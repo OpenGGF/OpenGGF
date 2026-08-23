@@ -87,6 +87,11 @@ public interface YmServiceTimingProfile {
 
     TimingOwnership timingOwnership();
 
+    default YmSourceProgramTiming.SourceProgram requireSourceProgram(
+            YmSourceProgramTiming.FirstPathShape shape, int carrierMask) {
+        throw new IllegalArgumentException("profile has no continuous source program");
+    }
+
     int maximumWritesPerDriverService();
 
     static YmServiceTimingProfile none() {

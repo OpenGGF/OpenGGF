@@ -26,7 +26,8 @@ LEDGER_BUILDER = (ROOT / "tools/bizhawk-headless/native/gpgx-audio-lab"
                   / "build-representative-ledger.sh")
 LEDGER_HEADER = (
     "occurrence_ordinal\tframe\tafter_source_ordinal\tcpu\tpc\topcode\t"
-    "start_master_cycle\tnext_pc\tdelta_to_next_start\tflow\tbranch_outcome\t"
+    "start_master_cycle\trefresh_delay_total_master_cycles\tnext_pc\t"
+    "delta_to_next_start\tflow\tbranch_outcome\t"
     "roles\tsource"
 )
 
@@ -52,11 +53,12 @@ def qualifying_no_pan_group(oracle: dict) -> dict:
     for group in oracle.get("groups", []):
         writes = group.get("writes", [])
         terminal = writes[-1] if writes else {}
-        b4_writes = [write for write in writes
-                     if write.get("port") == 1 and write.get("register") == 0xB1]
+        algorithm_writes = [write for write in writes
+                            if write.get("port") == 1
+                            and write.get("register") == 0xB1]
         if (group.get("classification") == "isolated"
                 and len(writes) == 30
-                and len(b4_writes) == 1
+                and len(algorithm_writes) == 1
                 and terminal.get("port") == 0
                 and terminal.get("register") == 0x28
                 and terminal.get("value") == 0xF5
@@ -68,6 +70,25 @@ def qualifying_no_pan_group(oracle: dict) -> dict:
     if selected["group_ordinal"] != 1:
         raise ValueError("lowest qualifying no-pan authority is no longer group 1")
     return selected
+
+
+def native_group_projection(group: dict) -> dict:
+    """Return the non-circular native facts used to select the source slice."""
+    return {
+        "group_ordinal": group["group_ordinal"],
+        "frame": group["frame"],
+        "classification": group["classification"],
+        "writes": [{
+            "source_ordinal": write["source_ordinal"],
+            "master_cycle": write["master_cycle"],
+            "relative_master_cycle": write["relative_master_cycle"],
+            "internal_ordinal": write["internal_ordinal"],
+            "port": write["port"],
+            "register": write["register"],
+            "value": write["value"],
+            "dma_stall_count": write["dma_stall_count"],
+        } for write in group["writes"]],
+    }
 
 
 def extract_no_pan_ledger(oracle_path: Path, instructions_path: Path,
@@ -84,7 +105,7 @@ def extract_no_pan_ledger(oracle_path: Path, instructions_path: Path,
         reader = csv.reader(stream, delimiter="\t")
         header = next(reader)
         if header != ["frame", "group_ordinal", "after_source_ordinal", "cpu",
-                      "pc", "opcode", "cycles"]:
+                      "pc", "opcode", "cycles", "refresh_delay_total_master_cycles"]:
             raise ValueError("native instruction header differs")
         selected_rows = [row for row in reader if int(row[1]) == group_ordinal]
     if not selected_rows:
@@ -110,11 +131,13 @@ def extract_no_pan_ledger(oracle_path: Path, instructions_path: Path,
         lines = built.read_text(encoding="utf-8").splitlines()
     if not lines or lines[0] != LEDGER_HEADER:
         raise ValueError("checked ledger builder returned a different schema")
+    group_projection = json.dumps(native_group_projection(selected),
+                                  sort_keys=True, separators=(",", ":")).encode()
     comments = [
-        f"# oracle_sha256={sha256(oracle_bytes)}",
+        f"# native_group_projection_sha256={sha256(group_projection)}",
         f"# native_instructions_sha256={sha256(instruction_bytes)}",
         f"# group_ordinal={group_ordinal}",
-        "# selection=lowest authenticated isolated 30-write S1 FM5 group with one B4/pan-field write, terminal key-on, and zero DMA stalls",
+        "# selection=lowest authenticated isolated 30-write S1 FM5 group with one FM5 B1 algorithm write, terminal key-on, and zero DMA stalls",
     ]
     output_path.write_text("\n".join([lines[0], *comments, *lines[1:]]) + "\n",
                            encoding="utf-8")
@@ -134,7 +157,7 @@ def read_ledger(path: Path) -> tuple[list[dict], dict[str, str]]:
         if not line:
             continue
         values = line.split("\t")
-        if len(values) != 13:
+        if len(values) != 14:
             raise ValueError(f"ledger row width differs: {path}")
         rows.append(dict(zip(LEDGER_HEADER.split("\t"), values, strict=True)))
     for ordinal, row in enumerate(rows):
@@ -152,6 +175,20 @@ def unique_sources(rows: list[dict]) -> str:
     if not values:
         raise ValueError("program write has no source citation")
     return "; ".join(values)
+
+
+def base_delta(row: dict, next_row: dict) -> int:
+    delta = row["delta_to_next_start"]
+    if delta == "key_on":
+        raise ValueError("terminal source row has no following instruction")
+    refresh = (int(next_row["refresh_delay_total_master_cycles"])
+               - int(row["refresh_delay_total_master_cycles"]))
+    if refresh < 0 or refresh % 14 != 0:
+        raise ValueError("68K cumulative refresh delay regressed or is not integral")
+    result = int(delta) - refresh
+    if result <= 0 or result % 7 != 0:
+        raise ValueError("source instruction delta is not a positive 68K cycle cost")
+    return result
 
 
 def build_program(shape: str, group: dict, ledger_path: Path,
@@ -178,20 +215,61 @@ def build_program(shape: str, group: dict, ledger_path: Path,
         consumed.update(occurrences)
         if not source_rows:
             raise ValueError("write has no authenticated source occurrences")
-        busy_rows = [row for row in source_rows if "busy_poll" in row["roles"]]
-        first_busy = int(busy_rows[0]["start_master_cycle"]) if busy_rows else None
-        previous_cycle = writes[ordinal - 1]["master_cycle"] if ordinal else None
-        fixed_before_busy = 0 if ordinal == 0 or first_busy is None else first_busy - previous_cycle
-        status_read_cycles = (int(busy_rows[0]["delta_to_next_start"])
-                              if busy_rows and busy_rows[0]["delta_to_next_start"] != "key_on"
-                              else 0)
-        status_starts = [int(row["start_master_cycle"]) for row in busy_rows
-                         if row["pc"] in ("0x7272E", "0x72764", "0x7277C")]
-        loop_cycles = status_starts[1] - status_starts[0] if len(status_starts) > 1 else 0
-        ready_start = status_starts[-1] if status_starts else None
-        after_ready = 0 if ready_start is None else write["master_cycle"] - ready_start
-        if min(fixed_before_busy, status_read_cycles, loop_cycles, after_ready) < 0:
+        # WriteFMI polls A04000 at $7272E. WriteFMII polls A04000 at
+        # $72764, then later reads A04002 at $7277C; that second-port read is
+        # invalid on the discrete YM2612 and is not the BUSY-ready decision.
+        busy_pc = "0x7272E" if write["port"] == 0 else "0x72764"
+        busy_indices = [index for index, row in enumerate(source_rows)
+                        if row["pc"] == busy_pc]
+        virtual_starts = []
+        if ordinal == 0:
+            virtual = 0
+        else:
+            # The preceding write occurs seven master cycles after the start of
+            # its MOVE.B instruction. Refresh is charged before that instruction,
+            # so it cancels from the write-to-next-instruction tail.
+            previous_rows = [row for row in rows
+                             if int(row["after_source_ordinal"]) == after - 1]
+            previous_write_rows = [row for row in previous_rows
+                                   if "ym_write" in row["roles"].split(",")]
+            if len(previous_write_rows) != 1:
+                raise ValueError("preceding interval must contain one hardware write")
+            refresh = (int(source_rows[0]["refresh_delay_total_master_cycles"])
+                       - int(previous_write_rows[0]["refresh_delay_total_master_cycles"]))
+            if refresh < 0 or refresh % 14 != 0:
+                raise ValueError("inter-write cumulative refresh delay is invalid")
+            virtual = (int(source_rows[0]["start_master_cycle"])
+                       - int(writes[ordinal - 1]["master_cycle"]) - refresh)
+        for index, row in enumerate(source_rows):
+            virtual_starts.append(virtual)
+            if index + 1 < len(source_rows):
+                virtual += base_delta(row, source_rows[index + 1])
+        write_indices = [index for index, row in enumerate(source_rows)
+                         if "ym_write" in row["roles"].split(",")]
+        if len(write_indices) != 1:
+            raise ValueError("source interval must contain one hardware write")
+        write_cycle = virtual_starts[write_indices[0]] + 7
+        fixed_before_busy = (virtual_starts[busy_indices[0]]
+                             if busy_indices else 0)
+        status_read_cycles = (base_delta(source_rows[busy_indices[0]],
+                                         source_rows[busy_indices[0] + 1])
+                              if busy_indices else 0)
+        loop_cycles = [virtual_starts[right] - virtual_starts[left]
+                       for left, right in zip(busy_indices, busy_indices[1:])]
+        if loop_cycles and any(value != loop_cycles[0] for value in loop_cycles):
+            raise ValueError("BUSY poll loop has inconsistent source cost")
+        busy_loop_cycles = loop_cycles[0] if loop_cycles else 259
+        ready_start = (virtual_starts[busy_indices[-1]]
+                       if busy_indices else None)
+        after_ready = 0 if ready_start is None else write_cycle - ready_start
+        if min(fixed_before_busy, status_read_cycles,
+               busy_loop_cycles, after_ready) < 0:
             raise ValueError("negative checked source cost")
+        if ordinal == 0:
+            fixed_before_busy = 0
+            status_read_cycles = 0
+            busy_loop_cycles = 0
+            after_ready = 0
         if ordinal < 26:
             section = "FM_VOICE_UPLOAD"
         elif pan_count and ordinal == 26:
@@ -208,7 +286,7 @@ def build_program(shape: str, group: dict, ledger_path: Path,
             "row_zero_anchor": ordinal == 0,
             "fixed_cycles_before_first_status_read": fixed_before_busy,
             "status_read_cycles": status_read_cycles,
-            "taken_busy_loop_cycles": loop_cycles,
+            "taken_busy_loop_cycles": busy_loop_cycles,
             "cycles_after_ready_status_to_data_write": after_ready,
             "captured_relative_master_cycle": write["relative_master_cycle"],
             "source_occurrence_first": occurrences[0],
@@ -227,7 +305,14 @@ def build_program(shape: str, group: dict, ledger_path: Path,
         "native_instruction_capture_sha256": (
             metadata.get("native_instructions_sha256")
             or load_json(AUDIT)["provenance"]["native_instructions_sha256"]),
+        "native_group_projection_sha256": sha256(json.dumps(
+            native_group_projection(group), sort_keys=True,
+            separators=(",", ":")).encode()),
     }
+    retained_projection = metadata.get("native_group_projection_sha256")
+    if retained_projection is not None \
+            and retained_projection != authority["native_group_projection_sha256"]:
+        raise ValueError("ledger native-group projection differs from retained oracle")
     return {
         "shape": shape,
         "sections": {
@@ -250,9 +335,9 @@ def build_document() -> dict:
         "schema": "openggf.s1-ym-busy-program.v1",
         "clock": {
             "master_cycles_per_m68k_cycle": 7,
-            "master_cycles_per_ym_sample": 1_008,
-            "busy_ym_cycles_after_data_write": 47,
-            "busy_ym_cycles_per_sample": 24,
+            "master_cycles_per_ym_clock": 42,
+            "busy_ym_clocks_after_data_write": 32,
+            "m68k_refresh_delay_master_cycles": 14,
         },
         "programs": [
             build_program(
@@ -273,10 +358,13 @@ def write_markdown(path: Path, document: dict) -> None:
         "the source-authenticated first FM5 voice attack. It does not model service-entry",
         "time or use a sound/zone/movie runtime carve-out.",
         "",
-        "The calculation uses seven master cycles per 68000 cycle, 1,008 master cycles",
-        "per internal YM sample, a 47-cycle busy interval after a data write, and a",
-        "24-cycle decrement at each internal sample. Only row zero is normalized to zero;",
-        "busy state continues through every later section.",
+        "The calculation uses seven master cycles per 68000 cycle and the checked",
+        "GPGX discrete-YM BUSY rule (master/42, 32 clocks after each data write).",
+        "The native instruction stream records cumulative 14-master-cycle refresh",
+        "delay at the exact GPGX refresh-add sites. The generator subtracts only that",
+        "counter delta; every remaining BUSY loop is exactly 259 master cycles.",
+        "Runtime resolves the checked no-refresh source costs dynamically for its",
+        "actual service-cursor residue. Captured final write cycles are comparison-only.",
         "",
         "| Shape | Writes | Ledger SHA-256 |",
         "|---|---:|---|",

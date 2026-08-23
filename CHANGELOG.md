@@ -1,5 +1,14 @@
 # Changelog
 
+- **Sonic 1 FM5 effects no longer inherit the previous instrument at onset:**
+  the first authenticated SetVoice-to-note path now preserves the shipped
+  68K driver's source costs and discrete-YM BUSY polling across voice upload,
+  optional pan, key-off, frequency, and key-on. Native GPGX replay over all 38
+  retained pre-effect YM states and every one of the 42 possible YM clock
+  phases reduces aggregate key-on attenuation error from 11,764 to
+  9,188-9,221 at every phase. Unsupported paths, completion, Sonic 2, and
+  Sonic 3&K retain their existing timing models.
+
 - **Sonic 1 restores DAC percussion after focus pause/resume:** the shipped
   `PauseMusic` unpause loop restores panning for six FM tracks and the current
   music DAC track. The engine now restores that DAC-owned FM6 pan as well,

@@ -37,6 +37,60 @@ class TestS1S2YmWriteTimingAudit {
     }
 
     @Test
+    void s1ProductionSourceModelImprovesEveryYmResidueAcrossAllNativeStates()
+            throws IOException {
+        JsonNode root = JSON.readTree(Files.readAllBytes(
+                RESEARCH.resolve("s1-ring-ym-write-audit-v2.json")));
+        assertEquals(sha256(Files.readAllBytes(RESEARCH.resolve(
+                        "s1-fm5-ym-busy-write-program-v1.json"))),
+                root.path("provenance").path("source_program_sha256").asText());
+        assertEquals(38, root.path("groups").size());
+        int atomicAggregate = 0;
+        for (JsonNode group : root.path("groups")) {
+            atomicAggregate += attenuationError(
+                    ints(group.path("native_counterfactual")
+                            .path("atomic_key_on_attenuation")),
+                    ints(group.path("key_on_attenuation")));
+        }
+        assertEquals(11_764, atomicAggregate);
+
+        List<Integer> residueAggregates = new ArrayList<>(42);
+        List<String> regressions = new ArrayList<>();
+        for (int residue = 0; residue < 42; residue++) {
+            int sourceAggregate = 0;
+            for (JsonNode group : root.path("groups")) {
+                JsonNode matrix = group.path("native_counterfactual")
+                        .path("source_model_by_cursor_residue");
+                assertEquals(42, matrix.size(), "group "
+                        + group.path("group_ordinal").asInt());
+                sourceAggregate += attenuationError(ints(matrix.get(residue)),
+                        ints(group.path("key_on_attenuation")));
+            }
+            residueAggregates.add(sourceAggregate);
+            if (sourceAggregate > atomicAggregate) {
+                regressions.add("residue " + residue + ": atomic="
+                        + atomicAggregate + ", source=" + sourceAggregate);
+            }
+        }
+        assertEquals(List.of(), regressions,
+                "no runtime-reachable YM clock residue may regress the full "
+                        + "38-state native attenuation aggregate");
+        assertEquals(List.of(
+                9221, 9221, 9221, 9221, 9221, 9221, 9221,
+                9221, 9221, 9221, 9221, 9221, 9221, 9221,
+                9188, 9188, 9188, 9188, 9188, 9188, 9188, 9188,
+                9221, 9221, 9221, 9221, 9221, 9221, 9221,
+                9221, 9221, 9221, 9221, 9221, 9221, 9221,
+                9221, 9221, 9221, 9221, 9221, 9221), residueAggregates);
+        int retainedAtomicAggregate = atomicAggregate;
+        assertTrue(residueAggregates.stream().allMatch(
+                value -> value < retainedAtomicAggregate));
+        assertTrue(residueAggregates.stream().mapToLong(Integer::longValue).sum()
+                        < (long) atomicAggregate * 42,
+                "the complete 42-by-38 matrix must strictly improve");
+    }
+
+    @Test
     void everyGapIsAnExactOrderedJoinOfCapturedInstructionOccurrences() throws IOException {
         assertEquals(SOURCE_MAP_SHA256, sha256(Files.readAllBytes(SOURCE_MAP)));
         assertSourceMapIntegrity();
@@ -44,14 +98,14 @@ class TestS1S2YmWriteTimingAudit {
                 "s1", "m68k", 2, 7,
                 "s1-ring-ym-write-audit-v2.json",
                 "s1-ring-ym-write-timing-calculation-v2.json",
-                "59000b1cbc90a3340e6f9142dfa96fd9ddea982af2d653ab5e52abf40557b689",
-                "b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa");
+                "a6d385bc17a9efb79ee687897c3577fdc9f3225bd8f4212022cc09fe7a5ccf7a",
+                "6c519b99ae89803993233bd85f22c1b942021556ce2dbefab7c2eddb6e2a8751");
         assertInstructionJoin(
                 "s2", "z80", 1, 15,
                 "s2-ringright-ym-write-audit-v2.json",
                 "s2-ringright-ym-write-timing-calculation-v2.json",
                 "b8f632aab340f07e2ed863944f2cfd3d39badbe0410a23979ebb10dd81e86372",
-                "d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c");
+                "598cad4a897bcb46d764d4bf334639c5f5f1007b923aa68e866a269402d4ffcb");
     }
 
     @Test
@@ -83,7 +137,7 @@ class TestS1S2YmWriteTimingAudit {
                 .findFirst().orElseThrow();
         List<String> wrongJump = replaced(s1, indexedJump, "\tjump\t", "\tlinear\t");
         assertThrows(AssertionError.class, () -> assertEquals(
-                "59000b1cbc90a3340e6f9142dfa96fd9ddea982af2d653ab5e52abf40557b689",
+                "a6d385bc17a9efb79ee687897c3577fdc9f3225bd8f4212022cc09fe7a5ccf7a",
                 sha256((String.join("\n", wrongJump) + "\n").getBytes(
                         java.nio.charset.StandardCharsets.UTF_8))));
         LedgerRow authenticJump = readLedger(RESEARCH.resolve(
@@ -174,7 +228,7 @@ class TestS1S2YmWriteTimingAudit {
         if (game.equals("s2")) {
             String scriptSha = sha256(Files.readAllBytes(Path.of(
                     "tools/bizhawk-headless/native/gpgx-audio-lab/capture-ym-write-timing.sh")));
-            assertEquals("b518761c57e7123ad086e6560616929be5cf6a7d91280af4f61ce0d14f618b1e",
+            assertEquals("e187e2ca34f0c46a6213094d7a8059adad38136f6bca00e388e476c5eaa93f17",
                     scriptSha);
             assertEquals(scriptSha,
                     oracle.path("provenance").path("capture_script_sha256").asText());
@@ -287,20 +341,43 @@ class TestS1S2YmWriteTimingAudit {
         assertEquals(count, gap.path(field).asLong());
     }
 
+    private static int[] ints(JsonNode node) {
+        int[] result = new int[node.size()];
+        for (int index = 0; index < result.length; index++) {
+            result[index] = node.get(index).asInt();
+        }
+        return result;
+    }
+
+    private static int attenuationError(int[] actual, int[] expected) {
+        assertEquals(expected.length, actual.length);
+        int error = 0;
+        for (int index = 0; index < expected.length; index++) {
+            error += Math.abs(actual[index] - expected[index]);
+        }
+        return error;
+    }
+
     private static List<LedgerRow> readLedger(Path path) throws IOException {
         List<String> lines = Files.readAllLines(path);
+        boolean refreshAware = lines.get(0).contains(
+                "\trefresh_delay_total_master_cycles\t");
         assertEquals("occurrence_ordinal\tframe\tafter_source_ordinal\tcpu\tpc\topcode\t"
-                        + "start_master_cycle\tnext_pc\tdelta_to_next_start\tflow\t"
+                        + "start_master_cycle\t"
+                        + (refreshAware ? "refresh_delay_total_master_cycles\t" : "")
+                        + "next_pc\tdelta_to_next_start\tflow\t"
                         + "branch_outcome\troles\tsource", lines.get(0));
         List<LedgerRow> rows = new ArrayList<>();
         for (int index = 1; index < lines.size(); index++) {
             String[] part = lines.get(index).split("\t", -1);
-            assertEquals(13, part.length);
+            assertEquals(refreshAware ? 14 : 13, part.length);
+            int shift = refreshAware ? 1 : 0;
             rows.add(new LedgerRow(
                     Integer.parseInt(part[0]), Integer.parseInt(part[2]), Integer.parseInt(part[3]),
                     part[4], parseHex(part[4]), part[5], parseHex(part[5]),
-                    Long.parseLong(part[6]), part[7], part[8].equals("key_on")
-                    ? -1 : Long.parseLong(part[8]), part[9], part[10], part[11], part[12]));
+                    Long.parseLong(part[6]), part[7 + shift], part[8 + shift].equals("key_on")
+                    ? -1 : Long.parseLong(part[8 + shift]), part[9 + shift],
+                    part[10 + shift], part[11 + shift], part[12 + shift]));
         }
         return List.copyOf(rows);
     }

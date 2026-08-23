@@ -1,9 +1,9 @@
 {
   "clock": {
-    "busy_ym_cycles_after_data_write": 47,
-    "busy_ym_cycles_per_sample": 24,
+    "busy_ym_clocks_after_data_write": 32,
+    "m68k_refresh_delay_master_cycles": 14,
     "master_cycles_per_m68k_cycle": 7,
-    "master_cycles_per_ym_sample": 1008
+    "master_cycles_per_ym_clock": 42
   },
   "programs": [
     {
@@ -11,8 +11,9 @@
         "group_ordinal": 1,
         "ledger_path": "s1-ring-no-pan-ym-write-instruction-ledger-v1.tsv",
         "ledger_row_count": 875,
-        "ledger_sha256": "cc594fe04b19cdbc6fcc586e4f92b6b6c3e48774529273ace750461cea2c6eca",
-        "native_instruction_capture_sha256": "b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa",
+        "ledger_sha256": "85572eb4af5a875469c1cf1152536e7c86fb155e6babf7dfe9771ac8a0c657c0",
+        "native_group_projection_sha256": "c2924f951d875bf4085af0a85011a4b2949ca79dbef1b548ae14a22eaf4adba7",
+        "native_instruction_capture_sha256": "6c519b99ae89803993233bd85f22c1b942021556ce2dbefab7c2eddb6e2a8751",
         "selection": "lowest authenticated isolated 30-write S1 FM5 group"
       },
       "sections": {
@@ -25,7 +26,7 @@
       "writes": [
         {
           "captured_relative_master_cycle": 0,
-          "cycles_after_ready_status_to_data_write": 252,
+          "cycles_after_ready_status_to_data_write": 0,
           "fixed_cycles_before_first_status_read": 0,
           "port": 1,
           "register": 177,
@@ -70,14 +71,14 @@
             32,
             33
           ],
-          "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 462,
+          "status_read_cycles": 0,
+          "taken_busy_loop_cycles": 0,
           "write_ordinal": 0
         },
         {
           "captured_relative_master_cycle": 2170,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 938,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 924,
           "port": 1,
           "register": 49,
           "row_zero_anchor": false,
@@ -121,8 +122,8 @@
         },
         {
           "captured_relative_master_cycle": 4340,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 57,
           "row_zero_anchor": false,
@@ -160,13 +161,13 @@
             88
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 2
         },
         {
           "captured_relative_master_cycle": 6496,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 53,
           "row_zero_anchor": false,
@@ -209,8 +210,8 @@
         },
         {
           "captured_relative_master_cycle": 8652,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 61,
           "row_zero_anchor": false,
@@ -253,8 +254,8 @@
         },
         {
           "captured_relative_master_cycle": 10808,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 81,
           "row_zero_anchor": false,
@@ -297,8 +298,8 @@
         },
         {
           "captured_relative_master_cycle": 12978,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 89,
           "row_zero_anchor": false,
@@ -336,13 +337,13 @@
             196
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 6
         },
         {
           "captured_relative_master_cycle": 15134,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 85,
           "row_zero_anchor": false,
@@ -385,8 +386,8 @@
         },
         {
           "captured_relative_master_cycle": 17290,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 93,
           "row_zero_anchor": false,
@@ -429,8 +430,8 @@
         },
         {
           "captured_relative_master_cycle": 19446,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 97,
           "row_zero_anchor": false,
@@ -473,8 +474,8 @@
         },
         {
           "captured_relative_master_cycle": 21616,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 105,
           "row_zero_anchor": false,
@@ -512,13 +513,13 @@
             304
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 10
         },
         {
           "captured_relative_master_cycle": 23772,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 101,
           "row_zero_anchor": false,
@@ -561,8 +562,8 @@
         },
         {
           "captured_relative_master_cycle": 25928,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 109,
           "row_zero_anchor": false,
@@ -605,8 +606,8 @@
         },
         {
           "captured_relative_master_cycle": 28084,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 113,
           "row_zero_anchor": false,
@@ -649,8 +650,8 @@
         },
         {
           "captured_relative_master_cycle": 30254,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 121,
           "row_zero_anchor": false,
@@ -688,13 +689,13 @@
             412
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 14
         },
         {
           "captured_relative_master_cycle": 32410,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 117,
           "row_zero_anchor": false,
@@ -737,8 +738,8 @@
         },
         {
           "captured_relative_master_cycle": 34566,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 125,
           "row_zero_anchor": false,
@@ -781,8 +782,8 @@
         },
         {
           "captured_relative_master_cycle": 36722,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 129,
           "row_zero_anchor": false,
@@ -825,8 +826,8 @@
         },
         {
           "captured_relative_master_cycle": 38892,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 137,
           "row_zero_anchor": false,
@@ -864,13 +865,13 @@
             520
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 18
         },
         {
           "captured_relative_master_cycle": 41048,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 133,
           "row_zero_anchor": false,
@@ -913,8 +914,8 @@
         },
         {
           "captured_relative_master_cycle": 43204,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 141,
           "row_zero_anchor": false,
@@ -957,8 +958,8 @@
         },
         {
           "captured_relative_master_cycle": 45262,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 1358,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 1330,
           "port": 1,
           "register": 65,
           "row_zero_anchor": false,
@@ -996,13 +997,13 @@
             601
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 448,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 21
         },
         {
           "captured_relative_master_cycle": 47572,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 1078,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 1050,
           "port": 1,
           "register": 73,
           "row_zero_anchor": false,
@@ -1048,8 +1049,8 @@
         },
         {
           "captured_relative_master_cycle": 49854,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 1050,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 1036,
           "port": 1,
           "register": 69,
           "row_zero_anchor": false,
@@ -1094,8 +1095,8 @@
         },
         {
           "captured_relative_master_cycle": 52164,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 1064,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 1050,
           "port": 1,
           "register": 77,
           "row_zero_anchor": false,
@@ -1136,13 +1137,13 @@
             690
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 24
         },
         {
           "captured_relative_master_cycle": 54376,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 980,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 966,
           "port": 1,
           "register": 181,
           "row_zero_anchor": false,
@@ -1186,7 +1187,7 @@
         {
           "captured_relative_master_cycle": 56567,
           "cycles_after_ready_status_to_data_write": 700,
-          "fixed_cycles_before_first_status_read": 1218,
+          "fixed_cycles_before_first_status_read": 1204,
           "port": 0,
           "register": 40,
           "row_zero_anchor": false,
@@ -1226,13 +1227,13 @@
             746
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 26
         },
         {
           "captured_relative_master_cycle": 62349,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 5068,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 4984,
           "port": 1,
           "register": 165,
           "row_zero_anchor": false,
@@ -1314,12 +1315,12 @@
             817
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 448,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 27
         },
         {
           "captured_relative_master_cycle": 64666,
-          "cycles_after_ready_status_to_data_write": 252,
+          "cycles_after_ready_status_to_data_write": 700,
           "fixed_cycles_before_first_status_read": 812,
           "port": 1,
           "register": 161,
@@ -1360,13 +1361,13 @@
             846
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 28
         },
         {
           "captured_relative_master_cycle": 66836,
           "cycles_after_ready_status_to_data_write": 700,
-          "fixed_cycles_before_first_status_read": 938,
+          "fixed_cycles_before_first_status_read": 924,
           "port": 0,
           "register": 40,
           "row_zero_anchor": false,
@@ -1415,8 +1416,9 @@
         "group_ordinal": 0,
         "ledger_path": "s1-ring-ym-write-instruction-ledger-v1.tsv",
         "ledger_row_count": 909,
-        "ledger_sha256": "59000b1cbc90a3340e6f9142dfa96fd9ddea982af2d653ab5e52abf40557b689",
-        "native_instruction_capture_sha256": "b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa",
+        "ledger_sha256": "a6d385bc17a9efb79ee687897c3577fdc9f3225bd8f4212022cc09fe7a5ccf7a",
+        "native_group_projection_sha256": "6783cf35bea4e3a6b489fd068a74884a9fff65ebe33cec1a51c150c2291b5755",
+        "native_instruction_capture_sha256": "6c519b99ae89803993233bd85f22c1b942021556ce2dbefab7c2eddb6e2a8751",
         "selection": "retained representative authenticated isolated 31-write S1 FM5 group"
       },
       "sections": {
@@ -1429,7 +1431,7 @@
       "writes": [
         {
           "captured_relative_master_cycle": 0,
-          "cycles_after_ready_status_to_data_write": 252,
+          "cycles_after_ready_status_to_data_write": 0,
           "fixed_cycles_before_first_status_read": 0,
           "port": 1,
           "register": 177,
@@ -1474,14 +1476,14 @@
             32,
             33
           ],
-          "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 462,
+          "status_read_cycles": 0,
+          "taken_busy_loop_cycles": 0,
           "write_ordinal": 0
         },
         {
           "captured_relative_master_cycle": 2170,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 938,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 924,
           "port": 1,
           "register": 49,
           "row_zero_anchor": false,
@@ -1525,8 +1527,8 @@
         },
         {
           "captured_relative_master_cycle": 4340,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 57,
           "row_zero_anchor": false,
@@ -1564,13 +1566,13 @@
             88
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 2
         },
         {
           "captured_relative_master_cycle": 6496,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 53,
           "row_zero_anchor": false,
@@ -1613,8 +1615,8 @@
         },
         {
           "captured_relative_master_cycle": 8652,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 61,
           "row_zero_anchor": false,
@@ -1657,8 +1659,8 @@
         },
         {
           "captured_relative_master_cycle": 10808,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 81,
           "row_zero_anchor": false,
@@ -1701,8 +1703,8 @@
         },
         {
           "captured_relative_master_cycle": 12978,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 89,
           "row_zero_anchor": false,
@@ -1740,13 +1742,13 @@
             196
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 6
         },
         {
           "captured_relative_master_cycle": 15134,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 85,
           "row_zero_anchor": false,
@@ -1789,8 +1791,8 @@
         },
         {
           "captured_relative_master_cycle": 17290,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 93,
           "row_zero_anchor": false,
@@ -1833,8 +1835,8 @@
         },
         {
           "captured_relative_master_cycle": 19446,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 97,
           "row_zero_anchor": false,
@@ -1877,8 +1879,8 @@
         },
         {
           "captured_relative_master_cycle": 21616,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 105,
           "row_zero_anchor": false,
@@ -1916,13 +1918,13 @@
             304
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 10
         },
         {
           "captured_relative_master_cycle": 23772,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 101,
           "row_zero_anchor": false,
@@ -1965,8 +1967,8 @@
         },
         {
           "captured_relative_master_cycle": 25928,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 109,
           "row_zero_anchor": false,
@@ -2009,8 +2011,8 @@
         },
         {
           "captured_relative_master_cycle": 28084,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 113,
           "row_zero_anchor": false,
@@ -2053,8 +2055,8 @@
         },
         {
           "captured_relative_master_cycle": 30254,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 121,
           "row_zero_anchor": false,
@@ -2092,13 +2094,13 @@
             412
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 14
         },
         {
           "captured_relative_master_cycle": 32410,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 117,
           "row_zero_anchor": false,
@@ -2141,8 +2143,8 @@
         },
         {
           "captured_relative_master_cycle": 34566,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 125,
           "row_zero_anchor": false,
@@ -2185,8 +2187,8 @@
         },
         {
           "captured_relative_master_cycle": 36722,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 129,
           "row_zero_anchor": false,
@@ -2229,8 +2231,8 @@
         },
         {
           "captured_relative_master_cycle": 38892,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 137,
           "row_zero_anchor": false,
@@ -2268,13 +2270,13 @@
             520
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 273,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 18
         },
         {
           "captured_relative_master_cycle": 41048,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 133,
           "row_zero_anchor": false,
@@ -2317,8 +2319,8 @@
         },
         {
           "captured_relative_master_cycle": 43204,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 924,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 910,
           "port": 1,
           "register": 141,
           "row_zero_anchor": false,
@@ -2361,8 +2363,8 @@
         },
         {
           "captured_relative_master_cycle": 45535,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 1358,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 1330,
           "port": 1,
           "register": 65,
           "row_zero_anchor": false,
@@ -2408,8 +2410,8 @@
         },
         {
           "captured_relative_master_cycle": 47831,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 1064,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 1050,
           "port": 1,
           "register": 73,
           "row_zero_anchor": false,
@@ -2455,8 +2457,8 @@
         },
         {
           "captured_relative_master_cycle": 50127,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 1050,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 1036,
           "port": 1,
           "register": 69,
           "row_zero_anchor": false,
@@ -2501,8 +2503,8 @@
         },
         {
           "captured_relative_master_cycle": 52423,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 1064,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 1050,
           "port": 1,
           "register": 77,
           "row_zero_anchor": false,
@@ -2548,8 +2550,8 @@
         },
         {
           "captured_relative_master_cycle": 54635,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 980,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 966,
           "port": 1,
           "register": 181,
           "row_zero_anchor": false,
@@ -2592,8 +2594,8 @@
         },
         {
           "captured_relative_master_cycle": 57575,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 2226,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 2184,
           "port": 1,
           "register": 181,
           "row_zero_anchor": false,
@@ -2644,13 +2646,13 @@
             760
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 448,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 26
         },
         {
           "captured_relative_master_cycle": 59654,
-          "cycles_after_ready_status_to_data_write": 714,
-          "fixed_cycles_before_first_status_read": 1106,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 1092,
           "port": 0,
           "register": 40,
           "row_zero_anchor": false,
@@ -2694,8 +2696,8 @@
         },
         {
           "captured_relative_master_cycle": 64666,
-          "cycles_after_ready_status_to_data_write": 252,
-          "fixed_cycles_before_first_status_read": 4312,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 4242,
           "port": 1,
           "register": 165,
           "row_zero_anchor": false,
@@ -2769,13 +2771,13 @@
             851
           ],
           "status_read_cycles": 119,
-          "taken_busy_loop_cycles": 448,
+          "taken_busy_loop_cycles": 259,
           "write_ordinal": 28
         },
         {
           "captured_relative_master_cycle": 66997,
-          "cycles_after_ready_status_to_data_write": 266,
-          "fixed_cycles_before_first_status_read": 826,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 812,
           "port": 1,
           "register": 161,
           "row_zero_anchor": false,
@@ -2820,8 +2822,8 @@
         },
         {
           "captured_relative_master_cycle": 69167,
-          "cycles_after_ready_status_to_data_write": 714,
-          "fixed_cycles_before_first_status_read": 938,
+          "cycles_after_ready_status_to_data_write": 700,
+          "fixed_cycles_before_first_status_read": 924,
           "port": 0,
           "register": 40,
           "row_zero_anchor": false,

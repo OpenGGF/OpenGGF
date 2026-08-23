@@ -8,6 +8,7 @@ import com.openggf.audio.smps.YmServiceTimingProfile.Segment;
 import com.openggf.audio.smps.YmServiceTimingProfile.SegmentKind;
 import com.openggf.audio.smps.YmServiceTimingProfile.Variant;
 import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
+import com.openggf.game.sonic1.audio.Sonic1YmServiceTimingProfile;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import org.junit.jupiter.api.Test;
 
@@ -106,9 +107,9 @@ class TestSonic3kYmServiceTimingProfile {
     private static final Variant BLUE_SPHERE = firstAttack(0b1110);
 
     @Test
-    void productionConfigsEnableOnlyTheAuditedLockedOnProfile() {
+    void productionConfigsEnableOnlyTheirAuditedProfiles() {
         YmServiceTimingProfile none = YmServiceTimingProfile.none();
-        assertSame(none,
+        assertSame(Sonic1YmServiceTimingProfile.PROFILE,
                 Sonic1SmpsSequencerConfig.CONFIG.getYmServiceTimingProfile());
         assertSame(none,
                 Sonic2SmpsSequencerConfig.CONFIG.getYmServiceTimingProfile());

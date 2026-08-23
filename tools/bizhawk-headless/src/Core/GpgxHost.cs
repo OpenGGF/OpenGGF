@@ -467,5 +467,10 @@ namespace OpenGGF.BizHawk.Headless
         public abstract int gpgx_ym_timing_lab_configure_z80_admission(
             uint admissionPc, uint groupStartPc,
             uint soundId, uint fmChannel, uint ownerIx);
+        [global::BizHawk.BizInvoke.BizImport(
+            System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public abstract int gpgx_ym_timing_lab_configure_source_row(
+            uint programKind, uint row, uint expectedPortRegister,
+            uint fixedCycles, uint busyLoopCycles, uint readyToDataCycles);
     }
 }

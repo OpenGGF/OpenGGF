@@ -87,8 +87,9 @@ logical-observer journal. `VirtualSynthesizer` continues to own the bounded
 pre-internal-sample boundary. Existing generation barriers, snapshot identity,
 adoption, capacity reservation, and chip-observer semantics remain unchanged.
 
-The new profile changes only how one bounded source program derives its
-`advanceBeforeWriteMasterCycles` vector before journal commit.
+The new profile changes only how one bounded source program derives each next
+YM due cycle from checked source costs and the existing discrete-YM BUSY rule
+before journal commit.
 
 ## Source-program timing representation
 
@@ -111,6 +112,9 @@ record ProgramVariant(
 
 record ProgramWrite(
         SegmentKind section,
+        int expectedPort,
+        int expectedRegister,
+        OptionalInt expectedFixedValue,
         int fixedCyclesBeforeFirstStatusRead,
         int statusReadCycles,
         int takenBusyLoopCycles,
@@ -134,7 +138,7 @@ Runtime production code does not read this file. Tests require the hard-coded
 typed profile to equal it and bind every source row to the existing canonical
 PC/opcode/source ledger and map.
 
-### Pure resolver and virtual YM continuation
+### Pure source-cost/BUSY resolver
 
 A package-private pure `YmSourceProgramResolver` advances one row of the whole
 program from an explicit immutable continuation:
@@ -148,28 +152,49 @@ ResolvedWrite resolveNext(
         int actualValue,
         long serviceCursorMasterCycle,
         long renderedYmFrontierMasterCycle);
-
-record VirtualYmBusyState(
-        long appliedFrontierMasterCycle,
-        int busyYmCyclesRemaining) { }
 ```
 
-Fixed S3K timing never uses this resolver. For an S1 program it simulates only
-the reviewed GPGX/MAME YM busy contract:
+Fixed S3K timing never uses this resolver. The S1 artifact proves the
+reviewed GPGX discrete-YM BUSY contract:
 
 - one 68K cycle is seven Mega Drive master cycles;
-- one internal YM sample is 1,008 master cycles;
-- a data write sets busy for 47 YM cycles;
-- busy decreases by 24 YM cycles at each internal sample;
-- a write due between internal frontiers is applied at the first frontier at
-  or after its due cycle, before the following internal sample;
-- the source program repeats its exact `btst`/taken-branch loop until the
-  status read observes busy clear.
+- the discrete YM clock ratio is master/42;
+- a data write sets BUSY through `ceil(write/42)+32` YM clocks;
+- `WriteFMI` polls A04000 at `$7272E`, while `WriteFMII` polls A04000 at
+  `$72764`; its later A04002 read at `$7277C` is not a BUSY-ready decision;
+- the source artifact retains every taken `btst`/branch interval separately;
+- the diagnostic core increments a cumulative refresh-delay counter only at
+  the two GPGX sites that actually add the 14-master-cycle 68K refresh stall.
+  Consecutive source-row cost is `captured delta - cumulative refresh delta`.
+  After that subtraction every repeated BUSY loop is exactly 259 master cycles.
+
+The audit also proves a limit: 68K refresh insertion changes captured normalized
+30/31-write paths by up to 2,590 master cycles. OpenGGF has no 68K execution or
+refresh phase from which to reproduce those stalls. Adding a partial 68K CPU
+solely for this SFX would be disproportionate. Runtime therefore excludes only
+the explicitly measured refresh stalls and executes the checked no-refresh
+source costs against the real service cursor's YM-clock residue. Captured final
+write gaps and attenuation are comparison evidence only; no captured relative
+write vector is a runtime constant.
+
+`ProgramState` stores `nextWrite`, `lastDueMasterCycle`, and the virtual
+`busyUntilMasterCycle`. Row zero is due at the service cursor and sets
+`busyUntil = (ceil(due / 42) + 32) * 42`. For every later row the resolver:
+
+1. starts at `lastDue + fixedCyclesBeforeFirstStatusRead`;
+2. adds the 259-cycle checked loop while `statusCycle < busyUntil`;
+3. publishes at `statusCycle + cyclesAfterReadyStatusToDataWrite`; and
+4. recomputes `busyUntil` from that data-write cycle.
+
+All 42 possible service-cursor residues modulo the YM clock are test inputs.
+`statusReadCycles` remains checked source decomposition evidence; the readiness
+decision occurs at the status-read instruction boundary already represented by
+`statusCycle`.
 
 Resolution is incremental within one transaction-owned program state. The
 side-effect-free classifier preselects `VOICE_NOTE` or `VOICE_PAN_NOTE`; the
 voice-upload section starts that program, and later sections must match the
-selected path exactly. Both variants continue from the same virtual busy state.
+selected path exactly. Both variants continue from one program-relative cursor.
 The classifier does not consume live stream state, and ordinary live-command
 rollback protects any mismatch between its local view and actual interpretation.
 
@@ -177,32 +202,35 @@ Row zero is always published at the transaction's service cursor. This is the
 explicit relative-only boundary: service-entry-to-first-write time and any
 pre-existing live busy interval are excluded. If an older pending entry has the
 same due cycle, its lower source ordinal drains first, then row zero drains at
-that same frontier and resets busy to 47 YM cycles. The resolver initializes
-`VirtualYmBusyState(appliedFrontier=serviceCursor, busy=47)` immediately after
-row zero; only rows 1..N consult and advance that state. An acceptance test pins
+that same frontier. Only rows 1..N advance through the checked source/BUSY
+calculation. An acceptance test pins
 this exact pending-tail case: prior tail due `C`, row zero due `C`, row one due
 strictly after `C`, with source ordinals tail < row zero < row one.
 
-Each later step returns its due-cycle advance plus the next
-`VirtualYmBusyState`. Busy state is carried across voice-upload, optional pan,
-key-off, frequency, and key-on sections. It does not query mutable chip busy
-after resolution begins.
-There is therefore no state in which a section can forget that the preceding
-data write made the YM busy. The resolver never mutates the live chip, reads
-gameplay state, or retains a sequencer reference. The actual timeline drain
-remains the authority for chip mutation and callbacks.
+Each later step returns its due cycle and next ordinal. The cursor remains
+continuous across voice-upload, optional pan, key-off, frequency, and key-on
+sections. The resolver never mutates the live chip, reads gameplay state, or
+retains a sequencer reference. The actual timeline drain remains the authority
+for chip mutation and callbacks.
 
-The resolver is checked-arithmetic and fail-closed: negative cycles, zero-cost
-loops, overflow, an empty program, count mismatch, or a due-cycle regression
+The resolver is checked-arithmetic and fail-closed: negative cycles, overflow,
+an empty program, count mismatch, or a due-cycle regression
 poisons the entire service transaction before publication.
 
-### Why a fixed vector is rejected
+### Bounded timing discrepancy
 
-Normalized S1 groups vary by 2,590 master cycles because each data write reaches
-the quantized internal YM frontier at a different busy phase. A single retained
-vector would fit one capture and fail another. The program derives the busy-loop
-outcome from source costs and current timeline phase, then must reproduce every
-captured vector without effect-specific constants.
+Normalized native groups vary by 2,590 master cycles because each data write
+reaches the driver under a different 68K refresh phase. The production model
+does not claim cycle-exact refresh parity. Acceptance instead requires the
+source-cost model to preserve exact write order and to resolve deterministically
+for every YM-clock residue. Acceptance evaluates the full 42-residue × every
+retained 3,624-byte native-state matrix. For each residue independently, the
+summed L1 key-on attenuation error over all states must be no larger than the
+atomic sum over those same states; at least one residue and the full matrix total
+must be strictly better. Every residue aggregate and per-state result, including
+neutral or worse individual states, is reported without filtering. This bounded
+refresh omission is recorded rather than hidden behind a fitted vector or a
+broader CPU model.
 
 ## S1 profile and interpreter mapping
 
@@ -255,6 +283,16 @@ or the live stream cursor. Only the first two results arm the source program;
 actual interpreter must later consume exactly the classified bytes and section
 sequence; a byte/position mismatch aborts and rolls back. Classification is by
 typed bytecode shape and FM5 ownership, never by SFX ID, zone, movie, or trace.
+
+Driver-service capacity preselection is a distinct bounded lookahead because
+retail Break Item executes one non-writing `F0 ModSet` before `EF SetVoice`.
+Starting at the untouched track cursor it may skip exactly that fixed-width
+five-byte prefix, then requires a valid EF voice and applies the same post-EF
+shape/carrier validation above. Once live interpretation reaches EF, the
+already-classified shape keeps the transaction active through voice upload.
+No other pre-EF command is skipped; an unsupported path remains immediate and
+does not reserve or append to the timed queue.
+
 Tests enumerate every retail S1 SFX track, record which shapes are eligible,
 prove Ring's 30/31 native variants are included, and poison every unsupported
 control-flow class. A second ROM SFX is an acceptance vector only if this same
@@ -274,14 +312,19 @@ The existing `FmVoiceWriteProfile.S1_68K` dialect owns the mapping:
 - `FREQUENCY_AND_KEY_ON` covers A4, A0, and 28/Fx;
 - all four sections consume one active
   `S1_FM5_FIRST_VOICE_ATTACK` program. Opening a section out of order, closing
-  it with unconsumed rows, publishing a mismatched register/value, or ending the
+  it with unconsumed rows, publishing a mismatched port/register or a mismatched
+  fixed semantic value, or ending the
   service before key-on poisons the unpublished transaction.
 
 The first `FM_VOICE_UPLOAD` call opens the program and resolves its first
 section. Later helpers call an
 internal `enterYmProgramSection(source, kind)`; `writeFm` atomically consumes
 and resolves the next row only when its program state, section, and expected
-register/value match.
+port/register match. Fixed semantic channel values are also checked: FM5 key-off
+must be `$05` and key-on must be `$F5`. Voice bytes, carrier-adjusted TL, pan,
+and frequency data remain ROM/interpreter-owned variable values and are proven
+by end-to-end ordered-write tests rather than falsely copied from Ring into the
+generic timing program.
 An ordinary write while a program is active is not assigned the current cursor:
 it must be the represented optional pan row or the transaction fails. This
 keeps the Java helper boundaries without treating them as timing anchors.
@@ -341,14 +384,19 @@ The canonical program is generated from:
   map already retained in `docs/architecture/research/audio/`.
 
 A deterministic generator identifies, per inter-data-write gap, the fixed
-prefix/suffix and the exact repeatable busy-poll loop. It rejects any ledger
+prefix/suffix and the exact repeatable busy-poll loop. Its native instruction
+rows carry the cumulative refresh delay observed at the exact GPGX refresh-add
+sites; the generator subtracts only the counter delta and rejects regression,
+non-14-cycle increments, any inconsistent remaining loop cost, or any ledger
 row not consumed exactly once. The Java test independently parses the source
 program, validates its PC/opcode/cycle/source references against the ledger,
-and resolves it from every retained group's first-write phase.
+and re-derives every no-refresh source cost from those rows.
 
-The runtime profile is accepted only if it reproduces all 38 captured relative
-write cycles and exact register/value order. The oracle continues to be
-comparison-only and never supplies runtime timing.
+The runtime profile is accepted only if its typed source costs equal the checked
+artifact, its resolver is correct for every service-cursor residue modulo 42,
+and its exact ROM-produced register/value stream remains ordered. The retained
+oracle evaluates the onset metric but remains comparison-only; captured final
+cycle gaps never enter runtime production data.
 
 ## Atomicity, capacity, and snapshots
 
@@ -383,8 +431,8 @@ enables or disables timing.
 
 - The current S1 profile is `none()` and an exact ROM FM5 group collapses to one
   YM frontier.
-- The retained isolated and overlap vectors cannot be reproduced by one fixed
-  advance vector.
+- The retained isolated and overlap vectors vary with 68K refresh phase and
+  cannot be valid runtime advance constants.
 - Atomic exact-context replay differs from native key-on attenuation.
 - Cross-helper voice/pan/key-off/frequency scopes currently lose native busy
   continuity.
@@ -392,16 +440,17 @@ enables or disables timing.
 ### GREEN
 
 - deterministic source-program generation is byte-identical twice;
-- every one of 909 ledger rows is consumed exactly once or explicitly excluded
-  as pre-first/post-terminal framing;
-- the pure resolver reproduces all 38 native relative vectors, their exact
-  register/value order, and zero-DMA dialect;
+- every row in each selected representative ledger is consumed exactly once or
+  explicitly excluded as pre-first/post-terminal framing;
+- the pure resolver re-derives every no-refresh source cost, exercises all 42
+  YM-clock residues, and never reads a captured final write gap;
 - the production profile equals the canonical checked program;
 - a ROM-backed ring and every other classifier-eligible FM5 SFX schedule
   without a sound-ID branch; unsupported shapes remain byte-identical to the
   immediate control;
-- exact-context production replay improves all retained isolated and overlap
-  onset errors relative to atomic playback, using predeclared metrics;
+- exact-context production replay reports every retained isolated/overlap onset
+  result and improves or equals the aggregate L1 error relative to atomic
+  playback without selecting a captured phase;
 - first attack, optional pan, ordinary note, retrigger, unchanged completion,
   suppression, and replacement retain source order;
 - sample-accurate and hybrid modes produce identical PCM and driver snapshots;
@@ -432,7 +481,8 @@ No merge or push occurs before a positive listen report.
 
 - forced key-off, envelope reset, fade, or crossfade: changes shipped
   `FixBugs = 0` behavior and masks the timing owner;
-- one captured fixed delay vector: fixture fitting and wrong across busy phases;
+- one observed delay vector without decoded source provenance and replay across
+  retained native YM states: fixture fitting and wrong across busy phases;
 - sound/zone/movie-specific timing: violates runtime rule placement and trace
   independence;
 - runtime native-oracle playback: violates comparison-only evidence policy;

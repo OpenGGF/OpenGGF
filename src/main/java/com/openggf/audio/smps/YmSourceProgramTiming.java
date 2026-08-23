@@ -12,9 +12,8 @@ import java.util.Set;
  */
 public final class YmSourceProgramTiming {
     public static final int MAX_WRITES = 31;
-    public static final long MASTER_CYCLES_PER_YM_SAMPLE = 1_008;
-    public static final int BUSY_YM_CYCLES_AFTER_WRITE = 47;
-    public static final int BUSY_YM_CYCLES_PER_SAMPLE = 24;
+    public static final long MASTER_CYCLES_PER_YM_CLOCK = 42;
+    public static final long BUSY_YM_CLOCKS_AFTER_WRITE = 32;
 
     public enum FirstPathShape {
         VOICE_NOTE,
@@ -50,6 +49,7 @@ public final class YmSourceProgramTiming {
             YmServiceTimingProfile.SegmentKind section,
             int expectedPort,
             int expectedRegister,
+            Integer expectedFixedValue,
             long fixedCyclesBeforeFirstStatusRead,
             long statusReadCycles,
             long takenBusyLoopCycles,
@@ -64,13 +64,18 @@ public final class YmSourceProgramTiming {
             if (expectedRegister < 0 || expectedRegister > 0xff) {
                 throw new IllegalArgumentException("expected YM register must be a byte");
             }
+            if (expectedFixedValue != null
+                    && (expectedFixedValue < 0 || expectedFixedValue > 0xff)) {
+                throw new IllegalArgumentException("expected fixed YM value must be a byte");
+            }
             if (fixedCyclesBeforeFirstStatusRead < 0 || statusReadCycles < 0
                     || takenBusyLoopCycles < 0
                     || cyclesAfterReadyStatusToDataWrite < 0) {
                 throw new IllegalArgumentException("source timing costs cannot be negative");
             }
             checkedTotal(fixedCyclesBeforeFirstStatusRead, statusReadCycles,
-                    takenBusyLoopCycles, cyclesAfterReadyStatusToDataWrite);
+                    takenBusyLoopCycles,
+                    cyclesAfterReadyStatusToDataWrite);
         }
     }
 
@@ -126,36 +131,33 @@ public final class YmSourceProgramTiming {
                     || first.cyclesAfterReadyStatusToDataWrite() != 0) {
                 throw new IllegalArgumentException("only a zero-cost row-zero anchor is supported");
             }
-        }
-    }
-
-    public record VirtualYmBusyState(long appliedFrontierMasterCycle,
-                                     int busyYmCyclesRemaining) {
-        public VirtualYmBusyState {
-            if (appliedFrontierMasterCycle < 0 || busyYmCyclesRemaining < 0
-                    || busyYmCyclesRemaining > BUSY_YM_CYCLES_AFTER_WRITE) {
-                throw new IllegalArgumentException("virtual YM busy state is invalid");
+            for (int index = 1; index < writes.size(); index++) {
+                if (writes.get(index).takenBusyLoopCycles() <= 0) {
+                    throw new IllegalArgumentException(
+                            "non-anchor source row requires a positive BUSY loop");
+                }
             }
         }
     }
 
-    public record ProgramState(int nextWrite, VirtualYmBusyState busy,
-                               long lastDueMasterCycle) {
+    public record ProgramState(int nextWrite, long lastDueMasterCycle,
+                               long busyUntilMasterCycle) {
         public ProgramState {
             if (nextWrite < 0 || nextWrite > MAX_WRITES) {
                 throw new IllegalArgumentException("program write ordinal is invalid");
             }
             if (nextWrite == 0) {
-                if (busy != null || lastDueMasterCycle != -1) {
+                if (lastDueMasterCycle != -1 || busyUntilMasterCycle != -1) {
                     throw new IllegalArgumentException("initial program state is inconsistent");
                 }
-            } else if (busy == null || lastDueMasterCycle < 0) {
+            } else if (lastDueMasterCycle < 0
+                    || busyUntilMasterCycle < lastDueMasterCycle) {
                 throw new IllegalArgumentException("active program state is incomplete");
             }
         }
 
         public static ProgramState initial() {
-            return new ProgramState(0, null, -1);
+            return new ProgramState(0, -1, -1);
         }
 
         public boolean complete(SourceProgram program) {
@@ -182,6 +184,7 @@ public final class YmSourceProgramTiming {
                 YmServiceTimingProfile.SegmentKind actualSection,
                 int actualPort,
                 int actualRegister,
+                int actualValue,
                 long serviceCursorMasterCycle,
                 long renderedYmFrontierMasterCycle) {
             Objects.requireNonNull(program, "program");
@@ -196,71 +199,42 @@ public final class YmSourceProgramTiming {
             }
             ProgramWrite write = program.writes().get(state.nextWrite());
             if (write.section() != actualSection || write.expectedPort() != actualPort
-                    || write.expectedRegister() != actualRegister) {
+                    || write.expectedRegister() != actualRegister
+                    || write.expectedFixedValue() != null
+                    && write.expectedFixedValue() != actualValue) {
                 throw new IllegalArgumentException("hardware write differs from source program");
             }
 
             long due;
-            VirtualYmBusyState nextBusy;
             if (state.nextWrite() == 0) {
                 due = serviceCursorMasterCycle;
-                nextBusy = afterDataWrite(due, renderedYmFrontierMasterCycle);
             } else {
                 long statusCycle = Math.addExact(state.lastDueMasterCycle(),
                         write.fixedCyclesBeforeFirstStatusRead());
-                BusyAtCycle observed = observeBusy(state.busy(), statusCycle);
-                while (observed.busyYmCyclesRemaining() > 0) {
-                    if (write.takenBusyLoopCycles() == 0) {
-                        throw new IllegalArgumentException(
-                                "busy source row has no positive taken-loop cost");
-                    }
+                int loops = 0;
+                while (statusCycle < state.busyUntilMasterCycle()) {
                     statusCycle = Math.addExact(statusCycle,
                             write.takenBusyLoopCycles());
-                    observed = observeBusy(new VirtualYmBusyState(
-                            observed.frontierMasterCycle(),
-                            observed.busyYmCyclesRemaining()), statusCycle);
+                    if (++loops > 64) {
+                        throw new IllegalArgumentException(
+                                "source BUSY loop exceeded its bounded horizon");
+                    }
                 }
                 due = Math.addExact(statusCycle,
                         write.cyclesAfterReadyStatusToDataWrite());
                 if (due <= state.lastDueMasterCycle()) {
                     throw new IllegalArgumentException("resolved due cycle did not advance");
                 }
-                nextBusy = afterDataWrite(due, observed.frontierMasterCycle());
             }
+            long ymClock = Math.floorDiv(due, MASTER_CYCLES_PER_YM_CLOCK);
+            if (due % MASTER_CYCLES_PER_YM_CLOCK != 0) {
+                ymClock = Math.addExact(ymClock, 1);
+            }
+            long busyUntil = Math.multiplyExact(
+                    Math.addExact(ymClock, BUSY_YM_CLOCKS_AFTER_WRITE),
+                    MASTER_CYCLES_PER_YM_CLOCK);
             return new ResolvedWrite(due, new ProgramState(
-                    state.nextWrite() + 1, nextBusy, due));
-        }
-
-        private static BusyAtCycle observeBusy(VirtualYmBusyState state, long cycle) {
-            if (cycle < state.appliedFrontierMasterCycle()) {
-                return new BusyAtCycle(state.appliedFrontierMasterCycle(),
-                        state.busyYmCyclesRemaining());
-            }
-            long elapsed = cycle - state.appliedFrontierMasterCycle();
-            long samples = elapsed / MASTER_CYCLES_PER_YM_SAMPLE;
-            long decrement = Math.multiplyExact(samples, BUSY_YM_CYCLES_PER_SAMPLE);
-            int remaining = (int) Math.max(0,
-                    (long) state.busyYmCyclesRemaining() - decrement);
-            long frontier = Math.addExact(state.appliedFrontierMasterCycle(),
-                    Math.multiplyExact(samples, MASTER_CYCLES_PER_YM_SAMPLE));
-            return new BusyAtCycle(frontier, remaining);
-        }
-
-        private static VirtualYmBusyState afterDataWrite(long due, long phaseFrontier) {
-            long applied = phaseFrontier;
-            if (applied < due) {
-                long distance = due - applied;
-                long samples = Math.floorDiv(
-                        Math.addExact(distance, MASTER_CYCLES_PER_YM_SAMPLE - 1),
-                        MASTER_CYCLES_PER_YM_SAMPLE);
-                applied = Math.addExact(applied,
-                        Math.multiplyExact(samples, MASTER_CYCLES_PER_YM_SAMPLE));
-            }
-            return new VirtualYmBusyState(applied, BUSY_YM_CYCLES_AFTER_WRITE);
-        }
-
-        private record BusyAtCycle(long frontierMasterCycle,
-                                   int busyYmCyclesRemaining) {
+                    state.nextWrite() + 1, due, busyUntil));
         }
     }
 

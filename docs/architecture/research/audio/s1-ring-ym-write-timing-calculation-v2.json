@@ -5,8 +5,8 @@
   "representative_group_ordinal": 0,
   "ledger": {
     "path": "s1-ring-ym-write-instruction-ledger-v1.tsv",
-    "sha256": "59000b1cbc90a3340e6f9142dfa96fd9ddea982af2d653ab5e52abf40557b689",
-    "full_capture_sha256": "b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa",
+    "sha256": "a6d385bc17a9efb79ee687897c3577fdc9f3225bd8f4212022cc09fe7a5ccf7a",
+    "full_capture_sha256": "6c519b99ae89803993233bd85f22c1b942021556ce2dbefab7c2eddb6e2a8751",
     "row_count": 909
   },
   "clock": {

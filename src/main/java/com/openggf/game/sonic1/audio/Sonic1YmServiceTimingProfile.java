@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Checked relative YM timing for the authenticated S1 FM5 first-attack shape. */
+/** Checked source-cost YM timing for the authenticated S1 FM5 first-attack shape. */
 public final class Sonic1YmServiceTimingProfile implements YmServiceTimingProfile {
 
     private static final int AUTHENTICATED_CARRIER_MASK = 0b1010;
@@ -38,6 +38,12 @@ public final class Sonic1YmServiceTimingProfile implements YmServiceTimingProfil
             throw new IllegalArgumentException("S1 source timing shape is unavailable");
         }
         return program;
+    }
+
+    @Override
+    public YmSourceProgramTiming.SourceProgram requireSourceProgram(
+            YmSourceProgramTiming.FirstPathShape shape, int carrierMask) {
+        return requireProgram(shape, carrierMask);
     }
 
     @Override
@@ -77,9 +83,12 @@ public final class Sonic1YmServiceTimingProfile implements YmServiceTimingProfil
             } else {
                 section = SegmentKind.FREQUENCY_AND_KEY_ON;
             }
+            Integer fixedValue = section == SegmentKind.KEY_OFF ? Integer.valueOf(0x05)
+                    : section == SegmentKind.FREQUENCY_AND_KEY_ON
+                    && row[1] == 0x28 ? Integer.valueOf(0xF5) : null;
             writes.add(new YmSourceProgramTiming.ProgramWrite(
-                    section, (int) row[0], (int) row[1], row[2], row[3], row[4], row[5],
-                    SOURCE));
+                    section, (int) row[0], (int) row[1], fixedValue,
+                    row[2], row[3], row[4], row[5], SOURCE));
         }
         return new YmSourceProgramTiming.SourceProgram(
                 YmSourceProgramTiming.ProgramKind.S1_FM5_FIRST_VOICE_ATTACK,
@@ -105,44 +114,45 @@ public final class Sonic1YmServiceTimingProfile implements YmServiceTimingProfil
                                         SegmentKind.FREQUENCY_AND_KEY_ON, 28, 3)));
     }
 
-    // port, register, fixed-before-status, status-read, taken-loop, ready-to-data.
-    private static final long[][] COMMON_PREFIX = {
-            {1, 0xB1, 0, 0, 0, 0},
-            {1, 0x31, 938, 119, 259, 252}, {1, 0x39, 924, 119, 273, 266},
-            {1, 0x35, 924, 119, 259, 252}, {1, 0x3D, 924, 119, 259, 252},
-            {1, 0x51, 924, 119, 259, 252}, {1, 0x59, 924, 119, 273, 266},
-            {1, 0x55, 924, 119, 259, 252}, {1, 0x5D, 924, 119, 259, 252},
-            {1, 0x61, 924, 119, 259, 252}, {1, 0x69, 924, 119, 273, 266},
-            {1, 0x65, 924, 119, 259, 252}, {1, 0x6D, 924, 119, 259, 252},
-            {1, 0x71, 924, 119, 259, 252}, {1, 0x79, 924, 119, 273, 266},
-            {1, 0x75, 924, 119, 259, 252}, {1, 0x7D, 924, 119, 259, 252},
-            {1, 0x81, 924, 119, 259, 252}, {1, 0x89, 924, 119, 273, 266},
-            {1, 0x85, 924, 119, 259, 252}, {1, 0x8D, 924, 119, 259, 252}
+    // port, register, fixed-before-status, status-read, BUSY-loop, ready-to-data.
+    private static final long[][] NO_PAN = {
+            {1, 0xB1, 0, 0, 0, 0}, {1, 0x31, 924, 119, 259, 700},
+            {1, 0x39, 910, 119, 259, 700}, {1, 0x35, 910, 119, 259, 700},
+            {1, 0x3D, 910, 119, 259, 700}, {1, 0x51, 910, 119, 259, 700},
+            {1, 0x59, 910, 119, 259, 700}, {1, 0x55, 910, 119, 259, 700},
+            {1, 0x5D, 910, 119, 259, 700}, {1, 0x61, 910, 119, 259, 700},
+            {1, 0x69, 910, 119, 259, 700}, {1, 0x65, 910, 119, 259, 700},
+            {1, 0x6D, 910, 119, 259, 700}, {1, 0x71, 910, 119, 259, 700},
+            {1, 0x79, 910, 119, 259, 700}, {1, 0x75, 910, 119, 259, 700},
+            {1, 0x7D, 910, 119, 259, 700}, {1, 0x81, 910, 119, 259, 700},
+            {1, 0x89, 910, 119, 259, 700}, {1, 0x85, 910, 119, 259, 700},
+            {1, 0x8D, 910, 119, 259, 700}, {1, 0x41, 1330, 119, 259, 700},
+            {1, 0x49, 1050, 119, 259, 700}, {1, 0x45, 1036, 119, 259, 700},
+            {1, 0x4D, 1050, 119, 259, 700}, {1, 0xB5, 966, 119, 259, 700},
+            {0, 0x28, 1204, 119, 259, 700}, {1, 0xA5, 4984, 119, 259, 700},
+            {1, 0xA1, 812, 119, 259, 700}, {0, 0x28, 924, 119, 259, 700}
     };
 
-    private static final long[][] NO_PAN = concat(COMMON_PREFIX, new long[][] {
-            {1, 0x41, 1358, 119, 448, 252}, {1, 0x49, 1078, 119, 259, 252},
-            {1, 0x45, 1050, 119, 259, 252}, {1, 0x4D, 1064, 119, 273, 266},
-            {1, 0xB5, 980, 119, 259, 252}, {0, 0x28, 1218, 119, 273, 700},
-            {1, 0xA5, 5068, 119, 448, 266}, {1, 0xA1, 812, 119, 273, 252},
-            {0, 0x28, 938, 119, 259, 700}
-    });
-
-    private static final long[][] PAN = concat(COMMON_PREFIX, new long[][] {
-            {1, 0x41, 1358, 119, 259, 266}, {1, 0x49, 1064, 119, 259, 252},
-            {1, 0x45, 1050, 119, 259, 266}, {1, 0x4D, 1064, 119, 259, 252},
-            {1, 0xB5, 980, 119, 259, 252}, {1, 0xB5, 2226, 119, 448, 266},
-            {0, 0x28, 1106, 119, 259, 714}, {1, 0xA5, 4312, 119, 448, 252},
-            {1, 0xA1, 826, 119, 259, 266}, {0, 0x28, 938, 119, 259, 714}
-    });
+    private static final long[][] PAN = {
+            {1, 0xB1, 0, 0, 0, 0}, {1, 0x31, 924, 119, 259, 700},
+            {1, 0x39, 910, 119, 259, 700}, {1, 0x35, 910, 119, 259, 700},
+            {1, 0x3D, 910, 119, 259, 700}, {1, 0x51, 910, 119, 259, 700},
+            {1, 0x59, 910, 119, 259, 700}, {1, 0x55, 910, 119, 259, 700},
+            {1, 0x5D, 910, 119, 259, 700}, {1, 0x61, 910, 119, 259, 700},
+            {1, 0x69, 910, 119, 259, 700}, {1, 0x65, 910, 119, 259, 700},
+            {1, 0x6D, 910, 119, 259, 700}, {1, 0x71, 910, 119, 259, 700},
+            {1, 0x79, 910, 119, 259, 700}, {1, 0x75, 910, 119, 259, 700},
+            {1, 0x7D, 910, 119, 259, 700}, {1, 0x81, 910, 119, 259, 700},
+            {1, 0x89, 910, 119, 259, 700}, {1, 0x85, 910, 119, 259, 700},
+            {1, 0x8D, 910, 119, 259, 700}, {1, 0x41, 1330, 119, 259, 700},
+            {1, 0x49, 1050, 119, 259, 700}, {1, 0x45, 1036, 119, 259, 700},
+            {1, 0x4D, 1050, 119, 259, 700}, {1, 0xB5, 966, 119, 259, 700},
+            {1, 0xB5, 2184, 119, 259, 700}, {0, 0x28, 1092, 119, 259, 700},
+            {1, 0xA5, 4242, 119, 259, 700}, {1, 0xA1, 812, 119, 259, 700},
+            {0, 0x28, 924, 119, 259, 700}
+    };
 
     public static final Sonic1YmServiceTimingProfile PROFILE =
             new Sonic1YmServiceTimingProfile();
 
-    private static long[][] concat(long[][] first, long[][] second) {
-        long[][] result = new long[first.length + second.length][];
-        System.arraycopy(first, 0, result, 0, first.length);
-        System.arraycopy(second, 0, result, first.length, second.length);
-        return result;
-    }
 }

@@ -563,6 +563,39 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     @Test
+    void s1SourceTimingPortRemainsConfinedToSequencerAndDriver() throws IOException {
+        Set<Path> allowed = Set.of(
+                Path.of("audio/synth/Synthesizer.java"),
+                Path.of("audio/driver/SmpsDriver.java"),
+                Path.of("audio/smps/SmpsSequencer.java"));
+        List<String> violations = new ArrayList<>();
+        try (var paths = Files.walk(PRODUCTION_ROOT)) {
+            for (Path path : paths.filter(value -> value.toString().endsWith(".java"))
+                    .toList()) {
+                String source = Files.readString(path);
+                if ((source.contains("beginYmSourceProgram(")
+                        || source.contains("enterYmSourceProgramSection(")
+                        || source.contains("hasReservableExclusiveYmSourceProgram()"))
+                        && !allowed.contains(PRODUCTION_ROOT.relativize(path))) {
+                    violations.add(PRODUCTION_ROOT.relativize(path).toString());
+                }
+            }
+        }
+        assertEquals(List.of(), violations,
+                "source-program timing is a private audio-driver protocol, not "
+                        + "a general production timing API");
+
+        String sequencer = Files.readString(
+                AUDIO_ROOT.resolve("smps/SmpsSequencer.java"));
+        assertEquals(1, occurrences(sequencer, "beginYmSourceProgram("));
+        assertEquals(3, occurrences(sequencer, "enterYmSourceProgramSection("));
+        String driver = Files.readString(
+                AUDIO_ROOT.resolve("driver/SmpsDriver.java"));
+        assertEquals(1, occurrences(driver,
+                "hasReservableExclusiveYmSourceProgram()"));
+    }
+
+    @Test
     void warmedMaterializationGuardTraversesAnnotatedHelpers() {
         for (String forbidden : List.of(
                 "SmpsSourceDescriptor.from(data);",

@@ -9,6 +9,7 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.YmServiceTimingProfile;
+import com.openggf.audio.smps.YmSourceProgramTiming;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.PsgChip;
 import com.openggf.audio.synth.Synthesizer;
@@ -128,6 +129,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 new ArrayList<>();
         private long cursor;
         private DriverYmTimingScope activeScope;
+        private YmSourceProgramTiming.SourceProgram sourceProgram;
+        private YmSourceProgramTiming.ProgramState sourceProgramState;
+        private long sourceProgramServiceCursor;
+        private long sourceProgramRenderedFrontier;
 
         private ServiceTransaction(
                 LiveCommandMutationToken rollback,
@@ -175,7 +180,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final ServiceTransaction transaction;
         private final Object source;
         private final YmServiceTimingProfile.Segment segment;
+        private final YmServiceTimingProfile.SegmentKind kind;
         private final long[] advances;
+        private final boolean sourceProgramScope;
+        private final int expectedWrites;
         private int consumed;
         private boolean closed;
 
@@ -186,21 +194,50 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.transaction = transaction;
             this.source = source;
             this.segment = segment;
+            this.kind = segment.kind();
             this.advances = segment.advanceBeforeWriteMasterCycles();
+            this.sourceProgramScope = false;
+            this.expectedWrites = advances.length;
         }
 
-        private long consumeSlot() {
+        private DriverYmTimingScope(
+                ServiceTransaction transaction,
+                Object source,
+                YmServiceTimingProfile.SegmentKind kind,
+                int expectedWrites) {
+            this.transaction = transaction;
+            this.source = source;
+            this.segment = null;
+            this.kind = Objects.requireNonNull(kind, "kind");
+            this.advances = null;
+            this.sourceProgramScope = true;
+            this.expectedWrites = expectedWrites;
+        }
+
+        private long consumeSlot(int port, int register, int value) {
             requireUsable();
-            if (consumed >= advances.length) {
+            if (consumed >= expectedWrites) {
                 IllegalStateException failure = new IllegalStateException(
                         "YM timing segment produced excess hardware writes");
                 abortYmServiceTransaction(failure);
                 throw failure;
             }
             try {
-                transaction.cursor = Math.addExact(
-                        transaction.cursor, advances[consumed]);
-            } catch (ArithmeticException failure) {
+                if (sourceProgramScope) {
+                    YmSourceProgramTiming.ResolvedWrite resolved =
+                            YmSourceProgramTiming.YmSourceProgramResolver.resolveNext(
+                                    transaction.sourceProgram,
+                                    transaction.sourceProgramState,
+                                    kind, port, register, value,
+                                    transaction.sourceProgramServiceCursor,
+                                    transaction.sourceProgramRenderedFrontier);
+                    transaction.sourceProgramState = resolved.nextState();
+                    transaction.cursor = resolved.dueMasterCycle();
+                } else {
+                    transaction.cursor = Math.addExact(
+                            transaction.cursor, advances[consumed]);
+                }
+            } catch (RuntimeException failure) {
                 abortYmServiceTransaction(failure);
                 throw failure;
             }
@@ -210,24 +247,30 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
         @Override
         public void consumeSuppressedHardwareAttempt() {
-            consumeSlot();
+            if (sourceProgramScope) {
+                IllegalStateException failure = new IllegalStateException(
+                        "S1 source program cannot suppress an authenticated hardware write");
+                abortYmServiceTransaction(failure);
+                throw failure;
+            }
+            consumeSlot(0, 0, 0);
         }
 
         @Override
         public void close() {
             requireUsable();
-            if (consumed != advances.length) {
+            if (consumed != expectedWrites) {
                 closed = true;
                 transaction.activeScope = null;
                 IllegalStateException failure = new IllegalStateException(
                         "YM timing segment closed after " + consumed
-                                + " of " + advances.length + " slots");
+                                + " of " + expectedWrites + " slots");
                 abortYmServiceTransaction(failure);
                 throw failure;
             }
             closed = true;
             transaction.activeScope = null;
-            if (transaction.implicit) {
+            if (transaction.implicit && !sourceProgramScope) {
                 commitYmServiceTransaction();
             }
         }
@@ -530,8 +573,92 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         return scope;
     }
 
+    @Override
+    public Synthesizer.YmTimingScope beginYmSourceProgram(
+            Object source,
+            YmSourceProgramTiming.SourceProgram program,
+            YmServiceTimingProfile.SegmentKind firstSection) {
+        Objects.requireNonNull(program, "program");
+        Objects.requireNonNull(firstSection, "firstSection");
+        YmServiceTimingProfile profile = timingProfileFor(source);
+        if (profile == YmServiceTimingProfile.none()) {
+            return Synthesizer.YmTimingScope.immediate();
+        }
+        if (profile.timingOwnership()
+                != YmServiceTimingProfile.TimingOwnership.EXCLUSIVE_SFX_FM5) {
+            throw new IllegalArgumentException(
+                    "source programs require exclusive SFX FM5 timing ownership");
+        }
+        if (ymServiceTransaction == null) {
+            beginYmServiceTransaction(source, true);
+        }
+        ServiceTransaction transaction = ymServiceTransaction;
+        if (transaction.activeScope != null || transaction.sourceProgram != null) {
+            IllegalStateException failure = new IllegalStateException(
+                    "nested or duplicate YM source programs are not permitted");
+            abortYmServiceTransaction(failure);
+            throw failure;
+        }
+        transaction.sourceProgram = program;
+        transaction.sourceProgramState = YmSourceProgramTiming.ProgramState.initial();
+        transaction.sourceProgramServiceCursor = transaction.cursor;
+        transaction.sourceProgramRenderedFrontier = renderedYmMasterCycle();
+        return openSourceProgramSection(transaction, source, firstSection);
+    }
+
+    @Override
+    public Synthesizer.YmTimingScope enterYmSourceProgramSection(
+            Object source, YmServiceTimingProfile.SegmentKind section) {
+        ServiceTransaction transaction = ymServiceTransaction;
+        if (transaction == null) {
+            throw new IllegalStateException("no matching active YM source program");
+        }
+        if (transaction.sourceProgram == null || transaction.source != source
+                || transaction.activeScope != null) {
+            IllegalStateException failure = new IllegalStateException(
+                    "no matching active YM source program");
+            abortYmServiceTransaction(failure);
+            throw failure;
+        }
+        return openSourceProgramSection(transaction, source,
+                Objects.requireNonNull(section, "section"));
+    }
+
+    private Synthesizer.YmTimingScope openSourceProgramSection(
+            ServiceTransaction transaction, Object source,
+            YmServiceTimingProfile.SegmentKind section) {
+        int next = transaction.sourceProgramState.nextWrite();
+        YmSourceProgramTiming.ProgramSection matched = null;
+        for (YmSourceProgramTiming.ProgramSection candidate
+                : transaction.sourceProgram.sections()) {
+            if (candidate.firstWrite() == next) {
+                matched = candidate;
+                break;
+            }
+        }
+        if (matched == null || matched.kind() != section) {
+            IllegalStateException failure = new IllegalStateException(
+                    "YM source-program section differs at write " + next);
+            abortYmServiceTransaction(failure);
+            throw failure;
+        }
+        DriverYmTimingScope scope = new DriverYmTimingScope(
+                transaction, source, section, matched.writeCount());
+        transaction.activeScope = scope;
+        return scope;
+    }
+
     private YmServiceTimingProfile timingProfileFor(Object source) {
         if (!(source instanceof SmpsSequencer sequencer)) {
+            return YmServiceTimingProfile.none();
+        }
+        YmServiceTimingProfile configured =
+                sequencer.getConfig().getYmServiceTimingProfile();
+        if (configured.timingOwnership()
+                == YmServiceTimingProfile.TimingOwnership.EXCLUSIVE_SFX_FM5
+                && (!sequencer.isSfx()
+                || fmLocks[4] != sequencer
+                || !sequencer.hasReservableExclusiveYmSourceProgram())) {
             return YmServiceTimingProfile.none();
         }
         // The audited source path belongs to SFX. A sibling sequencer only
@@ -542,7 +669,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 && pendingYmWriteCount() == 0) {
             return YmServiceTimingProfile.none();
         }
-        return sequencer.getConfig().getYmServiceTimingProfile();
+        return configured;
     }
 
     private ServiceTransaction beginYmServiceTransaction(
@@ -686,6 +813,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (transaction.activeScope != null) {
             IllegalStateException failure = new IllegalStateException(
                     "YM driver service ended with an open timing scope");
+            abortYmServiceTransaction(failure);
+            throw failure;
+        }
+        if (transaction.sourceProgram != null
+                && !transaction.sourceProgramState.complete(
+                        transaction.sourceProgram)) {
+            IllegalStateException failure = new IllegalStateException(
+                    "YM source program ended before its terminal write");
             abortYmServiceTransaction(failure);
             throw failure;
         }
@@ -3329,7 +3464,13 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                             }
                         }
                     }
-                    if (restoreVariant != null) {
+                    YmServiceTimingProfile cleanupProfile =
+                            timingProfileFor(seq);
+                    if (restoreVariant != null
+                            && cleanupProfile.supports(
+                                    YmServiceTimingProfile.SegmentKind
+                                            .COMPLETION_RESTORE,
+                                    restoreVariant)) {
                         try (Synthesizer.YmTimingScope ignored = beginYmTiming(
                                 seq,
                                 YmServiceTimingProfile.SegmentKind
@@ -3494,8 +3635,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         long dueMasterCycle = transaction.cursor;
         YmServiceTimingProfile.SegmentKind segment = null;
         if (scope != null) {
-            dueMasterCycle = scope.consumeSlot();
-            segment = scope.segment.kind();
+            dueMasterCycle = scope.consumeSlot(port & 1, reg & 0x1ff, val & 0xff);
+            segment = scope.kind;
         }
         long ordinal;
         try {

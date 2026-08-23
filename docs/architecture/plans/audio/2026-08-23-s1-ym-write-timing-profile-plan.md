@@ -11,9 +11,9 @@ audible attack, while leaving unsupported S1 paths, S2, S3K, and completion
 timing unchanged.
 
 **Architecture:** Extend the existing bounded YM timeline with one immutable,
-incrementally resolved S1 source program. A side-effect-free stream-shape
-classifier enables it only for the retained Ring control-flow shapes, a virtual
-busy continuation spans Java helper boundaries, and the unique FM5 SFX owner
+incrementally resolved S1 source-cost/BUSY program. A side-effect-free
+stream-shape classifier enables it only for the retained Ring control-flow
+shapes, one program cursor spans Java helper boundaries, and the unique FM5 SFX owner
 reserves the existing 4,096-entry queue atomically. Comparison-only native
 oracles and source ledgers validate the typed production profile; runtime never
 reads a trace or research artifact.
@@ -49,7 +49,7 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
 
 - Create
   `src/main/java/com/openggf/audio/smps/YmSourceProgramTiming.java`: immutable
-  program, variants, sections, state, busy continuation, and pure resolver.
+  program, variants, sections, state, continuous cursor, and pure resolver.
 - Modify
   `src/main/java/com/openggf/audio/smps/YmServiceTimingProfile.java`: timing
   ownership, source-program lookup, capability query, and fixed-segment
@@ -78,6 +78,9 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
   canonical checked derivation and provenance.
 - Create `tools/audio/build-s1-ym-busy-program.py`: deterministic research
   generator from the retained ledger/calculation/source map.
+- Modify the retained GPGX timing-lab patch, capture script, ledger builder, and
+  C# collector so every 68K instruction row carries the cumulative refresh
+  delay incremented at the exact native refresh-add sites.
 - Create
   `docs/architecture/research/audio/s1-ring-no-pan-ym-write-instruction-ledger-v1.tsv`:
   A/B-authenticated decoded 30-write branch authority from the retained native
@@ -109,9 +112,16 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
 
 **Files:**
 - Create: `tools/audio/build-s1-ym-busy-program.py`
+- Modify: `tools/bizhawk-headless/native/gpgx-audio-lab/0001-trace-ym-write-cycles.patch`
+- Modify: `tools/bizhawk-headless/native/gpgx-audio-lab/capture-ym-write-timing.sh`
+- Modify: `tools/bizhawk-headless/native/gpgx-audio-lab/build-representative-ledger.sh`
+- Modify: `tools/bizhawk-headless/tests/GpgxYmWriteTimingLabTests.cs`
 - Create: `docs/architecture/research/audio/s1-fm5-ym-busy-write-program-v1.json`
 - Create: `docs/architecture/research/audio/s1-fm5-ym-busy-write-program-v1.md`
 - Create: `docs/architecture/research/audio/s1-ring-no-pan-ym-write-instruction-ledger-v1.tsv`
+- Modify: `docs/architecture/research/audio/s1-ring-ym-write-instruction-ledger-v1.tsv`
+- Modify: `docs/architecture/research/audio/s1-ring-ym-write-audit-v2.json`
+- Modify: `docs/architecture/research/audio/s2-ringright-ym-write-audit-v2.json`
 - Test: `src/test/java/com/openggf/audio/smps/TestSonic1YmSourceProgramTiming.java`
 
 **Interfaces:**
@@ -129,6 +139,8 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
   export OPENGGF_MAIN_WORKSPACE="$(git rev-parse --show-toplevel)"
   export S1_ROM_PATH="${S1_ROM_PATH:?point this at the authenticated S1 REV01 ROM}"
   export S1_BK2_PATH="${S1_BK2_PATH:?point this at the reviewed complete-run BK2}"
+  export S2_ROM_PATH="${S2_ROM_PATH:?point this at the authenticated S2 REV01 ROM}"
+  export S2_BK2_PATH="${S2_BK2_PATH:?point this at the reviewed S2 complete-run BK2}"
   export GPGX_SOURCE_PATH="${GPGX_SOURCE_PATH:?point this at the pinned pristine BizHawk source}"
   export GPGX_TOOLCHAIN_PATH="${GPGX_TOOLCHAIN_PATH:?point this at the pinned native toolchain}"
   # The script independently rejects wrong commits, trees, file counts, tools,
@@ -139,9 +151,25 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
   tools/bizhawk-headless/native/gpgx-audio-lab/capture-ym-write-timing.sh \
     --game s1 --sound-id 0xB5 --fm-channel 4 \
     --output "$TASK_SCRATCH/s1-b.json"
+  tools/bizhawk-headless/native/gpgx-audio-lab/capture-ym-write-timing.sh \
+    --game s2 --sound-id 0xB5 --fm-channel 4 \
+    --output "$TASK_SCRATCH/s2-a.json"
+  tools/bizhawk-headless/native/gpgx-audio-lab/capture-ym-write-timing.sh \
+    --game s2 --sound-id 0xB5 --fm-channel 4 \
+    --output "$TASK_SCRATCH/s2-b.json"
   cmp "$TASK_SCRATCH/s1-a.json" "$TASK_SCRATCH/s1-b.json"
   cmp "$TASK_SCRATCH/s1-a.native-instructions.tsv" \
       "$TASK_SCRATCH/s1-b.native-instructions.tsv"
+  cmp "$TASK_SCRATCH/s2-a.json" "$TASK_SCRATCH/s2-b.json"
+  cmp "$TASK_SCRATCH/s2-a.native-instructions.tsv" \
+      "$TASK_SCRATCH/s2-b.native-instructions.tsv"
+  bash tools/bizhawk-headless/native/gpgx-audio-lab/build-representative-ledger.sh \
+    s2 "$TASK_SCRATCH/s2-a.native-instructions.tsv" \
+    "$TASK_SCRATCH/s2-ledger.tsv"
+  cmp "$TASK_SCRATCH/s2-ledger.tsv" \
+    docs/architecture/research/audio/s2-ringright-ym-write-instruction-ledger-v1.tsv
+  # The instruction schema includes cumulative refresh delay. The native patch
+  # increments it only at the actual 14-master-cycle refresh-add sites.
   ```
 
 - [ ] **Step 2: Write the RED artifact/parser test.**
@@ -176,10 +204,14 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
   The generator must then parse the existing 31-write panning ledger and the new
   30-write no-pan ledger by ordinal, split each
   inter-write instruction slice, identify the exact busy-poll loop and fixed
-  prefix/suffix, and reject unknown/duplicate/unconsumed instructions. It must
-  not infer cycles from the target write gaps. Emit sorted canonical JSON with
-  source SHA-256s and a Markdown calculation explaining 7 master cycles per
-  68K cycle, 1,008 per internal sample, busy 47, decrement 24.
+  prefix/suffix, and reject unknown/duplicate/unconsumed instructions. Native
+  instruction rows carry cumulative refresh delay from the exact GPGX sites
+  that add 14 master cycles. Subtract only consecutive counter deltas; reject a
+  regression, a non-14-cycle increment, or any remaining inconsistent BUSY
+  loop. It must not infer cycles from target write gaps. Emit sorted canonical
+  JSON with source SHA-256s and a Markdown calculation explaining seven master
+  cycles per 68K cycle and GPGX's discrete-YM master/42, 32-clock BUSY rule.
+  Captured final relative write cycles remain comparison-only fields.
 
 - [ ] **Step 5: Generate twice and prove byte identity.**
 
@@ -195,6 +227,19 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
   cmp "$TASK_SCRATCH/no-pan-a.tsv" "$TASK_SCRATCH/no-pan-b.tsv"
   cmp "$TASK_SCRATCH/no-pan-a.tsv" \
     docs/architecture/research/audio/s1-ring-no-pan-ym-write-instruction-ledger-v1.tsv
+  bash tools/bizhawk-headless/native/gpgx-audio-lab/build-representative-ledger.sh \
+    s1 "$TASK_SCRATCH/s1-a.native-instructions.tsv" \
+    "$TASK_SCRATCH/pan-a.tsv"
+  bash tools/bizhawk-headless/native/gpgx-audio-lab/build-representative-ledger.sh \
+    s1 "$TASK_SCRATCH/s1-b.native-instructions.tsv" \
+    "$TASK_SCRATCH/pan-b.tsv"
+  cmp "$TASK_SCRATCH/pan-a.tsv" "$TASK_SCRATCH/pan-b.tsv"
+  cmp "$TASK_SCRATCH/pan-a.tsv" \
+    docs/architecture/research/audio/s1-ring-ym-write-instruction-ledger-v1.tsv
+  cmp "$TASK_SCRATCH/s1-a.json" \
+    docs/architecture/research/audio/s1-ring-ym-write-audit-v2.json
+  cmp "$TASK_SCRATCH/s2-a.json" \
+    docs/architecture/research/audio/s2-ringright-ym-write-audit-v2.json
   sha256sum "$TASK_SCRATCH/no-pan-a.tsv"
   python3 tools/audio/build-s1-ym-busy-program.py --output "$TASK_SCRATCH/program-a.json"
   python3 tools/audio/build-s1-ym-busy-program.py --output "$TASK_SCRATCH/program-b.json"
@@ -208,9 +253,16 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
   mvn -v
   mvn -Dmse=off -Dtest=com.openggf.audio.smps.TestSonic1YmSourceProgramTiming test
   git add tools/audio/build-s1-ym-busy-program.py \
+    tools/bizhawk-headless/native/gpgx-audio-lab/0001-trace-ym-write-cycles.patch \
+    tools/bizhawk-headless/native/gpgx-audio-lab/capture-ym-write-timing.sh \
+    tools/bizhawk-headless/native/gpgx-audio-lab/build-representative-ledger.sh \
+    tools/bizhawk-headless/tests/GpgxYmWriteTimingLabTests.cs \
     docs/architecture/research/audio/s1-fm5-ym-busy-write-program-v1.json \
     docs/architecture/research/audio/s1-fm5-ym-busy-write-program-v1.md \
     docs/architecture/research/audio/s1-ring-no-pan-ym-write-instruction-ledger-v1.tsv \
+    docs/architecture/research/audio/s1-ring-ym-write-instruction-ledger-v1.tsv \
+    docs/architecture/research/audio/s1-ring-ym-write-audit-v2.json \
+    docs/architecture/research/audio/s2-ringright-ym-write-audit-v2.json \
     docs/architecture/designs/audio/2026-08-23-s1-ym-write-timing-profile-design.md \
     docs/architecture/plans/audio/2026-08-23-s1-ym-write-timing-profile-plan.md \
     src/test/java/com/openggf/audio/smps/TestSonic1YmSourceProgramTiming.java
@@ -234,7 +286,7 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
 **Interfaces:**
 - Produces:
   `FirstPathShape`, `SourceProgram`, `ProgramVariant`, `ProgramWrite`,
-  `ProgramSection`, `ProgramState`, `VirtualYmBusyState`, `ResolvedWrite`, and
+  `ProgramSection`, `ProgramState`, `ResolvedWrite`, and
   `YmSourceProgramResolver.resolveNext(...)` exactly as specified by the design.
 - Preserves: `Segment` fixed-vector construction and all S3K profile equality.
 
@@ -249,8 +301,11 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
 
   Assert row zero due at service cursor; pending tail and row zero share `C`
   with lower/higher ordinals; row one is `> C`; voice-to-pan-to-key-off carries
-  busy state; no-pan skips only its authenticated branch; wrong section,
-  register, value, shape, or final state fails before publication.
+  one cursor; no-pan skips only its authenticated branch; wrong section,
+  port/register, fixed key-off/key-on value, shape, or final state fails before
+  publication. Exercise all 42 service-cursor residues. Variable ROM-owned
+  voice/TL/pan/frequency values must remain accepted and are checked by the ROM
+  playback tests.
 
 - [ ] **Step 3: Run and observe missing-type/behavior RED.**
 
@@ -261,11 +316,14 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
 
 - [ ] **Step 4: Implement the immutable types and resolver minimally.**
 
-  Use checked `Math.addExact`/`multiplyExact`. Row zero initializes
-  `VirtualYmBusyState(cursor, 47)`; later rows advance internal frontiers in
-  1,008-master-cycle steps, subtract 24 busy cycles per step, and execute exact
-  source-loop costs until the status read is ready. Do not inspect live chip or
-  gameplay state.
+  Use checked `Math.addExact`. Row zero anchors at the service cursor and sets
+  `ymClock = addExact(floorDiv(due, 42), due % 42 == 0 ? 0 : 1)` then
+  `busyUntil = multiplyExact(addExact(ymClock, 32), 42)`; never implement
+  ceiling as unchecked `due+41`. Each later row begins at
+  `lastDue+fixedBeforePoll`, adds the checked 259-cycle loop while the status
+  cycle is below `busyUntil`, publishes after the checked ready-to-write tail,
+  and recomputes the deadline. Keep this state continuous across sections. Do
+  not inspect the live chip, gameplay state, or captured final write gaps.
 
 - [ ] **Step 5: Add `supports(kind, variant)` and ownership without changing S3K.**
 
@@ -335,6 +393,11 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
   only for SFX FM5 and an accepted shape. Store only the shape/program-progress
   bits needed across helper calls; capture them in the existing opaque track
   snapshot and live-command token path. Keep controls private/package-private.
+  Keep driver-service reservation lookahead separate from this classifier:
+  from the untouched cursor it may skip exactly one fixed-width, non-writing
+  S1 F0 ModSet before requiring EF, then must reuse the same post-EF
+  shape/carrier proof. Pin retail C1 Break Item as the positive prefix case and
+  a SetVoice-to-rest effect as an immediate, no-reservation control.
 
 - [ ] **Step 5: Prove profile identities without installing S1 yet.**
 
@@ -481,9 +544,13 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
 
 - [ ] **Step 5: Add architecture guards.**
 
-  Reject public source-program controls, runtime reads of
-  `docs/architecture/research/audio`, game/sound/zone switches in shared timing
-  code, uncaptured final mutable fields, and extra transaction capture sites.
+  Reject source-program controls on `SmpsSequencer` or application-facing
+  owners outside the existing injected `Synthesizer` transaction boundary,
+  runtime reads of `docs/architecture/research/audio`, game/sound/zone switches
+  in shared timing code, uncaptured final mutable fields, and extra transaction
+  capture sites. The two `Synthesizer` methods are the deliberately narrow
+  hardware-publication port used by the sequencer and implemented by the
+  driver; they are not gameplay controls.
 
 - [ ] **Step 6: Run, mutate one guard, restore, and rerun GREEN.**
 
@@ -528,11 +595,15 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
 
 - [ ] **Step 1: Add production-oracle RED tests.**
 
-  Resolve every retained isolated/overlap Ring group from its first-write phase,
-  require exact 30/31 register/value and relative-cycle vectors, replay each
-  saved 3,624-byte YM state, and require timed attenuation distance from native
-  to be lower than atomic for every predeclared group metric. Trace bytes may be
-  read only by tests.
+  Require exact source-derived 30/31 register order and the dynamic schedule for
+  every service-cursor residue modulo 42. Replay the full **42 residues × every
+  retained isolated/overlap Ring state** matrix. For each residue independently,
+  sum L1 attenuation error over all retained states and require that sum to be no
+  larger than the atomic sum over those same states; require at least one residue
+  and the full matrix total to be strictly better. Report every residue aggregate
+  plus every per-state result, so a consistently regressing runtime phase cannot
+  be hidden by another phase. Record the observed 2,590-master-cycle refresh
+  spread as bounded omitted 68K behavior. Trace bytes are test-only.
 
 - [ ] **Step 2: Add ROM playback RED tests.**
 
@@ -680,5 +751,5 @@ artifacts, retained GPGX/BizHawk native oracle, SMPS ROM loaders.
   gate each map to Tasks 1-7.
 - Placeholder scan: no TBD/TODO or unspecified implementation decision remains.
 - Type consistency: `FirstPathShape`, `SourceProgram`, `ProgramState`,
-  `VirtualYmBusyState`, `ResolvedWrite`, `supports(...)`, and
+  `ProgramWrite`, `ResolvedWrite`, `supports(...)`, and
   `TimingOwnership.EXCLUSIVE_SFX_FM5` are introduced before consumption.

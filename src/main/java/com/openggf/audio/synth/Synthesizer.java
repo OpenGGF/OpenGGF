@@ -2,6 +2,7 @@ package com.openggf.audio.synth;
 
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.YmServiceTimingProfile;
+import com.openggf.audio.smps.YmSourceProgramTiming;
 
 public interface Synthesizer {
     interface YmTimingScope extends AutoCloseable {
@@ -31,6 +32,19 @@ public interface Synthesizer {
             Object source,
             YmServiceTimingProfile.SegmentKind kind,
             YmServiceTimingProfile.Variant variant) {
+        return YmTimingScope.immediate();
+    }
+
+    default YmTimingScope beginYmSourceProgram(
+            Object source,
+            YmSourceProgramTiming.SourceProgram program,
+            YmServiceTimingProfile.SegmentKind firstSection) {
+        return YmTimingScope.immediate();
+    }
+
+    default YmTimingScope enterYmSourceProgramSection(
+            Object source,
+            YmServiceTimingProfile.SegmentKind section) {
         return YmTimingScope.immediate();
     }
 

@@ -1947,7 +1947,21 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.pan = ((val & 0x80) != 0 ? 0x80 : 0) | ((val & 0x40) != 0 ? 0x40 : 0);
             t.ams = (val >> 4) & 0x3;
             t.fms = val & 0x7;
-            applyFmPanAmsFms(t);
+            if (t.firstFm5AdmissionAttackPending
+                    && t.firstFmPathShape
+                    == YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
+                    && !t.firstFmPathPanConsumed) {
+                try (Synthesizer.YmTimingScope ignored =
+                             synth.enterYmSourceProgramSection(
+                                     this,
+                                     YmServiceTimingProfile.SegmentKind
+                                             .TRACK_PAN_WRITE)) {
+                    applyFmPanAmsFms(t);
+                }
+                t.firstFmPathPanConsumed = true;
+            } else {
+                applyFmPanAmsFms(t);
+            }
         }
     }
 
@@ -2088,6 +2102,35 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 t.firstFm5AdmissionVoicePending = false;
                 return;
             }
+            if (t.firstFmPathShape != null) {
+                int carrierMask = ALGO_OUT_MASK[t.voiceData[0] & 0x07];
+                YmSourceProgramTiming.SourceProgram program;
+                try {
+                    program = config.getYmServiceTimingProfile()
+                            .requireSourceProgram(t.firstFmPathShape,
+                                    carrierMask);
+                } catch (IllegalArgumentException unsupportedVariant) {
+                    t.firstFmPathShape = null;
+                    t.firstFm5AdmissionVoicePending = false;
+                    t.firstFm5AdmissionAttackPending = false;
+                    if (!t.tieNext) {
+                        refreshInstrument(t);
+                    }
+                    return;
+                }
+                if (!t.tieNext) {
+                    try (Synthesizer.YmTimingScope ignored =
+                                 synth.beginYmSourceProgram(
+                                         this, program,
+                                         YmServiceTimingProfile.SegmentKind
+                                                 .FM_VOICE_UPLOAD)) {
+                        refreshInstrument(t);
+                    }
+                    t.firstFm5AdmissionAttackPending = true;
+                }
+                t.firstFm5AdmissionVoicePending = false;
+                return;
+            }
             YmServiceTimingProfile.Variant variant = firstAttackVariant(t);
             try (Synthesizer.YmTimingScope ignored = synth.beginYmTiming(
                     this, YmServiceTimingProfile.SegmentKind.SFX_MAX_RELEASE,
@@ -2135,11 +2178,57 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         // The authenticated path reaches an actual note (80..DF), optionally
         // followed by a duration. Duration-only reuse and every coordination
         // or control-flow command remain on the immediate path.
-        if (first < 0x80 || first >= 0xE0) {
+        if (first <= 0x80 || first >= 0xE0) {
             return null;
         }
         return pan ? YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
                 : YmSourceProgramTiming.FirstPathShape.VOICE_NOTE;
+    }
+
+    /** Driver-owned predicate used only to reserve the exclusive timed FM5 horizon. */
+    public boolean hasReservableExclusiveYmSourceProgram() {
+        for (Track track : tracks) {
+            if (track.type == TrackType.FM && track.channelId == 4
+                    && (track.firstFm5AdmissionAttackPending
+                    && track.firstFmPathShape != null
+                    || track.firstFm5AdmissionVoicePending
+                    && (track.firstFmPathShape != null
+                    || eligibleFirstFmPath(track) != null))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private YmSourceProgramTiming.FirstPathShape eligibleFirstFmPath(Track track) {
+        int cursor = track.pos;
+        // S1 Break Item executes one non-writing smpsModSet before smpsSetvoice.
+        // Reservation may look through that exact fixed-width prefix, while the
+        // source-program classifier itself still begins after EF's voice byte.
+        if (cursor < programView.dataLength()
+                && (programView.dataByteAt(cursor) & 0xff) == 0xf0) {
+            cursor += 5;
+        }
+        if (cursor + 1 >= programView.dataLength()
+                || (programView.dataByteAt(cursor) & 0xff) != 0xef) {
+            return null;
+        }
+        int voiceId = programView.dataByteAt(cursor + 1) & 0xff;
+        if (programView.voiceLength(voiceId) <= 0) {
+            return null;
+        }
+        YmSourceProgramTiming.FirstPathShape shape =
+                classifyFirstFmPath(programView, cursor + 2);
+        if (shape == null) {
+            return null;
+        }
+        int carrierMask = ALGO_OUT_MASK[programView.voiceByteAt(voiceId, 0) & 0x07];
+        try {
+            config.getYmServiceTimingProfile().requireSourceProgram(shape, carrierMask);
+            return shape;
+        } catch (IllegalArgumentException unsupported) {
+            return null;
+        }
     }
 
     private void loadInitialVoice(Track t, int voiceId) {
@@ -2326,7 +2415,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             int chVal = (port == 0) ? ch : (ch + 4); // YM2612 0x28: bit2 selects upper port
             boolean timedFirstAttack = t.firstFm5AdmissionAttackPending
                     && !preventAttack && hwCh == 4;
+            boolean sourceTimedFirstAttack = timedFirstAttack
+                    && t.firstFmPathShape != null;
             YmServiceTimingProfile.Variant firstAttack = timedFirstAttack
+                    && !sourceTimedFirstAttack
                     ? firstAttackVariant(t) : null;
 
             // SMPSPlay DoNoteOn: skip KEY_OFF and KEY_ON when tieNext (HOLD) is set.
@@ -2339,10 +2431,15 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
                 if (timedFirstAttack) {
                     try (Synthesizer.YmTimingScope ignored =
-                                 synth.beginYmTiming(this,
-                                         YmServiceTimingProfile.SegmentKind
-                                                 .KEY_OFF,
-                                         firstAttack)) {
+                                 sourceTimedFirstAttack
+                                         ? synth.enterYmSourceProgramSection(
+                                                 this,
+                                                 YmServiceTimingProfile
+                                                         .SegmentKind.KEY_OFF)
+                                         : synth.beginYmTiming(this,
+                                                 YmServiceTimingProfile
+                                                         .SegmentKind.KEY_OFF,
+                                                 firstAttack)) {
                         synth.writeFm(this, 0, 0x28, chVal);
                     }
                 } else {
@@ -2351,10 +2448,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
 
             try (Synthesizer.YmTimingScope ignored = timedFirstAttack
-                    ? synth.beginYmTiming(this,
-                            YmServiceTimingProfile.SegmentKind
-                                    .FREQUENCY_AND_KEY_ON,
-                            firstAttack)
+                    ? sourceTimedFirstAttack
+                            ? synth.enterYmSourceProgramSection(this,
+                                    YmServiceTimingProfile.SegmentKind
+                                            .FREQUENCY_AND_KEY_ON)
+                            : synth.beginYmTiming(this,
+                                    YmServiceTimingProfile.SegmentKind
+                                            .FREQUENCY_AND_KEY_ON,
+                                    firstAttack)
                     : Synthesizer.YmTimingScope.immediate()) {
                 boolean z80Modulation = config.getModAlgo()
                         == SmpsSequencerConfig.ModAlgo.MOD_Z80
@@ -2397,6 +2498,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
             if (timedFirstAttack) {
                 t.firstFm5AdmissionAttackPending = false;
+                t.firstFmPathShape = null;
+                t.firstFmPathPanConsumed = false;
             }
 
         } else {
