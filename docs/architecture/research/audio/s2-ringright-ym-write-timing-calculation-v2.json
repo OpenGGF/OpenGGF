@@ -6,7 +6,7 @@
   "ledger": {
     "path": "s2-ringright-ym-write-instruction-ledger-v1.tsv",
     "sha256": "b8f632aab340f07e2ed863944f2cfd3d39badbe0410a23979ebb10dd81e86372",
-    "full_capture_sha256": "d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c",
+    "full_capture_sha256": "598cad4a897bcb46d764d4bf334639c5f5f1007b923aa68e866a269402d4ffcb",
     "row_count": 953
   },
   "clock": {

@@ -374,6 +374,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         // state is semantic track state, not a sound-id or frame predicate.
         private boolean firstFm5AdmissionVoicePending;
         private boolean firstFm5AdmissionAttackPending;
+        private YmSourceProgramTiming.FirstPathShape firstFmPathShape;
+        private boolean firstFmPathPanConsumed;
         // SSG-EG per-operator state (S3K FF 05), preserved across track restoration.
         public final int[] ssgEg = new int[4];
         // DAC mute state for fade-in
@@ -1945,7 +1947,21 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.pan = ((val & 0x80) != 0 ? 0x80 : 0) | ((val & 0x40) != 0 ? 0x40 : 0);
             t.ams = (val >> 4) & 0x3;
             t.fms = val & 0x7;
-            applyFmPanAmsFms(t);
+            if (t.firstFm5AdmissionAttackPending
+                    && t.firstFmPathShape
+                    == YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
+                    && !t.firstFmPathPanConsumed) {
+                try (Synthesizer.YmTimingScope ignored =
+                             synth.enterYmSourceProgramSection(
+                                     this,
+                                     YmServiceTimingProfile.SegmentKind
+                                             .TRACK_PAN_WRITE)) {
+                    applyFmPanAmsFms(t);
+                }
+                t.firstFmPathPanConsumed = true;
+            } else {
+                applyFmPanAmsFms(t);
+            }
         }
     }
 
@@ -2066,9 +2082,52 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     @Override
     public void loadVoice(Track t, int voiceId) {
         if (t.firstFm5AdmissionVoicePending) {
+            if (config.getFmVoiceWriteProfile()
+                    == SmpsSequencerConfig.FmVoiceWriteProfile.S1_68K) {
+                t.firstFmPathShape = classifyFirstFmPath(programView, t.pos);
+                t.firstFmPathPanConsumed = false;
+                if (t.firstFmPathShape == null) {
+                    t.firstFm5AdmissionVoicePending = false;
+                    t.firstFm5AdmissionAttackPending = false;
+                    prepareVoiceSelection(t);
+                    if (selectVoice(t, voiceId) && !t.tieNext) {
+                        refreshInstrument(t);
+                    }
+                    return;
+                }
+            }
             boolean selected = selectVoice(t, voiceId);
             if (!selected) {
                 prepareVoiceSelection(t);
+                t.firstFm5AdmissionVoicePending = false;
+                return;
+            }
+            if (t.firstFmPathShape != null) {
+                int carrierMask = ALGO_OUT_MASK[t.voiceData[0] & 0x07];
+                YmSourceProgramTiming.SourceProgram program;
+                try {
+                    program = config.getYmServiceTimingProfile()
+                            .requireSourceProgram(t.firstFmPathShape,
+                                    carrierMask);
+                } catch (IllegalArgumentException unsupportedVariant) {
+                    t.firstFmPathShape = null;
+                    t.firstFm5AdmissionVoicePending = false;
+                    t.firstFm5AdmissionAttackPending = false;
+                    if (!t.tieNext) {
+                        refreshInstrument(t);
+                    }
+                    return;
+                }
+                if (!t.tieNext) {
+                    try (Synthesizer.YmTimingScope ignored =
+                                 synth.beginYmSourceProgram(
+                                         this, program,
+                                         YmServiceTimingProfile.SegmentKind
+                                                 .FM_VOICE_UPLOAD)) {
+                        refreshInstrument(t);
+                    }
+                    t.firstFm5AdmissionAttackPending = true;
+                }
                 t.firstFm5AdmissionVoicePending = false;
                 return;
             }
@@ -2096,6 +2155,79 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 // live channel mid-sustain.
                 refreshInstrument(t);
             }
+        }
+    }
+
+    static YmSourceProgramTiming.FirstPathShape classifyFirstFmPath(
+            SmpsProgramView source, int position) {
+        Objects.requireNonNull(source, "source");
+        if (position < 0 || position >= source.dataLength()) {
+            return null;
+        }
+        int cursor = position;
+        int first = source.dataByteAt(cursor) & 0xff;
+        boolean pan = false;
+        if (first == 0xE0) {
+            if (cursor + 2 >= source.dataLength()) {
+                return null;
+            }
+            pan = true;
+            cursor += 2; // command plus its parameter
+            first = source.dataByteAt(cursor) & 0xff;
+        }
+        // The authenticated path reaches an actual note (80..DF), optionally
+        // followed by a duration. Duration-only reuse and every coordination
+        // or control-flow command remain on the immediate path.
+        if (first <= 0x80 || first >= 0xE0) {
+            return null;
+        }
+        return pan ? YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
+                : YmSourceProgramTiming.FirstPathShape.VOICE_NOTE;
+    }
+
+    /** Driver-owned predicate used only to reserve the exclusive timed FM5 horizon. */
+    public boolean hasReservableExclusiveYmSourceProgram() {
+        for (Track track : tracks) {
+            if (track.type == TrackType.FM && track.channelId == 4
+                    && (track.firstFm5AdmissionAttackPending
+                    && track.firstFmPathShape != null
+                    || track.firstFm5AdmissionVoicePending
+                    && (track.firstFmPathShape != null
+                    || eligibleFirstFmPath(track) != null))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private YmSourceProgramTiming.FirstPathShape eligibleFirstFmPath(Track track) {
+        int cursor = track.pos;
+        // S1 Break Item executes one non-writing smpsModSet before smpsSetvoice.
+        // Reservation may look through that exact fixed-width prefix, while the
+        // source-program classifier itself still begins after EF's voice byte.
+        if (cursor < programView.dataLength()
+                && (programView.dataByteAt(cursor) & 0xff) == 0xf0) {
+            cursor += 5;
+        }
+        if (cursor + 1 >= programView.dataLength()
+                || (programView.dataByteAt(cursor) & 0xff) != 0xef) {
+            return null;
+        }
+        int voiceId = programView.dataByteAt(cursor + 1) & 0xff;
+        if (programView.voiceLength(voiceId) <= 0) {
+            return null;
+        }
+        YmSourceProgramTiming.FirstPathShape shape =
+                classifyFirstFmPath(programView, cursor + 2);
+        if (shape == null) {
+            return null;
+        }
+        int carrierMask = ALGO_OUT_MASK[programView.voiceByteAt(voiceId, 0) & 0x07];
+        try {
+            config.getYmServiceTimingProfile().requireSourceProgram(shape, carrierMask);
+            return shape;
+        } catch (IllegalArgumentException unsupported) {
+            return null;
         }
     }
 
@@ -2283,7 +2415,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             int chVal = (port == 0) ? ch : (ch + 4); // YM2612 0x28: bit2 selects upper port
             boolean timedFirstAttack = t.firstFm5AdmissionAttackPending
                     && !preventAttack && hwCh == 4;
+            boolean sourceTimedFirstAttack = timedFirstAttack
+                    && t.firstFmPathShape != null;
             YmServiceTimingProfile.Variant firstAttack = timedFirstAttack
+                    && !sourceTimedFirstAttack
                     ? firstAttackVariant(t) : null;
 
             // SMPSPlay DoNoteOn: skip KEY_OFF and KEY_ON when tieNext (HOLD) is set.
@@ -2296,10 +2431,15 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
                 if (timedFirstAttack) {
                     try (Synthesizer.YmTimingScope ignored =
-                                 synth.beginYmTiming(this,
-                                         YmServiceTimingProfile.SegmentKind
-                                                 .KEY_OFF,
-                                         firstAttack)) {
+                                 sourceTimedFirstAttack
+                                         ? synth.enterYmSourceProgramSection(
+                                                 this,
+                                                 YmServiceTimingProfile
+                                                         .SegmentKind.KEY_OFF)
+                                         : synth.beginYmTiming(this,
+                                                 YmServiceTimingProfile
+                                                         .SegmentKind.KEY_OFF,
+                                                 firstAttack)) {
                         synth.writeFm(this, 0, 0x28, chVal);
                     }
                 } else {
@@ -2308,10 +2448,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
 
             try (Synthesizer.YmTimingScope ignored = timedFirstAttack
-                    ? synth.beginYmTiming(this,
-                            YmServiceTimingProfile.SegmentKind
-                                    .FREQUENCY_AND_KEY_ON,
-                            firstAttack)
+                    ? sourceTimedFirstAttack
+                            ? synth.enterYmSourceProgramSection(this,
+                                    YmServiceTimingProfile.SegmentKind
+                                            .FREQUENCY_AND_KEY_ON)
+                            : synth.beginYmTiming(this,
+                                    YmServiceTimingProfile.SegmentKind
+                                            .FREQUENCY_AND_KEY_ON,
+                                    firstAttack)
                     : Synthesizer.YmTimingScope.immediate()) {
                 boolean z80Modulation = config.getModAlgo()
                         == SmpsSequencerConfig.ModAlgo.MOD_Z80
@@ -2354,6 +2498,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
             if (timedFirstAttack) {
                 t.firstFm5AdmissionAttackPending = false;
+                t.firstFmPathShape = null;
+                t.firstFmPathPanConsumed = false;
             }
 
         } else {
@@ -2984,6 +3130,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void applyFmPanAmsFms(Track t) {
         if (t.type != TrackType.FM)
             return;
+        writePanAmsFms(t);
+    }
+
+    private void applyDacPanAmsFms(Track t) {
+        if (t.type != TrackType.DAC)
+            return;
+        writePanAmsFms(t);
+    }
+
+    private void writePanAmsFms(Track t) {
         int hwCh = t.channelId;
         int port = (hwCh < 3) ? 0 : 1;
         int ch = (hwCh % 3);
@@ -3362,16 +3518,26 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
     }
 
-    /** Restores the active, non-overridden FM tracks after a driver pause. */
-    public void resumeFmAfterPause(boolean reloadVoice) {
+    /** Restores active, non-overridden tracks after a driver pause. */
+    public void resumeAfterPause(SmpsSequencerConfig.PausePolicy policy) {
+        boolean reloadVoice = policy
+                == SmpsSequencerConfig.PausePolicy.S2_SILENCE_RELOAD;
+        boolean restoreDacPan = policy
+                == SmpsSequencerConfig.PausePolicy.S1_PAN_KEYOFF;
         for (Track track : tracks) {
-            if (!track.active || track.overridden || track.type != TrackType.FM) {
+            if (!track.active || track.overridden) {
                 continue;
             }
-            if (reloadVoice) {
-                refreshInstrument(track);
-            } else {
-                applyFmPanAmsFms(track);
+            if (track.type == TrackType.FM) {
+                if (reloadVoice) {
+                    refreshInstrument(track);
+                } else {
+                    applyFmPanAmsFms(track);
+                }
+            } else if (restoreDacPan && track.type == TrackType.DAC) {
+                // S1 FixBugs=0 PauseMusic deliberately includes all six FM
+                // tracks plus the DAC track in its unpause panning loop.
+                applyDacPanAmsFms(track);
             }
         }
     }
@@ -3666,7 +3832,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 track.fmVolEnvOpMask,
                 track.forceRefresh,
                 (track.firstFm5AdmissionVoicePending ? 1 : 0)
-                        | (track.firstFm5AdmissionAttackPending ? 2 : 0),
+                        | (track.firstFm5AdmissionAttackPending ? 2 : 0)
+                        | (track.firstFmPathShape
+                                == YmSourceProgramTiming.FirstPathShape.VOICE_NOTE ? 4 : 0)
+                        | (track.firstFmPathShape
+                                == YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE ? 8 : 0)
+                        | (track.firstFmPathPanConsumed ? 16 : 0),
                 track.ssgEg,
                 track.dacMuted,
                 track.modStepInEffect,
@@ -3759,6 +3930,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 (snapshot.internalStateFlags() & 1) != 0;
         track.firstFm5AdmissionAttackPending =
                 (snapshot.internalStateFlags() & 2) != 0;
+        track.firstFmPathShape = (snapshot.internalStateFlags() & 8) != 0
+                ? YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
+                : (snapshot.internalStateFlags() & 4) != 0
+                        ? YmSourceProgramTiming.FirstPathShape.VOICE_NOTE : null;
+        track.firstFmPathPanConsumed =
+                (snapshot.internalStateFlags() & 16) != 0;
         copyInto(snapshot.ssgEg(), track.ssgEg);
         track.dacMuted = snapshot.dacMuted();
         track.modStepInEffect = snapshot.modStepInEffect();

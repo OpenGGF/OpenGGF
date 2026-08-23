@@ -126,7 +126,7 @@ lab_patch_sha=$(sha256 "$lab_patch")
     == 9f49e334ec8a8f73e878b8c1b6b207baabc054e085e7af95e3dd07e77df9280c ]] \
   || fail 'production observer patch differs'
 [[ "$lab_patch_sha" \
-    == 9c204d55e1c7524bf94180aa930d6be6a88e332d5227f187a2ed3d048b6bd375 ]] \
+    == aa36d6e7b7c2e8fff7bd89d4e89ae54ea40cccc17eed64ee9cabad4fbc06bfce ]] \
   || fail 'diagnostic YM patch differs'
 
 stage=$(mktemp -d "$output_parent/.ym-write-lab.XXXXXX")
@@ -184,7 +184,7 @@ compressed_core="$stage/gpgx.wbx.zst"
 core_sha=$(sha256 "$core")
 compressed_core_sha=$(sha256 "$compressed_core")
 [[ "$compressed_core_sha" \
-    == 3e2cddbb22c93676046f980926fd14d0689bb5bfd36ee75d0d630c2289b940a3 ]] \
+    == f34616f5b9756cbe9cd5881f009eb3e27d2e53bf38d2c1b7ea1d5a2e833938c9 ]] \
   || fail "compressed diagnostic core SHA-256 differs: $compressed_core_sha"
 
 cp -a -- "$stock_path/." "$stage/install/"
@@ -197,6 +197,7 @@ OPENGGF_YM_TIMING_PATCH_SHA256="$lab_patch_sha" \
 OPENGGF_YM_TIMING_CORE_SHA256="$compressed_core_sha" \
 OPENGGF_YM_TIMING_CAPTURE_SCRIPT_SHA256="$capture_script_sha" \
 OPENGGF_YM_TIMING_GAME="$game" \
+OPENGGF_YM_SOURCE_PROGRAM_PATH="$repo_root/docs/architecture/research/audio/s1-fm5-ym-busy-write-program-v1.json" \
 S1_ROM_PATH="$rom_path" S1_BK2_PATH="$movie_path" \
 S2_ROM_PATH="$rom_path" S2_BK2_PATH="$movie_path" \
 S3K_ROM_PATH="$rom_path" S3K_BK2_PATH="$movie_path" \

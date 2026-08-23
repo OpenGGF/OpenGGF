@@ -83,6 +83,46 @@ class TestSmpsPauseProtocol {
     }
 
     @Test
+    void s1ResumeRestoresTheCurrentMusicDacTrackPanning() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .fmChannelOrder(new int[] {0x16})
+                .pausePolicy(SmpsSequencerConfig.PausePolicy.S1_PAN_KEYOFF)
+                .build();
+        SmpsSequencer sequencer = new SmpsSequencer(
+                new OneFmTrackData(), AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), config);
+        assertEquals(1, sequencer.trackCount());
+        assertEquals(SmpsSequencer.TrackType.DAC,
+                sequencer.captureSnapshot().tracks().getFirst().type());
+        driver.addSequencer(sequencer, false);
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(recording(writes));
+
+        driver.pauseAudio();
+        writes.clear();
+        driver.resumeAudio();
+
+        assertEquals(List.of("ym:1:b6:c0"), writes,
+                "S1 PauseMusic restores the active DAC track's FM6 pan");
+    }
+
+    @Test
+    void s3kResumeLeavesItsContinuouslyLiveDacPanningUntouched() {
+        SmpsDriver driver = driverWithOneDacTrack(
+                SmpsSequencerConfig.PausePolicy.S3K_FM1_TO_5);
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(recording(writes));
+
+        driver.pauseAudio();
+        writes.clear();
+        driver.resumeAudio();
+
+        assertTrue(writes.isEmpty(),
+                "S3K unpause must not reprogram its live FM6/DAC channel");
+    }
+
+    @Test
     void pausedHardwareAdvanceMovesDacWithoutServicingTracks() {
         SmpsDriver driver = new SmpsDriver();
         SmpsSequencer sequencer = new SmpsSequencer(
@@ -165,6 +205,21 @@ class TestSmpsPauseProtocol {
         driver.resumeAudio();
 
         return writes;
+    }
+
+    private static SmpsDriver driverWithOneDacTrack(
+            SmpsSequencerConfig.PausePolicy policy) {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer sequencer = new SmpsSequencer(
+                new OneFmTrackData(), AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), new SmpsSequencerConfig.Builder()
+                        .fmChannelOrder(new int[] {0x16})
+                        .pausePolicy(policy)
+                        .build());
+        assertEquals(SmpsSequencer.TrackType.DAC,
+                sequencer.captureSnapshot().tracks().getFirst().type());
+        driver.addSequencer(sequencer, false);
+        return driver;
     }
 
     private static ChipWriteObserver recording(List<String> writes) {

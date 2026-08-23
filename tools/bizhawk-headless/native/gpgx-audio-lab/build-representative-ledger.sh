@@ -77,15 +77,21 @@ function source(pc, j) {
 ARGIND == 1 && FNR == 1 { next }
 ARGIND == 1 { map_n++; map_game[map_n]=$1; map_start[map_n]=hex($2); map_end[map_n]=hex($3); map_label[map_n]=$4; map_file[map_n]=$5; map_line_start[map_n]=$6; map_line_end[map_n]=$7; next }
 ARGIND == 2 && FNR == 1 { next }
-ARGIND == 2 && $2 == 0 { n++; frame[n]=$1; after[n]=$3; cpu[n]=$4; pc_text[n]=$5; op_text[n]=$6; cycle[n]=$7; pc[n]=hex($5); op[n]=hex($6) }
+ARGIND == 2 && $2 == 0 { n++; frame[n]=$1; after[n]=$3; cpu[n]=$4; pc_text[n]=$5; op_text[n]=$6; cycle[n]=$7; refresh[n]=$8; pc[n]=hex($5); op[n]=hex($6) }
 END {
-  print "occurrence_ordinal","frame","after_source_ordinal","cpu","pc","opcode","start_master_cycle","next_pc","delta_to_next_start","flow","branch_outcome","roles","source"
+  if (game == "s1")
+    print "occurrence_ordinal","frame","after_source_ordinal","cpu","pc","opcode","start_master_cycle","refresh_delay_total_master_cycles","next_pc","delta_to_next_start","flow","branch_outcome","roles","source"
+  else
+    print "occurrence_ordinal","frame","after_source_ordinal","cpu","pc","opcode","start_master_cycle","next_pc","delta_to_next_start","flow","branch_outcome","roles","source"
   for (i=1; i<=n; i++) {
     flow = flow_kind(op[i], pc[i]); outcome = "n/a"; next_pc_value = i<n ? pc_text[i+1] : "key_on"
     delta = i<n ? cycle[i+1]-cycle[i] : "key_on"
     if (conditional(op[i])) outcome = (i<n && pc[i+1] == sequential_pc(op[i], pc[i])) ? "not_taken" : "taken"
     else if (flow != "linear") outcome = "target=" next_pc_value
     citation = source(pc[i]); if (citation == "UNKNOWN") { print "unmapped source PC " pc_text[i] > "/dev/stderr"; exit 3 }
-    print i-1,frame[i],after[i],cpu[i],pc_text[i],op_text[i],cycle[i],next_pc_value,delta,flow,outcome,roles(op[i],pc[i],flow),citation
+    if (game == "s1")
+      print i-1,frame[i],after[i],cpu[i],pc_text[i],op_text[i],cycle[i],refresh[i],next_pc_value,delta,flow,outcome,roles(op[i],pc[i],flow),citation
+    else
+      print i-1,frame[i],after[i],cpu[i],pc_text[i],op_text[i],cycle[i],next_pc_value,delta,flow,outcome,roles(op[i],pc[i],flow),citation
   }
 }' "$source_map" "$input" > "$output"

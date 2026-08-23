@@ -428,6 +428,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 1 DAC resume and FM5 sound-effect onset now follow the shipped driver.** Pausing or
+  losing window focus no longer leaves the currently playing music track's DAC channel unpanned
+  after resume. FM5 sound effects also retain the source-derived 68K/YM2612 busy timing between
+  voice upload, optional panning, and the first note, preventing the outgoing music instrument
+  from leaking into the first SFX sample. The timing path is restricted to authenticated S1
+  bytecode shapes, remains transactional across rewind and observer failures, and leaves unsupported
+  S1 effects plus the independently owned S2 and S3K timing profiles unchanged.
+
 - **S3K FM sound-effect service writes now retain the locked-on driver's source timing.** The
   Blue Sphere collection sound no longer collapses its admission, voice upload, first attack, and
   completion/restore writes into a single YM2612 instant, fixing the attenuated first replay after

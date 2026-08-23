@@ -59,7 +59,7 @@ Inputs:
 | S2 ROM | `$OPENGGF_MAIN_WORKSPACE/s2.gen`, SHA-1 `8bca5dcef1af3e00098666fd892dc1c2a76333f9` |
 | S2 BK2 | `sonic-2-sonic-tails-complete-emeralds.bk2`, SHA-256 `e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5` |
 | BizHawk/GPGX | BizHawk 2.11 commit `427556b5...`; GPGX commit `051d430d...` |
-| Diagnostic patch/core | SHA-256 `9c204d55e1c7524bf94180aa930d6be6a88e332d5227f187a2ed3d048b6bd375` / `3e2cddbb22c93676046f980926fd14d0689bb5bfd36ee75d0d630c2289b940a3` |
+| Diagnostic patch/core | SHA-256 `aa36d6e7b7c2e8fff7bd89d4e89ae54ea40cccc17eed64ee9cabad4fbc06bfce` / `f34616f5b9756cbe9cd5881f009eb3e27d2e53bf38d2c1b7ea1d5a2e833938c9` |
 
 ## Sonic 1 source calculation
 
@@ -104,14 +104,24 @@ allows the key-off/restore path to complete.
 
 Deterministic A/B compact result:
 
-- JSON SHA-256 `a62c26df8363cfdcf622fdbbd31688032c2c3cfa6a51bde04101e8cdfa08c088`;
-- terminal payload `032dee96c0163e089b689c8095ce9c95842e9bdf3a60006bd14953f3e254070a`;
+- JSON SHA-256 `703aeda6b776f3d1a872b55cec021eba5ef0bdafd8610c05aa690b24335d3a69`;
+- terminal payload `88145bf1cb23cb575a33efc7ac245a66688cbb50da99e53063cdfe80a40c743a`;
 - raw writes `87265ee3d08d91128faef6338695c426f6697df127b0431b16d77ade6210a509`;
-- full instruction stream `b860dccea2be3c3bae9788fd4621e7fd57311e6c2d9e57ef34a5617222ce23aa`;
+- full instruction stream `6c519b99ae89803993233bd85f22c1b942021556ce2dbefab7c2eddb6e2a8751`;
 - canonical source map `96f514aa28a41038e6622f0237726cdbd0692301946ce974f58c9e789dfddd3c`;
-- representative ledger `59000b1cbc90a3340e6f9142dfa96fd9ddea982af2d653ab5e52abf40557b689`;
+- representative pan ledger `a6d385bc17a9efb79ee687897c3577fdc9f3225bd8f4212022cc09fe7a5ccf7a`;
+- selected no-pan ledger `85572eb4af5a875469c1cf1152536e7c86fb155e6babf7dfe9771ac8a0c657c0`;
 - six-column projection `06888e2d89794879947fa2256aaf3bb9ae0244e0c147f400dd6363bc4d42125c`;
 - FM5 samples `10ccfc1aa351f34e9b7be4b7eab44fb8003e73f8bef15bff3ba4218c50285534`.
+
+The later S1 production-profile capture adds an independently emitted source-
+cost/BUSY counterfactual lane to every saved native context. The checked
+program SHA-256 is
+`cc857e08a6f2b925c548cad4a56e0b54a407bf7c09931594319e2fb8cacbcf8a`.
+A/B outputs are byte-identical. Against native key-on attenuation, all 42 YM
+clock residues reduce aggregate L1 error across the 38 contexts: 11,764 falls
+to 9,188 for residues 14-21 and 9,221 otherwise. Captured relative write
+cycles remain comparison-only and never become runtime constants.
 
 ## Sonic 2 source calculation
 
@@ -155,11 +165,11 @@ the audit does not claim parity during simultaneous VDP DMA.
 
 Deterministic A/B compact result:
 
-- JSON SHA-256 `e3ce0fa19db864cfdbc79f7f53568c1cdb323ec8b7a1d536444f6e6f8ee9e56b`;
-- terminal payload `ac4566256ebd364bc085c3af8da7ff27884f8f26acee824a7979808ab4f08330`;
-- capture script `b518761c57e7123ad086e6560616929be5cf6a7d91280af4f61ce0d14f618b1e`;
+- JSON SHA-256 `61a24ac2fac867ac7672e29434e5590ab6257ae03ca416c8fd00652a177a81b3`;
+- terminal payload `83b479d9677d74c1579adab8a9730e59d3c2779c935f0f0785f6afc189f39e66`;
+- capture script `e187e2ca34f0c46a6213094d7a8059adad38136f6bca00e388e476c5eaa93f17`;
 - raw writes `ea68ebff17ad939b9b17040f7ce846a4bfef895a4401abcf8104a1e972f0179e`;
-- full instruction stream `d03eed2d2679b2287c626c5098b96140c22e3746e425a23901ef023998826c3c`;
+- full instruction stream `598cad4a897bcb46d764d4bf334639c5f5f1007b923aa68e866a269402d4ffcb`;
 - canonical source map `96f514aa28a41038e6622f0237726cdbd0692301946ce974f58c9e789dfddd3c`;
 - representative ledger `b8f632aab340f07e2ed863944f2cfd3d39badbe0410a23979ebb10dd81e86372`;
 - six-column projection `c4dbf980004f7b1af450a0889a6bc5ae8b443b5378cd0fb546d889dd8a1a54d2`;

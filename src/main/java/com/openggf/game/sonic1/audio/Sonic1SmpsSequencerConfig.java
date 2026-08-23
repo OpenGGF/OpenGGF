@@ -82,6 +82,7 @@ public final class Sonic1SmpsSequencerConfig {
                 .relativePointers(true)  // S1: PC-relative pointers for F6/F7/F8
                 .direct68kDriver(true)   // S1 writes the YM/PSG cores from the 68k driver
                 .fmVoiceWriteProfile(FmVoiceWriteProfile.S1_68K)
+                .ymServiceTimingProfile(Sonic1YmServiceTimingProfile.PROFILE)
                 // The shipped Sound_PlaySFX initializes track RAM only. SetVoice and the
                 // track's own note-off establish the takeover during UpdateMusic.
                 .fmSfxTakeoverMode(FmSfxTakeoverMode.REGISTER_SEQUENCE)
