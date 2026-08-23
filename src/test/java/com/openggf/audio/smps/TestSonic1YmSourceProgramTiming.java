@@ -134,6 +134,24 @@ class TestSonic1YmSourceProgramTiming {
                         0, 0xB1, 7_000, 6_500));
     }
 
+    @Test
+    void firstPathClassifierIsSideEffectFreeAndRejectsUnauditedControlFlow() {
+        assertEquals(YmSourceProgramTiming.FirstPathShape.VOICE_NOTE,
+                SmpsSequencer.classifyFirstFmPath(new BytesView(0x90, 0x04), 0));
+        assertEquals(YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE,
+                SmpsSequencer.classifyFirstFmPath(
+                        new BytesView(0xE0, 0x40, 0x90, 0x04), 0));
+        for (int command : new int[] {0xE3, 0xE6, 0xE7, 0xE8, 0xE9,
+                0xEF, 0xF2, 0xF6, 0xF7, 0xF8}) {
+            assertEquals(null, SmpsSequencer.classifyFirstFmPath(
+                    new BytesView(command, 0x00, 0x90, 0x04), 0));
+        }
+        assertEquals(null, SmpsSequencer.classifyFirstFmPath(
+                new BytesView(0xE0), 0));
+        assertEquals(null, SmpsSequencer.classifyFirstFmPath(
+                new BytesView(0xE0, 0x40, 0xE0, 0x40, 0x90), 0));
+    }
+
     private static void assertProgram(JsonNode program, String shape, int writes,
                                       int panWrites) throws IOException {
         assertEquals(shape, program.path("shape").asText());
@@ -184,6 +202,40 @@ class TestSonic1YmSourceProgramTiming {
                     MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (NoSuchAlgorithmException exception) {
             throw new AssertionError(exception);
+        }
+    }
+
+    private record BytesView(byte[] bytes) implements SmpsProgramView {
+        private BytesView(int... values) {
+            this(toBytes(values));
+        }
+
+        @Override public int dataLength() { return bytes.length; }
+        @Override public byte dataByteAt(int index) { return bytes[index]; }
+        @Override public int fmPointerCount() { return 0; }
+        @Override public int fmPointerAt(int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int fmKeyOffsetAt(int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int fmVolumeOffsetAt(int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int psgPointerCount() { return 0; }
+        @Override public int psgPointerAt(int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int psgKeyOffsetAt(int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int psgVolumeOffsetAt(int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int psgModEnvelopeAt(int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int psgInstrumentCount() { return 0; }
+        @Override public int psgInstrumentAt(int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int voiceLength(int voiceId) { return 0; }
+        @Override public byte voiceByteAt(int voiceId, int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int psgEnvelopeLength(int envelopeId) { return 0; }
+        @Override public byte psgEnvelopeByteAt(int envelopeId, int index) { throw new IndexOutOfBoundsException(); }
+        @Override public int modEnvelopeLength(int envelopeId) { return 0; }
+        @Override public byte modEnvelopeByteAt(int envelopeId, int index) { throw new IndexOutOfBoundsException(); }
+
+        private static byte[] toBytes(int[] values) {
+            byte[] result = new byte[values.length];
+            for (int index = 0; index < values.length; index++) {
+                result[index] = (byte) values[index];
+            }
+            return result;
         }
     }
 }

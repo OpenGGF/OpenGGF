@@ -374,6 +374,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         // state is semantic track state, not a sound-id or frame predicate.
         private boolean firstFm5AdmissionVoicePending;
         private boolean firstFm5AdmissionAttackPending;
+        private YmSourceProgramTiming.FirstPathShape firstFmPathShape;
+        private boolean firstFmPathPanConsumed;
         // SSG-EG per-operator state (S3K FF 05), preserved across track restoration.
         public final int[] ssgEg = new int[4];
         // DAC mute state for fade-in
@@ -2066,6 +2068,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     @Override
     public void loadVoice(Track t, int voiceId) {
         if (t.firstFm5AdmissionVoicePending) {
+            if (config.getFmVoiceWriteProfile()
+                    == SmpsSequencerConfig.FmVoiceWriteProfile.S1_68K) {
+                t.firstFmPathShape = classifyFirstFmPath(programView, t.pos);
+                t.firstFmPathPanConsumed = false;
+                if (t.firstFmPathShape == null) {
+                    t.firstFm5AdmissionVoicePending = false;
+                    t.firstFm5AdmissionAttackPending = false;
+                    prepareVoiceSelection(t);
+                    if (selectVoice(t, voiceId) && !t.tieNext) {
+                        refreshInstrument(t);
+                    }
+                    return;
+                }
+            }
             boolean selected = selectVoice(t, voiceId);
             if (!selected) {
                 prepareVoiceSelection(t);
@@ -2097,6 +2113,33 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 refreshInstrument(t);
             }
         }
+    }
+
+    static YmSourceProgramTiming.FirstPathShape classifyFirstFmPath(
+            SmpsProgramView source, int position) {
+        Objects.requireNonNull(source, "source");
+        if (position < 0 || position >= source.dataLength()) {
+            return null;
+        }
+        int cursor = position;
+        int first = source.dataByteAt(cursor) & 0xff;
+        boolean pan = false;
+        if (first == 0xE0) {
+            if (cursor + 2 >= source.dataLength()) {
+                return null;
+            }
+            pan = true;
+            cursor += 2; // command plus its parameter
+            first = source.dataByteAt(cursor) & 0xff;
+        }
+        // The authenticated path reaches an actual note (80..DF), optionally
+        // followed by a duration. Duration-only reuse and every coordination
+        // or control-flow command remain on the immediate path.
+        if (first < 0x80 || first >= 0xE0) {
+            return null;
+        }
+        return pan ? YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
+                : YmSourceProgramTiming.FirstPathShape.VOICE_NOTE;
     }
 
     private void loadInitialVoice(Track t, int voiceId) {
@@ -3686,7 +3729,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 track.fmVolEnvOpMask,
                 track.forceRefresh,
                 (track.firstFm5AdmissionVoicePending ? 1 : 0)
-                        | (track.firstFm5AdmissionAttackPending ? 2 : 0),
+                        | (track.firstFm5AdmissionAttackPending ? 2 : 0)
+                        | (track.firstFmPathShape
+                                == YmSourceProgramTiming.FirstPathShape.VOICE_NOTE ? 4 : 0)
+                        | (track.firstFmPathShape
+                                == YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE ? 8 : 0)
+                        | (track.firstFmPathPanConsumed ? 16 : 0),
                 track.ssgEg,
                 track.dacMuted,
                 track.modStepInEffect,
@@ -3779,6 +3827,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 (snapshot.internalStateFlags() & 1) != 0;
         track.firstFm5AdmissionAttackPending =
                 (snapshot.internalStateFlags() & 2) != 0;
+        track.firstFmPathShape = (snapshot.internalStateFlags() & 8) != 0
+                ? YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
+                : (snapshot.internalStateFlags() & 4) != 0
+                        ? YmSourceProgramTiming.FirstPathShape.VOICE_NOTE : null;
+        track.firstFmPathPanConsumed =
+                (snapshot.internalStateFlags() & 16) != 0;
         copyInto(snapshot.ssgEg(), track.ssgEg);
         track.dacMuted = snapshot.dacMuted();
         track.modStepInEffect = snapshot.modStepInEffect();
