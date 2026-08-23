@@ -114612,3 +114612,9 @@ The other three death arms remain coordinates only.
 - Trace command: `tools/testing/test-session.sh -- mvn -Dmse=off test -Ptrace-replay -B` with the S1, S2, and S3K ROM properties. Result: **868 tests, 10 failures, 0 errors, 7 skips**; no `Java heap space`, `OutOfMemoryError`, fork crash, or truncated session. The first-error families remain the existing S3K closure, S1/S2 complete-run or level-select, and S3K AIZ divergences; no trace frontier moved.
 - Ordinary command: the same isolated test-session wrapper with `mvn -Dmse=off test -B` and all three ROM properties. Result: **15,041 tests, 51 failures, 9 errors, 19 skips**, against the clean baseline's 15,017 / 54 / 57 / 19. The direct-object fixture isolation work removed the prior null-service error cluster; the remaining reds are recorded in the release-hardening plan and are not release sign-off.
 - Package command: `tools/testing/test-session.sh -- mvn -Dmse=off -DskipTests package -B`; **BUILD SUCCESS**.
+
+### Merged `develop` verification
+
+- Merge commit: `fe40bb7ad` (`Merge 0.6 release hardening`), with the seven pre-existing S1 special-stage files left dirty and untouched.
+- Merged ordinary command completed **15,043 tests, 51 failures, 9 errors, 19 skips**. The two-test increase versus the isolated candidate is from those pre-existing main-workspace edits; no new release-hardening failure appeared, and there was no heap-space, OOM, fork, or crash failure.
+- Merged `-Ptrace-replay` completed **868 tests, 10 failures, 0 errors, 7 skips** with the same known trace failures and no frontier movement. The focused merged release/report/temp-file guard set completed **19 tests, 0 failures, 0 errors, 0 skips**.
