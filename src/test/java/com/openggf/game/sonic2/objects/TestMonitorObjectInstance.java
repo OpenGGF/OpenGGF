@@ -61,7 +61,7 @@ class TestMonitorObjectInstance {
 
     @Test
     void touchFromAboveRequiresRollAnimationNotJustRollingStatus() {
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mockObjectManager();
         MonitorObjectInstance monitor = new MonitorObjectInstance(
                 new ObjectSpawn(0x0100, 0x0100, 0x26, 0x00, 0, false, 0),
                 "Monitor");
@@ -101,7 +101,7 @@ class TestMonitorObjectInstance {
 
     @Test
     void touchFromAboveBreaksMonitorWhenRollAnimationIsActive() {
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mockObjectManager();
         MonitorObjectInstance monitor = new MonitorObjectInstance(
                 new ObjectSpawn(0x0100, 0x0100, 0x26, 0x00, 0, false, 0),
                 "Monitor");
@@ -127,7 +127,7 @@ class TestMonitorObjectInstance {
 
     @Test
     void touchFromAboveSpawnsMonitorContentsBeforeExplosion() {
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mockObjectManager();
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         MonitorObjectInstance monitor = new MonitorObjectInstance(
                 new ObjectSpawn(0x0100, 0x0100, 0x26, 0x06, 0, false, 0),
@@ -160,7 +160,7 @@ class TestMonitorObjectInstance {
 
     @Test
     void staleSidekickMonitorBitDoesNotReleaseSeparateObjectRideOnBreak() {
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mockObjectManager();
         SpriteManager spriteManager = mock(SpriteManager.class);
         MonitorObjectInstance monitor = new MonitorObjectInstance(
                 new ObjectSpawn(0x16F0, 0x06F1, 0x26, 0x00, 0, false, 0),
@@ -204,7 +204,7 @@ class TestMonitorObjectInstance {
 
     @Test
     void sidekickCannotBreakMonitorFromAbove() {
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mockObjectManager();
         MonitorObjectInstance monitor = new MonitorObjectInstance(
                 new ObjectSpawn(0x0100, 0x0100, 0x26, 0x00, 0, false, 0),
                 "Monitor");
@@ -233,7 +233,7 @@ class TestMonitorObjectInstance {
 
     @Test
     void sidekickCanStillKnockMonitorDownFromBelow() {
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mockObjectManager();
         MonitorObjectInstance monitor = new MonitorObjectInstance(
                 new ObjectSpawn(0x0100, 0x0100, 0x26, 0x00, 0, false, 0),
                 "Monitor");
@@ -284,6 +284,13 @@ class TestMonitorObjectInstance {
         assertTrue(profile.inclusiveRightEdge());
         assertTrue(profile.bypassesOffscreenSolidGate());
         assertTrue(monitor.projectsPreMovementGroundXForSolidContact(null));
+    }
+
+    private static ObjectManager mockObjectManager() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.solidContacts()).thenReturn(
+                mock(com.openggf.level.objects.ObjectSolidContactController.class));
+        return objectManager;
     }
 
     private static boolean isBroken(MonitorObjectInstance monitor) {

@@ -67,6 +67,21 @@ public class TestObjectServices implements ObjectServices {
     private DebugOverlayManager debugOverlay;
     private RomManager romManager;
     private CrossGameFeatureProvider crossGameFeatures;
+    private ObjectManager isolatedObjectManager;
+
+    /**
+     * Installs a real empty object manager for direct object tests that exercise
+     * solid-contact ownership without loading a level. The default remains null
+     * so tests that intentionally model an absent level manager stay explicit.
+     */
+    public TestObjectServices withIsolatedObjectManager() {
+        if (isolatedObjectManager == null) {
+            isolatedObjectManager = new ObjectManager(
+                    List.of(), null, 0, null, null,
+                    graphicsManager, camera, this);
+        }
+        return this;
+    }
 
     public TestObjectServices withLevelManager(LevelManager levelManager) {
         this.levelManager = levelManager;
@@ -198,7 +213,7 @@ public class TestObjectServices implements ObjectServices {
 
     @Override
     public ObjectManager objectManager() {
-        return levelManager != null ? levelManager.getObjectManager() : null;
+        return levelManager != null ? levelManager.getObjectManager() : isolatedObjectManager;
     }
 
     @Override

@@ -281,7 +281,8 @@ class TestS3kBreakableWallPlayerParticipation {
     private static TestObjectServices queryOnlyServices(
             PlayableEntity main,
             List<? extends PlayableEntity> sidekicks) {
-        return new QueryOnlyPlayerServices(main, sidekicks);
+        return new QueryOnlyPlayerServices(main, sidekicks)
+                .withIsolatedObjectManager();
     }
 
     private static TestObjectServices queryOnlyKnucklesServices(

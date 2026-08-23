@@ -25,7 +25,7 @@ class TestCnzTriangleBumperObjectInstance {
     void flippedDownwardTriangleAppliesRomTraceBounce() {
         CnzTriangleBumperObjectInstance bumper = new CnzTriangleBumperObjectInstance(
                 new ObjectSpawn(0x1280, 0x0478, Sonic3kObjectIds.CNZ_TRIANGLE_BUMPER, 0x60, 3, false, 0));
-        bumper.setServices(new TestObjectServices());
+        bumper.setServices(new TestObjectServices().withIsolatedObjectManager());
         AbstractPlayableSprite player = newPlayer();
         player.setCentreX((short) 0x12D3);
         player.setCentreY((short) 0x0486);
@@ -52,7 +52,7 @@ class TestCnzTriangleBumperObjectInstance {
     void unflippedTriangleLaunchesRightAndUp() {
         CnzTriangleBumperObjectInstance bumper = new CnzTriangleBumperObjectInstance(
                 new ObjectSpawn(0x0200, 0x0300, Sonic3kObjectIds.CNZ_TRIANGLE_BUMPER, 0x40, 0, false, 0));
-        bumper.setServices(new TestObjectServices());
+        bumper.setServices(new TestObjectServices().withIsolatedObjectManager());
         AbstractPlayableSprite player = newPlayer();
         player.setCentreX((short) 0x0200);
         player.setCentreY((short) 0x0300);
@@ -77,7 +77,7 @@ class TestCnzTriangleBumperObjectInstance {
     void outsideSubtypeWidthDoesNotBounce() {
         CnzTriangleBumperObjectInstance bumper = new CnzTriangleBumperObjectInstance(
                 new ObjectSpawn(0x0200, 0x0300, Sonic3kObjectIds.CNZ_TRIANGLE_BUMPER, 0x40, 0, false, 0));
-        bumper.setServices(new TestObjectServices());
+        bumper.setServices(new TestObjectServices().withIsolatedObjectManager());
         AbstractPlayableSprite player = newPlayer();
         player.setCentreX((short) 0x0240);
         player.setCentreY((short) 0x0300);
@@ -106,7 +106,8 @@ class TestCnzTriangleBumperObjectInstance {
         extraSidekick.setCentreY((short) 0x0300);
         extraSidekick.setXSpeed((short) 0x0123);
         extraSidekick.setYSpeed((short) -0x0456);
-        bumper.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extraSidekick)));
+        bumper.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extraSidekick))
+                .withIsolatedObjectManager());
 
         bumper.update(0, main);
 

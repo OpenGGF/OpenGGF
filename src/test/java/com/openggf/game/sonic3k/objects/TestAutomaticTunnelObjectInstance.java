@@ -32,7 +32,9 @@ class TestAutomaticTunnelObjectInstance {
                 new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
         TestPlayableSprite nativeP2 = new TestPlayableSprite();
         TestPlayableSprite extraSidekick = new TestPlayableSprite();
-        tunnel.setServices(new TestObjectServices().withSidekicks(List.of(nativeP2, extraSidekick)));
+        tunnel.setServices(new TestObjectServices()
+                .withSidekicks(List.of(nativeP2, extraSidekick))
+                .withIsolatedObjectManager());
 
         TestPlayableSprite main = new TestPlayableSprite();
         main.setCentreX((short) 0x0100);
@@ -53,7 +55,7 @@ class TestAutomaticTunnelObjectInstance {
     void captureUsesFullObjectControlWithoutWritingSeparateControlLock() {
         AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
                 new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
-        tunnel.setServices(new TestObjectServices());
+        tunnel.setServices(new TestObjectServices().withIsolatedObjectManager());
 
         TestPlayableSprite player = new TestPlayableSprite();
         player.setCentreX((short) 0x0F60);
@@ -85,7 +87,7 @@ class TestAutomaticTunnelObjectInstance {
     void captureWritesNativePositionWordsWithoutForcingRollingStatus() {
         AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
                 new ObjectSpawn(0x0D40, 0x0770, 0x24, 1, 0, false, 0));
-        tunnel.setServices(new TestObjectServices());
+        tunnel.setServices(new TestObjectServices().withIsolatedObjectManager());
 
         TestPlayableSprite player = new TestPlayableSprite();
         player.setCentreX((short) 0x0D40);
@@ -106,7 +108,7 @@ class TestAutomaticTunnelObjectInstance {
     void maintainedExitVelocityMovesPlayerOnFinalWaypointFrame() {
         AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
                 new ObjectSpawn(0x0D40, 0x0770, 0x24, 0x42, 0, false, 0));
-        tunnel.setServices(new TestObjectServices());
+        tunnel.setServices(new TestObjectServices().withIsolatedObjectManager());
 
         TestPlayableSprite player = new TestPlayableSprite();
         player.setCentreX((short) 0x0D40);
@@ -338,6 +340,8 @@ class TestAutomaticTunnelObjectInstance {
 
         private RecordingServices() {
             objectManager = mock(ObjectManager.class);
+            when(objectManager.solidContacts()).thenReturn(
+                    mock(com.openggf.level.objects.ObjectSolidContactController.class));
             doAnswer(invocation -> {
                 children.add(invocation.getArgument(0));
                 return null;

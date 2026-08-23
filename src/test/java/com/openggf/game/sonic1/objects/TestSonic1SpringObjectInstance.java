@@ -37,7 +37,7 @@ class TestSonic1SpringObjectInstance {
     void horizontalSpringTogglesExistingFacingInsteadOfFacingLaunchVelocity() throws Exception {
         Sonic1SpringObjectInstance spring = new Sonic1SpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0x41, 0x10, 0, false, 0));
-        spring.setServices(new StubObjectServices());
+        spring.setServices(new StubObjectServices().withIsolatedObjectManager());
         TestablePlayableSprite player = new TestablePlayableSprite(
                 "sonic", (short) 0x100, (short) 0x100);
         Method applyHorizontalSpring = Sonic1SpringObjectInstance.class
@@ -81,7 +81,7 @@ class TestSonic1SpringObjectInstance {
     void upSpringSuppressesSolidContactUntilAnimationResetCompletes() {
         Sonic1SpringObjectInstance spring = new Sonic1SpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0x41, 0x00, 0, false, 0));
-        spring.setServices(new StubObjectServices());
+        spring.setServices(new StubObjectServices().withIsolatedObjectManager());
         spring.update(0, null);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x100);
@@ -126,7 +126,7 @@ class TestSonic1SpringObjectInstance {
     void upSpringRestoresControlImmediatelyEvenWhileHurt() {
         Sonic1SpringObjectInstance spring = new Sonic1SpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0x41, 0x00, 0, false, 0));
-        spring.setServices(new StubObjectServices());
+        spring.setServices(new StubObjectServices().withIsolatedObjectManager());
         spring.update(0, null);
 
         HurtCapableSprite player = newHurtCapableAirborneSprite();
@@ -162,7 +162,7 @@ class TestSonic1SpringObjectInstance {
     void downSpringRestoresControlImmediatelyEvenWhileHurt() {
         Sonic1SpringObjectInstance spring = new Sonic1SpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0x41, 0x20, 0, false, 0));
-        spring.setServices(new StubObjectServices());
+        spring.setServices(new StubObjectServices().withIsolatedObjectManager());
         spring.update(0, null);
 
         HurtCapableSprite player = newHurtCapableAirborneSprite();
