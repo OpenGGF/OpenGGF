@@ -199,6 +199,43 @@ class TestBuildToolingGuard {
             "**/*Debug*.java",
             "**/*Probe.java",
             "**/*Probe*.java");
+    private static final List<String> TRACE_REPLAY_RELEASE_PROFILE_EXCLUDES = List.of(
+            "**/tests/trace/s3k/**/*Mhz*.java",
+            "**/tests/trace/s3k/**/*Fbz*.java",
+            "**/tests/trace/s3k/**/*Ssz*.java",
+            "**/tests/trace/s3k/**/*Soz*.java",
+            "**/tests/trace/s3k/**/*Lrz*.java",
+            "**/tests/trace/s3k/**/*Hpz*.java",
+            "**/tests/trace/s3k/**/*Ddz*.java",
+            "**/tests/trace/s3k/**/*Dez*.java",
+            "**/tests/trace/s3k/**/*Zone0c*.java",
+            "**/tests/trace/s3k/TestS3kGumballBonusTraceReplay.java",
+            "**/tests/trace/s3k/TestS3kPachinkoBonusTraceReplay.java",
+            "**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java",
+            "**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java",
+            "**/tests/trace/runs/TestS3kMegaRunChain.java",
+            "**/tests/trace/s3k/sonictails/*.java",
+            "**/tests/trace/s3k/*ZoneSliceTraceReplay.java");
+    private static final List<String> RELEASE_OPTIONAL_TEST_SKIPS = List.of(
+            "com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds",
+            "com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance#measureMixedRouteDispatchAllocationAndTime",
+            "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes",
+            "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#postWarmupRenderSamplingAllocationProbe",
+            "com.openggf.tests.TestCPZObjectBugs#testSpinTubeForcesRolling",
+            "com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval",
+            "com.openggf.tools.audio.completerun.s2.TestS2CompleteRunRealRow769DecodeGate#capturesAndDecodesTheExactRealRow769Boundary",
+            "com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics#writeCompatibilityReportForLocalShaderPack",
+            "com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput",
+            "com.openggf.tools.audio.completerun.s3k.TestS3kCompleteRunRealRow810DecodeGate#capturesAndDecodesTheExactRealRow810Boundary",
+            "com.openggf.audio.AudioRegressionTest#testMusicEhzMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testMusicCpzMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testMusicHtzMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testSfxRingMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testSfxJumpMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testSfxSpringMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testMixedMusicSfxMatchesReference",
+            "com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples",
+            "com.openggf.audio.synth.TestYm2612ChipGpgxParity#nativeEnvelopeHarnessReproducesTrackedVectorsWhenCoreIsPresent");
     private static final List<Pattern> TRACE_BOOTSTRAP_POLICY_SIGNALS = List.of(
             Pattern.compile("\\b(?:meta|metadata)\\s*\\.\\s*(?:zoneId|act|traceProfile)\\s*\\("),
             Pattern.compile("\\bhasPerFrameSlotMachineState\\s*\\("),
@@ -1119,6 +1156,53 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("release trace validation must prove ROM-backed trace tests actually executed:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldMirrorTraceReplayProfileExclusions() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("TRACE_REPLAY_PROFILE_EXCLUDES")) {
+            violations.add(".github/workflows/release.yml does not name release trace profile exclusions");
+        }
+        for (String exclusion : TRACE_REPLAY_RELEASE_PROFILE_EXCLUDES) {
+            if (!workflow.contains("\"" + exclusion + "\"")) {
+                violations.add(".github/workflows/release.yml does not mirror trace-replay exclusion "
+                        + exclusion);
+            }
+        }
+        if (!workflow.contains("is_release_profile_excluded_source(source)")) {
+            violations.add(".github/workflows/release.yml expects reports for trace sources excluded by Maven");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release trace evidence must follow the Maven release scope:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldClassifyEveryDefaultTestSkip() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("RELEASE_OPTIONAL_TEST_SKIPS")) {
+            violations.add(".github/workflows/release.yml does not define the explicit optional-skip inventory");
+        }
+        for (String skip : RELEASE_OPTIONAL_TEST_SKIPS) {
+            if (!workflow.contains("\"" + skip + "\"")) {
+                violations.add(".github/workflows/release.yml optional-skip inventory is missing " + skip);
+            }
+        }
+        if (!workflow.contains("unexpected_skips")) {
+            violations.add(".github/workflows/release.yml does not reject unclassified default-suite skips");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release default-suite skips must be explicit and reviewable:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

@@ -69,6 +69,58 @@ jobs:
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
+      - name: Assert default test skip classification
+        shell: bash
+        env:
+          MANIFEST: ${{ steps.release-default-tests.outputs.manifest }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
+          surefire_dir = Path(session["surefire_reports"])
+          RELEASE_OPTIONAL_TEST_SKIPS = {
+              "com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds",
+              "com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance#measureMixedRouteDispatchAllocationAndTime",
+              "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes",
+              "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#postWarmupRenderSamplingAllocationProbe",
+              "com.openggf.tests.TestCPZObjectBugs#testSpinTubeForcesRolling",
+              "com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval",
+              "com.openggf.tools.audio.completerun.s2.TestS2CompleteRunRealRow769DecodeGate#capturesAndDecodesTheExactRealRow769Boundary",
+              "com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics#writeCompatibilityReportForLocalShaderPack",
+              "com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput",
+              "com.openggf.tools.audio.completerun.s3k.TestS3kCompleteRunRealRow810DecodeGate#capturesAndDecodesTheExactRealRow810Boundary",
+              "com.openggf.audio.AudioRegressionTest#testMusicEhzMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testMusicCpzMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testMusicHtzMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testSfxRingMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testSfxJumpMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testSfxSpringMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testMixedMusicSfxMatchesReference",
+              "com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples",
+              "com.openggf.audio.synth.TestYm2612ChipGpgxParity#nativeEnvelopeHarnessReproducesTrackedVectorsWhenCoreIsPresent",
+          }
+
+          skipped = set()
+          for report in sorted(surefire_dir.glob("TEST-*.xml")):
+              root = ET.parse(report).getroot()
+              for testcase in root.iter("testcase"):
+                  if testcase.find("skipped") is not None:
+                      skipped.add(f"{testcase.attrib.get('classname', root.attrib.get('name', report.stem))}#{testcase.attrib.get('name', '<unnamed>')}")
+
+          unexpected_skips = sorted(skipped - RELEASE_OPTIONAL_TEST_SKIPS)
+          if unexpected_skips:
+              print("Unclassified default-suite skips are release-blocking", file=sys.stderr)
+              for identity in unexpected_skips:
+                  print(identity, file=sys.stderr)
+              sys.exit(1)
+          print(f"Default test skip classification: skipped={len(skipped)} allowed={len(RELEASE_OPTIONAL_TEST_SKIPS)}")
+          PY
+
       - name: Run structural guards in a fresh session
         id: release-guard-tests
         shell: bash
@@ -107,15 +159,49 @@ jobs:
               "*Probe.java",
               "*Probe*.java",
           )
+          TRACE_REPLAY_PROFILE_EXCLUDES = (
+              "**/tests/trace/s3k/**/*Mhz*.java",
+              "**/tests/trace/s3k/**/*Fbz*.java",
+              "**/tests/trace/s3k/**/*Ssz*.java",
+              "**/tests/trace/s3k/**/*Soz*.java",
+              "**/tests/trace/s3k/**/*Lrz*.java",
+              "**/tests/trace/s3k/**/*Hpz*.java",
+              "**/tests/trace/s3k/**/*Ddz*.java",
+              "**/tests/trace/s3k/**/*Dez*.java",
+              "**/tests/trace/s3k/**/*Zone0c*.java",
+              "**/tests/trace/s3k/TestS3kGumballBonusTraceReplay.java",
+              "**/tests/trace/s3k/TestS3kPachinkoBonusTraceReplay.java",
+              "**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java",
+              "**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java",
+              "**/tests/trace/runs/TestS3kMegaRunChain.java",
+              "**/tests/trace/s3k/sonictails/*.java",
+              "**/tests/trace/s3k/*ZoneSliceTraceReplay.java",
+          )
 
           def is_diagnostic_trace_source(source):
               return any(fnmatch.fnmatch(source.name, pattern)
                          for pattern in TRACE_REPLAY_DIAGNOSTIC_EXCLUDES)
 
+          def is_release_profile_excluded_source(source):
+              relative = source.relative_to(Path("src/test/java")).as_posix()
+              if not relative.startswith("com/openggf/tests/trace/"):
+                  return False
+              for pattern in TRACE_REPLAY_PROFILE_EXCLUDES:
+                  if "/tests/trace/s3k/" in pattern and not relative.startswith(
+                          "com/openggf/tests/trace/s3k/"):
+                      continue
+                  if "/tests/trace/runs/" in pattern and not relative.startswith(
+                          "com/openggf/tests/trace/runs/"):
+                      continue
+                  if fnmatch.fnmatch(source.name, pattern.rsplit("/", 1)[-1]):
+                      return True
+              return False
+
           expected_policy_reports = set()
           expected_trace_reports = set()
           for source in sorted(source_root.rglob("Test*.java")):
-              if is_diagnostic_trace_source(source):
+              if (is_diagnostic_trace_source(source)
+                      or is_release_profile_excluded_source(source)):
                   continue
               rel = source.relative_to(Path("src/test/java")).with_suffix("")
               class_name = ".".join(rel.parts)
