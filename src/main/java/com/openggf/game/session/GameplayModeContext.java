@@ -826,6 +826,8 @@ public final class GameplayModeContext implements ModeContext {
             }
             rewindRegistry.deregister(
                     com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager.REWIND_KEY);
+            rewindRegistry.deregister(
+                    com.openggf.game.sonic2.titlecard.TitleCardManager.REWIND_KEY);
             if (levelManager.getGameModule().getTitleCardProvider()
                     instanceof com.openggf.game.rewind.RewindSnapshottable<?> titleCard) {
                 rewindRegistry.deregister(titleCard.key());
