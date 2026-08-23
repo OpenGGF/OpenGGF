@@ -54,6 +54,25 @@ tools/bizhawk-headless/test.sh \
 # PASS
 ```
 
+The identical full JDK 21/all-three-ROM suite was run against exact parent
+`e0c94ea181a03a87cc42d4317cd6eb4452106ef3` and implementation commit
+`9a5e242a1`. The parent ran 15,500 tests with 56 failures, 56 errors, and 19
+skips; the implementation ran 15,506 tests with 53 failures, 56 errors, and 19
+skips. Its six additional tests are the new Collapse/Dash parity cases.
+
+The sorted failure/error identity comparison contained no candidate-only red
+test. The parent ledger has 112 identities (SHA-256
+`86177f94f9f56c23a1d2da447b21de0c67800c6a4fd0e5825446f7a3eef8aa2b`);
+the candidate ledger has 109 (SHA-256
+`f1284d5aa7ed356866a508271609c6e36c8e64176efe489af4596038b55d81a0`).
+The complete Maven log hashes are
+`9289b3fe08e141021a8f3bff8839e8db36d35ada22dfc1577ad7037136192706`
+for the parent and
+`20841cbbc91aa65f9b01a090e8190e3860f140d664a80b9c54944b586f4ca2d1`
+for the candidate. The three baseline-only failures are the AIZ initial-player
+state, test-mode trace-picker loading screen, and Corkey registry cases; no
+baseline-passing test regressed.
+
 The broad capability-class selector also exposes an existing combined service
 manifest mismatch (`90cf...` expected, `0b96...` generated) on the integration
 base. The isolated lifecycle selector is green and this change does not modify
@@ -61,6 +80,8 @@ the service manifest or native observer patch.
 
 ## Remaining gate
 
-Package the clean feature HEAD and listen to Collapse through all five PSG
-bursts and terminal silence, plus low/high-charge Dash release and a replay
-after another SFX. Do not merge or push before that listening result.
+Listen to Collapse through all five PSG bursts and terminal silence, plus
+low/high-charge Dash release and a replay after another SFX. The exact package
+identity is reported in the handoff after building clean HEAD so the report
+does not create a self-referential rebuild. Do not merge or push before the
+listening result.
