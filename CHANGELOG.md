@@ -17,7 +17,13 @@
   `cfStopTrack`, even when a longer PSG sibling keeps the overall effect alive;
   the interrupted music voice is restored at that same boundary instead of at
   whole-effect cleanup. This removes Collapse's left-only ringing tail and
-  Dash's prolonged FM ending.
+  Dash's prolonged FM ending. Collapse's three FM voices now retain their
+  one-service stagger and native four-step pitch wobble when the FM5 stream
+  begins with a rest. First-attack timing includes the source Z80 octave-loop
+  cost, correcting Spindash Release without changing Blue Sphere timing.
+  S2/S3K note fill now decrements its live timeout on each actual music service
+  independently of duration extension, so Invincibility's short FM1 tones key
+  off sharply after the shipped five services.
 
 - **Sonic 1 FM5 effects no longer inherit the previous instrument at onset:**
   the first authenticated SetVoice-to-note path now preserves the shipped

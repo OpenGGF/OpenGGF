@@ -103,7 +103,7 @@ class TestSonic3kYmServiceTimingProfile {
             Map.entry("RRCA", 4));
 
     private static final Variant ADMISSION = new Variant(
-            1, 4, false, true, 0, PathKind.FIRST_ADMISSION);
+            1, 4, false, true, 0, 0, PathKind.FIRST_ADMISSION);
     private static final Variant BLUE_SPHERE = firstAttack(0b1110);
 
     @Test
@@ -162,6 +162,29 @@ class TestSonic3kYmServiceTimingProfile {
                 () -> firstAttack(0b1_0000));
         assertThrows(IllegalArgumentException.class,
                 () -> firstAttack(-1));
+    }
+
+    @Test
+    void noteLookupOctaveLoopsShiftOnlyTheFrequencySection() {
+        YmServiceTimingProfile profile = Sonic3kYmServiceTimingProfile.PROFILE;
+        for (int loops = 0; loops <= 7; loops++) {
+            Variant variant = new Variant(1, 4, true, false,
+                    0b1110, loops, PathKind.FIRST_VOICE_ATTACK);
+            long[] frequency = advances(profile,
+                    SegmentKind.FREQUENCY_AND_KEY_ON, variant);
+            assertArrayEquals(new long[] {
+                    30_630L + (loops - 4L) * 35L * 15L,
+                    2_700L, 2_880L }, frequency);
+            assertArrayEquals(advances(profile, SegmentKind.FM_VOICE_UPLOAD,
+                            BLUE_SPHERE),
+                    advances(profile, SegmentKind.FM_VOICE_UPLOAD, variant));
+        }
+        assertThrows(IllegalArgumentException.class,
+                () -> new Variant(1, 4, true, false, 0, -1,
+                        PathKind.FIRST_VOICE_ATTACK));
+        assertThrows(IllegalArgumentException.class,
+                () -> new Variant(1, 4, true, false, 0, 8,
+                        PathKind.FIRST_VOICE_ATTACK));
     }
 
     @Test
@@ -417,17 +440,20 @@ class TestSonic3kYmServiceTimingProfile {
     }
 
     private static Variant firstAttack(int carrierMask) {
-        return new Variant(1, 4, true, false, carrierMask,
+        return new Variant(1, 4, true, false, carrierMask, 4,
                 PathKind.FIRST_VOICE_ATTACK);
     }
 
     private static Variant variant(JsonNode node) {
+        PathKind path = PathKind.valueOf(node.path("path").asText());
         return new Variant(node.path("port").asInt(),
                 node.path("operators").asInt(),
                 node.path("banked_voice").asBoolean(),
                 node.path("ssg_eg").asBoolean(),
                 node.path("carrier_mask").asInt(),
-                PathKind.valueOf(node.path("path").asText()));
+                node.path("octave_loops").asInt(
+                        path == PathKind.FIRST_ADMISSION ? 0 : 4),
+                path);
     }
 
     private static long[] advances(

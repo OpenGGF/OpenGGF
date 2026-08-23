@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.LongSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -92,6 +93,157 @@ class TestS3kCollapseDashSfxParity {
         assertEquals(
                 "0b7d78978c85bc7c021789c333594b96f905bbf2e64f1b2b3921751f2af1e093",
                 effectivePsgDigest(Sonic3kSfx.DASH, 89));
+    }
+
+    @Test
+    void collapseFmTracksKeepTheirNativeStaggerAndModulation() {
+        FmTrackTimeline timeline = fmTrackTimeline(
+                Sonic3kSfx.COLLAPSE, 20);
+        assertEquals(List.of(1, 2, 3), timeline.keyOnFrames);
+        assertEquals(List.of(17, 18, 19), timeline.keyOffFrames);
+        assertEquals(List.of(
+                        0x284, 0x284, 0x2A4, 0x2C4,
+                        0x2A4, 0x284, 0x264, 0x244,
+                        0x264, 0x284, 0x2A4, 0x2C4,
+                        0x2A4, 0x284, 0x264, 0x244),
+                timeline.frequencies.get(3));
+        assertEquals(List.of(
+                        0xB2D, 0xB2D, 0xB4D, 0xB6D,
+                        0xB4D, 0xB2D, 0xB0D, 0xAED,
+                        0xB0D, 0xB2D, 0xB4D, 0xB6D,
+                        0xB4D, 0xB2D, 0xB0D, 0xAED),
+                timeline.frequencies.get(4));
+        assertEquals(timeline.frequencies.get(4),
+                timeline.frequencies.get(2),
+                "FM3 follows the same four-step wobble one VInt after FM5");
+    }
+
+    @Test
+    void collapseDelayedFm5VoiceStartsOnItsNativeSecondUpdate() {
+        Fixture fixture = fixture(Sonic3kSfx.COLLAPSE);
+        fixture.driver.read(new short[735 * 2]);
+        fixture.observer.takeYmWrites();
+        fixture.driver.read(new short[735 * 2]);
+        fixture.observer.takeYmWrites();
+
+        fixture.driver.read(new short[735 * 2]);
+
+        List<String> writes = fixture.observer.takeYmWrites();
+        assertTrue(writes.contains("p1:a5=b"));
+        assertTrue(writes.contains("p1:a1=2d"));
+        assertTrue(writes.contains("p0:28=f5"));
+    }
+
+    @Test
+    void dashFmModulationAndTerminalMatchNative() {
+        FmTrackTimeline timeline = fmTrackTimeline(Sonic3kSfx.DASH, 18);
+        assertEquals(List.of(2), timeline.keyOnFrames);
+        assertEquals(List.of(16), timeline.keyOffFrames);
+        assertEquals(List.of(
+                        0x32B7, 0x327C, 0x3241, 0x3206,
+                        0x31CB, 0x3190, 0x3155, 0x311A, 0x30DF,
+                        0x30A4, 0x3069, 0x302E, 0x3069, 0x30A4),
+                timeline.frequencies.get(4));
+    }
+
+    @Test
+    void dashFirstModulationWaitsOneNativeDriverServiceAfterKeyOn() {
+        Fixture fixture = fixture(Sonic3kSfx.DASH);
+        for (int frame = 0; frame < 4; frame++) {
+            fixture.driver.read(new short[735 * 2]);
+        }
+
+        List<TimedYmWrite> writes = fixture.observer.timedYmWrites().stream()
+                .filter(write -> (write.port == 1
+                        && (write.register == 0xA5 || write.register == 0xA1))
+                        || (write.port == 0 && write.register == 0x28))
+                .toList();
+        int keyOn = indexOf(writes, 0, 0x28, 0xF5);
+        int firstModHigh = indexOfAfter(writes, keyOn, 1, 0xA5, 0x32);
+        int firstModLow = indexOfAfter(writes, firstModHigh, 1, 0xA1, 0xB7);
+        long keyOnCycle = writes.get(keyOn).masterCycle;
+        long firstModCycle = writes.get(firstModLow).masterCycle;
+        assertTrue(firstModCycle - keyOnCycle > 700_000,
+                "zDoModulation's first sustain update must not collapse into "
+                        + "the attack service: " + writes);
+    }
+
+    @Test
+    void dashFirstAttackIncludesItsNativeOctaveLoopCost() {
+        Fixture fixture = fixture(Sonic3kSfx.DASH);
+        fixture.driver.read(new short[735 * 2]);
+        fixture.driver.read(new short[735 * 2]);
+
+        var pending = fixture.driver.captureSnapshot().synthSnapshot()
+                .ymWriteTimeline().pending();
+        long secondRelease = pending.stream()
+                .filter(entry -> entry.sourceOrdinal() == 6)
+                .findFirst().orElseThrow().dueMasterCycle();
+        long firstRelease = Math.subtractExact(secondRelease, 3_150L);
+        long keyOn = pending.stream()
+                .filter(entry -> entry.port() == 0
+                        && entry.register() == 0x28 && entry.value() == 0xF5)
+                .findFirst().orElseThrow().dueMasterCycle();
+        assertEquals(152_640L, keyOn - firstRelease,
+                "nE6 executes two more 35-T-state octave loops than the "
+                        + "nEb5 timing authority: 2 * 35 * 15 = 1050");
+    }
+
+    @Test
+    void invincibilityFm1NoteFillKeysOffTheThreeShortD5Attacks() {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
+                TestEnvironment.currentRom());
+        RecordingObserver observer = new RecordingObserver();
+        TimelineDriver driver = new TimelineDriver(observer);
+        observer.masterCycle = driver::masterCycle;
+        SmpsSequencer music = new SmpsSequencer(
+                loader.loadMusic(Sonic3kMusic.INVINCIBILITY.id),
+                loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        driver.addSequencer(music, false);
+        observer.takeYmWrites();
+
+        List<String> fm1Keys = new ArrayList<>();
+        for (int frame = 0; frame <= 220; frame++) {
+            driver.read(new short[735 * 2]);
+            for (String write : observer.takeYmWrites()) {
+                if (write.equals("p0:28=0") || write.equals("p0:28=f0")) {
+                    fm1Keys.add(frame + ":" + write.substring(6));
+                }
+            }
+        }
+        List<Integer> attacks = new ArrayList<>();
+        List<Integer> keyOffs = new ArrayList<>();
+        for (String event : fm1Keys) {
+            int separator = event.indexOf(':');
+            int frame = Integer.parseInt(event.substring(0, separator));
+            if (frame < 170 || frame > 210) continue;
+            if (event.endsWith(":f0")) attacks.add(frame);
+            else keyOffs.add(frame);
+        }
+        List<Integer> fills = keyOffs.stream()
+                .filter(frame -> !attacks.contains(frame)).toList();
+        assertEquals(3, attacks.size());
+        assertEquals(3, fills.size());
+        for (int index = 0; index < attacks.size(); index++) {
+            assertEquals(5, fills.get(index) - attacks.get(index),
+                    "zTrackNoteFillUpdate must key off after five music "
+                            + "services regardless of TempoWait duration carry");
+            if (index + 1 < attacks.size()) {
+                assertTrue(fills.get(index) < attacks.get(index + 1),
+                        "each short D5 attack must end before the next attack");
+            }
+        }
+    }
+
+    @Test
+    void invincibilityNoteFillIsOutputChunkPartitionInvariant() {
+        int[] frameChunks = new int[221];
+        java.util.Arrays.fill(frameChunks, 735);
+        assertEquals(invincibilityFm1Keys(frameChunks),
+                invincibilityFm1Keys(new int[] { 735 * 221 }),
+                "the live NoteFillTimeout must remain a driver-service "
+                        + "boundary when the host requests one large buffer");
     }
 
     @Test
@@ -263,12 +415,54 @@ class TestS3kCollapseDashSfxParity {
                 TestEnvironment.currentRom());
         AbstractSmpsData data = loader.loadSfx(sfx.id);
         RecordingObserver observer = new RecordingObserver();
-        SmpsDriver driver = new SmpsDriver(44_100.0, observer);
+        TimelineDriver driver = new TimelineDriver(observer);
+        observer.masterCycle = driver::masterCycle;
         SmpsSequencer sequencer = new SmpsSequencer(
                 data, loader.loadDacData(), driver,
                 Sonic3kSmpsSequencerConfig.CONFIG);
         driver.addSequencer(sequencer, true);
         return new Fixture(driver, sequencer, observer);
+    }
+
+    private static int indexOf(List<TimedYmWrite> writes, int port,
+            int register, int value) {
+        return indexOfAfter(writes, -1, port, register, value);
+    }
+
+    private static List<String> invincibilityFm1Keys(int[] chunks) {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
+                TestEnvironment.currentRom());
+        RecordingObserver observer = new RecordingObserver();
+        TimelineDriver driver = new TimelineDriver(observer);
+        observer.masterCycle = driver::masterCycle;
+        driver.addSequencer(new SmpsSequencer(
+                loader.loadMusic(Sonic3kMusic.INVINCIBILITY.id),
+                loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG), false);
+        observer.takeYmWrites();
+        List<String> keys = new ArrayList<>();
+        for (int frames : chunks) {
+            driver.read(new short[frames * 2]);
+            observer.takeYmWrites().stream()
+                    .filter(write -> write.equals("p0:28=0")
+                            || write.equals("p0:28=f0"))
+                    .forEach(keys::add);
+        }
+        return keys;
+    }
+
+    private static int indexOfAfter(List<TimedYmWrite> writes, int after,
+            int port, int register, int value) {
+        for (int index = after + 1; index < writes.size(); index++) {
+            TimedYmWrite write = writes.get(index);
+            if (write.port == port && write.register == register
+                    && write.value == value) {
+                return index;
+            }
+        }
+        throw new AssertionError("Missing YM write " + port + ":"
+                + Integer.toHexString(register) + "="
+                + Integer.toHexString(value) + " in " + writes);
     }
 
     private static String effectivePsgDigest(
@@ -282,6 +476,49 @@ class TestS3kCollapseDashSfxParity {
         return sha256(rows);
     }
 
+    private static FmTrackTimeline fmTrackTimeline(
+            Sonic3kSfx sfx, int lastFrame) {
+        Fixture fixture = fixture(sfx);
+        int[] high = new int[6];
+        int[] low = new int[6];
+        boolean[] keyed = new boolean[6];
+        List<Integer> keyOnFrames = new ArrayList<>();
+        List<Integer> keyOffFrames = new ArrayList<>();
+        java.util.Map<Integer, List<Integer>> frequencies =
+                new java.util.HashMap<>();
+        for (int frame = 0; frame <= lastFrame; frame++) {
+            fixture.driver.read(new short[735 * 2]);
+            for (TimedYmWrite write : fixture.observer.takeTimedYmWrites()) {
+                if (write.port == 0 && write.register == 0x28) {
+                    int channel = write.value & 7;
+                    if (channel >= 4) channel -= 1;
+                    boolean nextKeyed = (write.value & 0xF0) != 0;
+                    if (nextKeyed && !keyed[channel]) keyOnFrames.add(frame);
+                    if (!nextKeyed && keyed[channel]) keyOffFrames.add(frame);
+                    keyed[channel] = nextKeyed;
+                } else if (write.register >= 0xA4
+                        && write.register <= 0xA6) {
+                    int channel = (write.register - 0xA4)
+                            + (write.port == 0 ? 0 : 3);
+                    high[channel] = write.value;
+                } else if (write.register >= 0xA0
+                        && write.register <= 0xA2) {
+                    int channel = (write.register - 0xA0)
+                            + (write.port == 0 ? 0 : 3);
+                    low[channel] = write.value;
+                }
+            }
+            for (int channel = 0; channel < keyed.length; channel++) {
+                if (keyed[channel]) {
+                    frequencies.computeIfAbsent(channel,
+                                    ignored -> new ArrayList<>())
+                            .add((high[channel] << 8) | low[channel]);
+                }
+            }
+        }
+        return new FmTrackTimeline(keyOnFrames, keyOffFrames, frequencies);
+    }
+
     private static String sha256(StringBuilder rows) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
@@ -293,14 +530,36 @@ class TestS3kCollapseDashSfxParity {
     }
 
     private record Fixture(
-            SmpsDriver driver,
+            TimelineDriver driver,
             SmpsSequencer sequencer,
             RecordingObserver observer) {
+    }
+
+    private record TimedYmWrite(
+            long masterCycle, int port, int register, int value) {
+    }
+
+    private record FmTrackTimeline(
+            List<Integer> keyOnFrames,
+            List<Integer> keyOffFrames,
+            java.util.Map<Integer, List<Integer>> frequencies) {
+    }
+
+    private static final class TimelineDriver extends SmpsDriver {
+        private TimelineDriver(ChipWriteObserver observer) {
+            super(44_100.0, observer);
+        }
+
+        private long masterCycle() {
+            return renderedYmMasterCycle();
+        }
     }
 
     private static final class RecordingObserver implements ChipWriteObserver {
         private final List<Integer> psgWrites = new ArrayList<>();
         private final List<String> ymWrites = new ArrayList<>();
+        private final List<TimedYmWrite> timedYmWrites = new ArrayList<>();
+        private LongSupplier masterCycle = () -> -1L;
         private int latchedChannel = -1;
         private boolean latchedVolume;
         private int tone2Period;
@@ -313,6 +572,19 @@ class TestS3kCollapseDashSfxParity {
             ymWrites.add("p" + port + ":"
                     + Integer.toHexString(register & 0xFF) + "="
                     + Integer.toHexString(value & 0xFF));
+            timedYmWrites.add(new TimedYmWrite(masterCycle.getAsLong(),
+                    port, register & 0xFF, value & 0xFF));
+        }
+
+
+        private List<TimedYmWrite> timedYmWrites() {
+            return List.copyOf(timedYmWrites);
+        }
+
+        private List<TimedYmWrite> takeTimedYmWrites() {
+            List<TimedYmWrite> copy = List.copyOf(timedYmWrites);
+            timedYmWrites.clear();
+            return copy;
         }
 
         @Override

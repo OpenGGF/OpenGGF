@@ -304,7 +304,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         public int rawDuration;
         public int scaledDuration;
         public int fill; // note-off shortening in ticks
-        public int fillCounter; // live S1/S2 NoteTimeout countdown
+        public int fillCounter; // live per-driver NoteFillTimeout countdown
         public boolean resting; // S1/S2 PlaybackControl bit 1
         public int keyOffset; // signed semitone displacement (E9)
         public int volumeOffset; // attenuation applied to TL (FM) or volume (PSG)
@@ -1135,11 +1135,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
             nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(t.duration));
 
-            boolean fillPending = config.isDirect68kDriver() ? t.fillCounter > 0 : t.fill > 0;
-            if (fillPending && !t.tieNext && t.type != TrackType.DAC) {
-                int fillTicks = config.isDirect68kDriver()
-                        ? t.fillCounter : Math.max(0, t.fill + t.duration - t.scaledDuration);
-                nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(fillTicks));
+            if (t.fillCounter > 0 && !t.tieNext
+                    && t.type != TrackType.DAC) {
+                nextEvent = Math.min(nextEvent,
+                        samplesUntilTempoTicks(t.fillCounter));
             }
         }
 
@@ -1262,13 +1261,19 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 if (!t.tieNext && t.type != TrackType.DAC) {
                     if (config.isDirect68kDriver()) {
                         if (t.fillCounter > 0 && --t.fillCounter == 0) {
-                            // S1/S2 NoteTimeoutUpdate tampers with the return address:
+                            // S1 NoteTimeoutUpdate tampers with the return address:
                             // after note-off, the rest of this track update is skipped.
                             stopNote(t);
                             t.resting = true;
                             continue;
                         }
-                    } else if (t.fill > 0 && (t.scaledDuration - t.duration) >= t.fill) {
+                    } else if (t.fillCounter > 0
+                            && --t.fillCounter == 0) {
+                        // The S2/S3K Z80 drivers own an independent timeout
+                        // which advances on every music service, including a
+                        // TempoWait carry service that extends note duration.
+                        // Unlike direct-68K S1, key-off returns to the same
+                        // track update and frequency/modulation processing.
                         stopNote(t);
                     }
                 }
@@ -1975,6 +1980,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void setFill(Track t) {
         if (t.pos < programView.dataLength()) {
             t.fill = programView.dataByteAt(t.pos++) & 0xFF;
+            if (!config.isDirect68kDriver()) {
+                // cfNoteFill writes both NoteFillMaster and the live
+                // NoteFillTimeout immediately.
+                t.fillCounter = t.fill;
+            }
         }
     }
 
@@ -2257,9 +2267,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private YmServiceTimingProfile.Variant firstAttackVariant(Track track) {
+        return firstAttackVariant(track, 4);
+    }
+
+    private YmServiceTimingProfile.Variant firstAttackVariant(
+            Track track, int octaveLoopCount) {
         return new YmServiceTimingProfile.Variant(
                 1, 4, true, false,
-                bit7CarrierMask(track.voiceData, 21),
+                bit7CarrierMask(track.voiceData, 21), octaveLoopCount,
                 YmServiceTimingProfile.PathKind.FIRST_VOICE_ATTACK);
     }
 
@@ -2341,6 +2356,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         t.resting = t.note == 0x80;
 
         if (t.note == 0x80) {
+            if (t.firstFm5AdmissionVoicePending) {
+                // The locked-on driver times the audited admission upload only
+                // when the first FM5 update reaches cfSetVoice.  A leading rest
+                // (Sound_59 Collapse) ends that admission path; its later voice
+                // upload belongs to an ordinary track service.
+                t.firstFm5AdmissionVoicePending = false;
+                t.firstFm5AdmissionAttackPending = false;
+                t.firstFmPathShape = null;
+                t.firstFmPathPanConsumed = false;
+            }
             if (t.type != TrackType.DAC) {
                 stopNote(t);
             }
@@ -2419,7 +2444,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     && t.firstFmPathShape != null;
             YmServiceTimingProfile.Variant firstAttack = timedFirstAttack
                     && !sourceTimedFirstAttack
-                    ? firstAttackVariant(t) : null;
+                    ? firstAttackVariant(t, octave) : null;
 
             // SMPSPlay DoNoteOn: skip KEY_OFF and KEY_ON when tieNext (HOLD) is set.
             // This allows smpsNoAttack (E7) to work correctly for both music and SFX.

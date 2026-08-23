@@ -1533,6 +1533,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 YmServiceTimingProfile.Variant variant =
                         new YmServiceTimingProfile.Variant(
                                 port, 4, false, true, 0,
+                                0,
                                 YmServiceTimingProfile.PathKind
                                         .FIRST_ADMISSION);
                 try (Synthesizer.YmTimingScope ignored = beginYmTiming(
@@ -3606,6 +3607,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 return new YmServiceTimingProfile.Variant(
                         channelId < 3 ? 0 : 1, 4, true, false,
                         bit7CarrierMask(track.voiceData, 21),
+                        4,
                         YmServiceTimingProfile.PathKind.COMPLETION_RESTORE);
             }
         }

@@ -42,9 +42,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsDriverYmWriteTimeline {
     private static final Variant VARIANT = new Variant(
-            0, 4, false, false, 0, PathKind.FIRST_VOICE_ATTACK);
+            0, 4, false, false, 0, 0, PathKind.FIRST_VOICE_ATTACK);
     private static final Variant WRONG_VARIANT = new Variant(
-            1, 4, false, false, 0, PathKind.FIRST_VOICE_ATTACK);
+            1, 4, false, false, 0, 0, PathKind.FIRST_VOICE_ATTACK);
     private static final YmServiceTimingProfile PROFILE =
             YmServiceTimingProfile.of(8,
                     new Segment(SegmentKind.SFX_ADMISSION_PREP,
