@@ -3,6 +3,8 @@ package com.openggf.tests;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
@@ -126,7 +128,11 @@ public final class TestSessionOutputPaths {
         publishCreateNew(allocation.metadataPath(), metadata);
     }
 
-    /** Publishes one report or context file without replacing an existing file. */
+    /**
+     * Publishes one report or context file without replacing an existing file.
+     * A repeated publication of byte-identical content is idempotent; a
+     * different publication remains a hard collision.
+     */
     public static void publish(Path destination, String content) throws IOException {
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(content, "content");
@@ -171,6 +177,15 @@ public final class TestSessionOutputPaths {
                 // move with ATOMIC_MOVE alone, it cannot replace a prior owner.
                 Files.createLink(destination, temporary);
                 Files.delete(temporary);
+            } catch (FileAlreadyExistsException e) {
+                // The replay finally block may publish the same logical report
+                // after the normal divergence path already wrote it. Accept
+                // that exact repeat, but never let a changed report replace
+                // evidence from the first publication.
+                if (!Files.isRegularFile(destination, LinkOption.NOFOLLOW_LINKS)
+                        || Files.mismatch(destination, temporary) != -1L) {
+                    throw e;
+                }
             } catch (UnsupportedOperationException e) {
                 throw new IOException(
                         "exclusive atomic report publication is unsupported for " + destination,

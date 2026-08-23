@@ -32,6 +32,7 @@ import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.api.parallel.Isolated;
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
@@ -727,6 +728,12 @@ public class TestTornadoObjectInstance {
     private static TornadoObjectInstance createTornado(int x, int y, int subtype, TestObjectServices services) {
         ObjectSpawn spawn = new ObjectSpawn(x, y, Sonic2ObjectIds.TORNADO, subtype, 0, false, 0);
         TornadoObjectInstance t = new TornadoObjectInstance(spawn);
+        if (services.configuration() == null) {
+            services.withConfiguration(SonicConfigurationService.getInstance());
+        }
+        if (services.levelManager() == null) {
+            services.withLevelManager(GameServices.level());
+        }
         t.setServices(services);
         // These cases exercise the main routines, so consume the object's
         // routine-0 frame (ObjB2_Init, docs/s2disasm/s2.asm:78799-78813) that
@@ -798,6 +805,8 @@ public class TestTornadoObjectInstance {
             withCamera(GameServices.camera());
             withParallaxManager(GameServices.parallax());
             withSpriteManager(GameServices.sprites());
+            withConfiguration(SonicConfigurationService.getInstance());
+            withLevelManager(GameServices.level());
         }
 
         @Override
@@ -816,6 +825,8 @@ public class TestTornadoObjectInstance {
             withCamera(GameServices.camera());
             withParallaxManager(GameServices.parallax());
             withSpriteManager(GameServices.sprites());
+            withConfiguration(SonicConfigurationService.getInstance());
+            withLevelManager(GameServices.level());
         }
 
         @Override
@@ -842,6 +853,8 @@ public class TestTornadoObjectInstance {
             withCamera(GameServices.camera());
             withParallaxManager(GameServices.parallax());
             withSpriteManager(GameServices.sprites());
+            withConfiguration(SonicConfigurationService.getInstance());
+            withLevelManager(GameServices.level());
         }
 
         @Override
@@ -873,6 +886,8 @@ public class TestTornadoObjectInstance {
             withCamera(GameServices.camera());
             withParallaxManager(GameServices.parallax());
             withSpriteManager(GameServices.sprites());
+            withConfiguration(SonicConfigurationService.getInstance());
+            withLevelManager(GameServices.level());
         }
 
         @Override

@@ -347,6 +347,7 @@ public abstract class AbstractTraceReplayTest {
         TraceBinder binder = null;
         HeadlessTestFixture fixture = null;
         boolean hardwareTimingReplayClosed = false;
+        Throwable replayFailure = null;
         // Comparison-only, env-gated (OGGF_SLOT_PROBE=1) SST occupancy diff. Off in
         // every normal run, and it never touches engine or binder state.
         slotOccupancyProbe = SlotOccupancyProbe.createIfEnabled(trace, game() + "_" + zone() + act());
@@ -618,10 +619,16 @@ public abstract class AbstractTraceReplayTest {
                         report.firstErrorFrame(verificationScope), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
+        } catch (Exception | Error failure) {
+            replayFailure = failure;
+            throw failure;
         } finally {
             // Always (re)write the report from the latest binder state so a stale
             // *_report.json from a prior run can never mask the current result.
-            // Best-effort: report regeneration must not suppress the real failure.
+            // Equivalent publication is idempotent. A real publication failure
+            // is attached to the primary replay failure, or fails a run that
+            // otherwise had no primary failure.
+            Throwable reportFailure = null;
             if (binder != null) {
                 try {
                     // Unconditional: a run that aborts mid-replay with a clean
@@ -631,8 +638,12 @@ public abstract class AbstractTraceReplayTest {
                     // started. The report's total_frames is the only record of
                     // how far the replay actually reached.
                     writeReport(buildDivergenceReport(binder, meta, trace), meta);
-                } catch (RuntimeException | java.io.IOError ignored) {
-                    // diagnostics only
+                } catch (Exception | Error failure) {
+                    if (replayFailure != null) {
+                        replayFailure.addSuppressed(failure);
+                    } else {
+                        reportFailure = failure;
+                    }
                 }
             }
             if (slotOccupancyProbe != null) {
@@ -646,6 +657,15 @@ public abstract class AbstractTraceReplayTest {
                 sharedLevel.dispose();
             } else {
                 TestEnvironment.resetAll();
+            }
+            if (reportFailure != null) {
+                if (reportFailure instanceof Exception exception) {
+                    throw exception;
+                }
+                if (reportFailure instanceof Error error) {
+                    throw error;
+                }
+                throw new AssertionError("unexpected report publication failure", reportFailure);
             }
         }
     }
@@ -1622,20 +1642,16 @@ public abstract class AbstractTraceReplayTest {
         return sidekick.getCpuController().formatLatestNormalStepDiagnostics();
     }
 
-    private void writeReport(DivergenceReport report, TraceMetadata meta) {
-        try {
-            String prefix = meta.game() + "_" + meta.zone() + meta.act();
-            TraceVerificationScope scope = verificationScope();
-            String scopeSuffix = scope == TraceVerificationScope.ALL
-                    ? ""
-                    : "_" + scope.name().toLowerCase();
-            TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
-                    SessionInvocationExtension.SessionInvocation.current(),
-                    "single", prefix + scopeSuffix, scope,
-                    TraceReplayConsole.contextRadius());
-        } catch (IOException e) {
-            System.err.println("Warning: failed to write report: " + e.getMessage());
-        }
+    private void writeReport(DivergenceReport report, TraceMetadata meta) throws IOException {
+        String prefix = meta.game() + "_" + meta.zone() + meta.act();
+        TraceVerificationScope scope = verificationScope();
+        String scopeSuffix = scope == TraceVerificationScope.ALL
+                ? ""
+                : "_" + scope.name().toLowerCase();
+        TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
+                SessionInvocationExtension.SessionInvocation.current(),
+                "single", prefix + scopeSuffix, scope,
+                TraceReplayConsole.contextRadius());
     }
 
 }

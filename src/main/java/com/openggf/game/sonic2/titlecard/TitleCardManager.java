@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.SessionManager;
 
 import com.openggf.data.Rom;
@@ -22,6 +23,7 @@ import com.openggf.util.PatternDecompressor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,8 +42,10 @@ import java.util.logging.Logger;
  * SLIDE_IN → DISPLAY → SLIDE_OUT → COMPLETE
  * </pre>
  */
-public class TitleCardManager implements TitleCardProvider {
+public class TitleCardManager implements TitleCardProvider,
+        RewindSnapshottable<TitleCardManager.Snapshot> {
     private static final Logger LOGGER = Logger.getLogger(TitleCardManager.class.getName());
+    public static final String REWIND_KEY = "s2-title-card";
 
     private static TitleCardManager instance;
 
@@ -313,7 +317,130 @@ public class TitleCardManager implements TitleCardProvider {
     /** x_pixel of the zone-name piece during that tail. */
     private int exitTailZoneNameX;
 
+    /** Immutable live-title state used by the gameplay rewind registry. */
+    public record Snapshot(
+            TitleCardState state,
+            int stateTimer,
+            int frameCounter,
+            int currentZone,
+            int currentAct,
+            int zoneTileUploadFramesLeft,
+            boolean textExitTransitionPending,
+            boolean artLoaded,
+            boolean artCached,
+            boolean exitPlcsQueued,
+            int lastLoadedZone,
+            int leavePass,
+            boolean exitTailActive,
+            int exitTailWaitFrames,
+            int exitTailZoneNameX,
+            Pattern[] combinedPatterns,
+            Pattern[] titleCard2RawPatterns,
+            Pattern[] titleCardBasePatterns,
+            TitleCardElement.Snapshot[] elements) {
+        public Snapshot {
+            Objects.requireNonNull(state, "state");
+            combinedPatterns = copy(combinedPatterns);
+            titleCard2RawPatterns = copy(titleCard2RawPatterns);
+            titleCardBasePatterns = copy(titleCardBasePatterns);
+            elements = elements == null ? new TitleCardElement.Snapshot[0] : elements.clone();
+        }
+
+        @Override
+        public Pattern[] combinedPatterns() {
+            return copy(combinedPatterns);
+        }
+
+        @Override
+        public Pattern[] titleCard2RawPatterns() {
+            return copy(titleCard2RawPatterns);
+        }
+
+        @Override
+        public Pattern[] titleCardBasePatterns() {
+            return copy(titleCardBasePatterns);
+        }
+
+        @Override
+        public TitleCardElement.Snapshot[] elements() {
+            return elements.clone();
+        }
+
+        private static Pattern[] copy(Pattern[] source) {
+            return source == null ? null : source.clone();
+        }
+    }
+
     public TitleCardManager() {}
+
+    @Override
+    public String key() {
+        return REWIND_KEY;
+    }
+
+    @Override
+    public Snapshot capture() {
+        TitleCardElement.Snapshot[] elementSnapshots = elements.stream()
+                .map(TitleCardElement::capture)
+                .toArray(TitleCardElement.Snapshot[]::new);
+        return new Snapshot(
+                state, stateTimer, frameCounter, currentZone, currentAct,
+                zoneTileUploadFramesLeft, textExitTransitionPending,
+                artLoaded, artCached, exitPlcsQueued, lastLoadedZone,
+                leavePass, exitTailActive, exitTailWaitFrames, exitTailZoneNameX,
+                combinedPatterns, titleCard2RawPatterns, titleCardBasePatterns,
+                elementSnapshots);
+    }
+
+    @Override
+    public void restore(Snapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        state = snapshot.state();
+        stateTimer = snapshot.stateTimer();
+        frameCounter = snapshot.frameCounter();
+        currentZone = snapshot.currentZone();
+        currentAct = snapshot.currentAct();
+        zoneTileUploadFramesLeft = snapshot.zoneTileUploadFramesLeft();
+        textExitTransitionPending = snapshot.textExitTransitionPending();
+        artLoaded = snapshot.artLoaded();
+        artCached = snapshot.artCached();
+        exitPlcsQueued = snapshot.exitPlcsQueued();
+        lastLoadedZone = snapshot.lastLoadedZone();
+        leavePass = snapshot.leavePass();
+        exitTailActive = snapshot.exitTailActive();
+        exitTailWaitFrames = snapshot.exitTailWaitFrames();
+        exitTailZoneNameX = snapshot.exitTailZoneNameX();
+        combinedPatterns = snapshot.combinedPatterns();
+        titleCard2RawPatterns = snapshot.titleCard2RawPatterns();
+        titleCardBasePatterns = snapshot.titleCardBasePatterns();
+
+        TitleCardElement.Snapshot[] elementSnapshots = snapshot.elements();
+        if (elementSnapshots.length == 0) {
+            elements.clear();
+            zoneNameElement = null;
+            zoneTextElement = null;
+            actNumberElement = null;
+            bottomBarElement = null;
+            leftSwooshElement = null;
+            blueBackgroundElement = null;
+            return;
+        }
+
+        createElements();
+        if (elementSnapshots.length != elements.size()) {
+            throw new IllegalStateException(
+                    "S2 title-card rewind element count mismatch: expected "
+                            + elements.size() + ", actual " + elementSnapshots.length);
+        }
+        for (int i = 0; i < elementSnapshots.length; i++) {
+            elements.get(i).restore(elementSnapshots[i]);
+        }
+    }
+
+    @Override
+    public void resetForMissingSnapshot() {
+        reset();
+    }
 
     public static synchronized TitleCardManager getInstance() {
         if (instance == null) {
@@ -1279,9 +1406,19 @@ public class TitleCardManager implements TitleCardProvider {
         stateTimer = 0;
         frameCounter = 0;
         textExitTransitionPending = false;
+        zoneTileUploadFramesLeft = 0;
+        exitPlcsQueued = false;
         exitTailActive = false;
+        exitTailWaitFrames = 0;
+        exitTailZoneNameX = 0;
         leavePass = 0;
         elements.clear();
+        zoneNameElement = null;
+        zoneTextElement = null;
+        actNumberElement = null;
+        bottomBarElement = null;
+        leftSwooshElement = null;
+        blueBackgroundElement = null;
     }
 
     /**

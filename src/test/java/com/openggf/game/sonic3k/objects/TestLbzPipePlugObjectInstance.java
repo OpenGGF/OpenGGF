@@ -44,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestLbzPipePlugObjectInstance {
     private static final int PIPE_X = 0x1800;
@@ -401,6 +402,8 @@ class TestLbzPipePlugObjectInstance {
 
         private RecordingServices() {
             objectManager = mock(ObjectManager.class);
+            when(objectManager.solidContacts()).thenReturn(
+                    mock(com.openggf.level.objects.ObjectSolidContactController.class));
             doAnswer(invocation -> {
                 children.add(invocation.getArgument(0));
                 return null;

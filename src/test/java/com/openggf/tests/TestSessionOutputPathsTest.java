@@ -3,6 +3,7 @@ package com.openggf.tests;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,6 +23,9 @@ class TestSessionOutputPathsTest {
     private static final String ARTIFACT_ROOT = "openggf.artifact.root";
 
     private final Map<String, String> originalProperties = new HashMap<>();
+
+    @TempDir
+    Path tempDir;
 
     @BeforeEach
     void rememberSessionProperties() {
@@ -52,7 +56,7 @@ class TestSessionOutputPathsTest {
 
     @Test
     void sessionPropertiesResolveToSuppliedAbsolutePaths() throws IOException {
-        Path sessionRoot = Files.createTempDirectory("openggf output paths ");
+        Path sessionRoot = Files.createTempDirectory(tempDir, "openggf output paths ");
         Path traceReports = sessionRoot.resolve("trace reports");
         Path diagnostics = sessionRoot.resolve("diagnostics");
         Path artifacts = sessionRoot.resolve("artifacts");
@@ -68,7 +72,7 @@ class TestSessionOutputPathsTest {
 
     @Test
     void allocationPublishesOwnerMetadataAndRejectsDuplicateOwner() throws IOException {
-        Path sessionRoot = Files.createTempDirectory("openggf report owner ");
+        Path sessionRoot = Files.createTempDirectory(tempDir, "openggf report owner ");
         System.setProperty(TRACE_REPORTS, sessionRoot.toString());
 
         TestSessionOutputPaths.ReportAllocation first = TestSessionOutputPaths.allocateReport(
@@ -92,8 +96,28 @@ class TestSessionOutputPathsTest {
     }
 
     @Test
+    void equivalentPublicationIsIdempotentAndPreservesOwnerMetadata() throws IOException {
+        Path sessionRoot = Files.createTempDirectory(tempDir, "openggf report repeat ");
+        System.setProperty(TRACE_REPORTS, sessionRoot.toString());
+
+        TestSessionOutputPaths.ReportAllocation allocation =
+                TestSessionOutputPaths.allocateReport(
+                        "trace", "com.openggf.tests.ExampleTest", "replay", 2,
+                        "0123456789abcdef", "lane-a", "s2_mtz1", ".json");
+
+        TestSessionOutputPaths.publish(allocation.physicalPath(), "report");
+        TestSessionOutputPaths.publish(allocation.physicalPath(), "report");
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+
+        assertEquals("report", Files.readString(allocation.physicalPath()));
+        assertTrue(Files.readString(allocation.metadataPath()).contains(
+                "\"owner_key\": \"" + allocation.ownerKey() + "\""));
+    }
+
+    @Test
     void pathComponentsCannotEscapeTheirParent() throws IOException {
-        Path sessionRoot = Files.createTempDirectory("openggf component safety ");
+        Path sessionRoot = Files.createTempDirectory(tempDir, "openggf component safety ");
         System.setProperty(DIAGNOSTICS, sessionRoot.toString());
         System.setProperty(TRACE_REPORTS, sessionRoot.toString());
 
@@ -107,7 +131,7 @@ class TestSessionOutputPathsTest {
 
     @Test
     void explicitOutputDirectoryRetainsLegacyReportBasename() throws IOException {
-        Path outputDirectory = Files.createTempDirectory("openggf explicit report ");
+        Path outputDirectory = Files.createTempDirectory(tempDir, "openggf explicit report ");
         TestSessionOutputPaths.ReportAllocation allocation =
                 TestSessionOutputPaths.allocateReport(outputDirectory,
                         "trace", "com.openggf.tests.ExampleTest", "replay", 2,

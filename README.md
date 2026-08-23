@@ -436,6 +436,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Automated release evidence hardening (2026-08-23):** trace report publication is now
+  repeatable for equivalent closure writes while rejecting changed evidence, and release
+  validation classifies optional default-suite skips explicitly and mirrors the Maven
+  trace-scope exclusions. This improves automated evidence accounting; human end-to-end
+  gameplay and audio QA remain required before release.
+
 - **Sonic 1 DAC resume and FM5 sound-effect onset now follow the shipped driver.** Pausing or
   losing window focus no longer leaves the currently playing music track's DAC channel unpanned
   after resume. FM5 sound effects also retain the source-derived 68K/YM2612 busy timing between
