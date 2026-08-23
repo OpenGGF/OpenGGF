@@ -42,10 +42,15 @@ public final class TestSessionCoordinatorSelfTest {
         Path outputRoot = createOwnedDirectory(root.resolve("output"));
 
         BasicRun first = verifySuccessfulRun(root, outputRoot);
+        verifyForeignOwnedRootIsRejected(root, outputRoot);
         verifyChildExitPropagation(root, outputRoot);
+        verifyShutdownFinalizesSession(root, outputRoot);
+        verifySourceMutationInvalidatesRun(root, outputRoot);
+        verifyArbitraryReclaimIsRejected(root, outputRoot);
         verifyOwnerPublicationAndLiveLock(root, outputRoot);
         verifyStagedPublicationIsRetained(root, outputRoot);
         verifyInterruptedInitializationRetriesExactly(root, outputRoot);
+        verifyLiveInitializationCannotBeReclaimed(root, outputRoot);
         verifySecondReclaimCheckPreventsLaunch(root, outputRoot);
         verifyNormalContentionRetriesExactly(outputRoot, first);
         String secondRunId = verifyInterruptedReclaimCanResume(root, outputRoot, first);
@@ -117,6 +122,81 @@ public final class TestSessionCoordinatorSelfTest {
                 "nonzero child exit must produce a FAILED manifest");
     }
 
+    private static void verifyForeignOwnedRootIsRejected(Path root, Path outputRoot) throws Exception {
+        Path systemRoot = Path.of(System.getProperty("java.io.tmpdir")).toAbsolutePath().normalize();
+        String currentOwner = systemRoot.getFileSystem().getUserPrincipalLookupService()
+                .lookupPrincipalByName(System.getProperty("user.name")).getName();
+        if (Files.getOwner(systemRoot).getName().equals(currentOwner)) {
+            return;
+        }
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-foreign-root"));
+        ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        builder.environment().put("OPENGGF_TEST_ROOT", systemRoot.toString());
+        Process process = builder.start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int exit = process.waitFor();
+        check(exit != 0, "a session root owned by another principal must be rejected: " + output);
+    }
+
+    private static void verifySourceMutationInvalidatesRun(Path root, Path outputRoot) throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-source-mutation"));
+        Path worktree = Path.of(System.getProperty("user.dir"));
+        try {
+            CommandResult result = runCoordinator(outputRoot, List.of(
+                    "--lock-root", lockRoot.toString(),
+                    "--", javaCommand(), "-cp", classPath(),
+                    TestSessionCoordinatorSelfTest.class.getName(), "child-mutate"));
+            check(result.exitCode != 0, "source mutation must make the coordinator nonzero");
+            Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+            String json = Files.readString(manifest);
+            check(json.contains("\"state\": \"INVALID_IDENTITY_CHANGED\""),
+                    "source mutation must invalidate the session identity");
+        } finally {
+            try (var paths = Files.list(worktree)) {
+                paths.filter(path -> path.getFileName().toString().startsWith(".session-selftest-mutation-"))
+                        .forEach(path -> {
+                            try {
+                                Files.deleteIfExists(path);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+            }
+        }
+    }
+
+    private static void verifyShutdownFinalizesSession(Path root, Path outputRoot) throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-shutdown"));
+        Process process = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-sleep")).start();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+        String line;
+        Path manifest = null;
+        while ((line = reader.readLine()) != null) {
+            if (line.startsWith("OPENGGF_TEST_RUN_START ")) {
+                manifest = Path.of(markerValue(line, "manifest"));
+                break;
+            }
+        }
+        check(manifest != null, "shutdown test must observe the run start marker");
+        process.destroy();
+        check(process.waitFor(Duration.ofSeconds(10).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS),
+                "coordinator must terminate after SIGTERM");
+        check(Files.readString(manifest).contains("\"state\": \"ABORTED\""),
+                "shutdown must finalize the manifest as ABORTED");
+    }
+
+    private static void verifyArbitraryReclaimIsRejected(Path root, Path outputRoot) throws Exception {
+        Path unrelated = createOwnedDirectory(root.resolve("unrelated-directory"));
+        CommandResult result = runCoordinator(outputRoot, List.of(
+                "--reclaim", unrelated.resolve("not-a-lease.lock").toString()));
+        check(result.exitCode != 0, "reclaim must reject a non-lease path");
+        check(Files.isDirectory(unrelated), "reclaim rejection must not rename an arbitrary directory");
+    }
+
     private static void verifyOwnerPublicationAndLiveLock(Path root, Path outputRoot) throws Exception {
         Path lockRoot = createOwnedDirectory(root.resolve("locks-owner"));
         GuardedProcess process = startGuarded(outputRoot, List.of(
@@ -175,6 +255,26 @@ public final class TestSessionCoordinatorSelfTest {
         check(Files.isRegularFile(initializing), "failed initialization metadata must be retained");
         check(!contender.output.contains("CHILD_MUST_NOT_RUN"), "contender must not launch the child");
         check(!contender.output.contains("OPENGGF_TEST_RUN_START"), "startup failure must not publish a Maven manifest");
+    }
+
+    private static void verifyLiveInitializationCannotBeReclaimed(Path root, Path outputRoot) throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-live-initializer"));
+        GuardedProcess process = startGuarded(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--guard", "initialized",
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-must-not-run"), "initialized");
+        Path namespace = onlyEntry(lockRoot, path -> !path.getFileName().toString().contains(".staging-"));
+        try {
+            CommandResult reclaim = runCoordinator(outputRoot, List.of(
+                    "--lock-root", lockRoot.toString(), "--reclaim",
+                    namespace.resolve("lease.lock").toString()));
+            check(reclaim.exitCode == 75, "live initializer reclaim must be retryable contention");
+            check(Files.isDirectory(namespace), "live initializer must not be renamed");
+            check(!Files.exists(namespace.resolve("reclaiming.json")),
+                    "live initializer reclaim must not leave a reclaim marker");
+        } finally {
+            process.kill();
+        }
     }
 
     private static void verifySecondReclaimCheckPreventsLaunch(Path root, Path outputRoot) throws Exception {
@@ -287,6 +387,16 @@ public final class TestSessionCoordinatorSelfTest {
     }
 
     private static void runChild(String mode) {
+        if (mode.equals("child-mutate")) {
+            try {
+                Path worktree = Path.of(System.getenv("OPENGGF_TEST_WORKTREE"));
+                Files.writeString(worktree.resolve(".session-selftest-mutation-"
+                                + ProcessHandle.current().pid() + ".txt"), "mutation\n",
+                        StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+        }
         if (mode.equals("child-exit-7")) {
             System.exit(7);
         }
@@ -306,6 +416,13 @@ public final class TestSessionCoordinatorSelfTest {
                 "JAVA_TOOL_OPTIONS must contain the session temp option");
         check(environment.getOrDefault("JAVA_TOOL_OPTIONS", "").contains("-Dselftest.java=preserved"),
                 "JAVA_TOOL_OPTIONS must preserve the caller's value");
+        if (mode.equals("child-sleep")) {
+            try {
+                Thread.sleep(Duration.ofSeconds(30).toMillis());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
         System.out.println("CHILD_ENV_OK");
     }
 

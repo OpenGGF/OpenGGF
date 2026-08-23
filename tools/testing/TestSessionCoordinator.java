@@ -1,7 +1,6 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.channels.FileChannel;
@@ -11,7 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
@@ -22,13 +20,13 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Standalone coordinator for isolated OpenGGF test/build sessions. */
 public final class TestSessionCoordinator {
@@ -93,9 +91,13 @@ public final class TestSessionCoordinator {
         System.out.println("OPENGGF_TEST_RUN_START run_id=" + runId + " manifest="
                 + paths.manifest + " lease=" + leasePath);
 
+        ShutdownState shutdown = new ShutdownState(paths, runId, worktree, leasePath,
+                sourceBefore, runtimeBefore, options.command, options.exportFile, lease);
+        Runtime.getRuntime().addShutdownHook(new Thread(shutdown::abort, "openggf-test-session-shutdown"));
         Process child = null;
         int exitCode = 1;
         boolean interrupted = false;
+        boolean identityChanged = false;
         try {
             Map<String, String> environment = new java.util.HashMap<>(System.getenv());
             configureEnvironment(environment, paths.tmp, options, runId, capability,
@@ -104,6 +106,7 @@ public final class TestSessionCoordinator {
                     .redirectErrorStream(true);
             builder.environment().putAll(environment);
             child = builder.start();
+            shutdown.child = child;
             try (Reader reader = new InputStreamReader(child.getInputStream(), StandardCharsets.UTF_8);
                  Writer log = Files.newBufferedWriter(paths.mavenLog, StandardCharsets.UTF_8,
                          StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
@@ -129,9 +132,13 @@ public final class TestSessionCoordinator {
         } finally {
             String sourceAfter = sourceDigest(worktree);
             String runtimeAfter = runtimeDigest(options.command);
-            boolean valid = sourceBefore.equals(sourceAfter) && runtimeBefore.equals(runtimeAfter)
-                    && !interrupted;
-            String state = interrupted ? "ABORTED" : (valid && exitCode == 0 ? "PASSED" : "FAILED");
+            boolean sourceChanged = !sourceBefore.equals(sourceAfter);
+            boolean runtimeChanged = !runtimeBefore.equals(runtimeAfter);
+            identityChanged = sourceChanged || runtimeChanged;
+            boolean valid = !sourceChanged && !runtimeChanged && !interrupted;
+            String state = interrupted ? "ABORTED"
+                    : (sourceChanged || runtimeChanged ? "INVALID_IDENTITY_CHANGED"
+                    : (exitCode == 0 ? "PASSED" : "FAILED"));
             writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                     sourceAfter, runtimeAfter, List.of(), List.of()));
             if (options.exportFile != null) {
@@ -139,9 +146,11 @@ public final class TestSessionCoordinator {
             }
             System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId + " exit_code=" + exitCode
                     + " state=" + state + " valid=" + valid + " manifest=" + paths.manifest);
+            shutdown.completed = true;
             lease.close();
         }
-        return interrupted ? 1 : exitCode;
+        return interrupted || identityChanged
+                ? (exitCode == 0 ? 1 : exitCode) : exitCode;
     }
 
     private static int debugGuard(Options options) throws Exception {
@@ -204,8 +213,8 @@ public final class TestSessionCoordinator {
     private static int reclaim(Options options) throws Exception {
         Path leasePath = options.reclaim.toAbsolutePath().normalize();
         Path namespace = leasePath.getParent();
-        if (namespace == null || !Files.isDirectory(namespace)) {
-            throw new StartupFailure("lease namespace does not exist: " + namespace, 1);
+        if (!isLeaseNamespace(leasePath, namespace)) {
+            throw new StartupFailure("reclaim target is not an OpenGGF lease namespace: " + leasePath, 1);
         }
         String runId = createRunId();
         for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -213,26 +222,39 @@ public final class TestSessionCoordinator {
                 retryNotice(runId, RETRY_DELAYS_MS[attempt - 1]);
             }
             Path marker = namespace.resolve("reclaiming.json");
-            if (!Files.exists(marker)) {
-                try {
-                    Files.writeString(marker, reclaimJson(runId, namespace), StandardCharsets.UTF_8,
-                            StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-                } catch (FileAlreadyExistsException ignored) {
-                    continue;
-                }
-            }
+            Path owner = namespace.resolve("owner.json");
+            Path initializing = namespace.resolve("initializing.json");
             FileChannel channel = null;
             FileLock lock = null;
             try {
-                if (Files.exists(leasePath)) {
+                boolean hasLease = Files.exists(leasePath);
+                if (hasLease) {
                     channel = FileChannel.open(leasePath, StandardOpenOption.WRITE);
                     lock = channel.tryLock();
                     if (lock == null) {
                         continue;
                     }
-                    if (!Files.exists(marker)) {
+                    if (Files.exists(owner) && recordedProcessAlive(owner)) {
                         continue;
                     }
+                }
+                if (!Files.exists(marker)) {
+                    if (!hasLease && Files.exists(initializing) && recordedProcessAlive(initializing)) {
+                        continue;
+                    }
+                    if (!hasLease && Files.exists(owner) && recordedProcessAlive(owner)) {
+                        continue;
+                    }
+                    try {
+                        // With a lease file present, the recovery claim is made while
+                        // holding the same lock that protects the owner namespace.
+                        Files.writeString(marker, reclaimJson(runId, namespace), StandardCharsets.UTF_8,
+                                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+                    } catch (FileAlreadyExistsException ignored) {
+                        continue;
+                    }
+                } else if (!markerBelongsTo(marker, runId) && recordedProcessAlive(marker)) {
+                    continue;
                 }
                 Path recovered = namespace.resolveSibling(
                         namespace.getFileName() + ".recovered-" + runId);
@@ -373,9 +395,49 @@ public final class TestSessionCoordinator {
             throws IOException {
         Files.createDirectories(parent);
         Path staging = Files.createDirectory(parent.resolve(".staging-" + runId));
-        writeOwner(staging.resolve("initializing.json"), runId, worktree, staging,
+        writeOwner(staging.resolve("initializing.json"), runId, worktree, staging.resolve("lease.lock"),
                 command, sha256(String.join("\0", command)), "initializing");
         return staging;
+    }
+
+    private static boolean isLeaseNamespace(Path leasePath, Path namespace) throws IOException {
+        if (namespace == null || !leasePath.getFileName().toString().equals("lease.lock")
+                || !Files.isDirectory(namespace) || Files.isSymbolicLink(namespace)) {
+            return false;
+        }
+        String name = namespace.getFileName().toString();
+        if (!name.startsWith("openggf-test-session.lock")) {
+            return false;
+        }
+        return Files.isRegularFile(namespace.resolve("initializing.json"))
+                || Files.isRegularFile(namespace.resolve("owner.json"))
+                || Files.isRegularFile(namespace.resolve("reclaiming.json"));
+    }
+
+    private static boolean recordedProcessAlive(Path metadata) throws IOException {
+        String json = Files.readString(metadata, StandardCharsets.UTF_8);
+        Matcher pid = Pattern.compile("\\\"pid\\\"\\s*:\\s*(\\d+)").matcher(json);
+        if (!pid.find()) {
+            return false;
+        }
+        long processId = Long.parseLong(pid.group(1));
+        Optional<ProcessHandle> process = ProcessHandle.of(processId);
+        if (process.isEmpty() || !process.get().isAlive()) {
+            return false;
+        }
+        Matcher start = Pattern.compile("\\\"process_start_epoch_ms\\\"\\s*:\\s*(-?\\d+)").matcher(json);
+        if (!start.find() || Long.parseLong(start.group(1)) < 0) {
+            return true;
+        }
+        return process.get().info().startInstant()
+                .map(value -> value.toEpochMilli() == Long.parseLong(start.group(1)))
+                .orElse(true);
+    }
+
+    private static boolean markerBelongsTo(Path marker, String runId) throws IOException {
+        String json = Files.readString(marker, StandardCharsets.UTF_8);
+        Matcher value = Pattern.compile("\\\"run_id\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"").matcher(json);
+        return value.find() && value.group(1).equals(runId);
     }
 
     private static int contention(String runId, String reason) throws InterruptedException {
@@ -498,7 +560,8 @@ public final class TestSessionCoordinator {
                 + "  \"command_hash\": \"" + hash + "\",\n"
                 + "  \"command\": \"" + escape(String.join(" ", command)) + "\",\n"
                 + "  \"state\": \"" + state + "\",\n"
-                + "  \"started_at\": \"" + escape(Instant.now().toString()) + "\"\n}\n";
+                + "  \"started_at\": \"" + escape(Instant.now().toString()) + "\",\n"
+                + "  \"process_start_epoch_ms\": " + processStartEpochMs() + "\n}\n";
         Files.createDirectories(path.getParent());
         Path tmp = path.resolveSibling(path.getFileName() + ".tmp");
         Files.writeString(tmp, json, StandardCharsets.UTF_8, StandardOpenOption.CREATE,
@@ -510,7 +573,12 @@ public final class TestSessionCoordinator {
         return "{\n  \"run_id\": \"" + escape(runId) + "\",\n  \"pid\": "
                 + ProcessHandle.current().pid() + ",\n  \"host\": \"" + escape(host())
                 + "\",\n  \"namespace\": \"" + escape(namespace.toString())
-                + "\",\n  \"state\": \"reclaiming\"\n}\n";
+                + "\",\n  \"state\": \"reclaiming\",\n"
+                + "  \"process_start_epoch_ms\": " + processStartEpochMs() + "\n}\n";
+    }
+
+    private static long processStartEpochMs() {
+        return ProcessHandle.current().info().startInstant().map(Instant::toEpochMilli).orElse(-1L);
     }
 
     private static Path resolveOutputRoot(Path worktree, boolean allowSystemTmp) throws IOException {
@@ -555,6 +623,16 @@ public final class TestSessionCoordinator {
         Files.createDirectories(root);
         if (!Files.isDirectory(root) || Files.isSymbolicLink(root)) {
             throw new StartupFailure(name + " is not a plain directory", 1);
+        }
+        try {
+            String current = root.getFileSystem().getUserPrincipalLookupService()
+                    .lookupPrincipalByName(System.getProperty("user.name")).getName();
+            String owner = Files.getOwner(root).getName();
+            if (!owner.equals(current)) {
+                throw new StartupFailure(name + " is not owned by the current user", 1);
+            }
+        } catch (UnsupportedOperationException e) {
+            throw new StartupFailure(name + " ownership cannot be verified", 1);
         }
         Path probe = Files.createTempFile(root, ".probe-", ".tmp");
         Files.deleteIfExists(probe);
@@ -709,6 +787,66 @@ public final class TestSessionCoordinator {
             }
             if (channel != null && channel.isOpen()) {
                 channel.close();
+            }
+        }
+    }
+
+    private static final class ShutdownState {
+        private final Paths paths;
+        private final String runId;
+        private final Path worktree;
+        private final Path leasePath;
+        private final String sourceBefore;
+        private final String runtimeBefore;
+        private final List<String> command;
+        private final Path exportFile;
+        private final Lease lease;
+        private volatile Process child;
+        private volatile boolean completed;
+
+        private ShutdownState(Paths paths, String runId, Path worktree, Path leasePath,
+                              String sourceBefore, String runtimeBefore, List<String> command,
+                              Path exportFile, Lease lease) {
+            this.paths = paths;
+            this.runId = runId;
+            this.worktree = worktree;
+            this.leasePath = leasePath;
+            this.sourceBefore = sourceBefore;
+            this.runtimeBefore = runtimeBefore;
+            this.command = command;
+            this.exportFile = exportFile;
+            this.lease = lease;
+        }
+
+        private synchronized void abort() {
+            if (completed) {
+                return;
+            }
+            Process process = child;
+            if (process != null && process.isAlive()) {
+                process.destroyForcibly();
+            }
+            try {
+                String sourceAfter = sourceDigest(worktree);
+                String runtimeAfter = runtimeDigest(command);
+                String state = sourceBefore.equals(sourceAfter) && runtimeBefore.equals(runtimeAfter)
+                        ? "ABORTED" : "INVALID_IDENTITY_CHANGED";
+                writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
+                        sourceAfter, runtimeAfter, List.of(), List.of()));
+                if (exportFile != null) {
+                    writeExport(exportFile, paths.manifest, runId);
+                }
+                System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId
+                        + " exit_code=143 state=" + state + " valid=false manifest=" + paths.manifest);
+                System.out.flush();
+            } catch (Exception e) {
+                e.printStackTrace(System.err);
+            } finally {
+                completed = true;
+                try {
+                    lease.close();
+                } catch (IOException ignored) {
+                }
             }
         }
     }
