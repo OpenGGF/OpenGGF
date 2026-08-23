@@ -963,9 +963,7 @@ public final class TestSessionCoordinator {
                 return;
             }
             Process process = child;
-            if (process != null && process.isAlive()) {
-                process.destroyForcibly();
-            }
+            boolean treeStopped = process == null || terminateProcessTree(process);
             try {
                 String sourceAfter = sourceDigest(worktree);
                 String runtimeAfter = runtimeDigest(command);
@@ -978,7 +976,8 @@ public final class TestSessionCoordinator {
                     writeExport(exportFile, paths.manifest, runId);
                 }
                 System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId
-                        + " exit_code=143 state=" + state + " valid=false manifest=" + paths.manifest);
+                        + " exit_code=143 state=" + state + " valid=false process_tree_stopped="
+                        + treeStopped + " manifest=" + paths.manifest);
                 System.out.flush();
             } catch (Exception e) {
                 e.printStackTrace(System.err);
@@ -989,6 +988,31 @@ public final class TestSessionCoordinator {
                 } catch (IOException ignored) {
                 }
             }
+        }
+
+        private static boolean terminateProcessTree(Process process) {
+            ProcessHandle root = process.toHandle();
+            Set<ProcessHandle> known = new LinkedHashSet<>();
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (System.nanoTime() < deadline) {
+                known.add(root);
+                root.descendants().forEach(known::add);
+                for (ProcessHandle handle : known) {
+                    if (handle.isAlive()) {
+                        handle.destroyForcibly();
+                    }
+                }
+                if (known.stream().noneMatch(ProcessHandle::isAlive)) {
+                    return true;
+                }
+                try {
+                    Thread.sleep(25);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }
+            return known.stream().noneMatch(ProcessHandle::isAlive);
         }
     }
 

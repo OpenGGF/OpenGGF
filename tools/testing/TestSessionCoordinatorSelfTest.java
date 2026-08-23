@@ -47,6 +47,7 @@ public final class TestSessionCoordinatorSelfTest {
         verifyInWorktreeSymlinkLockRootIsRejected(root, outputRoot);
         verifyChildExitPropagation(root, outputRoot);
         verifyShutdownFinalizesSession(root, outputRoot);
+        verifyShutdownStopsProcessTree(root, outputRoot);
         verifySourceMutationInvalidatesRun(root, outputRoot);
         verifyRuntimeInputMutationInvalidatesRun(root, outputRoot);
         verifyIgnoredFileDoesNotInvalidateRun(root, outputRoot);
@@ -283,6 +284,37 @@ public final class TestSessionCoordinatorSelfTest {
                 "coordinator must terminate after SIGTERM");
         check(Files.readString(manifest).contains("\"state\": \"ABORTED\""),
                 "shutdown must finalize the manifest as ABORTED");
+    }
+
+    private static void verifyShutdownStopsProcessTree(Path root, Path outputRoot) throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-shutdown-tree"));
+        Path pidFile = root.resolve("grandchild.pid");
+        ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-spawn-grandchild"));
+        builder.environment().put("OPENGGF_TEST_GRANDCHILD_PID_FILE", pidFile.toString());
+        Process process = builder.start();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+        String line;
+        while ((line = reader.readLine()) != null && line.startsWith("Picked up")) {
+            // Java may report JAVA_TOOL_OPTIONS before the coordinator marker.
+        }
+        check(line != null && line.startsWith("OPENGGF_TEST_RUN_START "),
+                "process-tree shutdown test must observe the run start marker");
+        for (int attempt = 0; attempt < 100 && !Files.exists(pidFile); attempt++) {
+            Thread.sleep(10);
+        }
+        check(Files.isRegularFile(pidFile), "child must publish its grandchild PID");
+        long grandchildPid = Long.parseLong(Files.readString(pidFile).trim());
+        process.destroy();
+        check(process.waitFor(Duration.ofSeconds(10).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS),
+                "coordinator must terminate after process-tree SIGTERM");
+        try {
+            check(ProcessHandle.of(grandchildPid).map(ProcessHandle::isAlive).orElse(false) == false,
+                    "shutdown must stop coordinator descendants before releasing the lease");
+        } finally {
+            ProcessHandle.of(grandchildPid).ifPresent(handle -> handle.destroyForcibly());
+        }
     }
 
     private static void verifyArbitraryReclaimIsRejected(Path root, Path outputRoot) throws Exception {
@@ -591,6 +623,26 @@ public final class TestSessionCoordinatorSelfTest {
         check(environment.getOrDefault("JAVA_TOOL_OPTIONS", "").contains("-Dselftest.java=preserved"),
                 "JAVA_TOOL_OPTIONS must preserve the caller's value");
         if (mode.equals("child-sleep")) {
+            try {
+                Thread.sleep(Duration.ofSeconds(30).toMillis());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        if (mode.equals("child-spawn-grandchild")) {
+            try {
+                Process grandchild = new ProcessBuilder(javaCommand(), "-cp", classPath(),
+                        TestSessionCoordinatorSelfTest.class.getName(), "child-grandchild-sleep").start();
+                Files.writeString(Path.of(System.getenv("OPENGGF_TEST_GRANDCHILD_PID_FILE")),
+                        Long.toString(grandchild.pid()) + "\n", StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+                Thread.sleep(Duration.ofSeconds(30).toMillis());
+            } catch (IOException | InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(e);
+            }
+        }
+        if (mode.equals("child-grandchild-sleep")) {
             try {
                 Thread.sleep(Duration.ofSeconds(30).toMillis());
             } catch (InterruptedException e) {
