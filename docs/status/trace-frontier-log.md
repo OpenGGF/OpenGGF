@@ -114644,3 +114644,19 @@ The other three death arms remain coordinates only.
   and WFZ level-select frame 0 `tornado.status_byte`. No heap exhaustion, fork death,
   crash, or LWJGL extraction collision occurred; the session reported
   `worktree-session` / `per-surefire-fork`.
+
+## 2026-08-23 - Post-merge 0.6 trace frontier verification
+
+- Worktree: main `develop` after merge `4149a520d`, with the seven pre-existing S1
+  special-stage files left dirty and untouched.
+- Command: `tools/testing/test-session.sh -- mvn -Ptrace-replay -Dmse=off test -B`
+  with the verified S1, S2, and S3K ROM paths from the release workspace.
+- Result: **868 tests, 9 failures, 0 errors, 7 skips**. Compared with the merged
+  baseline's 868 / 10 / 0 / 7, `TestS2SczLevelSelectTraceReplay` is now green.
+  The remaining failures are the known S2 CNZ/CPZ/WFZ spans, S3K AIZ and complete-run
+  chain divergences, and the existing S3K replay-reference closure diagnostic.
+- First-error examples: S2 CPZ2 frame 2252 `air`; S2 WFZ frame 0
+  `tornado.status_byte`; S3K AIZ frame 20713 `air`. The run reported no `Java heap
+  space`, `OutOfMemoryError`, fork death, crash, or LWJGL extraction collision;
+  isolation was `worktree-session` / `per-surefire-fork`.
+- Session manifest: `<managed-scratch>/tasks/openggf-test-session-20260823T211021Z-3266273-d4e5fd7e/20260823T211021Z-p3266217-7e394f/manifest.json`.
