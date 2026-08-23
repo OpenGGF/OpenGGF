@@ -442,6 +442,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
   trace-scope exclusions. This improves automated evidence accounting; human end-to-end
   gameplay and audio QA remain required before release.
 
+- **Sonic 2 SCZ Tornado trace boundary (2026-08-23):** the native ObjB2 ride-start timer
+  sentinel and stationary airborne release path now match the ROM, closing the two SCZ
+  warning spans without consuming trace state. The remaining WFZ ObjB2 spans are still
+  tracked before release sign-off.
+
 - **Sonic 1 DAC resume and FM5 sound-effect onset now follow the shipped driver.** Pausing or
   losing window focus no longer leaves the currently playing music track's DAC channel unpanned
   after resume. FM5 sound effects also retain the source-derived 68K/YM2612 busy timing between

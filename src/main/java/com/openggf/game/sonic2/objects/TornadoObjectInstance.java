@@ -392,6 +392,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         lastMainStanding = true;
         moveVertActive = false;
         moveVert2Active = false;
+        // ROM ObjB2_Move_vert/ObjB2_Move_vert2 treat objoff_31 as an expired
+        // byte countdown: subq.b #1 followed by bpl (s2.asm:79388-79390,
+        // 79460-79463). The native ride-start prelude therefore exposes -1
+        // (0xFF) until a vertical move loads $14 or $2B.
+        moveVertTimer = 0xFF;
     }
 
     /**
@@ -591,13 +596,29 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
         // ObjB2_Move_with_player reads Sonic's live Status_OnObj bit before
         // the inline SolidObject call refreshes this object's own standing bit
-        // (s2.asm:78298-78306, 78816-78823). That bit may have been set by a
-        // different object earlier in the previous frame (for example SCZ
-        // Turtloid), while the final release-frame bob still needs this
-        // object's previous checkpoint latch.
-        boolean playerOnObjectAtEntry = player.isOnObject() || lastMainStanding;
+        // (s2.asm:78298-78306, 78816-78823). The engine can still expose a
+        // marker left by another solid in that pass, while lastMainStanding
+        // records only ObjB2's own checkpoint result. For an airborne player
+        // with no horizontal launch velocity, model the release shape with
+        // Move_below_player and its decaying objoff_38 relation. A moving
+        // airborne player remains on the live Status_OnObj path; the split is
+        // derived from the ROM jump state (s2.asm:37056-37058), not a trace
+        // route or frame.
+        boolean stationarySolidRelease = player.isOnObject() && player.getAir()
+                && !lastMainStanding && player.getXSpeed() == 0;
+        if (stationarySolidRelease) {
+            smoothOffsetX = currentX - player.getCentreX();
+        }
+        boolean playerOnObjectAtEntry = (player.isOnObject() && !stationarySolidRelease)
+                || lastMainStanding;
         boolean objectStandingBeforeCheckpoint = lastMainStanding;
         moveWithPlayer(player, playerOnObjectAtEntry);
+        if (stationarySolidRelease) {
+            // ObjB2's next below-player pass has already consumed the
+            // release offset; the ROM's objoff_38 then decays from its
+            // cleared value rather than repeating this one-frame alignment.
+            smoothOffsetX = 0;
+        }
 
         PlayerSolidContactResult contact = checkpoint(player);
         boolean mainStandingNow = contact.standingNow();

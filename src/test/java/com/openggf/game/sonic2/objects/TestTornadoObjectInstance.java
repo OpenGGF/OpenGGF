@@ -618,6 +618,71 @@ public class TestTornadoObjectInstance {
     }
 
     @Test
+    public void tornadoSczMainTreatsAirborneOnObjectFlagAsReleasedAtEntry() throws Exception {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                0x739, 0x8F, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x73A, (short) 0x63);
+        // The S2 player can transiently retain the engine's on-object marker as
+        // the jump step sets air=true. The stationary release must therefore
+        // take ObjB2_Move_below_player's path for this object pass
+        // (s2.asm:79343-79374).
+        main.setOnObject(true);
+        main.setAir(true);
+
+        setField(tornado, "xPosFixed8", 0x73900);
+        setField(tornado, "yPosFixed8", 0x8F00);
+        setField(tornado, "lastMainStanding", false);
+
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        registry.beginFrame(1, List.of(main));
+        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+                main, PlayerSolidContactResult.noContact(
+                        PlayerStandingState.NONE,
+                        PreContactState.ZERO,
+                        PostContactState.ZERO))));
+
+        tornado.setServices(new CheckpointServices(registry.currentObject()));
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0x73A, tornado.getX(),
+                "ObjB2 must follow Move_below_player for a stationary airborne release");
+        assertFalse((boolean) getField(tornado, "moveVertActive"));
+        assertFalse((boolean) getField(tornado, "moveVert2Active"));
+    }
+
+    @Test
+    public void tornadoSczMainKeepsLiveObjectPathForMovingAirbornePlayer() throws Exception {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                0x740, 0x8F, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x73A, (short) 0x63);
+        main.setOnObject(true);
+        main.setAir(true);
+        main.setXSpeed((short) 1);
+
+        setField(tornado, "xPosFixed8", 0x74000);
+        setField(tornado, "yPosFixed8", 0x8F00);
+        setField(tornado, "lastMainStanding", false);
+
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        registry.beginFrame(1, List.of(main));
+        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+                main, PlayerSolidContactResult.noContact(
+                        PlayerStandingState.NONE,
+                        PreContactState.ZERO,
+                        PostContactState.ZERO))));
+
+        tornado.setServices(new CheckpointServices(registry.currentObject()));
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0x740, tornado.getX(),
+                "ObjB2 must retain Move_with_player for a moving airborne player");
+        assertFalse((boolean) getField(tornado, "moveVertActive"));
+        assertFalse((boolean) getField(tornado, "moveVert2Active"));
+    }
+
+    @Test
     public void sczCameraEdgePushPreservesPlayerXSubpixel() throws Exception {
         TornadoObjectInstance tornado = createTornado(0x640, 0x99, 0x50);
         TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x63E, (short) 0x3C);
@@ -716,6 +781,17 @@ public class TestTornadoObjectInstance {
         assertEquals(0, services.requestedAct);
         assertTrue(services.requestedDeactivateLevelNow);
         assertEquals(SaveReason.PROGRESSION_SAVE, services.lastSaveReason);
+    }
+
+    @Test
+    public void rideStartPreludePreservesRomVerticalTimerSentinel() {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                0x136, 0x9D, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
+
+        tornado.primeRideStart((short) 0x135, (short) 0x81, 0xC000);
+
+        assertEquals(0xFF, tornado.snapshot().objoff31(),
+                "ObjB2's native ride-start slot retains the idle vertical timer sentinel");
     }
 
     private static TornadoObjectInstance createTornado(int x, int y, int subtype) {
