@@ -62,7 +62,7 @@ The implementation is split by ownership rather than by one large launcher file:
 
 - `TestSessionCoordinator` accepts `--export-file <path>`, `--lock-root <path>`, `--allow-system-tmp`, `--reclaim <lease-path>`, `--guard <phase>`, and a child command after `--`.
 - Run mode emits `OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` lines and exits with the child exit code, except that invalid identity/startup states return nonzero even if the child returned zero.
-- `manifest.json` contains `run_id`, `state`, `manifest`, `worktree`, `lease_path`, `source_digest`, `runtime_inputs_digest`, `build_root`, `surefire_reports`, `trace_reports`, `artifact_root`, `distribution_root`, `reports`, and `artifacts`.
+- `manifest.json` contains `run_id`, `state`, `manifest`, `worktree`, `lease_path`, `source_digest`, `runtime_inputs_digest`, `build_root`, `tmp_root`, `surefire_reports`, `trace_reports`, `diagnostics_root`, `artifact_root`, `distribution_root`, `reports`, and `artifacts`.
 - The lease path is `<git-dir>/openggf-test-session.lock/lease.lock` or an explicitly supplied external lock root keyed by the canonical worktree hash. The coordinator creates the namespace directory, creates `lease.lock` with `CREATE_NEW`, acquires an exclusive `FileLock`, writes `owner.json` atomically, and holds the channel until Maven exits and the final manifest is written.
 - Run IDs use UTC timestamp + coordinator PID + cryptographic random suffix, for example `20260823T101530Z-p4812-a7f93c`.
 
@@ -350,7 +350,9 @@ The implementation is split by ownership rather than by one large launcher file:
 
 - POSIX invocation: `tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn ...`.
 - PowerShell invocation: `tools/testing/test-session.ps1 -ExportFile $env:GITHUB_OUTPUT -- mvn ...`.
-- Workflow outputs: `manifest`, `run_id`; manifest paths: `surefire_reports`, `trace_reports`, `artifact_root`, `distribution_root`, `reports`, `artifacts`.
+- Workflow outputs: `manifest`, `run_id`, and exported session roots; manifest paths:
+  `surefire_reports`, `trace_reports`, `artifact_root`, `distribution_root`, `reports`,
+  `artifacts`.
 
 - [ ] **Step 1: Write failing workflow-contract assertions.**
 
@@ -373,7 +375,9 @@ The implementation is split by ownership rather than by one large launcher file:
     '-Dtest=com.openggf.tests.TestBuildToolingGuard' test
   ```
 
-  Also run the coordinator with a temporary export file and verify it contains exactly `manifest=<absolute path>` and `run_id=<id>` and that the manifest JSON contains every required handoff key.
+  Also run the coordinator with a temporary export file and verify it contains the
+  manifest/run-id records plus every exported session root, and that the manifest JSON
+  contains every required handoff key.
 
 - [ ] **Step 5: Commit CI/release migration.**
 

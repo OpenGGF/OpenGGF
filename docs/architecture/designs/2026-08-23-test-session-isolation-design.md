@@ -291,7 +291,11 @@ The session launcher performs these operations in order:
    directory is also assigned to `TMPDIR`, `TMP`, and `TEMP` for Maven,
    Surefire, shell, ffmpeg, packaging, and other child processes. The POM passes
    the same session directory to Surefire forks through `argLine`, because the
-   parent and child JVMs have different startup timing. The prior values are
+   parent and child JVMs have different startup timing. Each Surefire fork also
+   receives `-Dorg.lwjgl.system.SharedLibraryExtractPath=<session>/tmp/lwjgl-<fork>`.
+   This prevents concurrent forks, worktrees, or CI jobs from replacing one
+   another's extracted LWJGL natives while preserving a common session-owned
+   parent temp root. The prior values are
    recorded in the manifest and are changed only in the coordinator's child
    environment.
 6. Pass the session build directory, Surefire report directory, trace report
@@ -405,8 +409,10 @@ The coordinator's manifest has a stable top-level handoff shape:
   "source_digest": "<sha256>",
   "runtime_inputs_digest": "<sha256>",
   "build_root": "<absolute path>",
+  "tmp_root": "<absolute path>",
   "surefire_reports": "<absolute path>",
   "trace_reports": "<absolute path>",
+  "diagnostics_root": "<absolute path>",
   "artifact_root": "<absolute path>",
   "distribution_root": "<absolute path>",
   "reports": [],
@@ -415,9 +421,13 @@ The coordinator's manifest has a stable top-level handoff shape:
 ```
 
 The coordinator accepts an optional `--export-file` path. On successful or
-failed completion it writes exactly two UTF-8, newline-terminated records:
-`manifest=<absolute path>` and `run_id=<id>`. Paths containing carriage returns
-or newlines are rejected at startup, so no additional escaping is needed.
+failed completion it writes UTF-8, newline-terminated `key=value` records for
+the manifest, run id, and all handoff roots: `manifest`, `run_id`, `build_root`,
+`tmp_root`, `surefire_reports`, `trace_reports`, `diagnostics_root`,
+`artifact_root`, and `distribution_root`. Paths containing carriage returns or
+newlines are rejected at startup, so no additional escaping is needed. The
+manifest remains the authoritative record; the exported root fields are a
+workflow convenience for shell steps that package or inspect the same run.
 GitHub Actions passes `$GITHUB_OUTPUT` or its PowerShell equivalent to this
 option, so later steps consume `${{ steps.<session>.outputs.manifest }}`. Local
 invocations receive the same path in the end marker and stdout. No workflow

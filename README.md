@@ -1947,8 +1947,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
   was implemented and **changed nothing measurable** -- same first ring divergence, same first
   position divergence, same failure cursor -- so it was reverted rather than banked as a plausible
   no-op. Note also that `-Ptrace-replay` publishes no segment report for segment 4 at all, because
-  the segment aborts before closure: anyone triaging from `target/trace-reports/` alone sees two
-  clean segments and no evidence.
+  the segment aborts before closure: anyone triaging from the legacy `target/trace-reports/`
+  path alone sees two clean segments and no evidence. Current runs must be triaged from the
+  session manifest's `trace_reports` root.
 
 - **Sonic 2 stops ageing placed objects through the title card
   (`bugfix/ai-s2-seg15-r1`, merged 2026-08-19).** No carried *value* differed at segment 15 row 0 --
@@ -2661,7 +2662,7 @@ straightforward to add new objects, zones, and game-specific behaviour.
   surfaced it as `hardware timing run is already closed` in the visual runs; neither
   introduced it. It is order-dependent: the `trace-replay` profile runs `forkCount=1,
   reuseForks=true` under Surefire's default `runOrder=filesystem`, whose order differs per
-  worktree and survives a `mvn clean`, so whichever visual run lands early enough behind the
+  worktree and survives a legacy raw Maven clean, so whichever visual run lands early enough behind the
   wrong predecessors reached the trap. Verified on a tree carrying this fix and the S2 chain
   V-blank work together: 778 tests, three red, the three chains only, both visual runs and
   all three prefix pins green.

@@ -22,8 +22,8 @@ public final class TestSessionCoordinatorSelfTest {
     private static final Pattern RUN_ID = Pattern.compile("\\d{8}T\\d{6}Z-p\\d+-[0-9a-f]{6}");
     private static final List<String> MANIFEST_KEYS = List.of(
             "run_id", "state", "manifest", "worktree", "lease_path", "source_digest",
-            "runtime_inputs_digest", "build_root", "surefire_reports", "trace_reports",
-            "artifact_root", "distribution_root", "reports", "artifacts");
+            "runtime_inputs_digest", "build_root", "tmp_root", "surefire_reports", "trace_reports",
+            "diagnostics_root", "artifact_root", "distribution_root", "reports", "artifacts");
 
     private TestSessionCoordinatorSelfTest() {
     }

@@ -52,6 +52,17 @@ class TestBuildToolingGuard {
     // unchanged and only its reachability differs.
     private static final String FRONTIER_GRANDFATHER_BASELINE = "9fb9f4011";
     private static final String FRONTIER_LOG_PATH = "docs/status/trace-frontier-log.md";
+    private static final List<String> SESSION_DOCUMENTATION_FILES = List.of(
+            "AGENTS.md", "CLAUDE.md", "README.md",
+            "docs/guide/contributing/dev-setup.md",
+            "docs/guide/contributing/testing.md",
+            "docs/guide/contributing/trace-replay.md",
+            "docs/guide/contributing/trace-framework-reference.md",
+            "docs/guide/playing/getting-started.md",
+            "docs/guide/contributing/tutorial-implement-object.md",
+            "docs/guide/PLAN.md");
+    private static final Pattern RAW_SUPPORTED_MAVEN_COMMAND = Pattern.compile(
+            "^\\s*`?mvn (?:test|package|clean|verify|compile|test-compile)\\b");
 
     private static final List<String> TASK4_INVENTORY_FILES = List.of(
             "src/test/java/com/openggf/audio/TestLiveCaptureSurvivesBackendSwap.java",
@@ -590,6 +601,64 @@ class TestBuildToolingGuard {
         if (!violations.isEmpty()) {
             fail("Surefire fork configuration does not match what the docs can honestly"
                     + " promise:\n  " + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void supportedDocumentationMustUseSessionsAndExplicitHookBootstrap() throws Exception {
+        String agents = Files.readString(Path.of("AGENTS.md"), StandardCharsets.UTF_8);
+        String claude = Files.readString(Path.of("CLAUDE.md"), StandardCharsets.UTF_8);
+        List<String> violations = new ArrayList<>();
+
+        if (!agents.equals(claude)) {
+            violations.add("AGENTS.md and CLAUDE.md are no longer byte-identical");
+        }
+        if (!agents.contains("tools/testing/install-hooks.sh")
+                || !agents.contains("tools/testing/install-hooks.ps1")) {
+            violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
+        }
+        if (!Files.isRegularFile(Path.of("tools/testing/install-hooks.sh"))
+                || !Files.isExecutable(Path.of("tools/testing/install-hooks.sh"))) {
+            violations.add("tools/testing/install-hooks.sh must exist and be executable");
+        }
+        if (!Files.isRegularFile(Path.of("tools/testing/install-hooks.ps1"))) {
+            violations.add("tools/testing/install-hooks.ps1 must exist");
+        }
+        String hookScript = Files.readString(Path.of("tools/testing/install-hooks.sh"), StandardCharsets.UTF_8);
+        String hookPowerShell = Files.readString(Path.of("tools/testing/install-hooks.ps1"), StandardCharsets.UTF_8);
+        if (!hookScript.contains("config --local core.hooksPath .githooks")) {
+            violations.add("POSIX hook bootstrap does not set core.hooksPath locally");
+        }
+        if (!hookPowerShell.contains("config --local core.hooksPath .githooks")) {
+            violations.add("PowerShell hook bootstrap does not set core.hooksPath locally");
+        }
+
+        for (String file : SESSION_DOCUMENTATION_FILES) {
+            Path path = Path.of(file);
+            if (!Files.isRegularFile(path)) {
+                violations.add(file + " is missing from the supported documentation inventory");
+                continue;
+            }
+            String text = Files.readString(path, StandardCharsets.UTF_8);
+            for (String line : text.split("\\R")) {
+                String stripped = line.stripLeading();
+                if (RAW_SUPPORTED_MAVEN_COMMAND.matcher(line).find()
+                        && !stripped.startsWith("tools/testing/test-session.sh")
+                        && !stripped.startsWith("tools/testing/test-session.ps1")) {
+                    violations.add(file + " contains a raw supported Maven command; use the session wrapper");
+                }
+                String lower = line.toLowerCase();
+                if ((lower.contains("target/trace-reports") || lower.contains("target/surefire-reports"))
+                        && !lower.contains("legacy") && !lower.contains("historical")) {
+                    violations.add(file + " names a shared report root without a legacy/historical label");
+                    break;
+                }
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("supported documentation must describe coordinator-owned runs and explicit hook setup:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
 
