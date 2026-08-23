@@ -234,6 +234,10 @@ public final class TestSessionCoordinator {
             Path marker = namespace.resolve("reclaiming.json");
             Path owner = namespace.resolve("owner.json");
             Path initializing = namespace.resolve("initializing.json");
+            Path processTree = namespace.resolve("process-tree-active.json");
+            if (Files.exists(processTree) && recordedProcessAlive(processTree)) {
+                continue;
+            }
             FileChannel channel = null;
             FileLock lock = null;
             try {
@@ -438,21 +442,30 @@ public final class TestSessionCoordinator {
     private static boolean recordedProcessAlive(Path metadata) throws IOException {
         String json = Files.readString(metadata, StandardCharsets.UTF_8);
         Matcher pid = Pattern.compile("\\\"pid\\\"\\s*:\\s*(\\d+)").matcher(json);
-        if (!pid.find()) {
+        List<Long> processIds = new ArrayList<>();
+        while (pid.find()) {
+            processIds.add(Long.parseLong(pid.group(1)));
+        }
+        if (processIds.isEmpty()) {
             return false;
         }
-        long processId = Long.parseLong(pid.group(1));
-        Optional<ProcessHandle> process = ProcessHandle.of(processId);
-        if (process.isEmpty() || !process.get().isAlive()) {
-            return false;
+        for (long processId : processIds) {
+            Optional<ProcessHandle> process = ProcessHandle.of(processId);
+            if (process.isEmpty() || !process.get().isAlive()) {
+                continue;
+            }
+            if (processIds.size() > 1) {
+                return true;
+            }
+            Matcher start = Pattern.compile("\\\"process_start_epoch_ms\\\"\\s*:\\s*(-?\\d+)").matcher(json);
+            if (!start.find() || Long.parseLong(start.group(1)) < 0) {
+                return true;
+            }
+            return process.get().info().startInstant()
+                    .map(value -> value.toEpochMilli() == Long.parseLong(start.group(1)))
+                    .orElse(true);
         }
-        Matcher start = Pattern.compile("\\\"process_start_epoch_ms\\\"\\s*:\\s*(-?\\d+)").matcher(json);
-        if (!start.find() || Long.parseLong(start.group(1)) < 0) {
-            return true;
-        }
-        return process.get().info().startInstant()
-                .map(value -> value.toEpochMilli() == Long.parseLong(start.group(1)))
-                .orElse(true);
+        return false;
     }
 
     private static boolean leaseStillOwned(Path namespace, Path leasePath, String runId) throws IOException {
@@ -963,12 +976,17 @@ public final class TestSessionCoordinator {
                 return;
             }
             Process process = child;
-            boolean treeStopped = process == null || terminateProcessTree(process);
+            ProcessTreeResult treeResult = process == null
+                    ? new ProcessTreeResult(true, List.of()) : terminateProcessTree(process);
+            boolean treeStopped = treeResult.stopped();
             try {
+                if (!treeStopped) {
+                    writeProcessTreeMarker(leasePath.getParent(), runId, treeResult.survivors());
+                }
                 String sourceAfter = sourceDigest(worktree);
                 String runtimeAfter = runtimeDigest(command);
                 String state = sourceBefore.equals(sourceAfter) && runtimeBefore.equals(runtimeAfter)
-                        && leaseStillOwned(leasePath.getParent(), leasePath, runId)
+                        && treeStopped && leaseStillOwned(leasePath.getParent(), leasePath, runId)
                         ? "ABORTED" : "INVALID_IDENTITY_CHANGED";
                 writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                         sourceAfter, runtimeAfter, List.of(), List.of()));
@@ -983,14 +1001,33 @@ public final class TestSessionCoordinator {
                 e.printStackTrace(System.err);
             } finally {
                 completed = true;
-                try {
-                    lease.close();
-                } catch (IOException ignored) {
+                if (treeStopped) {
+                    try {
+                        lease.close();
+                    } catch (IOException ignored) {
+                    }
                 }
             }
         }
 
-        private static boolean terminateProcessTree(Process process) {
+        private static void writeProcessTreeMarker(Path namespace, String runId,
+                                                   List<ProcessHandle> survivors)
+                throws IOException {
+            if (namespace == null || !Files.isDirectory(namespace)) {
+                return;
+            }
+            String json = "{\n  \"run_id\": \"" + escape(runId)
+                    + "\",\n  \"state\": \"process-tree-active\",\n  \"pid\": "
+                    + survivors.get(0).pid() + ",\n  \"pids\": [" + survivors.get(0).pid();
+            for (ProcessHandle survivor : survivors.stream().skip(1).toList()) {
+                json += ", " + survivor.pid();
+            }
+            json += "]\n}\n";
+            Files.writeString(namespace.resolve("process-tree-active.json"), json,
+                    StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        }
+
+        private static ProcessTreeResult terminateProcessTree(Process process) {
             ProcessHandle root = process.toHandle();
             Set<ProcessHandle> known = new LinkedHashSet<>();
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
@@ -1003,16 +1040,20 @@ public final class TestSessionCoordinator {
                     }
                 }
                 if (known.stream().noneMatch(ProcessHandle::isAlive)) {
-                    return true;
+                    return new ProcessTreeResult(true, List.of());
                 }
                 try {
                     Thread.sleep(25);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    return false;
+                    return new ProcessTreeResult(false, known.stream().filter(ProcessHandle::isAlive).toList());
                 }
             }
-            return known.stream().noneMatch(ProcessHandle::isAlive);
+            List<ProcessHandle> survivors = known.stream().filter(ProcessHandle::isAlive).toList();
+            return new ProcessTreeResult(survivors.isEmpty(), survivors);
+        }
+
+        private record ProcessTreeResult(boolean stopped, List<ProcessHandle> survivors) {
         }
     }
 
