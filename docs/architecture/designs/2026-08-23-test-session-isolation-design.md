@@ -134,17 +134,80 @@ single-session protection from a lock that `git clean -fdx` can remove.
 command, branch, and starting `HEAD`. If the directory already exists, the
 launcher prints the owner information and exits before starting Maven.
 
-The lease namespace is deliberately an atomically created directory rather than
-a PID-only file. PID files are vulnerable to stale processes, PID reuse, and
-partial writes. `lease.lock` is the regular-file ownership primitive: the
-coordinator creates the namespace directory, creates `lease.lock` with
-`CREATE_NEW`, acquires an exclusive Java `FileChannel`/`FileLock`, and only then
-writes `owner.json` through a temporary file followed by an atomic move. A
-second coordinator that sees the namespace reports the owner without touching
-it. A stale lease may be inspected and explicitly reclaimed by a separate
-command after checking the recorded process and manifest; reclaim first obtains
-the same file lock, renames the whole namespace to a retained stale name, and
-never deletes it automatically.
+The lease namespace is deliberately an atomically published directory rather
+than a PID-only file. PID files are vulnerable to stale processes, PID reuse,
+and partial writes. The creator first makes a uniquely named staging directory
+beside the canonical namespace, writes `initializing.json` with the run ID, PID,
+host, worktree, command, and start time, and atomically moves that complete
+directory into `openggf-test-session.lock`. No empty canonical namespace is
+ever exposed. `lease.lock` is the regular-file ownership primitive: after
+publication the coordinator creates it with `CREATE_NEW`, acquires an
+exclusive Java `FileChannel`/`FileLock`, and only then writes `owner.json`
+through a temporary file followed by an atomic move. `initializing.json` stays
+until `owner.json` is visible, so a crash in the post-lock/pre-owner window has
+recoverable owner metadata. A contender that sees `initializing.json` without
+`owner.json` waits briefly for initialization to finish, then reports the
+startup state and exits without reclaiming or deleting anything. If the creator
+dies before the lock or owner exists, `--reclaim` verifies the recorded process
+is gone, creates `reclaiming.json` with `CREATE_NEW`, and renames the namespace
+to a retained stale name; a live initializing process is never reclaimed. Once
+`owner.json` exists, a contender reports the owner without touching it. A stale
+lease may be inspected and explicitly reclaimed by a separate command after
+checking the recorded process and manifest.
+
+Normal coordinators never create `lease.lock` inside a published namespace that
+still has only `initializing.json`; only the creator that published that
+namespace may finish its initialization. For lockless recovery, the reclaimer
+claims `reclaiming.json` with `CREATE_NEW` before renaming. This atomic claim is
+the recovery mutex: competing reclaimers lose the create race, and normal
+coordinators refuse both `initializing.json` and `reclaiming.json` states.
+Process liveness checks use the recorded PID and process start identity where
+the platform exposes it, so a stale marker is never reclaimed merely because a
+PID number is absent.
+
+The staging-directory publication and every canonical namespace rename require
+`StandardCopyOption.ATOMIC_MOVE`; `AtomicMoveNotSupportedException` is a
+fail-closed startup/reclaim error, with the staging or marked namespace
+retained for diagnosis. There is no non-atomic fallback.
+
+Reclaim uses a cross-platform two-stage protocol. When a lock exists, the
+reclaimer creates `reclaiming.json` while holding the same `FileLock`, with
+`CREATE_NEW`, recording
+its own PID, host, start time, and target run ID, and flushes it. It then closes
+the channel before renaming the namespace to a retained stale name. Every
+normal coordinator checks for `reclaiming.json` before acquiring the lease and
+checks it again immediately after acquiring the lock; if the marker appeared,
+it releases the lock and retries or exits without starting Maven. The
+reclaimer creates that marker while holding the lock, so Windows' inability to
+rename an open locked file cannot create a close-then-rename race. If a
+reclaimer dies after writing the marker, a later explicit reclaim verifies that
+the recorded reclaimer process is gone, reacquires the target lock, confirms
+the target owner is stale, and resumes the close-before-rename sequence. A
+failed rename leaves the marker for that explicit retry; no automatic deletion
+occurs. POSIX follows the same sequence for one deterministic protocol on both
+platforms.
+
+All contention/recovery loops use one exact policy: attempt 1 starts
+immediately, followed by at most three retry attempts after 50 ms, 100 ms, and
+200 ms sleeps. A retryable condition is a lock conflict, a newly observed
+`reclaiming.json`, an incomplete initialization marker, or a transient failure
+to acquire/revalidate the target namespace; non-retryable validation errors
+fail immediately. A normal coordinator performs no Maven launch when any
+attempt observes a reclaim or incomplete-initialization marker; after the
+fourth failed attempt it exits 75 (`EX_TEMPFAIL`) with no Maven manifest.
+
+Explicit reclaim attempt 1 atomically creates `reclaiming.json` with
+`CREATE_NEW`. If it already exists, the reclaimer reads its recorded PID,
+process-start identity, host, and target run ID: a live owner is retryable
+contention, while a dead owner may be resumed by the explicit reclaim command.
+The marker remains in place across retries, and only one reclaim command can
+create it. On every attempt, reclaim revalidates the target owner and lease;
+when `lease.lock` exists it acquires the lock, checks `reclaiming.json` again,
+then closes the channel before each `ATOMIC_MOVE` rename. A lockless recovery
+uses the already-created marker as its mutex and atomically renames only after
+the recorded initializing process is revalidated dead. If all four attempts
+fail, reclaim exits 75 and leaves every marker and namespace retained for a
+later explicit invocation.
 
 The lease is placed in per-worktree metadata rather than the common repository
 metadata. This permits independent linked worktrees to run concurrently. The
@@ -152,7 +215,7 @@ external lock-root fallback is keyed by the canonical worktree path and is
 used only when explicitly provisioned outside the worktree.
 
 The launcher owns the lease for the entire Maven invocation, including `clean`,
-`compile`, `test`, `verify`, `package`, and report aggregation. It holds an
+`compile`, `test-compile`, `test`, `verify`, `package`, and report aggregation. It holds an
 exclusive `FileChannel`/`FileLock` on the lease for the full child-process
 lifetime; a second coordinator cannot acquire it. All documented test/build
 entrypoints use the launcher.
@@ -233,6 +296,18 @@ The session launcher performs these operations in order:
    environment.
 6. Pass the session build directory, Surefire report directory, trace report
    directory, and diagnostic root as explicit Maven/system properties.
+   The manifest path is passed as `openggf.session.manifest`; it is the
+   authoritative input for both lifecycle guards.
+   The coordinator also passes the guard identity properties
+   `openggf.session.manifest`,
+   `openggf.session.run-id`, `openggf.session.capability`,
+   `openggf.session.command-hash`, `openggf.session.worktree`,
+   `openggf.session.lease-path`, and
+   `openggf.session.allowed-phases`. `openggf.session.command-hash` is the
+   SHA-256 of the canonical child argv, joined with NUL separators; the
+   allowed phase list is derived from the supported lifecycle command before
+   Maven starts. The POM exposes these as system properties to the guard
+   invocation, and a missing or inconsistent value is a rejection.
 7. Stream Maven output to the console and `maven.log`. Emit a single-line
    `OPENGGF_TEST_RUN_START` marker before Maven and a corresponding
    `OPENGGF_TEST_RUN_END` marker after it.
@@ -450,7 +525,7 @@ The implementation is complete only when these checks exist:
    manifest are invalid, and the launcher returns nonzero.
 7. The process is interrupted: the manifest remains `RUNNING`/`ABORTED`, the
    next run reports the orphan, and no stale report is counted as current.
-8. Raw `mvn clean`, `compile`, `test`, `verify`, and `package` without a valid
+8. Raw `mvn clean`, `compile`, `test-compile`, `test`, `verify`, and `package` without a valid
    capability fail before mutating outputs; IDE model inspection remains
    available only through the allowlisted mode. Direct plugin goals are tested
    as non-certifying unless invoked through the coordinator.
