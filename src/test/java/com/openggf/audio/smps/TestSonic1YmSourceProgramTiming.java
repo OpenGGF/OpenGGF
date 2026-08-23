@@ -11,10 +11,13 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** Executable authority for the two authenticated S1 FM5 first-attack paths. */
 class TestSonic1YmSourceProgramTiming {
@@ -36,6 +39,99 @@ class TestSonic1YmSourceProgramTiming {
         assertEquals(2, root.path("programs").size());
         assertProgram(root.path("programs").get(0), "VOICE_NOTE", 30, 0);
         assertProgram(root.path("programs").get(1), "VOICE_PAN_NOTE", 31, 1);
+    }
+
+    @Test
+    void sourceProgramsAreImmutableDenseAndBounded() {
+        var variant = new YmSourceProgramTiming.ProgramVariant(
+                1, 0b1110, YmSourceProgramTiming.FirstPathShape.VOICE_NOTE);
+        var source = new YmSourceProgramTiming.SourcePath("SetVoice@source:1-2");
+        var writes = new java.util.ArrayList<>(List.of(
+                new YmSourceProgramTiming.ProgramWrite(
+                        YmServiceTimingProfile.SegmentKind.FM_VOICE_UPLOAD,
+                        1, 0xB1, 0, 0, 0, 0, source),
+                new YmSourceProgramTiming.ProgramWrite(
+                        YmServiceTimingProfile.SegmentKind.KEY_OFF,
+                        0, 0x28, 100, 119, 259, 500, source)));
+        var sections = new java.util.ArrayList<>(List.of(
+                new YmSourceProgramTiming.ProgramSection(
+                        YmServiceTimingProfile.SegmentKind.FM_VOICE_UPLOAD, 0, 1),
+                new YmSourceProgramTiming.ProgramSection(
+                        YmServiceTimingProfile.SegmentKind.KEY_OFF, 1, 1)));
+        var program = new YmSourceProgramTiming.SourceProgram(
+                YmSourceProgramTiming.ProgramKind.S1_FM5_FIRST_VOICE_ATTACK,
+                variant, writes, sections);
+        writes.clear();
+        sections.clear();
+        assertEquals(2, program.writes().size());
+        assertEquals(2, program.sections().size());
+        assertNotSame(writes, program.writes());
+        assertThrows(UnsupportedOperationException.class,
+                () -> program.writes().clear());
+
+        assertThrows(IllegalArgumentException.class, () ->
+                new YmSourceProgramTiming.ProgramSection(
+                        YmServiceTimingProfile.SegmentKind.KEY_OFF, -1, 1));
+        assertThrows(IllegalArgumentException.class, () ->
+                new YmSourceProgramTiming.ProgramWrite(
+                        YmServiceTimingProfile.SegmentKind.KEY_OFF,
+                        0, 0x28, -1, 1, 1, 1, source));
+        assertThrows(IllegalArgumentException.class, () ->
+                new YmSourceProgramTiming.ProgramVariant(
+                        2, 0, YmSourceProgramTiming.FirstPathShape.VOICE_NOTE));
+    }
+
+    @Test
+    void resolverAnchorsOnlyRowZeroAndCarriesBusyAcrossSections() {
+        var source = new YmSourceProgramTiming.SourcePath("WriteFM@s1:1-2");
+        var variant = new YmSourceProgramTiming.ProgramVariant(
+                1, 0b1110, YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE);
+        var program = new YmSourceProgramTiming.SourceProgram(
+                YmSourceProgramTiming.ProgramKind.S1_FM5_FIRST_VOICE_ATTACK,
+                variant,
+                List.of(
+                        new YmSourceProgramTiming.ProgramWrite(
+                                YmServiceTimingProfile.SegmentKind.FM_VOICE_UPLOAD,
+                                1, 0xB1, 0, 0, 0, 0, source),
+                        new YmSourceProgramTiming.ProgramWrite(
+                                YmServiceTimingProfile.SegmentKind.TRACK_PAN_WRITE,
+                                1, 0xB1, 100, 119, 259, 500, source),
+                        new YmSourceProgramTiming.ProgramWrite(
+                                YmServiceTimingProfile.SegmentKind.KEY_OFF,
+                                0, 0x28, 100, 119, 259, 500, source)),
+                List.of(
+                        new YmSourceProgramTiming.ProgramSection(
+                                YmServiceTimingProfile.SegmentKind.FM_VOICE_UPLOAD, 0, 1),
+                        new YmSourceProgramTiming.ProgramSection(
+                                YmServiceTimingProfile.SegmentKind.TRACK_PAN_WRITE, 1, 1),
+                        new YmSourceProgramTiming.ProgramSection(
+                                YmServiceTimingProfile.SegmentKind.KEY_OFF, 2, 1)));
+        var state = YmSourceProgramTiming.ProgramState.initial();
+        var first = YmSourceProgramTiming.YmSourceProgramResolver.resolveNext(
+                program, state, YmServiceTimingProfile.SegmentKind.FM_VOICE_UPLOAD,
+                1, 0xB1, 7_000, 6_500);
+        assertEquals(7_000, first.dueMasterCycle());
+        assertEquals(47, first.nextState().busy().busyYmCyclesRemaining());
+        var pan = YmSourceProgramTiming.YmSourceProgramResolver.resolveNext(
+                program, first.nextState(),
+                YmServiceTimingProfile.SegmentKind.TRACK_PAN_WRITE,
+                1, 0xB1, 7_000, 6_500);
+        assertTrue(pan.dueMasterCycle() > 7_000);
+        var keyOff = YmSourceProgramTiming.YmSourceProgramResolver.resolveNext(
+                program, pan.nextState(), YmServiceTimingProfile.SegmentKind.KEY_OFF,
+                0, 0x28, 7_000, 6_500);
+        assertTrue(keyOff.dueMasterCycle() > pan.dueMasterCycle());
+        assertTrue(keyOff.nextState().complete(program));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                YmSourceProgramTiming.YmSourceProgramResolver.resolveNext(
+                        program, first.nextState(), YmServiceTimingProfile.SegmentKind.KEY_OFF,
+                        0, 0x28, 7_000, 6_500));
+        assertThrows(IllegalArgumentException.class, () ->
+                YmSourceProgramTiming.YmSourceProgramResolver.resolveNext(
+                        program, first.nextState(),
+                        YmServiceTimingProfile.SegmentKind.TRACK_PAN_WRITE,
+                        0, 0xB1, 7_000, 6_500));
     }
 
     private static void assertProgram(JsonNode program, String shape, int writes,

@@ -15,6 +15,7 @@ public interface YmServiceTimingProfile {
         SFX_ADMISSION_PREP,
         SFX_MAX_RELEASE,
         FM_VOICE_UPLOAD,
+        TRACK_PAN_WRITE,
         KEY_OFF,
         FREQUENCY_AND_KEY_ON,
         COMPLETION_RESTORE
@@ -25,6 +26,12 @@ public interface YmServiceTimingProfile {
         FIRST_VOICE_ATTACK,
         ORDINARY_NOTE,
         COMPLETION_RESTORE
+    }
+
+    enum TimingOwnership {
+        NONE,
+        SHARED_FIXED,
+        EXCLUSIVE_SFX_FM5
     }
 
     record Variant(int port, int operatorCount, boolean bankedVoice,
@@ -75,6 +82,10 @@ public interface YmServiceTimingProfile {
     }
 
     Segment requireSegment(SegmentKind kind, Variant variant);
+
+    boolean supports(SegmentKind kind, Variant variant);
+
+    TimingOwnership timingOwnership();
 
     int maximumWritesPerDriverService();
 
@@ -152,6 +163,19 @@ public interface YmServiceTimingProfile {
                         "no YM service timing for " + key);
             }
             return segment;
+        }
+
+        @Override
+        public boolean supports(SegmentKind kind, Variant variant) {
+            return segments.containsKey(new Key(
+                    Objects.requireNonNull(kind, "kind"),
+                    Objects.requireNonNull(variant, "variant")));
+        }
+
+        @Override
+        public TimingOwnership timingOwnership() {
+            return segments.isEmpty() ? TimingOwnership.NONE
+                    : TimingOwnership.SHARED_FIXED;
         }
 
         @Override
