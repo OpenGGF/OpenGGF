@@ -1,5 +1,6 @@
 package com.openggf.graphics.shaderlib;
 
+import com.openggf.tests.TestSessionOutputPaths;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -27,8 +28,10 @@ public class TestDisplayShaderPackDiagnostics {
 
         Path root = Path.of(System.getProperty(ROOT_PROPERTY, "shaders")).toAbsolutePath().normalize();
         Assumptions.assumeTrue(Files.isDirectory(root), "Shader root does not exist: " + root);
-        Path report = Path.of(System.getProperty(REPORT_PROPERTY,
-                "target/display-shader-failures.txt")).toAbsolutePath().normalize();
+        String defaultReport = TestSessionOutputPaths.diagnostics("shaderlib")
+                .resolve("display-shader-failures.txt").toString();
+        Path report = Path.of(System.getProperty(REPORT_PROPERTY, defaultReport))
+                .toAbsolutePath().normalize();
         int maxEntries = Integer.getInteger(MAX_PROPERTY, Integer.MAX_VALUE);
 
         DisplayShaderLibrary library = DisplayShaderLibrary.scan(root);

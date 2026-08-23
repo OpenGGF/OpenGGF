@@ -88,7 +88,7 @@
             </properties>
         </profile>
 
-        <!-- Fast local dev launcher: run the engine straight from target/classes
+        <!-- Fast local dev launcher: run the engine straight from ${project.build.directory}/classes
              without building the jar-with-dependencies. Activate explicitly:
 
                mvn -q -Pdev-run compile exec:exec
@@ -184,7 +184,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>3.2.5</version>
                         <configuration combine.self="override">
-                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}"</argLine>
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
@@ -262,7 +262,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>3.2.5</version>
                         <configuration combine.self="override">
-                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}"</argLine>
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
@@ -391,7 +391,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>3.2.5</version>
                         <configuration combine.self="override">
-                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}"</argLine>
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
@@ -467,7 +467,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>3.2.5</version>
                         <configuration combine.self="override">
-                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}"</argLine>
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
@@ -564,7 +564,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>3.2.5</version>
                         <configuration combine.self="override">
-                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}"</argLine>
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
@@ -617,7 +617,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>3.2.5</version>
                         <configuration combine.self="override">
-                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}"</argLine>
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
@@ -675,7 +675,7 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!-- Flatten extracted native libs into target/native-libs/ -->
+                    <!-- Flatten extracted native libs into ${project.build.directory}/native-libs/ -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
@@ -1047,6 +1047,7 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.1.1</version>
                 <configuration>
+                    <outputDirectory>${openggf.artifact.root}</outputDirectory>
                     <!-- get all project dependencies -->
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
@@ -1211,6 +1212,14 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                 <version>3.2.5</version>
                 <configuration>
                     <!-- LWJGL/GLFW on macOS requires -XstartOnFirstThread (set via profile) -->
+                    <!--
+                         LWJGL otherwise derives one native extraction directory from
+                         java.io.tmpdir. Give every Surefire fork its own extraction root:
+                         two forks, or two coordinator sessions in different worktrees,
+                         must never replace or unlink one another's libglfw/liblwjgl files.
+                         Surefire expands its fork number in argLine after Maven resolves
+                         the shared session properties.
+                    -->
                     <!-- java.io.tmpdir must be set on the command line, not via
                          systemPropertyVariables: java.nio.file.TempFileHelper caches it
                          in a static initialiser that surefire's own early temp-file use
@@ -1225,7 +1234,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                          a coordinator-launched clean. Raw lifecycle clean is rejected by
                          the session guard. Tests should still clean up after themselves;
                          this makes forgetting harmless rather than cumulative. -->
-                    <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}"</argLine>
+                    <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                     <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                     <!-- Run test classes in parallel forked JVMs.
                          Thread-level parallelism is unsafe due to singleton state,

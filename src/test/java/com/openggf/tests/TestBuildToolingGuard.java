@@ -8,6 +8,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,6 +52,132 @@ class TestBuildToolingGuard {
     // unchanged and only its reachability differs.
     private static final String FRONTIER_GRANDFATHER_BASELINE = "9fb9f4011";
     private static final String FRONTIER_LOG_PATH = "docs/status/trace-frontier-log.md";
+
+    private static final List<String> TASK4_INVENTORY_FILES = List.of(
+            "src/test/java/com/openggf/audio/TestLiveCaptureSurvivesBackendSwap.java",
+            "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmark.java",
+            "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmarkComparator.java",
+            "src/test/java/com/openggf/audio/SmpsRepeatedPlaybackBenchmarkComparator.java",
+            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
+            "src/test/java/com/openggf/capture/CaptureRecorderTest.java",
+            "src/test/java/com/openggf/capture/LiveCaptureControllerTest.java",
+            "src/test/java/com/openggf/capture/LiveCaptureRecorderFactoryTest.java",
+            "src/test/java/com/openggf/game/TestInstaShieldVisual.java",
+            "src/test/java/com/openggf/game/rewind/RewindBenchmark.java",
+            "src/test/java/com/openggf/game/rewind/RewindRoundTripHarness.java",
+            "src/test/java/com/openggf/game/rewind/TestRewindManySidekickPerformanceTrace.java",
+            "src/test/java/com/openggf/game/rewind/schema/TestRewindFieldDispositionGuard.java",
+            "src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java",
+            "src/test/java/com/openggf/game/sonic3k/dataselect/S3kDataSelectVisualCapture.java",
+            "src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java",
+            "src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java",
+            "src/test/java/com/openggf/graphics/VisualRegressionTest.java",
+            "src/test/java/com/openggf/level/TestLevelRendererBackgroundSamplingPerformance.java",
+            "src/test/java/com/openggf/tests/TestAizFireCurtainGpuDiag.java",
+            "src/test/java/com/openggf/tests/trace/SlotOccupancyProbe.java",
+            "src/test/java/com/openggf/graphics/shaderlib/TestDisplayShaderPackDiagnostics.java",
+            "src/test/java/com/openggf/tools/TestTraceCaptureUnifiedAudio.java",
+            "src/test/java/com/openggf/tools/TraceCaptureSessionTest.java",
+            "src/test/java/com/openggf/tools/audio/parity/TestS1AudioParityCli.java",
+            "src/test/java/com/openggf/tools/audio/parity/TestS1OpenGgfAudioCapture.java",
+            "src/test/java/com/openggf/tools/audio/timeline/TestS1GameplayAudioTimelineCli.java",
+            "src/test/java/com/openggf/configuration/CaptureConfigDefaultsTest.java",
+            "src/test/java/com/openggf/tests/TestTempFiles.java",
+            "src/test/java/com/openggf/tests/TestNoLeakedTemporaryFiles.java",
+            "src/main/java/com/openggf/configuration/SonicConfigurationService.java",
+            "src/main/java/com/openggf/tools/BenchmarkCompareTool.java",
+            "src/main/java/com/openggf/tools/TraceBenchmarkTool.java",
+            "src/main/java/com/openggf/tools/TraceCaptureTool.java",
+            "src/main/java/com/openggf/tools/audio/parity/S1AudioParityTool.java",
+            "src/main/java/com/openggf/tools/audio/timeline/S1GameplayAudioTimelineTool.java",
+            "src/main/java/com/openggf/tools/timing/S3kLoadTimeProfileGenerator.java",
+            "src/main/resources/config.yaml",
+            "tools/audio/run_complete_audio_parity.sh",
+            "tools/audio/run_s1_audio_parity.sh",
+            "tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh",
+            "tools/audio/README.md",
+            "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch8Codecs.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch9Codecs.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch10Codecs.java",
+            "src/test/java/com/openggf/game/rewind/TestScalarOnlyCodecDeletion.java",
+            "src/test/java/com/openggf/game/rewind/TestS3kAizEndBossGraphRewind.java",
+            "src/test/java/com/openggf/game/rewind/TestS3kHczEndBossGraphRewind.java",
+            "src/packaging/assemble-macos-app.sh",
+            "pom.xml");
+
+    /*
+     * These files are part of the fixed-output inventory but are not writers
+     * owned by this migration: the run-chain base inherits TraceReportWriter,
+     * the rewind cases only exercise state, and the remaining files document or
+     * configure a producer. Keeping them in a named category makes a future
+     * direct writer addition fail the inventory test instead of silently
+     * becoming another shared target producer.
+     */
+    private static final Set<String> TASK4_SUPPORT_FILES = Set.of(
+            "src/main/resources/config.yaml",
+            "tools/audio/README.md",
+            "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch8Codecs.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch9Codecs.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch10Codecs.java",
+            "src/test/java/com/openggf/game/rewind/TestScalarOnlyCodecDeletion.java",
+            "src/test/java/com/openggf/game/rewind/TestS3kAizEndBossGraphRewind.java",
+            "src/test/java/com/openggf/game/rewind/TestS3kHczEndBossGraphRewind.java",
+            "src/packaging/assemble-macos-app.sh");
+
+    private static final Pattern LEGACY_OUTPUT_WRITE = Pattern.compile(
+            "(?s)(?:Files\\.(?:write|writeString|writeAllBytes|newBufferedWriter)"
+                    + "|new\\s+(?:FileOutputStream|FileWriter))[^;]*"
+                    + "(?:target/(?:trace-reports|audio-parity|trace-videos)|"
+                    + "Path\\.of\\(\\s*\\\"target|Paths\\.get\\(\\s*\\\"target)");
+
+    private static final Set<String> SESSION_OUTPUT_FILES = Set.of(
+            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
+            "src/test/java/com/openggf/game/TestInstaShieldVisual.java",
+            "src/test/java/com/openggf/game/rewind/RewindBenchmark.java",
+            "src/test/java/com/openggf/game/rewind/RewindRoundTripHarness.java",
+            "src/test/java/com/openggf/game/rewind/TestRewindManySidekickPerformanceTrace.java",
+            "src/test/java/com/openggf/game/rewind/schema/TestRewindFieldDispositionGuard.java",
+            "src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java",
+            "src/test/java/com/openggf/game/sonic3k/dataselect/S3kDataSelectVisualCapture.java",
+            "src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java",
+            "src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java",
+            "src/test/java/com/openggf/graphics/VisualRegressionTest.java",
+            "src/test/java/com/openggf/level/TestLevelRendererBackgroundSamplingPerformance.java",
+            "src/test/java/com/openggf/tests/TestAizFireCurtainGpuDiag.java",
+            "src/test/java/com/openggf/tests/trace/SlotOccupancyProbe.java",
+            "src/test/java/com/openggf/graphics/shaderlib/TestDisplayShaderPackDiagnostics.java",
+            "src/main/java/com/openggf/configuration/SonicConfigurationService.java",
+            "src/main/java/com/openggf/tools/TraceCaptureTool.java",
+            "src/main/java/com/openggf/tools/audio/parity/S1AudioParityTool.java",
+            "src/main/java/com/openggf/tools/audio/timeline/S1GameplayAudioTimelineTool.java",
+            "tools/audio/run_complete_audio_parity.sh",
+            "tools/audio/run_s1_audio_parity.sh",
+            "tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh",
+            "pom.xml");
+
+    private static final Set<String> EXPLICIT_OUTPUT_FILES = Set.of(
+            "src/main/java/com/openggf/tools/BenchmarkCompareTool.java",
+            "src/main/java/com/openggf/tools/TraceBenchmarkTool.java",
+            "src/main/java/com/openggf/tools/timing/S3kLoadTimeProfileGenerator.java",
+            "src/test/java/com/openggf/audio/TestLiveCaptureSurvivesBackendSwap.java",
+            "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmark.java",
+            "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmarkComparator.java",
+            "src/test/java/com/openggf/audio/SmpsRepeatedPlaybackBenchmarkComparator.java",
+            "src/test/java/com/openggf/capture/CaptureRecorderTest.java",
+            "src/test/java/com/openggf/capture/LiveCaptureControllerTest.java",
+            "src/test/java/com/openggf/capture/LiveCaptureRecorderFactoryTest.java",
+            "src/test/java/com/openggf/tools/TestTraceCaptureUnifiedAudio.java",
+            "src/test/java/com/openggf/tools/TraceCaptureSessionTest.java",
+            "src/test/java/com/openggf/tools/audio/parity/TestS1AudioParityCli.java",
+            "src/test/java/com/openggf/tools/audio/parity/TestS1OpenGgfAudioCapture.java",
+            "src/test/java/com/openggf/tools/audio/timeline/TestS1GameplayAudioTimelineCli.java");
+
+    private static final Set<String> NO_SESSION_EXCLUSION_FILES = Set.of(
+            "src/test/java/com/openggf/configuration/CaptureConfigDefaultsTest.java",
+            "src/test/java/com/openggf/tests/TestTempFiles.java",
+            "src/test/java/com/openggf/tests/TestNoLeakedTemporaryFiles.java");
 
     /** {@code -DforkCount=...} — the flag Maven ignores here. */
     private static final Pattern STALE_FORK_COUNT_FLAG =
@@ -237,6 +364,108 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void generatedOutputInventoryMustRemainSessionOwned() throws Exception {
+        Set<String> migrated = new TreeSet<>(SESSION_OUTPUT_FILES);
+        Set<String> explicit = new TreeSet<>(EXPLICIT_OUTPUT_FILES);
+        Set<String> exclusions = new TreeSet<>(NO_SESSION_EXCLUSION_FILES);
+        Set<String> support = new TreeSet<>(TASK4_SUPPORT_FILES);
+        List<Set<String>> categories = List.of(migrated, explicit, exclusions, support);
+        List<String> violations = new ArrayList<>();
+
+        if (new TreeSet<>(TASK4_INVENTORY_FILES).size() != TASK4_INVENTORY_FILES.size()) {
+            violations.add("the Task 4 inventory contains duplicate paths");
+        }
+        for (int left = 0; left < categories.size(); left++) {
+            for (int right = left + 1; right < categories.size(); right++) {
+                Set<String> overlap = new TreeSet<>(categories.get(left));
+                overlap.retainAll(categories.get(right));
+                if (!overlap.isEmpty()) {
+                    violations.add("Task 4 inventory categories overlap: " + overlap);
+                }
+            }
+        }
+        Set<String> classified = new TreeSet<>();
+        categories.forEach(classified::addAll);
+        Set<String> inventory = new TreeSet<>(TASK4_INVENTORY_FILES);
+        Set<String> unclassified = new TreeSet<>(inventory);
+        unclassified.removeAll(classified);
+        Set<String> unexpected = new TreeSet<>(classified);
+        unexpected.removeAll(inventory);
+        if (!unclassified.isEmpty()) {
+            violations.add("Task 4 inventory has unclassified files: " + unclassified);
+        }
+        if (!unexpected.isEmpty()) {
+            violations.add("Task 4 categories contain files outside the inventory: " + unexpected);
+        }
+
+        for (String relative : inventory) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                violations.add(relative + " is missing from the fixed-output inventory");
+            }
+        }
+
+        for (String relative : migrated) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                continue;
+            }
+            String source = sourceForInventory(file);
+            boolean hasSessionResolver = source.contains("TestSessionOutputPaths.")
+                    || source.contains("openggf.test.diagnostics")
+                    || source.contains("openggf.artifact.root")
+                    || source.contains("OPENGGF_TEST_DIAGNOSTICS")
+                    || source.contains("${openggf.");
+            if (!hasSessionResolver) {
+                violations.add(relative + " does not resolve a default output beneath session properties");
+            }
+            if (LEGACY_OUTPUT_WRITE.matcher(source).find()) {
+                violations.add(relative + " writes generated output directly through a legacy target path");
+            }
+        }
+
+        for (String relative : explicit) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                continue;
+            }
+            String source = sourceForInventory(file);
+            if (LEGACY_OUTPUT_WRITE.matcher(source).find()) {
+                violations.add(relative + " writes generated output directly through a legacy target path");
+            }
+        }
+
+        for (String relative : exclusions) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                continue;
+            }
+            String source = sourceForInventory(file);
+            if (LEGACY_OUTPUT_WRITE.matcher(source).find()
+                    || source.contains("new FileOutputStream")
+                    || source.contains("new FileWriter")) {
+                violations.add(relative + " is a no-session exclusion but contains a generated writer");
+            }
+        }
+
+        for (String relative : support) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                continue;
+            }
+            String source = sourceForInventory(file);
+            if (LEGACY_OUTPUT_WRITE.matcher(source).find()) {
+                violations.add(relative + " is classified as support but contains a legacy generated writer");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("generated diagnostic outputs must be classified and session-owned:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void mavenLifecycleMustNotMutateGitConfigurationOrUseSharedSessionPaths() throws Exception {
         String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
         assertFalse(pomText.contains("core.hooksPath"),
@@ -273,6 +502,10 @@ class TestBuildToolingGuard {
             assertTrue(argLines.item(i).getTextContent().contains(
                             "-Djava.io.tmpdir=\"${openggf.test.tmpdir}\""),
                     "Surefire argLine must quote the session temp path: "
+                            + argLines.item(i).getTextContent().trim());
+            assertTrue(argLines.item(i).getTextContent().contains(
+                            "-Dorg.lwjgl.system.SharedLibraryExtractPath=\"${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}\""),
+                    "Surefire argLine must isolate LWJGL native extraction per fork: "
                             + argLines.item(i).getTextContent().trim());
         }
     }
@@ -3176,6 +3409,11 @@ class TestBuildToolingGuard {
             stripped.append(current);
         }
         return stripped.toString();
+    }
+
+    private static String sourceForInventory(Path file) throws IOException {
+        String source = Files.readString(file, StandardCharsets.UTF_8);
+        return file.toString().endsWith(".java") ? stripComments(source) : source;
     }
 
     private static Element profileById(Document pom, String id) {

@@ -12,6 +12,7 @@ import org.lwjgl.opengl.GL;
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
@@ -346,7 +347,7 @@ public class VisualRegressionTest {
      */
     private void saveDiffImage(String originalFilename, RgbaImage reference, RgbaImage current)
             throws IOException {
-        Path diffDir = Paths.get("target", "visual-diff");
+        Path diffDir = TestSessionOutputPaths.diagnostics("visual-diff");
         Files.createDirectories(diffDir);
 
         // Save current image
@@ -399,5 +400,4 @@ public class VisualRegressionTest {
         }
     }
 }
-
 

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.specialstage;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
@@ -45,13 +46,14 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * Creates the results screen directly and captures screenshots to verify
  * text, emerald indicators, and layout are rendering correctly.
  *
- * Screenshots are saved to target/ss-results-visual/ for manual inspection.
+ * Screenshots are saved to the session diagnostics ss-results-visual namespace
+ * for manual inspection.
  */
 public class TestS3kSpecialStageResultsVisual {
 
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
-    private static final Path OUTPUT_DIR = Paths.get("target", "ss-results-visual");
+    private static final Path OUTPUT_DIR = TestSessionOutputPaths.diagnostics("ss-results-visual");
 
     private static long window;
     private static boolean initialized;
@@ -350,4 +352,3 @@ public class TestS3kSpecialStageResultsVisual {
         assertTrue(nonWhitePixels > 10, message + " (found " + nonWhitePixels + " non-white pixels in region)");
     }
 }
-

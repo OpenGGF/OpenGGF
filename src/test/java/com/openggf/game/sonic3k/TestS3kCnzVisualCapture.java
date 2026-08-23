@@ -33,6 +33,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.HeadlessTestRunner;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.joml.Matrix4f;
@@ -92,14 +93,16 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  *   tests.</li>
  * </ul>
  *
- * <p>PNG outputs are written to {@code target/s3k-cnz-visual/engine/}.
+ * <p>PNG outputs are written to the session diagnostics
+ * {@code s3k-cnz-visual/engine/} namespace.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kCnzVisualCapture {
 
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
-    private static final Path OUTPUT_DIR = Paths.get("target", "s3k-cnz-visual", "engine");
+    private static final Path OUTPUT_DIR = TestSessionOutputPaths.diagnostics("s3k-cnz-visual")
+            .resolve("engine");
 
     private static long window = NULL;
     private static boolean initialized;

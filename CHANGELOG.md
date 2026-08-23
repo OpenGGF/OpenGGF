@@ -1,5 +1,11 @@
 # Changelog
 
+- **Test sessions isolate LWJGL native extraction per fork:** generated test
+  outputs and temporary files remain session-owned, while every Surefire fork
+  now gets its own LWJGL extraction directory so concurrent suites cannot
+  replace one another's native libraries and turn the run into a false mass
+  failure.
+
 - **Trace reports are isolated per test session and invocation:** replay
   diagnostics now publish into coordinator-owned roots with collision-resistant
   owner metadata, so parallel suites cannot overwrite one another's evidence;

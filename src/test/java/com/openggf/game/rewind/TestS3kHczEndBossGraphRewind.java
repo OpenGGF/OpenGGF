@@ -6,6 +6,7 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
@@ -435,7 +436,8 @@ class TestS3kHczEndBossGraphRewind {
 
     private static SonicConfigurationService createDefaultConfiguration() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(
-                java.nio.file.Path.of("target", "rewind-hcz-endboss-graph-config"));
+                TestSessionOutputPaths.diagnostics("rewind")
+                        .resolve("rewind-hcz-endboss-graph-config"));
         config.resetToDefaults();
         return config;
     }

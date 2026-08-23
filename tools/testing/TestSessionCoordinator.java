@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /** Standalone coordinator for isolated OpenGGF test/build sessions. */
 public final class TestSessionCoordinator {
@@ -158,7 +159,7 @@ public final class TestSessionCoordinator {
                     : (exitCode == 0 ? "PASSED" : "FAILED"));
             writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                     commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
-                    List.of(), List.of()));
+                    reportInventory(paths), artifactInventory(paths)));
             if (options.exportFile != null) {
                 writeExport(options.exportFile, paths.manifest, runId);
             }
@@ -605,6 +606,10 @@ public final class TestSessionCoordinator {
         properties.put("OPENGGF_TEST_LEASE", lease.toString());
         properties.put("OPENGGF_TEST_COMMAND_HASH", commandHash);
         properties.put("OPENGGF_TEST_ALLOWED_PHASES", allowedPhases(command));
+        properties.put("OPENGGF_TEST_DIAGNOSTICS", paths.diagnostics.toString());
+        properties.put("OPENGGF_ARTIFACT_ROOT", paths.artifacts.toString());
+        properties.put("OPENGGF_DISTRIBUTION_ROOT", paths.distribution.toString());
+        properties.put("OPENGGF_BUILD_DIRECTORY", paths.build.toString());
         return properties;
     }
 
@@ -720,7 +725,51 @@ public final class TestSessionCoordinator {
                 + "  \"trace_reports\": \"" + escape(paths.trace.toString()) + "\",\n"
                 + "  \"artifact_root\": \"" + escape(paths.artifacts.toString()) + "\",\n"
                 + "  \"distribution_root\": \"" + escape(paths.distribution.toString()) + "\",\n"
-                + "  \"reports\": [],\n  \"artifacts\": []\n}\n";
+                + "  \"reports\": " + jsonArray(reports) + ",\n"
+                + "  \"artifacts\": " + jsonArray(artifacts) + "\n}\n";
+    }
+
+    private static List<String> reportInventory(Paths paths) throws IOException {
+        return inventory(paths.surefire, paths.trace, paths.diagnostics);
+    }
+
+    private static List<String> artifactInventory(Paths paths) throws IOException {
+        List<String> files = new ArrayList<>(inventory(paths.artifacts, paths.distribution));
+        try (Stream<Path> tree = Files.walk(paths.build)) {
+            tree.filter(path -> path.getParent() != null && path.getParent().equals(paths.build))
+                    .filter(path -> Files.isRegularFile(path, java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                    .filter(path -> path.getFileName().toString().endsWith(".jar")
+                            || path.getFileName().toString().equals("OpenGGF"))
+                    .map(path -> path.toAbsolutePath().normalize().toString())
+                    .forEach(files::add);
+        }
+        return files.stream().distinct().sorted().toList();
+    }
+
+    private static List<String> inventory(Path... roots) throws IOException {
+        List<String> files = new ArrayList<>();
+        for (Path root : roots) {
+            if (!Files.isDirectory(root, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                continue;
+            }
+            try (Stream<Path> tree = Files.walk(root)) {
+                tree.filter(path -> Files.isRegularFile(path, java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                        .map(path -> path.toAbsolutePath().normalize().toString())
+                        .forEach(files::add);
+            }
+        }
+        return files.stream().distinct().sorted().toList();
+    }
+
+    private static String jsonArray(List<String> values) {
+        StringBuilder json = new StringBuilder("[");
+        for (int index = 0; index < values.size(); index++) {
+            if (index > 0) {
+                json.append(", ");
+            }
+            json.append('\"').append(escape(values.get(index))).append('\"');
+        }
+        return json.append(']').toString();
     }
 
     private static void writeManifest(Path path, String json) throws IOException {
@@ -1131,7 +1180,7 @@ public final class TestSessionCoordinator {
                         ? "ABORTED" : "INVALID_IDENTITY_CHANGED";
                 writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                         commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
-                        List.of(), List.of()));
+                        reportInventory(paths), artifactInventory(paths)));
                 if (exportFile != null) {
                     writeExport(exportFile, paths.manifest, runId);
                 }

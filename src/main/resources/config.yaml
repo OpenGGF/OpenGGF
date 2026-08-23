@@ -129,7 +129,7 @@ discord:
 
 # ── Trace Capture ──
 capture:
-  outputDir: "target/trace-videos"   # Output directory for trace capture videos
+  outputDir: "target/trace-videos"   # No-session default; coordinator runs override this diagnostic path
   # TRACE CAPTURE ONLY. Live viewport recording (Shift+O) records the game
   # viewport at its current on-screen size instead, so the recording includes
   # menu and debug-overlay elements that scale outside the game's pixel space.
