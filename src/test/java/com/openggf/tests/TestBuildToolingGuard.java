@@ -617,9 +617,11 @@ class TestBuildToolingGuard {
                 || !agents.contains("tools/testing/install-hooks.ps1")) {
             violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
         }
-        if (!Files.isRegularFile(Path.of("tools/testing/install-hooks.sh"))
-                || !Files.isExecutable(Path.of("tools/testing/install-hooks.sh"))) {
-            violations.add("tools/testing/install-hooks.sh must exist and be executable");
+        for (String script : List.of("tools/testing/install-hooks.sh",
+                "tools/testing/test-session.sh", "tools/testing/run-session-process-harness.sh")) {
+            if (!Files.isRegularFile(Path.of(script)) || !Files.isExecutable(Path.of(script))) {
+                violations.add(script + " must exist and be executable");
+            }
         }
         if (!Files.isRegularFile(Path.of("tools/testing/install-hooks.ps1"))) {
             violations.add("tools/testing/install-hooks.ps1 must exist");

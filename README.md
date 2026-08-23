@@ -214,6 +214,10 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Test-session entrypoints remain executable in fresh checkouts (2026-08-23):** the
+  coordinator, hook bootstrap, and external-process harness POSIX launchers are tracked
+  with their executable mode, and the tooling guard rejects a checkout that loses it.
+
 - **Bounded active-segment trace ownership (2026-08-22, validated for
   integration):** complete-run replay now retains compact descriptors for the
   whole run and one eager payload only for the active segment. Two warmed,
