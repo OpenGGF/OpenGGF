@@ -21,6 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -83,18 +84,22 @@ public final class TestSessionCoordinator {
         Paths paths = Paths.create(session);
         Path leasePath = lease.namespace.resolve("lease.lock");
         String commandHash = sha256(String.join("\0", options.command));
-        String capability = writeCapability(session, runId, commandHash, worktree, leasePath);
+        String allowedPhases = allowedPhases(options.command);
+        String capability = writeCapability(session, runId, commandHash, worktree, leasePath,
+                allowedPhases);
         String sourceBefore = sourceDigest(worktree);
         String runtimeBefore = runtimeDigest(options.command);
         writeOwner(lease.namespace.resolve("owner.json"), runId, worktree, leasePath,
                 options.command, commandHash, "owner");
         writeManifest(paths.manifest, manifest(paths, runId, "RUNNING", worktree, leasePath,
-                sourceBefore, runtimeBefore, List.of(), List.of()));
+                commandHash, capability, allowedPhases, sourceBefore, runtimeBefore,
+                List.of(), List.of()));
         System.out.println("OPENGGF_TEST_RUN_START run_id=" + runId + " manifest="
                 + paths.manifest + " lease=" + leasePath);
 
         ShutdownState shutdown = new ShutdownState(paths, runId, worktree, leasePath,
-                sourceBefore, runtimeBefore, options.command, options.exportFile, lease);
+                sourceBefore, runtimeBefore, options.command, commandHash, capability,
+                allowedPhases, options.exportFile, lease);
         Runtime.getRuntime().addShutdownHook(new Thread(shutdown::abort, "openggf-test-session-shutdown"));
         Process child = null;
         int exitCode = 1;
@@ -102,9 +107,12 @@ public final class TestSessionCoordinator {
         boolean identityChanged = false;
         try {
             Map<String, String> environment = new java.util.HashMap<>(System.getenv());
-            configureEnvironment(environment, paths.tmp, options, runId, capability,
-                    commandHash, worktree, namespace, paths);
-            ProcessBuilder builder = new ProcessBuilder(options.command).directory(worktree.toFile())
+            Map<String, String> sessionProperties = sessionProperties(paths, runId, capability,
+                    commandHash, worktree, options.command, leasePath);
+            configureEnvironment(environment, paths.tmp, sessionProperties,
+                    !options.command.isEmpty() && isMavenExecutable(options.command.get(0)));
+            ProcessBuilder builder = new ProcessBuilder(sessionCommand(options.command, sessionProperties))
+                    .directory(worktree.toFile())
                     .redirectErrorStream(true);
             builder.environment().putAll(environment);
             child = builder.start();
@@ -143,7 +151,8 @@ public final class TestSessionCoordinator {
                     : (identityChanged ? "INVALID_IDENTITY_CHANGED"
                     : (exitCode == 0 ? "PASSED" : "FAILED"));
             writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
-                    sourceAfter, runtimeAfter, List.of(), List.of()));
+                    commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
+                    List.of(), List.of()));
             if (options.exportFile != null) {
                 writeExport(options.exportFile, paths.manifest, runId);
             }
@@ -303,34 +312,66 @@ public final class TestSessionCoordinator {
     }
 
     private static int guard(String phase) throws Exception {
-        String manifest = System.getProperty("openggf.session.manifest");
-        String capability = System.getProperty("openggf.session.capability");
-        String runId = System.getProperty("openggf.session.run-id");
-        String commandHash = System.getProperty("openggf.session.command-hash");
-        String worktree = System.getProperty("openggf.session.worktree");
-        String lease = System.getProperty("openggf.session.lease-path");
-        String allowed = System.getProperty("openggf.session.allowed-phases");
-        if (List.of(manifest, capability, runId, commandHash, worktree, lease, allowed)
-                .stream().anyMatch(v -> v == null || v.isBlank())) {
-            System.err.println("session guard rejected: missing session identity properties");
-            return 1;
+        try {
+            String manifest = System.getProperty("openggf.session.manifest");
+            String capability = System.getProperty("openggf.session.capability");
+            String runId = System.getProperty("openggf.session.run-id");
+            String commandHash = System.getProperty("openggf.session.command-hash");
+            String worktree = System.getProperty("openggf.session.worktree");
+            String lease = System.getProperty("openggf.session.lease-path");
+            String allowed = System.getProperty("openggf.session.allowed-phases");
+            if (List.of(manifest, capability, runId, commandHash, worktree, lease, allowed)
+                    .stream().anyMatch(v -> v == null || v.isBlank())) {
+                return guardReject("missing session identity properties");
+            }
+            if (!isLifecycleGuard(phase) || !Arrays.asList(allowed.split(",")).contains(phase)) {
+                return guardReject("phase " + phase + " is not allowed");
+            }
+            if (!commandHash.matches("[0-9a-fA-F]{64}")) {
+                return guardReject("command hash is not SHA-256");
+            }
+            Path manifestPath = Path.of(manifest).toAbsolutePath().normalize();
+            Path capabilityPath = Path.of(capability).toAbsolutePath().normalize();
+            Path leasePath = Path.of(lease).toAbsolutePath().normalize();
+            Path declaredWorktree = Path.of(worktree).toRealPath();
+            if (!Files.isRegularFile(manifestPath) || !Files.isRegularFile(capabilityPath)
+                    || !Files.isRegularFile(leasePath)) {
+                return guardReject("session files are not regular files");
+            }
+            if (!declaredWorktree.equals(worktree().toRealPath())) {
+                return guardReject("worktree identity mismatch");
+            }
+            String manifestJson = Files.readString(manifestPath, StandardCharsets.UTF_8);
+            String capabilityText = Files.readString(capabilityPath, StandardCharsets.UTF_8);
+            if (!hasJson(manifestJson, "run_id", runId)
+                    || !hasJson(manifestJson, "state", "RUNNING")
+                    || !hasJson(manifestJson, "worktree", declaredWorktree.toString())
+                    || !hasJson(manifestJson, "lease_path", leasePath.toString())
+                    || !hasJson(manifestJson, "command_hash", commandHash)
+                    || !hasJson(manifestJson, "capability", capabilityPath.toString())
+                    || !hasJson(manifestJson, "allowed_phases", allowed)) {
+                return guardReject("manifest identity mismatch");
+            }
+            if (!capabilityText.contains("run_id=" + runId + "\n")
+                    || !capabilityText.contains("command_hash=" + commandHash + "\n")
+                    || !capabilityText.contains("worktree=" + declaredWorktree + "\n")
+                    || !capabilityText.contains("lease_path=" + leasePath + "\n")
+                    || !capabilityText.contains("allowed_phases=" + allowed + "\n")) {
+                return guardReject("capability identity mismatch");
+            }
+            return 0;
+        } catch (Exception e) {
+            return guardReject(e.getMessage() == null ? "invalid session identity" : e.getMessage());
         }
-        if (!List.of("pre-clean", "validate").contains(phase)
-                || !Arrays.asList(allowed.split(",")).contains(phase)) {
-            System.err.println("session guard rejected: phase " + phase);
-            return 1;
-        }
-        if (!Files.isRegularFile(Path.of(manifest)) || !Files.isRegularFile(Path.of(capability))
-                || !Files.isRegularFile(Path.of(lease))) {
-            System.err.println("session guard rejected: session files are not regular files");
-            return 1;
-        }
-        String json = Files.readString(Path.of(manifest));
-        if (!json.contains("\"run_id\": \"" + escape(runId) + "\"")) {
-            System.err.println("session guard rejected: run ID mismatch");
-            return 1;
-        }
-        return 0;
+    }
+
+    private static int guardReject(String reason) {
+        System.err.println("session guard rejected: " + reason);
+        return 1;
+    }
+
+    private static boolean hasJson(String json, String key, String value) {
+        return json.contains("\"" + key + "\": \"" + escape(value) + "\"");
     }
 
     private static Lease acquireLease(Path lockParent, Path namespace, Path worktree,
@@ -506,24 +547,96 @@ public final class TestSessionCoordinator {
     }
 
     private static void configureEnvironment(Map<String, String> environment, Path tmp,
-                                             Options options, String runId, String capability,
-                                             String commandHash, Path worktree, Path lease,
-                                             Paths paths) throws IOException {
+                                             Map<String, String> properties,
+                                             boolean mavenChild) throws IOException {
         Files.createDirectories(tmp);
-        String javaTemp = "-Djava.io.tmpdir=\"" + tmp.toString().replace("\"", "\\\"") + "\"";
-        environment.put("MAVEN_OPTS", append(environment.get("MAVEN_OPTS"), javaTemp));
-        environment.put("JAVA_TOOL_OPTIONS", append(environment.get("JAVA_TOOL_OPTIONS"), javaTemp));
+        appendSessionJvmOption(environment, "java.io.tmpdir", tmp.toString(), mavenChild);
         environment.put("TMPDIR", tmp.toString());
         environment.put("TMP", tmp.toString());
         environment.put("TEMP", tmp.toString());
-        environment.put("OPENGGF_TEST_RUN_ID", runId);
-        environment.put("OPENGGF_TEST_MANIFEST", paths.manifest.toString());
-        environment.put("OPENGGF_TEST_CAPABILITY", capability);
-        environment.put("OPENGGF_TEST_WORKTREE", worktree.toString());
-        environment.put("OPENGGF_TEST_LEASE", lease.toString());
-        environment.put("OPENGGF_TEST_COMMAND_HASH", commandHash);
-        environment.put("OPENGGF_TEST_ALLOWED_PHASES", allowedPhases(options.command));
-        options.environment = environment;
+        for (Map.Entry<String, String> property : properties.entrySet()) {
+            if (property.getKey().startsWith("OPENGGF_")) {
+                environment.put(property.getKey(), property.getValue());
+            } else {
+                appendSessionJvmOption(environment, property.getKey(), property.getValue(), mavenChild);
+            }
+        }
+    }
+
+    private static Map<String, String> sessionProperties(Paths paths, String runId,
+                                                         String capability, String commandHash,
+                                                         Path worktree, List<String> command,
+                                                         Path lease) {
+        Map<String, String> properties = new LinkedHashMap<>();
+        properties.put("openggf.build.directory", paths.build.toString());
+        properties.put("openggf.test.tmpdir", paths.tmp.toString());
+        properties.put("openggf.surefire.reports", paths.surefire.toString());
+        properties.put("openggf.trace.reports", paths.trace.toString());
+        properties.put("openggf.test.diagnostics", paths.diagnostics.toString());
+        properties.put("openggf.artifact.root", paths.artifacts.toString());
+        properties.put("openggf.distribution.root", paths.distribution.toString());
+        properties.put("openggf.session.manifest", paths.manifest.toString());
+        properties.put("openggf.session.capability", capability);
+        properties.put("openggf.session.run-id", runId);
+        properties.put("openggf.session.command-hash", commandHash);
+        properties.put("openggf.session.worktree", worktree.toString());
+        properties.put("openggf.session.lease-path", lease.toString());
+        properties.put("openggf.session.allowed-phases", allowedPhases(command));
+        properties.put("OPENGGF_TEST_RUN_ID", runId);
+        properties.put("OPENGGF_TEST_MANIFEST", paths.manifest.toString());
+        properties.put("OPENGGF_TEST_CAPABILITY", capability);
+        properties.put("OPENGGF_TEST_WORKTREE", worktree.toString());
+        properties.put("OPENGGF_TEST_LEASE", lease.toString());
+        properties.put("OPENGGF_TEST_COMMAND_HASH", commandHash);
+        properties.put("OPENGGF_TEST_ALLOWED_PHASES", allowedPhases(command));
+        return properties;
+    }
+
+    private static List<String> sessionCommand(List<String> command,
+                                               Map<String, String> properties) {
+        if (command.isEmpty() || !isMavenExecutable(command.get(0))) {
+            return command;
+        }
+        List<String> result = new ArrayList<>(command.size() + properties.size());
+        result.add(command.get(0));
+        properties.entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith("openggf."))
+                .map(entry -> "-D" + entry.getKey() + "=" + entry.getValue())
+                .forEach(result::add);
+        result.addAll(command.subList(1, command.size()));
+        return List.copyOf(result);
+    }
+
+    private static boolean isMavenExecutable(String executable) {
+        String name = Path.of(executable).getFileName().toString().toLowerCase();
+        return name.equals("mvn") || name.equals("mvn.cmd") || name.equals("mvn.bat")
+                || name.equals("mvnw") || name.equals("mvnw.cmd");
+    }
+
+    private static void appendSessionJvmOption(Map<String, String> environment,
+                                               String key, String value, boolean mavenChild) {
+        String javaToolOption = "-D" + key + "=" + quoteJvmValue(value);
+        environment.put("JAVA_TOOL_OPTIONS",
+                append(environment.get("JAVA_TOOL_OPTIONS"), javaToolOption));
+        // Maven's POSIX launcher expands MAVEN_OPTS unquoted. A value containing
+        // whitespace would therefore become a new JVM argument (and a path with
+        // spaces would fail before Maven starts. JAVA_TOOL_OPTIONS is parsed by
+        // the JVM and remains the authoritative transport for such values when
+        // the direct child is Maven. Other children retain the complete option
+        // for nested Maven callers and for the coordinator environment contract.
+        if (!mavenChild || mavenShellSafe(value)) {
+            String mavenValue = mavenShellSafe(value) ? value : quoteJvmValue(value);
+            environment.put("MAVEN_OPTS", append(environment.get("MAVEN_OPTS"),
+                    "-D" + key + "=" + mavenValue));
+        }
+    }
+
+    private static boolean mavenShellSafe(String value) {
+        return value.matches("[A-Za-z0-9_./:+,=-]+");
+    }
+
+    private static String quoteJvmValue(String value) {
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
     private static void writeExport(Path export, Path manifest, String runId) throws IOException {
@@ -558,10 +671,11 @@ public final class TestSessionCoordinator {
     }
 
     private static String writeCapability(Path session, String runId, String hash, Path worktree,
-                                          Path lease) throws IOException {
+                                          Path lease, String allowedPhases) throws IOException {
         Path capability = session.resolve("capability");
         Files.writeString(capability, "run_id=" + runId + "\ncommand_hash=" + hash
-                + "\nworktree=" + worktree + "\nlease_path=" + lease + "\n",
+                + "\nworktree=" + worktree + "\nlease_path=" + lease
+                + "\nallowed_phases=" + allowedPhases + "\n",
                 StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
         try {
             Files.setPosixFilePermissions(capability, java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
@@ -571,14 +685,18 @@ public final class TestSessionCoordinator {
     }
 
     private static String manifest(Paths paths, String runId, String state, Path worktree,
-                                   Path lease, String source, String runtime,
+                                   Path lease, String commandHash, String capability,
+                                   String allowedPhases, String source, String runtime,
                                    List<String> reports, List<String> artifacts) {
         return "{\n"
                 + "  \"run_id\": \"" + escape(runId) + "\",\n"
                 + "  \"state\": \"" + state + "\",\n"
                 + "  \"manifest\": \"" + escape(paths.manifest.toString()) + "\",\n"
+                + "  \"capability\": \"" + escape(capability) + "\",\n"
                 + "  \"worktree\": \"" + escape(worktree.toString()) + "\",\n"
                 + "  \"lease_path\": \"" + escape(lease.toString()) + "\",\n"
+                + "  \"command_hash\": \"" + commandHash + "\",\n"
+                + "  \"allowed_phases\": \"" + escape(allowedPhases) + "\",\n"
                 + "  \"source_digest\": \"" + source + "\",\n"
                 + "  \"runtime_inputs_digest\": \"" + runtime + "\",\n"
                 + "  \"build_root\": \"" + escape(paths.build.toString()) + "\",\n"
@@ -952,6 +1070,9 @@ public final class TestSessionCoordinator {
         private final String sourceBefore;
         private final String runtimeBefore;
         private final List<String> command;
+        private final String commandHash;
+        private final String capability;
+        private final String allowedPhases;
         private final Path exportFile;
         private final Lease lease;
         private volatile Process child;
@@ -959,6 +1080,7 @@ public final class TestSessionCoordinator {
 
         private ShutdownState(Paths paths, String runId, Path worktree, Path leasePath,
                               String sourceBefore, String runtimeBefore, List<String> command,
+                              String commandHash, String capability, String allowedPhases,
                               Path exportFile, Lease lease) {
             this.paths = paths;
             this.runId = runId;
@@ -967,6 +1089,9 @@ public final class TestSessionCoordinator {
             this.sourceBefore = sourceBefore;
             this.runtimeBefore = runtimeBefore;
             this.command = command;
+            this.commandHash = commandHash;
+            this.capability = capability;
+            this.allowedPhases = allowedPhases;
             this.exportFile = exportFile;
             this.lease = lease;
         }
@@ -989,7 +1114,8 @@ public final class TestSessionCoordinator {
                         && treeStopped && leaseStillOwned(leasePath.getParent(), leasePath, runId)
                         ? "ABORTED" : "INVALID_IDENTITY_CHANGED";
                 writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
-                        sourceAfter, runtimeAfter, List.of(), List.of()));
+                        commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
+                        List.of(), List.of()));
                 if (exportFile != null) {
                     writeExport(exportFile, paths.manifest, runId);
                 }
@@ -1109,11 +1235,21 @@ public final class TestSessionCoordinator {
                 }
             }
             options.command = List.copyOf(command);
+            rejectReservedProperties(options.command);
             if (options.reclaim == null && options.guard == null && options.debugGuard == null
                     && options.command.isEmpty()) {
                 throw new StartupFailure("child command required after --", 2);
             }
             return options;
+        }
+
+        private static void rejectReservedProperties(List<String> command) {
+            for (String argument : command) {
+                if (argument.startsWith("-Dopenggf.")) {
+                    throw new StartupFailure("reserved session property cannot be supplied to the child command: "
+                            + argument, 2);
+                }
+            }
         }
 
         private static String require(String[] args, int index, String option) {

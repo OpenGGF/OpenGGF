@@ -238,11 +238,16 @@ public final class TestSessionCoordinatorSelfTest {
     private static void verifyIgnoredFileDoesNotInvalidateRun(Path root, Path outputRoot) throws Exception {
         Path lockRoot = createOwnedDirectory(root.resolve("locks-ignored-file"));
         Path ignored = Path.of(System.getProperty("user.dir"), "mods",
-                ".session-selftest-ignored-" + ProcessHandle.current().pid() + ".txt");
+                ".session-selftest-ignored-" + ProcessHandle.current().pid()
+                        + "-" + System.nanoTime() + ".txt");
         try {
-            CommandResult result = runCoordinator(outputRoot, List.of(
+            ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
                     "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
                     TestSessionCoordinatorSelfTest.class.getName(), "child-create-ignored"));
+            builder.environment().put("OPENGGF_TEST_IGNORED_FILE", ignored.toString());
+            Process process = builder.start();
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            CommandResult result = new CommandResult(process.waitFor(), output);
             check(result.exitCode == 0, "ignored file creation must not invalidate the source identity:\n"
                     + result.output);
             Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
@@ -579,8 +584,7 @@ public final class TestSessionCoordinatorSelfTest {
         }
         if (mode.equals("child-create-ignored")) {
             try {
-                Path ignored = Path.of(System.getenv("OPENGGF_TEST_WORKTREE"), "mods",
-                        ".session-selftest-ignored-" + ProcessHandle.current().pid() + ".txt");
+                Path ignored = Path.of(System.getenv("OPENGGF_TEST_IGNORED_FILE"));
                 Files.createDirectories(ignored.getParent());
                 Files.writeString(ignored, "ignored\n", StandardCharsets.UTF_8,
                         StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);

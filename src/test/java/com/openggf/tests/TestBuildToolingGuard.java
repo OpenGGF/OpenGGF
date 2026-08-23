@@ -236,6 +236,47 @@ class TestBuildToolingGuard {
         }
     }
 
+    @Test
+    void mavenLifecycleMustNotMutateGitConfigurationOrUseSharedSessionPaths() throws Exception {
+        String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
+        assertFalse(pomText.contains("core.hooksPath"),
+                "Maven lifecycle must not rewrite repository-local Git configuration");
+        assertFalse(Pattern.compile("\\bgit\\s+config\\b").matcher(pomText).find(),
+                "Maven lifecycle must not invoke git config");
+        assertFalse(pomText.contains("<argument>${basedir}/target/OpenGGF</argument>"),
+                "native packaging must not read a shared target binary");
+        assertFalse(pomText.contains("<argument>${basedir}/target</argument>"),
+                "native packaging must not publish into a shared target directory");
+        assertTrue(pomText.contains("<argument>${project.build.directory}/OpenGGF</argument>"),
+                "native packaging must consume the session build binary");
+        assertTrue(pomText.contains("<argument>${openggf.distribution.root}</argument>"),
+                "native packaging must consume the session distribution root");
+
+        Document pom = parsePom("pom.xml");
+        for (String property : List.of(
+                "openggf.build.directory", "openggf.test.tmpdir",
+                "openggf.surefire.reports", "openggf.trace.reports",
+                "openggf.test.diagnostics", "openggf.artifact.root",
+                "openggf.distribution.root")) {
+            assertTrue(property(pom, property) != null,
+                    "pom.xml must define the session path property " + property);
+        }
+        assertEquals("${openggf.build.directory}", property(pom, "openggf.distribution.root"),
+                "the no-session distribution default must remain in the target layout");
+        Element build = directChild(pom.getDocumentElement(), "build");
+        assertEquals("${openggf.build.directory}", directChildText(build, "directory"),
+                "Maven build output must be selected through the session property");
+        assertTrue(pom.getElementsByTagName("reportsDirectory").getLength() >= 1,
+                "every supported Surefire configuration must select a session report root");
+        NodeList argLines = pom.getElementsByTagName("argLine");
+        for (int i = 0; i < argLines.getLength(); i++) {
+            assertTrue(argLines.item(i).getTextContent().contains(
+                            "-Djava.io.tmpdir=\"${openggf.test.tmpdir}\""),
+                    "Surefire argLine must quote the session temp path: "
+                            + argLines.item(i).getTextContent().trim());
+        }
+    }
+
     /**
      * Every Surefire {@code <forkCount>} in the POM must read the same
      * {@code ${surefire.forkCount}} property, and the name of that property is
@@ -2978,7 +3019,9 @@ class TestBuildToolingGuard {
     private static boolean surefirePluginUsesSharedArgLine(Document pom) {
         NodeList argLines = pom.getElementsByTagName("argLine");
         for (int i = 0; i < argLines.getLength(); i++) {
-            if ("${surefire.argLine}".equals(argLines.item(i).getTextContent().trim())) {
+            String value = argLines.item(i).getTextContent().trim();
+            if (value.equals("${surefire.argLine}")
+                    || value.startsWith("${surefire.argLine} ")) {
                 return true;
             }
         }
@@ -3156,11 +3199,16 @@ class TestBuildToolingGuard {
     }
 
     private static String directChildText(Element root, String tagName) {
+        Element child = directChild(root, tagName);
+        return child == null ? null : child.getTextContent().trim();
+    }
+
+    private static Element directChild(Element root, String tagName) {
         NodeList children = root.getChildNodes();
         for (int i = 0; i < children.getLength(); i++) {
             Node child = children.item(i);
             if (child instanceof Element element && tagName.equals(element.getTagName())) {
-                return element.getTextContent().trim();
+                return element;
             }
         }
         return null;
