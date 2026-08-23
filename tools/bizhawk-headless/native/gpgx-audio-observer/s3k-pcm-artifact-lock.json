@@ -2,19 +2,19 @@
   "schema": "openggf.gpgx-s3k-chip-pcm-artifact-lock.v1",
   "publication": "DIAGNOSTIC_S3K_PCM_ONLY",
   "production_lock_eligible": false,
-  "base_parity_artifact_lock_sha256": "7e4109b2de5839387ec71d4cd59c99e73871cc896a67bf063d621c8d51246c4c",
+  "base_parity_artifact_lock_sha256": "7d595c02fab3d3554f4103bb434689d008398f99e573533c52b93cdf73ddbdfa",
   "pcm_patch_sha256": "d6f9926e8e68755492388929ab46c7ad8ef642dcd676f6231a6580c1ed78a14c",
   "native_selftest_runner_sha256": "d307c399ecaab4d6f02927a71c1a78c9a252e8fe96f87e57bca853494e904a72",
   "native_pcm_selftest_sha256": "9e9ac519aaf7049bee23f0423ef66599bdacf67d43500a2faa48a7356dbc7941",
   "native_pcm_replay_selftest_sha256": "a5bee721ffc28510539301c8c4dcc6fdcd2b95614a17626c2231b23ad0f70aef",
   "native_selftest_log_sha256": "8c238480238622e1a87ab5fb0a02d11ad566847d6ca26e2427e5ac9a64bf884e",
-  "elf_proof_sha256": "97a66dc883f341fb1c833c00552f5161ca38b7296c43e69957cdb8bbbb66b450",
+  "elf_proof_sha256": "64f0e3952d675fa0a70342836a77deba6fbb23cbeede45a259fc4d5b56e94ef5",
   "core": {
     "decompressed_size": 43475744,
-    "decompressed_sha256": "0d4689a1726a11e4f3d0f6763bb4c15d9f03abe7cd83004354675edb35d1e9b2",
-    "compressed_size": 426280,
-    "compressed_sha256": "241a748a5f7545cca82e4f3a34cf7457a7f62796da781acd74e69d24ac6b3809",
-    "build_id": "2f10a81d9ad1a747"
+    "decompressed_sha256": "03688e9cfb847eda9e5e44970547d3d2743fc73b258b4558f4d579570d5407f9",
+    "compressed_size": 426250,
+    "compressed_sha256": "724064c1b0a1b3388fcbc9b53cc0daba35c7fe9e2d16b492bb5278bd94813307",
+    "build_id": "8e5bbcdddaf23210"
   },
   "pcm": {
     "abi_version": 1,
