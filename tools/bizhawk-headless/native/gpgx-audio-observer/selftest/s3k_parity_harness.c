@@ -119,6 +119,9 @@ int main(void)
   configure_observer();
   configure_parity(0x20, 1);
   begin_owned_frame();
+  /* Shipped cfStopTrack temporarily changes IX to the overridden music track
+   * before restoring the originating SFX IX at the explicit transaction end. */
+  gpgx_s3k_audio_parity_instruction(0x11, 1005, 0x130, 0x00, zram);
   gpgx_s3k_audio_parity_fm_write(1010, 2, 0xB4);
   gpgx_s3k_audio_parity_fm_write(1025, 3, 0xC0);
   gpgx_s3k_audio_parity_psg_write(1040, 0x9F);
@@ -133,13 +136,29 @@ int main(void)
   assert(events[0].track_base == 0x100 && events[0].track_type == 1);
   assert(events[0].channel_id == 4 && events[0].bank == 9);
   assert(events[0].source_pointer == 0x1234 && events[0].generation == 1);
-  assert(events[0].source_pc == 0x10 && events[0].master_cycle == 1025);
+  assert(events[0].source_pc == 0x11 && events[0].master_cycle == 1025);
   assert(events[0].vint_ordinal == 12 && events[0].service_entry_master_cycle == 1000);
   assert(events[0].chip == GPGX_S3K_AUDIO_PARITY_CHIP_YM2612
     && events[0].port == 1 && events[0].register_id == 0xB4
     && events[0].value == 0xC0);
   assert(events[1].chip == GPGX_S3K_AUDIO_PARITY_CHIP_PSG
     && events[1].value == 0x9F);
+  assert(gpgx_s3k_audio_parity_disable() == 0);
+  close_observer_frame();
+
+  /* The YM2612 address latch is persistent hardware state.  A data write in
+   * the owned transaction may consume an address selected before the frame. */
+  configure_parity(0x20, 1);
+  gpgx_s3k_audio_parity_fm_write(900, 0, 0xB4);
+  begin_owned_frame();
+  gpgx_s3k_audio_parity_fm_write(1025, 3, 0xC0);
+  gpgx_s3k_audio_parity_instruction(0x20, 1055, 0x100, 0xDD, zram);
+  assert(gpgx_s3k_audio_parity_end_frame() == 0);
+  assert(gpgx_s3k_audio_parity_event_count(&count, &overflow) == 0
+    && count == 1 && overflow == 0);
+  assert(gpgx_s3k_audio_parity_drain(events, 2, &count) == 0 && count == 1);
+  assert(events[0].port == 0 && events[0].register_id == 0xB4
+    && events[0].value == 0xC0);
   assert(gpgx_s3k_audio_parity_disable() == 0);
   close_observer_frame();
 
@@ -179,7 +198,7 @@ int main(void)
 
   configure_parity(0x20, 1);
   begin_owned_frame();
-  gpgx_s3k_audio_parity_instruction(0x11, 1010, 0x130, 0, zram);
+  gpgx_s3k_audio_parity_instruction(0x20, 1010, 0x130, 0xDD, zram);
   assert(gpgx_s3k_audio_parity_first_fault(&fault) == 0
     && fault.reason == GPGX_S3K_AUDIO_PARITY_FAULT_OWNER_MUTATION);
   assert(gpgx_s3k_audio_parity_end_frame() == -3);
@@ -188,9 +207,16 @@ int main(void)
 
   configure_parity(0x20, 1);
   begin_owned_frame();
-  assert(gpgx_s3k_audio_parity_end_frame() == -3);
-  assert(gpgx_s3k_audio_parity_first_fault(&fault) == 0
-    && fault.reason == GPGX_S3K_AUDIO_PARITY_FAULT_INTERRUPTED);
+  assert(gpgx_s3k_audio_parity_end_frame() == 0);
+  assert(gpgx_s3k_audio_parity_event_count(&count, &overflow) == 0
+    && count == 0 && overflow == 0);
+  assert(gpgx_s3k_audio_parity_drain(NULL, 0, &count) == 0 && count == 0);
+  close_observer_frame();
+  assert(gpgx_audio_trace_begin_frame() == 0);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80, 0);
+  assert(gpgx_s3k_audio_parity_begin_frame(13) == 0);
+  gpgx_s3k_audio_parity_instruction(0x20, 1055, 0x100, 0xDD, zram);
+  assert(gpgx_s3k_audio_parity_end_frame() == 0);
   assert(gpgx_s3k_audio_parity_disable() == 0);
   close_observer_frame();
 
@@ -198,6 +224,6 @@ int main(void)
   assert(gpgx_s3k_audio_parity_event_size() == 38);
   assert(gpgx_s3k_audio_parity_capacity() == 32768);
   assert(gpgx_audio_trace_disable() == 0);
-  puts("s3k-parity-selftest: typed owner, YM pair, PSG, owner mutation, interruption, capacity N/N+1");
+  puts("s3k-parity-selftest: typed owner, shared YM latch, cross-frame transaction, owner mutation, capacity N/N+1");
   return 0;
 }

@@ -5,17 +5,17 @@
   "source_lock_sha256": "348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9",
   "toolchain_lock_sha256": "e40900cda561e1066db1887712cb8219dc0c5b53a9a249f24061181b7bc3420c",
   "ordinary_patch_sha256": "9f49e334ec8a8f73e878b8c1b6b207baabc054e085e7af95e3dd07e77df9280c",
-  "parity_patch_sha256": "467204b27a5f7704b6d2a49b3a29b8f0d62d34189731503dce2a0389ad9288c9",
+  "parity_patch_sha256": "749576761e4d209eecc2e9f800147f2562df04fd24896ca93ca2edd91e4379d6",
   "native_selftest_runner_sha256": "c1568b72936261176d936767b9e27b0bdfe2aaa2b929c11771ce8bcfc3a7f8f2",
-  "native_parity_selftest_sha256": "9a807715ef26fbec160833c0710e2c45b264793761cdadf340833f547354f7d0",
-  "native_selftest_log_sha256": "418151ba3d8ae0adf8c5ec4687df1055efdb69c7f2416a0aacdfe0b33406e603",
-  "elf_proof_sha256": "d50fd4680336cb67e58f8391aa00354bec74c17c7f37e86579c4d59e167b4c54",
+  "native_parity_selftest_sha256": "561241eef6760b0ab04b4f841080d26376056edef87767e140b7e969f176f897",
+  "native_selftest_log_sha256": "aa84bd50bee2953382b0e5ee597d8f05b9d554c1afb228b848da314179b50385",
+  "elf_proof_sha256": "64f0e3952d675fa0a70342836a77deba6fbb23cbeede45a259fc4d5b56e94ef5",
   "core": {
-    "decompressed_size": 43012072,
-    "decompressed_sha256": "277a7a8f14ea12279da9ede04eaadf90854ed370fbef3c3ee010bede11f67a5f",
-    "compressed_size": 424898,
-    "compressed_sha256": "352b258e5789bd536cc972647beb3d44c7be329e7973ecb9a1b4ee4164e18f53",
-    "build_id": "d0a69ac548fb2685"
+    "decompressed_size": 43475744,
+    "decompressed_sha256": "03688e9cfb847eda9e5e44970547d3d2743fc73b258b4558f4d579570d5407f9",
+    "compressed_size": 426250,
+    "compressed_sha256": "724064c1b0a1b3388fcbc9b53cc0daba35c7fe9e2d16b492bb5278bd94813307",
+    "build_id": "8e5bbcdddaf23210"
   },
   "ordinary_observer": {
     "abi_version": 4,
@@ -28,7 +28,7 @@
     "capacity": 32768
   },
   "invisible_state": {
-    "section_size_hex": "33b1b0",
+    "section_size_hex": "3ab1d0",
     "maximum_bytes": 4194304,
     "ordinary_events_size_hex": "200000",
     "parity_events_size_hex": "130000"
