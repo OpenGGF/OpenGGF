@@ -71,7 +71,7 @@ public final class TestSessionCoordinator {
         Files.createDirectories(outputRoot);
         Path lockParent = resolveLockParent(worktree, options.lockRoot);
         String runId = createRunId();
-        Path namespace = namespace(lockParent, worktree);
+        Path namespace = namespace(lockParent, worktree, externalLockRequested(options));
         Lease lease = acquireLease(lockParent, namespace, worktree, runId, options.command,
                 options.debugGuard == null);
         if (lease == null) {
@@ -136,10 +136,11 @@ public final class TestSessionCoordinator {
             String runtimeAfter = runtimeDigest(options.command);
             boolean sourceChanged = !sourceBefore.equals(sourceAfter);
             boolean runtimeChanged = !runtimeBefore.equals(runtimeAfter);
-            identityChanged = sourceChanged || runtimeChanged;
-            boolean valid = !sourceChanged && !runtimeChanged && !interrupted;
+            boolean leaseChanged = !leaseStillOwned(lease.namespace, leasePath, runId);
+            identityChanged = sourceChanged || runtimeChanged || leaseChanged;
+            boolean valid = !identityChanged && !interrupted;
             String state = interrupted ? "ABORTED"
-                    : (sourceChanged || runtimeChanged ? "INVALID_IDENTITY_CHANGED"
+                    : (identityChanged ? "INVALID_IDENTITY_CHANGED"
                     : (exitCode == 0 ? "PASSED" : "FAILED"));
             writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                     sourceAfter, runtimeAfter, List.of(), List.of()));
@@ -160,7 +161,7 @@ public final class TestSessionCoordinator {
         Path outputRoot = resolveOutputRoot(worktree, options.allowSystemTmp);
         Path lockParent = resolveLockParent(worktree, options.lockRoot);
         String runId = createRunId();
-        Path namespace = namespace(lockParent, worktree);
+        Path namespace = namespace(lockParent, worktree, externalLockRequested(options));
         if (options.debugGuard.equals("staged")) {
             Path staging = createStaging(lockParent, runId, worktree, namespace.resolve("lease.lock"), options.command);
             System.out.println("OPENGGF_TEST_GUARD phase=staged");
@@ -174,7 +175,9 @@ public final class TestSessionCoordinator {
             return 0;
         }
         if (options.reclaim != null || options.debugGuard.equals("reclaim-claimed")) {
-            Path target = options.reclaim == null ? namespace(options.lockRoot, worktree) : options.reclaim.getParent();
+            Path target = options.reclaim == null
+                    ? namespace(lockParent, worktree, externalLockRequested(options))
+                    : options.reclaim.getParent();
             Files.writeString(target.resolve("reclaiming.json"), reclaimJson(runId, target),
                     StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
             System.out.println("OPENGGF_TEST_GUARD phase=reclaim-claimed");
@@ -452,6 +455,19 @@ public final class TestSessionCoordinator {
                 .orElse(true);
     }
 
+    private static boolean leaseStillOwned(Path namespace, Path leasePath, String runId) throws IOException {
+        if (!Files.isDirectory(namespace) || !Files.isRegularFile(leasePath)) {
+            return false;
+        }
+        Path owner = namespace.resolve("owner.json");
+        if (!Files.isRegularFile(owner)) {
+            return false;
+        }
+        String json = Files.readString(owner, StandardCharsets.UTF_8);
+        return json.contains("\"run_id\": \"" + escape(runId) + "\"")
+                && json.contains("\"lease_path\": \"" + escape(leasePath.toString()) + "\"");
+    }
+
     private static boolean markerBelongsTo(Path marker, String runId) throws IOException {
         String json = Files.readString(marker, StandardCharsets.UTF_8);
         Matcher value = Pattern.compile("\\\"run_id\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"").matcher(json);
@@ -570,11 +586,15 @@ public final class TestSessionCoordinator {
 
     private static void writeOwner(Path path, String runId, Path worktree, Path lease,
                                    List<String> command, String hash, String state) throws IOException {
+        String branch = runGit(worktree, List.of("symbolic-ref", "--short", "HEAD")).trim();
+        String head = runGit(worktree, List.of("rev-parse", "HEAD")).trim();
         String json = "{\n  \"run_id\": \"" + escape(runId) + "\",\n"
                 + "  \"pid\": " + ProcessHandle.current().pid() + ",\n"
                 + "  \"host\": \"" + escape(host()) + "\",\n"
                 + "  \"worktree\": \"" + escape(worktree.toString()) + "\",\n"
                 + "  \"lease_path\": \"" + escape(lease.toString()) + "\",\n"
+                + "  \"branch\": \"" + escape(branch) + "\",\n"
+                + "  \"head\": \"" + escape(head) + "\",\n"
                 + "  \"command_hash\": \"" + hash + "\",\n"
                 + "  \"command\": \"" + escape(String.join(" ", command)) + "\",\n"
                 + "  \"state\": \"" + state + "\",\n"
@@ -671,32 +691,40 @@ public final class TestSessionCoordinator {
 
     private static Path resolveLockParent(Path worktree, Path explicit) throws IOException {
         Path parent;
+        boolean external = explicit != null;
         if (explicit != null) {
             parent = explicit.toAbsolutePath().normalize();
-            if (parent.startsWith(worktree)) {
-                throw new StartupFailure("external lock root must be outside the worktree", 1);
-            }
         } else {
             String env = System.getenv("OPENGGF_TEST_LOCK_ROOT");
             if (env != null && !env.isBlank()) {
+                external = true;
                 parent = Path.of(env).toAbsolutePath().normalize();
-                if (parent.startsWith(worktree)) {
-                    throw new StartupFailure("external lock root must be outside the worktree", 1);
-                }
             } else {
                 Path git = gitPath("--git-dir");
                 parent = (git.isAbsolute() ? git : worktree.resolve(git)).toAbsolutePath().normalize();
             }
         }
+        if (external && Files.exists(parent) && Files.isSymbolicLink(parent)) {
+            throw new StartupFailure("external lock root must not be a symlink", 1);
+        }
         Files.createDirectories(parent);
         if (!Files.isDirectory(parent) || !Files.isWritable(parent)) {
             throw new StartupFailure("lock root is not writable: " + parent, 1);
         }
-        return parent;
+        Path realParent = parent.toRealPath();
+        if (external && realParent.startsWith(worktree.toRealPath())) {
+            throw new StartupFailure("external lock root must be outside the worktree", 1);
+        }
+        return realParent;
     }
 
-    private static Path namespace(Path lockParent, Path worktree) {
-        String suffix = lockParent.equals(worktree.resolve(".git")) ? "" : "-" + sha256(worktree.toString()).substring(0, 12);
+    private static boolean externalLockRequested(Options options) {
+        return options.lockRoot != null || (System.getenv("OPENGGF_TEST_LOCK_ROOT") != null
+                && !System.getenv("OPENGGF_TEST_LOCK_ROOT").isBlank());
+    }
+
+    private static Path namespace(Path lockParent, Path worktree, boolean external) {
+        String suffix = external ? "-" + sha256(worktree.toString()).substring(0, 12) : "";
         return lockParent.resolve("openggf-test-session.lock" + suffix);
     }
 
@@ -738,15 +766,22 @@ public final class TestSessionCoordinator {
     private static String sourceDigest(Path root) throws IOException {
         MessageDigest digest = sha();
         digest.update(gitIdentity(root).getBytes(StandardCharsets.UTF_8));
-        try (var paths = Files.walk(root)) {
-            for (Path path : paths.filter(Files::isRegularFile).sorted().toList()) {
-                if (path.toString().contains(FileSep.GIT) || path.toString().contains(FileSep.OPENGGF)
-                        || path.toString().contains(FileSep.TARGET)) {
-                    continue;
-                }
+        String inventory = runGit(root, List.of("ls-files", "--cached", "--others",
+                "--exclude-standard", "-z"));
+        if (inventory.startsWith("<exit=") || inventory.startsWith("<timeout>")
+                || inventory.startsWith("<interrupted>")) {
+            throw new IOException("cannot enumerate Git source inventory: " + inventory);
+        }
+        for (String relative : inventory.split("\\u0000")) {
+            if (relative.isBlank()) {
+                continue;
+            }
+            Path path = root.resolve(relative).normalize();
+            if (!path.startsWith(root) || !Files.isRegularFile(path)) {
+                continue;
+            }
                 digest.update(root.relativize(path).toString().getBytes(StandardCharsets.UTF_8));
                 digest.update(Files.readAllBytes(path));
-            }
         }
         return HEX.formatHex(digest.digest());
     }
@@ -935,6 +970,7 @@ public final class TestSessionCoordinator {
                 String sourceAfter = sourceDigest(worktree);
                 String runtimeAfter = runtimeDigest(command);
                 String state = sourceBefore.equals(sourceAfter) && runtimeBefore.equals(runtimeAfter)
+                        && leaseStillOwned(leasePath.getParent(), leasePath, runId)
                         ? "ABORTED" : "INVALID_IDENTITY_CHANGED";
                 writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                         sourceAfter, runtimeAfter, List.of(), List.of()));
@@ -1032,9 +1068,4 @@ public final class TestSessionCoordinator {
         }
     }
 
-    private static final class FileSep {
-        private static final String GIT = java.io.File.separator + ".git" + java.io.File.separator;
-        private static final String OPENGGF = java.io.File.separator + ".openggf" + java.io.File.separator;
-        private static final String TARGET = java.io.File.separator + "target" + java.io.File.separator;
-    }
 }

@@ -44,10 +44,13 @@ public final class TestSessionCoordinatorSelfTest {
         BasicRun first = verifySuccessfulRun(root, outputRoot);
         verifyForeignOwnedRootIsRejected(root, outputRoot);
         verifySpaceContainingRoot(root);
+        verifyInWorktreeSymlinkLockRootIsRejected(root, outputRoot);
         verifyChildExitPropagation(root, outputRoot);
         verifyShutdownFinalizesSession(root, outputRoot);
         verifySourceMutationInvalidatesRun(root, outputRoot);
         verifyRuntimeInputMutationInvalidatesRun(root, outputRoot);
+        verifyIgnoredFileDoesNotInvalidateRun(root, outputRoot);
+        verifyLeaseDisappearanceInvalidatesRun(root, outputRoot);
         verifyArbitraryReclaimIsRejected(root, outputRoot);
         verifyMismatchedReclaimMetadataIsRejected(root, outputRoot);
         verifyOwnerPublicationAndLiveLock(root, outputRoot);
@@ -102,6 +105,8 @@ public final class TestSessionCoordinatorSelfTest {
         String ownerJson = Files.readString(owner);
         check(ownerJson.contains("\"run_id\": \"" + runId + "\""), "owner metadata must identify the run");
         check(ownerJson.contains("\"state\": \"owner\""), "owner metadata must identify the publication state");
+        check(ownerJson.contains("\"branch\""), "owner metadata must record the starting branch");
+        check(ownerJson.contains("\"head\""), "owner metadata must record the starting HEAD");
 
         String exported = Files.readString(exportFile);
         check(exported.equals("manifest=" + manifest + "\nrun_id=" + runId + "\n"),
@@ -134,6 +139,32 @@ public final class TestSessionCoordinatorSelfTest {
                 TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
         check(result.exitCode == 0, "session roots containing spaces must preserve JVM option boundaries:\n"
                 + result.output);
+    }
+
+    private static void verifyInWorktreeSymlinkLockRootIsRejected(Path root, Path outputRoot) throws Exception {
+        Path link = root.resolve("lock-root-link");
+        Path worktree = Path.of(System.getProperty("user.dir")).toRealPath();
+        try {
+            try {
+                Files.createSymbolicLink(link, worktree);
+            } catch (UnsupportedOperationException e) {
+                return;
+            }
+            CommandResult result = runCoordinator(outputRoot, List.of(
+                    "--lock-root", link.toString(), "--", javaCommand(), "-cp", classPath(),
+                    TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+            check(result.exitCode != 0, "a lock root symlinked into the worktree must be rejected");
+        } finally {
+            if (Files.isSymbolicLink(link)) {
+                try (var entries = Files.list(link)) {
+                    for (Path entry : entries.filter(path -> path.getFileName().toString()
+                            .startsWith("openggf-test-session.lock")).toList()) {
+                        deleteTree(entry);
+                    }
+                }
+            }
+            Files.deleteIfExists(link);
+        }
     }
 
     private static void verifyForeignOwnedRootIsRejected(Path root, Path outputRoot) throws Exception {
@@ -201,6 +232,35 @@ public final class TestSessionCoordinatorSelfTest {
         } finally {
             Files.deleteIfExists(runtimeInput);
         }
+    }
+
+    private static void verifyIgnoredFileDoesNotInvalidateRun(Path root, Path outputRoot) throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-ignored-file"));
+        Path ignored = Path.of(System.getProperty("user.dir"), "mods",
+                ".session-selftest-ignored-" + ProcessHandle.current().pid() + ".txt");
+        try {
+            CommandResult result = runCoordinator(outputRoot, List.of(
+                    "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                    TestSessionCoordinatorSelfTest.class.getName(), "child-create-ignored"));
+            check(result.exitCode == 0, "ignored file creation must not invalidate the source identity:\n"
+                    + result.output);
+            Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+            check(Files.readString(manifest).contains("\"state\": \"PASSED\""),
+                    "ignored file creation must leave the session PASSED");
+        } finally {
+            Files.deleteIfExists(ignored);
+        }
+    }
+
+    private static void verifyLeaseDisappearanceInvalidatesRun(Path root, Path outputRoot) throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-lease-disappearance"));
+        CommandResult result = runCoordinator(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-delete-lease"));
+        check(result.exitCode != 0, "lease disappearance must make the coordinator nonzero");
+        Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        check(Files.readString(manifest).contains("\"state\": \"INVALID_IDENTITY_CHANGED\""),
+                "lease disappearance must invalidate the session identity");
     }
 
     private static void verifyShutdownFinalizesSession(Path root, Path outputRoot) throws Exception {
@@ -485,6 +545,30 @@ public final class TestSessionCoordinatorSelfTest {
                 throw new AssertionError(e);
             }
         }
+        if (mode.equals("child-create-ignored")) {
+            try {
+                Path ignored = Path.of(System.getenv("OPENGGF_TEST_WORKTREE"), "mods",
+                        ".session-selftest-ignored-" + ProcessHandle.current().pid() + ".txt");
+                Files.createDirectories(ignored.getParent());
+                Files.writeString(ignored, "ignored\n", StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+        }
+        if (mode.equals("child-delete-lease")) {
+            try {
+                Path lease = Path.of(System.getenv("OPENGGF_TEST_LEASE"));
+                Path namespace = lease.getParent();
+                try (var paths = Files.walk(namespace)) {
+                    for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                        Files.deleteIfExists(path);
+                    }
+                }
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+        }
         if (mode.equals("child-exit-7")) {
             System.exit(7);
         }
@@ -519,6 +603,14 @@ public final class TestSessionCoordinatorSelfTest {
     private static Path createOwnedDirectory(Path path) throws IOException {
         Files.createDirectories(path);
         return path.toAbsolutePath().normalize();
+    }
+
+    private static void deleteTree(Path root) throws IOException {
+        try (var paths = Files.walk(root)) {
+            for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(path);
+            }
+        }
     }
 
     private static Path onlyEntry(Path root, java.util.function.Predicate<Path> predicate) throws IOException {
