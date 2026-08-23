@@ -21,9 +21,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HexFormat;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -160,7 +162,7 @@ public final class TestSessionCoordinator {
         String runId = createRunId();
         Path namespace = namespace(lockParent, worktree);
         if (options.debugGuard.equals("staged")) {
-            Path staging = createStaging(lockParent, runId, worktree, options.command);
+            Path staging = createStaging(lockParent, runId, worktree, namespace.resolve("lease.lock"), options.command);
             System.out.println("OPENGGF_TEST_GUARD phase=staged");
             waitForContinue();
             return 0;
@@ -182,6 +184,11 @@ public final class TestSessionCoordinator {
         Lease target = publishInitialization(lockParent, namespace, runId, worktree, options.command);
         Path lockPath = target.namespace.resolve("lease.lock");
         Files.createFile(lockPath);
+        if (options.debugGuard.equals("lease-created")) {
+            System.out.println("OPENGGF_TEST_GUARD phase=lease-created");
+            waitForContinue();
+            return 0;
+        }
         FileChannel channel = FileChannel.open(lockPath, StandardOpenOption.WRITE);
         FileLock fileLock = channel.tryLock();
         if (fileLock == null) {
@@ -213,7 +220,7 @@ public final class TestSessionCoordinator {
     private static int reclaim(Options options) throws Exception {
         Path leasePath = options.reclaim.toAbsolutePath().normalize();
         Path namespace = leasePath.getParent();
-        if (!isLeaseNamespace(leasePath, namespace)) {
+        if (!isLeaseNamespace(leasePath, namespace, worktree())) {
             throw new StartupFailure("reclaim target is not an OpenGGF lease namespace: " + leasePath, 1);
         }
         String runId = createRunId();
@@ -235,6 +242,10 @@ public final class TestSessionCoordinator {
                         continue;
                     }
                     if (Files.exists(owner) && recordedProcessAlive(owner)) {
+                        continue;
+                    }
+                    if (!Files.exists(owner) && Files.exists(initializing)
+                            && recordedProcessAlive(initializing)) {
                         continue;
                     }
                 }
@@ -350,7 +361,7 @@ public final class TestSessionCoordinator {
         }
         Path staging;
         try {
-            staging = createStaging(lockParent, runId, worktree, command);
+            staging = createStaging(lockParent, runId, worktree, namespace.resolve("lease.lock"), command);
             moveAtomic(staging, namespace);
         } catch (FileAlreadyExistsException e) {
             return null;
@@ -386,32 +397,39 @@ public final class TestSessionCoordinator {
         if (Files.exists(namespace)) {
             return new Lease(namespace, null, null);
         }
-        Path staging = createStaging(lockParent, runId, worktree, command);
+        Path staging = createStaging(lockParent, runId, worktree, namespace.resolve("lease.lock"), command);
         moveAtomic(staging, namespace);
         return new Lease(namespace, null, null);
     }
 
-    private static Path createStaging(Path parent, String runId, Path worktree, List<String> command)
-            throws IOException {
+    private static Path createStaging(Path parent, String runId, Path worktree, Path leasePath,
+                                      List<String> command) throws IOException {
         Files.createDirectories(parent);
         Path staging = Files.createDirectory(parent.resolve(".staging-" + runId));
-        writeOwner(staging.resolve("initializing.json"), runId, worktree, staging.resolve("lease.lock"),
+        writeOwner(staging.resolve("initializing.json"), runId, worktree, leasePath,
                 command, sha256(String.join("\0", command)), "initializing");
         return staging;
     }
 
-    private static boolean isLeaseNamespace(Path leasePath, Path namespace) throws IOException {
+    private static boolean isLeaseNamespace(Path leasePath, Path namespace, Path worktree) throws IOException {
         if (namespace == null || !leasePath.getFileName().toString().equals("lease.lock")
                 || !Files.isDirectory(namespace) || Files.isSymbolicLink(namespace)) {
             return false;
         }
         String name = namespace.getFileName().toString();
-        if (!name.startsWith("openggf-test-session.lock")) {
+        if (!name.matches("openggf-test-session\\.lock(-[0-9a-f]{12})?")) {
             return false;
         }
-        return Files.isRegularFile(namespace.resolve("initializing.json"))
-                || Files.isRegularFile(namespace.resolve("owner.json"))
-                || Files.isRegularFile(namespace.resolve("reclaiming.json"));
+        for (String metadataName : List.of("owner.json", "initializing.json")) {
+            Path metadata = namespace.resolve(metadataName);
+            if (!Files.isRegularFile(metadata)) {
+                continue;
+            }
+            String json = Files.readString(metadata, StandardCharsets.UTF_8);
+            return json.contains("\"worktree\": \"" + escape(worktree.toString()) + "\"")
+                    && json.contains("\"lease_path\": \"" + escape(leasePath.toString()) + "\"");
+        }
+        return false;
     }
 
     private static boolean recordedProcessAlive(Path metadata) throws IOException {
@@ -463,7 +481,7 @@ public final class TestSessionCoordinator {
                                              String commandHash, Path worktree, Path lease,
                                              Paths paths) throws IOException {
         Files.createDirectories(tmp);
-        String javaTemp = "-Djava.io.tmpdir=" + tmp;
+        String javaTemp = "-Djava.io.tmpdir=\"" + tmp.toString().replace("\"", "\\\"") + "\"";
         environment.put("MAVEN_OPTS", append(environment.get("MAVEN_OPTS"), javaTemp));
         environment.put("JAVA_TOOL_OPTIONS", append(environment.get("JAVA_TOOL_OPTIONS"), javaTemp));
         environment.put("TMPDIR", tmp.toString());
@@ -719,6 +737,7 @@ public final class TestSessionCoordinator {
 
     private static String sourceDigest(Path root) throws IOException {
         MessageDigest digest = sha();
+        digest.update(gitIdentity(root).getBytes(StandardCharsets.UTF_8));
         try (var paths = Files.walk(root)) {
             for (Path path : paths.filter(Files::isRegularFile).sorted().toList()) {
                 if (path.toString().contains(FileSep.GIT) || path.toString().contains(FileSep.OPENGGF)
@@ -732,8 +751,94 @@ public final class TestSessionCoordinator {
         return HEX.formatHex(digest.digest());
     }
 
+    private static String gitIdentity(Path root) throws IOException {
+        StringBuilder identity = new StringBuilder();
+        for (List<String> arguments : List.of(
+                List.of("rev-parse", "HEAD"),
+                List.of("symbolic-ref", "--short", "HEAD"),
+                List.of("status", "--porcelain=v2", "--untracked-files=all"),
+                List.of("ls-files", "-v"),
+                List.of("diff", "--cached", "--binary"))) {
+            identity.append(String.join("\0", arguments)).append('\n');
+            identity.append(runGit(root, arguments)).append('\n');
+        }
+        return identity.toString();
+    }
+
+    private static String runGit(Path root, List<String> arguments) throws IOException {
+        List<String> command = new ArrayList<>();
+        command.add("git");
+        command.add("-C");
+        command.add(root.toString());
+        command.addAll(arguments);
+        Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        try {
+            if (!process.waitFor(5, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                return "<timeout>";
+            }
+        } catch (InterruptedException e) {
+            process.destroyForcibly();
+            Thread.currentThread().interrupt();
+            return "<interrupted>";
+        }
+        return process.exitValue() == 0 ? output : "<exit=" + process.exitValue() + ">" + output;
+    }
+
     private static String runtimeDigest(List<String> command) {
-        return sha256(String.join("\0", command));
+        MessageDigest digest = sha();
+        digest.update(String.join("\0", command).getBytes(StandardCharsets.UTF_8));
+        for (Path input : runtimeInputs(command)) {
+            Path canonical = input.toAbsolutePath().normalize();
+            digest.update(canonical.toString().getBytes(StandardCharsets.UTF_8));
+            if (!Files.exists(canonical)) {
+                digest.update("<missing>".getBytes(StandardCharsets.UTF_8));
+                continue;
+            }
+            try {
+                if (Files.isRegularFile(canonical)) {
+                    digest.update(Files.readAllBytes(canonical));
+                } else if (Files.isDirectory(canonical)) {
+                    try (var paths = Files.walk(canonical)) {
+                        for (Path path : paths.filter(Files::isRegularFile).sorted().toList()) {
+                            digest.update(canonical.relativize(path).toString().getBytes(StandardCharsets.UTF_8));
+                            digest.update(Files.readAllBytes(path));
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                digest.update(("<unreadable:" + e.getClass().getName() + ">").getBytes(StandardCharsets.UTF_8));
+            }
+        }
+        return HEX.formatHex(digest.digest());
+    }
+
+    private static Set<Path> runtimeInputs(List<String> command) {
+        Set<Path> inputs = new LinkedHashSet<>();
+        String declared = System.getenv("OPENGGF_RUNTIME_INPUTS");
+        if (declared != null && !declared.isBlank()) {
+            for (String value : declared.split(Pattern.quote(java.io.File.pathSeparator))) {
+                if (!value.isBlank()) {
+                    inputs.add(Path.of(value));
+                }
+            }
+        }
+        for (String argument : command) {
+            if (!argument.startsWith("-D")) {
+                continue;
+            }
+            int equals = argument.indexOf('=');
+            if (equals <= 2) {
+                continue;
+            }
+            String key = argument.substring(2, equals).toLowerCase();
+            if (key.contains("rom") || key.contains("config") || key.contains("mods")
+                    || key.endsWith(".path")) {
+                inputs.add(Path.of(argument.substring(equals + 1)));
+            }
+        }
+        return inputs;
     }
 
     private static String sha256(String value) {
