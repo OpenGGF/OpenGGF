@@ -114605,3 +114605,10 @@ The other three death arms remain coordinates only.
   red cleared during the run. The differing skipped/error counts from
   `develop` are the checkout's missing untracked default-ROM/config files, not
   code deltas.
+
+## 2026-08-23 - 0.6 release-hardening evidence sweep
+
+- Worktree: `bugfix/ai-0.6-release-hardening`, candidate over `79567caa4`.
+- Trace command: `tools/testing/test-session.sh -- mvn -Dmse=off test -Ptrace-replay -B` with the S1, S2, and S3K ROM properties. Result: **868 tests, 10 failures, 0 errors, 7 skips**; no `Java heap space`, `OutOfMemoryError`, fork crash, or truncated session. The first-error families remain the existing S3K closure, S1/S2 complete-run or level-select, and S3K AIZ divergences; no trace frontier moved.
+- Ordinary command: the same isolated test-session wrapper with `mvn -Dmse=off test -B` and all three ROM properties. Result: **15,041 tests, 51 failures, 9 errors, 19 skips**, against the clean baseline's 15,017 / 54 / 57 / 19. The direct-object fixture isolation work removed the prior null-service error cluster; the remaining reds are recorded in the release-hardening plan and are not release sign-off.
+- Package command: `tools/testing/test-session.sh -- mvn -Dmse=off -DskipTests package -B`; **BUILD SUCCESS**.

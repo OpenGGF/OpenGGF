@@ -200,8 +200,9 @@ jobs:
           expected_policy_reports = set()
           expected_trace_reports = set()
           for source in sorted(source_root.rglob("Test*.java")):
-              if (is_diagnostic_trace_source(source)
-                      or is_release_profile_excluded_source(source)):
+              if is_diagnostic_trace_source(source):
+                  continue
+              if is_release_profile_excluded_source(source):
                   continue
               rel = source.relative_to(Path("src/test/java")).with_suffix("")
               class_name = ".".join(rel.parts)
