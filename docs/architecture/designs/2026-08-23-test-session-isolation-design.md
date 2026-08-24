@@ -254,15 +254,22 @@ the session lease, and can never produce certifying evidence. The contributor
 guides call this out explicitly so the limitation is visible rather than
 mistaken for a hidden guarantee.
 
-`clean` has one unambiguous policy: an unwrapped `mvn clean` is rejected by a
-`pre-clean` session guard before Maven's clean plugin deletes `target`. A
-coordinator-launched `clean` is allowed only when its capability names the
-current lease and command. A second coordinator cannot acquire that lease. The
-active session therefore survives the rejection, and its external
-build/report/package roots provide defense in depth if an unrelated tool
-attempts to remove the legacy `target` directory. An explicitly provisioned
-external lock root is checked at session finalization; if it disappears, the
-session is marked invalid rather than silently accepted.
+The four normal local launchers are a deliberate non-certifying exception:
+they pass `-Dopenggf.session.guard.skip=true` so the distributable remains in
+`target/` and can be launched normally. That switch does not make arbitrary
+Maven lifecycles supported or produce certifying evidence.
+
+`clean` has one unambiguous policy for certifying workflows: an unwrapped
+`mvn clean` is rejected by a `pre-clean` session guard before Maven's clean
+plugin deletes `target`. A coordinator-launched `clean` is allowed only when
+its capability names the current lease and command. A second coordinator
+cannot acquire that lease. The active session therefore survives the
+rejection, and its external build/report/package roots provide defense in
+depth if an unrelated tool attempts to remove the legacy `target` directory.
+An explicitly provisioned external lock root is checked at session
+finalization; if it disappears, the session is marked invalid rather than
+silently accepted. Only the normal local launchers may opt out of this guard,
+and they do not run `clean`.
 
 ## Lifecycle
 
@@ -483,8 +490,11 @@ not raw `mvn test` or `mvn package` commands. `AGENTS.md` and `CLAUDE.md` are
 updated together and remain byte-identical where their mirrored guidance is
 intended to match. Raw Maven lifecycle commands are documented as unsupported
 and non-certifying; the lifecycle guards reject them when they reach the
-project. A separate explicit hook-bootstrap command installs `.githooks` once
-and does not run from Maven `validate`.
+project unless a normal local launcher has explicitly selected its
+non-certifying bypass. That bypass exists only to preserve the interactive
+`target/` package-and-launch workflow; it is not used by tests, traces, CI, or
+release commands. A separate explicit hook-bootstrap command installs
+`.githooks` once and does not run from Maven `validate`.
 
 The agent-facing isolation contract is explicit in both mirrored instruction
 files. Codex and Claude must enter through the POSIX or PowerShell session
@@ -494,7 +504,8 @@ diagnostics, and every fork's LWJGL native extraction directory remain below
 that run's root. Parallel agents use separate worktrees and wrapper sessions;
 they never share a temporary or LWJGL extraction directory. The start/end
 markers (`OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END`) and their manifest
-are required evidence, while raw Maven lifecycle commands are non-certifying.
+are required evidence, while raw Maven lifecycle commands—including the
+non-certifying launcher path—are not.
 The ordinary test profile excludes structural guards; release validation runs
 the separate `-Pguards` profile through a fresh wrapper session so whole-
 production ArchUnit imports cannot retain their graph behind the long ordinary

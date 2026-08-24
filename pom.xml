@@ -37,6 +37,8 @@
         <openggf.session.worktree></openggf.session.worktree>
         <openggf.session.lease-path></openggf.session.lease-path>
         <openggf.session.allowed-phases></openggf.session.allowed-phases>
+        <!-- Explicitly enabled only by the non-certifying local launchers. -->
+        <openggf.session.guard.skip>false</openggf.session.guard.skip>
         <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
         <surefire.forkCount>4</surefire.forkCount>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
@@ -1091,6 +1093,7 @@
                         <phase>pre-clean</phase>
                         <goals><goal>run</goal></goals>
                         <configuration>
+                            <skip>${openggf.session.guard.skip}</skip>
                             <target>
                                 <exec executable="${java.home}/bin/java" failonerror="true">
                                     <arg value="-Dopenggf.session.manifest=${openggf.session.manifest}"/>
@@ -1112,6 +1115,7 @@
                         <phase>validate</phase>
                         <goals><goal>run</goal></goals>
                         <configuration>
+                            <skip>${openggf.session.guard.skip}</skip>
                             <target>
                                 <exec executable="${java.home}/bin/java" failonerror="true">
                                     <arg value="-Dopenggf.session.manifest=${openggf.session.manifest}"/>
