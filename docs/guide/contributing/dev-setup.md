@@ -63,6 +63,11 @@ Build and run a distributable jar with the launcher for your platform:
 run.cmd
 ```
 
+The normal launchers are intentionally non-certifying: they explicitly bypass
+the session guard so they can keep writing the distributable to `target/` and
+launching it in the usual way. Use the test-session commands above whenever
+you need certifying build, test, trace, or release evidence.
+
 For faster iteration, `dev.sh` (Linux) and `dev.cmd` (Windows) compile only
 changed sources and run directly from `target/classes`. The first offline
 development launch may require `run.sh` or `run.cmd` to populate Maven's local

@@ -257,6 +257,9 @@ recorded hardware traces.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
   and isolated test-session procedures.
+- **Normal local launchers:** `run.sh`, `run.cmd`, `dev.sh`, and `dev.cmd` keep
+  the direct package-and-launch workflow for interactive development, while
+  certifying builds, tests, and trace evidence remain session-wrapped.
 
 #### Current release status
 

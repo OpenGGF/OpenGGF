@@ -559,6 +559,26 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void normalLauncherUsesAnExplicitNonCertifyingSessionGuardBypass() throws Exception {
+        String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
+
+        assertTrue(pomText.contains("<openggf.session.guard.skip>false</openggf.session.guard.skip>"),
+                "the session-guard bypass must be opt-in and disabled by default");
+        assertTrue(pomText.contains("<skip>${openggf.session.guard.skip}</skip>"),
+                "the explicit bypass must skip only the session-guard executions");
+        for (String launcherName : List.of("run.sh", "run.cmd", "dev.sh", "dev.cmd")) {
+            String launcher = Files.readString(Path.of(launcherName), StandardCharsets.UTF_8);
+            assertTrue(launcher.contains("-Dopenggf.session.guard.skip=true"),
+                    launcherName + " must declare its non-certifying launcher bypass explicitly");
+            assertFalse(launcher.contains("tools/testing/test-session.sh"),
+                    launcherName + " must not depend on the certifying test-session wrapper");
+        }
+        String runLauncher = Files.readString(Path.of("run.sh"), StandardCharsets.UTF_8);
+        assertTrue(runLauncher.contains("-DskipTests package -q"),
+                "run.sh must retain its package-and-launch fat-JAR workflow");
+    }
+
+    @Test
     void defaultSuiteMustLeaveStructuralGuardsToTheFreshGuardsSession() throws Exception {
         Document pom = parsePom("pom.xml");
         Element build = directChild(pom.getDocumentElement(), "build");

@@ -4,6 +4,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Normal local launchers retain their package-and-launch workflow:** `run.sh`,
+  `run.cmd`, `dev.sh`, and `dev.cmd` explicitly select the non-certifying
+  runtime path, so the distributable remains in `target/` while certifying
+  builds, tests, and trace evidence remain session-wrapped.
+
 - **AIZ's fire curtain now remains continuous across the exact-load seam:** the
   AIZ2 `FireRedraw`/`WaitFire` continuation keeps the cached ROM fire body in
   VDP-style wrapped tiling when the carried fire position passes the original

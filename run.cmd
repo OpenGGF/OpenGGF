@@ -1,5 +1,7 @@
 @echo off
-call mvn -Dmse=off -DskipTests package -q
+REM This is a normal, non-certifying local launcher. Keep the distributable in
+REM target\ and leave certifying builds to tools\testing\test-session.ps1.
+call mvn -Dmse=off -Dopenggf.session.guard.skip=true -DskipTests package -q
 if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
 
 set "JAR="

@@ -9,4 +9,6 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$script_dir"
 
-mvn -q -o -Dmse=off -Pdev-run compile exec:exec
+# This is a normal, non-certifying local launcher; certifying builds use the
+# test-session wrapper instead.
+mvn -q -o -Dmse=off -Dopenggf.session.guard.skip=true -Pdev-run compile exec:exec
