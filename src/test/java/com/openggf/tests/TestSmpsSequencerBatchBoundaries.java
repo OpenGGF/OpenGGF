@@ -34,7 +34,7 @@ public class TestSmpsSequencerBatchBoundaries {
     }
 
     @Test
-    public void fillNoteOffUsesShortenedDurationBoundary() throws Exception {
+    public void fillNoteOffUsesLiveTimeoutBoundary() throws Exception {
         SmpsSequencer seq = newSequencer();
         setSamplesPerFrame(seq, 8.0);
         setSampleCounter(seq, 0.0);
@@ -43,6 +43,7 @@ public class TestSmpsSequencerBatchBoundaries {
         track.duration = 5;
         track.scaledDuration = 5;
         track.fill = 2;
+        track.fillCounter = 2;
 
         assertEquals(16, seq.getSamplesUntilNextObservableEvent());
     }

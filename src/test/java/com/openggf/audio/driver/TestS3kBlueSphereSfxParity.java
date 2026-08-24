@@ -247,9 +247,10 @@ class TestS3kBlueSphereSfxParity {
                 .synthSnapshot().ymWriteTimeline().pending();
         assertEquals(33, pending.size());
         long anchor = pending.getFirst().dueMasterCycle() - 3_150L;
-        assertEquals(151_020L,
+        assertEquals(151_545L,
                 pending.getLast().dueMasterCycle() - anchor,
-                "Sound_37 has only stored operator four in the BIT7 timing path");
+                "Sound_37 has only stored operator four in the BIT7 timing "
+                        + "path and executes one more 35-T-state octave loop");
         assertEquals(List.of(0x29, 0x20, 0x0F, 0x00),
                 pending.subList(25, 29).stream()
                         .map(YmWriteTimeline.Entry::value).toList());
@@ -316,9 +317,10 @@ class TestS3kBlueSphereSfxParity {
         assertEquals(33, pending.size(),
                 "the displaced pre-service FM5 owner never opens an attack");
         long anchor = pending.getFirst().dueMasterCycle() - 3_150L;
-        assertEquals(151_020L,
+        assertEquals(151_545L,
                 pending.getLast().dueMasterCycle() - anchor,
-                "the surviving Sound_37 attack keeps its semantic mask");
+                "the surviving Sound_37 attack keeps its semantic mask and "
+                        + "source note-lookup path");
     }
 
     @Test

@@ -137,6 +137,9 @@ public class SonicConfigurationService {
 		if (migrationService.migrateDeprecatedCaptureToggleKey(config)) {
 			configChanged = true;
 		}
+		if (migrationService.migrateDeprecatedAudioChipDefaults(config)) {
+			configChanged = true;
+		}
 		if (normalizeDisplayShaderSelection(config)) {
 			configChanged = true;
 		}
@@ -675,6 +678,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
 		putDefault(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, false);
 		putDefault(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE, false);
+		putDefault(SonicConfiguration.AUDIO_REFERENCE_DEFAULTS_VERSION, 1);
 		putDefault(SonicConfiguration.REGION, "NTSC");
 		putDefaultKey(SonicConfiguration.UP, GLFW_KEY_UP);
 		putDefaultKey(SonicConfiguration.DOWN, GLFW_KEY_DOWN);

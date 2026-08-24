@@ -426,6 +426,29 @@
       ]
     },
     {
+      "id": "cfStopTrack-entry-to-keyoff-data",
+      "owner": "cfStopTrack -> zKeyOffIfActive -> zKeyOff -> zKeyOnOff -> zWriteFMI",
+      "source": "Z80 Sound Driver.asm:3443-3454,1143-1176,582-590; shipped fix_sndbugs=0",
+      "rows": [
+        {"opcode":"RES b,(IX+d)","count":1,"t_states":23,"source":"Z80 Sound Driver.asm:3443-3454"},
+        {"opcode":"LD r,n","count":1,"t_states":7,"source":"Z80 Sound Driver.asm:3443-3454"},
+        {"opcode":"LD (nn),r","count":1,"t_states":13,"source":"Z80 Sound Driver.asm:3443-3454"},
+        {"opcode":"CALL nn","count":1,"t_states":17,"source":"Z80 Sound Driver.asm:3443-3454"},
+        {"opcode":"LD r,(IX+d)","count":1,"t_states":19,"source":"Z80 Sound Driver.asm:1143-1176"},
+        {"opcode":"AND n","count":1,"t_states":7,"source":"Z80 Sound Driver.asm:1143-1176"},
+        {"opcode":"RET cc not taken","count":1,"t_states":5,"source":"Z80 Sound Driver.asm:1143-1176"},
+        {"opcode":"LD r,(IX+d)","count":1,"t_states":19,"source":"Z80 Sound Driver.asm:1143-1176"},
+        {"opcode":"BIT b,r","count":1,"t_states":8,"source":"Z80 Sound Driver.asm:1143-1176"},
+        {"opcode":"RET cc not taken","count":1,"t_states":5,"source":"Z80 Sound Driver.asm:1143-1176"},
+        {"opcode":"LD r,n","count":1,"t_states":7,"source":"Z80 Sound Driver.asm:1143-1176"},
+        {"opcode":"CALL nn","count":1,"t_states":17,"source":"Z80 Sound Driver.asm:1143-1176"},
+        {"opcode":"LD (nn),r","count":1,"t_states":13,"source":"Z80 Sound Driver.asm:582-590"},
+        {"opcode":"NOP","count":1,"t_states":4,"source":"Z80 Sound Driver.asm:582-590"},
+        {"opcode":"LD r,r","count":1,"t_states":4,"source":"Z80 Sound Driver.asm:582-590"},
+        {"opcode":"LD (nn),r","count":1,"t_states":13,"source":"Z80 Sound Driver.asm:582-590"}
+      ]
+    },
+    {
       "id": "cfStopTrack-keyoff-to-restored-panning-data",
       "owner": "cfStopTrack -> zGetSFXChannelPointers -> bankswitchToMusicS3 -> zGetFMInstrumentOffset -> zSendFMInstrument",
       "source": "Z80 Sound Driver.asm:309-326,426-456,1449-1480,1531-1536,2110-2160,3443-3506; shipped fix_sndbugs=0",
@@ -545,14 +568,26 @@
       ]
     },
     {
+      "key":"locked-on-fm-track-stop","kind":"TRACK_STOP_KEY_OFF",
+      "variant":{"port":1,"operators":4,"banked_voice":false,"ssg_eg":false,"carrier_mask":0,"octave_loops":0,"path":"TRACK_STOP"},
+      "source_prefix_path":"zWriteFMI.through-data","cross_segment_advance_path":"cfStopTrack-entry-to-keyoff-data","cross_segment_bank_waits":[],
+      "writes":[{"slot":0,"advance_before_write_path":"","bank_waits":[],"expected_delta_master_cycles":0}]
+    },
+    {
+      "key":"locked-on-fm-track-stop-part-I","kind":"TRACK_STOP_KEY_OFF",
+      "variant":{"port":0,"operators":4,"banked_voice":false,"ssg_eg":false,"carrier_mask":0,"octave_loops":0,"path":"TRACK_STOP"},
+      "source_prefix_path":"zWriteFMI.through-data","cross_segment_advance_path":"cfStopTrack-entry-to-keyoff-data","cross_segment_bank_waits":[],
+      "writes":[{"slot":0,"advance_before_write_path":"","bank_waits":[],"expected_delta_master_cycles":0}]
+    },
+    {
       "key":"blue-sphere-completion-restore","kind":"COMPLETION_RESTORE",
       "variant":{"port":1,"operators":4,"banked_voice":true,"ssg_eg":false,"carrier_mask":8,"path":"COMPLETION_RESTORE"},
-      "source_prefix_path":"zWriteFMI.through-data","cross_segment_advance_path":"","cross_segment_bank_waits":[],
+      "source_prefix_path":"zWriteFMI.through-data","cross_segment_advance_path":"cfStopTrack-keyoff-to-restored-panning-data","cross_segment_bank_waits":[],
       "writes":[
         {"slot":0,"advance_before_write_path":"","bank_waits":[],"expected_delta_master_cycles":0},
-        {"slot":1,"advance_before_write_path":"cfStopTrack-keyoff-to-restored-panning-data","bank_waits":[],"expected_delta_master_cycles":16170},
-        {"slot":2,"advance_before_write_path":"zSendFMInstrData.panning-to-algorithm-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3225},
-        {"slot":3,"advance_before_write_path":"zSendFMInstrument.algorithm-to-first-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3765},
+        {"slot":1,"advance_before_write_path":"zSendFMInstrData.panning-to-algorithm-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3225},
+        {"slot":2,"advance_before_write_path":"zSendFMInstrument.algorithm-to-first-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3765},
+        {"slot":3,"advance_before_write_path":"zSendFMInstrData.next-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3570},
         {"slot":4,"advance_before_write_path":"zSendFMInstrData.next-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3570},
         {"slot":5,"advance_before_write_path":"zSendFMInstrData.next-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3570},
         {"slot":6,"advance_before_write_path":"zSendFMInstrData.next-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3570},
@@ -571,11 +606,10 @@
         {"slot":19,"advance_before_write_path":"zSendFMInstrData.next-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3570},
         {"slot":20,"advance_before_write_path":"zSendFMInstrData.next-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3570},
         {"slot":21,"advance_before_write_path":"zSendFMInstrData.next-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3570},
-        {"slot":22,"advance_before_write_path":"zSendFMInstrData.next-operator-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3570},
-        {"slot":23,"advance_before_write_path":"zSendFMInstrument.first-TL-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":5145},
+        {"slot":22,"advance_before_write_path":"zSendFMInstrument.first-TL-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":5145},
+        {"slot":23,"advance_before_write_path":"zSendTL.next-noncarrier-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3540},
         {"slot":24,"advance_before_write_path":"zSendTL.next-noncarrier-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3540},
-        {"slot":25,"advance_before_write_path":"zSendTL.next-noncarrier-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3540},
-        {"slot":26,"advance_before_write_path":"zSendTL.next-carrier-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3825}
+        {"slot":25,"advance_before_write_path":"zSendTL.next-carrier-data","bank_waits":[{"owner":"GPGX z80_request_68k_bus_access average wait","accesses":1}],"expected_delta_master_cycles":3825}
       ]
     }
   ]

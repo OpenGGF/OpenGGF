@@ -395,6 +395,11 @@ public class VirtualSynthesizer implements Synthesizer {
         return psg.isNoiseShiftOnEveryToggle();
     }
 
+    /** Selects the band-limited PSG path used by the BizHawk GPGX core. */
+    protected final void setPsgHqMode(boolean enabled) {
+        psg.setHqMode(enabled);
+    }
+
     @Override
     public void silenceAll() {
         crossYmTimelineGenerationBarrier(

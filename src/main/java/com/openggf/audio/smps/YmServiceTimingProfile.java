@@ -17,6 +17,7 @@ public interface YmServiceTimingProfile {
         FM_VOICE_UPLOAD,
         TRACK_PAN_WRITE,
         KEY_OFF,
+        TRACK_STOP_KEY_OFF,
         FREQUENCY_AND_KEY_ON,
         COMPLETION_RESTORE
     }
@@ -25,6 +26,7 @@ public interface YmServiceTimingProfile {
         FIRST_ADMISSION,
         FIRST_VOICE_ATTACK,
         ORDINARY_NOTE,
+        TRACK_STOP,
         COMPLETION_RESTORE
     }
 
@@ -35,7 +37,8 @@ public interface YmServiceTimingProfile {
     }
 
     record Variant(int port, int operatorCount, boolean bankedVoice,
-                   boolean ssgEg, int carrierMask, PathKind path) {
+                   boolean ssgEg, int carrierMask, int octaveLoopCount,
+                   PathKind path) {
         public Variant {
             if (port < 0 || port > 1) {
                 throw new IllegalArgumentException("YM port must be 0 or 1");
@@ -47,6 +50,10 @@ public interface YmServiceTimingProfile {
             if (carrierMask < 0 || (carrierMask & ~0xF) != 0) {
                 throw new IllegalArgumentException(
                         "carrier mask must fit four stored operators");
+            }
+            if (octaveLoopCount < 0 || octaveLoopCount > 7) {
+                throw new IllegalArgumentException(
+                        "octave loop count must be between 0 and 7");
             }
             Objects.requireNonNull(path, "path");
         }

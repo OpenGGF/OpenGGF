@@ -4,6 +4,76 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **The standalone sound test once again reaches the speaker:** its interactive
+  window now creates, drives, and closes the OpenAL presentation host on one
+  audio thread, instead of creating the thread-bound device on Swing's caller
+  and silently falling back when the scheduled presenter first used it. A new
+  root `soundTest.sh` launcher incrementally compiles the app and forwards its
+  game, ROM, song, console, and null-audio arguments.
+
+- **S3K FM sound effects retain the shipped track-stop decay:** locked-on
+  `cfStopTrack` spends 181 Z80 T-states between entering the terminal path and
+  writing the YM2612 key-off. OpenGGF previously keyed each FM track off at the
+  driver-service boundary, shortening the final envelope release. Track stops
+  now preserve that source-derived delay for all eligible S3K FM effects while
+  keeping completion restoration in its own ordered scope. A real AIZ1
+  headless regression starts Tails at debug-HUD position `6517,933` in an air
+  roll, breaks the ROM-backed rock, verifies Collapse's three staggered
+  key-offs and presented-PCM tail, and then observes the later spring launch.
+
+- **Repeated PSG effects now overwrite the shared SFX track without exposing
+  music between requests:** a real AIZ native trace showed Collapse requested
+  three times about 61–62 frames apart while its five-burst PSG3 tail was still
+  active. OpenGGF removed each same-ID sequencer by releasing PSG3 to music,
+  producing a transient music-tone restore before the replacement took over.
+  The shared PSG3/noise lock now hands directly to the replacement, matching
+  the shipped track RAM; S3K's `fix_sndbugs=0` admission still emits its
+  authentic PSG3/noise silence pair. The final request consequently retains
+  the complete 121-frame decay instead of breaking the continuous crumble
+  texture.
+
+- **SMPS PSG output now uses the reference band-limited renderer:** BizHawk's
+  Genesis Plus GX core runs the console with `hq_psg=1`, while OpenGGF's SMPS
+  drivers had left the chip in its standalone fast mode. Native final-speaker
+  captures showed that S3K Collapse ends at the same semantic frame in both
+  engines but retains the PSG filter's decaying waveform after the final mute.
+  All three SMPS dialects now select the existing HQ path, restoring that
+  texture without extending Sound_59 or adding effect-specific reverb.
+
+- **Existing installs now receive the reference audio-chip defaults:** older
+  generated `config.yaml` files persisted DAC interpolation and MAME-style
+  every-toggle PSG noise as an all-true pair, which overrode later default
+  corrections forever. That exact legacy pair is migrated once to raw DAC
+  steps and GPGX/libvgm positive-edge PSG noise; asymmetric user choices remain
+  untouched. This corrects a separate installed-configuration mismatch for
+  noise effects such as S3K Collapse and Spindash Release without
+  sound-specific constants.
+
+- **S3K audio parity can now be localized through exact PCM boundaries:** a
+  diagnostic-only path records YM2612 stereo mix samples, held DAC codes, PSG
+  native stereo samples, and final presented PCM on their owning clocks. The
+  production fast path remains inert, while the pinned native core and Java
+  chips expose bounded, snapshot-stable evidence for distinguishing SMPS
+  interpreter errors from chip and presentation errors.
+
+- **S3K modulated PSG effects no longer chirp at note boundaries:** the
+  locked-on Z80 driver applies modulation before its single PSG frequency
+  upload. The engine was first publishing the unmodulated period and then the
+  modulated period, adding a short wrong pitch to Collapse's repeated noise
+  bursts and to the Dash/spindash-release attack. PSG3/noise writes also retain
+  their one logical track lock instead of injecting a second noise-channel
+  silence during the note. FM5 now keys off when its own track reaches
+  `cfStopTrack`, even when a longer PSG sibling keeps the overall effect alive;
+  the interrupted music voice is restored at that same boundary instead of at
+  whole-effect cleanup. This removes Collapse's left-only ringing tail and
+  Dash's prolonged FM ending. Collapse's three FM voices now retain their
+  one-service stagger and native four-step pitch wobble when the FM5 stream
+  begins with a rest. First-attack timing includes the source Z80 octave-loop
+  cost, correcting Spindash Release without changing Blue Sphere timing.
+  S2/S3K note fill now decrements its live timeout on each actual music service
+  independently of duration extension, so Invincibility's short FM1 tones key
+  off sharply after the shipped five services.
+
 
 - **Sonic 1 FM5 effects no longer inherit the previous instrument at onset:**
   the first authenticated SetVoice-to-note path now preserves the shipped

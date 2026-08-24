@@ -1,10 +1,14 @@
 package com.openggf.audio;
 
+import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.runtime.AudioFrameClock;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.synth.PsgChip;
+import com.openggf.audio.synth.Ym2612Chip;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -14,6 +18,8 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -45,6 +51,22 @@ class TestAudioPresentationArchitectureGuard {
      * explicit review here; mutating owners are never allow-listed.
      */
     private static final Set<String> TIMELINE_READ_ONLY_AUDIO_DEPENDENCIES = Set.of();
+
+    @Test
+    void chipPcmTapInstallationIsConfinedToItsPackageDiagnosticFactory() {
+        JavaClasses classes = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.openggf");
+        List<JavaMethodCall> calls = classes.stream()
+                .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                .filter(call -> call.getName().equals("installPcmDiagnosticTap"))
+                .filter(call -> call.getTargetOwner().isEquivalentTo(Ym2612Chip.class)
+                        || call.getTargetOwner().isEquivalentTo(PsgChip.class))
+                .toList();
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().allMatch(call -> call.getOriginOwner().getFullName()
+                .equals("com.openggf.audio.synth.ChipPcmDiagnosticFactory")));
+    }
 
     /**
      * Superseded split-runtime / recording-lease-switch identifiers. None may
@@ -593,6 +615,49 @@ class TestAudioPresentationArchitectureGuard {
                 AUDIO_ROOT.resolve("driver/SmpsDriver.java"));
         assertEquals(1, occurrences(driver,
                 "hasReservableExclusiveYmSourceProgram()"));
+    }
+
+    @Test
+    void stoppedSfxFmReleasePortHasOneReviewedProductionCallsite() {
+        String portName = "releaseStoppedSfxFmTrackFromSequencer";
+        List<Method> namedPorts = java.util.Arrays.stream(
+                        SmpsDriver.class.getDeclaredMethods())
+                .filter(method -> method.getName().equals(portName))
+                .toList();
+        assertEquals(1, namedPorts.size(),
+                "the internal cross-package port has no overloads");
+        Method port = namedPorts.getFirst();
+        assertTrue(Modifier.isPublic(port.getModifiers()));
+        assertTrue(Modifier.isFinal(port.getModifiers()),
+                "the cross-package sequencer port cannot be overridden");
+        assertFalse(Modifier.isStatic(port.getModifiers()));
+        assertEquals(List.of(SmpsSequencer.class, int.class),
+                List.of(port.getParameterTypes()));
+
+        JavaClasses classes = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.openggf");
+        List<JavaMethodCall> calls = classes.stream()
+                .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner()
+                        .isEquivalentTo(SmpsDriver.class))
+                .filter(call -> call.getName().equals(portName))
+                .toList();
+        assertEquals(1, calls.size(),
+                "the port has exactly one bytecode callsite");
+        assertTrue(calls.getFirst().getOriginOwner()
+                .isEquivalentTo(SmpsSequencer.class));
+        assertEquals("stopNote", calls.getFirst().getOrigin().getName());
+
+        List<String> methodReferences = classes.stream()
+                .flatMap(owner -> owner.getMethodReferencesFromSelf().stream())
+                .filter(reference -> reference.getTargetOwner()
+                        .isEquivalentTo(SmpsDriver.class))
+                .filter(reference -> reference.getName().equals(portName))
+                .map(reference -> reference.getDescription())
+                .toList();
+        assertEquals(List.of(), methodReferences,
+                "method references cannot bypass the reviewed callsite");
     }
 
     @Test

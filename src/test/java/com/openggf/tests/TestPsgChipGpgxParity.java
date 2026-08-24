@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
+import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.synth.PsgChip;
 
 import java.lang.reflect.Field;
@@ -14,11 +15,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestPsgChipGpgxParity {
 
     @Test
-    public void defaultsToFastModeForCrisperGenesisParity() {
+    public void standaloneChipDefaultsToFastModeUntilItsRuntimeOwnerSelectsQuality() {
         PsgChip chip = new PsgChip(44100.0, PsgChip.ChipType.INTEGRATED);
-        assertFalse(chip.isHqMode(), "GPGX parity should default to fast PSG mode");
+        assertFalse(chip.isHqMode(),
+                "standalone chip tests select HQ explicitly; SMPS drivers "
+                        + "own the BizHawk GPGX runtime setting");
         assertFalse(chip.isNoiseShiftOnEveryToggle(),
                 "GPGX/libvgm parity clocks noise only on positive edges");
+    }
+
+    @Test
+    public void smpsRuntimeSelectsTheBizhawkGpgxHqRenderer() {
+        SmpsDriver driver = new SmpsDriver(44_100.0);
+
+        assertTrue(driver.captureSnapshot().synthSnapshot().psg().hqPsg(),
+                "BizHawk GPGX sets hq_psg=1 for the emulated console; all "
+                        + "SMPS dialects must use the same band-limited path");
     }
 
     @Test

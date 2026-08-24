@@ -121,6 +121,8 @@ public final class ConfigCatalog {
                 "Output audio at the internal YM2612 rate (~53kHz)"));
         put(PSG_NOISE_SHIFT_EVERY_TOGGLE, of("audio", "psgNoiseShiftEveryToggle", BOOL,
                 "PSG noise LFSR clock mode: false=positive edges (GPGX/libvgm), true=every toggle (MAME)"));
+        put(AUDIO_REFERENCE_DEFAULTS_VERSION, of("audio", "referenceDefaultsVersion", INT,
+                "Internal one-time migration version for reference chip defaults"));
         put(FM6_DAC_OFF, of("audio", "fm6DacOff", BOOL,
                 "Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)"));
 

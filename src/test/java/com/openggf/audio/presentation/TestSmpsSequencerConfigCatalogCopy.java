@@ -15,7 +15,8 @@ class TestSmpsSequencerConfigCatalogCopy {
                 new YmServiceTimingProfile.Segment(
                         YmServiceTimingProfile.SegmentKind.KEY_OFF,
                         new YmServiceTimingProfile.Variant(1, 4, true, false,
-                                0, YmServiceTimingProfile.PathKind.ORDINARY_NOTE),
+                                0, 0,
+                                YmServiceTimingProfile.PathKind.ORDINARY_NOTE),
                         new long[] { 0 }));
         SmpsSequencerConfig source = new SmpsSequencerConfig.Builder()
                 .ymServiceTimingProfile(profile)

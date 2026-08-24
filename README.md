@@ -238,7 +238,11 @@ recorded hardware traces.
 - **Audio and video hardware modeling:** YM2612 FM, PSG, DAC/PCM, SMPS
   sequencing, pause/resume behavior, PAL clocks, priority rendering, tilemaps,
   shaders, sprite batching, and staged art loading have received substantial
-  accuracy and stability work.
+  accuracy and stability work. Source-timed S3K FM/PSG services, repeated SFX
+  ownership, reference chip defaults, and HQ PSG rendering improve Collapse,
+  Spindash Release, Blue Sphere, and mixed music/SFX playback; the standalone
+  sound-test launcher provides ROM-backed listening through the same unified
+  presentation pipeline.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,
   level events, audio history, and relevant static state are captured and
   restored with explicit ownership rules.

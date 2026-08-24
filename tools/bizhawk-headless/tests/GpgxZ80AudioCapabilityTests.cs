@@ -62,6 +62,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "GpgxZ80AudioCapabilityTests restore S3K same-epoch observer checkpoints",
                     () => ProveSaveLoad("s3k", s3kRom, s3kMovie, CreateS3kObserver),
                     game: "s3k", serial: true, estimatedSeconds: 10.0));
+                if (Environment.GetEnvironmentVariable("OPENGGF_GPGX_S3K_SFX_LIFECYCLE") == "1")
+                    tests.Add(new TestMain.TestCase(
+                        "GpgxZ80AudioCapabilityTests capture injected S3K SFX lifecycles",
+                        () => CaptureInjectedS3kSfxLifecycles(s3kRom),
+                        game: "s3k", serial: true, estimatedSeconds: 30.0));
             }
             if (Environment.GetEnvironmentVariable("OPENGGF_GPGX_Z80_PERFORMANCE") == "1"
                 && File.Exists(s2Rom) && File.Exists(movie))
@@ -1238,6 +1243,81 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal((long)vector[2], psgByKind[kind]);
             }
             AssertEx.Equal(true, JToken.DeepEquals(expected["breakdown"], breakdown.ToJson()));
+        }
+
+        private static void CaptureInjectedS3kSfxLifecycles(string rom)
+        {
+            CaptureInjectedS3kSfxLifecycle(rom, 0x59,
+                new[] { 0x1DF0, 0x1E20, 0x1E50, 0x1F10 }, 121);
+            CaptureInjectedS3kSfxLifecycle(rom, 0xB6,
+                new[] { 0x1E50, 0x1F10 }, 86);
+        }
+
+        private static void CaptureInjectedS3kSfxLifecycle(string rom, byte sfxId,
+            int[] trackStarts, int expectedTerminalFrame)
+        {
+            using (var host = GpgxHost.Open(rom, GpgxHost.CreateGhz1SyncSettings()))
+            {
+                CompleteRunAudioObserver observer = CreateS3kObserver(host.CreateAudioTraceApi());
+                for (int frame = 0; frame < 600; frame++)
+                {
+                    host.ClearButtons();
+                    observer.CaptureFrame(host.Advance, (buffer, count) => { });
+                }
+                host.WriteZ80RamByte(0x1C0A, 0xE2);
+                for (int frame = 0; frame < 4; frame++)
+                {
+                    host.ClearButtons();
+                    observer.CaptureFrame(host.Advance, (buffer, count) => { });
+                }
+                for (int start = 0x1DF0; start <= 0x1F10; start += 0x30)
+                    AssertEx.Equal(0, host.ReadZ80RamByte(start) & 0x80);
+
+                bool becameActive = false;
+                int quietFrames = 0;
+                int terminalFrame = -1;
+                for (int relativeFrame = 0; relativeFrame < 512; relativeFrame++)
+                {
+                    host.ClearButtons();
+                    if (relativeFrame == 0) host.WriteZ80RamByte(0x1C0B, sfxId);
+                    var writes = new List<string>();
+                    observer.CaptureFrame(host.Advance, (buffer, count) =>
+                    {
+                        for (int i = 0; i < count; i++)
+                        {
+                            GpgxAudioTraceEvent value = buffer[i];
+                            if (value.Kind == 3 || value.Kind == 4)
+                                writes.Add(value.Kind + ":" + value.ServiceKindId
+                                    + ":" + value.Subject.ToString("x2")
+                                    + ":" + value.Value.ToString("x2")
+                                    + "@" + value.Pc.ToString("x"));
+                        }
+                    });
+                    var tracks = new List<string>();
+                    bool active = false;
+                    foreach (int start in trackStarts)
+                    {
+                        byte control = host.ReadZ80RamByte(start);
+                        active |= (control & 0x80) != 0;
+                        tracks.Add(start.ToString("x") + "=" + Hex(host, start, 0x30));
+                    }
+                    if (active) { becameActive = true; quietFrames = 0; }
+                    else if (becameActive)
+                    {
+                        if (terminalFrame < 0) terminalFrame = relativeFrame;
+                        quietFrames++;
+                    }
+                    Console.WriteLine("S3K-SFX " + sfxId.ToString("x2")
+                        + " frame=" + relativeFrame + " active=" + active
+                        + " queue=" + host.ReadZ80RamByte(0x1C0B).ToString("x2")
+                        + " writes=" + string.Join(",", writes.ToArray())
+                        + " tracks=" + string.Join("|", tracks.ToArray()));
+                    if (becameActive && quietFrames >= 3) break;
+                }
+                AssertEx.Equal(true, becameActive);
+                AssertEx.Equal(expectedTerminalFrame, terminalFrame);
+                AssertEx.Equal(3, quietFrames);
+            }
         }
 
         private static string Sha256File(string path)

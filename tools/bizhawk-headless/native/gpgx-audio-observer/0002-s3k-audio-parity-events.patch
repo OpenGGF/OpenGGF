@@ -1,0 +1,633 @@
+diff --git a/waterbox/gpgx/Genesis-Plus-GX/core/sound/psg.c b/waterbox/gpgx/Genesis-Plus-GX/core/sound/psg.c
+index 502f5db8ee30d7fc3183985a2012d79ef2be17eb..ae6d2ab30f3c4eef20fa62f855ca34654265a223 100644
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/sound/psg.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/sound/psg.c
+@@ -228,7 +228,11 @@ void psg_write(unsigned int clocks, unsigned int data)
+   int index;
+ 
+   if (__builtin_expect(gpgx_audio_trace_enabled != 0, 0))
++  {
+     gpgx_audio_trace_psg_write(data);
++    if (__builtin_expect(gpgx_s3k_audio_parity_enabled != 0, 0))
++      gpgx_s3k_audio_parity_psg_write(clocks, data);
++  }
+ 
+   /* PSG chip synchronization */
+   if (clocks > psg.clocks)
+diff --git a/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c b/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c
+index 1c4dcf0562de84d4bb1f2aedad4e4a5f195d9e33..6ea871b2f564ac824fba30c8bc357184f716ae88 100644
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/sound/sound.c
+@@ -69,7 +69,11 @@ unsigned int (*fm_read)(unsigned int cycles, unsigned int address);
+ void fm_write(unsigned int cycles, unsigned int address, unsigned int data)
+ {
+   if (__builtin_expect(gpgx_audio_trace_enabled != 0, 0))
++  {
+     gpgx_audio_trace_fm_write(address, data);
++    if (__builtin_expect(gpgx_s3k_audio_parity_enabled != 0, 0))
++      gpgx_s3k_audio_parity_fm_write(cycles, address, data);
++  }
+   fm_write_impl(cycles, address, data);
+ }
+ 
+diff --git a/waterbox/gpgx/Genesis-Plus-GX/core/z80/z80.c b/waterbox/gpgx/Genesis-Plus-GX/core/z80/z80.c
+index 7fb4fd9439497d1fc36b94b19017a24a6f3d3bf5..b7818f67e48d172b4c499cbd7075d125ba83aef1 100644
+--- a/waterbox/gpgx/Genesis-Plus-GX/core/z80/z80.c
++++ b/waterbox/gpgx/Genesis-Plus-GX/core/z80/z80.c
+@@ -3452,6 +3452,9 @@ void z80_run(unsigned int cycles)
+ 
+     Z80.after_ei = FALSE;
+     GPGX_AUDIO_TRACE_INSTRUCTION_ENABLED(GPGX_AUDIO_TRACE_CPU_Z80, PCD);
++    if (__builtin_expect(gpgx_s3k_audio_parity_enabled != 0, 0))
++      gpgx_s3k_audio_parity_instruction(
++        PCD, Z80.cycles, IX, zram[PCD & 0x1fffu], zram);
+     R++;
+     EXEC_INLINE(op,ROP());
+   }
+diff --git a/waterbox/gpgx/cinterface/audio_trace.c b/waterbox/gpgx/cinterface/audio_trace.c
+index f1104ac2688f517a7e297cdb0bec406e93f635ef..2f84b0a145f3d6e13e5b27023ce592753d006c48 100644
+--- a/waterbox/gpgx/cinterface/audio_trace.c
++++ b/waterbox/gpgx/cinterface/audio_trace.c
+@@ -155,6 +155,10 @@ STATIC_ASSERT(first_fault_depth_offset, offsetof(struct gpgx_audio_trace_first_f
+ STATIC_ASSERT(first_fault_count_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, continuation_count) == 11);
+ STATIC_ASSERT(first_fault_limit_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, continuation_limit) == 12);
+ STATIC_ASSERT(first_fault_reserved_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, reserved) == 13);
++STATIC_ASSERT(s3k_parity_config_size, sizeof(struct gpgx_s3k_audio_parity_config_v1) == 64);
++STATIC_ASSERT(s3k_parity_descriptor_size, sizeof(struct gpgx_s3k_audio_parity_descriptor_v1) == 20);
++STATIC_ASSERT(s3k_parity_event_size, sizeof(struct gpgx_s3k_audio_parity_event_v1) == 38);
++STATIC_ASSERT(s3k_parity_fault_size, sizeof(struct gpgx_s3k_audio_parity_fault_v1) == 16);
+ 
+ struct trace_stack_entry
+ {
+@@ -213,6 +217,48 @@ ECL_INVISIBLE static struct trace_deferred_begin_reservation trace_deferred_begi
+ ECL_INVISIBLE static struct gpgx_audio_trace_event trace_events[GPGX_AUDIO_TRACE_EVENT_CAPACITY]
+   __attribute__((used, aligned(32)));
+ 
++#define S3K_PARITY_MAGIC 0x31503353u
++#define S3K_PARITY_MAX_TRACKS 256u
++
++struct s3k_parity_active_owner
++{
++  uint32_t transaction_id;
++  uint32_t service_entry_master_cycle;
++  uint16_t descriptor_id;
++  uint16_t service_ordinal;
++  uint16_t generation;
++  uint16_t track_base;
++  uint16_t source_pointer;
++  uint8_t service_kind;
++  uint8_t track_type;
++  uint8_t channel_id;
++  uint8_t bank;
++  uint8_t active;
++};
++
++ECL_INVISIBLE volatile uint8_t gpgx_s3k_audio_parity_enabled;
++ECL_INVISIBLE static uint8_t s3k_parity_phase;
++ECL_INVISIBLE static uint8_t s3k_parity_runtime_error;
++ECL_INVISIBLE static uint8_t s3k_parity_ready_drained;
++ECL_INVISIBLE static uint16_t s3k_parity_fm_address;
++ECL_INVISIBLE static uint8_t s3k_parity_fm_address_valid;
++ECL_INVISIBLE static uint8_t s3k_parity_track_playing[S3K_PARITY_MAX_TRACKS];
++ECL_INVISIBLE static uint16_t s3k_parity_track_generation[S3K_PARITY_MAX_TRACKS];
++ECL_INVISIBLE static uint32_t s3k_parity_event_count_value;
++ECL_INVISIBLE static uint32_t s3k_parity_omitted_count;
++ECL_INVISIBLE static uint32_t s3k_parity_next_transaction_id;
++ECL_INVISIBLE static uint32_t s3k_parity_vint_ordinal;
++ECL_INVISIBLE static uint16_t s3k_parity_last_service_token;
++ECL_INVISIBLE static uint32_t s3k_parity_service_entry_master_cycle;
++ECL_INVISIBLE static struct gpgx_s3k_audio_parity_config_v1 s3k_parity_config;
++ECL_INVISIBLE static struct gpgx_s3k_audio_parity_descriptor_v1
++  s3k_parity_descriptors[GPGX_S3K_AUDIO_PARITY_MAX_DESCRIPTORS];
++ECL_INVISIBLE static struct gpgx_s3k_audio_parity_fault_v1 s3k_parity_fault;
++ECL_INVISIBLE static struct s3k_parity_active_owner s3k_parity_active;
++ECL_INVISIBLE static struct gpgx_s3k_audio_parity_event_v1
++  s3k_parity_events[GPGX_S3K_AUDIO_PARITY_EVENT_CAPACITY]
++  __attribute__((used, aligned(32)));
++
+ static const struct gpgx_audio_service_kind_v1 *kind_for(uint8_t kind);
+ 
+ static void fail_runtime_at(uint32_t reason, uint8_t source_cpu, uint32_t pc)
+@@ -273,6 +319,221 @@ static struct gpgx_audio_trace_event *new_event(uint8_t kind)
+   return event;
+ }
+ 
++static void s3k_parity_fail(uint32_t reason, uint32_t pc)
++{
++  s3k_parity_runtime_error = 1;
++  if (s3k_parity_fault.reason) return;
++  s3k_parity_fault.reason = reason;
++  s3k_parity_fault.pc = pc;
++  s3k_parity_fault.transaction_id = s3k_parity_active.transaction_id;
++  s3k_parity_fault.track_base = s3k_parity_active.track_base;
++  s3k_parity_fault.service_kind = trace_depth ? trace_stack[trace_depth - 1].kind : 0;
++}
++
++static uint32_t s3k_parity_track_count(void)
++{
++  return ((uint32_t)s3k_parity_config.song_track_end
++      - s3k_parity_config.song_track_first
++      + (uint32_t)s3k_parity_config.sfx_track_end
++      - s3k_parity_config.sfx_track_first) / s3k_parity_config.track_size;
++}
++
++static int s3k_parity_track_slot(uint16_t ix, uint16_t *slot, uint8_t *type)
++{
++  uint32_t song_count = ((uint32_t)s3k_parity_config.song_track_end
++      - s3k_parity_config.song_track_first) / s3k_parity_config.track_size;
++  if (ix >= s3k_parity_config.song_track_first
++      && ix < s3k_parity_config.song_track_end
++      && ((ix - s3k_parity_config.song_track_first) % s3k_parity_config.track_size) == 0)
++  {
++    *slot = (uint16_t)((ix - s3k_parity_config.song_track_first)
++      / s3k_parity_config.track_size);
++    *type = 1u;
++    return 1;
++  }
++  if (ix >= s3k_parity_config.sfx_track_first
++      && ix < s3k_parity_config.sfx_track_end
++      && ((ix - s3k_parity_config.sfx_track_first) % s3k_parity_config.track_size) == 0)
++  {
++    *slot = (uint16_t)(song_count + (ix - s3k_parity_config.sfx_track_first)
++      / s3k_parity_config.track_size);
++    *type = 2u;
++    return 1;
++  }
++  return 0;
++}
++
++static void s3k_parity_scan_generations(const uint8_t *ram)
++{
++  uint32_t i, count = s3k_parity_track_count();
++  for (i = 0; i < count; i++)
++  {
++    uint16_t address;
++    uint32_t song_count = ((uint32_t)s3k_parity_config.song_track_end
++      - s3k_parity_config.song_track_first) / s3k_parity_config.track_size;
++    uint8_t playing;
++    if (i < song_count)
++      address = (uint16_t)(s3k_parity_config.song_track_first
++        + i * s3k_parity_config.track_size);
++    else
++      address = (uint16_t)(s3k_parity_config.sfx_track_first
++        + (i - song_count) * s3k_parity_config.track_size);
++    playing = (uint8_t)((ram[address] >> 7) & 1u);
++    if (playing && !s3k_parity_track_playing[i])
++    {
++      if (s3k_parity_track_generation[i] == UINT16_MAX)
++      { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_CONFIG, 0); return; }
++      s3k_parity_track_generation[i]++;
++    }
++    s3k_parity_track_playing[i] = playing;
++  }
++}
++
++static struct gpgx_s3k_audio_parity_event_v1 *s3k_parity_new_event(void)
++{
++  struct gpgx_s3k_audio_parity_event_v1 *event;
++  if (s3k_parity_event_count_value >= GPGX_S3K_AUDIO_PARITY_EVENT_CAPACITY)
++  {
++    if (s3k_parity_omitted_count != UINT32_MAX) s3k_parity_omitted_count++;
++    s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_CAPACITY,
++      trace_z80_instruction_pc);
++    return NULL;
++  }
++  event = &s3k_parity_events[s3k_parity_event_count_value];
++  memset(event, 0, sizeof(*event));
++  event->event_ordinal = s3k_parity_event_count_value++;
++  return event;
++}
++
++static void s3k_parity_emit(uint32_t master_cycle, uint8_t chip,
++  uint8_t port, uint8_t reg, uint8_t value)
++{
++  struct gpgx_s3k_audio_parity_event_v1 *event;
++  if (!s3k_parity_active.active || s3k_parity_runtime_error) return;
++  event = s3k_parity_new_event();
++  if (!event) return;
++  event->master_cycle = master_cycle;
++  event->vint_ordinal = s3k_parity_vint_ordinal;
++  event->service_entry_master_cycle = s3k_parity_active.service_entry_master_cycle;
++  event->transaction_id = s3k_parity_active.transaction_id;
++  event->service_ordinal = s3k_parity_active.service_ordinal;
++  event->generation = s3k_parity_active.generation;
++  event->track_base = s3k_parity_active.track_base;
++  event->source_pointer = s3k_parity_active.source_pointer;
++  event->source_pc = (uint16_t)trace_z80_instruction_pc;
++  event->service_kind = s3k_parity_active.service_kind;
++  event->track_type = s3k_parity_active.track_type;
++  event->channel_id = s3k_parity_active.channel_id;
++  event->bank = s3k_parity_active.bank;
++  event->chip = chip;
++  event->port = port;
++  event->register_id = reg;
++  event->value = value;
++}
++
++void gpgx_s3k_audio_parity_instruction(uint32_t pc, uint32_t master_cycle,
++  uint32_t owner_ix, uint32_t opcode, const uint8_t *ram)
++{
++  uint32_t i, matches = 0;
++  uint16_t slot = 0;
++  uint8_t track_type = 0;
++  const struct gpgx_s3k_audio_parity_descriptor_v1 *selected = NULL;
++  uint16_t ix = (uint16_t)owner_ix;
++  uint8_t active_kind;
++  if (s3k_parity_phase != PHASE_RECORDING || s3k_parity_runtime_error) return;
++  trace_z80_instruction_pc = pc;
++  if (!ram) { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_CONFIG, pc); return; }
++  s3k_parity_scan_generations(ram);
++  if (s3k_parity_runtime_error) return;
++  active_kind = trace_depth ? trace_stack[trace_depth - 1].kind : 0;
++  if (trace_depth && trace_stack[trace_depth - 1].token != s3k_parity_last_service_token)
++  {
++    s3k_parity_last_service_token = trace_stack[trace_depth - 1].token;
++    s3k_parity_service_entry_master_cycle = master_cycle;
++  }
++  if (s3k_parity_active.active)
++  {
++    const struct gpgx_s3k_audio_parity_descriptor_v1 *descriptor = NULL;
++    for (i = 0; i < s3k_parity_config.descriptor_count; i++)
++      if (s3k_parity_descriptors[i].descriptor_id
++          == s3k_parity_active.descriptor_id) descriptor = &s3k_parity_descriptors[i];
++    if (!descriptor)
++    { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_CONFIG, pc); return; }
++    if (active_kind != s3k_parity_active.service_kind)
++    { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_SERVICE, pc); return; }
++    if ((uint16_t)pc == descriptor->end_pc
++        && (uint8_t)opcode == descriptor->end_opcode)
++    {
++      if (ix != s3k_parity_active.track_base)
++      { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_OWNER_MUTATION, pc); return; }
++      memset(&s3k_parity_active, 0, sizeof(s3k_parity_active)); return;
++    }
++  }
++  for (i = 0; i < s3k_parity_config.descriptor_count; i++)
++  {
++    const struct gpgx_s3k_audio_parity_descriptor_v1 *candidate =
++      &s3k_parity_descriptors[i];
++    if ((uint16_t)pc == candidate->begin_pc
++        && (uint8_t)opcode == candidate->begin_opcode)
++    { selected = candidate; matches++; }
++  }
++  if (!matches) return;
++  if (matches != 1 || s3k_parity_active.active)
++  { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_NESTED, pc); return; }
++  if (!trace_depth || active_kind != selected->expected_service_kind)
++  { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_SERVICE, pc); return; }
++  if (!s3k_parity_track_slot(ix, &slot, &track_type)
++      || track_type != selected->expected_track_type)
++  { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_OWNER_MUTATION, pc); return; }
++  if (!(ram[ix] & 0x80u) || !s3k_parity_track_generation[slot])
++  { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_OWNER_MUTATION, pc); return; }
++  memset(&s3k_parity_active, 0, sizeof(s3k_parity_active));
++  if (!++s3k_parity_next_transaction_id)
++  { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_CONFIG, pc); return; }
++  s3k_parity_active.transaction_id = s3k_parity_next_transaction_id;
++  s3k_parity_active.service_entry_master_cycle = s3k_parity_service_entry_master_cycle;
++  s3k_parity_active.descriptor_id = selected->descriptor_id;
++  s3k_parity_active.service_ordinal = trace_stack[trace_depth - 1].token;
++  s3k_parity_active.generation = s3k_parity_track_generation[slot];
++  s3k_parity_active.track_base = ix;
++  s3k_parity_active.source_pointer = (uint16_t)(ram[ix + 3u]
++    | ((uint16_t)ram[ix + 4u] << 8));
++  s3k_parity_active.service_kind = active_kind;
++  s3k_parity_active.track_type = track_type;
++  s3k_parity_active.channel_id = ram[ix + 1u];
++  s3k_parity_active.bank = track_type == 2u ? s3k_parity_config.fixed_sfx_bank
++    : ram[s3k_parity_config.song_bank_address];
++  s3k_parity_active.active = 1;
++}
++
++void gpgx_s3k_audio_parity_fm_write(uint32_t master_cycle,
++  uint32_t address, uint32_t data)
++{
++  if (s3k_parity_phase == PHASE_DISABLED) return;
++  if (!(address & 1u))
++  {
++    s3k_parity_fm_address = (uint16_t)data
++      | (uint16_t)((address & 2u) << 7);
++    s3k_parity_fm_address_valid = 1;
++    return;
++  }
++  if (s3k_parity_phase != PHASE_RECORDING) return;
++  if (s3k_parity_active.active && !s3k_parity_fm_address_valid)
++  { s3k_parity_fail(GPGX_S3K_AUDIO_PARITY_FAULT_INTERRUPTED,
++      trace_z80_instruction_pc); return; }
++  if (s3k_parity_fm_address_valid)
++    s3k_parity_emit(master_cycle, GPGX_S3K_AUDIO_PARITY_CHIP_YM2612,
++      (uint8_t)(s3k_parity_fm_address >> 8),
++      (uint8_t)s3k_parity_fm_address, (uint8_t)data);
++}
++
++void gpgx_s3k_audio_parity_psg_write(uint32_t master_cycle, uint32_t data)
++{
++  if (s3k_parity_phase == PHASE_RECORDING)
++    s3k_parity_emit(master_cycle, GPGX_S3K_AUDIO_PARITY_CHIP_PSG,
++      0, 0, (uint8_t)data);
++}
++
+ static const struct gpgx_audio_service_kind_v1 *kind_for(uint8_t kind)
+ {
+   uint8_t slot = trace_kind_lookup[kind];
+@@ -1772,6 +2033,158 @@ ECL_EXPORT int32_t gpgx_audio_trace_drain(struct gpgx_audio_trace_event *out,
+   return TRACE_OK;
+ }
+ 
++ECL_EXPORT uint32_t gpgx_s3k_audio_parity_abi_version(void)
++{ return GPGX_S3K_AUDIO_PARITY_ABI_VERSION; }
++
++ECL_EXPORT uint32_t gpgx_s3k_audio_parity_event_size(void)
++{ return sizeof(struct gpgx_s3k_audio_parity_event_v1); }
++
++ECL_EXPORT uint32_t gpgx_s3k_audio_parity_capacity(void)
++{ return GPGX_S3K_AUDIO_PARITY_EVENT_CAPACITY; }
++
++ECL_EXPORT int32_t gpgx_s3k_audio_parity_configure(
++  const struct gpgx_s3k_audio_parity_config_v1 *config,
++  const struct gpgx_s3k_audio_parity_descriptor_v1 *descriptors)
++{
++  uint32_t i, j, count;
++  if (s3k_parity_phase != PHASE_DISABLED) return TRACE_INVALID_PHASE;
++  if (!config || !descriptors
++      || config->magic != S3K_PARITY_MAGIC
++      || config->abi_version != GPGX_S3K_AUDIO_PARITY_ABI_VERSION
++      || config->struct_size != sizeof(*config)
++      || config->descriptor_size != sizeof(descriptors[0])
++      || config->event_size != sizeof(struct gpgx_s3k_audio_parity_event_v1)
++      || !config->descriptor_count
++      || config->descriptor_count > GPGX_S3K_AUDIO_PARITY_MAX_DESCRIPTORS
++      || config->event_capacity != GPGX_S3K_AUDIO_PARITY_EVENT_CAPACITY
++      || !config->track_size
++      || config->song_track_first >= config->song_track_end
++      || config->sfx_track_first >= config->sfx_track_end
++      || ((config->song_track_end - config->song_track_first) % config->track_size)
++      || ((config->sfx_track_end - config->sfx_track_first) % config->track_size)
++      || config->song_bank_address >= 0x2000u
++      || config->reserved0 || config->reserved1
++      || !bytes_are_zero((const uint8_t *)config->reserved, sizeof(config->reserved)))
++    return TRACE_INVALID_ARGUMENT;
++  memcpy(&s3k_parity_config, config, sizeof(*config));
++  count = ((uint32_t)config->song_track_end - config->song_track_first
++    + (uint32_t)config->sfx_track_end - config->sfx_track_first) / config->track_size;
++  if (!count || count > S3K_PARITY_MAX_TRACKS)
++  { memset(&s3k_parity_config, 0, sizeof(s3k_parity_config)); return TRACE_ABI_OR_CONFIG_LIMIT; }
++  for (i = 0; i < config->descriptor_count; i++)
++  {
++    const struct gpgx_s3k_audio_parity_descriptor_v1 *descriptor = &descriptors[i];
++    if (!descriptor->descriptor_id || !descriptor->begin_pc || !descriptor->end_pc
++        || !descriptor->expected_service_kind
++        || (descriptor->expected_track_type != 1u
++          && descriptor->expected_track_type != 2u)
++        || descriptor->reserved0
++        || !bytes_are_zero((const uint8_t *)descriptor->reserved,
++          sizeof(descriptor->reserved))) goto invalid;
++    for (j = 0; j < i; j++)
++      if (descriptors[j].descriptor_id == descriptor->descriptor_id
++          || (descriptors[j].begin_pc == descriptor->begin_pc
++            && descriptors[j].begin_opcode == descriptor->begin_opcode)) goto invalid;
++  }
++  memcpy(s3k_parity_descriptors, descriptors,
++    config->descriptor_count * sizeof(descriptors[0]));
++  memset(s3k_parity_track_playing, 0, sizeof(s3k_parity_track_playing));
++  memset(s3k_parity_track_generation, 0, sizeof(s3k_parity_track_generation));
++  s3k_parity_fm_address = 0;
++  s3k_parity_fm_address_valid = 0;
++  memset(&s3k_parity_fault, 0, sizeof(s3k_parity_fault));
++  memset(&s3k_parity_active, 0, sizeof(s3k_parity_active));
++  s3k_parity_event_count_value = s3k_parity_omitted_count = 0;
++  s3k_parity_next_transaction_id = 0;
++  s3k_parity_phase = PHASE_CONFIGURED;
++  gpgx_s3k_audio_parity_enabled = 1;
++  return TRACE_OK;
++invalid:
++  memset(&s3k_parity_config, 0, sizeof(s3k_parity_config));
++  return TRACE_INVALID_ARGUMENT;
++}
++
++ECL_EXPORT int32_t gpgx_s3k_audio_parity_begin_frame(uint32_t vint_ordinal)
++{
++  if (s3k_parity_phase != PHASE_CONFIGURED || trace_phase != PHASE_RECORDING)
++    return TRACE_INVALID_PHASE;
++  s3k_parity_event_count_value = s3k_parity_omitted_count = 0;
++  s3k_parity_runtime_error = s3k_parity_ready_drained = 0;
++  s3k_parity_vint_ordinal = vint_ordinal;
++  s3k_parity_last_service_token = 0;
++  s3k_parity_service_entry_master_cycle = 0;
++  memset(&s3k_parity_fault, 0, sizeof(s3k_parity_fault));
++  s3k_parity_phase = PHASE_RECORDING;
++  return TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_s3k_audio_parity_end_frame(void)
++{
++  if (s3k_parity_phase != PHASE_RECORDING) return TRACE_INVALID_PHASE;
++  s3k_parity_phase = PHASE_READY;
++  if (s3k_parity_omitted_count) return TRACE_OVERFLOW;
++  return s3k_parity_runtime_error ? TRACE_ABI_OR_CONFIG_LIMIT : TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_s3k_audio_parity_event_count(
++  uint32_t *required_count, uint32_t *overflow_count)
++{
++  if (s3k_parity_phase != PHASE_READY) return TRACE_INVALID_PHASE;
++  if (!required_count || !overflow_count) return TRACE_INVALID_ARGUMENT;
++  *required_count = s3k_parity_event_count_value;
++  *overflow_count = s3k_parity_omitted_count;
++  return s3k_parity_omitted_count ? TRACE_OVERFLOW : TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_s3k_audio_parity_drain(
++  struct gpgx_s3k_audio_parity_event_v1 *out,
++  uint32_t out_capacity, uint32_t *out_count)
++{
++  if (s3k_parity_phase != PHASE_READY) return TRACE_INVALID_PHASE;
++  if (!out_count) return TRACE_INVALID_ARGUMENT;
++  *out_count = s3k_parity_event_count_value;
++  if (s3k_parity_omitted_count) return TRACE_OVERFLOW;
++  if (s3k_parity_event_count_value && (!out
++      || out_capacity < s3k_parity_event_count_value))
++    return out ? TRACE_OUTPUT_CAPACITY : TRACE_INVALID_ARGUMENT;
++  if (!s3k_parity_event_count_value && (out || out_capacity))
++    return TRACE_INVALID_ARGUMENT;
++  if (s3k_parity_event_count_value)
++    memcpy(out, s3k_parity_events,
++      s3k_parity_event_count_value * sizeof(s3k_parity_events[0]));
++  s3k_parity_event_count_value = 0;
++  s3k_parity_phase = PHASE_CONFIGURED;
++  s3k_parity_ready_drained = 1;
++  return TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_s3k_audio_parity_first_fault(
++  struct gpgx_s3k_audio_parity_fault_v1 *out)
++{
++  if (!out) return TRACE_INVALID_ARGUMENT;
++  *out = s3k_parity_fault;
++  return TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_s3k_audio_parity_disable(void)
++{
++  memset(&s3k_parity_config, 0, sizeof(s3k_parity_config));
++  memset(s3k_parity_descriptors, 0, sizeof(s3k_parity_descriptors));
++  memset(s3k_parity_track_playing, 0, sizeof(s3k_parity_track_playing));
++  memset(s3k_parity_track_generation, 0, sizeof(s3k_parity_track_generation));
++  s3k_parity_fm_address = 0;
++  s3k_parity_fm_address_valid = 0;
++  memset(&s3k_parity_fault, 0, sizeof(s3k_parity_fault));
++  memset(&s3k_parity_active, 0, sizeof(s3k_parity_active));
++  s3k_parity_event_count_value = s3k_parity_omitted_count = 0;
++  s3k_parity_next_transaction_id = s3k_parity_vint_ordinal = 0;
++  s3k_parity_last_service_token = 0;
++  s3k_parity_runtime_error = s3k_parity_ready_drained = 0;
++  s3k_parity_phase = PHASE_DISABLED;
++  gpgx_s3k_audio_parity_enabled = 0;
++  return TRACE_OK;
++}
++
+ ECL_EXPORT int32_t gpgx_audio_trace_abort_frame(void)
+ {
+   if (trace_ready_invalid) return TRACE_ABI_OR_CONFIG_LIMIT;
+@@ -1789,6 +2202,7 @@ ECL_EXPORT int32_t gpgx_audio_trace_abort_frame(void)
+ 
+ ECL_EXPORT int32_t gpgx_audio_trace_disable(void)
+ {
++  if (gpgx_s3k_audio_parity_enabled) gpgx_s3k_audio_parity_disable();
+   memset(&trace_config, 0, sizeof(trace_config));
+   memset(gpgx_audio_trace_z80_watch_mask, 0, sizeof(gpgx_audio_trace_z80_watch_mask));
+   memset(trace_kinds, 0, sizeof(trace_kinds)); memset(trace_hooks, 0, sizeof(trace_hooks));
+diff --git a/waterbox/gpgx/cinterface/audio_trace.h b/waterbox/gpgx/cinterface/audio_trace.h
+index 41d1caabf117160457e0a769bd23554a715b7f81..658eedb7ee29d8b8405234427f2b93baaf292691 100644
+--- a/waterbox/gpgx/cinterface/audio_trace.h
++++ b/waterbox/gpgx/cinterface/audio_trace.h
+@@ -7,6 +7,21 @@
+ #define GPGX_AUDIO_TRACE_EVENT_CAPACITY 65536u
+ #define GPGX_AUDIO_TRACE_EVENT_SIZE 32u
+ 
++#define GPGX_S3K_AUDIO_PARITY_ABI_VERSION 1u
++#define GPGX_S3K_AUDIO_PARITY_EVENT_CAPACITY 32768u
++#define GPGX_S3K_AUDIO_PARITY_MAX_DESCRIPTORS 64u
++
++#define GPGX_S3K_AUDIO_PARITY_CHIP_YM2612 1u
++#define GPGX_S3K_AUDIO_PARITY_CHIP_PSG 2u
++
++#define GPGX_S3K_AUDIO_PARITY_FAULT_NONE 0u
++#define GPGX_S3K_AUDIO_PARITY_FAULT_CONFIG 1u
++#define GPGX_S3K_AUDIO_PARITY_FAULT_CAPACITY 2u
++#define GPGX_S3K_AUDIO_PARITY_FAULT_NESTED 3u
++#define GPGX_S3K_AUDIO_PARITY_FAULT_OWNER_MUTATION 4u
++#define GPGX_S3K_AUDIO_PARITY_FAULT_SERVICE 5u
++#define GPGX_S3K_AUDIO_PARITY_FAULT_INTERRUPTED 6u
++
+ #define GPGX_AUDIO_TRACE_CPU_Z80 1u
+ #define GPGX_AUDIO_TRACE_CPU_M68K 2u
+ #define GPGX_AUDIO_TRACE_CPU_RESET 3u
+@@ -113,11 +128,78 @@ struct __attribute__((packed)) gpgx_audio_trace_first_fault_v1
+   uint8_t reserved[3];
+ };
+ 
++struct __attribute__((packed)) gpgx_s3k_audio_parity_config_v1
++{
++  uint32_t magic;
++  uint16_t abi_version;
++  uint16_t struct_size;
++  uint16_t descriptor_size;
++  uint16_t event_size;
++  uint32_t descriptor_count;
++  uint32_t event_capacity;
++  uint16_t song_track_first;
++  uint16_t song_track_end;
++  uint16_t sfx_track_first;
++  uint16_t sfx_track_end;
++  uint16_t track_size;
++  uint16_t song_bank_address;
++  uint8_t fixed_sfx_bank;
++  uint8_t reserved0;
++  uint16_t reserved1;
++  uint32_t reserved[7];
++};
++
++struct __attribute__((packed)) gpgx_s3k_audio_parity_descriptor_v1
++{
++  uint16_t descriptor_id;
++  uint16_t begin_pc;
++  uint16_t end_pc;
++  uint8_t begin_opcode;
++  uint8_t end_opcode;
++  uint8_t expected_service_kind;
++  uint8_t expected_track_type;
++  uint16_t reserved0;
++  uint32_t reserved[2];
++};
++
++struct __attribute__((packed)) gpgx_s3k_audio_parity_event_v1
++{
++  uint32_t event_ordinal;
++  uint32_t master_cycle;
++  uint32_t vint_ordinal;
++  uint32_t service_entry_master_cycle;
++  uint32_t transaction_id;
++  uint16_t service_ordinal;
++  uint16_t generation;
++  uint16_t track_base;
++  uint16_t source_pointer;
++  uint16_t source_pc;
++  uint8_t service_kind;
++  uint8_t track_type;
++  uint8_t channel_id;
++  uint8_t bank;
++  uint8_t chip;
++  uint8_t port;
++  uint8_t register_id;
++  uint8_t value;
++};
++
++struct __attribute__((packed)) gpgx_s3k_audio_parity_fault_v1
++{
++  uint32_t reason;
++  uint32_t pc;
++  uint32_t transaction_id;
++  uint16_t track_base;
++  uint8_t service_kind;
++  uint8_t reserved;
++};
++
+ extern volatile uint8_t gpgx_audio_trace_enabled;
+ extern uint8_t gpgx_audio_trace_z80_watch_mask[8192];
+ extern uint8_t gpgx_audio_trace_m68k_watch_mask[8192];
+ extern uint32_t trace_z80_instruction_pc;
+ extern uint32_t trace_m68k_instruction_pc;
++extern volatile uint8_t gpgx_s3k_audio_parity_enabled;
+ 
+ uint8_t gpgx_audio_trace_enter_cpu(uint8_t cpu);
+ void gpgx_audio_trace_leave_cpu(uint8_t previous);
+@@ -144,6 +226,28 @@ int32_t gpgx_audio_trace_drain(struct gpgx_audio_trace_event *out,
+ int32_t gpgx_audio_trace_abort_frame(void);
+ int32_t gpgx_audio_trace_disable(void);
+ 
++void gpgx_s3k_audio_parity_instruction(uint32_t pc, uint32_t master_cycle,
++  uint32_t owner_ix, uint32_t opcode, const uint8_t *z80_ram);
++void gpgx_s3k_audio_parity_fm_write(uint32_t master_cycle,
++  uint32_t address, uint32_t data);
++void gpgx_s3k_audio_parity_psg_write(uint32_t master_cycle, uint32_t data);
++uint32_t gpgx_s3k_audio_parity_abi_version(void);
++uint32_t gpgx_s3k_audio_parity_event_size(void);
++uint32_t gpgx_s3k_audio_parity_capacity(void);
++int32_t gpgx_s3k_audio_parity_configure(
++  const struct gpgx_s3k_audio_parity_config_v1 *config,
++  const struct gpgx_s3k_audio_parity_descriptor_v1 *descriptors);
++int32_t gpgx_s3k_audio_parity_begin_frame(uint32_t vint_ordinal);
++int32_t gpgx_s3k_audio_parity_end_frame(void);
++int32_t gpgx_s3k_audio_parity_event_count(uint32_t *required_count,
++  uint32_t *overflow_count);
++int32_t gpgx_s3k_audio_parity_drain(
++  struct gpgx_s3k_audio_parity_event_v1 *out,
++  uint32_t out_capacity, uint32_t *out_count);
++int32_t gpgx_s3k_audio_parity_first_fault(
++  struct gpgx_s3k_audio_parity_fault_v1 *out);
++int32_t gpgx_s3k_audio_parity_disable(void);
++
+ #define GPGX_AUDIO_TRACE_ENTER(cpu, previous) do { \
+   (previous) = 0; \
+   if (__builtin_expect(gpgx_audio_trace_enabled != 0, 0)) \
