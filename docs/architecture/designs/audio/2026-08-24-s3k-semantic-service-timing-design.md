@@ -1,91 +1,47 @@
-# S3K Semantic Sound-Driver Timing Design
+# S3K PSG Service-Write Timing Design
 
 ## Status and decision
 
-Extend the existing high-level SMPS runtime with a source-derived semantic
-execution clock for the locked-on Sonic 3&K version-4 sound driver. The clock
-will timestamp chip writes from actual service state and source branches. It
-will not emulate the complete Z80, identify individual sounds, or read native
-trace data at runtime.
+Add a bounded, source-derived scheduler for PSG writes produced by the locked-on
+Sonic 3&K SFX service. Keep the existing high-level SMPS interpreter and chip
+cores. Do not emulate the Z80, retime YM writes, or build a general complete-run
+timing subsystem in this slice.
 
-This is the middle course between two rejected extremes:
-
-- a Collapse-specific delay or fade would conceal one symptom while leaving
-  the same timing defect in every other PSG effect;
-- running the original Z80 driver as a second production audio engine would
-  duplicate stream, request, snapshot, rewind, and modding ownership.
-
-The first delivery slice covers the common S3K SFX PSG service grammar reached
-by the authenticated first-slice inventory: active/inactive slot dispatch,
-duration service, next-note control flow, modulation, PSG volume envelopes,
-frequency/noise/volume writes, rest, and track termination. Collapse and Dash
-are acceptance cases, not runtime selectors. Every S3K SFX that follows an
-authenticated covered path receives the same timing behavior.
+The scheduler fixes one systemic mismatch: OpenGGF currently publishes all PSG
+writes at the beginning of a host driver service, while the retail driver issues
+them at different points inside the VInt. Collapse and Dash are acceptance cases,
+not runtime selectors. Timing is selected from the S3K dialect, physical PSG
+slot, and the semantic branch already taken by the interpreter.
 
 This design amends, but does not replace,
-`2026-08-23-s3k-smps-driver-pcm-parity-design.md`. Its evidence layers,
-authenticated dialect tuple, inventory, trace-is-comparison-only rule, and
-human listening gate remain normative.
+`2026-08-23-s3k-smps-driver-pcm-parity-design.md`. Its authenticated dialect,
+trace-is-comparison-only rule, inventory, and listening gate remain normative.
 
-## Problem statement
+## Why sub-frame placement is necessary
 
-The current runtime reproduces Collapse's semantic lifetime and effective PSG
-register state but not the native waveform. The authenticated native capture
-and a diagnostic OpenGGF chip tap show why:
+The current runtime already matches Collapse's effective PSG register sequence
+and semantic lifetime. It does not match the resulting waveform:
 
-- native Collapse PSG writes occur roughly 58,000 to 120,000 Mega Drive master
-  cycles after each VInt;
-- OpenGGF publishes the complete PSG journal at the host service boundary;
-- native PSG remains active through relative frame 121 and its final frame has
-  RMS `44.695811`, with 107 non-zero native samples before the terminal mute;
-- the corresponding OpenGGF tail frame has RMS `188.444964` and the next frame
-  is fully silent;
-- the engine and native effective PSG state digests nevertheless agree because
-  that comparison discards sub-frame timing and phase.
+- native writes occur tens of thousands of Mega Drive master cycles after the
+  VInt boundary;
+- OpenGGF applies the complete service journal before rendering the first sample
+  of that VInt;
+- the native terminal frame contains 107 non-zero PSG samples before the mute,
+  with RMS `44.695811`;
+- the aligned OpenGGF frame is completely silent;
+- delaying the mute by a whole VInt instead makes the effect too long.
 
-The result is the reported dry, abrupt ending. Earlier services also reset or
-change tone/noise/volume at the wrong sub-frame position, so fixing only the
-terminal mute would not reproduce the effect's repeating, echo-like texture.
+The SN76489 tone counters and noise LFSR run continuously. Moving a frequency,
+noise, or attenuation write changes which oscillator/LFSR state is heard. A
+within-VInt write position is therefore required; a synthetic reverb, fade, or
+sound-specific duration change cannot reproduce the native result.
 
-The source explains the required ownership. Locked-on version 4 calls
-`zUpdateSFXTracks` before music, scans every SFX slot, and dispatches active FM
-or PSG tracks (`Z80 Sound Driver.asm:727-759`). PSG service then runs the timer,
-note parser, modulation, frequency output, volume envelope, and PSG writes in
-one ordered path (`4058-4147`). Rest writes its attenuation in
-`zRestTrack`/`zSilencePSGChannel` (`4205-4247`), while `cfStopTrack` releases
-and silences a PSG owner through `zStopPSGTrack` (`3423-3529`). The Z80 returns
-to the DAC playback
-or idle loop, whose interrupt-enable windows determine the next service-entry
-phase (`4249-4335`).
+This does **not** require general instruction timing. The first slice only needs
+the finite SFX PSG paths that already produce writes in the high-level runtime.
 
-## Goals
+## Source authority
 
-1. Preserve source order and source-derived sub-frame timing for covered S3K
-   YM and PSG writes under one driver-service clock.
-2. Select timing from dialect, semantic path, and live track/driver state; never
-   from sound ID, zone, movie, frame number, or captured amplitude.
-3. Keep the existing ROM-backed high-level SMPS interpreter, request system,
-   modding boundary, chip cores, presentation pipeline, and rewind model.
-4. Make timing coverage finite and reviewable through the existing S3K
-   reachability and driver-service inventories.
-5. Leave S1, S2, and standalone-S3 compatibility behavior unchanged until each
-   has its own source proof.
-6. Make later timing-family additions incremental rather than requiring another
-   driver or a new public runtime protocol.
-
-## Non-goals
-
-- full Z80 instruction, memory, bank, or interrupt emulation;
-- runtime execution of disassembly text, diagnostic traces, or oracle JSON;
-- bit-identical complete-game PCM in this first slice;
-- timing every S3K routine before it has source and native evidence;
-- changing chip algorithms, gains, filters, or presentation to compensate for
-  a driver-scheduling mismatch;
-- delaying gameplay or changing what any SMPS stream does.
-
-## Authorities and invariants
-
-The first slice is authenticated to locked-on S&K with:
+The slice is authenticated to locked-on S&K:
 
 ```text
 ROM SHA-1: CFBF98C36C776677290A872547AC47C53D2761D6
@@ -95,130 +51,164 @@ FixMusicAndSFXDataBugs = 0
 FixBugs = 0
 ```
 
-Source constants come from checked executed-instruction rows joined to the
-checked-out disassembly. Native GPGX captures validate those calculations but
-cannot supply production timing constants. Every retained capture has A/B
-byte equality, fixed caps, provenance hashes, and zero overflow/fault. The
-runtime never opens the retained artifacts.
+The checked-out source owns behavior and timing costs:
 
-All arithmetic uses checked `long` operations. All pending writes are bounded,
-self-contained, generation-stamped, and snapshot-safe. A service either
-publishes its complete write/observer journal or restores its exact prior
-state. Chip callbacks remain drain-bound; logical service callbacks remain
-commit-bound.
+- `zUpdateSFXTracks` fixed-slot scan: `Z80 Sound Driver.asm:727-759`;
+- PSG timer/note/modulation/envelope service: `4058-4147`;
+- rest and channel silence: `4205-4247`;
+- `cfStopTrack` and `zStopPSGTrack`: `3423-3529`;
+- interrupt handler and entry into SFX service: source-cited by the checked
+  calculation artifact.
+
+Decoded native instruction/write captures validate the calculations. Captured
+write gaps and PCM are comparison oracles only and never become production
+constants. Every retained capture is A/B reproducible, bounded, source-owner
+joined, and zero fault/overflow. Any audited group used for absolute timing must
+also report zero DMA stalls.
+
+## Goals
+
+1. Place covered S3K SFX PSG writes at source-derived positions within their
+   driver service.
+2. Preserve exact PSG write value, physical-slot order, equal-cycle order, and
+   already-committed write lifetime.
+3. Keep SMPS parsing, requests, priorities, ownership, modulation, envelopes,
+   snapshots, rewind, and modding in their existing owners.
+4. Cover a finite ROM-backed grammar with explicit covered/unavailable results.
+5. Leave YM timing, S1, S2, and standalone-S3 behavior unchanged.
+6. Make unsupported retail or modded paths retain current immediate behavior
+   rather than guessing.
+
+## Non-goals
+
+- full or partial production Z80 emulation;
+- a unified YM/PSG CPU scheduler;
+- retiming music PSG or any YM write in this slice;
+- runtime use of diagnostic traces, disassembly files, sound IDs, zones, movies,
+  frame numbers, or captured amplitudes;
+- complete-game bit-identical PCM;
+- synthetic reverb, gain, filter, duration, or release-tail compensation.
 
 ## Architecture
 
-### 1. Semantic execution journal
+### 1. One unpublished SFX PSG journal per VInt service
 
-The sequencer already takes the semantic branches that correspond to the
-shipped routines. During a timed service it will append compact typed events to
-the driver's unpublished transaction instead of exposing a new public tracing
-API. The event vocabulary is deliberately semantic and finite:
-
-```text
-SERVICE_ENTRY
-TRACK_SLOT(active, type, slot)
-TRACK_TIMER(expired)
-STREAM_COMMAND(kind, operandClass)
-NEXT_NOTE(rest, tie, durationClass)
-MODULATION(branch, stepCount)
-PSG_ENVELOPE(branch, valueClass)
-FM_WRITE(port, register, value)
-PSG_WRITE(value)
-TRACK_TERMINAL(restOrStop)
-SERVICE_EXIT
-```
-
-Events contain only state already used to take the runtime branch. They carry
-no game name, sound ID, trace coordinate, or waveform value. Exact hardware
-write values stay in their write entries so a timing program cannot authorize
-the wrong write.
-
-The journal is private to `SmpsDriver` and the configured timing profile.
-Architecture guards permit emission only from the sequencer operations that
-own the corresponding source branch. An event outside the profile grammar
-poisons the unpublished timed service; it cannot partially publish.
-
-The native loop scans seven fixed SFX RAM slots: FM3, FM4, FM5, FM6, PSG1,
-PSG2, and PSG3. OpenGGF stores active effects as sequencers rather than a fixed
-RAM array, so the configured profile also provides a typed
-`DriverTrackSlotLayout`. Admission projects each physical channel claim onto
-exactly one native slot; inactive slots remain explicit timing events. A second
-owner for one slot is rejected by the existing contention transaction before
-timing begins. The projection is rebuilt from semantic channel ownership on
-restore and checked against its captured identity; it is not keyed by sound.
-
-### 2. Source-derived timing program
-
-`DriverExecutionTimingProfile` is a typed configuration owner copied by
-`SmpsAssetCatalog`. Its disabled singleton preserves current behavior. The
-locked-on profile consumes the semantic journal and returns an immutable
-`ResolvedDriverService` containing:
-
-- the service-entry master cycle;
-- the next CPU phase state;
-- an exact due master cycle for every YM and PSG write;
-- the source row/citation identity used for each cost;
-- the number and order of consumed semantic events.
-
-The production table is generated from a checked calculation artifact. Each
-row records decoded PC/opcode, executed branch outcome, Z80 T-states, GPGX's
-explicit three-T-state average bank-window wait where applicable, YM busy-wait
-behavior, semantic event, and source citation. Tests independently sum the
-rows, join every semantic event and hardware write, and reject deletion,
-reorder, wrong branch, wrong opcode, wrong write value, or orphan rows.
-
-Timing programs are selected by the event grammar and live state. For example,
-the same PSG update program handles any covered tone/noise track whose actual
-events are timer-sustain, frequency calculation, modulation branch, envelope
-branch, and three PSG writes. Collapse's ID is irrelevant.
-
-Before executing a timed service, a bounded side-effect-free classifier proves
-that the reachable service path is covered. If it is not covered, the service
-uses the existing immediate behavior and its inventory row remains
-`timing_status = UNAVAILABLE` or `PARTIAL`. A path declared `EXACT` must never
-fall back; tests poison every selector boundary. This prevents a new retail
-sound from crashing while preventing claimed coverage from silently lying.
-
-### 3. Driver CPU phase
-
-Absolute service-entry timing cannot be derived from the host VInt alone. The
-Z80 accepts the interrupt only during an enabled window in `zPlayDigitalAudio`.
-The profile therefore owns a small `S3kAudioCpuPhase` value, not a general Z80
-machine:
+The existing outer `SmpsDriver` VInt batch transaction gains one private bounded
+SFX PSG journal shared by every SFX sequencer serviced at that boundary. If any
+active SFX path is unavailable, the complete SFX PSG journal for that VInt uses
+the existing immediate publication path; a covered sequencer cannot be timed
+around an unclassified sibling. A journal entry records:
 
 ```text
-mode: DAC_IDLE | DAC_PLAYBACK
-loopPhaseMasterCycles
-dacRate
-dacNibblePhase
-lastRenderedMasterCycle
+physicalSlot: PSG1 | PSG2 | PSG3
+semanticOperation:
+  TONE_LOW | TONE_HIGH | NOISE_MODE | ATTENUATION | SILENCE
+value: unsigned byte
+sourceDescriptor
+sourceTrackIdentity
+serviceOrdinal
+writeOrdinal
 ```
 
-The phase advances from rendered master cycles and the existing DAC playback
-state. It models only the source-defined idle-loop and two-nibble playback-loop
-costs and their `EI`/`DI` windows. Interrupt entry resolves to the first legal
-window at or after VInt. It then hands one service cursor to the semantic timing
-program. On service exit the returned phase resumes the matching loop.
+The sequencer records the PSG writes it already intends to publish. Each active
+FM or PSG track also contributes a bounded `SlotTimingSummary` containing the
+small semantic decisions needed to calculate the path it actually took:
+inactive/active slot, timer sustain/expiry, rest/note/tie, reached
+coordination-command class, modulation branch, envelope branch, terminal
+branch, and hardware-write count. It does not predict the stream with a second
+interpreter and does not duplicate YM write values.
 
-Driver initialization anchors the phase at the first `.dac_idle_loop` `EI`
-after the source-derived DAC-disable write. Hard reset reconstructs that exact
-seed at the current chip frontier. No arbitrary host-time or capture-phase
-offset is accepted.
+The journal is capped at 4,096 semantic events and 4,096 PSG writes per service.
+Overflow poisons the unpublished transaction. Exact values remain attached to
+the writes; timing cannot authorize a different register value.
 
-This state does not decode samples or generate DAC values. `Ym2612Chip` remains
-the DAC producer. The phase model only answers when the already-existing driver
-service and its writes occur. Unsupported SEGA PCM and unmodeled DAC branches
-remain explicit inventory frontiers until separately implemented.
+The current engine may update different SFX sequencers in insertion order. The
+timing resolver projects their active PSG channel claims onto the native fixed
+slots PSG1, PSG2, and PSG3. Duplicate physical owners are rejected by the
+existing contention transaction. The resolver orders only the unpublished
+hardware writes; it does not replay or reorder logical SMPS state mutations.
+Tests prove that reordering is safe for the covered grammar because those tracks
+share no mutable stream or channel state after contention has committed.
 
-`S3kAudioCpuPhase` is captured by `SmpsDriverSnapshot`, live command mutation
-tokens, presentation replacement, and rewind. Restore validates dialect and
-clock identity. Phase is driver-global, never per sequencer.
+### 2. Bounded source-cost resolver
 
-### 4. PSG write timeline
+`S3kPsgServiceTimingProfile` consumes the completed journal and returns either:
 
-Add a bounded `PsgWriteTimeline` beside `YmWriteTimeline`. An entry contains:
+```text
+COVERED(List<ResolvedPsgWrite>)
+UNAVAILABLE(reason)
+```
+
+Each resolved write contains its due master cycle, dense source ordinal, value,
+physical slot, source descriptor, and calculation-row identity. The resolver
+uses a generated, checked source-cost table for only these routines:
+
+- interrupt entry through `zUpdateSFXTracks`;
+- inactive FM/PSG slot scan costs;
+- reached earlier active-slot service summaries needed to locate PSG1-3;
+- the covered PSG timer/note/modulation/envelope branches;
+- PSG output, rest, silence, and stop paths;
+- return from the covered PSG service.
+
+Earlier FM slots contribute time summaries only. Their YM writes and existing
+YM source-timing implementation are untouched. A summary is selected from live
+semantic branch facts and is accepted only when its checked executed-row slice
+accounts for every branch and write. An unrecognized earlier-slot path makes the
+whole SFX PSG journal unavailable; it is not approximated from a neighboring
+path.
+
+The source-cost artifact stores decoded PC/opcode, branch outcome, Z80 T-states,
+GPGX's explicit average three-T-state bank-window wait where applicable,
+semantic event, and disassembly citation. Independent tests regenerate every
+sum and reject row deletion, reorder, wrong opcode, wrong branch, wrong event,
+wrong value predicate, orphan row, overflow, or unknown selector.
+
+Write-value predicates are semantic rather than fixture-specific. For example,
+an attenuation operation accepts the actual low nibble selected by the live
+envelope; it does not hard-code Collapse's value. Constant source writes such as
+terminal silence remain exact constants.
+
+### 3. Service anchor and bounded accuracy
+
+The existing S3K driver-service boundary is the VInt anchor. At that boundary,
+the driver reads the PSG chip's rendered master-cycle frontier; this is the
+absolute `serviceAnchorMasterCycle` for every entry in the journal. Hybrid
+rendering must already have drained audio exactly to that boundary. The checked
+source program includes interrupt-entry cost through the first SFX slot and
+uses the actual active-slot/path facts for the remainder of the service.
+
+Every covered resolved write must be at or after that anchor and strictly before
+the next driver-service anchor already owned by the sequencer's sample-phase
+accumulator. A source path whose writes can cross that boundary is unavailable
+in this slice. This prevents a later service from being committed ahead of
+unresolved work from its predecessor without replacing the existing regional
+cadence model.
+
+The first slice deliberately does not model the complete DAC playback-loop
+phase. Native captures quantify the resulting entry-phase variation. Coverage
+is accepted only when:
+
+- the source-derived write positions fall within the predeclared native window
+  for every retained group;
+- no tested initial DAC phase regresses the component-PCM error versus immediate
+  publication;
+- the terminal partial-frame sample count is within the predeclared bounded
+  tolerance; and
+- no per-phase aggregate is selected after observing the result.
+
+The tolerance and phase set are fixed in the research artifact before runtime
+code is changed. If the bounded model cannot improve every retained phase, the
+family remains unavailable and a separate DAC-phase design is required. No
+captured mean or best-fitting offset may enter production.
+
+This boundary is intentional scope control: it gives the PSG the timing
+resolution required by the audible bug without creating a general Z80 phase
+machine.
+
+### 4. PSG write timeline and exact chip application
+
+Add a private fixed-capacity `PsgWriteTimeline` beside the existing YM timeline.
+Its 4,096-entry snapshot-safe record contains:
 
 ```text
 dueMasterCycle
@@ -226,110 +216,124 @@ ordinal
 value
 driverGeneration
 serviceOrdinal
-SmpsSourceDescriptor
-semanticSegment
+sourceDescriptor
+physicalSlot
+semanticOperation
 ```
 
-The timeline capacity is exactly 4,096 entries. It validates nondecreasing due cycle, dense
-ordinal, current generation, source identity, and byte range. Commit is atomic.
-Snapshots preserve pending entries, next ordinal, capacity, and generation.
-Hard reset, synth replacement, and full silence cross the same generation
-barriers as YM. Ordinary SFX completion does not erase already committed writes.
+Commit is atomic and validates nondecreasing due cycle, dense ordinal, current
+generation, source identity, and byte range. Snapshots preserve pending entries,
+capacity, next ordinal, and generation. Hard reset, synthesizer replacement,
+and full silence use the existing generation barriers. Ordinary SFX completion
+does not erase committed entries.
 
-`PsgChip.renderStereo` drains entries in master-cycle order. Rendering is split
-at an entry's exact PSG clock boundary, applies the write, then continues from
-the preserved oscillator/LFSR and blip-resampler state. Equal-cycle entries
-retain source ordinal. The chip observer fires only when the real write drains;
-discarded generation entries emit no callback.
+`PsgChip` applies writes with the same clock rule as the pinned GPGX PSG core:
+advance PSG state to the requested master cycle, round its internal clock up to
+the 240-master-cycle PSG boundary, mutate the register/latch, then continue
+rendering from the preserved counters, LFSR, deltas, and blip-resampler state.
+Writes are not rounded to a host output sample. Equal-cycle entries retain
+source ordinal.
 
-Untimed PSG writes remain immediate when no timed predecessor exists. A timed service cannot mix immediate and
-scheduled PSG publication: doing so aborts before commit. YM and PSG entries
-share the resolved service ordinal and CPU cursor, preserving cross-chip source
-order without merging their chip-specific render queues.
+The PSG timeline is chip-private because YM and PSG state are independent. The
+resolved service journal retains one global source ordinal for audit. Existing
+`ChipWriteObserver` callbacks remain drain-bound and guarantee per-chip order;
+they do not claim callback arrival order across separate chip renderers. A
+package-private timed diagnostic tap includes due cycle and source ordinal, so
+trace tests can merge YM and PSG records by `(dueMasterCycle, sourceOrdinal)`
+without changing the public observer contract.
 
-Once a timed SFX service has committed delayed writes, a later unprofiled
-same-VInt sibling cannot overtake them. Its PSG writes enter an ordered fence at
-or after the timed service cursor. They preserve native SFX-before-music order
-but remain classified timing-partial until their own source program is added.
+Untimed PSG writes remain immediate when no pending timed predecessor exists.
+After a timed SFX PSG journal commits, later same-VInt unprofiled PSG writes are
+fenced after its final due cycle so music cannot overtake SFX. Those later writes
+remain timing-partial and are not used for exact component-PCM claims.
 
-### 5. Transaction, capacity, and presentation
+### 5. Transactions, capacity, snapshots, and rendering
 
-The existing service reservation independently preflights each chip timeline's
-aggregate maximum for every service that can occur in the requested render
-horizon, including the locked-on PAL repeat. N succeeds; N-1 fails before sequencer,
-phase, timeline, chip, observer, lock, or diagnostic ordinal mutation.
+The outer driver batch preflights the aggregate number of PSG entries before any
+sequencer, chip, lock, observer, phase, or ordinal mutation. N succeeds; N-1
+fails with exact deep rollback. YM capacity accounting remains unchanged and is
+preflighted independently.
 
-The PSG shadow used for observer snapshot fidelity replays committed entries in
-due order up to each frozen logical boundary. It does not apply future entries
-early. A service-end snapshot therefore contains the chip state observable at
-that boundary plus the self-contained pending timeline.
+Logical service/contention observers are staged until the whole batch commits.
+PSG chip callbacks fire only when a committed entry actually mutates the chip.
+A generation barrier discards pending entries without callbacks.
 
-Both `SAMPLE_ACCURATE` and `HYBRID` rendering fence at the earliest pending YM
-or PSG write and the next modeled driver service. Chunk partitioning must yield
-byte-identical PCM and deep-equal driver/chip/timeline snapshots.
+Service-end snapshots contain the current PSG state plus the self-contained
+pending timeline. They do not apply future writes to a shadow chip early. A
+snapshot after partial drain captures the advanced oscillator/LFSR/blip state
+and only the remaining entries. Restore, live rollback, presentation replacement,
+and `adoptActiveSfxFrom` preserve or generation-remap that exact state.
 
-## First-slice coverage
+Both sample-accurate and hybrid rendering fence at the earliest pending PSG
+write or driver-service boundary. `PsgChip` performs exact internal-cycle
+segmentation, so output buffer partitioning cannot move a write. Whole-buffer
+and arbitrarily chunked rendering must produce byte-identical PCM and deep-equal
+chip/timeline snapshots.
 
-The first slice implements the common locked-on SFX PSG grammar exercised by
-the finite ROM-backed first-slice inventory:
+## Coverage boundary
 
-- scan inactive and active SFX track slots in native order;
+The first slice covers the common locked-on SFX PSG grammar reached by the ROM:
+
+- inactive and active fixed-slot scan through PSG1-3;
 - timer sustain and expiry;
-- note/rest/tie and the already-supported coordination commands reached before
-  the next hardware write;
-- `zPrepareModulation`, `zUpdateFreq`, and reached `zDoModulation` branches;
-- PSG frequency, noise, and volume-envelope writes;
-- `zRestTrack`, `zSilencePSGChannel`, and `cfStopTrack` PSG termination;
-- resume into the DAC idle/playback loop.
+- note, rest, tie, and reached coordination commands before a PSG write;
+- reached modulation preparation/update branches;
+- reached PSG volume-envelope branches;
+- tone frequency, noise mode, and attenuation writes;
+- rest, silence, `cfStopTrack`, and `zStopPSGTrack` termination.
 
-The implementation must run a ROM-wide SFX census. Every stream service shape
-is classified as covered or unavailable using its semantic path; no case list
-is maintained. Collapse and Dash must be covered. At least one unrelated S3K
-PSG SFX from each distinct covered grammar family is an acceptance control.
+A ROM-backed static census walks every S3K SFX stream and classifies its reachable
+PSG service shapes as covered or unavailable. The census is grammar-based and
+contains no sound-specific runtime table. Collapse and Dash must be covered.
+At least one unrelated PSG noise effect and one PSG tone effect are positive
+controls. Unsupported effects remain immediate and must be byte-identical to the
+pre-feature runtime in write order, values, and semantic state.
 
-Existing S3K YM source timing remains enabled. The new shared service cursor
-must reproduce its accepted relative write vectors and may improve absolute
-placement, but cannot regress Blue Sphere, Ring Loss, Spike Hit, Spindash, or
-music restore. S1 and S2 profiles remain byte-for-byte behavior controls.
+The slice does not claim exact music-PSG timing or exact PCM when an unavailable
+music PSG path overlaps a covered SFX. It does preserve SFX-before-music hardware
+order. Existing S3K YM timing, Blue Sphere, Ring Loss, Spike Hit, Spindash,
+music restore, S1, and S2 remain regression controls.
 
-## Evidence and tests
+## Evidence and acceptance
 
-### Strict RED
+### RED gates
 
-Before production changes, a package-confined PCM diagnostic captures Collapse
-through the real driver and asserts native component boundaries. The current
-engine must fail because the native partial terminal frame contains 107
-non-zero PSG samples while the aligned engine frame contains zero. Additional
-REDs compare selected attack/repeat-frame native PSG digests so a terminal-only
-delay cannot pass.
+Before production changes, retain package-confined tests showing:
 
-### Source proof
+- Collapse's native terminal frame has 107 non-zero PSG samples while the
+  aligned engine frame has zero;
+- selected attack and repeat frames differ despite equal effective PSG state;
+- an immediate terminal mute fails the partial-frame oracle;
+- a whole-VInt delayed mute fails duration and tail bounds.
 
-- capture fresh A/B locked-on instruction/write/PCM streams with the pinned
-  headless GPGX core;
-- generate checked semantic timing rows from decoded instructions;
-- independently reproduce the artifact and compare it byte-for-byte;
-- prove the calculated write cycles equal every selected native group without
-  reading captured deltas into production rows;
-- retain zero DMA/fault/overflow and exact source-owner joins.
+### Source and native proof
+
+- capture fresh A/B instruction, PSG-write, and component-PCM streams with the
+  pinned headless GPGX core;
+- generate the bounded source-cost artifact from decoded executed rows;
+- regenerate it independently and compare byte-for-byte;
+- prove calculated write positions against every retained covered group without
+  copying captured deltas into production;
+- retain exact ROM/movie/core/patch/tool hashes and zero fault/overflow/DMA;
+- run the predeclared initial-phase matrix and report every phase, not only an
+  aggregate winner.
 
 ### Runtime proof
 
-- timeline ordering, equal-cycle order, capacity N/N-1, overflow, stale
-  generation, reset-before-due, ordinary completion retention;
-- snapshot before drain, partial drain, restore, live rollback, observer
-  exception, retry-once, and PSG shadow fidelity;
-- sample/hybrid and buffer-partition equality;
-- exact effective PSG writes and component PCM for Collapse and Dash;
-- Collapse's repeating noise texture and partial final frame;
-- no change to semantic lifecycle, request admission, priority, or channel
-  ownership;
-- ROM-wide covered/unavailable census stability;
-- S3K YM parity and S1/S2 controls.
+- timeline order, equal-cycle order, capacity N/N-1, overflow, stale generation,
+  reset-before-due, and ordinary-completion retention;
+- snapshot before drain, partial drain, restore, live rollback, observer failure,
+  retry-once, and replacement/adoption;
+- exact GPGX clock-boundary application and buffer-partition equality;
+- Collapse and Dash effective writes, component PCM, repeat texture, and terminal
+  partial frame;
+- ROM-wide census stability and unsupported-path byte identity;
+- no semantic lifecycle, request, priority, or channel-ownership change;
+- S3K YM plus S1/S2 regression controls.
 
 ### Listening proof
 
-Automated gates are necessary but not sufficient. The handoff build repeats:
+The handoff build repeats:
 
 - Collapse in isolation and over music, including its complete tail;
 - Spindash Release;
@@ -341,46 +345,45 @@ No merge or push occurs until the user confirms a positive improvement.
 
 ## Failure handling
 
-- A malformed timing artifact, ambiguous semantic selector, event mismatch,
-  write mismatch, arithmetic overflow, capacity failure, or invalid snapshot
-  aborts the unpublished service and restores its mutation token.
-- An inventory path not yet claimed exact uses existing immediate timing and is
-  reported as unavailable; it is not guessed from a neighboring path.
-- A path claimed exact but unresolved is a test and diagnostic failure, never a
+- Malformed timing data, ambiguous slot ownership, event/write mismatch,
+  arithmetic overflow, capacity failure, or invalid snapshot aborts the
+  unpublished transaction and restores its exact mutation token.
+- An unclaimed path uses current immediate timing and reports `UNAVAILABLE`.
+- A path claimed covered but unresolved is a test/diagnostic failure, never a
   silent fallback.
-- Native capture disagreement blocks that coverage family. It does not invite
-  tuning a delay until PCM looks closer.
+- Native disagreement blocks that grammar family; it never authorizes tuning a
+  delay until the waveform looks closer.
 
 ## Rejected alternatives
 
-### Per-sound timing constants
+### Collapse-specific tail, fade, or reverb
 
-Keying a delay to Collapse `$59`, its frame 121, or its observed RMS would be a
-fixture-fitted runtime carve-out. It would not correct other streams using the
-same routines and is forbidden.
+The native texture is generated by the continuously running PSG and correctly
+timed source writes. Presentation processing would hide the cause and change
+other playback contexts.
 
-### Terminal fade or synthetic reverb
+### Whole-VInt delay
 
-The native sound is produced by correctly phased PSG noise and volume writes,
-not a presentation reverb. A fade would alter the waveform and mask earlier
-mistimed bursts.
+Immediate publication cuts the sound off too early; a whole-VInt delay keeps it
+alive too long. Neither can reproduce a partially audible terminal VInt.
 
-### Complete Z80 emulation
+### Unified chip or complete Z80 scheduler
 
-A complete CPU would give broader timing fidelity but duplicate production
-driver state and greatly expand integration, rewind, and modding scope. The
-semantic clock models only the source routines whose timing affects existing
-high-level behavior. If future coverage requires most of the CPU instruction
-set or shared RAM, this decision must be revisited explicitly rather than
-letting the semantic model grow into an accidental emulator.
+YM timing is already separately owned and does not need replacement to fix this
+PSG defect. Full CPU scheduling would duplicate production driver state and
+expand the slice far beyond the audible bug. If the bounded phase matrix or
+ROM-wide census shows that most paths require unmodeled CPU state, this design
+must stop and be reconsidered rather than grow into an accidental emulator.
 
 ## Completion boundary
 
-This slice is complete when the common covered PSG grammar is source-derived,
-the ROM-wide census has no unclassified path, Collapse/Dash native PSG component
-gates pass, existing YM and cross-game controls remain green, the full-suite
-red identity ledger introduces no attributable regression, and the listening
-gate confirms the Collapse texture and ending improve.
+This slice is complete when the bounded PSG grammar is source-derived, the
+ROM-wide census has no unclassified path, Collapse/Dash component gates improve
+for every predeclared phase, existing YM and cross-game controls remain green,
+the full-suite red identity ledger introduces no attributable regression, and
+the listening gate confirms that Collapse's texture and ending are a positive
+improvement.
 
 It does not claim complete S3K PCM parity. Remaining unavailable timing families
-stay in the tracked inventory and are prioritized by audible/route impact.
+stay explicit and are prioritized only when they cause a demonstrated audible or
+route-impacting defect.
