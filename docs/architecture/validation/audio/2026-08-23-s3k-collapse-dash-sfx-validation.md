@@ -160,6 +160,52 @@ The full log SHA-256 is
 
 ## Remaining gate
 
+### 2026-08-24 final-PCM / HQ PSG correction
+
+The later listening report that Collapse still ended abruptly was not a second
+track-lifetime defect.  A native final-speaker capture proved that the raw S3K
+PSG stream ends after frame 121 in both implementations, while GPGX's
+band-limited PSG output decays across the following output frames.  GPGX selects
+its HQ PSG delta path (`config.hq_psg = 1`); OpenGGF had a compatible path but
+left it disabled for every SMPS driver.  The correction enables that existing
+reference rendering mode at the shared SMPS-driver boundary for S1, S2, and
+S3K.  It does not extend Sound_59, synthesize reverb, or branch on a game or
+sound identifier.
+
+Two independent native captures produced byte-identical 125-frame final-PCM
+evidence (SHA-256
+`5c6bfe3382749fa31137128a3bfd87d191da17d6ad33ece8c39d360e428ce7a3`).
+Native frame RMS at 121-124 was `88.917, 21.669, 5.142, 1.273`; the retained
+comparison fixture checks the active waveform and post-mute decay ratios rather
+than inventing a longer semantic lifetime.  With HQ mode deliberately disabled,
+the final-PCM parity test fails on the active waveform; restoring it returns the
+focused and broad selectors to green.
+
+Fresh JDK 21 verification at `a0d3352a7`:
+
+```text
+TestS3kCollapseDashSfxParity,TestPsgChipGpgxParity: 27/27 green
+cross-game chip/driver/presentation snapshot and allocation selector: 114/114 green
+TestMadmoleBadnikInstance isolated order-flake check: 32/32 green
+```
+
+An exact detached parent baseline at `0612aab314dafcba1cdc50e6bff7a43978644b5e`
+ran the identical all-three-ROM suite: 15,550 tests, 56 failures, 56 errors,
+19 skips.  Its 112-entry red ledger SHA-256 is
+`731a77a49c8a5362c2fc556ee4e6713e617a97c5ddd460ae5bde6a6b7006e3b3`;
+the complete log SHA-256 is
+`0c18d731c7f3a18016ce18b69f0be4f0040aeacb0d3a0f9c32a8ba3ce83b048b`.
+
+The clean candidate suite encountered one native-loader JVM startup crash, so
+Surefire omitted the complete 13-test `TestS3kCnzLocalTraversalHeadless` class.
+The remaining run reported 15,541 tests, 56 failures, 56 errors, and 19 skips;
+the missing class then passed 13/13 in isolation.  The completed candidate red
+ledger also has 112 identities (SHA-256
+`3a6fc61e04a14cceb8cde0529b88e855171cc37813a1371e623088f8c6d0f745`).
+Its three candidate-only Madmole identities all pass in the isolated 32-test
+class and are suite-order contamination; the candidate resolves three other
+baseline reds.  No red identity is attributable to the PSG correction.
+
 Listen to Collapse through all five PSG bursts and terminal silence, plus
 low/high-charge Dash release and a replay after another SFX. The exact package
 identity is reported in the handoff after building clean HEAD so the report
