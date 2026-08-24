@@ -2,10 +2,28 @@
 
 ## Status and decision
 
-Add a bounded, source-derived scheduler for PSG writes produced by the locked-on
-Sonic 3&K SFX service. Keep the existing high-level SMPS interpreter and chip
-cores. Do not emulate the Z80, retime YM writes, or build a general complete-run
-timing subsystem in this slice.
+**Rejected after diagnostic implementation; do not implement this design.**
+
+The full-prelude capture proved that the largest apparent intra-service delay
+is a moving 68K `stopZ80`/`startZ80` bus hold owned by VBlank, VDP, and DMA work,
+not an SMPS routine constant. A smaller implementation that preserved only the
+source-derived relative PSG write gaps was then measured against the native
+component PCM and did not improve Collapse. The experimental runtime was
+removed rather than fitting an absolute delay from one capture.
+
+The decisive direct-chip comparison instead showed that the existing positive-
+edge PSG core already carries Collapse's five native bursts through frame 121
+at the native amplitude. The remaining user-visible mismatch came from old
+generated `config.yaml` files: releases before `a17438e67` persisted both
+`dacInterpolate: true` and `psgNoiseShiftEveryToggle: true`, so changing the
+registered defaults did not update an existing install. Collapse and Spindash
+Release both use PSG3 noise, making the stale every-toggle mode especially
+audible. The bounded fix is the one-time paired-default migration in
+`ConfigMigrationService`, not a production Z80/PSG scheduler.
+
+The rest of this document is retained as a rejected design record. It describes
+what exact absolute PSG placement would require if a future PCM-parity goal
+justifies reproducing the external VInt bus-arbitration owner.
 
 The scheduler fixes one systemic mismatch: OpenGGF currently publishes all PSG
 writes at the beginning of a host driver service, while the retail driver issues

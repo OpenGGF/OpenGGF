@@ -1,5 +1,14 @@
 # Changelog
 
+- **Existing installs now receive the reference audio-chip defaults:** older
+  generated `config.yaml` files persisted DAC interpolation and MAME-style
+  every-toggle PSG noise as an all-true pair, which overrode later default
+  corrections forever. That exact legacy pair is migrated once to raw DAC
+  steps and GPGX/libvgm positive-edge PSG noise; asymmetric user choices remain
+  untouched. This restores the intended noise texture and decay of effects such
+  as S3K Collapse and Spindash Release without sound-specific reverb or timing
+  constants.
+
 - **S3K audio parity can now be localized through exact PCM boundaries:** a
   diagnostic-only path records YM2612 stereo mix samples, held DAC codes, PSG
   native stereo samples, and final presented PCM on their owning clocks. The

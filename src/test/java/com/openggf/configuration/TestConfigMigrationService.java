@@ -24,6 +24,80 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
 class TestConfigMigrationService {
 
     @Test
+    void migrateDeprecatedAudioChipDefaults_rewritesThePersistedLegacyPair() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(SonicConfiguration.DAC_INTERPOLATE.name(), true);
+        config.put(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE.name(), true);
+
+        ConfigMigrationService service = new ConfigMigrationService();
+
+        assertTrue(service.migrateDeprecatedAudioChipDefaults(config));
+        assertEquals(false, config.get(SonicConfiguration.DAC_INTERPOLATE.name()));
+        assertEquals(false, config.get(
+                SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE.name()));
+        assertEquals(1, config.get(
+                SonicConfiguration.AUDIO_REFERENCE_DEFAULTS_VERSION.name()));
+        assertFalse(service.migrateDeprecatedAudioChipDefaults(config),
+                "the migrated reference defaults must be stable on later launches");
+    }
+
+    @Test
+    void migrateDeprecatedAudioChipDefaults_preservesAnAsymmetricCustomChoice() {
+        ConfigMigrationService service = new ConfigMigrationService();
+        for (boolean dac : new boolean[] {false, true}) {
+            for (boolean psg : new boolean[] {false, true}) {
+                if (dac && psg) continue;
+                Map<String, Object> config = new HashMap<>();
+                config.put(SonicConfiguration.DAC_INTERPOLATE.name(), dac);
+                config.put(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE.name(), psg);
+
+                assertTrue(service.migrateDeprecatedAudioChipDefaults(config));
+                assertEquals(dac, config.get(SonicConfiguration.DAC_INTERPOLATE.name()));
+                assertEquals(psg, config.get(
+                        SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE.name()));
+                assertEquals(1, config.get(
+                        SonicConfiguration.AUDIO_REFERENCE_DEFAULTS_VERSION.name()));
+                assertFalse(service.migrateDeprecatedAudioChipDefaults(config));
+            }
+        }
+    }
+
+    @Test
+    void migrateDeprecatedAudioChipDefaults_preservesLaterExplicitAllTrueChoice() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(SonicConfiguration.DAC_INTERPOLATE.name(), true);
+        config.put(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE.name(), true);
+        config.put(SonicConfiguration.AUDIO_REFERENCE_DEFAULTS_VERSION.name(), 1);
+
+        assertFalse(new ConfigMigrationService()
+                .migrateDeprecatedAudioChipDefaults(config));
+        assertEquals(true, config.get(SonicConfiguration.DAC_INTERPOLATE.name()));
+        assertEquals(true, config.get(
+                SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE.name()));
+    }
+
+    @Test
+    void existingInstallWithBothSupersededAudioDefaultsIsMigratedOnLoad(
+            @TempDir Path tempDir) throws IOException {
+        Files.writeString(tempDir.resolve("config.yaml"), """
+                audio:
+                  dacInterpolate: true
+                  psgNoiseShiftEveryToggle: true
+                """);
+
+        SonicConfigurationService service =
+                SonicConfigurationService.createStandalone(tempDir);
+
+        assertFalse(service.getBoolean(SonicConfiguration.DAC_INTERPOLATE));
+        assertFalse(service.getBoolean(
+                SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE));
+        String persisted = Files.readString(tempDir.resolve("config.yaml"));
+        assertTrue(persisted.contains("dacInterpolate: false"));
+        assertTrue(persisted.contains("psgNoiseShiftEveryToggle: false"));
+        assertTrue(persisted.contains("referenceDefaultsVersion: 1"));
+    }
+
+    @Test
     void migrateConfig_convertsLegacyAwtArrowAndActionKeys() {
         Map<String, Object> config = new HashMap<>();
         config.put(SonicConfiguration.UP.name(), 38);

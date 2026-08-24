@@ -56,6 +56,7 @@ audio:
   dacInterpolate: false   # Raw DAC sample steps (hardware-authentic); true enables smoothing
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
   psgNoiseShiftEveryToggle: false   # PSG noise LFSR clock mode: false=positive edges (GPGX/libvgm), true=every toggle (MAME)
+  referenceDefaultsVersion: 1   # Internal one-time migration marker for reference chip defaults
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 
 # ── Characters ──
