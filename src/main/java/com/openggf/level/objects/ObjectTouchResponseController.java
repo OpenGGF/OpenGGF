@@ -482,8 +482,10 @@ final class ObjectTouchResponseController {
             boolean useCurrentTouchState = usesCurrentTouchState(instance)
                     || (usePreviousCollisionResponseList
                     && instance instanceof LostRingObjectInstance);
-            int objX = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateX() : instance.getX();
-            int objY = usePreUpdateState && !useCurrentTouchState ? instance.getPreUpdateY() : instance.getY();
+            int objX = usePreUpdateState && !useCurrentTouchState
+                    ? instance.getPreUpdateCollisionX() : instance.getCollisionX();
+            int objY = usePreUpdateState && !useCurrentTouchState
+                    ? instance.getPreUpdateCollisionY() : instance.getCollisionY();
             if (category == TouchCategory.HURT
                     && tryShieldDeflect(player, provider, touchProfile, objX, objY, width, height)) {
                 continue;
@@ -826,7 +828,7 @@ final class ObjectTouchResponseController {
             TouchResponseResult result) {
         int sourceX = (result != null && result.hasRegionX())
                 ? result.regionX()
-                : instance != null ? instance.getX() : sidekick.getCentreX();
+                : instance != null ? instance.getCollisionX() : sidekick.getCentreX();
         // HurtCharacter's common tail always publishes $1A (sonic3k.asm:21321).
         // Where the ROM appears to keep the prior byte it is the solid
         // push-release tail erasing it later in the same frame, which
@@ -1094,8 +1096,8 @@ final class ObjectTouchResponseController {
         if (target == null) {
             return false;
         }
-        int dx = (short) (player.getCentreX() - target.getX());
-        int dy = (short) (player.getCentreY() - target.getY());
+        int dx = (short) (player.getCentreX() - target.getCollisionX());
+        int dy = (short) (player.getCentreY() - target.getCollisionY());
         int angle = segaAngle(dx, dy);
         return ((angle - 0x20) & 0xFF) < 0x40;
     }
@@ -1182,7 +1184,7 @@ final class ObjectTouchResponseController {
         // for the hurt-direction comparison (docs/s1disasm/_incObj/Sonic ReactToItem.asm:402-405).
         int sourceX = (result != null && result.hasRegionX())
                 ? result.regionX()
-                : instance != null ? instance.getX() : player.getCentreX();
+                : instance != null ? instance.getCollisionX() : player.getCentreX();
         boolean spikeHit = instance != null && instance.getSpawn().objectId() == 0x36;
 
         // S3K shield_reaction bit 4: fire shield blocks fire damage

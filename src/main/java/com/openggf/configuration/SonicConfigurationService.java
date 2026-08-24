@@ -114,6 +114,8 @@ public class SonicConfigurationService {
 			}
 		}
 
+		applySessionOutputOverrides();
+
 		publishBundledConfigExample();
 
 		// Migrate deprecated key encodings/defaults before applying defaults.
@@ -594,6 +596,7 @@ public class SonicConfigurationService {
 		config = new HashMap<>();
 		defaults = new HashMap<>();
 		sessionOverrides.clear();
+		applySessionOutputOverrides();
 		invalidateResolvedCaches();
 		applyDefaults();
 		// Re-derive SCREEN_WIDTH_PIXELS (and related) from the freshly-set
@@ -809,6 +812,25 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER, true);
 		putDefault(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_ZONE, true);
 		return defaultInsertedSinceLastApply;
+	}
+
+	/**
+	 * A coordinator-launched run owns its capture directory. Keep the bundled
+	 * config and no-session default unchanged, but redirect the bundled default
+	 * into the session diagnostic namespace when the coordinator supplies one.
+	 */
+	private void applySessionOutputOverrides() {
+		String diagnostics = System.getProperty("openggf.test.diagnostics");
+		if (diagnostics == null || diagnostics.isBlank()) {
+			return;
+		}
+		Object configured = config == null
+				? null
+				: config.get(SonicConfiguration.CAPTURE_OUTPUT_DIR.name());
+		if (configured == null || "target/trace-videos".equals(configured.toString())) {
+			sessionOverrides.put(SonicConfiguration.CAPTURE_OUTPUT_DIR.name(),
+					Path.of(diagnostics, "trace-videos").toString());
+		}
 	}
 
 	private void putDefault(SonicConfiguration key, Object value) {

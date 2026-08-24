@@ -114605,3 +114605,58 @@ The other three death arms remain coordinates only.
   red cleared during the run. The differing skipped/error counts from
   `develop` are the checkout's missing untracked default-ROM/config files, not
   code deltas.
+
+## 2026-08-23 - 0.6 release-hardening evidence sweep
+
+- Worktree: `bugfix/ai-0.6-release-hardening`, candidate over `79567caa4`.
+- Trace command: `tools/testing/test-session.sh -- mvn -Dmse=off test -Ptrace-replay -B` with the S1, S2, and S3K ROM properties. Result: **868 tests, 10 failures, 0 errors, 7 skips**; no `Java heap space`, `OutOfMemoryError`, fork crash, or truncated session. The first-error families remain the existing S3K closure, S1/S2 complete-run or level-select, and S3K AIZ divergences; no trace frontier moved.
+- Ordinary command: the same isolated test-session wrapper with `mvn -Dmse=off test -B` and all three ROM properties. Result: **15,041 tests, 51 failures, 9 errors, 19 skips**, against the clean baseline's 15,017 / 54 / 57 / 19. The direct-object fixture isolation work removed the prior null-service error cluster; the remaining reds are recorded in the release-hardening plan and are not release sign-off.
+- Package command: `tools/testing/test-session.sh -- mvn -Dmse=off -DskipTests package -B`; **BUILD SUCCESS**.
+
+### Merged `develop` verification
+
+- Merge commit: `fe40bb7ad` (`Merge 0.6 release hardening`), with the seven pre-existing S1 special-stage files left dirty and untouched.
+- Merged ordinary command completed **15,043 tests, 51 failures, 9 errors, 19 skips**. The two-test increase versus the isolated candidate is from those pre-existing main-workspace edits; no new release-hardening failure appeared, and there was no heap-space, OOM, fork, or crash failure.
+- Merged `-Ptrace-replay` completed **868 tests, 10 failures, 0 errors, 7 skips** with the same known trace failures and no frontier movement. The focused merged release/report/temp-file guard set completed **19 tests, 0 failures, 0 errors, 0 skips**.
+
+## 2026-08-23 - S2 Tornado SCZ boundary and ride-start sentinel
+
+- Worktree: `.worktrees/0.6-s2-boundary-trace`, branch
+  `bugfix/ai-s2-boundary-trace`, candidate over `8985de5cb`.
+- The SCZ ObjB2 replay now closes both recorded warning spans owned by the current
+  Tornado implementation: the native ride-start `objoff_31` expired timer sentinel
+  (`0xFF`, rows 0–198) and the stationary airborne release `x` boundary (row 7103).
+  The implementation follows the ROM's `ObjB2_Move_with_player` / `Move_below_player`
+  ordering and uses live player air and horizontal velocity state; it does not consume
+  trace values or branch on a route/frame.
+- Focused command: `tools/testing/test-session.sh -- mvn -Dmse=off test
+  -Dtest=TestTornadoObjectInstance,TestS2SczLevelSelectTraceReplay
+  -Dsonic2.rom.path="Sonic The Hedgehog 2 (W) (REV01) [!].gen" -B`.
+  Result: 32 tests, 0 failures, 0 errors, 0 skips; SCZ reports zero errors and zero
+  warnings.
+- S2 replay sweep command: `tools/testing/test-session.sh -- mvn -Dmse=off test
+  -Dtest="com.openggf.tests.trace.s2.*TraceReplay"
+  -Dsonic2.rom.path="Sonic The Hedgehog 2 (W) (REV01) [!].gen" -B`.
+  Result: 37 tests, 5 failures, 0 errors, 0 skips. The five reds are the remaining
+  pre-existing S2 frontier outside this SCZ fix: ARZ2 segment frame 2175 `x_speed`,
+  CPZ2 segment frame 2252 `air`, CNZ level-select frame 0 `cnz_slot.slot2_pos`
+  (237 warnings), CNZ2 level-select frame 0 `cnz_slot.slot2_pos` (530 warnings),
+  and WFZ level-select frame 0 `tornado.status_byte`. No heap exhaustion, fork death,
+  crash, or LWJGL extraction collision occurred; the session reported
+  `worktree-session` / `per-surefire-fork`.
+
+## 2026-08-23 - Post-merge 0.6 trace frontier verification
+
+- Worktree: main `develop` after merge `4149a520d`, with the seven pre-existing S1
+  special-stage files left dirty and untouched.
+- Command: `tools/testing/test-session.sh -- mvn -Ptrace-replay -Dmse=off test -B`
+  with the verified S1, S2, and S3K ROM paths from the release workspace.
+- Result: **868 tests, 9 failures, 0 errors, 7 skips**. Compared with the merged
+  baseline's 868 / 10 / 0 / 7, `TestS2SczLevelSelectTraceReplay` is now green.
+  The remaining failures are the known S2 CNZ/CPZ/WFZ spans, S3K AIZ and complete-run
+  chain divergences, and the existing S3K replay-reference closure diagnostic.
+- First-error examples: S2 CPZ2 frame 2252 `air`; S2 WFZ frame 0
+  `tornado.status_byte`; S3K AIZ frame 20713 `air`. The run reported no `Java heap
+  space`, `OutOfMemoryError`, fork death, crash, or LWJGL extraction collision;
+  isolation was `worktree-session` / `per-surefire-fork`.
+- Session manifest: `<managed-scratch>/tasks/openggf-test-session-20260823T211021Z-3266273-d4e5fd7e/20260823T211021Z-p3266217-7e394f/manifest.json`.

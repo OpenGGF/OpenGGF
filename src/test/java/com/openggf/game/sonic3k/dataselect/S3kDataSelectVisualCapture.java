@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.dataselect;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
@@ -64,7 +65,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public final class S3kDataSelectVisualCapture {
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
-    private static final Path OUTPUT_DIR = Paths.get("target", "s3k-dataselect-visual");
+    private static final Path OUTPUT_DIR = TestSessionOutputPaths.diagnostics("s3k-dataselect-visual");
     private static final Path SAVE_ROOT = OUTPUT_DIR.resolve("saves");
     private static final Path EMPTY_OUTPUT_FILE = OUTPUT_DIR.resolve("native_s3k_dataselect_capture.png");
     private static final Path SAVES_OUTPUT_FILE = OUTPUT_DIR.resolve("native_s3k_dataselect_with_saves.png");

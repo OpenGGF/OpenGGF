@@ -19,6 +19,21 @@ public interface ObjectInstance {
         return getSpawn().y();
     }
 
+    /**
+     * Returns the object's X coordinate for touch collision geometry.
+     * Most objects use their normal position; objects whose hitbox follows a
+     * facing-dependent visual anchor can override this without moving their
+     * logical/render-stream position.
+     */
+    default int getCollisionX() {
+        return getX();
+    }
+
+    /** Returns the object's Y coordinate for touch collision geometry. */
+    default int getCollisionY() {
+        return getY();
+    }
+
     default String getName() {
         return getClass().getSimpleName();
     }
@@ -40,6 +55,16 @@ public interface ObjectInstance {
      */
     default int getPreUpdateY() {
         return getY();
+    }
+
+    /** Returns the frame-start X coordinate for touch collision geometry. */
+    default int getPreUpdateCollisionX() {
+        return getPreUpdateX();
+    }
+
+    /** Returns the frame-start Y coordinate for touch collision geometry. */
+    default int getPreUpdateCollisionY() {
+        return getPreUpdateY();
     }
 
     /**

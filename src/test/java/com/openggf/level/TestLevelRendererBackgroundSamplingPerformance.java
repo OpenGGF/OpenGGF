@@ -31,6 +31,7 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.util.IntIndexedView;
 import com.openggf.util.ShortIndexedView;
 import com.sun.management.ThreadMXBean;
@@ -157,7 +158,7 @@ class TestLevelRendererBackgroundSamplingPerformance {
         File romFile = RomTestUtils.ensureSonic2RomAvailable();
         Assumptions.assumeTrue(romFile != null, "Sonic 2 ROM unavailable");
         String label = System.getProperty(LIVE_CAPTURE_LABEL_PROPERTY, "capture");
-        Path outputDirectory = Path.of("target", "perf-captures", label);
+        Path outputDirectory = TestSessionOutputPaths.diagnostics("perf-captures").resolve(label);
         Files.createDirectories(outputDirectory);
 
         long window = NULL;

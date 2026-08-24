@@ -37,6 +37,7 @@ import com.openggf.control.PlayerInputState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -2565,7 +2566,8 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectVisualCapture.main(new String[0]);
 
         RgbaImage image = ScreenshotCapture.loadPNG(
-                Paths.get("target", "s3k-dataselect-visual", "native_s3k_dataselect_with_saves.png"));
+                TestSessionOutputPaths.diagnostics("s3k-dataselect-visual")
+                        .resolve("native_s3k_dataselect_with_saves.png"));
 
         assertNotEquals(0xFFFFFFFF, image.argb(113, 89),
                 "selected slot left body rail should render over the background");

@@ -63,7 +63,8 @@ Linux terminal example:
    ```
 2. Build with Maven:
    ```
-   mvn package
+   tools/testing/install-hooks.sh
+   tools/testing/test-session.sh -- mvn package
    ```
 3. Place your ROM files in the project root directory (next to `pom.xml`).
 4. Run:

@@ -27,6 +27,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
+import com.openggf.tests.SessionInvocationExtension;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.trace.s2.S2SkyChaseBadnikDiagnostics;
@@ -61,6 +63,7 @@ import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -81,6 +84,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * <p>Originally used JUnit 4 because the ROM fixture was exposed as a JUnit 4 rule.
  */
+@ExtendWith(SessionInvocationExtension.class)
 public abstract class AbstractTraceReplayTest {
     private static final Logger LOGGER = Logger.getLogger(AbstractTraceReplayTest.class.getName());
     private static final boolean QUIET_TRACE_LOGS =
@@ -133,7 +137,7 @@ public abstract class AbstractTraceReplayTest {
 
     /** Override to change report output directory. */
     protected Path reportOutputDir() {
-        return Path.of("target/trace-reports");
+        return TestSessionOutputPaths.traceReports();
     }
 
     /** Override only for explicitly diagnostic trace fixtures that are not release gates. */
@@ -343,6 +347,7 @@ public abstract class AbstractTraceReplayTest {
         TraceBinder binder = null;
         HeadlessTestFixture fixture = null;
         boolean hardwareTimingReplayClosed = false;
+        Throwable replayFailure = null;
         // Comparison-only, env-gated (OGGF_SLOT_PROBE=1) SST occupancy diff. Off in
         // every normal run, and it never touches engine or binder state.
         slotOccupancyProbe = SlotOccupancyProbe.createIfEnabled(trace, game() + "_" + zone() + act());
@@ -614,10 +619,16 @@ public abstract class AbstractTraceReplayTest {
                         report.firstErrorFrame(verificationScope), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
+        } catch (Exception | Error failure) {
+            replayFailure = failure;
+            throw failure;
         } finally {
             // Always (re)write the report from the latest binder state so a stale
             // *_report.json from a prior run can never mask the current result.
-            // Best-effort: report regeneration must not suppress the real failure.
+            // Equivalent publication is idempotent. A real publication failure
+            // is attached to the primary replay failure, or fails a run that
+            // otherwise had no primary failure.
+            Throwable reportFailure = null;
             if (binder != null) {
                 try {
                     // Unconditional: a run that aborts mid-replay with a clean
@@ -627,8 +638,12 @@ public abstract class AbstractTraceReplayTest {
                     // started. The report's total_frames is the only record of
                     // how far the replay actually reached.
                     writeReport(buildDivergenceReport(binder, meta, trace), meta);
-                } catch (RuntimeException | java.io.IOError ignored) {
-                    // diagnostics only
+                } catch (Exception | Error failure) {
+                    if (replayFailure != null) {
+                        replayFailure.addSuppressed(failure);
+                    } else {
+                        reportFailure = failure;
+                    }
                 }
             }
             if (slotOccupancyProbe != null) {
@@ -642,6 +657,15 @@ public abstract class AbstractTraceReplayTest {
                 sharedLevel.dispose();
             } else {
                 TestEnvironment.resetAll();
+            }
+            if (reportFailure != null) {
+                if (reportFailure instanceof Exception exception) {
+                    throw exception;
+                }
+                if (reportFailure instanceof Error error) {
+                    throw error;
+                }
+                throw new AssertionError("unexpected report publication failure", reportFailure);
             }
         }
     }
@@ -1618,28 +1642,16 @@ public abstract class AbstractTraceReplayTest {
         return sidekick.getCpuController().formatLatestNormalStepDiagnostics();
     }
 
-    private void writeReport(DivergenceReport report, TraceMetadata meta) {
-        try {
-            Path outDir = reportOutputDir();
-            Files.createDirectories(outDir);
-
-            String prefix = meta.game() + "_" + meta.zone() + meta.act();
-            TraceVerificationScope scope = verificationScope();
-            String scopeSuffix = scope == TraceVerificationScope.ALL
-                    ? ""
-                    : "_" + scope.name().toLowerCase();
-            Path jsonPath = outDir.resolve(prefix + scopeSuffix + "_report.json");
-            Files.writeString(jsonPath, report.toJson());
-
-            if (report.hasErrors(scope)) {
-                Path contextPath = outDir.resolve(prefix + scopeSuffix + "_context.txt");
-                Files.writeString(contextPath,
-                    report.getContextWindow(
-                            report.firstErrorFrame(scope), TraceReplayConsole.contextRadius()));
-            }
-        } catch (IOException e) {
-            System.err.println("Warning: failed to write report: " + e.getMessage());
-        }
+    private void writeReport(DivergenceReport report, TraceMetadata meta) throws IOException {
+        String prefix = meta.game() + "_" + meta.zone() + meta.act();
+        TraceVerificationScope scope = verificationScope();
+        String scopeSuffix = scope == TraceVerificationScope.ALL
+                ? ""
+                : "_" + scope.name().toLowerCase();
+        TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
+                SessionInvocationExtension.SessionInvocation.current(),
+                "single", prefix + scopeSuffix, scope,
+                TraceReplayConsole.contextRadius());
     }
 
 }

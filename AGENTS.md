@@ -39,11 +39,37 @@ removes active duplication or risk — but don't let cleanup displace playable S
 ## Build, test, run
 
 ```bash
-mvn package                          # executable JAR with dependencies
-mvn test
-mvn "-Dtest=TestCollisionLogic" test # focused run
-java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+tools/testing/install-hooks.sh
+tools/testing/test-session.sh -- mvn package                          # executable JAR with dependencies
+tools/testing/test-session.sh -- mvn test
+tools/testing/test-session.sh -- mvn "-Dtest=TestCollisionLogic" test # focused run
+tools/testing/test-session.sh -- mvn -Dmse=off -Pguards test -B   # structural guards in a fresh session
+java -jar <session-artifact-root>/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
+
+PowerShell uses `tools/testing/install-hooks.ps1` and
+`tools/testing/test-session.ps1 -- ...` with the same Maven arguments. The
+coordinator owns temporary/output paths and prints the session manifest at the
+start and end of each run; raw Maven lifecycle commands are non-certifying.
+For release evidence, run both the ordinary suite and the separate `-Pguards`
+session; the structural guards are intentionally excluded from the long reused
+ordinary fork so whole-production graph imports receive a fresh JVM.
+
+### Agent test-session isolation contract
+
+Codex and Claude agents must use `tools/testing/test-session.sh` on POSIX systems
+and must use `tools/testing/test-session.ps1` in PowerShell for every certifying
+build, test, trace replay, or capture run. The wrapper is the sandbox boundary:
+it creates a unique session-owned temporary root, routes build/report/diagnostic
+output there, and gives every Surefire fork a per-Surefire-fork LWJGL extraction
+directory. Agents must not reuse another run's temporary directory, point
+LWJGL at a shared extraction directory, or treat a raw Maven lifecycle command
+as release evidence. Parallel agents must use separate worktrees and separate
+wrapper sessions, even when they are testing the same commit.
+
+The wrapper's `OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` markers, plus
+the referenced manifest, are part of the evidence. Report the run ID and
+manifest path; if those markers are absent, the result is non-certifying.
 
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.
@@ -58,8 +84,9 @@ java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 - In PowerShell, quote `-D...` properties (`mvn "-Dtest=com.openggf.pkg.TestClass" test`).
 - Tests are **JUnit 5 / Jupiter only** — no JUnit 4 tests, rules, runners, or `org.junit.*`
   imports.
-- Git hooks auto-install during any Maven build's `validate` phase. If you commit without
-  building first, run `git config core.hooksPath .githooks` once.
+- Git hooks are installed explicitly once per worktree with
+  `tools/testing/install-hooks.sh` (or `tools/testing/install-hooks.ps1` on
+  PowerShell). Maven never mutates Git configuration during `validate`.
 
 ## ROMs
 
@@ -187,6 +214,59 @@ rules on PRs into `develop`.
   `Changelog: n/a` is rejected.
 - Merging a non-`master` branch into `develop` requires a staged `README.md` update
   summarising the change in the release/change log section.
+
+### Documentation update map
+
+The active release is 0.6. Use this map before staging a change. The detailed
+trailer rules and exceptions remain authoritative in
+[docs/agent-workflow/documentation-obligation-checklist.md](docs/agent-workflow/documentation-obligation-checklist.md)
+and `.githooks/validate-policy.sh` / `.githooks/validate-policy.ps1`.
+
+- **Release notes:** put concise, user-facing entries for release-worthy 0.6
+  features, fixes, and performance work in `CHANGELOG.0.6.md`. Do not add new
+  0.6 release prose only to the root index. Historical
+  `CHANGELOG.0.x.md` files are immutable except for factual corrections.
+- **Release index:** update `CHANGELOG.md` when adding, renaming, or publishing
+  a release file, changing the current-release pointer, or changing the release
+  index itself. The commit hook currently maps the `Changelog` trailer to the
+  exact root file `CHANGELOG.md`; if a source `feat`/`fix`/`perf` note is recorded
+  only in `CHANGELOG.0.6.md`, use a justified
+  `Changelog: n/a: release note recorded in CHANGELOG.0.6.md`. If
+  `CHANGELOG.md` changes, stage it and use `Changelog: updated`.
+- **README release section:** update `README.md` when the current release
+  summary, release status, supported-scope statement, or release links change.
+  Keep the rest of the README as the stable user and contributor guide; do not
+  replace it with a release ledger.
+- **Public release copy:** update
+  `docs/changelog/v0.6-release-summary.md` when website/GitHub messaging,
+  validation results, or release blockers change. Update the detailed
+  `docs/changelog/v0.6-prerelease-detailed.md` ledger for substantial 0.6
+  investigations, workstreams, and gate decisions.
+- **Trace evidence:** update `docs/status/trace-frontier-log.md` whenever a
+  frontier moves, a trace fix lands, a passing trace regresses, or a full
+  `*TraceReplay` sweep selects the next target. Record the command,
+  commit/worktree context, pass/fail result, error count, and first-error
+  frame/field. This obligation has no trailer.
+- **Known discrepancies:** update `docs/status/known-discrepancies.md` for
+  cross-game or general intentional ROM divergences, and
+  `docs/S3K_KNOWN_DISCREPANCIES.md` for S3K-specific gaps. Set the matching
+  discrepancy trailer to `updated`.
+- **Configuration and guides:** update `CONFIGURATION.md` for config flags,
+  bindings, or toggles; update the relevant file under `docs/guide/` for player
+  or contributor instructions. Set `Configuration-Docs` or `Guide` to
+  `updated` respectively.
+- **Agent guidance:** update `AGENTS.md` and `CLAUDE.md` together whenever
+  top-level workflow or project guidance changes. Update `AGENTS_S3K.md` for
+  S3K-specific agent guidance. Set `Agent-Docs: updated` when the root pair
+  changes; keep the pair identical.
+- **Skills:** update matching files in both `.agents/skills/` and
+  `.claude/skills/` together. Set `Skills: updated`; never update one mirror
+  without the other.
+- **Architecture artifacts:** put designs, audits, validation reports, and
+  other engineering records under the matching `docs/architecture/`
+  subdirectory; put release material under `docs/changelog/`. Do not leave
+  task documentation loose or untracked.
+
 - Branch naming: `feature/ai-*`, `bugfix/ai-*`. Keep a session's PRs on one branch.
 - Trace frontier work keeps [docs/status/trace-frontier-log.md](docs/status/trace-frontier-log.md)
   current — when a frontier moves, a fix lands, a passing trace regresses, or a full

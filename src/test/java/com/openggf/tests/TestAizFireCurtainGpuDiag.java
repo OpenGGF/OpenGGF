@@ -51,13 +51,13 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * <pre>
  * mvn test -Dtest=TestAizFireCurtainGpuDiag -Ds3k.rom.path="Sonic and Knuckles &amp; Sonic 3 (W) [!].gen"
  * </pre>
- * Output PNGs go to {@code target/fire-curtain-gpu/}.
+ * Output PNGs go to the session diagnostics {@code fire-curtain-gpu/} namespace.
  */
 public class TestAizFireCurtainGpuDiag {
 
     private static final int W = 320;
     private static final int H = 224;
-    private static final Path OUT_DIR = Paths.get("target", "fire-curtain-gpu");
+    private static final Path OUT_DIR = TestSessionOutputPaths.diagnostics("fire-curtain-gpu");
 
     private static long window;
     private static boolean initialized;
@@ -284,4 +284,3 @@ public class TestAizFireCurtainGpuDiag {
         return count;
     }
 }
-

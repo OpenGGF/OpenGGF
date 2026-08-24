@@ -14,12 +14,22 @@ class CaptureConfigDefaultsTest {
 
     @Test
     void captureDefaults() {
-        SonicConfigurationService c = SonicConfigurationService.createStandalone();
-        assertEquals("target/trace-videos", c.getString(SonicConfiguration.CAPTURE_OUTPUT_DIR));
-        assertEquals(4, c.getInt(SonicConfiguration.CAPTURE_SCALE));
-        assertEquals(60, c.getInt(SonicConfiguration.CAPTURE_FPS));
-        assertEquals("ffv1", c.getString(SonicConfiguration.CAPTURE_CODEC));
-        assertEquals(GLFW_KEY_O, c.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY));
+        String previous = System.getProperty("openggf.test.diagnostics");
+        System.clearProperty("openggf.test.diagnostics");
+        try {
+            SonicConfigurationService c = SonicConfigurationService.createStandalone();
+            assertEquals("target/trace-videos", c.getString(SonicConfiguration.CAPTURE_OUTPUT_DIR));
+            assertEquals(4, c.getInt(SonicConfiguration.CAPTURE_SCALE));
+            assertEquals(60, c.getInt(SonicConfiguration.CAPTURE_FPS));
+            assertEquals("ffv1", c.getString(SonicConfiguration.CAPTURE_CODEC));
+            assertEquals(GLFW_KEY_O, c.getInt(SonicConfiguration.CAPTURE_TOGGLE_KEY));
+        } finally {
+            if (previous == null) {
+                System.clearProperty("openggf.test.diagnostics");
+            } else {
+                System.setProperty("openggf.test.diagnostics", previous);
+            }
+        }
     }
 
     @Test

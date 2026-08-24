@@ -18,9 +18,12 @@ import com.openggf.level.objects.TouchResponseDebugState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
+import com.openggf.tests.SessionInvocationExtension;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Subclasses should add {@code @RequiresRom(SonicGame.SONIC_1)} â€” the abstract
  * class intentionally does NOT carry that annotation so subclasses control it.
  */
+@ExtendWith(SessionInvocationExtension.class)
 public abstract class AbstractCreditsDemoTraceReplayTest {
     /** Credits demo index (0-7). */
     protected abstract int creditsDemoIndex();
@@ -60,7 +64,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
     /** Override to change report output directory. */
     protected Path reportOutputDir() {
-        return Path.of("target/trace-reports");
+        return TestSessionOutputPaths.traceReports();
     }
 
     /** Override only when warning-only reports are deliberately diagnostic debt. */
@@ -431,32 +435,19 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                 -1, -1, sprite.getAnimationId(), sprite.getMappingFrame(), lives);
     }
 
-    private void writeReport(DivergenceReport report, int demoIndex) {
-        try {
-            Path outDir = reportOutputDir();
-            Files.createDirectories(outDir);
-
-            String prefix = String.format("s1_credits_%02d_%s%d",
-                demoIndex,
-                zoneSlug(demoIndex),
-                Sonic1CreditsDemoData.DEMO_ACT[demoIndex] + 1);
-            TraceVerificationScope scope = verificationScope();
-            String scopeSuffix = scope == TraceVerificationScope.ALL
-                    ? ""
-                    : "_" + scope.name().toLowerCase();
-
-            Path jsonPath = outDir.resolve(prefix + scopeSuffix + "_report.json");
-            Files.writeString(jsonPath, report.toJson());
-
-            if (report.hasErrors(scope)) {
-                Path contextPath = outDir.resolve(prefix + scopeSuffix + "_context.txt");
-                Files.writeString(contextPath,
-                    report.getContextWindow(
-                            report.firstErrorFrame(scope), TraceReplayConsole.contextRadius()));
-            }
-        } catch (IOException e) {
-            System.err.println("Warning: failed to write report: " + e.getMessage());
-        }
+    private void writeReport(DivergenceReport report, int demoIndex) throws IOException {
+        String prefix = String.format("s1_credits_%02d_%s%d",
+            demoIndex,
+            zoneSlug(demoIndex),
+            Sonic1CreditsDemoData.DEMO_ACT[demoIndex] + 1);
+        TraceVerificationScope scope = verificationScope();
+        String scopeSuffix = scope == TraceVerificationScope.ALL
+                ? ""
+                : "_" + scope.name().toLowerCase();
+        TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
+                SessionInvocationExtension.SessionInvocation.current(),
+                "credits-" + demoIndex, prefix + scopeSuffix, scope,
+                TraceReplayConsole.contextRadius());
     }
 
     private boolean observeFrontierAndShouldStop(

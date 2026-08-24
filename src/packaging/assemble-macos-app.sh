@@ -4,7 +4,7 @@
 # Usage: ./assemble-macos-app.sh <path-to-native-binary> [output-dir]
 #
 # Example:
-#   ./assemble-macos-app.sh target/OpenGGF dist
+#   ./assemble-macos-app.sh <artifact-root>/OpenGGF <distribution-root>
 
 set -euo pipefail
 

@@ -486,8 +486,23 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         }
     }
 
+    /**
+     * The live collision/debug anchor follows the same facing-dependent origin as
+     * the body sprite. Keep the inherited frame-start anchor: S3K's player touch
+     * pass reads the object's frame-start {@code x_pos}, while the ROM's render
+     * flip does not move that field (sonic3k.asm:20655-20681).
+     */
+    @Override
+    public int getCollisionX() {
+        return facingAdjustedX(facingLeft);
+    }
+
     @Override
     protected int getRenderAnchorX() {
+        return facingAdjustedX(facingLeft);
+    }
+
+    private int facingAdjustedX(boolean facingLeft) {
         if (facingLeft == initialFacingLeft) {
             return currentX;
         }

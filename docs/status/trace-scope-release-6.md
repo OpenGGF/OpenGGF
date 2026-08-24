@@ -10,6 +10,17 @@ This document records the split and how it is enforced. Numbers are measured on 
 `-Ptrace-replay` sweep at commit `9900b3114` (843 tests, the expected total — a smaller
 total means the run truncated, a larger one means stale reports were counted).
 
+## Fresh 2026-08-23 validation
+
+The isolated `bugfix/ai-0.6-release-hardening` candidate was re-run with all three supplied
+ROMs using the release-equivalent `-Ptrace-replay` profile. Maven completed **868 tests,
+10 failures, 0 errors, and 7 skips**, with no heap exhaustion, fork crash, or truncated
+session. The same ten known red classes remain; this validation did not move the trace
+frontier. Human end-to-end gameplay and audio QA are still required before release.
+
+The scope measurements below are historical measurements of earlier candidates. They are
+not the result count of this fresh run.
+
 ## The two axes that put a trace out of scope
 
 1. **Zone.** In scope is the name set **{AIZ, HCZ, MGZ, CNZ, ICZ, LBZ}**. Everything else

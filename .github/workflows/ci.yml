@@ -61,7 +61,7 @@ jobs:
           cache: maven
 
       - name: Run structural guards
-        run: mvn -Dmse=off -Pguards test -B
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off -Pguards test -B
 
   test:
     if: github.event_name != 'push'
@@ -78,17 +78,24 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: mvn -Dmse=off test -B
+        id: default-tests
+        shell: bash
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B
 
       - name: Assert default test coverage
         shell: bash
+        env:
+          MANIFEST: ${{ steps.default-tests.outputs.manifest }}
         run: |
           python3 - <<'PY'
+          import json
+          import os
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          reports = sorted(Path("target/surefire-reports").glob("TEST-*.xml"))
+          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
+          reports = sorted(Path(session["surefire_reports"]).glob("TEST-*.xml"))
           total = 0
           skipped = 0
           for report in reports:
@@ -145,25 +152,31 @@ jobs:
           exit "$missing"
 
       - name: Run trace replay profile
+        id: develop-trace
         shell: bash
         run: |
-          mvn -Dmse=off test -Ptrace-replay -B \
+          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Assert trace replay coverage
         shell: bash
+        env:
+          MANIFEST: ${{ steps.develop-trace.outputs.manifest }}
         run: |
           python3 - <<'PY'
           import fnmatch
           import json
           import re
+          import os
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          surefire_dir = Path("target/surefire-reports")
+          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
+          surefire_dir = Path(session["surefire_reports"])
+          trace_dir = Path(session["trace_reports"])
           source_root = Path("src/test/java/com/openggf/tests/trace")
           diagnostic_excludes = (
               "Debug*.java",
@@ -261,7 +274,7 @@ jobs:
                   print(f"{report}: skipped={skipped_count}", file=sys.stderr)
               sys.exit(1)
 
-          required_ss_report = Path("target/trace-reports/s2_special_stage_0_report.json")
+          required_ss_report = trace_dir / "s2_special_stage_0_report.json"
           if not required_ss_report.exists():
               print(f"Missing required keep-green divergence report: {required_ss_report}",
                     file=sys.stderr)
@@ -277,7 +290,7 @@ jobs:
               sys.exit(1)
 
           warning_reports = []
-          for report in sorted(Path("target/trace-reports").glob("*_report.json")):
+          for report in sorted(trace_dir.glob("*_report.json")):
               data = json.loads(report.read_text(encoding="utf-8"))
               warning_count = int(data.get("warning_count", 0))
               if warning_count > 0:
