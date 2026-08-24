@@ -15,7 +15,6 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -371,6 +370,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private int fireTransitionFrames;
     /** Per-phase frame counter used for the redraw phases. */
     private int firePhaseFrames;
+    /** Countdown copied from AIZMinibossCutscene_Escape's object timer. */
+    private int fireMusicRestoreTimer;
     /** True once AIZ2 WaitFire has snapped to the dedicated $200 source strip. */
     private boolean act2WaitFireDrawActive;
     /** Current fake-out fire phase derived from the AIZ1/AIZ2 background event routines. */
@@ -397,6 +398,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int FIRE_BG_X_PHASE_MASK = 0x0060;
     private static final int FIRE_WAVE_PHASE_STEP = 6;
     private static final int FIRE_TRANSITION_FALLBACK_FRAMES = 240;
+    /**
+     * ROM: AIZMinibossCutscene_StartEscape writes #$120 to $2E(a0) for AIZ1
+     * (sonic3k.asm:136869-136885). AIZMinibossCutscene_Escape restores the
+     * level music after its per-frame decrement makes this timer negative.
+     */
+    private static final int FIRE_MUSIC_RESTORE_TIME = 0x120;
     // ROM AIZ1BGE_FireTransition, the Camera_Y_pos_BG_copy >= $190 branch
     // (sonic3k.asm:104674-104716): loc_4FD10 seeds
     // `move.w #$F,(Draw_delayed_rowcount).w`, bumps Events_routine_bg to
@@ -565,6 +572,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             int fireWavePhase,
             int fireTransitionFrames,
             int firePhaseFrames,
+            int fireMusicRestoreTimer,
             boolean mutationRequested,
             boolean act2WaitFireDrawActive) {
     }
@@ -648,6 +656,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         fireWavePhase = 0;
         fireTransitionFrames = 0;
         firePhaseFrames = 0;
+        fireMusicRestoreTimer = -1;
         act2WaitFireDrawActive = false;
         fireSequencePhase = FireSequencePhase.INACTIVE;
         fireOverlayTileCount = 0;
@@ -696,10 +705,28 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         && act2ArtKosQueue == null)) {
             rebindHardwareWorkAfterRewind();
         }
+        advanceFireMusicRestore();
         if (act == 0) {
             updateAct1(frameCounter);
         } else {
             updateAct2Continuation(frameCounter);
+        }
+    }
+
+    /**
+     * Mirrors the AIZ miniboss escape object's {@code $2E(a0)} countdown.
+     * This runs at the start of the event pass because the ROM decrements the
+     * object timer during {@code Process_Sprites}; the fire transition itself
+     * begins later in this pass, after the object has raised Events_fg_5.
+     */
+    private void advanceFireMusicRestore() {
+        if (fireMusicRestoreTimer < 0) {
+            return;
+        }
+        fireMusicRestoreTimer--;
+        if (fireMusicRestoreTimer < 0) {
+            audio().restoreMusic();
+            fireMusicRestoreTimer = -1;
         }
     }
 
@@ -2684,6 +2711,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         fireWavePhase = 0;
         fireTransitionFrames = 0;
         firePhaseFrames = 0;
+        fireMusicRestoreTimer = FIRE_MUSIC_RESTORE_TIME;
         act2WaitFireDrawActive = false;
 
         fireTransitionMutationRequested = false;
@@ -2904,6 +2932,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 fireWavePhase,
                 fireTransitionFrames,
                 AIZ2_FIRE_REDRAW_ROWCOUNT,
+                fireMusicRestoreTimer,
                 fireTransitionMutationRequested,
                 false);
         persistTransitionCheckpoint();
@@ -2934,7 +2963,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         .showInLevelTitleCard(false)
                         .forceAirOnStaleObjectSupportLoss(true)
                         .mutationKey(S3kSeamlessMutationExecutor.MUTATION_AIZ1_POST_RELOAD_ACT2)
-                        .musicOverrideId(Sonic3kMusic.AIZ1.id)
                         .playerOffset(-0x2F00, -0x80)
                         .cameraOffset(-0x2F00, -0x80)
                         // ROM: AIZ1BGE_Finish subtracts the same offsets from
@@ -3084,6 +3112,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         fireWavePhase = pending.fireWavePhase();
         fireTransitionFrames = pending.fireTransitionFrames();
         firePhaseFrames = pending.firePhaseFrames();
+        fireMusicRestoreTimer = pending.fireMusicRestoreTimer();
         fireTransitionMutationRequested = pending.mutationRequested();
         act2WaitFireDrawActive = pending.act2WaitFireDrawActive();
         postFireHazeActive = false;
