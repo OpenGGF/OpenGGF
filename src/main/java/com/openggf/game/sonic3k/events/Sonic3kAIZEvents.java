@@ -530,18 +530,22 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
         /**
          * True while the ROM is still drawing the fire plane as part of the
-         * continuation.  AIZ2BGE_FireRedraw and AIZ2BGE_WaitFire continue the
-         * AIZ1 fire rise and draw rows before WaitFire releases the effect
-         * (sonic3k.asm:105036-105105).  The VDP plane wraps during that
+         * continuation.  AIZ2BGE_FireRedraw and the pre-latch branch of
+         * AIZ2BGE_WaitFire continue the AIZ1 fire rise and draw rows
+         * (sonic3k.asm:105036-105078).  The VDP plane wraps during that
          * interval, including when exact art-loading timing leaves the carried
-         * fire position beyond the original $310 fire-zone boundary.  The
-         * post-release AIZ2_BG_REDRAW phase intentionally remains unwrapped so
-         * the curtain can scroll off naturally.
+         * fire position beyond the original $310 fire-zone boundary.  After
+         * Events_bg+$00 is latched, WaitFire draws the real rows while the rise
+         * approaches $310 (sonic3k.asm:105079-105105), so wrapping must stop
+         * and the trailing fire band can scroll off naturally.  The subsequent
+         * AIZ2_BG_REDRAW phase remains unwrapped because the ROM no longer
+         * calls the fire-rise or fire-draw routines (sonic3k.asm:105128-105138).
          */
-        boolean wrapFireTiles() {
+        boolean wrapFireTiles(boolean waitFireDrawActive) {
             return switch (this) {
                 case AIZ1_FIRE_TRANSITION, AIZ1_FIRE_REFRESH, AIZ1_FINISH,
-                     AIZ2_FIRE_REDRAW, AIZ2_WAIT_FIRE -> true;
+                     AIZ2_FIRE_REDRAW -> true;
+                case AIZ2_WAIT_FIRE -> !waitFireDrawActive;
                 default -> false;
             };
         }
@@ -1414,7 +1418,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             return FireCurtainRenderState.inactive();
         }
 
-        boolean wrapActive = fireSequencePhase.wrapFireTiles();
+        boolean wrapActive = fireSequencePhase.wrapFireTiles(act2WaitFireDrawActive);
 
         return new FireCurtainRenderState(
                 true,

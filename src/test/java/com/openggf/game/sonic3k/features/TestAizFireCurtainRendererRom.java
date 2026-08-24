@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -198,11 +199,14 @@ public class TestAizFireCurtainRendererRom {
 
         AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
         EnumMap<FireCurtainStage, PhaseStats> statsByStage = new EnumMap<>(FireCurtainStage.class);
+        PhaseStats latchedWaitFireStats = new PhaseStats();
+        PhaseStats bgRedrawStats = new PhaseStats();
 
         for (int frame = 0; frame < 360 && !events.isAct2TransitionRequested(); frame++) {
             updateWithHardware(events, 0, frame);
             FireCurtainRenderState state = events.getFireCurtainRenderState(224);
-            collectStageStats(renderer, state, overlayTileBase, overlayTileEnd, statsByStage);
+            collectStageStats(renderer, state, overlayTileBase, overlayTileEnd, statsByStage,
+                    events.isAct2WaitFireDrawActive(), latchedWaitFireStats, bgRedrawStats);
         }
 
         if (events.isAct2TransitionRequested()) {
@@ -211,7 +215,8 @@ public class TestAizFireCurtainRendererRom {
             for (int frame = 0; frame < 240 && act2Events.getFireCurtainRenderState(224).active(); frame++) {
                 updateWithHardware(act2Events, 1, frame);
                 FireCurtainRenderState state = act2Events.getFireCurtainRenderState(224);
-                collectStageStats(renderer, state, overlayTileBase, overlayTileEnd, statsByStage);
+                collectStageStats(renderer, state, overlayTileBase, overlayTileEnd, statsByStage,
+                        act2Events.isAct2WaitFireDrawActive(), latchedWaitFireStats, bgRedrawStats);
             }
         }
 
@@ -231,6 +236,14 @@ public class TestAizFireCurtainRendererRom {
         assertTrue(statsByStage.containsKey(FireCurtainStage.AIZ1_REFRESH), "Expected to gather stage stats for the AIZ1 refresh curtain");
         assertTrue(statsByStage.containsKey(FireCurtainStage.AIZ2_REDRAW), "Expected to gather stage stats for the AIZ2 redraw curtain");
         assertTrue(statsByStage.containsKey(FireCurtainStage.AIZ2_WAIT_FIRE), "Expected to gather stage stats for the AIZ2 wait-fire curtain");
+        assertTrue(latchedWaitFireStats.framesSeen > 0,
+                "Expected to gather latched WaitFire release-tail frames separately");
+        assertTrue(latchedWaitFireStats.sawOverlayPattern,
+                "Latched WaitFire must emit the ROM-backed fire overlay during its outro");
+        assertTrue(bgRedrawStats.framesSeen > 0,
+                "Expected to gather AIZ2 BG redraw frames separately");
+        assertFalse(bgRedrawStats.sawOverlayPattern,
+                "AIZ2 BG redraw must not emit fire overlay tiles after ROM release");
     }
 
     /**
@@ -300,7 +313,10 @@ public class TestAizFireCurtainRendererRom {
                                           FireCurtainRenderState state,
                                           int overlayTileBase,
                                           int overlayTileEnd,
-                                          EnumMap<FireCurtainStage, PhaseStats> statsByStage) {
+                                          EnumMap<FireCurtainStage, PhaseStats> statsByStage,
+                                          boolean waitFireDrawActive,
+                                          PhaseStats latchedWaitFireStats,
+                                          PhaseStats bgRedrawStats) {
         if (state == null || !state.active() || state.coverHeightPx() <= 0 || state.stage() == FireCurtainStage.INACTIVE) {
             return;
         }
@@ -308,6 +324,20 @@ public class TestAizFireCurtainRendererRom {
         AizFireCurtainRenderer.CurtainCompositionPlan plan =
                 renderer.buildCompositionPlan(state, 320, 224);
         PhaseStats stats = statsByStage.computeIfAbsent(state.stage(), ignored -> new PhaseStats());
+        recordDescriptorStats(stats, state, plan, overlayTileBase, overlayTileEnd);
+        if (state.stage() == FireCurtainStage.AIZ2_WAIT_FIRE && waitFireDrawActive) {
+            recordDescriptorStats(latchedWaitFireStats, state, plan, overlayTileBase, overlayTileEnd);
+        }
+        if (state.stage() == FireCurtainStage.AIZ2_BG_REDRAW) {
+            recordDescriptorStats(bgRedrawStats, state, plan, overlayTileBase, overlayTileEnd);
+        }
+    }
+
+    private static void recordDescriptorStats(PhaseStats stats,
+                                              FireCurtainRenderState state,
+                                              AizFireCurtainRenderer.CurtainCompositionPlan plan,
+                                              int overlayTileBase,
+                                              int overlayTileEnd) {
         stats.sourceWorldXs.add(state.sourceWorldX());
         stats.framesSeen++;
 
