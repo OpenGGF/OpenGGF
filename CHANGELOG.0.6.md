@@ -4,6 +4,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **AIZ's fire curtain now remains continuous across the exact-load seam:** the
+  AIZ2 `FireRedraw`/`WaitFire` continuation keeps the cached ROM fire body in
+  VDP-style wrapped tiling when the carried fire position passes the original
+  `$310` boundary. The post-release redraw still scrolls off naturally, so
+  normal play and trace captures no longer show the curtain disappearing and
+  restarting.
+
 - **The standalone sound test once again reaches the speaker:** its interactive
   window now creates, drives, and closes the OpenAL presentation host on one
   audio thread, instead of creating the thread-bound device on Swing's caller
