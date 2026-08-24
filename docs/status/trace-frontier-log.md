@@ -114771,3 +114771,36 @@ The other three death arms remain coordinates only.
   -Dmse=off -DskipTests package -B`. Result: passed and produced the
   executable dependency JAR. Manifest:
   `<managed-scratch>/tasks/openggf-test-session-20260824T193813Z-31751-fb5e1d73/20260824T193813Z-p31692-c737ec/manifest.json`.
+
+## 2026-08-24 - AIZ fire music restore follows the ROM escape timer
+
+- Worktree: `.worktrees/aiz-fire-music-timing`, branch
+  `bugfix/ai-aiz-fire-music-timing`, candidate over `232e1a900`.
+- Root: `AIZMinibossCutscene_StartEscape` arms the AIZ1 `$120` object timer,
+  `AIZMinibossCutscene_Escape` decrements it during `Process_Sprites`, and
+  `Restore_LevelMusic` runs only when it becomes negative. The persistent AIZ
+  event owner now carries that ROM-derived countdown through the AIZ1-to-AIZ2
+  reload. The act transition no longer eagerly starts AIZ1 music, and no trace
+  row, frame number, zone exception, or gameplay value supplies the timing.
+- Focused certifying command:
+  `tools/testing/test-session.sh -- mvn -Dmse=off
+  -Ds3k.rom.path="Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  -Dtest=com.openggf.game.sonic3k.events.TestSonic3kAIZEvents,
+  com.openggf.game.sonic3k.features.TestAizFireCurtainRenderer,
+  com.openggf.game.sonic3k.features.TestAizFireCurtainRendererRom,
+  com.openggf.game.sonic3k.TestZoneEventRewindSchemaGuard,
+  com.openggf.game.sonic3k.TestSonic3kLevelEventRewindSnapshot test -B`.
+  Result: 118 tests, 0 failures, 0 errors, 0 skips. The new regression also
+  passed independently while asserting that the act reload emits no eager AIZ1
+  `PlayMusic` command and that the carried timer eventually restores music.
+- Full frontier command:
+  `tools/testing/test-session.sh -- mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  '-Dtest=*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false test -B`.
+  Candidate run `20260824T203549Z-p107571-39cae8` reported 117 tests, 58
+  failures, 0 errors, 0 skips. Its red set and first errors match the recorded
+  frontier baseline: AIZ remains frame `20713` / `air`, and the AIZ zone slice
+  remains frame `25589` / `player_animation_id`; no trace frontier regressed.
+  Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260824T203549Z-107642-5a980d4f/20260824T203549Z-p107571-39cae8/manifest.json`.
