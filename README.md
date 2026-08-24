@@ -214,6 +214,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **SMPS playback and audio diagnostics uplift (2026-08-24):** source-timed
+  S3K FM/PSG service behavior, repeated-effect ownership, reference chip
+  defaults, and HQ PSG rendering substantially improve Collapse, Spindash
+  Release, Blue Sphere, and mixed music/SFX playback. The standalone sound
+  test also has a direct launcher and keeps its OpenAL lifecycle on its audio
+  thread, making isolated ROM-backed listening useful again.
+
 - **Bounded active-segment trace ownership (2026-08-22, validated for
   integration):** complete-run replay now retains compact descriptors for the
   whole run and one eager payload only for the active segment. Two warmed,

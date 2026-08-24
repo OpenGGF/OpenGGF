@@ -1,5 +1,12 @@
 # Changelog
 
+- **The standalone sound test once again reaches the speaker:** its interactive
+  window now creates, drives, and closes the OpenAL presentation host on one
+  audio thread, instead of creating the thread-bound device on Swing's caller
+  and silently falling back when the scheduled presenter first used it. A new
+  root `soundTest.sh` launcher incrementally compiles the app and forwards its
+  game, ROM, song, console, and null-audio arguments.
+
 - **S3K FM sound effects retain the shipped track-stop decay:** locked-on
   `cfStopTrack` spends 181 Z80 T-states between entering the terminal path and
   writing the YM2612 key-off. OpenGGF previously keyed each FM track off at the
