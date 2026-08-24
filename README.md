@@ -233,7 +233,8 @@ recorded hardware traces.
   bonus stages.
 - **AIZ presentation continuity:** the Angel Island fire curtain now remains
   continuous across exact art-loading seams and completes its ROM-shaped
-  release tail in normal play and trace renders.
+  release tail in normal play and trace renders, while level music restoration
+  follows the ROM escape timer across the AIZ1-to-AIZ2 reload.
 - **ROM-accurate gameplay systems:** physics, subpixel movement, sensors,
   collision, solid objects, water, camera behavior, title cards, level events,
   bosses, badniks, sidekicks, Super Sonic, and cross-game feature donation are

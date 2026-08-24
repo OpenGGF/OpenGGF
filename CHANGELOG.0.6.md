@@ -34,6 +34,12 @@ This file contains the complete 0.6 development snapshot history carried forward
   scrolls away before the background redraw; normal play and trace captures no
   longer show the curtain disappearing and restarting or ending abruptly.
 
+- **AIZ miniboss music now follows the retail escape boundary:** the `$120`
+  `AIZMinibossCutscene_Escape` countdown is owned by persistent AIZ event state,
+  survives the AIZ1-to-AIZ2 reload, and restores level music only when the ROM
+  timer expires. The transition no longer starts AIZ1 music eagerly, so the
+  visual fire outro and trace-synchronised progression remain intact.
+
 - **The standalone sound test once again reaches the speaker:** its interactive
   window now creates, drives, and closes the OpenAL presentation host on one
   audio thread, instead of creating the thread-bound device on Swing's caller
