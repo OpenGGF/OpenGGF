@@ -3,11 +3,14 @@ package com.openggf.tests;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.LiveCaptureAudioHandle;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.rules.RequiresRom;
@@ -67,7 +70,7 @@ class TestS3kAizRockCollapseAudioHeadless {
         tails.updateSensors(tails.getX(), tails.getY());
         GameServices.level().getObjectManager().reset(fixture.camera().getX());
 
-        audio.stopMusic();
+        audio.playMusic(Sonic3kMusic.AIZ1.id);
         int[] presentedFrame = { -1 };
         List<YmKeyWrite> keyWrites = new ArrayList<>();
         audio.setChipWriteObserver(new ChipWriteObserver() {
@@ -90,6 +93,7 @@ class TestS3kAizRockCollapseAudioHeadless {
             List<Long> packetEnergy = new ArrayList<>();
             int breakFrame = -1;
             int springFrame = -1;
+            List<Integer> collapsePsg3OwnerFrames = new ArrayList<>();
 
             for (int frame = 0; frame < 180; frame++) {
                 presentedFrame[0] = frame;
@@ -111,7 +115,14 @@ class TestS3kAizRockCollapseAudioHeadless {
                         && springFrame < 0) {
                     springFrame = frame;
                 }
+                if (breakFrame >= 0 && collapseOwnsPsg3()) {
+                    collapsePsg3OwnerFrames.add(frame);
+                }
             }
+
+            assertTrue(audio.captureLogicalSnapshot().presentation()
+                            .activeMusic() != null,
+                    "the regression must retain AIZ1 music while Collapse owns PSG3");
 
             assertTrue(breakFrame >= 0,
                     "Tails should break the ROM AIZ rock from the supplied air-roll position");
@@ -123,9 +134,10 @@ class TestS3kAizRockCollapseAudioHeadless {
             assertFalse(collapseWindow.isEmpty());
             List<Integer> collapseKeyOffFrames = terminalKeyOffFrames(
                     keyWrites, breakFrame, springFrame);
-            assertTrue(collapseKeyOffFrames.equals(List.of(
-                            breakFrame + 18, breakFrame + 19,
-                            breakFrame + 20)),
+            assertTrue(collapseKeyOffFrames.size() >= 3
+                            && collapseKeyOffFrames.subList(0, 3).equals(
+                            List.of(breakFrame + 18, breakFrame + 19,
+                                    breakFrame + 20)),
                     "the real AIZ request must preserve the three staggered "
                             + "cfStopTrack key-offs: breakFrame=" + breakFrame
                             + " keyOffFrames=" + collapseKeyOffFrames);
@@ -136,7 +148,30 @@ class TestS3kAizRockCollapseAudioHeadless {
                                 + "post-key-off Collapse decay at frame "
                                 + frame + ": " + collapseWindow);
             }
+            for (int relativeFrame : List.of(49, 73, 97, 110)) {
+                int frame = breakFrame + relativeFrame;
+                assertTrue(frame > springFrame);
+                assertTrue(collapsePsg3OwnerFrames.contains(frame),
+                        "Collapse must retain the physical PSG3/noise lock "
+                                + "through its late post-spring tail at frame "
+                                + frame + "; owners="
+                                + collapsePsg3OwnerFrames);
+            }
         }
+    }
+
+    private boolean collapseOwnsPsg3() {
+        return audio.captureLogicalSnapshot().presentation().voices().stream()
+                .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
+                .map(PresentationVoiceSnapshot.Smps.class::cast)
+                .anyMatch(voice -> {
+                    int lockId = voice.driver().psgLockSequencerIds()[2];
+                    return lockId >= 0
+                            && lockId < voice.driver().sequencers().size()
+                            && voice.driver().sequencers().get(lockId)
+                                    .smpsData().getId()
+                            == Sonic3kSfx.COLLAPSE.id;
+                });
     }
 
     private static long sumAbsolute(short[] samples, int length) {

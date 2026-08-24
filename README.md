@@ -242,8 +242,10 @@ recorded hardware traces.
   sequencing, pause/resume behavior, PAL clocks, priority rendering, tilemaps,
   shaders, sprite batching, and staged art loading have received substantial
   accuracy and stability work. Source-timed S3K FM/PSG services, repeated SFX
-  ownership, reference chip defaults, and HQ PSG rendering improve Collapse,
-  Spindash Release, Blue Sphere, and mixed music/SFX playback; the standalone
+  ownership, and the retail two-cell SFX request order preserve incumbent
+  services during repeated boss explosions. Reference chip defaults and HQ
+  PSG rendering improve Collapse, Spindash Release, Blue Sphere, and mixed
+  music/SFX playback; the standalone
   sound-test launcher provides ROM-backed listening through the same unified
   presentation pipeline.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,

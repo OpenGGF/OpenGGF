@@ -4,6 +4,17 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Repeated S3K boss explosions now retain the incumbent's final service:**
+  the locked-on driver services active SFX tracks before consuming its two
+  68K SFX request cells. OpenGGF previously admitted each request immediately,
+  so a new boss explosion retired FM5 before the incumbent received that
+  boundary's modulation update. The driver now models the two retail input
+  cells, their duplicate/overwrite rules, and their SFX-first consumption as
+  one rewind-safe transaction. Native AIZ evidence covers 134 physical
+  Explosion reloads and a complete 121-frame Collapse residence with later
+  SFX traffic. Sonic 1 and Sonic 2 retain immediate admission because their
+  shipped drivers consume requests before their SFX service loops.
+
 - **Normal local launchers retain their package-and-launch workflow:** `run.sh`,
   `run.cmd`, `dev.sh`, and `dev.cmd` explicitly select the non-certifying
   runtime path, so the distributable remains in `target/` while certifying

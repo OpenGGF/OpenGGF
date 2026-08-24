@@ -826,10 +826,49 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     public void beginSfxAdmission() {
         deferNextDriverService = config.getSfxStartTiming()
                 == SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE;
+        if (!deferNextDriverService) {
+            publishSfxStart();
+        }
+    }
+
+    private void publishSfxStart() {
         CoordFlagHandler handler = config.getCoordFlagHandler();
         if (handler != null) {
             handler.onSfxStart(smpsData.getId());
         }
+    }
+
+    /**
+     * Transfers the S3K queue delay from this sequencer to the driver's
+     * source-authenticated input-cell boundary. The first service after the
+     * queued admission is therefore a real SFX service, not a second delay.
+     */
+    public final void consumeDeferredSfxAdmission() {
+        if (config.getSfxStartTiming()
+                != SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE
+                || !deferNextDriverService) {
+            throw new IllegalStateException(
+                    "sequencer has no deferred SFX admission to consume");
+        }
+        deferNextDriverService = false;
+        publishSfxStart();
+    }
+
+    /** Advances only the queue-resident driver's VInt phase. */
+    public final boolean advanceDeferredSfxAdmissionClock(int samples) {
+        if (config.getSfxStartTiming()
+                != SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE
+                || !deferNextDriverService) {
+            throw new IllegalStateException(
+                    "sequencer has no deferred SFX admission clock");
+        }
+        sampleCounter += samples;
+        boolean crossed = false;
+        while (sampleCounter >= samplesPerFrame) {
+            sampleCounter -= samplesPerFrame;
+            crossed = true;
+        }
+        return crossed;
     }
 
     /** Publishes the SFX DAC source only after admission has been validated. */

@@ -14,7 +14,6 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
-import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -54,9 +53,7 @@ class TestAudioPresentationArchitectureGuard {
 
     @Test
     void chipPcmTapInstallationIsConfinedToItsPackageDiagnosticFactory() {
-        JavaClasses classes = new ClassFileImporter()
-                .withImportOption(new ImportOption.DoNotIncludeTests())
-                .importPackages("com.openggf");
+        JavaClasses classes = productionClasses();
         List<JavaMethodCall> calls = classes.stream()
                 .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
                 .filter(call -> call.getName().equals("installPcmDiagnosticTap"))
@@ -634,9 +631,7 @@ class TestAudioPresentationArchitectureGuard {
         assertEquals(List.of(SmpsSequencer.class, int.class),
                 List.of(port.getParameterTypes()));
 
-        JavaClasses classes = new ClassFileImporter()
-                .withImportOption(new ImportOption.DoNotIncludeTests())
-                .importPackages("com.openggf");
+        JavaClasses classes = productionClasses();
         List<JavaMethodCall> calls = classes.stream()
                 .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
                 .filter(call -> call.getTargetOwner()
@@ -658,6 +653,49 @@ class TestAudioPresentationArchitectureGuard {
                 .toList();
         assertEquals(List.of(), methodReferences,
                 "method references cannot bypass the reviewed callsite");
+    }
+
+    @Test
+    void deferredSfxInputClockPortsAreConfinedToSmpsDriver() {
+        JavaClasses classes = productionClasses();
+        Map<String, String> expectedOrigins = Map.of(
+                "advanceDeferredSfxAdmissionClock",
+                "advancePendingSfxInputClocks",
+                "consumeDeferredSfxAdmission", "consumeDeferredSfxInput");
+        for (Map.Entry<String, String> expected
+                : expectedOrigins.entrySet()) {
+            List<Method> methods = java.util.Arrays.stream(
+                            SmpsSequencer.class.getDeclaredMethods())
+                    .filter(method -> method.getName().equals(
+                            expected.getKey()))
+                    .toList();
+            assertEquals(1, methods.size());
+            assertTrue(Modifier.isPublic(methods.getFirst().getModifiers()));
+            assertTrue(Modifier.isFinal(methods.getFirst().getModifiers()));
+            assertFalse(Modifier.isStatic(methods.getFirst().getModifiers()));
+
+            List<JavaMethodCall> calls = classes.stream()
+                    .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                    .filter(call -> call.getTargetOwner()
+                            .isEquivalentTo(SmpsSequencer.class))
+                    .filter(call -> call.getName().equals(expected.getKey()))
+                    .toList();
+            assertEquals(1, calls.size(), expected.getKey());
+            assertTrue(calls.getFirst().getOriginOwner()
+                    .isEquivalentTo(SmpsDriver.class));
+            assertEquals(expected.getValue(),
+                    calls.getFirst().getOrigin().getName());
+
+            assertEquals(List.of(), classes.stream()
+                    .flatMap(owner -> owner.getMethodReferencesFromSelf()
+                            .stream())
+                    .filter(reference -> reference.getTargetOwner()
+                            .isEquivalentTo(SmpsSequencer.class))
+                    .filter(reference -> reference.getName().equals(
+                            expected.getKey()))
+                    .map(reference -> reference.getDescription())
+                    .toList());
+        }
     }
 
     @Test
@@ -1830,18 +1868,14 @@ class TestAudioPresentationArchitectureGuard {
     @Test
     void gameplayAudioTimelineIsToolingOnlyAndCannotDriveAudioOrTraceAuthority()
             throws IOException {
-        JavaClasses production = new ClassFileImporter()
-                .withImportOption(new ImportOption.DoNotIncludeTests())
-                .importPackages("com.openggf");
+        JavaClasses production = productionClasses();
         assertEquals(List.of(), timelineDependenciesOutsideTimeline(production),
                 "production runtime must not depend on gameplay-audio timeline tooling");
 
-        JavaClasses timeline = new ClassFileImporter()
-                .withImportOption(new ImportOption.DoNotIncludeTests())
-                .importPackages("com.openggf.tools.audio.timeline");
-        assertEquals(List.of(), timelineAuthorityCalls(timeline),
+        JavaClasses timeline = productionClasses();
+        assertEquals(List.of(), timelineAuthorityCallsFromTimeline(timeline),
                 "timeline tooling must remain a read-only schema boundary");
-        assertEquals(List.of(), timelineAudioOwnerDependencies(timeline),
+        assertEquals(List.of(), timelineAudioOwnerDependenciesFromTimeline(timeline),
                 "timeline tooling may not depend on mutation-capable audio owners");
 
         JavaClasses fixture = new ClassFileImporter()
@@ -1922,6 +1956,35 @@ class TestAudioPresentationArchitectureGuard {
                 .toList();
     }
 
+    private static List<String> timelineAuthorityCallsFromTimeline(
+            JavaClasses classes) {
+        return classes.stream()
+                .filter(origin -> origin.getPackageName()
+                        .startsWith("com.openggf.tools.audio.timeline"))
+                .flatMap(origin -> origin.getMethodCallsFromSelf().stream())
+                .filter(call -> isTimelineAuthorityCall(
+                        call, call.getTargetOwner()))
+                .map(JavaMethodCall::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static List<String> timelineAudioOwnerDependenciesFromTimeline(
+            JavaClasses classes) {
+        return classes.stream()
+                .filter(origin -> origin.getPackageName()
+                        .startsWith("com.openggf.tools.audio.timeline"))
+                .flatMap(origin -> origin.getDirectDependenciesFromSelf()
+                        .stream())
+                .filter(dependency -> dependency.getTargetClass()
+                        .getPackageName().startsWith("com.openggf.audio"))
+                .filter(dependency -> !TIMELINE_READ_ONLY_AUDIO_DEPENDENCIES
+                        .contains(dependency.getTargetClass().getFullName()))
+                .map(Dependency::getDescription)
+                .sorted()
+                .toList();
+    }
+
     private static boolean isTimelineAuthorityCall(JavaMethodCall call, JavaClass targetOwner) {
         if (targetOwner.isEquivalentTo(AudioManager.class)) {
             return Set.of("playMusic", "playSfx", "replayTimelineCommand",
@@ -1942,9 +2005,7 @@ class TestAudioPresentationArchitectureGuard {
 
     @Test
     void productionDoesNotBypassManagerOwnedAudioCommands() {
-        JavaClasses production = new ClassFileImporter()
-                .withImportOption(new ImportOption.DoNotIncludeTests())
-                .importPackages("com.openggf");
+        JavaClasses production = productionClasses();
 
         assertEquals(List.of(), directBackendCommandBypasses(production));
     }
@@ -1961,6 +2022,11 @@ class TestAudioPresentationArchitectureGuard {
                 call -> call.contains(".playMusic(")));
         assertTrue(bypasses.stream().anyMatch(
                 call -> call.contains(".toggleMute(")));
+    }
+
+    private static JavaClasses productionClasses() {
+        return new ClassFileImporter().importUrl(SmpsDriver.class
+                .getProtectionDomain().getCodeSource().getLocation());
     }
 
     private static List<String> directBackendCommandBypasses(

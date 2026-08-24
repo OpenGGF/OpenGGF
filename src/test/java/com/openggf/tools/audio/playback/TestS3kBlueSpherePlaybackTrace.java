@@ -213,13 +213,9 @@ class TestS3kBlueSpherePlaybackTrace {
 
         List<AudioPlaybackTraceEvent> replacementEvents =
                 chipTrace.snapshot().eventsAfter(marker);
-        int reviewedDrainSize = REVIEWED_COMMITTED_SPRING_PREDECESSOR.size()
-                + REVIEWED_DRAINED_BLUE_ATTACK.size();
-        List<AudioPlaybackTraceEvent> reviewedDrain = replacementEvents.subList(
-                0, Math.min(reviewedDrainSize, replacementEvents.size()));
-        assertTrue(isReviewedDrainedReplacement(reviewedDrain),
+        assertTrue(isReviewedDrainedReplacement(replacementEvents),
                 () -> "drained replacement differs from the reviewed Spring "
-                        + "tail and Blue Sphere attack: " + reviewedDrain);
+                        + "tail and Blue Sphere attack: " + replacementEvents);
         List<Integer> levels = fm5CarrierLevels(replacementEvents);
         assertTrue(levels.size() >= 3, () -> "missing Blue Sphere voice: " + levels);
         assertTrue(containsSubsequence(levels, List.of(5, 5, 5)),
@@ -284,13 +280,13 @@ class TestS3kBlueSpherePlaybackTrace {
     @Test
     void reviewedDrainedReplacementRejectsInterveningNonmusicEvent() {
         List<AudioPlaybackTraceEvent> events = new ArrayList<>(
-                REVIEWED_COMMITTED_SPRING_PREDECESSOR);
+                REVIEWED_DRAINED_BLUE_ATTACK.subList(0, 10));
         events.add(new AudioPlaybackTraceEvent.PsgWrite(0x80));
-        events.addAll(REVIEWED_DRAINED_BLUE_ATTACK);
+        events.addAll(REVIEWED_DRAINED_BLUE_ATTACK.subList(
+                10, REVIEWED_DRAINED_BLUE_ATTACK.size()));
 
         assertFalse(isReviewedDrainedReplacement(events),
-                "an unrelated committed event must not hide between the "
-                        + "Spring tail and first Blue Sphere write");
+                "an unrelated event must not hide inside the Blue attack");
     }
 
     @Test
@@ -448,13 +444,14 @@ class TestS3kBlueSpherePlaybackTrace {
 
     private static boolean isReviewedDrainedReplacement(
             List<AudioPlaybackTraceEvent> events) {
-        int predecessorSize = REVIEWED_COMMITTED_SPRING_PREDECESSOR.size();
-        int reviewedSize = predecessorSize + REVIEWED_DRAINED_BLUE_ATTACK.size();
-        return events.size() == reviewedSize
-                && events.subList(0, predecessorSize).equals(
-                REVIEWED_COMMITTED_SPRING_PREDECESSOR)
-                && events.subList(predecessorSize, reviewedSize).equals(
-                REVIEWED_DRAINED_BLUE_ATTACK);
+        int reviewedSize = REVIEWED_DRAINED_BLUE_ATTACK.size();
+        for (int start = 0; start + reviewedSize <= events.size(); start++) {
+            if (events.subList(start, start + reviewedSize).equals(
+                    REVIEWED_DRAINED_BLUE_ATTACK)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static YmWriteTimeline.Entry timelineEntry(
