@@ -61,6 +61,68 @@ class TestS3kCollapseDashSfxParity {
     }
 
     @Test
+    void repeatedCollapseRequestOverwritesTheLivePsgTrackWithoutMusicRestore() {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
+                TestEnvironment.currentRom());
+        RecordingObserver observer = new RecordingObserver();
+        TimelineDriver driver = new TimelineDriver(observer);
+        observer.masterCycle = driver::masterCycle;
+        SmpsSequencer music = new SmpsSequencer(
+                loader.loadMusic(Sonic3kMusic.SPECIAL_STAGE.id),
+                loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        driver.addSequencer(music, false);
+        driver.read(new short[735 * 8]);
+        observer.takePsgWrites();
+
+        AbstractSmpsData collapse = loader.loadSfx(Sonic3kSfx.COLLAPSE.id);
+        SmpsSequencer first = new SmpsSequencer(
+                collapse, loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        driver.addSequencer(first, true);
+        for (int frame = 0; frame < 61; frame++) {
+            driver.read(new short[735 * 2]);
+        }
+        observer.takePsgWrites();
+        SmpsSequencer.Track musicPsg3 = music.getTracks().stream()
+                .filter(track -> track.type == SmpsSequencer.TrackType.PSG
+                        && track.channelId == 2)
+                .findFirst().orElseThrow();
+        assertTrue(musicPsg3.overridden);
+
+        SmpsSequencer replacement = new SmpsSequencer(
+                collapse, loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        driver.addSequencer(replacement, true);
+
+        assertTrue(musicPsg3.overridden,
+                "zPlaySound overwrites the shared SFX PSG3 RAM track without "
+                        + "releasing the interrupted music track");
+        assertEquals(List.of(0xDF, 0xFF), observer.takePsgWrites(),
+                "fix_sndbugs=0 silences PSG3 and noise for the replacement, "
+                        + "but must not publish a transient music restore");
+
+        for (int frame = 0; frame < 62; frame++) {
+            driver.read(new short[735 * 2]);
+        }
+        observer.takePsgWrites();
+        SmpsSequencer finalReplacement = new SmpsSequencer(
+                collapse, loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        driver.addSequencer(finalReplacement, true);
+        assertEquals(List.of(0xDF, 0xFF), observer.takePsgWrites());
+
+        for (int frame = 0; frame < 121; frame++) {
+            driver.read(new short[735 * 2]);
+        }
+        assertFalse(finalReplacement.isComplete(),
+                "the final native gameplay request owns a complete five-burst "
+                        + "decay after the earlier overlapping requests");
+        driver.read(new short[735 * 2]);
+        assertTrue(finalReplacement.isComplete());
+    }
+
+    @Test
     void collapsePsgTailSurvivesTheAuthoritativePresentationPipeline() {
         Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
                 TestEnvironment.currentRom());

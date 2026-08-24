@@ -211,3 +211,36 @@ low/high-charge Dash release and a replay after another SFX. The exact package
 identity is reported in the handoff after building clean HEAD so the report
 does not create a self-referential rebuild. Do not merge or push before the
 listening result.
+
+### 2026-08-24 real-game repeated-request correction
+
+The HQ result above was correct for one isolated Sound_59 instance, but the
+subsequent listening result proved that it did not explain the audible AIZ
+texture. A fresh BK2-driven native capture kept music and gameplay active. It
+showed Collapse requests at relative frames 228, 289, and 351: each new request
+arrives 61–62 frames after the previous one, well before Sound_59's 121-frame
+PSG track terminal. The final request then runs through relative frame 472.
+The capture SHA-256 is
+`75e58682964c5b9263a849af32cc6e4676509e2df44ff4c9b31a0adf5d34b155`.
+
+That overlap exposed a separate driver defect. OpenGGF's same-ID removal path
+called `releaseLocks` before admitting the replacement. On PSG3 it published
+`DF C0 00 E7`: silence the old SFX, restore the interrupted music tone, and
+then reclaim the channel. The shipped S3K `zPlaySound` overwrites the one
+shared SFX RAM track while the music override remains set, publishing `DF FF`
+for its `fix_sndbugs=0` PSG3/noise silence. A strict regression first failed on
+the transient restore, then passed after the old PSG lock was handed directly
+to the replacement. The same test reproduces the native 61/62-frame request
+spacing and proves that the final replacement remains alive for its complete
+121-frame decay.
+
+Fresh JDK 21 focused verification:
+
+```text
+TestS3kCollapseDashSfxParity, TestPreparedSfxAdmission,
+TestSfxContentionObserver: 51/51 green
+S1/S2/S3K unified presentation, Blue Sphere, Collapse/Dash,
+prepared admission and contention controls: 75/75 green
+expanded architecture, timeline, rewind/snapshot, admission, and all-game
+presentation selector: 179/179 green
+```

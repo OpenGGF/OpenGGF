@@ -1411,10 +1411,13 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         applyAdmissionFmPreparation(sequencer);
 
         SmpsSequencer replaced = admission.replacedSequencer;
+        boolean replacedPsg3 = false;
         if (replaced != null) {
             rememberReplacementConflicts(replaced, sequencer);
             sequencers.remove(replaced);
             handoffRetailFmReplacementLocks(replaced, sequencer);
+            replacedPsg3 = handoffSharedPsg3ReplacementLock(
+                    replaced, sequencer);
             releaseLocks(replaced);
             sfxSequencers.remove(replaced);
             sfxSequencersById.remove(replaced.getSmpsData().getId(), replaced);
@@ -1422,7 +1425,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             forgetSequencerServiceIdentity(replaced);
         }
 
-        boolean killedPsg3Track = false;
+        boolean killedPsg3Track = replacedPsg3;
         for (int action = 0;
                 action < admission.displacedTracks.length; action++) {
             SmpsSequencer.Track track = admission.displacedTracks[action];
@@ -1512,6 +1515,28 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 fmLocks[channel] = replacement;
             }
         }
+    }
+
+    private boolean handoffSharedPsg3ReplacementLock(
+            SmpsSequencer replaced, SmpsSequencer replacement) {
+        for (int index = 0; index < replacement.trackCount(); index++) {
+            SmpsSequencer.Track track = replacement.trackAt(index);
+            if (!track.active || track.type != SmpsSequencer.TrackType.PSG
+                    || track.channelId != 2) {
+                continue;
+            }
+            if (psgLocks[2] != replaced) {
+                continue;
+            }
+            // PSG3 and noise are one logical SMPS track. A same-ID request
+            // overwrites its shared SFX RAM in place; it does not release the
+            // interrupted music track between old and new instances. S3K
+            // fix_sndbugs=0 then silences both hardware generators while
+            // initializing the replacement in zPlaySound.
+            psgLocks[2] = replacement;
+            return true;
+        }
+        return false;
     }
 
     void applyAdmissionFmPreparation(SmpsSequencer sequencer) {

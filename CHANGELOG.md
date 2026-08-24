@@ -1,5 +1,16 @@
 # Changelog
 
+- **Repeated PSG effects now overwrite the shared SFX track without exposing
+  music between requests:** a real AIZ native trace showed Collapse requested
+  three times about 61–62 frames apart while its five-burst PSG3 tail was still
+  active. OpenGGF removed each same-ID sequencer by releasing PSG3 to music,
+  producing a transient music-tone restore before the replacement took over.
+  The shared PSG3/noise lock now hands directly to the replacement, matching
+  the shipped track RAM; S3K's `fix_sndbugs=0` admission still emits its
+  authentic PSG3/noise silence pair. The final request consequently retains
+  the complete 121-frame decay instead of breaking the continuous crumble
+  texture.
+
 - **SMPS PSG output now uses the reference band-limited renderer:** BizHawk's
   Genesis Plus GX core runs the console with `hq_psg=1`, while OpenGGF's SMPS
   drivers had left the chip in its standalone fast mode. Native final-speaker
