@@ -214,6 +214,59 @@ rules on PRs into `develop`.
   `Changelog: n/a` is rejected.
 - Merging a non-`master` branch into `develop` requires a staged `README.md` update
   summarising the change in the release/change log section.
+
+### Documentation update map
+
+The active release is 0.6. Use this map before staging a change. The detailed
+trailer rules and exceptions remain authoritative in
+[docs/agent-workflow/documentation-obligation-checklist.md](docs/agent-workflow/documentation-obligation-checklist.md)
+and `.githooks/validate-policy.sh` / `.githooks/validate-policy.ps1`.
+
+- **Release notes:** put concise, user-facing entries for release-worthy 0.6
+  features, fixes, and performance work in `CHANGELOG.0.6.md`. Do not add new
+  0.6 release prose only to the root index. Historical
+  `CHANGELOG.0.x.md` files are immutable except for factual corrections.
+- **Release index:** update `CHANGELOG.md` when adding, renaming, or publishing
+  a release file, changing the current-release pointer, or changing the release
+  index itself. The commit hook currently maps the `Changelog` trailer to the
+  exact root file `CHANGELOG.md`; if a source `feat`/`fix`/`perf` note is recorded
+  only in `CHANGELOG.0.6.md`, use a justified
+  `Changelog: n/a: release note recorded in CHANGELOG.0.6.md`. If
+  `CHANGELOG.md` changes, stage it and use `Changelog: updated`.
+- **README release section:** update `README.md` when the current release
+  summary, release status, supported-scope statement, or release links change.
+  Keep the rest of the README as the stable user and contributor guide; do not
+  replace it with a release ledger.
+- **Public release copy:** update
+  `docs/changelog/v0.6-release-summary.md` when website/GitHub messaging,
+  validation results, or release blockers change. Update the detailed
+  `docs/changelog/v0.6-prerelease-detailed.md` ledger for substantial 0.6
+  investigations, workstreams, and gate decisions.
+- **Trace evidence:** update `docs/status/trace-frontier-log.md` whenever a
+  frontier moves, a trace fix lands, a passing trace regresses, or a full
+  `*TraceReplay` sweep selects the next target. Record the command,
+  commit/worktree context, pass/fail result, error count, and first-error
+  frame/field. This obligation has no trailer.
+- **Known discrepancies:** update `docs/status/known-discrepancies.md` for
+  cross-game or general intentional ROM divergences, and
+  `docs/S3K_KNOWN_DISCREPANCIES.md` for S3K-specific gaps. Set the matching
+  discrepancy trailer to `updated`.
+- **Configuration and guides:** update `CONFIGURATION.md` for config flags,
+  bindings, or toggles; update the relevant file under `docs/guide/` for player
+  or contributor instructions. Set `Configuration-Docs` or `Guide` to
+  `updated` respectively.
+- **Agent guidance:** update `AGENTS.md` and `CLAUDE.md` together whenever
+  top-level workflow or project guidance changes. Update `AGENTS_S3K.md` for
+  S3K-specific agent guidance. Set `Agent-Docs: updated` when the root pair
+  changes; keep the pair identical.
+- **Skills:** update matching files in both `.agents/skills/` and
+  `.claude/skills/` together. Set `Skills: updated`; never update one mirror
+  without the other.
+- **Architecture artifacts:** put designs, audits, validation reports, and
+  other engineering records under the matching `docs/architecture/`
+  subdirectory; put release material under `docs/changelog/`. Do not leave
+  task documentation loose or untracked.
+
 - Branch naming: `feature/ai-*`, `bugfix/ai-*`. Keep a session's PRs on one branch.
 - Trace frontier work keeps [docs/status/trace-frontier-log.md](docs/status/trace-frontier-log.md)
   current — when a frontier moves, a fix lands, a passing trace regresses, or a full
