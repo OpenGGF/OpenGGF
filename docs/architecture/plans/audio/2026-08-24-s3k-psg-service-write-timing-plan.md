@@ -5,10 +5,13 @@
 **Stopped after source-first diagnostics; do not execute Tasks 1-6.** Native
 full-prelude capture assigned the large delay to the 68K VBlank Z80 bus hold,
 and the relative-only prototype failed its predeclared PCM-improvement gate.
-No timing runtime from that prototype is part of the branch. The actual shipped
-playback correction is the bounded migration of the superseded paired audio
-chip defaults described in the design status and covered by configuration plus
-S3K audio regression tests.
+No timing runtime from that prototype is part of the branch. The paired audio
+default migration corrected old installed configuration, but a later listening
+gate proved it was not the complete Collapse fix. Final-speaker A/B evidence
+instead identified the generic GPGX `hq_psg=1` band-limited renderer setting;
+that separate correction is implemented and verified outside Tasks 1-6. See
+the design status and
+`docs/architecture/research/audio/s3k-collapse-final-pcm-hq-psg-v1.json`.
 
 > Execute this plan only on `bugfix/ai-s3k-sfx-tail-fidelity`. Do not merge or
 > push until the listening gate is positive.

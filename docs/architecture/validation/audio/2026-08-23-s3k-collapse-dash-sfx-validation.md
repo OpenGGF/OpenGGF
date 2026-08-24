@@ -35,6 +35,53 @@ production code. S1/S2 retain their existing modulation algorithms.
   - Collapse: `d85bbd997725b5804d5990cb222f13a1c367ce2e76b628ab5ec61c515d81c584`
   - Dash: `0b7d78978c85bc7c021789c333594b96f905bbf2e64f1b2b3921751f2af1e093`
 
+### Final-speaker correction after the listening gate
+
+The first listening package still ended Collapse too abruptly. A fresh native
+A/B capture added final presented PCM after GPGX's ordinary audio drain. The
+two 125-frame captures were byte-identical at SHA-256
+`5c6bfe3382749fa31137128a3bfd87d191da17d6ad33ece8c39d360e428ce7a3`
+with zero overflow/fault. Raw native PSG has RMS `44.695811` on frame 121
+and is exactly silent from frame 122. Final native PCM nevertheless decays with
+RMS `88.917`, `21.669`, `5.142`, `1.273` on frames 121-124. GPGX owns that
+tail through its globally selected `hq_psg=1` band-limited delta path; the
+global post-filter is `None`.
+
+OpenGGF already contained the matching HQ `PsgChip` path but no SMPS runtime
+selected it. The correction enables it in `SmpsDriver`, so S1, S2, and S3K all
+follow the same console-level GPGX setting. Sound_59 still executes five
+24-tick bursts and completes after the same 122 request-through-terminal
+updates. The aligned OpenGGF post-mute RMS is `76.086`, `18.124`, `4.291`,
+`1.064`; its decay ratios match the native response. Disabling HQ mode makes
+the final-PCM comparison fail before the mute, while the semantic lifetime
+test remains unchanged. The compact comparison-only evidence is
+`docs/architecture/research/audio/s3k-collapse-final-pcm-hq-psg-v1.json`.
+
+Fresh JDK 21 verification for this correction:
+
+```bash
+mvn -Dmse=off -Ds3k.rom.path="$S3K_ROM" \
+  -Dtest=TestS3kCollapseDashSfxParity,TestPsgChipGpgxParity test
+# 27 tests, 0 failures/errors/skips
+
+mvn -Dmse=off -Dsonic1.rom.path="$S1_ROM" \
+  -Dsonic2.rom.path="$S2_ROM" -Ds3k.rom.path="$S3K_ROM" \
+  -Dtest=TestS3kCollapseDashSfxParity,TestPsgChipGpgxParity,\
+TestPsgChipSnapshot,TestVirtualSynthesizerSnapshot,TestSmpsDriverSnapshot,\
+TestSmpsDriverYmWriteTimeline,TestAudioPresentationSnapshotParity,\
+TestSonic1UnifiedAudioPresentationRomIntegration,\
+TestSonic2UnifiedAudioPresentationRomIntegration,\
+TestSonic3kUnifiedAudioPresentationRomIntegration,\
+TestAudioPresentationAllocationBudget,TestSmpsSfxAdmissionAllocation test
+# 114 tests, 0 failures/errors/skips
+```
+
+All three ROM SHA-1s matched the project pins. As mutation evidence, changing
+the three `SmpsDriver` constructors back to fast mode made
+`collapseFinalPcmRetainsTheReferencePostMuteRingDown` fail on the first aligned
+native frame (`122.835` expected, `127.764` observed); restoring HQ returned the
+focused suite to green.
+
 ## Commands run
 
 All Maven commands used Maven 3.9.16 on JDK 21.0.11.

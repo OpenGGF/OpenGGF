@@ -11,19 +11,26 @@ source-derived relative PSG write gaps was then measured against the native
 component PCM and did not improve Collapse. The experimental runtime was
 removed rather than fitting an absolute delay from one capture.
 
-The decisive direct-chip comparison instead showed that the existing positive-
-edge PSG core already carries Collapse's five native bursts through frame 121
-at the native amplitude. The remaining user-visible mismatch came from old
-generated `config.yaml` files: releases before `a17438e67` persisted both
-`dacInterpolate: true` and `psgNoiseShiftEveryToggle: true`, so changing the
-registered defaults did not update an existing install. Collapse and Spindash
-Release both use PSG3 noise, making the stale every-toggle mode especially
-audible. The bounded fix is the one-time paired-default migration in
-`ConfigMigrationService`, not a production Z80/PSG scheduler.
+The decisive direct-chip comparison showed that the existing positive-edge PSG
+core carries Collapse's five native bursts through frame 121 at the native
+amplitude. A subsequent final-speaker capture separated the remaining issue:
+raw native PSG becomes silent on frame 122, but GPGX's band-limited output
+decays over four more output frames. BizHawk configures `hq_psg=1`; OpenGGF's
+SMPS runtime had left its otherwise compatible `PsgChip` in standalone fast
+mode. All SMPS drivers therefore select the existing HQ path. This changes the
+generic chip presentation, not Sound_59's lifetime, and adds no synthetic
+reverb. The comparison evidence is retained in
+`docs/architecture/research/audio/s3k-collapse-final-pcm-hq-psg-v1.json`.
+
+The one-time paired-default migration in `ConfigMigrationService` remains a
+separate correction for old generated `config.yaml` files that persisted
+`dacInterpolate: true` and `psgNoiseShiftEveryToggle: true`. Listening rejected
+that migration as the complete explanation for Collapse's ending.
 
 The rest of this document is retained as a rejected design record. It describes
 what exact absolute PSG placement would require if a future PCM-parity goal
-justifies reproducing the external VInt bus-arbitration owner.
+justifies reproducing the external VInt bus-arbitration owner. It is not needed
+for the band-limited renderer correction above.
 
 The scheduler fixes one systemic mismatch: OpenGGF currently publishes all PSG
 writes at the beginning of a host driver service, while the retail driver issues

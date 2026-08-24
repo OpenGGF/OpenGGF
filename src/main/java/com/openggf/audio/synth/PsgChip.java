@@ -81,7 +81,7 @@ public class PsgChip {
     private int clocks = 0;  // Integer for drift-free timing
     private long clockFrac = 0;
     private long clocksPerSampleFixed = 0;
-    private boolean hqPsg = false;  // false = fast mode (rawer/brighter, GPGX default), true = HQ sinc filter
+    private boolean hqPsg = false;  // Standalone default; SMPS selects GPGX's HQ band-limited path.
     private boolean noiseShiftOnEveryToggle = false; // GPGX/libvgm positive-edge reference default
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
     private ChipPcmDiagnosticTap pcmDiagnosticTap = ChipPcmDiagnosticTap.NONE;

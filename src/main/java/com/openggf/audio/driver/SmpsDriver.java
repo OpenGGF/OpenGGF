@@ -524,15 +524,18 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     public SmpsDriver() {
         super();
+        setPsgHqMode(true);
     }
 
     public SmpsDriver(double outputSampleRate) {
         super(outputSampleRate);
+        setPsgHqMode(true);
     }
 
     public SmpsDriver(
             double outputSampleRate, ChipWriteObserver observer) {
         super(outputSampleRate, observer);
+        setPsgHqMode(true);
         nextYmWriteOrdinal = nextCommittedYmWriteOrdinal();
     }
 

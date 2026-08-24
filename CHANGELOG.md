@@ -1,13 +1,21 @@
 # Changelog
 
+- **SMPS PSG output now uses the reference band-limited renderer:** BizHawk's
+  Genesis Plus GX core runs the console with `hq_psg=1`, while OpenGGF's SMPS
+  drivers had left the chip in its standalone fast mode. Native final-speaker
+  captures showed that S3K Collapse ends at the same semantic frame in both
+  engines but retains the PSG filter's decaying waveform after the final mute.
+  All three SMPS dialects now select the existing HQ path, restoring that
+  texture without extending Sound_59 or adding effect-specific reverb.
+
 - **Existing installs now receive the reference audio-chip defaults:** older
   generated `config.yaml` files persisted DAC interpolation and MAME-style
   every-toggle PSG noise as an all-true pair, which overrode later default
   corrections forever. That exact legacy pair is migrated once to raw DAC
   steps and GPGX/libvgm positive-edge PSG noise; asymmetric user choices remain
-  untouched. This restores the intended noise texture and decay of effects such
-  as S3K Collapse and Spindash Release without sound-specific reverb or timing
-  constants.
+  untouched. This corrects a separate installed-configuration mismatch for
+  noise effects such as S3K Collapse and Spindash Release without
+  sound-specific constants.
 
 - **S3K audio parity can now be localized through exact PCM boundaries:** a
   diagnostic-only path records YM2612 stereo mix samples, held DAC codes, PSG

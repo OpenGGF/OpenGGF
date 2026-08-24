@@ -3,11 +3,21 @@ package com.openggf.audio.driver;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.YmServiceTimingProfile;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.presentation.AudioPresentationCommand;
+import com.openggf.audio.presentation.AudioPresentationMixer;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioVoiceRegistry;
+import com.openggf.audio.presentation.DecodedPcmCache;
+import com.openggf.audio.presentation.SmpsAssetKey;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
+import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -48,6 +58,115 @@ class TestS3kCollapseDashSfxParity {
                 "the terminal EC +3 reaches native silence before F2");
         assertEquals(122, frames,
                 "request/load frame plus five 24-tick bursts match the Z80 lifecycle");
+    }
+
+    @Test
+    void collapsePsgTailSurvivesTheAuthoritativePresentationPipeline() {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
+                TestEnvironment.currentRom());
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        handlers.register("s3k", Sonic3kCoordFlagHandler::new);
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(
+                        () -> true, handlers,
+                        new AudioPresentationSourceFactory.Settings(
+                                44_100, SmpsSequencer.Region.NTSC,
+                                false, false, false, false, 1,
+                                AudioManager.getInstance(),
+                                new DecodedPcmCache(), ignored -> null));
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { });
+        registry.apply(new AudioPresentationCommand.ReplaceMusic(
+                factory.musicSmps(
+                        "s3k", Sonic3kMusic.SPECIAL_STAGE.id, 1,
+                        loader.loadMusic(Sonic3kMusic.SPECIAL_STAGE.id),
+                        loader.loadDacData(), Sonic3kSmpsSequencerConfig.CONFIG,
+                        com.openggf.audio.rewind.AudioSourceDescriptor
+                                .baseMusic(Sonic3kMusic.SPECIAL_STAGE.id),
+                        735)));
+        SmpsAssetKey key = new SmpsAssetKey(
+                "s3k", SmpsAssetKey.Route.BASE_ID,
+                Sonic3kSfx.COLLAPSE.id, null);
+        factory.registerSmpsSfxAsset(
+                key, loader.loadSfx(Sonic3kSfx.COLLAPSE.id),
+                loader.loadDacData(), Sonic3kSmpsSequencerConfig.CONFIG);
+        registry.apply(new AudioPresentationCommand.AddSmpsSfx(
+                factory.resolveSmpsSfx(
+                        2, key, 1 << 16, 0x70, 0, 4, 735)));
+
+        AudioPresentationMixer mixer = new AudioPresentationMixer(735);
+        for (int frame = 0; frame <= 120; frame++) {
+            registry.beginRendering();
+            try {
+                mixer.mix(registry, 735);
+            } finally {
+                registry.endRendering();
+            }
+            SmpsDriver owner = ((com.openggf.audio.presentation.SmpsCompositeVoice)
+                    registry.orderedVoiceAt(0)).driver();
+            long activeSfx = owner.captureSnapshot().sequencers().stream()
+                    .filter(snapshot -> snapshot.sfx()).count();
+            assertEquals(1, activeSfx,
+                    "presentation removed Collapse before its PSG tail at frame "
+                            + frame);
+        }
+    }
+
+    @Test
+    void smpsDriversUseTheBizhawkReferenceHqPsgRenderer() {
+        Fixture fixture = fixture(Sonic3kSfx.COLLAPSE);
+
+        assertTrue(fixture.driver.captureSnapshot().synthSnapshot()
+                        .psg().hqPsg(),
+                "BizHawk GPGX configures hq_psg=1; the fast renderer drops "
+                        + "Collapse's final band-limited ring-down at mute");
+    }
+
+    @Test
+    void collapseFinalPcmRetainsTheReferencePostMuteRingDown() {
+        Fixture fixture = fixture(Sonic3kSfx.COLLAPSE);
+        SmpsDriver silent = new SmpsDriver(44_100.0);
+        double[] rms = new double[126];
+        for (int frame = 0; frame < rms.length; frame++) {
+            short[] pcm = new short[735 * 2];
+            short[] baseline = new short[735 * 2];
+            fixture.driver.read(pcm);
+            silent.read(baseline);
+            double squares = 0;
+            for (int sample = 0; sample < pcm.length; sample++) {
+                double delta = pcm[sample] - baseline[sample];
+                squares += delta * delta;
+            }
+            rms[frame] = Math.sqrt(squares / pcm.length);
+        }
+
+        assertTrue(rms[122] > 10.0,
+                "the native HQ PSG filter retains audible energy after mute");
+        String diagnostic = java.util.Arrays.toString(
+                java.util.Arrays.copyOfRange(rms, 118, 126));
+        assertTrue(rms[123] > 1.0 && rms[123] < rms[122], diagnostic);
+        assertTrue(rms[124] > 0.1 && rms[124] < rms[123], diagnostic);
+        assertTrue(rms[125] < rms[124], diagnostic);
+
+        double[] nativeActiveRms = {122.835, 124.576, 128.477, 129.363};
+        for (int i = 0; i < nativeActiveRms.length; i++) {
+            assertEquals(nativeActiveRms[i], rms[118 + i], 2.0,
+                    "aligned final-PCM RMS before the native mute at frame "
+                            + (118 + i));
+        }
+
+        // Comparison-only native final-PCM evidence is retained in
+        // s3k-collapse-final-pcm-hq-psg-v1.json. OpenGGF's request boundary is
+        // one presentation frame later, but the HQ filter's decay ratios must
+        // follow the same impulse response rather than extending Sound_59.
+        double[] nativeRms = {88.917, 21.669, 5.142, 1.273};
+        double[] actualRms = {rms[122], rms[123], rms[124], rms[125]};
+        for (int i = 1; i < actualRms.length; i++) {
+            assertEquals(nativeRms[i] / nativeRms[i - 1],
+                    actualRms[i] / actualRms[i - 1], 0.02,
+                    "post-mute decay ratio at tail sample " + i);
+        }
     }
 
     @Test
