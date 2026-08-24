@@ -17,6 +17,7 @@ public interface YmServiceTimingProfile {
         FM_VOICE_UPLOAD,
         TRACK_PAN_WRITE,
         KEY_OFF,
+        TRACK_STOP_KEY_OFF,
         FREQUENCY_AND_KEY_ON,
         COMPLETION_RESTORE
     }
@@ -25,6 +26,7 @@ public interface YmServiceTimingProfile {
         FIRST_ADMISSION,
         FIRST_VOICE_ATTACK,
         ORDINARY_NOTE,
+        TRACK_STOP,
         COMPLETION_RESTORE
     }
 

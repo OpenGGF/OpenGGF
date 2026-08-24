@@ -244,3 +244,36 @@ prepared admission and contention controls: 75/75 green
 expanded architecture, timeline, rewind/snapshot, admission, and all-game
 presentation selector: 179/179 green
 ```
+
+### 2026-08-24 single-request FM track-stop correction
+
+The later report that a single Collapse request still lost its final decay was
+reproduced without the earlier three-block route. The headless regression boots
+AIZ1 with Tails as the main character and the intro skipped, places Tails at
+debug-HUD top-left position `6517,933` in an air roll, and lets him fall without
+input. The ROM-backed `AIZLRZEMZRock` at `$1980,$0424` breaks at headless frame
+27; the spring below launches Tails later at frame 63.
+
+This isolated the remaining fault to FM track termination, not PSG noise. A
+native locked-on trace showed that `cfStopTrack` enters at Z80 PC `$0D87`, then
+executes 181 Z80 T-states before its YM2612 key-off data write: 2715 master
+cycles at the established 15:1 ratio. OpenGGF had performed the key-off at the
+driver-service boundary, prematurely advancing the YM envelope release. The
+source calculation is now retained in
+`s3k-ym-write-timing-calculation-v1.json`; it covers the exact shipped
+`fix_sndbugs=0` path and both YM ports.
+
+The implementation adds one generic locked-on `TRACK_STOP_KEY_OFF` timing
+segment. It is selected by the S3K timing profile for eligible FM track stops;
+there is no sound ID, AIZ, object, position, or route predicate. FM5 music
+restoration remains a distinct, subsequently ordered `COMPLETION_RESTORE`
+segment, so the source key-off is neither duplicated nor folded into the voice
+upload. S1 and S2 retain their existing immediate/none-profile behaviour.
+
+The real headless test observes Collapse's three terminal key-offs on frames
+45, 46, and 47 (`break + 18/+19/+20`), verifies non-zero presented PCM through
+four subsequent packets, and independently proves that the later spring still
+launches Tails. Focused JDK 21 verification with the authenticated S3K ROM ran
+33 tests with zero failures, errors, or skips. The expanded all-three-ROM
+timing, rewind, architecture, presentation, and real-headless selector ran 150
+tests with zero failures, errors, or skips.

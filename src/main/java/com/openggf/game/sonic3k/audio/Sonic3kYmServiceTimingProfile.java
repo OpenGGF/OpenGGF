@@ -17,6 +17,7 @@ public final class Sonic3kYmServiceTimingProfile {
             MAX_LOCKED_ON_SFX_TRACKS * MAX_HARDWARE_ATTEMPTS_PER_TRACK;
     private static final long[] MAX_RELEASE = { 0, 3_150, 3_150, 3_150 };
     private static final long[] FREQUENCY_AND_KEY_ON = { 0, 2_700, 2_880 };
+    private static final long[] TRACK_STOP_KEY_OFF = { 2_715 };
     public static final YmServiceTimingProfile PROFILE = create();
 
     private Sonic3kYmServiceTimingProfile() {
@@ -58,6 +59,10 @@ public final class Sonic3kYmServiceTimingProfile {
             segments.add(new Segment(SegmentKind.COMPLETION_RESTORE,
                     restore, completionRestore(carrierMask)));
         }
+        for (int port = 0; port <= 1; port++) {
+            segments.add(new Segment(SegmentKind.TRACK_STOP_KEY_OFF,
+                    trackStop(port), TRACK_STOP_KEY_OFF));
+        }
         // Sound_59 (Collapse) and Sound_66 (All Spheres Collected) are the
         // largest shipped locked-on headers at four tracks. The complete SFX
         // owner service is transactional, so reserve every sibling track at
@@ -85,13 +90,17 @@ public final class Sonic3kYmServiceTimingProfile {
 
     private static long[] completionRestore(int carrierMask) {
         long[] voice = voiceUpload(carrierMask);
-        long[] restore = new long[voice.length + 1];
-        restore[0] = 0;
+        long[] restore = new long[voice.length];
         // cfStopTrack's shipped fix_sndbugs=0 positive-voice FM5 path performs
         // the channel lookup and bank switch before zSendFMInstrument.
-        restore[1] = 16_170;
-        System.arraycopy(voice, 1, restore, 2, voice.length - 1);
+        restore[0] = 16_170;
+        System.arraycopy(voice, 1, restore, 1, voice.length - 1);
         return restore;
+    }
+
+    static Variant trackStop(int port) {
+        return new Variant(port, 4, false, false, 0, 0,
+                PathKind.TRACK_STOP);
     }
 
     private static long[] withLeadingAdvance(long leading, long[] advances) {

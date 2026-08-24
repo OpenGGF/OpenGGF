@@ -1736,6 +1736,27 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             return true;
         }
 
+        int keyOffChannel = channel < 3 ? channel : channel + 1;
+        YmServiceTimingProfile profile = timingProfileFor(sequencer);
+        YmServiceTimingProfile.Variant stopVariant =
+                new YmServiceTimingProfile.Variant(
+                        channel < 3 ? 0 : 1, 4, false, false,
+                        0, 0, YmServiceTimingProfile.PathKind.TRACK_STOP);
+        boolean timedTrackStop = profile.supports(
+                YmServiceTimingProfile.SegmentKind.TRACK_STOP_KEY_OFF,
+                stopVariant);
+        if (timedTrackStop) {
+            try (Synthesizer.YmTimingScope ignored = beginYmTiming(
+                    sequencer,
+                    YmServiceTimingProfile.SegmentKind.TRACK_STOP_KEY_OFF,
+                    stopVariant)) {
+                publishAuthorizedFmWrite(
+                        sequencer, 0, 0x28, keyOffChannel);
+            }
+        } else {
+            publishAuthorizedFmWrite(sequencer, 0, 0x28, keyOffChannel);
+        }
+
         if (channel == 4) {
             YmServiceTimingProfile.Variant restoreVariant = null;
             for (SmpsSequencer candidate : sequencers) {
@@ -1747,23 +1768,18 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     }
                 }
             }
-            YmServiceTimingProfile profile = timingProfileFor(sequencer);
             if (restoreVariant != null && profile.supports(
-                    YmServiceTimingProfile.SegmentKind.COMPLETION_RESTORE,
-                    restoreVariant)) {
+                        YmServiceTimingProfile.SegmentKind.COMPLETION_RESTORE,
+                        restoreVariant)) {
                 try (Synthesizer.YmTimingScope ignored = beginYmTiming(
                         sequencer,
                         YmServiceTimingProfile.SegmentKind.COMPLETION_RESTORE,
                         restoreVariant)) {
-                    publishAuthorizedFmWrite(sequencer, 0, 0x28, 0x05);
                     releaseStoppedFmOwnership(sequencer, channel);
                 }
                 return true;
             }
         }
-
-        int keyOffChannel = channel < 3 ? channel : channel + 1;
-        publishAuthorizedFmWrite(sequencer, 0, 0x28, keyOffChannel);
         releaseStoppedFmOwnership(sequencer, channel);
         return true;
     }

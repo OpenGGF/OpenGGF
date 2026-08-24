@@ -1,5 +1,15 @@
 # Changelog
 
+- **S3K FM sound effects retain the shipped track-stop decay:** locked-on
+  `cfStopTrack` spends 181 Z80 T-states between entering the terminal path and
+  writing the YM2612 key-off. OpenGGF previously keyed each FM track off at the
+  driver-service boundary, shortening the final envelope release. Track stops
+  now preserve that source-derived delay for all eligible S3K FM effects while
+  keeping completion restoration in its own ordered scope. A real AIZ1
+  headless regression starts Tails at debug-HUD position `6517,933` in an air
+  roll, breaks the ROM-backed rock, verifies Collapse's three staggered
+  key-offs and presented-PCM tail, and then observes the later spring launch.
+
 - **Repeated PSG effects now overwrite the shared SFX track without exposing
   music between requests:** a real AIZ native trace showed Collapse requested
   three times about 61–62 frames apart while its five-burst PSG3 tail was still

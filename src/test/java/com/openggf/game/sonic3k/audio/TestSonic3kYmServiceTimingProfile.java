@@ -40,7 +40,7 @@ class TestSonic3kYmServiceTimingProfile {
     private static final Pattern SOURCE_ROW = Pattern.compile(
             "Z80 Sound Driver\\.asm:(\\d+)(?:-(\\d+))?");
     private static final String SOURCE_ROW_DIGEST =
-            "e345a0148cb5e284b36a0572facc2b8bfd7f5e4de5b1a2e58c3f07cf038a7e4f";
+            "3ed86743a9d06911b209d72ef5c1ce385fd9a0461498c55d1398b9806ea82471";
     private static final Map<String, Integer> AUTHORITATIVE_T_STATES = Map.ofEntries(
             Map.entry("NOP", 4),
             Map.entry("RET", 10),
@@ -140,6 +140,12 @@ class TestSonic3kYmServiceTimingProfile {
                 advances(profile, SegmentKind.KEY_OFF, BLUE_SPHERE));
         assertArrayEquals(new long[] { 30_630, 2_700, 2_880 },
                 advances(profile, SegmentKind.FREQUENCY_AND_KEY_ON, BLUE_SPHERE));
+        assertArrayEquals(new long[] { 2_715 },
+                advances(profile, SegmentKind.TRACK_STOP_KEY_OFF,
+                        Sonic3kYmServiceTimingProfile.trackStop(0)));
+        assertArrayEquals(new long[] { 2_715 },
+                advances(profile, SegmentKind.TRACK_STOP_KEY_OFF,
+                        Sonic3kYmServiceTimingProfile.trackStop(1)));
     }
 
     @Test
@@ -256,10 +262,10 @@ class TestSonic3kYmServiceTimingProfile {
                         findSegment(root, "blue-sphere-frequency-key-on")
                                 .path("writes"))));
         assertArrayEquals(new long[] {
-                0, 16170, 19395, 23160, 26730, 30300, 33870, 37440,
-                41010, 44580, 48150, 51720, 55290, 58860, 62430,
-                66000, 69570, 73140, 76710, 80280, 83850, 87420,
-                90990, 96135, 99675, 103215, 107040 }, cumulative(
+                0, 3225, 6990, 10560, 14130, 17700, 21270,
+                24840, 28410, 31980, 35550, 39120, 42690, 46260,
+                49830, 53400, 56970, 60540, 64110, 67680, 71250,
+                74820, 79965, 83505, 87045, 90870 }, cumulative(
                 derivedAdvances(root, clock,
                         findSegment(root, "blue-sphere-completion-restore")
                                 .path("writes"))));
@@ -272,7 +278,9 @@ class TestSonic3kYmServiceTimingProfile {
                 findSegment(root, "blue-sphere-key-off")));
         assertEquals(30630, crossSegmentAdvance(root, clock,
                 findSegment(root, "blue-sphere-frequency-key-on")));
-        assertEquals(0, crossSegmentAdvance(root, clock,
+        assertEquals(2715, crossSegmentAdvance(root, clock,
+                findSegment(root, "locked-on-fm-track-stop")));
+        assertEquals(16170, crossSegmentAdvance(root, clock,
                 findSegment(root, "blue-sphere-completion-restore")));
     }
 

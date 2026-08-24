@@ -281,22 +281,29 @@ class TestS3kCollapseDashSfxParity {
         FmTrackTimeline timeline = fmTrackTimeline(
                 Sonic3kSfx.COLLAPSE, 20);
         assertEquals(List.of(1, 2, 3), timeline.keyOnFrames);
-        assertEquals(List.of(17, 18, 19), timeline.keyOffFrames);
+        assertEquals(List.of(18, 19, 20), timeline.keyOffFrames,
+                "sub-frame cfStopTrack execution moves each hardware key-off "
+                        + "into the following output packet");
         assertEquals(List.of(
                         0x284, 0x284, 0x2A4, 0x2C4,
                         0x2A4, 0x284, 0x264, 0x244,
                         0x264, 0x284, 0x2A4, 0x2C4,
-                        0x2A4, 0x284, 0x264, 0x244),
+                        0x2A4, 0x284, 0x264, 0x244, 0x244),
                 timeline.frequencies.get(3));
         assertEquals(List.of(
                         0xB2D, 0xB2D, 0xB4D, 0xB6D,
                         0xB4D, 0xB2D, 0xB0D, 0xAED,
                         0xB0D, 0xB2D, 0xB4D, 0xB6D,
-                        0xB4D, 0xB2D, 0xB0D, 0xAED),
+                        0xB4D, 0xB2D, 0xB0D, 0xB0D, 0xAED),
                 timeline.frequencies.get(4));
-        assertEquals(timeline.frequencies.get(4),
+        assertEquals(List.of(
+                        0xB2D, 0xB2D, 0xB4D, 0xB6D,
+                        0xB4D, 0xB2D, 0xB0D, 0xAED,
+                        0xB0D, 0xB2D, 0xB4D, 0xB6D,
+                        0xB4D, 0xB2D, 0xB0D, 0xAED, 0xAED),
                 timeline.frequencies.get(2),
-                "FM3 follows the same four-step wobble one VInt after FM5");
+                "FM3 runs the same wobble one VInt after FM5 and retains "
+                        + "its own terminal value until its delayed key-off");
     }
 
     @Test
@@ -319,11 +326,14 @@ class TestS3kCollapseDashSfxParity {
     void dashFmModulationAndTerminalMatchNative() {
         FmTrackTimeline timeline = fmTrackTimeline(Sonic3kSfx.DASH, 18);
         assertEquals(List.of(2), timeline.keyOnFrames);
-        assertEquals(List.of(16), timeline.keyOffFrames);
+        assertEquals(List.of(17), timeline.keyOffFrames,
+                "sub-frame cfStopTrack execution moves the hardware key-off "
+                        + "into the following output packet");
         assertEquals(List.of(
                         0x32B7, 0x327C, 0x3241, 0x3206,
                         0x31CB, 0x3190, 0x3155, 0x311A, 0x30DF,
-                        0x30A4, 0x3069, 0x302E, 0x3069, 0x30A4),
+                        0x30A4, 0x3069, 0x302E, 0x3069, 0x30A4,
+                        0x30A4),
                 timeline.frequencies.get(4));
     }
 
@@ -452,8 +462,41 @@ class TestS3kCollapseDashSfxParity {
 
     @Test
     void fm5KeysOffWhenItsTrackEndsBeforeThePsgSibling() {
-        assertFm5KeyOffFrame(Sonic3kSfx.COLLAPSE, 18);
-        assertFm5KeyOffFrame(Sonic3kSfx.DASH, 16);
+        assertFm5KeyOffFrame(Sonic3kSfx.COLLAPSE, 19);
+        assertFm5KeyOffFrame(Sonic3kSfx.DASH, 17);
+    }
+
+    @Test
+    void collapseTerminalKeyOffsRetainCfStopTrackExecutionTime() {
+        Fixture fixture = fixture(Sonic3kSfx.COLLAPSE);
+        List<Long> terminalOffsets = new ArrayList<>();
+        int observedWrites = 0;
+        for (int frame = 0; frame < 24; frame++) {
+            long frameStart = fixture.driver.masterCycle();
+            fixture.driver.read(new short[735 * 2]);
+            List<TimedYmWrite> writes = fixture.observer.timedYmWrites();
+            for (int index = observedWrites; index < writes.size(); index++) {
+                TimedYmWrite write = writes.get(index);
+                if (frame >= 10 && write.port == 0
+                        && write.register == 0x28
+                        && (write.value == 2 || write.value == 4
+                        || write.value == 5)) {
+                    terminalOffsets.add(write.masterCycle - frameStart);
+                }
+            }
+            observedWrites = writes.size();
+        }
+
+        assertEquals(3, terminalOffsets.size());
+        for (long offset : terminalOffsets) {
+            assertEquals(2_016, offset,
+                    "cfStopTrack reaches zKeyOffIfActive after 181 Z80 "
+                            + "T-states from the service cursor; relative to "
+                            + "the next output packet's already-advanced "
+                            + "1008-cycle frontier, the chip callback is "
+                            + "observed at 2016 master cycles: "
+                            + terminalOffsets);
+        }
     }
 
     @Test
