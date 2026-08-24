@@ -231,6 +231,8 @@ recorded hardware traces.
   Sonic 3 & Knuckles has a growing playable vertical slice centered on
   Angel Island and Hydrocity, with substantial work across later zones and
   bonus stages.
+- **AIZ presentation continuity:** the Angel Island fire curtain now remains
+  continuous across exact art-loading seams in normal play and trace renders.
 - **ROM-accurate gameplay systems:** physics, subpixel movement, sensors,
   collision, solid objects, water, camera behavior, title cards, level events,
   bosses, badniks, sidekicks, Super Sonic, and cross-game feature donation are

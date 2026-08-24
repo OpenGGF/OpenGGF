@@ -528,10 +528,20 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             };
         }
 
-        /** True for act 1 phases where the fire overlay wraps (loops) tiles. */
+        /**
+         * True while the ROM is still drawing the fire plane as part of the
+         * continuation.  AIZ2BGE_FireRedraw and AIZ2BGE_WaitFire continue the
+         * AIZ1 fire rise and draw rows before WaitFire releases the effect
+         * (sonic3k.asm:105036-105105).  The VDP plane wraps during that
+         * interval, including when exact art-loading timing leaves the carried
+         * fire position beyond the original $310 fire-zone boundary.  The
+         * post-release AIZ2_BG_REDRAW phase intentionally remains unwrapped so
+         * the curtain can scroll off naturally.
+         */
         boolean wrapFireTiles() {
             return switch (this) {
-                case AIZ1_FIRE_TRANSITION, AIZ1_FIRE_REFRESH, AIZ1_FINISH -> true;
+                case AIZ1_FIRE_TRANSITION, AIZ1_FIRE_REFRESH, AIZ1_FINISH,
+                     AIZ2_FIRE_REDRAW, AIZ2_WAIT_FIRE -> true;
                 default -> false;
             };
         }

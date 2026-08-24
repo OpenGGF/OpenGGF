@@ -1,8 +1,12 @@
 package com.openggf.game.sonic3k.features;
 
+import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.FireCurtainStage;
+import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -207,6 +211,30 @@ public class TestAizFireCurtainRenderer {
     }
 
     @Test
+    public void act2ContinuationWrapsCachedCurtainAfterLongFinishWait() throws Exception {
+        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
+        markCachedFireDescriptors(renderer);
+
+        for (int phaseOrdinal : new int[] {4, 5}) {
+            events.setFireSequencePhaseOrdinal(phaseOrdinal);
+            events.setFireBgCopyFixed(0x0400_0000);
+            events.setFireTransitionFrames(240);
+            events.setFireOverlayTileCount(121);
+
+            FireCurtainRenderState state = events.getFireCurtainRenderState(224);
+            assertTrue(state.active(), "AIZ2 continuation phase must keep the curtain active");
+            assertTrue(state.wrapFireTiles(),
+                    "AIZ2 fire continuation must wrap the cached curtain while FireRedraw/WaitFire is active");
+
+            AizFireCurtainRenderer.CurtainCompositionPlan plan =
+                    renderer.buildCompositionPlan(state, 320, 224);
+            assertFalse(plan.columns().isEmpty(),
+                    "AIZ2 continuation must render cached fire tiles after the rise crosses the fire-zone boundary");
+        }
+    }
+
+    @Test
     public void act2ContinuationWithoutCachedDescriptorsFailsClosed() {
         AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
         FireCurtainRenderState redraw = new FireCurtainRenderState(
@@ -225,6 +253,21 @@ public class TestAizFireCurtainRenderer {
         assertTrue(plan.columns().isEmpty(),
                 "Act 2 continuation must use cached ROM descriptors, not synthetic overlay tiles");
     }
-}
 
+    private static void markCachedFireDescriptors(AizFireCurtainRenderer renderer) throws Exception {
+        Field descriptors = AizFireCurtainRenderer.class.getDeclaredField("cachedFireDescriptors");
+        descriptors.setAccessible(true);
+        int[][] cached = new int[66][40];
+        for (int row = 0; row < cached.length; row++) {
+            for (int column = 0; column < cached[row].length; column++) {
+                cached[row][column] = (3 << 13) | 0x500;
+            }
+        }
+        descriptors.set(renderer, cached);
+
+        Field cachedFlag = AizFireCurtainRenderer.class.getDeclaredField("fireDescriptorsCached");
+        cachedFlag.setAccessible(true);
+        cachedFlag.setBoolean(renderer, true);
+    }
+}
 

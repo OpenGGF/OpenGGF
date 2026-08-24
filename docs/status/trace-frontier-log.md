@@ -114660,3 +114660,42 @@ The other three death arms remain coordinates only.
   space`, `OutOfMemoryError`, fork death, crash, or LWJGL extraction collision;
   isolation was `worktree-session` / `per-surefire-fork`.
 - Session manifest: `<managed-scratch>/tasks/openggf-test-session-20260823T211021Z-3266273-d4e5fd7e/20260823T211021Z-p3266217-7e394f/manifest.json`.
+
+## 2026-08-24 - AIZ fire curtain continuity across the exact-load seam
+
+- Worktree: `.worktrees/bugfix-ai-aiz-fire-curtain-visual-gap`, branch
+  `bugfix/ai-aiz-fire-curtain-visual-gap`, candidate over `941879ad0`.
+- Root: exact art-loading timing can carry the ROM's fire-rise position beyond
+  the AIZ fire-zone end (`$310`) while `AIZ2BGE_FireRedraw` and
+  `AIZ2BGE_WaitFire` are still drawing the continuation
+  (`docs/skdisasm/sonic3k.asm:105036-105105`). The renderer previously disabled
+  VDP-style wrapping for both phases, producing a nine-frame visual gap before
+  `WaitFire` reseated the position. The phase predicate now keeps wrapping for
+  those two active ROM phases; `AIZ2_BG_REDRAW` remains unwrapped so the
+  released curtain scrolls off naturally. No timing delay, trace input, or
+  gameplay value was added.
+- Focused regression command through the certifying test-session wrapper:
+  `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic3k.features.TestAizFireCurtainRenderer test`.
+  Result after the fix: 10 tests, 0 failures, 0 errors, 0 skipped. The
+  pre-fix regression failed because the AIZ2 continuation state reported
+  `wrapFireTiles=false`.
+- AIZ event/renderer/ROM/headless command selected
+  `TestAizFireCurtainRenderer`, `TestAizTransitionRenderFeature`,
+  `TestSonic3kAIZEvents`, `TestAizFireCurtainRendererRom`, and
+  `TestS3kAiz1FireCurtainHeadless`: 77 tests, 0 failures, 2 errors. The two
+  errors are the unchanged baseline `AIZ fire continuation has no prepared
+  fire-overlay payload` setup failures in the headless class; the 75 other
+  tests pass.
+- AIZ replay command through the certifying wrapper:
+  `mvn -Dmse=off
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace
+  -Dsurefire.argLine='-Xshare:off -Xmx6g' test`. Result: 1 test, still the
+  established red frontier with 37 errors and 0 warnings; first error remains
+  frame `20713`, field `air` (expected `0`, actual `1`). The curtain-only change
+  does not alter replay gameplay or timing progress.
+- Post-fix capture command used `TraceCaptureTool` on
+  `s3k/aiz1_to_hcz_fullrun`: 20,461 frames were captured; the wrapper exits at
+  the known trace-prefix boundary with pending KosM ordinals 38-41. The
+  formerly empty capture window (frames 5206-5214) is continuously covered in
+  the new render; no fixture data changed.
