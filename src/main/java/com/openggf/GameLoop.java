@@ -4389,7 +4389,8 @@ public class GameLoop {
 
         SpecialStageInputMapper.MappedInput mapped =
                 SpecialStageInputMapper.map(inputHandler.logical());
-        ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+        ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed(),
+                inputHandler.isShiftDown(), inputHandler.isControlDown());
         ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
     }
 

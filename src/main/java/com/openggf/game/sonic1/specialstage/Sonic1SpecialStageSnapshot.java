@@ -49,6 +49,8 @@ final class Sonic1SpecialStageSnapshot {
     final int exitFadeTimer;
     final int heldButtons;
     final int pressedButtons;
+    final boolean debugSpeedUp;
+    final boolean debugSlowDown;
     final int bgAnimState;
     final boolean bgUsingPlane6;
     final int fgAnimPlaneIndex;
@@ -109,6 +111,8 @@ final class Sonic1SpecialStageSnapshot {
             int exitFadeTimer,
             int heldButtons,
             int pressedButtons,
+            boolean debugSpeedUp,
+            boolean debugSlowDown,
             int bgAnimState,
             boolean bgUsingPlane6,
             int fgAnimPlaneIndex,
@@ -167,6 +171,8 @@ final class Sonic1SpecialStageSnapshot {
         this.exitFadeTimer = exitFadeTimer;
         this.heldButtons = heldButtons;
         this.pressedButtons = pressedButtons;
+        this.debugSpeedUp = debugSpeedUp;
+        this.debugSlowDown = debugSlowDown;
         this.bgAnimState = bgAnimState;
         this.bgUsingPlane6 = bgUsingPlane6;
         this.fgAnimPlaneIndex = fgAnimPlaneIndex;

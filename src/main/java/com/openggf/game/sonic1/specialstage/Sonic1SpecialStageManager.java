@@ -53,6 +53,7 @@ public final class Sonic1SpecialStageManager {
     private static final int ANIM_NONE = 0;
     private static final int ANIM_RING_SPARKLE = 1;
     private static final int ANIM_BUMPER = 2; // SS_AniBumper (ss_ani_id=2)
+    private static final int ANIM_REVERSE = 4; // SS_AniReverse (ss_ani_id=4)
     private static final int ANIM_GLASS_BLOCK = 6;
     private static final int ANIM_EMERALD_SPARKLE = 5; // SS_AniEmeraldSparks (ss_ani_id=5)
     private static final int[] ANIM_RING_SPARKLE_DATA = {0x42, 0x43, 0x44, 0x45, 0};
@@ -77,6 +78,9 @@ public final class Sonic1SpecialStageManager {
      */
     private static final int[] ANIM_BUMPER_DATA = {0x32, 0x33, 0x32, 0x33, 0};
     private static final int ANIM_BUMPER_PERIOD = 8; // 7+1 frames per step (ROM: move.b #7,ss_ani_delay(a0))
+    // SS_AniRevData (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:433)
+    private static final int[] ANIM_REVERSE_DATA = {0x2B, 0x31, 0x2B, 0x31, 0};
+    private static final int ANIM_REVERSE_PERIOD = 8; // 7+1 frames per step (ROM: move.b #7,ss_ani_delay(a0))
 
     // byte_4A3C: SS BG state table (32 entries, 4 fields each)
     // {time, anim, bgPlaneSelect (0=Plane_6, 1=Plane_5), palette-cycle selector byte}
@@ -204,6 +208,8 @@ public final class Sonic1SpecialStageManager {
     // Input state (set by handleInput, consumed by update)
     private int heldButtons;
     private int pressedButtons;
+    private boolean debugSpeedUp;
+    private boolean debugSlowDown;
 
     // BG animation state (SS_BGAnimate from sonic.asm)
     private int bgAnimState;           // v_ssbganim (0,2,4,6,8,10,12)
@@ -340,6 +346,8 @@ public final class Sonic1SpecialStageManager {
         // Clear input
         heldButtons = 0;
         pressedButtons = 0;
+        debugSpeedUp = false;
+        debugSlowDown = false;
 
         this.initialized = true;
         LOGGER.info("Special Stage " + (currentStage + 1) + " initialized");
@@ -440,19 +448,20 @@ public final class Sonic1SpecialStageManager {
     }
 
     private void processDebugMove() {
+        int moveSpeed = getDebugMoveSpeed();
         if ((heldButtons & INPUT_LEFT) != 0) {
-            sonicPosX -= (long) DEBUG_MOVE_SPEED << 16;
+            sonicPosX -= (long) moveSpeed << 16;
             sonicFacingLeft = true;
         }
         if ((heldButtons & INPUT_RIGHT) != 0) {
-            sonicPosX += (long) DEBUG_MOVE_SPEED << 16;
+            sonicPosX += (long) moveSpeed << 16;
             sonicFacingLeft = false;
         }
         if ((heldButtons & INPUT_UP) != 0) {
-            sonicPosY -= (long) DEBUG_MOVE_SPEED << 16;
+            sonicPosY -= (long) moveSpeed << 16;
         }
         if ((heldButtons & INPUT_DOWN) != 0) {
-            sonicPosY += (long) DEBUG_MOVE_SPEED << 16;
+            sonicPosY += (long) moveSpeed << 16;
         }
 
         // Keep movement deterministic when leaving debug mode.
@@ -461,6 +470,17 @@ public final class Sonic1SpecialStageManager {
         sonicInertia = 0;
         sonicAirborne = true;
         lastCollisionBlockId = 0;
+    }
+
+    private int getDebugMoveSpeed() {
+        double multiplier = 1.0;
+        if (debugSpeedUp) {
+            multiplier *= 2.0;
+        }
+        if (debugSlowDown) {
+            multiplier *= 0.5;
+        }
+        return (int) Math.max(1, Math.round(DEBUG_MOVE_SPEED * multiplier));
     }
 
     // ---- Physics (from Obj09) ----
@@ -906,6 +926,8 @@ public final class Sonic1SpecialStageManager {
         if (blockId == 0x2B) {
             if (reverseCooldown == 0) {
                 reverseCooldown = SS_UP_DOWN_COOLDOWN;
+                int idx = lastCollisionRow * SS_LAYOUT_STRIDE + lastCollisionCol;
+                startReverseAnimation(idx);
                 ssRotate = -ssRotate; // Reverse rotation
                 playSfx(Sonic1Sfx.SS_ITEM);
             }
@@ -1114,6 +1136,28 @@ public final class Sonic1SpecialStageManager {
         // ROM behavior when no slot is free: skip the animation this frame.
     }
 
+    /**
+     * SS_AniReverse registration (SonicSS_ChkR, docs/s1disasm/_incObj/09 Sonic
+     * in Special Stage.asm:907-920): claim a queue slot for animation ID 4
+     * before reversing the stage rotation. If all slots are occupied, the ROM
+     * still reverses the stage and simply skips the visual animation.
+     */
+    private void startReverseAnimation(int layoutIndex) {
+        if (ssAnimBuffer == null) {
+            return;
+        }
+        for (int i = 0; i < SS_ANIM_BUFFER_SIZE; i++) {
+            if (ssAnimBuffer[i][0] == ANIM_NONE) {
+                ssAnimBuffer[i][0] = ANIM_REVERSE;
+                ssAnimBuffer[i][1] = 0; // Trigger the first script entry on the animation tick
+                ssAnimBuffer[i][2] = 0;
+                ssAnimBuffer[i][3] = layoutIndex;
+                return;
+            }
+        }
+        // ROM behavior when no slot is free: reverse the stage without flashing the block.
+    }
+
     private void updateItemAnimations() {
         if (ssAnimBuffer == null) return;
         for (int i = 0; i < SS_ANIM_BUFFER_SIZE; i++) {
@@ -1125,6 +1169,10 @@ public final class Sonic1SpecialStageManager {
             }
             if (type == ANIM_BUMPER) {
                 updateBumperAnimation(i);
+                continue;
+            }
+            if (type == ANIM_REVERSE) {
+                updateReverseAnimation(i);
                 continue;
             }
             if (type == ANIM_GLASS_BLOCK) {
@@ -1236,6 +1284,35 @@ public final class Sonic1SpecialStageManager {
 
         if (layoutIndex >= 0 && layoutIndex < layout.length) {
             layout[layoutIndex] = (byte) 0x25; // id_SS_Bumper: reset to idle, re-triggerable
+        }
+        ssAnimBuffer[slot][0] = ANIM_NONE;
+    }
+
+    /**
+     * SS_AniReverse (docs/s1disasm/_inc/Special Stage Loading & Drawing.asm:
+     * 408-435): flash the touched R block through the ROM's four-entry script,
+     * then restore the idle R mapping when the terminator is reached.
+     */
+    private void updateReverseAnimation(int slot) {
+        ssAnimBuffer[slot][1]--;
+        if (ssAnimBuffer[slot][1] > 0) return;
+        ssAnimBuffer[slot][1] = ANIM_REVERSE_PERIOD;
+
+        int frameIdx = ssAnimBuffer[slot][2];
+        ssAnimBuffer[slot][2] = frameIdx + 1;
+        int layoutIndex = ssAnimBuffer[slot][3];
+        int nextBlockId = (frameIdx < ANIM_REVERSE_DATA.length)
+                ? ANIM_REVERSE_DATA[frameIdx] : 0;
+
+        if (nextBlockId != 0) {
+            if (layoutIndex >= 0 && layoutIndex < layout.length) {
+                layout[layoutIndex] = (byte) nextBlockId;
+            }
+            return;
+        }
+
+        if (layoutIndex >= 0 && layoutIndex < layout.length) {
+            layout[layoutIndex] = 0x2B; // id_SS_R: reset R block to idle
         }
         ssAnimBuffer[slot][0] = ANIM_NONE;
     }
@@ -2273,8 +2350,15 @@ public final class Sonic1SpecialStageManager {
     // ---- Input ----
 
     public void handleInput(int heldButtons, int pressedButtons) {
+        handleInput(heldButtons, pressedButtons, false, false);
+    }
+
+    public void handleInput(int heldButtons, int pressedButtons,
+                            boolean debugSpeedUp, boolean debugSlowDown) {
         this.heldButtons = heldButtons;
         this.pressedButtons |= pressedButtons;
+        this.debugSpeedUp = debugSpeedUp;
+        this.debugSlowDown = debugSlowDown;
     }
 
     public boolean isDebugMode() {
@@ -2396,6 +2480,8 @@ public final class Sonic1SpecialStageManager {
                 exitFadeTimer,
                 heldButtons,
                 pressedButtons,
+                debugSpeedUp,
+                debugSlowDown,
                 bgAnimState,
                 bgUsingPlane6,
                 fgAnimPlaneIndex,
@@ -2457,6 +2543,8 @@ public final class Sonic1SpecialStageManager {
         exitFadeTimer = snapshot.exitFadeTimer;
         heldButtons = snapshot.heldButtons;
         pressedButtons = snapshot.pressedButtons;
+        debugSpeedUp = snapshot.debugSpeedUp;
+        debugSlowDown = snapshot.debugSlowDown;
         bgAnimState = snapshot.bgAnimState;
         bgUsingPlane6 = snapshot.bgUsingPlane6;
         fgAnimPlaneIndex = snapshot.fgAnimPlaneIndex;
@@ -2572,6 +2660,8 @@ public final class Sonic1SpecialStageManager {
         ani3Timer = 0;
         heldButtons = 0;
         pressedButtons = 0;
+        debugSpeedUp = false;
+        debugSlowDown = false;
         if (gm != null) {
             gm.setUseWaterShader(false);
             gm.setUseSpritePriorityShader(false);

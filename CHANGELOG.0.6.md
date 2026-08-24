@@ -4,6 +4,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Sonic 1 reverse blocks now flash and debug movement honors speed modifiers:**
+  touching an R block in a special stage registers the shipped four-step
+  reverse animation while still reversing immediately when the animation queue
+  is full. Special-stage debug movement now uses Shift for double speed and
+  Control for half speed, with those inputs preserved across rewind snapshots.
+
 - **Repeated S3K boss explosions now retain the incumbent's final service:**
   the locked-on driver services active SFX tracks before consuming its two
   68K SFX request cells. OpenGGF previously admitted each request immediately,

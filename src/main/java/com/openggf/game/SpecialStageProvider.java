@@ -114,6 +114,16 @@ public interface SpecialStageProvider extends MiniGameProvider {
     }
 
     /**
+     * Handles input plus the debug movement speed modifiers used by normal
+     * gameplay. Providers without gameplay debug movement retain the ordinary
+     * two-mask behavior.
+     */
+    default void handleInput(int heldButtons, int pressedButtons,
+                             boolean debugSpeedUp, boolean debugSlowDown) {
+        handleInput(heldButtons, pressedButtons);
+    }
+
+    /**
      * Checks if this game has special stages.
      *
      * @return true if special stages are available
