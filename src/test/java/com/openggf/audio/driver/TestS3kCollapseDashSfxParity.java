@@ -40,6 +40,93 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kCollapseDashSfxParity {
 
     @Test
+    void repeatedBossExplosionRetainsTheNativeFm5OverwriteLifecycle() {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(
+                TestEnvironment.currentRom());
+        RecordingObserver observer = new RecordingObserver();
+        TimelineDriver driver = new TimelineDriver(observer);
+        observer.masterCycle = driver::masterCycle;
+        SmpsSequencer music = new SmpsSequencer(
+                loader.loadMusic(Sonic3kMusic.AIZ1.id),
+                loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        driver.addSequencer(music, false);
+        driver.read(new short[735 * 8]);
+        observer.takeTimedYmWrites();
+
+        AbstractSmpsData explode = loader.loadSfx(Sonic3kSfx.EXPLODE.id);
+        List<String> boundaries = new ArrayList<>();
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                if (event.kind() == ServiceKind.SEQUENCER_TICK
+                        && event.sequencer().sfx()) {
+                    boundaries.add("service:"
+                            + event.sequencer().instanceOrdinal());
+                }
+            }
+        });
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission admission) {
+                boundaries.add("admit:"
+                        + admission.source().admissionOrdinal());
+            }
+        });
+
+        SmpsSequencer first = new SmpsSequencer(
+                explode, loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        driver.addSequencer(first, true);
+        long attachedAtRequest = activeSfxCount(driver);
+        List<String> request0 = take(boundaries);
+
+        driver.read(new short[735 * 2]);
+        List<String> boundary0 = take(boundaries);
+        driver.read(new short[735 * 2]);
+        List<String> boundary1 = take(boundaries);
+        driver.read(new short[735 * 2]);
+        List<String> boundary2 = take(boundaries);
+        String firstService = boundary1.getFirst();
+
+        SmpsSequencer replacement = new SmpsSequencer(
+                explode, loader.loadDacData(), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        driver.addSequencer(replacement, true);
+        long attachedBeforeReplacementBoundary = activeSfxCount(driver);
+        List<String> request1 = take(boundaries);
+        driver.read(new short[735 * 2]);
+        List<String> replacementBoundary = take(boundaries);
+        driver.read(new short[735 * 2]);
+        List<String> nextBoundary = take(boundaries);
+
+        assertEquals(0, attachedAtRequest,
+                "S3K Play_SFX writes a pending cell; it does not install the "
+                        + "residence before zUpdateSFXTracks");
+        assertEquals(List.of(), request0,
+                "admission observation belongs to queue consumption");
+        assertEquals(List.of("admit:0"), boundary0,
+                "the first request is admitted after the empty SFX pass");
+        assertEquals(1, boundary1.size());
+        assertTrue(firstService.startsWith("service:"));
+        assertEquals(List.of(firstService), boundary2,
+                "the incumbent receives every ordinary SFX service");
+        assertEquals(1, attachedBeforeReplacementBoundary,
+                "the incumbent remains the sole physical FM5 owner while the "
+                        + "replacement waits in the input cell");
+        assertEquals(List.of(), request1);
+        assertEquals(List.of(firstService, "admit:1"), replacementBoundary,
+                "zUpdateSFXTracks must service the incumbent before zPlaySound "
+                        + "loads the replacement");
+        assertEquals(1, nextBoundary.size());
+        assertTrue(nextBoundary.getFirst().startsWith("service:"));
+        assertFalse(nextBoundary.getFirst().equals(firstService),
+                "the newly admitted residence first services on the following boundary");
+        assertTrue(fm5Track(music).overridden,
+                "music FM5 must not restore between repeated B4 requests");
+    }
+
+    @Test
     void collapsePsgRunsFiveTwentyFourTickBurstsThenStops() {
         Fixture fixture = fixture(Sonic3kSfx.COLLAPSE);
         assertEquals(4, fixture.sequencer.trackCount());
@@ -94,13 +181,19 @@ class TestS3kCollapseDashSfxParity {
                 collapse, loader.loadDacData(), driver,
                 Sonic3kSmpsSequencerConfig.CONFIG);
         driver.addSequencer(replacement, true);
+        driver.read(new short[735 * 2]);
 
         assertTrue(musicPsg3.overridden,
                 "zPlaySound overwrites the shared SFX PSG3 RAM track without "
                         + "releasing the interrupted music track");
-        assertEquals(List.of(0xDF, 0xFF), observer.takePsgWrites(),
-                "fix_sndbugs=0 silences PSG3 and noise for the replacement, "
-                        + "but must not publish a transient music restore");
+        List<Integer> replacementWrites = observer.takePsgWrites();
+        int silence = replacementWrites.indexOf(0xDF);
+        assertTrue(silence >= 0
+                        && silence + 1 < replacementWrites.size()
+                        && replacementWrites.get(silence + 1) == 0xFF,
+                "the incumbent service must precede fix_sndbugs=0 PSG3/noise "
+                        + "silence at queued replacement: "
+                        + replacementWrites);
 
         for (int frame = 0; frame < 62; frame++) {
             driver.read(new short[735 * 2]);
@@ -110,9 +203,14 @@ class TestS3kCollapseDashSfxParity {
                 collapse, loader.loadDacData(), driver,
                 Sonic3kSmpsSequencerConfig.CONFIG);
         driver.addSequencer(finalReplacement, true);
-        assertEquals(List.of(0xDF, 0xFF), observer.takePsgWrites());
+        driver.read(new short[735 * 2]);
+        List<Integer> finalWrites = observer.takePsgWrites();
+        int finalSilence = finalWrites.indexOf(0xDF);
+        assertTrue(finalSilence >= 0
+                && finalSilence + 1 < finalWrites.size()
+                && finalWrites.get(finalSilence + 1) == 0xFF);
 
-        for (int frame = 0; frame < 121; frame++) {
+        for (int frame = 0; frame < 120; frame++) {
             driver.read(new short[735 * 2]);
         }
         assertFalse(finalReplacement.isComplete(),
@@ -523,13 +621,15 @@ class TestS3kCollapseDashSfxParity {
                 loader.loadSfx(sfx.id), loader.loadDacData(), driver,
                 Sonic3kSmpsSequencerConfig.CONFIG);
         driver.addSequencer(sfxSequencer, true);
+        driver.read(new short[735 * 2]);
+        observer.takeYmWrites();
         SmpsSequencer.Track musicFm5 = fm5Track(music);
         assertTrue(musicFm5.overridden,
                 "the SFX must own FM5 before its terminal service");
 
         Set<Long> completionRestoreServices = new HashSet<>();
         boolean restoredVoiceObserved = false;
-        for (int frame = 0; frame < 160 && !sfxSequencer.isComplete(); frame++) {
+        for (int frame = 1; frame < 160 && !sfxSequencer.isComplete(); frame++) {
             driver.read(new short[735 * 2]);
             List<String> writes = observer.takeYmWrites();
             driver.captureSnapshot().synthSnapshot().ymWriteTimeline()
@@ -539,8 +639,8 @@ class TestS3kCollapseDashSfxParity {
                                     .COMPLETION_RESTORE)
                     .map(entry -> entry.serviceOrdinal())
                     .forEach(completionRestoreServices::add);
+            restoredVoiceObserved |= writes.contains("p1:b5=c0");
             if (frame >= expectedFrame) {
-                restoredVoiceObserved |= writes.contains("p1:b5=c0");
                 assertFalse(musicFm5.overridden,
                         "FM5 must remain released after its track terminal");
             }
@@ -570,6 +670,33 @@ class TestS3kCollapseDashSfxParity {
             }
         }
         throw new AssertionError("Special Stage music must contain FM5");
+    }
+
+    private static boolean isFm5Write(TimedYmWrite write) {
+        if (write.port == 0 && write.register == 0x28) {
+            return (write.value & 7) == 5;
+        }
+        if (write.port != 1) {
+            return false;
+        }
+        int register = write.register & 0xFF;
+        if (register == 0xA1 || register == 0xA5 || register == 0xB5) {
+            return true;
+        }
+        return register >= 0x30 && register <= 0x9F
+                && (register & 3) == 1;
+    }
+
+    private static long activeSfxCount(SmpsDriver driver) {
+        return driver.captureSnapshot().sequencers().stream()
+                .filter(snapshot -> snapshot.sfx())
+                .count();
+    }
+
+    private static List<String> take(List<String> values) {
+        List<String> result = List.copyOf(values);
+        values.clear();
+        return result;
     }
 
     private static void assertFm5KeyOffFrame(

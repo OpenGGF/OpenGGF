@@ -13,6 +13,7 @@ public final class PreparedSfxAdmission {
     private final SmpsDriver owner;
     private final SmpsSequencer sequencer;
     private final boolean continuousExtension;
+    private final boolean deferredRequest;
     private final int affectedFmMask;
     private final int affectedPsgMask;
     private final int continuousSfxId;
@@ -28,6 +29,7 @@ public final class PreparedSfxAdmission {
             SmpsDriver owner,
             SmpsSequencer sequencer,
             boolean continuousExtension,
+            boolean deferredRequest,
             int affectedFmMask,
             int affectedPsgMask,
             int continuousSfxId,
@@ -40,6 +42,7 @@ public final class PreparedSfxAdmission {
         this.owner = owner;
         this.sequencer = sequencer;
         this.continuousExtension = continuousExtension;
+        this.deferredRequest = deferredRequest;
         this.affectedFmMask = affectedFmMask;
         this.affectedPsgMask = affectedPsgMask;
         this.continuousSfxId = continuousSfxId;
@@ -61,6 +64,10 @@ public final class PreparedSfxAdmission {
 
     public boolean continuousExtension() {
         return continuousExtension;
+    }
+
+    boolean deferredRequest() {
+        return deferredRequest;
     }
 
     public int affectedFmMask() {

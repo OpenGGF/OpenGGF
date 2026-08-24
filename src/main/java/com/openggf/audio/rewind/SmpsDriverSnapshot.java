@@ -29,7 +29,9 @@ public record SmpsDriverSnapshot(
         long ymServiceCursor,
         long nextYmServiceOrdinal,
         long nextYmWriteOrdinal,
-        long driverGeneration) {
+        long driverGeneration,
+        List<PendingSfxEntry> pendingSfxInputs,
+        long nextPendingSfxRequestOrdinal) {
 
     public SmpsDriverSnapshot {
         Objects.requireNonNull(region, "region");
@@ -53,10 +55,26 @@ public record SmpsDriverSnapshot(
                     "spindash-rev index must fit [0, 0x0B]");
         }
         sequencers = List.copyOf(sequencers);
+        pendingSfxInputs = List.copyOf(pendingSfxInputs);
+        if (pendingSfxInputs.size() > 2) {
+            throw new IllegalArgumentException(
+                    "S3K pending SFX input count exceeds two cells");
+        }
+        long priorPendingOrdinal = -1;
+        for (PendingSfxEntry pending : pendingSfxInputs) {
+            if (pending.requestOrdinal() <= priorPendingOrdinal
+                    || pending.requestOrdinal()
+                    >= nextPendingSfxRequestOrdinal) {
+                throw new IllegalArgumentException(
+                        "pending SFX request ordinals must be ordered before the next source ordinal");
+            }
+            priorPendingOrdinal = pending.requestOrdinal();
+        }
         fmLockSequencerIds = Arrays.copyOf(fmLockSequencerIds, fmLockSequencerIds.length);
         psgLockSequencerIds = Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
         if (ymServiceCursor < 0 || nextYmServiceOrdinal < 0
-                || nextYmWriteOrdinal < 0 || driverGeneration < 0) {
+                || nextYmWriteOrdinal < 0 || driverGeneration < 0
+                || nextPendingSfxRequestOrdinal < 0) {
             throw new IllegalArgumentException(
                     "YM driver timeline state cannot be negative");
         }
@@ -94,6 +112,32 @@ public record SmpsDriverSnapshot(
             List<SequencerEntry> sequencers,
             int[] fmLockSequencerIds,
             int[] psgLockSequencerIds,
+            VirtualSynthesizer.Snapshot synthSnapshot,
+            long ymServiceCursor,
+            long nextYmServiceOrdinal,
+            long nextYmWriteOrdinal,
+            long driverGeneration) {
+        this(region, readMode, palFullUpdateCounter, sfxPriorityLatch,
+                spindashRevPlayingCounter, spindashRevFrequencyIndex,
+                continuousSfxId, continuousSfxFlag, contSfxLoopCnt,
+                sequencers, fmLockSequencerIds, psgLockSequencerIds,
+                synthSnapshot, ymServiceCursor, nextYmServiceOrdinal,
+                nextYmWriteOrdinal, driverGeneration, List.of(), 0);
+    }
+
+    public SmpsDriverSnapshot(
+            SmpsSequencer.Region region,
+            SmpsDriver.ReadMode readMode,
+            int palFullUpdateCounter,
+            int sfxPriorityLatch,
+            int spindashRevPlayingCounter,
+            int spindashRevFrequencyIndex,
+            int continuousSfxId,
+            boolean continuousSfxFlag,
+            int contSfxLoopCnt,
+            List<SequencerEntry> sequencers,
+            int[] fmLockSequencerIds,
+            int[] psgLockSequencerIds,
             VirtualSynthesizer.Snapshot synthSnapshot) {
         this(region, readMode, palFullUpdateCounter, sfxPriorityLatch,
                 spindashRevPlayingCounter, spindashRevFrequencyIndex,
@@ -101,7 +145,7 @@ public record SmpsDriverSnapshot(
                 sequencers, fmLockSequencerIds, psgLockSequencerIds,
                 synthSnapshot, inferredCursor(synthSnapshot), 0,
                 inferredWriteOrdinal(synthSnapshot),
-                inferredGeneration(synthSnapshot));
+                inferredGeneration(synthSnapshot), List.of(), 0);
     }
 
     public SmpsDriverSnapshot(
@@ -130,7 +174,9 @@ public record SmpsDriverSnapshot(
                 0,
                 0,
                 0,
-                1);
+                1,
+                List.of(),
+                0);
     }
 
     public SmpsDriverSnapshot(
@@ -160,7 +206,7 @@ public record SmpsDriverSnapshot(
                 inferredCursor(synthSnapshot),
                 0,
                 inferredWriteOrdinal(synthSnapshot),
-                inferredGeneration(synthSnapshot));
+                inferredGeneration(synthSnapshot), List.of(), 0);
     }
 
     private static long inferredCursor(
@@ -264,6 +310,25 @@ public record SmpsDriverSnapshot(
                     SmpsSequencer.SourceDescriptorTrust.LEGACY_RECOMPUTE,
                     fallbackVoiceSource, smpsData, dacData, audioManager,
                     config, snapshot);
+        }
+    }
+
+    public record PendingSfxEntry(
+            SequencerEntry sequencer,
+            int continuousSfxId,
+            int trackCount,
+            long requestOrdinal) {
+        public PendingSfxEntry {
+            Objects.requireNonNull(sequencer, "sequencer");
+            if (sequencer.sfx()) {
+                throw new IllegalArgumentException(
+                        "pending SFX entry must not be installed yet");
+            }
+            if (continuousSfxId < 0 || trackCount < 0
+                    || requestOrdinal < 0) {
+                throw new IllegalArgumentException(
+                        "pending SFX metadata cannot be negative");
+            }
         }
     }
 }

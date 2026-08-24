@@ -52,6 +52,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             { request = 0xB6; frames = 90; expectedKind = 11; expectedTrackType = 2; }
             else if (captureCase == "invincibility")
             { request = 0x2C; frames = 600; expectedKind = 12; expectedTrackType = 1; }
+            else if (captureCase == "explode-repeat")
+            { request = 0xB4; frames = 160; expectedKind = 11; expectedTrackType = 2; }
             else throw new InvalidDataException("Unknown first-slice case: " + captureCase);
 
             using (var host = GpgxHost.Open(rom, GpgxHost.CreateGhz1SyncSettings()))
@@ -167,7 +169,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     for (int frame = 0; frame < frames; frame++)
                     {
                         host.ClearButtons();
-                        if (frame == 0)
+                        if (frame == 0 || (captureCase == "explode-repeat"
+                            && frame <= 30 && frame % 3 == 0))
                             host.WriteZ80RamByte(captureCase == "invincibility"
                                 ? 0x1C0A : 0x1C0B, request);
                         AssertEx.Equal(0, trace.BeginFrame());

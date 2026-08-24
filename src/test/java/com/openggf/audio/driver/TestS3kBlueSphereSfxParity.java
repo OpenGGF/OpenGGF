@@ -60,13 +60,13 @@ class TestS3kBlueSphereSfxParity {
 
         admit(driver, data, loader);
         driver.read(new short[64]);
-        assertTrue(writes.contains("0:28:05"),
-                "admission key-off drains before the deferred first service");
-        writes.clear();
+        assertTrue(writes.isEmpty(),
+                "host publication cannot execute zPlaySound mid-VInt");
 
         driver.read(new short[735 * 2]);
-        assertTrue(writes.isEmpty(),
-                "the admission VInt has already run before zPlaySound");
+        assertTrue(writes.contains("0:28:05"),
+                "queue consumption prepares FM5 at the next VInt boundary");
+        writes.clear();
 
         driver.read(new short[735 * 2]);
         assertTrue(writes.containsAll(List.of(
@@ -84,6 +84,7 @@ class TestS3kBlueSphereSfxParity {
         SmpsDriver driver = new SmpsDriver();
 
         admit(driver, data, loader);
+        advanceWithoutRender(driver, 735);
 
         List<YmWriteTimeline.Entry> pending = driver.captureSnapshot()
                 .synthSnapshot().ymWriteTimeline().pending();
@@ -333,6 +334,7 @@ class TestS3kBlueSphereSfxParity {
 
         SmpsSequencer blue = admit(driver,
                 loader.loadSfx(Sonic3kSfx.BLUE_SPHERE.id), loader);
+        advanceWithoutRender(driver, 735);
         assertTrue(pending(blue.trackAt(0), "firstFm5AdmissionVoicePending"),
                 "the post-other admission is a fresh source path");
         driver.read(new short[735 * 3]);
@@ -352,6 +354,8 @@ class TestS3kBlueSphereSfxParity {
         AbstractSmpsData data = loader.loadSfx(Sonic3kSfx.BLUE_SPHERE.id);
         SmpsDriver driver = new SmpsDriver();
         SmpsSequencer sequencer = admit(driver, data, loader);
+        assertEquals(1, driver.captureSnapshot().pendingSfxInputs().size());
+        advanceWithoutRender(driver, 735);
         SmpsSequencer.Track track = sequencer.trackAt(0);
         assertTrue(pending(track, "firstFm5AdmissionVoicePending"));
         assertFalse(pending(track, "firstFm5AdmissionAttackPending"));
@@ -376,10 +380,9 @@ class TestS3kBlueSphereSfxParity {
         driver.read(new short[735 * 2]);
         assertFalse(pending(identityTrack, "firstFm5AdmissionVoicePending"));
         assertFalse(pending(identityTrack, "firstFm5AdmissionAttackPending"));
-        assertEquals(33, driver.captureSnapshot().synthSnapshot()
-                .ymWriteTimeline().pending().size(),
-                "restored admission executes exactly one 34-attempt path; "
-                        + "the first write drains at the boundary");
+        assertTrue(driver.captureSnapshot().synthSnapshot()
+                        .ymWriteTimeline().pending().isEmpty(),
+                "the restored first path drains once after both boundaries");
     }
 
     @Test
@@ -545,16 +548,17 @@ class TestS3kBlueSphereSfxParity {
         SmpsDriver exact = new SmpsDriver();
         SmpsSequencer exactSfx = admit(exact,
                 loader.loadSfx(Sonic3kSfx.COLLAPSE.id), loader);
+        advanceWithoutRender(exact, 735);
         fillRemainingCapacity(exact, 136);
         long exactOrdinal = exact.captureSnapshot().nextYmWriteOrdinal();
 
-        assertDoesNotThrow(() -> advanceWithoutRender(exact, 735 * 2));
+        assertDoesNotThrow(() -> advanceWithoutRender(exact, 735));
         assertTrue(exact.captureSnapshot().nextYmWriteOrdinal()
                         > exactOrdinal,
                 "N=136 admits the complete four-track owner service");
-        assertFalse(pending(exactSfx.trackAt(0), "firstFm5AdmissionVoicePending")
-                        && exactSfx.trackAt(0).channelId == 4,
-                "the admitted service actually executed");
+        assertFalse(pending(exactSfx.trackAt(0),
+                        "firstFm5AdmissionVoicePending"),
+                "the exact-capacity boundary executes the first SFX service");
 
         List<String> callbacks = new ArrayList<>();
         SmpsDriver shortDriver = new SmpsDriver(44_100.0,
@@ -569,15 +573,16 @@ class TestS3kBlueSphereSfxParity {
                     public void onPsgWrite(int value) {
                         callbacks.add("PSG");
                     }
-                });
+        });
         admit(shortDriver, loader.loadSfx(Sonic3kSfx.COLLAPSE.id), loader);
+        advanceWithoutRender(shortDriver, 735);
         fillRemainingCapacity(shortDriver, 135);
         callbacks.clear();
         SmpsDriverSnapshot before = shortDriver.captureSnapshot();
 
         IllegalStateException failure = assertThrows(
                 IllegalStateException.class,
-                () -> advanceWithoutRender(shortDriver, 735 * 2));
+                () -> advanceWithoutRender(shortDriver, 735));
 
         assertTrue(failure.getMessage().contains(
                 "aggregate service bound 136"));
@@ -632,12 +637,13 @@ class TestS3kBlueSphereSfxParity {
             SmpsDriver driver = new SmpsDriver();
             SmpsSequencer sfx = admit(driver,
                     loader.loadSfx(Sonic3kSfx.COLLAPSE.id), loader);
+            advanceWithoutRender(driver, 735);
             for (int index = 0; index < sfx.trackCount(); index++) {
                 sfx.trackAt(index).active = index == selected;
             }
             long before = driver.captureSnapshot().nextYmWriteOrdinal();
 
-            advanceWithoutRender(driver, 735 * 2);
+            advanceWithoutRender(driver, 735);
 
             long attempts = driver.captureSnapshot().nextYmWriteOrdinal()
                     - before;

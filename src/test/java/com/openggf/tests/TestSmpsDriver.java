@@ -116,6 +116,9 @@ public class TestSmpsDriver {
     public void testSfxFighting() {
         SpyDriver driver = new SpyDriver();
         AbstractSmpsData dummyData = new Sonic2SmpsData(new byte[100]);
+        dummyData.setId(1);
+        AbstractSmpsData secondData = new Sonic2SmpsData(new byte[100]);
+        secondData.setId(2);
         DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
 
         // Create two sequencers (SFX)
@@ -124,11 +127,12 @@ public class TestSmpsDriver {
         // request before any channel write.
         SmpsSequencer sfx1 = new SmpsSequencer(dummyData, dummyDac, driver,
                 Sonic3kSmpsSequencerConfig.CONFIG);
-        SmpsSequencer sfx2 = new SmpsSequencer(dummyData, dummyDac, driver,
+        SmpsSequencer sfx2 = new SmpsSequencer(secondData, dummyDac, driver,
                 Sonic3kSmpsSequencerConfig.CONFIG);
 
         driver.addSequencer(sfx1, true);
         driver.addSequencer(sfx2, true);
+        driver.read(new short[735 * 2]);
 
         // sfx1 writes to FM channel 0 (Reg 0xA4, 0xA0 -> Channel 0)
         // Reg mapping: 0xA0..0xA2 -> Ch 0..2.
@@ -283,4 +287,3 @@ public class TestSmpsDriver {
                 "Driver output should not depend on whether audio is read a frame at a time or in one block");
     }
 }
-

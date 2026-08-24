@@ -81,6 +81,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private int continuousSfxId;
     private boolean continuousSfxFlag;
     private int contSfxLoopCnt;
+    private final PendingSfxRequest[] pendingSfxInputs =
+            new PendingSfxRequest[2];
+    private long nextPendingSfxRequestOrdinal;
     private long nextSfxAdmissionOrdinal;
     private SfxContentionObserver sfxContentionObserver = SfxContentionObserver.NONE;
     /** Diagnostic-only state; deliberately absent from rewind snapshots. */
@@ -99,6 +102,21 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private DriverServiceReservation ymDriverServiceReservation;
     private SmpsSequencer activeServiceSequencer;
     private SmpsDriverServiceObserver.ServiceKind activeServiceKind;
+    private boolean consumingDeferredSfxInput;
+
+    private record PendingSfxRequest(
+            SmpsSequencer sequencer,
+            int continuousSfxId,
+            int trackCount,
+            long requestOrdinal) {
+        private PendingSfxRequest {
+            Objects.requireNonNull(sequencer, "sequencer");
+            if (requestOrdinal < 0) {
+                throw new IllegalArgumentException(
+                        "pending SFX request ordinal cannot be negative");
+            }
+        }
+    }
 
     @FunctionalInterface
     private interface PostCommitPublication {
@@ -305,6 +323,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final int[] psgLatchChannels;
         private final SmpsSequencer[] pendingRemovals;
         private final SmpsSequencer[] sfxRemovalBuffer;
+        private final PendingSfxRequest[] pendingSfxInputs;
+        private final SmpsSequencer.LiveCommandMutationToken[]
+                pendingSfxSequencerStates;
+        private final long nextPendingSfxRequestOrdinal;
         private final SmpsSequencer.Region region;
         private final ReadMode readMode;
         private final int hybridChunkCountForTesting;
@@ -339,6 +361,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 int[] psgLatchChannels,
                 SmpsSequencer[] pendingRemovals,
                 SmpsSequencer[] sfxRemovalBuffer,
+                PendingSfxRequest[] pendingSfxInputs,
+                SmpsSequencer.LiveCommandMutationToken[]
+                        pendingSfxSequencerStates,
+                long nextPendingSfxRequestOrdinal,
                 SmpsSequencer.Region region,
                 ReadMode readMode,
                 int hybridChunkCountForTesting,
@@ -372,6 +398,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.psgLatchChannels = psgLatchChannels;
             this.pendingRemovals = pendingRemovals;
             this.sfxRemovalBuffer = sfxRemovalBuffer;
+            this.pendingSfxInputs = pendingSfxInputs;
+            this.pendingSfxSequencerStates = pendingSfxSequencerStates;
+            this.nextPendingSfxRequestOrdinal =
+                    nextPendingSfxRequestOrdinal;
             this.region = region;
             this.readMode = readMode;
             this.hybridChunkCountForTesting = hybridChunkCountForTesting;
@@ -395,6 +425,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     static final class SfxAdmissionMutationState {
         private final boolean continuousOnly;
+        private final LiveCommandMutationToken driverState;
         private final SmpsSequencer[] affected;
         private final SmpsSequencer.LiveCommandMutationToken[] sequencerStates;
         private final int[] positions;
@@ -448,6 +479,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 int continuousLoopCount, DacData dacData,
                 VirtualSynthesizer.SfxAdmissionState synthState) {
             this.continuousOnly = false;
+            this.driverState = null;
             this.affected = affected;
             this.sequencerStates = sequencerStates;
             this.positions = positions;
@@ -490,6 +522,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 boolean continuousSfxFlag,
                 int continuousLoopCount) {
             this.continuousOnly = true;
+            this.driverState = null;
             this.affected = null;
             this.sequencerStates = null;
             this.positions = null;
@@ -517,6 +550,42 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.continuousLoopCount = continuousLoopCount;
+            this.dacData = null;
+            this.synthState = null;
+        }
+
+        private SfxAdmissionMutationState(
+                LiveCommandMutationToken driverState) {
+            this.continuousOnly = false;
+            this.driverState = Objects.requireNonNull(
+                    driverState, "driverState");
+            this.affected = null;
+            this.sequencerStates = null;
+            this.positions = null;
+            this.sfxMembers = null;
+            this.pendingRemovalMembers = null;
+            this.removalBufferMembers = null;
+            this.admissionOrdinalPresent = null;
+            this.admissionOrdinals = null;
+            this.serviceOrdinalPresent = null;
+            this.serviceOrdinals = null;
+            this.fmLocks = null;
+            this.psgLocks = null;
+            this.psgLatchPresent = null;
+            this.psgLatchChannels = null;
+            this.musicOverrideTracks = null;
+            this.musicOverrides = null;
+            this.conflictKeys = null;
+            this.conflictSources = null;
+            this.nextAdmissionOrdinal = 0;
+            this.nextServiceOrdinal = 0;
+            this.nextServiceSequencerOrdinal = 0;
+            this.sfxPriorityLatch = 0;
+            this.spindashRevPlayingCounter = 0;
+            this.spindashRevFrequencyIndex = 0;
+            this.continuousSfxId = 0;
+            this.continuousSfxFlag = false;
+            this.continuousLoopCount = 0;
             this.dacData = null;
             this.synthState = null;
         }
@@ -717,6 +786,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     timingProfileFor(owner)
                             .maximumWritesPerDriverService());
         }
+        for (PendingSfxRequest pending : pendingSfxInputs) {
+            if (pending != null && !owners.containsKey(pending.sequencer())) {
+                aggregateBound = Math.addExact(aggregateBound,
+                        pending.sequencer().getConfig()
+                                .getYmServiceTimingProfile()
+                                .maximumWritesPerDriverService());
+            }
+        }
         if (region == SmpsSequencer.Region.PAL
                 && usesPalFullDriverRepeat()) {
             for (SmpsSequencer active : sequencers) {
@@ -780,6 +857,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     private boolean mayPublishTimedWorkDuringAdvance(int frames) {
+        if (pendingSfxInputs[0] != null || pendingSfxInputs[1] != null) {
+            return true;
+        }
         for (SmpsSequencer pending : pendingRemovals) {
             if (timingProfileFor(pending)
                     != YmServiceTimingProfile.none()) {
@@ -1184,7 +1264,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             for (SmpsSequencer sequencer : sfxSequencers) {
                 if (sequencer.getSmpsData().getId() == sfxId) {
                     return new PreparedSfxAdmission(
-                            this, null, true, 0, 0, sfxId, trackCount,
+                            this, null, true, false, 0, 0, sfxId, trackCount,
                             sfxPriorityLatch, sfxPriorityLatch,
                             null, null, null);
                 }
@@ -1212,6 +1292,27 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         sequencer.validateSfxAdmissionMetadata();
 
         synchronized (sequencersLock) {
+            if (usesDeferredSfxInputCells(sequencer)) {
+                if (sfxSequencers.contains(sequencer)
+                        || containsPendingSfxSequencer(sequencer)) {
+                    throw new IllegalArgumentException(
+                            "SFX sequencer is already attached or pending");
+                }
+                return new PreparedSfxAdmission(
+                        this, sequencer, false, true, 0, 0,
+                        sfxId, trackCount,
+                        SmpsRequestAdmissionPolicy.NO_PRIORITY,
+                        SmpsRequestAdmissionPolicy.NO_PRIORITY,
+                        null, new SmpsSequencer[0],
+                        new SmpsSequencer.Track[0]);
+            }
+            return prepareImmediateSfxAdmission(
+                    sequencer, sfxId, trackCount);
+        }
+    }
+
+    private PreparedSfxAdmission prepareImmediateSfxAdmission(
+            SmpsSequencer sequencer, int sfxId, int trackCount) {
             SmpsRequestAdmissionPolicy.AdmissionResult priorityDecision =
                     evaluateSfxRequest(sequencer.getSmpsData().getId(),
                             sequencer.getSfxPriority(),
@@ -1299,13 +1400,28 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
 
             return new PreparedSfxAdmission(
-                    this, sequencer, false, fmMask, psgMask,
+                    this, sequencer, false, false, fmMask, psgMask,
                     sfxId, trackCount,
                     priorityDecision.priorityBefore(),
                     priorityDecision.priorityAfter(),
                     replaced,
                     displacedOwners, displacedTracks);
-        }
+    }
+
+    private static boolean usesDeferredSfxInputCells(
+            SmpsSequencer sequencer) {
+        return sequencer.getConfig().getSfxStartTiming()
+                == SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE
+                && sequencer.getConfig().getDriverServiceOrder()
+                == SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC;
+    }
+
+    private boolean containsPendingSfxSequencer(
+            SmpsSequencer sequencer) {
+        return (pendingSfxInputs[0] != null
+                && pendingSfxInputs[0].sequencer() == sequencer)
+                || (pendingSfxInputs[1] != null
+                && pendingSfxInputs[1].sequencer() == sequencer);
     }
 
     /** Applies one already-validated admission in deterministic native order. */
@@ -1331,6 +1447,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
         synchronized (sequencersLock) {
             if (!admission.continuousExtension()
+                    && !admission.deferredRequest()
                     && admission.priorityBefore()
                     != SmpsRequestAdmissionPolicy.NO_PRIORITY
                     && admission.priorityBefore() != sfxPriorityLatch) {
@@ -1358,6 +1475,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 if (admission.continuousExtension()) {
                     continuousSfxFlag = true;
                     contSfxLoopCnt = admission.trackCount();
+                } else if (admission.deferredRequest()) {
+                    enqueueDeferredSfxRequest(admission);
                 } else {
                     commitNewSfxAdmission(admission);
                 }
@@ -1388,6 +1507,57 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
+    private void enqueueDeferredSfxRequest(
+            PreparedSfxAdmission admission) {
+        int nativeId = admission.sequencer().getSmpsData().getId();
+        PendingSfxRequest first = pendingSfxInputs[0];
+        if (first != null
+                && first.sequencer().getSmpsData().getId() == nativeId) {
+            return;
+        }
+        long requestOrdinal = nextPendingSfxRequestOrdinal;
+        long nextOrdinal = Math.incrementExact(requestOrdinal);
+        PendingSfxRequest request = new PendingSfxRequest(
+                admission.sequencer(), admission.continuousSfxId(),
+                admission.trackCount(), requestOrdinal);
+        if (!sequencers.isEmpty()) {
+            admission.sequencer().alignDriverSamplePhase(
+                    sequencers.getFirst().driverSamplePhase());
+        }
+        if (first == null) {
+            pendingSfxInputs[0] = request;
+        } else {
+            pendingSfxInputs[1] = request;
+        }
+        nextPendingSfxRequestOrdinal = nextOrdinal;
+    }
+
+    private void consumeDeferredSfxInputs() {
+        PendingSfxRequest first = pendingSfxInputs[0];
+        PendingSfxRequest second = pendingSfxInputs[1];
+        pendingSfxInputs[0] = null;
+        pendingSfxInputs[1] = null;
+        if (first != null) {
+            consumeDeferredSfxInput(first);
+        }
+        if (second != null) {
+            consumeDeferredSfxInput(second);
+        }
+    }
+
+    private void consumeDeferredSfxInput(PendingSfxRequest request) {
+        SmpsSequencer sequencer = request.sequencer();
+        PreparedSfxAdmission admission = prepareImmediateSfxAdmission(
+                sequencer, request.continuousSfxId(), request.trackCount());
+        sequencer.consumeDeferredSfxAdmission();
+        consumingDeferredSfxInput = true;
+        try {
+            commitSfxAdmission(admission, false);
+        } finally {
+            consumingDeferredSfxInput = false;
+        }
+    }
+
     private boolean hasPotentiallyThrowingAdmissionObserver() {
         return hasChipWriteObserver()
                 || sfxContentionObserver != SfxContentionObserver.NONE
@@ -1406,7 +1576,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             sfxPriorityLatch = admission.priorityAfter();
         }
         sequencer.setRegion(region);
-        alignSequencerServicePhase(sequencer);
+        if (!consumingDeferredSfxInput) {
+            alignSequencerServicePhase(sequencer);
+        }
         sequencer.setIsSfx(true);
         applyAdmissionFmPreparation(sequencer);
 
@@ -2031,6 +2203,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     SfxAdmissionMutationState captureSfxAdmissionMutation(
             PreparedSfxAdmission admission) {
         synchronized (sequencersLock) {
+            if (admission.deferredRequest()) {
+                return new SfxAdmissionMutationState(
+                        captureLiveCommandMutation());
+            }
             if (admission.continuousExtension()) {
                 return new SfxAdmissionMutationState(
                         nextSfxAdmissionOrdinal, nextServiceOrdinal,
@@ -2148,6 +2324,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     void restoreSfxAdmissionMutation(SfxAdmissionMutationState state) {
         synchronized (sequencersLock) {
+            if (state.driverState != null) {
+                rollbackLiveCommandMutation(state.driverState);
+                return;
+            }
             if (state.continuousOnly) {
                 nextSfxAdmissionOrdinal = state.nextAdmissionOrdinal;
                 nextServiceOrdinal = state.nextServiceOrdinal;
@@ -2342,6 +2522,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 serviceOrdinals[index] = serviceSequencerOrdinals.get(
                         serviceOrdinalSequencers[index]);
             }
+            PendingSfxRequest[] capturedPending = pendingSfxInputs.clone();
+            SmpsSequencer.LiveCommandMutationToken[] pendingStates =
+                    new SmpsSequencer.LiveCommandMutationToken[2];
+            for (int index = 0; index < capturedPending.length; index++) {
+                if (capturedPending[index] != null) {
+                    pendingStates[index] = capturedPending[index].sequencer()
+                            .captureLiveCommandMutation();
+                }
+            }
             return new LiveCommandMutationToken(
                     this,
                     capturedSequencers,
@@ -2358,6 +2547,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     latchChannels,
                     pendingRemovals.toArray(SmpsSequencer[]::new),
                     sfxRemovalBuffer.toArray(SmpsSequencer[]::new),
+                    capturedPending,
+                    pendingStates,
+                    nextPendingSfxRequestOrdinal,
                     region,
                     readMode,
                     hybridChunkCountForTesting,
@@ -2397,6 +2589,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                  index++) {
                 token.sequencers[index].rollbackLiveCommandMutation(
                         token.sequencerStates[index]);
+            }
+            for (int index = 0;
+                    index < token.pendingSfxInputs.length; index++) {
+                PendingSfxRequest pending = token.pendingSfxInputs[index];
+                if (pending != null) {
+                    pending.sequencer().rollbackLiveCommandMutation(
+                            token.pendingSfxSequencerStates[index]);
+                }
             }
 
             sequencers.clear();
@@ -2439,6 +2639,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             for (SmpsSequencer sequencer : token.sfxRemovalBuffer) {
                 sfxRemovalBuffer.add(sequencer);
             }
+            System.arraycopy(token.pendingSfxInputs, 0,
+                    pendingSfxInputs, 0, pendingSfxInputs.length);
+            nextPendingSfxRequestOrdinal =
+                    token.nextPendingSfxRequestOrdinal;
             region = token.region;
             readMode = token.readMode;
             hybridChunkCountForTesting =
@@ -2496,29 +2700,29 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             for (SmpsSequencer sequencer : sequencers) {
                 sourceDescriptors.put(sequencer.getSmpsData(), sequencer.getSourceDescriptor());
             }
+            for (PendingSfxRequest pending : pendingSfxInputs) {
+                if (pending != null) {
+                    sourceDescriptors.put(pending.sequencer().getSmpsData(),
+                            pending.sequencer().getSourceDescriptor());
+                }
+            }
             List<SmpsDriverSnapshot.SequencerEntry> entries = new ArrayList<>(sequencers.size());
             for (int i = 0; i < sequencers.size(); i++) {
                 SmpsSequencer sequencer = sequencers.get(i);
                 sequencerIds.put(sequencer, i);
-                AbstractSmpsData fallbackVoiceData = sequencer.getFallbackVoiceData();
-                SmpsSourceDescriptor fallbackVoiceSource = null;
-                if (fallbackVoiceData != null) {
-                    fallbackVoiceSource = sourceDescriptors.get(fallbackVoiceData);
-                    if (fallbackVoiceSource == null) {
-                        fallbackVoiceSource = SmpsSourceDescriptor.from(fallbackVoiceData);
-                        sourceDescriptors.put(fallbackVoiceData, fallbackVoiceSource);
-                    }
+                entries.add(captureSequencerEntry(
+                        sequencer, isSfx(sequencer), sourceDescriptors));
+            }
+            List<SmpsDriverSnapshot.PendingSfxEntry> pendingEntries =
+                    new ArrayList<>(2);
+            for (PendingSfxRequest pending : pendingSfxInputs) {
+                if (pending != null) {
+                    pendingEntries.add(new SmpsDriverSnapshot.PendingSfxEntry(
+                            captureSequencerEntry(pending.sequencer(), false,
+                                    sourceDescriptors),
+                            pending.continuousSfxId(), pending.trackCount(),
+                            pending.requestOrdinal()));
                 }
-                entries.add(new SmpsDriverSnapshot.SequencerEntry(
-                        isSfx(sequencer),
-                        sequencer.getSourceDescriptor(),
-                        sequencer.getSourceDescriptorTrust(),
-                        fallbackVoiceSource,
-                        sequencer.getSmpsData(),
-                        sequencer.getDacData(),
-                        sequencer.getAudioManager(),
-                        sequencer.getConfig(),
-                        sequencer.captureSnapshot()));
             }
 
             return new SmpsDriverSnapshot(
@@ -2538,8 +2742,32 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     ymServiceCursor,
                     nextYmServiceOrdinal,
                     nextYmWriteOrdinal,
-                    ymTimelineGeneration());
+                    ymTimelineGeneration(), pendingEntries,
+                    nextPendingSfxRequestOrdinal);
         }
+    }
+
+    private static SmpsDriverSnapshot.SequencerEntry captureSequencerEntry(
+            SmpsSequencer sequencer,
+            boolean sfx,
+            IdentityHashMap<AbstractSmpsData, SmpsSourceDescriptor>
+                    sourceDescriptors) {
+        AbstractSmpsData fallbackVoiceData = sequencer.getFallbackVoiceData();
+        SmpsSourceDescriptor fallbackVoiceSource = null;
+        if (fallbackVoiceData != null) {
+            fallbackVoiceSource = sourceDescriptors.get(fallbackVoiceData);
+            if (fallbackVoiceSource == null) {
+                fallbackVoiceSource = SmpsSourceDescriptor.from(
+                        fallbackVoiceData);
+                sourceDescriptors.put(fallbackVoiceData, fallbackVoiceSource);
+            }
+        }
+        return new SmpsDriverSnapshot.SequencerEntry(
+                sfx, sequencer.getSourceDescriptor(),
+                sequencer.getSourceDescriptorTrust(), fallbackVoiceSource,
+                sequencer.getSmpsData(), sequencer.getDacData(),
+                sequencer.getAudioManager(), sequencer.getConfig(),
+                sequencer.captureSnapshot());
     }
 
     private SmpsDriverSnapshot captureSnapshotWithPsg(
@@ -2565,7 +2793,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 snapshot.ymServiceCursor(),
                 snapshot.nextYmServiceOrdinal(),
                 snapshot.nextYmWriteOrdinal(),
-                snapshot.driverGeneration());
+                snapshot.driverGeneration(), snapshot.pendingSfxInputs(),
+                snapshot.nextPendingSfxRequestOrdinal());
     }
 
     /**
@@ -2734,6 +2963,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
         List<SmpsDriverSnapshot.SequencerEntry> entries = snapshot.sequencers();
         List<ResolvedSequencerDependencies> resolved = resolveSequencerDependencies(entries, resolver);
+        List<SmpsDriverSnapshot.SequencerEntry> pendingEntries =
+                snapshot.pendingSfxInputs().stream()
+                        .map(SmpsDriverSnapshot.PendingSfxEntry::sequencer)
+                        .toList();
+        List<ResolvedSequencerDependencies> pendingResolved =
+                resolveSequencerDependencies(pendingEntries, resolver);
         synchronized (sequencersLock) {
             sequencers.clear();
             sfxSequencers.clear();
@@ -2750,6 +2985,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
             Arrays.fill(fmLocks, null);
             Arrays.fill(psgLocks, null);
+            Arrays.fill(pendingSfxInputs, null);
 
             region = snapshot.region();
             readMode = snapshot.readMode();
@@ -2762,6 +2998,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             continuousSfxId = snapshot.continuousSfxId();
             continuousSfxFlag = snapshot.continuousSfxFlag();
             contSfxLoopCnt = snapshot.contSfxLoopCnt();
+            nextPendingSfxRequestOrdinal =
+                    snapshot.nextPendingSfxRequestOrdinal();
 
             for (int i = 0; i < entries.size(); i++) {
                 SmpsDriverSnapshot.SequencerEntry entry = entries.get(i);
@@ -2785,6 +3023,23 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     recordSfxClaims(sequencer);
                     trackRestoredSfxAdmission(sequencer);
                 }
+            }
+
+            for (int i = 0; i < snapshot.pendingSfxInputs().size(); i++) {
+                SmpsDriverSnapshot.PendingSfxEntry pending =
+                        snapshot.pendingSfxInputs().get(i);
+                ResolvedSequencerDependencies dependency =
+                        pendingResolved.get(i);
+                SmpsSequencer sequencer = new SmpsSequencer(
+                        dependency.smpsData(), dependency.dacData(), this,
+                        dependency.audioManager(), dependency.config(),
+                        pending.sequencer().source(),
+                        dependency.sourceDescriptorTrust());
+                sequencer.setRegion(region);
+                sequencer.restoreSnapshot(pending.sequencer().snapshot());
+                pendingSfxInputs[i] = new PendingSfxRequest(
+                        sequencer, pending.continuousSfxId(),
+                        pending.trackCount(), pending.requestOrdinal());
             }
 
             for (int i = 0; i < entries.size(); i++) {
@@ -3208,6 +3463,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             continuousSfxFlag = false;
             contSfxLoopCnt = 0;
             sfxPriorityLatch = 0;
+            clearPendingSfxInputs();
         }
         // Silence hardware (ROM: zFMSilenceAll + zPSGSilenceAll)
         silenceAll();
@@ -3232,6 +3488,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     }
                 }
                 sfxPriorityLatch = 0;
+                clearPendingSfxInputs();
                 sfxRemovalBuffer.clear();
                 sfxRemovalBuffer.addAll(sfxSequencers);
                 for (int i = 0; i < sfxRemovalBuffer.size(); i++) {
@@ -3262,6 +3519,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
             throw failure;
         }
+    }
+
+    private void clearPendingSfxInputs() {
+        Arrays.fill(pendingSfxInputs, null);
     }
 
     /** Stops 1-up-displaced SFX with the retail save-slot priority ordering. */
@@ -3419,6 +3680,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     private void advanceSequencersWithinReservation(int frames) {
         boolean sfxFirst = usesSfxFirstServiceOrder();
+        boolean consumePendingAtBoundary = sfxFirst
+                && (pendingSfxInputs[0] != null
+                || pendingSfxInputs[1] != null)
+                && advancePendingSfxInputClocks(frames);
         int driverFrames = -1;
         for (int pass = 0; pass < 2; pass++) {
             boolean serviceSfx = sfxFirst == (pass == 0);
@@ -3446,6 +3711,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 // A stopped SFX restores its channel in that first pass, so
                 // the same VInt's music service can use it immediately.
                 removeCompletedSequencers();
+                if (consumePendingAtBoundary) {
+                    consumeDeferredSfxInputs();
+                    consumePendingAtBoundary = false;
+                }
             }
         }
         driverFrames = Math.max(0, driverFrames);
@@ -3457,6 +3726,18 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
+    private boolean advancePendingSfxInputClocks(int frames) {
+        boolean crossed = false;
+        for (PendingSfxRequest pending : pendingSfxInputs) {
+            if (pending != null
+                    && pending.sequencer()
+                            .advanceDeferredSfxAdmissionClock(frames)) {
+                crossed = true;
+            }
+        }
+        return crossed;
+    }
+
     public void requestFadeTerminalStopAll() {
         fadeTerminalStopAllPending = true;
     }
@@ -3465,6 +3746,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         for (SmpsSequencer sequencer : sequencers) {
             return sequencer.getConfig().getDriverServiceOrder()
                     == SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC;
+        }
+        for (PendingSfxRequest pending : pendingSfxInputs) {
+            if (pending != null) {
+                return pending.sequencer().getConfig()
+                        .getDriverServiceOrder()
+                        == SmpsSequencerConfig.DriverServiceOrder
+                                .SFX_THEN_MUSIC;
+            }
         }
         return false;
     }
@@ -3560,7 +3849,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     @Override
     public boolean isComplete() {
-        return sequencers.isEmpty();
+        return sequencers.isEmpty()
+                && pendingSfxInputs[0] == null
+                && pendingSfxInputs[1] == null;
     }
 
     /**

@@ -287,8 +287,9 @@ public class TestSonic3kCoordFlagParity {
 
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.DASH.id, new byte[] {(byte) 0xF2}), 0);
+        fixture.mix();
         assertEquals(0, fixture.state.spindashRevCounter(),
-                "Ordered apply of a normal SFX resets the session counter");
+                "zPlaySound consumption of a normal SFX resets the counter");
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.SPINDASH.id,
                 new byte[] {(byte) 0xE9, (byte) 0xF2}), 0);
@@ -315,8 +316,9 @@ public class TestSonic3kCoordFlagParity {
         SmpsCompositeVoice voice =
                 (SmpsCompositeVoice) fixture.registry.orderedVoiceAt(0);
         assertEquals(1,
-                voice.driver().captureSnapshot().sequencers().size());
-        assertTrue(voice.driver().isContinuousSfxFlagSet());
+                voice.driver().captureSnapshot().pendingSfxInputs().size(),
+                "same-frame duplicate stays in the first zSoundQueue cell");
+        fixture.mix();
         assertEquals(2, fixture.state.spindashRevCounter(),
                 "Continuous retrigger does not construct a resetting handler");
     }
@@ -335,6 +337,7 @@ public class TestSonic3kCoordFlagParity {
 
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.DASH.id, new byte[] {(byte) 0xF2}), 0);
+        fixture.mix();
         assertEquals(0, fixture.state.spindashRevCounter());
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.SPINDASH.id,
