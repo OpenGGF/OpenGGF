@@ -232,7 +232,8 @@ recorded hardware traces.
   Angel Island and Hydrocity, with substantial work across later zones and
   bonus stages.
 - **AIZ presentation continuity:** the Angel Island fire curtain now remains
-  continuous across exact art-loading seams in normal play and trace renders.
+  continuous across exact art-loading seams and completes its ROM-shaped
+  release tail in normal play and trace renders.
 - **ROM-accurate gameplay systems:** physics, subpixel movement, sensors,
   collision, solid objects, water, camera behavior, title cards, level events,
   bosses, badniks, sidekicks, Super Sonic, and cross-game feature donation are

@@ -1182,20 +1182,35 @@ public class TestSonic3kAIZEvents {
         assertEquals(FireCurtainStage.AIZ2_REDRAW, state.stage());
 
         boolean sawWaitFire = false;
+        boolean sawUnlatchedWaitFire = false;
+        boolean sawLatchedWaitFire = false;
         boolean sawAiz2SourceStrip = false;
+        int latchedWaitFireSourceY = -1;
         for (int i = 0; i < 240 && act2Events.getFireCurtainRenderState(224).active(); i++) {
             updateWithHardware(act2Events, 1, i);
             state = act2Events.getFireCurtainRenderState(224);
             if (state.stage() == FireCurtainStage.AIZ2_WAIT_FIRE) {
                 sawWaitFire = true;
                 if (state.sourceWorldX() == 0x0200) {
+                    sawLatchedWaitFire = true;
                     sawAiz2SourceStrip = true;
+                    latchedWaitFireSourceY = state.sourceWorldY();
+                    assertFalse(state.wrapFireTiles(),
+                            "The latched WaitFire outro must stop wrapping the cached fire body");
+                } else {
+                    sawUnlatchedWaitFire = true;
+                    assertTrue(state.wrapFireTiles(),
+                            "The pre-latch WaitFire continuation must keep the cached plane wrapped");
                 }
             }
         }
 
         assertTrue(sawWaitFire, "Expected to reach AIZ2 WaitFire continuation");
+        assertTrue(sawUnlatchedWaitFire, "Expected to observe WaitFire before its ROM release latch");
+        assertTrue(sawLatchedWaitFire, "Expected to observe WaitFire after its ROM release latch");
         assertTrue(sawAiz2SourceStrip, "Expected WaitFire to switch to the $200 source strip");
+        assertTrue(latchedWaitFireSourceY >= 0x180 && latchedWaitFireSourceY < 0x310,
+                "The latched WaitFire source Y must remain in the ROM's finite release interval");
         assertFalse(act2Events.getFireCurtainRenderState(224).active(), "Curtain should eventually clear after AIZ2 WaitFire");
     }
 

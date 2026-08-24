@@ -9,12 +9,13 @@ This file contains the complete 0.6 development snapshot history carried forward
   runtime path, so the distributable remains in `target/` while certifying
   builds, tests, and trace evidence remain session-wrapped.
 
-- **AIZ's fire curtain now remains continuous across the exact-load seam:** the
-  AIZ2 `FireRedraw`/`WaitFire` continuation keeps the cached ROM fire body in
-  VDP-style wrapped tiling when the carried fire position passes the original
-  `$310` boundary. The post-release redraw still scrolls off naturally, so
-  normal play and trace captures no longer show the curtain disappearing and
-  restarting.
+- **AIZ's fire curtain now remains continuous across the exact-load seam and
+  exits with its ROM-shaped tail:** the AIZ2 `FireRedraw`/pre-latch `WaitFire`
+  continuation keeps the cached ROM fire body in VDP-style wrapped tiling when
+  the carried fire position passes the original `$310` boundary. Once the ROM
+  latches the AIZ2 source strip, wrapping stops so the finite trailing band
+  scrolls away before the background redraw; normal play and trace captures no
+  longer show the curtain disappearing and restarting or ending abruptly.
 
 - **The standalone sound test once again reaches the speaker:** its interactive
   window now creates, drives, and closes the OpenAL presentation host on one

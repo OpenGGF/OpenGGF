@@ -114699,3 +114699,42 @@ The other three death arms remain coordinates only.
   the known trace-prefix boundary with pending KosM ordinals 38-41. The
   formerly empty capture window (frames 5206-5214) is continuously covered in
   the new render; no fixture data changed.
+
+## 2026-08-24 - AIZ fire curtain outro preserves the trace frontier
+
+- Worktree: `.worktrees/bugfix-ai-aiz-fire-curtain-outro`, branch
+  `bugfix/ai-aiz-fire-curtain-outro`, candidate over `4618e882b`.
+- Root: AIZ2 `WaitFire` has two ROM-owned render intervals. Before
+  `Events_bg+$00` latches, the continuation still redraws the wrapped cached
+  fire plane; after the latch, it draws only the finite `$180..$310` release
+  tail. `AIZ2_BG_REDRAW` performs no fire draw. The renderer now selects those
+  modes from the existing latch state; event progression, source strips,
+  timing, and trace comparison data are unchanged. ROM references:
+  `docs/skdisasm/sonic3k.asm:105036-105105,105128-105138`.
+- Focused certifying command: `tools/testing/test-session.sh -- mvn
+  -Dmse=off -Dtest=TestAizFireCurtainRenderer,TestSonic3kAIZEvents test -B`;
+  pre-fix candidate failed 2 new assertions (57 tests), and the fixed
+  candidate run `20260824T182219Z-p4115363-91a464` passed all 57. Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260824T182219Z-4115440-7e91cbc8/20260824T182219Z-p4115363-91a464/manifest.json`.
+- ROM-backed diagnostic command passed in run
+  `20260824T182306Z-p4116066-58d9a9` (1 test): latched WaitFire emitted the
+  overlay tail and AIZ2 background redraw emitted no fire overlay. Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260824T182306Z-4116143-aefd7c07/20260824T182306Z-p4116066-58d9a9/manifest.json`.
+- Frontier command, run identically on baseline and candidate:
+  `tools/testing/test-session.sh -- mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  '-Dtest=*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false test -B`.
+  Baseline run `20260824T184445Z-p4144997-c8e1ef` and candidate run
+  `20260824T185645Z-p4166117-c50f5b` each reported 117 tests, 58 failures,
+  and 0 errors. The Surefire red sets were identical and all 58 first-error
+  messages matched exactly. The AIZ replay remained at frame 20713 / `air`,
+  and the AIZ zone slice remained at frame 25589 /
+  `player_animation_id`; no trace frontier regressed. Manifests:
+  baseline `<managed-scratch>/tasks/openggf-test-session-20260824T184445Z-4145054-2752ab2c/20260824T184445Z-p4144997-c8e1ef/manifest.json`;
+  candidate `<managed-scratch>/tasks/openggf-test-session-20260824T185645Z-4166185-4b33612f/20260824T185645Z-p4166117-c50f5b/manifest.json`.
+- The supplementary native capture run
+  `20260824T182449Z-p4117227-fd65a5` captured 20,461 frames before the known
+  teardown-only pending KOS ordinals 38-41 exception; it was used only for
+  visual review and never supplied replay state. Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260824T182409Z-4117291-b2e62b66/20260824T182449Z-p4117227-fd65a5/manifest.json`.
