@@ -114804,3 +114804,20 @@ The other three death arms remain coordinates only.
   remains frame `25589` / `player_animation_id`; no trace frontier regressed.
   Manifest:
   `<managed-scratch>/tasks/openggf-test-session-20260824T203549Z-107642-5a980d4f/20260824T203549Z-p107571-39cae8/manifest.json`.
+
+## 2026-08-24 - Post-merge verification of AIZ fire music timing
+
+- Worktree: main `develop` after the non-fast-forward merge commit
+  `3c1447d72`; the merge completed without conflicts after the fetched main
+  branch was confirmed up to date.
+- Full frontier command:
+  `tools/testing/test-session.sh -- mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  '-Dtest=*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false test -B`.
+  Result: 117 tests, 58 failures, 0 errors, 0 skips. The result matches the
+  candidate and integration-baseline frontier exactly; AIZ remains at frame
+  `20713` / `air`, and the AIZ zone slice remains at frame `25589` /
+  `player_animation_id`. No trace frontier regressed.
+- Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260824T211258Z-158007-37744576/20260824T211258Z-p157948-e1c132/manifest.json`.
