@@ -114738,3 +114738,36 @@ The other three death arms remain coordinates only.
   teardown-only pending KOS ordinals 38-41 exception; it was used only for
   visual review and never supplied replay state. Manifest:
   `<managed-scratch>/tasks/openggf-test-session-20260824T182409Z-4117291-b2e62b66/20260824T182449Z-p4117227-fd65a5/manifest.json`.
+
+## 2026-08-24 - Post-merge AIZ fire-curtain verification
+
+- Worktree: main `develop` after merge `32c3f4c8e06d352f46f0823f6a2e7fce21e72f7d`,
+  with the seven pre-existing S1 special-stage files left dirty and untouched.
+  The merged feature parent is `f7a12ae326e19e1efbdf42fdb55f566eaefd588a`.
+- Post-merge ordinary suite command: `tools/testing/test-session.sh -- mvn
+  -Dmse=off -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  test -B`. Result: 15,106 tests, 51 failures, 9 errors, 19 skips. Compared
+  with the merged baseline's 15,105 / 52 / 9 / 19, the merged red set had no
+  new failures; the one baseline-only red was the existing
+  `TestMhzMushroomParachuteObjectInstance` order-sensitive case. Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260824T192337Z-7228-be58f4f6/20260824T192337Z-p7173-8c6dd9/manifest.json`.
+- Post-merge guard command: `tools/testing/test-session.sh -- mvn -Pguards
+  -Dmse=off -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  test -B`. Result: 556 tests, 19 failures, 1 error, 0 skips, identical to
+  baseline. Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260824T192824Z-14956-74d8aec1/20260824T192824Z-p14878-af33ad/manifest.json`.
+- Post-merge complete frontier command: `tools/testing/test-session.sh -- mvn
+  -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dsonic1.rom.path=...
+  -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  '-Dtest=*TraceReplay#replayMatchesTrace' -DfailIfNoTests=false test -B`.
+  Result: 117 tests, 58 failures, 0 errors, 0 skips. Surefire red sets and
+  all 62 normalized trace reports matched both baseline and candidate in error
+  count, warning count, frame count, and first-error frame/field. AIZ remained
+  at frame 20713 / `air` and AIZ zone slice at frame 25589 /
+  `player_animation_id`; no trace frontier regressed. Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260824T193104Z-27288-6933c0a5/20260824T193104Z-p27232-92151e/manifest.json`.
+- Post-merge packaging command: `tools/testing/test-session.sh -- mvn
+  -Dmse=off -DskipTests package -B`. Result: passed and produced the
+  executable dependency JAR. Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260824T193813Z-31751-fb5e1d73/20260824T193813Z-p31692-c737ec/manifest.json`.
