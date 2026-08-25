@@ -2579,14 +2579,16 @@ frontier is untriaged rather than asserting a tolerance.
 divergences to zero, then promote `TraceBinder.putSlotField` from
 `Severity.WARNING` to `Severity.ERROR` and delete this entry.
 
-## S2 tornado (ObjB2): recorded ROM SST diverges at three discrete points
+## S2 tornado (ObjB2): recorded single-instance SST rows are exact
 
-**Status:** open, comparison landed at WARNING on 2026-08-21; two SCZ spans
-resolved on 2026-08-23.
+**Status:** all five divergence spans in rows where the comparator identifies one
+Tornado are resolved. Comparison landed at WARNING on 2026-08-21, the two SCZ
+spans resolved on 2026-08-23, and the three WFZ spans resolved on the 2026-08-25
+candidate over `bad36d0b2`.
 
 `aux_state.jsonl` carries ObjB2's SST (`s2_tornado_state`) on every row of the SCZ and WFZ
 fixtures. It was parsed as an untyped generic event and never compared. Comparing it exposed
-five pre-existing divergence spans across 24,056 rows; the two SCZ spans below are now closed:
+five pre-existing divergence spans across 24,056 rows. The three formerly open WFZ spans were:
 
 | fixture | field | rows | ROM | engine |
 |---|---|---|---|---|
@@ -2594,8 +2596,8 @@ five pre-existing divergence spans across 24,056 rows; the two SCZ spans below a
 | `wfz` | `tornado.routine` | 10419 only | `0x00` | `0x06` |
 | `wfz` | `tornado.objoff_2f` | 13378–13440 | `0x01` | `0x00` |
 
-Unlike the CNZ slot block these are discrete and individually nameable rather than a cascade,
-which makes each one a small self-contained target. The SCZ targets were resolved by
+Unlike the CNZ slot block these were discrete and individually nameable rather than a cascade.
+The SCZ targets were resolved by
 initialising the native expired vertical timer sentinel and by preserving the ROM's
 stationary airborne release path through `Move_below_player`; the focused SCZ replay now
 reports zero errors and zero warnings.
@@ -2604,10 +2606,17 @@ reports zero errors and zero warnings.
   `subq.b #1` / `bpl` (`s2.asm:79388`), so its expired resting value is `-1` = `0xFF`. The
   engine now exposes that sentinel from the native ride-start prelude. This closes the
   SCZ 0–198 span.
-- **`status_byte` at WFZ level start.** The ROM has the `p1_standing` bit set on ObjB2 for the
-  first 197 rows; the engine's `lastMainStanding` is false there.
-- **The remaining single-row span** (`wfz` `routine` at 10419) is a one-frame divergence that
-  self-corrects, so it is a phase question at a specific transition rather than a drift.
+- **`status_byte` at WFZ level start.** ObjB2's inline `SolidObject` call now retains the
+  returned standing state in the object-owned status latch. This follows
+  `RideObject_SetRide` setting `p1_standing` and `SolidObject` clearing it on release
+  (`s2.asm:35014-35044, 35986-36045`).
+- **`routine` at WFZ row 10419.** A newly allocated ObjB2 snapshot now exposes routine 0
+  until its pending `ObjB2_Init` update installs the subtype-derived routine
+  (`s2.asm:78777-78813`).
+- **`objoff_2f` at WFZ rows 13378-13440.** The WFZ-end snapshot now encodes the low byte of
+  the word incremented by `ObjB2_Wait_Leader_position`, then the jump countdown installed
+  by `ObjB2_Prepare_to_jump` (`s2.asm:78972-78979, 79042-79052`). The Java model already
+  owned those values as `leaderWaitCounter` and `jumpTimer`; no trace value supplies them.
 
 The resolved SCZ `x` span at row 7103 was caused by the engine treating an airborne,
 stationary player as still riding a different solid while ObjB2 performed its pre-contact
@@ -2615,18 +2624,25 @@ stationary player as still riding a different solid while ObjB2 performed its pr
 the live-object path, while the stationary airborne release seeds and consumes ObjB2's
 decaying horizontal relation. It does not inspect trace rows, frame numbers, or zone names.
 
-**A limitation of the encoding, stated because it is not obvious.** The scratch bytes are
-re-encoded from the engine's semantic fields using ROM idioms read off the **SCZ** arm:
+**The routine-aware encoding.** The SCZ scratch bytes are re-encoded from the engine's
+semantic fields using ROM idioms read off the **SCZ** arm:
 `objoff_2E` is the `p1_standing` transition (`status(a0)` saved, then
 `(saved ^ current) & p1_standing`, `s2.asm:78827, 78834-78839`), and `objoff_2F`/`objoff_30`
-are `st.b`/`clr.b` flags, hence `0xFF`/`0x00` (`s2.asm:79382-79383, 79390`). The WFZ
-`objoff_2f` divergence records `0x01`, which that encoding cannot produce — so **the WFZ arm
-uses the byte for something else**, and the mapping is per-routine rather than per-object. The
-WFZ arm's scratch semantics have not been read; until they are, `tornado.objoff_2f` on a WFZ
-row should be treated as unmodelled rather than as a divergence.
+are `st.b`/`clr.b` flags, hence `0xFF`/`0x00` (`s2.asm:79382-79383, 79390`). The WFZ-end arm
+instead owns `objoff_2E` as a word, so `objoff_2F` is its low byte. The mapping is therefore
+per routine, matching the ROM's reuse of the SST scratch region.
+
+**Coverage boundary.** `TraceBinder` compares `s2_tornado_state` only while exactly one live
+Tornado instance can be identified by content. Once WFZ-end creates its Tornado children,
+the comparison stops instead of inventing a ROM-slot-to-engine-slot mapping. The committed
+WFZ fixture therefore proves the recorded single-instance rows through the `$0040` leader
+wait, but does not prove the parent plane's state-8-and-later `$38`/`$28` decrement and
+landing-reset tail. Focused ObjB2 tests cover those ROM-owned transitions directly; the
+trace comparator remains deliberately unchanged in this patch.
 
 `y_sub` is exact rather than truncating: the ROM's sub-pixel word has a zero low byte on all
 7629 SCZ rows, so the engine's 8-bit sub-pixel is a faithful model of it.
 
-**Removal condition.** Fix the three remaining divergences, read the WFZ arm's scratch semantics, then
-promote the tornado fields from `Severity.WARNING` to `ERROR` and delete this entry.
+**Removal condition.** Give the parent Tornado an exact identity through the child-presence
+tail without slot fitting, compare and close the state-8-and-later rows, then split Tornado
+severity from the shared CNZ-slot WARNING helper and promote it to `Severity.ERROR`.

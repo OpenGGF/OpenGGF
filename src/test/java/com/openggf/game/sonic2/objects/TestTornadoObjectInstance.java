@@ -44,6 +44,8 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -227,8 +229,27 @@ public class TestTornadoObjectInstance {
 
         assertEquals(8, getField(tornado, "routineSecondary"));
         assertEquals(0x38, getField(tornado, "jumpTimer"));
+        assertEquals(0x0038, snapshotObjoff2EWord(tornado),
+                "ObjB2_Prepare_to_jump installs the normal $38 word at objoff_2E");
         assertEquals(0, main.getForcedInputMask());
         assertTrue(main.isControlLocked());
+    }
+
+    @Test
+    public void wfzPrepareToJumpPublishesSuperJumpCountdownAtObjoff2E() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2E58, 0x066C, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2E31, (short) 0x05EC);
+        main.setSuperSonic(true);
+
+        setField(tornado, "routineSecondary", 6);
+        setField(tornado, "scriptTimer", 0x2F);
+
+        invokePrivate(tornado, "wfzPrepareToJump",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(8, getField(tornado, "routineSecondary"));
+        assertEquals(0x0028, snapshotObjoff2EWord(tornado),
+                "Super_Sonic_flag selects the ROM's $28 jump countdown");
     }
 
     @Test
@@ -244,6 +265,14 @@ public class TestTornadoObjectInstance {
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
                 main.getForcedInputMask());
         assertEquals(-1, getField(tornado, "jumpTimer"));
+        assertEquals(0xFFFF, snapshotObjoff2EWord(tornado),
+                "subq.w wraps ObjB2's zero countdown to $FFFF");
+
+        tornado.update(1, main);
+
+        assertEquals(-2, getField(tornado, "jumpTimer"));
+        assertEquals(0xFFFE, snapshotObjoff2EWord(tornado),
+                "the Java int remains published with ROM word-width decrement semantics");
         assertTrue(main.isControlLocked());
     }
 
@@ -284,6 +313,8 @@ public class TestTornadoObjectInstance {
 
         assertEquals(0x0A, getField(tornado, "routineSecondary"));
         assertEquals(0x20, getField(tornado, "jumpTimer"));
+        assertEquals(0x0020, snapshotObjoff2EWord(tornado),
+                "ObjB2_Jump_to_plane resets objoff_2E to $20 on landing");
         assertEquals(0x2EC5, tornado.getX(),
                 "ObjB2_Align_plane still advances the plane after the landing check");
         assertEquals(0x05FF, tornado.getY(),
@@ -545,6 +576,103 @@ public class TestTornadoObjectInstance {
                 "SCZ Tornado should use the current-frame checkpoint standing state");
         assertTrue((boolean) getField(tornado, "standingTransition"),
                 "SCZ Tornado should detect the same-frame standing transition before follow motion");
+    }
+
+    @Test
+    public void tornadoWfzStartPublishesStandingBitFromManualCheckpoint() throws Exception {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                0x80, 0x4E4, Sonic2ObjectIds.TORNADO, 0x52, 0, false, 0));
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x80, (short) 0x4C8);
+        main.setAir(false);
+
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        registry.beginFrame(1, List.of(main));
+        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+                main, new PlayerSolidContactResult(
+                        ContactKind.TOP,
+                        true,
+                        false,
+                        false,
+                        false,
+                        PreContactState.ZERO,
+                        PostContactState.ZERO,
+                        0))));
+
+        tornado.setServices(new CheckpointServices(registry.currentObject()));
+        setField(tornado, "routineSecondary", 2);
+        setField(tornado, "scriptTimer", 2);
+
+        invokePrivate(tornado, "updateWfzStart",
+                new Class<?>[]{int.class, AbstractPlayableSprite.class}, 1, main);
+
+        assertEquals(0x08, tornado.snapshot().statusByte(),
+                "ObjB2 status must retain SolidObject's p1_standing bit after the WFZ checkpoint");
+    }
+
+    @Test
+    public void tornadoInitRoutinePublicationSurvivesRewindRecreation() throws Exception {
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x2C60, 0x05EC, Sonic2ObjectIds.TORNADO, 0x54, 0, false, 0);
+        TestObjectServices services = new TestObjectServices()
+                .withConfiguration(SonicConfigurationService.getInstance());
+        TornadoObjectInstance tornado = new TornadoObjectInstance(spawn);
+        tornado.setServices(services);
+
+        assertEquals(0, tornado.snapshot().routine(),
+                "A freshly allocated ObjB2 SST slot must expose routine 0 until ObjB2_Init executes");
+
+        tornado.update(0, new TestPlayableSprite("main", (short) 0x2C00, (short) 0x05EC));
+
+        assertEquals(6, tornado.snapshot().routine(),
+                "ObjB2_Init publishes subtype $54 as the WFZ-end routine 6");
+
+        PerObjectRewindSnapshot rewindState = tornado.captureRewindState();
+        TornadoObjectInstance recreated = tornado.recreateForRewind(
+                new RewindRecreateContext(spawn, rewindState, services));
+        recreated.setServices(services);
+        assertTrue((boolean) getField(recreated, "initRoutinePending"),
+                "recreation starts from the constructor's routine-0 state before restore");
+
+        recreated.restoreRewindState(rewindState);
+
+        assertFalse((boolean) getField(recreated, "initRoutinePending"),
+                "rewind restore must recover the captured post-init publication state");
+        assertEquals(6, recreated.snapshot().routine(),
+                "restored ObjB2 must not regress to routine 0 after recreation");
+    }
+
+    @Test
+    public void tornadoWfzEndSnapshotPublishesLeaderWaitWordAtObjoff2E() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2C60, 0x05EC, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2C00, (short) 0x05EC);
+
+        invokePrivate(tornado, "wfzWaitLeaderPosition",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0, tornado.snapshot().objoff2E(),
+                "ObjB2_Wait_Leader_position increments the big-endian word at objoff_2E");
+        assertEquals(1, tornado.snapshot().objoff2F(),
+                "The first increment must appear in the low byte at objoff_2F");
+    }
+
+    @Test
+    public void tornadoWfzEndRetainsCompletedLeaderWaitWordUntilJumpState() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x2C60, 0x05EC, 0x54);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2C00, (short) 0x05EC);
+        setField(tornado, "leaderWaitCounter", 0x3F);
+
+        invokePrivate(tornado, "wfzWaitLeaderPosition",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(2, getField(tornado, "routineSecondary"));
+        assertEquals(0x0040, snapshotObjoff2EWord(tornado),
+                "ObjB2_Wait_Leader_position retains the completed $40 word in state 2");
+
+        for (int state : new int[]{4, 6}) {
+            setField(tornado, "routineSecondary", state);
+            assertEquals(0x0040, snapshotObjoff2EWord(tornado),
+                    "pre-jump state " + state + " must retain ObjB2's $40 word");
+        }
     }
 
     @Test
@@ -835,6 +963,11 @@ public class TestTornadoObjectInstance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private static int snapshotObjoff2EWord(TornadoObjectInstance tornado) {
+        TornadoObjectInstance.Snapshot snapshot = tornado.snapshot();
+        return ((snapshot.objoff2E() & 0xFF) << 8) | (snapshot.objoff2F() & 0xFF);
     }
 
     private static final class TestPlayableSprite extends AbstractPlayableSprite {
