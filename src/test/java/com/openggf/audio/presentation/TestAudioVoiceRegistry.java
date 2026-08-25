@@ -7,8 +7,10 @@ import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.driver.PreparedSfxAdmission;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.presentation.AudioPresentationCommand.AddSmpsSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.EndMusicOverride;
+import com.openggf.audio.presentation.AudioPresentationCommand.FadeMusic;
 import com.openggf.audio.presentation.AudioPresentationCommand.HardReset;
 import com.openggf.audio.presentation.AudioPresentationCommand.MusicVoiceEntry;
 import com.openggf.audio.presentation.AudioPresentationCommand.PushMusicOverride;
@@ -107,6 +109,45 @@ class TestAudioVoiceRegistry {
         assertEquals(List.of("sample SFX blocked at presentation boundary"),
                 warnings);
         assertEquals(0, registry.orderedVoiceCount());
+    }
+
+    @Test
+    void fadeOutSfxAdmissionFollowsTheActiveSequencerConfig() {
+        RecordingInstantiation blockedInstantiation =
+                new RecordingInstantiation();
+        AudioVoiceRegistry blocked = registry(
+                blockedInstantiation, new ArrayList<>());
+        SmpsDriver sonic1 = musicDriver(new SmpsSequencerConfig.Builder()
+                .blocksSfxDuringFadeOut(true)
+                .build());
+        blockedInstantiation.enqueueMusicDriver(sonic1);
+        blocked.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, sonic1))));
+        blocked.apply(new FadeMusic(2, 1));
+
+        blocked.apply(start(longSample(2, 1, "s1-fade-jump")));
+
+        assertEquals(List.of(1L), orderedIds(blocked),
+                "S1 Sound_PlaySFX rejects new SFX while fading out");
+
+        RecordingInstantiation allowedInstantiation =
+                new RecordingInstantiation();
+        AudioVoiceRegistry allowed = registry(
+                allowedInstantiation, new ArrayList<>());
+        SmpsDriver sonic2 = musicDriver(new SmpsSequencerConfig.Builder()
+                .blocksSfxDuringFadeOut(false)
+                .build());
+        allowedInstantiation.enqueueMusicDriver(sonic2);
+        allowed.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(3, 0x81, sonic2))));
+        allowed.apply(new FadeMusic(2, 1));
+
+        allowed.apply(start(longSample(4, 1, "s2-fade-jump")));
+
+        assertEquals(List.of(3L, 4L), orderedIds(allowed),
+                "S2 and S3K accept SFX while fading out");
     }
 
     @Test
@@ -1242,6 +1283,79 @@ class TestAudioVoiceRegistry {
         assertEquals(AudioSourceDescriptor.fallbackMusic(1),
                 snapshot.activeMusic().sourceDescriptor());
         assertTrue(snapshot.overrideStack().isEmpty());
+    }
+
+    @Test
+    void overrideLifecycleReportsSaveOnlyWhenTheBaseSongIsActuallySaved() {
+        List<SmpsDriverServiceObserver.LifecycleEvent> lifecycle =
+                new ArrayList<>();
+        RecordingInstantiation instantiation = new RecordingInstantiation() {
+            @Override
+            public void observeLifecycle(
+                    SmpsDriverServiceObserver.LifecycleEvent event) {
+                lifecycle.add(event);
+            }
+        };
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(new ReplaceMusic(fallbackMusic(1, 10, "base")));
+        registry.apply(new PushMusicOverride(
+                fallbackMusic(2, 20, "override-first")));
+        registry.apply(new PushMusicOverride(
+                fallbackMusic(2, 21, "override-ignored")));
+        registry.apply(new PushMusicOverride(
+                fallbackMusic(2, 22, "override-restarted"),
+                com.openggf.audio.GameAudioProfile
+                        .MusicOverrideRetriggerPolicy.RESTART));
+
+        assertEquals(1, lifecycle.stream()
+                .filter(event -> event.kind()
+                        == SmpsDriverServiceObserver.LifecycleKind.SAVE)
+                .count(), "retriggering never overwrites the saved-song slot");
+    }
+
+    @Test
+    void completedOverrideVoiceCannotStrandItsSavedSongOrSfxGate() {
+        AudioVoiceRegistry registry = registry(
+                new RecordingInstantiation(), new ArrayList<>());
+        registry.apply(new ReplaceMusic(fallbackMusic(1, 10, "base")));
+        registry.apply(new PushMusicOverride(
+                fallbackMusic(2, 20, "override")));
+        PresentationVoice override = registry.orderedVoiceAt(0);
+
+        override.stop();
+        registry.beginRendering();
+        registry.endRendering();
+
+        AudioPresentationSnapshot snapshot = registry.snapshot();
+        assertNull(snapshot.activeMusic());
+        assertTrue(snapshot.overrideStack().isEmpty(),
+                "S1/S2 fade completion performs a full playback-memory clear");
+        assertFalse(snapshot.activeMusicOverride());
+        assertFalse(snapshot.sfxBlocked(),
+                "a vanished override can never leave SFX permanently blocked");
+    }
+
+    @Test
+    void completedOverridePreservesSavedSongWhenItsE4RestoreIsPending() {
+        AudioVoiceRegistry registry = registry(
+                new RecordingInstantiation(), new ArrayList<>());
+        registry.apply(new ReplaceMusic(fallbackMusic(1, 10, "base")));
+        registry.apply(new PushMusicOverride(
+                fallbackMusic(2, 20, "override")));
+        registry.setPendingRestore(true);
+        PresentationVoice override = registry.orderedVoiceAt(0);
+
+        override.stop();
+        registry.beginRendering();
+        registry.endRendering();
+
+        assertEquals(List.of(1), registry.snapshot().overrideStack().stream()
+                .map(AudioPresentationSnapshot.MusicSlotSnapshot::musicId)
+                .toList());
+        assertTrue(registry.snapshot().sfxBlocked());
+        registry.apply(new RestoreMusicOverride());
+        assertEquals(1, registry.snapshot().activeMusic().musicId());
+        assertFalse(registry.snapshot().sfxBlocked());
     }
 
     @Test

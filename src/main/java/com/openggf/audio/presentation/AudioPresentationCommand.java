@@ -178,9 +178,18 @@ public sealed interface AudioPresentationCommand
         }
     }
 
-    record PushMusicOverride(MusicVoiceEntry music) implements AudioPresentationCommand {
+    record PushMusicOverride(
+            MusicVoiceEntry music,
+            com.openggf.audio.GameAudioProfile.MusicOverrideRetriggerPolicy
+                    retriggerPolicy) implements AudioPresentationCommand {
         public PushMusicOverride {
             Objects.requireNonNull(music, "music");
+            Objects.requireNonNull(retriggerPolicy, "retriggerPolicy");
+        }
+
+        public PushMusicOverride(MusicVoiceEntry music) {
+            this(music, com.openggf.audio.GameAudioProfile
+                    .MusicOverrideRetriggerPolicy.IGNORE);
         }
     }
 
@@ -233,17 +242,17 @@ public sealed interface AudioPresentationCommand
     }
 
     record StopMusic(
-            com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
-                    musicDuringOverridePolicy)
+            com.openggf.audio.GameAudioProfile.SystemCommandDuringOverridePolicy
+                    systemCommandDuringOverridePolicy)
             implements AudioPresentationCommand {
         public StopMusic {
-            Objects.requireNonNull(musicDuringOverridePolicy,
-                    "musicDuringOverridePolicy");
+            Objects.requireNonNull(systemCommandDuringOverridePolicy,
+                    "systemCommandDuringOverridePolicy");
         }
 
         public StopMusic() {
-            this(com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
-                    .REPLACE_IMMEDIATELY);
+            this(com.openggf.audio.GameAudioProfile
+                    .SystemCommandDuringOverridePolicy.APPLY);
         }
     }
 
@@ -253,17 +262,17 @@ public sealed interface AudioPresentationCommand
     record FadeMusic(
             int steps,
             int delay,
-            com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
-                    musicDuringOverridePolicy)
+            com.openggf.audio.GameAudioProfile.SystemCommandDuringOverridePolicy
+                    systemCommandDuringOverridePolicy)
             implements AudioPresentationCommand {
         public FadeMusic {
-            Objects.requireNonNull(musicDuringOverridePolicy,
-                    "musicDuringOverridePolicy");
+            Objects.requireNonNull(systemCommandDuringOverridePolicy,
+                    "systemCommandDuringOverridePolicy");
         }
 
         public FadeMusic(int steps, int delay) {
             this(steps, delay, com.openggf.audio.GameAudioProfile
-                    .MusicDuringOverridePolicy.REPLACE_IMMEDIATELY);
+                    .SystemCommandDuringOverridePolicy.APPLY);
         }
     }
 

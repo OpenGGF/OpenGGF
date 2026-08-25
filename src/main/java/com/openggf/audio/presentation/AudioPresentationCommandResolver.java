@@ -131,9 +131,10 @@ public final class AudioPresentationCommandResolver {
             case AudioCommand.PlaySfx sfx -> submitSfx(sfx);
             case AudioCommand.FadeOutMusic fade ->
                     enqueue(new FadeMusic(fade.steps(), fade.delay(),
-                            fade.musicDuringOverridePolicy()));
+                            fade.systemCommandDuringOverridePolicy()));
             case AudioCommand.StopMusic stop ->
-                    enqueue(new StopMusic(stop.musicDuringOverridePolicy()));
+                    enqueue(new StopMusic(
+                            stop.systemCommandDuringOverridePolicy()));
             case AudioCommand.StopAllSfx ignored ->
                     enqueue(new StopAllSfx());
             case AudioCommand.EndMusicOverride end ->
@@ -238,7 +239,8 @@ public final class AudioPresentationCommandResolver {
                                 throw new AssertionError("handled above");
                     };
             resolved = command.override()
-                    ? new PushMusicOverride(voice)
+                    ? new PushMusicOverride(
+                            voice, command.overrideRetriggerPolicy())
                     : new ReplaceMusic(voice, selectedSource[0] != null
                             ? selectedSource[0].ordinaryMusicSfxPolicy()
                             : GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL,

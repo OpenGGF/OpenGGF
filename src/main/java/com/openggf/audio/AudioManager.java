@@ -1583,6 +1583,10 @@ public class AudioManager implements MusicRestoreSink {
                         ? profile.getMusicDuringOverridePolicy()
                         : GameAudioProfile.MusicDuringOverridePolicy
                                 .REPLACE_IMMEDIATELY;
+        GameAudioProfile.MusicOverrideRetriggerPolicy retriggerPolicy =
+                profile != null
+                        ? profile.getMusicOverrideRetriggerPolicy()
+                        : GameAudioProfile.MusicOverrideRetriggerPolicy.IGNORE;
 
         if (source.loader() != null) {
             ensureShadowPresentation();
@@ -1604,7 +1608,7 @@ public class AudioManager implements MusicRestoreSink {
             if (registered) {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
                         musicId, AudioCommand.MusicRoute.BASE_SMPS, override, null,
-                        musicDuringOverridePolicy));
+                        musicDuringOverridePolicy, retriggerPolicy));
                 if (sendLiveBackendCommands()) {
                     var playback = shadowFactory
                             .requireRegisteredSmpsMusicPlayback(
@@ -1617,7 +1621,7 @@ public class AudioManager implements MusicRestoreSink {
         }
         recordTimelineCommand(new AudioCommand.PlayMusic(
                 musicId, AudioCommand.MusicRoute.FALLBACK_WAV, override, null,
-                musicDuringOverridePolicy));
+                musicDuringOverridePolicy, retriggerPolicy));
         if (sendLiveBackendCommands()) {
             backend.prepareLogicalMusicSource(AudioSourceDescriptor.fallbackMusic(musicId));
             backend.playMusic(musicId);
@@ -2337,9 +2341,10 @@ public class AudioManager implements MusicRestoreSink {
         }
         GameAudioProfile profile = baseAudioSource.profile();
         recordTimelineCommand(new AudioCommand.StopMusic(
-                profile != null ? profile.getMusicDuringOverridePolicy()
-                        : GameAudioProfile.MusicDuringOverridePolicy
-                                .REPLACE_IMMEDIATELY));
+                profile != null
+                        ? profile.getSystemCommandDuringOverridePolicy()
+                        : GameAudioProfile.SystemCommandDuringOverridePolicy
+                                .APPLY));
         if (sendLiveBackendCommands()) {
             backend.stopPlayback();
         }
@@ -2348,7 +2353,7 @@ public class AudioManager implements MusicRestoreSink {
     /**
      * Fade out the currently playing music using ROM default timing.
      * ROM equivalent: MusID_FadeOut (0xF9) / zFadeOutMusic.
-     * Does not affect SFX - only music channels fade.
+     * SFX admission follows the active game's retail fade policy.
      *
      * <p>ROM uses fadeOutMusic() in these situations (for future implementation):
      * <ul>
@@ -2384,7 +2389,7 @@ public class AudioManager implements MusicRestoreSink {
     /**
      * Fade out the currently playing music over time.
      * ROM equivalent: MusID_FadeOut (0xF9) / zFadeOutMusic.
-     * Does not affect SFX - only music channels fade.
+     * SFX admission follows the active game's retail fade policy.
      *
      * @param steps total number of volume steps (ROM default: 0x28 = 40)
      * @param delay frames between each volume step (ROM default: 3)
@@ -2396,9 +2401,10 @@ public class AudioManager implements MusicRestoreSink {
         fadeOutMusicCount++;
         GameAudioProfile profile = baseAudioSource.profile();
         recordTimelineCommand(new AudioCommand.FadeOutMusic(steps, delay,
-                profile != null ? profile.getMusicDuringOverridePolicy()
-                        : GameAudioProfile.MusicDuringOverridePolicy
-                                .REPLACE_IMMEDIATELY));
+                profile != null
+                        ? profile.getSystemCommandDuringOverridePolicy()
+                        : GameAudioProfile.SystemCommandDuringOverridePolicy
+                                .APPLY));
         if (sendLiveBackendCommands()) {
             backend.fadeOutMusic(steps, delay);
         }
@@ -2728,6 +2734,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void restoreShadowMusic() {
+        shadowRegistry.requestMusicOverrideRestore();
         shadowRestoreRequested = true;
     }
 

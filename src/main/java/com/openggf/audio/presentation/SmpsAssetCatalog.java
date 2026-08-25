@@ -483,6 +483,7 @@ final class SmpsAssetCatalog {
                 .sfxRequestTransformPolicy(source.getSfxRequestTransformPolicy())
                 .fadeOutClearsSpeedShoes(source.isFadeOutClearsSpeedShoes())
                 .fadeOutStopsSfxImmediately(source.isFadeOutStopsSfxImmediately())
+                .blocksSfxDuringFadeOut(source.blocksSfxDuringFadeOut())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
                 .ymServiceTimingProfile(source.getYmServiceTimingProfile())
                 .volMode(source.getVolMode())
