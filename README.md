@@ -258,7 +258,8 @@ recorded hardware traces.
   replay, visual/audio regression checks, and release/architecture guards.
   Automated test sessions use timestamped session-owned roots and isolate
   LWJGL extraction per Surefire fork so concurrent agent runs cannot corrupt
-  one another.
+  one another. Their full build output stays in a searchable session log by
+  default, while compact start/end markers expose the manifest and log paths.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
   and isolated test-session procedures.

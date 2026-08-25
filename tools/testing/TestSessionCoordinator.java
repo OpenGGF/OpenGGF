@@ -106,7 +106,7 @@ public final class TestSessionCoordinator {
                 List.of(), List.of()));
         System.out.println("OPENGGF_TEST_RUN_START run_id=" + runId + " isolation="
                 + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " manifest="
-                + paths.manifest + " lease=" + leasePath);
+                + paths.manifest + " lease=" + leasePath + " log=" + paths.mavenLog);
 
         ShutdownState shutdown = new ShutdownState(paths, runId, worktree, leasePath,
                 sourceBefore, runtimeBefore, options.command, commandHash, capability,
@@ -140,7 +140,9 @@ public final class TestSessionCoordinator {
                     String text = new String(buffer, 0, count);
                     log.write(text);
                     log.flush();
-                    System.out.print(text);
+                    if (options.verbose) {
+                        System.out.print(text);
+                    }
                 }
             }
             exitCode = child.waitFor();
@@ -169,7 +171,8 @@ public final class TestSessionCoordinator {
             }
             System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId + " isolation="
                     + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " exit_code="
-                    + exitCode + " state=" + state + " valid=" + valid + " manifest=" + paths.manifest);
+                    + exitCode + " state=" + state + " valid=" + valid + " manifest=" + paths.manifest
+                    + " log=" + paths.mavenLog);
             shutdown.completed = true;
             lease.close();
         }
@@ -1305,6 +1308,7 @@ public final class TestSessionCoordinator {
         Path reclaim;
         boolean reuseStale;
         boolean allowSystemTmp;
+        boolean verbose;
         String guard;
         String debugGuard;
         List<String> command = List.of();
@@ -1323,6 +1327,8 @@ public final class TestSessionCoordinator {
                     case "--export-file" -> options.exportFile = Path.of(require(args, ++i, arg));
                     case "--lock-root" -> options.lockRoot = Path.of(require(args, ++i, arg));
                     case "--allow-system-tmp" -> options.allowSystemTmp = true;
+                    case "--quiet" -> options.verbose = false;
+                    case "--verbose" -> options.verbose = true;
                     case "--reclaim" -> options.reclaim = Path.of(require(args, ++i, arg));
                     case "--reuse-stale" -> options.reuseStale = true;
                     case "--guard" -> {
