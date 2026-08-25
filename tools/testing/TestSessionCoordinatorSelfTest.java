@@ -43,6 +43,8 @@ public final class TestSessionCoordinatorSelfTest {
         Path outputRoot = createOwnedDirectory(root.resolve("output"));
 
         BasicRun first = verifySuccessfulRun(root, outputRoot);
+        verifyExplicitQuietRun(root, outputRoot);
+        verifyVerboseRun(root, outputRoot);
         verifyForeignOwnedRootIsRejected(root, outputRoot);
         verifySpaceContainingRoot(root);
         verifyInWorktreeSymlinkLockRootIsRejected(root, outputRoot);
@@ -95,6 +97,11 @@ public final class TestSessionCoordinatorSelfTest {
 
         Path manifest = Path.of(markerValue(startLine, "manifest"));
         check(manifest.isAbsolute() && Files.isRegularFile(manifest), "manifest path must be absolute and regular");
+        Path mavenLog = Path.of(markerValue(startLine, "log"));
+        check(mavenLog.equals(manifest.getParent().resolve("maven.log")),
+                "start marker must identify the session Maven log");
+        check(mavenLog.equals(Path.of(markerValue(endLine, "log"))),
+                "start and end markers must identify the same Maven log");
         String json = Files.readString(manifest);
         for (String key : MANIFEST_KEYS) {
             check(json.contains("\"" + key + "\""), "manifest missing required key: " + key);
@@ -135,10 +142,36 @@ public final class TestSessionCoordinatorSelfTest {
                 + "distribution_root=" + session.resolve("distribution") + "\n";
         check(exported.equals(expectedExport),
                 "export file must contain the manifest and session roots:\n" + exported);
-        check(Files.readString(manifest.getParent().resolve("maven.log")).contains("CHILD_ENV_OK"),
-                "child output must be streamed to maven.log");
-        check(result.output.contains("CHILD_ENV_OK"), "child output must also be streamed to stdout");
+        check(Files.readString(mavenLog).contains("CHILD_ENV_OK"),
+                "child output must be captured in maven.log");
+        check(!result.output.contains("CHILD_ENV_OK"),
+                "child output must not be streamed to stdout by default");
         return new BasicRun(runId, lease, lockRoot);
+    }
+
+    private static void verifyExplicitQuietRun(Path root, Path outputRoot) throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-explicit-quiet"));
+        CommandResult result = runCoordinator(outputRoot, List.of(
+                "--quiet", "--lock-root", lockRoot.toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        check(result.exitCode == 0, "explicit quiet mode must succeed:\n" + result.output);
+        check(!result.output.contains("CHILD_ENV_OK"),
+                "explicit quiet mode must not stream child output to stdout");
+    }
+
+    private static void verifyVerboseRun(Path root, Path outputRoot) throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-verbose"));
+        CommandResult result = runCoordinator(outputRoot, List.of(
+                "--verbose", "--lock-root", lockRoot.toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        check(result.exitCode == 0, "verbose mode must succeed:\n" + result.output);
+        check(result.output.contains("CHILD_ENV_OK"),
+                "verbose mode must stream child output to stdout");
+        Path log = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "log"));
+        check(Files.readString(log).contains("CHILD_ENV_OK"),
+                "verbose mode must continue capturing child output in maven.log");
     }
 
     private static void verifyChildExitPropagation(Path root, Path outputRoot) throws Exception {

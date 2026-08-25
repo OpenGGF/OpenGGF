@@ -319,9 +319,12 @@ The session launcher performs these operations in order:
    allowed phase list is derived from the supported lifecycle command before
    Maven starts. The POM exposes these as system properties to the guard
    invocation, and a missing or inconsistent value is a rejection.
-7. Stream Maven output to the console and `maven.log`. Emit a single-line
-   `OPENGGF_TEST_RUN_START` marker before Maven and a corresponding
-   `OPENGGF_TEST_RUN_END` marker after it.
+7. Capture Maven output in `maven.log` without streaming it to the console by
+   default. Emit a single-line `OPENGGF_TEST_RUN_START` marker before Maven and
+   a corresponding `OPENGGF_TEST_RUN_END` marker after it; both markers name
+   the manifest and log paths. An explicit `--verbose` option additionally
+   streams child output for interactive human troubleshooting, while `--quiet`
+   remains an accepted explicit form of the default.
 8. Determine the terminal state from the Maven exit code, the terminal
    `BUILD SUCCESS`/`BUILD FAILURE` marker, and source identity.
 9. Capture the final source identity, report inventory, exit code, duration,
@@ -504,8 +507,10 @@ diagnostics, and every fork's LWJGL native extraction directory remain below
 that run's root. Parallel agents use separate worktrees and wrapper sessions;
 they never share a temporary or LWJGL extraction directory. The start/end
 markers (`OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END`) and their manifest
-are required evidence, while raw Maven lifecycle commands—including the
-non-certifying launcher path—are not.
+are required evidence. The markers expose the session log path, and agents use
+targeted searches or bounded reads of that quiet-by-default log instead of
+streaming or replaying it wholesale into context. Raw Maven lifecycle
+commands—including the non-certifying launcher path—are not evidence.
 The ordinary test profile excludes structural guards; release validation runs
 the separate `-Pguards` profile through a fresh wrapper session so whole-
 production ArchUnit imports cannot retain their graph behind the long ordinary
