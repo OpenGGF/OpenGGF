@@ -4,6 +4,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **AIZ2 boss damage now preserves the waterfall depth handoff:** landing from
+  hurt no longer erases the `art_tile` priority previously set by the ROM path
+  switcher, so Sonic and Tails remain in front of the boss-arena waterfall.
+  Spilled rings now also carry their native high-priority art bit and `$180`
+  display bucket instead of inheriting the generic dynamic-object defaults.
+
 - **Sonic 1 reverse blocks now flash and debug movement honors speed modifiers:**
   touching an R block in a special stage registers the shipped four-step
   reverse animation while still reversing immediately when the animation queue

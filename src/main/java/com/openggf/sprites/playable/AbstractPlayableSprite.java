@@ -1843,12 +1843,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setAir(boolean air) {
                 boolean landed = !air && this.air;
-                // If landing from hurt state, clear hurt flag and high-priority rendering
+                // HurtCharacter/HurtStop do not write art_tile. Preserve any priority bit
+                // owned by a path switcher or scripted sequence (notably AIZ2's waterfall
+                // arena) when the hurt routine lands.
                 // (invulnerableFrames already set in applyHurt() per ROM behavior)
                 if (!air && this.air && hurt) {
                         hurt = false;
                         forcedAnimationId = -1;
-                        setHighPriority(false);
                         // HurtStop's direct draw path delays decrementing the reset timer by one frame.
                         invulnerableFrames = 0x78;
                         suppressNextInvulnerabilityDecrement = true;
@@ -1936,7 +1937,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 hurt = false;
                 forcedAnimationId = -1;
                 controller.markHurtRecoveryCompleted();
-                setHighPriority(false);
                 invulnerableFrames = 0x78;
                 suppressNextInvulnerabilityDecrement = true;
                 setXSpeed((short) 0);
