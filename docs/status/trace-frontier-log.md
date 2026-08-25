@@ -114841,3 +114841,62 @@ The other three death arms remain coordinates only.
   `.openggf/test-runs/20260825T133415Z-p41266-5b2997/manifest.json`.
   Candidate manifest:
   `.openggf/test-runs/20260825T144631Z-p53107-51a67e/manifest.json`.
+
+## 2026-08-25 - S2 WFZ Tornado SST parity
+
+- Worktree: `.worktrees/s2-wfz-tornado-status`, branch
+  `bugfix/ai-s2-wfz-tornado-status`, uncommitted candidate over `bad36d0b2`.
+  The Sonic 2 World REV01 ROM was verified as SHA-1
+  `8bca5dcef1af3e00098666fd892dc1c2a76333f9`, CRC32 `7B905383`.
+- Focused baseline command: `tools/testing/test-session.sh -- mvn -Dmse=off
+  -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dsurefire.forkCount=1
+  -Dsonic2.rom.path=... -Dtest=TestS2WfzLevelSelectTraceReplay test -B`.
+  Run `20260825T212607Z-p602914-e5eb41` reported 0 errors and 3 warnings:
+  `tornado.status_byte` rows 0-196 (`0x0008` / `0x0000`),
+  `tornado.routine` row 10419 (`0x0000` / `0x0006`), and
+  `tornado.objoff_2f` rows 13378-13440 (`0x0001` / `0x0000`). Manifest:
+  `<managed-scratch>/tasks/s2-wfz-tornado-status-20260825T212323Z-600955-07e6d161/20260825T212607Z-p602914-e5eb41/manifest.json`.
+- Root and fix: ObjB2's WFZ-start `SolidObject` result now updates its object-owned
+  `p1_standing` latch (`SolidObject` / `RideObject_SetRide`,
+  `s2.asm:35014-35044, 35986-36045`). Snapshots retain routine 0 until
+  `ObjB2_Init` executes (`s2.asm:78777-78813`) and encode the WFZ-end
+  `objoff_2E` word from the existing `leaderWaitCounter` / `jumpTimer` semantic
+  state (`ObjB2_Wait_Leader_position` and `ObjB2_Prepare_to_jump`,
+  `s2.asm:78972-78979, 79042-79052`). The implementation consumes no trace state,
+  fitted fixture value, route/frame key, or shared-runtime zone carve-out.
+- The two test-first attempts were witnessed red at runs
+  `20260825T212920Z-p615136-58d985` (standing status) and
+  `20260825T213256Z-p617055-3d73af` (init routine and WFZ scratch word), then
+  focused green at `20260825T213009Z-p615725-c7cd9a` and
+  `20260825T213403Z-p617751-e717cf`. Final WFZ run
+  `20260825T213437Z-p618245-e9e6b0` reported **all comparable frames match,
+  0 errors, 0 warnings**. The comparator stops when child creation leaves more
+  than one Tornado instance, so this result does not claim trace coverage of the
+  parent plane's state-8-and-later word lifecycle. Manifest:
+  `<managed-scratch>/tasks/s2-wfz-tornado-status-20260825T212323Z-600955-07e6d161/20260825T213437Z-p618245-e9e6b0/manifest.json`.
+- Four-class release-scope run `20260825T213538Z-p618873-c8b7f2` retained WFZ
+  at 0 errors / 0 warnings. The other bounded frontiers remained CNZ1 at
+  0 errors / 237 warnings (first row 0 `cnz_slot.slot2_pos`), CNZ2 at
+  0 / 530 (same first field/row), and CPZ2 segment 10 at 370 errors / 0 warnings
+  (first row 2252 `air`). Manifest:
+  `<managed-scratch>/tasks/s2-wfz-tornado-status-20260825T212323Z-600955-07e6d161/20260825T213538Z-p618873-c8b7f2/manifest.json`.
+- Focused object, trace-invariant, object-service/construction, and rewind guards
+  passed 59 tests with 0 failures, errors, or skips in run
+  `20260825T213826Z-p619975-4280f1`. Manifest:
+  `<managed-scratch>/tasks/s2-wfz-tornado-status-20260825T212323Z-600955-07e6d161/20260825T213826Z-p619975-4280f1/manifest.json`.
+- Independent review added direct coverage for the WFZ-end `objoff_2E` word's
+  `$0040` pre-jump retention, normal/super `$38`/`$28` installation, signed-word
+  decrement wrap, and `$20` landing reset (`s2.asm:78972-78979, 79041-79068`).
+  It also covers routine 0 before `ObjB2_Init`, routine 6 afterward, and generic
+  rewind recreation restoring the captured post-init state. These assertions
+  started green because production already represented the ROM lifecycle; no
+  further production behavior changed. Focused object run
+  `20260825T215624Z-p630745-ad3773` passed 36 tests. Manifest:
+  `<managed-scratch>/tasks/s2-wfz-tornado-status-20260825T212323Z-600955-07e6d161/20260825T215624Z-p630745-ad3773/manifest.json`.
+- Review verification retained the WFZ report at all comparable frames matching,
+  0 errors and 0 warnings in run `20260825T215706Z-p631449-693efc`; the existing
+  comparator still stops once Tornado children make parent identity ambiguous.
+  The focused trace/object-service/construction/rewind guards passed 25 tests in
+  run `20260825T215746Z-p631976-fb0521`. Manifests:
+  `<managed-scratch>/tasks/s2-wfz-tornado-status-20260825T212323Z-600955-07e6d161/20260825T215706Z-p631449-693efc/manifest.json` and
+  `<managed-scratch>/tasks/s2-wfz-tornado-status-20260825T212323Z-600955-07e6d161/20260825T215746Z-p631976-fb0521/manifest.json`.

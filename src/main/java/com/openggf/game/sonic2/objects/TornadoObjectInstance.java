@@ -186,10 +186,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
      * Read-only view of ObjB2's SST in ROM byte layout, for comparison against a
      * recorded {@code s2_tornado_state} row. Comparison-only.
      *
-     * <p>The engine models the ROM's scratch bytes semantically, so this re-encodes
-     * them the way ObjB2 stores them rather than inventing a representation:
-     * {@code standingTransition} and {@code lastMainStanding} are the `p1_standing`
-     * bit ($08), and the two `st.b`/`clr.b` flags are $FF or $00.
+     * <p>The engine models the ROM's reused scratch region semantically. In the
+     * SCZ routine, {@code objoff2E} is the {@code p1_standing} transition byte,
+     * {@code objoff2F}/{@code objoff30} are {@code st.b}/{@code clr.b} flags,
+     * and {@code objoff31} is the vertical countdown (s2.asm:78827-78839,
+     * 79382-79390). In the WFZ-end routine, {@code objoff2E}/{@code objoff2F}
+     * are instead the high/low bytes of one word: the leader-wait counter, then
+     * the jump countdown (s2.asm:78972-78979, 79041-79068).
      */
     public record Snapshot(
             int x, int y, int ySub, int yVel,
@@ -204,13 +207,35 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 currentY & 0xFFFF,
                 (yPosFixed8 & 0xFF) << 8,
                 yVel & 0xFFFF,
-                routine & 0xFF,
+                initRoutinePending ? 0 : routine & 0xFF,
                 routineSecondary & 0xFF,
                 lastMainStanding ? P1_STANDING_BIT : 0,
-                standingTransition ? P1_STANDING_BIT : 0,
-                moveVertActive ? 0xFF : 0,
+                snapshotObjoff2E(),
+                snapshotObjoff2F(),
                 moveVert2Active ? 0xFF : 0,
                 moveVertTimer & 0xFF);
+    }
+
+    private int snapshotObjoff2E() {
+        if (routine == ROUTINE_WFZ_END) {
+            return (wfzEndObjoff2EWord() >>> 8) & 0xFF;
+        }
+        return standingTransition ? P1_STANDING_BIT : 0;
+    }
+
+    private int snapshotObjoff2F() {
+        if (routine == ROUTINE_WFZ_END) {
+            return wfzEndObjoff2EWord() & 0xFF;
+        }
+        return moveVertActive ? 0xFF : 0;
+    }
+
+    private int wfzEndObjoff2EWord() {
+        // ObjB2_Wait_Leader_position increments the word at objoff_2E until
+        // $40. ObjB2_Prepare_to_jump later replaces that same word with the
+        // jump countdown as it enters state 8 (s2.asm:78972-78979,
+        // 79042-79052). The Java model keeps those two lifetimes separately.
+        return routineSecondary < 8 ? leaderWaitCounter : jumpTimer;
     }
 
     // SCZ movement helpers (objoff_2E/$2F/$30/$31/$38 equivalents).
@@ -1510,7 +1535,14 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {
-        return services().solidExecution().resolveSolidNow(player);
+        PlayerSolidContactResult contact = services().solidExecution().resolveSolidNow(player);
+        // ObjB2's inline SolidObject calls leave p1_standing in status(a0):
+        // RideObject_SetRide sets the bit on a top landing, and SolidObject's
+        // standing path clears it on release (s2.asm:35014-35044, 35986-36045).
+        // Keep the object-owned latch for every ObjB2 routine that reaches the
+        // shared manual checkpoint, not only ObjB2_Main_SCZ.
+        lastMainStanding = contact.standingNow();
+        return contact;
     }
 
     private void releasePlayersFromPlatform(AbstractPlayableSprite updatePlayer) {

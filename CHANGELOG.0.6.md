@@ -4,6 +4,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Wing Fortress Tornado state now follows ObjB2's retail SST lifecycle:**
+  standing status survives the manual solid checkpoint, newly allocated planes
+  publish routine 0 until `ObjB2_Init`, and WFZ-end publishes the reused
+  leader-wait/jump-countdown word. All recorded rows where the comparator can
+  identify one Tornado now match without trace-fed state or fitted timing.
+
 - **S3K extra-life music now retains its retail priority:** if invincibility
   expires while the 1-up jingle is playing, the level-music request waits for
   the jingle's own restore instead of cutting it off. That restore also releases

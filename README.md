@@ -231,6 +231,9 @@ recorded hardware traces.
   Sonic 3 & Knuckles has a growing playable vertical slice centered on
   Angel Island and Hydrocity, with substantial work across later zones and
   bonus stages.
+- **Sonic 2 Tornado parity:** Wing Fortress now preserves ObjB2's retail
+  standing, initialization, and reused leader-wait/jump-countdown state across
+  every trace row where the parent Tornado can be identified unambiguously.
 - **AIZ presentation continuity:** the Angel Island fire curtain now remains
   continuous across exact art-loading seams and completes its ROM-shaped
   release tail in normal play and trace renders, while level music restoration

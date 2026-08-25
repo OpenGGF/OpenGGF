@@ -682,14 +682,17 @@ public sealed interface TraceEvent {
      * Per-frame snapshot of ObjB2's SST, emitted by the S2 recorder on every row
      * of an SCZ or WFZ capture. Comparison-only.
      *
-     * <p>The scratch bytes carry ROM idioms rather than plain numbers, and the
-     * engine models each one semantically:
-     * {@code objoff_2E} is the standing-bit transition — ObjB2 saves
+     * <p>The scratch bytes carry routine-specific ROM idioms rather than plain
+     * numbers. In the SCZ routine, {@code objoff_2E} is the standing-bit
+     * transition — ObjB2 saves
      * {@code status(a0)}, then stores {@code (saved ^ current) & p1_standing}
      * (s2.asm:78827, 78834-78839), so it is `$00` or `$08`;
      * {@code objoff_2F} and {@code objoff_30} are `st.b`/`clr.b` flags, hence
      * `$FF` or `$00` (s2.asm:79382-79383, 79390); and {@code objoff_31} is the
      * vertical-move countdown loaded with `$14` (s2.asm:79385-79388).
+     * In the WFZ-end routine, {@code objoff_2E}/{@code objoff_2F} are instead
+     * the big-endian leader-wait word, reused as the jump countdown
+     * (s2.asm:78972-78979, 79041-79068).
      *
      * <p>{@code y_sub} is the ROM's 16-bit sub-pixel word. Its low byte is zero
      * on all 7629 rows of the SCZ fixture, so the engine's 8-bit sub-pixel is a
