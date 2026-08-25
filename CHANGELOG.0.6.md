@@ -34,6 +34,11 @@ This file contains the complete 0.6 development snapshot history carried forward
   scrolls away before the background redraw; normal play and trace captures no
   longer show the curtain disappearing and restarting or ending abruptly.
 
+- **AIZ's fire curtain now covers every configured display aspect:** its
+  ROM-backed descriptor cache captures the active viewport's full horizontal
+  tile span, so the post-mutation continuation remains visible at 16:10, 16:9,
+  21:9, and 32:9 widths while the native 320×224 plan remains unchanged.
+
 - **AIZ miniboss music now follows the retail escape boundary:** the `$120`
   `AIZMinibossCutscene_Escape` countdown is owned by persistent AIZ event state,
   survives the AIZ1-to-AIZ2 reload, and restores level music only when the ROM

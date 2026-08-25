@@ -5,6 +5,8 @@ import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.FireCurtainStage;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 
@@ -214,7 +216,7 @@ public class TestAizFireCurtainRenderer {
     public void act2ContinuationWrapsCachedCurtainBeforeWaitFireLatch() throws Exception {
         Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
-        markCachedFireDescriptors(renderer);
+        markCachedFireDescriptors(renderer, 40);
 
         for (int phaseOrdinal : new int[] {4, 5}) {
             events.setFireSequencePhaseOrdinal(phaseOrdinal);
@@ -239,7 +241,7 @@ public class TestAizFireCurtainRenderer {
     public void latchedWaitFireReleasesCachedCurtainWithoutRefillingDenseBody() throws Exception {
         Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
-        markCachedFireDescriptors(renderer);
+        markCachedFireDescriptors(renderer, 40);
 
         events.setFireSequencePhaseOrdinal(5);
         events.setAct2WaitFireDrawActive(true);
@@ -288,10 +290,41 @@ public class TestAizFireCurtainRenderer {
                 "Act 2 continuation must use cached ROM descriptors, not synthetic overlay tiles");
     }
 
-    private static void markCachedFireDescriptors(AizFireCurtainRenderer renderer) throws Exception {
+    @ParameterizedTest
+    @CsvSource({"320,40", "352,44", "400,50", "528,66", "800,100"})
+    public void cachedCurtainCoversTheEntireConfiguredViewport(int screenWidth, int cacheColumns)
+            throws Exception {
+        AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
+        markCachedFireDescriptors(renderer, cacheColumns);
+        FireCurtainRenderState state = new FireCurtainRenderState(
+                true,
+                224,
+                0,
+                8,
+                0x0200,
+                0x0400,
+                new int[20],
+                FireCurtainStage.AIZ2_REDRAW,
+                0x500,
+                121);
+
+        AizFireCurtainRenderer.CurtainCompositionPlan plan =
+                renderer.buildCompositionPlan(state, screenWidth, 224);
+
+        int rightmostDrawEdge = plan.columns().stream()
+                .flatMap(column -> column.draws().stream())
+                .mapToInt(draw -> draw.screenX() + 8)
+                .max()
+                .orElse(-1);
+        assertTrue(rightmostDrawEdge >= screenWidth,
+                "cached AIZ fire must fill the right edge at every configured viewport width");
+    }
+
+    private static void markCachedFireDescriptors(AizFireCurtainRenderer renderer, int cacheColumns)
+            throws Exception {
         Field descriptors = AizFireCurtainRenderer.class.getDeclaredField("cachedFireDescriptors");
         descriptors.setAccessible(true);
-        int[][] cached = new int[66][40];
+        int[][] cached = new int[66][cacheColumns];
         for (int row = 0; row < cached.length; row++) {
             for (int column = 0; column < cached[row].length; column++) {
                 cached[row][column] = (3 << 13) | (0x500 + row);
