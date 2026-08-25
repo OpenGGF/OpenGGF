@@ -220,9 +220,10 @@ The `next` branch is where post-0.6 work is staged before it graduates into the 
 
 The [0.7 roadmap](docs/project/v0.7-roadmap.md) targets complete locked-on
 Knuckles, Tails, and Sonic routes through their ROM-authored finales and full
-outros. It also makes the typed game-policy hierarchy a pre-publication Mod API
-gate and carries forward the modding, Time Attack, multiplayer, editor, FBZ,
-super-emerald, widescreen, and compatibility work already staged here.
+outros, with end-to-end complete-chain trace replay as a release gate. It also
+makes the typed game-policy hierarchy a pre-publication Mod API gate and carries
+forward the modding, Time Attack, multiplayer, editor, super-emerald,
+widescreen, and compatibility work already staged here.
 
 Highlights:
 
