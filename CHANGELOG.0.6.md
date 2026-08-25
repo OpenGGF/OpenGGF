@@ -4,6 +4,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **S3K extra-life music now retains its retail priority:** if invincibility
+  expires while the 1-up jingle is playing, the level-music request waits for
+  the jingle's own restore instead of cutting it off. That restore also releases
+  the jingle-only sound-effect gate, so jump and other gameplay sounds remain
+  audible through later boss and miniboss music fades.
+
 - **AIZ2's boss-exit bridges now survive and layer like the retail scene:**
   the settled drawbridge remains live through score counting until Knuckles
   triggers its collapse, while both arena bridges and their falling pieces

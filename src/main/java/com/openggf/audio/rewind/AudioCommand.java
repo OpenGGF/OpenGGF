@@ -1,5 +1,7 @@
 package com.openggf.audio.rewind;
 
+import com.openggf.audio.GameAudioProfile;
+
 public sealed interface AudioCommand {
     enum MusicRoute {
         BASE_SMPS,
@@ -22,14 +24,39 @@ public sealed interface AudioCommand {
     }
 
     record PlayMusic(int musicId, MusicRoute route, boolean override,
-                     String donorGameId) implements AudioCommand {}
+                     String donorGameId,
+                     GameAudioProfile.MusicDuringOverridePolicy
+                             musicDuringOverridePolicy) implements AudioCommand {
+        public PlayMusic(int musicId, MusicRoute route, boolean override,
+                         String donorGameId) {
+            this(musicId, route, override, donorGameId,
+                    GameAudioProfile.MusicDuringOverridePolicy
+                            .REPLACE_IMMEDIATELY);
+        }
+    }
 
     record PlaySfx(int sfxId, String sfxName, SfxRoute route, float pitch,
                    String donorGameId) implements AudioCommand {}
 
-    record FadeOutMusic(int steps, int delay) implements AudioCommand {}
+    record FadeOutMusic(
+            int steps,
+            int delay,
+            GameAudioProfile.MusicDuringOverridePolicy
+                    musicDuringOverridePolicy) implements AudioCommand {
+        public FadeOutMusic(int steps, int delay) {
+            this(steps, delay, GameAudioProfile.MusicDuringOverridePolicy
+                    .REPLACE_IMMEDIATELY);
+        }
+    }
 
-    record StopMusic() implements AudioCommand {}
+    record StopMusic(
+            GameAudioProfile.MusicDuringOverridePolicy
+                    musicDuringOverridePolicy) implements AudioCommand {
+        public StopMusic() {
+            this(GameAudioProfile.MusicDuringOverridePolicy
+                    .REPLACE_IMMEDIATELY);
+        }
+    }
 
     record StopAllSfx() implements AudioCommand {}
 

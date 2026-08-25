@@ -246,7 +246,8 @@ recorded hardware traces.
   ownership, and the retail two-cell SFX request order preserve incumbent
   services during repeated boss explosions. Reference chip defaults and HQ
   PSG rendering improve Collapse, Spindash Release, Blue Sphere, and mixed
-  music/SFX playback; the standalone
+  music/SFX playback. S3K's 1-up jingle retains priority over an expiring
+  invincibility theme and releases its SFX gate before later boss fades; the standalone
   sound-test launcher provides ROM-backed listening through the same unified
   presentation pipeline.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,

@@ -66,6 +66,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private record PreparedRestore(
             MusicSlot activeMusic,
             MusicSlot[] overrides,
+            MusicSlot pendingMusic,
             SmpsCompositeVoice standaloneSmps,
             SampleBackedVoice rawPcm,
             SampleBackedVoice[] sampleSfx) {
@@ -106,6 +107,10 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             new long[WARNED_REJECTION_CAPACITY];
 
     private MusicSlot activeMusic;
+    private MusicSlot pendingMusic;
+    private com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
+            pendingMusicSfxPolicy;
+    private boolean pendingMusicReady;
     private SmpsCompositeVoice standaloneSmps;
     private SampleBackedVoice rawPcm;
     private int overrideCount;
@@ -117,6 +122,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private int warnedRejectionCursor;
     private boolean rendering;
     private boolean completionSweepRequired;
+    private boolean activeMusicOverride;
     private boolean sfxBlocked;
     private boolean pendingRestore;
     private boolean smpsPaused;
@@ -177,7 +183,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         Objects.requireNonNull(command, "command");
 
         if (command instanceof ReplaceMusic replace) {
-            replaceMusic(replace.music(), replace.sfxPolicy());
+            replaceMusic(replace.music(), replace.sfxPolicy(),
+                    replace.musicDuringOverridePolicy());
         } else if (command instanceof PushMusicOverride push) {
             pushMusicOverride(push.music());
             sfxInstantiation.observeLifecycle(
@@ -208,12 +215,18 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                         SmpsDriverServiceObserver.LifecycleEvent.pcm(
                                 SmpsDriverServiceObserver.LifecycleKind.SEGA_PCM_LEAVE));
             }
-        } else if (command instanceof StopMusic) {
-            stopMusic();
+        } else if (command instanceof StopMusic stop) {
+            if (musicOverrideAcceptsSystemCommand(
+                    stop.musicDuringOverridePolicy())) {
+                stopMusic();
+            }
         } else if (command instanceof StopAllSfx) {
             stopAllSfx();
         } else if (command instanceof FadeMusic fade) {
-            fadeMusic(fade.steps(), fade.delay());
+            if (musicOverrideAcceptsSystemCommand(
+                    fade.musicDuringOverridePolicy())) {
+                fadeMusic(fade.steps(), fade.delay());
+            }
         } else if (command instanceof SetVoiceGain gain) {
             setVoiceGain(gain.voiceId(), gain.gainQ16());
         } else if (command instanceof SetVoicePitch pitch) {
@@ -404,6 +417,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         for (int index = 0; index < overrideCount; index++) {
             addMusicSnapshot(voices, overrideStack[index]);
         }
+        addMusicSnapshot(voices, pendingMusic);
         addVoiceSnapshot(voices, standaloneSmps, null);
         addVoiceSnapshot(voices, rawPcm, null);
         for (int index = 0; index < sampleSfxCount; index++) {
@@ -420,12 +434,17 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 voices,
                 activeMusic == null ? null : slotSnapshot(activeMusic),
                 overrides,
+                pendingMusic == null ? null
+                        : new AudioPresentationSnapshot.PendingMusicSnapshot(
+                                slotSnapshot(pendingMusic),
+                                pendingMusicSfxPolicy, pendingMusicReady),
                 standaloneSmps == null ? null : standaloneSmps.voiceId(),
                 rawPcm == null ? null : rawPcm.voiceId(),
                 fmMuteMask,
                 fmSoloMask,
                 psgMuteMask,
                 psgSoloMask,
+                activeMusicOverride,
                 sfxBlocked,
                 pendingRestore,
                 speedShoesEnabled,
@@ -509,6 +528,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             overrideCount = prepared.overrides().length;
             System.arraycopy(prepared.overrides(), 0, overrideStack, 0,
                     overrideCount);
+            pendingMusic = prepared.pendingMusic();
+            pendingMusicSfxPolicy = snapshot.pendingMusic() == null ? null
+                    : snapshot.pendingMusic().sfxPolicy();
+            pendingMusicReady = snapshot.pendingMusic() != null
+                    && snapshot.pendingMusic().readyAfterRestore();
             standaloneSmps = prepared.standaloneSmps();
             rawPcm = prepared.rawPcm();
             for (SampleBackedVoice sample : prepared.sampleSfx()) {
@@ -520,6 +544,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             fmSoloMask = snapshot.fmSoloMask();
             psgMuteMask = snapshot.psgMuteMask();
             psgSoloMask = snapshot.psgSoloMask();
+            activeMusicOverride = snapshot.activeMusicOverride();
             sfxBlocked = snapshot.sfxBlocked();
             pendingRestore = snapshot.pendingRestore();
             speedShoesEnabled = snapshot.speedShoesEnabled();
@@ -551,6 +576,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             }
             for (MusicSlot slot : prepared.overrides()) {
                 slot.voice().stop();
+            }
+            if (prepared.pendingMusic() != null) {
+                prepared.pendingMusic().voice().stop();
             }
             if (prepared.standaloneSmps() != null) {
                 prepared.standaloneSmps().stop();
@@ -608,6 +636,9 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             preparedOverrides[preparedOverrideCount++] =
                     restoreMusicSlot(slot, recreated, claimed);
         }
+        MusicSlot preparedPending = snapshot.pendingMusic() == null ? null
+                : restoreMusicSlot(snapshot.pendingMusic().music(), recreated,
+                        claimed);
 
         SmpsCompositeVoice preparedStandalone = null;
         if (snapshot.standaloneSmpsVoiceId() != null) {
@@ -649,7 +680,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             claimed[index] = true;
         }
         return new PreparedRestore(
-                preparedActive, preparedOverrides, preparedStandalone,
+                preparedActive, preparedOverrides, preparedPending,
+                preparedStandalone,
                 preparedRawPcm,
                 java.util.Arrays.copyOf(preparedSamples, preparedSampleCount));
     }
@@ -668,6 +700,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         psgMuteMask = 0;
         psgSoloMask = 0;
         sfxBlocked = false;
+        activeMusicOverride = false;
         pendingRestore = false;
         smpsPaused = false;
         speedShoesEnabled = false;
@@ -691,6 +724,25 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     public void setPendingRestore(boolean pending) {
         assertOwnerBoundary();
         pendingRestore = pending;
+    }
+
+    /** Services an input retained by the preceding S3K driver update. */
+    public void beginDriverService() {
+        assertOwnerBoundary();
+        if (!pendingMusicReady || pendingMusic == null) {
+            return;
+        }
+        MusicSlot music = pendingMusic;
+        com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy =
+                pendingMusicSfxPolicy;
+        pendingMusic = null;
+        pendingMusicSfxPolicy = null;
+        pendingMusicReady = false;
+        replaceMaterializedMusic(music, sfxPolicy);
+        // zPlayMusic_DoFade reaches zStopAllSound, which clears the 1-up
+        // input gate instead of waiting for the interrupted restore fade.
+        sfxBlocked = false;
+        rebuildOrderedVoices();
     }
 
     private MusicSlot materializeMusic(MusicVoiceEntry music) {
@@ -736,8 +788,24 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     private void replaceMusic(
             MusicVoiceEntry entry,
-            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy) {
-        MusicSlot music = materializeMusic(entry);
+            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy,
+            com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
+                    musicDuringOverridePolicy) {
+        if (sfxBlocked && activeMusic != null
+                && activeMusicOverride
+                && musicDuringOverridePolicy
+                        == com.openggf.audio.GameAudioProfile
+                                .MusicDuringOverridePolicy.DEFER_UNTIL_RESTORE) {
+            deferMusicUntilOverrideRestore(entry, sfxPolicy);
+            return;
+        }
+        replaceMaterializedMusic(materializeMusic(entry), sfxPolicy);
+    }
+
+    private void replaceMaterializedMusic(
+            MusicSlot music,
+            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
+                    sfxPolicy) {
         boolean published = false;
         RuntimeException primaryFailure = null;
         try {
@@ -764,6 +832,62 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
     }
 
+    /**
+     * Retains the latest ordinary song input separately from the saved song.
+     *
+     * <p>S3K's {@code zUpdateMusic} leaves ordinary {@code zMusicNumber}
+     * requests pending while {@code zFadeToPrevFlag} holds the 1-up id. The
+     * jingle therefore keeps playing, then its E4 restore yields to the latest
+     * queued song on the following driver service.
+     */
+    private void deferMusicUntilOverrideRestore(
+            MusicVoiceEntry entry,
+            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
+                    sfxPolicy) {
+        MusicSlot music = materializeMusic(entry);
+        boolean published = false;
+        RuntimeException primaryFailure = null;
+        try {
+            applyMusicControls(music, speedShoesEnabled, speedMultiplier,
+                    fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
+            if (pendingMusic != null) {
+                stopVoicesAtomically(pendingMusic.voice());
+            }
+            pendingMusic = music;
+            pendingMusicSfxPolicy = sfxPolicy;
+            pendingMusicReady = false;
+            noteVoiceId(music.voice());
+            published = true;
+        } catch (RuntimeException failure) {
+            primaryFailure = failure;
+            throw failure;
+        } finally {
+            if (!published) {
+                disposeUnpublishedVoice(music.voice(), primaryFailure);
+            }
+        }
+    }
+
+    private boolean musicOverrideAcceptsSystemCommand(
+            com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
+                    policy) {
+        if (!activeMusicOverride || policy != com.openggf.audio.GameAudioProfile
+                .MusicDuringOverridePolicy.DEFER_UNTIL_RESTORE) {
+            return true;
+        }
+        clearPendingMusic();
+        return false;
+    }
+
+    private void clearPendingMusic() {
+        if (pendingMusic != null) {
+            stopVoicesAtomically(pendingMusic.voice());
+        }
+        pendingMusic = null;
+        pendingMusicSfxPolicy = null;
+        pendingMusicReady = false;
+    }
+
     private void pushMusicOverride(MusicVoiceEntry entry) {
         if (activeMusic != null
                 && activeMusic.musicId() != entry.musicId()
@@ -787,12 +911,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     normalSpeed ? false : speedShoesEnabled,
                     normalSpeed ? 1 : speedMultiplier,
                     fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
-            if (activeMusic != null
+            if (activeMusicOverride && activeMusic != null
                     && activeMusic.musicId() == music.musicId()) {
-                stopVoicesAtomically(activeMusic.voice());
-                activeMusic = music;
-                noteVoiceId(music.voice());
-                published = true;
+                // zUpdateMusic clears the single input cell when another
+                // 1-up request arrives while the 1-up override is active.
+                clearPendingMusic();
                 return;
             }
             stopAllSfxForMusicOverride();
@@ -800,6 +923,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 overrideStack[overrideCount++] = activeMusic;
             }
             activeMusic = music;
+            activeMusicOverride = true;
             sfxBlocked = true;
             noteVoiceId(music.voice());
             published = true;
@@ -814,9 +938,20 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     private boolean restoreMusicOverride() {
-        if (overrideCount == 0) {
+        if (!activeMusicOverride) {
             pendingRestore = false;
             return false;
+        }
+        if (overrideCount == 0) {
+            if (activeMusic != null) {
+                stopVoicesAtomically(activeMusic.voice());
+                activeMusic = null;
+            }
+            activeMusicOverride = false;
+            sfxBlocked = false;
+            pendingMusicReady = pendingMusic != null;
+            pendingRestore = false;
+            return true;
         }
         MusicSlot restored = overrideStack[overrideCount - 1];
         PresentationVoice current =
@@ -868,6 +1003,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }, restored.voice(), current);
         activeMusic = restored;
         overrideStack[--overrideCount] = null;
+        activeMusicOverride = false;
+        pendingMusicReady = pendingMusic != null;
         pendingRestore = false;
         return true;
     }
@@ -1351,13 +1488,16 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     private void stopMusic() {
         PresentationVoice[] voices =
-                new PresentationVoice[overrideCount + 1];
+                new PresentationVoice[overrideCount + 2];
         int voiceCount = 0;
         if (activeMusic != null) {
             voices[voiceCount++] = activeMusic.voice();
         }
         for (int index = 0; index < overrideCount; index++) {
             voices[voiceCount++] = overrideStack[index].voice();
+        }
+        if (pendingMusic != null) {
+            voices[voiceCount++] = pendingMusic.voice();
         }
         int capturedVoiceCount = voiceCount;
         mutateVoicesAtomically(() -> {
@@ -1370,6 +1510,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             overrideStack[index] = null;
         }
         overrideCount = 0;
+        pendingMusic = null;
+        pendingMusicSfxPolicy = null;
+        pendingMusicReady = false;
+        activeMusicOverride = false;
+        sfxBlocked = false;
         pendingRestore = false;
     }
 
@@ -1414,13 +1559,16 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     private PresentationVoice[] allOwnedVoices() {
         PresentationVoice[] voices =
-                new PresentationVoice[overrideCount + sampleSfxCount + 4];
+                new PresentationVoice[overrideCount + sampleSfxCount + 5];
         int count = 0;
         if (activeMusic != null) {
             voices[count++] = activeMusic.voice();
         }
         for (int index = 0; index < overrideCount; index++) {
             voices[count++] = overrideStack[index].voice();
+        }
+        if (pendingMusic != null) {
+            voices[count++] = pendingMusic.voice();
         }
         if (standaloneSmps != null) {
             voices[count++] = standaloneSmps;
@@ -1702,6 +1850,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             overrideStack[index] = null;
         }
         overrideCount = 0;
+        pendingMusic = null;
+        pendingMusicSfxPolicy = null;
+        pendingMusicReady = false;
+        activeMusicOverride = false;
+        sfxBlocked = false;
         pendingRestore = false;
         standaloneSmps = null;
         rawPcm = null;
@@ -1833,6 +1986,10 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             if (overrideStack[index].voice().voiceId() == voiceId) {
                 return overrideStack[index].voice();
             }
+        }
+        if (pendingMusic != null
+                && pendingMusic.voice().voiceId() == voiceId) {
+            return pendingMusic.voice();
         }
         if (standaloneSmps != null && standaloneSmps.voiceId() == voiceId) {
             return standaloneSmps;

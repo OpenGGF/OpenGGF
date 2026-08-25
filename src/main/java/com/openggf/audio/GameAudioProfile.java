@@ -87,6 +87,18 @@ public interface GameAudioProfile {
         return musicId == getExtraLifeMusicId();
     }
 
+    /** How an ordinary music request interacts with an active 1-up override. */
+    enum MusicDuringOverridePolicy {
+        /** S1/S2 load the new song immediately and abandon the saved song. */
+        REPLACE_IMMEDIATELY,
+        /** S3K keeps the request queued until the 1-up jingle restores. */
+        DEFER_UNTIL_RESTORE
+    }
+
+    default MusicDuringOverridePolicy getMusicDuringOverridePolicy() {
+        return MusicDuringOverridePolicy.REPLACE_IMMEDIATELY;
+    }
+
     /**
      * Returns true if SFX should be completely blocked during this music.
      * In the original ROM, only the 1-up jingle sets 1upPlaying flag which blocks SFX.

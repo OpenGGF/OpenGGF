@@ -1578,6 +1578,11 @@ public class AudioManager implements MusicRestoreSink {
         // bring it back. Without this the interrupted song is destroyed and the
         // restore finds an empty stack, leaving the level silent.
         boolean override = profile != null && profile.isMusicOverride(musicId);
+        GameAudioProfile.MusicDuringOverridePolicy musicDuringOverridePolicy =
+                profile != null
+                        ? profile.getMusicDuringOverridePolicy()
+                        : GameAudioProfile.MusicDuringOverridePolicy
+                                .REPLACE_IMMEDIATELY;
 
         if (source.loader() != null) {
             ensureShadowPresentation();
@@ -1598,7 +1603,8 @@ public class AudioManager implements MusicRestoreSink {
             }
             if (registered) {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
-                        musicId, AudioCommand.MusicRoute.BASE_SMPS, override, null));
+                        musicId, AudioCommand.MusicRoute.BASE_SMPS, override, null,
+                        musicDuringOverridePolicy));
                 if (sendLiveBackendCommands()) {
                     var playback = shadowFactory
                             .requireRegisteredSmpsMusicPlayback(
@@ -1610,7 +1616,8 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
         recordTimelineCommand(new AudioCommand.PlayMusic(
-                musicId, AudioCommand.MusicRoute.FALLBACK_WAV, override, null));
+                musicId, AudioCommand.MusicRoute.FALLBACK_WAV, override, null,
+                musicDuringOverridePolicy));
         if (sendLiveBackendCommands()) {
             backend.prepareLogicalMusicSource(AudioSourceDescriptor.fallbackMusic(musicId));
             backend.playMusic(musicId);
@@ -2218,7 +2225,13 @@ public class AudioManager implements MusicRestoreSink {
                 // music, none of which the ROM saves and restores — only the
                 // 1-up jingle does that, and it is never a donor track.
                 recordTimelineCommand(new AudioCommand.PlayMusic(
-                        musicId, AudioCommand.MusicRoute.DONOR_SMPS, false, donorGameId));
+                        musicId, AudioCommand.MusicRoute.DONOR_SMPS, false,
+                        donorGameId,
+                        baseAudioSource.profile() != null
+                                ? baseAudioSource.profile()
+                                        .getMusicDuringOverridePolicy()
+                                : GameAudioProfile.MusicDuringOverridePolicy
+                                        .REPLACE_IMMEDIATELY));
                 if (sendLiveBackendCommands()) {
                     var playback = shadowFactory
                             .requireRegisteredSmpsMusicPlayback(
@@ -2322,7 +2335,11 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        recordTimelineCommand(new AudioCommand.StopMusic());
+        GameAudioProfile profile = baseAudioSource.profile();
+        recordTimelineCommand(new AudioCommand.StopMusic(
+                profile != null ? profile.getMusicDuringOverridePolicy()
+                        : GameAudioProfile.MusicDuringOverridePolicy
+                                .REPLACE_IMMEDIATELY));
         if (sendLiveBackendCommands()) {
             backend.stopPlayback();
         }
@@ -2377,7 +2394,11 @@ public class AudioManager implements MusicRestoreSink {
             return;
         }
         fadeOutMusicCount++;
-        recordTimelineCommand(new AudioCommand.FadeOutMusic(steps, delay));
+        GameAudioProfile profile = baseAudioSource.profile();
+        recordTimelineCommand(new AudioCommand.FadeOutMusic(steps, delay,
+                profile != null ? profile.getMusicDuringOverridePolicy()
+                        : GameAudioProfile.MusicDuringOverridePolicy
+                                .REPLACE_IMMEDIATELY));
         if (sendLiveBackendCommands()) {
             backend.fadeOutMusic(steps, delay);
         }
