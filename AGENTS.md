@@ -68,8 +68,16 @@ as release evidence. Parallel agents must use separate worktrees and separate
 wrapper sessions, even when they are testing the same commit.
 
 The wrapper's `OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` markers, plus
-the referenced manifest, are part of the evidence. Report the run ID and
-manifest path; if those markers are absent, the result is non-certifying.
+the referenced manifest, are part of the evidence. The wrapper is quiet by
+default: both markers print the session-owned `manifest=` and `log=` paths while
+the full child output is retained only in `maven.log`. Agent runs must keep this
+default; do not pass `--verbose`, pipe through `tee`, or print the complete log
+back into context. Diagnose with targeted `rg` searches and bounded `tail`/`sed`
+reads against the reported log. `--quiet` is accepted when an invocation needs
+to state the default explicitly; `--verbose` is reserved for interactive human
+troubleshooting that genuinely needs live output. Report the run ID, manifest
+path, and log path; if the start/end markers are absent, the result is
+non-certifying.
 
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.
