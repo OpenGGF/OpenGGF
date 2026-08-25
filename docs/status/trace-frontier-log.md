@@ -114821,3 +114821,23 @@ The other three death arms remain coordinates only.
   `player_animation_id`. No trace frontier regressed.
 - Manifest:
   `<managed-scratch>/tasks/openggf-test-session-20260824T211258Z-158007-37744576/20260824T211258Z-p157948-e1c132/manifest.json`.
+
+## 2026-08-25 - AIZ2 boss-exit bridge lifetime and depth fix
+
+- Worktree: main `develop` at `a37a4a55d` with the bridge fix uncommitted;
+  unrelated existing worktree changes were left untouched.
+- Full pre-change and post-change frontier command:
+  `tools/testing/test-session.sh -- mvn -Dmse=off -Ptrace-replay
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  -Dsurefire.runOrder=alphabetical '-Dtest=*TraceReplay'
+  -DfailIfNoTests=false test -B`.
+- Baseline run `20260825T133415Z-p41266-5b2997` and final candidate run
+  `20260825T144631Z-p53107-51a67e` each reported 192 tests, 58 failures,
+  7 errors, and 8 skips. All 65 failure/error test identities and messages
+  matched exactly; no trace frontier regressed. The directly relevant AIZ
+  zone slice also retained its baseline 113 errors and first mismatch at frame
+  `25589` / `player_animation_id`.
+- Baseline manifest:
+  `.openggf/test-runs/20260825T133415Z-p41266-5b2997/manifest.json`.
+  Candidate manifest:
+  `.openggf/test-runs/20260825T144631Z-p53107-51a67e/manifest.json`.

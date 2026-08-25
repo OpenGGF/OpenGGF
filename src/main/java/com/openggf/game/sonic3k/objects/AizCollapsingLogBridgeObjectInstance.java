@@ -425,7 +425,15 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        return isFireBridge;
+        // This engine flag means "above every terrain pixel". The fire bridge
+        // instead uses the palette mask below to sit between the arena's
+        // palette-3 waterfall and its palette 0-2 foreground terrain.
+        return false;
+    }
+
+    @Override
+    public int getTileOcclusionPaletteMask() {
+        return isFireBridge ? 0b0111 : 0b1111;
     }
 
     @Override
@@ -563,7 +571,12 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
         @Override
         public boolean isHighPriority() {
-            return isFireVariant;
+            return false;
+        }
+
+        @Override
+        public int getTileOcclusionPaletteMask() {
+            return isFireVariant ? 0b0111 : 0b1111;
         }
 
         @Override

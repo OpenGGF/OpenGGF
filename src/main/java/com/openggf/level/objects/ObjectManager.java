@@ -1516,6 +1516,12 @@ public class ObjectManager {
         try {
             renderCommands.clear();
             for (ObjectInstance instance : instances) {
+                int mask = instance.getTileOcclusionPaletteMask();
+                if (graphicsManager.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
+                    graphicsManager.flushPatternBatch();
+                    graphicsManager.setCurrentSpriteTileOcclusionPaletteMask(mask);
+                    graphicsManager.beginPatternBatch();
+                }
                 instance.appendRenderCommands(renderCommands);
             }
 
@@ -1603,10 +1609,9 @@ public class ObjectManager {
         ensureBucketsPopulated();
         int idx = RenderPriority.clamp(bucket) - RenderPriority.MIN;
 
-        // The BatchedPatternRenderer uses a single global priority uniform for
-        // the entire batch — it cannot vary per-instance. We must flush and
-        // restart the batch at each LOW→HIGH transition so that each group
-        // gets its own batch with the correct priority.
+        // The BatchedPatternRenderer uses a single tile-occlusion uniform for
+        // the entire batch — it cannot vary per-instance. The helper flushes
+        // at every mask transition while retaining SST slot order.
         // (The InstancedPatternRenderer bakes priority per-instance and doesn't
         // need the flush, but it's harmless — empty flushes are no-ops.)
 
@@ -1614,18 +1619,18 @@ public class ObjectManager {
             gfx.flushPatternBatch();
             gfx.setCurrentSpriteHighPriority(false);
             gfx.beginPatternBatch();
-            drawBucketInstancesWithPriority(lowPriorityBuckets[idx]);
+            drawBucketInstancesWithPriority(lowPriorityBuckets[idx], gfx);
         }
 
         if (!highPriorityBuckets[idx].isEmpty()) {
             gfx.flushPatternBatch();
             gfx.setCurrentSpriteHighPriority(true);
             gfx.beginPatternBatch();
-            drawBucketInstancesWithPriority(highPriorityBuckets[idx]);
+            drawBucketInstancesWithPriority(highPriorityBuckets[idx], gfx);
         }
     }
 
-    private void drawBucketInstancesWithPriority(List<ObjectInstance> instances) {
+    private void drawBucketInstancesWithPriority(List<ObjectInstance> instances, GraphicsManager gfx) {
         if (instances.isEmpty()) {
             return;
         }
@@ -1634,6 +1639,12 @@ public class ObjectManager {
         try {
             renderCommands.clear();
             for (ObjectInstance instance : instances) {
+                int mask = instance.getTileOcclusionPaletteMask();
+                if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
+                    gfx.flushPatternBatch();
+                    gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
+                    gfx.beginPatternBatch();
+                }
                 instance.appendRenderCommands(renderCommands);
             }
 

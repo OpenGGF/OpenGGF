@@ -46,7 +46,7 @@ public class PatternRenderCommand implements GLCommandable {
     private boolean vFlip;
     private boolean textureCoordinatesResolved;
     private boolean piecePriority; // VDP per-tile priority from PatternDesc bit 15
-    private boolean capturedGlobalHighPriority;
+    private int capturedTileOcclusionPaletteMask;
     private boolean ghostEffectActive;
     private float ghostAlpha;
     private boolean leased;
@@ -168,7 +168,7 @@ public class PatternRenderCommand implements GLCommandable {
         this.vFlip = desc.getVFlip();
         this.textureCoordinatesResolved = false;
         this.piecePriority = desc.getPriority();
-        this.capturedGlobalHighPriority = graphicsManager.getCurrentSpriteHighPriority();
+        this.capturedTileOcclusionPaletteMask = graphicsManager.getCurrentSpriteTileOcclusionPaletteMask();
         this.ghostEffectActive = graphicsManager.isGhostRenderEffectActive();
         this.ghostAlpha = graphicsManager.getGhostRenderAlpha();
         this.x = x;
@@ -371,8 +371,9 @@ public class PatternRenderCommand implements GLCommandable {
                 lastPriorityScreenHeight = screenHeight;
             }
 
-            // Per-piece VDP priority: use ROM per-tile bit OR'd with global override
-            priorityShader.setSpriteHighPriority(piecePriority || capturedGlobalHighPriority);
+            // A piece carrying the ROM priority bit bypasses terrain masking;
+            // otherwise retain the object's palette-specific occlusion mask.
+            priorityShader.setTileOcclusionPaletteMask(piecePriority ? 0 : capturedTileOcclusionPaletteMask);
         }
 
         // Only bind palette texture if it changed

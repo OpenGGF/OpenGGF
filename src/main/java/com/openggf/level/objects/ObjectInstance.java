@@ -193,6 +193,15 @@ public interface ObjectInstance {
     void appendRenderCommands(List<GLCommand> commands);
 
     boolean isHighPriority();
+
+    /**
+     * Palette lines whose high-priority foreground pixels occlude this sprite.
+     * Bit 0 represents palette line 0 through bit 3 for palette line 3.
+     */
+    default int getTileOcclusionPaletteMask() {
+        return isHighPriority() ? 0 : 0xF;
+    }
+
     default int getPriorityBucket() {
         return RenderPriority.MIN;
     }

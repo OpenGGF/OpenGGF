@@ -131,7 +131,11 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     public boolean isPersistent() {
         // Normal/wait routines reach AIZDrawBridge_Solid's range tail, but
         // loc_2B452 only counts down then deletes (sonic3k.asm:59769-59791).
-        return collapseStarted && !isDestroyed();
+        // The cutscene replacement represents a layout owner that was already
+        // live and settled when folded out of the native SST graph. Keep it
+        // alive until the button starts loc_2B452; otherwise the dynamic object
+        // cannot respawn after the ordinary range tail removes it.
+        return (cutsceneOverride || collapseStarted) && !isDestroyed();
     }
 
     @Override
@@ -163,7 +167,17 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        return true;
+        // This engine flag means "above every terrain pixel". Keep the bridge
+        // tile-occluded so priority terrain masks it, with the palette mask
+        // below preserving its position in front of the waterfall.
+        return false;
+    }
+
+    @Override
+    public int getTileOcclusionPaletteMask() {
+        // The ROM arena's palette-3 high-priority pixels are the waterfall;
+        // palette 0-2 high-priority pixels are foreground terrain.
+        return 0b0111;
     }
 
     @Override
@@ -375,7 +389,12 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
         @Override
         public boolean isHighPriority() {
-            return true;
+            return false;
+        }
+
+        @Override
+        public int getTileOcclusionPaletteMask() {
+            return 0b0111;
         }
 
         @Override

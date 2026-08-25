@@ -4,6 +4,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **AIZ2's boss-exit bridges now survive and layer like the retail scene:**
+  the settled drawbridge remains live through score counting until Knuckles
+  triggers its collapse, while both arena bridges and their falling pieces
+  stay in front of the waterfall but are masked by foreground terrain.
+
 - **AIZ2 boss damage now preserves the waterfall depth handoff:** landing from
   hurt no longer erases the `art_tile` priority previously set by the ROM path
   switcher, so Sonic and Tails remain in front of the boss-arena waterfall.

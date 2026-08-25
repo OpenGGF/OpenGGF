@@ -214,6 +214,44 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void settledCutsceneBridgeSurvivesUntilItsTimedCollapse() {
+        AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+
+        assertTrue(bridge.isPersistent(),
+                "the folded settled layout owner must not range-delete before Sonic reaches it");
+    }
+
+    @Test
+    void aizBossArenaBridgesRemainOccludedByPriorityTerrain() {
+        AizDrawBridgeObjectInstance drawBridge =
+                new AizDrawBridgeObjectInstance(new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 1, false, 0));
+        AizCollapsingLogBridgeObjectInstance fireBridge =
+                new AizCollapsingLogBridgeObjectInstance(new ObjectSpawn(0x48E0, 0x0218, 0x2C, 0x88, 0, false, 0));
+
+        assertFalse(drawBridge.isHighPriority(),
+                "The draw bridge must not bypass all priority terrain");
+        assertFalse(fireBridge.isHighPriority(),
+                "The fire bridge must not bypass all priority terrain");
+    }
+
+    @Test
+    void aizBossArenaBridgesMaskOnlyTerrainPalettes() {
+        AizDrawBridgeObjectInstance drawBridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+        AizCollapsingLogBridgeObjectInstance fireBridge =
+                new AizCollapsingLogBridgeObjectInstance(new ObjectSpawn(0x48E0, 0x0218, 0x2C, 0x88, 0, false, 0));
+        AizCollapsingLogBridgeObjectInstance normalBridge =
+                new AizCollapsingLogBridgeObjectInstance(new ObjectSpawn(0x2000, 0x0218, 0x2C, 0x08, 0, false, 0));
+
+        assertEquals(0b0111, drawBridge.getTileOcclusionPaletteMask());
+        assertEquals(0b0111, fireBridge.getTileOcclusionPaletteMask());
+        assertEquals(0b1111, normalBridge.getTileOcclusionPaletteMask());
+        assertEquals(0, drawBridge.getTileOcclusionPaletteMask() & (1 << 3),
+                "Palette-line 3 waterfall pixels must remain behind the bridge");
+        assertTrue((drawBridge.getTileOcclusionPaletteMask() & (1 << 2)) != 0,
+                "Palette-line 2 terrain pixels must remain in front of the bridge");
+    }
+
+    @Test
     void drawBridgeCollapseCountdownSuppressesTheNormalRangeTailUntilTimedDeletion() {
         AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
         bridge.setServices(new TestObjectServices().withGameState(new GameStateManager()));

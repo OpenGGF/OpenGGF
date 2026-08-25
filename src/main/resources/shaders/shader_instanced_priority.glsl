@@ -44,7 +44,7 @@ void main()
     }
 
     // Get per-instance priority from vertex shader
-    float spriteHighPriority = v_highPriority;
+    int tileOcclusionPaletteMask = int(round(v_highPriority));
 
     // Check tile priority at this screen position
     // gl_FragCoord is in WINDOW coordinates (0,0 at bottom-left of window),
@@ -52,11 +52,12 @@ void main()
     // Subtract ViewportOffset to get viewport-local coordinates, then normalize.
     // No Y-flip needed: OpenGL texture V coordinates already match the FBO orientation
     vec2 screenCoord = (gl_FragCoord.xy - ViewportOffset) / ScreenSize;
-    float tilePriority = texture(TilePriorityTexture, screenCoord).r;
+    vec4 tilePriority = texture(TilePriorityTexture, screenCoord);
 
     // Low-priority sprite behind high-priority tile: discard
     // tilePriority > 0.5 means there's a high-priority tile pixel at this location
-    if (spriteHighPriority < 0.5 && tilePriority > 0.5) {
+    int tilePaletteLine = int(round(tilePriority.g * 3.0));
+    if (tilePriority.r > 0.5 && (tileOcclusionPaletteMask & (1 << tilePaletteLine)) != 0) {
         discard;
     }
 

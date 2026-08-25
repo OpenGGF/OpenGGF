@@ -15,7 +15,7 @@ uniform sampler2D IndexedColorTexture;
 uniform sampler2D TilePriorityTexture;  // FBO texture with high-priority tile info
 uniform float PaletteLine;
 uniform float TotalPaletteLines;
-uniform int SpriteHighPriority;         // 1 = sprite appears above all tiles, 0 = behind high-priority tiles
+uniform int TileOcclusionPaletteMask;   // bit N = priority tiles using palette line N occlude this sprite
 uniform vec2 ScreenSize;                // Viewport dimensions for screen coord lookup
 uniform vec2 ViewportOffset;            // Viewport offset in window coords (for letterboxing)
 // Underwater palette uniforms
@@ -50,11 +50,12 @@ void main()
     // Subtract ViewportOffset to get viewport-local coordinates, then normalize.
     // No Y-flip needed: OpenGL texture V coordinates already match the FBO orientation
     vec2 screenCoord = (gl_FragCoord.xy - ViewportOffset) / ScreenSize;
-    float tilePriority = texture(TilePriorityTexture, screenCoord).r;
+    vec4 tilePriority = texture(TilePriorityTexture, screenCoord);
 
     // Low-priority sprite behind high-priority tile: discard
     // tilePriority > 0.5 means there's a high-priority tile pixel at this location
-    if (SpriteHighPriority == 0 && tilePriority > 0.5) {
+    int tilePaletteLine = int(round(tilePriority.g * 3.0));
+    if (tilePriority.r > 0.5 && (TileOcclusionPaletteMask & (1 << tilePaletteLine)) != 0) {
         discard;
     }
 
