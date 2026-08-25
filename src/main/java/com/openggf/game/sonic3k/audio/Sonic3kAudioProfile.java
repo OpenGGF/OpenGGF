@@ -140,6 +140,12 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
+    public SystemCommandDuringOverridePolicy
+            getSystemCommandDuringOverridePolicy() {
+        return SystemCommandDuringOverridePolicy.DISCARD;
+    }
+
+    @Override
     protected int getFadeOutCommandId() {
         return Sonic3kSmpsConstants.CMD_FADE_OUT;
     }

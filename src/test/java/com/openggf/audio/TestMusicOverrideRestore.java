@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * The 1-up jingle is the only music that interrupts the current song and
@@ -274,6 +275,39 @@ class TestMusicOverrideRestore {
         assertEquals(null, snapshot().pendingMusic());
     }
 
+    /**
+     * S2's zPlayMusic branches directly to zBGMLoad for another 1-up, so the
+     * jingle restarts without replacing the one saved zone-music slot.
+     */
+    @Test
+    void sonic2PolicyRestartsARepeatedJingleWithoutSavingItself() {
+        audio.setAudioProfile(new RestartingOverrideProfile());
+        play(LEVEL_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
+        long firstJingleVoice = snapshot().activeMusic().voiceId();
+
+        play(EXTRA_LIFE_MUSIC);
+
+        assertNotEquals(firstJingleVoice, snapshot().activeMusic().voiceId());
+        assertSaved(LEVEL_MUSIC);
+        restore();
+        assertEquals(LEVEL_MUSIC, activeMusicId());
+    }
+
+    @Test
+    void systemCommandPolicyIsIndependentOfOrdinaryMusicQueueing() {
+        audio.setAudioProfile(new DeferredMusicAppliedCommandsProfile());
+        play(LEVEL_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
+
+        audio.stopMusic();
+        audio.presentFrame(PresentationMode.SILENT);
+
+        assertEquals(null, snapshot().activeMusic());
+        assertNothingSaved();
+        assertEquals(false, snapshot().sfxBlocked());
+    }
+
     private void play(int musicId) {
         audio.playMusic(musicId);
         audio.presentFrame(PresentationMode.SILENT);
@@ -332,6 +366,11 @@ class TestMusicOverrideRestore {
         @Override public MusicDuringOverridePolicy getMusicDuringOverridePolicy() {
             return new Sonic3kAudioProfile().getMusicDuringOverridePolicy();
         }
+        @Override public SystemCommandDuringOverridePolicy
+                getSystemCommandDuringOverridePolicy() {
+            return new Sonic3kAudioProfile()
+                    .getSystemCommandDuringOverridePolicy();
+        }
         @Override public int getDrowningMusicId() { return -1; }
         @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
         @Override public Map<GameMusic, Integer> getMusicMap() { return Map.of(); }
@@ -348,6 +387,48 @@ class TestMusicOverrideRestore {
         @Override public int getExtraLifeMusicId() { return EXTRA_LIFE_MUSIC; }
         @Override public int getSuperSonicMusicId() { return SUPER_MUSIC; }
         @Override public int getDrowningMusicId() { return -1; }
+        @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
+        @Override public Map<GameMusic, Integer> getMusicMap() { return Map.of(); }
+    }
+
+    private record RestartingOverrideProfile() implements GameAudioProfile {
+        @Override public SmpsLoader createSmpsLoader(Rom rom) { return null; }
+        @Override public SmpsSequencerConfig getSequencerConfig() {
+            return new SmpsSequencerConfig.Builder().build();
+        }
+        @Override public int getSpeedShoesOnCommandId() { return -1; }
+        @Override public int getSpeedShoesOffCommandId() { return -1; }
+        @Override public int getInvincibilityMusicId() { return INVINCIBILITY_MUSIC; }
+        @Override public int getExtraLifeMusicId() { return EXTRA_LIFE_MUSIC; }
+        @Override public int getSuperSonicMusicId() { return SUPER_MUSIC; }
+        @Override public int getDrowningMusicId() { return -1; }
+        @Override public MusicOverrideRetriggerPolicy
+                getMusicOverrideRetriggerPolicy() {
+            return MusicOverrideRetriggerPolicy.RESTART;
+        }
+        @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
+        @Override public Map<GameMusic, Integer> getMusicMap() { return Map.of(); }
+    }
+
+    private record DeferredMusicAppliedCommandsProfile()
+            implements GameAudioProfile {
+        @Override public SmpsLoader createSmpsLoader(Rom rom) { return null; }
+        @Override public SmpsSequencerConfig getSequencerConfig() {
+            return new SmpsSequencerConfig.Builder().build();
+        }
+        @Override public int getSpeedShoesOnCommandId() { return -1; }
+        @Override public int getSpeedShoesOffCommandId() { return -1; }
+        @Override public int getInvincibilityMusicId() { return INVINCIBILITY_MUSIC; }
+        @Override public int getExtraLifeMusicId() { return EXTRA_LIFE_MUSIC; }
+        @Override public int getSuperSonicMusicId() { return SUPER_MUSIC; }
+        @Override public int getDrowningMusicId() { return -1; }
+        @Override public MusicDuringOverridePolicy getMusicDuringOverridePolicy() {
+            return MusicDuringOverridePolicy.DEFER_UNTIL_RESTORE;
+        }
+        @Override public SystemCommandDuringOverridePolicy
+                getSystemCommandDuringOverridePolicy() {
+            return SystemCommandDuringOverridePolicy.APPLY;
+        }
         @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
         @Override public Map<GameMusic, Integer> getMusicMap() { return Map.of(); }
     }

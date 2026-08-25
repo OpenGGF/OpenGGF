@@ -16,6 +16,13 @@ This file contains the complete 0.6 development snapshot history carried forward
   the jingle-only sound-effect gate, so jump and other gameplay sounds remain
   audible through later boss and miniboss music fades.
 
+- **Extra-life and music-fade edge cases now follow each retail sound driver:**
+  S1 and S3K ignore a repeated 1-up request while S2 restarts its jingle without
+  overwriting the saved song. S1 alone rejects new gameplay SFX during an
+  ordinary fade; S2 and S3K keep jump and other effects audible. A completed S1
+  or S2 fade can no longer leave the 1-up SFX gate latched, and S2's native
+  `$F9` fade and `$FD` stop commands now reach the shared presentation path.
+
 - **AIZ2's boss-exit bridges now survive and layer like the retail scene:**
   the settled drawbridge remains live through score counting until Knuckles
   triggers its collapse, while both arena bridges and their falling pieces

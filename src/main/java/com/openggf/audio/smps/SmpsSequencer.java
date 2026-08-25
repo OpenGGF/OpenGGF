@@ -3578,6 +3578,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
     }
 
+    /** Whether the retail driver is currently servicing a music fade-out. */
+    public boolean isFadingOut() {
+        return fadeState.active && fadeState.fadeOut;
+    }
+
     /**
      * Refresh all FM voice settings after being paused/restored.
      * This reloads instruments and pan/ams/fms settings to the hardware.

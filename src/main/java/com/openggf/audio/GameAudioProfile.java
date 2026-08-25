@@ -99,6 +99,31 @@ public interface GameAudioProfile {
         return MusicDuringOverridePolicy.REPLACE_IMMEDIATELY;
     }
 
+    /** How another 1-up request behaves while the 1-up jingle is active. */
+    enum MusicOverrideRetriggerPolicy {
+        /** S1 and S3K consume the request without restarting the jingle. */
+        IGNORE,
+        /** S2 reloads the jingle but preserves the original saved song. */
+        RESTART
+    }
+
+    default MusicOverrideRetriggerPolicy getMusicOverrideRetriggerPolicy() {
+        return MusicOverrideRetriggerPolicy.IGNORE;
+    }
+
+    /** How fade/stop commands behave while the 1-up jingle is active. */
+    enum SystemCommandDuringOverridePolicy {
+        /** S1/S2 service the command against the active jingle. */
+        APPLY,
+        /** S3K consumes the queued command without disturbing the jingle. */
+        DISCARD
+    }
+
+    default SystemCommandDuringOverridePolicy
+            getSystemCommandDuringOverridePolicy() {
+        return SystemCommandDuringOverridePolicy.APPLY;
+    }
+
     /**
      * Returns true if SFX should be completely blocked during this music.
      * In the original ROM, only the 1-up jingle sets 1upPlaying flag which blocks SFX.

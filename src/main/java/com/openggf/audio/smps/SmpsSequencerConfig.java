@@ -241,6 +241,7 @@ public final class SmpsSequencerConfig {
     private final SfxRequestTransformPolicy sfxRequestTransformPolicy;
     private final boolean fadeOutClearsSpeedShoes;
     private final boolean fadeOutStopsSfxImmediately;
+    private final boolean blocksSfxDuringFadeOut;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
     private final YmServiceTimingProfile ymServiceTimingProfile;
 
@@ -294,6 +295,7 @@ public final class SmpsSequencerConfig {
         this.sfxRequestTransformPolicy = b.sfxRequestTransformPolicy;
         this.fadeOutClearsSpeedShoes = b.fadeOutClearsSpeedShoes;
         this.fadeOutStopsSfxImmediately = b.fadeOutStopsSfxImmediately;
+        this.blocksSfxDuringFadeOut = b.blocksSfxDuringFadeOut;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
         this.ymServiceTimingProfile = b.ymServiceTimingProfile;
         this.volMode = b.volMode;
@@ -433,6 +435,10 @@ public final class SmpsSequencerConfig {
 
     public boolean isFadeOutStopsSfxImmediately() {
         return fadeOutStopsSfxImmediately;
+    }
+
+    public boolean blocksSfxDuringFadeOut() {
+        return blocksSfxDuringFadeOut;
     }
 
     public FmVoiceWriteProfile getFmVoiceWriteProfile() {
@@ -579,6 +585,7 @@ public final class SmpsSequencerConfig {
                 SfxRequestTransformPolicy.NONE;
         private boolean fadeOutClearsSpeedShoes;
         private boolean fadeOutStopsSfxImmediately;
+        private boolean blocksSfxDuringFadeOut;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
         private YmServiceTimingProfile ymServiceTimingProfile =
                 YmServiceTimingProfile.none();
@@ -625,6 +632,7 @@ public final class SmpsSequencerConfig {
         public Builder sfxRequestTransformPolicy(SfxRequestTransformPolicy val) { sfxRequestTransformPolicy = val; return this; }
         public Builder fadeOutClearsSpeedShoes(boolean val) { fadeOutClearsSpeedShoes = val; return this; }
         public Builder fadeOutStopsSfxImmediately(boolean val) { fadeOutStopsSfxImmediately = val; return this; }
+        public Builder blocksSfxDuringFadeOut(boolean val) { blocksSfxDuringFadeOut = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
         public Builder ymServiceTimingProfile(YmServiceTimingProfile val) { ymServiceTimingProfile = Objects.requireNonNull(val, "val"); return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }

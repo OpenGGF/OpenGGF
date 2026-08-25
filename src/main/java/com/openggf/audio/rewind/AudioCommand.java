@@ -26,12 +26,24 @@ public sealed interface AudioCommand {
     record PlayMusic(int musicId, MusicRoute route, boolean override,
                      String donorGameId,
                      GameAudioProfile.MusicDuringOverridePolicy
-                             musicDuringOverridePolicy) implements AudioCommand {
+                             musicDuringOverridePolicy,
+                     GameAudioProfile.MusicOverrideRetriggerPolicy
+                             overrideRetriggerPolicy) implements AudioCommand {
+        public PlayMusic(int musicId, MusicRoute route, boolean override,
+                         String donorGameId,
+                         GameAudioProfile.MusicDuringOverridePolicy
+                                 musicDuringOverridePolicy) {
+            this(musicId, route, override, donorGameId,
+                    musicDuringOverridePolicy,
+                    GameAudioProfile.MusicOverrideRetriggerPolicy.IGNORE);
+        }
+
         public PlayMusic(int musicId, MusicRoute route, boolean override,
                          String donorGameId) {
             this(musicId, route, override, donorGameId,
                     GameAudioProfile.MusicDuringOverridePolicy
-                            .REPLACE_IMMEDIATELY);
+                            .REPLACE_IMMEDIATELY,
+                    GameAudioProfile.MusicOverrideRetriggerPolicy.IGNORE);
         }
     }
 
@@ -41,20 +53,19 @@ public sealed interface AudioCommand {
     record FadeOutMusic(
             int steps,
             int delay,
-            GameAudioProfile.MusicDuringOverridePolicy
-                    musicDuringOverridePolicy) implements AudioCommand {
+            GameAudioProfile.SystemCommandDuringOverridePolicy
+                    systemCommandDuringOverridePolicy) implements AudioCommand {
         public FadeOutMusic(int steps, int delay) {
-            this(steps, delay, GameAudioProfile.MusicDuringOverridePolicy
-                    .REPLACE_IMMEDIATELY);
+            this(steps, delay,
+                    GameAudioProfile.SystemCommandDuringOverridePolicy.APPLY);
         }
     }
 
     record StopMusic(
-            GameAudioProfile.MusicDuringOverridePolicy
-                    musicDuringOverridePolicy) implements AudioCommand {
+            GameAudioProfile.SystemCommandDuringOverridePolicy
+                    systemCommandDuringOverridePolicy) implements AudioCommand {
         public StopMusic() {
-            this(GameAudioProfile.MusicDuringOverridePolicy
-                    .REPLACE_IMMEDIATELY);
+            this(GameAudioProfile.SystemCommandDuringOverridePolicy.APPLY);
         }
     }
 

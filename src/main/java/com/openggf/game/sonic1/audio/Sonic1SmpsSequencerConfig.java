@@ -90,6 +90,9 @@ public final class Sonic1SmpsSequencerConfig {
                         SmpsSequencerConfig.PsgSfxReleaseMode.REST_UNTIL_NEXT_NOTE)
                 .fadeOutClearsSpeedShoes(true)
                 .fadeOutStopsSfxImmediately(true)
+                // Sound_PlaySFX rejects new normal and special SFX while
+                // v_fadeout_counter is nonzero.
+                .blocksSfxDuringFadeOut(true)
                 .musicOverrideRestorePolicy(
                         SmpsSequencerConfig.MusicOverrideRestorePolicy
                                 .DRIVER_FADE_IN)
