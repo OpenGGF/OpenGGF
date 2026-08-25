@@ -130,9 +130,10 @@ public final class AudioPresentationCommandResolver {
             case AudioCommand.PlayMusic music -> submitMusic(music);
             case AudioCommand.PlaySfx sfx -> submitSfx(sfx);
             case AudioCommand.FadeOutMusic fade ->
-                    enqueue(new FadeMusic(fade.steps(), fade.delay()));
-            case AudioCommand.StopMusic ignored ->
-                    enqueue(new StopMusic());
+                    enqueue(new FadeMusic(fade.steps(), fade.delay(),
+                            fade.musicDuringOverridePolicy()));
+            case AudioCommand.StopMusic stop ->
+                    enqueue(new StopMusic(stop.musicDuringOverridePolicy()));
             case AudioCommand.StopAllSfx ignored ->
                     enqueue(new StopAllSfx());
             case AudioCommand.EndMusicOverride end ->
@@ -240,7 +241,8 @@ public final class AudioPresentationCommandResolver {
                     ? new PushMusicOverride(voice)
                     : new ReplaceMusic(voice, selectedSource[0] != null
                             ? selectedSource[0].ordinaryMusicSfxPolicy()
-                            : GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
+                            : GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL,
+                            command.musicDuringOverridePolicy());
         } catch (IOException | RuntimeException failure) {
             AudioDiagnosticObserverException.rethrowIfPresent(failure);
             warn("Rejected music " + command.musicId()

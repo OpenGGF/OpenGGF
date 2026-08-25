@@ -1,11 +1,14 @@
 package com.openggf.audio;
 
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,10 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * <p>The ROM owns a single save slot: S1's {@code Sound_PlayBGM} backs up
  * {@code v_1up_ram} and sets {@code f_1up_playing}; S3K's {@code zPlayMusic}
  * copies {@code zTracksStart} to {@code zTracksSaveStart} and sets
- * {@code zFadeToPrevFlag}. Any other music request abandons that save — S1 by
- * {@code clr.b f_1up_playing}, S3K by {@code zStopAllSound} zeroing the whole
- * backup area. Invincibility and Super are ordinary music that restore the
- * level music by re-issuing it, not by unwinding a saved song.
+ * {@code zFadeToPrevFlag}. S1/S2 abandon that save when another song is loaded;
+ * S3K instead leaves an ordinary music request queued while the jingle owns
+ * {@code zFadeToPrevFlag}. Invincibility and Super are ordinary music that
+ * restore the level music by re-issuing it, not by unwinding a saved song.
  *
  * <p>The claims are made against the presentation registry the mixer actually
  * renders: {@code activeMusic} is the voice being heard and the override stack
@@ -58,6 +61,8 @@ class TestMusicOverrideRestore {
                     "music/" + Integer.toHexString(musicId).toUpperCase() + ".wav",
                     new byte[SAMPLE_RATE], SAMPLE_RATE);
         }
+        AudioManagerTestDiagnostics.registerFallbackSfxAsset(audio,
+                "sfx/jump.wav", new byte[SAMPLE_RATE], SAMPLE_RATE);
     }
 
     @AfterEach
@@ -88,6 +93,20 @@ class TestMusicOverrideRestore {
                 "restoring a non-SMPS fallback must release the 1-up SFX gate");
     }
 
+    @Test
+    void extraLifeFromSilenceStillOwnsAndReleasesItsGate() {
+        play(EXTRA_LIFE_MUSIC);
+        play(LEVEL_MUSIC);
+        assertEquals(EXTRA_LIFE_MUSIC, activeMusicId());
+
+        restore();
+        assertEquals(null, snapshot().activeMusic());
+        assertEquals(false, snapshot().sfxBlocked());
+
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(LEVEL_MUSIC, activeMusicId());
+    }
+
     /**
      * Invincibility and Super are ordinary music, not overrides. The ROM plays
      * them through the same {@code zPlayMusic_DoFade} path as any other song
@@ -108,29 +127,89 @@ class TestMusicOverrideRestore {
     }
 
     /**
-     * Any other music arriving while the jingle plays abandons the save.
+     * Ordinary music requested while the jingle plays waits behind it.
      *
-     * <p>ROM: a non-1-up request reaches {@code zPlayMusic_DoFade ->
-     * zStopAllSound}, which zeroes {@code zFadeToPrevFlag} and the whole
-     * {@code zTracksSaveStart} backup (S1 clears {@code f_1up_playing} the same
-     * way). A later E4 must therefore leave the new song alone rather than
-     * reinstating a jingle that no longer exists — the frozen, exhausted voice
-     * that used to be reinstated here is what fell silent.
+     * <p>ROM: while {@code zFadeToPrevFlag} holds the 1-up id,
+     * {@code zUpdateMusic} leaves an ordinary {@code zMusicNumber} queued and
+     * continues updating the jingle. Its E4 first restores the saved tracks;
+     * the next driver service may then consume the queued replacement. This is
+     * observable when invincibility expires during the jingle: the expiry's
+     * level-music request must not cut the jingle short or strand its SFX gate.
      */
     @Test
-    void musicStartedDuringTheJingleDiscardsTheSavedSong() {
-        play(LEVEL_MUSIC);
+    void invincibilityExpiryWaitsForTheExtraLifeJingle() {
+        play(INVINCIBILITY_MUSIC);
         play(EXTRA_LIFE_MUSIC);
-        assertSaved(LEVEL_MUSIC);
+        assertSaved(INVINCIBILITY_MUSIC);
 
+        play(LEVEL_MUSIC);
+        assertEquals(EXTRA_LIFE_MUSIC, activeMusicId(),
+                "the queued level song must not cut off the 1-up jingle");
+        assertEquals(LEVEL_MUSIC,
+                snapshot().pendingMusic().music().musicId());
+        assertEquals(true, snapshot().sfxBlocked(),
+                "the 1-up SFX gate remains active until its own restore");
+
+        AudioLogicalSnapshot queued = audio.captureLogicalSnapshot();
         play(SUPER_MUSIC);
-        assertEquals(SUPER_MUSIC, activeMusicId());
-        assertNothingSaved();
+        assertEquals(SUPER_MUSIC,
+                snapshot().pendingMusic().music().musicId(),
+                "S3K's single input cell keeps only the latest song request");
+        audio.restoreLogicalSnapshot(queued);
+        assertEquals(LEVEL_MUSIC,
+                snapshot().pendingMusic().music().musicId(),
+                "rewind must restore the pending input separately from the save slot");
 
-        // The jingle is gone, so its E4 can never arrive; if one does, Super
-        // music keeps playing rather than the act falling silent.
         restore();
-        assertEquals(SUPER_MUSIC, activeMusicId());
+        assertEquals(INVINCIBILITY_MUSIC, activeMusicId(),
+                "E4 first restores the saved song before consuming the queue");
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(LEVEL_MUSIC, activeMusicId(),
+                "the next driver service consumes the queued expiry request");
+        assertNothingSaved();
+        assertEquals(false, snapshot().sfxBlocked(),
+                "finishing the 1-up must release later sound effects");
+    }
+
+    /** S3K clears a queued system command instead of applying it to the jingle. */
+    @Test
+    void fadeDuringExtraLifeIsDiscardedAndReleasesTheSfxGate() {
+        play(INVINCIBILITY_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
+        play(LEVEL_MUSIC);
+
+        audio.fadeOutMusic(0x28, 6);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(EXTRA_LIFE_MUSIC, activeMusicId(),
+                "a fade command must not fade the active 1-up jingle");
+
+        restore();
+        assertEquals(INVINCIBILITY_MUSIC, activeMusicId(),
+                "the fade overwrites and clears the queued level song");
+        assertNothingSaved();
+        assertEquals(false, snapshot().sfxBlocked(),
+                "the 1-up restore must release its SFX gate");
+
+        audio.playSfx("JUMP");
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(true, hasSampleAsset("sfx/jump.wav"),
+                "the discarded fade must not suppress later jump SFX");
+    }
+
+    @Test
+    void stopDuringExtraLifeIsDiscardedAndClearsThePendingInput() {
+        play(INVINCIBILITY_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
+        play(LEVEL_MUSIC);
+
+        audio.stopMusic();
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(EXTRA_LIFE_MUSIC, activeMusicId());
+        assertEquals(null, snapshot().pendingMusic());
+
+        restore();
+        assertEquals(INVINCIBILITY_MUSIC, activeMusicId());
+        assertEquals(false, snapshot().sfxBlocked());
     }
 
     /**
@@ -144,7 +223,10 @@ class TestMusicOverrideRestore {
     void retriggeredJingleKeepsTheOriginalSavedSong() {
         play(LEVEL_MUSIC);
         play(EXTRA_LIFE_MUSIC);
+        long voiceId = snapshot().activeMusic().voiceId();
         play(EXTRA_LIFE_MUSIC);
+        assertEquals(voiceId, snapshot().activeMusic().voiceId(),
+                "a later 1-up input is cleared without restarting the jingle");
         assertSaved(LEVEL_MUSIC);
 
         restore();
@@ -163,21 +245,33 @@ class TestMusicOverrideRestore {
         play(EXTRA_LIFE_MUSIC);
         play(INVINCIBILITY_MUSIC);
         play(EXTRA_LIFE_MUSIC);
-        assertSaved(INVINCIBILITY_MUSIC);
+        assertSaved(LEVEL_MUSIC);
 
         restore();
-        assertEquals(INVINCIBILITY_MUSIC, activeMusicId());
+        assertEquals(LEVEL_MUSIC, activeMusicId());
         assertNothingSaved();
     }
 
-    /** Ordinary music replaces the foreground and drops any saved song. */
+    /** Ordinary music still replaces the foreground when no jingle owns it. */
     @Test
-    void ordinaryMusicReplacesTheForegroundInsteadOfStacking() {
-        play(LEVEL_MUSIC);
-        play(EXTRA_LIFE_MUSIC);
+    void ordinaryMusicReplacesTheForegroundOutsideTheJingle() {
+        play(SUPER_MUSIC);
         play(LEVEL_MUSIC);
         assertEquals(LEVEL_MUSIC, activeMusicId());
         assertNothingSaved();
+    }
+
+    /** S1/S2 retain their immediate ordinary-music replacement behavior. */
+    @Test
+    void defaultProfileAbandonsTheJingleForOrdinaryMusic() {
+        audio.setAudioProfile(new ImmediateOverrideProfile());
+        play(LEVEL_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
+        play(SUPER_MUSIC);
+
+        assertEquals(SUPER_MUSIC, activeMusicId());
+        assertNothingSaved();
+        assertEquals(null, snapshot().pendingMusic());
     }
 
     private void play(int musicId) {
@@ -218,7 +312,32 @@ class TestMusicOverrideRestore {
         return audio.captureLogicalSnapshot().presentation();
     }
 
+    private boolean hasSampleAsset(String assetId) {
+        return snapshot().voices().stream()
+                .filter(PresentationVoiceSnapshot.Sample.class::isInstance)
+                .map(PresentationVoiceSnapshot.Sample.class::cast)
+                .anyMatch(sample -> sample.assetId().equals(assetId));
+    }
+
     private record OverrideProfile() implements GameAudioProfile {
+        @Override public SmpsLoader createSmpsLoader(Rom rom) { return null; }
+        @Override public SmpsSequencerConfig getSequencerConfig() {
+            return new SmpsSequencerConfig.Builder().build();
+        }
+        @Override public int getSpeedShoesOnCommandId() { return -1; }
+        @Override public int getSpeedShoesOffCommandId() { return -1; }
+        @Override public int getInvincibilityMusicId() { return INVINCIBILITY_MUSIC; }
+        @Override public int getExtraLifeMusicId() { return EXTRA_LIFE_MUSIC; }
+        @Override public int getSuperSonicMusicId() { return SUPER_MUSIC; }
+        @Override public MusicDuringOverridePolicy getMusicDuringOverridePolicy() {
+            return new Sonic3kAudioProfile().getMusicDuringOverridePolicy();
+        }
+        @Override public int getDrowningMusicId() { return -1; }
+        @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
+        @Override public Map<GameMusic, Integer> getMusicMap() { return Map.of(); }
+    }
+
+    private record ImmediateOverrideProfile() implements GameAudioProfile {
         @Override public SmpsLoader createSmpsLoader(Rom rom) { return null; }
         @Override public SmpsSequencerConfig getSequencerConfig() {
             return new SmpsSequencerConfig.Builder().build();

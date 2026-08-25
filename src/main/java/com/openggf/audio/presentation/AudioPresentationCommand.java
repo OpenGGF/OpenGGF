@@ -150,16 +150,31 @@ public sealed interface AudioPresentationCommand
 
     record ReplaceMusic(
             MusicVoiceEntry music,
-            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy)
+            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy,
+            com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
+                    musicDuringOverridePolicy)
             implements AudioPresentationCommand {
         public ReplaceMusic {
             Objects.requireNonNull(music, "music");
             Objects.requireNonNull(sfxPolicy, "sfxPolicy");
+            Objects.requireNonNull(musicDuringOverridePolicy,
+                    "musicDuringOverridePolicy");
+        }
+
+        public ReplaceMusic(
+                MusicVoiceEntry music,
+                com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
+                        sfxPolicy) {
+            this(music, sfxPolicy,
+                    com.openggf.audio.GameAudioProfile
+                            .MusicDuringOverridePolicy.REPLACE_IMMEDIATELY);
         }
 
         public ReplaceMusic(MusicVoiceEntry music) {
             this(music,
-                    com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
+                    com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL,
+                    com.openggf.audio.GameAudioProfile
+                            .MusicDuringOverridePolicy.REPLACE_IMMEDIATELY);
         }
     }
 
@@ -217,13 +232,39 @@ public sealed interface AudioPresentationCommand
     record StopRawPcm() implements AudioPresentationCommand {
     }
 
-    record StopMusic() implements AudioPresentationCommand {
+    record StopMusic(
+            com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
+                    musicDuringOverridePolicy)
+            implements AudioPresentationCommand {
+        public StopMusic {
+            Objects.requireNonNull(musicDuringOverridePolicy,
+                    "musicDuringOverridePolicy");
+        }
+
+        public StopMusic() {
+            this(com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
+                    .REPLACE_IMMEDIATELY);
+        }
     }
 
     record StopAllSfx() implements AudioPresentationCommand {
     }
 
-    record FadeMusic(int steps, int delay) implements AudioPresentationCommand {
+    record FadeMusic(
+            int steps,
+            int delay,
+            com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
+                    musicDuringOverridePolicy)
+            implements AudioPresentationCommand {
+        public FadeMusic {
+            Objects.requireNonNull(musicDuringOverridePolicy,
+                    "musicDuringOverridePolicy");
+        }
+
+        public FadeMusic(int steps, int delay) {
+            this(steps, delay, com.openggf.audio.GameAudioProfile
+                    .MusicDuringOverridePolicy.REPLACE_IMMEDIATELY);
+        }
     }
 
     record SetVoiceGain(long voiceId, int gainQ16) implements AudioPresentationCommand {
