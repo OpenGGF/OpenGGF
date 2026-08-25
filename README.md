@@ -218,6 +218,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 The `next` branch is where post-0.6 work is staged before it graduates into the next release line.
 
+The [0.7 roadmap](docs/project/v0.7-roadmap.md) targets complete locked-on
+Knuckles, Tails, and Sonic routes through their ROM-authored finales and full
+outros. It also makes the typed game-policy hierarchy a pre-publication Mod API
+gate and carries forward the modding, Time Attack, multiplayer, editor, FBZ,
+super-emerald, widescreen, and compatibility work already staged here.
+
 Highlights:
 
 - **`develop` 0.6 merged into `next` (2026-07-28):** the 0.6 line — hardware-timing replay and the ROM work ledger, the rebuilt audio presentation producer/sink pipeline, `LevelIterationAdmissionController`, `ObjectExecutionController`, and the initial-`Process_Sprites` assembly — is now under the 0.7 Mod API, multiplayer, editor and FBZ work. 146 conflicts, resolved on one rule throughout: `develop` wins on shared runtime, `next` re-engineers onto it. Audio was re-implemented rather than reverted — creator streamed music now hosts as an ordinary `StreamedMusicVoice` so mod tracks participate in the presentation clock, rewind and capture leases like SMPS and sample music do, and the sample-mod PCM tests were rewritten to drive `AudioPresentationMixer` instead of the retired backend upload hook. Production code is now AWT-free (`PngCodec`/`PixelImage` replace `ImageIO`/`BufferedImage` in the mod SDK) so a native image stays buildable; that half is already backported to `develop` as PR #175. Two ROM-accuracy corrections came out of the merge rather than going in: the S3K dynamic slot count is **90**, not 89 (`Dynamic_object_RAM ds.b object_size*90`, and `Offset_ObjectsDuringTransition` runs exactly 90 `dbf` iterations over absolute slots 4-93), and `isManagedDynamicSlot` was split from a new execution-order predicate after widening it was found to let objects seat below `firstDynamicSlot`. Reds are scored against the union of both parents, since `origin/develop`'s own tip carries 77 red methods and a test tree that does not compile: merge-introduced failures stand at 18 of 16,063 tests, each triaged in `MERGE-STATUS-develop-into-next.md`, with backports to `develop` tracked separately.
