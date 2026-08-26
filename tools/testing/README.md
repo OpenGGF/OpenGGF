@@ -68,6 +68,13 @@ namespace, and common mount-namespace mismatches at ready/go and recovery.
 Functional normal and forced-cleanup cases also prove that the same PID with
 the same recorded start returns cleanup status 76 and preserves the exact
 authenticated target, while a different start permits its exact `rmdir`.
+Adapter/shim controls used to exercise those trust-boundary cases require the
+exact self-test mode and publish a run-bound `frozen-next-test-seam.env` marker.
+The launcher independently authenticates the complete inherited seam-variable
+list and always marks such a run non-admissible, even when its coordinator
+manifest is otherwise `PASSED` and valid. A seam variable without exact mode,
+or a missing/mismatched seam marker, fails closed. Normal production evidence
+contains no seam marker and remains eligible for admission.
 
 ## Complete Surefire outcome inventories
 

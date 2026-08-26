@@ -335,6 +335,33 @@ printf '%s\n' \
     > "$authority_tmp"
 mv -- "$authority_tmp" "$report_authority"
 
+test_seam_marker="$diagnostics/frozen-next-test-seam.env"
+test_seam_variables=
+for test_seam_variable in \
+    OPENGGF_FROZEN_NEXT_SELF_TEST_MODE OPENGGF_ADAPTER_TEST_SHIM \
+    OPENGGF_TEST_CLEANUP_IDENTITY_PID OPENGGF_TEST_CLEANUP_IDENTITY_ACTUAL_START \
+    OPENGGF_TEST_CLEANUP_IDENTITY_RECORDED_START OPENGGF_TEST_PUBLISHED_PID_NAMESPACE_OVERRIDE \
+    OPENGGF_TEST_READY_SUPERVISOR_START_OVERRIDE OPENGGF_TEST_READY_PRIVATE_PID1_START_OVERRIDE \
+    OPENGGF_TEST_READY_COMMON_MOUNT_OVERRIDE OPENGGF_TEST_TRIPWIRE_ARM_FAILURE \
+    OPENGGF_TEST_TRIPWIRE_REASON_OVERRIDE OPENGGF_TEST_FAIL_PREFLIGHT OPENGGF_TEST_FAIL_BIND \
+    OPENGGF_TEST_WRONG_MOUNT_IDENTITY OPENGGF_TEST_PROPAGATION_LEAK \
+    OPENGGF_TEST_REAL_UNSHARE OPENGGF_TEST_REAL_MOUNT OPENGGF_TEST_REAL_STAT \
+    OPENGGF_TEST_REAL_MOUNTPOINT OPENGGF_TEST_RMDIR_FAIL_TARGET OPENGGF_TEST_REAL_RMDIR \
+    OPENGGF_TEST_FAIL_GENERATED_ARCHIVE OPENGGF_TEST_FAIL_RESTORE \
+    OPENGGF_TEST_REAL_CP OPENGGF_TEST_REAL_MV; do
+    [[ -v "$test_seam_variable" ]] || continue
+    test_seam_variables="${test_seam_variables:+$test_seam_variables,}$test_seam_variable"
+done
+if [[ -n "$test_seam_variables" ]]; then
+    test_seam_mode=rejected-unmodeled
+    [[ "${OPENGGF_FROZEN_NEXT_SELF_TEST_MODE:-}" == 1 ]] \
+        && test_seam_mode=exact-self-test-v1
+    printf 'run_id=%s\nmode=%s\nvariables=%s\n' \
+        "$OPENGGF_TEST_RUN_ID" "$test_seam_mode" "$test_seam_variables" > "$test_seam_marker"
+    [[ "$test_seam_mode" == exact-self-test-v1 ]] \
+        || die "adapter test seam requires exact self-test mode"
+fi
+
 supervisor_pid= supervisor_start= private_pid1_pid= private_pid1_start=
 private_pid_namespace= common_mount_namespace= target_created=0 finalized=0
 target_kind= target_device= target_inode= child_status=not-started safety_phase=preflight

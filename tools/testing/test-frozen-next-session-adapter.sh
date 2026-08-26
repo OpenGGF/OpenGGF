@@ -374,37 +374,44 @@ test_namespace_safety_negatives() {
         ready-supervisor-start ready-pid1-start ready-common-mount; do
         case "$negative" in
             bind)
-                PATH="$shim_dir:$PATH" OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_FAIL_BIND=1 \
+                PATH="$shim_dir:$PATH" OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+                    OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_FAIL_BIND=1 \
                     OPENGGF_TEST_REAL_UNSHARE="$real_unshare" OPENGGF_TEST_REAL_MOUNT="$real_mount" \
                     OPENGGF_TEST_REAL_STAT="$real_stat" OPENGGF_TEST_REAL_MOUNTPOINT="$real_mountpoint" \
                     OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" && fail "bind failure was accepted"
                 ;;
             wrong-identity)
-                PATH="$shim_dir:$PATH" OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_WRONG_MOUNT_IDENTITY=1 \
+                PATH="$shim_dir:$PATH" OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+                    OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_WRONG_MOUNT_IDENTITY=1 \
                     OPENGGF_TEST_REAL_UNSHARE="$real_unshare" OPENGGF_TEST_REAL_MOUNT="$real_mount" \
                     OPENGGF_TEST_REAL_STAT="$real_stat" OPENGGF_TEST_REAL_MOUNTPOINT="$real_mountpoint" \
                     OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" && fail "wrong mount identity was accepted"
                 ;;
             propagation)
-                PATH="$shim_dir:$PATH" OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_PROPAGATION_LEAK=1 \
+                PATH="$shim_dir:$PATH" OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+                    OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_PROPAGATION_LEAK=1 \
                     OPENGGF_TEST_REAL_UNSHARE="$real_unshare" OPENGGF_TEST_REAL_MOUNT="$real_mount" \
                     OPENGGF_TEST_REAL_STAT="$real_stat" OPENGGF_TEST_REAL_MOUNTPOINT="$real_mountpoint" \
                     OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" && fail "propagation leak was accepted"
                 ;;
             published-pid-namespace)
-                OPENGGF_TEST_PUBLISHED_PID_NAMESPACE_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
+                OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+                    OPENGGF_TEST_PUBLISHED_PID_NAMESPACE_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
                     run_launcher "$fake_maven" && fail "published PID namespace mismatch was accepted"
                 ;;
             ready-supervisor-start)
-                OPENGGF_TEST_READY_SUPERVISOR_START_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
+                OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+                    OPENGGF_TEST_READY_SUPERVISOR_START_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
                     run_launcher "$fake_maven" && fail "ready supervisor start mismatch was accepted"
                 ;;
             ready-pid1-start)
-                OPENGGF_TEST_READY_PRIVATE_PID1_START_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
+                OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+                    OPENGGF_TEST_READY_PRIVATE_PID1_START_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
                     run_launcher "$fake_maven" && fail "ready PID1 start mismatch was accepted"
                 ;;
             ready-common-mount)
-                OPENGGF_TEST_READY_COMMON_MOUNT_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
+                OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+                    OPENGGF_TEST_READY_COMMON_MOUNT_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
                     run_launcher "$fake_maven" && fail "ready common mount mismatch was accepted"
                 ;;
         esac
@@ -544,7 +551,8 @@ test_functional_identity_cleanup() {
             recorded_start=$actual_start
             [[ "$lifecycle" == recycled ]] && recorded_start=$((actual_start + 1))
             if [[ "$path" == normal ]]; then
-                if OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_CLEANUP_IDENTITY_PID="$sleeper_pid" \
+                if OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 OPENGGF_ADAPTER_TEST_SHIM=1 \
+                    OPENGGF_TEST_CLEANUP_IDENTITY_PID="$sleeper_pid" \
                     OPENGGF_TEST_CLEANUP_IDENTITY_ACTUAL_START="$actual_start" \
                     OPENGGF_TEST_CLEANUP_IDENTITY_RECORDED_START="$recorded_start" \
                     OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven"; then
@@ -568,17 +576,24 @@ test_functional_identity_cleanup() {
                     rmdir -- "$next_tree/target"
                 else
                     (( normal_status == 0 )) || fail "normal recycled identity returned $normal_status"
-                    [[ "$launch_output" == *'authenticated=true admissible=true'* ]] \
-                        || fail "normal recycled identity did not remain admissible"
+                    [[ "$launch_output" == *'authenticated=true admissible=false'* ]] \
+                        || fail "normal recycled test-seam identity was admitted"
                     [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
                         || fail "normal recycled identity did not permit exact rmdir"
                 fi
+                manifest=$(manifest_from_output "$launch_output")
+                diagnostics="$(dirname -- "$manifest")/diagnostics"
+                seam_marker="$diagnostics/frozen-next-test-seam.env"
+                [[ -f "$seam_marker" && ! -L "$seam_marker" \
+                    && "$(sed -n 's/^run_id=//p' "$seam_marker")" == "$(sed -n 's/.*\"run_id\": \"\([^\"]*\)\".*/\1/p' "$manifest" | head -1)" ]] \
+                    || fail "normal $lifecycle lacked a run-bound test-seam marker"
             else
                 ready="$test_root/forced-$lifecycle-ready.env"
                 go="$test_root/forced-$lifecycle-go"
                 output="$test_root/forced-$lifecycle.out"
                 set +e
-                OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_CLEANUP_IDENTITY_PID="$sleeper_pid" \
+                OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 OPENGGF_ADAPTER_TEST_SHIM=1 \
+                    OPENGGF_TEST_CLEANUP_IDENTITY_PID="$sleeper_pid" \
                     OPENGGF_TEST_CLEANUP_IDENTITY_ACTUAL_START="$actual_start" \
                     OPENGGF_TEST_CLEANUP_IDENTITY_RECORDED_START="$recorded_start" \
                     OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_PARENT_MUTATION_READY="$ready" \
@@ -626,6 +641,10 @@ test_functional_identity_cleanup() {
                     [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
                         || fail "forced recycled identity did not permit exact rmdir"
                 fi
+                seam_marker="$diagnostics/frozen-next-test-seam.env"
+                [[ -f "$seam_marker" && ! -L "$seam_marker" \
+                    && "$(sed -n 's/^run_id=//p' "$seam_marker")" == "$(sed -n 's/.*\"run_id\": \"\([^\"]*\)\".*/\1/p' "$manifest" | head -1)" ]] \
+                    || fail "forced $lifecycle lacked a run-bound test-seam marker"
                 assert_report_restored
             fi
             kill -KILL "$sleeper_pid" 2>/dev/null || true
@@ -633,6 +652,50 @@ test_functional_identity_cleanup() {
         done
     done
     printf 'PASS: normal and forced cleanup preserve live identities and remove recycled identities\n'
+}
+
+test_test_seam_admission() {
+    local manifest diagnostics seam_marker seam_names unmodeled
+    for unmodeled in adapter-shim cleanup-identity; do
+        case "$unmodeled" in
+            adapter-shim)
+                if OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven"; then
+                    fail "adapter test shim without exact self-test mode was accepted"
+                fi
+                ;;
+            cleanup-identity)
+                if OPENGGF_TEST_CLEANUP_IDENTITY_PID=1 OPENGGF_FAKE_MAVEN=1 \
+                    run_launcher "$fake_maven"; then
+                    fail "cleanup identity seam without exact self-test mode was accepted"
+                fi
+                ;;
+        esac
+        [[ "$launch_output" == *'authenticated=true admissible=false'* ]] \
+            || fail "unmodeled $unmodeled lacked explicit launcher rejection"
+        manifest=$(manifest_from_output "$launch_output")
+        diagnostics="$(dirname -- "$manifest")/diagnostics"
+        rg -F 'adapter test seam requires exact self-test mode' "$(dirname -- "$manifest")/maven.log" >/dev/null \
+            || fail "unmodeled $unmodeled lacked fail-closed diagnostic"
+    done
+
+    OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 OPENGGF_ADAPTER_TEST_SHIM=1 \
+        OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" \
+        || fail "authenticated self-test seam run failed"
+    [[ "$launch_output" == *'authenticated=true admissible=false'* ]] \
+        || fail "successful adapter test seam was admitted"
+    manifest=$(manifest_from_output "$launch_output")
+    diagnostics="$(dirname -- "$manifest")/diagnostics"
+    seam_marker="$diagnostics/frozen-next-test-seam.env"
+    [[ -f "$seam_marker" && ! -L "$seam_marker" \
+        && "$(sed -n 's/^run_id=//p' "$seam_marker")" == "$(sed -n 's/.*\"run_id\": \"\([^\"]*\)\".*/\1/p' "$manifest" | head -1)" \
+        && "$(sed -n 's/^mode=//p' "$seam_marker")" == exact-self-test-v1 ]] \
+        || fail "successful adapter test seam marker was not authenticated"
+    seam_names=$(sed -n 's/^variables=//p' "$seam_marker")
+    [[ ",$seam_names," == *,OPENGGF_ADAPTER_TEST_SHIM,* ]] \
+        || fail "adapter test seam marker omitted the activating variable"
+    [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+        || fail "successful adapter test seam left target"
+    printf 'PASS: lifecycle/test shims are explicit and never admissible\n'
 }
 test_launcher_signal_recovery() {
     local signal_case expected_signal_status interrupt_ready interrupt_output interrupt_tmp
@@ -711,7 +774,8 @@ test_authenticated_rmdir_failure() {
         'exec "${OPENGGF_TEST_REAL_RMDIR:?}" "$@"' > "$rmdir_shim"
     chmod +x "$rmdir_shim"
 
-    if PATH="$shim_dir:$PATH" OPENGGF_TEST_RMDIR_FAIL_TARGET="$next_tree/target" \
+    if PATH="$shim_dir:$PATH" OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+        OPENGGF_TEST_RMDIR_FAIL_TARGET="$next_tree/target" \
         OPENGGF_TEST_REAL_RMDIR="$real_rmdir" OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven"; then
         review_fail "launcher returned success after authenticated target rmdir failure"
     elif (( launch_status != 73 )); then
@@ -725,7 +789,8 @@ test_authenticated_rmdir_failure() {
         || review_fail "authenticated rmdir failure was not reported"
     "$real_rmdir" -- "$next_tree/target"
 
-    if PATH="$shim_dir:$PATH" OPENGGF_TEST_RMDIR_FAIL_TARGET="$next_tree/target" \
+    if PATH="$shim_dir:$PATH" OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+        OPENGGF_TEST_RMDIR_FAIL_TARGET="$next_tree/target" \
         OPENGGF_TEST_REAL_RMDIR="$real_rmdir" OPENGGF_FAKE_MAVEN=1 \
         run_launcher "$fake_maven" --fail; then
         fail "failing Maven child became successful during authenticated rmdir failure"
@@ -749,7 +814,8 @@ test_preflight_safety_tripwire() {
     mkdir -- "$shim_dir"
     real_unshare=$(command -v unshare)
     ln -s -- "$fake_maven" "$shim_dir/unshare"
-    if PATH="$shim_dir:$PATH" OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_FAIL_PREFLIGHT=1 \
+    if PATH="$shim_dir:$PATH" OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+        OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_FAIL_PREFLIGHT=1 \
         OPENGGF_TEST_REAL_UNSHARE="$real_unshare" OPENGGF_FAKE_MAVEN=1 \
         run_launcher "$fake_maven"; then
         fail "unavailable namespace preflight was accepted"
@@ -827,6 +893,11 @@ if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == functional-lifecycle ]]; then
     exit 0
 fi
 
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == seam-admission ]]; then
+    test_test_seam_admission
+    exit 0
+fi
+
 if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == terminal-auth ]]; then
     test_terminal_line_authentication
     exit 0
@@ -887,6 +958,7 @@ test_namespace_safety_negatives
 test_recovery_marker_identity_mismatch
 test_identity_lifecycle_semantics
 test_functional_identity_cleanup
+test_test_seam_admission
 test_terminal_line_authentication
 
 # The selected guards are independent and force two Surefire processes when forkCount=2.
@@ -895,6 +967,10 @@ success_manifest=$(manifest_from_output "$launch_output")
 [[ -f "$success_manifest" ]] || fail "successful session did not publish a manifest"
 evidence="$(dirname -- "$success_manifest")/diagnostics/frozen-next-session-evidence.txt"
 mount_evidence="$(dirname -- "$success_manifest")/diagnostics/frozen-next-mount-evidence.txt"
+[[ ! -e "$(dirname -- "$success_manifest")/diagnostics/frozen-next-test-seam.env" ]] \
+    || fail "production two-fork run unexpectedly published a test-seam marker"
+[[ "$launch_output" == *'authenticated=true admissible=true'* ]] \
+    || fail "production two-fork run lost authenticated admission"
 success_tmp="$(dirname -- "$success_manifest")/tmp"
 success_target="$next_tree/target/test-tmp"
 rg -F 'TEST-com.openggf.audio.TestAudioBackendBypassGuard.xml' "$success_manifest" >/dev/null \
@@ -1002,7 +1078,8 @@ printf '%s\n' \
     'exec "${OPENGGF_TEST_REAL_MV:?}" "$@"' > "$failure_shim_dir/mv"
 chmod +x "$failure_shim_dir/cp" "$failure_shim_dir/mv"
 
-if PATH="$failure_shim_dir:$PATH" OPENGGF_TEST_REAL_CP="$real_cp" OPENGGF_TEST_REAL_MV="$real_mv" \
+if PATH="$failure_shim_dir:$PATH" OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+    OPENGGF_TEST_REAL_CP="$real_cp" OPENGGF_TEST_REAL_MV="$real_mv" \
     OPENGGF_TEST_FAIL_GENERATED_ARCHIVE=1 OPENGGF_FAKE_MAVEN=1 \
     run_launcher "$fake_maven" --emit-report --rewrite-report; then
     fail "generated archive failure was accepted"
@@ -1015,7 +1092,8 @@ rg -F 'normalization failed: generated-archive-failed' "$(dirname -- "$failure_m
     || fail "generated archive failure lacked an explicit diagnostic"
 printf 'PASS: generated archive failure remains identity-invalid\n'
 
-if PATH="$failure_shim_dir:$PATH" OPENGGF_TEST_REAL_CP="$real_cp" OPENGGF_TEST_REAL_MV="$real_mv" \
+if PATH="$failure_shim_dir:$PATH" OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+    OPENGGF_TEST_REAL_CP="$real_cp" OPENGGF_TEST_REAL_MV="$real_mv" \
     OPENGGF_TEST_CORRUPT_GENERATED_ARCHIVE=1 OPENGGF_FAKE_MAVEN=1 \
     run_launcher "$fake_maven" --emit-report --rewrite-report; then
     fail "generated archive byte corruption was accepted"
@@ -1029,7 +1107,8 @@ rg -F 'normalization failed: generated-archive-identity-failed' \
     || fail "generated archive corruption lacked an explicit diagnostic"
 printf 'PASS: generated archive copy is byte-verified against authenticated measurement\n'
 
-if PATH="$failure_shim_dir:$PATH" OPENGGF_TEST_REAL_CP="$real_cp" OPENGGF_TEST_REAL_MV="$real_mv" \
+if PATH="$failure_shim_dir:$PATH" OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+    OPENGGF_TEST_REAL_CP="$real_cp" OPENGGF_TEST_REAL_MV="$real_mv" \
     OPENGGF_TEST_FAIL_RESTORE=1 OPENGGF_FAKE_MAVEN=1 \
     run_launcher "$fake_maven" --emit-report --rewrite-report --fail; then
     fail "restore failure plus child failure was accepted"
@@ -1225,9 +1304,10 @@ for tripwire_case in arm-failure unrelated-trigger; do
     tripwire_env=(OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_PARENT_MUTATION_READY="$tripwire_ready" \
         OPENGGF_TEST_PARENT_MUTATION_GO="$tripwire_go")
     if [[ "$tripwire_case" == arm-failure ]]; then
-        tripwire_env+=(OPENGGF_TEST_TRIPWIRE_ARM_FAILURE=1)
+        tripwire_env+=(OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 OPENGGF_TEST_TRIPWIRE_ARM_FAILURE=1)
     else
-        tripwire_env+=(OPENGGF_TEST_TRIPWIRE_REASON_OVERRIDE=unrelated-test-trigger)
+        tripwire_env+=(OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 \
+            OPENGGF_TEST_TRIPWIRE_REASON_OVERRIDE=unrelated-test-trigger)
     fi
     env "${tripwire_env[@]}" "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
         --harness-worktree "$harness_tree" --expected-harness-head "$frozen_harness" \

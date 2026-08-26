@@ -68,6 +68,28 @@ authenticate_terminal_line() {
     terminal_valid=$valid
     return 0
 }
+authenticate_test_seam() {
+    local diagnostics=$1 run_id=$2 marker="$1/frozen-next-test-seam.env" mode variables
+    if [[ -z "$launcher_test_seam_variables" ]]; then
+        [[ ! -e "$marker" && ! -L "$marker" ]] || return 77
+        recovery_test_seam=0
+        return 0
+    fi
+    recovery_test_seam=1
+    [[ -f "$marker" && ! -L "$marker" ]] || return 77
+    mode=$(marker_value "$marker" mode)
+    variables=$(marker_value "$marker" variables)
+    [[ "$(marker_value "$marker" run_id)" == "$run_id" \
+        && ( "$mode" == exact-self-test-v1 || "$mode" == rejected-unmodeled ) \
+        && "$variables" == "$launcher_test_seam_variables" ]] || return 77
+    if [[ "$mode" == exact-self-test-v1 ]]; then
+        [[ "${OPENGGF_FROZEN_NEXT_SELF_TEST_MODE:-}" == 1 ]] || return 77
+    else
+        [[ "${OPENGGF_FROZEN_NEXT_SELF_TEST_MODE:-}" != 1 ]] || return 77
+    fi
+    printf 'frozen-next launcher: authenticated non-admissible adapter test seam: mode=%s variables=%s\n' \
+        "$mode" "$variables" >&2
+}
 authenticate_tripwire() {
     local diagnostics=$1 run_id=$2 report=$3 trigger evidence reason child adapter_status mode
     local report_hash report_length current_hash current_length
@@ -182,6 +204,23 @@ printf -v "$config_value" '%s' "$exclude"
 export "$config_key" "$config_value"
 export GIT_CONFIG_COUNT=$((config_count + 1))
 
+launcher_test_seam_variables=
+for test_seam_variable in \
+    OPENGGF_FROZEN_NEXT_SELF_TEST_MODE OPENGGF_ADAPTER_TEST_SHIM \
+    OPENGGF_TEST_CLEANUP_IDENTITY_PID OPENGGF_TEST_CLEANUP_IDENTITY_ACTUAL_START \
+    OPENGGF_TEST_CLEANUP_IDENTITY_RECORDED_START OPENGGF_TEST_PUBLISHED_PID_NAMESPACE_OVERRIDE \
+    OPENGGF_TEST_READY_SUPERVISOR_START_OVERRIDE OPENGGF_TEST_READY_PRIVATE_PID1_START_OVERRIDE \
+    OPENGGF_TEST_READY_COMMON_MOUNT_OVERRIDE OPENGGF_TEST_TRIPWIRE_ARM_FAILURE \
+    OPENGGF_TEST_TRIPWIRE_REASON_OVERRIDE OPENGGF_TEST_FAIL_PREFLIGHT OPENGGF_TEST_FAIL_BIND \
+    OPENGGF_TEST_WRONG_MOUNT_IDENTITY OPENGGF_TEST_PROPAGATION_LEAK \
+    OPENGGF_TEST_REAL_UNSHARE OPENGGF_TEST_REAL_MOUNT OPENGGF_TEST_REAL_STAT \
+    OPENGGF_TEST_REAL_MOUNTPOINT OPENGGF_TEST_RMDIR_FAIL_TARGET OPENGGF_TEST_REAL_RMDIR \
+    OPENGGF_TEST_FAIL_GENERATED_ARCHIVE OPENGGF_TEST_FAIL_RESTORE \
+    OPENGGF_TEST_REAL_CP OPENGGF_TEST_REAL_MV; do
+    [[ -v "$test_seam_variable" ]] || continue
+    launcher_test_seam_variables="${launcher_test_seam_variables:+$launcher_test_seam_variables,}$test_seam_variable"
+done
+
 recover_report() {
     local authority=$1 manifest=$2 run_id=$3 diagnostics recorded_head recorded_worktree recorded_report
     local recorded_relative archive archive_hash archive_length archive_blob canonical_archive tripwire_status=0
@@ -231,6 +270,7 @@ recover() {
     diagnostics="$(dirname -- "$manifest")/diagnostics"
     authority="$diagnostics/frozen-next-report-authority.env"
     [[ -n "$run_id" && -f "$authority" && ! -L "$authority" ]] || return 77
+    authenticate_test_seam "$diagnostics" "$run_id" || recovery_status=$?
     authenticate_terminal_line "$output" "$run_id" "$manifest" || terminal_status=$?
     if (( terminal_status == 0 )); then
         recovery_terminal_authenticated=1
@@ -325,7 +365,8 @@ recover() {
 
 capture_file= wrapper_pid= finalized=0 finalize_status=0 final_output= final_run_id=
 recovery_report_authenticated=0 recovery_full_marker=0 recovery_target_clean=0 recovery_tripwire=false
-recovery_terminal_authenticated=0 recovery_run_id= terminal_run_id= terminal_manifest= terminal_state= terminal_valid=
+recovery_terminal_authenticated=0 recovery_test_seam=0 recovery_run_id=
+terminal_run_id= terminal_manifest= terminal_state= terminal_valid=
 finalize() {
     (( finalized == 0 )) || return "$finalize_status"
     finalized=1
@@ -350,7 +391,7 @@ emit_launcher_outcome() {
     (( recovery_report_authenticated == 1 )) && authenticated=true
     if (( cleanup_status == 0 && recovery_report_authenticated == 1 \
         && recovery_full_marker == 1 && recovery_target_clean == 1 \
-        && recovery_terminal_authenticated == 1 )) \
+        && recovery_terminal_authenticated == 1 && recovery_test_seam == 0 )) \
         && [[ "$recovery_tripwire" == false \
             && "$terminal_run_id" == "$final_run_id" && "$terminal_manifest" != '' \
             && "$terminal_valid" == true ]]; then
