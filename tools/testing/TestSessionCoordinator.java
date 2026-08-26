@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -96,6 +97,7 @@ public final class TestSessionCoordinator {
         COMPACTED,
         NOTHING_TO_REMOVE,
         RETAINED_BY_REQUEST,
+        RETAINED_PLATFORM_UNSUPPORTED,
         FAILED,
         REFUSED
     }
@@ -116,10 +118,20 @@ public final class TestSessionCoordinator {
             String relativePath, Map<Path, BoundEntry> entries) {
     }
 
+    private record NativeCompactionControl(
+            boolean forceNoSecureStream,
+            boolean stableFileKeys,
+            String providerReason,
+            Consumer<String> beforeCandidateMove,
+            BiPredicate<Object, Object> movedIdentityMatches,
+            Predicate<Path> reparsePoint) {
+    }
+
     private static final class DeletionProgress {
         private long reclaimedBytes;
         private boolean candidateModified;
         private boolean candidateFullyRemoved;
+        private String currentCandidate;
     }
 
     private record SessionDirectoryIdentity(
@@ -1268,6 +1280,7 @@ public final class TestSessionCoordinator {
                 ? null : context.sessionIdentity.realPath) + ",\n"
                 + "  \"session_file_key\": "
                 + jsonNullable(context.sessionIdentity == null
+                || context.sessionIdentity.fileKey == null
                 ? null : String.valueOf(context.sessionIdentity.fileKey)) + ",\n"
                 + "  \"session_file_store\": "
                 + jsonNullable(context.sessionIdentity == null ? null
@@ -1315,7 +1328,8 @@ public final class TestSessionCoordinator {
                 + (compaction == null ? "[]"
                 : jsonArray(compaction.partiallyModifiedRelativePaths)) + ",\n"
                 + "  \"compaction_retained_relative_paths\": "
-                + (compaction != null && compaction.status == CompactionStatus.RETAINED_BY_REQUEST
+                + (compaction != null && (compaction.status == CompactionStatus.RETAINED_BY_REQUEST
+                || compaction.status == CompactionStatus.RETAINED_PLATFORM_UNSUPPORTED)
                 ? jsonArray(COMPACTABLE_RELATIVE_PATHS) : "[]") + ",\n"
                 + "  \"compaction_reclaimed_bytes\": "
                 + jsonNullableLong(compaction == null ? null : compaction.reclaimedBytes) + ",\n"
@@ -1408,9 +1422,6 @@ public final class TestSessionCoordinator {
         if (!realPath.equals(expected)) {
             throw new IOException("session root is not canonical: " + expected);
         }
-        if (attributes.fileKey() == null) {
-            throw new IOException("session root file identity is unavailable: " + expected);
-        }
         return new SessionDirectoryIdentity(realPath, attributes.fileKey(),
                 Files.getFileStore(expected));
     }
@@ -1425,7 +1436,7 @@ public final class TestSessionCoordinator {
                     } catch (IOException | RuntimeException e) {
                         return false;
                     }
-                }, ignored -> { });
+                }, ignored -> { }, defaultNativeCompactionControl(paths, identity));
     }
 
     private static CompactionResult compactTerminalSession(
@@ -1433,22 +1444,29 @@ public final class TestSessionCoordinator {
             List<String> artifacts, SessionDirectoryIdentity identity,
             BiPredicate<FileStore, Path> sameStore) {
         return compactTerminalSession(paths, state, retainEphemeral, reports, artifacts,
-                identity, sameStore, ignored -> { });
+                identity, sameStore, ignored -> { }, defaultNativeCompactionControl(paths, identity));
     }
 
     private static CompactionResult compactTerminalSession(
             Paths paths, String state, boolean retainEphemeral, List<String> reports,
             List<String> artifacts, SessionDirectoryIdentity identity,
             BiPredicate<FileStore, Path> sameStore, Consumer<String> deletionHook) {
+        return compactTerminalSession(paths, state, retainEphemeral, reports, artifacts,
+                identity, sameStore, deletionHook, defaultNativeCompactionControl(paths, identity));
+    }
+
+    private static CompactionResult compactTerminalSession(
+            Paths paths, String state, boolean retainEphemeral, List<String> reports,
+            List<String> artifacts, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore, Consumer<String> deletionHook,
+            NativeCompactionControl nativeControl) {
         List<String> removed = new ArrayList<>();
         List<String> partiallyModified = new ArrayList<>();
         DeletionProgress progress = new DeletionProgress();
-        String currentCandidate = null;
         try {
             if (!TERMINAL_SESSION_STATES.contains(state)) {
                 throw new CompactionRefusal("session state is not terminal: " + state);
             }
-            requireSessionDirectoryIdentity(paths.session, identity, sameStore);
             if (retainEphemeral) {
                 return new CompactionResult(CompactionStatus.RETAINED_BY_REQUEST,
                         List.of(), List.of(), 0L, null);
@@ -1458,48 +1476,73 @@ public final class TestSessionCoordinator {
                     .map(value -> inventoryPath(paths.session, value))
                     .toList();
             validateProtectedPaths(paths.session, protectedPaths);
+            boolean secureStrategyUsed = false;
             try (DirectoryStream<Path> opened = openSessionDirectory(paths.session)) {
-                if (!(opened instanceof SecureDirectoryStream<?> rawSecure)) {
-                    throw new CompactionRefusal(
-                            "secure directory streams are unavailable for the session file store");
-                }
-                @SuppressWarnings("unchecked")
-                SecureDirectoryStream<Path> sessionStream =
-                        (SecureDirectoryStream<Path>) rawSecure;
-                revalidateSessionDescriptor(sessionStream, identity);
+                if (!nativeControl.forceNoSecureStream
+                        && opened instanceof SecureDirectoryStream<?> rawSecure) {
+                    if (identity.fileKey == null) {
+                        throw new CompactionRefusal(
+                                "secure session identity has no stable file key");
+                    }
+                    secureStrategyUsed = true;
+                    requireSessionDirectoryIdentity(paths.session, identity, sameStore);
+                    @SuppressWarnings("unchecked")
+                    SecureDirectoryStream<Path> sessionStream =
+                            (SecureDirectoryStream<Path>) rawSecure;
+                    revalidateSessionDescriptor(sessionStream, identity);
 
-                List<CandidateBinding> candidates = new ArrayList<>();
-                for (String relative : COMPACTABLE_RELATIVE_PATHS) {
-                    CandidateBinding candidate = bindCandidate(sessionStream, paths.session,
-                            relative, identity, sameStore);
-                    if (candidate != null) {
-                        candidates.add(candidate);
+                    List<CandidateBinding> candidates = new ArrayList<>();
+                    for (String relative : COMPACTABLE_RELATIVE_PATHS) {
+                        CandidateBinding candidate = bindCandidate(sessionStream, paths.session,
+                                relative, identity, sameStore);
+                        if (candidate != null) {
+                            candidates.add(candidate);
+                        }
+                    }
+
+                    for (CandidateBinding candidate : candidates) {
+                        beginCandidate(progress, candidate.relativePath);
+                        requireSessionDirectoryIdentity(paths.session, identity, sameStore);
+                        revalidateSessionDescriptor(sessionStream, identity);
+                        deleteCandidate(sessionStream, candidate, deletionHook, progress);
+                        removed.add(candidate.relativePath);
+                        finishCandidate(progress);
                     }
                 }
-
-                for (CandidateBinding candidate : candidates) {
-                    currentCandidate = candidate.relativePath;
-                    progress.candidateModified = false;
-                    progress.candidateFullyRemoved = false;
-                    requireSessionDirectoryIdentity(paths.session, identity, sameStore);
-                    revalidateSessionDescriptor(sessionStream, identity);
-                    deleteCandidate(sessionStream, candidate, deletionHook, progress);
-                    removed.add(candidate.relativePath);
-                    currentCandidate = null;
-                    progress.candidateModified = false;
-                    progress.candidateFullyRemoved = false;
+            }
+            if (!secureStrategyUsed) {
+                if (!nativeControl.stableFileKeys || identity.fileKey == null) {
+                    return new CompactionResult(
+                            CompactionStatus.RETAINED_PLATFORM_UNSUPPORTED,
+                            List.of(), List.of(), 0L,
+                            boundedSingleLine(nativeControl.providerReason));
                 }
+                requireSessionDirectoryIdentity(paths.session, identity, sameStore);
+                compactNativeCandidates(paths.session, identity, sameStore, deletionHook,
+                        nativeControl, removed, progress);
             }
             return new CompactionResult(removed.isEmpty()
                     ? CompactionStatus.NOTHING_TO_REMOVE : CompactionStatus.COMPACTED,
                     List.copyOf(removed), List.of(), progress.reclaimedBytes, null);
+        } catch (NativePlatformUnsupported e) {
+            if (progress.candidateModified || !removed.isEmpty()) {
+                recordInterruptedCandidate(removed, partiallyModified,
+                        progress.currentCandidate, progress);
+                return new CompactionResult(CompactionStatus.REFUSED, List.copyOf(removed),
+                        List.copyOf(partiallyModified), progress.reclaimedBytes,
+                        boundedSingleLine(e.getMessage()));
+            }
+            return new CompactionResult(CompactionStatus.RETAINED_PLATFORM_UNSUPPORTED,
+                    List.of(), List.of(), 0L, boundedSingleLine(e.getMessage()));
         } catch (CompactionRefusal e) {
-            recordInterruptedCandidate(removed, partiallyModified, currentCandidate, progress);
+            recordInterruptedCandidate(removed, partiallyModified,
+                    progress.currentCandidate, progress);
             return new CompactionResult(CompactionStatus.REFUSED, List.copyOf(removed),
                     List.copyOf(partiallyModified), progress.reclaimedBytes,
                     boundedSingleLine(e.getMessage()));
         } catch (IOException | RuntimeException e) {
-            recordInterruptedCandidate(removed, partiallyModified, currentCandidate, progress);
+            recordInterruptedCandidate(removed, partiallyModified,
+                    progress.currentCandidate, progress);
             Throwable reported = e instanceof UncheckedIOException unchecked
                     ? unchecked.getCause() : e;
             return new CompactionResult(CompactionStatus.FAILED, List.copyOf(removed),
@@ -1511,6 +1554,283 @@ public final class TestSessionCoordinator {
     private static Path inventoryPath(Path session, String value) {
         Path path = Path.of(value);
         return (path.isAbsolute() ? path : session.resolve(path)).toAbsolutePath().normalize();
+    }
+
+    private static NativeCompactionControl defaultNativeCompactionControl(
+            Paths paths, SessionDirectoryIdentity identity) {
+        String provider = paths.session.getFileSystem().provider().getClass().getName();
+        String store = identity.fileStore.name() + " (" + identity.fileStore.type() + ")";
+        String reason = "provider=" + provider + " file_store=" + store
+                + " secure_directory_stream=unavailable stable_file_key="
+                + (identity.fileKey == null ? "unavailable" : "available");
+        return new NativeCompactionControl(false, identity.fileKey != null, reason,
+                ignored -> { }, Object::equals,
+                path -> isNativeReparsePoint(path, null));
+    }
+
+    private static void beginCandidate(DeletionProgress progress, String candidate) {
+        progress.currentCandidate = candidate;
+        progress.candidateModified = false;
+        progress.candidateFullyRemoved = false;
+    }
+
+    private static void finishCandidate(DeletionProgress progress) {
+        progress.currentCandidate = null;
+        progress.candidateModified = false;
+        progress.candidateFullyRemoved = false;
+    }
+
+    private static void compactNativeCandidates(
+            Path session, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore, Consumer<String> deletionHook,
+            NativeCompactionControl control, List<String> removed,
+            DeletionProgress progress)
+            throws IOException, CompactionRefusal, NativePlatformUnsupported {
+        List<CandidateBinding> candidates = new ArrayList<>();
+        for (String relative : COMPACTABLE_RELATIVE_PATHS) {
+            CandidateBinding candidate = bindNativeCandidate(
+                    session, relative, identity, sameStore, control);
+            if (candidate != null) {
+                candidates.add(candidate);
+            }
+        }
+        if (candidates.isEmpty()) {
+            return;
+        }
+
+        Path staging = session.resolve(".compaction-staging-" + createProbeSuffix());
+        Files.createDirectory(staging);
+        BoundEntry stagingIdentity = inspectNativeEntry(staging, staging.getFileName(),
+                true, identity, sameStore, control, false);
+        for (CandidateBinding candidate : candidates) {
+            beginCandidate(progress, candidate.relativePath);
+            control.beforeCandidateMove.accept(candidate.relativePath);
+            verifyNativeSessionAndStaging(
+                    session, identity, staging, stagingIdentity, sameStore, control);
+            Path source = session.resolve(candidate.relativePath);
+            Path tombstone = staging.resolve("candidate-" + createProbeSuffix());
+            Files.move(source, tombstone, StandardCopyOption.ATOMIC_MOVE);
+            progress.candidateModified = true;
+            BoundEntry candidateRoot = candidate.entries.get(Path.of(candidate.relativePath));
+            verifyMovedTombstone(tombstone, candidateRoot, identity, sameStore, control);
+            deleteNativeCandidate(session, identity, staging, stagingIdentity,
+                    tombstone, candidate, sameStore, deletionHook, control, progress);
+            removed.add(candidate.relativePath);
+            finishCandidate(progress);
+        }
+        verifyNativeSessionAndStaging(
+                session, identity, staging, stagingIdentity, sameStore, control);
+        Files.delete(staging);
+    }
+
+    private static CandidateBinding bindNativeCandidate(
+            Path session, String relative, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore, NativeCompactionControl control)
+            throws CompactionRefusal, NativePlatformUnsupported {
+        Map<Path, BoundEntry> entries = new LinkedHashMap<>();
+        Path candidate = Path.of(relative);
+        Path traversed = Path.of("");
+        try {
+            for (Path component : candidate) {
+                traversed = traversed.getNameCount() == 0
+                        ? component : traversed.resolve(component);
+                BoundEntry bound;
+                try {
+                    bound = inspectNativeEntry(session.resolve(traversed), traversed,
+                            true, identity, sameStore, control, true);
+                } catch (NoSuchFileException e) {
+                    throw new CandidateAbsent();
+                }
+                entries.put(traversed, bound);
+            }
+            bindNativeDescendants(session.resolve(candidate), session, candidate,
+                    entries, identity, sameStore, control);
+            return new CandidateBinding(relative, Map.copyOf(entries));
+        } catch (CandidateAbsent e) {
+            return null;
+        } catch (NotDirectoryException e) {
+            throw new CompactionRefusal(
+                    "compactable path ancestor is not a directory: " + relative);
+        } catch (NativePlatformUnsupported e) {
+            throw e;
+        } catch (IOException | RuntimeException e) {
+            throw new CompactionRefusal(
+                    "native compactable path cannot be inspected safely: "
+                            + relative + ": " + message(e));
+        }
+    }
+
+    private static void bindNativeDescendants(
+            Path directory, Path session, Path parentRelative,
+            Map<Path, BoundEntry> entries, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore, NativeCompactionControl control)
+            throws IOException, CompactionRefusal, NativePlatformUnsupported {
+        BoundEntry expectedDirectory = entries.get(parentRelative);
+        verifyNativeBoundEntry(directory, expectedDirectory, identity, sameStore, control);
+        List<Path> names = new ArrayList<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
+            for (Path entry : stream) {
+                names.add(entry.getFileName());
+            }
+        }
+        verifyNativeBoundEntry(directory, expectedDirectory, identity, sameStore, control);
+        names.sort(Comparator.comparing(Path::toString));
+        for (Path name : names) {
+            Path relative = parentRelative.resolve(name);
+            Path absolute = session.resolve(relative);
+            BoundEntry bound = inspectNativeEntry(absolute, relative, false,
+                    identity, sameStore, control, true);
+            entries.put(relative, bound);
+            if (bound.directory) {
+                bindNativeDescendants(absolute, session, relative, entries,
+                        identity, sameStore, control);
+            }
+        }
+    }
+
+    private static BoundEntry inspectNativeEntry(
+            Path path, Path relative, boolean requireDirectory,
+            SessionDirectoryIdentity identity, BiPredicate<FileStore, Path> sameStore,
+            NativeCompactionControl control, boolean unsupportedOnNullKey)
+            throws IOException, CompactionRefusal, NativePlatformUnsupported {
+        BasicFileAttributes attributes = Files.readAttributes(
+                path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        if (isNativeReparsePoint(path, attributes) || control.reparsePoint.test(path)
+                || requireDirectory && !attributes.isDirectory()) {
+            throw new CompactionRefusal("unsafe native compactable entry: " + relative);
+        }
+        if (attributes.fileKey() == null) {
+            if (unsupportedOnNullKey) {
+                throw new NativePlatformUnsupported(control.providerReason
+                        + " entry=" + relative + " stable_file_key=unavailable");
+            }
+            throw new CompactionRefusal(
+                    "native compactable entry has no stable identity: " + relative);
+        }
+        Path normalized = path.toAbsolutePath().normalize();
+        if (!normalized.startsWith(identity.realPath) || normalized.equals(identity.realPath)
+                || !normalized.toRealPath(LinkOption.NOFOLLOW_LINKS).equals(normalized)
+                || !sameStore.test(identity.fileStore, normalized)) {
+            throw new CompactionRefusal("unsafe native compactable descendant: " + relative);
+        }
+        return new BoundEntry(relative, attributes.fileKey(), attributes.isDirectory(),
+                attributes.isRegularFile() ? attributes.size() : 0L);
+    }
+
+    private static boolean isNativeReparsePoint(Path path, BasicFileAttributes knownAttributes) {
+        try {
+            BasicFileAttributes attributes = knownAttributes == null
+                    ? Files.readAttributes(path, BasicFileAttributes.class,
+                    LinkOption.NOFOLLOW_LINKS) : knownAttributes;
+            return attributes.isSymbolicLink() || attributes.isOther();
+        } catch (IOException | RuntimeException e) {
+            return true;
+        }
+    }
+
+    private static void verifyNativeSessionAndStaging(
+            Path session, SessionDirectoryIdentity identity,
+            Path staging, BoundEntry stagingIdentity,
+            BiPredicate<FileStore, Path> sameStore, NativeCompactionControl control)
+            throws CompactionRefusal {
+        requireSessionDirectoryIdentity(session, identity, sameStore);
+        try {
+            verifyNativeBoundEntry(staging, stagingIdentity, identity, sameStore, control);
+        } catch (IOException | NativePlatformUnsupported e) {
+            throw new CompactionRefusal(
+                    "native staging identity cannot be inspected: " + message(e));
+        }
+    }
+
+    private static void verifyMovedTombstone(
+            Path tombstone, BoundEntry expectedRoot, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore, NativeCompactionControl control)
+            throws IOException, CompactionRefusal, NativePlatformUnsupported {
+        BoundEntry moved = inspectNativeEntry(tombstone, tombstone.getFileName(),
+                true, identity, sameStore, control, false);
+        if (!control.movedIdentityMatches.test(expectedRoot.fileKey, moved.fileKey)
+                || !expectedRoot.fileKey.equals(moved.fileKey)) {
+            throw new CompactionRefusal("atomically moved candidate identity does not match binding");
+        }
+    }
+
+    private static void deleteNativeCandidate(
+            Path session, SessionDirectoryIdentity identity,
+            Path staging, BoundEntry stagingIdentity, Path tombstone,
+            CandidateBinding candidate, BiPredicate<FileStore, Path> sameStore,
+            Consumer<String> deletionHook, NativeCompactionControl control,
+            DeletionProgress progress)
+            throws IOException, CompactionRefusal, NativePlatformUnsupported {
+        Path candidateRoot = Path.of(candidate.relativePath);
+        List<BoundEntry> deletionOrder = candidate.entries.values().stream()
+                .filter(entry -> entry.relativePath.equals(candidateRoot)
+                        || entry.relativePath.startsWith(candidateRoot))
+                .sorted(Comparator.comparingInt(
+                        (BoundEntry entry) -> entry.relativePath.getNameCount()).reversed()
+                        .thenComparing(entry -> entry.relativePath.toString()))
+                .toList();
+        for (BoundEntry target : deletionOrder) {
+            verifyNativeSessionAndStaging(
+                    session, identity, staging, stagingIdentity, sameStore, control);
+            Path suffix = candidateRoot.relativize(target.relativePath);
+            Path targetPath = suffix.toString().isEmpty()
+                    ? tombstone : tombstone.resolve(suffix);
+            verifyNativeTarget(tombstone, candidateRoot, targetPath, target,
+                    candidate, identity, sameStore, control);
+            deletionHook.accept(target.relativePath.toString().replace('\\', '/'));
+            verifyNativeSessionAndStaging(
+                    session, identity, staging, stagingIdentity, sameStore, control);
+            verifyNativeTarget(tombstone, candidateRoot, targetPath, target,
+                    candidate, identity, sameStore, control);
+            Files.delete(targetPath);
+            progress.candidateModified = true;
+            if (!target.directory) {
+                progress.reclaimedBytes = Math.addExact(progress.reclaimedBytes, target.size);
+            }
+            if (target.relativePath.equals(candidateRoot)) {
+                progress.candidateFullyRemoved = true;
+            }
+        }
+    }
+
+    private static void verifyNativeTarget(
+            Path tombstone, Path candidateRoot, Path targetPath, BoundEntry target,
+            CandidateBinding candidate, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore, NativeCompactionControl control)
+            throws IOException, CompactionRefusal, NativePlatformUnsupported {
+        Path parent = target.relativePath.getParent();
+        if (!target.relativePath.equals(candidateRoot) && parent != null) {
+            Path traversed = candidateRoot;
+            BoundEntry rootBound = candidate.entries.get(candidateRoot);
+            verifyNativeBoundEntry(tombstone, rootBound, identity, sameStore, control);
+            Path suffixParent = candidateRoot.relativize(parent);
+            for (Path component : suffixParent) {
+                traversed = traversed.resolve(component);
+                Path absolute = tombstone.resolve(candidateRoot.relativize(traversed));
+                verifyNativeBoundEntry(absolute, candidate.entries.get(traversed),
+                        identity, sameStore, control);
+            }
+        }
+        verifyNativeBoundEntry(targetPath, target, identity, sameStore, control);
+    }
+
+    private static void verifyNativeBoundEntry(
+            Path path, BoundEntry expected, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore, NativeCompactionControl control)
+            throws IOException, CompactionRefusal, NativePlatformUnsupported {
+        if (expected == null) {
+            throw new CompactionRefusal("native compactable ancestor is unbound");
+        }
+        BasicFileAttributes actual = Files.readAttributes(
+                path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        if (isNativeReparsePoint(path, actual) || control.reparsePoint.test(path)
+                || actual.fileKey() == null
+                || actual.isDirectory() != expected.directory
+                || !expected.fileKey.equals(actual.fileKey())
+                || !sameStore.test(identity.fileStore, path)) {
+            throw new CompactionRefusal(
+                    "native compactable entry identity changed: " + expected.relativePath);
+        }
     }
 
     private static void validateProtectedPaths(Path session, List<Path> protectedPaths)
@@ -2865,6 +3185,12 @@ public final class TestSessionCoordinator {
     }
 
     private static final class CandidateAbsent extends Exception {
+    }
+
+    private static final class NativePlatformUnsupported extends Exception {
+        private NativePlatformUnsupported(String message) {
+            super(message);
+        }
     }
 
 }
