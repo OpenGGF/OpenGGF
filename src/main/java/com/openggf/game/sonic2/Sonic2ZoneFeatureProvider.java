@@ -363,31 +363,28 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void updatePrePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
-        if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ && cnzSlotMachineManager != null) {
-            // KNOWN DIVERGENCE -- this call site is one pass too early.
-            // The ROM runs SlotMachine AFTER the object pass, not before it:
-            // Level_MainLoop reaches jsr (RunObjects).l at s2.asm:5095 and only
-            // then jsrto JmpTo_DeformBgLayer at s2.asm:5098; DeformBgLayer calls
-            // RunDynamicLevelEvents (s2.asm:15175, defined at 20329), which
-            // dispatches DynamicLevelEventIndex to LevEvents_CNZ (s2.asm:21511),
-            // whose first instruction is jsr (SlotMachine).l (s2.asm:21512;
-            // routine at 59305). So ObjD6's capture and SlotMachine_Routine3 run
-            // in the same ROM frame and read the same V_int_run_count.
-            //
-            // Running it here instead reads the following frame's counter, and
-            // that error is currently cancelled by the object-visible clock being
-            // read before its tick -- moving either one alone desyncs both CNZ
-            // fixtures. Earlier revisions of this comment asserted the opposite
-            // ordering; that claim is retracted. See the 2026-08-21 tick-ownership
-            // entries in docs/status/trace-frontier-log.md before changing this.
-            cnzSlotMachineManager.update();
-        }
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_WFZ) {
             updateWfzPrePhysicsLevelEvents();
             updateWfzWindTunnel(player);
         } else {
             wfzWindTunnelActive = false;
         }
+    }
+
+    @Override
+    public void updateAfterObjectExecution(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        if (zoneIndex != Sonic2ZoneConstants.ROM_ZONE_CNZ || cnzSlotMachineManager == null) {
+            return;
+        }
+        // Level_MainLoop runs RunObjects before DeformBgLayer (s2.asm:5095,
+        // 5098); DeformBgLayer dispatches LevEvents_CNZ and its SlotMachine
+        // call (s2.asm:15175, 21511-21512). ObjD6 therefore observes the
+        // previous SlotMachine result during this frame's object pass, while
+        // SlotMachine reads the V_int_run_count published by that same pass.
+        // LevelManager invokes this callback for each playable, but the ROM
+        // routine is zone-global. CNZSlotMachineManager suppresses the second
+        // callback for the same V-int count.
+        cnzSlotMachineManager.update();
     }
 
     private void updateWfzPrePhysicsLevelEvents() {

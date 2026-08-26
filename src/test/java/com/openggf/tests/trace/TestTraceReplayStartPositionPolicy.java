@@ -530,12 +530,13 @@ class TestTraceReplayStartPositionPolicy {
 
         assertTrue(slotMachineTrace.metadata().hasPerFrameSlotMachineState(),
                 "Replay policy should consume generic slot-machine recorder capability metadata.");
-        assertEquals(4,
+        assertEquals(1,
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(slotMachineTrace),
-                "SlotMachine state traces need the native short init window before comparison.");
+                "Bootstrap initializes SlotMachine_Routine1; recorded row 0 owns the following "
+                        + "Routine2 slot-1 draw (s2.asm:59320-59355).");
         assertEquals(10,
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(slotMachineTrace));
-        assertEquals(4,
+        assertEquals(1,
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(otherCapabilityTrace),
                 "The generic recorder capability, not the route name, owns S2 feature prelude scheduling.");
         assertEquals(0,

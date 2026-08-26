@@ -74,6 +74,25 @@ class TestCNZSlotMachineRng {
     }
 
     @Test
+    void targetAlignmentPreservesTheRomWordUnderflow() throws Exception {
+        CNZSlotMachineManager manager = new CNZSlotMachineManager();
+        setIntField(manager, "slot23Target", CNZSlotMachineManager.FACE_JACKPOT);
+        setIntArray(manager, "slotIndices", new int[]{0x07, 0x00, 0x00});
+        setIntArray(manager, "slotOffsets", new int[]{0x80, 0x00, 0x00});
+        setIntArray(manager, "slotSpeeds", new int[]{0x60, 0x00, 0x00});
+        setIntArray(manager, "slotSubroutines", new int[]{0x04, 0x00, 0x00});
+
+        invokeProcessSlotSubroutine(manager, 0);
+
+        assertEquals(0xFFF0,
+                ((intArray(manager, "slotIndices")[0] & 0xFF) << 8)
+                        | (intArray(manager, "slotOffsets")[0] & 0xFF),
+                "SlotMachine_Routine5_2 masks the boundary to $0700, then subtracts $0010 "
+                        + "as a 16-bit word (s2.asm:59550-59558).");
+        assertEquals(0x08, intArray(manager, "slotSubroutines")[0]);
+    }
+
+    @Test
     void changingStoppedFaceUpdatesMatchingRewardSlot() throws Exception {
         CNZSlotMachineManager manager = new CNZSlotMachineManager();
         setIntField(manager, "slot1Target", CNZSlotMachineManager.FACE_SONIC);
@@ -118,6 +137,9 @@ class TestCNZSlotMachineRng {
         assertTrue(manager.isComplete());
         assertArrayEquals(new int[]{0x00, 0x00, 0x00}, maskedSlots(manager, "slotOffsets"));
         assertArrayEquals(new int[]{0x00, 0x00, 0x00}, maskedSlots(manager, "slotSpeeds"));
+        assertArrayEquals(new int[]{0x00, 0x00, 0x00}, maskedSlots(manager, "slotSubroutines"),
+                "SlotMachine_Routine6 clears a word at each slot speed, which also clears "
+                        + "the adjacent subroutine byte (s2.asm:59579-59581).");
     }
 
     @Test
@@ -176,5 +198,12 @@ class TestCNZSlotMachineRng {
         var method = CNZSlotMachineManager.class.getDeclaredMethod("setTargetForSlot", int.class, int.class);
         method.setAccessible(true);
         method.invoke(manager, slot, face);
+    }
+
+    private static void invokeProcessSlotSubroutine(CNZSlotMachineManager manager, int slot)
+            throws ReflectiveOperationException {
+        var method = CNZSlotMachineManager.class.getDeclaredMethod("processSlotSubroutine", int.class);
+        method.setAccessible(true);
+        method.invoke(manager, slot);
     }
 }

@@ -114900,3 +114900,58 @@ The other three death arms remain coordinates only.
   run `20260825T215746Z-p631976-fb0521`. Manifests:
   `<managed-scratch>/tasks/s2-wfz-tornado-status-20260825T212323Z-600955-07e6d161/20260825T215706Z-p631449-693efc/manifest.json` and
   `<managed-scratch>/tasks/s2-wfz-tornado-status-20260825T212323Z-600955-07e6d161/20260825T215746Z-p631976-fb0521/manifest.json`.
+
+## 2026-08-26 - S2 CNZ slot-machine ordering and word arithmetic
+
+- Worktree: `.worktrees/s2-cnz-slot-ordering`, branch
+  `bugfix/ai-s2-cnz-slot-ordering`, candidate `b85f98b2b` after merging the
+  current `develop` baseline `edab24d7b`.
+- Root and fix: the ROM dispatches `SlotMachine` from `LevEvents_CNZ` after
+  `RunObjects`, so the engine moved the zone-global update from pre-physics to
+  the post-object boundary and suppresses duplicate playable callbacks by the
+  current V-int count (`s2.asm:5095-5098, 15175, 21511-21512`). The native
+  replay prelude now executes only Routine1 before row 0 owns Routine2's first
+  draw (`s2.asm:59320-59355`). Routine5 preserves the ROM word underflow to
+  `$FFF0`, and Routine6 mirrors each `clr.w slotN_speed`, clearing speed and the
+  adjacent routine byte (`s2.asm:59550-59581`). No trace row, gameplay value,
+  fitted constant, route/frame exception, or trace hydration supplies state.
+- Test-first evidence: alignment underflow failed as `0x07F0` instead of
+  `0xFFF0` in run `20260826T104952Z-p4049030-274d5f`; completion routines
+  failed as `$0C/$0C/$0C` instead of zero in run
+  `20260826T105408Z-p4058234-497c22`. The focused ordering, arithmetic, and
+  bootstrap-policy set passed in run `20260826T105503Z-p4064297-16e777`.
+- Focused trace command:
+  `tools/testing/test-session.sh -- mvn -Ptrace-replay
+  -Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay,
+  com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay
+  -Dsonic2.rom.path=s2.gen -DforkCount=1
+  -Dsurefire.runOrder=alphabetical test`.
+  Final post-severity run `20260826T110356Z-p4120572-90e448` reports **all
+  frames match** for both
+  fixtures: CNZ1 0 errors / 0 warnings and CNZ2 0 errors / 0 warnings. Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260826T110356Z-4120637-aa643f47/20260826T110356Z-p4120572-90e448/manifest.json`.
+- Updated-baseline ordinary-suite comparison used
+  `tools/testing/test-session.sh -- mvn -Dmse=off
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  test -B`. Baseline run `20260826T111403Z-p4159968-740d73` reported 15,151
+  tests, 43 failures, 8 errors, and 19 skips. Candidate run
+  `20260826T112120Z-p4190085-3c3baf` reported 15,154 tests with the same
+  43 failures, 8 errors, and 19 skips; all 51 failing test identities and
+  normalized messages matched. Manifests:
+  `<managed-scratch>/tasks/openggf-test-session-20260826T111403Z-4160023-181b1a83/20260826T111403Z-p4159968-740d73/manifest.json` and
+  `<managed-scratch>/tasks/openggf-test-session-20260826T112120Z-4190187-70976262/20260826T112120Z-p4190085-3c3baf/manifest.json`.
+- Fresh-JVM guard command used the same ROM properties with `-Pguards`.
+  Baseline run `20260826T112842Z-p51371-2a765c` and candidate run
+  `20260826T112611Z-p34487-008c0d` each reported 557 tests, 18 failures,
+  1 error, and no skips. All 19 failing guard identities and normalized rule
+  summaries, including violation counts, matched. Manifests:
+  `<managed-scratch>/tasks/openggf-test-session-20260826T112842Z-51427-780dfd47/20260826T112842Z-p51371-2a765c/manifest.json` and
+  `<managed-scratch>/tasks/openggf-test-session-20260826T112611Z-34552-b2ccdd0e/20260826T112611Z-p34487-008c0d/manifest.json`.
+- Full curated release gate command:
+  `tools/testing/test-session.sh -- mvn -Dmse=off -Ptrace-replay
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  test -B`. Candidate run `20260826T113532Z-p84507-05f1da` reported 870
+  tests, 6 failures, 0 errors, and 7 skips, down from the recorded baseline's
+  866 tests and 8 failures. The two removed failures are exactly CNZ1 and
+  CNZ2; the other six retain their baseline first-error signatures. Manifest:
+  `<managed-scratch>/tasks/openggf-test-session-20260826T113532Z-84624-563ef71f/20260826T113532Z-p84507-05f1da/manifest.json`.

@@ -308,6 +308,8 @@ public final class TraceReplaySessionBootstrap {
                     objectManager.advanceVblaCounter();
                     levelManager.getZoneFeatureProvider().updatePrePhysics(
                             null, cameraX, levelManager.getFeatureZoneId());
+                    levelManager.getZoneFeatureProvider().updateAfterObjectExecution(
+                            null, cameraX, levelManager.getFeatureZoneId());
                 }
             }
             objectManager.initVblaCounter(

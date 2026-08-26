@@ -297,7 +297,10 @@ public final class TraceReplayBootstrap {
         if (!meta.hasPerFrameSlotMachineState()) {
             return 0;
         }
-        return 4;
+        // Bootstrap only Routine1's initialization (s2.asm:59320-59342).
+        // Recorded row 0 is the following Level_MainLoop iteration, where
+        // Routine2 performs the first reel draw (s2.asm:59345-59355).
+        return 1;
     }
 
     public static int zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(TraceData trace) {

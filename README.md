@@ -234,6 +234,9 @@ recorded hardware traces.
 - **Sonic 2 Tornado parity:** Wing Fortress now preserves ObjB2's retail
   standing, initialization, and reused leader-wait/jump-countdown state across
   every trace row where the parent Tornado can be identified unambiguously.
+- **Sonic 2 CNZ slot-machine parity:** Casino Night now runs its zone-global
+  slot routine in the retail post-object order with ROM-accurate word
+  arithmetic; both release traces match every compared row exactly.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
@@ -285,7 +288,7 @@ recorded hardware traces.
 #### Current release status
 
 0.6 is not a final release yet. The automated suite and trace-replay gates are
-active, but known parity gaps remain in parts of the Sonic 2 CNZ/CPZ/WFZ
+active, but known parity gaps remain in parts of the Sonic 2 CPZ/WFZ
 frontier and the Sonic 3 & Knuckles trace/run-chain frontier. Human end-to-end
 gameplay and audio QA are still required before release sign-off.
 

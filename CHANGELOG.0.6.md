@@ -4,6 +4,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Sonic 2 CNZ slot machines now follow the retail object/event order:** the
+  zone-global slot routine runs after `RunObjects`, uses the current native
+  V-int count once per level-loop pass, preserves 16-bit reel-position
+  underflow, and clears each speed/subroutine word at completion. Both CNZ
+  ROM-state traces now match every compared row with zero errors and zero
+  warnings; exact slot mismatches have been promoted from warning to error
+  (`docs/s2disasm/s2.asm:5095-5098,15175,21511-21512,59320-59588`).
+
 - **AIZ1 miniboss rewinds now restore the complete cutscene object graph:** the
   shared body, arm, and flame-barrel children relink to the Act 1 cutscene boss
   as well as the Act 2 fight boss, preventing a missing-object-reference crash

@@ -985,7 +985,9 @@ S2 CNZ replay fixtures that advertise per-frame slot-machine state need a short
 native slot-machine init prelude before comparison begins. The bootstrap now
 consumes this through generic `TraceMetadata.hasPerFrameSlotMachineState()`
 capability metadata; the old CNZ-named metadata helper remains only as a
-deprecated alias for the current recorder schema string.
+deprecated alias for the current recorder schema string. The prelude executes
+only ROM `SlotMachine_Routine1`; recorded row 0 owns the following Routine2
+reel draw (`s2.asm:59320-59355`).
 
 ### Rationale
 
@@ -2562,46 +2564,6 @@ Probe `tools/bizhawk/probes/s2_cpz2_d7_clobber_probe.lua` over rows 5535-5600
 logs `d7` per `RunObject` iteration; rows 5554-5564 show 123 iterations ending at
 `$FFCE80`, their neighbours 144 ending at `$FFD3C0`.
 
-## CNZ slot machine: recorded ROM state diverges inside the slot windows
-
-**Status:** open, comparison landed at WARNING on 2026-08-21.
-
-`aux_state.jsonl` carries the ROM's own `SlotMachineVariables` block
-(`cnz_slot_machine_state`) on every row of both S2 CNZ fixtures. It was parsed
-and never compared. Wiring it into the comparison exposes divergences that were
-present all along:
-
-| fixture | divergent field-rows | at level-start roll | in the slot session | elsewhere |
-|---|---|---|---|---|
-| `cnz` | 237 | 8 | 229 | 0 |
-| `cnz2` | 530 | 8 | 516 | 6 |
-
-Almost everything sits inside the slot machine's own active windows, which is
-what makes the owner identifiable rather than diffuse. The six exceptions are
-both worth a look rather than a shrug: they are `slotN_routine` on exactly two
-rows, `cnz2` 8405 and 10936, long after the last session. Row 8405 sits beside
-the frame 8506 residual left by the rejected tick-plus-seed pair, and neither
-has been investigated.
-
-**Mechanism.** The unresolved three-member ordering group: the engine calls
-`CNZSlotMachineManager.update()` from `updatePrePhysics` while the ROM calls
-`SlotMachine` *after* the object pass (`s2.asm:5095` then 5098, 15175, 20329,
-21511, 21512); the object-visible clock is read before its tick, which cancels
-the placement error at the seed but not in phase; and ObjD6's completion check
-(`s2.asm:59205`, during `RunObjects`) is unmodelled. Moving any one member alone
-desyncs the fixtures — measured at tick-alone 19,603/29,397 errors,
-tick-plus-seed green/10, placement-alone 22,879/green.
-
-**Why WARNING and not ERROR.** This is new coverage of a never-triaged block, not
-a relaxation of existing coverage: nothing that was red becomes green, and every
-divergence stays visible in the report. Warnings are release-blocking in this
-harness, so the two CNZ classes are red either way; the severity records that the
-frontier is untriaged rather than asserting a tolerance.
-
-**Removal condition.** Model all three members together, drive the CNZ slot
-divergences to zero, then promote `TraceBinder.putSlotField` from
-`Severity.WARNING` to `Severity.ERROR` and delete this entry.
-
 ## S2 tornado (ObjB2): recorded single-instance SST rows are exact
 
 **Status:** all five divergence spans in rows where the comparator identifies one
@@ -2667,5 +2629,5 @@ trace comparator remains deliberately unchanged in this patch.
 7629 SCZ rows, so the engine's 8-bit sub-pixel is a faithful model of it.
 
 **Removal condition.** Give the parent Tornado an exact identity through the child-presence
-tail without slot fitting, compare and close the state-8-and-later rows, then split Tornado
-severity from the shared CNZ-slot WARNING helper and promote it to `Severity.ERROR`.
+tail without slot fitting, compare and close the state-8-and-later rows, then promote the
+Tornado-only warning helper to `Severity.ERROR`.
