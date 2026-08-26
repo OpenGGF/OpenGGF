@@ -74,7 +74,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `LOAD_TIME_SIMULATION` | `gameplay.loadTimeSimulation` | enum | `NONE` | Optional normal-play readiness admission for jobs submitted through `HardwareTimingService` (currently S3K Kosinski): `NONE` admits as soon as production preparation allows; `PROFILED` uses published deterministic profile data; `FAST` is a retained reserved alias that warns and returns `NONE`; `REALISTIC` is a retained reserved alias that warns and returns `PROFILED`. S1/S2 still resolve this enum through their default module factory, but every value yields their supplied immediate profile and their ROM-derived PLC plus dynamic-art/DPLC lifecycles remain game-owned; `NONE` does not disable them and another value does not retime them. Trace replay uses recorded hardware-timing authority instead of this setting; queue-state diagnostics remain comparison-only. |
 | `DISPLAY_COLOR_PROFILE` | `display.colorProfile` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
 | `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | `display.colorProfileToggleKey` | key | `V` | Runtime key used to cycle display color profiles. The selected profile is saved to `config.yaml` and shown briefly in the bottom-left corner. |
-| `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the native pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, default), `"WIDE_16_10"` (352 px), `"WIDE_16_9"` (400 px), `"ULTRA_21_9"` (528 px), `"SUPER_32_9"` (800 px). **EXPERIMENTAL / INCOMPLETE** — widescreen rendering (UI pillarbox, parallax column extension) is not finished; only `"NATIVE_4_3"` is fully supported. |
+| `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the logical pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, exact native behavior), `"WIDE_16_10"` (352 px, supported), `"WIDE_16_9"` (400 px, primary supported widescreen target), `"ULTRA_21_9"` (528 px, best-effort smoke tier), and `"SUPER_32_9"` (800 px, exploratory). Wider presentation does not widen ROM world boundaries or trace-comparison authority. |
 | `DISPLAY_WINDOW_AUTOSIZE` | `display.windowAutosize` | bool | `true` | When `true` and a widescreen preset is active, the OS window is derived from the preset at 2x baseline (e.g. `WIDE_16_9` → 800×448). When `false`, `SCREEN_WIDTH`/`SCREEN_HEIGHT` are used verbatim so a custom window size is preserved. Has no effect when `DISPLAY_ASPECT` is `"NATIVE_4_3"`. |
 | `DISPLAY_SHADER_LIBRARY_ROOT` | `display.shaderLibraryRoot` | string | `"shaders"` | Root directory scanned for user display shaders, resolved relative to the working directory. |
 | `DISPLAY_SHADER_SELECTION` | `display.shaderSelection` | string | `"OFF"` | Last selected display shader. Use `"OFF"` or a root-relative forward-slash path under `DISPLAY_SHADER_LIBRARY_ROOT`. |
@@ -212,8 +212,9 @@ requires Sonic 3&K data; hand-edited saved values outside that donor set are cla
 before launch. `aspect: "global"` inherits the normal `display.aspect` setting and does not
 resize the window; pinned aspect values such as `"WIDE_16_9"` apply only for that game
 session and resize back when returning to the master title. In the launch panel, pinned
-16:10 and 16:9 aspects are amber non-standard choices, while 21:9 and 32:9 are red
-experimental choices.
+16:10 and 16:9 aspects are amber non-standard choices. The 21:9 preset remains a
+best-effort smoke tier, while 32:9 is exploratory; both remain red choices so the panel
+does not imply the same support level as 16:10/16:9.
 
 Stock defaults:
 

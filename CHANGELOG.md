@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: widescreen presentation is completed for the 0.7 candidate across ordinary
+  UI/HUD surfaces, titles, results, endings, diagnostics, all three special stages,
+  width-sensitive scene effects, and trace-video capture. Native 320x224 behavior remains
+  the exact gameplay/trace authority; 352x224 and 400x224 are supported presentation
+  targets, 528x224 is a best-effort smoke tier, and 800x224 remains exploratory.
 - Testing: two trace-harness tests built their derived fixtures incorrectly and were rejecting
   themselves. One appended a synthetic per-frame art-state stream on top of a recording that
   already carried a real one, so frame zero legitimately held two states; the other copied a
