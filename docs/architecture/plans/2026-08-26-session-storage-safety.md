@@ -404,6 +404,23 @@ Set<String> expectedRemoved = Set.of("tmp", "build/test-classes/traces");
 
 Also assert a compaction error changes an otherwise green run to `STORAGE_FINALIZATION_FAILED` while a pre-existing child/identity failure remains primary.
 
+Exercise both deletion strategies through an injectable provider capability.
+For secure streams, deterministically swap a bound candidate and prove an
+outside sentinel survives. For the native no-secure-stream strategy, require
+same-store atomic tombstoning into an identity-bound private staging lane,
+moved-file-key equality, no-follow/reparse rejection, per-ancestor identity
+revalidation, and exact partial accounting. Prove the fallback succeeds for a
+normal Windows-shaped fixture, while candidate/ancestor swaps move or refuse
+the replacement itself and never touch the outside sentinel. Do not require
+symlink creation in the native Windows test path; use an injectable reparse or
+identity mismatch fixture when privileges do not permit it.
+
+Add an injectable provider fixture with neither `SecureDirectoryStream` nor a
+non-null stable `fileKey()`. Assert the test fails before the branch exists,
+then prove the implementation performs no mutation, preserves both compactable
+paths, returns certifying `RETAINED_PLATFORM_UNSUPPORTED`, and records the
+exact provider/file-store reason.
+
 - [ ] **Step 2: Run focused Java tests and observe failures**
 
 Run Task 4 Step 2. Expected: compaction cases fail.
@@ -414,12 +431,14 @@ Add:
 
 ```java
 private enum CompactionStatus {
-    COMPACTED, NOTHING_TO_REMOVE, RETAINED_BY_REQUEST, FAILED, REFUSED
+    COMPACTED, NOTHING_TO_REMOVE, RETAINED_BY_REQUEST,
+    RETAINED_PLATFORM_UNSUPPORTED, FAILED, REFUSED
 }
 
 private record CompactionResult(
         CompactionStatus status,
         List<String> removedRelativePaths,
+        List<String> partiallyModifiedRelativePaths,
         long reclaimedBytes,
         String error) {}
 
@@ -427,7 +446,22 @@ private record SessionDirectoryIdentity(
         Path realPath, Object fileKey, FileStore fileStore) {}
 ```
 
-Capture identity immediately after session creation. Before each removal, revalidate the session and descendant with `NOFOLLOW_LINKS`, same file store, exact canonical containment, and report/artifact protection. Write a terminal pre-compaction manifest, compact, measure reclaimed bytes, then atomically write the final manifest. Apply the same function from normal and shutdown finalisation.
+Capture identity immediately after session creation. Before each removal,
+revalidate the session and descendant with `NOFOLLOW_LINKS`, same file store,
+exact canonical containment, and report/artifact protection. Use
+`SecureDirectoryStream` descriptor-relative deletion when supported. Otherwise
+atomically move each fully bound candidate into a private same-store staging
+lane, verify its moved identity, and delete the tombstone with no-follow,
+reparse, and ancestor-identity checks. Never fall back to an ordinary unbound
+pathname walk, and do not fail a healthy native Windows session merely because
+secure streams are unavailable. Use a non-null provider
+`BasicFileAttributes.fileKey()` plus file-store identity as the stable native
+token. If both secure streams and a stable token are unavailable, perform no
+mutation and return certifying `RETAINED_PLATFORM_UNSUPPORTED` with an exact
+reason. Record full and partial candidate progress separately through the two
+result lists. Write a terminal pre-compaction manifest, compact, measure exact
+reclaimed bytes after each successful deletion, then atomically write the final
+manifest. Apply the same function from normal and shutdown finalisation.
 
 - [ ] **Step 4: Add and translate the opt-out flag**
 

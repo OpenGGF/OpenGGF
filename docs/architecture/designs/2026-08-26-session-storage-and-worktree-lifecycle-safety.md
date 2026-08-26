@@ -261,6 +261,39 @@ It refuses `RUNNING`, an unknown state, a replaced directory, or an
 out-of-scope path. The storage tier changes allocation and retention policy,
 not the terminal compaction allowlist.
 
+Deletion has two platform strategies with the same fail-closed result schema:
+
+- When `SecureDirectoryStream` is available, traversal and deletion stay
+  relative to identity-checked open parent descriptors.
+- On native providers without secure directory streams (notably Windows), the
+  coordinator first binds and preflights every candidate, creates an
+  identity-bound private staging lane inside the session on the same file
+  store, atomically moves one candidate at a time to an unpredictable
+  tombstone name, and verifies that the moved file key is the bound candidate
+  key. It then walks the tombstone without following symbolic links or reparse
+  points and revalidates every ancestor identity immediately before each
+  operation. A swap moves the replacement itself, never follows it; any
+  identity, reparse, access, atomic-move, or inspection uncertainty stops the
+  deletion and records truthful partial progress.
+
+The stable identity token is the provider's non-null
+`BasicFileAttributes.fileKey()` paired with the captured file-store identity.
+The standard JDK Windows provider exposes its volume/file identity through
+that token. If a provider supplies neither `SecureDirectoryStream` nor a
+non-null stable file key, the coordinator performs no mutation and records
+`RETAINED_PLATFORM_UNSUPPORTED` with the provider/file-store reason. That
+visible retained result is certifying rather than a storage-finalisation
+failure because no destructive operation was attempted; the capacity gate and
+normal retention remain active. A null identity never falls back to pathname
+trust.
+
+There is no ordinary pathname-walk fallback. Both strategies inspect and bind
+all allowlisted candidates before the first mutation, never touch an external
+target through a link, and report fully removed and partially modified
+relative paths separately. Native Windows/PowerShell sessions must remain
+certifying under the tombstone strategy; lack of `SecureDirectoryStream` alone
+is not a storage-finalisation failure.
+
 ### Compactable data
 
 Automatic terminal compaction removes only:
