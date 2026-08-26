@@ -162,14 +162,27 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 - [ ] **Step 6: Run existing coordinator harnesses**
 
-  Run:
+  From the detached harness worktree at exact
+  `f1b82774d4aeb9585e75bd74e90856e7b67256d7`, byte-authenticate both frozen
+  Java sources against their Git blobs before compilation, then run the
+  process harness and compiled coordinator self-test from managed scratch:
 
   ```bash
+  cmp -s tools/testing/TestSessionCoordinator.java \
+    <(git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/TestSessionCoordinator.java)
+  cmp -s tools/testing/TestSessionCoordinatorSelfTest.java \
+    <(git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/TestSessionCoordinatorSelfTest.java)
+  OPENGGF_COORDINATOR_CLASSES="$(agent-scratch new frozen-develop-coordinator-classes)"
+  OPENGGF_COORDINATOR_SELF_TEST_ROOT="$(agent-scratch new frozen-develop-coordinator-self-test)"
   tools/testing/run-session-process-harness.sh
-  java --source 21 tools/testing/TestSessionCoordinatorSelfTest.java
+  javac --release 21 -d "$OPENGGF_COORDINATOR_CLASSES" \
+    tools/testing/TestSessionCoordinator.java \
+    tools/testing/TestSessionCoordinatorSelfTest.java
+  java -cp "$OPENGGF_COORDINATOR_CLASSES" TestSessionCoordinatorSelfTest \
+    "$OPENGGF_COORDINATOR_SELF_TEST_ROOT"
   ```
 
-  Expected: both pass with no source/runtime identity regression.
+  Expected: both harnesses pass with no source/runtime identity regression.
 
 - [ ] **Step 7: Document the historical adapter contract**
 
