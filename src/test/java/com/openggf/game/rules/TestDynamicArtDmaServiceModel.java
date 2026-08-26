@@ -8,12 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestDynamicArtDmaServiceModel {
     @Test
-    void sonic2ServicesOnlyProcessDmaQueueEquivalentClaims() {
+    void sonic2ServicesEveryProcessDmaQueueEquivalentClaim() {
         var model = DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE;
 
         assertFalse(model.services(null));
         assertFalse(model.services(PlcLifecyclePhase.PALETTE_FADE));
-        assertFalse(model.services(PlcLifecyclePhase.LEVEL_TITLE_CARD));
+        assertTrue(model.services(PlcLifecyclePhase.LEVEL_TITLE_CARD),
+                "Vint_TitleCard calls ProcessDMAQueue just like the ordinary level V-int");
         assertTrue(model.services(PlcLifecyclePhase.ORDINARY_LEVEL));
         assertTrue(model.services(PlcLifecyclePhase.SPECIAL_STAGE));
     }
