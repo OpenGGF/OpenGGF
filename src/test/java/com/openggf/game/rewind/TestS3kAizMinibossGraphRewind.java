@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.objects.AizMinibossArmChild;
 import com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild;
 import com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild;
 import com.openggf.game.sonic3k.objects.AizMinibossBodyChild;
+import com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameChild;
 import com.openggf.game.sonic3k.objects.AizMinibossInstance;
@@ -45,6 +46,8 @@ class TestS3kAizMinibossGraphRewind {
 
     private static final ObjectSpawn BOSS_SPAWN =
             new ObjectSpawn(0x0100, 0x0100, Sonic3kObjectIds.AIZ_MINIBOSS, 0, 0, false, 10);
+    private static final ObjectSpawn CUTSCENE_BOSS_SPAWN =
+            new ObjectSpawn(0x0100, 0x0100, Sonic3kObjectIds.AIZ_MINIBOSS_CUTSCENE, 0, 0, false, 10);
 
     @BeforeEach
     void initHeadless() {
@@ -96,6 +99,41 @@ class TestS3kAizMinibossGraphRewind {
     }
 
     @Test
+    void aiz1CutsceneMinibossRestoresSharedTrackedChildren() throws Exception {
+        Harness harness = Harness.createWithSpawn(CUTSCENE_BOSS_SPAWN);
+        ObjectManager objectManager = harness.objectManager();
+        AizMinibossCutsceneInstance boss = only(objectManager, AizMinibossCutsceneInstance.class);
+        AizMinibossBodyChild body = objectManager.createDynamicObject(
+                () -> new AizMinibossBodyChild(boss));
+        AizMinibossArmChild arm = objectManager.createDynamicObject(
+                () -> new AizMinibossArmChild(boss));
+        AizMinibossFlameBarrelChild barrel = objectManager.createDynamicObject(
+                () -> new AizMinibossFlameBarrelChild(boss, 0, true));
+        boss.getChildComponents().addAll(List.of(body, arm, barrel));
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(body);
+        objectManager.removeDynamicObject(arm);
+        objectManager.removeDynamicObject(barrel);
+
+        rewindRegistry.restore(snapshot);
+
+        AizMinibossCutsceneInstance restoredBoss =
+                only(objectManager, AizMinibossCutsceneInstance.class);
+        AizMinibossBodyChild restoredBody = only(objectManager, AizMinibossBodyChild.class);
+        AizMinibossArmChild restoredArm = only(objectManager, AizMinibossArmChild.class);
+        AizMinibossFlameBarrelChild restoredBarrel =
+                only(objectManager, AizMinibossFlameBarrelChild.class);
+        assertEquals(3, restoredBoss.getChildComponents().size());
+        assertSame(restoredBoss, readObjectField(restoredBody, "parent"));
+        assertSame(restoredBoss, readObjectField(restoredArm, "parent"));
+        assertSame(restoredBoss, readObjectField(restoredBarrel, "parent"));
+    }
+
+    @Test
     void missingRequiredObjectReferencesStillFailWhenTargetHasNoRewindIdentity() {
         Harness externalHarness = Harness.createWithBoss();
         AizGraph external = AizGraph.spawnRepresentativeFamily(externalHarness.objectManager());
@@ -142,6 +180,10 @@ class TestS3kAizMinibossGraphRewind {
 
     private record Harness(ObjectManager objectManager) {
         static Harness createWithBoss() {
+            return createWithSpawn(BOSS_SPAWN);
+        }
+
+        static Harness createWithSpawn(ObjectSpawn spawn) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCameraAtOrigin();
             ObjectServices services = new StubObjectServices() {
@@ -149,7 +191,7 @@ class TestS3kAizMinibossGraphRewind {
                 @Override public Camera camera() { return camera; }
             };
             ObjectManager objectManager = new ObjectManager(
-                    List.of(BOSS_SPAWN),
+                    List.of(spawn),
                     new Sonic3kObjectRegistry(),
                     0,
                     null,

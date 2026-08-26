@@ -74,13 +74,13 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         updateDynamicSpawn();
     }
 
-    private AizMinibossFlameBarrelChild(ObjectSpawn spawn, AizMinibossInstance parent) {
+    private AizMinibossFlameBarrelChild(ObjectSpawn spawn, AbstractBossInstance parent) {
         this(parent, 0, false);
     }
 
     @Override
     public AizMinibossFlameBarrelChild recreateForRewind(RewindRecreateContext ctx) {
-        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
+        AbstractBossInstance boss = AizMinibossRewindLinks.nearestSharedBoss(ctx);
         if (boss == null) {
             return null;
         }

@@ -12,6 +12,11 @@ This file contains the complete 0.6 development snapshot history carried forward
   warnings; exact slot mismatches have been promoted from warning to error
   (`docs/s2disasm/s2.asm:5095-5098,15175,21511-21512,59320-59588`).
 
+- **AIZ1 miniboss rewinds now restore the complete cutscene object graph:** the
+  shared body, arm, and flame-barrel children relink to the Act 1 cutscene boss
+  as well as the Act 2 fight boss, preventing a missing-object-reference crash
+  while rewinding through the fire-transition sequence.
+
 - **Sonic 2 special stages retain slowdown in ordinary play without making it
   trace authority:** the existing stateless segment/speed approximation remains
   enabled for interactive pacing and is rewind-captured, while externally paced
