@@ -195,10 +195,10 @@ public class TestS2PostLoadAssemblyHeadless {
 
         GameServices.level().spawnSidekicks(-32, 4);
 
-        assertEquals(0x5A00, tails.getXSubpixelRaw(),
-                "ROM move.w x_pos preserves the fractional x word");
-        assertEquals(0xA500, tails.getYSubpixelRaw(),
-                "ROM move.w y_pos preserves the fractional y word");
+        assertEquals(0, tails.getXSubpixelRaw(),
+                "the level-entry Object_RAM clear zeroes x_sub before the ROM move.w x_pos");
+        assertEquals(0, tails.getYSubpixelRaw(),
+                "the level-entry Object_RAM clear zeroes y_sub before the ROM move.w y_pos");
     }
 
     @Test
