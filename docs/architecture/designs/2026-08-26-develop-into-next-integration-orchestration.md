@@ -91,8 +91,13 @@ files.
   discovers the current working tree independently of the script location, so
   this isolates and builds `next` without modifying it. Evidence records the
   wrapper commit, file hash, command, and separate session manifest.
-- Ordinary and `-Pguards` sessions are separate; raw Maven output is not
-  certification evidence.
+- Ordinary and structural-guard sessions are separate; raw Maven output is not
+  certification evidence. Frozen `develop` and the merged tree use their
+  in-tree `-Pguards` profile. Frozen `next` predates that profile, so its
+  equivalent fresh-JVM session uses an explicit selector generated from its own
+  source tree with the merged profile's conventions (`Test*Guard*`, `TestNo*`,
+  `TestArchUnit*`, and `TestAudioPresentationBoundary`). The selector inventory
+  and reports must agree exactly, with zero missing or duplicate class.
 - Repository hooks and documentation/trailer policy remain enabled; no
   `--no-verify` operation is permitted.
 
@@ -186,12 +191,19 @@ never a forced rewrite inferred by the agent.
 
 Record exact, wrapper-produced ordinary and structural-guard sessions for both
 frozen parents in immutable detached worktrees. `develop` uses its in-tree
-wrapper. Frozen `next` runs the wrapper and coordinator from frozen `develop`
-`9b46505eb` by absolute path while its process working directory remains the
-detached `next` worktree. First self-test and hash that external coordinator,
-then record its commit and SHA-256 in the validation report. Capture run IDs,
-manifests, logs, pass/failure/error/skip outcomes, complete test inventories,
-and environmental limitations.
+wrapper and `-Pguards` profile. Frozen `next` runs the wrapper and coordinator
+from frozen `develop` `9b46505eb` by absolute path while its process working
+directory remains the detached `next` worktree. Because frozen `next` has no
+`guards` Maven profile, generate its explicit fresh-JVM guard selector from the
+frozen tree using the four merged-profile naming conventions above, record the
+sorted source inventory, run exactly those classes, and reject any missing,
+duplicate, or extra report. This is equivalent parent guard evidence without
+mutating or borrowing a POM profile from another tree.
+
+First self-test and hash the external coordinator, then record its commit and
+SHA-256 in the validation report. Capture run IDs, manifests, logs,
+pass/failure/error/skip outcomes, complete test inventories, and environmental
+limitations.
 
 ROM-backed runs discover the actual files and verify their bytes before use:
 
@@ -240,10 +252,12 @@ failed session and run an OOM-safe deterministic partition of the complete test
 class inventory through separate wrapper sessions. Each executable class must
 appear in exactly one successful partition, with zero missing or duplicate
 classes, and the aggregation manifest records every child run ID and outcome.
-Use the same partition map for the parent comparison needed to distinguish
-order-sensitive behavior. This partitioned aggregate, plus the separate fresh
-JVM guard session, is the certifying fallback; a partial full run is never
-reported as the suite result.
+Use one deterministic union partition map across all three trees, filtering
+each partition to classes present in the tree being run so parent-only or
+merged-only classes do not create false selector failures. Preserve the union
+slot identity in the aggregation report. This partitioned aggregate, plus the
+separate fresh-JVM guard session, is the certifying fallback; a partial full run
+is never reported as the suite result.
 
 Rerun order-sensitive or environment-sensitive changes in isolation before
 classification. Record any legitimate pre-existing red, sandbox-only
