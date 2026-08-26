@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -9,14 +10,19 @@ import java.nio.channels.OverlappingFileLockException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
+import java.nio.file.SecureDirectoryStream;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.BasicFileAttributeView;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -36,6 +42,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -96,8 +103,23 @@ public final class TestSessionCoordinator {
     private record CompactionResult(
             CompactionStatus status,
             List<String> removedRelativePaths,
+            List<String> partiallyModifiedRelativePaths,
             long reclaimedBytes,
             String error) {
+    }
+
+    private record BoundEntry(
+            Path relativePath, Object fileKey, boolean directory, long size) {
+    }
+
+    private record CandidateBinding(
+            String relativePath, Map<Path, BoundEntry> entries) {
+    }
+
+    private static final class DeletionProgress {
+        private long reclaimedBytes;
+        private boolean candidateModified;
+        private boolean candidateFullyRemoved;
     }
 
     private record SessionDirectoryIdentity(
@@ -1289,6 +1311,9 @@ public final class TestSessionCoordinator {
                 + jsonNullable(compaction == null ? null : compaction.status.name()) + ",\n"
                 + "  \"compaction_removed_relative_paths\": "
                 + (compaction == null ? "[]" : jsonArray(compaction.removedRelativePaths)) + ",\n"
+                + "  \"compaction_partially_modified_relative_paths\": "
+                + (compaction == null ? "[]"
+                : jsonArray(compaction.partiallyModifiedRelativePaths)) + ",\n"
                 + "  \"compaction_retained_relative_paths\": "
                 + (compaction != null && compaction.status == CompactionStatus.RETAINED_BY_REQUEST
                 ? jsonArray(COMPACTABLE_RELATIVE_PATHS) : "[]") + ",\n"
@@ -1400,55 +1425,86 @@ public final class TestSessionCoordinator {
                     } catch (IOException | RuntimeException e) {
                         return false;
                     }
-                });
+                }, ignored -> { });
     }
 
     private static CompactionResult compactTerminalSession(
             Paths paths, String state, boolean retainEphemeral, List<String> reports,
             List<String> artifacts, SessionDirectoryIdentity identity,
             BiPredicate<FileStore, Path> sameStore) {
+        return compactTerminalSession(paths, state, retainEphemeral, reports, artifacts,
+                identity, sameStore, ignored -> { });
+    }
+
+    private static CompactionResult compactTerminalSession(
+            Paths paths, String state, boolean retainEphemeral, List<String> reports,
+            List<String> artifacts, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore, Consumer<String> deletionHook) {
         List<String> removed = new ArrayList<>();
-        long reclaimedBytes = 0L;
+        List<String> partiallyModified = new ArrayList<>();
+        DeletionProgress progress = new DeletionProgress();
+        String currentCandidate = null;
         try {
             if (!TERMINAL_SESSION_STATES.contains(state)) {
                 throw new CompactionRefusal("session state is not terminal: " + state);
             }
-            revalidateSessionDirectory(paths.session, identity, sameStore);
+            requireSessionDirectoryIdentity(paths.session, identity, sameStore);
             if (retainEphemeral) {
                 return new CompactionResult(CompactionStatus.RETAINED_BY_REQUEST,
-                        List.of(), 0L, null);
+                        List.of(), List.of(), 0L, null);
             }
 
             List<Path> protectedPaths = Stream.concat(reports.stream(), artifacts.stream())
                     .map(value -> inventoryPath(paths.session, value))
                     .toList();
-            List<Path> candidates = new ArrayList<>();
-            for (String relative : COMPACTABLE_RELATIVE_PATHS) {
-                Path candidate = paths.session.resolve(relative).toAbsolutePath().normalize();
-                validateCompactableCandidate(paths.session, candidate, identity,
-                        protectedPaths, sameStore);
-                if (Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
-                    candidates.add(candidate);
+            validateProtectedPaths(paths.session, protectedPaths);
+            try (DirectoryStream<Path> opened = openSessionDirectory(paths.session)) {
+                if (!(opened instanceof SecureDirectoryStream<?> rawSecure)) {
+                    throw new CompactionRefusal(
+                            "secure directory streams are unavailable for the session file store");
                 }
-            }
+                @SuppressWarnings("unchecked")
+                SecureDirectoryStream<Path> sessionStream =
+                        (SecureDirectoryStream<Path>) rawSecure;
+                revalidateSessionDescriptor(sessionStream, identity);
 
-            for (Path candidate : candidates) {
-                revalidateSessionDirectory(paths.session, identity, sameStore);
-                long candidateBytes = compactableBytes(candidate, identity, sameStore);
-                deleteCompactableTree(candidate, paths.session, identity, sameStore);
-                String relative = paths.session.relativize(candidate).toString().replace('\\', '/');
-                removed.add(relative);
-                reclaimedBytes = Math.addExact(reclaimedBytes, candidateBytes);
+                List<CandidateBinding> candidates = new ArrayList<>();
+                for (String relative : COMPACTABLE_RELATIVE_PATHS) {
+                    CandidateBinding candidate = bindCandidate(sessionStream, paths.session,
+                            relative, identity, sameStore);
+                    if (candidate != null) {
+                        candidates.add(candidate);
+                    }
+                }
+
+                for (CandidateBinding candidate : candidates) {
+                    currentCandidate = candidate.relativePath;
+                    progress.candidateModified = false;
+                    progress.candidateFullyRemoved = false;
+                    requireSessionDirectoryIdentity(paths.session, identity, sameStore);
+                    revalidateSessionDescriptor(sessionStream, identity);
+                    deleteCandidate(sessionStream, candidate, deletionHook, progress);
+                    removed.add(candidate.relativePath);
+                    currentCandidate = null;
+                    progress.candidateModified = false;
+                    progress.candidateFullyRemoved = false;
+                }
             }
             return new CompactionResult(removed.isEmpty()
                     ? CompactionStatus.NOTHING_TO_REMOVE : CompactionStatus.COMPACTED,
-                    List.copyOf(removed), reclaimedBytes, null);
+                    List.copyOf(removed), List.of(), progress.reclaimedBytes, null);
         } catch (CompactionRefusal e) {
+            recordInterruptedCandidate(removed, partiallyModified, currentCandidate, progress);
             return new CompactionResult(CompactionStatus.REFUSED, List.copyOf(removed),
-                    reclaimedBytes, boundedSingleLine(e.getMessage()));
+                    List.copyOf(partiallyModified), progress.reclaimedBytes,
+                    boundedSingleLine(e.getMessage()));
         } catch (IOException | RuntimeException e) {
+            recordInterruptedCandidate(removed, partiallyModified, currentCandidate, progress);
+            Throwable reported = e instanceof UncheckedIOException unchecked
+                    ? unchecked.getCause() : e;
             return new CompactionResult(CompactionStatus.FAILED, List.copyOf(removed),
-                    reclaimedBytes, boundedSingleLine(message(e)));
+                    List.copyOf(partiallyModified), progress.reclaimedBytes,
+                    boundedSingleLine(message(reported)));
         }
     }
 
@@ -1457,35 +1513,16 @@ public final class TestSessionCoordinator {
         return (path.isAbsolute() ? path : session.resolve(path)).toAbsolutePath().normalize();
     }
 
-    private static void validateCompactableCandidate(
-            Path session, Path candidate, SessionDirectoryIdentity identity,
-            List<Path> protectedPaths, BiPredicate<FileStore, Path> sameStore)
-            throws IOException, CompactionRefusal {
-        revalidateSessionDirectory(session, identity, sameStore);
-        Path expected = identity.realPath.resolve(session.relativize(candidate)).normalize();
-        if (!candidate.startsWith(identity.realPath) || candidate.equals(identity.realPath)
-                || !candidate.equals(expected)) {
-            throw new CompactionRefusal("compactable path escapes the captured session root: " + candidate);
-        }
+    private static void validateProtectedPaths(Path session, List<Path> protectedPaths)
+            throws CompactionRefusal {
+        Path root = session.toAbsolutePath().normalize();
         for (Path protectedPath : protectedPaths) {
-            if (protectedPath.equals(candidate) || protectedPath.startsWith(candidate)) {
-                throw new CompactionRefusal("compactable path contains inventoried evidence: " + candidate);
-            }
-        }
-        if (!Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
-            return;
-        }
-        Path current = candidate;
-        while (!current.equals(identity.realPath)) {
-            validatePlainContainedPath(current, identity, sameStore, true);
-            current = current.getParent();
-            if (current == null) {
-                throw new CompactionRefusal("compactable path has no captured session ancestor");
-            }
-        }
-        try (Stream<Path> tree = Files.walk(candidate)) {
-            for (Path path : tree.toList()) {
-                validatePlainContainedPath(path, identity, sameStore, false);
+            for (String relative : COMPACTABLE_RELATIVE_PATHS) {
+                Path candidate = root.resolve(relative).normalize();
+                if (protectedPath.equals(candidate) || protectedPath.startsWith(candidate)) {
+                    throw new CompactionRefusal(
+                            "compactable path contains inventoried evidence: " + candidate);
+                }
             }
         }
     }
@@ -1504,50 +1541,282 @@ public final class TestSessionCoordinator {
         }
     }
 
-    private static void validatePlainContainedPath(
-            Path path, SessionDirectoryIdentity identity,
-            BiPredicate<FileStore, Path> sameStore, boolean requireDirectory)
-            throws IOException, CompactionRefusal {
-        Path expected = path.toAbsolutePath().normalize();
-        if (!expected.startsWith(identity.realPath) || expected.equals(identity.realPath)
-                || Files.isSymbolicLink(expected)
-                || !expected.toRealPath(LinkOption.NOFOLLOW_LINKS).equals(expected)
-                || !sameStore.test(identity.fileStore, expected)) {
-            throw new CompactionRefusal("unsafe compactable descendant: " + expected);
-        }
-        BasicFileAttributes attributes = Files.readAttributes(expected, BasicFileAttributes.class,
-                LinkOption.NOFOLLOW_LINKS);
-        if (requireDirectory && !attributes.isDirectory()) {
-            throw new CompactionRefusal("compactable path component is not a directory: " + expected);
+    private static void requireSessionDirectoryIdentity(
+            Path session, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore) throws CompactionRefusal {
+        try {
+            revalidateSessionDirectory(session, identity, sameStore);
+        } catch (IOException | RuntimeException e) {
+            throw new CompactionRefusal(
+                    "session directory identity cannot be inspected: " + message(e));
         }
     }
 
-    private static long compactableBytes(
-            Path candidate, SessionDirectoryIdentity identity,
+    private static DirectoryStream<Path> openSessionDirectory(Path session)
+            throws CompactionRefusal {
+        try {
+            return Files.newDirectoryStream(session);
+        } catch (IOException | RuntimeException e) {
+            throw new CompactionRefusal(
+                    "session directory cannot be opened safely: " + message(e));
+        }
+    }
+
+    private static void revalidateSessionDescriptor(
+            SecureDirectoryStream<Path> sessionStream, SessionDirectoryIdentity identity)
+            throws CompactionRefusal {
+        try {
+            BasicFileAttributeView view = sessionStream.getFileAttributeView(
+                    BasicFileAttributeView.class);
+            if (view == null) {
+                throw new CompactionRefusal("session descriptor attributes are unavailable");
+            }
+            BasicFileAttributes attributes = view.readAttributes();
+            if (!attributes.isDirectory() || !identity.fileKey.equals(attributes.fileKey())) {
+                throw new CompactionRefusal("open session descriptor identity changed");
+            }
+        } catch (IOException | RuntimeException e) {
+            throw new CompactionRefusal(
+                    "session descriptor identity cannot be inspected: " + message(e));
+        }
+    }
+
+    private static CandidateBinding bindCandidate(
+            SecureDirectoryStream<Path> sessionStream, Path session, String relative,
+            SessionDirectoryIdentity identity, BiPredicate<FileStore, Path> sameStore)
+            throws CompactionRefusal {
+        Map<Path, BoundEntry> entries = new LinkedHashMap<>();
+        Path candidate = Path.of(relative);
+        try {
+            bindCandidatePath(sessionStream, session, candidate, 0, Path.of(""), entries,
+                    identity, sameStore);
+            return new CandidateBinding(relative, Map.copyOf(entries));
+        } catch (CandidateAbsent e) {
+            return null;
+        } catch (NotDirectoryException e) {
+            throw new CompactionRefusal(
+                    "compactable path ancestor is not a directory: " + relative);
+        } catch (IOException | RuntimeException e) {
+            throw new CompactionRefusal(
+                    "compactable path cannot be inspected safely: " + relative + ": " + message(e));
+        }
+    }
+
+    private static void bindCandidatePath(
+            SecureDirectoryStream<Path> parent, Path session, Path candidate, int index,
+            Path parentRelative, Map<Path, BoundEntry> entries,
+            SessionDirectoryIdentity identity, BiPredicate<FileStore, Path> sameStore)
+            throws IOException, CompactionRefusal, CandidateAbsent {
+        Path name = candidate.getName(index);
+        Path relative = parentRelative.getNameCount() == 0
+                ? name : parentRelative.resolve(name);
+        BoundEntry bound;
+        try {
+            bound = inspectEntry(parent, name, session.resolve(relative), relative,
+                    true, identity, sameStore);
+        } catch (NoSuchFileException e) {
+            throw new CandidateAbsent();
+        }
+        entries.put(relative, bound);
+        try (SecureDirectoryStream<Path> child = parent.newDirectoryStream(
+                name, LinkOption.NOFOLLOW_LINKS)) {
+            verifyDirectoryDescriptor(child, bound);
+            if (index + 1 < candidate.getNameCount()) {
+                bindCandidatePath(child, session, candidate, index + 1, relative,
+                        entries, identity, sameStore);
+            } else {
+                bindDescendants(child, session, relative, entries, identity, sameStore);
+            }
+        }
+    }
+
+    private static void bindDescendants(
+            SecureDirectoryStream<Path> directory, Path session, Path parentRelative,
+            Map<Path, BoundEntry> entries, SessionDirectoryIdentity identity,
             BiPredicate<FileStore, Path> sameStore) throws IOException, CompactionRefusal {
-        long total = 0L;
-        try (Stream<Path> tree = Files.walk(candidate)) {
-            for (Path path : tree.toList()) {
-                validatePlainContainedPath(path, identity, sameStore, false);
-                BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class,
-                        LinkOption.NOFOLLOW_LINKS);
-                if (attributes.isRegularFile()) {
-                    total = Math.addExact(total, attributes.size());
+        List<Path> names = new ArrayList<>();
+        for (Path entry : directory) {
+            names.add(entry.getFileName());
+        }
+        names.sort(Comparator.comparing(Path::toString));
+        for (Path name : names) {
+            Path relative = parentRelative.resolve(name);
+            BoundEntry bound = inspectEntry(directory, name, session.resolve(relative),
+                    relative, false, identity, sameStore);
+            entries.put(relative, bound);
+            if (bound.directory) {
+                try (SecureDirectoryStream<Path> child = directory.newDirectoryStream(
+                        name, LinkOption.NOFOLLOW_LINKS)) {
+                    verifyDirectoryDescriptor(child, bound);
+                    bindDescendants(child, session, relative, entries, identity, sameStore);
                 }
             }
         }
-        return total;
     }
 
-    private static void deleteCompactableTree(
-            Path candidate, Path session, SessionDirectoryIdentity identity,
+    private static BoundEntry inspectEntry(
+            SecureDirectoryStream<Path> parent, Path name, Path absolute, Path relative,
+            boolean requireDirectory, SessionDirectoryIdentity identity,
             BiPredicate<FileStore, Path> sameStore) throws IOException, CompactionRefusal {
-        try (Stream<Path> tree = Files.walk(candidate)) {
-            for (Path path : tree.sorted(Comparator.reverseOrder()).toList()) {
-                revalidateSessionDirectory(session, identity, sameStore);
-                validatePlainContainedPath(path, identity, sameStore, false);
-                Files.delete(path);
+        BasicFileAttributes attributes = secureAttributes(parent, name);
+        if (attributes.isSymbolicLink() || requireDirectory && !attributes.isDirectory()
+                || attributes.fileKey() == null) {
+            throw new CompactionRefusal("unsafe compactable entry: " + relative);
+        }
+        Path normalized = absolute.toAbsolutePath().normalize();
+        if (!normalized.startsWith(identity.realPath) || normalized.equals(identity.realPath)
+                || !normalized.toRealPath(LinkOption.NOFOLLOW_LINKS).equals(normalized)
+                || !sameStore.test(identity.fileStore, normalized)) {
+            throw new CompactionRefusal("unsafe compactable descendant: " + relative);
+        }
+        return new BoundEntry(relative, attributes.fileKey(), attributes.isDirectory(),
+                attributes.isRegularFile() ? attributes.size() : 0L);
+    }
+
+    private static BasicFileAttributes secureAttributes(
+            SecureDirectoryStream<Path> parent, Path name) throws IOException {
+        BasicFileAttributeView view = parent.getFileAttributeView(
+                name, BasicFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+        if (view == null) {
+            throw new IOException("descriptor-relative attributes are unavailable for " + name);
+        }
+        return view.readAttributes();
+    }
+
+    private static void verifyDirectoryDescriptor(
+            SecureDirectoryStream<Path> directory, BoundEntry bound)
+            throws CompactionRefusal {
+        try {
+            BasicFileAttributeView view = directory.getFileAttributeView(BasicFileAttributeView.class);
+            if (view == null) {
+                throw new CompactionRefusal(
+                        "directory descriptor attributes are unavailable: " + bound.relativePath);
             }
+            BasicFileAttributes attributes = view.readAttributes();
+            if (!attributes.isDirectory() || !bound.fileKey.equals(attributes.fileKey())) {
+                throw new CompactionRefusal(
+                        "directory identity changed while opening: " + bound.relativePath);
+            }
+        } catch (IOException | RuntimeException e) {
+            throw new CompactionRefusal(
+                    "directory descriptor cannot be inspected: " + bound.relativePath
+                            + ": " + message(e));
+        }
+    }
+
+    private static void deleteCandidate(
+            SecureDirectoryStream<Path> sessionStream, CandidateBinding candidate,
+            Consumer<String> deletionHook, DeletionProgress progress)
+            throws IOException, CompactionRefusal {
+        Path root = Path.of(candidate.relativePath);
+        List<BoundEntry> deletionOrder = candidate.entries.values().stream()
+                .filter(entry -> entry.relativePath.equals(root)
+                        || entry.relativePath.startsWith(root))
+                .sorted(Comparator.comparingInt(
+                        (BoundEntry entry) -> entry.relativePath.getNameCount()).reversed()
+                        .thenComparing(entry -> entry.relativePath.toString()))
+                .toList();
+        for (BoundEntry entry : deletionOrder) {
+            deleteBoundEntry(sessionStream, candidate, entry, deletionHook, progress);
+        }
+    }
+
+    private static void deleteBoundEntry(
+            SecureDirectoryStream<Path> sessionStream, CandidateBinding candidate,
+            BoundEntry target, Consumer<String> deletionHook, DeletionProgress progress)
+            throws IOException, CompactionRefusal {
+        List<SecureDirectoryStream<Path>> opened = new ArrayList<>();
+        SecureDirectoryStream<Path> parent = sessionStream;
+        try {
+            Path parentRelative = target.relativePath.getParent();
+            Path traversed = Path.of("");
+            if (parentRelative != null) {
+                for (Path component : parentRelative) {
+                    traversed = traversed.getNameCount() == 0
+                            ? component : traversed.resolve(component);
+                    BoundEntry boundParent = candidate.entries.get(traversed);
+                    if (boundParent == null || !boundParent.directory) {
+                        throw new CompactionRefusal(
+                                "unbound compactable ancestor: " + traversed);
+                    }
+                    verifyBoundEntry(parent, component, boundParent);
+                    SecureDirectoryStream<Path> child = openBoundDirectory(
+                            parent, component, boundParent);
+                    opened.add(child);
+                    parent = child;
+                }
+            }
+            Path name = target.relativePath.getFileName();
+            verifyBoundEntry(parent, name, target);
+            deletionHook.accept(target.relativePath.toString().replace('\\', '/'));
+            verifyBoundEntry(parent, name, target);
+            if (target.directory) {
+                parent.deleteDirectory(name);
+                progress.candidateModified = true;
+            } else {
+                parent.deleteFile(name);
+                progress.candidateModified = true;
+                progress.reclaimedBytes = Math.addExact(progress.reclaimedBytes, target.size);
+            }
+            if (target.relativePath.equals(Path.of(candidate.relativePath))) {
+                progress.candidateFullyRemoved = true;
+            }
+        } finally {
+            for (int index = opened.size() - 1; index >= 0; index--) {
+                opened.get(index).close();
+            }
+        }
+    }
+
+    private static void verifyBoundEntry(
+            SecureDirectoryStream<Path> parent, Path name, BoundEntry expected)
+            throws CompactionRefusal {
+        try {
+            BasicFileAttributes actual = secureAttributes(parent, name);
+            if (actual.isSymbolicLink() || actual.isDirectory() != expected.directory
+                    || !expected.fileKey.equals(actual.fileKey())) {
+                throw new CompactionRefusal(
+                        "compactable entry identity changed: " + expected.relativePath);
+            }
+        } catch (IOException | RuntimeException e) {
+            throw new CompactionRefusal(
+                    "compactable entry cannot be inspected: " + expected.relativePath
+                            + ": " + message(e));
+        }
+    }
+
+    private static SecureDirectoryStream<Path> openBoundDirectory(
+            SecureDirectoryStream<Path> parent, Path name, BoundEntry expected)
+            throws CompactionRefusal {
+        try {
+            SecureDirectoryStream<Path> child = parent.newDirectoryStream(
+                    name, LinkOption.NOFOLLOW_LINKS);
+            try {
+                verifyDirectoryDescriptor(child, expected);
+                return child;
+            } catch (CompactionRefusal e) {
+                child.close();
+                throw e;
+            }
+        } catch (CompactionRefusal e) {
+            throw e;
+        } catch (IOException | RuntimeException e) {
+            throw new CompactionRefusal(
+                    "compactable ancestor cannot be opened: " + expected.relativePath
+                            + ": " + message(e));
+        }
+    }
+
+    private static void recordInterruptedCandidate(
+            List<String> removed, List<String> partial, String currentCandidate,
+            DeletionProgress progress) {
+        if (currentCandidate == null) {
+            return;
+        }
+        if (progress.candidateFullyRemoved && !removed.contains(currentCandidate)) {
+            removed.add(currentCandidate);
+        } else if (progress.candidateModified && !partial.contains(currentCandidate)) {
+            partial.add(currentCandidate);
         }
     }
 
@@ -2593,6 +2862,9 @@ public final class TestSessionCoordinator {
         private CompactionRefusal(String message) {
             super(message);
         }
+    }
+
+    private static final class CandidateAbsent extends Exception {
     }
 
 }

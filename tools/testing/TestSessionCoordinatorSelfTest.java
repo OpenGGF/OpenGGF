@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.net.URLDecoder;
 import java.nio.channels.FileChannel;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,7 +42,8 @@ public final class TestSessionCoordinatorSelfTest {
             "launch_usable_inodes", "launch_usable_inodes_reason", "completion_usable_bytes",
             "completion_total_bytes", "completion_usable_inodes",
             "completion_usable_inodes_reason", "compaction_status", "compaction_removed_relative_paths",
-            "compaction_retained_relative_paths", "compaction_reclaimed_bytes",
+            "compaction_partially_modified_relative_paths", "compaction_retained_relative_paths",
+            "compaction_reclaimed_bytes",
             "compaction_error", "retain_ephemeral",
             "storage_finalization_error", "numeric_inode_unavailable_reason",
             "launch_capacity_error", "launch_inode_probe_status", "launch_inode_probe_error",
@@ -66,6 +69,9 @@ public final class TestSessionCoordinatorSelfTest {
 
         verifyTerminalCompactionAllowlist(root);
         verifyTerminalCompactionRefusals(root);
+        verifySecureCompactionRejectsPathSwap(root);
+        verifyCompactionInspectionFailureIsNotAbsence(root);
+        verifyPartialCompactionEvidenceIsTruthful(root);
         verifyRequiredFreeBytesFormula();
         verifyManagedReservationIsValidated(root);
         verifyManagedHelperFailureDoesNotFallback(root);
@@ -202,6 +208,93 @@ public final class TestSessionCoordinatorSelfTest {
                 "inventory refusal must not partially compact another candidate");
     }
 
+    private static void verifySecureCompactionRejectsPathSwap(Path root) throws Exception {
+        Path session = root.resolve("compact-path-swap");
+        Object paths = createCompactionFixture(session);
+        Object identity = captureSessionIdentity(session);
+        Path outside = createOwnedDirectory(root.resolve("compact-path-swap-outside"));
+        Path outsideFile = outside.resolve("ephemeral.bin");
+        Files.writeString(outsideFile, "outside-must-survive", StandardCharsets.UTF_8);
+        Path capturedTmp = root.resolve("compact-path-swap-captured-tmp");
+        boolean[] swapped = {false};
+
+        Object result = compactWithDeletionHook(paths, "PASSED", false, List.of(), List.of(),
+                identity, (expected, candidate) -> true, relative -> {
+                    if (!swapped[0] && relative.equals("tmp/ephemeral.bin")) {
+                        try {
+                            Files.move(session.resolve("tmp"), capturedTmp);
+                            Files.createSymbolicLink(session.resolve("tmp"), outside);
+                            swapped[0] = true;
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    }
+                });
+
+        check(swapped[0], "swap hook must run after secure candidate binding");
+        check(recordValue(result, "status").toString().equals("REFUSED"),
+                "a replaced candidate binding must be refused");
+        check(Files.readString(outsideFile).equals("outside-must-survive"),
+                "descriptor-relative refusal must not touch the symlink target");
+        @SuppressWarnings("unchecked")
+        List<String> partial = (List<String>) recordValue(
+                result, "partiallyModifiedRelativePaths");
+        check(partial.equals(List.of("tmp")),
+                "the captured tmp tree was partially modified before replacement refusal: " + partial);
+        check((long) recordValue(result, "reclaimedBytes") == 8L,
+                "the securely deleted captured file must be counted before replacement refusal");
+    }
+
+    private static void verifyCompactionInspectionFailureIsNotAbsence(Path root) throws Exception {
+        Path session = root.resolve("compact-wrong-type-ancestor");
+        Object paths = createCompactionFixture(session);
+        Object identity = captureSessionIdentity(session);
+        deleteTree(session.resolve("build/test-classes"));
+        Files.writeString(session.resolve("build/test-classes"), "wrong-type",
+                StandardCharsets.UTF_8);
+
+        Object result = compact(paths, "PASSED", false, List.of(), List.of(), identity);
+
+        check(recordValue(result, "status").toString().equals("REFUSED"),
+                "a wrong-type candidate ancestor must not be treated as an absent candidate");
+        check(Files.isRegularFile(session.resolve("tmp/ephemeral.bin")),
+                "inspection uncertainty must refuse before deleting another candidate");
+    }
+
+    private static void verifyPartialCompactionEvidenceIsTruthful(Path root) throws Exception {
+        Path session = root.resolve("compact-partial-failure");
+        Object paths = createCompactionFixture(session);
+        Object identity = captureSessionIdentity(session);
+        Files.delete(session.resolve("tmp/ephemeral.bin"));
+        Files.writeString(session.resolve("tmp/a.bin"), "aaa", StandardCharsets.UTF_8);
+        Files.writeString(session.resolve("tmp/b.bin"), "bbbbb", StandardCharsets.UTF_8);
+
+        Object result = compactWithDeletionHook(paths, "PASSED", false, List.of(), List.of(),
+                identity, (expected, candidate) -> true, relative -> {
+                    if (relative.equals("tmp/b.bin")) {
+                        throw new UncheckedIOException(new IOException("injected mid-tree deletion failure"));
+                    }
+                });
+
+        check(recordValue(result, "status").toString().equals("FAILED"),
+                "an injected mid-tree deletion error must fail compaction");
+        @SuppressWarnings("unchecked")
+        List<String> removed = (List<String>) recordValue(result, "removedRelativePaths");
+        @SuppressWarnings("unchecked")
+        List<String> partial = (List<String>) recordValue(
+                result, "partiallyModifiedRelativePaths");
+        check(removed.isEmpty(), "a partially deleted candidate must not be reported as removed");
+        check(partial.equals(List.of("tmp")),
+                "partial deletion must name the modified candidate: " + partial);
+        check((long) recordValue(result, "reclaimedBytes") == 3L,
+                "only the successfully deleted first file must count as reclaimed");
+        check(!Files.exists(session.resolve("tmp/a.bin"))
+                        && Files.isRegularFile(session.resolve("tmp/b.bin")),
+                "injected deletion failure must occur after exactly one file deletion");
+        check(Files.isRegularFile(session.resolve("build/test-classes/traces/copied.bin")),
+                "mid-tree failure must not continue to another candidate");
+    }
+
     private static Object createCompactionFixture(Path session) throws Exception {
         Class<?> pathsType = Class.forName("TestSessionCoordinator$Paths");
         var create = pathsType.getDeclaredMethod("create", Path.class);
@@ -271,6 +364,20 @@ public final class TestSessionCoordinatorSelfTest {
         method.setAccessible(true);
         return method.invoke(null, paths, state, retainEphemeral, reports, artifacts,
                 identity, verifier);
+    }
+
+    private static Object compactWithDeletionHook(
+            Object paths, String state, boolean retainEphemeral, List<String> reports,
+            List<String> artifacts, Object identity, BiPredicate<FileStore, Path> verifier,
+            Consumer<String> deletionHook) throws Exception {
+        Class<?> pathsType = Class.forName("TestSessionCoordinator$Paths");
+        Class<?> identityType = Class.forName("TestSessionCoordinator$SessionDirectoryIdentity");
+        var method = TestSessionCoordinator.class.getDeclaredMethod("compactTerminalSession",
+                pathsType, String.class, boolean.class, List.class, List.class, identityType,
+                BiPredicate.class, Consumer.class);
+        method.setAccessible(true);
+        return method.invoke(null, paths, state, retainEphemeral, reports, artifacts,
+                identity, verifier, deletionHook);
     }
 
     private static Object recordValue(Object record, String accessor) throws Exception {
@@ -841,6 +948,8 @@ public final class TestSessionCoordinatorSelfTest {
             check(json.contains("\"" + key + "\""), "manifest missing required key: " + key);
         }
         check(json.contains("\"state\": \"PASSED\""), "successful manifest must be PASSED");
+        check(json.contains("\"compaction_partially_modified_relative_paths\": []"),
+                "successful compaction must not report a partially modified candidate");
         check(json.contains("\"run_id\": \"" + runId + "\""), "manifest run ID must match marker");
         check(json.matches("(?s).*\"source_digest\": \"[0-9a-f]{64}\".*"), "source digest must be SHA-256");
         check(json.matches("(?s).*\"runtime_inputs_digest\": \"[0-9a-f]{64}\".*"),
