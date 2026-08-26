@@ -86,11 +86,11 @@ files.
   pinned `develop` source commit, JDK 21, quiet markers, and a session-owned
   temporary root. The merged tree uses its own
   `tools/testing/test-session.sh`; the frozen `next` baseline, whose tree
-  predates that wrapper, invokes the pinned `develop` wrapper by absolute path
-  from inside an immutable detached `next` baseline worktree. The coordinator
-  discovers the current working tree independently of the script location, so
-  this isolates and builds `next` without modifying it. Evidence records the
-  wrapper commit, file hash, command, and separate session manifest.
+  predates that wrapper and its Maven output properties, invokes the pinned
+  `develop` wrapper by absolute path from inside an immutable detached `next`
+  baseline worktree and runs Maven through the reviewed frozen-parent adapter
+  described below. Evidence records the wrapper and adapter commits, file
+  hashes, commands, and separate session manifests.
 - Ordinary and structural-guard sessions are separate; raw Maven output is not
   certification evidence. Frozen `develop` and the merged tree use their
   in-tree `-Pguards` profile. Frozen `next` predates that profile, so its
@@ -162,6 +162,42 @@ update `docs/status/trace-frontier-log.md` whenever a required sweep moves or
 selects a frontier. The validation report contains an owner and 0.7 release
 disposition for every remaining failure or error.
 
+### Frozen-parent test-session adapter
+
+Frozen `next` `84d9a3761` predates both the coordinator and the POM properties
+that route build, report, temporary, diagnostic, artifact, and distribution
+output into a coordinator session. An external coordinator without an adapter
+would therefore produce a misleading manifest with empty report inventory while
+Maven wrote into the worktree's ignored `target` directory.
+
+The integration branch provides a pinned, reviewed compatibility adapter under
+`tools/testing/` for this historical baseline only. The adapter runs as the
+coordinator's child command in a newly created immutable detached worktree and:
+
+1. requires the detached worktree to match `84d9a3761`, have no tracked or
+   untracked source changes, and have no existing `target` path;
+2. derives the coordinator session roots from its injected `OPENGGF_*`
+   identity, then creates only an ignored `target` symlink to the
+   session-owned build root;
+3. creates build-root links for `surefire-reports`, `test-tmp`, trace reports,
+   diagnostics, artifacts, and distribution to their coordinator-owned roots;
+4. invokes Maven with an override of frozen `next`'s user-defined
+   `surefire.argLine` that preserves its CDS, Mockito agent, and heap options
+   while adding
+   `org.lwjgl.system.SharedLibraryExtractPath=<session tmp>/lwjgl-${surefire.forkNumber}`;
+5. declares the adapter itself in `OPENGGF_RUNTIME_INPUTS`, so the coordinator's
+   runtime-input digest detects any change during a run; and
+6. removes only the ignored `target` symlink on exit, leaving the immutable
+   source identity unchanged and the session evidence intact.
+
+The adapter is test infrastructure, not a production or gameplay change. Its
+self-test runs one frozen-next guard through the pinned coordinator, requires
+start/end markers and a valid manifest, proves the expected Surefire XML is in
+the manifest inventory, and verifies the report's JVM properties point
+`java.io.tmpdir` at the session root and LWJGL extraction at the resolved
+per-fork path. The full parent baseline cannot start until that self-test and
+the coordinator's own self-test pass.
+
 ### Failure handling and rollback
 
 The original `next` and `develop` branches remain untouched during development.
@@ -193,10 +229,11 @@ Record exact, wrapper-produced ordinary and structural-guard sessions for both
 frozen parents in immutable detached worktrees. `develop` uses its in-tree
 wrapper and `-Pguards` profile. Frozen `next` runs the wrapper and coordinator
 from frozen `develop` `9b46505eb` by absolute path while its process working
-directory remains the detached `next` worktree. Because frozen `next` has no
-`guards` Maven profile, generate its explicit fresh-JVM guard selector from the
-frozen tree using the four merged-profile naming conventions above, record the
-sorted source inventory, run exactly those classes, and reject any missing,
+directory remains the detached `next` worktree and the compatibility adapter
+routes every output into that coordinator session. Because frozen `next` has
+no `guards` Maven profile, generate its explicit fresh-JVM guard selector from
+the frozen tree using the four merged-profile naming conventions above, record
+the sorted source inventory, run exactly those classes, and reject any missing,
 duplicate, or extra report. This is equivalent parent guard evidence without
 mutating or borrowing a POM profile from another tree.
 
