@@ -1107,6 +1107,7 @@ public final class LevelRenderer {
         if (options.includeHud() && lm.hudRenderManager != null && !lm.isHudSuppressed()
                 && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
             AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
+            lm.hudRenderManager.setViewportWidth(lm.graphicsManager.getProjectionWidth());
             lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
         }
         profiler.endSection("render.hud");

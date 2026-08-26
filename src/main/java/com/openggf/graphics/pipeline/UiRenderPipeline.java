@@ -86,6 +86,7 @@ public class UiRenderPipeline {
     public void renderOverlay(LevelState levelState, AbstractPlayableSprite player) {
         if (hudEnabled && hudRenderManager != null && levelState != null) {
             renderOrderRecorder.record(RenderPhase.OVERLAY, "HUD");
+            hudRenderManager.setViewportWidth(graphicsManager.getProjectionWidth());
             hudRenderManager.draw(levelState, player);
         }
     }
