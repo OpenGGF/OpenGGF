@@ -242,8 +242,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   `mountpoint`, and `rmdir` in managed scratch. Fail closed if unprivileged
   namespaces or bind mounts are unavailable. The coordinator-child adapter
   creates an ignored empty real `target` directory and empty real mountpoint
-  directories beneath the coordinator build root, then runs Maven inside the
-  private namespace with these bindings:
+  directories beneath the coordinator build root, then starts a namespace
+  leader. The leader must run `mount --make-rprivate /` before establishing
+  these bindings:
 
   ```text
   $OPENGGF_BUILD_DIRECTORY       -> <worktree>/target
@@ -257,8 +258,11 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   Authenticate each binding inside the namespace with `mountpoint` and matching
   no-follow device/inode identity between source and mounted target. Record a
-  bounded mount table and prove the mounts do not appear in the parent
-  namespace. Preserve frozen `next`'s own historical
+  bounded mount table, namespace-leader PID/start identity, and mount-namespace
+  inode, then stop at a ready/go barrier. Before releasing Maven, the adapter in
+  the still-parent namespace revalidates that PID/start/namespace identity and
+  simultaneously proves its `target` view is the original empty ordinary
+  directory and is not a mountpoint. Preserve frozen `next`'s own historical
   `java.io.tmpdir=<worktree>/target/test-tmp`; lexical and canonical paths must
   both remain worktree-local while the mount identity proves exact backing by
   the coordinator tmp root. Keep using `${surefire.argLine}` only to append:
@@ -268,10 +272,13 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   ```
 
   Reject caller `argLine`, `surefire.argLine`, `java.io.tmpdir`, LWJGL, mount,
-  or namespace overrides. After the private namespace exits, require the parent
-  view of `target` to be the exact still-empty ordinary directory recorded in
-  the recovery marker and remove only it with `rmdir`. Never recursively delete
-  it. Mandatory outer recovery uses the same checks after forced termination.
+  or namespace overrides. Before cleanup, require the recorded leader to be
+  gone and scan `/proc/*/ns/mnt` for the recorded inode; any surviving namespace
+  holder or unreadable/ambiguous holder evidence fails closed. Then require the
+  parent view of `target` to be the exact still-empty, non-mount ordinary
+  directory recorded in the recovery marker and remove only it with `rmdir`.
+  Never recursively delete it. Mandatory outer recovery uses the same checks
+  after forced termination.
 
 - [ ] **Step 3: Implement the pinned generated-report normalization**
 
@@ -294,7 +301,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   Before Maven, extend the authenticated recovery marker with frozen HEAD, run
   ID, canonical worktree/report paths, exact preimage archive path/hash/length,
-  and target-link identity. Mandatory outer recovery uses no-follow/type/hash
+  ordinary target mountpoint path, pre-mount no-follow type/device/inode,
+  expected parent-empty/non-mount state, namespace leader PID/start identity,
+  and mount-namespace inode. Mandatory outer recovery uses no-follow/type/hash
   checks to restore only that report if forced termination bypasses the child
   trap. Exact-coordinator evidence run
   `20260826T053627Z-p1892866-17619a` proves the coordinator forcibly terminates
@@ -315,8 +324,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   mutation, report plus second mutation, wrong initial blob, missing report,
   symlink/directory replacement, archive failure, restore failure, and
   interruption after report generation. Add namespace-unavailable,
-  bind-failure, wrong mount source/device/inode, mount leakage, non-empty target,
-  and changed target-identity cases. Include a real frozen-POM fixture proving
+  bind-failure, wrong mount source/device/inode, propagation leakage,
+  ready/go parent-view mismatch, surviving namespace leader/descendant holder,
+  non-empty target, and changed target-identity cases. Include a real frozen-POM fixture proving
   both worktree-local lexical/canonical temp paths and exact coordinator-tmp
   mount identity while `${surefire.argLine}` yields distinct fork-specific
   LWJGL roots; do not accept a synthetic XML-only assertion. Require exact outcomes:

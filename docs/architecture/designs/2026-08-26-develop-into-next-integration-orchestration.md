@@ -193,16 +193,19 @@ immutable detached worktree and:
    the coordinator roots from its injected `OPENGGF_*` identity, creates an
    ignored empty real directory at `target`, and creates empty real mountpoint
    directories beneath the session build root;
-3. runs Maven inside a private `unshare --user --map-root-user --mount`
-   namespace that bind-mounts the session build root onto the real worktree
-   `target`, then nested-bind-mounts coordinator-owned tmp, Surefire, trace,
-   diagnostic, artifact, and distribution roots onto their historical
-   `target/*` paths;
+3. runs a namespace leader with `unshare --user --map-root-user --mount`, makes
+   `/` recursively private with `mount --make-rprivate /` before any binding,
+   bind-mounts the session build root onto the real worktree `target`, then
+   nested-bind-mounts coordinator-owned tmp, Surefire, trace, diagnostic,
+   artifact, and distribution roots onto their historical `target/*` paths;
 4. authenticates every mount with `mountpoint` plus matching no-follow
-   device/inode identity between source and mounted target, records bounded
-   mount-table evidence, and proves the mounts are invisible to the parent
-   namespace; Maven therefore observes real worktree-local canonical paths
-   while every byte is stored in the exact coordinator root;
+   device/inode identity between source and mounted target, records the leader
+   PID/start time and mount-namespace inode with bounded mount-table evidence,
+   and pauses at a ready/go barrier; the still-parent-namespace adapter verifies
+   the same PID/start/namespace identity while simultaneously proving `target`
+   is a non-mount, empty ordinary directory in its view before releasing Maven;
+   Maven therefore observes real worktree-local canonical paths while every
+   byte is stored in the exact coordinator root;
 5. resolves frozen `next`'s platform-effective `surefire.argLine`, preserving
    CDS, Mockito agent, heap, and macOS `-XstartOnFirstThread`, then appends
    fork-specific
@@ -210,10 +213,14 @@ immutable detached worktree and:
    through the frozen POM's own `${surefire.argLine}` expansion; the historical
    POM continues to own `java.io.tmpdir=<worktree>/target/test-tmp`, whose real
    mount identity is the coordinator tmp root; and
-6. installs cleanup before creating the mountpoint, writes a recovery marker
-   with its exact type/identity, and after the private namespace exits removes
-   only the authenticated empty real `target` directory with `rmdir`. It never
-   recursively deletes, follows, replaces, unlinks, or empties `target`.
+6. installs cleanup before creating the mountpoint and writes a recovery marker
+   with its exact ordinary-directory type/device/inode, expected parent-empty
+   state, namespace leader PID/start identity, and mount-namespace inode. After
+   finalization it scans `/proc/*/ns/mnt` for that inode and requires the leader
+   and every namespace holder to be gone before removing only the still-exact,
+   parent-non-mount, empty real `target` directory with `rmdir`. It never
+   recursively deletes, follows, replaces, reads/unlinks a link, or empties
+   `target`.
 
 The orchestrator invokes the pinned launcher with expected harness commit
 `f1b82774d`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
@@ -238,11 +245,14 @@ destroy the authenticated routing contract.
 An outer recovery/finally step runs after every coordinator outcome. This is
 separate from the child trap because forced process-tree termination can prevent
 the trap from running. Recovery accepts only a marker whose run ID, canonical
-worktree, target path, original empty-directory device/inode, and session roots
-agree with the just-started session. After the private mount namespace is gone,
-it uses no-follow inspection and `rmdir` only on that exact still-empty ordinary
-directory. A symlink, non-empty directory, changed identity, live mount, or
-mismatched marker is reported for human inspection and is never deleted.
+worktree, target path, original empty-directory device/inode, expected
+parent-empty state, namespace leader PID/start identity, mount-namespace inode,
+and session roots agree with the just-started session. It proves the leader is
+gone and scans `/proc/*/ns/mnt` to reject any surviving holder of that namespace
+before using no-follow inspection and `rmdir` only on that exact still-empty,
+parent-non-mount ordinary directory. A symlink, non-empty directory, changed
+identity, live/surviving namespace, propagation leak, or mismatched marker is
+reported for human inspection and is never deleted.
 
 The adapter is test infrastructure, not a production or gameplay change. Its
 self-test suite covers successful Maven completion, ordinary Maven failure, and
