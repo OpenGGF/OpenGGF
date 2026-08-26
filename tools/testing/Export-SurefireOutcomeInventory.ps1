@@ -33,6 +33,32 @@ function Get-OrdinalSorted {
     return $copy.ToArray()
 }
 
+function Assert-JavaFqcn {
+    param([string] $ClassName)
+    $javaKeywords = @(
+        'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char',
+        'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum',
+        'extends', 'false', 'final', 'finally', 'float', 'for', 'goto', 'if',
+        'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native',
+        'new', 'null', 'package', 'private', 'protected', 'public', 'return',
+        'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this',
+        'throw', 'throws', 'transient', 'true', 'try', 'void', 'volatile', 'while', '_'
+    )
+    if ($ClassName.Contains('$') -or $ClassName.Contains('/') -or $ClassName.Contains('\') -or
+        $ClassName.IndexOfAny([char[]]@('*', '?', '[', ']')) -ge 0 -or
+        $ClassName -match '\s') {
+        throw "Source class inventory selector root is not an exact Java FQCN: [$ClassName]"
+    }
+    $segments = $ClassName.Split('.', [System.StringSplitOptions]::None)
+    foreach ($segment in $segments) {
+        if ($segment.Length -eq 0 -or
+            $segment -notmatch '^[\p{L}\p{Nl}\p{Sc}\p{Pc}][\p{L}\p{Nl}\p{Sc}\p{Pc}\p{Nd}\p{Mn}\p{Mc}\p{Cf}]*$' -or
+            $javaKeywords -ccontains $segment) {
+            throw "Source class inventory selector root is not an exact Java FQCN: [$ClassName]"
+        }
+    }
+}
+
 function Read-ClassInventory {
     param([string] $Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
@@ -45,12 +71,7 @@ function Read-ClassInventory {
         if ($className.Length -eq 0) {
             continue
         }
-        if ($className.IndexOfAny([char[]]@("`t", "`r", "`n")) -ge 0) {
-            throw "Invalid class name in source inventory: [$className]"
-        }
-        if ($className.Contains('$')) {
-            throw "Source class inventory selector roots cannot contain `$: $className"
-        }
+        Assert-JavaFqcn $className
         if (-not $seen.Add($className)) {
             throw "Duplicate class in source inventory: $className"
         }
@@ -92,6 +113,70 @@ function Read-HelperAllowlist {
     return ,$helpers
 }
 
+function ConvertFrom-MavenPropertyDefinition {
+    param([string] $Definition, [string] $Argument)
+    if ($Definition.Length -eq 0) {
+        throw "Maven property argument has no name: $Argument"
+    }
+    $separator = $Definition.IndexOf('=', [System.StringComparison]::Ordinal)
+    $name = if ($separator -lt 0) { $Definition } else { $Definition.Substring(0, $separator) }
+    $value = if ($separator -lt 0) { '' } else { $Definition.Substring($separator + 1) }
+    if ($name -notmatch '^[A-Za-z0-9_.-]+$') {
+        throw "Maven property argument has an invalid name: $Argument"
+    }
+    return [pscustomobject]@{
+        Name = $name
+        Value = $value
+        HasValue = ($separator -ge 0)
+        Argument = $Argument
+    }
+}
+
+function Read-MavenPropertyArguments {
+    param([string] $Path)
+    $arguments = @([System.IO.File]::ReadAllLines((Resolve-Path -LiteralPath $Path).Path))
+    $properties = [System.Collections.Generic.List[object]]::new()
+    for ($index = 0; $index -lt $arguments.Count; $index++) {
+        $argument = $arguments[$index]
+        if ($argument.StartsWith('-D', [System.StringComparison]::Ordinal) -and $argument.Length -gt 2) {
+            $properties.Add((ConvertFrom-MavenPropertyDefinition $argument.Substring(2) $argument))
+        }
+        elseif ($argument -ceq '--define') {
+            if (++$index -ge $arguments.Count) {
+                throw 'Maven --define argument is missing its property definition'
+            }
+            $properties.Add((ConvertFrom-MavenPropertyDefinition $arguments[$index] "--define $($arguments[$index])"))
+        }
+        elseif ($argument.StartsWith('--define=', [System.StringComparison]::Ordinal)) {
+            $properties.Add((ConvertFrom-MavenPropertyDefinition $argument.Substring(9) $argument))
+        }
+        elseif ($argument -ceq '-D') {
+            throw 'Maven -D argument is missing its property definition'
+        }
+    }
+    return $properties.ToArray()
+}
+
+function Test-IsSelectionProperty {
+    param([string] $Name)
+    $exactNames = @(
+        'test', 'it.test', 'skipTests', 'maven.test.skip', 'groups', 'excludedGroups',
+        'includes', 'excludes', 'includesFile', 'excludesFile', 'suiteXmlFiles',
+        'includeTags', 'excludeTags', 'includeJUnit5Engines', 'excludeJUnit5Engines'
+    )
+    foreach ($exactName in $exactNames) {
+        if ($Name.Equals($exactName, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+    foreach ($prefix in @('surefire.', 'failsafe.', 'junit.', 'testng.')) {
+        if ($Name.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function Assert-ExplicitSourceSelectorContract {
     param(
         [string[]] $SourceClasses,
@@ -100,17 +185,6 @@ function Assert-ExplicitSourceSelectorContract {
         [string] $AuthenticatedRuntimeInputs
     )
 
-    $supplied = @(
-        -not [string]::IsNullOrWhiteSpace($PatternPath),
-        -not [string]::IsNullOrWhiteSpace($ArgumentPath),
-        -not [string]::IsNullOrWhiteSpace($AuthenticatedRuntimeInputs)
-    )
-    if (($supplied -contains $true) -and ($supplied -contains $false)) {
-        throw 'SelectorPatternInventory, MavenArgumentInventory, and RuntimeInputs must be supplied together'
-    }
-    if ($supplied -notcontains $true) {
-        return
-    }
     foreach ($path in @($PatternPath, $ArgumentPath)) {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
             throw "Selector contract input does not exist: $path"
@@ -149,13 +223,16 @@ function Assert-ExplicitSourceSelectorContract {
     }
 
     $includesFileValues = [System.Collections.Generic.List[string]]::new()
-    foreach ($argument in [System.IO.File]::ReadAllLines((Resolve-Path -LiteralPath $ArgumentPath).Path)) {
-        if ($argument -match '^-Dsurefire\.includesFile=(.*)$') {
-            $includesFileValues.Add($Matches[1])
+    foreach ($property in (Read-MavenPropertyArguments $ArgumentPath)) {
+        if ([string]$property.Name -ceq 'surefire.includesFile') {
+            if (-not $property.HasValue -or ([string]$property.Value).Length -eq 0) {
+                throw "surefire.includesFile requires a canonical absolute value: $($property.Argument)"
+            }
+            $includesFileValues.Add([string]$property.Value)
             continue
         }
-        if ($argument -match '^-D(?i:test|surefire\.includes|surefire\.excludes|groups|excludedGroups|surefire\.groups|surefire\.excludedGroups)(?:=|$)') {
-            throw "Maven selector override is forbidden with surefire.includesFile: $argument"
+        if (Test-IsSelectionProperty ([string]$property.Name)) {
+            throw "Maven selector override is forbidden with surefire.includesFile: $($property.Argument)"
         }
     }
     if ($includesFileValues.Count -ne 1) {
@@ -176,6 +253,7 @@ function Assert-ExplicitSourceSelectorContract {
     if ($runtimeMatches -ne 1) {
         throw "OPENGGF_RUNTIME_INPUTS must contain the canonical selector exactly once; found $runtimeMatches"
     }
+    return $canonicalPatternPath
 }
 
 function Read-EffectiveSurefireConfiguration {
@@ -207,12 +285,23 @@ function Read-EffectiveSurefireConfiguration {
     if ($null -eq $configuration) {
         throw "Effective Surefire execution '$ExecutionId' has no configuration"
     }
-    if ($null -ne $configuration.SelectSingleNode("./*[local-name()='includes']")) {
-        throw "Effective ordinary Surefire execution '$ExecutionId' must not configure includes"
+    $competingNames = @(
+        'includes', 'excludesFile', 'suiteXmlFiles', 'dependenciesToScan', 'test',
+        'includeJUnit5Engines', 'excludeJUnit5Engines', 'includeTags', 'excludeTags'
+    )
+    foreach ($name in $competingNames) {
+        if ($null -ne $configuration.SelectSingleNode("./*[local-name()='$name']")) {
+            throw "Effective ordinary Surefire execution '$ExecutionId' contains competing selection channel $name"
+        }
     }
 
     $values = [ordered]@{}
-    $values.excludes = (@($configuration.SelectNodes("./*[local-name()='excludes']/*[local-name()='exclude']")) | ForEach-Object { $_.InnerText }) -join ','
+    $includesFileNodes = @($configuration.SelectNodes("./*[local-name()='includesFile']"))
+    if ($includesFileNodes.Count -gt 1) {
+        throw "Effective Surefire execution '$ExecutionId' contains duplicate includesFile channels"
+    }
+    $values.includesFile = if ($includesFileNodes.Count -eq 0) { '' } else { $includesFileNodes[0].InnerText }
+    $values.excludes = [string[]]@($configuration.SelectNodes("./*[local-name()='excludes']/*[local-name()='exclude']") | ForEach-Object { $_.InnerText })
     foreach ($name in @('groups', 'excludedGroups', 'forkCount', 'reuseForks')) {
         $node = $configuration.SelectSingleNode("./*[local-name()='$name']")
         $values[$name] = if ($null -eq $node) { '' } else { $node.InnerText }
@@ -221,25 +310,31 @@ function Read-EffectiveSurefireConfiguration {
 }
 
 function Assert-EffectiveSurefireContract {
-    param([string] $BaselinePath, [string] $SelectorPath, [string] $ExecutionId)
-    $supplied = @(
-        -not [string]::IsNullOrWhiteSpace($BaselinePath),
-        -not [string]::IsNullOrWhiteSpace($SelectorPath)
-    )
-    if (($supplied -contains $true) -and ($supplied -contains $false)) {
-        throw 'EffectivePomPath and SelectorEffectivePomPath must be supplied together'
-    }
-    if ($supplied -notcontains $true) {
-        return
-    }
+    param([string] $BaselinePath, [string] $SelectorPath, [string] $ExecutionId, [string] $AuthenticatedSelectorPath)
     $baseline = Read-EffectiveSurefireConfiguration $BaselinePath $ExecutionId
     $selector = Read-EffectiveSurefireConfiguration $SelectorPath $ExecutionId
-    foreach ($name in @('excludes', 'groups', 'excludedGroups', 'forkCount', 'reuseForks')) {
+    if (([string]$baseline.includesFile).Length -ne 0) {
+        throw "Baseline effective Surefire execution contains selector override includesFile: $($baseline.includesFile)"
+    }
+    if ([string]$selector.includesFile -cne $AuthenticatedSelectorPath) {
+        throw "Selector effective Surefire includesFile must equal the authenticated canonical path: expected=[$AuthenticatedSelectorPath] actual=[$($selector.includesFile)]"
+    }
+    $baselineExcludes = @($baseline.excludes)
+    $selectorExcludes = @($selector.excludes)
+    if ($baselineExcludes.Count -ne $selectorExcludes.Count) {
+        throw "Effective Surefire excludes changed under the selector property: baseline=[$($baselineExcludes -join ',')] selector=[$($selectorExcludes -join ',')]"
+    }
+    for ($index = 0; $index -lt $baselineExcludes.Count; $index++) {
+        if ([string]$baselineExcludes[$index] -cne [string]$selectorExcludes[$index]) {
+            throw "Effective Surefire excludes changed under the selector property at ordinal $index`: baseline=[$($baselineExcludes[$index])] selector=[$($selectorExcludes[$index])]"
+        }
+    }
+    foreach ($name in @('groups', 'excludedGroups', 'forkCount', 'reuseForks')) {
         if ([string]$baseline.$name -cne [string]$selector.$name) {
             throw "Effective Surefire $name changed under the selector property: baseline=[$($baseline.$name)] selector=[$($selector.$name)]"
         }
     }
-    Write-Host "Effective Surefire unchanged: excludes=$($baseline.excludes) groups=$($baseline.groups) excludedGroups=$($baseline.excludedGroups) forkCount=$($baseline.forkCount) reuseForks=$($baseline.reuseForks)"
+    Write-Host "Effective Surefire unchanged: excludes=$($baselineExcludes -join ',') groups=$($baseline.groups) excludedGroups=$($baseline.excludedGroups) forkCount=$($baseline.forkCount) reuseForks=$($baseline.reuseForks)"
 }
 
 function Normalize-TokenizedText {
@@ -349,8 +444,22 @@ function ConvertFrom-TsvField {
 }
 
 $sourceClasses = Read-ClassInventory $SourceClassInventory
-Assert-ExplicitSourceSelectorContract $sourceClasses $SelectorPatternInventory $MavenArgumentInventory $RuntimeInputs
-Assert-EffectiveSurefireContract $EffectivePomPath $SelectorEffectivePomPath $SurefireExecutionId
+$preflightValues = [ordered]@{
+    SelectorPatternInventory = $SelectorPatternInventory
+    MavenArgumentInventory = $MavenArgumentInventory
+    RuntimeInputs = $RuntimeInputs
+    EffectivePomPath = $EffectivePomPath
+    SelectorEffectivePomPath = $SelectorEffectivePomPath
+}
+$suppliedPreflight = @($preflightValues.Values | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count
+if ($suppliedPreflight -ne 0 -and $suppliedPreflight -ne $preflightValues.Count) {
+    $missingPreflight = @($preflightValues.Keys | Where-Object { [string]::IsNullOrWhiteSpace([string]$preflightValues[$_]) })
+    throw "Explicit-source preflight is atomic; missing: $($missingPreflight -join ', ')"
+}
+if ($suppliedPreflight -eq $preflightValues.Count) {
+    $authenticatedSelectorPath = Assert-ExplicitSourceSelectorContract $sourceClasses $SelectorPatternInventory $MavenArgumentInventory $RuntimeInputs
+    Assert-EffectiveSurefireContract $EffectivePomPath $SelectorEffectivePomPath $SurefireExecutionId $authenticatedSelectorPath
+}
 $selected = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($className in $sourceClasses) {
     [void]$selected.Add($className)

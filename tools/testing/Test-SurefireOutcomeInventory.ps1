@@ -109,6 +109,26 @@ function New-InventoryRow {
     return "$Identity`t$Class`t$Method`t$Outcome`t$RedKind`t$ExceptionType`t$Message`t$BodyBytes`t$BodySha`t$Report"
 }
 
+function New-EffectivePomText {
+    param(
+        [string] $IncludesFile = '',
+        [string] $AdditionalSelection = '',
+        [string] $ForkCount = '1',
+        [string[]] $Excludes = @('**/*Guard.java', '**/ExcludedTest.java')
+    )
+    $includesFileElement = if ($IncludesFile.Length -eq 0) { '' } else { "<includesFile>$IncludesFile</includesFile>" }
+    $excludeElements = ($Excludes | ForEach-Object { "<exclude>$([System.Security.SecurityElement]::Escape($_))</exclude>" }) -join ''
+    return @"
+<project xmlns="http://maven.apache.org/POM/4.0.0"><build><plugins><plugin>
+  <artifactId>maven-surefire-plugin</artifactId><executions><execution><id>default-test</id><configuration>
+    $includesFileElement$AdditionalSelection
+    <excludes>$excludeElements</excludes>
+    <groups>ordinary</groups><excludedGroups>quarantined</excludedGroups><forkCount>$ForkCount</forkCount><reuseForks>true</reuseForks>
+  </configuration></execution></executions>
+</plugin></plugins></build></project>
+"@
+}
+
 foreach ($implementation in @($exportScript, $compareScript, $partitionScript)) {
     if (-not (Test-Path -LiteralPath $implementation -PathType Leaf)) {
         throw "Required implementation script is absent: $implementation"
@@ -170,27 +190,25 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-Equal $error.report 'TEST-fixture.xml' 'relative report identity'
     }
 
-    Invoke-Case 'export preserves boundary whitespace in exact parameterized identities' {
+    Invoke-Case 'export preserves boundary whitespace in exact parameterized method identities' {
         $case = Join-Path $scratch 'export-boundary-identities'
         New-Item -ItemType Directory -Path $case -Force | Out-Null
         $classes = Join-Path $case 'classes.txt'
         $output = Join-Path $case 'outcomes.tsv'
-        Write-Utf8File $classes " example.BoundaryTest`nexample.BoundaryTest`nexample.BoundaryTest `n"
+        Write-Utf8File $classes "example.BoundaryTest`n"
         Write-Utf8File (Join-Path $case 'TEST-boundaries.xml') @'
 <testsuite>
-  <testcase classname=" example.BoundaryTest" name="case[1]"/>
   <testcase classname="example.BoundaryTest" name=" case[1]"/>
   <testcase classname="example.BoundaryTest" name="case[1]"/>
   <testcase classname="example.BoundaryTest" name="case[1] "/>
-  <testcase classname="example.BoundaryTest " name="case[1]"/>
 </testsuite>
 '@
         $result = Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)
         Assert-Succeeded $result 'boundary identity export'
         $rows = @(Import-Csv -Delimiter "`t" -LiteralPath $output)
-        Assert-Equal (($rows.identity) -join '|') '\sexample.BoundaryTest#case[1]|example.BoundaryTest #case[1]|example.BoundaryTest# case[1]|example.BoundaryTest#case[1]|example.BoundaryTest#case[1]\s' 'boundary whitespace remains identity data'
-        Assert-Equal (($rows.class) -join '|') '\sexample.BoundaryTest|example.BoundaryTest\s|example.BoundaryTest|example.BoundaryTest|example.BoundaryTest' 'boundary classname values remain exact'
-        Assert-Equal (($rows.method) -join '|') 'case[1]|case[1]|\scase[1]|case[1]|case[1]\s' 'boundary parameterized names remain exact'
+        Assert-Equal (($rows.identity) -join '|') 'example.BoundaryTest# case[1]|example.BoundaryTest#case[1]|example.BoundaryTest#case[1]\s' 'boundary method whitespace remains identity data'
+        Assert-Equal (($rows.class) -join '|') 'example.BoundaryTest|example.BoundaryTest|example.BoundaryTest' 'class roots remain exact FQCNs'
+        Assert-Equal (($rows.method) -join '|') '\scase[1]|case[1]|case[1]\s' 'boundary parameterized names remain exact'
     }
 
     Invoke-Case 'export reversibly escapes actual controls and literal backslash sequences' {
@@ -314,6 +332,28 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)) 'ABSENT[\s\S]*example\.Outer' 'root without exact or nested coverage'
     }
 
+    Invoke-Case 'export rejects source roots that are not exact Java FQCNs' {
+        $case = Join-Path $scratch 'export-invalid-fqcn-roots'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        $invalidRoots = @(
+            'com/openggf.BadTest', 'com\openggf.BadTest', 'com.openggf.*Test',
+            'com.openggf.Bad?Test', 'com.openggf.Bad[Test', 'com.openggf.Bad Test',
+            '.com.openggf.BadTest', 'com.openggf.BadTest.', 'com..openggf.BadTest',
+            'com.openggf.1BadTest', 'com.openggf.Bad-Test', 'com.class.BadTest',
+            'com.openggf._'
+        )
+        foreach ($root in $invalidRoots) {
+            Write-Utf8File $classes "$root`n"
+            $escapedRoot = [System.Security.SecurityElement]::Escape($root)
+            Write-Utf8File (Join-Path $case 'TEST-invalid.xml') "<testsuite><testcase classname=`"$escapedRoot`" name=`"test`"/></testsuite>"
+            Assert-Failed (Invoke-Tool $exportScript @(
+                '-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case
+            )) 'Java|FQCN|selector root|source inventory' "invalid Java FQCN root [$root]"
+        }
+    }
+
     Invoke-Case 'export normalizes nested red outcomes without changing descendant identity' {
         $case = Join-Path $scratch 'export-nested-red'
         New-Item -ItemType Directory -Path $case -Force | Out-Null
@@ -340,15 +380,20 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         $classes = Join-Path $case 'classes.txt'
         $patterns = Join-Path $case 'ordinary.includes'
         $arguments = Join-Path $case 'maven-arguments.txt'
+        $baselinePom = Join-Path $case 'baseline-effective-pom.xml'
+        $selectorPom = Join-Path $case 'selector-effective-pom.xml'
         $output = Join-Path $case 'outcomes.tsv'
         Write-Utf8File $classes "com.openggf.AlphaTest`ncom.openggf.deep.ZuluTest`n"
         Write-Utf8File $patterns "com/openggf/AlphaTest.java`ncom/openggf/deep/ZuluTest.java`n"
         Write-Utf8File $arguments "-Dmse=relaxed`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $baselinePom (New-EffectivePomText)
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns)
         Write-Utf8File (Join-Path $case 'TEST-fixture.xml') '<testsuite><testcase classname="com.openggf.AlphaTest" name="alpha"/><testcase classname="com.openggf.deep.ZuluTest$Nested" name="zulu"/></testsuite>'
 
         $result = Invoke-Tool $exportScript @(
             '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
             '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom, '-SelectorEffectivePomPath', $selectorPom,
             '-OutputPath', $output, '-ReportRoot', $case
         )
         Assert-Succeeded $result 'authenticated selector contract'
@@ -361,9 +406,13 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         $classes = Join-Path $case 'classes.txt'
         $patterns = Join-Path $case 'ordinary.includes'
         $arguments = Join-Path $case 'maven-arguments.txt'
+        $baselinePom = Join-Path $case 'baseline-effective-pom.xml'
+        $selectorPom = Join-Path $case 'selector-effective-pom.xml'
         $output = Join-Path $case 'outcomes.tsv'
         Write-Utf8File $classes "com.openggf.AlphaTest`ncom.openggf.deep.ZuluTest`n"
         Write-Utf8File (Join-Path $case 'TEST-fixture.xml') '<testsuite><testcase classname="com.openggf.AlphaTest" name="alpha"/><testcase classname="com.openggf.deep.ZuluTest" name="zulu"/></testsuite>'
+        Write-Utf8File $baselinePom (New-EffectivePomText)
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns)
 
         $invalidPatterns = @(
             [pscustomobject]@{ Name = 'wildcard selector'; Content = "com/openggf/*Test.java`ncom/openggf/deep/ZuluTest.java`n"; Pattern = 'wildcard|pattern' },
@@ -377,6 +426,7 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
             Assert-Failed (Invoke-Tool $exportScript @(
                 '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
                 '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+                '-EffectivePomPath', $baselinePom, '-SelectorEffectivePomPath', $selectorPom,
                 '-OutputPath', $output, '-ReportRoot', $case
             )) $fixture.Pattern $fixture.Name
         }
@@ -387,6 +437,10 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
             [pscustomobject]@{ Name = 'surefire includes override'; Content = "-Dsurefire.includes=**/Test*.java`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'surefire.includes|selector override' },
             [pscustomobject]@{ Name = 'duplicate includes file'; Content = "-Dsurefire.includesFile=$patterns`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'exactly one|duplicate|includesFile' },
             [pscustomobject]@{ Name = 'other selector override'; Content = "-DexcludedGroups=slow`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'excludedGroups|selector override' },
+            [pscustomobject]@{ Name = 'long define test override'; Content = "--define`ntest=com.openggf.AlphaTest`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'test|selector override' },
+            [pscustomobject]@{ Name = 'equals define excludes file'; Content = "--define=surefire.excludesFile=$case/excludes`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'excludesFile|selector override' },
+            [pscustomobject]@{ Name = 'suite XML selector'; Content = "-Dsurefire.suiteXmlFiles=$case/suite.xml`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'suiteXmlFiles|selector override' },
+            [pscustomobject]@{ Name = 'JUnit engine selector'; Content = "--define=includeJUnit5Engines=junit-jupiter`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'includeJUnit5Engines|selector override' },
             [pscustomobject]@{ Name = 'missing runtime input'; Content = "-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = (Join-Path $case 'other-input'); Pattern = 'OPENGGF_RUNTIME_INPUTS|runtime input' },
             [pscustomobject]@{ Name = 'relative includes file'; Content = "-Dsurefire.includesFile=ordinary.includes`ntest`n"; Runtime = $patterns; Pattern = 'canonical absolute|includesFile' }
         )
@@ -395,8 +449,22 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
             Assert-Failed (Invoke-Tool $exportScript @(
                 '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
                 '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $fixture.Runtime,
+                '-EffectivePomPath', $baselinePom, '-SelectorEffectivePomPath', $selectorPom,
                 '-OutputPath', $output, '-ReportRoot', $case
             )) $fixture.Pattern $fixture.Name
+        }
+
+        foreach ($validArguments in @(
+            "--define`nsurefire.includesFile=$patterns`ntest`n",
+            "--define=surefire.includesFile=$patterns`ntest`n"
+        )) {
+            Write-Utf8File $arguments $validArguments
+            Assert-Succeeded (Invoke-Tool $exportScript @(
+                '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+                '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+                '-EffectivePomPath', $baselinePom, '-SelectorEffectivePomPath', $selectorPom,
+                '-OutputPath', $output, '-ReportRoot', $case
+            )) 'supported long-form define invocation'
         }
     }
 
@@ -404,23 +472,21 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         $case = Join-Path $scratch 'export-effective-pom'
         New-Item -ItemType Directory -Path $case -Force | Out-Null
         $classes = Join-Path $case 'classes.txt'
+        $patterns = Join-Path $case 'ordinary.includes'
+        $arguments = Join-Path $case 'maven-arguments.txt'
         $baselinePom = Join-Path $case 'baseline-effective-pom.xml'
         $selectorPom = Join-Path $case 'selector-effective-pom.xml'
         $output = Join-Path $case 'outcomes.tsv'
         Write-Utf8File $classes "example.Test`n"
+        Write-Utf8File $patterns "example/Test.java`n"
+        Write-Utf8File $arguments "-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File (Join-Path $case 'TEST-fixture.xml') '<testsuite><testcase classname="example.Test" name="test"/></testsuite>'
-        $pom = @'
-<project xmlns="http://maven.apache.org/POM/4.0.0"><build><plugins><plugin>
-  <artifactId>maven-surefire-plugin</artifactId><executions><execution><id>default-test</id><configuration>
-    <excludes><exclude>**/*Guard.java</exclude><exclude>**/ExcludedTest.java</exclude></excludes>
-    <groups>ordinary</groups><excludedGroups>quarantined</excludedGroups><forkCount>1</forkCount><reuseForks>true</reuseForks>
-  </configuration></execution></executions>
-</plugin></plugins></build></project>
-'@
-        Write-Utf8File $baselinePom $pom
-        Write-Utf8File $selectorPom $pom
+        Write-Utf8File $baselinePom (New-EffectivePomText)
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns)
         $result = Invoke-Tool $exportScript @(
-            '-SourceClassInventory', $classes, '-EffectivePomPath', $baselinePom,
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom,
             '-SelectorEffectivePomPath', $selectorPom, '-SurefireExecutionId', 'default-test',
             '-OutputPath', $output, '-ReportRoot', $case
         )
@@ -428,19 +494,74 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-True ($result.Output -match 'excludes=.*Guard.*ExcludedTest') 'effective POM evidence records excludes'
         Assert-True ($result.Output -match 'groups=ordinary.*excludedGroups=quarantined.*forkCount=1.*reuseForks=true') 'effective POM evidence records groups and fork settings'
 
-        Write-Utf8File $selectorPom ($pom.Replace('<forkCount>1</forkCount>', '<forkCount>2</forkCount>'))
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns -ForkCount '2')
         Assert-Failed (Invoke-Tool $exportScript @(
-            '-SourceClassInventory', $classes, '-EffectivePomPath', $baselinePom,
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom,
             '-SelectorEffectivePomPath', $selectorPom, '-SurefireExecutionId', 'default-test',
             '-OutputPath', $output, '-ReportRoot', $case
         )) 'forkCount|unchanged|effective' 'changed effective fork setting'
 
-        Write-Utf8File $selectorPom ($pom.Replace('<excludes>', '<includes><include>**/Test.java</include></includes><excludes>'))
+        Write-Utf8File $baselinePom (New-EffectivePomText -Excludes @('a,b', 'c'))
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns -Excludes @('a', 'b,c'))
         Assert-Failed (Invoke-Tool $exportScript @(
-            '-SourceClassInventory', $classes, '-EffectivePomPath', $baselinePom,
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom,
+            '-SelectorEffectivePomPath', $selectorPom, '-SurefireExecutionId', 'default-test',
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'excludes|unchanged|effective' 'ordered effective excludes change'
+
+        Write-Utf8File $baselinePom (New-EffectivePomText)
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns -AdditionalSelection '<includes><include>**/Test.java</include></includes>')
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom,
             '-SelectorEffectivePomPath', $selectorPom, '-SurefireExecutionId', 'default-test',
             '-OutputPath', $output, '-ReportRoot', $case
         )) 'includes|ordinary' 'configured ordinary includes'
+
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'atomic|EffectivePomPath|preflight' 'partial selector preflight'
+
+        Write-Utf8File $baselinePom (New-EffectivePomText -IncludesFile $patterns)
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns)
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom, '-SelectorEffectivePomPath', $selectorPom,
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'baseline|includesFile|selector override' 'baseline effective selector override'
+
+        Write-Utf8File $baselinePom (New-EffectivePomText)
+        Write-Utf8File $selectorPom (New-EffectivePomText)
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom, '-SelectorEffectivePomPath', $selectorPom,
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'selector.*includesFile|authenticated path' 'missing effective selector includesFile'
+
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile (Join-Path $case 'wrong.includes'))
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom, '-SelectorEffectivePomPath', $selectorPom,
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'includesFile|authenticated path|canonical' 'wrong effective selector includesFile'
+
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns -AdditionalSelection '<suiteXmlFiles><suiteXmlFile>suite.xml</suiteXmlFile></suiteXmlFiles>')
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom, '-SelectorEffectivePomPath', $selectorPom,
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'suiteXmlFiles|competing|selection' 'competing effective selector channel'
     }
 
     Invoke-Case 'export reads all report roots and accepts only reviewed empty helpers with reasons' {

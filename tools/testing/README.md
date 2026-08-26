@@ -88,10 +88,13 @@ selected root only when its XML `classname` is exactly that root or begins with
 the exact `root + '$'` boundary. Thus a selected `example.Outer` may export
 `example.Outer$Nested#method`, preserving that actual nested classname and
 identity, while `example.Outerish$Nested` remains unselected. Selector roots
-containing `$`, lookalike prefixes, duplicate nested identities, and roots with
-neither exact nor nested testcase coverage are fatal. Naming-convention helpers
-that execute no tests require a separately reviewed TSV with `class` and
-non-empty `reason` columns.
+must consist only of non-keyword Java identifier segments separated by single
+dots. Empty segments, leading/trailing dots, whitespace, slash/backslash,
+wildcards, `$`, and other identifier metacharacters are fatal before any
+slash-path mapping. Lookalike prefixes, duplicate nested identities, and roots
+with neither exact nor nested testcase coverage are also fatal.
+Naming-convention helpers that execute no tests require a separately reviewed
+TSV with `class` and non-empty `reason` columns.
 
 Run the exporter from PowerShell so multiple report roots remain an array:
 
@@ -150,17 +153,30 @@ $mavenArguments = @('-Dmse=relaxed', "-Dsurefire.includesFile=$selector", 'test'
 ```
 
 The Maven invocation must contain exactly one canonical absolute
-`-Dsurefire.includesFile=<selector>` property. Reject `-Dtest`,
-`-Dsurefire.includes`, a second `surefire.includesFile`, group/excluded-group
-properties, excludes, or any other caller selector override. `-Dtest` is
-specifically forbidden because it replaces the POM's ordinary includes and
-excludes. The selector must be present exactly once in
-`OPENGGF_RUNTIME_INPUTS`, so the coordinator records pre/post hashes of the
-same file.
+`surefire.includesFile=<selector>` definition. The preflight parses all Maven
+property spellings supported by this workflow: `-Dname[=value]`,
+`--define name[=value]`, and `--define=name[=value]`. It rejects `test`, all
+other `surefire.*` properties, includes/excludes files or patterns, suites,
+groups, excluded groups, JUnit engine/tag selectors, duplicate includes-file
+definitions, and related aliases. `-Dtest` is specifically forbidden because
+it replaces the POM's ordinary includes and excludes. The selector must be
+present exactly once in `OPENGGF_RUNTIME_INPUTS`, so the coordinator records
+pre/post hashes of the same file.
 
-The exporter can preflight the static mapping, invocation, and runtime-input
-contract. Put the exact Maven argument vector in a UTF-8 file, one argument per
-line, and supply:
+Before accepting this fallback, capture the exact effective POM once without
+and once with the selector property. Select the ordinary
+`maven-surefire-plugin` execution (normally `default-test`). The baseline must
+contain no includes or includes-file selector. The selector effective POM must
+contain exactly the authenticated canonical `includesFile` path. Neither POM
+may contain a competing includes pattern, excludes file, suite XML, dependency
+scan, or JUnit engine/tag selector. Their ordered excludes, groups, excluded
+groups, fork count, and fork-reuse value must be identical.
+
+The exporter exposes one atomic preflight for the roots/patterns, canonical
+selector path, exact Maven argv, authenticated runtime inputs, baseline
+effective POM, and selector effective POM. Supplying only part of this evidence
+is fatal. Put the exact Maven argument vector in a UTF-8 file, one argv element
+per line, and invoke the exporter once:
 
 ```powershell
 & ./tools/testing/Export-SurefireOutcomeInventory.ps1 `
@@ -168,27 +184,15 @@ line, and supply:
     -SelectorPatternInventory $selector `
     -MavenArgumentInventory ./evidence/candidate-maven-arguments.txt `
     -RuntimeInputs $env:OPENGGF_RUNTIME_INPUTS `
-    -ReportRoot ./evidence/candidate-ordinary/surefire-reports `
-    -OutputPath ./evidence/candidate-outcomes.tsv
-```
-
-Before accepting this fallback, capture the exact effective POM once without
-and once with the selector property. Select the ordinary
-`maven-surefire-plugin` execution (normally `default-test`). It must have no
-configured `<includes>` because `includesFile` appends to configured includes;
-its ordered excludes, groups, excluded groups, fork count, and fork-reuse value
-must be identical in both effective POMs. Preserve those parsed values with the
-selector hash/count evidence. The exporter enforces and prints that comparison:
-
-```powershell
-& ./tools/testing/Export-SurefireOutcomeInventory.ps1 `
-    -SourceClassInventory ./evidence/candidate-classes.txt `
     -EffectivePomPath ./evidence/candidate-effective-ordinary.xml `
     -SelectorEffectivePomPath ./evidence/candidate-effective-selector.xml `
     -SurefireExecutionId default-test `
     -ReportRoot ./evidence/candidate-ordinary/surefire-reports `
     -OutputPath ./evidence/candidate-outcomes.tsv
 ```
+
+Preserve the printed effective configuration with the selector hash/count
+evidence.
 
 This static/effective-POM preflight supplements, but does not replace, the real
 frozen-POM proof: one exact top-level root containing `@Nested` must execute its
