@@ -16,6 +16,7 @@ final class Sonic2SpecialStageSnapshot {
     final int p2HeldButtons;
     final int p2LogicalButtons;
     final boolean recurringMainPassPending;
+    final boolean introFirstRecurringPassDeferred;
     final int pendingMainHeldButtons;
     final int pendingMainPressedButtons;
     final int pendingMainP2HeldButtons;
@@ -92,6 +93,7 @@ final class Sonic2SpecialStageSnapshot {
             int p2HeldButtons,
             int p2LogicalButtons,
             boolean recurringMainPassPending,
+            boolean introFirstRecurringPassDeferred,
             int pendingMainHeldButtons,
             int pendingMainPressedButtons,
             int pendingMainP2HeldButtons,
@@ -166,6 +168,7 @@ final class Sonic2SpecialStageSnapshot {
         this.p2HeldButtons = p2HeldButtons;
         this.p2LogicalButtons = p2LogicalButtons;
         this.recurringMainPassPending = recurringMainPassPending;
+        this.introFirstRecurringPassDeferred = introFirstRecurringPassDeferred;
         this.pendingMainHeldButtons = pendingMainHeldButtons;
         this.pendingMainPressedButtons = pendingMainPressedButtons;
         this.pendingMainP2HeldButtons = pendingMainP2HeldButtons;

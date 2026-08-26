@@ -263,7 +263,8 @@ recorded hardware traces.
   restored with explicit ownership rules. Completed in-frame act reloads such
   as the AIZ fire-curtain transition now re-root history at the destination
   frame, preventing incompatible cross-act restores while preserving rewind
-  within the new act.
+  within the new act. Sonic 2 special stages also preserve their first
+  pre-start object-pass deferral across fade-from-white restores.
 - **Modern development and validation tools:** level-editor foundations,
   ROM offset and compression tools, headless gameplay tests, BizHawk trace
   replay, visual/audio regression checks, and release/architecture guards.

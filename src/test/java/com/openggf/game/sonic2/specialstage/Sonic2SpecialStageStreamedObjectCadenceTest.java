@@ -37,6 +37,10 @@ class Sonic2SpecialStageStreamedObjectCadenceTest {
         set(manager, "lastDrawingIndex", 3);
 
         invoke(manager, "streamSpecialStageObjects");
+        // SSObjectsManager allocates the entries, then the same SS_MainLoop
+        // iteration reaches RunObjects (s2.asm:6679-6688). Exercise both halves
+        // of that production iteration instead of asking the allocator to dispatch.
+        invoke(manager, "executeActiveSpecialStageObjects");
 
         List<Sonic2SpecialStageObject> objects = objectManager.getActiveObjects();
         assertEquals(2, objects.size());
@@ -75,6 +79,10 @@ class Sonic2SpecialStageStreamedObjectCadenceTest {
         set(manager, "lastDrawingIndex", 3);
 
         invoke(manager, "streamSpecialStageObjects");
+        // Obj59 is allocated by SSObjectsManager before the same iteration's
+        // RunObjects scan reaches its later SST slot (s2.asm:6679-6688, 6992-6999,
+        // 72304-72325).
+        invoke(manager, "executeActiveSpecialStageObjects");
 
         Sonic2SpecialStageEmerald emerald = objectManager.getActiveEmerald();
         assertTrue(emerald.restrictsControlsToStart(),
