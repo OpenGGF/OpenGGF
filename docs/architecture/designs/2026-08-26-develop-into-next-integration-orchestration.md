@@ -350,10 +350,10 @@ Run the ordinary suite and separate fresh-JVM structural guards through the
 test-session coordinator. Build a clean class inventory for each tree and
 normalize every Surefire outcome as class, method or parameterized identity,
 and `PASS|FAILURE|ERROR|SKIPPED`. Red outcomes also retain a deterministic
-signature containing element kind, exception type, normalized message, and a
-SHA-256 of the first 65,536 UTF-8 bytes of the normalized failure body. The
-normalizer converts line endings to LF and replaces the canonical worktree,
-session-root, run-ID, and ISO-8601 timestamp tokens before truncation and
+signature containing element kind, exception type, normalized message,
+normalized UTF-8 byte length, and a streaming SHA-256 of the complete normalized
+failure body. The normalizer converts line endings to LF and replaces the
+canonical worktree, session-root, run-ID, and ISO-8601 timestamp tokens before
 hashing. Duplicate identities are invalid. A test
 identity that exists or executes on either parent but is absent from the merged
 inventory is classified `ABSENT` and is a regression unless a documented,
@@ -376,9 +376,10 @@ is never reported as the suite result.
 
 Rerun order-sensitive or environment-sensitive changes in isolation before
 classification. A parent red whose candidate has the same outcome kind but a
-different signature is not silently accepted: it requires an isolated matching
-rerun, ledger owner, and documented disposition, and remains a regression if
-the change is merge-attributable. Record any legitimate pre-existing red, sandbox-only
+different signature is not silently accepted: it requires paired isolated
+reruns of the exact frozen parent and candidate with the same selector and
+environment, plus a ledger owner and documented disposition, and remains a
+regression if the change is merge-attributable. Record any legitimate pre-existing red, sandbox-only
 limitation, or explicitly deferred risk without weakening tests. Install the
 tracked `develop` hook path explicitly in every worktree that lacks the current
 installer, and record the exact final range-policy invocation and its base/head

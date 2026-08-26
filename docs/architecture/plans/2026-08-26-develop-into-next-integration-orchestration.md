@@ -234,13 +234,14 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   least one report/testcase, and write TSV columns:
 
   ```text
-  identity	class	method	outcome	red_kind	exception_type	normalized_message	red_body_sha256	report
+  identity	class	method	outcome	red_kind	exception_type	normalized_message	red_body_bytes	red_body_sha256	report
   ```
 
   For red outcomes, convert line endings to LF; replace canonical worktree,
   session-root, generated run-ID, and ISO-8601 timestamp tokens; encode UTF-8;
-  take the first 65,536 bytes; and hash that bounded body. Reject a red element
-  lacking a deterministic signature.
+  and record the complete normalized byte length plus a streaming SHA-256 of
+  the complete normalized body. Reject a red element lacking a deterministic
+  signature.
 
   Empty helper classes are accepted only through a separate reviewed allowlist
   whose entries name a reason.
@@ -250,9 +251,10 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   `Compare-SurefireOutcomeInventory.ps1` must compare ordinal identities from
   either parent with the candidate, synthesize `ABSENT` for missing candidate
   identities, reject PASS→red/SKIPPED/ABSENT, flag changed failure/error kinds,
-  and flag every same-kind red signature change for isolated matching rerun and
-  owner/disposition classification. It writes a TSV with baseline, candidate,
-  red signatures, classification, owner, and disposition fields. A
+  and flag every same-kind red signature change for paired isolated reruns of
+  the exact frozen parent and candidate under the same selector/environment,
+  followed by owner/disposition classification. It writes a TSV with baseline,
+  candidate, red signatures, classification, owner, and disposition fields. A
   reviewed-removal input may exempt only an explicitly named identity with a
   reason.
 
