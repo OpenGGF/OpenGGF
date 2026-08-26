@@ -267,7 +267,10 @@ def _probe_directory(directory_fd: int) -> None:
 
 
 def _statvfs_record(path: pathlib.Path) -> dict[str, int]:
-    info = os.statvfs(path)
+    return _statvfs_values(os.statvfs(path))
+
+
+def _statvfs_values(info) -> dict[str, int]:
     return {
         "usable_bytes": info.f_bavail * info.f_frsize,
         "total_bytes": info.f_blocks * info.f_frsize,
@@ -275,7 +278,8 @@ def _statvfs_record(path: pathlib.Path) -> dict[str, int]:
     }
 
 
-def _reservation_record(root: pathlib.Path, allocation: pathlib.Path) -> dict[str, object]:
+def _reservation_record(root: pathlib.Path, allocation: pathlib.Path,
+                        expected_allocation: os.stat_result | None = None) -> dict[str, object]:
     canonical_root = root.resolve(strict=True)
     expected_lane = canonical_root.joinpath(*TEST_SESSION_LANE)
     try:
@@ -302,6 +306,10 @@ def _reservation_record(root: pathlib.Path, allocation: pathlib.Path) -> dict[st
                     raise ScratchError("managed test-session allocation ownership or mode changed")
                 if allocation_info.st_dev != root_info.st_dev:
                     raise ScratchError("managed test-session allocation filesystem changed")
+                if (expected_allocation is not None
+                        and not _same_identity(allocation_info, expected_allocation)):
+                    raise ScratchError("managed test-session allocation changed after probing")
+                capacity = _statvfs_values(os.fstatvfs(allocation_fd))
             finally:
                 os.close(allocation_fd)
     except OSError as exc:
@@ -312,7 +320,7 @@ def _reservation_record(root: pathlib.Path, allocation: pathlib.Path) -> dict[st
         "managed_root": str(canonical_root),
         "allocation_path": str(canonical_allocation),
         "filesystem_device": allocation_info.st_dev,
-        **_statvfs_record(canonical_allocation),
+        **capacity,
         "retention_deadline": (dt.datetime.now(dt.UTC)
                                + dt.timedelta(days=TEST_SESSION_RETENTION_DAYS)).isoformat(),
         "helper_version": HELPER_VERSION,
@@ -337,10 +345,11 @@ def cmd_reserve_test_session(args: argparse.Namespace) -> int:
                                     dir_fd=lane_fd)
             try:
                 _probe_directory(allocation_fd)
+                allocation = root.joinpath(*TEST_SESSION_LANE, name)
+                record = _reservation_record(root, allocation, os.fstat(allocation_fd))
+                print(json.dumps(record, sort_keys=True))
             finally:
                 os.close(allocation_fd)
-    allocation = root.joinpath(*TEST_SESSION_LANE, name)
-    print(json.dumps(_reservation_record(root, allocation), sort_keys=True))
     return 0
 
 

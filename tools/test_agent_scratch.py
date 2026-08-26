@@ -68,7 +68,7 @@ class AgentScratchTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(dir=CACHE)
         self.root = pathlib.Path(self.temp.name) / "managed"
-        self.env = {"AGENT_SCRATCH_ROOT": str(self.root)}
+        self.env = {"AGENT_SCRATCH_ROOT": str(self.root), "OGGF_SCRATCH_ROOT": None}
 
     def tearDown(self):
         self.temp.cleanup()
@@ -121,7 +121,7 @@ class AgentScratchTests(unittest.TestCase):
 
     def test_reserve_test_session_returns_structured_private_allocation(self):
         root = self.root
-        with environment(AGENT_SCRATCH_ROOT=str(root)):
+        with environment(**self.env):
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
                 self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
@@ -138,6 +138,21 @@ class AgentScratchTests(unittest.TestCase):
         self.assertGreaterEqual(record["usable_inodes"], 0)
         self.assertRegex(record["retention_deadline"], r"^\d{4}-\d{2}-\d{2}T")
         self.assertTrue(record["helper_version"])
+
+    def test_reserve_test_session_rejects_a_recreated_allocation_name(self):
+        root = self.helper.ensure_root(self.env)
+        lane = root / "codex" / "test-sessions"
+
+        def recreate_allocation(_allocation_fd):
+            allocation, = [entry for entry in lane.iterdir()
+                           if entry.name.startswith("session-")]
+            os.rename(allocation, lane / "probed-allocation")
+            allocation.mkdir(mode=self.helper.MODE)
+
+        with environment(**self.env), \
+             mock.patch.object(self.helper, "_probe_directory", side_effect=recreate_allocation), \
+             self.assertRaises(self.helper.ScratchError):
+            self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
 
     def test_reserve_test_session_rejects_a_symlinked_lane(self):
         root = self.helper.ensure_root(self.env)
@@ -238,7 +253,8 @@ class AgentScratchTests(unittest.TestCase):
 
     def test_concurrent_new_and_prune_share_lock(self):
         self.helper.ensure_root(self.env)
-        child_env = {**os.environ, **self.env}
+        child_env = {key: value for key, value in {**os.environ, **self.env}.items()
+                     if value is not None}
         commands = [[sys.executable, str(HELPER), "new", "parallel"] for _ in range(4)]
         commands += [[sys.executable, str(HELPER), "prune", "--dry-run"] for _ in range(4)]
         children = [subprocess.Popen(command, env=child_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
