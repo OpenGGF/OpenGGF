@@ -1342,8 +1342,12 @@ class TestS3kBadnikChildGraphRewind {
         assertEquals(2, sourceHeads.size(), "precondition: two Caterkiller Jr heads must be captured");
         CaterkillerJrHeadInstance sourceHeadA = sourceHeads.get(0);
         CaterkillerJrHeadInstance sourceHeadB = sourceHeads.get(1);
+        // Obj_WaitOffscreen consumes its release dispatch; routine-0 Init and
+        // its six-child allocation run on the following object dispatch.
         sourceHeadA.update(0, player);
+        sourceHeadA.update(1, player);
         sourceHeadB.update(0, player);
+        sourceHeadB.update(1, player);
         List<ObjectInstance> sourceBodies = liveByClassName(objectManager, CATERKILLER_JR_BODY);
         assertEquals(12, sourceBodies.size(), "precondition: each Caterkiller Jr head must spawn six body segments");
         List<?> sourceListA = (List<?>) readObjectField(sourceHeadA, "bodySegments");
