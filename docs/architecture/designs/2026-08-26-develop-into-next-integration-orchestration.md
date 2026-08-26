@@ -195,8 +195,10 @@ immutable detached worktree and:
    diagnostics, artifacts, and distribution to their coordinator-owned roots;
 4. resolves frozen `next`'s platform-effective `surefire.argLine` under the
    active Maven profiles, preserving CDS, Mockito agent, heap, and macOS
-   `-XstartOnFirstThread` options, then appends
-   `org.lwjgl.system.SharedLibraryExtractPath=<session tmp>/lwjgl-${surefire.forkNumber}`;
+   `-XstartOnFirstThread` options, then appends both
+   `java.io.tmpdir=<canonical session tmp>` and
+   `org.lwjgl.system.SharedLibraryExtractPath=<session tmp>/lwjgl-${surefire.forkNumber}`
+   after the historical POM's own properties so the coordinator paths win;
 5. installs its cleanup trap before creating any link and writes a session-side
    recovery marker containing the canonical worktree path, link path, run ID,
    and exact session build target; and
@@ -250,16 +252,47 @@ distinct resolved `lwjgl-<fork>` directories beneath the session tmp root; a
 literal unresolved `${surefire.forkNumber}`, duplicate path, or path outside
 the session fails the adapter.
 
-Frozen `next`'s POM reports `java.io.tmpdir` lexically as
-`<detached worktree>/target/test-tmp`. That lexical value is accepted only while
-the validated link exists and its no-follow-then-canonical resolution is
-exactly the current session tmp root. Before cleanup, the adapter records the
-lexical value, canonical value, link identity, run ID, and session root in the
-session diagnostics; post-run review consumes this preserved evidence rather
-than attempting to resolve a removed link. Any other worktree-local temporary
-path fails. A mutation test changes a scratch copy named in pre-launch
-`OPENGGF_RUNTIME_INPUTS` during a controlled run and requires the coordinator
-to end `INVALID_IDENTITY_CHANGED`.
+Frozen `next`'s POM normally reports `java.io.tmpdir` lexically as
+`<detached worktree>/target/test-tmp`. That spelling is not acceptable through
+the compatibility symlink: path-containment tests compare lexical roots with
+canonical children, so the symlink creates adapter-only failures even though it
+resolves to the right bytes. The adapter's final JVM property must instead be
+the canonical coordinator session tmp root itself. Before cleanup, the adapter
+records lexical and canonical values, run ID, and session root in diagnostics
+and requires both temp values to equal that root. LWJGL remains a distinct
+per-fork child beneath it. A mutation test changes a scratch copy named in
+pre-launch `OPENGGF_RUNTIME_INPUTS` during a controlled run and requires the
+coordinator to end `INVALID_IDENTITY_CHANGED`.
+
+Frozen `next` also contains one historical test side effect that is incompatible
+with the newer coordinator identity contract:
+`TestRewindRoundTripProbe.probeReportIsWrittenToDisk` intentionally overwrites
+the tracked `docs/status/rewind-round-trip-gaps.md`. The test passes, and develop
+later classified the path as generated output by deleting it and adding the path
+to `.gitignore`; nevertheless, a run that simply leaves the rewrite behind is
+identity-invalid and cannot serve as a parent baseline.
+
+The adapter therefore owns one fail-closed normalization, pinned simultaneously
+to frozen HEAD `84d9a3761f618035dd1caa40a3d5fc72a1019693`, exact path
+`docs/status/rewind-round-trip-gaps.md`, and committed Git blob
+`d83614ec3a32abd1d6636d2be247ade01331bf3c`. Before Maven it authenticates the
+regular, non-symlink preimage and archives its bytes outside the worktree. After
+the child exits it may archive a changed regular report under session
+diagnostics only when the file retains the expected report title and summary
+shape. It records original/generated SHA-256 values and byte lengths, then
+atomically restores the exact committed bytes before the coordinator takes its
+final digest. The generated hash is evidence, not an allowlisted constant: the
+report embeds the current date and does not contractually guarantee iteration or
+locale ordering.
+
+No other path is normalized. An unexpected initial blob, missing or replaced
+report, archive/restore failure, or any second tracked/untracked mutation must
+remain identity-invalid. A failing Maven child keeps its original status when
+normalization succeeds; normalization failure controls only an otherwise
+successful result and is always diagnosed. Signal/outer recovery must either
+restore the exact preimage or leave an explicit identity-invalid session—never
+silently accept a dirty tree. The archived generated report is parent hygiene
+evidence, not a repository deliverable and not a parent test failure.
 
 The full parent baseline cannot start until the adapter self-tests and the
 coordinator's own self-test pass.
