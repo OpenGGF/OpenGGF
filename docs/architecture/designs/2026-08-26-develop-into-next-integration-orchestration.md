@@ -192,7 +192,10 @@ immutable detached worktree and:
 2. preflights Linux unprivileged user/mount namespaces and bind mounts, derives
    the coordinator roots from its injected `OPENGGF_*` identity, creates an
    ignored empty real directory at `target`, and creates empty real mountpoint
-   directories beneath the session build root;
+   directories beneath the session build root; before root mapping it also
+   authenticates the outer numeric UID's passwd home against canonical `HOME`
+   without changing `HOME`, and rejects any existing `user.home` override in
+   Maven arguments, `MAVEN_OPTS`, or `JAVA_TOOL_OPTIONS`;
 3. runs a namespace leader with `unshare --user --map-root-user --mount`, makes
    `/` recursively private with `mount --make-rprivate /` before any binding,
    bind-mounts the session build root onto the real worktree `target`, then
@@ -206,9 +209,11 @@ immutable detached worktree and:
    is a non-mount, empty ordinary directory in its view before releasing Maven;
    Maven therefore observes real worktree-local canonical paths while every
    byte is stored in the exact coordinator root;
-5. resolves frozen `next`'s platform-effective `surefire.argLine`, preserving
-   CDS, Mockito agent, heap, and macOS `-XstartOnFirstThread`, then appends
-   fork-specific
+5. root mapping gives the namespace child mount capability but would otherwise
+   make Java select `/root`; the adapter preserves user semantics by appending
+   `-Duser.home=<authenticated outer passwd home>` to adapter-owned
+   `MAVEN_OPTS` for both Maven invocations and to frozen `next`'s resolved
+   `surefire.argLine`, while preserving existing options. It also appends fork-specific
    `org.lwjgl.system.SharedLibraryExtractPath=<session tmp>/lwjgl-${surefire.forkNumber}`
    through the frozen POM's own `${surefire.argLine}` expansion; the historical
    POM continues to own `java.io.tmpdir=<worktree>/target/test-tmp`, whose real
@@ -281,8 +286,9 @@ promotion cannot preserve every historical JUnit/startup consumer. A private
 bind mount is the supported mechanism: both lexical and canonical test-visible
 paths remain `<worktree>/target/test-tmp`, while `mountpoint` and device/inode
 evidence prove their backing directory is the exact coordinator tmp root.
-Before cleanup, the adapter records those paths, mount identities, run ID, and
-session root in diagnostics. LWJGL remains injected through
+Before cleanup, the adapter records those paths, mount identities, outer UID,
+authenticated home, fork `user.home`, run ID, and session root in diagnostics.
+LWJGL remains injected through
 `${surefire.argLine}` as a distinct per-fork child beneath the direct session
 tmp root. A mutation test changes a scratch copy named in
 pre-launch `OPENGGF_RUNTIME_INPUTS` during a controlled run and requires the

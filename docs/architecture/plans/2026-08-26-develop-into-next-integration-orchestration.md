@@ -240,7 +240,11 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   Preflight `unshare --user --map-root-user --mount`, `mount --bind`,
   `mountpoint`, and `rmdir` in managed scratch. Fail closed if unprivileged
-  namespaces or bind mounts are unavailable. The coordinator-child adapter
+  namespaces or bind mounts are unavailable. Before root mapping, resolve the
+  current numeric UID through the passwd database, canonicalize that home and
+  `HOME`, and require equality without modifying `HOME`. Reject `user.home` in
+  caller Maven arguments, existing `MAVEN_OPTS`, `JAVA_TOOL_OPTIONS`, or the
+  resolved Surefire base line. The coordinator-child adapter
   creates an ignored empty real `target` directory and empty real mountpoint
   directories beneath the coordinator build root, then starts a namespace
   leader. The leader must run `mount --make-rprivate /` before establishing
@@ -265,14 +269,18 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   directory and is not a mountpoint. Preserve frozen `next`'s own historical
   `java.io.tmpdir=<worktree>/target/test-tmp`; lexical and canonical paths must
   both remain worktree-local while the mount identity proves exact backing by
-  the coordinator tmp root. Keep using `${surefire.argLine}` only to append:
+  the coordinator tmp root. Root mapping otherwise makes Java choose `/root`,
+  so append `-Duser.home=<authenticated outer passwd home>` to preserved
+  adapter-owned `MAVEN_OPTS` for both help/evaluate and actual Maven, and append
+  the same property through `${surefire.argLine}` for every fork. Also append:
 
   ```text
   -Dorg.lwjgl.system.SharedLibraryExtractPath=$OPENGGF_TEST_TMP_ROOT/lwjgl-${surefire.forkNumber}
   ```
 
   Reject caller `argLine`, `surefire.argLine`, `java.io.tmpdir`, LWJGL, mount,
-  or namespace overrides. Before cleanup, require the recorded leader to be
+  namespace, or `user.home` overrides. Require Surefire XML to report the exact
+  authenticated outer home. Before cleanup, require the recorded leader to be
   gone and scan `/proc/*/ns/mnt` for the recorded inode; any surviving namespace
   holder or unreadable/ambiguous holder evidence fails closed. Then require the
   parent view of `target` to be the exact still-empty, non-mount ordinary
@@ -326,7 +334,8 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   interruption after report generation. Add namespace-unavailable,
   bind-failure, wrong mount source/device/inode, propagation leakage,
   ready/go parent-view mismatch, surviving namespace leader/descendant holder,
-  non-empty target, and changed target-identity cases. Include a real frozen-POM fixture proving
+  passwd/HOME mismatch, preexisting `user.home` override, non-empty target, and
+  changed target-identity cases. Include a real frozen-POM fixture proving
   both worktree-local lexical/canonical temp paths and exact coordinator-tmp
   mount identity while `${surefire.argLine}` yields distinct fork-specific
   LWJGL roots; do not accept a synthetic XML-only assertion. Require exact outcomes:
@@ -358,6 +367,8 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   - archived generated-report evidence;
   - historical worktree-local lexical/canonical temp properties in the XML,
     plus recorded device/inode mount identity to the coordinator tmp root;
+  - fork `user.home` equal to the authenticated outer passwd home, with Maven
+    local-repository resolution proven before project execution;
   - exact original report bytes restored; and
   - clean detached source inventory with no `target` after cleanup.
 
