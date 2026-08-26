@@ -47,6 +47,12 @@ public final class TestSessionOutputPaths {
                 .resolve("classes");
     }
 
+    /** Resolves Maven's compiled test classes for this test session. */
+    public static Path compiledTestClasses() {
+        return configuredPath(BUILD_DIRECTORY_PROPERTY, LEGACY_BUILD_DIRECTORY)
+                .resolve("test-classes");
+    }
+
     /**
      * Reserves a logical report owner. The metadata sidecar is published with
      * CREATE_NEW semantics, so a repeated invocation cannot silently replace

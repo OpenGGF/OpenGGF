@@ -55,6 +55,8 @@ class TestSessionOutputPathsTest {
                 TestSessionOutputPaths.diagnostics("physics"));
         assertEquals(Path.of("target"), TestSessionOutputPaths.artifactRoot());
         assertEquals(Path.of("target", "classes"), TestSessionOutputPaths.compiledClasses());
+        assertEquals(Path.of("target", "test-classes"),
+                TestSessionOutputPaths.compiledTestClasses());
     }
 
     @Test
@@ -75,6 +77,8 @@ class TestSessionOutputPathsTest {
         assertEquals(artifacts, TestSessionOutputPaths.artifactRoot());
         assertEquals(buildDirectory.resolve("classes"),
                 TestSessionOutputPaths.compiledClasses());
+        assertEquals(buildDirectory.resolve("test-classes"),
+                TestSessionOutputPaths.compiledTestClasses());
     }
 
     @Test

@@ -198,6 +198,39 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     @Test
+    void reviewedDacCompatibilitySnapshotRequiresIndependentRuntimeOwnership() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        String reviewed = reviewedDacCompatibilitySource();
+        sources.put("audio/smps/DacData.java", reviewed);
+        assertEquals(List.of(), smpsOwnershipViolations(sources));
+
+        for (String unsafe : List.of(
+                reviewed.replace(
+                        "private final Map<Integer, Sample> ownedSamples;", ""),
+                reviewed.replace(
+                        "public final Map<Integer, byte[]> samples;",
+                        "public final Map<Integer, byte[]> samples; "
+                                + "public final Map<Integer, byte[]> escaped;"),
+                reviewed.replace("return ownedSamples.get(sampleId);",
+                        "return samples.get(sampleId);"),
+                reviewed.replace("static final class Sample {",
+                        "byte[] escaped(int sampleId) { "
+                                + "return samples.get(sampleId); } "
+                                + "static final class Sample {"),
+                reviewed.replace("static final class Sample {",
+                        "byte[] escaped(int sampleId) { "
+                                + "Map<Integer, byte[]> alias = this.samples; "
+                                + "return alias.get(sampleId); } "
+                                + "static final class Sample {"),
+                reviewed.replace("this.bytes = bytes.clone();",
+                        "this.bytes = bytes;"))) {
+            sources.put("audio/smps/DacData.java", unsafe);
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "public raw DAC array @ audio/smps/DacData.java"));
+        }
+    }
+
+    @Test
     void smpsOwnershipDetectorFailsClosedOnRenamedMethods() {
         Map<String, String> sources = representativeSafeSmpsSources();
         sources.put("audio/AudioManager.java",
@@ -804,6 +837,27 @@ class TestAudioPresentationArchitectureGuard {
         return sources;
     }
 
+    private static String reviewedDacCompatibilitySource() {
+        return "final class DacData { "
+                + "public final Map<Integer, byte[]> samples; "
+                + "private final Map<Integer, Sample> ownedSamples; "
+                + "DacData(Map<Integer, byte[]> samples) { "
+                + "Map<Integer, Sample> ownedSamples = new HashMap<>(); "
+                + "Map<Integer, byte[]> compatibilitySamples = new HashMap<>(); "
+                + "for (Map.Entry<Integer, byte[]> entry : samples.entrySet()) { "
+                + "byte[] bytes = entry.getValue(); "
+                + "ownedSamples.put(entry.getKey(), bytes == null ? null : new Sample(bytes)); "
+                + "compatibilitySamples.put(entry.getKey(), bytes == null ? null : bytes.clone()); "
+                + "} this.ownedSamples = Collections.unmodifiableMap(ownedSamples); "
+                + "this.samples = Collections.unmodifiableMap(compatibilitySamples); } "
+                + "Sample sample(int sampleId) { return ownedSamples.get(sampleId); } "
+                + "int sampleCount() { return ownedSamples.size(); } "
+                + "boolean hasSample(int sampleId) { return ownedSamples.containsKey(sampleId); } "
+                + "static final class Sample { private final byte[] bytes; "
+                + "Sample(byte[] bytes) { this.bytes = bytes.clone(); } } "
+                + "}";
+    }
+
     private static String safeAudioManagerClassificationMethods() {
         return "public void playSfx(String sfxName, float pitch) { "
                 + "ensureRegisteredSmpsSfx(); } "
@@ -820,13 +874,15 @@ class TestAudioPresentationArchitectureGuard {
         List<String> violations = new ArrayList<>();
         String dac = sanitizedSource(
                 source(sources, "audio/smps/DacData.java"));
-        if (Pattern.compile(
+        Pattern publicPrimitiveArray = Pattern.compile(
                 "\\bpublic\\s+(?:final\\s+)?(?:byte|short|int|long)\\[\\]"
-                        + "\\s+\\w+")
-                .matcher(dac).find()
-                || Pattern.compile(
-                "\\bpublic\\s+(?:final\\s+)?Map<[^>]*\\[\\][^>]*>")
-                .matcher(dac).find()) {
+                        + "\\s+\\w+");
+        Pattern publicPrimitiveArrayMap = Pattern.compile(
+                "\\bpublic\\s+(?:final\\s+)?Map<[^>]*\\[\\][^>]*>");
+        if ((publicPrimitiveArray.matcher(dac).find()
+                || publicPrimitiveArrayMap.matcher(dac).find())
+                && !reviewedDacCompatibilitySnapshot(
+                dac, publicPrimitiveArray, publicPrimitiveArrayMap)) {
             violations.add("public raw DAC array @ audio/smps/DacData.java");
         }
 
@@ -930,6 +986,39 @@ class TestAudioPresentationArchitectureGuard {
                     + "audio/driver/SmpsDriver.java");
         }
         return List.copyOf(violations);
+    }
+
+    private static boolean reviewedDacCompatibilitySnapshot(
+            String source,
+            Pattern publicPrimitiveArray,
+            Pattern publicPrimitiveArrayMap) {
+        String compact = source.replaceAll("\\s+", "");
+        return !publicPrimitiveArray.matcher(source).find()
+                && publicPrimitiveArrayMap.matcher(source).results().count() == 1
+                && compact.contains(
+                "publicfinalMap<Integer,byte[]>samples;")
+                && compact.contains(
+                "privatefinalMap<Integer,Sample>ownedSamples;")
+                && compact.contains(
+                "ownedSamples.put(entry.getKey(),bytes==null?null:newSample(bytes));")
+                && compact.contains(
+                "compatibilitySamples.put(entry.getKey(),bytes==null?null:bytes.clone());")
+                && compact.contains(
+                "Sample(byte[]bytes){this.bytes=bytes.clone();}")
+                && compact.contains(
+                "this.ownedSamples=Collections.unmodifiableMap(ownedSamples);")
+                && compact.contains(
+                "this.samples=Collections.unmodifiableMap(compatibilitySamples);")
+                && compact.contains(
+                "Samplesample(intsampleId){returnownedSamples.get(sampleId);}")
+                && compact.contains(
+                "intsampleCount(){returnownedSamples.size();}")
+                && compact.contains(
+                "booleanhasSample(intsampleId){returnownedSamples.containsKey(sampleId);}")
+                && Pattern.compile("\\bsamples\\.")
+                .matcher(source).results().count() == 1
+                && Pattern.compile("\\bthis\\s*\\.\\s*samples\\b")
+                .matcher(source).results().count() == 1;
     }
 
     private static String source(

@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,17 +64,45 @@ class TestDacDataImmutability {
     @Test
     void publicApiDoesNotExposeMutableDacStorage() {
         assertTrue(Modifier.isFinal(DacData.class.getModifiers()));
-        assertEquals(0, DacData.class.getFields().length,
-                "DAC state must not be exposed through public fields");
+
+        Field[] publicFields = DacData.class.getFields();
+        assertEquals(Set.of("samples", "mapping", "baseCycles"),
+                Arrays.stream(publicFields)
+                        .map(Field::getName)
+                        .collect(Collectors.toSet()),
+                "only the frozen Mod API compatibility snapshot may be public");
+        assertTrue(Arrays.stream(publicFields)
+                        .allMatch(field -> Modifier.isFinal(field.getModifiers())),
+                "compatibility fields must remain final");
 
         for (Method method : DacData.class.getMethods()) {
             assertFalse(exposesRawSamples(method.getGenericReturnType()),
                     method + " exposes mutable DAC sample storage");
         }
-        for (Field field : DacData.class.getFields()) {
-            assertFalse(exposesRawSamples(field.getGenericType()),
-                    field + " exposes mutable DAC sample storage");
+        for (Field field : publicFields) {
+            if (exposesRawSamples(field.getGenericType())) {
+                assertEquals("samples", field.getName(),
+                        field + " is an unreviewed raw DAC compatibility field");
+            }
         }
+
+        byte[] sourceBytes = { 0x12, 0x34 };
+        DacData data = new DacData(
+                Map.of(1, sourceBytes),
+                Map.of(0x81, new DacData.DacEntry(1, 4)),
+                295);
+        byte[] compatibilityBytes = data.samples.get(1);
+        assertNotSame(sourceBytes, compatibilityBytes,
+                "the compatibility snapshot must clone caller-owned bytes");
+        sourceBytes[0] = 0x55;
+        assertEquals((byte) 0x12, compatibilityBytes[0]);
+        compatibilityBytes[0] = 0x66;
+        assertEquals((byte) 0x12, data.sample(1).byteAt(0),
+                "compatibility bytes must not be runtime storage");
+        assertThrows(UnsupportedOperationException.class,
+                () -> data.samples.put(2, new byte[] { 0x01 }));
+        assertThrows(UnsupportedOperationException.class,
+                () -> data.mapping.put(0x82, new DacData.DacEntry(1, 4)));
 
         Set<String> sampleMethods = Arrays.stream(
                         DacData.Sample.class.getDeclaredMethods())
