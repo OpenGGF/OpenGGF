@@ -761,6 +761,160 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         assertTrue(manager.getPlayers().stream().noneMatch(Sonic2SpecialStagePlayer::isSpawned));
     }
 
+    @Test
+    void gameplayLagSkippedReleaseThenRepressDoesNotCreateRawPressEdge() {
+        advanceToGameplay();
+
+        manager.handleInput(0x08, 0x08);
+        manager.update();
+        manager.handleInput(0x08, 0);
+        manager.update();
+        assertEquals(0x08, manager.captureRewindSnapshot().previousPhysicalHeldButtons);
+
+        manager.setLagCompensation(0.35);
+        advanceUntilNextLagFrame(0x08);
+
+        manager.handleInput(0, 0);
+        manager.update(); // skipped release: ReadJoypads never observes it
+
+        manager.setLagCompensation(0);
+        manager.handleInput(0x08, 0x08);
+        manager.update(); // executed re-press row, but last executed held was already RIGHT
+
+        Sonic2SpecialStageSnapshot resumed = manager.captureRewindSnapshot();
+        assertEquals(0x08, resumed.pendingMainHeldButtons);
+        assertEquals(0, resumed.pendingMainPressedButtons,
+                "ROM raw press compares current held with the last executed VInt held sample");
+    }
+
+    @Test
+    void lagSkippedFadePressHeldThroughNextVintFeedsExactlyOnePreStartPass() {
+        advanceThroughStartupRunObjects();
+        for (int update = 0; update < Sonic2SpecialStageIntro.FADE_FROM_WHITE_FRAMES; update++) {
+            manager.handleInput(0, 0);
+            manager.update();
+        }
+        assertEquals(Sonic2SpecialStageIntro.Phase.DROP,
+                manager.getIntro().getCurrentPhase());
+
+        manager.setLagCompensation(0.35);
+        advanceUntilNextLagFrame(0);
+
+        manager.handleInput(0x10, 0x10);
+        manager.update(); // skipped physical edge; held state remains current
+
+        manager.setLagCompensation(0);
+        manager.handleInput(0x10, 0);
+        manager.update(); // next executed VInt synthesizes the held transition
+        Sonic2SpecialStageSnapshot sampledHeld = manager.captureRewindSnapshot();
+        assertEquals(0x10, sampledHeld.previousPhysicalPressedButtons);
+        assertEquals(0x10, sampledHeld.previousPhysicalHeldButtons);
+
+        manager.handleInput(0x10, 0);
+        manager.update(); // pre-start loop copies and consumes the prior raw word
+        Sonic2SpecialStageSnapshot scheduledEdge = manager.captureRewindSnapshot();
+        assertEquals(Sonic2SpecialStagePlayer.RoutineState.JUMPING,
+                manager.getSonicPlayer().getRoutine());
+        assertEquals(0, scheduledEdge.pendingMainPressedButtons,
+                "the current pre-start cadence consumes the single copied edge in this update");
+        assertEquals(0, scheduledEdge.previousPhysicalPressedButtons,
+                "unchanged held input must not synthesize a second press");
+        assertEquals(0x10, scheduledEdge.previousPhysicalHeldButtons);
+
+        manager.handleInput(0x10, 0);
+        manager.update(); // held input must not publish the logical edge again
+        Sonic2SpecialStageSnapshot afterJump = manager.captureRewindSnapshot();
+        assertEquals(Sonic2SpecialStagePlayer.RoutineState.JUMPING,
+                manager.getSonicPlayer().getRoutine());
+        assertEquals(0, afterJump.pendingMainPressedButtons,
+                "the following pending pass must not repeat the held jump edge");
+    }
+
+    @Test
+    void lagSkippedFadePressReleasedBeforeNextVintDoesNotLeakIntoDrop() {
+        advanceThroughStartupRunObjects();
+        for (int update = 0; update < 10; update++) {
+            manager.handleInput(0, 0);
+            manager.update();
+        }
+        assertEquals(10, manager.captureRewindSnapshot().intro.phaseTimer());
+
+        manager.setLagCompensation(0.35);
+        advanceUntilNextLagFrame(0);
+
+        manager.handleInput(0x10, 0x10);
+        manager.update(); // skipped: no VInt/control copy occurred
+
+        Sonic2SpecialStageSnapshot skipped = manager.captureRewindSnapshot();
+        assertEquals(0, skipped.pressedButtons,
+                "a skipped physical press edge must not survive to an executed VInt");
+        assertEquals(0, skipped.previousPhysicalPressedButtons,
+                "lag skip preserves the last executed VInt's sampled input");
+        assertEquals(0, skipped.pendingMainPressedButtons);
+
+        manager.setLagCompensation(0);
+        manager.handleInput(0, 0);
+        while (manager.getIntro().getCurrentPhase() == Sonic2SpecialStageIntro.Phase.FADE_FROM_WHITE) {
+            manager.update();
+        }
+        assertEquals(Sonic2SpecialStageIntro.Phase.DROP, manager.getIntro().getCurrentPhase());
+
+        manager.update(); // first DROP VInt
+        manager.update(); // publish its pending RunObjects pass
+
+        assertEquals(Sonic2SpecialStagePlayer.RoutineState.NORMAL,
+                manager.getSonicPlayer().getRoutine());
+        assertFalse(manager.getSonicPlayer().isJumping());
+    }
+
+    @Test
+    void preStartLagSkippedReleaseThenRepressDoesNotLeakIntoFollowingCopy() {
+        advanceThroughStartupRunObjects();
+        for (int update = 0; update < Sonic2SpecialStageIntro.FADE_FROM_WHITE_FRAMES; update++) {
+            manager.handleInput(0, 0);
+            manager.update();
+        }
+        assertEquals(Sonic2SpecialStageIntro.Phase.DROP,
+                manager.getIntro().getCurrentPhase());
+        assertFalse(manager.getIntro().isSpecialStageStarted());
+
+        manager.handleInput(0x08, 0x08);
+        manager.update();
+        manager.handleInput(0x08, 0);
+        manager.update();
+
+        manager.setLagCompensation(0.35);
+        advanceUntilNextLagFrame(0x08);
+        manager.handleInput(0, 0);
+        manager.update(); // skipped release
+        manager.setLagCompensation(0);
+        manager.handleInput(0x08, 0x08);
+        manager.update(); // executed mapper re-press must latch raw press zero
+
+        manager.handleInput(0x08, 0);
+        manager.update(); // pre-start loop copies the preceding executed raw word
+
+        assertEquals(0, manager.captureRewindSnapshot().pendingMainPressedButtons,
+                "the skipped release must not leak through previousPhysicalPressedButtons");
+    }
+
+
+    private void advanceUntilNextLagFrame(int heldButtons) {
+        for (int hostFrame = 0; hostFrame < 100; hostFrame++) {
+            Sonic2SpecialStageSnapshot snapshot = manager.captureRewindSnapshot();
+            if (Sonic2SpecialStageLagModel.shouldSkipLiveUpdate(
+                    snapshot.frameCounter + 1,
+                    snapshot.trackAnimator.speedFactor(),
+                    snapshot.trackAnimator.currentSegmentType())) {
+                return;
+            }
+            manager.handleInput(heldButtons, 0);
+            manager.update();
+        }
+        throw new AssertionError("lag model did not produce a lag frame within 100 host frames");
+    }
+
+
     private void advanceThroughStartupRunObjects() {
         int updates = Sonic2SpecialStageIntro.PRE_ROLL_FRAMES + STARTUP_WAIT_UPDATES;
         for (int update = 0; update < updates; update++) {

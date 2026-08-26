@@ -248,6 +248,13 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     // -- Spray animation state (inline — replaces spray child loc_6B3DE) --
     private int sprayAnimIndex;
     private int sprayAnimTimer;
+    /**
+     * The separately allocated spray SST runs after its platform parent. When
+     * {@code HCZEndBossPlatform_StartFallAway} selects DESCEND, that later slot
+     * still completes its final suction dispatch before observing parent bit 3
+     * (docs/skdisasm/sonic3k.asm:141143-141176,141205-141229).
+     */
+    private boolean pendingSprayTailInteraction;
 
     /** Platform wait counter for ROUTINE_PLATFORM (ROM $2E). */
     private int platformWait;
@@ -451,8 +458,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * Used for both RISE (routine 4) and DESCEND (routine 8).
      */
     private void updateRiseDescend(PlayableEntity player) {
+        boolean risingAtEntry = routine == ROUTINE_RISE;
         // Track turbine X during rise
-        if (routine == ROUTINE_RISE) {
+        if (risingAtEntry) {
             currentX = turbine.getCurrentX();
             xFixed = currentX << 8;
         }
@@ -474,8 +482,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         solidActive = true;
 
         // Suction (replicated from spray child sub_6B9AC + sub_6B9E2)
-        if (routine == ROUTINE_RISE) {
+        if (risingAtEntry || pendingSprayTailInteraction) {
             applySuction(player);
+            pendingSprayTailInteraction = false;
         }
     }
 
@@ -577,6 +586,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         if (!boss.isPropellerActive()) {
             // loc_6B34A: transition to DESCEND
             routine = ROUTINE_DESCEND;
+            pendingSprayTailInteraction = true;
 
             // ROM: bset #3,$38(a0) — set own flag (not used elsewhere)
             // ROM: y_vel = $80

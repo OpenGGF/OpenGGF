@@ -283,6 +283,15 @@ public class Sonic2SpecialStageManagerTest {
         assertEquals(11, SEGMENT_FRAME_COUNTS[SEGMENT_STRAIGHT_THEN_TURN], "StraightThenTurn should have 11 frames");
     }
 
+    @Test
+    void lagAccumulatorIsRetiredBecauseTheModelIsStateless() {
+        assertThrows(NoSuchFieldException.class,
+                () -> Sonic2SpecialStageManager.class.getDeclaredField("lagAccumulator"));
+        assertThrows(NoSuchFieldException.class,
+                () -> Sonic2SpecialStageSnapshot.class.getDeclaredField("lagAccumulator"));
+    }
+
+
     private static final class CountingDiagnosticClock implements DiagnosticClock {
         private int nanoTimeReads;
         private int currentTimeMillisReads;

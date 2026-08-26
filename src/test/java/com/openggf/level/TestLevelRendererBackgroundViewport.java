@@ -42,6 +42,17 @@ class TestLevelRendererBackgroundViewport {
     }
 
     @Test
+    void highPriorityForegroundMaskUsesForegroundVScrollOrigin() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+        String normalizedSource = source.replace("\r\n", "\n");
+
+        assertTrue(normalizedSource.contains("float fgWorldOffsetY = foregroundVScroll(currentAdvancedRenderFrameState,"),
+                "The high-priority mask must use the same foreground VScroll origin as the visible Plane A pass.");
+        assertFalse(normalizedSource.contains("float fgWorldOffsetY = camera.getYWithShake();"),
+                "Using camera Y for the mask shifts low-priority sprite occlusion away from visible foreground tiles.");
+    }
+
+    @Test
     void universalPlaneRoutingHotPathUsesNoPerPassRoutingObject() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
         assertFalse(source.contains("record PlaneRouting"));
