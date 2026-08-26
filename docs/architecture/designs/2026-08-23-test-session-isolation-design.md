@@ -235,10 +235,11 @@ the recorded initializing process is revalidated dead. If all four attempts
 fail, reclaim exits 75 and leaves every marker and namespace retained for a
 later explicit invocation.
 
-No selected lease namespace uses common repository metadata. Explicit and
-managed external lock roots key their namespace by the canonical worktree path;
-the unmanaged Git-local path is already the linked worktree's own metadata
-directory. This permits independent linked worktrees to run concurrently.
+Linked worktrees never share one lease namespace in common repository metadata.
+For unmanaged Git-local locking, the main worktree uses common `.git` and each
+linked worktree uses `.git/worktrees/<name>`; explicit and managed external
+roots key their namespace by the canonical worktree path. This permits
+independent linked worktrees to run concurrently.
 Managed external storage is the default for a managed reservation, while an
 explicit external root is selected only by `--lock-root` or
 `OPENGGF_TEST_LOCK_ROOT`.
