@@ -205,6 +205,48 @@ def root_lock(root_fd: int):
         os.close(fd)
 
 
+@contextmanager
+def lane_lock(lane_fd: int):
+    """Serialize routine reservations without writing outside their lane."""
+    fcntl.flock(lane_fd, fcntl.LOCK_EX)
+    try:
+        yield
+    finally:
+        fcntl.flock(lane_fd, fcntl.LOCK_UN)
+
+
+@contextmanager
+def open_installed_test_session_lane() -> tuple[pathlib.Path, int, int]:
+    """Open, but never repair, the installed managed Codex session lane."""
+    root = _safe_root_path()
+    if filesystem_type(root) in {"tmpfs", "ramfs"}:
+        raise ScratchError("managed root must be on a disk-backed filesystem, not tmpfs/ramfs")
+    try:
+        with open_root(root) as root_fd:
+            root_info = os.fstat(root_fd)
+            codex_fd = os.open("codex", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                               dir_fd=root_fd)
+            try:
+                codex_info = os.fstat(codex_fd)
+                if (codex_info.st_uid != os.getuid() or stat.S_IMODE(codex_info.st_mode) != MODE
+                        or codex_info.st_dev != root_info.st_dev):
+                    raise ScratchError("managed Codex directory ownership, mode, or filesystem changed")
+                lane_fd = os.open("test-sessions", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                  dir_fd=codex_fd)
+            finally:
+                os.close(codex_fd)
+            try:
+                lane_info = os.fstat(lane_fd)
+                if (lane_info.st_uid != os.getuid() or stat.S_IMODE(lane_info.st_mode) != MODE
+                        or lane_info.st_dev != root_info.st_dev):
+                    raise ScratchError("managed test-session lane ownership, mode, or filesystem changed")
+                yield root, root_fd, lane_fd
+            finally:
+                os.close(lane_fd)
+    except (FileNotFoundError, NotADirectoryError, OSError) as exc:
+        raise ScratchError("managed test-session lane is missing or unsafe") from exc
+
+
 def validate_label(label: str) -> str:
     if not label or len(label) > 64 or label in {".", ".."} or "/" in label or "\\" in label or CONTROL.search(label):
         raise ScratchError("label must be one non-control path component no longer than 64 characters")
@@ -333,9 +375,8 @@ def _reservation_record(root: pathlib.Path, allocation: pathlib.Path,
 def cmd_reserve_test_session(args: argparse.Namespace) -> int:
     if not args.json:
         raise ScratchError("reserve-test-session requires --json")
-    root = ensure_root()
-    with open_root(root) as root_fd, root_lock(root_fd):
-        with child_fd(root_fd, TEST_SESSION_LANE, create=True) as lane_fd:
+    with open_installed_test_session_lane() as (root, _root_fd, lane_fd):
+        with lane_lock(lane_fd):
             while True:
                 name = (f"session-{dt.datetime.now(dt.UTC):%Y%m%dT%H%M%SZ}-"
                         f"{random.SystemRandom().randrange(1 << 32):08x}")

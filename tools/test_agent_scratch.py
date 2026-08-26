@@ -120,7 +120,7 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual(0o700, stat.S_IMODE(created.stat().st_mode))
 
     def test_reserve_test_session_returns_structured_private_allocation(self):
-        root = self.root
+        root = self.helper.ensure_root(self.env)
         with environment(**self.env):
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
@@ -142,6 +142,73 @@ class AgentScratchTests(unittest.TestCase):
             self.assertIsNone(record["usable_inodes"])
         self.assertRegex(record["retention_deadline"], r"^\d{4}-\d{2}-\d{2}T")
         self.assertTrue(record["helper_version"])
+
+    def test_reserve_uses_only_the_existing_writable_lane(self):
+        root = self.helper.ensure_root(self.env)
+        protected = [root / "claude", root / "tasks", root / "quarantine",
+                     root / "codex" / "tmp"]
+        for path in protected:
+            os.chmod(path, 0o500)
+        before = {path: (stat.S_IMODE(path.stat().st_mode), path.stat().st_mtime_ns,
+                         sorted(child.name for child in path.iterdir()))
+                  for path in protected}
+
+        with environment(**self.env):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
+
+        record = json.loads(output.getvalue())
+        allocation = pathlib.Path(record["allocation_path"])
+        self.assertEqual([], list(allocation.iterdir()))
+        self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
+        self.assertFalse((root / ".agent-scratch.lock").exists())
+        after = {path: (stat.S_IMODE(path.stat().st_mode), path.stat().st_mtime_ns,
+                        sorted(child.name for child in path.iterdir()))
+                 for path in protected}
+        self.assertEqual(before, after)
+
+    def test_concurrent_reservations_serialize_inside_the_lane(self):
+        root = self.helper.ensure_root(self.env)
+        child_env = {key: value for key, value in {**os.environ, **self.env}.items()
+                     if value is not None}
+        commands = [[sys.executable, str(HELPER), "reserve-test-session", "--json"]
+                    for _ in range(2)]
+        children = [subprocess.Popen(command, env=child_env, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, text=True)
+                    for command in commands]
+        completed = [child.communicate() for child in children]
+
+        self.assertEqual([0, 0], [child.returncode for child in children])
+        records = [json.loads(stdout) for stdout, _ in completed]
+        allocations = [pathlib.Path(record["allocation_path"]) for record in records]
+        self.assertEqual(2, len(set(allocations)))
+        self.assertFalse((root / ".agent-scratch.lock").exists())
+        for allocation in allocations:
+            self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
+            self.assertEqual([], list(allocation.iterdir()))
+
+    def test_reserve_missing_or_unsafe_lane_fails_without_repair(self):
+        root = self.helper.ensure_root(self.env)
+        lane = root / "codex" / "test-sessions"
+        lane.rmdir()
+
+        status, _, error = self.run_helper(["reserve-test-session", "--json"])
+
+        self.assertEqual(2, status)
+        self.assertIn("test-session lane", error)
+        self.assertFalse(lane.exists())
+        self.assertFalse((root / ".agent-scratch.lock").exists())
+        outside = pathlib.Path(self.temp.name) / "outside"
+        outside.mkdir()
+        lane.symlink_to(outside, target_is_directory=True)
+
+        status, _, error = self.run_helper(["reserve-test-session", "--json"])
+
+        self.assertEqual(2, status)
+        self.assertIn("test-session lane", error)
+        self.assertTrue(lane.is_symlink())
+        self.assertEqual([], list(outside.iterdir()))
 
     def test_statvfs_reports_dynamic_inode_unavailability_separately_from_zero(self):
         unavailable = type("Statvfs", (), {
