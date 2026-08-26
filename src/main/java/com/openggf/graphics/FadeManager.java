@@ -288,6 +288,18 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      * @param onComplete Callback to execute when fade completes (can be null)
      */
     public void startFadeFromBlack(Runnable onComplete) {
+        startFadeFromBlack(onComplete, 0);
+    }
+
+    /**
+     * Starts a fade from black with optional fully revealed terminal VBlanks.
+     * The S3K level reveal services 22 VBlanks: 21 change color and the last is
+     * a no-op (Palette_fade_timer=$16 at sonic3k.asm:7875-7892).
+     */
+    public void startFadeFromBlack(Runnable onComplete, int terminalNoOpFrames) {
+        if (terminalNoOpFrames < 0) {
+            throw new IllegalArgumentException("terminalNoOpFrames must not be negative");
+        }
         this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_FROM_BLACK;
         this.fadeType = FadeType.BLACK;
@@ -297,7 +309,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.fadeG = 1f;
         this.fadeB = 1f;
         this.onFadeComplete = onComplete;
-        this.holdDuration = 0;
+        this.holdDuration = terminalNoOpFrames;
         this.holdFrameCount = 0;
     }
 
@@ -499,6 +511,10 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
             fadeR = 0f;
             fadeG = 0f;
             fadeB = 0f;
+            if (holdFrameCount < holdDuration) {
+                holdFrameCount++;
+                return;
+            }
             completeFade();
         }
     }

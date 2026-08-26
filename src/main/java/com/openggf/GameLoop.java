@@ -3891,7 +3891,12 @@ public class GameLoop {
         }
         if (isDataSelectGameplayAction(action.type())) {
             com.openggf.game.dataselect.DataSelectAction pendingAction = action;
-            audioManager.fadeOutMusic();
+            com.openggf.game.dataselect.DataSelectExitTransition transition =
+                    dataSelect.exitTransition();
+            if (transition.confirmationSfxId() >= 0) {
+                audioManager.playSfx(transition.confirmationSfxId());
+            }
+            audioManager.fadeOutMusic(transition.musicFadeSteps(), transition.musicFadeDelay());
             resolveFadeManager().startFadeToBlack(() -> {
                 try {
                     dataSelectActionHandler.accept(pendingAction);
@@ -3901,7 +3906,8 @@ public class GameLoop {
                 } catch (RuntimeException e) {
                     restoreDataSelectAfterLaunchFailure(dataSelect, pendingAction, e);
                 }
-                resolveFadeManager().startFadeFromBlack(null);
+                resolveFadeManager().startFadeFromBlack(
+                        null, transition.revealTerminalNoOpFrames());
             });
             return;
         }

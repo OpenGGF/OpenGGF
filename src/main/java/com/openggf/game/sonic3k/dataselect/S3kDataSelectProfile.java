@@ -1,9 +1,11 @@
 package com.openggf.game.sonic3k.dataselect;
 
 import com.openggf.game.dataselect.DataSelectDestination;
+import com.openggf.game.dataselect.DataSelectExitTransition;
 import com.openggf.game.dataselect.DataSelectGameProfile;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +27,13 @@ public final class S3kDataSelectProfile implements DataSelectGameProfile {
     @Override
     public int slotCount() {
         return 8;
+    }
+
+    @Override
+    public DataSelectExitTransition exitTransition() {
+        // SaveScreen exits with sfx_EnterSS, then Level dispatches cmd_FadeOut.
+        // S3K's driver owns the 0x28-step, delay-6 cadence.
+        return new DataSelectExitTransition(Sonic3kSfx.ENTER_SS.id, 0x28, 6, 1);
     }
 
     @Override

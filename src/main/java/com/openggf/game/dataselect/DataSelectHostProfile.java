@@ -15,6 +15,11 @@ public interface DataSelectHostProfile {
 
     int slotCount();
 
+    /** Host-native confirmation cue and music-fade cadence for a data-select launch. */
+    default DataSelectExitTransition exitTransition() {
+        return DataSelectExitTransition.defaultTransition();
+    }
+
     List<SelectedTeam> builtInTeams();
 
     default List<SelectedTeam> parseExtraTeams(String raw) {

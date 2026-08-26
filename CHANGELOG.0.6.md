@@ -4,6 +4,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Data-select launches now retain each host game's retail transition:** native
+  S3K plays `sfx_EnterSS` before its 40-step, delay-6 music fade, while S1 and
+  S2 hosts using the donated S3K presentation play their own equivalent entry
+  cue and delay-3 fade. The destination reveal also retains the ROM's 22nd,
+  fully revealed no-op VBlank before the fade lifecycle completes.
+
 - **Live rewind now stops safely at in-frame act reloads:** transitions such
   as AIZ's fire-curtain reload record their completed destination frame and
   re-root rewind history there. Rewinding remains available within AIZ2 but
