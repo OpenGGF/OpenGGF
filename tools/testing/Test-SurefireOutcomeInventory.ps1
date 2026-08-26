@@ -400,6 +400,37 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-Equal ((Import-Csv -Delimiter "`t" -LiteralPath $output).Count) 2 'authenticated selector export row count'
     }
 
+    Invoke-Case 'export accepts frozen-next plumbing and split short property definitions' {
+        $case = Join-Path $scratch 'export-frozen-next-argv'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $patterns = Join-Path $case 'ordinary.includes'
+        $arguments = Join-Path $case 'maven-arguments.txt'
+        $baselinePom = Join-Path $case 'baseline-effective-pom.xml'
+        $selectorPom = Join-Path $case 'selector-effective-pom.xml'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "com.openggf.AdapterTest`n"
+        Write-Utf8File $patterns "com/openggf/AdapterTest.java`n"
+        Write-Utf8File $arguments @"
+-Dmse=relaxed
+-Dsurefire.argLine=-Xshare:off -javaagent:/harness/mockito-agent.jar
+-Dsurefire.forkCount=1
+-Dsurefire.reuseForks=true
+-D
+surefire.includesFile=$patterns
+test
+"@
+        Write-Utf8File $baselinePom (New-EffectivePomText)
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns)
+        Write-Utf8File (Join-Path $case 'TEST-fixture.xml') '<testsuite><testcase classname="com.openggf.AdapterTest" name="adapter"/></testsuite>'
+        Assert-Succeeded (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom, '-SelectorEffectivePomPath', $selectorPom,
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'frozen-next adapter argv'
+    }
+
     Invoke-Case 'export rejects non-bijective unsafe or competing selector invocations' {
         $case = Join-Path $scratch 'export-selector-rejections'
         New-Item -ItemType Directory -Path $case -Force | Out-Null
@@ -441,6 +472,9 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
             [pscustomobject]@{ Name = 'equals define excludes file'; Content = "--define=surefire.excludesFile=$case/excludes`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'excludesFile|selector override' },
             [pscustomobject]@{ Name = 'suite XML selector'; Content = "-Dsurefire.suiteXmlFiles=$case/suite.xml`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'suiteXmlFiles|selector override' },
             [pscustomobject]@{ Name = 'JUnit engine selector'; Content = "--define=includeJUnit5Engines=junit-jupiter`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'includeJUnit5Engines|selector override' },
+            [pscustomobject]@{ Name = 'split short provider selector'; Content = "-D`nsurefire.providers=custom.Provider`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'providers|selector override' },
+            [pscustomobject]@{ Name = 'case-insensitive selector alias'; Content = "--define=Surefire.Excludes=**/Hidden.java`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'Surefire.Excludes|selector override' },
+            [pscustomobject]@{ Name = 'split short missing definition'; Content = "-Dsurefire.includesFile=$patterns`n-D`n"; Runtime = $patterns; Pattern = '-D.*missing|property definition' },
             [pscustomobject]@{ Name = 'missing runtime input'; Content = "-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = (Join-Path $case 'other-input'); Pattern = 'OPENGGF_RUNTIME_INPUTS|runtime input' },
             [pscustomobject]@{ Name = 'relative includes file'; Content = "-Dsurefire.includesFile=ordinary.includes`ntest`n"; Runtime = $patterns; Pattern = 'canonical absolute|includesFile' }
         )

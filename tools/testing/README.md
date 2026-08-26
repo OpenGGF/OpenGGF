@@ -155,13 +155,21 @@ $mavenArguments = @('-Dmse=relaxed', "-Dsurefire.includesFile=$selector", 'test'
 The Maven invocation must contain exactly one canonical absolute
 `surefire.includesFile=<selector>` definition. The preflight parses all Maven
 property spellings supported by this workflow: `-Dname[=value]`,
-`--define name[=value]`, and `--define=name[=value]`. It rejects `test`, all
-other `surefire.*` properties, includes/excludes files or patterns, suites,
-groups, excluded groups, JUnit engine/tag selectors, duplicate includes-file
-definitions, and related aliases. `-Dtest` is specifically forbidden because
-it replaces the POM's ordinary includes and excludes. The selector must be
-present exactly once in `OPENGGF_RUNTIME_INPUTS`, so the coordinator records
-pre/post hashes of the same file.
+split `-D name[=value]`, `--define name[=value]`, and
+`--define=name[=value]`. It rejects `test`, includes/excludes files or patterns,
+suites, groups, excluded groups, JUnit engine/tag selectors, discovery-provider
+selectors, duplicate includes-file definitions, and related aliases.
+Selection names are matched case-insensitively through a maintained exact list
+plus membership-bearing terms such as `include`, `exclude`, `engine`,
+`provider`, and `scan`; this fails closed for unknown properties whose names
+plausibly change discovery. It deliberately does not blanket-reject the
+`surefire.*` namespace: adapter plumbing such as `surefire.argLine`,
+`surefire.forkCount`, and `surefire.reuseForks` does not select test membership
+and is allowed. Fork settings remain bound by the effective-POM comparison.
+`-Dtest` is specifically forbidden because it replaces the POM's ordinary
+includes and excludes. The selector must be present exactly once in
+`OPENGGF_RUNTIME_INPUTS`, so the coordinator records pre/post hashes of the
+same file.
 
 Before accepting this fallback, capture the exact effective POM once without
 and once with the selector property. Select the ordinary

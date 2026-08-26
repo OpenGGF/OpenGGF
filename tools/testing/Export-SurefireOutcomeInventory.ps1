@@ -141,17 +141,14 @@ function Read-MavenPropertyArguments {
         if ($argument.StartsWith('-D', [System.StringComparison]::Ordinal) -and $argument.Length -gt 2) {
             $properties.Add((ConvertFrom-MavenPropertyDefinition $argument.Substring(2) $argument))
         }
-        elseif ($argument -ceq '--define') {
+        elseif ($argument -ceq '-D' -or $argument -ceq '--define') {
             if (++$index -ge $arguments.Count) {
-                throw 'Maven --define argument is missing its property definition'
+                throw "Maven $argument argument is missing its property definition"
             }
-            $properties.Add((ConvertFrom-MavenPropertyDefinition $arguments[$index] "--define $($arguments[$index])"))
+            $properties.Add((ConvertFrom-MavenPropertyDefinition $arguments[$index] "$argument $($arguments[$index])"))
         }
         elseif ($argument.StartsWith('--define=', [System.StringComparison]::Ordinal)) {
             $properties.Add((ConvertFrom-MavenPropertyDefinition $argument.Substring(9) $argument))
-        }
-        elseif ($argument -ceq '-D') {
-            throw 'Maven -D argument is missing its property definition'
         }
     }
     return $properties.ToArray()
@@ -159,18 +156,32 @@ function Read-MavenPropertyArguments {
 
 function Test-IsSelectionProperty {
     param([string] $Name)
+    $normalized = $Name.ToLowerInvariant()
     $exactNames = @(
-        'test', 'it.test', 'skipTests', 'maven.test.skip', 'groups', 'excludedGroups',
-        'includes', 'excludes', 'includesFile', 'excludesFile', 'suiteXmlFiles',
-        'includeTags', 'excludeTags', 'includeJUnit5Engines', 'excludeJUnit5Engines'
+        'test', 'it.test', 'skiptests', 'maven.test.skip', 'groups', 'excludedgroups',
+        'includes', 'excludes', 'includesfile', 'excludesfile', 'suitexmlfiles',
+        'includetags', 'excludetags', 'includejunit5engines', 'excludejunit5engines',
+        'dependenciestoscan', 'testclassesdirectory', 'testsourcedirectory',
+        'provider', 'providers', 'providerclassname', 'selector', 'selectors',
+        'filter', 'filters'
     )
-    foreach ($exactName in $exactNames) {
-        if ($Name.Equals($exactName, [System.StringComparison]::OrdinalIgnoreCase)) {
-            return $true
-        }
+    if ($exactNames -ccontains $normalized) {
+        return $true
     }
     foreach ($prefix in @('surefire.', 'failsafe.', 'junit.', 'testng.')) {
-        if ($Name.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        if ($normalized.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+            $normalized = $normalized.Substring($prefix.Length)
+            break
+        }
+    }
+    if ($exactNames -ccontains $normalized) {
+        return $true
+    }
+    foreach ($membershipTerm in @(
+        'include', 'exclude', 'group', 'suite', 'engine', 'provider',
+        'selector', 'filter', 'tag', 'scan', 'condition'
+    )) {
+        if ($normalized.Contains($membershipTerm, [System.StringComparison]::Ordinal)) {
             return $true
         }
     }
