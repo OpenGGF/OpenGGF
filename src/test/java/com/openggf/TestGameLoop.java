@@ -1234,7 +1234,7 @@ public class TestGameLoop {
         assertNotNull(handled.get());
         assertEquals(DataSelectActionType.LOAD_SLOT, handled.get().type());
         assertEquals(2, handled.get().slot());
-        verify(fadeManager).startFadeFromBlack(any());
+        verify(fadeManager).startFadeFromBlack(isNull(), eq(0));
         assertEquals(com.openggf.game.DataSelectProvider.State.INACTIVE, provider.getState(),
                 "Data Select should reset only after the fade callback runs");
     }
@@ -1318,7 +1318,7 @@ public class TestGameLoop {
         assertEquals(com.openggf.game.DataSelectProvider.State.ACTIVE, provider.getState(),
                 "Data Select should remain active instead of resetting inactive on launch failure");
         assertEquals("Unable to load selected save.", provider.launchErrorMessage().orElseThrow());
-        verify(fadeManager).startFadeFromBlack(any());
+        verify(fadeManager).startFadeFromBlack(isNull(), eq(0));
     }
 
     @Test

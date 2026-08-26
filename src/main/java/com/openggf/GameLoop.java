@@ -3906,12 +3906,8 @@ public class GameLoop {
                 } catch (RuntimeException e) {
                     restoreDataSelectAfterLaunchFailure(dataSelect, pendingAction, e);
                 }
-                if (transition.revealTerminalNoOpFrames() == 0) {
-                    resolveFadeManager().startFadeFromBlack(null);
-                } else {
-                    resolveFadeManager().startFadeFromBlack(
-                            null, transition.revealTerminalNoOpFrames());
-                }
+                resolveFadeManager().startFadeFromBlack(
+                        null, transition.revealTerminalNoOpFrames());
             });
             return;
         }
