@@ -236,8 +236,8 @@ coordinator reads and hashes those inputs before the child starts, so any
 mid-run change invalidates the session. The exact harness commit, Git-config
 environment, and input hashes are recorded in the adapter evidence, and the
 adapter asserts an empty
-`git status --porcelain --untracked-files=all` both before and after link
-creation while the run is active. Adapter commands may invoke Maven lifecycle
+`git status --porcelain --untracked-files=all` both before mountpoint creation
+and after the ready/go isolation proof while the run is active. Adapter commands may invoke Maven lifecycle
 phases such as `test` or `package`, but must never include `clean`: the
 historical clean plugin could traverse or replace the active mount topology and
 destroy the authenticated routing contract.
@@ -266,7 +266,7 @@ The successful self-test selects enough frozen-next guards to force at least two
 Surefire JVMs with a two-fork configuration. It requires start/end markers and
 a valid manifest, proves every expected Surefire XML is in the manifest
 inventory, and extracts the report JVM properties and process evidence before
-the link is removed. At least two distinct fork identities must expose two
+namespace teardown and mountpoint removal. At least two distinct fork identities must expose two
 distinct resolved `lwjgl-<fork>` directories beneath the session tmp root; a
 literal unresolved `${surefire.forkNumber}`, duplicate path, or path outside
 the session fails the adapter.
@@ -319,9 +319,18 @@ successful result and is always diagnosed.
 
 The launcher's outer recovery is mandatory. Before Maven, the adapter writes
 the authenticated recovery marker with run ID, frozen HEAD, canonical
-worktree/report paths, exact preimage archive path/hash/length, and target-link
-identity. If forced termination bypasses the child trap, outer recovery uses
-no-follow type checks and those identities to restore only that exact report.
+worktree/report paths, exact preimage archive path/hash/length, ordinary target
+mountpoint path and pre-mount no-follow type/device/inode, expected
+parent-empty/non-mount state, namespace leader PID/start identity, and
+mount-namespace inode. If forced termination bypasses the child trap, outer
+recovery uses only those authenticated ordinary-directory and namespace
+identities; `readlink`/`unlink` recovery is forbidden.
+
+Normal and outer cleanup use one order: prove the namespace leader and every
+holder of its mount-namespace inode are gone; restore the exact authenticated
+report preimage when required; recheck that `target` is the same empty,
+parent-non-mount ordinary directory with the recorded device/inode; then remove
+only that directory with `rmdir`.
 It may restore for hygiene without Surefire proof, but such a run remains
 non-certifying. Empirical INT/TERM tests against the exact authenticated frozen
 coordinator show that its shutdown hook forcibly terminates the adapter before
