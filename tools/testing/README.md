@@ -6,10 +6,53 @@ Frozen commit `84d9a3761` predates the session-output Maven properties. Its
 baseline evidence therefore uses `frozen-next-session-launch.sh` and
 `frozen-next-session-adapter.sh` with the pinned detached develop harness.
 They are historical baseline-only tooling, never a production launcher. The
-adapter creates a validated ignored `target` symlink into the coordinator
-session and removes only that exact link during recovery. Adapter Maven
-arguments must never include `clean`, because frozen next's clean plugin can
-replace the routed symlink with a worktree-local directory.
+adapter preflights Linux unprivileged user and mount namespaces, creates an
+ignored empty real `target` directory, and privately bind-mounts the exact
+coordinator build root there. Nested private binds route temporary, Surefire,
+trace, diagnostic, artifact, and distribution output to their exact session
+roots while Maven and tests retain worktree-local lexical and canonical paths.
+Adapter Maven arguments must never include `clean`, because frozen next's
+historical clean plugin can destroy the authenticated mount topology.
+
+The adapter preserves the frozen platform-effective `surefire.argLine` for
+CDS, Mockito, heap, and macOS options, then adds a distinct direct-session
+`lwjgl-${surefire.forkNumber}` path. Frozen next continues to own
+`java.io.tmpdir=<worktree>/target/test-tmp`; both its lexical and canonical
+values remain worktree-local, while recorded mount device/inode identities
+prove the exact coordinator temp backing. Because root mapping would otherwise
+change Java's home to `/root`, the adapter authenticates the outer UID's passwd
+home against canonical `HOME` and appends that `user.home` to both Maven JVMs
+and Surefire forks. Caller overrides of these channels are rejected.
+
+The namespace leader records its PID/start time and mount-namespace inode and
+waits at a ready/go barrier while the parent proves its own `target` view is
+the original empty non-mount directory. Teardown unmounts nested binds in
+reverse order, proves every namespace holder is gone, and removes only the
+same empty ordinary directory with `rmdir`. Normal and outer recovery never
+recursively delete, follow, replace, read, or unlink a target link; an unsafe
+target is preserved for inspection.
+
+One frozen test intentionally rewrites the tracked
+`docs/status/rewind-round-trip-gaps.md`. Baseline runs authenticate its exact
+committed blob, archive both versions in session diagnostics, require the
+current session's exact probe testcase outcome, and atomically restore only
+that report before a valid final digest. Any second mutation, unsafe file type,
+or archive/restore failure remains identity-invalid. Launcher `INT`/`TERM`
+forces coordinator finalization first, so mandatory outer recovery restores
+the authenticated report only after an `INVALID_IDENTITY_CHANGED` manifest;
+restoration never makes that interrupted run certifying.
+
+Adapter safety or cleanup failures arm a pinned tracked-report identity
+tripwire before the coordinator's final digest. The launcher authenticates the
+tripwire's run, reason, child status, adapter status, hash, and length, then
+restores only the exact report preimage after finalization while leaving any
+unsafe target untouched. Ordinary Maven failure with successful cleanup stays
+`FAILED` and valid; parent evidence must authenticate launcher and cleanup
+diagnostics as well as the manifest. A tripwire-arm failure, unrelated trigger,
+or missing terminal marker is non-certifying. The exact frozen coordinator can
+omit its end marker during a diagnosed `manifest.json.tmp` signal race, but
+that shape is accepted only by the interruption safety fixture to prove
+hygiene—never as baseline evidence.
 
 ## Complete Surefire outcome inventories
 
