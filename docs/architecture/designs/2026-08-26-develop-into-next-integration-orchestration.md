@@ -174,9 +174,10 @@ Maven wrote into the worktree's ignored `target` directory.
 
 The integration branch provides a pinned, reviewed launcher, external exclude
 file, and compatibility adapter under `tools/testing/` for this historical
-baseline only. Frozen `next` ignores `/target/*` but not a symlink named
-`target`, so ignoring the link must be established before the coordinator takes
-its first source digest. The launcher sets an inherited, process-local
+baseline only. The original adapter used a `target` symlink, but that changed
+canonical path semantics and is superseded below by a private bind mount onto
+an empty real directory. Ignoring the root mountpoint must still be established
+before the coordinator takes its first source digest. The launcher sets an inherited, process-local
 `GIT_CONFIG_COUNT` entry for `core.excludesFile` that points at the pinned file,
 whose sole effective pattern is the root `/target` entry. It does not mutate
 repository or user Git configuration. The launcher and exclude file are named
@@ -188,26 +189,31 @@ immutable detached worktree and:
 
 1. requires the detached worktree to match `84d9a3761`, have no tracked or
    untracked source changes, and have no existing `target` path;
-2. derives the coordinator session roots from its injected `OPENGGF_*`
-   identity, then creates only an ignored `target` symlink to the
-   session-owned build root;
-3. creates build-root links for `surefire-reports`, `test-tmp`, trace reports,
-   diagnostics, artifacts, and distribution to their coordinator-owned roots;
-4. resolves frozen `next`'s platform-effective `surefire.argLine` under the
-   active Maven profiles, preserving CDS, Mockito agent, heap, and macOS
-   `-XstartOnFirstThread` options; appends fork-specific
+2. preflights Linux unprivileged user/mount namespaces and bind mounts, derives
+   the coordinator roots from its injected `OPENGGF_*` identity, creates an
+   ignored empty real directory at `target`, and creates empty real mountpoint
+   directories beneath the session build root;
+3. runs Maven inside a private `unshare --user --map-root-user --mount`
+   namespace that bind-mounts the session build root onto the real worktree
+   `target`, then nested-bind-mounts coordinator-owned tmp, Surefire, trace,
+   diagnostic, artifact, and distribution roots onto their historical
+   `target/*` paths;
+4. authenticates every mount with `mountpoint` plus matching no-follow
+   device/inode identity between source and mounted target, records bounded
+   mount-table evidence, and proves the mounts are invisible to the parent
+   namespace; Maven therefore observes real worktree-local canonical paths
+   while every byte is stored in the exact coordinator root;
+5. resolves frozen `next`'s platform-effective `surefire.argLine`, preserving
+   CDS, Mockito agent, heap, and macOS `-XstartOnFirstThread`, then appends
+   fork-specific
    `org.lwjgl.system.SharedLibraryExtractPath=<session tmp>/lwjgl-${surefire.forkNumber}`
-   through the frozen POM's own `${surefire.argLine}` expansion; and separately
-   supplies Maven user property `-Djava.io.tmpdir=<canonical session tmp>`,
-   whose Surefire user-property promotion replaces the historical plugin-local
-   value in the running fork before tests execute;
-5. installs its cleanup trap before creating any link and writes a session-side
-   recovery marker containing the canonical worktree path, link path, run ID,
-   and exact session build target; and
-6. removes only the ignored `target` symlink after a no-follow `lstat` confirms
-   that it is a symlink and its canonical target exactly matches the recorded
-   session build root. It never recursively deletes, follows, replaces, or
-   empties `target`.
+   through the frozen POM's own `${surefire.argLine}` expansion; the historical
+   POM continues to own `java.io.tmpdir=<worktree>/target/test-tmp`, whose real
+   mount identity is the coordinator tmp root; and
+6. installs cleanup before creating the mountpoint, writes a recovery marker
+   with its exact type/identity, and after the private namespace exits removes
+   only the authenticated empty real `target` directory with `rmdir`. It never
+   recursively deletes, follows, replaces, unlinks, or empties `target`.
 
 The orchestrator invokes the pinned launcher with expected harness commit
 `f1b82774d`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
@@ -226,24 +232,25 @@ adapter asserts an empty
 `git status --porcelain --untracked-files=all` both before and after link
 creation while the run is active. Adapter commands may invoke Maven lifecycle
 phases such as `test` or `package`, but must never include `clean`: the
-historical clean plugin could unlink the routed `target` symlink and recreate a
-worktree-local directory.
+historical clean plugin could traverse or replace the active mount topology and
+destroy the authenticated routing contract.
 
 An outer recovery/finally step runs after every coordinator outcome. This is
 separate from the child trap because forced process-tree termination can prevent
 the trap from running. Recovery accepts only a marker whose run ID, canonical
-worktree, link path, and link target agree with the just-started session; it
-uses no-follow inspection and unlinks only that exact symlink. A missing,
-ordinary directory, changed target, or mismatched marker is reported for human
-inspection and is never deleted automatically.
+worktree, target path, original empty-directory device/inode, and session roots
+agree with the just-started session. After the private mount namespace is gone,
+it uses no-follow inspection and `rmdir` only on that exact still-empty ordinary
+directory. A symlink, non-empty directory, changed identity, live mount, or
+mismatched marker is reported for human inspection and is never deleted.
 
 The adapter is test infrastructure, not a production or gameplay change. Its
 self-test suite covers successful Maven completion, ordinary Maven failure, and
 forced child-process termination. Every case checks exact detached HEAD, clean
 tracked/non-ignored source inventory, post-run `target` absence, and unchanged
 source digest. The forced-termination case proves the outer recovery path, and
-a negative case proves that an ordinary directory or mismatched symlink is left
-untouched.
+negative cases prove that a changed/non-empty ordinary directory, live mount,
+or symlink is left untouched.
 
 The successful self-test selects enough frozen-next guards to force at least two
 Surefire JVMs with a two-fork configuration. It requires start/end markers and
@@ -258,17 +265,16 @@ Frozen `next`'s POM normally reports `java.io.tmpdir` lexically as
 `<detached worktree>/target/test-tmp`. That spelling is not acceptable through
 the compatibility symlink: path-containment tests compare lexical roots with
 canonical children, so the symlink creates adapter-only failures even though it
-resolves to the right bytes. Empirical frozen-POM runs proved that neither
-`-DargLine` nor `-Dproject.build.directory` displaces that plugin configuration.
-The supported mechanism is Maven user property
-`-Djava.io.tmpdir=<canonical session tmp>`: Surefire promotes it into the
-running fork after startup, and reports/tests observe the direct canonical
-root. The startup argument still resolves through the authenticated
-`target/test-tmp` link to the same session bytes; it is not accepted as the
-reported test-visible identity. Before cleanup, the adapter records lexical
-and canonical values, run ID, and session root in diagnostics and requires both
-reported temp values to equal that root. LWJGL remains injected through
-`${surefire.argLine}` as a distinct per-fork child beneath it. A mutation test changes a scratch copy named in
+resolves to the right bytes. Empirical frozen-POM runs also proved that
+`-DargLine`, `-Dproject.build.directory`, and post-start Surefire user-property
+promotion cannot preserve every historical JUnit/startup consumer. A private
+bind mount is the supported mechanism: both lexical and canonical test-visible
+paths remain `<worktree>/target/test-tmp`, while `mountpoint` and device/inode
+evidence prove their backing directory is the exact coordinator tmp root.
+Before cleanup, the adapter records those paths, mount identities, run ID, and
+session root in diagnostics. LWJGL remains injected through
+`${surefire.argLine}` as a distinct per-fork child beneath the direct session
+tmp root. A mutation test changes a scratch copy named in
 pre-launch `OPENGGF_RUNTIME_INPUTS` during a controlled run and requires the
 coordinator to end `INVALID_IDENTITY_CHANGED`.
 

@@ -229,33 +229,49 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   1. a child that rewrites only
      `docs/status/rewind-round-trip-gaps.md` makes the coordinator publish
      `INVALID_IDENTITY_CHANGED`; and
-  2. a report JVM whose `java.io.tmpdir` is the lexical
-     `<worktree>/target/test-tmp` spelling fails the new requirement that the
-     lexical and canonical temp roots both equal the coordinator tmp root.
+  2. the symlink adapter makes `java.io.tmpdir` lexically
+     `<worktree>/target/test-tmp` but canonically session-external, causing real
+     frozen containment tests to fail even though the storage root is isolated.
 
   Keep the original invalid run and dirty cowtree as evidence until the repair
   is reviewed. Do not restore it in place or reinterpret its failure counts.
 
-- [ ] **Step 2: Inject the coordinator temp root after historical POM options**
+- [ ] **Step 2: Replace symlink routing with a private bind-mount namespace**
 
-  Resolve the historical platform-effective `surefire.argLine` as before and
-  keep using the frozen POM's `${surefire.argLine}` expansion to append:
+  Preflight `unshare --user --map-root-user --mount`, `mount --bind`,
+  `mountpoint`, and `rmdir` in managed scratch. Fail closed if unprivileged
+  namespaces or bind mounts are unavailable. The coordinator-child adapter
+  creates an ignored empty real `target` directory and empty real mountpoint
+  directories beneath the coordinator build root, then runs Maven inside the
+  private namespace with these bindings:
+
+  ```text
+  $OPENGGF_BUILD_DIRECTORY       -> <worktree>/target
+  $OPENGGF_TEST_TMP_ROOT         -> <worktree>/target/test-tmp
+  <session>/surefire-reports     -> <worktree>/target/surefire-reports
+  <session>/trace-reports        -> <worktree>/target/trace-reports
+  $OPENGGF_TEST_DIAGNOSTICS      -> <worktree>/target/diagnostics
+  $OPENGGF_ARTIFACT_ROOT         -> <worktree>/target/artifacts
+  $OPENGGF_DISTRIBUTION_ROOT     -> <worktree>/target/distribution
+  ```
+
+  Authenticate each binding inside the namespace with `mountpoint` and matching
+  no-follow device/inode identity between source and mounted target. Record a
+  bounded mount table and prove the mounts do not appear in the parent
+  namespace. Preserve frozen `next`'s own historical
+  `java.io.tmpdir=<worktree>/target/test-tmp`; lexical and canonical paths must
+  both remain worktree-local while the mount identity proves exact backing by
+  the coordinator tmp root. Keep using `${surefire.argLine}` only to append:
 
   ```text
   -Dorg.lwjgl.system.SharedLibraryExtractPath=$OPENGGF_TEST_TMP_ROOT/lwjgl-${surefire.forkNumber}
   ```
 
-  Separately pass Maven user property
-  `-Djava.io.tmpdir=$OPENGGF_TEST_TMP_ROOT`. Frozen-POM evidence runs
-  `20260826T051810Z-p1815598-6b0009` and
-  `20260826T051959Z-p1828131-cf7dca` prove respectively that Surefire promotes
-  that user property into the running fork while `-DargLine` and
-  `-Dproject.build.directory` do not displace the POM's hard-coded value.
-  Reject caller `argLine`, `surefire.argLine`, `java.io.tmpdir`, and LWJGL
-  overrides. Require every Surefire report to expose lexical and canonical
-  `java.io.tmpdir` equal to the canonical session tmp root, with each LWJGL path
-  a fork-specific child beneath it. The authenticated `target/test-tmp` link may
-  still satisfy JVM startup, but it is not an accepted reported identity.
+  Reject caller `argLine`, `surefire.argLine`, `java.io.tmpdir`, LWJGL, mount,
+  or namespace overrides. After the private namespace exits, require the parent
+  view of `target` to be the exact still-empty ordinary directory recorded in
+  the recovery marker and remove only it with `rmdir`. Never recursively delete
+  it. Mandatory outer recovery uses the same checks after forced termination.
 
 - [ ] **Step 3: Implement the pinned generated-report normalization**
 
@@ -298,11 +314,12 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Add cases for exact-report mutation on success and child failure, no report
   mutation, report plus second mutation, wrong initial blob, missing report,
   symlink/directory replacement, archive failure, restore failure, and
-  interruption after report generation. Include a real frozen-POM fixture
-  proving the Maven `java.io.tmpdir` user property is promoted into the running
-  fork despite the plugin's hard-coded startup value while the existing
-  `${surefire.argLine}` path still yields distinct fork-specific LWJGL roots;
-  do not accept a synthetic XML-only assertion. Require exact outcomes:
+  interruption after report generation. Add namespace-unavailable,
+  bind-failure, wrong mount source/device/inode, mount leakage, non-empty target,
+  and changed target-identity cases. Include a real frozen-POM fixture proving
+  both worktree-local lexical/canonical temp paths and exact coordinator-tmp
+  mount identity while `${surefire.argLine}` yields distinct fork-specific
+  LWJGL roots; do not accept a synthetic XML-only assertion. Require exact outcomes:
 
   | Case | Process status | Manifest state | valid |
   |---|---:|---|---|
@@ -329,7 +346,8 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   - explicit start/end markers and `valid=true`;
   - historical probe methods and containment tests actually reported;
   - archived generated-report evidence;
-  - direct canonical coordinator temp properties in the XML;
+  - historical worktree-local lexical/canonical temp properties in the XML,
+    plus recorded device/inode mount identity to the coordinator tmp root;
   - exact original report bytes restored; and
   - clean detached source inventory with no `target` after cleanup.
 
@@ -504,8 +522,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   `git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/TestSessionCoordinator.java`,
   then hash them together with the launcher, exclude, and adapter. Run the coordinator harness
   and the repaired Task 1/1A self-test, including
-  wrong-wrapper/wrong-coordinator rejection, direct canonical temp semantics,
-  and the generated-report normalization matrix.
+  wrong-wrapper/wrong-coordinator rejection, private bind-mount isolation,
+  exact historical temp semantics, and the generated-report normalization
+  matrix.
   Expected: green; otherwise no parent baseline may start.
 
 - [ ] **Step 6: Run frozen-develop ordinary and guard baselines**
@@ -536,7 +555,8 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Require the adapter to archive and restore any authorized rewind-probe report
   rewrite before coordinator finalization. Reject any mismatch between the 67
   selected classes and produced reports, any other source mutation, or temp XML
-  properties that do not name the direct canonical session root.
+  paths/mount identities that do not prove historical path semantics backed by
+  the exact coordinator session root.
 
 - [ ] **Step 8: Export and validate both parent inventories**
 
