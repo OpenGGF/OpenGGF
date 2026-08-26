@@ -158,6 +158,7 @@ On success it returns exactly one JSON object containing at least:
 - usable bytes at allocation time;
 - inode-count status `MEASURED` or `UNAVAILABLE_DYNAMIC`, with a numeric
   usable-inode value only when measured;
+- canonical managed lease root `<root>/codex/test-session-locks`;
 - retention deadline;
 - helper version.
 
@@ -176,6 +177,15 @@ validates every ancestor, and serializes allocation by locking the lane
 directory descriptor (or a lock contained inside the writable lane). A sandbox
 that grants write access only to `<root>/codex` must be able to verify and
 reserve without elevated access; a missing/unsafe lane remains fail-closed.
+
+Installation also creates `<root>/codex/test-session-locks`. A managed
+reservation returns that canonical lease root as part of the same verified
+schema. The coordinator's explicit `--lock-root`/environment override retains
+highest priority; otherwise a managed allocation uses this writable managed
+lease root rather than the sandbox-protected Git common directory. Namespace
+creation, owner publication, liveness, recovery, and deletion remain owned by
+the coordinator's existing lease protocol. The helper creates/verifies the
+lane but never prunes coordinator lock metadata.
 
 The coordinator independently canonicalises the result, confirms containment
 below the configured lane, confirms ownership and directory type, and creates
@@ -469,6 +479,14 @@ an agent running inside Codex's normal workspace-write sandbox must use the
 ordinary approval path for `retire --apply`; the design does not broaden the
 sandbox to make removal silent.
 
+Lease audit covers two canonical sources: the linked-worktree Git directory
+for legacy/explicit local locks, and the installed managed lease root returned
+by `agent-scratch path test-session-locks` when managed scratch is configured.
+The latter is a shared directory whose namespace metadata identifies and
+validates the owning worktree. An unreadable configured managed lease root
+blocks retirement; absent managed configuration is not an error. Audit reports
+root provenance and never deletes either source.
+
 ### Workflow enforcement
 
 The paired trace-green-fleet skills, agent guidance, and workflow docs will
@@ -545,6 +563,9 @@ actionable managed-allocation failure, not a reason to fall back locally.
   and return distinct, probed directories;
 - a missing, symlinked, or otherwise unsafe test-session lane fails closed
   without repairing or mutating the root layout;
+- install creates and verify validates `codex/test-session-locks`; reservation
+  returns its canonical path without writing it, and a missing/symlinked lease
+  lane fails closed;
 - allocation rejects symlinks, foreign ownership, unsafe modes, wrong roots,
   malformed paths, and failed atomic operations;
 - terminal sessions obey seven-day retention and bounded keep markers;
@@ -554,6 +575,8 @@ actionable managed-allocation failure, not a reason to fall back locally.
 ### Coordinator self-tests and process harness
 
 - configured managed allocation failure never creates `.openggf/test-runs`;
+- a default managed run uses the returned writable lease root and reaches the
+  child inside the ordinary Codex sandbox without `--lock-root`;
 - unmanaged project-local fallback is visibly classified;
 - explicit overrides preserve fail-closed behavior;
 - low capacity prevents child launch, with an injectable threshold for a

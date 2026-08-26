@@ -32,7 +32,8 @@
 - Modify: `tools/test_agent_scratch.py:58-420`
 
 **Interfaces:**
-- Produces: `TEST_SESSION_LANE = ("codex", "test-sessions")`.
+- Produces: `TEST_SESSION_LANE = ("codex", "test-sessions")` and
+  `TEST_SESSION_LOCK_LANE = ("codex", "test-session-locks")`.
 - Produces: `agent-scratch reserve-test-session --json` with one versioned JSON object.
 - Produces: `_reservation_record(root: Path, allocation: Path) -> dict[str, object]`.
 - Consumes: existing descriptor-relative root creation and locking helpers.
@@ -55,6 +56,8 @@ def test_reserve_test_session_returns_structured_private_allocation(self):
     self.assertEqual(str(root.resolve()), record["managed_root"])
     self.assertEqual(str(allocation.resolve()), record["allocation_path"])
     self.assertEqual(root / "codex" / "test-sessions", allocation.parent)
+    self.assertEqual(str((root / "codex" / "test-session-locks").resolve()),
+                     record["lease_root"])
     self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
     self.assertTrue(record["filesystem_device"])
     self.assertGreater(record["usable_bytes"], 0)
@@ -67,7 +70,9 @@ def test_reserve_test_session_returns_structured_private_allocation(self):
     self.assertTrue(record["helper_version"])
 ```
 
-Extend the root-layout test to require `codex/test-sessions`, and add rejection tests for a symlinked lane and a replaced allocation parent.
+Extend the root-layout test to require `codex/test-sessions` and
+`codex/test-session-locks`, and add rejection tests for a symlinked allocation
+lane, lease lane, and a replaced allocation parent.
 
 Add a sandbox-boundary fixture where the managed root and non-Codex siblings
 are non-writable but the existing `codex/test-sessions` lane is writable.
@@ -102,6 +107,7 @@ Add constants and focused helpers:
 
 ```python
 TEST_SESSION_LANE = ("codex", "test-sessions")
+TEST_SESSION_LOCK_LANE = ("codex", "test-session-locks")
 TEST_SESSION_RETENTION_DAYS = 7
 RESERVATION_SCHEMA_VERSION = 1
 HELPER_VERSION = "openggf-agent-scratch-v2"
@@ -223,7 +229,7 @@ returns schema version `1`, tier `MANAGED_CODEX_TEST_SESSIONS`, the installed
 helper version, canonical managed/allocation paths, filesystem device,
 capacity fields, seven-day retention deadline, and an allocation contained by
 that lane. Capacity fields include inode-count status and conditional numeric
-nullability.
+nullability. The record also contains the canonical managed lease root.
 This is the migration checkpoint: a stale installed helper is a hard failure,
 not permission to continue to the coordinator tasks.
 
@@ -296,6 +302,7 @@ private record CapacitySnapshot(
 
 private record StorageAllocation(
         Path outputRoot, StorageTier tier, Path managedRoot,
+        Path managedLeaseRoot,
         int allocationSchema, String helperVersion, String filesystemDevice,
         CapacitySnapshot allocationCapacity, InodeCountStatus inodeCountStatus,
         Instant retentionDeadline,
@@ -306,6 +313,7 @@ Replace `resolveOutputRoot()`/`agentScratchRoot()` with `resolveStorageAllocatio
 
 Require every design-mandated reservation field: schema version, canonical
 managed root, canonical allocation path, storage tier, filesystem device,
+canonical managed lease root,
 usable bytes, inode-count status plus conditionally nullable inode value,
 retention deadline, and helper version. Reject missing or
 malformed fields, including a retention deadline that is not a future ISO-8601
@@ -315,6 +323,12 @@ Accept exactly `MEASURED` with a nonnegative numeric inode value or
 `UNAVAILABLE_DYNAMIC` with JSON `null`. Reject every other pairing. The
 allocation-time numeric zero gate applies only to `MEASURED`; the all-tier live
 file probe remains authoritative when the count is unavailable.
+
+When no explicit lock-root option/environment is present, require managed
+allocations to use the verified `managedLeaseRoot`. Never fall back to the Git
+common directory on a managed allocation. Add tests for explicit lock-root
+priority, managed default success, malformed/out-of-lane lease-root failure,
+and no Git-metadata write attempt in the ordinary sandbox.
 
 - [ ] **Step 4: Run the coordinator self-test**
 
@@ -533,6 +547,10 @@ Task 6 guidance and guards must also document measured-versus-dynamic inode
 nullability and sandbox-static verification with
 `UNAVAILABLE_IN_SANDBOX` service runtime state.
 
+Require `test-session-locks` guidance and a process-harness/default-wrapper
+test proving a managed run publishes its lease under that lane without an
+explicit lock-root override.
+
 - [ ] **Step 4: Add and translate the opt-out flag**
 
 Parse `--retain-ephemeral` in `Options`. Add this PowerShell translation:
@@ -584,7 +602,9 @@ List<String> requiredStorageGuidance = List.of(
     "--retain-ephemeral",
     "STORAGE_FINALIZATION_FAILED",
     "UNAVAILABLE_DYNAMIC",
-    "UNAVAILABLE_IN_SANDBOX"
+    "UNAVAILABLE_IN_SANDBOX",
+    "test-session-locks",
+    "lease_root"
 );
 ```
 

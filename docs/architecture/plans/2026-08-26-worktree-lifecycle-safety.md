@@ -162,7 +162,7 @@ git commit -m "feat: inventory orphaned worktree directories" \
 **Interfaces:**
 - Consumes: Task 1 context/classification and exact target path.
 - Produces: `retire(context, target, base, apply, confirm_detached_head) -> RetireResult`.
-- Produces: `detect_test_session_leases(worktree: WorktreeRecord) -> list[LeaseNamespaceStatus]`.
+- Produces: `detect_test_session_leases(worktree: WorktreeRecord) -> list[LeaseRootStatus]`.
 
 The operation schemas are distinct from audit records:
 
@@ -174,6 +174,15 @@ class LeaseNamespaceStatus:
     run_id: str | None
     state: str  # ACTIVE, RECOVERED, UNREADABLE, INITIALIZING, STALE
     blocker: str | None
+
+@dataclasses.dataclass(frozen=True)
+class LeaseRootStatus:
+    provenance: str  # GIT_DIR or MANAGED_TEST_SESSION_LOCKS
+    root_path: str | None
+    configured: bool
+    state: str  # AVAILABLE, ABSENT_CONFIGURATION, UNREADABLE
+    blocker: str | None
+    namespaces: list[LeaseNamespaceStatus]
 
 @dataclasses.dataclass(frozen=True)
 class RetireResult:
@@ -188,7 +197,7 @@ class RetireResult:
     deleted_branch: bool
     branch_retained: bool
     partial_success: bool
-    lease_namespaces: list[LeaseNamespaceStatus]
+    lease_roots: list[LeaseRootStatus]
     git_errors: list[str]
     blockers: list[str]
 ```
@@ -201,17 +210,27 @@ exact detached-HEAD confirmation, live or unreadable session leases, recovered
 lease reporting without deletion, and deterministic state change immediately
 before apply.
 
+Add explicit failing cases for: absent managed configuration producing a
+non-blocking `ABSENT_CONFIGURATION` root record; configured managed root
+scanned with `MANAGED_TEST_SESSION_LOCKS` provenance; unreadable configured
+managed root blocking retirement even when it exposes no namespace; and an
+arbitrary external root never being searched.
+
 Inject a callback immediately before final revalidation so the race test can dirty or advance the target deterministically.
 
 Lease discovery must inspect every direct child matching
-`openggf-test-session.lock*` beneath the linked worktree Git directory returned
-by `git -C <worktree> rev-parse --git-dir`. It parses `owner.json` and
+`openggf-test-session.lock*` beneath both (1) the linked worktree Git directory
+returned by `git -C <worktree> rev-parse --git-dir` and (2) the canonical
+managed lease root printed by `agent-scratch path test-session-locks` when
+managed scratch is configured. It parses `owner.json` and
 `initializing.json`, validates their `worktree` and `lease_path`, and applies
 the coordinator's `pid` plus `process_start_epoch_ms` identity contract.
 Active, initializing-live, and unreadable namespaces block. Recovered and
 stale namespaces are reported but never removed. Do not search arbitrary
-external lock roots in this delivery; report that only the canonical Git-dir
-lock root is covered.
+external lock roots in this delivery. Report each root's provenance; an
+unreadable configured managed lease root blocks retirement, while absent
+managed configuration returns a non-blocking `ABSENT_CONFIGURATION` managed
+root record.
 
 - [ ] **Step 2: Run lifecycle tests and prove mutation is not implemented**
 
