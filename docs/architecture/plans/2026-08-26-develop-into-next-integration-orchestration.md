@@ -238,22 +238,24 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 - [ ] **Step 2: Inject the coordinator temp root after historical POM options**
 
-  Resolve the historical platform-effective `surefire.argLine` as before,
-  construct the complete effective fork argument line, and supply it through
-  Surefire's final user property `-DargLine=...` so the frozen POM's plugin-local
-  `-Djava.io.tmpdir=${project.build.directory}/test-tmp` is displaced. End that
-  complete line with:
+  Resolve the historical platform-effective `surefire.argLine` as before and
+  keep using the frozen POM's `${surefire.argLine}` expansion to append:
 
   ```text
-  -Djava.io.tmpdir=$OPENGGF_TEST_TMP_ROOT
   -Dorg.lwjgl.system.SharedLibraryExtractPath=$OPENGGF_TEST_TMP_ROOT/lwjgl-${surefire.forkNumber}
   ```
 
+  Separately pass Maven user property
+  `-Djava.io.tmpdir=$OPENGGF_TEST_TMP_ROOT`. Frozen-POM evidence runs
+  `20260826T051810Z-p1815598-6b0009` and
+  `20260826T051959Z-p1828131-cf7dca` prove respectively that Surefire promotes
+  that user property into the running fork while `-DargLine` and
+  `-Dproject.build.directory` do not displace the POM's hard-coded value.
   Reject caller `argLine`, `surefire.argLine`, `java.io.tmpdir`, and LWJGL
   overrides. Require every Surefire report to expose lexical and canonical
   `java.io.tmpdir` equal to the canonical session tmp root, with each LWJGL path
-  a fork-specific child beneath it. Remove reliance on the `target/test-tmp`
-  symlink for JVM temp identity.
+  a fork-specific child beneath it. The authenticated `target/test-tmp` link may
+  still satisfy JVM startup, but it is not an accepted reported identity.
 
 - [ ] **Step 3: Implement the pinned generated-report normalization**
 
@@ -293,9 +295,11 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Add cases for exact-report mutation on success and child failure, no report
   mutation, report plus second mutation, wrong initial blob, missing report,
   symlink/directory replacement, archive failure, restore failure, and
-  interruption after report generation. Include a frozen-POM precedence fixture
-  proving `-DargLine` displaces the plugin's later hard-coded tmp value, not a
-  synthetic XML-only assertion. Require exact outcomes:
+  interruption after report generation. Include a real frozen-POM fixture
+  proving the Maven `java.io.tmpdir` user property is promoted into the running
+  fork despite the plugin's hard-coded startup value while the existing
+  `${surefire.argLine}` path still yields distinct fork-specific LWJGL roots;
+  do not accept a synthetic XML-only assertion. Require exact outcomes:
 
   | Case | Process status | Manifest state | valid |
   |---|---:|---|---|

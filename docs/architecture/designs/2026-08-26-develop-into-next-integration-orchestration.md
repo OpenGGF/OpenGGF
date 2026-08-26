@@ -195,13 +195,12 @@ immutable detached worktree and:
    diagnostics, artifacts, and distribution to their coordinator-owned roots;
 4. resolves frozen `next`'s platform-effective `surefire.argLine` under the
    active Maven profiles, preserving CDS, Mockito agent, heap, and macOS
-   `-XstartOnFirstThread` options, constructs the complete effective fork
-   argument line, and supplies it through Surefire's final user property
-   `-DargLine=...` so the frozen POM's later plugin-local tmp option is
-   displaced; the constructed line ends with both
-   `java.io.tmpdir=<canonical session tmp>` and
+   `-XstartOnFirstThread` options; appends fork-specific
    `org.lwjgl.system.SharedLibraryExtractPath=<session tmp>/lwjgl-${surefire.forkNumber}`
-   after the historical POM's own properties so the coordinator paths win;
+   through the frozen POM's own `${surefire.argLine}` expansion; and separately
+   supplies Maven user property `-Djava.io.tmpdir=<canonical session tmp>`,
+   whose Surefire user-property promotion replaces the historical plugin-local
+   value in the running fork before tests execute;
 5. installs its cleanup trap before creating any link and writes a session-side
    recovery marker containing the canonical worktree path, link path, run ID,
    and exact session build target; and
@@ -259,11 +258,17 @@ Frozen `next`'s POM normally reports `java.io.tmpdir` lexically as
 `<detached worktree>/target/test-tmp`. That spelling is not acceptable through
 the compatibility symlink: path-containment tests compare lexical roots with
 canonical children, so the symlink creates adapter-only failures even though it
-resolves to the right bytes. The adapter's final JVM property must instead be
-the canonical coordinator session tmp root itself. Before cleanup, the adapter
-records lexical and canonical values, run ID, and session root in diagnostics
-and requires both temp values to equal that root. LWJGL remains a distinct
-per-fork child beneath it. A mutation test changes a scratch copy named in
+resolves to the right bytes. Empirical frozen-POM runs proved that neither
+`-DargLine` nor `-Dproject.build.directory` displaces that plugin configuration.
+The supported mechanism is Maven user property
+`-Djava.io.tmpdir=<canonical session tmp>`: Surefire promotes it into the
+running fork after startup, and reports/tests observe the direct canonical
+root. The startup argument still resolves through the authenticated
+`target/test-tmp` link to the same session bytes; it is not accepted as the
+reported test-visible identity. Before cleanup, the adapter records lexical
+and canonical values, run ID, and session root in diagnostics and requires both
+reported temp values to equal that root. LWJGL remains injected through
+`${surefire.argLine}` as a distinct per-fork child beneath it. A mutation test changes a scratch copy named in
 pre-launch `OPENGGF_RUNTIME_INPUTS` during a controlled run and requires the
 coordinator to end `INVALID_IDENTITY_CHANGED`.
 
