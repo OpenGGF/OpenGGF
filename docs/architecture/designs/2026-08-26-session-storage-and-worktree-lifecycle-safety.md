@@ -167,6 +167,16 @@ read, and unlink probe before reporting success. It rejects symlink traversal,
 foreign ownership, unsafe modes, a changed filesystem identity, or a path
 outside the lane.
 
+Routine reservation must fit the installed Codex writable-root boundary. It
+may read and validate the managed root and existing `codex` ancestors, but it
+must not create or lock `.agent-scratch.lock`, `tasks`, `quarantine`, or any
+other root-level path. Installation owns that broader layout. Reservation opens
+the already-installed `codex/test-sessions` lane descriptor-relatively,
+validates every ancestor, and serializes allocation by locking the lane
+directory descriptor (or a lock contained inside the writable lane). A sandbox
+that grants write access only to `<root>/codex` must be able to verify and
+reserve without elevated access; a missing/unsafe lane remains fail-closed.
+
 The coordinator independently canonicalises the result, confirms containment
 below the configured lane, confirms ownership and directory type, and creates
 its run directory atomically. A syntactically valid helper response is not by
@@ -527,6 +537,14 @@ actionable managed-allocation failure, not a reason to fall back locally.
 - a deterministic Btrfs-shaped `f_files=0, f_favail=0` fixture emits
   `inode_count_status=UNAVAILABLE_DYNAMIC` and JSON-null `usable_inodes`, while
   a measured zero fixture remains `MEASURED` and numeric;
+- a simulated sandbox makes the managed root and non-Codex siblings read-only
+  while leaving the installed Codex lane writable; reservation succeeds,
+  creates/touches no root `.agent-scratch.lock`, `tasks`, `quarantine`, or
+  other sibling, and returns a valid allocation;
+- concurrent sandboxed reservations serialize through the lane-contained lock
+  and return distinct, probed directories;
+- a missing, symlinked, or otherwise unsafe test-session lane fails closed
+  without repairing or mutating the root layout;
 - allocation rejects symlinks, foreign ownership, unsafe modes, wrong roots,
   malformed paths, and failed atomic operations;
 - terminal sessions obey seven-day retention and bounded keep markers;

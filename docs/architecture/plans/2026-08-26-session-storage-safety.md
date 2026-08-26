@@ -69,6 +69,17 @@ def test_reserve_test_session_returns_structured_private_allocation(self):
 
 Extend the root-layout test to require `codex/test-sessions`, and add rejection tests for a symlinked lane and a replaced allocation parent.
 
+Add a sandbox-boundary fixture where the managed root and non-Codex siblings
+are non-writable but the existing `codex/test-sessions` lane is writable.
+Reservation must succeed without creating/touching root `.agent-scratch.lock`,
+`tasks`, or `quarantine`. A missing/unsafe lane must fail rather than invoking
+general root creation.
+
+Run two concurrent reservations against that fixture and assert both complete,
+return distinct private directories, and leave no probe files. Snapshot
+root-level sibling metadata before/after to prove reservation neither creates
+nor touches it.
+
 Inject `statvfs` results rather than relying on the host: a Btrfs-shaped
 `f_files=0, f_favail=0` fixture must emit `UNAVAILABLE_DYNAMIC` plus JSON
 `null`, while a nonzero-total fixture with `f_favail=0` must emit `MEASURED`
@@ -108,24 +119,30 @@ def _statvfs_record(path: pathlib.Path) -> dict[str, object]:
     }
 
 def cmd_reserve_test_session(args: argparse.Namespace) -> int:
-    root = ensure_root()
-    with open_root(root) as root_fd, root_lock(root_fd):
-        with child_fd(root_fd, TEST_SESSION_LANE, create=True) as lane_fd:
-            name = f"session-{dt.datetime.now(dt.UTC):%Y%m%dT%H%M%SZ}-{random.randrange(1 << 32):08x}"
-            os.mkdir(name, mode=MODE, dir_fd=lane_fd)
-            allocation_fd = os.open(
-                name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
-                dir_fd=lane_fd)
-            try:
-                _probe_directory(allocation_fd)
-            finally:
-                os.close(allocation_fd)
+    root = validate_installed_root_read_only()
+    with open_root(root) as root_fd:
+        with child_fd(root_fd, TEST_SESSION_LANE, create=False) as lane_fd:
+            with lock_directory(lane_fd):
+                name = f"session-{dt.datetime.now(dt.UTC):%Y%m%dT%H%M%SZ}-{random.randrange(1 << 32):08x}"
+                os.mkdir(name, mode=MODE, dir_fd=lane_fd)
+                allocation_fd = os.open(
+                    name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                    dir_fd=lane_fd)
+                try:
+                    _probe_directory(allocation_fd)
+                finally:
+                    os.close(allocation_fd)
     allocation = root.joinpath(*TEST_SESSION_LANE, name)
     print(json.dumps(_reservation_record(root, allocation), sort_keys=True))
     return 0
 ```
 
-The probe must create, write, `fsync`, atomically rename, read, and unlink a private file within the allocation. Register `reserve-test-session` in `build_parser()` and make `ensure_root()` create the lane idempotently.
+The probe must create, write, `fsync`, atomically rename, read, and unlink a
+private file within the allocation. Register `reserve-test-session` in
+`build_parser()` and make install/`ensure_root()` create the lane idempotently.
+The routine reservation command must only validate existing ancestors and
+write/lock within `codex/test-sessions`; it must not call general layout
+creation or the root-level lock.
 
 - [ ] **Step 4: Run helper tests**
 
