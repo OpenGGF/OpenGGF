@@ -740,11 +740,12 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Freeze detached baseline worktrees at these exact hashes. At every later
   gate, require `next == origin/next == 84d9a3761` and require `e3f390e9f` to
   remain an ancestor of both current develop refs. Also require clean main and
-  integration worktrees. Target drift, non-fast-forward develop divergence, or
-  loss of snapshot ancestry requires an amendment. If the develop refs differ
-  linearly, record the newer descendant as a follow-up source-line fast-forward
+  integration worktrees. Target drift or loss of snapshot ancestry requires an
+  amendment. Record every later develop descendant as a follow-up source-line
   delta without refreezing or rebaselining this merge; keep the detached parent
-  baseline at `e3f390e9f`.
+  baseline at `e3f390e9f`. Non-linear post-snapshot descendants do not block
+  detached baseline work, but must be reconciled into one pushed develop tip
+  and verified separately before final delivery.
   Evidence captured against `f1b82774d` is historical and must not be reused as
   the `e3f390e9f` develop parent baseline. All evidence captured at
   `97bc177ee` is historical. Frozen-next evidence must also be
@@ -1410,6 +1411,64 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 ---
 
+### Task 12A: Reconcile Post-Snapshot Develop Descendants
+
+**Files:**
+
+- Main workspace `develop`; no integration-parent or baseline mutation.
+- Modify: `README.md` with the merge-policy-required concise release/change-log
+  summary for this post-snapshot reconciliation.
+- Update the final validation artifact with the follow-up evidence.
+
+**Interfaces:**
+
+- Consumes: frozen snapshot `e3f390e9f`, local descendant
+  `75f64e53c379e4ac65fdde1d3c37fc2f52701711`, fetched remote descendant
+  `ed9f55941343093e226b5ad55d80ece7a9417267`, and the completed integration
+  evidence.
+- Produces: one tested and pushed `develop` follow-up tip that still contains
+  `e3f390e9f`; it is not substituted as this integration merge's second parent.
+
+- [ ] **Step 1: Fetch, classify, and protect the main workspace**
+
+  In the clean main workspace on `develop`, fetch origin and resolve the exact
+  local and remote tips. Require both to contain `e3f390e9f`; never switch the
+  main workspace, rewrite history, discard user changes, or force-push.
+
+- [ ] **Step 2: Record the updated-origin baseline**
+
+  In a detached worktree at the exact fetched `origin/develop`, run the ordinary
+  full suite, fresh `-Pguards` suite, and focused tests covering the descendant
+  changes through quiet `tools/testing/test-session.sh` sessions. Record exact
+  failures, errors, markers, manifests, and logs as the comparison baseline.
+
+- [ ] **Step 3: Merge the exact fetched source tip**
+
+  Merge the fetched `origin/develop` commit into clean main-workspace `develop`
+  without switching branches or bypassing hooks. Reconcile conflicts narrowly;
+  before committing, stage a concise `README.md` release/change-log summary as
+  required by the non-master-into-develop merge policy. Keep this commit outside
+  the frozen integration branch's second-parent and parent-baseline identities.
+
+- [ ] **Step 4: Verify no follow-up regression**
+
+  Run the same ordinary full suite and fresh guards on the reconciled main tip,
+  plus the relevant focused tests for both descendant lines. Compare against
+  the updated-origin baseline: no baseline pass may become red, and no baseline
+  failure may worsen or change due to the reconciliation. Classify the staged
+  README delta as intentional reconciliation-only documentation and record it
+  in the final validation evidence.
+
+- [ ] **Step 5: Push and verify the follow-up source tip**
+
+  Push only main-workspace `develop`, fetch again, and require local develop and
+  `origin/develop` to equal the exact reconciliation commit with `e3f390e9f` as
+  an ancestor. Record the pushed commit and all verification evidence. Do not
+  change the frozen integration parent or rerun its parent baselines solely
+  because this follow-up tip exists.
+
+---
+
 ### Task 13: End-to-End Review and Human Handoff
 
 **Files:**
@@ -1451,12 +1510,13 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   Fetch origin and require `next`/`origin/next` still equal the frozen target.
   Verify the merge second parent is exact frozen snapshot `e3f390e9f`, both
-  current develop refs retain that commit as an ancestor, any inequality is a
-  linear fast-forward relation, first-parent ancestry reaches frozen next, the
-  branch is clean, and `next` itself is unchanged. Record any newer develop
-  descendant as a later follow-up source-line fast-forward delta; do not absorb
-  it into or rebaseline this merge, and do not imply that `next` itself can
-  fast-forward to it. Non-fast-forward source divergence is a stop condition.
+  current develop refs retain that commit as an ancestor, first-parent ancestry
+  reaches frozen next, the branch is clean, and `next` itself is unchanged.
+  Record newer develop descendants as later follow-up source-line deltas; do
+  not absorb them into or rebaseline this merge, and do not imply that `next`
+  itself can fast-forward to them. Before final delivery, reconcile any
+  divergent post-snapshot source lines into one pushed develop tip and verify
+  that follow-up separately.
 
 - [ ] **Step 5: Write the end-to-end review artifact**
 

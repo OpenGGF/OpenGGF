@@ -57,6 +57,16 @@ the immutable merge snapshot; later `develop` descendants are follow-up
 fast-forward deltas on the source line and do not change this merge's exact
 second parent or imply that `next` itself can fast-forward to them.
 
+After that snapshot was frozen, the 2026-08-26 source refs advanced on separate
+lines from common ancestor `e3f390e9f`: local `develop` reached
+`75f64e53c379e4ac65fdde1d3c37fc2f52701711` through the 0.6 scope-freeze
+documentation merge (two local-only commits), while `origin/develop` reached
+`ed9f55941343093e226b5ad55d80ece7a9417267` through the S2 CPZ2 water-palette
+fix (one remote-only commit). These descendants are outside the frozen merge
+snapshot and its parent baselines. Their reconciliation is a separately tested
+and pushed source-line follow-up before final delivery; it does not alter the
+exact `e3f390e9f` second parent.
+
 From the merge base, `next` and `develop` have 611 and 1,879 unique commits
 respectively. They changed 2,324 and 1,950 files, with 232 paths touched by both
 sides. An isolated recursive merge simulation at the final pre-baseline
@@ -481,12 +491,15 @@ lacks its start/end markers.
 Before implementation and again before human review, the coordinator fetches
 and verifies `next` and `origin/next` against the frozen target hash, and
 verifies that both `develop` refs still contain frozen snapshot `e3f390e9f`.
-Target drift, non-fast-forward source divergence, or loss of snapshot ancestry
-pauses promotion and requires a reviewed amendment. If the source refs differ
-but one is an ancestor of the other, record the newer descendant as a follow-up
-source-line fast-forward delta; it does not refreeze or invalidate the exact
-merge snapshot, and the frozen baseline remains detached at `e3f390e9f`. A
-later target update is attempted only after the same checks.
+Target drift or loss of snapshot ancestry pauses promotion and requires a
+reviewed amendment. Any later source-line descendants, whether currently
+linear or awaiting their own reconciliation merge, are recorded as follow-up
+deltas; they do not refreeze or invalidate this integration snapshot, and the
+parent baseline remains detached at `e3f390e9f`. Before final delivery, those
+descendants must be reconciled into one pushed source tip without rewriting
+history, but that follow-up reconciliation is verified separately rather than
+silently changing this merge's second parent. A later target update is
+attempted only after the same checks.
 Because the original branches remain unchanged, rollback
 before promotion is branch abandonment; any partial remote update is recovered
 with a new reviewed commit or an explicit human-authorized remote correction,
@@ -665,8 +678,10 @@ The integration is ready for human review only when:
 - Local and fetched remote-tracking refs agree on frozen `next` and pushed
   snapshot `e3f390e9f`. Target drift or loss of source-snapshot ancestry before
   merge or promotion triggers the amendment and review process. A later
-  `develop` descendant is recorded as a follow-up source-line fast-forward
-  delta instead of being silently absorbed into this merge.
+  `develop` descendant is recorded as a follow-up source-line delta instead of
+  being silently absorbed into this merge; divergent post-snapshot descendant
+  lines are reconciled before final delivery without changing the frozen
+  baseline or exact merge parent.
 - Both parents may have pre-existing red tests. Exact outcome comparison, not a
   simplistic all-green requirement, governs acceptance.
 - Trace payload volume makes file and line counts poor estimates of manual
