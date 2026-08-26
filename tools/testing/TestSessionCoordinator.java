@@ -9,14 +9,17 @@ import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,6 +47,29 @@ public final class TestSessionCoordinator {
             .ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC);
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final HexFormat HEX = HexFormat.of();
+    private static final int STORAGE_ALLOCATION_SCHEMA = 1;
+    private static final Duration MAX_MANAGED_RETENTION = Duration.ofDays(7);
+    private static final Set<String> RESERVATION_FIELDS = Set.of(
+            "schema_version", "storage_tier", "managed_root", "allocation_path",
+            "filesystem_device", "usable_bytes", "total_bytes", "usable_inodes",
+            "retention_deadline", "helper_version");
+
+    private enum StorageTier {
+        EXPLICIT_OVERRIDE,
+        MANAGED_CODEX_TEST_SESSIONS,
+        PROJECT_LOCAL_FALLBACK,
+        SYSTEM_TMP_EXPLICIT
+    }
+
+    private record CapacitySnapshot(long usableBytes, long totalBytes, long usableInodes) {
+    }
+
+    private record StorageAllocation(
+            Path outputRoot, StorageTier tier, Path managedRoot,
+            int allocationSchema, String helperVersion, String filesystemDevice,
+            CapacitySnapshot allocationCapacity, Instant retentionDeadline,
+            String notApplicableReason, String warning) {
+    }
 
     private TestSessionCoordinator() {
     }
@@ -72,7 +98,11 @@ public final class TestSessionCoordinator {
 
     private static int run(Options options) throws Exception {
         Path worktree = worktree();
-        Path outputRoot = resolveOutputRoot(worktree, options.allowSystemTmp);
+        StorageAllocation allocation = resolveStorageAllocation(worktree, options.allowSystemTmp);
+        Path outputRoot = allocation.outputRoot;
+        if (allocation.warning != null) {
+            System.err.println(allocation.warning);
+        }
         Files.createDirectories(outputRoot);
         Path lockParent = resolveLockParent(worktree, options.lockRoot);
         String runId = createRunId();
@@ -192,7 +222,11 @@ public final class TestSessionCoordinator {
 
     private static int debugGuard(Options options) throws Exception {
         Path worktree = worktree();
-        Path outputRoot = resolveOutputRoot(worktree, options.allowSystemTmp);
+        StorageAllocation allocation = resolveStorageAllocation(worktree, options.allowSystemTmp);
+        Path outputRoot = allocation.outputRoot;
+        if (allocation.warning != null) {
+            System.err.println(allocation.warning);
+        }
         Path lockParent = resolveLockParent(worktree, options.lockRoot);
         String runId = createRunId();
         Path namespace = namespace(lockParent, worktree, externalLockRequested(options));
@@ -852,38 +886,439 @@ public final class TestSessionCoordinator {
         return ProcessHandle.current().info().startInstant().map(Instant::toEpochMilli).orElse(-1L);
     }
 
-    private static Path resolveOutputRoot(Path worktree, boolean allowSystemTmp) throws IOException {
+    private static StorageAllocation resolveStorageAllocation(Path worktree, boolean allowSystemTmp)
+            throws IOException {
         String override = System.getenv("OPENGGF_TEST_ROOT");
         if (override != null && !override.isBlank()) {
-            return validateRoot(Path.of(override), "OPENGGF_TEST_ROOT");
+            Path root = validateRoot(path(override, "OPENGGF_TEST_ROOT"), "OPENGGF_TEST_ROOT");
+            return localAllocation(root, StorageTier.EXPLICIT_OVERRIDE, null);
         }
-        Optional<Path> managed = agentScratchRoot();
-        if (managed.isPresent()) {
-            return validateRoot(managed.get(), "agent-scratch session root");
+
+        String configuredManagedRoot = configuredManagedRoot();
+        if (configuredManagedRoot != null) {
+            return managedAllocation(path(configuredManagedRoot, "managed scratch root"));
+        }
+        if (allowSystemTmp) {
+            Path system = validateRoot(Path.of(System.getProperty("java.io.tmpdir"), "openggf-test-runs"),
+                    "system temp");
+            return localAllocation(system, StorageTier.SYSTEM_TMP_EXPLICIT, null);
         }
         Path project = worktree.resolve(".openggf/test-runs");
         if (Files.exists(project) || writableParent(project)) {
-            return validateRoot(project, "project session root");
-        }
-        if (allowSystemTmp) {
-            return validateRoot(Path.of(System.getProperty("java.io.tmpdir"), "openggf-test-runs"), "system temp");
+            Path root = validateRoot(project, "project session root");
+            String warning = "OPENGGF_TEST_SESSION_WARNING storage_tier=PROJECT_LOCAL_FALLBACK "
+                    + "reason=managed-scratch-not-configured action=install-agent-scratch";
+            return localAllocation(root, StorageTier.PROJECT_LOCAL_FALLBACK, warning);
         }
         throw new StartupFailure("no writable session root; set OPENGGF_TEST_ROOT or --allow-system-tmp", 1);
     }
 
-    private static Optional<Path> agentScratchRoot() {
+    private static StorageAllocation managedAllocation(Path configuredRoot) {
         try {
-            Process process = new ProcessBuilder("agent-scratch", "new", "openggf-test-session")
-                    .redirectErrorStream(true).start();
-            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-            if (!process.waitFor(5, TimeUnit.SECONDS) || process.exitValue() != 0 || output.isBlank()) {
-                return Optional.empty();
+            if (!configuredRoot.isAbsolute() || Files.isSymbolicLink(configuredRoot)) {
+                throw managedFailure("configured managed scratch root must be an absolute plain directory");
             }
-            String last = output.lines().reduce((a, b) -> b).orElse("").trim();
-            Path path = Path.of(last);
-            return path.isAbsolute() ? Optional.of(path) : Optional.empty();
-        } catch (Exception ignored) {
-            return Optional.empty();
+        } catch (StartupFailure e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw managedFailure("configured managed scratch root type cannot be verified");
+        }
+        Path canonicalConfiguredRoot;
+        try {
+            canonicalConfiguredRoot = configuredRoot.toRealPath();
+        } catch (IOException | SecurityException e) {
+            throw managedFailure("configured managed scratch root cannot be canonicalised: " + configuredRoot);
+        }
+        validateExistingDirectory(canonicalConfiguredRoot, "configured managed scratch root");
+
+        runAgentScratch(List.of("verify"), "verification");
+        String output = runAgentScratch(List.of("reserve-test-session", "--json"), "reservation");
+        Map<String, JsonValue> record = parseReservation(output);
+        int schema = requiredInt(record, "schema_version");
+        if (schema != STORAGE_ALLOCATION_SCHEMA) {
+            throw managedFailure("unsupported reservation schema: " + schema);
+        }
+        String tier = requiredString(record, "storage_tier");
+        if (!StorageTier.MANAGED_CODEX_TEST_SESSIONS.name().equals(tier)) {
+            throw managedFailure("unexpected storage tier: " + tier);
+        }
+
+        Path reportedRoot = canonicalReservationPath(requiredString(record, "managed_root"),
+                "managed_root");
+        if (!reportedRoot.equals(canonicalConfiguredRoot)) {
+            throw managedFailure("reservation managed root does not match configured root");
+        }
+        Path codex = canonicalConfiguredRoot.resolve("codex");
+        Path lane = codex.resolve("test-sessions");
+        validateExistingDirectory(codex, "managed Codex lane");
+        validateExistingDirectory(lane, "managed test-session lane");
+        Path canonicalLane;
+        try {
+            canonicalLane = lane.toRealPath();
+        } catch (IOException | SecurityException e) {
+            throw managedFailure("managed test-session lane cannot be canonicalised");
+        }
+        if (!canonicalLane.equals(lane.toAbsolutePath().normalize())) {
+            throw managedFailure("managed test-session lane traverses a symbolic link");
+        }
+
+        Path allocation = canonicalReservationPath(requiredString(record, "allocation_path"),
+                "allocation_path");
+        validateExistingDirectory(allocation, "managed session allocation");
+        if (!canonicalLane.equals(allocation.getParent())) {
+            throw managedFailure("reservation allocation is outside the managed test-session lane");
+        }
+
+        long device = requiredLong(record, "filesystem_device");
+        long actualDevice = filesystemDevice(allocation);
+        if (device < 0 || device != actualDevice
+                || actualDevice != filesystemDevice(canonicalConfiguredRoot)
+                || actualDevice != filesystemDevice(canonicalLane)) {
+            throw managedFailure("reservation filesystem device does not match the allocation");
+        }
+        long usableBytes = requiredLong(record, "usable_bytes");
+        long totalBytes = requiredLong(record, "total_bytes");
+        long usableInodes = requiredLong(record, "usable_inodes");
+        if (usableBytes < 0 || totalBytes <= 0 || usableBytes > totalBytes || usableInodes < 0) {
+            throw managedFailure("reservation capacity values are outside their valid ranges");
+        }
+
+        Instant now = Instant.now();
+        Instant retentionDeadline;
+        try {
+            retentionDeadline = Instant.parse(requiredString(record, "retention_deadline"));
+        } catch (DateTimeParseException e) {
+            throw managedFailure("reservation retention_deadline is not an ISO-8601 instant");
+        }
+        if (!retentionDeadline.isAfter(now)
+                || retentionDeadline.isAfter(now.plus(MAX_MANAGED_RETENTION))) {
+            throw managedFailure("reservation retention_deadline is outside the bounded seven-day policy");
+        }
+        String helperVersion = requiredString(record, "helper_version");
+        if (helperVersion.isBlank()) {
+            throw managedFailure("reservation helper_version must not be blank");
+        }
+
+        return new StorageAllocation(allocation, StorageTier.MANAGED_CODEX_TEST_SESSIONS,
+                reportedRoot, schema, helperVersion, Long.toString(device),
+                new CapacitySnapshot(usableBytes, totalBytes, usableInodes), retentionDeadline,
+                null, null);
+    }
+
+    private static StorageAllocation localAllocation(Path root, StorageTier tier, String warning)
+            throws IOException {
+        FileStore store = Files.getFileStore(root);
+        return new StorageAllocation(root, tier, null, 0, null,
+                store.name().isBlank() ? store.type() : store.name(),
+                new CapacitySnapshot(store.getUsableSpace(), store.getTotalSpace(), -1), null,
+                "managed reservation fields do not apply to " + tier, warning);
+    }
+
+    private static String configuredManagedRoot() {
+        String generic = nonBlank(System.getenv("AGENT_SCRATCH_ROOT"));
+        String legacy = nonBlank(System.getenv("OGGF_SCRATCH_ROOT"));
+        if (generic != null && legacy != null && !generic.equals(legacy)) {
+            throw managedFailure("AGENT_SCRATCH_ROOT conflicts with OGGF_SCRATCH_ROOT");
+        }
+        return generic != null ? generic : legacy;
+    }
+
+    private static String nonBlank(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
+    private static Path path(String value, String name) {
+        try {
+            return Path.of(value);
+        } catch (RuntimeException e) {
+            throw new StartupFailure(name + " is not a valid path", 1);
+        }
+    }
+
+    private static String runAgentScratch(List<String> arguments, String operation) {
+        List<String> command = new ArrayList<>();
+        command.add("agent-scratch");
+        command.addAll(arguments);
+        Process process;
+        try {
+            process = new ProcessBuilder(command).redirectErrorStream(true).start();
+        } catch (IOException | SecurityException e) {
+            throw managedFailure("agent-scratch " + operation + " could not start");
+        }
+        boolean finished;
+        try {
+            finished = process.waitFor(5, TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                process.waitFor(1, TimeUnit.SECONDS);
+                throw managedFailure("agent-scratch " + operation + " timed out");
+            }
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
+            if (process.exitValue() != 0) {
+                throw managedFailure("agent-scratch " + operation + " failed with exit "
+                        + process.exitValue() + helperDetail(output));
+            }
+            if (operation.equals("reservation") && output.isBlank()) {
+                throw managedFailure("agent-scratch reservation returned no JSON");
+            }
+            return output;
+        } catch (InterruptedException e) {
+            process.destroyForcibly();
+            Thread.currentThread().interrupt();
+            throw managedFailure("agent-scratch " + operation + " was interrupted");
+        } catch (IOException e) {
+            throw managedFailure("agent-scratch " + operation + " output could not be read");
+        }
+    }
+
+    private static String helperDetail(String output) {
+        if (output.isBlank()) {
+            return "";
+        }
+        String oneLine = output.replace('\n', ' ').replace('\r', ' ');
+        return ": " + oneLine.substring(0, Math.min(oneLine.length(), 240));
+    }
+
+    private static Path canonicalReservationPath(String value, String field) {
+        Path reported = path(value, "reservation " + field);
+        if (!reported.isAbsolute() || value.contains("\n") || value.contains("\r")) {
+            throw managedFailure("reservation " + field + " must be an absolute path without newlines");
+        }
+        try {
+            Path canonical = reported.toRealPath();
+            if (!canonical.toString().equals(value)) {
+                throw managedFailure("reservation " + field + " is not canonical");
+            }
+            return canonical;
+        } catch (IOException | SecurityException e) {
+            throw managedFailure("reservation " + field + " cannot be canonicalised");
+        }
+    }
+
+    private static void validateExistingDirectory(Path root, String name) {
+        try {
+            if (!Files.isDirectory(root, java.nio.file.LinkOption.NOFOLLOW_LINKS)
+                    || Files.isSymbolicLink(root)) {
+                throw managedFailure(name + " is not a plain directory");
+            }
+            String current = root.getFileSystem().getUserPrincipalLookupService()
+                    .lookupPrincipalByName(System.getProperty("user.name")).getName();
+            String owner = Files.getOwner(root).getName();
+            if (!owner.equals(current)) {
+                throw managedFailure(name + " is not owned by the current user");
+            }
+        } catch (StartupFailure e) {
+            throw e;
+        } catch (IOException | RuntimeException e) {
+            throw managedFailure(name + " ownership or directory type cannot be verified");
+        }
+    }
+
+    private static long filesystemDevice(Path path) {
+        try {
+            return ((Number) Files.getAttribute(path, "unix:dev",
+                    java.nio.file.LinkOption.NOFOLLOW_LINKS)).longValue();
+        } catch (IOException | RuntimeException e) {
+            throw managedFailure("filesystem device identity cannot be verified for " + path);
+        }
+    }
+
+    private static StartupFailure managedFailure(String detail) {
+        return new StartupFailure("managed scratch is configured but unavailable: " + detail, 1);
+    }
+
+    private static Map<String, JsonValue> parseReservation(String json) {
+        Map<String, JsonValue> values = new FlatJsonParser(json).parse();
+        for (String field : RESERVATION_FIELDS) {
+            if (!values.containsKey(field)) {
+                throw managedFailure("reservation JSON is missing required field " + field);
+            }
+        }
+        return values;
+    }
+
+    private static String requiredString(Map<String, JsonValue> values, String field) {
+        JsonValue value = values.get(field);
+        if (value == null || value.type != JsonType.STRING) {
+            throw managedFailure("reservation field " + field + " must be a string");
+        }
+        return value.value;
+    }
+
+    private static long requiredLong(Map<String, JsonValue> values, String field) {
+        JsonValue value = values.get(field);
+        if (value == null || value.type != JsonType.INTEGER) {
+            throw managedFailure("reservation field " + field + " must be an integer");
+        }
+        try {
+            return Long.parseLong(value.value);
+        } catch (NumberFormatException e) {
+            throw managedFailure("reservation field " + field + " is outside the integer range");
+        }
+    }
+
+    private static int requiredInt(Map<String, JsonValue> values, String field) {
+        long value = requiredLong(values, field);
+        if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
+            throw managedFailure("reservation field " + field + " is outside the integer range");
+        }
+        return (int) value;
+    }
+
+    private enum JsonType {
+        STRING,
+        INTEGER
+    }
+
+    private record JsonValue(JsonType type, String value) {
+    }
+
+    private static final class FlatJsonParser {
+        private final String source;
+        private int index;
+
+        private FlatJsonParser(String source) {
+            this.source = source;
+        }
+
+        private Map<String, JsonValue> parse() {
+            Map<String, JsonValue> values = new LinkedHashMap<>();
+            whitespace();
+            expect('{');
+            whitespace();
+            if (take('}')) {
+                finish();
+                return values;
+            }
+            while (true) {
+                String key = string();
+                if (!RESERVATION_FIELDS.contains(key)) {
+                    throw managedFailure("reservation JSON contains unknown field " + key);
+                }
+                whitespace();
+                expect(':');
+                whitespace();
+                JsonValue value = value();
+                if (values.putIfAbsent(key, value) != null) {
+                    throw managedFailure("reservation JSON contains duplicate field " + key);
+                }
+                whitespace();
+                if (take('}')) {
+                    finish();
+                    return values;
+                }
+                expect(',');
+                whitespace();
+            }
+        }
+
+        private JsonValue value() {
+            if (peek() == '"') {
+                return new JsonValue(JsonType.STRING, string());
+            }
+            int start = index;
+            take('-');
+            if (index >= source.length() || !Character.isDigit(source.charAt(index))) {
+                throw malformed("expected a string or integer value");
+            }
+            if (source.charAt(index) == '0') {
+                index++;
+                if (index < source.length() && Character.isDigit(source.charAt(index))) {
+                    throw malformed("integer has a leading zero");
+                }
+            } else {
+                while (index < source.length() && Character.isDigit(source.charAt(index))) {
+                    index++;
+                }
+            }
+            return new JsonValue(JsonType.INTEGER, source.substring(start, index));
+        }
+
+        private String string() {
+            expect('"');
+            StringBuilder value = new StringBuilder();
+            while (index < source.length()) {
+                char character = source.charAt(index++);
+                if (character == '"') {
+                    return value.toString();
+                }
+                if (character < 0x20) {
+                    throw malformed("unescaped control character in string");
+                }
+                if (character != '\\') {
+                    value.append(character);
+                    continue;
+                }
+                if (index >= source.length()) {
+                    throw malformed("unfinished string escape");
+                }
+                char escaped = source.charAt(index++);
+                switch (escaped) {
+                    case '"', '\\', '/' -> value.append(escaped);
+                    case 'b' -> value.append('\b');
+                    case 'f' -> value.append('\f');
+                    case 'n' -> value.append('\n');
+                    case 'r' -> value.append('\r');
+                    case 't' -> value.append('\t');
+                    case 'u' -> value.append(unicode());
+                    default -> throw malformed("invalid string escape");
+                }
+            }
+            throw malformed("unterminated string");
+        }
+
+        private char unicode() {
+            if (index + 4 > source.length()) {
+                throw malformed("unfinished Unicode escape");
+            }
+            int value = 0;
+            for (int count = 0; count < 4; count++) {
+                int digit = Character.digit(source.charAt(index++), 16);
+                if (digit < 0) {
+                    throw malformed("invalid Unicode escape");
+                }
+                value = value * 16 + digit;
+            }
+            return (char) value;
+        }
+
+        private void finish() {
+            whitespace();
+            if (index != source.length()) {
+                throw malformed("trailing content after reservation object");
+            }
+        }
+
+        private void whitespace() {
+            while (index < source.length()) {
+                char character = source.charAt(index);
+                if (character != ' ' && character != '\t' && character != '\r' && character != '\n') {
+                    return;
+                }
+                index++;
+            }
+        }
+
+        private char peek() {
+            return index < source.length() ? source.charAt(index) : '\0';
+        }
+
+        private boolean take(char expected) {
+            if (peek() != expected) {
+                return false;
+            }
+            index++;
+            return true;
+        }
+
+        private void expect(char expected) {
+            if (!take(expected)) {
+                throw malformed("expected '" + expected + "'");
+            }
+        }
+
+        private StartupFailure malformed(String detail) {
+            return managedFailure("malformed reservation JSON at offset " + index + ": " + detail);
         }
     }
 

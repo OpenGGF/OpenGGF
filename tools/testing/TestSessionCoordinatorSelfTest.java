@@ -10,9 +10,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -42,6 +44,11 @@ public final class TestSessionCoordinatorSelfTest {
         Files.createDirectories(root);
         Path outputRoot = createOwnedDirectory(root.resolve("output"));
 
+        verifyManagedReservationIsValidated(root);
+        verifyManagedHelperFailureDoesNotFallback(root);
+        verifyManagedMalformedJsonDoesNotFallback(root);
+        verifyUnmanagedProjectFallbackIsVisible(root);
+        verifyExplicitRootRemainsFailClosed(root);
         BasicRun first = verifySuccessfulRun(root, outputRoot);
         verifyExplicitQuietRun(root, outputRoot);
         verifyVerboseRun(root, outputRoot);
@@ -68,6 +75,137 @@ public final class TestSessionCoordinatorSelfTest {
         check(!first.runId.equals(secondRunId), "run IDs must be unique");
 
         System.out.println("TestSessionCoordinatorSelfTest: PASS");
+    }
+
+    private static void verifyManagedReservationIsValidated(Path root) throws Exception {
+        Path project = createTestProject(root.resolve("managed-valid-project"));
+        Path managedRoot = createOwnedDirectory(root.resolve("managed-valid-root"));
+        Path allocation = createOwnedDirectory(managedRoot.resolve("codex/test-sessions/session-reserved"));
+        Path fakeBin = createFakeAgentScratch(root.resolve("managed-valid-bin"),
+                reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6))));
+        Path lockRoot = createOwnedDirectory(root.resolve("managed-valid-locks"));
+
+        CommandResult result = runStorageCoordinator(project, managedRoot, fakeBin, null, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+
+        check(result.exitCode == 0, "validated managed reservation must run successfully:\n" + result.output);
+        Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        check(manifest.getParent().getParent().equals(allocation),
+                "managed reservation must be the parent of the coordinator-created run: " + manifest);
+        check(!Files.exists(project.resolve(".openggf/test-runs")),
+                "validated managed allocation must not create a project-local fallback");
+    }
+
+    private static void verifyManagedHelperFailureDoesNotFallback(Path root) throws Exception {
+        Path project = createTestProject(root.resolve("managed-failure-project"));
+        Path managedRoot = createOwnedDirectory(root.resolve("managed-failure-root"));
+        createOwnedDirectory(managedRoot.resolve("codex/test-sessions"));
+        Path fakeBin = createFakeAgentScratchFailure(root.resolve("managed-failure-bin"));
+        Path childMarker = root.resolve("managed-failure-child-started");
+
+        CommandResult result = runStorageCoordinator(project, managedRoot, fakeBin, childMarker, List.of(
+                "--lock-root", createOwnedDirectory(root.resolve("managed-failure-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-mark-start"));
+
+        check(result.exitCode != 0, "configured managed helper failure must fail startup");
+        check(!Files.exists(project.resolve(".openggf/test-runs")),
+                "managed helper failure must not create a project-local fallback");
+        check(!Files.exists(childMarker), "managed helper failure must not start the child");
+        check(!result.output.contains("OPENGGF_TEST_RUN_START"),
+                "managed helper failure must not publish a child-start marker");
+    }
+
+    private static void verifyManagedMalformedJsonDoesNotFallback(Path root) throws Exception {
+        Path managedRoot = createOwnedDirectory(root.resolve("managed-malformed-root"));
+        Path allocation = createOwnedDirectory(managedRoot.resolve("codex/test-sessions/session-reserved"));
+        String valid = reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6)));
+        Map<String, String> malformed = new LinkedHashMap<>();
+        malformed.put("syntax", "{");
+        malformed.put("duplicate", valid.replace("\"schema_version\":1",
+                "\"schema_version\":1,\"schema_version\":1"));
+        malformed.put("unknown", valid.substring(0, valid.length() - 1) + ",\"future_field\":1}");
+        malformed.put("schema-type", valid.replace("\"schema_version\":1", "\"schema_version\":\"1\""));
+        malformed.put("tier", valid.replace("MANAGED_CODEX_TEST_SESSIONS", "PROJECT_LOCAL_FALLBACK"));
+        malformed.put("managed-root", valid.replace(jsonEscape(managedRoot.toString()),
+                jsonEscape(root.resolve("different-managed-root").toString())));
+        malformed.put("allocation", valid.replace(jsonEscape(allocation.toString()),
+                jsonEscape(root.resolve("outside-allocation").toString())));
+        malformed.put("device-type", valid.replaceFirst("\"filesystem_device\":\\d+",
+                "\"filesystem_device\":\"1\""));
+        malformed.put("device-mismatch", valid.replaceFirst("\"filesystem_device\":\\d+",
+                "\"filesystem_device\":9223372036854775807"));
+        malformed.put("usable-bytes-type", valid.replace("\"usable_bytes\":1048576",
+                "\"usable_bytes\":\"1048576\""));
+        malformed.put("total-bytes-type", valid.replace("\"total_bytes\":2097152",
+                "\"total_bytes\":\"2097152\""));
+        malformed.put("inodes-type", valid.replace("\"usable_inodes\":1024",
+                "\"usable_inodes\":\"1024\""));
+        malformed.put("missing-retention", valid.replaceFirst(
+                ",\"retention_deadline\":\"[^\"]+\"", ""));
+        malformed.put("past-retention", reservationJson(managedRoot, allocation,
+                Instant.now().minus(Duration.ofHours(1))));
+        malformed.put("unbounded-retention", reservationJson(managedRoot, allocation,
+                Instant.now().plus(Duration.ofDays(8))));
+        malformed.put("helper-version-type", valid.replace(
+                "\"helper_version\":\"openggf-agent-scratch-v2\"", "\"helper_version\":2"));
+        malformed.put("trailing-object", valid + "{}");
+
+        int index = 0;
+        for (Map.Entry<String, String> entry : malformed.entrySet()) {
+            Path project = createTestProject(root.resolve("managed-malformed-project-" + index));
+            Path fakeBin = createFakeAgentScratch(root.resolve("managed-malformed-bin-" + index), entry.getValue());
+            Path childMarker = root.resolve("managed-malformed-child-" + index);
+            CommandResult result = runStorageCoordinator(project, managedRoot, fakeBin, childMarker, List.of(
+                    "--lock-root", createOwnedDirectory(root.resolve("managed-malformed-locks-" + index)).toString(),
+                    "--", javaCommand(), "-cp", classPath(),
+                    TestSessionCoordinatorSelfTest.class.getName(), "child-mark-start"));
+            check(result.exitCode != 0, "malformed managed reservation must fail (" + entry.getKey() + "):\n"
+                    + result.output);
+            check(!Files.exists(project.resolve(".openggf/test-runs")),
+                    "malformed managed reservation must not create fallback (" + entry.getKey() + ")");
+            check(!Files.exists(childMarker),
+                    "malformed managed reservation must not start child (" + entry.getKey() + ")");
+            check(!result.output.contains("OPENGGF_TEST_RUN_START"),
+                    "malformed managed reservation must not publish start marker (" + entry.getKey() + ")");
+            index++;
+        }
+    }
+
+    private static void verifyUnmanagedProjectFallbackIsVisible(Path root) throws Exception {
+        Path project = createTestProject(root.resolve("unmanaged-project"));
+        Path lockRoot = createOwnedDirectory(root.resolve("unmanaged-locks"));
+        CommandResult result = runStorageCoordinator(project, null, null, null, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+
+        check(result.exitCode == 0, "unmanaged contributor fallback must remain usable:\n" + result.output);
+        check(result.output.contains("PROJECT_LOCAL_FALLBACK"),
+                "unmanaged project fallback must emit a visible storage-tier warning:\n" + result.output);
+        Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        check(manifest.startsWith(project.resolve(".openggf/test-runs")),
+                "unmanaged fallback must allocate beneath the project-local lane: " + manifest);
+    }
+
+    private static void verifyExplicitRootRemainsFailClosed(Path root) throws Exception {
+        Path project = createTestProject(root.resolve("explicit-invalid-project"));
+        Path managedRoot = createOwnedDirectory(root.resolve("explicit-invalid-managed"));
+        Path allocation = createOwnedDirectory(managedRoot.resolve("codex/test-sessions/session-reserved"));
+        Path fakeBin = createFakeAgentScratch(root.resolve("explicit-invalid-bin"),
+                reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6))));
+        Path childMarker = root.resolve("explicit-invalid-child-started");
+        ProcessBuilder builder = storageCoordinatorProcess(project, managedRoot, fakeBin, childMarker, List.of(
+                "--lock-root", createOwnedDirectory(root.resolve("explicit-invalid-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-mark-start"));
+        builder.environment().put("OPENGGF_TEST_ROOT", "relative-root");
+        CommandResult result = finish(builder.start());
+
+        check(result.exitCode != 0, "invalid explicit root must fail closed");
+        check(!Files.exists(project.resolve(".openggf/test-runs")),
+                "invalid explicit root must not fall through to project-local storage");
+        check(!Files.exists(childMarker), "invalid explicit root must not start the child");
     }
 
     private static BasicRun verifySuccessfulRun(Path root, Path outputRoot) throws Exception {
@@ -617,7 +755,127 @@ public final class TestSessionCoordinatorSelfTest {
         return builder;
     }
 
+    private static CommandResult runStorageCoordinator(Path project, Path managedRoot, Path fakeBin,
+                                                       Path childMarker, List<String> arguments)
+            throws Exception {
+        return finish(storageCoordinatorProcess(project, managedRoot, fakeBin, childMarker, arguments).start());
+    }
+
+    private static ProcessBuilder storageCoordinatorProcess(Path project, Path managedRoot, Path fakeBin,
+                                                            Path childMarker, List<String> arguments) {
+        ProcessBuilder builder = coordinatorProcess(project.resolve("unused-explicit-root"), arguments);
+        builder.directory(project.toFile());
+        builder.environment().remove("OPENGGF_TEST_ROOT");
+        builder.environment().remove("AGENT_SCRATCH_ROOT");
+        builder.environment().remove("OGGF_SCRATCH_ROOT");
+        if (managedRoot != null) {
+            builder.environment().put("AGENT_SCRATCH_ROOT", managedRoot.toString());
+        }
+        if (fakeBin != null) {
+            builder.environment().put("PATH", fakeBin + java.io.File.pathSeparator
+                    + builder.environment().getOrDefault("PATH", ""));
+        }
+        if (childMarker != null) {
+            builder.environment().put("OPENGGF_TEST_CHILD_MARKER", childMarker.toString());
+        }
+        return builder;
+    }
+
+    private static CommandResult finish(Process process) throws Exception {
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        return new CommandResult(process.waitFor(), output);
+    }
+
+    private static Path createTestProject(Path project) throws Exception {
+        Files.createDirectories(project);
+        runProjectCommand(project, List.of("git", "init", "-q"));
+        Files.writeString(project.resolve("tracked.txt"), "session storage policy test\n",
+                StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        Files.writeString(project.resolve(".gitignore"), ".openggf/\n",
+                StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        runProjectCommand(project, List.of("git", "add", "tracked.txt", ".gitignore"));
+        runProjectCommand(project, List.of("git", "-c", "user.name=OpenGGF Self Test",
+                "-c", "user.email=self-test@openggf.invalid", "commit", "-q", "-m", "fixture"));
+        return project.toAbsolutePath().normalize();
+    }
+
+    private static void runProjectCommand(Path directory, List<String> command) throws Exception {
+        Process process = new ProcessBuilder(command).directory(directory.toFile()).redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int exit = process.waitFor();
+        check(exit == 0, "fixture command failed (" + String.join(" ", command) + "):\n" + output);
+    }
+
+    private static Path createFakeAgentScratch(Path fakeBin, String reservationJson) throws IOException {
+        Files.createDirectories(fakeBin);
+        Path helper = fakeBin.resolve("agent-scratch");
+        String script = "#!/bin/sh\n"
+                + "if [ \"$1\" = \"verify\" ]; then exit 0; fi\n"
+                + "if [ \"$1\" = \"reserve-test-session\" ] && [ \"$2\" = \"--json\" ]; then\n"
+                + "  printf '%s\\n' " + shellQuote(reservationJson) + "\n"
+                + "  exit 0\n"
+                + "fi\n"
+                + "exit 64\n";
+        Files.writeString(helper, script, StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        helper.toFile().setExecutable(true, true);
+        return fakeBin.toAbsolutePath().normalize();
+    }
+
+    private static Path createFakeAgentScratchFailure(Path fakeBin) throws IOException {
+        Files.createDirectories(fakeBin);
+        Path helper = fakeBin.resolve("agent-scratch");
+        Files.writeString(helper, "#!/bin/sh\n"
+                        + "if [ \"$1\" = \"verify\" ]; then exit 0; fi\n"
+                        + "echo reservation-failed >&2\n"
+                        + "exit 23\n",
+                StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        helper.toFile().setExecutable(true, true);
+        return fakeBin.toAbsolutePath().normalize();
+    }
+
+    private static String reservationJson(Path managedRoot, Path allocation, Instant deadline) {
+        return "{"
+                + "\"schema_version\":1,"
+                + "\"storage_tier\":\"MANAGED_CODEX_TEST_SESSIONS\","
+                + "\"managed_root\":\"" + jsonEscape(managedRoot.toString()) + "\","
+                + "\"allocation_path\":\"" + jsonEscape(allocation.toString()) + "\","
+                + "\"filesystem_device\":" + filesystemDevice(allocation) + ","
+                + "\"usable_bytes\":1048576,"
+                + "\"total_bytes\":2097152,"
+                + "\"usable_inodes\":1024,"
+                + "\"retention_deadline\":\"" + deadline.toString().replace("Z", "+00:00") + "\","
+                + "\"helper_version\":\"openggf-agent-scratch-v2\""
+                + "}";
+    }
+
+    private static long filesystemDevice(Path path) {
+        try {
+            return ((Number) Files.getAttribute(path, "unix:dev")).longValue();
+        } catch (IOException | UnsupportedOperationException e) {
+            throw new AssertionError("self-test requires filesystem device identity", e);
+        }
+    }
+
+    private static String jsonEscape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String shellQuote(String value) {
+        return "'" + value.replace("'", "'\\''") + "'";
+    }
+
     private static void runChild(String mode) {
+        if (mode.equals("child-mark-start")) {
+            try {
+                Files.writeString(Path.of(System.getenv("OPENGGF_TEST_CHILD_MARKER")), "started\n",
+                        StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+            } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+            System.out.println("CHILD_STARTED_UNEXPECTEDLY");
+            System.exit(92);
+        }
         if (mode.equals("child-success")) {
             try {
                 Path build = Path.of(System.getenv("OPENGGF_BUILD_DIRECTORY"));
