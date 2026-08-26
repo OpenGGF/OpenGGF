@@ -257,6 +257,9 @@ traces.
   their retail entry cue, music-fade cadence, and destination reveal timing,
   including host-native equivalents when that presentation is donated to S1 or
   S2.
+- **MGZ2 boss handoff physics:** jumping out of Tails's carry clears stale
+  physical-object support, while the transition camera remains owned by MGZ2's
+  native resize event.
 - **Audio and video hardware modeling:** YM2612 FM, PSG, DAC/PCM, SMPS
   sequencing, pause/resume behavior, PAL clocks, priority rendering, tilemaps,
   shaders, sprite batching, and staged art loading have received substantial

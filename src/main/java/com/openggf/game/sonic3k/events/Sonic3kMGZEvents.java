@@ -1449,7 +1449,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         bossTransitionY = bossTransitionCameraY + BOSS_TRANSITION_SPAWN_OFFSET_Y;
         bossTransitionTimer = BOSS_TRANSITION_WAIT_FRAMES;
         bossTransitionActive = true;
-        lockBossTransitionCamera();
         cancelSameFrameBossTransitionPitDeath(camera.getFocusedSprite());
         ensureBossTransitionTails(bossTransitionX, bossTransitionY);
     }
@@ -1527,7 +1526,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (!bossTransitionActive) {
             return;
         }
-        lockBossTransitionCamera();
         if (bossTransitionTimer > 0) {
             bossTransitionTimer--;
         }
@@ -1726,20 +1724,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         player.setDeathCountdown(0);
         player.setForcedAnimationId(-1);
         player.setHighPriority(false);
-    }
-
-    private void lockBossTransitionCamera() {
-        Camera camera = camera();
-        camera.setX((short) bossTransitionCameraX);
-        camera.setY((short) bossTransitionCameraY);
-        camera.setMinX((short) bossTransitionCameraX);
-        camera.setMinXTarget((short) bossTransitionCameraX);
-        camera.setMaxX((short) bossTransitionCameraX);
-        camera.setMaxXTarget((short) bossTransitionCameraX);
-        camera.setMinY((short) bossTransitionCameraY);
-        camera.setMinYTarget((short) bossTransitionCameraY);
-        camera.setMaxY((short) bossTransitionCameraY);
-        camera.setMaxYTarget((short) bossTransitionCameraY);
     }
 
     private SidekickCarryTrigger mgzBossTransitionCarryTrigger() {

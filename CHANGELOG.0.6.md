@@ -13,6 +13,11 @@ This file contains the complete 0.6 development snapshot history carried forward
   the live `maven.log` is atomically published as `maven.log.gz` after completion.
   Compression failure retains the original log and cannot turn a failed child green.
 
+- **MGZ2's Robotnik handoff no longer leaves Sonic standing on invisible collapse
+  solids or snaps the camera to unrelated terrain:** jumping out of Tails's
+  carry now discards stale physical object support, while the boss-transition
+  object leaves camera bounds to MGZ2's native resize event.
+
 - **Aquatic Ruin's Robotnik hit flash no longer flashes Sonic:** the Act 2
   boss now alternates color 1 on the ROM's second palette line, preserving the
   ship and pillar effect without modifying Sonic's first-line palette.

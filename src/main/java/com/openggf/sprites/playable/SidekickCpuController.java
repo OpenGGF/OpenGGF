@@ -4275,6 +4275,10 @@ public class SidekickCpuController {
         }
         leader.setYSpeed(carryTrigger.carryReleaseJumpYVel());
         leader.setAir(true);
+        var collision = leader.currentCollisionSystemOrNull();
+        if (collision != null) {
+            collision.clearRidingObjectForJump(leader);
+        }
         leader.setJumping(true);
         // ROM loc_14428 writes y_radius=$0E/x_radius=7, anim=2, and sets
         // Status_Roll without adjusting y_pos. setRolling(true) would also
