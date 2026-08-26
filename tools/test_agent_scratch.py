@@ -98,7 +98,8 @@ class AgentScratchTests(unittest.TestCase):
         root = self.helper.ensure_root(self.env)
         self.assertEqual(self.root, root)
         self.assertEqual(0o700, stat.S_IMODE(root.stat().st_mode))
-        for child in ("claude", "codex/tmp", "codex/test-sessions", "tasks", "quarantine"):
+        for child in ("claude", "codex/tmp", "codex/test-sessions", "codex/test-session-locks",
+                      "tasks", "quarantine"):
             self.assertTrue((root / child).is_dir())
 
     def test_static_symlink_root_is_rejected(self):
@@ -131,6 +132,8 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual("MANAGED_CODEX_TEST_SESSIONS", record["storage_tier"])
         self.assertEqual(str(root.resolve()), record["managed_root"])
         self.assertEqual(str(allocation.resolve()), record["allocation_path"])
+        self.assertEqual(str((root / "codex" / "test-session-locks").resolve()),
+                         record["lease_root"])
         self.assertEqual(root / "codex" / "test-sessions", allocation.parent)
         self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
         self.assertTrue(record["filesystem_device"])
@@ -152,6 +155,9 @@ class AgentScratchTests(unittest.TestCase):
         before = {path: (stat.S_IMODE(path.stat().st_mode), path.stat().st_mtime_ns,
                          sorted(child.name for child in path.iterdir()))
                   for path in protected}
+        lease_lane = root / "codex" / "test-session-locks"
+        lease_before = (stat.S_IMODE(lease_lane.stat().st_mode), lease_lane.stat().st_mtime_ns,
+                        sorted(child.name for child in lease_lane.iterdir()))
 
         with environment(**self.env):
             output = io.StringIO()
@@ -167,6 +173,9 @@ class AgentScratchTests(unittest.TestCase):
                         sorted(child.name for child in path.iterdir()))
                  for path in protected}
         self.assertEqual(before, after)
+        self.assertEqual(lease_before, (stat.S_IMODE(lease_lane.stat().st_mode),
+                                        lease_lane.stat().st_mtime_ns,
+                                        sorted(child.name for child in lease_lane.iterdir())))
 
     def test_concurrent_reservations_serialize_inside_the_lane(self):
         root = self.helper.ensure_root(self.env)
@@ -259,6 +268,28 @@ class AgentScratchTests(unittest.TestCase):
         with environment(**self.env), self.assertRaises(self.helper.ScratchError):
             self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
 
+    def test_reserve_rejects_missing_or_unsafe_lease_lane_without_repair(self):
+        root = self.helper.ensure_root(self.env)
+        lease_lane = root / "codex" / "test-session-locks"
+        lease_lane.rmdir()
+
+        status, _, error = self.run_helper(["reserve-test-session", "--json"])
+
+        self.assertEqual(2, status)
+        self.assertIn("test-session lock lane", error)
+        self.assertFalse(lease_lane.exists())
+        self.assertEqual([], list((root / "codex" / "test-sessions").iterdir()))
+        outside = pathlib.Path(self.temp.name) / "outside-lease"
+        outside.mkdir()
+        lease_lane.symlink_to(outside, target_is_directory=True)
+
+        status, _, error = self.run_helper(["reserve-test-session", "--json"])
+
+        self.assertEqual(2, status)
+        self.assertIn("test-session lock lane", error)
+        self.assertTrue(lease_lane.is_symlink())
+        self.assertEqual([], list(outside.iterdir()))
+
     def test_reservation_record_rejects_a_replaced_allocation_parent(self):
         root = self.helper.ensure_root(self.env)
         lane = root / "codex" / "test-sessions"
@@ -301,6 +332,28 @@ class AgentScratchTests(unittest.TestCase):
         (root / "codex" / "test-sessions").rmdir()
 
         with self.assertRaisesRegex(self.helper.ScratchError, "test-session lane"):
+            self._verify_installed_configuration(root, home)
+
+    def test_install_creates_test_session_lock_lane_idempotently(self):
+        root, home = self._installed_configuration()
+        lease_lane = root / "codex" / "test-session-locks"
+        lease_lane.rmdir()
+
+        with environment(**self.env), \
+             mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+             mock.patch.object(self.helper, "_retire_legacy_units", return_value="absent"), \
+             mock.patch.object(self.helper, "_run_systemd_install", return_value="timer active"):
+            self.assertEqual(0, self.helper.cmd_install(argparse.Namespace()))
+
+        self.assertTrue(lease_lane.is_dir())
+        self.assertEqual(0o700, stat.S_IMODE(lease_lane.stat().st_mode))
+
+    def test_verify_rejects_missing_test_session_lock_lane(self):
+        root, home = self._installed_configuration()
+        (root / "codex" / "test-session-locks").rmdir()
+
+        with self.assertRaisesRegex(self.helper.ScratchError, "test-session lock lane"):
             self._verify_installed_configuration(root, home)
 
     def test_verify_rejects_stale_installed_helper(self):
@@ -986,6 +1039,19 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual(0, status, error)
         self.assertTrue(output.strip().endswith("/tasks"))
         self.assertEqual("safe", sentinel.read_text())
+
+    def test_path_test_session_locks_is_canonical_and_read_only(self):
+        root = self.helper.ensure_root(self.env)
+        lease_lane = root / "codex" / "test-session-locks"
+        before = (stat.S_IMODE(lease_lane.stat().st_mode), lease_lane.stat().st_mtime_ns,
+                  sorted(child.name for child in lease_lane.iterdir()))
+
+        status, output, error = self.run_helper(["path", "test-session-locks"])
+
+        self.assertEqual(0, status, error)
+        self.assertEqual(str(lease_lane.resolve()), output.strip())
+        self.assertEqual(before, (stat.S_IMODE(lease_lane.stat().st_mode), lease_lane.stat().st_mtime_ns,
+                                  sorted(child.name for child in lease_lane.iterdir())))
 
 
 if __name__ == "__main__":

@@ -31,6 +31,7 @@ KEEP_FILE = ".oggf-agent-scratch-keep"
 KEEP_PREFIX = "OGGF_AGENT_SCRATCH_KEEP_UNTIL="
 MODE = 0o700
 TEST_SESSION_LANE = ("codex", "test-sessions")
+TEST_SESSION_LOCK_LANE = ("codex", "test-session-locks")
 TEST_SESSION_RETENTION_DAYS = 7
 RESERVATION_SCHEMA_VERSION = 1
 HELPER_VERSION = "openggf-agent-scratch-v2"
@@ -145,6 +146,7 @@ def ensure_root(env: dict[str, str] | None = None) -> pathlib.Path:
         raise ScratchError("managed root must be on a disk-backed filesystem, not tmpfs/ramfs")
     with open_root(root) as fd:
         for parts in (("claude",), ("codex",), ("codex", "tmp"), TEST_SESSION_LANE,
+                      TEST_SESSION_LOCK_LANE,
                       ("tasks",), ("quarantine",)):
             current = os.dup(fd)
             try:
@@ -216,9 +218,9 @@ def lane_lock(lane_fd: int):
 
 
 @contextmanager
-def open_installed_test_session_lane() -> tuple[pathlib.Path, int, int]:
-    """Open, but never repair, the installed managed Codex session lane."""
-    root = _safe_root_path()
+def open_installed_test_session_lanes(root: pathlib.Path | None = None) -> tuple[pathlib.Path, int, int, int]:
+    """Open, but never repair, the installed Codex session and lease lanes."""
+    root = _safe_root_path() if root is None else root
     if filesystem_type(root) in {"tmpfs", "ramfs"}:
         raise ScratchError("managed root must be on a disk-backed filesystem, not tmpfs/ramfs")
     try:
@@ -233,16 +235,29 @@ def open_installed_test_session_lane() -> tuple[pathlib.Path, int, int]:
                     raise ScratchError("managed Codex directory ownership, mode, or filesystem changed")
                 lane_fd = os.open("test-sessions", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
                                   dir_fd=codex_fd)
+                try:
+                    lane_info = os.fstat(lane_fd)
+                    if (lane_info.st_uid != os.getuid() or stat.S_IMODE(lane_info.st_mode) != MODE
+                            or lane_info.st_dev != root_info.st_dev):
+                        raise ScratchError("managed test-session lane ownership, mode, or filesystem changed")
+                    try:
+                        lease_fd = os.open("test-session-locks",
+                                           os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                           dir_fd=codex_fd)
+                    except (FileNotFoundError, NotADirectoryError, OSError) as exc:
+                        raise ScratchError("managed test-session lock lane is missing or unsafe") from exc
+                    try:
+                        lease_info = os.fstat(lease_fd)
+                        if (lease_info.st_uid != os.getuid() or stat.S_IMODE(lease_info.st_mode) != MODE
+                                or lease_info.st_dev != root_info.st_dev):
+                            raise ScratchError("managed test-session lock lane ownership, mode, or filesystem changed")
+                        yield root.resolve(strict=True), root_fd, lane_fd, lease_fd
+                    finally:
+                        os.close(lease_fd)
+                finally:
+                    os.close(lane_fd)
             finally:
                 os.close(codex_fd)
-            try:
-                lane_info = os.fstat(lane_fd)
-                if (lane_info.st_uid != os.getuid() or stat.S_IMODE(lane_info.st_mode) != MODE
-                        or lane_info.st_dev != root_info.st_dev):
-                    raise ScratchError("managed test-session lane ownership, mode, or filesystem changed")
-                yield root, root_fd, lane_fd
-            finally:
-                os.close(lane_fd)
     except (FileNotFoundError, NotADirectoryError, OSError) as exc:
         raise ScratchError("managed test-session lane is missing or unsafe") from exc
 
@@ -324,9 +339,18 @@ def _statvfs_values(info) -> dict[str, object]:
 
 
 def _reservation_record(root: pathlib.Path, allocation: pathlib.Path,
-                        expected_allocation: os.stat_result | None = None) -> dict[str, object]:
+                        expected_allocation: os.stat_result | None = None,
+                        lease_root: pathlib.Path | None = None) -> dict[str, object]:
     canonical_root = root.resolve(strict=True)
     expected_lane = canonical_root.joinpath(*TEST_SESSION_LANE)
+    expected_lease_root = canonical_root.joinpath(*TEST_SESSION_LOCK_LANE)
+    lease_root = expected_lease_root if lease_root is None else lease_root
+    try:
+        canonical_lease_root = lease_root.resolve(strict=True)
+    except OSError as exc:
+        raise ScratchError("managed test-session lock lane disappeared before reporting") from exc
+    if canonical_lease_root != expected_lease_root:
+        raise ScratchError("managed test-session lock lane escapes its installed location")
     try:
         canonical_allocation = allocation.resolve(strict=True)
     except OSError as exc:
@@ -334,13 +358,18 @@ def _reservation_record(root: pathlib.Path, allocation: pathlib.Path,
     if canonical_allocation.parent != expected_lane:
         raise ScratchError("managed test-session allocation escapes its reserved lane")
     try:
-        with open_root(canonical_root) as root_fd, child_fd(root_fd, TEST_SESSION_LANE) as lane_fd:
+        with open_root(canonical_root) as root_fd, child_fd(root_fd, TEST_SESSION_LANE) as lane_fd, \
+             child_fd(root_fd, TEST_SESSION_LOCK_LANE) as lease_fd:
             root_info = os.fstat(root_fd)
             lane_info = os.fstat(lane_fd)
             if lane_info.st_uid != os.getuid() or stat.S_IMODE(lane_info.st_mode) != MODE:
                 raise ScratchError("managed test-session lane ownership or mode changed")
             if lane_info.st_dev != root_info.st_dev:
                 raise ScratchError("managed test-session lane filesystem changed")
+            lease_info = os.fstat(lease_fd)
+            if (lease_info.st_uid != os.getuid() or stat.S_IMODE(lease_info.st_mode) != MODE
+                    or lease_info.st_dev != root_info.st_dev):
+                raise ScratchError("managed test-session lock lane ownership, mode, or filesystem changed")
             allocation_fd = os.open(canonical_allocation.name,
                                     os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
                                     dir_fd=lane_fd)
@@ -364,6 +393,7 @@ def _reservation_record(root: pathlib.Path, allocation: pathlib.Path,
         "storage_tier": "MANAGED_CODEX_TEST_SESSIONS",
         "managed_root": str(canonical_root),
         "allocation_path": str(canonical_allocation),
+        "lease_root": str(canonical_lease_root),
         "filesystem_device": allocation_info.st_dev,
         **capacity,
         "retention_deadline": (dt.datetime.now(dt.UTC)
@@ -375,7 +405,7 @@ def _reservation_record(root: pathlib.Path, allocation: pathlib.Path,
 def cmd_reserve_test_session(args: argparse.Namespace) -> int:
     if not args.json:
         raise ScratchError("reserve-test-session requires --json")
-    with open_installed_test_session_lane() as (root, _root_fd, lane_fd):
+    with open_installed_test_session_lanes() as (root, _root_fd, lane_fd, _lease_fd):
         with lane_lock(lane_fd):
             while True:
                 name = (f"session-{dt.datetime.now(dt.UTC):%Y%m%dT%H%M%SZ}-"
@@ -390,7 +420,8 @@ def cmd_reserve_test_session(args: argparse.Namespace) -> int:
             try:
                 _probe_directory(allocation_fd)
                 allocation = root.joinpath(*TEST_SESSION_LANE, name)
-                record = _reservation_record(root, allocation, os.fstat(allocation_fd))
+                record = _reservation_record(root, allocation, os.fstat(allocation_fd),
+                                             root.joinpath(*TEST_SESSION_LOCK_LANE))
                 print(json.dumps(record, sort_keys=True))
             finally:
                 os.close(allocation_fd)
@@ -398,9 +429,13 @@ def cmd_reserve_test_session(args: argparse.Namespace) -> int:
 
 
 def cmd_path(args: argparse.Namespace) -> int:
-    aliases = {"claude": "claude", "codex": "codex", "codex-tmp": "codex", "tasks": "tasks", "quarantine": "quarantine"}
+    aliases = {"claude": "claude", "codex": "codex", "codex-tmp": "codex", "tasks": "tasks", "quarantine": "quarantine", "test-session-locks": "test-session-locks"}
     if args.kind not in aliases:
         raise ScratchError(f"unknown path kind: {args.kind}")
+    if args.kind == "test-session-locks":
+        with open_installed_test_session_lanes() as (root, _root_fd, _lane_fd, _lease_fd):
+            print(root.joinpath(*TEST_SESSION_LOCK_LANE))
+        return 0
     root = ensure_root()
     paths = {"claude": root / "claude", "codex": root / "codex", "codex-tmp": root / "codex" / "tmp",
              "tasks": root / "tasks", "quarantine": root / "quarantine"}
@@ -999,14 +1034,8 @@ def _regular_file_digest(path: pathlib.Path) -> bytes:
 
 
 def _verify_test_session_lane(root: pathlib.Path) -> None:
-    try:
-        with open_root(root) as root_fd:
-            with child_fd(root_fd, TEST_SESSION_LANE) as lane_fd:
-                info = os.fstat(lane_fd)
-                if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != MODE:
-                    raise ScratchError("managed test-session lane ownership or mode is invalid")
-    except (FileNotFoundError, NotADirectoryError, OSError) as exc:
-        raise ScratchError("managed test-session lane is missing or unsafe") from exc
+    with open_installed_test_session_lanes(root):
+        pass
 
 
 def _ensure_private_user_bin(home: pathlib.Path) -> pathlib.Path:
