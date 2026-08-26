@@ -189,26 +189,42 @@ immutable detached worktree and:
 
 1. requires the detached worktree to match `84d9a3761`, have no tracked or
    untracked source changes, and have no existing `target` path;
-2. preflights Linux unprivileged user/mount namespaces and bind mounts, derives
+2. preflights Linux unprivileged user/mount/PID namespaces and bind mounts, derives
    the coordinator roots from its injected `OPENGGF_*` identity, creates an
    ignored empty real directory at `target`, and creates empty real mountpoint
    directories beneath the session build root; before root mapping it also
    authenticates the outer numeric UID's passwd home against canonical `HOME`
    without changing `HOME`, and rejects any existing `user.home` override in
    Maven arguments, `MAVEN_OPTS`, or `JAVA_TOOL_OPTIONS`;
-3. runs a namespace leader with `unshare --user --map-root-user --mount`, makes
-   `/` recursively private with `mount --make-rprivate /` before any binding,
+3. runs a namespace supervisor with
+   `unshare --user --map-root-user --mount --pid --fork --kill-child=KILL` and
+   no replacement procfs mount. Its child is PID 1 of the private PID namespace,
+   so Maven, Surefire, and every descendant remain kernel-contained there and
+   cannot daemonize into the ancestor PID namespace. The child makes `/`
+   recursively private with `mount --make-rprivate /` before any binding,
    bind-mounts the session build root onto the real worktree `target`, then
    nested-bind-mounts coordinator-owned tmp, Surefire, trace, diagnostic,
    artifact, and distribution roots onto their historical `target/*` paths;
 4. authenticates every mount with `mountpoint` plus matching no-follow
-   device/inode identity between source and mounted target, records the leader
-   PID/start time and mount-namespace inode with bounded mount-table evidence,
-   and pauses at a ready/go barrier; the still-parent-namespace adapter verifies
-   the same PID/start/namespace identity while simultaneously proving `target`
-   is a non-mount, empty ordinary directory in its view before releasing Maven;
+   device/inode identity between source and mounted target, records the exact
+   outer supervisor PID/start time, the outer PID/start time and PID-namespace
+   inode of private PID 1, their common mount-namespace inode, and bounded
+   mount-table evidence, then pauses at a ready/go barrier; the
+   still-parent-namespace adapter verifies those same identities while
+   simultaneously proving `target` is a non-mount, empty ordinary directory in
+   its view before releasing Maven;
    Maven therefore observes real worktree-local canonical paths while every
    byte is stored in the exact coordinator root;
+
+   Because procfs is intentionally not remounted, `/proc/1` inside the private
+   PID namespace still names host PID 1. The private PID 1 publishes its
+   `NSpid` chain by shell-native reading of an already-open
+   `/proc/self/status`; it must not use `/proc/$$` or a subprocess whose
+   `/proc/self` would name that subprocess. The outer adapter authenticates the
+   published host PID against the supervisor's single direct
+   `/proc/<supervisor>/task/<supervisor>/children` edge, process start time, an
+   `NSpid` chain ending in 1, PID-namespace inode, and the common
+   mount-namespace inode before releasing Maven.
 5. root mapping gives the namespace child mount capability but would otherwise
    make Java select `/root`; the adapter preserves user semantics by appending
    `-Duser.home=<authenticated outer passwd home>` to adapter-owned
@@ -220,12 +236,27 @@ immutable detached worktree and:
    mount identity is the coordinator tmp root; and
 6. installs cleanup before creating the mountpoint and writes a recovery marker
    with its exact ordinary-directory type/device/inode, expected parent-empty
-   state, namespace leader PID/start identity, and mount-namespace inode. After
-   finalization it scans `/proc/*/ns/mnt` for that inode and requires the leader
-   and every namespace holder to be gone before removing only the still-exact,
-   parent-non-mount, empty real `target` directory with `rmdir`. It never
+   state, exact supervisor and private-PID-1 identities, PID-namespace inode,
+   and their common mount-namespace inode. Normal cleanup reaps the exact
+   supervisor and then verifies both recorded process identities are gone;
+   forced cleanup performs the same bounded verification. After termination,
+   an absent PID or the same PID with a different start time means the recorded
+   identity is gone, while the same PID with the same start time means it still
+   survives. Private PID-namespace lifecycle is
+   the proof that no adapter-created workload survives: when PID 1 exits the
+   kernel kills the namespace's remaining processes, and when the supervisor
+   dies `--kill-child=KILL` kills PID 1. Only after that proof may cleanup remove
+   the still-exact, parent-non-mount, empty real `target` directory with
+   `rmdir`. It never
    recursively deletes, follows, replaces, reads/unlinks a link, or empties
    `target`.
+
+The adapter does not scan every host `/proc/*/ns/mnt` entry. Unreadable
+privileged host processes are unrelated to the adapter-created PID namespace
+and cannot be classified by an unprivileged harness. Concurrent hostile
+privileged host interference is outside this certification threat model; no
+unprivileged adapter can prove its absence. The authenticated private PID
+namespace is the bounded ownership boundary for cleanup.
 
 The orchestrator invokes the pinned launcher with expected harness commit
 `f1b82774d`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
@@ -251,13 +282,15 @@ An outer recovery/finally step runs after every coordinator outcome. This is
 separate from the child trap because forced process-tree termination can prevent
 the trap from running. Recovery accepts only a marker whose run ID, canonical
 worktree, target path, original empty-directory device/inode, expected
-parent-empty state, namespace leader PID/start identity, mount-namespace inode,
-and session roots agree with the just-started session. It proves the leader is
-gone and scans `/proc/*/ns/mnt` to reject any surviving holder of that namespace
-before using no-follow inspection and `rmdir` only on that exact still-empty,
-parent-non-mount ordinary directory. A symlink, non-empty directory, changed
-identity, live/surviving namespace, propagation leak, or mismatched marker is
-reported for human inspection and is never deleted.
+parent-empty state, supervisor and private-PID-1 PID/start identities,
+PID-namespace inode, common mount-namespace inode, and session roots agree with
+the just-started session. It bounded-waits for both exact process identities to
+be absent or for the same PID to have a different start time before using
+no-follow inspection and `rmdir` only on
+that exact still-empty, parent-non-mount ordinary directory. A symlink,
+non-empty directory, changed identity, surviving supervisor or PID 1,
+propagation leak, or mismatched marker is reported for human inspection and is
+never deleted.
 
 The adapter is test infrastructure, not a production or gameplay change. Its
 self-test suite covers successful Maven completion, ordinary Maven failure, and
@@ -354,16 +387,17 @@ The launcher's outer recovery is mandatory. Before Maven, the adapter writes
 the authenticated recovery marker with run ID, frozen HEAD, canonical
 worktree/report paths, exact preimage archive path/hash/length, ordinary target
 mountpoint path and pre-mount no-follow type/device/inode, expected
-parent-empty/non-mount state, namespace leader PID/start identity, and
-mount-namespace inode. If forced termination bypasses the child trap, outer
+parent-empty/non-mount state, exact supervisor and private-PID-1 PID/start
+identities, PID-namespace inode, and their common mount-namespace inode. If
+forced termination bypasses the child trap, outer
 recovery uses only those authenticated ordinary-directory and namespace
 identities; `readlink`/`unlink` recovery is forbidden.
 
-Normal and outer cleanup use one order: prove the namespace leader and every
-holder of its mount-namespace inode are gone; restore the exact authenticated
-report preimage when required; recheck that `target` is the same empty,
-parent-non-mount ordinary directory with the recorded device/inode; then remove
-only that directory with `rmdir`.
+Normal and outer cleanup use one order: prove the exact supervisor and private
+PID 1 are gone, relying on kernel PID-namespace lifecycle to terminate their
+descendants; restore the exact authenticated report preimage when required;
+recheck that `target` is the same empty, parent-non-mount ordinary directory
+with the recorded device/inode; then remove only that directory with `rmdir`.
 It may restore for hygiene without Surefire proof, but such a run remains
 non-certifying. Empirical INT/TERM tests against the exact authenticated frozen
 coordinator show that its shutdown hook forcibly terminates the adapter before

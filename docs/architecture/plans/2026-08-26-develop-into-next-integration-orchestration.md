@@ -236,19 +236,21 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Keep the original invalid run and dirty cowtree as evidence until the repair
   is reviewed. Do not restore it in place or reinterpret its failure counts.
 
-- [ ] **Step 2: Replace symlink routing with a private bind-mount namespace**
+- [ ] **Step 2: Replace symlink routing with private bind-mount and PID namespaces**
 
-  Preflight `unshare --user --map-root-user --mount`, `mount --bind`,
-  `mountpoint`, and `rmdir` in managed scratch. Fail closed if unprivileged
-  namespaces or bind mounts are unavailable. Before root mapping, resolve the
+  Preflight
+  `unshare --user --map-root-user --mount --pid --fork --kill-child=KILL`,
+  `mount --bind`, `mountpoint`, and `rmdir` in managed scratch. Do not replace
+  the host procfs mount. Fail closed if unprivileged namespaces or bind mounts
+  are unavailable. Before root mapping, resolve the
   current numeric UID through the passwd database, canonicalize that home and
   `HOME`, and require equality without modifying `HOME`. Reject `user.home` in
   caller Maven arguments, existing `MAVEN_OPTS`, `JAVA_TOOL_OPTIONS`, or the
   resolved Surefire base line. The coordinator-child adapter
   creates an ignored empty real `target` directory and empty real mountpoint
-  directories beneath the coordinator build root, then starts a namespace
-  leader. The leader must run `mount --make-rprivate /` before establishing
-  these bindings:
+  directories beneath the coordinator build root, then starts an exact
+  `unshare` supervisor whose child is PID 1 in the private PID namespace. The
+  child must run `mount --make-rprivate /` before establishing these bindings:
 
   ```text
   $OPENGGF_BUILD_DIRECTORY       -> <worktree>/target
@@ -262,11 +264,20 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   Authenticate each binding inside the namespace with `mountpoint` and matching
   no-follow device/inode identity between source and mounted target. Record a
-  bounded mount table, namespace-leader PID/start identity, and mount-namespace
-  inode, then stop at a ready/go barrier. Before releasing Maven, the adapter in
-  the still-parent namespace revalidates that PID/start/namespace identity and
-  simultaneously proves its `target` view is the original empty ordinary
-  directory and is not a mountpoint. Preserve frozen `next`'s own historical
+  bounded mount table, the exact outer supervisor PID/start identity, the outer
+  PID/start identity and PID-namespace inode of private PID 1, and their common
+  mount-namespace inode, then stop at a ready/go barrier. Before releasing
+  Maven, the adapter in the still-parent namespace revalidates those identities
+  and simultaneously proves its `target` view is the original empty ordinary
+  directory and is not a mountpoint. Do not infer private PID 1 from `/proc/1`
+  or `/proc/$$`: without `--mount-proc`, both resolve through the host procfs
+  mount. Have PID 1 use a shell-native read of an already-open
+  `/proc/self/status` to publish its `NSpid` chain; do not delegate that read to
+  a subprocess. The outer adapter must authenticate the published host PID
+  against the supervisor's single direct
+  `/proc/<supervisor>/task/<supervisor>/children` edge, exact start time, an
+  `NSpid` chain ending in 1, PID-namespace inode, and the common mount-namespace
+  inode. Preserve frozen `next`'s own historical
   `java.io.tmpdir=<worktree>/target/test-tmp`; lexical and canonical paths must
   both remain worktree-local while the mount identity proves exact backing by
   the coordinator tmp root. Root mapping otherwise makes Java choose `/root`,
@@ -280,13 +291,21 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   Reject caller `argLine`, `surefire.argLine`, `java.io.tmpdir`, LWJGL, mount,
   namespace, or `user.home` overrides. Require Surefire XML to report the exact
-  authenticated outer home. Before cleanup, require the recorded leader to be
-  gone and scan `/proc/*/ns/mnt` for the recorded inode; any surviving namespace
-  holder or unreadable/ambiguous holder evidence fails closed. Then require the
-  parent view of `target` to be the exact still-empty, non-mount ordinary
-  directory recorded in the recovery marker and remove only it with `rmdir`.
-  Never recursively delete it. Mandatory outer recovery uses the same checks
-  after forced termination.
+  authenticated outer home. Normal cleanup must reap the exact supervisor and
+  then verify both the recorded supervisor and private-PID-1 identities are
+  gone; forced cleanup must perform the same bounded verification. After
+  termination, an absent PID or the same PID with a different start time means
+  the recorded identity is gone, while the same PID with the same start time
+  means it survives. Private PID-namespace
+  lifecycle is the containment proof: descendants cannot escape to an ancestor
+  PID namespace, PID-1 exit causes the kernel to kill remaining members, and
+  supervisor death invokes `--kill-child=KILL`. Then require the parent view of
+  `target` to be the exact still-empty, non-mount ordinary directory recorded
+  in the recovery marker and remove only it with `rmdir`. Never recursively
+  delete it. Do not scan every host `/proc/*/ns/mnt` entry or maintain an
+  unreadable-process census; concurrent hostile privileged host interference is
+  outside the unprivileged harness threat model. Mandatory outer recovery uses
+  the same bounded identity checks after forced termination.
 
 - [ ] **Step 3: Implement the pinned generated-report normalization**
 
@@ -310,8 +329,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Before Maven, extend the authenticated recovery marker with frozen HEAD, run
   ID, canonical worktree/report paths, exact preimage archive path/hash/length,
   ordinary target mountpoint path, pre-mount no-follow type/device/inode,
-  expected parent-empty/non-mount state, namespace leader PID/start identity,
-  and mount-namespace inode. Mandatory outer recovery uses no-follow/type/hash
+  expected parent-empty/non-mount state, exact supervisor and private-PID-1
+  PID/start identities, PID-namespace inode, and their common mount-namespace
+  inode. Mandatory outer recovery uses no-follow/type/hash
   checks to restore only that report if forced termination bypasses the child
   trap. Exact-coordinator evidence run
   `20260826T053627Z-p1892866-17619a` proves the coordinator forcibly terminates
@@ -362,7 +382,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   symlink/directory replacement, archive failure, restore failure, and
   interruption after report generation. Add namespace-unavailable,
   bind-failure, wrong mount source/device/inode, propagation leakage,
-  ready/go parent-view mismatch, surviving namespace leader/descendant holder,
+  ready/go parent-view mismatch, surviving supervisor/private PID 1,
   passwd/HOME mismatch, preexisting `user.home` override, non-empty target, and
   changed target-identity cases. Include a real frozen-POM fixture proving
   both worktree-local lexical/canonical temp paths and exact coordinator-tmp
@@ -397,6 +417,17 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   cleanup status 73. The fixture must reject a tripwire armed for an unrelated
   reason. Also retain a control case proving an ordinary child N with no adapter
   safety failure stays `FAILED` / `valid=true`.
+
+  Add functional PID-containment fixtures, not a help-text assertion: launch a
+  `setsid` plus double-fork descendant and a nested mount-namespace descendant,
+  then prove their recorded outer PID/start identities are gone after normal
+  PID-1 exit and after forced supervisor termination. At ready/go and when
+  authenticating the recovery marker, prove PID/start, PID-namespace, and
+  supervisor/PID-1 mount-namespace mismatches fail closed. After termination,
+  prove same PID plus same recorded start time is treated as a survivor and
+  preserves the target, while an absent PID or the same PID with a different
+  start time counts as the recorded identity gone. Exercise both normal and
+  forced cleanup. No host-wide unreadable-holder fixture is required.
 
 - [ ] **Step 5: Run focused real frozen-next proof**
 
