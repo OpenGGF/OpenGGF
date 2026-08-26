@@ -712,8 +712,10 @@ steps are superseded by Task 1D against the official scope freeze.
 
   Record both frozen-parent ordinary monoliths as inventory-invalid because the
   same nested testcase identity appears twice. Do not deduplicate their XML or
-  reinterpret their counts. Record the non-certifying partition collision with
-  unrelated Maven sessions; it is environmental evidence, not a child result.
+  reinterpret their counts. Preserve observations of concurrent Maven sessions
+  as environmental context, but do not invalidate a child solely because a
+  different worktree used its own authenticated wrapper session and output
+  roots concurrently.
 
 - [ ] **Step 2: Add failing nested ownership fixtures**
 
@@ -907,8 +909,11 @@ steps are superseded by Task 1D against the official scope freeze.
   If that session is incomplete or OOMs, retain it, create the deterministic
   union partition map, run all filtered partitions in separate sessions, and
   require exact aggregate class coverage before calling the baseline complete.
-  Any partition overlapped by unrelated Maven is environmental-invalid and must
-  be rerun; it contributes no inventory row or suite count.
+  Parallel Maven in a different worktree with a distinct authenticated wrapper
+  session and session-owned output roots is permitted by the project isolation
+  contract. Reject overlap only when it shares or can mutate the selected
+  worktree, coordinator identity, mount namespace, report tree, temporary root,
+  or another authenticated runtime input.
 
 - [ ] **Step 9: Preserve evidence paths**
 
