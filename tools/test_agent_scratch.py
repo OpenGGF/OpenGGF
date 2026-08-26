@@ -135,9 +135,36 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
         self.assertTrue(record["filesystem_device"])
         self.assertGreater(record["usable_bytes"], 0)
-        self.assertGreaterEqual(record["usable_inodes"], 0)
+        self.assertIn(record["inode_count_status"], {"MEASURED", "UNAVAILABLE_DYNAMIC"})
+        if record["inode_count_status"] == "MEASURED":
+            self.assertGreaterEqual(record["usable_inodes"], 0)
+        else:
+            self.assertIsNone(record["usable_inodes"])
         self.assertRegex(record["retention_deadline"], r"^\d{4}-\d{2}-\d{2}T")
         self.assertTrue(record["helper_version"])
+
+    def test_statvfs_reports_dynamic_inode_unavailability_separately_from_zero(self):
+        unavailable = type("Statvfs", (), {
+            "f_bavail": 4, "f_frsize": 1024, "f_blocks": 16,
+            "f_files": 0, "f_favail": 0,
+        })()
+        measured_zero = type("Statvfs", (), {
+            "f_bavail": 4, "f_frsize": 1024, "f_blocks": 16,
+            "f_files": 32, "f_favail": 0,
+        })()
+
+        self.assertEqual({
+            "usable_bytes": 4096,
+            "total_bytes": 16384,
+            "usable_inodes": None,
+            "inode_count_status": "UNAVAILABLE_DYNAMIC",
+        }, self.helper._statvfs_values(unavailable))
+        self.assertEqual({
+            "usable_bytes": 4096,
+            "total_bytes": 16384,
+            "usable_inodes": 0,
+            "inode_count_status": "MEASURED",
+        }, self.helper._statvfs_values(measured_zero))
 
     def test_reserve_test_session_rejects_a_recreated_allocation_name(self):
         root = self.helper.ensure_root(self.env)
@@ -216,6 +243,25 @@ class AgentScratchTests(unittest.TestCase):
 
         with self.assertRaisesRegex(self.helper.ScratchError, "does not match"):
             self._verify_installed_configuration(root, home)
+
+    def test_verify_reports_known_user_bus_diagnostics_after_static_checks(self):
+        root, home = self._installed_configuration()
+        for diagnostic in ("Failed to connect to bus", "Failed to connect to user scope bus"):
+            unavailable = type("Run", (), {
+                "returncode": 1, "stdout": "", "stderr": diagnostic,
+            })()
+            output = io.StringIO()
+            with environment(**self.env), \
+                 mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+                 mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+                 mock.patch.object(self.helper, "_verify_unit_syntax", return_value="verified"), \
+                 mock.patch.object(self.helper, "_verify_legacy_timer", return_value="absent"), \
+                 mock.patch.object(self.helper, "_verify_claude_tmpdir", return_value="unverified"), \
+                 mock.patch.object(self.helper.subprocess, "run", return_value=unavailable), \
+                 contextlib.redirect_stdout(output):
+                self.assertEqual(0, self.helper.cmd_verify(argparse.Namespace()))
+            self.assertIn("config=verified", output.getvalue())
+            self.assertIn("systemd_timer=UNAVAILABLE_IN_SANDBOX", output.getvalue())
 
     def _session(self, name, state, *, pid=None, start=None, old=True):
         root = self.helper.ensure_root(self.env)
@@ -783,9 +829,10 @@ class AgentScratchTests(unittest.TestCase):
         trigger = type("Run", (), {"returncode": 0, "stdout": "Fri 2026-08-14 14:00:00 BST\n", "stderr": ""})()
         with mock.patch.object(self.helper.subprocess, "run", side_effect=[enabled, trigger]):
             self.assertEqual("verified", self.helper._verify_timer())
-        unavailable = type("Run", (), {"returncode": 1, "stdout": "", "stderr": "Failed to connect to bus"})()
-        with mock.patch.object(self.helper.subprocess, "run", return_value=unavailable):
-            self.assertEqual("unverified", self.helper._verify_timer())
+        for diagnostic in ("Failed to connect to bus", "Failed to connect to user scope bus"):
+            unavailable = type("Run", (), {"returncode": 1, "stdout": "", "stderr": diagnostic})()
+            with mock.patch.object(self.helper.subprocess, "run", return_value=unavailable):
+                self.assertEqual("unavailable_in_sandbox", self.helper._verify_timer())
 
     def test_claude_timeout_and_launch_failure_are_unverified(self):
         root = self.helper.ensure_root(self.env)

@@ -266,15 +266,17 @@ def _probe_directory(directory_fd: int) -> None:
                 pass
 
 
-def _statvfs_record(path: pathlib.Path) -> dict[str, int]:
+def _statvfs_record(path: pathlib.Path) -> dict[str, object]:
     return _statvfs_values(os.statvfs(path))
 
 
-def _statvfs_values(info) -> dict[str, int]:
+def _statvfs_values(info) -> dict[str, object]:
+    inode_counts_available = info.f_files > 0
     return {
         "usable_bytes": info.f_bavail * info.f_frsize,
         "total_bytes": info.f_blocks * info.f_frsize,
-        "usable_inodes": info.f_favail,
+        "usable_inodes": info.f_favail if inode_counts_available else None,
+        "inode_count_status": "MEASURED" if inode_counts_available else "UNAVAILABLE_DYNAMIC",
     }
 
 
@@ -1506,7 +1508,9 @@ def _systemd_details(run: subprocess.CompletedProcess[str]) -> str:
 
 def _user_manager_unavailable(run: subprocess.CompletedProcess[str]) -> bool:
     details = _systemd_details(run)
-    return "failed to connect to bus" in details or "xdg_runtime_dir" in details
+    return ("failed to connect to bus" in details
+            or "failed to connect to user scope bus" in details
+            or "xdg_runtime_dir" in details)
 
 
 def _legacy_timer_state() -> str:
@@ -1612,16 +1616,16 @@ def _verify_timer() -> str:
     except OSError:
         return "unverified"
     if enabled.returncode:
-        if "failed to connect to bus" in enabled.stderr.lower() or "xdg_runtime_dir" in enabled.stderr.lower():
-            return "unverified"
+        if _user_manager_unavailable(enabled):
+            return "unavailable_in_sandbox"
         raise ScratchError("managed cleanup timer is not enabled: " + (enabled.stderr or enabled.stdout).strip())
     try:
         listed = subprocess.run(["systemctl", "--user", "list-timers", TIMER_UNIT, "--no-legend", "--no-pager"], text=True, capture_output=True, check=False)
     except OSError:
         return "unverified"
     if listed.returncode:
-        if "failed to connect to bus" in listed.stderr.lower() or "xdg_runtime_dir" in listed.stderr.lower():
-            return "unverified"
+        if _user_manager_unavailable(listed):
+            return "unavailable_in_sandbox"
         raise ScratchError("cannot inspect managed cleanup timer: " + (listed.stderr or listed.stdout).strip())
     if not listed.stdout.strip() or listed.stdout.lstrip().lower().startswith("n/a"):
         raise ScratchError("managed cleanup timer has no next trigger")
@@ -1781,7 +1785,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
     print(f"root={root}")
     print("config=verified")
     print(f"systemd_units={unit_syntax}")
-    print(f"systemd_timer={timer_state}")
+    print("systemd_timer=" + ("UNAVAILABLE_IN_SANDBOX"
+                              if timer_state == "unavailable_in_sandbox" else timer_state))
     print(f"legacy_timer={legacy_timer_state}")
     print("codex_danger_full_access=unconstrained by workspace sandbox settings")
     claude_state = _verify_claude_tmpdir(root)
