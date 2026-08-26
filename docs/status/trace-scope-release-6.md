@@ -1,5 +1,32 @@
 # Trace scope for release 6
 
+## 2026-08-26 release-closure decision
+
+0.6 no longer requires every known-red in-scope trace to become green before
+release. Trace replay remains release evidence under a strict no-regression
+contract:
+
+- every trace that passes on the candidate baseline must remain passing;
+- a known-red trace must not gain a new failure, regress its established
+  frontier, or worsen in a way attributable to the candidate;
+- trace comparison, timing authority, fixture integrity, and structural guards
+  remain mandatory and are not weakened or skipped; and
+- a trace finding that demonstrates a release-impacting real-play defect is a
+  normal 0.6 bug fix, while parity-only frontier work is deferred to the next
+  release.
+
+This closes the open-ended trace campaign as a 0.6 scheduling gate without
+discarding its evidence. Sonic 2 CPZ/WFZ and Sonic 3 & Knuckles run-chain
+frontiers remain documented limitations. Casino Night is no longer on that
+list: both release traces compare exactly. Final 0.6 sign-off now requires a
+fresh package, ordinary suite, guard session, trace no-regression comparison,
+and human gameplay/audio QA.
+
+The historical scope and measurements below still define which fixtures belong
+to each profile and how to interpret their evidence. Statements below that call
+run chains "the gate" describe the earlier parity-completion policy; for 0.6
+release closure, the no-regression policy above supersedes that requirement.
+
 Release 6 targets the **Sonic path through S1, S2 and S3**. Sonic 3 & Knuckles is only
 partially implemented past Launch Base, and the Knuckles routes are not a release-6
 deliverable at all, so a large part of the S3K trace suite is **expected red** and always
@@ -183,7 +210,7 @@ to restore the ordering it happened to rely on. Until then it is red in the rele
 sweep and is **not** a trace-parity failure.
 
 
-## 2026-08-17: the release gate is the run chains, not the segments
+## 2026-08-17: historical parity gate refinement — run chains, not segments
 
 **Segments are instrumentation, not evidence.** A per-zone or per-act segment *resumes* a
 playthrough: it is seeded with position/zone/act from metadata but inherits progression
