@@ -268,6 +268,35 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     @Test
+    void mgz2BossTransition_doesNotOverrideCameraOwnedByDynamicResize() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x3C80);
+        camera.setY((short) 0x06A0);
+        camera.setMinX((short) 0x3C80);
+        camera.setMaxX((short) 0x3C80);
+        camera.setMinY((short) 0x06A0);
+        camera.setMaxY((short) 0x06A0);
+
+        events.triggerBossCollapseHandoff();
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+
+        camera.setX((short) 0x3C90);
+        camera.setY((short) 0x0698);
+        camera.setMinY((short) 0x0690);
+        camera.setMaxY((short) 0x06B0);
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+
+        assertEquals(0x3C90, camera.getX() & 0xFFFF,
+                "Obj_MGZ2_BossTransition reads Camera_X_pos only during creation; it never rewrites the live camera");
+        assertEquals(0x0698, camera.getY() & 0xFFFF,
+                "Obj_MGZ2_BossTransition must not snap Camera_Y_pos back after the collapse");
+        assertEquals(0x0690, camera.getMinY() & 0xFFFF);
+        assertEquals(0x06B0, camera.getMaxY() & 0xFFFF);
+    }
+
+    @Test
     void mgz2BossCollapseHandoff_repositionsExistingTailsSidekick() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
@@ -369,33 +398,6 @@ class TestSonic3kMgz2EndBossEvents {
         assertEquals((short) 0, sonic.getYSpeed());
         assertEquals((short) 0, sonic.getGSpeed());
         assertEquals(false, sonic.getSpindash());
-    }
-
-    @Test
-    void mgz2BossTransition_keepsCameraLockedWhileSonicWaitsForRescue() {
-        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
-        events.init(1);
-        Camera camera = GameServices.camera();
-        camera.setX((short) 0x3C80);
-        camera.setY((short) 0x0600);
-        camera.setMinX((short) 0);
-        camera.setMaxX((short) 0x6000);
-        camera.setMinY((short) 0);
-        camera.setMaxY((short) 0x1000);
-        AbstractPlayableSprite sonic = camera.getFocusedSprite();
-        sonic.setCentreX((short) 0x3A10);
-        sonic.setCentreY((short) 0x0780);
-        sonic.setAir(true);
-
-        events.triggerBossCollapseHandoff();
-        events.updateBossTransitionObjectBeforeDynamicObjects(1);
-        events.update(1, 0);
-        camera.updatePosition();
-
-        assertEquals((short) 0x3C80, camera.getX(),
-                "Obj_MGZ2_BossTransition should hold the boss arena camera while Sonic waits below the screen");
-        assertEquals((short) 0x0600, camera.getY(),
-                "The rescue clamp should not let the camera chase Sonic's off-bottom position for one frame");
     }
 
     @Test
