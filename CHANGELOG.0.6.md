@@ -4,6 +4,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Zone music resumes after temporary S3K music sequences:** the extra-life
+  jingle now latches its `E2 FF` fade-to-previous request at the presentation
+  boundary before completion can discard the saved track. The AIZ1 miniboss
+  escape and its non-transition fallback also request the current level track
+  directly instead of trying to unwind the jingle's saved-song slot.
+
 - **AIZ1 miniboss rewinds now restore the complete cutscene object graph:** the
   shared body, arm, and flame-barrel children relink to the Act 1 cutscene boss
   as well as the Act 2 fight boss, preventing a missing-object-reference crash

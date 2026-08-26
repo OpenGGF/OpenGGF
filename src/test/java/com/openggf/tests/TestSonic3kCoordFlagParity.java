@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -64,6 +65,24 @@ public class TestSonic3kCoordFlagParity {
             psgWrites.add(val & 0xFF);
             super.writePsg(source, val);
         }
+    }
+
+    @Test
+    public void e2FfRestoresThroughTheSequencerOwnedSink() {
+        byte[] fmTrack = {
+                (byte) 0xE2, (byte) 0xFF,
+                (byte) 0xE3
+        };
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        AtomicInteger restores = new AtomicInteger();
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC,
+                new CaptureSynth(), restores::incrementAndGet,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+
+        seq.read(new short[20_000]);
+
+        assertEquals(1, restores.get(),
+                "E2 FF must latch restore on the presentation-owned sink");
     }
 
     @Test
