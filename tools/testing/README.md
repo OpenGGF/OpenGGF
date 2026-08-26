@@ -83,10 +83,15 @@ marker and remains eligible for admission.
 
 `Export-SurefireOutcomeInventory.ps1` converts one or more coordinator-owned
 Surefire report roots into an ordinal-sorted TSV. The source-class inventory is
-one fully qualified selected class per line. Every selected executable class
-must produce at least one testcase; naming-convention helpers that execute no
-tests require a separately reviewed TSV with `class` and non-empty `reason`
-columns.
+one fully qualified selected top-level class per line. A testcase covers a
+selected root only when its XML `classname` is exactly that root or begins with
+the exact `root + '$'` boundary. Thus a selected `example.Outer` may export
+`example.Outer$Nested#method`, preserving that actual nested classname and
+identity, while `example.Outerish$Nested` remains unselected. Selector roots
+containing `$`, lookalike prefixes, duplicate nested identities, and roots with
+neither exact nor nested testcase coverage are fatal. Naming-convention helpers
+that execute no tests require a separately reviewed TSV with `class` and
+non-empty `reason` columns.
 
 Run the exporter from PowerShell so multiple report roots remain an array:
 
@@ -103,6 +108,94 @@ Run the exporter from PowerShell so multiple report roots remain an array:
     -EmptyHelperAllowlist ./evidence/candidate-empty-helpers.tsv `
     -OutputPath ./evidence/candidate-outcomes.tsv
 ```
+
+### Authenticated explicit-source fallback
+
+When a completed ordinary monolith is inventory-invalid because Surefire
+discovers a nested class both independently and through its top-level Jupiter
+owner, retain that invalid run unchanged. The first fallback is one complete
+ordinary session selected by exact top-level source patterns, not a
+deduplicated report and not a partition.
+
+Construct the selector only after applying that tree's ordinary source includes
+and effective POM excludes. Ordinal-sort the exact top-level FQCN roots, then
+map each root mechanically from `com.openggf.Foo` to
+`com/openggf/Foo.java`. The resulting generated-test-classes-relative file must
+contain neither `$` nor wildcard characters and must be an ordinal bijection
+with the root inventory. Store it at a canonical absolute path under an
+owner-only task directory created by `agent-scratch`; record its SHA-256 and
+line count before launch. For example:
+
+```powershell
+$taskRoot = agent-scratch new surefire-explicit-source
+$selector = Join-Path $taskRoot 'ordinary.includes'
+$roots = [string[]](Get-Content -LiteralPath ./evidence/candidate-classes.txt)
+[Array]::Sort($roots, [StringComparer]::Ordinal)
+$patterns = $roots | ForEach-Object { $_.Replace('.', '/') + '.java' }
+[IO.File]::WriteAllText($selector, (($patterns -join "`n") + "`n"), [Text.UTF8Encoding]::new($false))
+$selector = (Resolve-Path -LiteralPath $selector).Path
+$selectorHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $selector).Hash.ToLowerInvariant()
+$selectorCount = $patterns.Count
+```
+
+Make the selector an authenticated coordinator input before launch. Preserve
+any existing runtime inputs and add the selector exactly once using
+`[IO.Path]::PathSeparator`:
+
+```powershell
+$existingInputs = @($env:OPENGGF_RUNTIME_INPUTS -split [IO.Path]::PathSeparator |
+    Where-Object { $_ })
+$env:OPENGGF_RUNTIME_INPUTS = (@($existingInputs) + $selector) -join [IO.Path]::PathSeparator
+$mavenArguments = @('-Dmse=relaxed', "-Dsurefire.includesFile=$selector", 'test')
+```
+
+The Maven invocation must contain exactly one canonical absolute
+`-Dsurefire.includesFile=<selector>` property. Reject `-Dtest`,
+`-Dsurefire.includes`, a second `surefire.includesFile`, group/excluded-group
+properties, excludes, or any other caller selector override. `-Dtest` is
+specifically forbidden because it replaces the POM's ordinary includes and
+excludes. The selector must be present exactly once in
+`OPENGGF_RUNTIME_INPUTS`, so the coordinator records pre/post hashes of the
+same file.
+
+The exporter can preflight the static mapping, invocation, and runtime-input
+contract. Put the exact Maven argument vector in a UTF-8 file, one argument per
+line, and supply:
+
+```powershell
+& ./tools/testing/Export-SurefireOutcomeInventory.ps1 `
+    -SourceClassInventory ./evidence/candidate-classes.txt `
+    -SelectorPatternInventory $selector `
+    -MavenArgumentInventory ./evidence/candidate-maven-arguments.txt `
+    -RuntimeInputs $env:OPENGGF_RUNTIME_INPUTS `
+    -ReportRoot ./evidence/candidate-ordinary/surefire-reports `
+    -OutputPath ./evidence/candidate-outcomes.tsv
+```
+
+Before accepting this fallback, capture the exact effective POM once without
+and once with the selector property. Select the ordinary
+`maven-surefire-plugin` execution (normally `default-test`). It must have no
+configured `<includes>` because `includesFile` appends to configured includes;
+its ordered excludes, groups, excluded groups, fork count, and fork-reuse value
+must be identical in both effective POMs. Preserve those parsed values with the
+selector hash/count evidence. The exporter enforces and prints that comparison:
+
+```powershell
+& ./tools/testing/Export-SurefireOutcomeInventory.ps1 `
+    -SourceClassInventory ./evidence/candidate-classes.txt `
+    -EffectivePomPath ./evidence/candidate-effective-ordinary.xml `
+    -SelectorEffectivePomPath ./evidence/candidate-effective-selector.xml `
+    -SurefireExecutionId default-test `
+    -ReportRoot ./evidence/candidate-ordinary/surefire-reports `
+    -OutputPath ./evidence/candidate-outcomes.tsv
+```
+
+This static/effective-POM preflight supplements, but does not replace, the real
+frozen-POM proof: one exact top-level root containing `@Nested` must execute its
+nested testcase exactly once, a class named by an effective POM exclude must
+emit no report, no unrelated report may appear, and the coordinator manifest
+must authenticate the selector runtime input. Repeat that proof for each frozen
+parent and the later merged candidate.
 
 When `pwsh -File` must carry multiple paths, join them with
 `[IO.Path]::PathSeparator` (`:` on POSIX, `;` on Windows). XML is loaded with

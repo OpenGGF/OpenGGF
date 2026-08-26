@@ -267,6 +267,182 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-True (([System.IO.File]::ReadAllText($compareOutput)).IndexOf('"', [System.StringComparison]::Ordinal) -lt 0) 'comparison wire rows also contain no quote characters'
     }
 
+    Invoke-Case 'export accepts nested-only and combined ownership while preserving actual classnames' {
+        $case = Join-Path $scratch 'export-nested-ownership'
+        $nestedOnly = Join-Path $case 'nested-only'
+        $combined = Join-Path $case 'combined'
+        New-Item -ItemType Directory -Path $nestedOnly, $combined -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.Outer`n"
+        Write-Utf8File (Join-Path $nestedOnly 'TEST-nested.xml') '<testsuite><testcase classname="example.Outer$Nested" name="nestedOnly"/></testsuite>'
+
+        $nestedResult = Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $nestedOnly)
+        Assert-Succeeded $nestedResult 'nested-only owner export'
+        $nestedRows = @(Import-Csv -Delimiter "`t" -LiteralPath $output)
+        Assert-Equal $nestedRows.Count 1 'nested-only row count'
+        Assert-Equal $nestedRows[0].identity 'example.Outer$Nested#nestedOnly' 'nested-only actual identity'
+        Assert-Equal $nestedRows[0].class 'example.Outer$Nested' 'nested-only actual classname'
+
+        Write-Utf8File (Join-Path $combined 'TEST-combined.xml') '<testsuite><testcase classname="example.Outer" name="outer"/><testcase classname="example.Outer$Nested" name="nested"/></testsuite>'
+        $combinedResult = Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $combined)
+        Assert-Succeeded $combinedResult 'combined owner export'
+        $combinedRows = @(Import-Csv -Delimiter "`t" -LiteralPath $output)
+        Assert-Equal (($combinedRows.identity) -join '|') 'example.Outer#outer|example.Outer$Nested#nested' 'combined actual identities'
+        Assert-Equal (($combinedRows.class) -join '|') 'example.Outer|example.Outer$Nested' 'combined actual classnames'
+    }
+
+    Invoke-Case 'export rejects nested selector roots lookalike prefixes duplicate descendants and uncovered roots' {
+        $case = Join-Path $scratch 'export-nested-rejections'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+
+        Write-Utf8File $classes "example.Outer`$Nested`n"
+        Write-Utf8File (Join-Path $case 'TEST-case.xml') '<testsuite><testcase classname="example.Outer$Nested" name="nested"/></testsuite>'
+        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)) 'selector root|source inventory|\$' 'nested selector root'
+
+        Write-Utf8File $classes "example.Outer`n"
+        Write-Utf8File (Join-Path $case 'TEST-case.xml') '<testsuite><testcase classname="example.Outerish$Nested" name="lookalike"/></testsuite>'
+        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)) 'unselected|Outerish' 'lookalike nested prefix'
+
+        Write-Utf8File (Join-Path $case 'TEST-case.xml') '<testsuite><testcase classname="example.Outer$Nested" name="same"/><testcase classname="example.Outer$Nested" name="same"/></testsuite>'
+        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)) 'duplicate.*Outer\$Nested#same' 'duplicate nested identity'
+
+        Write-Utf8File (Join-Path $case 'TEST-case.xml') '<testsuite><testcase classname="example.Outerish$Nested" name="lookalike"/></testsuite>'
+        Write-Utf8File $classes "example.Outer`nexample.Outerish`n"
+        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)) 'ABSENT[\s\S]*example\.Outer' 'root without exact or nested coverage'
+    }
+
+    Invoke-Case 'export normalizes nested red outcomes without changing descendant identity' {
+        $case = Join-Path $scratch 'export-nested-red'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.Outer`n"
+        Write-Utf8File (Join-Path $case 'TEST-red.xml') '<testsuite><testcase classname="example.Outer$Nested" name="red"><failure type="example.NestedFailure" message="at /work/tree 2026-08-26T12:34:56Z">nested /session/root run-nested-12345678</failure></testcase></testsuite>'
+        $result = Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-OutputPath', $output,
+            '-CanonicalWorktree', '/work/tree', '-SessionRoot', '/session/root', '-RunId', 'run-nested-12345678',
+            '-ReportRoot', $case
+        )
+        Assert-Succeeded $result 'nested red export'
+        $row = @(Import-Csv -Delimiter "`t" -LiteralPath $output)[0]
+        Assert-Equal $row.identity 'example.Outer$Nested#red' 'nested red identity'
+        Assert-Equal $row.normalized_message 'at <WORKTREE> <TIMESTAMP>' 'nested red message normalization'
+        Assert-Equal $row.red_body_bytes '30' 'nested red body byte count'
+        Assert-Equal $row.red_body_sha256 '3d28e9114476422d99e9e02cfda0a90cb67e5cec0ac467acb1ef03adfa311529' 'nested red body SHA-256'
+    }
+
+    Invoke-Case 'export authenticates exact source selector mapping invocation and runtime input' {
+        $case = Join-Path $scratch 'export-selector-contract'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $patterns = Join-Path $case 'ordinary.includes'
+        $arguments = Join-Path $case 'maven-arguments.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "com.openggf.AlphaTest`ncom.openggf.deep.ZuluTest`n"
+        Write-Utf8File $patterns "com/openggf/AlphaTest.java`ncom/openggf/deep/ZuluTest.java`n"
+        Write-Utf8File $arguments "-Dmse=relaxed`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File (Join-Path $case 'TEST-fixture.xml') '<testsuite><testcase classname="com.openggf.AlphaTest" name="alpha"/><testcase classname="com.openggf.deep.ZuluTest$Nested" name="zulu"/></testsuite>'
+
+        $result = Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-OutputPath', $output, '-ReportRoot', $case
+        )
+        Assert-Succeeded $result 'authenticated selector contract'
+        Assert-Equal ((Import-Csv -Delimiter "`t" -LiteralPath $output).Count) 2 'authenticated selector export row count'
+    }
+
+    Invoke-Case 'export rejects non-bijective unsafe or competing selector invocations' {
+        $case = Join-Path $scratch 'export-selector-rejections'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $patterns = Join-Path $case 'ordinary.includes'
+        $arguments = Join-Path $case 'maven-arguments.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "com.openggf.AlphaTest`ncom.openggf.deep.ZuluTest`n"
+        Write-Utf8File (Join-Path $case 'TEST-fixture.xml') '<testsuite><testcase classname="com.openggf.AlphaTest" name="alpha"/><testcase classname="com.openggf.deep.ZuluTest" name="zulu"/></testsuite>'
+
+        $invalidPatterns = @(
+            [pscustomobject]@{ Name = 'wildcard selector'; Content = "com/openggf/*Test.java`ncom/openggf/deep/ZuluTest.java`n"; Pattern = 'wildcard|pattern' },
+            [pscustomobject]@{ Name = 'nested selector'; Content = "com/openggf/AlphaTest.java`ncom/openggf/deep/ZuluTest`$Nested.java`n"; Pattern = '\$|nested' },
+            [pscustomobject]@{ Name = 'wrong mapping'; Content = "com/openggf/AlphaTest.java`ncom/openggf/deep/Wrong.java`n"; Pattern = 'bijection|mapping|Zulu' },
+            [pscustomobject]@{ Name = 'wrong order'; Content = "com/openggf/deep/ZuluTest.java`ncom/openggf/AlphaTest.java`n"; Pattern = 'ordinal|bijection|mapping' }
+        )
+        foreach ($fixture in $invalidPatterns) {
+            Write-Utf8File $patterns $fixture.Content
+            Write-Utf8File $arguments "-Dsurefire.includesFile=$patterns`ntest`n"
+            Assert-Failed (Invoke-Tool $exportScript @(
+                '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+                '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+                '-OutputPath', $output, '-ReportRoot', $case
+            )) $fixture.Pattern $fixture.Name
+        }
+
+        Write-Utf8File $patterns "com/openggf/AlphaTest.java`ncom/openggf/deep/ZuluTest.java`n"
+        $invalidInvocations = @(
+            [pscustomobject]@{ Name = '-Dtest override'; Content = "-Dtest=com.openggf.AlphaTest`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = '-Dtest|selector override' },
+            [pscustomobject]@{ Name = 'surefire includes override'; Content = "-Dsurefire.includes=**/Test*.java`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'surefire.includes|selector override' },
+            [pscustomobject]@{ Name = 'duplicate includes file'; Content = "-Dsurefire.includesFile=$patterns`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'exactly one|duplicate|includesFile' },
+            [pscustomobject]@{ Name = 'other selector override'; Content = "-DexcludedGroups=slow`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'excludedGroups|selector override' },
+            [pscustomobject]@{ Name = 'missing runtime input'; Content = "-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = (Join-Path $case 'other-input'); Pattern = 'OPENGGF_RUNTIME_INPUTS|runtime input' },
+            [pscustomobject]@{ Name = 'relative includes file'; Content = "-Dsurefire.includesFile=ordinary.includes`ntest`n"; Runtime = $patterns; Pattern = 'canonical absolute|includesFile' }
+        )
+        foreach ($fixture in $invalidInvocations) {
+            Write-Utf8File $arguments $fixture.Content
+            Assert-Failed (Invoke-Tool $exportScript @(
+                '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+                '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $fixture.Runtime,
+                '-OutputPath', $output, '-ReportRoot', $case
+            )) $fixture.Pattern $fixture.Name
+        }
+    }
+
+    Invoke-Case 'export parses unchanged effective ordinary Surefire selector configuration' {
+        $case = Join-Path $scratch 'export-effective-pom'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $baselinePom = Join-Path $case 'baseline-effective-pom.xml'
+        $selectorPom = Join-Path $case 'selector-effective-pom.xml'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.Test`n"
+        Write-Utf8File (Join-Path $case 'TEST-fixture.xml') '<testsuite><testcase classname="example.Test" name="test"/></testsuite>'
+        $pom = @'
+<project xmlns="http://maven.apache.org/POM/4.0.0"><build><plugins><plugin>
+  <artifactId>maven-surefire-plugin</artifactId><executions><execution><id>default-test</id><configuration>
+    <excludes><exclude>**/*Guard.java</exclude><exclude>**/ExcludedTest.java</exclude></excludes>
+    <groups>ordinary</groups><excludedGroups>quarantined</excludedGroups><forkCount>1</forkCount><reuseForks>true</reuseForks>
+  </configuration></execution></executions>
+</plugin></plugins></build></project>
+'@
+        Write-Utf8File $baselinePom $pom
+        Write-Utf8File $selectorPom $pom
+        $result = Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-EffectivePomPath', $baselinePom,
+            '-SelectorEffectivePomPath', $selectorPom, '-SurefireExecutionId', 'default-test',
+            '-OutputPath', $output, '-ReportRoot', $case
+        )
+        Assert-Succeeded $result 'unchanged effective POM contract'
+        Assert-True ($result.Output -match 'excludes=.*Guard.*ExcludedTest') 'effective POM evidence records excludes'
+        Assert-True ($result.Output -match 'groups=ordinary.*excludedGroups=quarantined.*forkCount=1.*reuseForks=true') 'effective POM evidence records groups and fork settings'
+
+        Write-Utf8File $selectorPom ($pom.Replace('<forkCount>1</forkCount>', '<forkCount>2</forkCount>'))
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-EffectivePomPath', $baselinePom,
+            '-SelectorEffectivePomPath', $selectorPom, '-SurefireExecutionId', 'default-test',
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'forkCount|unchanged|effective' 'changed effective fork setting'
+
+        Write-Utf8File $selectorPom ($pom.Replace('<excludes>', '<includes><include>**/Test.java</include></includes><excludes>'))
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-EffectivePomPath', $baselinePom,
+            '-SelectorEffectivePomPath', $selectorPom, '-SurefireExecutionId', 'default-test',
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'includes|ordinary' 'configured ordinary includes'
+    }
+
     Invoke-Case 'export reads all report roots and accepts only reviewed empty helpers with reasons' {
         $case = Join-Path $scratch 'export-roots-helper'
         $rootA = Join-Path $case 'a'

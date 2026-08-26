@@ -6,7 +6,13 @@ param(
     [string] $CanonicalWorktree = '',
     [string] $SessionRoot = '',
     [string] $RunId = '',
-    [string] $EmptyHelperAllowlist = ''
+    [string] $EmptyHelperAllowlist = '',
+    [string] $SelectorPatternInventory = '',
+    [string] $MavenArgumentInventory = '',
+    [string] $RuntimeInputs = '',
+    [string] $EffectivePomPath = '',
+    [string] $SelectorEffectivePomPath = '',
+    [string] $SurefireExecutionId = 'default-test'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,6 +47,9 @@ function Read-ClassInventory {
         }
         if ($className.IndexOfAny([char[]]@("`t", "`r", "`n")) -ge 0) {
             throw "Invalid class name in source inventory: [$className]"
+        }
+        if ($className.Contains('$')) {
+            throw "Source class inventory selector roots cannot contain `$: $className"
         }
         if (-not $seen.Add($className)) {
             throw "Duplicate class in source inventory: $className"
@@ -81,6 +90,156 @@ function Read-HelperAllowlist {
         }
     }
     return ,$helpers
+}
+
+function Assert-ExplicitSourceSelectorContract {
+    param(
+        [string[]] $SourceClasses,
+        [string] $PatternPath,
+        [string] $ArgumentPath,
+        [string] $AuthenticatedRuntimeInputs
+    )
+
+    $supplied = @(
+        -not [string]::IsNullOrWhiteSpace($PatternPath),
+        -not [string]::IsNullOrWhiteSpace($ArgumentPath),
+        -not [string]::IsNullOrWhiteSpace($AuthenticatedRuntimeInputs)
+    )
+    if (($supplied -contains $true) -and ($supplied -contains $false)) {
+        throw 'SelectorPatternInventory, MavenArgumentInventory, and RuntimeInputs must be supplied together'
+    }
+    if ($supplied -notcontains $true) {
+        return
+    }
+    foreach ($path in @($PatternPath, $ArgumentPath)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Selector contract input does not exist: $path"
+        }
+    }
+
+    $canonicalPatternPath = (Resolve-Path -LiteralPath $PatternPath).Path
+    if (-not [System.IO.Path]::IsPathFullyQualified($PatternPath) -or
+        [System.IO.Path]::GetFullPath($PatternPath) -cne $canonicalPatternPath) {
+        throw "surefire.includesFile must use the canonical absolute selector path: $canonicalPatternPath"
+    }
+
+    $expectedPatterns = [System.Collections.Generic.List[string]]::new()
+    foreach ($className in $SourceClasses) {
+        $expectedPatterns.Add(($className.Replace('.', '/') + '.java'))
+    }
+    $sortedClasses = Get-OrdinalSorted $SourceClasses
+    if (($SourceClasses -join "`n") -cne ($sortedClasses -join "`n")) {
+        throw 'Explicit-source selector roots must be ordinal sorted'
+    }
+    $patterns = @([System.IO.File]::ReadAllLines($canonicalPatternPath))
+    if ($patterns.Count -ne $expectedPatterns.Count) {
+        throw 'Selector root list and slash-path patterns are not an ordinal bijection'
+    }
+    for ($index = 0; $index -lt $patterns.Count; $index++) {
+        $pattern = $patterns[$index]
+        if ($pattern.Contains('$')) {
+            throw "Explicit-source selector pattern cannot contain `$: $pattern"
+        }
+        if ($pattern.IndexOfAny([char[]]@('*', '?', '[', ']')) -ge 0) {
+            throw "Explicit-source selector pattern cannot contain a wildcard: $pattern"
+        }
+        if ($pattern -cne $expectedPatterns[$index]) {
+            throw "Selector root list and slash-path patterns are not an ordinal bijection at $($SourceClasses[$index]): $pattern"
+        }
+    }
+
+    $includesFileValues = [System.Collections.Generic.List[string]]::new()
+    foreach ($argument in [System.IO.File]::ReadAllLines((Resolve-Path -LiteralPath $ArgumentPath).Path)) {
+        if ($argument -match '^-Dsurefire\.includesFile=(.*)$') {
+            $includesFileValues.Add($Matches[1])
+            continue
+        }
+        if ($argument -match '^-D(?i:test|surefire\.includes|surefire\.excludes|groups|excludedGroups|surefire\.groups|surefire\.excludedGroups)(?:=|$)') {
+            throw "Maven selector override is forbidden with surefire.includesFile: $argument"
+        }
+    }
+    if ($includesFileValues.Count -ne 1) {
+        throw "Explicit-source invocation requires exactly one -Dsurefire.includesFile property; found $($includesFileValues.Count)"
+    }
+    if (-not [System.IO.Path]::IsPathFullyQualified($includesFileValues[0]) -or
+        [System.IO.Path]::GetFullPath($includesFileValues[0]) -cne $canonicalPatternPath) {
+        throw "surefire.includesFile must equal the canonical absolute selector path: $canonicalPatternPath"
+    }
+
+    $runtimeMatches = 0
+    foreach ($runtimeInput in $AuthenticatedRuntimeInputs.Split([System.IO.Path]::PathSeparator, [System.StringSplitOptions]::RemoveEmptyEntries)) {
+        if ([System.IO.Path]::IsPathFullyQualified($runtimeInput) -and
+            [System.IO.Path]::GetFullPath($runtimeInput) -ceq $canonicalPatternPath) {
+            $runtimeMatches++
+        }
+    }
+    if ($runtimeMatches -ne 1) {
+        throw "OPENGGF_RUNTIME_INPUTS must contain the canonical selector exactly once; found $runtimeMatches"
+    }
+}
+
+function Read-EffectiveSurefireConfiguration {
+    param([string] $Path, [string] $ExecutionId)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Effective POM does not exist: $Path"
+    }
+    $settings = [System.Xml.XmlReaderSettings]::new()
+    $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
+    $settings.XmlResolver = $null
+    $document = [System.Xml.XmlDocument]::new()
+    $reader = [System.Xml.XmlReader]::Create((Resolve-Path -LiteralPath $Path).Path, $settings)
+    try { $document.Load($reader) } finally { $reader.Dispose() }
+
+    $plugins = @($document.SelectNodes("//*[local-name()='plugin'][*[local-name()='artifactId' and text()='maven-surefire-plugin']]"))
+    $executions = [System.Collections.Generic.List[object]]::new()
+    foreach ($plugin in $plugins) {
+        foreach ($execution in @($plugin.SelectNodes("./*[local-name()='executions']/*[local-name()='execution']"))) {
+            $id = $execution.SelectSingleNode("./*[local-name()='id']")
+            if ($null -ne $id -and $id.InnerText -ceq $ExecutionId) {
+                $executions.Add($execution)
+            }
+        }
+    }
+    if ($executions.Count -ne 1) {
+        throw "Effective POM must contain exactly one maven-surefire-plugin execution '$ExecutionId'; found $($executions.Count)"
+    }
+    $configuration = $executions[0].SelectSingleNode("./*[local-name()='configuration']")
+    if ($null -eq $configuration) {
+        throw "Effective Surefire execution '$ExecutionId' has no configuration"
+    }
+    if ($null -ne $configuration.SelectSingleNode("./*[local-name()='includes']")) {
+        throw "Effective ordinary Surefire execution '$ExecutionId' must not configure includes"
+    }
+
+    $values = [ordered]@{}
+    $values.excludes = (@($configuration.SelectNodes("./*[local-name()='excludes']/*[local-name()='exclude']")) | ForEach-Object { $_.InnerText }) -join ','
+    foreach ($name in @('groups', 'excludedGroups', 'forkCount', 'reuseForks')) {
+        $node = $configuration.SelectSingleNode("./*[local-name()='$name']")
+        $values[$name] = if ($null -eq $node) { '' } else { $node.InnerText }
+    }
+    return [pscustomobject]$values
+}
+
+function Assert-EffectiveSurefireContract {
+    param([string] $BaselinePath, [string] $SelectorPath, [string] $ExecutionId)
+    $supplied = @(
+        -not [string]::IsNullOrWhiteSpace($BaselinePath),
+        -not [string]::IsNullOrWhiteSpace($SelectorPath)
+    )
+    if (($supplied -contains $true) -and ($supplied -contains $false)) {
+        throw 'EffectivePomPath and SelectorEffectivePomPath must be supplied together'
+    }
+    if ($supplied -notcontains $true) {
+        return
+    }
+    $baseline = Read-EffectiveSurefireConfiguration $BaselinePath $ExecutionId
+    $selector = Read-EffectiveSurefireConfiguration $SelectorPath $ExecutionId
+    foreach ($name in @('excludes', 'groups', 'excludedGroups', 'forkCount', 'reuseForks')) {
+        if ([string]$baseline.$name -cne [string]$selector.$name) {
+            throw "Effective Surefire $name changed under the selector property: baseline=[$($baseline.$name)] selector=[$($selector.$name)]"
+        }
+    }
+    Write-Host "Effective Surefire unchanged: excludes=$($baseline.excludes) groups=$($baseline.groups) excludedGroups=$($baseline.excludedGroups) forkCount=$($baseline.forkCount) reuseForks=$($baseline.reuseForks)"
 }
 
 function Normalize-TokenizedText {
@@ -190,6 +349,8 @@ function ConvertFrom-TsvField {
 }
 
 $sourceClasses = Read-ClassInventory $SourceClassInventory
+Assert-ExplicitSourceSelectorContract $sourceClasses $SelectorPatternInventory $MavenArgumentInventory $RuntimeInputs
+Assert-EffectiveSurefireContract $EffectivePomPath $SelectorEffectivePomPath $SurefireExecutionId
 $selected = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($className in $sourceClasses) {
     [void]$selected.Add($className)
@@ -215,7 +376,7 @@ if ($reportFiles.Count -eq 0) {
 }
 
 $rowsByIdentity = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
-$reportedClasses = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+$coveredRoots = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 $settings = [System.Xml.XmlReaderSettings]::new()
 $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
 $settings.XmlResolver = $null
@@ -244,10 +405,17 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
         if ($className.Length -eq 0 -or $methodName.Length -eq 0) {
             throw "Surefire testcase in $reportPath lacks classname or name"
         }
-        if (-not $selected.Contains($className)) {
+        $owningRoot = $className
+        if (-not $selected.Contains($owningRoot)) {
+            $nestedBoundary = $className.IndexOf('$', [System.StringComparison]::Ordinal)
+            if ($nestedBoundary -ge 0) {
+                $owningRoot = $className.Substring(0, $nestedBoundary)
+            }
+        }
+        if (-not $selected.Contains($owningRoot)) {
             throw "Surefire report contains unselected executable class: $className"
         }
-        [void]$reportedClasses.Add($className)
+        [void]$coveredRoots.Add($owningRoot)
         $identity = "$className#$methodName"
         if ($rowsByIdentity.ContainsKey($identity)) {
             throw "Duplicate Surefire testcase identity: $identity"
@@ -315,7 +483,7 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
 
 $missingClasses = [System.Collections.Generic.List[string]]::new()
 foreach ($className in $sourceClasses) {
-    if (-not $reportedClasses.Contains($className) -and -not $helpers.Contains($className)) {
+    if (-not $coveredRoots.Contains($className) -and -not $helpers.Contains($className)) {
         $missingClasses.Add($className)
     }
 }
