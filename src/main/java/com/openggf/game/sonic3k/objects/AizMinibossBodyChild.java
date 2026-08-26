@@ -68,7 +68,7 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
 
     @Override
     public AizMinibossBodyChild recreateForRewind(RewindRecreateContext ctx) {
-        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
+        AbstractBossInstance boss = AizMinibossRewindLinks.nearestSharedBoss(ctx);
         return boss == null ? null : new AizMinibossBodyChild(boss);
     }
 

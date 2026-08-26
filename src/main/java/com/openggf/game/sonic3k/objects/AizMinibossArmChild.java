@@ -37,7 +37,7 @@ public class AizMinibossArmChild extends AbstractBossChild implements RewindRecr
 
     @Override
     public AizMinibossArmChild recreateForRewind(RewindRecreateContext ctx) {
-        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
+        AbstractBossInstance boss = AizMinibossRewindLinks.nearestSharedBoss(ctx);
         return boss == null ? null : new AizMinibossArmChild(boss);
     }
 

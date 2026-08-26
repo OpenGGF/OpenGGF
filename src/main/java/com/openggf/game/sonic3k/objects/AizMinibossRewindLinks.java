@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.boss.AbstractBossInstance;
 
 final class AizMinibossRewindLinks {
     private static final int[][] BARREL_OFFSETS = {
@@ -16,6 +17,26 @@ final class AizMinibossRewindLinks {
         return RewindRecreateObjectLinks.nearestLiveObject(ctx, AizMinibossInstance.class);
     }
 
+    static AbstractBossInstance nearestSharedBoss(RewindRecreateContext ctx) {
+        AizMinibossInstance fightBoss = nearestBoss(ctx);
+        AizMinibossCutsceneInstance cutsceneBoss =
+                RewindRecreateObjectLinks.nearestLiveObject(ctx, AizMinibossCutsceneInstance.class);
+        if (fightBoss == null) {
+            return cutsceneBoss;
+        }
+        if (cutsceneBoss == null) {
+            return fightBoss;
+        }
+        ObjectSpawn spawn = ctx.spawn();
+        if (spawn == null) {
+            return fightBoss;
+        }
+        long fightDistance = distanceSquared(spawn.x(), spawn.y(), fightBoss.getX(), fightBoss.getY());
+        long cutsceneDistance = distanceSquared(
+                spawn.x(), spawn.y(), cutsceneBoss.getX(), cutsceneBoss.getY());
+        return cutsceneDistance < fightDistance ? cutsceneBoss : fightBoss;
+    }
+
     static AizMinibossFlameBarrelChild nearestBarrel(RewindRecreateContext ctx) {
         return RewindRecreateObjectLinks.nearestLiveObject(ctx, AizMinibossFlameBarrelChild.class);
     }
@@ -24,7 +45,7 @@ final class AizMinibossRewindLinks {
         return RewindRecreateObjectLinks.nearestLiveObject(ctx, AizMinibossBarrelShotChild.class);
     }
 
-    static int nearestBarrelIndex(RewindRecreateContext ctx, AizMinibossInstance boss) {
+    static int nearestBarrelIndex(RewindRecreateContext ctx, AbstractBossInstance boss) {
         ObjectSpawn spawn = ctx.spawn();
         if (spawn == null || boss == null) {
             return 0;
