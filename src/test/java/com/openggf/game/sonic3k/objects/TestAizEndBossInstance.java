@@ -34,6 +34,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAizEndBossInstance {
@@ -114,7 +115,12 @@ class TestAizEndBossInstance {
         bridge.update(0, null);
 
         assertTrue(readBoolean(bridge, "segmentsSpawned"));
-        assertTrue(bridge.isHighPriority());
+        assertEquals(4, bridge.getPriorityBucket(),
+                "AIZCollapsingLogBridge_InitFire writes priority $200");
+        assertFalse(bridge.isHighPriority(),
+                "render_flags = 4 must not promote the bridge above every terrain pixel");
+        assertEquals(0b0111, bridge.getTileOcclusionPaletteMask(),
+                "fire bridge must remain above the palette-3 waterfall but below palette 0-2 terrain");
     }
 
     @Test
