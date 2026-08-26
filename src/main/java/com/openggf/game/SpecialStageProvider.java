@@ -369,10 +369,11 @@ public interface SpecialStageProvider extends MiniGameProvider {
     }
 
     /**
-     * Configures the internal lag-pacing bypass used by trace sessions.
+     * Legacy compatibility notification for externally paced sessions.
+     * Implementations without a ROM-backed live scheduler must ignore it;
+     * recorded lag outcomes are admitted only by the hardware-timing port.
      *
-     * @param factor zero to disable native lag modeling for externally paced
-     *               replay; a positive value restores normal native pacing
+     * @param factor legacy scalar retained for source compatibility
      */
     void setLagCompensation(double factor);
 

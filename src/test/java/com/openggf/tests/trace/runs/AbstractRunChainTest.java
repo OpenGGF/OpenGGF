@@ -4277,12 +4277,9 @@ abstract class AbstractRunChainTest {
                 inputHandler.setLogicalOverride(
                         RecordedInputSnapshots.fromBk2(current, previous));
                 if (localRow >= passPacedFromRow) {
-                    // The recorded pass stream IS the pacing authority for this
-                    // segment, so the runtime's own lag MODEL (which skips an
-                    // update on frames it predicts the ROM lagged) must not also
-                    // pace it -- the standalone S2 special-stage harness turns it
-                    // off for exactly this reason ("Trace-paced replay: disable
-                    // the runtime's own lag compensation").
+                    // The recorded pass stream and lag-row admission are the
+                    // scheduling authority. Keep the legacy provider
+                    // notification, but do not derive gameplay state from it.
                     loop.getActiveSpecialStageProvider().setLagCompensation(0);
                     loop.setSpecialStageObservationPacing(
                             recordedPassPacing(movie, observationPasses, localRow));

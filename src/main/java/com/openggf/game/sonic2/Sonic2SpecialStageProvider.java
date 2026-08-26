@@ -56,7 +56,7 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public SpecialStageDebugCapabilities debugCapabilities() {
-        return new SpecialStageDebugCapabilities(false, false, false, true, true, true, true);
+        return new SpecialStageDebugCapabilities(false, false, false, true, true, true, false);
     }
 
     public Sonic2SpecialStageProvider() {
@@ -283,22 +283,22 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) {
-        manager.renderLagCompensationOverlay(viewportWidth, viewportHeight);
+        // Compatibility no-op: S2 has no ROM-backed live lag predictor.
     }
 
     @Override
     public boolean isLagCompensationDisplayEnabled() {
-        return manager.isLagCompensationDisplayEnabled();
+        return false;
     }
 
     @Override
     public void toggleLagCompensationDisplay() {
-        manager.toggleLagCompensationDisplay();
+        // Compatibility no-op: the capability is not advertised.
     }
 
     @Override
     public void setLagCompensation(double factor) {
-        manager.setLagCompensation(factor);
+        // Compatibility no-op. Recorded lag rows are admitted by the trace scheduler.
     }
 
     // ==================== Results Screen ====================

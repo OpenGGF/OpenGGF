@@ -4,6 +4,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Sonic 2 special stages no longer synthesize Mega Drive lag from trace-fitted
+  ratios:** the Stage 1 segment/speed bucket model, its runtime frame-skip
+  branch, diagnostic overlay, validation fixture, and rewind fields have been
+  removed. Exact trace replay still admits recorded `VBlank_Lag` rows solely as
+  scheduling outcomes; ordinary interactive play now advances every host tick
+  until a causal 68K/VDP timing model can derive the ROM branch.
+
 - **Sonic 2 special-stage rewind now preserves the first pre-start object-pass
   deferral:** restoring during the fade-from-white boundary retains the pending
   retail cadence state, so replaying that boundary no longer advances players,

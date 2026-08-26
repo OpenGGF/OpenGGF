@@ -51,8 +51,6 @@ final class Sonic2SpecialStageSnapshot {
     final double alignmentRainbowSpeedScale;
     final double alignmentRainbowSpeedAccumulator;
     final boolean alignmentStepByTrackFrame;
-    final double lagCompensation;
-    final boolean lagCompensationDisplayEnabled;
     final long diagnosticWallStartTime;
     final int diagnosticUpdateCount;
     final int diagnosticTrackAdvances;
@@ -128,8 +126,6 @@ final class Sonic2SpecialStageSnapshot {
             double alignmentRainbowSpeedScale,
             double alignmentRainbowSpeedAccumulator,
             boolean alignmentStepByTrackFrame,
-            double lagCompensation,
-            boolean lagCompensationDisplayEnabled,
             long diagnosticWallStartTime,
             int diagnosticUpdateCount,
             int diagnosticTrackAdvances,
@@ -203,8 +199,6 @@ final class Sonic2SpecialStageSnapshot {
         this.alignmentRainbowSpeedScale = alignmentRainbowSpeedScale;
         this.alignmentRainbowSpeedAccumulator = alignmentRainbowSpeedAccumulator;
         this.alignmentStepByTrackFrame = alignmentStepByTrackFrame;
-        this.lagCompensation = lagCompensation;
-        this.lagCompensationDisplayEnabled = lagCompensationDisplayEnabled;
         this.diagnosticWallStartTime = diagnosticWallStartTime;
         this.diagnosticUpdateCount = diagnosticUpdateCount;
         this.diagnosticTrackAdvances = diagnosticTrackAdvances;

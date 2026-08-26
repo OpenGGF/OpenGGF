@@ -174,14 +174,12 @@ public class Sonic2SpecialStageManagerTest {
     }
 
     @Test
-    void diagnosticsGateCoversNormalLagAndAlignmentUpdatePaths() throws Exception {
+    void diagnosticsGateCoversNormalAndAlignmentUpdatePaths() throws Exception {
         Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
         Sonic2TrackAnimator animator = new Sonic2TrackAnimator(null);
         animator.initializeWithMockLayout();
         setField(manager, "initialized", true);
         setField(manager, "trackAnimator", animator);
-        manager.setLagCompensation(0.0);
-
         CountingDiagnosticClock clock = new CountingDiagnosticClock();
         manager.setDiagnosticClockForTesting(clock);
         manager.setFineDiagnosticsOverrideForTesting(false);
@@ -196,23 +194,9 @@ public class Sonic2SpecialStageManagerTest {
         assertTrue(normalNanoReads > 0);
         assertTrue(normalWallReads > 0);
 
-        manager.setLagCompensation(0.5);
-        setField(manager, "frameCounter", 2);
-        assertTrue(Sonic2SpecialStageLagModel.shouldLagThisFrame(
-                3,
-                animator.getSpeedFactor(),
-                animator.getCurrentSegmentType(),
-                0,
-                0), "the next host frame must exercise the stateless lag branch");
-        manager.update();
-        assertEquals(normalNanoReads + 1, clock.nanoTimeReads,
-                "A lag-skip update should refresh only the fine diagnostic frame timestamp");
-        assertEquals(normalWallReads, clock.currentTimeMillisReads,
-                "A lag-skip update must not count as a completed diagnostic update");
-
         setField(manager, "alignmentTestMode", true);
         manager.update();
-        assertEquals(normalNanoReads + 2, clock.nanoTimeReads,
+        assertEquals(normalNanoReads + 1, clock.nanoTimeReads,
                 "The alignment path should refresh only the fine diagnostic frame timestamp");
         assertEquals(normalWallReads, clock.currentTimeMillisReads,
                 "The alignment path must not count as a completed diagnostic update");
@@ -260,42 +244,6 @@ public class Sonic2SpecialStageManagerTest {
         assertEquals(before.lastDrawingIndex, after.lastDrawingIndex);
         assertEquals(before.recurringMainPassPending, after.recurringMainPassPending);
         assertEquals(before.trackAnimator, after.trackAnimator);
-    }
-
-    @Test
-    public void lagCompensationDisplayStartsOffAndToggles() {
-        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
-
-        assertFalse(manager.isLagCompensationDisplayEnabled(),
-                "Lag compensation debug display should be hidden until explicitly toggled");
-
-        manager.toggleLagCompensationDisplay();
-        assertTrue(manager.isLagCompensationDisplayEnabled(),
-                "First toggle should enable the lag compensation debug display");
-
-        manager.toggleLagCompensationDisplay();
-        assertFalse(manager.isLagCompensationDisplayEnabled(),
-                "Second toggle should hide the lag compensation debug display again");
-    }
-
-    @Test
-    void lagAccumulatorIsRetiredBecauseTheModelIsStateless() {
-        assertThrows(NoSuchFieldException.class,
-                () -> Sonic2SpecialStageManager.class.getDeclaredField("lagAccumulator"));
-        assertThrows(NoSuchFieldException.class,
-                () -> Sonic2SpecialStageSnapshot.class.getDeclaredField("lagAccumulator"));
-    }
-
-    @Test
-    void disabledLagOverlaySeparatesActualRateFromTargetBucket() {
-        Sonic2SpecialStageManager manager = new Sonic2SpecialStageManager();
-        manager.setLagCompensation(0);
-
-        String text = manager.formatLagCompensationOverlayText();
-
-        assertTrue(text.contains("actual 0.0%"));
-        assertTrue(text.contains("~60 upd/s"));
-        assertTrue(text.contains("target seg=3 speed=0"));
     }
 
     @Test

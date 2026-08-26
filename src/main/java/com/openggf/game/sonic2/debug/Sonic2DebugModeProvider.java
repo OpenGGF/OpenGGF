@@ -105,7 +105,7 @@ public class Sonic2DebugModeProvider implements DebugModeProvider {
 
         @Override
         public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) {
-            manager.renderLagCompensationOverlay(viewportWidth, viewportHeight);
+            // S2 does not advertise a live lag diagnostic.
         }
 
         @Override
