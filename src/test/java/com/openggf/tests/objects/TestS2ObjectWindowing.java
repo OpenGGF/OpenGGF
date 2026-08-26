@@ -88,6 +88,27 @@ class TestS2ObjectWindowing {
         }
     }
 
+    @Test
+    void viewportAwareUnloadCompareKeepsNativeIdentityAndAddsOnlyLiveWidth() {
+        int cameraX = 0x1500;
+        int[] widths = {320, 352, 400, 528, 800};
+        int[] expectedUnloadCompare = {0x280, 0x2A0, 0x2D0, 0x350, 0x460};
+        int base = S2ObjectWindowing.unloadCoarse(cameraX);
+
+        for (int i = 0; i < widths.length; i++) {
+            int width = widths[i];
+            assertEquals(expectedUnloadCompare[i],
+                    S2ObjectWindowing.unloadCompareFor(width),
+                    "unload compare at width " + width);
+            assertFalse(S2ObjectWindowing.markObjGone(
+                    base + expectedUnloadCompare[i], cameraX, width),
+                    "compare boundary must survive at width " + width);
+            assertTrue(S2ObjectWindowing.markObjGone(
+                    base + expectedUnloadCompare[i] + 0x80, cameraX, width),
+                    "next coarse bucket must unload at width " + width);
+        }
+    }
+
     // ---- Task 1.4b: directional load cursor consumes S2ObjectWindowing final boundaries ----
 
     @Test

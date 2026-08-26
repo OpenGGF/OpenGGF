@@ -34,6 +34,8 @@ import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -284,6 +286,46 @@ class TestS3kIczFreezerObject {
                 IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 800));
         assertEquals(0x20,
                 IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(true, 800));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "320,296",
+            "352,328",
+            "400,376",
+            "528,504",
+            "800,776"
+    })
+    void frozenPlayerBlockUsesLiveViewportForRightClampBoundaries(int viewportWidth, int rightClampOffset) {
+        AbstractObjectInstance.updateCameraBounds(0x4000, 0,
+                0x4000 + viewportWidth, 224, 0);
+        RecordingServices services = new RecordingServices();
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x4000);
+        when(camera.getWidth()).thenReturn((short) viewportWidth);
+        services.withCamera(camera);
+
+        int threshold = 0x4000 + rightClampOffset;
+        TestablePlayableSprite inside = new TestablePlayableSprite(
+                "tails", (short) threshold, (short) 0x0373);
+        IczFreezerObjectInstance.FrozenPlayerBlock insideBlock =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(inside, threshold, 0x0373, 0, false);
+        insideBlock.setServices(services);
+        insideBlock.update(1, inside);
+
+        assertEquals(threshold + 2, insideBlock.getX(),
+                "the exact right clamp boundary must remain movable at width " + viewportWidth);
+
+        TestablePlayableSprite outside = new TestablePlayableSprite(
+                "tails", (short) (threshold + 1), (short) 0x0373);
+        IczFreezerObjectInstance.FrozenPlayerBlock outsideBlock =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(
+                        outside, threshold + 1, 0x0373, 0, false);
+        outsideBlock.setServices(services);
+        outsideBlock.update(1, outside);
+
+        assertEquals(threshold + 1, outsideBlock.getX(),
+                "the first pixel beyond the right clamp must stop at width " + viewportWidth);
     }
 
     @Test

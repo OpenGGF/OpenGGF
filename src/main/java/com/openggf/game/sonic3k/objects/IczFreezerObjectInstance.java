@@ -633,7 +633,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
                 return;
             }
             int cameraX = services.camera().getX() & 0xFFFF;
-            int threshold = (cameraX + (motion.xVel < 0 ? 0x20 : 0x128)) & 0xFFFF;
+            int rightClampOffset = Math.max(0x20, viewportWidth() - 0x18);
+            int threshold = (cameraX + (motion.xVel < 0 ? 0x20 : rightClampOffset)) & 0xFFFF;
             int comparison = Integer.compareUnsigned(threshold, motion.x & 0xFFFF);
             boolean clamp = motion.xVel < 0 ? comparison >= 0 : comparison < 0;
             if (clamp) {

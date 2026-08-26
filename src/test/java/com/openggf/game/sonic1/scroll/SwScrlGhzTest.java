@@ -1,11 +1,21 @@
 package com.openggf.game.sonic1.scroll;
 
+import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.level.ParallaxManager;
+import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import com.openggf.tests.SingletonResetExtension;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@ExtendWith(SingletonResetExtension.class)
 public class SwScrlGhzTest {
 
     @ParameterizedTest
@@ -36,6 +46,48 @@ public class SwScrlGhzTest {
     public void periodCapsAtTheFull8192PixelBackgroundSourceExtent() {
         assertEquals(8192, SwScrlGhz.requiredBgPeriodWidth(
                 0x4000, 0, 0, 0, 0, 800));
+    }
+
+    @Test
+    public void periodCapsAtTheNativeBackgroundExtentForWideCameraAndCloudSpread() {
+        assertEquals(8192,
+                SwScrlGhz.requiredBgPeriodWidth(0x22C0, 0x400, 0, 0, 0, 320));
+        assertEquals(8192,
+                SwScrlGhz.requiredBgPeriodWidth(0x400, 0x400,
+                        0x1F000000, 0, 0, 400));
+        assertEquals(8192,
+                SwScrlGhz.requiredBgPeriodWidth(0x400, 0x400, 0, 0, 0, 8193));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"320,NATIVE_4_3,512", "400,WIDE_16_9,512", "528,ULTRA_21_9,1024",
+            "800,SUPER_32_9,1024"})
+    public void runtimeParallaxPublishesTheConfiguredGhzPeriod(
+            int viewportWidth, String displayAspect, int expectedPeriodWidth) {
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
+        GameServices.configuration().setConfigValue(
+                SonicConfiguration.DISPLAY_ASPECT, displayAspect);
+        GameServices.configuration().resolveDisplayAspect();
+        assertEquals(viewportWidth,
+                GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x400);
+        camera.setY((short) 0x400);
+
+        SwScrlGhz directOwner = new SwScrlGhz();
+        int[] expectedHScroll = new int[224];
+        directOwner.update(expectedHScroll, 0x400, 0x400, 0, 0);
+
+        ParallaxManager parallax = new ParallaxManager();
+        parallax.load(null);
+        parallax.update(Sonic1ZoneConstants.ZONE_GHZ, 0, camera, 0);
+
+        assertEquals(expectedPeriodWidth, directOwner.getBgPeriodWidth());
+        assertEquals(expectedPeriodWidth, parallax.getBgPeriodWidth());
+        assertEquals(directOwner.getBgCameraX(), parallax.getBgCameraX());
+        assertArrayEquals(expectedHScroll, parallax.getHScroll(),
+                "runtime GHZ wiring must preserve direct HScroll output");
     }
 
     @Test

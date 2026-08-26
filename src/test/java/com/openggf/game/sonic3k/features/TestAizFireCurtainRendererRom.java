@@ -25,6 +25,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -73,8 +75,10 @@ public class TestAizFireCurtainRendererRom {
                 SonicConfiguration.S3K_SKIP_INTROS, true);
     }
 
-    @Test
-    public void realAizFakeoutProducesNonEmptyCurtainPlan() throws Exception {
+    @ParameterizedTest
+    @ValueSource(ints = {320, 352, 400, 528, 800})
+    public void realAizFakeoutProducesWideRisingAndRefreshCurtainPlan(int screenWidth)
+            throws Exception {
         LevelManager levelManager = GameServices.level();
         levelManager.loadZoneAndAct(0, 0);
 
@@ -90,6 +94,7 @@ public class TestAizFireCurtainRendererRom {
         AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
         boolean sawRisingCurtain = false;
         boolean sawRefreshCurtain = false;
+        boolean refreshCoversViewport = false;
 
         for (int frame = 0; frame < 360 && !events.isAct2TransitionRequested(); frame++) {
             updateWithHardware(events, 0, frame);
@@ -99,7 +104,7 @@ public class TestAizFireCurtainRendererRom {
             }
 
             AizFireCurtainRenderer.CurtainCompositionPlan plan =
-                    renderer.buildCompositionPlan(state, 320, 224);
+                    renderer.buildCompositionPlan(state, screenWidth, 224);
             int drawCount = 0;
             for (AizFireCurtainRenderer.ColumnRenderPlan column : plan.columns()) {
                 drawCount += column.draws().size();
@@ -110,11 +115,14 @@ public class TestAizFireCurtainRendererRom {
             }
             if (state.stage() == FireCurtainStage.AIZ1_REFRESH && drawCount > 0) {
                 sawRefreshCurtain = true;
+                refreshCoversViewport |= rightmostDrawEdge(plan) >= screenWidth;
             }
         }
 
         assertTrue(sawRisingCurtain, "Expected non-empty curtain plan during AIZ1 rising fire");
         assertTrue(sawRefreshCurtain, "Expected non-empty curtain plan during AIZ1 refresh fire");
+        assertTrue(refreshCoversViewport,
+                "AIZ1 refresh fire must cover the full configured viewport at " + screenWidth);
     }
 
     @Test
@@ -324,6 +332,14 @@ public class TestAizFireCurtainRendererRom {
                 }
             }
         }
+    }
+
+    private static int rightmostDrawEdge(AizFireCurtainRenderer.CurtainCompositionPlan plan) {
+        return plan.columns().stream()
+                .flatMap(column -> column.draws().stream())
+                .mapToInt(draw -> draw.screenX() + 8)
+                .max()
+                .orElse(-1);
     }
 
     private static void updateWithHardware(

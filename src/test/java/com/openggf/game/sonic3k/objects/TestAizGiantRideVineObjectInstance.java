@@ -1,14 +1,17 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -19,12 +22,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestAizGiantRideVineObjectInstance {
@@ -32,6 +37,7 @@ class TestAizGiantRideVineObjectInstance {
     @BeforeEach
     void setUp() {
         GraphicsManager.getInstance().initHeadless();
+        AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
     @AfterEach
@@ -118,6 +124,39 @@ class TestAizGiantRideVineObjectInstance {
 
         assertEquals(width + 15, vine.getX(),
                 "a still sprite whose left edge remains inside the active viewport must survive MoveSprite");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {320, 352, 400, 528, 800})
+    void ordinaryVineStillSpriteCullsAtExactLiveViewportRightEdge(int width)
+            throws Exception {
+        AizRideVineObjectInstance vine = stillSpriteVine(width, width + 8, 100);
+
+        vine.update(0, null);
+
+        assertEquals(0x7FF0, vine.getX(),
+                "a still sprite exactly beyond the live right edge must self-delete at width " + width);
+    }
+
+    @Test
+    void ordinaryVineActiveRenderKeepsNativeRootPatternAndPosition() {
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.AIZ_RIDE_VINE)).thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+
+        AizRideVineObjectInstance vine = new AizRideVineObjectInstance(
+                new ObjectSpawn(0x1E00, 0x0300, 0x06, 0x00, 0, false, 0));
+        vine.setServices(new StubObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        }.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of)));
+
+        vine.appendRenderCommands(new ArrayList<GLCommand>());
+
+        verify(renderer).drawFrameIndex(0x21, 0x1E00, 0x0300, false, false);
     }
 
     @Test
