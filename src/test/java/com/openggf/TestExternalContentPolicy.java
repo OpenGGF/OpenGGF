@@ -311,16 +311,17 @@ class TestExternalContentPolicy {
                 new ModCatalog(List.of(), EffectiveModCatalog.EMPTY),
                 new ModRuntimeFindingStore(), (rate, game) ->
                 new SessionExternalContentView(ModMusicResolver.EMPTY,
-                        idempotentCountingPort(closes)), boundary);
+                        idempotentCountingPort(rate, closes)), boundary);
         ModSubsystem.installProcess(subsystem);
-        subsystem.beginNormalSession(8_000, "s1");
+        int outputRate = audio.outputSampleRate();
+        subsystem.beginNormalSession(outputRate, "s1");
 
         audio.resetState();
 
         assertSame(SessionExternalContentView.EMPTY, subsystem.sessionView());
         assertTrue(closes.get() == 1);
 
-        subsystem.beginNormalSession(8_000, "s1");
+        subsystem.beginNormalSession(outputRate, "s1");
         audio.setBackend(new TrackingBackend());
 
         assertSame(SessionExternalContentView.EMPTY, subsystem.sessionView());
@@ -371,9 +372,9 @@ class TestExternalContentPolicy {
                 new ModCatalog(List.of(), EffectiveModCatalog.EMPTY),
                 new ModRuntimeFindingStore(), (rate, game) ->
                 new SessionExternalContentView(ModMusicResolver.EMPTY,
-                        countingPort(closes)), boundary);
+                        countingPort(rate, closes)), boundary);
         ModSubsystem.installProcess(subsystem);
-        subsystem.beginNormalSession(8_000, "s1");
+        subsystem.beginNormalSession(audio.outputSampleRate(), "s1");
 
         assertThrows(IllegalStateException.class,
                 () -> audio.setBackendForLaunch(new FailingBackend()));
@@ -539,8 +540,12 @@ class TestExternalContentPolicy {
     }
 
     private static StreamedMusicPort countingPort(AtomicInteger closes) {
+        return countingPort(8_000, closes);
+    }
+
+    private static StreamedMusicPort countingPort(int outputRate, AtomicInteger closes) {
         return new StreamedMusicPort() {
-            @Override public int outputRate() { return 8_000; }
+            @Override public int outputRate() { return outputRate; }
             @Override public boolean hasStockOverride(int musicId) { return false; }
             @Override public boolean isCurrentStockOverride(int musicId) { return false; }
             @Override public void playStockOverride(int musicId) { }
@@ -563,8 +568,13 @@ class TestExternalContentPolicy {
     }
 
     private static StreamedMusicPort idempotentCountingPort(AtomicInteger closes) {
+        return idempotentCountingPort(8_000, closes);
+    }
+
+    private static StreamedMusicPort idempotentCountingPort(
+            int outputRate, AtomicInteger closes) {
         AtomicBoolean closed = new AtomicBoolean();
-        StreamedMusicPort delegate = countingPort(closes);
+        StreamedMusicPort delegate = countingPort(outputRate, closes);
         return new DelegatingPort(delegate) {
             @Override public void close() {
                 if (closed.compareAndSet(false, true)) delegate.close();
