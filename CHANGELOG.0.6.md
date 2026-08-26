@@ -4,6 +4,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Sonic 2 special-stage rewind now preserves the first pre-start object-pass
+  deferral:** restoring during the fade-from-white boundary retains the pending
+  retail cadence state, so replaying that boundary no longer advances players,
+  objects, and intro timers one pass early.
+
 - **Data-select launches now retain each host game's retail transition:** native
   S3K plays `sfx_EnterSS` before its 40-step, delay-6 music fade, while S1 and
   S2 hosts using the donated S3K presentation play their own equivalent entry

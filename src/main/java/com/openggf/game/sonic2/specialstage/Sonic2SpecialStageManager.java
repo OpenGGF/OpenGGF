@@ -2982,6 +2982,7 @@ public class Sonic2SpecialStageManager {
                 p2HeldButtons,
                 p2LogicalButtons,
                 recurringMainPassPending,
+                introFirstRecurringPassDeferred,
                 pendingMainHeldButtons,
                 pendingMainPressedButtons,
                 pendingMainP2HeldButtons,
@@ -3059,6 +3060,7 @@ public class Sonic2SpecialStageManager {
         p2HeldButtons = snapshot.p2HeldButtons;
         p2LogicalButtons = snapshot.p2LogicalButtons;
         recurringMainPassPending = snapshot.recurringMainPassPending;
+        introFirstRecurringPassDeferred = snapshot.introFirstRecurringPassDeferred;
         pendingMainHeldButtons = snapshot.pendingMainHeldButtons;
         pendingMainPressedButtons = snapshot.pendingMainPressedButtons;
         pendingMainP2HeldButtons = snapshot.pendingMainP2HeldButtons;

@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * <h2>Seven tests here are currently RED, and the ENGINE IS NOT THE DEFECT.</h2>
+ * <h2>Six failures and one error here encode a superseded cadence model.</h2>
  *
  * <p>They encode a superseded model of the pre-start pass cadence. This class was green at
  * {@code 06d570718} and was broken by {@code 649f21886} ("fix(trace): S2 special stage
@@ -54,9 +54,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       {@code frameCounter=225} where HEAD reports 224 — one pre-start pass behind.</li>
  * </ul>
  *
- * <p>Fixing this means correcting the expectations in this class against the ROM and the
- * recorded ledger, per assertion and with citations — not changing the engine, and not
- * rewriting expected values to whatever the engine currently prints.
+ * <p>Fixing those stale cases means correcting the expectations in this class against the
+ * ROM and the recorded ledger, per assertion and with citations — not changing the engine,
+ * and not rewriting expected values to whatever the engine currently prints. The separate
+ * {@code rewindDuringFadeRestoresTimerAndReplaysTheBoundaryDeterministically} failure is
+ * intentionally excluded: it detects that the first-post-fade deferral is not restored and
+ * therefore remains a genuine production rewind defect.
  */
 class Sonic2SpecialStageBootstrapCadenceTest {
 
@@ -98,7 +101,7 @@ class Sonic2SpecialStageBootstrapCadenceTest {
     }
 
     @Test
-    void fadeFromWhiteFreezesRuntimeThenRecurringMainPassPublishesOneObservationLater() {
+    void fadeFromWhiteFreezesRuntimeThenDeferredAndCurrentPreStartPassesPublishTogether() {
         int[] activeObjectUpdates = {0};
         manager.getObjectManager().getActiveObjects().add(new Sonic2SpecialStageRing() {
             @Override
@@ -177,8 +180,12 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         assertEquals(1, publishedPriorMainPass.trackFrameDelayCounter());
         assertNotEquals(frozen.sonic(), publishedPriorMainPass.sonic(),
                 "the next executed update publishes the prior VInt's RunObjects result");
-        assertEquals(frozenBannerY + 1, manager.getIntro().getBannerY());
-        assertEquals(2, activeObjectUpdates[0]);
+        // The first post-fade iteration overruns and publishes here, then the current
+        // pre-start iteration also completes before this observation. SS_MainLoop runs
+        // RunObjects after each WaitForVint (s2.asm:6674-6688); the recorder ledger shows
+        // only the first iteration deferred in all eight committed special-stage runs.
+        assertEquals(frozenBannerY + 2, manager.getIntro().getBannerY());
+        assertEquals(3, activeObjectUpdates[0]);
 
         manager.update(); // drawing index 3
         manager.update(); // drawing index 4
@@ -342,15 +349,17 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         assertEquals(0x10, sampledHeld.previousPhysicalHeldButtons);
 
         manager.handleInput(0x10, 0);
-        manager.update(); // pre-start loop copies the prior raw word before WaitForVint
-        Sonic2SpecialStageSnapshot scheduledEdge = manager.captureRewindSnapshot();
-        assertEquals(0x10, scheduledEdge.pendingMainPressedButtons);
-        assertEquals(0, scheduledEdge.previousPhysicalPressedButtons,
+        manager.update(); // the pre-start pass consumes the prior raw word in this iteration
+        Sonic2SpecialStageSnapshot consumedEdge = manager.captureRewindSnapshot();
+        assertEquals(0, consumedEdge.pendingMainPressedButtons,
+                "the same-iteration pre-start pass must consume the one jump edge");
+        assertTrue(manager.getSonicPlayer().isJumping());
+        assertEquals(0, consumedEdge.previousPhysicalPressedButtons,
                 "unchanged held input must not synthesize a second press");
-        assertEquals(0x10, scheduledEdge.previousPhysicalHeldButtons);
+        assertEquals(0x10, consumedEdge.previousPhysicalHeldButtons);
 
         manager.handleInput(0x10, 0);
-        manager.update(); // publishes the one pre-start logical edge
+        manager.update(); // a later pre-start pass must not repeat the logical edge
         Sonic2SpecialStageSnapshot afterJump = manager.captureRewindSnapshot();
         assertEquals(Sonic2SpecialStagePlayer.RoutineState.JUMPING,
                 manager.getSonicPlayer().getRoutine());
@@ -523,6 +532,13 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         assertTrue(intro.isBannerInFlyoutPhase());
         assertFalse(intro.isMessageVisible());
 
+        manager.update();
+        Sonic2SpecialStageSnapshot terminalPending = manager.captureRewindSnapshot();
+        assertEquals(Sonic2SpecialStageConstants.INTRO_WAIT2_FRAMES - 1,
+                terminalPending.intro.phaseTimer(),
+                "the terminal VInt schedules Obj5F without executing its deferred pass");
+        assertTrue(terminalPending.recurringMainPassPending);
+
         manager.completeTerminalPreStartPassWithoutVint();
 
         assertFalse(intro.isBannerVisible());
@@ -583,6 +599,10 @@ class Sonic2SpecialStageBootstrapCadenceTest {
 
         manager.handleInput(0x08, 0);
         manager.update();
+        assertEquals(Sonic2SpecialStageIntro.Phase.WAIT2,
+                manager.getIntro().getCurrentPhase(),
+                "the terminal Obj5F pass remains pending at the VInt observation");
+        manager.completeTerminalPreStartPassWithoutVint();
 
         assertEquals(Sonic2SpecialStageIntro.Phase.MESSAGE_FLYOUT,
                 manager.getIntro().getCurrentPhase(),
@@ -680,7 +700,12 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         manager.update(); // schedules first recurring RunObjects pass
         manager.update(); // players, fixed banner, then later dynamic slot
 
-        assertEquals(List.of("110:" + (initialBannerY + 1)), dynamicObservations);
+        // The deferred first post-fade pass and the current pre-start pass both
+        // complete before this observation. RunObjects scans players, Obj5F, then
+        // later dynamic slots on each pass (s2.asm:29805-29846, 6674-6688).
+        assertEquals(List.of(
+                "110:" + (initialBannerY + 1),
+                "110:" + (initialBannerY + 2)), dynamicObservations);
     }
 
     @Test
@@ -844,7 +869,8 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         int updatesRemaining = 1_000;
         while ((manager.getIntro().getCurrentPhase() != Sonic2SpecialStageIntro.Phase.WAIT2
                 || manager.captureRewindSnapshot().intro.phaseTimer()
-                < Sonic2SpecialStageConstants.INTRO_WAIT2_FRAMES - 1)
+                        < Sonic2SpecialStageConstants.INTRO_WAIT2_FRAMES - 1
+                || !manager.captureRewindSnapshot().recurringMainPassPending)
                 && updatesRemaining-- > 0) {
             manager.handleInput(0, 0);
             manager.update();
