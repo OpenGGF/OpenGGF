@@ -263,6 +263,31 @@ class AgentScratchTests(unittest.TestCase):
             self.assertIn("config=verified", output.getvalue())
             self.assertIn("systemd_timer=UNAVAILABLE_IN_SANDBOX", output.getvalue())
 
+    def test_verify_bounds_the_optional_claude_probe(self):
+        root, home = self._installed_configuration()
+        timed_out = []
+
+        def timeout_probe(command, **kwargs):
+            timed_out.append(kwargs["timeout"])
+            raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+        output = io.StringIO()
+        started = time.monotonic()
+        with environment(**self.env), \
+             mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+             mock.patch.object(self.helper, "_verify_unit_syntax", return_value="verified"), \
+             mock.patch.object(self.helper, "_verify_timer", return_value="verified"), \
+             mock.patch.object(self.helper, "_verify_legacy_timer", return_value="absent"), \
+             mock.patch.object(self.helper.shutil, "which", return_value="claude"), \
+             mock.patch.object(self.helper.subprocess, "run", side_effect=timeout_probe), \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(0, self.helper.cmd_verify(argparse.Namespace()))
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual([self.helper.CLAUDE_VERIFY_TIMEOUT_SECONDS], timed_out)
+        self.assertLessEqual(self.helper.CLAUDE_VERIFY_TIMEOUT_SECONDS, 2)
+        self.assertIn("claude=unverified", output.getvalue())
+
     def _session(self, name, state, *, pid=None, start=None, old=True):
         root = self.helper.ensure_root(self.env)
         session = root / "codex" / "test-sessions" / name
@@ -833,6 +858,20 @@ class AgentScratchTests(unittest.TestCase):
             unavailable = type("Run", (), {"returncode": 1, "stdout": "", "stderr": diagnostic})()
             with mock.patch.object(self.helper.subprocess, "run", return_value=unavailable):
                 self.assertEqual("unavailable_in_sandbox", self.helper._verify_timer())
+
+    def test_legacy_timer_state_requires_explicit_inactive_or_known_sandbox_status(self):
+        disabled = type("Run", (), {"returncode": 1, "stdout": "disabled\n", "stderr": ""})()
+        inactive = type("Run", (), {"returncode": 3, "stdout": "inactive\n", "stderr": ""})()
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=[disabled, inactive]):
+            self.assertEqual("inactive", self.helper._legacy_timer_state())
+        for diagnostic in ("Failed to connect to bus", "Failed to connect to user scope bus"):
+            unavailable = type("Run", (), {"returncode": 1, "stdout": "", "stderr": diagnostic})()
+            with mock.patch.object(self.helper.subprocess, "run", side_effect=[unavailable, unavailable]):
+                self.assertEqual("unavailable_in_sandbox", self.helper._legacy_timer_state())
+        unexpected = type("Run", (), {"returncode": 1, "stdout": "", "stderr": "permission denied"})()
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=[unexpected, unexpected]), \
+             self.assertRaisesRegex(self.helper.ScratchError, "cannot inspect legacy cleanup timer"):
+            self.helper._legacy_timer_state()
 
     def test_claude_timeout_and_launch_failure_are_unverified(self):
         root = self.helper.ensure_root(self.env)

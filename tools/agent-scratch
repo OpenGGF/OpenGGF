@@ -34,6 +34,7 @@ TEST_SESSION_LANE = ("codex", "test-sessions")
 TEST_SESSION_RETENTION_DAYS = 7
 RESERVATION_SCHEMA_VERSION = 1
 HELPER_VERSION = "openggf-agent-scratch-v2"
+CLAUDE_VERIFY_TIMEOUT_SECONDS = 2
 AREAS = {"claude": ("claude", 30), "codex": ("codex", "tmp", 30),
          "tasks": ("tasks", 7), "quarantine": ("quarantine", 14)}
 CONTROL = re.compile(r"[\x00-\x1f\x7f]")
@@ -1514,19 +1515,22 @@ def _user_manager_unavailable(run: subprocess.CompletedProcess[str]) -> bool:
 
 
 def _legacy_timer_state() -> str:
-    """Return active/inactive/absent/unverified for the pre-generic timer."""
+    """Return active/inactive/absent/sandbox-unavailable for the former timer."""
     try:
         enabled = subprocess.run(["systemctl", "--user", "is-enabled", LEGACY_TIMER_UNIT], text=True, capture_output=True, check=False)
         active = subprocess.run(["systemctl", "--user", "is-active", LEGACY_TIMER_UNIT], text=True, capture_output=True, check=False)
-    except OSError:
-        return "unverified"
+    except OSError as exc:
+        raise ScratchError(f"cannot inspect legacy cleanup timer: {exc}") from exc
     if _user_manager_unavailable(enabled) or _user_manager_unavailable(active):
-        return "unverified"
+        return "unavailable_in_sandbox"
     if enabled.returncode == 0 or active.returncode == 0:
         return "active"
     if "not-found" in _systemd_details(enabled) or "not loaded" in _systemd_details(enabled):
         return "absent"
-    return "inactive"
+    if enabled.stdout.strip().lower() == "disabled" and active.stdout.strip().lower() == "inactive":
+        return "inactive"
+    raise ScratchError("cannot inspect legacy cleanup timer: "
+                       + ((_systemd_details(enabled) + "\n" + _systemd_details(active)).strip()))
 
 
 def _verify_legacy_timer() -> str:
@@ -1552,8 +1556,8 @@ def _legacy_migration_preflight(home: pathlib.Path, root: pathlib.Path) -> str:
             f"legacy cleanup timer state is not backed by an owned template: {LEGACY_TIMER_UNIT}; "
             "manual review is required before installation"
         )
-    if state == "unverified":
-        return "unverified"
+    if state in {"unverified", "unavailable_in_sandbox"}:
+        return state
     return "owned" if owned else "absent"
 
 
@@ -1565,8 +1569,8 @@ def _retire_legacy_units(home: pathlib.Path, root: pathlib.Path) -> str:
     """
     environment_path, service_path, timer_path = _legacy_unit_paths(home)
     preflight = _legacy_migration_preflight(home, root)
-    if preflight == "unverified":
-        return "unverified"
+    if preflight in {"unverified", "unavailable_in_sandbox"}:
+        return preflight
     if preflight == "absent":
         return "absent"
     try:
@@ -1587,8 +1591,8 @@ def _retire_legacy_units(home: pathlib.Path, root: pathlib.Path) -> str:
         return "unverified"
     if reloaded.returncode:
         raise ScratchError("cannot reload user units while retiring legacy timer: " + (reloaded.stderr or reloaded.stdout).strip())
-    if _verify_legacy_timer() == "unverified":
-        return "unverified"
+    if _verify_legacy_timer() in {"unverified", "unavailable_in_sandbox"}:
+        return "unavailable_in_sandbox"
     if not _owned_legacy_units(root, home):
         raise ScratchError(
             "legacy scratch unit files changed during retirement; "
@@ -1696,7 +1700,8 @@ def _verify_claude_tmpdir(root: pathlib.Path) -> str:
         "-p", prompt,
     ]
     try:
-        run = subprocess.run(command, text=True, capture_output=True, timeout=45, check=False)
+        run = subprocess.run(command, text=True, capture_output=True,
+                             timeout=CLAUDE_VERIFY_TIMEOUT_SECONDS, check=False)
     except (subprocess.TimeoutExpired, OSError):
         return "unverified"
     if run.returncode:
@@ -1787,7 +1792,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
     print(f"systemd_units={unit_syntax}")
     print("systemd_timer=" + ("UNAVAILABLE_IN_SANDBOX"
                               if timer_state == "unavailable_in_sandbox" else timer_state))
-    print(f"legacy_timer={legacy_timer_state}")
+    print("legacy_timer=" + ("UNAVAILABLE_IN_SANDBOX"
+                              if legacy_timer_state == "unavailable_in_sandbox"
+                              else legacy_timer_state))
     print("codex_danger_full_access=unconstrained by workspace sandbox settings")
     claude_state = _verify_claude_tmpdir(root)
     print(f"claude={claude_state}")
