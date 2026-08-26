@@ -109,6 +109,27 @@ class TestLiveRewindBoundaryPolicy {
     }
 
     @Test
+    void completedInFrameSeamlessTransitionRecordsFrameThenRerootsHistory() {
+        Fixture fixture = installLiveFixture();
+        InputHandler input = new InputHandler();
+        fixture.manager.recordExternalFrame(GameMode.LEVEL, false, input);
+        fixture.manager.recordExternalFrame(GameMode.LEVEL, false, input);
+
+        fixture.manager.recordExternalFrame(GameMode.LEVEL, false, input, true);
+
+        assertEquals(3, fixture.controller.currentFrame());
+        assertEquals(3, fixture.controller.earliestAvailableFrame());
+        assertFalse(fixture.controller.stepBackward(),
+                "the completed transition frame must replace pre-act rewind history");
+
+        fixture.manager.recordExternalFrame(GameMode.LEVEL, false, input);
+
+        assertTrue(fixture.controller.stepBackward(),
+                "rewind must remain available among post-transition frames");
+        assertEquals(3, fixture.controller.currentFrame());
+    }
+
+    @Test
     void modeExitBoundaryClearsInstalledState() {
         Fixture fixture = installLiveFixture();
         assertNotNull(readPrivateField(fixture.manager, "inputSource"));

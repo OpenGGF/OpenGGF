@@ -373,6 +373,10 @@ public class TestActTransitionHeadless {
 
         assertEquals(ZONE_EHZ, lm.getCurrentZone(), "Zone should be EHZ after transition");
         assertEquals(ACT_2, lm.getCurrentAct(), "Act should be 2 (index 1) after transition");
+        assertTrue(lm.consumeActTransitionRewindBoundaryDuringFrame(),
+                "a direct in-frame act reload must publish a rewind boundary");
+        assertFalse(lm.consumeActTransitionRewindBoundaryDuringFrame(),
+                "the in-frame rewind boundary signal must be one-shot");
     }
 
     @Test

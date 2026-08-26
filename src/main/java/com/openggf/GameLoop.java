@@ -1792,14 +1792,21 @@ public class GameLoop {
             if (!TraceSessionLauncher.isRunFrameDriverActive()) {
                 advanceTraceRunPhysicalRow();
             }
+            boolean seamlessTransitionCompleted =
+                    levelManager.consumeActTransitionRewindBoundaryDuringFrame();
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-            if (traceSession != null
-                    && !TraceSessionLauncher.isRunFrameDriverActive()) {
-                traceSession.recordExternalRewindFrame();
-            } else if (traceSession == null) {
+            if ((traceSession != null
+                    && !TraceSessionLauncher.isRunFrameDriverActive())
+                    || traceSession == null) {
                 // Reached only inside the !freezeForNonRewindableTransition branch,
                 // so the transition-pending predicate is guaranteed false here.
-                liveRewindManager.recordExternalFrame(currentGameMode, freezeForNonRewindableTransition, inputHandler);
+                LevelRewindFrameRecorder.record(
+                        traceSession,
+                        liveRewindManager,
+                        currentGameMode,
+                        freezeForNonRewindableTransition,
+                        inputHandler,
+                        seamlessTransitionCompleted);
             }
 
             // Check if a checkpoint star requested a special stage
