@@ -6,7 +6,7 @@
 
 **Goal:** Produce a locally reviewed `next` integration commit whose first-parent
 line is rooted at frozen `next` `84d9a3761`, whose exact second parent is frozen
-`develop` `f1b82774d`, and whose measured behavior introduces no regression
+`develop` `97bc177ee`, and whose measured behavior introduces no regression
 relative to either parent.
 
 **Architecture:** Keep one coordinator-owned merge index in the isolated
@@ -25,7 +25,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 ## Global Constraints
 
 - Frozen `next` is `84d9a3761f618035dd1caa40a3d5fc72a1019693`.
-- Frozen `develop` is `f1b82774d4aeb9585e75bd74e90856e7b67256d7`.
+- Frozen `develop` is `97bc177ee1f3a8924d4354933dad32fb1c038a9b`.
 - The merge base is `59e59c8feb5fb5a247ff0ab43da63aeccc742cb0`.
 - The main workspace remains on `develop`; no branch switch is permitted there.
 - The coordinator alone owns the integration worktree's index, staging, merge,
@@ -163,15 +163,15 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 - [ ] **Step 6: Run existing coordinator harnesses**
 
   From the detached harness worktree at exact
-  `f1b82774d4aeb9585e75bd74e90856e7b67256d7`, byte-authenticate both frozen
+  `97bc177ee1f3a8924d4354933dad32fb1c038a9b`, byte-authenticate both frozen
   Java sources against their Git blobs before compilation, then run the
   process harness and compiled coordinator self-test from managed scratch:
 
   ```bash
   cmp -s tools/testing/TestSessionCoordinator.java \
-    <(git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/TestSessionCoordinator.java)
+    <(git show 97bc177ee1f3a8924d4354933dad32fb1c038a9b:tools/testing/TestSessionCoordinator.java)
   cmp -s tools/testing/TestSessionCoordinatorSelfTest.java \
-    <(git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/TestSessionCoordinatorSelfTest.java)
+    <(git show 97bc177ee1f3a8924d4354933dad32fb1c038a9b:tools/testing/TestSessionCoordinatorSelfTest.java)
   OPENGGF_PROCESS_HARNESS_ROOT="$(agent-scratch new frozen-develop-process-harness)"
   OPENGGF_COORDINATOR_CLASSES="$(agent-scratch new frozen-develop-coordinator-classes)"
   OPENGGF_COORDINATOR_SELF_TEST_ROOT="$(agent-scratch new frozen-develop-coordinator-self-test)"
@@ -457,6 +457,45 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 ---
 
+### Task 1B: Re-pin the Frozen Harness After Develop Drift
+
+**Files:**
+
+- Modify: `tools/testing/test-frozen-next-session-adapter.sh`
+
+**Interfaces:**
+
+- Consumes: old harness pin `f1b82774d`, new frozen develop
+  `97bc177ee`, and the independently green Task 1A adapter.
+- Produces: the same authenticated adapter contract pinned to the new exact
+  parent commit.
+
+- [ ] **Step 1: Prove harness bytes and prerequisites are unchanged**
+
+  Require an empty diff from `f1b82774d..97bc177ee` for
+  `tools/testing/test-session.sh`, `TestSessionCoordinator.java`,
+  `TestSessionCoordinatorSelfTest.java`, the Maven/test configuration, and hook
+  paths consumed by the adapter. Record the two S2 special-stage commits and
+  their merge ancestry separately; do not infer harness equivalence from the
+  fast-forward alone.
+
+- [ ] **Step 2: Update only the exact harness pin**
+
+  Change the adapter self-test's frozen harness constant from
+  `f1b82774d4aeb9585e75bd74e90856e7b67256d7` to
+  `97bc177ee1f3a8924d4354933dad32fb1c038a9b`. Do not weaken any byte,
+  detached-HEAD, admission, cleanup, or source-identity check.
+
+- [ ] **Step 3: Repeat certification and review**
+
+  Run the complete adapter matrix, real combined frozen-next proof, pinned
+  process harness, and compiled coordinator self-test against the new detached
+  harness head. Require production `PASSED` / `valid=true` / authenticated /
+  admissible evidence and a clean target-free cowtree. Independently review the
+  one-line pin change and evidence, then commit it before Task 3 restarts.
+
+---
+
 ### Task 2: Implement Complete Surefire Inventory and Comparison Tooling
 
 **Files:**
@@ -575,11 +614,15 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   ```text
   next == origin/next == 84d9a3761f618035dd1caa40a3d5fc72a1019693
-  develop == origin/develop == f1b82774d4aeb9585e75bd74e90856e7b67256d7
+  develop == origin/develop == 97bc177ee1f3a8924d4354933dad32fb1c038a9b
   ```
 
   Also require clean main and integration worktrees. If any hash differs, amend
   both design and plan and repeat their independent review loops before merge.
+  Evidence captured against `f1b82774d` is historical and must not be reused as
+  the `97bc177ee` develop parent baseline. Frozen-next evidence must also be
+  repeated through the Task 1B harness pin even though the authenticated
+  wrapper/coordinator bytes are unchanged.
 
 - [ ] **Step 2: Create managed scratch and detached baseline worktrees**
 
@@ -611,9 +654,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   In the detached frozen-develop harness worktree, byte-compare the wrapper and
   coordinator source with
-  `git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/test-session.sh`
+  `git show 97bc177ee1f3a8924d4354933dad32fb1c038a9b:tools/testing/test-session.sh`
   and
-  `git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/TestSessionCoordinator.java`,
+  `git show 97bc177ee1f3a8924d4354933dad32fb1c038a9b:tools/testing/TestSessionCoordinator.java`,
   then hash them together with the launcher, exclude, and adapter. Run the coordinator harness
   and the repaired Task 1/1A self-test, including
   wrong-wrapper/wrong-coordinator rejection, private bind-mount isolation,
@@ -687,9 +730,10 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 - [ ] **Step 1: Regenerate the exact conflict set**
 
   Run an isolated recursive `git merge-tree --write-tree --name-only` for the
-  final pre-merge integration head versus frozen develop. Expected: 76 paths
-  unless pre-merge tooling legitimately changes the set. Record any change and
-  update the ledger count before proceeding.
+  final pre-merge integration head versus frozen develop. Expected: 77 paths:
+  the original 76 plus the intentional Task 1 documentation conflict at
+  `tools/testing/README.md`. Record any further change and update the ledger
+  count before proceeding.
 
 - [ ] **Step 2: Dispatch three read-only analysis agents in parallel**
 
@@ -762,7 +806,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Verify the four frozen refs again. Run:
 
   ```bash
-  git merge --no-ff --no-commit f1b82774d4aeb9585e75bd74e90856e7b67256d7
+  git merge --no-ff --no-commit 97bc177ee1f3a8924d4354933dad32fb1c038a9b
   ```
 
   Expected: conflicts; do not commit or abort.
@@ -1057,7 +1101,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 - [ ] **Step 4: Finish the index**
 
   Require `git diff --name-only --diff-filter=U` to be empty and scan the entire
-  staged tree for conflict markers. Confirm all 76 ledger rows are resolved and
+  staged tree for conflict markers. Confirm all 77 ledger rows are resolved and
   every extra edited path is attributed to a direct compile/API dependency.
 
 ---
@@ -1104,7 +1148,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Immediately before commit, require `MERGE_HEAD` equals frozen develop and the
   current first parent descends by uninterrupted first-parent history from
   frozen next. Commit the merge without bypassing hooks. Record the resulting
-  parents and ensure the second parent is exactly `f1b82774d`.
+  parents and ensure the second parent is exactly `97bc177ee`.
 
 - [ ] **Step 5: Rerun focused selectors on the committed merge**
 

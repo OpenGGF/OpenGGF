@@ -23,8 +23,8 @@ start of the 2026-08-26 integration session:
 
 - `next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
 - `origin/next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
-- committed local `develop`: `f1b82774d4aeb9585e75bd74e90856e7b67256d7`
-- `origin/develop`: `f1b82774d4aeb9585e75bd74e90856e7b67256d7`
+- committed local `develop`: `97bc177ee1f3a8924d4354933dad32fb1c038a9b`
+- `origin/develop`: `97bc177ee1f3a8924d4354933dad32fb1c038a9b`
 - merge base: `59e59c8feb5fb5a247ff0ab43da63aeccc742cb0`
 
 Local `develop` is clean and matches the fetched remote-tracking tip. The
@@ -34,11 +34,24 @@ plan review, both refs advanced together from `9b46505eb` by merge commit
 the merge simulation repeated, and both design and plan returned through their
 independent review loops before implementation.
 
-From the merge base, `next` and `develop` have 611 and 1,868 unique commits
-respectively. They changed 2,324 and 1,933 files, with 228 paths touched by both
-sides. An isolated recursive merge simulation reports 76 conflicts: 49
-production files, 17 test or guard files, and 10 build, policy, or documentation
-files.
+At the Task 3 baseline gate, `develop` and `origin/develop` advanced again by
+the reviewed S2 special-stage pacing changes and their merge commits, from
+`f1b82774d` to `97bc177ee`; `next` remained unchanged. The new tip is a strict
+fast-forward descendant. Its delta does not touch the pinned wrapper,
+coordinator, hooks, Maven configuration, or Task 1 adapter inputs, and an
+isolated merge-tree comparison reports the same semantic conflict paths against
+both develop tips. Parent evidence at `f1b82774d` is nevertheless historical
+and cannot certify the new parent, so the adapter pin and all develop baselines
+must be repeated against `97bc177ee` after this amendment's independent review.
+
+From the merge base, `next` and `develop` have 611 and 1,872 unique commits
+respectively. They changed 2,324 and 1,939 files, with 229 paths touched by both
+sides. An isolated recursive merge simulation at the final pre-baseline
+integration head reports 77 conflicts: 49 production files, 17 test or guard
+files, and 11 build, policy, tooling, or documentation files. The additional
+path relative to the original 76-path simulation is the intentional pre-merge
+Task 1 documentation at `tools/testing/README.md`; the develop-tip drift itself
+does not change the conflict-path set.
 
 ## Requirements
 
@@ -112,7 +125,7 @@ from `next`. The integration branch already contains the approved design and
 planning commits above frozen `next`; therefore the merge commit's exact first
 parent is the final pre-merge integration-branch commit, whose uninterrupted
 first-parent ancestry reaches frozen `next` `84d9a3761`. Its exact second parent
-is frozen `develop` `f1b82774d`. This keeps the 0.7 development line legible
+is frozen `develop` `97bc177ee`. This keeps the 0.7 development line legible
 while recording all of `develop` as ancestry. A single coordinating agent owns
 the merge index because Git cannot safely compose independent partial
 resolutions of one conflicted index.
@@ -259,12 +272,12 @@ unprivileged adapter can prove its absence. The authenticated private PID
 namespace is the bounded ownership boundary for cleanup.
 
 The orchestrator invokes the pinned launcher with expected harness commit
-`f1b82774d`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
+`97bc177ee`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
 an immutable detached worktree at that exact commit. Before launch, the
 launcher asserts the harness worktree's detached clean identity and byte-checks
 `tools/testing/test-session.sh` and
 `tools/testing/TestSessionCoordinator.java` against their corresponding blobs
-from `git show f1b82774d4aeb9585e75bd74e90856e7b67256d7`; a wrapper or coordinator
+from `git show 97bc177ee1f3a8924d4354933dad32fb1c038a9b`; a wrapper or coordinator
 outside that worktree, at another commit, or with different bytes is rejected. It then
 starts the coordinator with `OPENGGF_RUNTIME_INPUTS` already containing the
 launcher, exclude file, adapter, wrapper, and coordinator-source paths. The
@@ -469,7 +482,7 @@ never a forced rewrite inferred by the agent.
 Record exact, wrapper-produced ordinary and structural-guard sessions for both
 frozen parents in immutable detached worktrees. `develop` uses its in-tree
 wrapper and `-Pguards` profile. Frozen `next` runs the wrapper and coordinator
-from frozen `develop` `f1b82774d` by absolute path while its process working
+from frozen `develop` `97bc177ee` by absolute path while its process working
 directory remains the detached `next` worktree and the compatibility adapter
 routes every output into that coordinator session. Because frozen `next` has
 no `guards` Maven profile, generate its explicit fresh-JVM guard selector from
@@ -566,7 +579,7 @@ The integration is ready for human review only when:
 
 1. The integration merge commit's first parent is the reviewed pre-merge
    integration-branch commit rooted at frozen `next` `84d9a3761`, and its exact
-   second parent is frozen committed `develop` `f1b82774d`.
+   second parent is frozen committed `develop` `97bc177ee`.
 2. No conflict markers, unresolved index entries, unintended generated output,
    or executable disassembly dependency remains.
 3. Every conflict decision is traceable to parent behavior, current ownership,
@@ -595,7 +608,8 @@ The integration is ready for human review only when:
 - Both parents may have pre-existing red tests. Exact outcome comparison, not a
   simplistic all-green requirement, governs acceptance.
 - Trace payload volume makes file and line counts poor estimates of manual
-  effort; the 76 semantic conflicts and post-merge behavioral comparison are
+  effort; the 77 current conflict paths (the original 76 semantic set plus the
+  intentional Task 1 tooling/documentation conflict) and post-merge behavioral comparison are
   the useful sizing measures.
 - Prior `develop`-into-`next` work exposed direct-test harness regressions and a
   Surefire heap ceiling only after integration. The plan therefore includes
