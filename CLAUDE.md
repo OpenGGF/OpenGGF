@@ -79,6 +79,47 @@ troubleshooting that genuinely needs live output. Report the run ID, manifest
 path, and log path; if the start/end markers are absent, the result is
 non-certifying.
 
+#### Session storage lifecycle
+
+After `tools/agent-scratch` changes, run `tools/agent-scratch install` and
+`agent-scratch verify`. A configured managed root must verify and return a valid
+`agent-scratch reserve-test-session --json` allocation in the
+`MANAGED_CODEX_TEST_SESSIONS` tier; missing, stale, malformed, unsafe, timed-out,
+or failed managed allocation is a startup error and never project-falls back.
+`OPENGGF_TEST_ROOT` remains the highest-priority explicit tier. Project-local
+fallback is visibly labelled and is allowed only when managed scratch is not
+configured; system temporary storage requires `--allow-system-tmp`.
+
+Before Maven starts, every storage tier must have usable bytes of at least
+`max(20 GiB, 5% of filesystem capacity)` and pass a live contained inode probe.
+`OPENGGF_TEST_MIN_FREE_BYTES` may only be an unsigned decimal that raises this
+floor; blank, whitespace-only, malformed, or lower values fail startup. Capacity
+and live inode availability are measured again at finalisation.
+
+Terminal compaction removes only `tmp` and `build/test-classes/traces`; manifests,
+command/Maven logs, reports, diagnostics, ordinary resources, other classes,
+JAR/native/package output, `artifacts/`, `distribution/`, and inventoried paths
+remain. Use `--retain-ephemeral` (PowerShell `-RetainEphemeral`) to retain the two
+reproducible trees for diagnosis without changing expiry. A compaction failure
+makes an otherwise green run `STORAGE_FINALIZATION_FAILED`; an existing child or
+identity failure remains primary.
+
+Automatic deletion requires secure descriptor-relative streams or a stable
+file-key tombstone strategy. Native Windows on OpenJDK 21 exposes neither and
+therefore remains certifying as `RETAINED_PLATFORM_UNSUPPORTED`, with no
+automatic compaction pending a future Actworks/Slipmat native file-ID bridge;
+capacity and retention still apply. Managed terminal sessions expire after seven
+days unless kept. Live `RUNNING` sessions are never pruned; expired stale
+`RUNNING` sessions move atomically to the fourteen-day quarantine lane.
+
+The start marker fields are exactly `run_id`, `isolation`, `lwjgl`, `manifest`,
+`lease`, `log`, `state`, `storage_tier`, `launch_usable_bytes`, and
+`capacity_floor_bytes`. The end fields are `run_id`, `isolation`, `lwjgl`,
+`exit_code`, `state`, `valid`, `manifest`, `log`, `compaction_status`,
+`reclaimed_bytes`, and `completion_usable_bytes`, plus `process_tree_stopped`
+when shutdown handling reports it. Run/identity verdict fields keep their prior
+meaning; compaction fields report storage finalisation only.
+
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.
 - **Build on JDK 21** — what CI and the release workflow use. Surefire forks inherit

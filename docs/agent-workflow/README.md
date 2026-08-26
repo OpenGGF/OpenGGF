@@ -113,6 +113,55 @@ Existing Claude/Codex sessions and old output are audited rather than migrated i
 Inspect and explicitly archive or quarantine them; a newly installed root affects new
 sessions after the relevant client restarts.
 
+### Certifying test-session storage
+
+Re-run `tools/agent-scratch install` after helper-source changes and require
+`agent-scratch verify` to succeed before relying on managed sessions. The test-session
+coordinator independently invokes that verification and
+`agent-scratch reserve-test-session --json`. The versioned response binds the canonical
+managed root and allocation, storage tier `MANAGED_CODEX_TEST_SESSIONS`, filesystem device,
+usable byte/inode snapshot, retention deadline, and helper version. When managed scratch is
+configured, any missing, stale, malformed, timed-out, unsafe, or failed helper response is a
+startup failure and must never fall back into the project.
+
+Storage tiers are selected in this order: `EXPLICIT_OVERRIDE` for
+`OPENGGF_TEST_ROOT`, verified `MANAGED_CODEX_TEST_SESSIONS`, visibly warned
+`PROJECT_LOCAL_FALLBACK` only when managed scratch is not configured, and
+`SYSTEM_TMP_EXPLICIT` only with `--allow-system-tmp`. Before Maven starts, every tier must
+prove usable bytes of at least `max(20 GiB, 5% of filesystem capacity)` and pass a live
+contained create/write/flush/read/unlink inode probe. `OPENGGF_TEST_MIN_FREE_BYTES` accepts
+only an unsigned decimal that raises the default; blank, whitespace-only, malformed, or
+lower values fail startup. Capacity and the live inode probe are measured again at
+finalisation. The managed numeric inode value remains labelled as an allocation-time
+snapshot; other tiers record why a numeric count is unavailable.
+
+After any terminal state, automatic compaction may remove only `tmp` and
+`build/test-classes/traces`. It preserves manifests, command and Maven logs, reports,
+diagnostics, ordinary resources, other compiled classes, JAR/native/package outputs,
+`artifacts/`, `distribution/`, and every path in the report/artifact inventories. Use
+`--retain-ephemeral` (PowerShell `-RetainEphemeral`) only when those reproducible trees are
+needed for diagnosis; it records `RETAINED_BY_REQUEST` and does not extend expiry. A storage
+failure turns an otherwise successful child into `STORAGE_FINALIZATION_FAILED`; a prior
+child or identity failure remains primary.
+
+Destructive compaction requires either descriptor-relative `SecureDirectoryStream` support
+or a non-null stable file key with same-store atomic tombstoning and identity revalidation.
+There is no unbound pathname fallback. Native Windows on OpenJDK 21 therefore certifies as
+`RETAINED_PLATFORM_UNSUPPORTED` without automatic compaction, pending a future
+Actworks/Slipmat native file-ID bridge; capacity checks and retention still apply. Managed
+terminal sessions expire after seven days unless kept. A live `RUNNING` lease is never
+compacted or pruned; an expired stale `RUNNING` session is atomically quarantined for the
+normal fourteen-day quarantine period instead of being deleted directly.
+
+For evidence parsing, `OPENGGF_TEST_RUN_START` has exactly `run_id`, `isolation`, `lwjgl`,
+`manifest`, `lease`, `log`, `state`, `storage_tier`, `launch_usable_bytes`, and
+`capacity_floor_bytes`. `OPENGGF_TEST_RUN_END` has `run_id`, `isolation`, `lwjgl`,
+`exit_code`, `state`, `valid`, `manifest`, `log`, `compaction_status`, `reclaimed_bytes`, and
+`completion_usable_bytes`, with `process_tree_stopped` only when shutdown handling has that
+result. The first group identifies the run, isolation, evidence paths and capacity gate;
+the second preserves the run/identity verdict while reporting storage finalisation
+separately. Marker strings are encoded so one value cannot create a counterfeit marker.
+
 ### `/tmp` output audit
 
 The scoped audit must include POSIX and Windows temporary-root forms, ignored files, and

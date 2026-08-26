@@ -6,6 +6,13 @@ Approved in discussion as the direction for implementation and amended after
 independent review. This document specifies the implementation boundary; no
 runtime or build changes are made by the design commit.
 
+The terminal allocation, capacity, retention, and compaction contract is
+defined by the later
+[session storage and worktree lifecycle safety addendum](2026-08-26-session-storage-and-worktree-lifecycle-safety.md).
+That addendum supersedes this document's original root-selection and cleanup
+assumptions without changing the session identity, lease, source-validity, or
+evidence ownership contracts below.
+
 ## Motivation
 
 OpenGGF's test workflow currently has several independent shared-state hazards:
@@ -65,22 +72,29 @@ The test workflow will provide a named **test session** with these guarantees:
 
 The default session root is outside Maven's normal `target` directory so that a
 clean of the legacy output directory cannot delete an active session's
-evidence. The root resolver uses the following order:
+evidence. As amended by the terminal-storage addendum, the resolver uses:
 
 1. An explicit `OPENGGF_TEST_ROOT` override. If it is present but not absolute,
    writable, or owned by the current user, startup fails; it never silently
    falls through to another root.
-2. A task directory returned by `agent-scratch new` when the managed scratch
-   helper is available and writable. The launcher does not guess a child path
-   beneath `$AGENT_SCRATCH_ROOT/tasks`, because the helper owns naming, locking,
-   and retention there.
-3. The ignored project-local `.openggf/test-runs` directory.
+2. A verified versioned `agent-scratch reserve-test-session --json` allocation
+   in `MANAGED_CODEX_TEST_SESSIONS` when managed scratch is configured. Any
+   configured helper/install/verification/reservation failure fails closed;
+   project fallback is forbidden.
+3. The visibly labelled ignored project-local `.openggf/test-runs` directory,
+   only when managed scratch is not configured.
 4. A verified writable system temporary directory only when explicitly enabled
-   by the caller.
+   by the caller with `--allow-system-tmp`.
 
 The project-local fallback is ephemeral test output, not a replacement for
 durable agent artifacts. A report that must outlive normal retention is copied
 to the managed scratch/archive location by the caller.
+
+Every tier applies the addendum's pre-launch floor of
+`max(20 GiB, 5% of filesystem capacity)`, with
+`OPENGGF_TEST_MIN_FREE_BYTES` able only to raise it, and its all-tier live inode
+probe. Terminal compaction is limited to `tmp` and
+`build/test-classes/traces`; `--retain-ephemeral` retains them for diagnosis.
 
 Each session is created with an ID containing a UTC timestamp, the launcher PID,
 and a cryptographically random suffix, for example:
@@ -106,8 +120,8 @@ identity because two invocations can share a clock tick or the clock can move.
 ```
 
 The run manifest starts in `RUNNING` state and ends in exactly one of
-`PASSED`, `FAILED`, `INVALID_IDENTITY_CHANGED`, `ABORTED`, or
-`STARTUP_FAILED`.
+`PASSED`, `FAILED`, `INVALID_IDENTITY_CHANGED`, `ABORTED`, `STARTUP_FAILED`, or
+`STORAGE_FINALIZATION_FAILED`.
 An orphaned `RUNNING` manifest is retained for diagnosis and is never silently
 reused.
 
@@ -516,6 +530,14 @@ the separate `-Pguards` profile through a fresh wrapper session so whole-
 production ArchUnit imports cannot retain their graph behind the long ordinary
 suite.
 
+The storage addendum extends but does not reinterpret those markers. Start adds
+`storage_tier`, `launch_usable_bytes`, and `capacity_floor_bytes` alongside the
+existing run/isolation/evidence-path fields. End adds `compaction_status`,
+`reclaimed_bytes`, and `completion_usable_bytes` alongside the existing
+exit/state/identity verdict. Storage finalisation can turn an otherwise green
+run into `STORAGE_FINALIZATION_FAILED`, but it cannot replace an existing child
+or identity failure as the primary result.
+
 ## Failure handling and cleanup
 
 - No writable root: emit `STARTUP_FAILED`, explain each candidate path, and do
@@ -531,16 +553,24 @@ suite.
   exit code is zero.
 - Source or declared runtime-input identity changed: mark
   `INVALID_IDENTITY_CHANGED` and return nonzero.
-- Stale session: retain it until explicit bounded cleanup. Cleanup may remove
-  only completed sessions owned by the current project root and must never
-  target an active or unknown path.
+- Stale session: managed terminal sessions use seven-day retention unless kept;
+  a live `RUNNING` lease is preserved, while an expired stale `RUNNING` session
+  is atomically moved to the fourteen-day quarantine lane rather than deleted.
+- Terminal storage: preserve manifest, command/log, reports, diagnostics,
+  artifacts, distributions, package output, ordinary resources, and manifest
+  inventories. Remove only the addendum's two allowlisted reproducible trees.
+- Unsupported destructive identity: retain without mutation as
+  `RETAINED_PLATFORM_UNSUPPORTED`. In particular, native Windows on OpenJDK 21
+  remains certifying and retained pending an Actworks/Slipmat native file-ID
+  bridge; its capacity and retention policies still apply.
 
-The launcher does not run a broad recursive deletion. Cleanup is limited to
-known session directories and is separate from test execution. Maven no longer
-installs Git hooks by mutating shared `.git/config` during `validate`; hook
-installation is an explicit bootstrap command. A read-only Git configuration
-therefore does not produce a build-side mutation attempt or hide behind a
-non-fatal Maven error.
+The launcher does not run a broad recursive pathname deletion. Terminal
+compaction requires descriptor-relative secure streams or a stable-key,
+same-store atomic tombstone strategy; uncertainty retains evidence. Maven no
+longer installs Git hooks by mutating shared `.git/config` during `validate`;
+hook installation is an explicit bootstrap command. A read-only Git
+configuration therefore does not produce a build-side mutation attempt or hide
+behind a non-fatal Maven error.
 
 ## Verification contract
 

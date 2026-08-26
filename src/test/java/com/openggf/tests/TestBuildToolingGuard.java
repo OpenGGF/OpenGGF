@@ -689,11 +689,12 @@ class TestBuildToolingGuard {
 
     @Test
     void supportedDocumentationMustUseSessionsAndExplicitHookBootstrap() throws Exception {
-        String agents = Files.readString(Path.of("AGENTS.md"), StandardCharsets.UTF_8);
-        String claude = Files.readString(Path.of("CLAUDE.md"), StandardCharsets.UTF_8);
+        Path agentsPath = Path.of("AGENTS.md");
+        Path claudePath = Path.of("CLAUDE.md");
+        String agents = Files.readString(agentsPath, StandardCharsets.UTF_8);
         List<String> violations = new ArrayList<>();
 
-        if (!agents.equals(claude)) {
+        if (Files.mismatch(agentsPath, claudePath) != -1) {
             violations.add("AGENTS.md and CLAUDE.md are no longer byte-identical");
         }
         if (!agents.contains("tools/testing/install-hooks.sh")
@@ -715,6 +716,26 @@ class TestBuildToolingGuard {
                 violations.add("AGENTS.md/CLAUDE.md do not contain required isolation guidance: " + requiredText);
             }
         }
+        List<String> requiredStorageGuidance = List.of(
+                "MANAGED_CODEX_TEST_SESSIONS",
+                "OPENGGF_TEST_MIN_FREE_BYTES",
+                "--retain-ephemeral",
+                "STORAGE_FINALIZATION_FAILED");
+        for (String file : List.of("AGENTS.md", "CLAUDE.md", "tools/testing/README.md",
+                "docs/agent-workflow/README.md")) {
+            String text = Files.readString(Path.of(file), StandardCharsets.UTF_8);
+            for (String requiredText : requiredStorageGuidance) {
+                if (!text.contains(requiredText)) {
+                    violations.add(file + " does not contain required storage guidance: " + requiredText);
+                }
+            }
+        }
+        String isolationDesign = Files.readString(Path.of(
+                "docs/architecture/designs/2026-08-23-test-session-isolation-design.md"),
+                StandardCharsets.UTF_8);
+        if (!isolationDesign.contains("2026-08-26-session-storage-and-worktree-lifecycle-safety.md")) {
+            violations.add("the test-session isolation design does not reference the terminal-storage addendum");
+        }
         for (String script : List.of("tools/testing/install-hooks.sh",
                 "tools/testing/test-session.sh", "tools/testing/run-session-process-harness.sh")) {
             if (!Files.isRegularFile(Path.of(script)) || !Files.isExecutable(Path.of(script))) {
@@ -723,6 +744,17 @@ class TestBuildToolingGuard {
         }
         if (!Files.isRegularFile(Path.of("tools/testing/install-hooks.ps1"))) {
             violations.add("tools/testing/install-hooks.ps1 must exist");
+        }
+        String sessionScript = Files.readString(Path.of("tools/testing/test-session.sh"),
+                StandardCharsets.UTF_8);
+        String sessionPowerShell = Files.readString(Path.of("tools/testing/test-session.ps1"),
+                StandardCharsets.UTF_8);
+        if (!sessionScript.contains("\"$@\"")) {
+            violations.add("POSIX test-session wrapper must pass --retain-ephemeral through to the coordinator");
+        }
+        if (!sessionPowerShell.contains("-RetainEphemeral")
+                || !sessionPowerShell.contains("--retain-ephemeral")) {
+            violations.add("PowerShell test-session wrapper must translate -RetainEphemeral to --retain-ephemeral");
         }
         String hookScript = Files.readString(Path.of("tools/testing/install-hooks.sh"), StandardCharsets.UTF_8);
         String hookPowerShell = Files.readString(Path.of("tools/testing/install-hooks.ps1"), StandardCharsets.UTF_8);
