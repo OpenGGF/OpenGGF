@@ -85,6 +85,133 @@ run_launcher() {
 manifest_from_output() {
     printf '%s\n' "$1" | sed -n 's/.*manifest=\([^ ]*\).*/\1/p' | tail -1
 }
+test_authenticated_unlink_failure() {
+    local failures_before=$review_failures
+    local shim_dir="$test_root/unlink-failure-bin"
+    local unlink_shim="$shim_dir/unlink"
+    local readlink_shim="$shim_dir/readlink"
+    local real_unlink real_readlink
+    real_unlink=$(command -v unlink)
+    real_readlink=$(command -v readlink)
+    mkdir -p "$shim_dir"
+    printf '%s\n' \
+        '#!/usr/bin/env bash' \
+        'set -euo pipefail' \
+        'target=' \
+        'for argument in "$@"; do target=$argument; done' \
+        'if [[ "$target" == "${OPENGGF_TEST_UNLINK_FAIL_TARGET:?}" ]]; then' \
+        '    printf "controlled unlink failure: %s\\n" "$target" >&2' \
+        '    exit 73' \
+        'fi' \
+        'exec "${OPENGGF_TEST_REAL_UNLINK:?}" "$@"' > "$unlink_shim"
+    printf '%s\n' \
+        '#!/usr/bin/env bash' \
+        'set -euo pipefail' \
+        'target=' \
+        'for argument in "$@"; do target=$argument; done' \
+        'if [[ "$target" == "${OPENGGF_TEST_UNLINK_FAIL_TARGET:?}" && "${1:-}" == --' \
+        '    && -n "${OPENGGF_TEST_RUN_ID:-}" ]]; then' \
+        '    printf "%s/../build\\n" "${OPENGGF_BUILD_DIRECTORY:?}"' \
+        '    exit 0' \
+        'fi' \
+        'exec "${OPENGGF_TEST_REAL_READLINK:?}" "$@"' > "$readlink_shim"
+    chmod +x "$unlink_shim" "$readlink_shim"
+
+    if PATH="$shim_dir:$PATH" OPENGGF_TEST_UNLINK_FAIL_TARGET="$next_tree/target" \
+        OPENGGF_TEST_REAL_UNLINK="$real_unlink" OPENGGF_TEST_REAL_READLINK="$real_readlink" \
+        OPENGGF_FAKE_MAVEN=1 \
+        run_launcher "$fake_maven"; then
+        review_fail "launcher returned success after authenticated target unlink failure"
+    elif (( launch_status != 73 )); then
+        fail "authenticated unlink failure returned unexpected status: $launch_status"
+    fi
+    unlink_failure_manifest=$(manifest_from_output "$launch_output")
+    [[ -f "$unlink_failure_manifest" ]] || fail "unlink failure did not publish a manifest"
+    unlink_failure_build=$(sed -n 's/.*"build_root": "\([^"]*\)".*/\1/p' \
+        "$unlink_failure_manifest" | head -1)
+    [[ -L "$next_tree/target" ]] || fail "controlled unlink failure did not leave the target symlink"
+    [[ "$(readlink -- "$next_tree/target")" == "$unlink_failure_build" ]] \
+        || fail "controlled unlink failure left an unexpected target payload"
+    [[ "$launch_output" == *'frozen-next launcher: authenticated target cleanup failed'* ]] \
+        || review_fail "authenticated target cleanup failure was not reported by the launcher"
+    "$real_unlink" -- "$next_tree/target"
+
+    if PATH="$shim_dir:$PATH" OPENGGF_TEST_UNLINK_FAIL_TARGET="$next_tree/target" \
+        OPENGGF_TEST_REAL_UNLINK="$real_unlink" OPENGGF_TEST_REAL_READLINK="$real_readlink" \
+        OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" --fail; then
+        fail "failing Maven child became successful during authenticated unlink failure"
+    elif (( launch_status != 23 )); then
+        fail "authenticated unlink failure replaced Maven status 23 with: $launch_status"
+    fi
+    unlink_failure_manifest=$(manifest_from_output "$launch_output")
+    unlink_failure_build=$(sed -n 's/.*"build_root": "\([^"]*\)".*/\1/p' \
+        "$unlink_failure_manifest" | head -1)
+    [[ -L "$next_tree/target" && "$(readlink -- "$next_tree/target")" == "$unlink_failure_build" ]] \
+        || fail "Maven failure cleanup did not retain the exact target after unlink failure"
+    [[ "$launch_output" == *'frozen-next launcher: authenticated target cleanup failed'* ]] \
+        || review_fail "Maven failure did not report authenticated target cleanup failure"
+    "$real_unlink" -- "$next_tree/target"
+
+    local signal_ready="$test_root/unlink-signal-ready.env"
+    local signal_output="$test_root/unlink-signal.out"
+    local signal_tmp="$test_root/unlink-signal-tmp"
+    mkdir "$signal_tmp"
+    PATH="$shim_dir:$PATH" TMPDIR="$signal_tmp" \
+        OPENGGF_TEST_UNLINK_FAIL_TARGET="$next_tree/target" \
+        OPENGGF_TEST_REAL_UNLINK="$real_unlink" OPENGGF_TEST_REAL_READLINK="$real_readlink" \
+        OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_INTERRUPT_READY="$signal_ready" \
+        "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
+        --harness-worktree "$harness_tree" --expected-harness-head "$frozen_harness" \
+        --wrapper "$wrapper" --coordinator "$coordinator" --adapter "$adapter" \
+        -- "$fake_maven" --wait-for-launcher-interrupt > "$signal_output" 2>&1 &
+    local signal_launcher_pid=$!
+    for _ in {1..200}; do
+        [[ -f "$signal_ready" ]] && break
+        sleep 0.05
+    done
+    [[ -f "$signal_ready" ]] || fail "unlink-failure signal child did not become ready"
+    local signal_fake_pid signal_adapter_pid signal_manifest
+    signal_fake_pid=$(sed -n 's/^fake_pid=//p' "$signal_ready")
+    signal_adapter_pid=$(sed -n 's/^adapter_pid=//p' "$signal_ready")
+    signal_manifest=$(sed -n 's/^manifest=//p' "$signal_ready")
+    kill -STOP "$signal_launcher_pid"
+    kill -KILL "$signal_fake_pid" 2>/dev/null || true
+    kill -KILL "$signal_adapter_pid"
+    for _ in {1..200}; do
+        [[ -f "$signal_manifest" ]] && rg -q '"state": "FAILED"' "$signal_manifest" && break
+        sleep 0.05
+    done
+    [[ -f "$signal_manifest" ]] && rg -q '"state": "FAILED"' "$signal_manifest" \
+        || fail "unlink-failure signal coordinator did not finalize"
+    kill -TERM "$signal_launcher_pid"
+    kill -CONT "$signal_launcher_pid"
+    set +e
+    wait "$signal_launcher_pid"
+    local signal_status=$?
+    set -e
+    (( signal_status == 143 )) || fail "cleanup failure replaced TERM status 143 with: $signal_status"
+    local signal_build
+    signal_build=$(sed -n 's/.*"build_root": "\([^"]*\)".*/\1/p' "$signal_manifest" | head -1)
+    [[ -L "$next_tree/target" && "$(readlink -- "$next_tree/target")" == "$signal_build" ]] \
+        || fail "signal cleanup did not retain the exact target after unlink failure"
+    [[ "$(<"$signal_output")" == *'frozen-next launcher: authenticated target cleanup failed'* ]] \
+        || review_fail "TERM failure did not report authenticated target cleanup failure"
+    "$real_unlink" -- "$next_tree/target"
+    shopt -s nullglob
+    signal_captures=("$signal_tmp"/*)
+    shopt -u nullglob
+    (( ${#signal_captures[@]} == 0 )) || fail "TERM cleanup failure retained its private capture"
+
+    if (( review_failures == failures_before )); then
+        printf 'PASS: authenticated target unlink failure propagation\n'
+    fi
+}
+
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == cleanup-failure ]]; then
+    test_authenticated_unlink_failure
+    (( review_failures == 0 )) || fail "$review_failures focused cleanup regression case(s) remain"
+    exit 0
+fi
 
 # The selected guards are independent and force two Surefire processes when forkCount=2.
 run_launcher mvn -DforkCount=2 -Dtest=TestAudioBackendBypassGuard,TestProductionAwtBlacklistGuard test
@@ -224,6 +351,8 @@ interrupt_captures=("$interrupt_tmp"/*)
 shopt -u nullglob
 (( ${#interrupt_captures[@]} == 0 )) || fail "launcher interruption retained its private capture"
 printf 'PASS: interrupted launcher outer recovery\n'
+
+test_authenticated_unlink_failure
 
 mutation_input="$test_root/runtime-input"
 cp "$exclude" "$mutation_input"

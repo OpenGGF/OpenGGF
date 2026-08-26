@@ -80,10 +80,11 @@ recover() {
 capture_file=
 wrapper_pid=
 finalized=0
+finalize_status=0
 finalize() {
-    (( finalized == 0 )) || return 0
+    (( finalized == 0 )) || return "$finalize_status"
     finalized=1
-    local output=
+    local output= cleanup_status=0
     if [[ -n "$capture_file" && -f "$capture_file" && ! -L "$capture_file" ]]; then
         output=$(<"$capture_file")
         OPENGGF_RECOVERY_BUILD_ROOT=
@@ -91,15 +92,25 @@ finalize() {
         if [[ -n "$manifest" && -f "$manifest" ]]; then
             OPENGGF_RECOVERY_BUILD_ROOT=$(sed -n 's/.*"build_root": "\([^"]*\)".*/\1/p' "$manifest" | head -1)
         fi
-        recover "$output" || true
+        recover "$output" || cleanup_status=$?
+        if (( cleanup_status != 0 )); then
+            printf 'frozen-next launcher: authenticated target cleanup failed: status=%s target=%s\n' \
+                "$cleanup_status" "$worktree/target" >&2
+        fi
         printf '%s\n' "$output"
         unlink -- "$capture_file" || true
     fi
+    finalize_status=$cleanup_status
+    return "$finalize_status"
 }
 on_exit() {
-    local status=$?
-    finalize
-    return "$status"
+    local status=$? cleanup_status=0
+    trap - EXIT
+    finalize || cleanup_status=$?
+    if (( status != 0 )); then
+        exit "$status"
+    fi
+    exit "$cleanup_status"
 }
 on_signal() {
     local signal=$1 status=$2
