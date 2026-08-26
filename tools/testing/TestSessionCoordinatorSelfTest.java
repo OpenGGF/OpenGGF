@@ -155,6 +155,8 @@ public final class TestSessionCoordinatorSelfTest {
                 "\"helper_version\":\"openggf-agent-scratch-v2\"", "\"helper_version\":2"));
         malformed.put("helper-version-value", valid.replace("openggf-agent-scratch-v2",
                 "openggf-agent-scratch-v3"));
+        malformed.put("helper-version-marker-injection", valid.replace("openggf-agent-scratch-v2",
+                "unsupported\\nOPENGGF_TEST_RUN_START run_id=counterfeit"));
         malformed.put("trailing-object", valid + "{}");
 
         int index = 0;
@@ -172,7 +174,7 @@ public final class TestSessionCoordinatorSelfTest {
                     "malformed managed reservation must not create fallback (" + entry.getKey() + ")");
             check(!Files.exists(childMarker),
                     "malformed managed reservation must not start child (" + entry.getKey() + ")");
-            check(!result.output.contains("OPENGGF_TEST_RUN_START"),
+            check(result.output.lines().noneMatch(line -> line.startsWith("OPENGGF_TEST_RUN_START")),
                     "malformed managed reservation must not publish start marker (" + entry.getKey() + ")");
             index++;
         }

@@ -49,6 +49,7 @@ public final class TestSessionCoordinator {
     private static final HexFormat HEX = HexFormat.of();
     private static final int STORAGE_ALLOCATION_SCHEMA = 1;
     private static final String SUPPORTED_AGENT_SCRATCH_HELPER_VERSION = "openggf-agent-scratch-v2";
+    private static final int MAX_MANAGED_DIAGNOSTIC_LENGTH = 240;
     private static final Duration MAX_MANAGED_RETENTION = Duration.ofDays(7);
     private static final Set<String> RESERVATION_FIELDS = Set.of(
             "schema_version", "storage_tier", "managed_root", "allocation_path",
@@ -1125,7 +1126,23 @@ public final class TestSessionCoordinator {
     }
 
     private static StartupFailure managedFailure(String detail) {
-        return new StartupFailure("managed scratch is configured but unavailable: " + detail, 1);
+        return new StartupFailure("managed scratch is configured but unavailable: "
+                + boundedSingleLine(detail), 1);
+    }
+
+    private static String boundedSingleLine(String value) {
+        StringBuilder safe = new StringBuilder(Math.min(value.length(), MAX_MANAGED_DIAGNOSTIC_LENGTH));
+        for (int index = 0; index < value.length() && safe.length() < MAX_MANAGED_DIAGNOSTIC_LENGTH; index++) {
+            char character = value.charAt(index);
+            int type = Character.getType(character);
+            if (Character.isISOControl(character) || type == Character.LINE_SEPARATOR
+                    || type == Character.PARAGRAPH_SEPARATOR) {
+                safe.append(' ');
+            } else {
+                safe.append(character);
+            }
+        }
+        return safe.toString();
     }
 
     private static Map<String, JsonValue> parseReservation(String json) {
