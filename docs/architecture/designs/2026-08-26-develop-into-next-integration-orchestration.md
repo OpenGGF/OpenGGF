@@ -23,8 +23,8 @@ start of the 2026-08-26 integration session:
 
 - `next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
 - `origin/next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
-- committed local `develop`: `97bc177ee1f3a8924d4354933dad32fb1c038a9b`
-- `origin/develop`: `97bc177ee1f3a8924d4354933dad32fb1c038a9b`
+- committed local `develop`: `e3f390e9fe381b89cc54a2399b5a49843ba044e4`
+- `origin/develop`: `e3f390e9fe381b89cc54a2399b5a49843ba044e4`
 - merge base: `59e59c8feb5fb5a247ff0ab43da63aeccc742cb0`
 
 Local `develop` is clean and matches the fetched remote-tracking tip. The
@@ -44,8 +44,21 @@ both develop tips. Parent evidence at `f1b82774d` is nevertheless historical
 and cannot certify the new parent, so the adapter pin and all develop baselines
 must be repeated against `97bc177ee` after this amendment's independent review.
 
-From the merge base, `next` and `develop` have 611 and 1,872 unique commits
-respectively. They changed 2,324 and 1,939 files, with 229 paths touched by both
+Before the baseline restart, local and remote `develop` then diverged: local
+CNZ slot-machine work and remote S3K runtime work were reconciled by merge
+commit `e3f390e9f` and that commit was pushed to `origin/develop`. The resulting
+tip is seven commits and 28 changed paths beyond `97bc177ee`. Its wrapper,
+coordinator, self-test, hook, Maven, and adapter prerequisite bytes are
+unchanged; a fresh recursive merge simulation still reports exactly 77
+conflict paths. Evidence captured at `97bc177ee` is nevertheless historical.
+The adapter pin, both parent baselines, union inventory, and the four affected
+conflict-ledger rows must be repeated against `e3f390e9f`. This pushed commit is
+the immutable merge snapshot; later `develop` descendants are follow-up
+fast-forward deltas on the source line and do not change this merge's exact
+second parent or imply that `next` itself can fast-forward to them.
+
+From the merge base, `next` and `develop` have 611 and 1,879 unique commits
+respectively. They changed 2,324 and 1,950 files, with 232 paths touched by both
 sides. An isolated recursive merge simulation at the final pre-baseline
 integration head reports 77 conflicts: 49 production files, 17 test or guard
 files, and 11 build, policy, tooling, or documentation files. The additional
@@ -125,7 +138,7 @@ from `next`. The integration branch already contains the approved design and
 planning commits above frozen `next`; therefore the merge commit's exact first
 parent is the final pre-merge integration-branch commit, whose uninterrupted
 first-parent ancestry reaches frozen `next` `84d9a3761`. Its exact second parent
-is frozen `develop` `97bc177ee`. This keeps the 0.7 development line legible
+is frozen `develop` `e3f390e9f`. This keeps the 0.7 development line legible
 while recording all of `develop` as ancestry. A single coordinating agent owns
 the merge index because Git cannot safely compose independent partial
 resolutions of one conflicted index.
@@ -272,12 +285,12 @@ unprivileged adapter can prove its absence. The authenticated private PID
 namespace is the bounded ownership boundary for cleanup.
 
 The orchestrator invokes the pinned launcher with expected harness commit
-`97bc177ee`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
+`e3f390e9f`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
 an immutable detached worktree at that exact commit. Before launch, the
 launcher asserts the harness worktree's detached clean identity and byte-checks
 `tools/testing/test-session.sh` and
 `tools/testing/TestSessionCoordinator.java` against their corresponding blobs
-from `git show 97bc177ee1f3a8924d4354933dad32fb1c038a9b`; a wrapper or coordinator
+from `git show e3f390e9fe381b89cc54a2399b5a49843ba044e4`; a wrapper or coordinator
 outside that worktree, at another commit, or with different bytes is rejected. It then
 starts the coordinator with `OPENGGF_RUNTIME_INPUTS` already containing the
 launcher, exclude file, adapter, wrapper, and coordinator-source paths. The
@@ -466,11 +479,15 @@ inventory, a required `next` capability disappears, or a certifying session
 lacks its start/end markers.
 
 Before implementation and again before human review, the coordinator fetches
-and verifies all four refs (`next`, `origin/next`, `develop`, and
-`origin/develop`) against the frozen hashes. Drift on either line pauses
-promotion, updates both design and plan, and requires a reviewed reintegration
-and repeated affected baselines. A later target update is attempted only after
-the same drift check. Because the original branches remain unchanged, rollback
+and verifies `next` and `origin/next` against the frozen target hash, and
+verifies that both `develop` refs still contain frozen snapshot `e3f390e9f`.
+Target drift, non-fast-forward source divergence, or loss of snapshot ancestry
+pauses promotion and requires a reviewed amendment. If the source refs differ
+but one is an ancestor of the other, record the newer descendant as a follow-up
+source-line fast-forward delta; it does not refreeze or invalidate the exact
+merge snapshot, and the frozen baseline remains detached at `e3f390e9f`. A
+later target update is attempted only after the same checks.
+Because the original branches remain unchanged, rollback
 before promotion is branch abandonment; any partial remote update is recovered
 with a new reviewed commit or an explicit human-authorized remote correction,
 never a forced rewrite inferred by the agent.
@@ -482,7 +499,7 @@ never a forced rewrite inferred by the agent.
 Record exact, wrapper-produced ordinary and structural-guard sessions for both
 frozen parents in immutable detached worktrees. `develop` uses its in-tree
 wrapper and `-Pguards` profile. Frozen `next` runs the wrapper and coordinator
-from frozen `develop` `97bc177ee` by absolute path while its process working
+from frozen `develop` `e3f390e9f` by absolute path while its process working
 directory remains the detached `next` worktree and the compatibility adapter
 routes every output into that coordinator session. Because frozen `next` has
 no `guards` Maven profile, generate its explicit fresh-JVM guard selector from
@@ -622,7 +639,7 @@ The integration is ready for human review only when:
 
 1. The integration merge commit's first parent is the reviewed pre-merge
    integration-branch commit rooted at frozen `next` `84d9a3761`, and its exact
-   second parent is frozen committed `develop` `97bc177ee`.
+   second parent is frozen committed `develop` `e3f390e9f`.
 2. No conflict markers, unresolved index entries, unintended generated output,
    or executable disassembly dependency remains.
 3. Every conflict decision is traceable to parent behavior, current ownership,
@@ -645,9 +662,11 @@ The integration is ready for human review only when:
 
 ## Assumptions and risks
 
-- Local and fetched remote-tracking refs currently agree on both frozen tips.
-  Any source or target drift before merge or promotion triggers the amendment
-  and review process rather than being silently absorbed.
+- Local and fetched remote-tracking refs agree on frozen `next` and pushed
+  snapshot `e3f390e9f`. Target drift or loss of source-snapshot ancestry before
+  merge or promotion triggers the amendment and review process. A later
+  `develop` descendant is recorded as a follow-up source-line fast-forward
+  delta instead of being silently absorbed into this merge.
 - Both parents may have pre-existing red tests. Exact outcome comparison, not a
   simplistic all-green requirement, governs acceptance.
 - Trace payload volume makes file and line counts poor estimates of manual
