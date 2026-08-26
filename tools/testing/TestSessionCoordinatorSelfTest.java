@@ -73,9 +73,9 @@ public final class TestSessionCoordinatorSelfTest {
         verifySecureCompactionRejectsPathSwap(root);
         verifyCompactionInspectionFailureIsNotAbsence(root);
         verifyPartialCompactionEvidenceIsTruthful(root);
-        verifyNativeCompactionWithoutSecureStreams(root);
-        verifyNativeCompactionSwapAndReparseSafety(root);
-        verifyPlatformUnsupportedRetentionIsCertifying(root);
+        verifyStableKeyTombstoneCompactionWithoutSecureStreams(root);
+        verifyStableKeyTombstoneSwapAndReparseSafety(root);
+        verifyJdk21NativeWindowsUnsupportedContract(root);
         verifyRequiredFreeBytesFormula();
         verifyManagedReservationIsValidated(root);
         verifyManagedHelperFailureDoesNotFallback(root);
@@ -299,65 +299,66 @@ public final class TestSessionCoordinatorSelfTest {
                 "mid-tree failure must not continue to another candidate");
     }
 
-    private static void verifyNativeCompactionWithoutSecureStreams(Path root) throws Exception {
-        Path session = root.resolve("compact-native-success");
+    private static void verifyStableKeyTombstoneCompactionWithoutSecureStreams(Path root)
+            throws Exception {
+        Path session = root.resolve("compact-stable-key-tombstone-success");
         Object paths = createCompactionFixture(session);
         Object identity = captureSessionIdentity(session);
-        Object control = nativeControl(true, true, "fixture-native-provider",
+        Object control = tombstoneControl(true, true, "fixture-stable-key-provider",
                 ignored -> { }, (expected, actual) -> expected.equals(actual), ignored -> false);
 
-        Object result = compactWithNativeControl(paths, "PASSED", false, List.of(), List.of(),
+        Object result = compactWithTombstoneControl(paths, "PASSED", false, List.of(), List.of(),
                 identity, (expected, candidate) -> true, ignored -> { }, control);
 
         check(recordValue(result, "status").toString().equals("COMPACTED"),
-                "native tombstone strategy must compact without secure streams: status="
+                "stable-key tombstone strategy must compact without secure streams: status="
                         + recordValue(result, "status") + " error=" + recordValue(result, "error"));
         @SuppressWarnings("unchecked")
         List<String> removed = (List<String>) recordValue(result, "removedRelativePaths");
         check(Set.copyOf(removed).equals(Set.of("tmp", "build/test-classes/traces")),
-                "native strategy removed unexpected candidates: " + removed);
+                "stable-key tombstone strategy removed unexpected candidates: " + removed);
         check((long) recordValue(result, "reclaimedBytes") == 18L,
-                "native strategy must report exact reclaimed bytes");
+                "stable-key tombstone strategy must report exact reclaimed bytes");
         assertOnlyCompactablePathsRemoved(session);
         try (var entries = Files.list(session)) {
             check(entries.noneMatch(path -> path.getFileName().toString()
                             .startsWith(".compaction-staging-")),
-                    "successful native compaction must remove its private staging lane");
+                    "successful stable-key tombstone compaction must remove its staging lane");
         }
 
-        Path partialSession = root.resolve("compact-native-partial");
+        Path partialSession = root.resolve("compact-stable-key-tombstone-partial");
         Object partialPaths = createCompactionFixture(partialSession);
         Object partialIdentity = captureSessionIdentity(partialSession);
         Files.delete(partialSession.resolve("tmp/ephemeral.bin"));
         Files.writeString(partialSession.resolve("tmp/a.bin"), "aaa", StandardCharsets.UTF_8);
         Files.writeString(partialSession.resolve("tmp/b.bin"), "bbbbb", StandardCharsets.UTF_8);
-        Object partialControl = nativeControl(true, true, "fixture-native-provider",
+        Object partialControl = tombstoneControl(true, true, "fixture-stable-key-provider",
                 ignored -> { }, (expected, actual) -> expected.equals(actual), ignored -> false);
-        Object partial = compactWithNativeControl(partialPaths, "PASSED", false,
+        Object partial = compactWithTombstoneControl(partialPaths, "PASSED", false,
                 List.of(), List.of(), partialIdentity, (expected, candidate) -> true,
                 relative -> {
                     if (relative.equals("tmp/b.bin")) {
                         throw new UncheckedIOException(
-                                new IOException("injected native mid-tree deletion failure"));
+                                new IOException("injected tombstone mid-tree deletion failure"));
                     }
                 }, partialControl);
         check(recordValue(partial, "status").toString().equals("FAILED"),
-                "native mid-tree deletion error must fail compaction");
+                "tombstone mid-tree deletion error must fail compaction");
         @SuppressWarnings("unchecked")
         List<String> partiallyModified = (List<String>) recordValue(
                 partial, "partiallyModifiedRelativePaths");
         check(partiallyModified.equals(List.of("tmp")),
-                "native partial failure must name tmp: " + partiallyModified);
+                "tombstone partial failure must name tmp: " + partiallyModified);
         check((long) recordValue(partial, "reclaimedBytes") == 3L,
-                "native partial failure must count only the deleted first file");
+                "tombstone partial failure must count only the deleted first file");
     }
 
-    private static void verifyNativeCompactionSwapAndReparseSafety(Path root) throws Exception {
-        Path swapSession = root.resolve("compact-native-swap");
+    private static void verifyStableKeyTombstoneSwapAndReparseSafety(Path root) throws Exception {
+        Path swapSession = root.resolve("compact-stable-key-tombstone-swap");
         Object swapPaths = createCompactionFixture(swapSession);
         Object swapIdentity = captureSessionIdentity(swapSession);
-        Path outsideCaptured = root.resolve("compact-native-swap-captured");
-        Object swapControl = nativeControl(true, true, "fixture-native-provider",
+        Path outsideCaptured = root.resolve("compact-stable-key-tombstone-swap-captured");
+        Object swapControl = tombstoneControl(true, true, "fixture-stable-key-provider",
                 relative -> {
                     if (relative.equals("tmp")) {
                         try {
@@ -371,28 +372,28 @@ public final class TestSessionCoordinatorSelfTest {
                     }
                 }, (expected, actual) -> expected.equals(actual), ignored -> false);
 
-        Object swapped = compactWithNativeControl(swapPaths, "PASSED", false,
+        Object swapped = compactWithTombstoneControl(swapPaths, "PASSED", false,
                 List.of(), List.of(), swapIdentity, (expected, candidate) -> true,
                 ignored -> { }, swapControl);
 
         check(recordValue(swapped, "status").toString().equals("REFUSED"),
-                "native candidate replacement must be refused after atomic tombstoning");
+                "stable-key candidate replacement must be refused after atomic tombstoning");
         check(Files.readString(outsideCaptured.resolve("ephemeral.bin")).equals("tmp-data"),
-                "native swap must not touch the outside captured-tree sentinel");
+                "tombstone swap must not touch the outside captured-tree sentinel");
         check(!Files.exists(swapSession.resolve("tmp")),
-                "native swap must move the replacement itself into the private staging lane");
+                "tombstone swap must move the replacement itself into the staging lane");
         @SuppressWarnings("unchecked")
         List<String> swappedPartial = (List<String>) recordValue(
                 swapped, "partiallyModifiedRelativePaths");
         check(swappedPartial.equals(List.of("tmp")),
                 "moved replacement must be reported as a partial tmp mutation");
 
-        Path identitySession = root.resolve("compact-native-identity-mismatch");
+        Path identitySession = root.resolve("compact-stable-key-identity-mismatch");
         Object identityPaths = createCompactionFixture(identitySession);
         Object identity = captureSessionIdentity(identitySession);
-        Object identityControl = nativeControl(true, true, "fixture-native-provider",
+        Object identityControl = tombstoneControl(true, true, "fixture-stable-key-provider",
                 ignored -> { }, (expected, actual) -> false, ignored -> false);
-        Object mismatch = compactWithNativeControl(identityPaths, "PASSED", false,
+        Object mismatch = compactWithTombstoneControl(identityPaths, "PASSED", false,
                 List.of(), List.of(), identity, (expected, candidate) -> true,
                 ignored -> { }, identityControl);
         check(recordValue(mismatch, "status").toString().equals("REFUSED"),
@@ -400,13 +401,13 @@ public final class TestSessionCoordinatorSelfTest {
         check(findInStaging(identitySession, "ephemeral.bin") != null,
                 "identity-mismatched tombstone contents must be retained without deletion");
 
-        Path reparseSession = root.resolve("compact-native-reparse");
+        Path reparseSession = root.resolve("compact-stable-key-reparse");
         Object reparsePaths = createCompactionFixture(reparseSession);
         Object reparseIdentity = captureSessionIdentity(reparseSession);
-        Object reparseControl = nativeControl(true, true, "fixture-native-provider",
+        Object reparseControl = tombstoneControl(true, true, "fixture-stable-key-provider",
                 ignored -> { }, (expected, actual) -> expected.equals(actual),
                 path -> path.getFileName().toString().startsWith("candidate-"));
-        Object reparse = compactWithNativeControl(reparsePaths, "PASSED", false,
+        Object reparse = compactWithTombstoneControl(reparsePaths, "PASSED", false,
                 List.of(), List.of(), reparseIdentity, (expected, candidate) -> true,
                 ignored -> { }, reparseControl);
         check(recordValue(reparse, "status").toString().equals("REFUSED"),
@@ -415,33 +416,36 @@ public final class TestSessionCoordinatorSelfTest {
                 "reparse-refused tombstone contents must survive without traversal");
     }
 
-    private static void verifyPlatformUnsupportedRetentionIsCertifying(Path root) throws Exception {
-        Path session = root.resolve("compact-platform-unsupported");
+    private static void verifyJdk21NativeWindowsUnsupportedContract(Path root) throws Exception {
+        Path session = root.resolve("compact-jdk21-native-windows-unsupported");
         Object paths = createCompactionFixture(session);
+        // Portable injection of the JDK 21 Windows public contract, not native-host evidence.
         Object identity = identityWithFileKey(captureSessionIdentity(session), null);
-        String reason = "provider=fixture-no-secure file_store=fixture-store stable_file_key=unavailable";
-        Object control = nativeControl(true, false, reason,
-                ignored -> { throw new AssertionError("unsupported provider must not mutate"); },
+        String reason = "provider=sun.nio.fs.WindowsFileSystemProvider "
+                + "file_store=fixture-ntfs secure_directory_stream=unavailable "
+                + "stable_file_key=unavailable";
+        Object control = tombstoneControl(true, false, reason,
+                ignored -> { throw new AssertionError("JDK 21 Windows contract must not mutate"); },
                 (expected, actual) -> false, ignored -> false);
 
-        Object result = compactWithNativeControl(paths, "PASSED", false, List.of(), List.of(),
+        Object result = compactWithTombstoneControl(paths, "PASSED", false, List.of(), List.of(),
                 identity, (expected, candidate) -> true, ignored -> { }, control);
 
         check(recordValue(result, "status").toString().equals("RETAINED_PLATFORM_UNSUPPORTED"),
-                "provider without secure streams or stable keys must retain certifying evidence");
+                "JDK 21 Windows null public file key must retain certifying evidence");
         check(reason.equals(recordValue(result, "error")),
-                "platform retention must record the exact provider/file-store reason");
+                "JDK 21 Windows retention must record the exact provider/file-store reason");
         check(compactionFailure(result) == null,
                 "platform-unsupported retention must remain certifying");
         check(Files.isRegularFile(session.resolve("tmp/ephemeral.bin"))
                         && Files.isRegularFile(
                         session.resolve("build/test-classes/traces/copied.bin")),
-                "unsupported platform retention must perform no mutation");
+                "JDK 21 Windows unsupported retention must perform no mutation");
         check(((List<?>) recordValue(result, "removedRelativePaths")).isEmpty()
                         && ((List<?>) recordValue(
                         result, "partiallyModifiedRelativePaths")).isEmpty()
                         && (long) recordValue(result, "reclaimedBytes") == 0L,
-                "unsupported platform retention must report zero mutation");
+                "JDK 21 Windows unsupported retention must report zero mutation");
     }
 
     private static Path findInStaging(Path session, String fileName) throws IOException {
@@ -536,7 +540,7 @@ public final class TestSessionCoordinatorSelfTest {
                 identity, verifier, deletionHook);
     }
 
-    private static Object nativeControl(
+    private static Object tombstoneControl(
             boolean forceNoSecureStream, boolean stableFileKeys, String providerReason,
             Consumer<String> beforeCandidateMove, BiPredicate<Object, Object> movedIdentityMatches,
             Predicate<Path> reparsePoint) throws Exception {
@@ -557,7 +561,7 @@ public final class TestSessionCoordinatorSelfTest {
                 recordValue(identity, "fileStore"));
     }
 
-    private static Object compactWithNativeControl(
+    private static Object compactWithTombstoneControl(
             Object paths, String state, boolean retainEphemeral, List<String> reports,
             List<String> artifacts, Object identity, BiPredicate<FileStore, Path> verifier,
             Consumer<String> deletionHook, Object control) throws Exception {
