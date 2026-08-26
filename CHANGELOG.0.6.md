@@ -4,6 +4,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Sonic 2 CNZ slot machines now follow the retail object/event order:** the
+  zone-global slot routine runs after `RunObjects`, uses the current native
+  V-int count once per level-loop pass, preserves 16-bit reel-position
+  underflow, and clears each speed/subroutine word at completion. Both CNZ
+  ROM-state traces now match every compared row with zero errors and zero
+  warnings; exact slot mismatches have been promoted from warning to error
+  (`docs/s2disasm/s2.asm:5095-5098,15175,21511-21512,59320-59588`).
+
 - **Sonic 2 special stages retain slowdown in ordinary play without making it
   trace authority:** the existing stateless segment/speed approximation remains
   enabled for interactive pacing and is rewind-captured, while externally paced

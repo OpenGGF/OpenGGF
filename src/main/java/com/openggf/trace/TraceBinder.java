@@ -668,8 +668,8 @@ public class TraceBinder {
      * engine's. Comparison-only: nothing here writes engine state.
      *
      * <p>Every field is an exact ROM byte, so any mismatch is a real
-     * divergence with no tolerance -- reported at WARNING for now, see
-     * {@link #putSlotField}. The reel speeds and the roll timer are the
+     * divergence with no tolerance and is reported at ERROR. The reel speeds
+     * and the roll timer are the
      * load-bearing ones:
      * the ROM computes them from {@code V_int_run_count} by byte arithmetic
      * (s2.asm:59360-59375), so they pin the exact counter {@code SlotMachine}
@@ -700,24 +700,24 @@ public class TraceBinder {
             existing = new FrameComparison(frame, Map.of());
         }
         Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
-        putSlotField(fields, "tornado.x", expected.x(), actual.x());
-        putSlotField(fields, "tornado.y", expected.y(), actual.y());
-        putSlotField(fields, "tornado.y_sub", expected.ySub(), actual.ySub());
-        putSlotField(fields, "tornado.y_vel", expected.yVel(), actual.yVel());
-        putSlotField(fields, "tornado.routine", expected.routine(), actual.routine());
-        putSlotField(fields, "tornado.routine_secondary",
+        putTornadoField(fields, "tornado.x", expected.x(), actual.x());
+        putTornadoField(fields, "tornado.y", expected.y(), actual.y());
+        putTornadoField(fields, "tornado.y_sub", expected.ySub(), actual.ySub());
+        putTornadoField(fields, "tornado.y_vel", expected.yVel(), actual.yVel());
+        putTornadoField(fields, "tornado.routine", expected.routine(), actual.routine());
+        putTornadoField(fields, "tornado.routine_secondary",
                 expected.routineSecondary(), actual.routineSecondary());
-        putSlotField(fields, "tornado.status_byte", expected.statusByte(), actual.statusByte());
-        putSlotField(fields, "tornado.objoff_2e", expected.objoff2E(), actual.objoff2E());
-        putSlotField(fields, "tornado.objoff_2f", expected.objoff2F(), actual.objoff2F());
-        putSlotField(fields, "tornado.objoff_30", expected.objoff30(), actual.objoff30());
-        putSlotField(fields, "tornado.objoff_31", expected.objoff31(), actual.objoff31());
+        putTornadoField(fields, "tornado.status_byte", expected.statusByte(), actual.statusByte());
+        putTornadoField(fields, "tornado.objoff_2e", expected.objoff2E(), actual.objoff2E());
+        putTornadoField(fields, "tornado.objoff_2f", expected.objoff2F(), actual.objoff2F());
+        putTornadoField(fields, "tornado.objoff_30", expected.objoff30(), actual.objoff30());
+        putTornadoField(fields, "tornado.objoff_31", expected.objoff31(), actual.objoff31());
         comparisonsByFrame.put(frame, new FrameComparison(
                 existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
     }
 
     /**
-     * Emits one slot field at WARNING rather than ERROR.
+     * Emits one Tornado field at WARNING rather than ERROR.
      *
      * <p>Deliberate and temporary. This comparison is brand-new coverage of a
      * block the recording has always carried and nothing ever read, so its
@@ -727,12 +727,11 @@ public class TraceBinder {
      * them visible in the report, which is the whole point of wiring it in,
      * without converting an untriaged unknown into a release blocker.
      *
-     * <p>Promote to ERROR once the CNZ slot divergences are down to zero --
-     * measured at 237 on cnz and 530 on cnz2 when this landed. Nothing that is
-     * red today becomes green because of this choice; it adds coverage that did
-     * not exist rather than relaxing coverage that did.
+     * <p>The CNZ slot block is now exact and uses {@link #putSlotField}; keep
+     * this helper separate until ObjB2's child-presence identity boundary is
+     * closed.
      */
-    private void putSlotField(
+    private void putTornadoField(
             Map<String, FieldComparison> fields, String name, int expected, int actual) {
         boolean match = expected == actual;
         fields.put(name, new FieldComparison(
@@ -740,6 +739,17 @@ public class TraceBinder {
                 String.format("0x%04X", expected & 0xFFFF),
                 String.format("0x%04X", actual & 0xFFFF),
                 match ? Severity.MATCH : Severity.WARNING,
+                actual - expected));
+    }
+
+    private void putSlotField(
+            Map<String, FieldComparison> fields, String name, int expected, int actual) {
+        boolean match = expected == actual;
+        fields.put(name, new FieldComparison(
+                name,
+                String.format("0x%04X", expected & 0xFFFF),
+                String.format("0x%04X", actual & 0xFFFF),
+                match ? Severity.MATCH : Severity.ERROR,
                 actual - expected));
     }
 
