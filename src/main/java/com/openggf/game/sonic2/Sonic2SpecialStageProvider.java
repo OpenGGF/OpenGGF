@@ -283,7 +283,7 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) {
-        // Compatibility no-op: S2 has no ROM-backed live lag predictor.
+        // Compatibility no-op: S2 exposes no live pacing diagnostic.
     }
 
     @Override
@@ -298,7 +298,7 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void setLagCompensation(double factor) {
-        // Compatibility no-op. Recorded lag rows are admitted by the trace scheduler.
+        manager.setLagCompensation(factor);
     }
 
     // ==================== Results Screen ====================

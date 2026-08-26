@@ -369,11 +369,12 @@ public interface SpecialStageProvider extends MiniGameProvider {
     }
 
     /**
-     * Legacy compatibility notification for externally paced sessions.
-     * Implementations without a ROM-backed live scheduler must ignore it;
-     * recorded lag outcomes are admitted only by the hardware-timing port.
+     * External-pacing control for providers with an interactive lag or slowdown
+     * simulation. Zero disables that local simulation so recorded lag outcomes
+     * can be admitted only by the hardware-timing port; providers without a
+     * local simulation may ignore the value.
      *
-     * @param factor legacy scalar retained for source compatibility
+     * @param factor zero for external pacing; positive for normal live pacing
      */
     void setLagCompensation(double factor);
 

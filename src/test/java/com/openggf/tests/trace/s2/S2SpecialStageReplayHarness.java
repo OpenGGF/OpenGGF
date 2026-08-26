@@ -98,7 +98,7 @@ final class S2SpecialStageReplayHarness {
         this.provider = new Sonic2SpecialStageProvider();
         this.provider.initializeStage(
                 specialStageIndex, SpecialStageStartupPolicy.TRACE_ACCURATE);
-        // Retained compatibility notification; the provider does not infer lag.
+        // Disable the interactive approximation; recorded rows own replay pacing.
         this.provider.setLagCompensation(0);
     }
 
