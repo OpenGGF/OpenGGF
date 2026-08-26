@@ -30,6 +30,10 @@ from contextlib import contextmanager
 KEEP_FILE = ".oggf-agent-scratch-keep"
 KEEP_PREFIX = "OGGF_AGENT_SCRATCH_KEEP_UNTIL="
 MODE = 0o700
+TEST_SESSION_LANE = ("codex", "test-sessions")
+TEST_SESSION_RETENTION_DAYS = 7
+RESERVATION_SCHEMA_VERSION = 1
+HELPER_VERSION = "openggf-agent-scratch-v2"
 AREAS = {"claude": ("claude", 30), "codex": ("codex", "tmp", 30),
          "tasks": ("tasks", 7), "quarantine": ("quarantine", 14)}
 CONTROL = re.compile(r"[\x00-\x1f\x7f]")
@@ -139,7 +143,8 @@ def ensure_root(env: dict[str, str] | None = None) -> pathlib.Path:
     if filesystem_type(root) in {"tmpfs", "ramfs"}:
         raise ScratchError("managed root must be on a disk-backed filesystem, not tmpfs/ramfs")
     with open_root(root) as fd:
-        for parts in (("claude",), ("codex",), ("codex", "tmp"), ("tasks",), ("quarantine",)):
+        for parts in (("claude",), ("codex",), ("codex", "tmp"), TEST_SESSION_LANE,
+                      ("tasks",), ("quarantine",)):
             current = os.dup(fd)
             try:
                 for part in parts:
@@ -225,6 +230,117 @@ def cmd_new(args: argparse.Namespace) -> int:
                 continue
     print(root)
     print(root / "tasks" / name)
+    return 0
+
+
+def _probe_directory(directory_fd: int) -> None:
+    """Verify a newly reserved directory supports the required local operations."""
+    payload = b"openggf managed test-session reservation probe\n"
+    suffix = f"{os.getpid()}-{random.SystemRandom().randrange(1 << 32):08x}"
+    temporary = f".reservation-probe-{suffix}.tmp"
+    committed = f".reservation-probe-{suffix}"
+    try:
+        probe_fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                           MODE, dir_fd=directory_fd)
+        try:
+            _write_all(probe_fd, payload)
+            os.fsync(probe_fd)
+        finally:
+            os.close(probe_fd)
+        os.rename(temporary, committed, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+        probe_fd = os.open(committed, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory_fd)
+        try:
+            if os.read(probe_fd, len(payload) + 1) != payload:
+                raise ScratchError("managed test-session probe readback changed")
+        finally:
+            os.close(probe_fd)
+        os.unlink(committed, dir_fd=directory_fd)
+        os.fsync(directory_fd)
+    except OSError as exc:
+        raise ScratchError(f"managed test-session probe failed: {exc.strerror}") from exc
+    finally:
+        for name in (temporary, committed):
+            try:
+                os.unlink(name, dir_fd=directory_fd)
+            except FileNotFoundError:
+                pass
+
+
+def _statvfs_record(path: pathlib.Path) -> dict[str, int]:
+    info = os.statvfs(path)
+    return {
+        "usable_bytes": info.f_bavail * info.f_frsize,
+        "total_bytes": info.f_blocks * info.f_frsize,
+        "usable_inodes": info.f_favail,
+    }
+
+
+def _reservation_record(root: pathlib.Path, allocation: pathlib.Path) -> dict[str, object]:
+    canonical_root = root.resolve(strict=True)
+    expected_lane = canonical_root.joinpath(*TEST_SESSION_LANE)
+    try:
+        canonical_allocation = allocation.resolve(strict=True)
+    except OSError as exc:
+        raise ScratchError("managed test-session allocation disappeared before reporting") from exc
+    if canonical_allocation.parent != expected_lane:
+        raise ScratchError("managed test-session allocation escapes its reserved lane")
+    try:
+        with open_root(canonical_root) as root_fd, child_fd(root_fd, TEST_SESSION_LANE) as lane_fd:
+            root_info = os.fstat(root_fd)
+            lane_info = os.fstat(lane_fd)
+            if lane_info.st_uid != os.getuid() or stat.S_IMODE(lane_info.st_mode) != MODE:
+                raise ScratchError("managed test-session lane ownership or mode changed")
+            if lane_info.st_dev != root_info.st_dev:
+                raise ScratchError("managed test-session lane filesystem changed")
+            allocation_fd = os.open(canonical_allocation.name,
+                                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                    dir_fd=lane_fd)
+            try:
+                allocation_info = os.fstat(allocation_fd)
+                if (allocation_info.st_uid != os.getuid()
+                        or stat.S_IMODE(allocation_info.st_mode) != MODE):
+                    raise ScratchError("managed test-session allocation ownership or mode changed")
+                if allocation_info.st_dev != root_info.st_dev:
+                    raise ScratchError("managed test-session allocation filesystem changed")
+            finally:
+                os.close(allocation_fd)
+    except OSError as exc:
+        raise ScratchError("managed test-session allocation changed before reporting") from exc
+    return {
+        "schema_version": RESERVATION_SCHEMA_VERSION,
+        "storage_tier": "MANAGED_CODEX_TEST_SESSIONS",
+        "managed_root": str(canonical_root),
+        "allocation_path": str(canonical_allocation),
+        "filesystem_device": allocation_info.st_dev,
+        **_statvfs_record(canonical_allocation),
+        "retention_deadline": (dt.datetime.now(dt.UTC)
+                               + dt.timedelta(days=TEST_SESSION_RETENTION_DAYS)).isoformat(),
+        "helper_version": HELPER_VERSION,
+    }
+
+
+def cmd_reserve_test_session(args: argparse.Namespace) -> int:
+    if not args.json:
+        raise ScratchError("reserve-test-session requires --json")
+    root = ensure_root()
+    with open_root(root) as root_fd, root_lock(root_fd):
+        with child_fd(root_fd, TEST_SESSION_LANE, create=True) as lane_fd:
+            while True:
+                name = (f"session-{dt.datetime.now(dt.UTC):%Y%m%dT%H%M%SZ}-"
+                        f"{random.SystemRandom().randrange(1 << 32):08x}")
+                try:
+                    os.mkdir(name, mode=MODE, dir_fd=lane_fd)
+                    break
+                except FileExistsError:
+                    continue
+            allocation_fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                    dir_fd=lane_fd)
+            try:
+                _probe_directory(allocation_fd)
+            finally:
+                os.close(allocation_fd)
+    allocation = root.joinpath(*TEST_SESSION_LANE, name)
+    print(json.dumps(_reservation_record(root, allocation), sort_keys=True))
     return 0
 
 
@@ -1396,6 +1512,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     actions = parser.add_subparsers(dest="operation", required=True)
     item = actions.add_parser("new"); item.add_argument("label"); item.set_defaults(func=cmd_new)
+    item = actions.add_parser("reserve-test-session"); item.add_argument("--json", action="store_true", required=True); item.set_defaults(func=cmd_reserve_test_session)
     item = actions.add_parser("path"); item.add_argument("kind"); item.set_defaults(func=cmd_path)
     item = actions.add_parser("status"); item.set_defaults(func=cmd_status)
     item = actions.add_parser("keep"); item.add_argument("path"); item.add_argument("--until", required=True); item.set_defaults(func=cmd_keep)

@@ -98,7 +98,7 @@ class AgentScratchTests(unittest.TestCase):
         root = self.helper.ensure_root(self.env)
         self.assertEqual(self.root, root)
         self.assertEqual(0o700, stat.S_IMODE(root.stat().st_mode))
-        for child in ("claude", "codex/tmp", "tasks", "quarantine"):
+        for child in ("claude", "codex/tmp", "codex/test-sessions", "tasks", "quarantine"):
             self.assertTrue((root / child).is_dir())
 
     def test_static_symlink_root_is_rejected(self):
@@ -118,6 +118,51 @@ class AgentScratchTests(unittest.TestCase):
         created = pathlib.Path(output.splitlines()[-1])
         self.assertTrue(created.is_dir())
         self.assertEqual(0o700, stat.S_IMODE(created.stat().st_mode))
+
+    def test_reserve_test_session_returns_structured_private_allocation(self):
+        root = self.root
+        with environment(AGENT_SCRATCH_ROOT=str(root)):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
+        record = json.loads(output.getvalue())
+        allocation = pathlib.Path(record["allocation_path"])
+        self.assertEqual(1, record["schema_version"])
+        self.assertEqual("MANAGED_CODEX_TEST_SESSIONS", record["storage_tier"])
+        self.assertEqual(str(root.resolve()), record["managed_root"])
+        self.assertEqual(str(allocation.resolve()), record["allocation_path"])
+        self.assertEqual(root / "codex" / "test-sessions", allocation.parent)
+        self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
+        self.assertTrue(record["filesystem_device"])
+        self.assertGreater(record["usable_bytes"], 0)
+        self.assertGreaterEqual(record["usable_inodes"], 0)
+        self.assertRegex(record["retention_deadline"], r"^\d{4}-\d{2}-\d{2}T")
+        self.assertTrue(record["helper_version"])
+
+    def test_reserve_test_session_rejects_a_symlinked_lane(self):
+        root = self.helper.ensure_root(self.env)
+        lane = root / "codex" / "test-sessions"
+        outside = pathlib.Path(self.temp.name) / "outside"
+        outside.mkdir()
+        lane.rmdir()
+        lane.symlink_to(outside, target_is_directory=True)
+
+        with environment(**self.env), self.assertRaises(self.helper.ScratchError):
+            self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
+
+    def test_reservation_record_rejects_a_replaced_allocation_parent(self):
+        root = self.helper.ensure_root(self.env)
+        lane = root / "codex" / "test-sessions"
+        allocation = lane / "session-replaced-parent"
+        allocation.mkdir()
+        parked = root / "codex" / "parked-test-sessions"
+        os.rename(lane, parked)
+        replacement = root / "codex" / "replacement-test-sessions"
+        replacement.mkdir()
+        os.rename(replacement, lane)
+
+        with self.assertRaises(self.helper.ScratchError):
+            self.helper._reservation_record(root, allocation)
 
     def test_symlink_swap_race_does_not_remove_outside_sentinel(self):
         root = self.helper.ensure_root(self.env)
