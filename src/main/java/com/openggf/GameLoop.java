@@ -2279,8 +2279,9 @@ public class GameLoop {
         if (startupPolicy == SpecialStageStartupPolicy.TRACE_ACCURATE) {
             // Startup policy and external scheduling admission are independent
             // contracts. Retain the legacy provider notification for callers
-            // that still implement it; S2's provider intentionally ignores the
-            // scalar because recorded lag rows are admitted at the timing port.
+            // that implement live pacing; S2 disables its interactive
+            // approximation because recorded lag rows are admitted at the
+            // timing port.
             ssProvider.setLagCompensation(0);
         }
     }

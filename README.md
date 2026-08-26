@@ -235,8 +235,8 @@ recorded hardware traces.
   standing, initialization, and reused leader-wait/jump-countdown state across
   every trace row where the parent Tornado can be identified unambiguously.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
-  scheduling-only replay inputs, while the former Stage 1 trace-fitted live lag
-  predictor has been removed instead of guessing hardware timing in normal play.
+  scheduling-only replay inputs, while ordinary play retains its existing
+  stateless slowdown approximation until causal hardware timing can replace it.
 - **AIZ presentation continuity:** the Angel Island fire curtain now remains
   continuous across exact art-loading seams and completes its ROM-shaped
   release tail in normal play and trace renders, while level music restoration

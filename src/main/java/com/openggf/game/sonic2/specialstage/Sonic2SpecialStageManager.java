@@ -251,6 +251,7 @@ public class Sonic2SpecialStageManager {
     private DiagnosticClock diagnosticClock = DiagnosticClock.SYSTEM;
     private Boolean fineDiagnosticsOverride;
     private boolean diagnosticEpochActive;
+    private boolean liveLagSimulationEnabled = true;
 
     // Skydome scroll state (accumulated horizontal scroll for background)
     private int skydomeScrollX = 0;
@@ -1131,6 +1132,21 @@ public class Sonic2SpecialStageManager {
         }
 
         frameCounter++;
+
+        int liveSpeedFactor = trackAnimator != null ? trackAnimator.getSpeedFactor() : 0;
+        int liveSegmentType = trackAnimator != null
+                ? trackAnimator.getCurrentSegmentType()
+                : Sonic2SpecialStageConstants.SEGMENT_STRAIGHT;
+        if (liveLagSimulationEnabled
+                && Sonic2SpecialStageLagModel.shouldSkipLiveUpdate(
+                        frameCounter, liveSpeedFactor, liveSegmentType)) {
+            // Approximate the retail Vint_Lag outcome for interactive play.
+            // Externally paced traces disable this branch and admit recorded
+            // lag rows at the scheduling boundary instead.
+            pressedButtons = 0;
+            updateTimingDiagnostics(false, false);
+            return;
+        }
 
         // Vint_runcount advances at VintRet even when intervening VInts took the
         // lag path. Publish the current successful VInt phase before RunObjects
@@ -2650,6 +2666,11 @@ public class Sonic2SpecialStageManager {
         }
     }
 
+    /** Enables live pacing for positive values and disables it for trace pacing. */
+    public void setLagCompensation(double factor) {
+        liveLagSimulationEnabled = factor > 0.0;
+    }
+
     public int getCurrentStage() {
         return currentStage;
     }
@@ -2694,6 +2715,7 @@ public class Sonic2SpecialStageManager {
         }
 
         initialized = false;
+        liveLagSimulationEnabled = true;
         backgroundStageGeneration++;
         if (renderer != null) {
             renderer.beginStaticBackgroundStage(backgroundStageGeneration);
@@ -2900,6 +2922,7 @@ public class Sonic2SpecialStageManager {
                 alignmentRainbowSpeedScale,
                 alignmentRainbowSpeedAccumulator,
                 alignmentStepByTrackFrame,
+                liveLagSimulationEnabled,
                 diagnosticWallStartTime,
                 diagnosticUpdateCount,
                 diagnosticTrackAdvances,
@@ -2982,6 +3005,7 @@ public class Sonic2SpecialStageManager {
         alignmentRainbowSpeedScale = snapshot.alignmentRainbowSpeedScale;
         alignmentRainbowSpeedAccumulator = snapshot.alignmentRainbowSpeedAccumulator;
         alignmentStepByTrackFrame = snapshot.alignmentStepByTrackFrame;
+        liveLagSimulationEnabled = snapshot.liveLagSimulationEnabled;
         diagnosticWallStartTime = snapshot.diagnosticWallStartTime;
         diagnosticUpdateCount = snapshot.diagnosticUpdateCount;
         diagnosticTrackAdvances = snapshot.diagnosticTrackAdvances;

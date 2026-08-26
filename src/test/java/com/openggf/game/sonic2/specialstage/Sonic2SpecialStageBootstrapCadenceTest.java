@@ -218,16 +218,60 @@ class Sonic2SpecialStageBootstrapCadenceTest {
     }
 
     @Test
-    void legacyLagCompensationControlCannotSuppressProductionUpdates() throws Exception {
+    void livePacingSkipsUpdatesWhileExternalTracePacingRunsEverySubmittedTick() throws Exception {
         provider.setLagCompensation(0.35);
-        for (int hostFrame = 0; hostFrame < 30; hostFrame++) {
+        boolean observedLiveSkip = false;
+        for (int hostFrame = 0; hostFrame < 30 && !observedLiveSkip; hostFrame++) {
             int beforeFrame = manager.captureRewindSnapshot().frameCounter;
             manager.update();
             Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
             assertEquals(beforeFrame + 1, after.frameCounter,
-                    "every provider update must advance the production frame");
+                    "live pacing must keep advancing its host clock");
+            observedLiveSkip = after.renderFrameCounter < after.frameCounter;
+        }
+        assertTrue(observedLiveSkip,
+                "ordinary play must retain the S2 special-stage slowdown simulation");
+
+        provider.setLagCompensation(0);
+        Sonic2SpecialStageSnapshot externallyPaced = manager.captureRewindSnapshot();
+        for (int submittedTick = 0; submittedTick < 30; submittedTick++) {
+            int beforeFrame = manager.captureRewindSnapshot().frameCounter;
+            manager.update();
+            Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
+            assertEquals(beforeFrame + 1, after.frameCounter);
             assertEquals(after.frameCounter, after.renderFrameCounter,
-                    "a legacy compatibility value must not synthesize a Vint_Lag outcome");
+                    "externally paced replay must not receive an additional live-model skip");
+        }
+
+        provider.setLagCompensation(0.35);
+        manager.restoreRewindSnapshot(externallyPaced);
+        for (int submittedTick = 0; submittedTick < 30; submittedTick++) {
+            manager.update();
+            Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
+            assertEquals(after.frameCounter, after.renderFrameCounter,
+                    "rewind must restore external-pacing authority without live skips");
+        }
+    }
+
+    @Test
+    void ordinaryReinitializationRestoresLivePacingAfterAnExternalTraceSession() throws Exception {
+        try {
+            provider.initializeStage(0, SpecialStageStartupPolicy.TRACE_ACCURATE);
+            provider.setLagCompensation(0);
+
+            provider.initializeStage(0);
+
+            boolean observedLiveSkip = false;
+            for (int hostFrame = 0; hostFrame < 30 && !observedLiveSkip; hostFrame++) {
+                manager.update();
+                Sonic2SpecialStageSnapshot after = manager.captureRewindSnapshot();
+                observedLiveSkip = after.renderFrameCounter < after.frameCounter;
+            }
+            assertTrue(observedLiveSkip,
+                    "reusing the provider for ordinary play must restore live slowdown");
+        } finally {
+            // The cadence fixture shares the provider across methods; keep its external-pacing setup isolated.
+            provider.setLagCompensation(0);
         }
     }
 
