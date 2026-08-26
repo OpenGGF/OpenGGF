@@ -5,8 +5,12 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.HScrollBuffer;
 import com.openggf.graphics.ParallaxShaderProgram;
 import com.openggf.graphics.QuadRenderer;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -65,6 +69,7 @@ public class SpecialStageBackgroundRenderer {
     private TilePassState activeTilePassState;
     private float[] activeProjection;
     private boolean quadRendererOwned;
+    private final Deque<ProjectionState> fboProjectionStates = new ArrayDeque<>();
 
     public SpecialStageBackgroundRenderer(GraphicsManager graphicsManager) {
         this.graphicsManager = java.util.Objects.requireNonNull(graphicsManager, "graphicsManager");
@@ -134,6 +139,7 @@ public class SpecialStageBackgroundRenderer {
      * any GL operations. Call beginTilePassGL() for the actual GL setup.
      */
     public void beginFBOProjection() {
+        fboProjectionStates.push(new ProjectionState(copyProjectionBuffer()));
         graphicsManager.setProjectionMatrixBuffer(fboProjectionBuffer());
     }
 
@@ -142,7 +148,9 @@ public class SpecialStageBackgroundRenderer {
      * Call this AFTER flushing the pattern batch.
      */
     public void endFBOProjection() {
-        graphicsManager.setProjectionMatrixBuffer(null);
+        if (!fboProjectionStates.isEmpty()) {
+            graphicsManager.setProjectionMatrixBuffer(fboProjectionStates.pop().projectionBuffer());
+        }
     }
 
     /**
@@ -189,6 +197,11 @@ public class SpecialStageBackgroundRenderer {
         float[] buffer = new float[16];
         new org.joml.Matrix4f().ortho2D(0, FBO_WIDTH, 0, FBO_HEIGHT).get(buffer);
         return buffer;
+    }
+
+    private float[] copyProjectionBuffer() {
+        float[] current = graphicsManager.getProjectionMatrixBuffer();
+        return current == null ? null : current.clone();
     }
 
     private Throwable restoreTilePass(TilePassState state, Throwable failure) {
@@ -295,10 +308,14 @@ public class SpecialStageBackgroundRenderer {
         throwFailure(failure);
     }
 
+    private record ProjectionState(float[] projectionBuffer) {
+    }
+
     private record ShaderPassState(int[] viewport, int[] scissor, float[] clearColor,
             boolean scissorEnabled, boolean blendEnabled, int blendSourceRgb, int blendDestinationRgb,
             int blendSourceAlpha, int blendDestinationAlpha, int blendEquationRgb,
-            int blendEquationAlpha, int activeTexture, int texture0, int texture1) {
+            int blendEquationAlpha, int activeTexture, int texture0, int texture1,
+            int program, int vertexArray) {
         private static ShaderPassState capture() {
             int[] viewport = new int[4];
             int[] scissor = new int[4];
@@ -316,7 +333,9 @@ public class SpecialStageBackgroundRenderer {
                     glIsEnabled(GL_BLEND), glGetInteger(GL_BLEND_SRC_RGB), glGetInteger(GL_BLEND_DST_RGB),
                     glGetInteger(GL_BLEND_SRC_ALPHA), glGetInteger(GL_BLEND_DST_ALPHA),
                     glGetInteger(GL_BLEND_EQUATION_RGB), glGetInteger(GL_BLEND_EQUATION_ALPHA),
-                    active, texture0, texture1);
+                    active, texture0, texture1,
+                    GL20.glGetInteger(GL20.GL_CURRENT_PROGRAM),
+                    GL30.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING));
         }
 
         private Throwable restore(Throwable failure) {
@@ -338,6 +357,8 @@ public class SpecialStageBackgroundRenderer {
                 glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_1D, texture1);
                 glActiveTexture(activeTexture);
             });
+            failure = attempt(failure, () -> GL20.glUseProgram(program));
+            failure = attempt(failure, () -> GL30.glBindVertexArray(vertexArray));
             return failure;
         }
     }
@@ -416,6 +437,9 @@ public class SpecialStageBackgroundRenderer {
 
     private void cleanupResources(Throwable originalFailure) {
         Throwable failure = originalFailure;
+        while (!fboProjectionStates.isEmpty()) {
+            graphicsManager.setProjectionMatrixBuffer(fboProjectionStates.pop().projectionBuffer());
+        }
         if (activeTilePassState != null) {
             TilePassState state = activeTilePassState;
             failure = restoreTilePass(state, failure);
@@ -455,7 +479,8 @@ public class SpecialStageBackgroundRenderer {
 
     public boolean hasCleanupPendingOwnership() {
         return activeTilePassState != null || hScrollBuffer != null || shader != null
-                || quadRendererOwned || (fboHandle != null && fboHandle.hasPendingOwnership());
+                || quadRendererOwned || !fboProjectionStates.isEmpty()
+                || (fboHandle != null && fboHandle.hasPendingOwnership());
     }
 
     private record CleanupAttempt(Throwable failure, boolean succeeded) {

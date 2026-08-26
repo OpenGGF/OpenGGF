@@ -30,6 +30,7 @@ import java.util.Objects;
 
 import static com.openggf.game.sonic1.constants.Sonic1Constants.*;
 import static com.openggf.sprites.playable.AbstractPlayableSprite.*;
+import static org.lwjgl.opengl.GL11.*;
 
 /**
  * Sonic 1 Special Stage runtime - rotating maze gameplay.
@@ -2061,22 +2062,33 @@ public final class Sonic1SpecialStageManager {
             fgRenderer.setBackdropColor(bdR, bdG, bdB);
         }
 
-        if (bgRenderer != null && bgRenderer.isInitialized()
-                && fgRenderer != null && fgRenderer.isInitialized()) {
-            drawWithBgRenderers();
-        } else {
-            // Fallback: solid color background + maze
-            renderer.render(layout, ssAngle, cameraX, cameraY,
-                    (int) (sonicPosX >> 16), (int) (sonicPosY >> 16),
-                    wallRotFrame, ringAnimFrame, wallVramAnimFrame,
-                    ani2Frame, ani3Frame, sonicFacingLeft);
+        boolean useBackgroundRenderers = bgRenderer != null && bgRenderer.isInitialized()
+                && fgRenderer != null && fgRenderer.isInitialized();
+        if (!useBackgroundRenderers) {
+            // Paint the full logical display before clipping the native world.
+            renderer.renderBackground();
         }
 
-        if (sonicSpriteRenderer != null) {
-            int sonicScreenX = Sonic1SpecialStageRenderer.SCREEN_CENTER_OFFSET +
-                    (int) (sonicPosX >> 16) - cameraX;
-            int sonicScreenY = (int) (sonicPosY >> 16) - cameraY;
-            sonicSpriteRenderer.drawFrame(sonicSpriteFrame, sonicScreenX, sonicScreenY, sonicFacingLeft, false);
+        NativePresentationClip clip = new NativePresentationClip(graphicsManager, specialStageViewport);
+        graphicsManager.registerCommand(clip.openCommand());
+        try {
+            if (useBackgroundRenderers) {
+                drawWithBgRenderers();
+            } else {
+                renderer.renderMaze(layout, ssAngle, cameraX, cameraY, wallRotFrame, ringAnimFrame,
+                        wallVramAnimFrame, ani2Frame, ani3Frame);
+            }
+
+            if (sonicSpriteRenderer != null) {
+                int sonicScreenX = specialStageViewport.outerOriginX()
+                        + Sonic1SpecialStageRenderer.SCREEN_CENTER_OFFSET
+                        + (int) (sonicPosX >> 16) - cameraX;
+                int sonicScreenY = (int) (sonicPosY >> 16) - cameraY;
+                sonicSpriteRenderer.drawFrame(sonicSpriteFrame, sonicScreenX, sonicScreenY,
+                        sonicFacingLeft, false);
+            }
+        } finally {
+            graphicsManager.registerCommand(clip.closeCommand());
         }
     }
 
@@ -2121,12 +2133,15 @@ public final class Sonic1SpecialStageManager {
         }
 
         layerRenderer.beginFBOProjection();
-        graphicsManager.registerCommand(backgroundCommandPool.obtainBegin(layerRenderer));
-        graphicsManager.beginPatternBatch();
-        layerRenderer.renderTilesToFBO(graphicsManager);
-        graphicsManager.flushPatternBatch();
-        layerRenderer.endFBOProjection();
-        graphicsManager.registerCommand(backgroundCommandPool.obtainEnd(layerRenderer));
+        try {
+            graphicsManager.registerCommand(backgroundCommandPool.obtainBegin(layerRenderer));
+            graphicsManager.beginPatternBatch();
+            layerRenderer.renderTilesToFBO(graphicsManager);
+            graphicsManager.flushPatternBatch();
+            graphicsManager.registerCommand(backgroundCommandPool.obtainEnd(layerRenderer));
+        } finally {
+            layerRenderer.endFBOProjection();
+        }
     }
 
     /** Bounded owner for deferred special-stage background commands. */
@@ -2184,6 +2199,101 @@ public final class Sonic1SpecialStageManager {
         private void disarmTilePass(Sonic1SpecialStageBackgroundRenderer renderer) {
             if (activeTilePassRenderer == renderer) {
                 activeTilePassRenderer = null;
+            }
+        }
+    }
+
+    /** Defers the native 320px presentation clip until the command stream executes. */
+    private static final class NativePresentationClip {
+        private final GraphicsManager graphicsManager;
+        private final SpecialStageViewport viewport;
+        private final ArrayDeque<ScissorState> states = new ArrayDeque<>();
+
+        private NativePresentationClip(GraphicsManager graphicsManager, SpecialStageViewport viewport) {
+            this.graphicsManager = graphicsManager;
+            this.viewport = viewport;
+        }
+
+        private GLCommandable openCommand() {
+            return new ClipCommand(this, false);
+        }
+
+        private GLCommandable closeCommand() {
+            return new ClipCommand(this, true);
+        }
+
+        private void open() {
+            int[] scissor = new int[4];
+            glGetIntegerv(GL_SCISSOR_BOX, scissor);
+            ScissorState prior = new ScissorState(scissor, glIsEnabled(GL_SCISSOR_TEST));
+            states.push(prior);
+            int logicalWidth = Math.max(SpecialStageViewport.NATIVE_WIDTH, viewport.logicalWidth());
+            int physicalWidth = graphicsManager.getViewportWidth();
+            int outerX = Math.round(viewport.outerOriginX() * physicalWidth / (float) logicalWidth);
+            int nativeWidth = Math.round(
+                    SpecialStageViewport.NATIVE_WIDTH * physicalWidth / (float) logicalWidth);
+            try {
+                glEnable(GL_SCISSOR_TEST);
+                glScissor(graphicsManager.getViewportX() + outerX,
+                        graphicsManager.getViewportY(), nativeWidth,
+                        graphicsManager.getViewportHeight());
+            } catch (RuntimeException | Error failure) {
+                try {
+                    glScissor(prior.scissor[0], prior.scissor[1],
+                            prior.scissor[2], prior.scissor[3]);
+                    if (prior.enabled) glEnable(GL_SCISSOR_TEST);
+                    else glDisable(GL_SCISSOR_TEST);
+                } catch (RuntimeException | Error restoreFailure) {
+                    failure.addSuppressed(restoreFailure);
+                }
+                states.pop();
+                throw failure;
+            }
+        }
+
+        private void close() {
+            if (states.isEmpty()) {
+                return;
+            }
+            ScissorState prior = states.peek();
+            glScissor(prior.scissor[0], prior.scissor[1], prior.scissor[2], prior.scissor[3]);
+            if (prior.enabled) {
+                glEnable(GL_SCISSOR_TEST);
+            } else {
+                glDisable(GL_SCISSOR_TEST);
+            }
+            states.pop();
+        }
+
+        private static final class ClipCommand implements GLCommandable {
+            private final NativePresentationClip clip;
+            private final boolean close;
+
+            private ClipCommand(NativePresentationClip clip, boolean close) {
+                this.clip = clip;
+                this.close = close;
+            }
+
+            @Override
+            public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+                if (close) clip.close();
+                else clip.open();
+            }
+
+            @Override
+            public void unwindAfterFailure(int cameraX, int cameraY,
+                                           int cameraWidth, int cameraHeight) {
+                if (close) clip.close();
+            }
+        }
+
+        private static final class ScissorState {
+            private final int[] scissor;
+            private final boolean enabled;
+
+            private ScissorState(int[] scissor, boolean enabled) {
+                this.scissor = scissor;
+                this.enabled = enabled;
             }
         }
     }

@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 
 class TestSonic2SpecialStageResultsWidescreenCommands {
@@ -34,12 +36,28 @@ class TestSonic2SpecialStageResultsWidescreenCommands {
         }
     }
 
+    @Test
+    void twoPlayerResultsEmitMilesRingsRowButOnePlayerLayoutDoesNot() throws Exception {
+        List<Command> onePlayer = render(320, 0);
+        List<Command> twoPlayer = render(320, 9);
+
+        assertTrue(twoPlayer.size() > onePlayer.size(), "P2 must add a distinct result row");
+        assertTrue(twoPlayer.stream().anyMatch(command -> command.y() == 168),
+                "P2 Miles Rings row must use the ROM two-player Y position");
+        assertFalse(onePlayer.stream().anyMatch(command -> command.y() == 168),
+                "single-player layout must retain its existing three-line layout");
+    }
+
     private static List<Command> render(int width) throws Exception {
+        return render(width, 9);
+    }
+
+    private static List<Command> render(int width, int p2) throws Exception {
         RecordingGraphics graphics = new RecordingGraphics();
         TestObjectServices services = new TestObjectServices()
                 .withGraphicsManager(graphics).withGameState(mock(GameStateManager.class));
         SpecialStageResultsScreenObjectInstance results =
-                new SpecialStageResultsScreenObjectInstance(17, 9, false, 2, 0, services);
+                new SpecialStageResultsScreenObjectInstance(17, p2, false, 2, 0, services);
         setField(results, "artLoaded", true);
         setField(results, "artCached", true);
         Pattern[] patterns = new Pattern[0x0710 - 0x0002];

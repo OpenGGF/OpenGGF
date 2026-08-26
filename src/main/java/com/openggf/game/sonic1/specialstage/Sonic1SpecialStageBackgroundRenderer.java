@@ -88,6 +88,8 @@ public class Sonic1SpecialStageBackgroundRenderer {
     private final GraphicsManager graphicsManager;
     private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
     private final Deque<TilePassState> tilePassStates = new ArrayDeque<>();
+    private final Deque<ProjectionState> fboProjectionStates = new ArrayDeque<>();
+    private boolean quadRendererOwned;
 
     public Sonic1SpecialStageBackgroundRenderer(GraphicsManager graphicsManager) {
         this.graphicsManager = java.util.Objects.requireNonNull(graphicsManager, "graphicsManager");
@@ -113,6 +115,7 @@ public class Sonic1SpecialStageBackgroundRenderer {
         shader = new ParallaxShaderProgram("shaders/shader_ss_background.glsl");
         shader.cacheUniformLocations();
         quadRenderer.init();
+        quadRendererOwned = true;
 
         for (int i = 0; i < SCREEN_HEIGHT; i++) {
             hScrollData[i] = 0;
@@ -168,6 +171,7 @@ public class Sonic1SpecialStageBackgroundRenderer {
      * Call BEFORE creating the pattern batch.
      */
     public void beginFBOProjection() {
+        fboProjectionStates.push(new ProjectionState(copyProjectionBuffer()));
         graphicsManager.setProjectionMatrixBuffer(fboProjectionBuffer());
     }
 
@@ -176,7 +180,9 @@ public class Sonic1SpecialStageBackgroundRenderer {
      * Call AFTER flushing the pattern batch.
      */
     public void endFBOProjection() {
-        graphicsManager.setProjectionMatrixBuffer(null);
+        if (!fboProjectionStates.isEmpty()) {
+            graphicsManager.setProjectionMatrixBuffer(fboProjectionStates.pop().projectionBuffer());
+        }
     }
 
     /**
@@ -332,6 +338,9 @@ public class Sonic1SpecialStageBackgroundRenderer {
         if (failure instanceof Error errorFailure) throw errorFailure;
     }
 
+    private record ProjectionState(float[] projectionBuffer) {
+    }
+
     private record TilePassState(int framebuffer, int[] viewport, int[] scissor, float[] clearColor,
             boolean scissorEnabled, boolean blendEnabled,
             int blendSrcRgb, int blendDstRgb, int blendSrcAlpha, int blendDstAlpha,
@@ -427,7 +436,7 @@ public class Sonic1SpecialStageBackgroundRenderer {
             boolean scissorEnabled, boolean blendEnabled,
             int blendSrcRgb, int blendDstRgb, int blendSrcAlpha, int blendDstAlpha,
             int blendEquationRgb, int blendEquationAlpha, int activeTexture,
-            int texture0, int texture1) {
+            int texture0, int texture1, int program, int vertexArray) {
         private static ShaderState capture() {
             int[] viewport = new int[4];
             int[] scissor = new int[4];
@@ -447,7 +456,9 @@ public class Sonic1SpecialStageBackgroundRenderer {
                     glGetInteger(GL_BLEND_SRC_RGB), glGetInteger(GL_BLEND_DST_RGB),
                     glGetInteger(GL_BLEND_SRC_ALPHA), glGetInteger(GL_BLEND_DST_ALPHA),
                     glGetInteger(GL_BLEND_EQUATION_RGB), glGetInteger(GL_BLEND_EQUATION_ALPHA),
-                    activeTexture, texture0, texture1);
+                    activeTexture, texture0, texture1,
+                    org.lwjgl.opengl.GL20.glGetInteger(org.lwjgl.opengl.GL20.GL_CURRENT_PROGRAM),
+                    org.lwjgl.opengl.GL30.glGetInteger(org.lwjgl.opengl.GL30.GL_VERTEX_ARRAY_BINDING));
         }
 
         private Throwable restore() {
@@ -474,6 +485,8 @@ public class Sonic1SpecialStageBackgroundRenderer {
                 glBindTexture(GL_TEXTURE_1D, texture1);
                 glActiveTexture(activeTexture);
             });
+            failure = attempt(failure, () -> org.lwjgl.opengl.GL20.glUseProgram(program));
+            failure = attempt(failure, () -> org.lwjgl.opengl.GL30.glBindVertexArray(vertexArray));
             return failure;
         }
     }
@@ -511,6 +524,9 @@ public class Sonic1SpecialStageBackgroundRenderer {
      */
     public void cleanup() {
         Throwable failure = null;
+        while (!fboProjectionStates.isEmpty()) {
+            graphicsManager.setProjectionMatrixBuffer(fboProjectionStates.pop().projectionBuffer());
+        }
         while (!tilePassStates.isEmpty()) {
             TilePassState state = tilePassStates.peek();
             try {
@@ -532,8 +548,11 @@ public class Sonic1SpecialStageBackgroundRenderer {
             failure = cleanup.failure();
             if (cleanup.succeeded()) shader = null;
         }
-        CleanupAttempt quadCleanup = attemptCleanup(failure, quadRenderer::cleanup);
-        failure = quadCleanup.failure();
+        if (quadRendererOwned) {
+            CleanupAttempt quadCleanup = attemptCleanup(failure, quadRenderer::cleanup);
+            failure = quadCleanup.failure();
+            if (quadCleanup.succeeded()) quadRendererOwned = false;
+        }
         if (fboHandle != null) {
             FboHelper.FboHandle resource = fboHandle;
             CleanupAttempt cleanup = attemptCleanup(failure, () -> FboHelper.destroy(resource));
@@ -550,7 +569,8 @@ public class Sonic1SpecialStageBackgroundRenderer {
     }
 
     public boolean hasCleanupPendingOwnership() {
-        return !tilePassStates.isEmpty() || hScrollBuffer != null || shader != null || fboHandle != null;
+        return !tilePassStates.isEmpty() || hScrollBuffer != null || shader != null
+                || quadRendererOwned || fboHandle != null || !fboProjectionStates.isEmpty();
     }
 
     private record CleanupAttempt(Throwable failure, boolean succeeded) {

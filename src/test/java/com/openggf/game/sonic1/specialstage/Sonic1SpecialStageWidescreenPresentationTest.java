@@ -8,6 +8,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.HScrollBuffer;
 import com.openggf.graphics.ParallaxShaderProgram;
 import com.openggf.graphics.QuadRenderer;
+import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
@@ -117,6 +118,81 @@ class Sonic1SpecialStageWidescreenPresentationTest {
             assertEquals(0.3f, command.getColour3(), "backdrop blue at " + width);
             assertEquals(1.0f, command.getAlpha(), "backdrop alpha at " + width);
             assertEquals(GLCommand.BlendType.ONE_MINUS_SRC_ALPHA, command.getBlendMode());
+        }
+    }
+
+    @Test
+    void managerPlayerCommandUsesCenteredOuterOrigin() throws Exception {
+        RecordingGraphics frameGraphics = new RecordingGraphics();
+        frameGraphics.setViewport(0, 0, 400, 224);
+        frameGraphics.setProjectionWidth(400);
+        frameGraphics.setBatchingEnabled(false);
+
+        Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
+        Sonic1SpecialStageRenderer frameRenderer = new Sonic1SpecialStageRenderer(frameGraphics);
+        frameRenderer.setPatternBases(
+                0x10000, 0x10100, 0x10200, 0x10300, 0x10400, 0x10500,
+                0x10600, 0x10700, 0x10800, 0x10900, 0x10A00, 0x10B00,
+                0x10C00, 0x10D00, 0x10D20, 0x10D40, 0x10D60, 0x10D80,
+                0x10DA0, 0x10E00, 0x10E80);
+        PlayerSpriteRenderer player = mock(PlayerSpriteRenderer.class);
+        setField(manager, "initialized", true);
+        setField(manager, "layout", filledLayout(1));
+        setField(manager, "renderer", frameRenderer);
+        setField(manager, "graphicsManager", frameGraphics);
+        setField(manager, "sonicSpriteRenderer", player);
+        setField(manager, "sonicSpriteFrame", 7);
+        setField(manager, "sonicPosX", 11L << 16);
+        setField(manager, "sonicPosY", 22L << 16);
+        manager.setSpecialStageViewport(SpecialStageViewport.fromLogicalWidth(400));
+
+        manager.draw();
+
+        verify(player).drawFrame(7, 51, 22, false, false);
+    }
+
+    @Test
+    void nativePresentationClipRestoresNestedPriorScissorState() throws Exception {
+        RecordingGraphics frameGraphics = new RecordingGraphics();
+        frameGraphics.setViewport(9, 11, 400, 224);
+        frameGraphics.setProjectionWidth(400);
+        boolean[] enabled = {false};
+        int[][] scissor = {{3, 4, 5, 6}};
+        try (MockedStatic<GL11> gl11 = mockStatic(GL11.class)) {
+            gl11.when(() -> GL11.glGetIntegerv(eq(GL11.GL_SCISSOR_BOX), any(int[].class)))
+                    .thenAnswer(invocation -> {
+                        System.arraycopy(scissor[0], 0, invocation.getArgument(1), 0, 4);
+                        return null;
+                    });
+            gl11.when(() -> GL11.glIsEnabled(GL11.GL_SCISSOR_TEST))
+                    .thenAnswer(invocation -> enabled[0]);
+            gl11.when(() -> GL11.glScissor(anyInt(), anyInt(), anyInt(), anyInt()))
+                    .thenAnswer(invocation -> {
+                        scissor[0] = new int[] {invocation.getArgument(0), invocation.getArgument(1),
+                                invocation.getArgument(2), invocation.getArgument(3)};
+                        return null;
+                    });
+            gl11.when(() -> GL11.glEnable(GL11.GL_SCISSOR_TEST))
+                    .thenAnswer(invocation -> { enabled[0] = true; return null; });
+            gl11.when(() -> GL11.glDisable(GL11.GL_SCISSOR_TEST))
+                    .thenAnswer(invocation -> { enabled[0] = false; return null; });
+
+            Object outer = newNativeClip(frameGraphics, SpecialStageViewport.fromLogicalWidth(400));
+            Object inner = newNativeClip(frameGraphics, SpecialStageViewport.fromLogicalWidth(400));
+            GLCommandable outerOpen = (GLCommandable) invokeNativeClip(outer, "openCommand");
+            GLCommandable outerClose = (GLCommandable) invokeNativeClip(outer, "closeCommand");
+            GLCommandable innerOpen = (GLCommandable) invokeNativeClip(inner, "openCommand");
+            GLCommandable innerClose = (GLCommandable) invokeNativeClip(inner, "closeCommand");
+
+            outerOpen.execute(0, 0, 400, 224);
+            assertArrayEquals(new int[] {49, 11, 320, 224}, scissor[0]);
+            assertTrue(enabled[0]);
+            innerOpen.execute(0, 0, 400, 224);
+            innerClose.execute(0, 0, 400, 224);
+            assertArrayEquals(new int[] {49, 11, 320, 224}, scissor[0]);
+            outerClose.execute(0, 0, 400, 224);
+            assertArrayEquals(new int[] {3, 4, 5, 6}, scissor[0]);
+            assertFalse(enabled[0]);
         }
     }
 

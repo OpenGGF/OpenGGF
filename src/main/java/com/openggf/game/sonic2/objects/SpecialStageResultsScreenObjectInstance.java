@@ -86,7 +86,9 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     // For single-player, we move GEMS BONUS up to Y=168 for consistent 16px spacing
     private static final int SCORE_LINE_Y = 136;
     private static final int SONIC_RINGS_Y = 152;
+    private static final int MILES_RINGS_Y = 168;
     private static final int GEMS_BONUS_Y = 168;  // Moved up from 184 for consistent spacing in single-player
+    private static final int GEMS_BONUS_TWO_PLAYER_Y = 184;
 
     // Super Sonic message positions (from Obj6F_InitAndMoveSuperMsg in s2.asm)
     // The three messages stack vertically at the top of the screen,
@@ -936,14 +938,26 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             // Numbers always visible with the label
             renderBonusNumber(ringsX + numbersXOffset, SONIC_RINGS_Y, displayedRingCount);
 
+            // Obj6F frame 14 is the separate Miles Rings row in two-player
+            // mode (s2.asm Map_obj6F_02B0). A positive P2 tally identifies that
+            // layout; the one-player layout intentionally has no such row.
+            if (ringsCollectedP2 > 0) {
+                int milesOffset = getSlideOffset(560);
+                int milesX = xOff + SCREEN_CENTER_X + milesOffset;
+                renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_SCORE_AREA_1,
+                        milesX, MILES_RINGS_Y);
+                renderBonusNumber(milesX + numbersXOffset, MILES_RINGS_Y, displayedRingCountP2);
+            }
+
             // Line 3: Y=184 - "GEMS BONUS" - distance = 576 (736 - 160)
             if (gotEmerald) {
                 int gemsOffset = getSlideOffset(576);
                 int gemsX = xOff + SCREEN_CENTER_X + gemsOffset;
                 renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_PERFECT_BONUS,
-                        gemsX, GEMS_BONUS_Y);
+                        gemsX, ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y);
                 // Numbers always visible with the label
-                renderBonusNumber(gemsX + numbersXOffset, GEMS_BONUS_Y, emeraldBonus);
+                renderBonusNumber(gemsX + numbersXOffset,
+                        ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y, emeraldBonus);
             }
         } else {
             // Placeholder rendering with slide-in
@@ -956,9 +970,16 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + ringsOffset, SONIC_RINGS_Y,
                     "SONIC RINGS: " + displayedRingCount, 1.0f, 1.0f, 0.5f);
 
+            if (ringsCollectedP2 > 0) {
+                int milesOffset = getSlideOffset(560);
+                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + milesOffset, MILES_RINGS_Y,
+                        "MILES RINGS: " + displayedRingCountP2, 1.0f, 1.0f, 0.5f);
+            }
+
             if (gotEmerald) {
                 int gemsOffset = getSlideOffset(576);
-                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + gemsOffset, GEMS_BONUS_Y,
+                int gemsY = ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y;
+                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + gemsOffset, gemsY,
                         "GEMS BONUS: " + emeraldBonus, 0.5f, 1.0f, 0.5f);
             }
         }

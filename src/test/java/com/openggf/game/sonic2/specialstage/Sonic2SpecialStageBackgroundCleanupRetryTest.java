@@ -32,6 +32,22 @@ class Sonic2SpecialStageBackgroundCleanupRetryTest {
         verify(shader, org.mockito.Mockito.times(2)).cleanup();
     }
 
+    @Test
+    void nestedFboProjectionRestoresEachPriorProjectionBuffer() {
+        GraphicsManager graphics = new GraphicsManager();
+        SpecialStageBackgroundRenderer renderer = new SpecialStageBackgroundRenderer(graphics);
+        float[] prior = new float[] {4, 5, 6};
+        graphics.setProjectionMatrixBuffer(prior);
+
+        renderer.beginFBOProjection();
+        float[] fbo = graphics.getProjectionMatrixBuffer();
+        renderer.beginFBOProjection();
+        renderer.endFBOProjection();
+        org.junit.jupiter.api.Assertions.assertArrayEquals(fbo, graphics.getProjectionMatrixBuffer());
+        renderer.endFBOProjection();
+        org.junit.jupiter.api.Assertions.assertArrayEquals(prior, graphics.getProjectionMatrixBuffer());
+    }
+
     private static void setField(Object target, String name, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
