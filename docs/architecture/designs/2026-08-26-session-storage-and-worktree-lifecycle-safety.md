@@ -311,13 +311,16 @@ is reviewable after its worktree is removed. A dirty tree is not disposable.
 
 ```text
 tools/worktree-lifecycle audit [--root <allowlisted-root>] [--json]
-tools/worktree-lifecycle retire <registered-worktree> [--base <ref>] [--apply]
+tools/worktree-lifecycle retire <registered-worktree> [--base <ref>]
+  [--confirm-detached-head <sha>] [--apply]
 ```
 
 All operations are dry-run unless `--apply` is supplied. The command resolves
-the repository common directory, obtains registered state from
-`git worktree list --porcelain`, and refuses `/`, a home directory, a project
-root, unresolved variables, globs, symlinked roots, and paths outside explicit
+the repository common directory and always obtains every registered worktree
+from `git worktree list --porcelain`; `--root` adds an allowlisted filesystem
+root for physical-orphan discovery and never limits registered-worktree
+reporting. The command refuses `/`, a home directory, a project root,
+unresolved variables, globs, symlinked roots, and paths outside explicit
 allowlists.
 
 `audit` classifies without modifying:
