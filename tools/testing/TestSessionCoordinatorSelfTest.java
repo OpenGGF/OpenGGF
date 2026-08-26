@@ -7,6 +7,7 @@ import java.net.URLDecoder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -18,6 +19,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,11 +35,13 @@ public final class TestSessionCoordinatorSelfTest {
             "helper_version", "filesystem_device", "allocation_usable_bytes",
             "allocation_total_bytes", "allocation_usable_inodes", "retention_deadline",
             "allocation_not_applicable_reason", "storage_warning", "allocation_verified",
+            "session_real_path", "session_file_key", "session_file_store",
             "capacity_floor_bytes", "launch_usable_bytes", "launch_total_bytes",
             "launch_usable_inodes", "launch_usable_inodes_reason", "completion_usable_bytes",
             "completion_total_bytes", "completion_usable_inodes",
             "completion_usable_inodes_reason", "compaction_status", "compaction_removed_relative_paths",
-            "compaction_reclaimed_bytes", "compaction_error", "retain_ephemeral",
+            "compaction_retained_relative_paths", "compaction_reclaimed_bytes",
+            "compaction_error", "retain_ephemeral",
             "storage_finalization_error", "numeric_inode_unavailable_reason",
             "launch_capacity_error", "launch_inode_probe_status", "launch_inode_probe_error",
             "launch_directory_flush_status", "completion_capacity_error",
@@ -59,6 +64,8 @@ public final class TestSessionCoordinatorSelfTest {
         Files.createDirectories(root);
         Path outputRoot = createOwnedDirectory(root.resolve("output"));
 
+        verifyTerminalCompactionAllowlist(root);
+        verifyTerminalCompactionRefusals(root);
         verifyRequiredFreeBytesFormula();
         verifyManagedReservationIsValidated(root);
         verifyManagedHelperFailureDoesNotFallback(root);
@@ -73,6 +80,7 @@ public final class TestSessionCoordinatorSelfTest {
         verifyCompletionProbeFailuresPreserveTerminalState(root);
         verifyUnsupportedDirectoryFlushIsObservable(root);
         verifyMarkerFieldsCannotForgeLines(root, outputRoot);
+        verifyCompactionAcrossStorageTiers(root, outputRoot);
         BasicRun first = verifySuccessfulRun(root, outputRoot);
         verifyExplicitQuietRun(root, outputRoot);
         verifyVerboseRun(root, outputRoot);
@@ -80,6 +88,7 @@ public final class TestSessionCoordinatorSelfTest {
         verifySpaceContainingRoot(root);
         verifyInWorktreeSymlinkLockRootIsRejected(root, outputRoot);
         verifyChildExitPropagation(root, outputRoot);
+        verifyCompactionFailureVerdictPrecedence(root, outputRoot);
         verifyShutdownFinalizesSession(root, outputRoot);
         verifyShutdownStopsProcessTree(root, outputRoot);
         verifySourceMutationInvalidatesRun(root, outputRoot);
@@ -101,6 +110,175 @@ public final class TestSessionCoordinatorSelfTest {
         System.out.println("TestSessionCoordinatorSelfTest: PASS");
     }
 
+    private static void verifyTerminalCompactionAllowlist(Path root) throws Exception {
+        Set<String> expectedRemoved = Set.of("tmp", "build/test-classes/traces");
+        for (String state : List.of("PASSED", "FAILED", "INVALID_IDENTITY_CHANGED", "ABORTED",
+                "STARTUP_FAILED", "STORAGE_FINALIZATION_FAILED")) {
+            Path session = root.resolve("compact-" + state.toLowerCase());
+            Object paths = createCompactionFixture(session);
+            Object identity = captureSessionIdentity(session);
+            Object result = compact(paths, state, false, List.of(), List.of(), identity);
+
+            check(recordValue(result, "status").toString().equals("COMPACTED"),
+                    state + " must be compacted");
+            @SuppressWarnings("unchecked")
+            List<String> removed = (List<String>) recordValue(result, "removedRelativePaths");
+            check(Set.copyOf(removed).equals(expectedRemoved),
+                    state + " removed unexpected paths: " + removed);
+            check((long) recordValue(result, "reclaimedBytes") == 18L,
+                    state + " must report exact reclaimed file bytes");
+            assertOnlyCompactablePathsRemoved(session);
+        }
+
+        Path retainedSession = root.resolve("compact-retained");
+        Object retainedPaths = createCompactionFixture(retainedSession);
+        Object retainedIdentity = captureSessionIdentity(retainedSession);
+        Object retained = compact(retainedPaths, "PASSED", true, List.of(), List.of(), retainedIdentity);
+        check(recordValue(retained, "status").toString().equals("RETAINED_BY_REQUEST"),
+                "retain opt-out must be recorded");
+        check(Files.isDirectory(retainedSession.resolve("tmp"))
+                        && Files.isDirectory(retainedSession.resolve("build/test-classes/traces")),
+                "retain opt-out must preserve both compactable paths");
+
+        Path runningSession = root.resolve("compact-running");
+        Object runningPaths = createCompactionFixture(runningSession);
+        Object runningIdentity = captureSessionIdentity(runningSession);
+        Object running = compact(runningPaths, "RUNNING", false, List.of(), List.of(), runningIdentity);
+        check(recordValue(running, "status").toString().equals("REFUSED"),
+                "an active session must never be compacted");
+        check(Files.isDirectory(runningSession.resolve("tmp")),
+                "refused active compaction must not mutate the session");
+    }
+
+    private static void verifyTerminalCompactionRefusals(Path root) throws Exception {
+        Path symlinkSession = root.resolve("compact-symlink");
+        Object symlinkPaths = createCompactionFixture(symlinkSession);
+        Object symlinkIdentity = captureSessionIdentity(symlinkSession);
+        Path external = createOwnedDirectory(root.resolve("compact-symlink-external"));
+        deleteTree(symlinkSession.resolve("tmp"));
+        try {
+            Files.createSymbolicLink(symlinkSession.resolve("tmp"), external);
+            Object result = compact(symlinkPaths, "PASSED", false, List.of(), List.of(), symlinkIdentity);
+            check(recordValue(result, "status").toString().equals("REFUSED"),
+                    "a symlinked compactable path must be refused");
+            check(Files.isDirectory(symlinkSession.resolve("build/test-classes/traces")),
+                    "symlink refusal must not partially compact other candidates");
+        } catch (UnsupportedOperationException e) {
+            // Replacement and injected verifier cases still prove fail-closed identity checks.
+        }
+
+        Path replacedSession = root.resolve("compact-replaced");
+        Object replacedPaths = createCompactionFixture(replacedSession);
+        Object replacedIdentity = captureSessionIdentity(replacedSession);
+        Path moved = root.resolve("compact-replaced-original");
+        Files.move(replacedSession, moved);
+        createCompactionFixture(replacedSession);
+        Object replaced = compact(replacedPaths, "PASSED", false, List.of(), List.of(), replacedIdentity);
+        check(recordValue(replaced, "status").toString().equals("REFUSED"),
+                "a replaced session root must be refused");
+        check(Files.isDirectory(replacedSession.resolve("tmp")),
+                "replacement refusal must not mutate the replacement");
+
+        Path mismatchedSession = root.resolve("compact-store-mismatch");
+        Object mismatchedPaths = createCompactionFixture(mismatchedSession);
+        Object mismatchedIdentity = captureSessionIdentity(mismatchedSession);
+        Object mismatch = compactWithStoreVerifier(mismatchedPaths, "PASSED", false,
+                List.of(), List.of(), mismatchedIdentity, (expected, candidate) -> false);
+        check(recordValue(mismatch, "status").toString().equals("REFUSED"),
+                "a file-store mismatch must be refused");
+        check(Files.isDirectory(mismatchedSession.resolve("tmp")),
+                "file-store refusal must not mutate the session");
+
+        Path protectedSession = root.resolve("compact-protected-inventory");
+        Object protectedPaths = createCompactionFixture(protectedSession);
+        Object protectedIdentity = captureSessionIdentity(protectedSession);
+        Path protectedReport = protectedSession.resolve("tmp/ephemeral.bin").toAbsolutePath().normalize();
+        Object protectedResult = compact(protectedPaths, "PASSED", false,
+                List.of(protectedReport.toString()), List.of(), protectedIdentity);
+        check(recordValue(protectedResult, "status").toString().equals("REFUSED"),
+                "an inventoried report below a candidate must block compaction");
+        check(Files.isRegularFile(protectedReport), "an inventoried report must survive refusal");
+        check(Files.isDirectory(protectedSession.resolve("build/test-classes/traces")),
+                "inventory refusal must not partially compact another candidate");
+    }
+
+    private static Object createCompactionFixture(Path session) throws Exception {
+        Class<?> pathsType = Class.forName("TestSessionCoordinator$Paths");
+        var create = pathsType.getDeclaredMethod("create", Path.class);
+        create.setAccessible(true);
+        Object paths = create.invoke(null, Files.createDirectory(session));
+        Files.writeString(session.resolve("tmp/ephemeral.bin"), "tmp-data", StandardCharsets.UTF_8);
+        Files.createDirectories(session.resolve("build/test-classes/traces"));
+        Files.writeString(session.resolve("build/test-classes/traces/copied.bin"),
+                "trace-data", StandardCharsets.UTF_8);
+        for (String preserved : List.of(
+                "manifest.json", "command.txt", "maven.log",
+                "surefire-reports/result.xml", "trace-reports/frontier.txt",
+                "diagnostics/diagnostic.txt", "build/classes/Main.class",
+                "build/test-classes/ordinary-resource.bin", "build/OpenGGF.jar",
+                "build/native-libs/libopenggf.so", "artifacts/promoted.bin",
+                "distribution/OpenGGF.zip")) {
+            Path file = session.resolve(preserved);
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, "preserved", StandardCharsets.UTF_8);
+        }
+        return paths;
+    }
+
+    private static void assertOnlyCompactablePathsRemoved(Path session) {
+        check(!Files.exists(session.resolve("tmp")), "tmp must be removed");
+        check(!Files.exists(session.resolve("build/test-classes/traces")),
+                "copied trace resources must be removed");
+        for (String preserved : List.of(
+                "manifest.json", "command.txt", "maven.log",
+                "surefire-reports/result.xml", "trace-reports/frontier.txt",
+                "diagnostics/diagnostic.txt", "build/classes/Main.class",
+                "build/test-classes/ordinary-resource.bin", "build/OpenGGF.jar",
+                "build/native-libs/libopenggf.so", "artifacts/promoted.bin",
+                "distribution/OpenGGF.zip")) {
+            check(Files.isRegularFile(session.resolve(preserved)),
+                    "compaction removed preserved evidence: " + preserved);
+        }
+    }
+
+    private static Object captureSessionIdentity(Path session) throws Exception {
+        var method = TestSessionCoordinator.class.getDeclaredMethod(
+                "captureSessionDirectoryIdentity", Path.class);
+        method.setAccessible(true);
+        return method.invoke(null, session);
+    }
+
+    private static Object compact(Object paths, String state, boolean retainEphemeral,
+                                  List<String> reports, List<String> artifacts, Object identity)
+            throws Exception {
+        Class<?> pathsType = Class.forName("TestSessionCoordinator$Paths");
+        Class<?> identityType = Class.forName("TestSessionCoordinator$SessionDirectoryIdentity");
+        var method = TestSessionCoordinator.class.getDeclaredMethod("compactTerminalSession",
+                pathsType, String.class, boolean.class, List.class, List.class, identityType);
+        method.setAccessible(true);
+        return method.invoke(null, paths, state, retainEphemeral, reports, artifacts, identity);
+    }
+
+    private static Object compactWithStoreVerifier(
+            Object paths, String state, boolean retainEphemeral, List<String> reports,
+            List<String> artifacts, Object identity, BiPredicate<FileStore, Path> verifier)
+            throws Exception {
+        Class<?> pathsType = Class.forName("TestSessionCoordinator$Paths");
+        Class<?> identityType = Class.forName("TestSessionCoordinator$SessionDirectoryIdentity");
+        var method = TestSessionCoordinator.class.getDeclaredMethod("compactTerminalSession",
+                pathsType, String.class, boolean.class, List.class, List.class, identityType,
+                BiPredicate.class);
+        method.setAccessible(true);
+        return method.invoke(null, paths, state, retainEphemeral, reports, artifacts,
+                identity, verifier);
+    }
+
+    private static Object recordValue(Object record, String accessor) throws Exception {
+        var method = record.getClass().getDeclaredMethod(accessor);
+        method.setAccessible(true);
+        return method.invoke(record);
+    }
+
     private static void verifyRequiredFreeBytesFormula() throws Exception {
         Class<?> capacityType = Class.forName("TestSessionCoordinator$CapacitySnapshot");
         var constructor = capacityType.getDeclaredConstructor(long.class, long.class, long.class);
@@ -111,6 +289,60 @@ public final class TestSessionCoordinatorSelfTest {
         long minimum = (long) method.invoke(null, constructor.newInstance(0L, 100L << 30, 1L));
         check(fivePercent == 50L << 30, "five percent should exceed 20 GiB");
         check(minimum == 20L << 30, "20 GiB should be the minimum floor");
+    }
+
+    private static void verifyCompactionAcrossStorageTiers(Path root, Path explicitOutput)
+            throws Exception {
+        int index = 0;
+        CommandResult explicit = runCoordinator(explicitOutput, List.of(
+                "--lock-root", createOwnedDirectory(root.resolve("compact-tier-explicit-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        assertCompactedTier(explicit, "EXPLICIT_OVERRIDE", index++);
+
+        Path project = createTestProject(root.resolve("compact-tier-project"));
+        CommandResult fallback = runStorageCoordinator(project, null, null, null, List.of(
+                "--lock-root", createOwnedDirectory(root.resolve("compact-tier-project-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        assertCompactedTier(fallback, "PROJECT_LOCAL_FALLBACK", index++);
+
+        Path systemProject = createTestProject(root.resolve("compact-tier-system-project"));
+        ProcessBuilder system = storageCoordinatorProcess(systemProject, null, null, null, List.of(
+                "--allow-system-tmp",
+                "--lock-root", createOwnedDirectory(root.resolve("compact-tier-system-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        Path systemTmp = createOwnedDirectory(root.resolve("compact-tier-system-tmp"));
+        system.environment().put("JAVA_TOOL_OPTIONS", "-Dselftest.java=preserved -Djava.io.tmpdir="
+                + systemTmp);
+        assertCompactedTier(finish(system.start()), "SYSTEM_TMP_EXPLICIT", index++);
+
+        Path managedProject = createTestProject(root.resolve("compact-tier-managed-project"));
+        Path managedRoot = createOwnedDirectory(root.resolve("compact-tier-managed-root"));
+        Path allocation = createOwnedDirectory(
+                managedRoot.resolve("codex/test-sessions/session-reserved"));
+        Path fakeBin = createFakeAgentScratch(root.resolve("compact-tier-managed-bin"),
+                reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6))));
+        CommandResult managed = runStorageCoordinator(managedProject, managedRoot, fakeBin, null, List.of(
+                "--lock-root", createOwnedDirectory(root.resolve("compact-tier-managed-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        assertCompactedTier(managed, "MANAGED_CODEX_TEST_SESSIONS", index);
+    }
+
+    private static void assertCompactedTier(CommandResult result, String tier, int index)
+            throws IOException {
+        check(result.exitCode == 0, "tier compaction run " + index + " failed:\n" + result.output);
+        Path manifest = Path.of(markerValue(
+                findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String json = Files.readString(manifest);
+        check(json.contains("\"storage_tier\": \"" + tier + "\""),
+                "compaction run did not use tier " + tier);
+        check(json.contains("\"compaction_status\": \"COMPACTED\""),
+                "terminal session was not compacted for " + tier);
+        check(!Files.exists(manifest.getParent().resolve("tmp")),
+                "terminal tmp survived for " + tier);
     }
 
     private static void verifyManagedReservationIsValidated(Path root) throws Exception {
@@ -690,6 +922,39 @@ public final class TestSessionCoordinatorSelfTest {
                 "nonzero child exit must produce a FAILED manifest");
     }
 
+    private static void verifyCompactionFailureVerdictPrecedence(Path root, Path outputRoot)
+            throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-compaction-failure"));
+        CommandResult green = runCoordinator(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-symlink-tmp"));
+        check(green.exitCode != 0, "a green child with failed compaction must be non-certifying");
+        Path greenManifest = Path.of(markerValue(
+                findLine(green.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String greenJson = Files.readString(greenManifest);
+        check(greenJson.contains("\"state\": \"STORAGE_FINALIZATION_FAILED\""),
+                "failed compaction must replace an otherwise PASSED state");
+        check(greenJson.contains("\"compaction_status\": \"REFUSED\""),
+                "failed compaction refusal must be recorded");
+
+        Path identityProject = createTestProject(root.resolve("compaction-identity-project"));
+        Path identityOutput = createOwnedDirectory(root.resolve("compaction-identity-output"));
+        ProcessBuilder builder = storageCoordinatorProcess(identityProject, null, null, null, List.of(
+                "--lock-root", createOwnedDirectory(root.resolve("compaction-identity-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-mutate-and-symlink-tmp"));
+        builder.environment().put("OPENGGF_TEST_ROOT", identityOutput.toString());
+        CommandResult identity = finish(builder.start());
+        check(identity.exitCode != 0, "identity failure must remain nonzero");
+        Path identityManifest = Path.of(markerValue(
+                findLine(identity.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String identityJson = Files.readString(identityManifest);
+        check(identityJson.contains("\"state\": \"INVALID_IDENTITY_CHANGED\""),
+                "compaction failure must not replace a pre-existing identity failure");
+        check(!identityJson.contains("\"storage_finalization_error\": null"),
+                "identity failure must retain compaction failure as secondary evidence");
+    }
+
     private static void verifySpaceContainingRoot(Path root) throws Exception {
         Path outputRoot = createOwnedDirectory(root.resolve("output with spaces"));
         Path lockRoot = createOwnedDirectory(root.resolve("locks-spaces"));
@@ -845,8 +1110,13 @@ public final class TestSessionCoordinatorSelfTest {
         process.destroy();
         check(process.waitFor(Duration.ofSeconds(10).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS),
                 "coordinator must terminate after SIGTERM");
-        check(Files.readString(manifest).contains("\"state\": \"ABORTED\""),
+        String json = Files.readString(manifest);
+        check(json.contains("\"state\": \"ABORTED\""),
                 "shutdown must finalize the manifest as ABORTED");
+        check(json.contains("\"compaction_status\": \"COMPACTED\""),
+                "shutdown must use terminal compaction");
+        check(!Files.exists(manifest.getParent().resolve("tmp")),
+                "shutdown terminal compaction must remove tmp");
     }
 
     private static void verifyShutdownStopsProcessTree(Path root, Path outputRoot) throws Exception {
@@ -1262,6 +1532,23 @@ public final class TestSessionCoordinatorSelfTest {
                 Files.writeString(build.resolve("libopenggf-selftest.so"), "native-library\n",
                         StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
             } catch (IOException e) {
+                throw new AssertionError(e);
+            }
+        }
+        if (mode.equals("child-symlink-tmp") || mode.equals("child-mutate-and-symlink-tmp")) {
+            try {
+                Path tmp = Path.of(System.getenv("OPENGGF_TEST_TMP_ROOT"));
+                deleteTree(tmp);
+                Path external = Files.createDirectories(tmp.resolveSibling("external-tmp"));
+                Files.createSymbolicLink(tmp, external);
+                if (mode.equals("child-mutate-and-symlink-tmp")) {
+                    Path worktree = Path.of(System.getenv("OPENGGF_TEST_WORKTREE"));
+                    Files.writeString(worktree.resolve(".session-selftest-compaction-mutation-"
+                                    + ProcessHandle.current().pid() + ".txt"), "mutation\n",
+                            StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW,
+                            StandardOpenOption.WRITE);
+                }
+            } catch (IOException | UnsupportedOperationException e) {
                 throw new AssertionError(e);
             }
         }

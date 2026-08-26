@@ -12,9 +12,11 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -24,6 +26,7 @@ import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -32,6 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiPredicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -54,6 +58,11 @@ public final class TestSessionCoordinator {
     private static final Duration MAX_MANAGED_RETENTION = Duration.ofDays(7);
     private static final long GIB = 1024L * 1024L * 1024L;
     private static final long DEFAULT_MIN_FREE_BYTES = 20L * GIB;
+    private static final Set<String> TERMINAL_SESSION_STATES = Set.of(
+            "PASSED", "FAILED", "INVALID_IDENTITY_CHANGED", "ABORTED",
+            "STARTUP_FAILED", "STORAGE_FINALIZATION_FAILED");
+    private static final List<String> COMPACTABLE_RELATIVE_PATHS = List.of(
+            "tmp", "build/test-classes/traces");
     private static final Set<String> RESERVATION_FIELDS = Set.of(
             "schema_version", "storage_tier", "managed_root", "allocation_path",
             "filesystem_device", "usable_bytes", "total_bytes", "usable_inodes",
@@ -91,6 +100,10 @@ public final class TestSessionCoordinator {
             String error) {
     }
 
+    private record SessionDirectoryIdentity(
+            Path realPath, Object fileKey, FileStore fileStore) {
+    }
+
     private record ManifestContext(
             StorageAllocation allocation,
             CapacitySnapshot launchCapacity,
@@ -98,6 +111,7 @@ public final class TestSessionCoordinator {
             CompactionResult compaction,
             boolean retainEphemeral,
             String storageFinalizationError,
+            SessionDirectoryIdentity sessionIdentity,
             String launchCapacityError,
             LiveProbeResult launchProbe,
             String completionCapacityError,
@@ -201,6 +215,7 @@ public final class TestSessionCoordinator {
         }
 
         Path session = Files.createDirectory(outputRoot.resolve(runId));
+        SessionDirectoryIdentity sessionIdentity = captureSessionDirectoryIdentity(session);
         Paths paths = Paths.create(session);
         Path leasePath = lease.namespace.resolve("lease.lock");
         String commandHash = sha256(String.join("\0", options.command));
@@ -223,12 +238,14 @@ public final class TestSessionCoordinator {
         } catch (StartupFailure failure) {
             return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
                     allowedPhases, sourceBefore, runtimeBefore, allocation, launchObservation,
-                    defaultCapacityFloor, failure.getMessage(), lease, capacityProbe);
+                    defaultCapacityFloor, failure.getMessage(), lease, capacityProbe,
+                    sessionIdentity, options.retainEphemeral);
         }
         if (launchObservation.capacityError != null) {
             return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
                     allowedPhases, sourceBefore, runtimeBefore, allocation, launchObservation,
-                    capacityFloor, launchObservation.capacityError, lease, capacityProbe);
+                    capacityFloor, launchObservation.capacityError, lease, capacityProbe,
+                    sessionIdentity, options.retainEphemeral);
         }
         if (launchCapacity.usableBytes < capacityFloor
                 || allocation.tier == StorageTier.MANAGED_CODEX_TEST_SESSIONS
@@ -238,18 +255,20 @@ public final class TestSessionCoordinator {
                     : "allocation filesystem is below the required free-byte floor";
             return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
                     allowedPhases, sourceBefore, runtimeBefore, allocation, launchObservation,
-                    capacityFloor, reason, lease, capacityProbe);
+                    capacityFloor, reason, lease, capacityProbe, sessionIdentity,
+                    options.retainEphemeral);
         }
         launchObservation = new StorageObservation(launchCapacity, null,
                 liveStorageProbe(paths.session, ProbePhase.LAUNCH));
         if (launchObservation.liveProbe.status == InodeProbeStatus.FAILED) {
             return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
                     allowedPhases, sourceBefore, runtimeBefore, allocation, launchObservation,
-                    capacityFloor, launchObservation.liveProbe.error, lease, capacityProbe);
+                    capacityFloor, launchObservation.liveProbe.error, lease, capacityProbe,
+                    sessionIdentity, options.retainEphemeral);
         }
         ManifestContext runningContext = new ManifestContext(allocation, launchCapacity,
-                null, null, false, null, null, launchObservation.liveProbe,
-                null, null);
+                null, null, options.retainEphemeral, null, sessionIdentity,
+                null, launchObservation.liveProbe, null, null);
         writeManifest(paths.manifest, manifest(paths, runId, "RUNNING", worktree, leasePath,
                 commandHash, capability, allowedPhases, sourceBefore, runtimeBefore,
                 List.of(), List.of(), runningContext, capacityFloor));
@@ -258,7 +277,8 @@ public final class TestSessionCoordinator {
         ShutdownState shutdown = new ShutdownState(paths, runId, worktree, leasePath,
                 sourceBefore, runtimeBefore, options.command, commandHash, capability,
                 allowedPhases, options.exportFile, lease, allocation, launchCapacity,
-                capacityFloor, capacityProbe, launchObservation.liveProbe);
+                capacityFloor, capacityProbe, launchObservation.liveProbe, sessionIdentity,
+                options.retainEphemeral);
         Runtime.getRuntime().addShutdownHook(new Thread(shutdown::abort, "openggf-test-session-shutdown"));
         Process child = null;
         int exitCode = 1;
@@ -308,9 +328,10 @@ public final class TestSessionCoordinator {
             boolean leaseChanged = !leaseStillOwned(lease.namespace, leasePath, runId);
             identityChanged = sourceChanged || runtimeChanged || leaseChanged;
             boolean valid = !identityChanged && !interrupted;
-            String state = interrupted ? "ABORTED"
+            String primaryState = interrupted ? "ABORTED"
                     : (identityChanged ? "INVALID_IDENTITY_CHANGED"
                     : (exitCode == 0 ? "PASSED" : "FAILED"));
+            String state = primaryState;
             StorageObservation completionObservation = observeStorage(
                     paths, allocation, capacityProbe, ProbePhase.COMPLETION);
             String storageFinalizationError = completionObservation.error();
@@ -319,14 +340,32 @@ public final class TestSessionCoordinator {
                 exitCode = 1;
                 valid = false;
             }
-            ManifestContext terminalContext = new ManifestContext(allocation, launchCapacity,
-                    completionObservation.capacity, null, false, storageFinalizationError,
-                    null, launchObservation.liveProbe, completionObservation.capacityError,
-                    completionObservation.liveProbe);
+            List<String> reports = reportInventory(paths);
+            List<String> artifacts = artifactInventory(paths);
+            ManifestContext preCompactionContext = new ManifestContext(allocation, launchCapacity,
+                    completionObservation.capacity, null, options.retainEphemeral,
+                    storageFinalizationError, sessionIdentity, null, launchObservation.liveProbe,
+                    completionObservation.capacityError, completionObservation.liveProbe);
             writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                     commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
-                    reportInventory(paths), artifactInventory(paths), terminalContext,
+                    reports, artifacts, preCompactionContext,
                     capacityFloor));
+            CompactionResult compaction = compactTerminalSession(paths, state,
+                    options.retainEphemeral, reports, artifacts, sessionIdentity);
+            storageFinalizationError = combineStorageErrors(storageFinalizationError,
+                    compactionFailure(compaction));
+            if (storageFinalizationError != null && primaryState.equals("PASSED")) {
+                state = "STORAGE_FINALIZATION_FAILED";
+                exitCode = 1;
+                valid = false;
+            }
+            ManifestContext terminalContext = new ManifestContext(allocation, launchCapacity,
+                    completionObservation.capacity, compaction, options.retainEphemeral,
+                    storageFinalizationError, sessionIdentity, null, launchObservation.liveProbe,
+                    completionObservation.capacityError, completionObservation.liveProbe);
+            writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
+                    commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
+                    reports, artifacts, terminalContext, capacityFloor));
             if (options.exportFile != null) {
                 writeExport(options.exportFile, paths.manifest, runId);
             }
@@ -343,20 +382,38 @@ public final class TestSessionCoordinator {
                                      String source, String runtime, StorageAllocation allocation,
                                      StorageObservation launchObservation, long capacityFloor,
                                      String reason, Lease lease,
-                                     CapacityProbe capacityProbe) throws Exception {
+                                     CapacityProbe capacityProbe,
+                                     SessionDirectoryIdentity sessionIdentity,
+                                     boolean retainEphemeral) throws Exception {
         try {
             if (!Files.exists(paths.mavenLog)) {
                 Files.createFile(paths.mavenLog);
             }
             StorageObservation completionObservation = observeStorage(
                     paths, allocation, capacityProbe, ProbePhase.COMPLETION);
-            ManifestContext context = new ManifestContext(allocation, launchObservation.capacity,
-                    completionObservation.capacity, null, false, completionObservation.error(),
+            String storageFinalizationError = completionObservation.error();
+            List<String> reports = reportInventory(paths);
+            List<String> artifacts = artifactInventory(paths);
+            ManifestContext preCompactionContext = new ManifestContext(
+                    allocation, launchObservation.capacity, completionObservation.capacity,
+                    null, retainEphemeral, storageFinalizationError, sessionIdentity,
                     launchObservation.capacityError, launchObservation.liveProbe,
                     completionObservation.capacityError, completionObservation.liveProbe);
             writeManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
                     leasePath, commandHash, capability, allowedPhases, source, runtime,
-                    List.of(), List.of(), context, capacityFloor));
+                    reports, artifacts, preCompactionContext, capacityFloor));
+            CompactionResult compaction = compactTerminalSession(paths, "STARTUP_FAILED",
+                    retainEphemeral, reports, artifacts, sessionIdentity);
+            storageFinalizationError = combineStorageErrors(storageFinalizationError,
+                    compactionFailure(compaction));
+            ManifestContext context = new ManifestContext(
+                    allocation, launchObservation.capacity, completionObservation.capacity,
+                    compaction, retainEphemeral, storageFinalizationError, sessionIdentity,
+                    launchObservation.capacityError, launchObservation.liveProbe,
+                    completionObservation.capacityError, completionObservation.liveProbe);
+            writeManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
+                    leasePath, commandHash, capability, allowedPhases, source, runtime,
+                    reports, artifacts, context, capacityFloor));
             printStartMarker(paths, runId, leasePath, context, capacityFloor, "STARTUP_FAILED");
             printEndMarker(paths, runId, 1, "STARTUP_FAILED", false, context);
             System.err.println("OPENGGF_TEST_SESSION_ERROR " + boundedSingleLine(reason)
@@ -1184,6 +1241,16 @@ public final class TestSessionCoordinator {
                 + jsonNullable(allocation.notApplicableReason) + ",\n"
                 + "  \"storage_warning\": " + jsonNullable(allocation.warning) + ",\n"
                 + "  \"allocation_verified\": true,\n"
+                + "  \"session_real_path\": "
+                + jsonNullablePath(context.sessionIdentity == null
+                ? null : context.sessionIdentity.realPath) + ",\n"
+                + "  \"session_file_key\": "
+                + jsonNullable(context.sessionIdentity == null
+                ? null : String.valueOf(context.sessionIdentity.fileKey)) + ",\n"
+                + "  \"session_file_store\": "
+                + jsonNullable(context.sessionIdentity == null ? null
+                : context.sessionIdentity.fileStore.name() + " ("
+                + context.sessionIdentity.fileStore.type() + ")") + ",\n"
                 + "  \"capacity_floor_bytes\": " + capacityFloor + ",\n"
                 + "  \"launch_usable_bytes\": " + launch.usableBytes + ",\n"
                 + "  \"launch_total_bytes\": " + launch.totalBytes + ",\n"
@@ -1222,6 +1289,9 @@ public final class TestSessionCoordinator {
                 + jsonNullable(compaction == null ? null : compaction.status.name()) + ",\n"
                 + "  \"compaction_removed_relative_paths\": "
                 + (compaction == null ? "[]" : jsonArray(compaction.removedRelativePaths)) + ",\n"
+                + "  \"compaction_retained_relative_paths\": "
+                + (compaction != null && compaction.status == CompactionStatus.RETAINED_BY_REQUEST
+                ? jsonArray(COMPACTABLE_RELATIVE_PATHS) : "[]") + ",\n"
                 + "  \"compaction_reclaimed_bytes\": "
                 + jsonNullableLong(compaction == null ? null : compaction.reclaimedBytes) + ",\n"
                 + "  \"compaction_error\": "
@@ -1299,6 +1369,205 @@ public final class TestSessionCoordinator {
         Files.writeString(tmp, json, StandardCharsets.UTF_8, StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
         moveAtomic(tmp, path);
+    }
+
+    private static SessionDirectoryIdentity captureSessionDirectoryIdentity(Path session)
+            throws IOException {
+        Path expected = session.toAbsolutePath().normalize();
+        BasicFileAttributes attributes = Files.readAttributes(expected, BasicFileAttributes.class,
+                LinkOption.NOFOLLOW_LINKS);
+        if (!attributes.isDirectory() || Files.isSymbolicLink(expected)) {
+            throw new IOException("session root is not a plain directory: " + expected);
+        }
+        Path realPath = expected.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        if (!realPath.equals(expected)) {
+            throw new IOException("session root is not canonical: " + expected);
+        }
+        if (attributes.fileKey() == null) {
+            throw new IOException("session root file identity is unavailable: " + expected);
+        }
+        return new SessionDirectoryIdentity(realPath, attributes.fileKey(),
+                Files.getFileStore(expected));
+    }
+
+    private static CompactionResult compactTerminalSession(
+            Paths paths, String state, boolean retainEphemeral, List<String> reports,
+            List<String> artifacts, SessionDirectoryIdentity identity) {
+        return compactTerminalSession(paths, state, retainEphemeral, reports, artifacts,
+                identity, (expected, candidate) -> {
+                    try {
+                        return expected.equals(Files.getFileStore(candidate));
+                    } catch (IOException | RuntimeException e) {
+                        return false;
+                    }
+                });
+    }
+
+    private static CompactionResult compactTerminalSession(
+            Paths paths, String state, boolean retainEphemeral, List<String> reports,
+            List<String> artifacts, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore) {
+        List<String> removed = new ArrayList<>();
+        long reclaimedBytes = 0L;
+        try {
+            if (!TERMINAL_SESSION_STATES.contains(state)) {
+                throw new CompactionRefusal("session state is not terminal: " + state);
+            }
+            revalidateSessionDirectory(paths.session, identity, sameStore);
+            if (retainEphemeral) {
+                return new CompactionResult(CompactionStatus.RETAINED_BY_REQUEST,
+                        List.of(), 0L, null);
+            }
+
+            List<Path> protectedPaths = Stream.concat(reports.stream(), artifacts.stream())
+                    .map(value -> inventoryPath(paths.session, value))
+                    .toList();
+            List<Path> candidates = new ArrayList<>();
+            for (String relative : COMPACTABLE_RELATIVE_PATHS) {
+                Path candidate = paths.session.resolve(relative).toAbsolutePath().normalize();
+                validateCompactableCandidate(paths.session, candidate, identity,
+                        protectedPaths, sameStore);
+                if (Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
+                    candidates.add(candidate);
+                }
+            }
+
+            for (Path candidate : candidates) {
+                revalidateSessionDirectory(paths.session, identity, sameStore);
+                long candidateBytes = compactableBytes(candidate, identity, sameStore);
+                deleteCompactableTree(candidate, paths.session, identity, sameStore);
+                String relative = paths.session.relativize(candidate).toString().replace('\\', '/');
+                removed.add(relative);
+                reclaimedBytes = Math.addExact(reclaimedBytes, candidateBytes);
+            }
+            return new CompactionResult(removed.isEmpty()
+                    ? CompactionStatus.NOTHING_TO_REMOVE : CompactionStatus.COMPACTED,
+                    List.copyOf(removed), reclaimedBytes, null);
+        } catch (CompactionRefusal e) {
+            return new CompactionResult(CompactionStatus.REFUSED, List.copyOf(removed),
+                    reclaimedBytes, boundedSingleLine(e.getMessage()));
+        } catch (IOException | RuntimeException e) {
+            return new CompactionResult(CompactionStatus.FAILED, List.copyOf(removed),
+                    reclaimedBytes, boundedSingleLine(message(e)));
+        }
+    }
+
+    private static Path inventoryPath(Path session, String value) {
+        Path path = Path.of(value);
+        return (path.isAbsolute() ? path : session.resolve(path)).toAbsolutePath().normalize();
+    }
+
+    private static void validateCompactableCandidate(
+            Path session, Path candidate, SessionDirectoryIdentity identity,
+            List<Path> protectedPaths, BiPredicate<FileStore, Path> sameStore)
+            throws IOException, CompactionRefusal {
+        revalidateSessionDirectory(session, identity, sameStore);
+        Path expected = identity.realPath.resolve(session.relativize(candidate)).normalize();
+        if (!candidate.startsWith(identity.realPath) || candidate.equals(identity.realPath)
+                || !candidate.equals(expected)) {
+            throw new CompactionRefusal("compactable path escapes the captured session root: " + candidate);
+        }
+        for (Path protectedPath : protectedPaths) {
+            if (protectedPath.equals(candidate) || protectedPath.startsWith(candidate)) {
+                throw new CompactionRefusal("compactable path contains inventoried evidence: " + candidate);
+            }
+        }
+        if (!Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
+        Path current = candidate;
+        while (!current.equals(identity.realPath)) {
+            validatePlainContainedPath(current, identity, sameStore, true);
+            current = current.getParent();
+            if (current == null) {
+                throw new CompactionRefusal("compactable path has no captured session ancestor");
+            }
+        }
+        try (Stream<Path> tree = Files.walk(candidate)) {
+            for (Path path : tree.toList()) {
+                validatePlainContainedPath(path, identity, sameStore, false);
+            }
+        }
+    }
+
+    private static void revalidateSessionDirectory(
+            Path session, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore) throws IOException, CompactionRefusal {
+        Path expected = session.toAbsolutePath().normalize();
+        BasicFileAttributes attributes = Files.readAttributes(expected, BasicFileAttributes.class,
+                LinkOption.NOFOLLOW_LINKS);
+        if (!attributes.isDirectory() || Files.isSymbolicLink(expected)
+                || !expected.toRealPath(LinkOption.NOFOLLOW_LINKS).equals(identity.realPath)
+                || !identity.fileKey.equals(attributes.fileKey())
+                || !sameStore.test(identity.fileStore, expected)) {
+            throw new CompactionRefusal("session directory identity changed: " + expected);
+        }
+    }
+
+    private static void validatePlainContainedPath(
+            Path path, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore, boolean requireDirectory)
+            throws IOException, CompactionRefusal {
+        Path expected = path.toAbsolutePath().normalize();
+        if (!expected.startsWith(identity.realPath) || expected.equals(identity.realPath)
+                || Files.isSymbolicLink(expected)
+                || !expected.toRealPath(LinkOption.NOFOLLOW_LINKS).equals(expected)
+                || !sameStore.test(identity.fileStore, expected)) {
+            throw new CompactionRefusal("unsafe compactable descendant: " + expected);
+        }
+        BasicFileAttributes attributes = Files.readAttributes(expected, BasicFileAttributes.class,
+                LinkOption.NOFOLLOW_LINKS);
+        if (requireDirectory && !attributes.isDirectory()) {
+            throw new CompactionRefusal("compactable path component is not a directory: " + expected);
+        }
+    }
+
+    private static long compactableBytes(
+            Path candidate, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore) throws IOException, CompactionRefusal {
+        long total = 0L;
+        try (Stream<Path> tree = Files.walk(candidate)) {
+            for (Path path : tree.toList()) {
+                validatePlainContainedPath(path, identity, sameStore, false);
+                BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class,
+                        LinkOption.NOFOLLOW_LINKS);
+                if (attributes.isRegularFile()) {
+                    total = Math.addExact(total, attributes.size());
+                }
+            }
+        }
+        return total;
+    }
+
+    private static void deleteCompactableTree(
+            Path candidate, Path session, SessionDirectoryIdentity identity,
+            BiPredicate<FileStore, Path> sameStore) throws IOException, CompactionRefusal {
+        try (Stream<Path> tree = Files.walk(candidate)) {
+            for (Path path : tree.sorted(Comparator.reverseOrder()).toList()) {
+                revalidateSessionDirectory(session, identity, sameStore);
+                validatePlainContainedPath(path, identity, sameStore, false);
+                Files.delete(path);
+            }
+        }
+    }
+
+    private static String compactionFailure(CompactionResult compaction) {
+        if (compaction.status != CompactionStatus.FAILED
+                && compaction.status != CompactionStatus.REFUSED) {
+            return null;
+        }
+        return "terminal compaction " + compaction.status.name().toLowerCase(
+                java.util.Locale.ROOT) + ": " + compaction.error;
+    }
+
+    private static String combineStorageErrors(String first, String second) {
+        if (first == null) {
+            return second;
+        }
+        if (second == null) {
+            return first;
+        }
+        return first + "; " + second;
     }
 
     private static void writeOwner(Path path, String runId, Path worktree, Path lease,
@@ -2083,6 +2352,8 @@ public final class TestSessionCoordinator {
         private final long capacityFloor;
         private final CapacityProbe capacityProbe;
         private final LiveProbeResult launchProbe;
+        private final SessionDirectoryIdentity sessionIdentity;
+        private final boolean retainEphemeral;
         private volatile Process child;
         private volatile boolean completed;
 
@@ -2091,7 +2362,9 @@ public final class TestSessionCoordinator {
                               String commandHash, String capability, String allowedPhases,
                               Path exportFile, Lease lease, StorageAllocation allocation,
                               CapacitySnapshot launchCapacity, long capacityFloor,
-                              CapacityProbe capacityProbe, LiveProbeResult launchProbe) {
+                              CapacityProbe capacityProbe, LiveProbeResult launchProbe,
+                              SessionDirectoryIdentity sessionIdentity,
+                              boolean retainEphemeral) {
             this.paths = paths;
             this.runId = runId;
             this.worktree = worktree;
@@ -2109,6 +2382,8 @@ public final class TestSessionCoordinator {
             this.capacityFloor = capacityFloor;
             this.capacityProbe = capacityProbe;
             this.launchProbe = launchProbe;
+            this.sessionIdentity = sessionIdentity;
+            this.retainEphemeral = retainEphemeral;
         }
 
         private synchronized void abort() {
@@ -2130,14 +2405,30 @@ public final class TestSessionCoordinator {
                         ? "ABORTED" : "INVALID_IDENTITY_CHANGED";
                 StorageObservation completionObservation = observeStorage(
                         paths, allocation, capacityProbe, ProbePhase.COMPLETION);
-                ManifestContext terminalContext = new ManifestContext(allocation, launchCapacity,
-                        completionObservation.capacity, null, false, completionObservation.error(),
+                List<String> reports = reportInventory(paths);
+                List<String> artifacts = artifactInventory(paths);
+                String storageFinalizationError = completionObservation.error();
+                ManifestContext preCompactionContext = new ManifestContext(
+                        allocation, launchCapacity, completionObservation.capacity, null,
+                        retainEphemeral, storageFinalizationError, sessionIdentity,
                         null, launchProbe, completionObservation.capacityError,
                         completionObservation.liveProbe);
                 writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                         commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
-                        reportInventory(paths), artifactInventory(paths), terminalContext,
+                        reports, artifacts, preCompactionContext,
                         capacityFloor));
+                CompactionResult compaction = compactTerminalSession(paths, state,
+                        retainEphemeral, reports, artifacts, sessionIdentity);
+                storageFinalizationError = combineStorageErrors(storageFinalizationError,
+                        compactionFailure(compaction));
+                ManifestContext terminalContext = new ManifestContext(
+                        allocation, launchCapacity, completionObservation.capacity, compaction,
+                        retainEphemeral, storageFinalizationError, sessionIdentity,
+                        null, launchProbe, completionObservation.capacityError,
+                        completionObservation.liveProbe);
+                writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
+                        commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
+                        reports, artifacts, terminalContext, capacityFloor));
                 if (exportFile != null) {
                     writeExport(exportFile, paths.manifest, runId);
                 }
@@ -2227,6 +2518,7 @@ public final class TestSessionCoordinator {
         Path reclaim;
         boolean reuseStale;
         boolean allowSystemTmp;
+        boolean retainEphemeral;
         boolean verbose;
         String guard;
         String debugGuard;
@@ -2246,6 +2538,7 @@ public final class TestSessionCoordinator {
                     case "--export-file" -> options.exportFile = Path.of(require(args, ++i, arg));
                     case "--lock-root" -> options.lockRoot = Path.of(require(args, ++i, arg));
                     case "--allow-system-tmp" -> options.allowSystemTmp = true;
+                    case "--retain-ephemeral" -> options.retainEphemeral = true;
                     case "--quiet" -> options.verbose = false;
                     case "--verbose" -> options.verbose = true;
                     case "--reclaim" -> options.reclaim = Path.of(require(args, ++i, arg));
@@ -2293,6 +2586,12 @@ public final class TestSessionCoordinator {
         private StartupFailure(String message, int exitCode) {
             super(message);
             this.exitCode = exitCode;
+        }
+    }
+
+    private static final class CompactionRefusal extends Exception {
+        private CompactionRefusal(String message) {
+            super(message);
         }
     }
 

@@ -15,6 +15,7 @@ for ($index = 0; $index -lt $args.Count; $index++) {
             $translated.Add([string]$args[$index])
         }
         '^(?i)-AllowSystemTmp$' { $translated.Add('--allow-system-tmp') }
+        '^(?i)-RetainEphemeral$' { $translated.Add('--retain-ephemeral'); continue }
         '^(?i)-Reclaim$' {
             $translated.Add('--reclaim')
             $index++

@@ -122,6 +122,12 @@ public final class TestSessionProcessHarness {
                         if "%FAKE_MAVEN_MUTATION%"=="runtime" echo runtime-mutated>runtime-input.gen
                         if not exist "%OPENGGF_TEST_DIAGNOSTICS%" mkdir "%OPENGGF_TEST_DIAGNOSTICS%"
                         echo %FAKE_MAVEN_MARKER%>"%OPENGGF_TEST_DIAGNOSTICS%\\collision-report.txt"
+                        if not exist "%OPENGGF_BUILD_DIRECTORY%\\test-classes\\traces" mkdir "%OPENGGF_BUILD_DIRECTORY%\\test-classes\\traces"
+                        echo trace-copy>"%OPENGGF_BUILD_DIRECTORY%\\test-classes\\traces\\copied.bin"
+                        echo ordinary-resource>"%OPENGGF_BUILD_DIRECTORY%\\test-classes\\ordinary.bin"
+                        echo temporary>"%OPENGGF_TEST_TMP_ROOT%\\ephemeral.bin"
+                        echo jar-output>"%OPENGGF_BUILD_DIRECTORY%\\OpenGGF.jar"
+                        echo promoted>"%OPENGGF_ARTIFACT_ROOT%\\promoted.bin"
                         echo BUILD SUCCESS
                         exit /b 0
                         :wait
@@ -150,6 +156,13 @@ public final class TestSessionProcessHarness {
                     esac
                     mkdir -p "${OPENGGF_TEST_DIAGNOSTICS}"
                     printf '%s\\n' "${FAKE_MAVEN_MARKER}" > "${OPENGGF_TEST_DIAGNOSTICS}/collision-report.txt"
+                    mkdir -p "${OPENGGF_BUILD_DIRECTORY}/test-classes/traces"
+                    printf 'trace-copy' > "${OPENGGF_BUILD_DIRECTORY}/test-classes/traces/copied.bin"
+                    mkdir -p "${OPENGGF_BUILD_DIRECTORY}/test-classes"
+                    printf 'ordinary-resource' > "${OPENGGF_BUILD_DIRECTORY}/test-classes/ordinary.bin"
+                    printf 'temporary' > "${OPENGGF_TEST_TMP_ROOT}/ephemeral.bin"
+                    printf 'jar-output' > "${OPENGGF_BUILD_DIRECTORY}/OpenGGF.jar"
+                    printf 'promoted' > "${OPENGGF_ARTIFACT_ROOT}/promoted.bin"
                     printf 'BUILD SUCCESS\\n'
                     exit "${FAKE_MAVEN_EXIT:-0}"
                     """, StandardCharsets.UTF_8);
@@ -165,6 +178,8 @@ public final class TestSessionProcessHarness {
             linkedWorktreesRunIndependently();
             systemTempIsNotUsed();
             inWorktreeLockRootIsRejected();
+            terminalCompactionPreservesEvidence();
+            retainEphemeralPassesThroughWrapper();
             reportRootsAreIsolated();
             mutationIsInvalid("branch", "branch");
             mutationIsInvalid("head", "head");
@@ -304,6 +319,39 @@ public final class TestSessionProcessHarness {
                     "rejected lock root must not start fake Maven");
         }
 
+        private void terminalCompactionPreservesEvidence() throws Exception {
+            Path manifest = runSimple("terminal-compaction", List.of());
+            Path session = manifest.getParent();
+            check(jsonString(manifest, "compaction_status").equals("COMPACTED"),
+                    "terminal session must record successful compaction");
+            check(!Files.exists(session.resolve("tmp")), "terminal compaction must remove tmp");
+            check(!Files.exists(session.resolve("build/test-classes/traces")),
+                    "terminal compaction must remove copied trace resources");
+            for (String retained : List.of(
+                    "manifest.json", "command.txt", "maven.log",
+                    "diagnostics/collision-report.txt", "build/test-classes/ordinary.bin",
+                    "build/OpenGGF.jar", "artifacts/promoted.bin")) {
+                check(Files.isRegularFile(session.resolve(retained)),
+                        "terminal compaction removed preserved evidence: " + retained);
+            }
+        }
+
+        private void retainEphemeralPassesThroughWrapper() throws Exception {
+            String retainFlag = windows ? "-RetainEphemeral" : "--retain-ephemeral";
+            Path manifest = runSimple("retain-ephemeral", List.of(retainFlag));
+            Path session = manifest.getParent();
+            check(jsonString(manifest, "compaction_status").equals("RETAINED_BY_REQUEST"),
+                    "wrapper retain flag must reach the coordinator");
+            String json = Files.readString(manifest, StandardCharsets.UTF_8);
+            check(json.contains("\"compaction_retained_relative_paths\": "
+                            + "[\"tmp\", \"build/test-classes/traces\"]"),
+                    "retained allowlist must be explicit in the manifest");
+            check(Files.isRegularFile(session.resolve("tmp/ephemeral.bin"))
+                            && Files.isRegularFile(session.resolve(
+                            "build/test-classes/traces/copied.bin")),
+                    "retain flag must preserve compactable paths");
+        }
+
         private void reportRootsAreIsolated() throws Exception {
             Path first = runSimple("reports-one", List.of());
             Path second = runSimple("reports-two", List.of());
@@ -438,8 +486,17 @@ public final class TestSessionProcessHarness {
                 command.add("-File");
             }
             command.add(sessionScript.toString());
-            command.addAll(List.of("--lock-root", lockRoot.toString(), "--", "mvn"));
-            command.addAll(options);
+            command.addAll(List.of("--lock-root", lockRoot.toString()));
+            List<String> childOptions = new ArrayList<>();
+            for (String option : options) {
+                if (option.equals("--retain-ephemeral") || option.equals("-RetainEphemeral")) {
+                    command.add(option);
+                } else {
+                    childOptions.add(option);
+                }
+            }
+            command.addAll(List.of("--", "mvn"));
+            command.addAll(childOptions);
             ProcessBuilder builder = new ProcessBuilder(command)
                     .directory(repo.toFile()).redirectErrorStream(true);
             Map<String, String> environment = builder.environment();
