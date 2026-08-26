@@ -170,9 +170,19 @@ output into a coordinator session. An external coordinator without an adapter
 would therefore produce a misleading manifest with empty report inventory while
 Maven wrote into the worktree's ignored `target` directory.
 
-The integration branch provides a pinned, reviewed compatibility adapter under
-`tools/testing/` for this historical baseline only. The adapter runs as the
-coordinator's child command in a newly created immutable detached worktree and:
+The integration branch provides a pinned, reviewed launcher, external exclude
+file, and compatibility adapter under `tools/testing/` for this historical
+baseline only. Frozen `next` ignores `/target/*` but not a symlink named
+`target`, so ignoring the link must be established before the coordinator takes
+its first source digest. The launcher sets an inherited, process-local
+`GIT_CONFIG_COUNT` entry for `core.excludesFile` that points at the pinned file,
+whose sole effective pattern is the root `/target` entry. It does not mutate
+repository or user Git configuration. The launcher and exclude file are named
+in `OPENGGF_RUNTIME_INPUTS`, and the adapter validates the inherited config and
+file hash before creating anything.
+
+The adapter runs as the coordinator's child command in a newly created
+immutable detached worktree and:
 
 1. requires the detached worktree to match `84d9a3761`, have no tracked or
    untracked source changes, and have no existing `target` path;
@@ -193,13 +203,17 @@ coordinator's child command in a newly created immutable detached worktree and:
    session build root. It never recursively deletes, follows, replaces, or
    empties `target`.
 
-The orchestrator, not the child adapter, starts the coordinator with
-`OPENGGF_RUNTIME_INPUTS` already containing the pinned adapter, wrapper, and
-coordinator-source paths. The coordinator reads and hashes those inputs before
-the child starts, so any mid-run change invalidates the session. Adapter
-commands may invoke Maven lifecycle phases such as `test` or `package`, but
-must never include `clean`: the historical clean plugin could unlink the routed
-`target` symlink and recreate a worktree-local directory.
+The orchestrator invokes the pinned launcher, which starts the coordinator with
+`OPENGGF_RUNTIME_INPUTS` already containing the launcher, exclude file,
+adapter, wrapper, and coordinator-source paths. The coordinator reads and
+hashes those inputs before the child starts, so any mid-run change invalidates
+the session. The exact Git-config environment and input hashes are recorded in
+the adapter evidence, and the adapter asserts an empty
+`git status --porcelain --untracked-files=all` both before and after link
+creation while the run is active. Adapter commands may invoke Maven lifecycle
+phases such as `test` or `package`, but must never include `clean`: the
+historical clean plugin could unlink the routed `target` symlink and recreate a
+worktree-local directory.
 
 An outer recovery/finally step runs after every coordinator outcome. This is
 separate from the child trap because forced process-tree termination can prevent
@@ -220,13 +234,22 @@ untouched.
 The successful self-test selects enough frozen-next guards to force at least two
 Surefire JVMs with a two-fork configuration. It requires start/end markers and
 a valid manifest, proves every expected Surefire XML is in the manifest
-inventory, and extracts the report JVM properties and process evidence. At
-least two distinct fork identities must expose two distinct resolved
-`lwjgl-<fork>` directories beneath the session tmp root; a literal unresolved
-`${surefire.forkNumber}`, duplicate path, path outside the session, or
-worktree-local `java.io.tmpdir` fails the adapter. A mutation test changes a
-scratch copy named in pre-launch `OPENGGF_RUNTIME_INPUTS` during a controlled
-run and requires the coordinator to end `INVALID_IDENTITY_CHANGED`.
+inventory, and extracts the report JVM properties and process evidence before
+the link is removed. At least two distinct fork identities must expose two
+distinct resolved `lwjgl-<fork>` directories beneath the session tmp root; a
+literal unresolved `${surefire.forkNumber}`, duplicate path, or path outside
+the session fails the adapter.
+
+Frozen `next`'s POM reports `java.io.tmpdir` lexically as
+`<detached worktree>/target/test-tmp`. That lexical value is accepted only while
+the validated link exists and its no-follow-then-canonical resolution is
+exactly the current session tmp root. Before cleanup, the adapter records the
+lexical value, canonical value, link identity, run ID, and session root in the
+session diagnostics; post-run review consumes this preserved evidence rather
+than attempting to resolve a removed link. Any other worktree-local temporary
+path fails. A mutation test changes a scratch copy named in pre-launch
+`OPENGGF_RUNTIME_INPUTS` during a controlled run and requires the coordinator
+to end `INVALID_IDENTITY_CHANGED`.
 
 The full parent baseline cannot start until the adapter self-tests and the
 coordinator's own self-test pass.
