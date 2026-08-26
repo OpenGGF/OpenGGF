@@ -270,6 +270,8 @@ traces.
   releases its SFX gate before later boss fades. The standalone sound-test
   launcher provides ROM-backed listening through the same unified presentation
   pipeline.
+- **Resolve-ready capture:** live and trace recording can select DNxHR SQ video
+  with lossless 24-bit PCM audio in a MOV container for DaVinci Resolve on Linux.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,
   level events, audio history, and relevant static state are captured and
   restored with explicit ownership rules. Completed in-frame act reloads such

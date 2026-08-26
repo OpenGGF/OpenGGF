@@ -310,7 +310,9 @@ codec, for both live viewport recording and trace capture.
 | `ffv1` (default) | yes | Largest files, most widely playable. |
 | `h264` | yes | Much smaller than FFV1. Encoded as RGB — see below. |
 | `h265` | yes | Smaller still, slowest to encode. Encoded as RGB. |
+| `dnxhr-sq` | **no** | Compact, visually lossy 8-bit 4:2:2 editing codec supported by DaVinci Resolve on Linux. |
 | `flac` (default) | yes | Audio matches the engine's output exactly. |
+| `pcm-s24le` | yes | Uncompressed 24-bit PCM for editing workflows. |
 | `aac` | **no** | Lossy. Small files; the audio is not what the engine produced. |
 | `mp3` | **no** | Lossy. Most portable, largest quality loss. |
 
@@ -325,6 +327,18 @@ players will not decode it. If a recording will not play elsewhere, use `ffv1`.
 Choosing `aac` or `mp3` means the recording is no longer a faithful capture of
 the engine's audio. That is a legitimate choice for sharing a clip; it is not
 appropriate for comparing audio against reference material.
+
+For a DaVinci Resolve-ready recording on Linux, select these options together:
+
+```yaml
+capture:
+  codec: "dnxhr-sq"
+  audioCodec: "pcm-s24le"
+  container: "mov"
+```
+
+DNxHR SQ is designed for smooth editing rather than archival pixel fidelity;
+use the default FFV1 + FLAC + MKV combination when byte-exact capture matters.
 
 ### Recording high-motion content
 
@@ -352,7 +366,7 @@ recording stops. If you see those, the encoder is the bottleneck.
 
 #### Making the encoder keep up
 
-H.265 is by a wide margin the most expensive of the three, and it is the only one that
+H.265 is by a wide margin the most expensive of the three lossless codecs, and it is the only one that
 degrades sharply on high-motion content. Everything else has ample headroom.
 
 Measured on 120 frames of 1280×896 RGBA (2.0 s of real time at 60fps), best of three runs
@@ -516,12 +530,12 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `SHIFT+O` | Live viewport recording toggle. The modifiers live in the value (`CTRL+SHIFT+O`, `META+O`, or a bare key such as `SCROLL_LOCK` for none) and are matched exactly. A bare `O` is reserved — the compatibility migration rewrites it back to `SHIFT+O` on every launch. |
 | `CAPTURE_SCALE` | `capture.scale` | int | `4` | Trace capture only: integer nearest-neighbor upscale factor applied to captured frames; live viewport recording always uses scale 1. |
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
-| `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
-| `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
+| `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: lossless `ffv1`, `h264`, `h265`, or Resolve-compatible `dnxhr-sq` (visually lossy). |
+| `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this; use `mov` for DNxHR SQ + PCM. |
 | `CAPTURE_QUEUE_BUDGET_MB` | `capture.queueBudgetMb` | int | `192` | Live recording only: memory budget for the encoder queue. The queue is sized in whole frames from this budget and the recording viewport (which is the *window*, not 320×224), so it holds fewer frames at larger window sizes — clamped to 8..120 frames. A deeper queue absorbs longer encoder stalls before backpressure blocks the game loop; see "Recording high-motion content" below. |
-| `CAPTURE_ENCODER_PRESET` | `capture.encoderPreset` | string | `"fast"` | x264/x265 speed preset: `ultrafast`, `superfast`, `veryfast`, `faster`, `fast`, `medium`, `slow`, `slower`, `veryslow`, `placebo`. Blank uses the encoder's own default (`medium`). Ignored by FFV1, which has no preset. Presets trade encode speed for file size and **never** affect losslessness. This is the main lever when H.265 cannot keep up — see below. |
+| `CAPTURE_ENCODER_PRESET` | `capture.encoderPreset` | string | `"fast"` | x264/x265 speed preset: `ultrafast`, `superfast`, `veryfast`, `faster`, `fast`, `medium`, `slow`, `slower`, `veryslow`, `placebo`. Blank uses the encoder's own default (`medium`). Ignored by FFV1 and DNxHR. Presets trade encode speed for file size and **never** affect losslessness. This is the main lever when H.265 cannot keep up — see below. |
 | `CAPTURE_ENCODER_THREADS` | `capture.encoderThreads` | int | `0` | ffmpeg `-threads` for the encode pass. `0` lets ffmpeg choose, which is normally one thread per core and is almost always right. x264/x265 already thread internally, so raising this rarely helps them; prefer `capture.encoderPreset`. |
-| `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
+| `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: lossless `flac` or `pcm-s24le`, or lossy `aac` / `mp3`. |
 | `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
 | `CAPTURE_FFMPEG_PASS2_ARGS` | `capture.ffmpegPass2Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the mux pass; leave empty to skip it and record video only. |
 

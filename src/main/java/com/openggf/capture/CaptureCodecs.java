@@ -45,7 +45,8 @@ public final class CaptureCodecs {
     }
 
     /**
-     * @param name {@code ffv1}, {@code h264} or {@code h265}, case-insensitive
+     * @param name {@code ffv1}, {@code h264}, {@code h265} or
+     *        {@code dnxhr-sq}, case-insensitive
      * @throws IllegalArgumentException on an unknown name, so a typo in
      *         {@code config.yaml} fails at capture start rather than producing
      *         a recording in a codec the user did not ask for
@@ -92,8 +93,16 @@ public final class CaptureCodecs {
                     concat(List.of("-c:v", "libx265", "-x265-params", "lossless=1",
                             "-pix_fmt", "gbrp"), presetArgs, threadArgs),
                     true);
+            // Resolve-compatible intermediate. DNxHR SQ is visually lossy and
+            // uses 8-bit 4:2:2 YUV, so do not advertise the byte-exact guarantee
+            // made by the RGB-native codecs above.
+            case "dnxhr-sq" -> new Codec("dnxhr-sq",
+                    concat(List.of("-c:v", "dnxhd", "-profile:v", "dnxhr_sq",
+                            "-pix_fmt", "yuv422p"), threadArgs),
+                    false);
             default -> throw new IllegalArgumentException(
-                    "unknown capture video codec '" + name + "'; expected ffv1, h264 or h265");
+                    "unknown capture video codec '" + name
+                            + "'; expected ffv1, h264, h265 or dnxhr-sq");
         };
     }
 
@@ -129,16 +138,20 @@ public final class CaptureCodecs {
     }
 
     /**
-     * @param name {@code flac}, {@code aac} or {@code mp3}, case-insensitive
+     * @param name {@code flac}, {@code pcm-s24le}, {@code aac} or {@code mp3},
+     *        case-insensitive
      * @throws IllegalArgumentException on an unknown name
      */
     public static Codec audio(String name) {
         return switch (normalize(name)) {
             case "flac" -> new Codec("flac", List.of("-c:a", "flac"), true);
+            case "pcm-s24le" -> new Codec("pcm-s24le",
+                    List.of("-c:a", "pcm_s24le"), true);
             case "aac" -> new Codec("aac", List.of("-c:a", "aac"), false);
             case "mp3" -> new Codec("mp3", List.of("-c:a", "libmp3lame"), false);
             default -> throw new IllegalArgumentException(
-                    "unknown capture audio codec '" + name + "'; expected flac, aac or mp3");
+                    "unknown capture audio codec '" + name
+                            + "'; expected flac, pcm-s24le, aac or mp3");
         };
     }
 

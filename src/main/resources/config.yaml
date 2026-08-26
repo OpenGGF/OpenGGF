@@ -138,9 +138,9 @@ capture:
   # fixed for the life of an encode.
   scale: 4   # Integer nearest-neighbor upscale factor for trace capture output
   fps: 60   # Output frame rate for trace capture
-  codec: "ffv1"   # Video codec: ffv1, h264 or h265 (all lossless)
-  audioCodec: "flac"   # Audio codec: flac (lossless), or aac / mp3 (LOSSY)
-  container: "mkv"   # Recording file extension; mp4 is portable only with h264/h265 + aac
+  codec: "ffv1"   # Video codec: ffv1, h264 or h265 (lossless), or dnxhr-sq (visually lossy Resolve editing codec)
+  audioCodec: "flac"   # Audio codec: flac / pcm-s24le (lossless), or aac / mp3 (LOSSY)
+  container: "mkv"   # Recording extension: mkv by default; use mov with dnxhr-sq + pcm-s24le for DaVinci Resolve
   # ── ADVANCED: full ffmpeg argument lists ───────────────────────────────
   # "default" = the engine's own command. Empty = skip that pass (pass 2 only,
   # which publishes the video with no audio). Anything else is used literally.
@@ -163,6 +163,11 @@ capture:
   #   ffmpegPass2Args: >-
   #     -y -i {videoIn} -f s16le -ar {sampleRate} -ac 2 -i {audioIn}
   #     -c:v copy {audioCodecArgs} -movflags +faststart {output}
+  #
+  # Example - DaVinci Resolve on Linux:
+  #   codec: "dnxhr-sq"
+  #   audioCodec: "pcm-s24le"
+  #   container: "mov"
   #
   # Example - video only, no audio, no mux pass (fastest):
   #   ffmpegPass2Args: ""

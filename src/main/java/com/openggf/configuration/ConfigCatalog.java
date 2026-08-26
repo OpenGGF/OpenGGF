@@ -240,15 +240,18 @@ public final class ConfigCatalog {
                 "Integer nearest-neighbor upscale factor for capture output"));
         put(CAPTURE_FPS, of("capture", "fps", INT, "Output frame rate for trace capture"));
         put(CAPTURE_CODEC, of("capture", "codec", STRING,
-                "Capture video codec: ffv1, h264 or h265. All three are lossless"
+                "Capture video codec: ffv1, h264, h265 or dnxhr-sq. The first"
+                        + " three are lossless; dnxhr-sq is a visually lossy"
+                        + " 8-bit 4:2:2 editing codec for DaVinci Resolve."
                         + " (h264/h265 encode RGB directly; the usual yuv444p"
                         + " 'lossless' settings are not byte-exact for RGB input)."
                         + " ffv1 is the most widely playable; h264/h265 produce"
                         + " smaller files but in an RGB form some players reject"));
         put(CAPTURE_AUDIO_CODEC, of("capture", "audioCodec", STRING,
-                "Capture audio codec: flac, aac or mp3. WARNING: aac and mp3 are"
-                        + " LOSSY - the recorded audio will not match what the"
-                        + " engine produced. flac is lossless and is the default"));
+                "Capture audio codec: flac, pcm-s24le, aac or mp3. WARNING: aac"
+                        + " and mp3 are LOSSY - the recorded audio will not match"
+                        + " what the engine produced. flac and pcm-s24le are"
+                        + " lossless; flac is the default"));
         put(CAPTURE_QUEUE_BUDGET_MB, of("capture", "queueBudgetMb", INT,
                 "Memory budget in MB for the live-recording encoder queue. The"
                         + " queue is sized in whole frames from this budget and"
@@ -267,7 +270,8 @@ public final class ConfigCatalog {
                 "x264/x265 speed preset: ultrafast, superfast, veryfast, faster,"
                         + " fast, medium, slow, slower, veryslow or placebo."
                         + " Blank uses the encoder's own default (medium)."
-                        + " Ignored by FFV1, which has no preset. Presets trade"
+                        + " Ignored by FFV1 and DNxHR, which have no x26x preset."
+                        + " Presets trade"
                         + " encode speed for file size and never affect"
                         + " losslessness. Defaults to fast: libx265 at medium"
                         + " keeps up with ordinary play but not with"
@@ -275,12 +279,10 @@ public final class ConfigCatalog {
                         + " playback, where each recorded frame is several"
                         + " gameplay frames from the last"));
         put(CAPTURE_CONTAINER, of("capture", "container", STRING,
-                "Recording file extension, e.g. mkv or mp4. ffmpeg picks its"
-                        + " muxer from this. Recent ffmpeg will write every codec"
-                        + " here into either container, but player support is much"
-                        + " narrower: mkv plays everything, while mp4 is portable"
-                        + " only with h264/h265 + aac. mp4 holding ffv1 or flac is"
-                        + " a valid file most players will refuse"));
+                "Recording file extension, e.g. mkv, mp4 or mov. ffmpeg picks"
+                        + " its muxer from this. Use mov with dnxhr-sq + pcm-s24le"
+                        + " for DaVinci Resolve; mp4 is portable only with"
+                        + " h264/h265 + aac; mkv supports the lossless defaults"));
         put(CAPTURE_FFMPEG_PASS1_ARGS, of("capture", "ffmpegPass1Args", STRING,
                 "ADVANCED. Full ffmpeg argument list for the encode pass."
                         + " 'default' uses the engine's command. Placeholders:"
