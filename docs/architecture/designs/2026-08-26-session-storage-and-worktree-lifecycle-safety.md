@@ -155,7 +155,9 @@ On success it returns exactly one JSON object containing at least:
 - canonical allocation path;
 - storage tier `MANAGED_CODEX_TEST_SESSIONS`;
 - filesystem device identity;
-- usable bytes and inodes at allocation time;
+- usable bytes at allocation time;
+- inode-count status `MEASURED` or `UNAVAILABLE_DYNAMIC`, with a numeric
+  usable-inode value only when measured;
 - retention deadline;
 - helper version.
 
@@ -209,8 +211,12 @@ The launch is refused when either usable bytes are below the floor or inode
 availability cannot be proved. Java has no portable API for a live numeric
 free-inode count on every supported filesystem, so this proof has two parts:
 
-- when the managed helper supplies a numeric allocation-time inode snapshot,
-  zero refuses immediately and the snapshot is retained as observability;
+- when the managed helper reports `MEASURED`, a numeric allocation-time inode
+  snapshot is required, zero refuses immediately, and the snapshot is retained
+  as observability;
+- filesystems such as Btrfs report both total and free inode counters as zero
+  because their inode pool is dynamic. The helper reports those as
+  `UNAVAILABLE_DYNAMIC` with JSON `null`, never as measured exhaustion;
 - for every storage tier, immediately before launch the coordinator performs a
   contained create, write, file flush, read, and unlink probe inside the unique
   session directory. It also flushes the directory where the platform supports
@@ -238,6 +244,15 @@ An explicitly present but blank or whitespace-only
 `OPENGGF_TEST_MIN_FREE_BYTES` is invalid. Every string placed in a start/end
 marker, including configured lock paths, is encoded or rejected so control
 characters cannot create counterfeit marker lines.
+
+Installed-helper verification must also be usable inside the managed Codex
+sandbox. Static verification of helper bytes, configuration, lane ownership,
+and unit-file content remains mandatory. When `systemctl --user` cannot reach
+the user bus, both known diagnostic families (including “failed to connect to
+bus” and “failed to connect to user scope bus”) record runtime service state as
+`UNAVAILABLE_IN_SANDBOX` and do not invalidate otherwise verified static
+state. Unknown service-manager errors, stale helper/configuration, missing
+lanes, and wrong writable roots still fail closed.
 
 Byte capacity and live inode availability are measured again during
 finalisation and recorded even when the child process fails. The guardrail is
@@ -349,7 +364,14 @@ The manifest adds:
 - allocation schema and helper version;
 - storage tier and canonical allocation lane;
 - allocation verification result;
-- capacity floor and launch/completion usable bytes/inodes;
+- capacity floor and launch/completion usable bytes;
+- `allocation_inode_count_status`, nullable `allocation_usable_inodes`, and an
+  explicit allocation inode reason when the count is unavailable;
+- `launch_inode_probe_status` / `completion_inode_probe_status` plus their
+  nullable errors, and separate launch/completion directory-flush status;
+- launch/completion numeric inode fields remain JSON `null` with the reason
+  that the live probe status is authoritative; they never repeat the
+  allocation snapshot under a phase-current name;
 - compaction status, removed relative paths, and reclaimed bytes;
 - `retainEphemeral` and storage-finalisation error details.
 
@@ -498,7 +520,13 @@ actionable managed-allocation failure, not a reason to fall back locally.
 - rendered Codex configuration contains the exact canonical writable root;
 - verify detects a missing lane, stale installed helper, environment mismatch,
   and missing/wrong writable root;
+- verify treats the two known sandbox user-bus-unavailable diagnostics as
+  `UNAVAILABLE_IN_SANDBOX` only after all static evidence passes, while an
+  unknown service-manager error still fails;
 - structured allocation returns valid JSON and a successfully probed path;
+- a deterministic Btrfs-shaped `f_files=0, f_favail=0` fixture emits
+  `inode_count_status=UNAVAILABLE_DYNAMIC` and JSON-null `usable_inodes`, while
+  a measured zero fixture remains `MEASURED` and numeric;
 - allocation rejects symlinks, foreign ownership, unsafe modes, wrong roots,
   malformed paths, and failed atomic operations;
 - terminal sessions obey seven-day retention and bounded keep markers;

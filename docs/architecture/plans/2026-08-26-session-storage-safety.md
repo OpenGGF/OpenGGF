@@ -58,12 +58,21 @@ def test_reserve_test_session_returns_structured_private_allocation(self):
     self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
     self.assertTrue(record["filesystem_device"])
     self.assertGreater(record["usable_bytes"], 0)
-    self.assertGreaterEqual(record["usable_inodes"], 0)
+    self.assertIn(record["inode_count_status"], ("MEASURED", "UNAVAILABLE_DYNAMIC"))
+    if record["inode_count_status"] == "MEASURED":
+        self.assertGreaterEqual(record["usable_inodes"], 0)
+    else:
+        self.assertIsNone(record["usable_inodes"])
     self.assertRegex(record["retention_deadline"], r"^\d{4}-\d{2}-\d{2}T")
     self.assertTrue(record["helper_version"])
 ```
 
 Extend the root-layout test to require `codex/test-sessions`, and add rejection tests for a symlinked lane and a replaced allocation parent.
+
+Inject `statvfs` results rather than relying on the host: a Btrfs-shaped
+`f_files=0, f_favail=0` fixture must emit `UNAVAILABLE_DYNAMIC` plus JSON
+`null`, while a nonzero-total fixture with `f_favail=0` must emit `MEASURED`
+plus numeric zero.
 
 - [ ] **Step 2: Run the helper tests and prove the new contract is absent**
 
@@ -86,12 +95,16 @@ TEST_SESSION_RETENTION_DAYS = 7
 RESERVATION_SCHEMA_VERSION = 1
 HELPER_VERSION = "openggf-agent-scratch-v2"
 
-def _statvfs_record(path: pathlib.Path) -> dict[str, int]:
+def _statvfs_record(path: pathlib.Path) -> dict[str, object]:
     info = os.statvfs(path)
     return {
         "usable_bytes": info.f_bavail * info.f_frsize,
         "total_bytes": info.f_blocks * info.f_frsize,
-        "usable_inodes": info.f_favail,
+        "inode_count_status": (
+            "UNAVAILABLE_DYNAMIC"
+            if info.f_files == 0 and info.f_favail == 0 else "MEASURED"),
+        "usable_inodes": (
+            None if info.f_files == 0 and info.f_favail == 0 else info.f_favail),
     }
 
 def cmd_reserve_test_session(args: argparse.Namespace) -> int:
@@ -149,6 +162,12 @@ Cover `test_verify_rejects_missing_test_session_lane`,
 
 Use minimal manifests containing `state: RUNNING|PASSED`, owner PID/start identity fixtures, and bounded keep markers. Assert stale `RUNNING` data is renamed into `quarantine`, not deleted.
 
+Add verifier fixtures for both known sandbox user-bus diagnostics: “failed to
+connect to bus” and “failed to connect to user scope bus”. Static helper,
+configuration, lane, writable-root, and unit-file checks must still pass and
+runtime service state must report `UNAVAILABLE_IN_SANDBOX`; an unknown
+systemctl error remains a hard verification failure.
+
 - [ ] **Step 2: Run helper tests and observe the new failures**
 
 Run `python3 tools/test_agent_scratch.py`. Expected: the new verify and lifecycle cases fail.
@@ -186,7 +205,8 @@ the installed helper matches this worktree's source and that
 returns schema version `1`, tier `MANAGED_CODEX_TEST_SESSIONS`, the installed
 helper version, canonical managed/allocation paths, filesystem device,
 capacity fields, seven-day retention deadline, and an allocation contained by
-that lane.
+that lane. Capacity fields include inode-count status and conditional numeric
+nullability.
 This is the migration checkpoint: a stale installed helper is a hard failure,
 not permission to continue to the coordinator tasks.
 
@@ -251,12 +271,17 @@ private enum StorageTier {
     SYSTEM_TMP_EXPLICIT
 }
 
-private record CapacitySnapshot(long usableBytes, long totalBytes, long usableInodes) {}
+private record InodeSnapshot(
+        InodeCountStatus status, Long usableInodes, String unavailableReason) {}
+
+private record CapacitySnapshot(
+        long usableBytes, long totalBytes, InodeSnapshot inodeSnapshot) {}
 
 private record StorageAllocation(
         Path outputRoot, StorageTier tier, Path managedRoot,
         int allocationSchema, String helperVersion, String filesystemDevice,
-        CapacitySnapshot allocationCapacity, Instant retentionDeadline,
+        CapacitySnapshot allocationCapacity, InodeCountStatus inodeCountStatus,
+        Instant retentionDeadline,
         String notApplicableReason, String warning) {}
 ```
 
@@ -264,9 +289,15 @@ Replace `resolveOutputRoot()`/`agentScratchRoot()` with `resolveStorageAllocatio
 
 Require every design-mandated reservation field: schema version, canonical
 managed root, canonical allocation path, storage tier, filesystem device,
-usable bytes/inodes, retention deadline, and helper version. Reject missing or
+usable bytes, inode-count status plus conditionally nullable inode value,
+retention deadline, and helper version. Reject missing or
 malformed fields, including a retention deadline that is not a future ISO-8601
 instant within the helper's bounded seven-day policy.
+
+Accept exactly `MEASURED` with a nonnegative numeric inode value or
+`UNAVAILABLE_DYNAMIC` with JSON `null`. Reject every other pairing. The
+allocation-time numeric zero gate applies only to `MEASURED`; the all-tier live
+file probe remains authoritative when the count is unavailable.
 
 - [ ] **Step 4: Run the coordinator self-test**
 
@@ -299,17 +330,23 @@ git commit -m "fix: fail closed on managed session allocation" \
 Add deterministic tests for:
 
 ```java
-check(requiredFreeBytes(new CapacitySnapshot(0, 1_000L << 30, 1)) == 50L << 30,
+InodeSnapshot measured = new InodeSnapshot(InodeCountStatus.MEASURED, 1L, null);
+check(requiredFreeBytes(new CapacitySnapshot(0, 1_000L << 30, measured)) == 50L << 30,
         "five percent should exceed 20 GiB");
-check(requiredFreeBytes(new CapacitySnapshot(0, 100L << 30, 1)) == 20L << 30,
+check(requiredFreeBytes(new CapacitySnapshot(0, 100L << 30, measured)) == 20L << 30,
         "20 GiB should be the minimum floor");
 ```
 
 Add subprocess tests setting `OPENGGF_TEST_MIN_FREE_BYTES` above actual free space, asserting `STARTUP_FAILED`, no fake Maven launch, and manifest fields for tier, floor, launch capacity, schema/helper nullability, and warning. Add an invalid/too-low override test.
 
 Add an injectable capacity probe returning sufficient bytes but zero usable
-inodes. Assert the coordinator writes `STARTUP_FAILED`, records the zero-inode
+inodes with status `MEASURED`. Assert the coordinator writes `STARTUP_FAILED`, records the zero-inode
 measurement, and never starts the fake Maven child.
+
+Add a Btrfs-shaped allocation fixture with inode totals/free both zero,
+`inode_count_status=UNAVAILABLE_DYNAMIC`, and `usable_inodes=null`. Assert a
+successful live file probe permits launch and the manifest never labels the
+unknown count as measured zero.
 
 Add all-tier live inode-availability fixtures. The real production probe must
 create, write, file-flush, read, and unlink a private file inside the unique
@@ -352,7 +389,9 @@ private record ManifestContext(
 Calculate `max(DEFAULT_MIN_FREE_BYTES, totalBytes / 20)`, allow the environment
 to raise it, and reject explicitly blank as well as malformed/lower values.
 Refuse launch when usable bytes are below the threshold, a managed numeric
-inode snapshot is zero, or the all-tier live inode-availability probe fails.
+inode snapshot with status `MEASURED` is zero, or the all-tier live
+inode-availability probe fails. `UNAVAILABLE_DYNAMIC` is not exhaustion and
+requires the successful live probe.
 The portable file operations are authoritative; directory flush is required
 only where supported and otherwise produces explicit observability rather than
 a false inode failure.
@@ -473,6 +512,10 @@ on secure-stream or stable-key providers, while native Windows JDK 21 visibly
 retains with `RETAINED_PLATFORM_UNSUPPORTED` pending a future native file-ID
 bridge. Capacity refusal and managed retention still apply there.
 
+Task 6 guidance and guards must also document measured-versus-dynamic inode
+nullability and sandbox-static verification with
+`UNAVAILABLE_IN_SANDBOX` service runtime state.
+
 - [ ] **Step 4: Add and translate the opt-out flag**
 
 Parse `--retain-ephemeral` in `Options`. Add this PowerShell translation:
@@ -522,11 +565,15 @@ List<String> requiredStorageGuidance = List.of(
     "MANAGED_CODEX_TEST_SESSIONS",
     "OPENGGF_TEST_MIN_FREE_BYTES",
     "--retain-ephemeral",
-    "STORAGE_FINALIZATION_FAILED"
+    "STORAGE_FINALIZATION_FAILED",
+    "UNAVAILABLE_DYNAMIC",
+    "UNAVAILABLE_IN_SANDBOX"
 );
 ```
 
-Require both wrappers to route the retention flag and require AGENTS/CLAUDE byte identity.
+Require both wrappers to route the retention flag, require AGENTS/CLAUDE byte
+identity, and require guidance to explain that `UNAVAILABLE_DYNAMIC` carries a
+JSON-null numeric count whose live probe is authoritative.
 
 - [ ] **Step 2: Run the focused guard and verify it fails**
 
