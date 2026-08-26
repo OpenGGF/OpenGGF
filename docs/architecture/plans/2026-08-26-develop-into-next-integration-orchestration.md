@@ -999,6 +999,7 @@ steps are superseded by Task 1D against the official scope freeze.
 - Resolve: `docs/status/known-discrepancies.md`
 - Resolve: `docs/status/rewind-round-trip-gaps.md`
 - Resolve: `docs/status/s3k-known-bugs.md`
+- Resolve: `tools/testing/README.md`
 
 **Interfaces:**
 
@@ -1030,11 +1031,13 @@ steps are superseded by Task 1D against the official scope freeze.
   release index while retaining next's 0.7 roadmap/status links. Treat the
   modify/delete `rewind-round-trip-gaps.md` conflict by moving any still-current
   0.7 facts to the owning status/validation artifact, not by resurrecting stale
-  inventory blindly.
+  inventory blindly. Resolve the add/add `tools/testing/README.md` conflict by
+  preserving the official freeze's current coordinator usage together with the
+  integration branch's frozen-next adapter and inventory contracts.
 
 - [ ] **Step 4: Validate resolved paths against the ledger**
 
-  Stage only these ten paths. For each, mark the ledger row `resolved` and record
+  Stage only these eleven paths. For each, mark the ledger row `resolved` and record
   the exact chosen contract. `git diff --check` must pass for staged content.
 
 ---
