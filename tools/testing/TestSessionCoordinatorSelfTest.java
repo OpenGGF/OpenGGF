@@ -33,8 +33,9 @@ public final class TestSessionCoordinatorSelfTest {
             "allocation_total_bytes", "allocation_usable_inodes", "retention_deadline",
             "allocation_not_applicable_reason", "storage_warning", "allocation_verified",
             "capacity_floor_bytes", "launch_usable_bytes", "launch_total_bytes",
-            "launch_usable_inodes", "completion_usable_bytes", "completion_total_bytes",
-            "completion_usable_inodes", "compaction_status", "compaction_removed_relative_paths",
+            "launch_usable_inodes", "launch_usable_inodes_reason", "completion_usable_bytes",
+            "completion_total_bytes", "completion_usable_inodes",
+            "completion_usable_inodes_reason", "compaction_status", "compaction_removed_relative_paths",
             "compaction_reclaimed_bytes", "compaction_error", "retain_ephemeral",
             "storage_finalization_error", "numeric_inode_unavailable_reason",
             "launch_capacity_error", "launch_inode_probe_status", "launch_inode_probe_error",
@@ -139,6 +140,18 @@ public final class TestSessionCoordinatorSelfTest {
                 "managed manifest must preserve the helper version");
         check(json.contains("\"allocation_not_applicable_reason\": null"),
                 "managed manifest must not invent a not-applicable reason");
+        check(json.contains("\"allocation_usable_inodes\": 1024"),
+                "managed manifest must retain the helper allocation-time inode snapshot");
+        check(json.contains("\"launch_usable_inodes\": null"),
+                "managed launch must not publish an allocation snapshot as a live numeric measurement");
+        check(json.contains("\"launch_usable_inodes_reason\": "
+                        + "\"live numeric inode count unavailable; probe status authoritative\""),
+                "managed launch must explain phase-current numeric inode nullability");
+        check(json.contains("\"completion_usable_inodes\": null"),
+                "managed completion must not publish an allocation snapshot as a live numeric measurement");
+        check(json.contains("\"completion_usable_inodes_reason\": "
+                        + "\"live numeric inode count unavailable; probe status authoritative\""),
+                "managed completion must explain phase-current numeric inode nullability");
         check(json.contains("\"launch_inode_probe_status\": \"AVAILABLE\""),
                 "managed launch must record a successful live inode probe");
         check(json.contains("\"completion_inode_probe_status\": \"AVAILABLE\""),
@@ -261,6 +274,12 @@ public final class TestSessionCoordinatorSelfTest {
                 "unmanaged launch inode count must be explicitly null");
         check(json.contains("\"completion_usable_inodes\": null"),
                 "unmanaged completion inode count must be explicitly null");
+        check(json.contains("\"launch_usable_inodes_reason\": "
+                        + "\"live numeric inode count unavailable; probe status authoritative\""),
+                "unmanaged launch must identify the live probe as phase-current authority");
+        check(json.contains("\"completion_usable_inodes_reason\": "
+                        + "\"live numeric inode count unavailable; probe status authoritative\""),
+                "unmanaged completion must identify the live probe as phase-current authority");
         check(json.contains("\"numeric_inode_unavailable_reason\": "
                         + "\"numeric inode count is unavailable for PROJECT_LOCAL_FALLBACK; "
                         + "live availability probe is authoritative\""),
@@ -347,8 +366,14 @@ public final class TestSessionCoordinatorSelfTest {
 
         Path manifest = assertStartupFailedWithoutChild(result, allocation, childMarker,
                 "zero usable inodes");
-        check(Files.readString(manifest).contains("\"launch_usable_inodes\": 0"),
-                "zero-inode refusal must preserve the measured inode count");
+        String json = Files.readString(manifest);
+        check(json.contains("\"allocation_usable_inodes\": 0"),
+                "zero-inode refusal must preserve the allocation-time inode snapshot");
+        check(json.contains("\"launch_usable_inodes\": null"),
+                "zero-inode refusal must not relabel the allocation snapshot as launch-time data");
+        check(json.contains("\"launch_usable_inodes_reason\": "
+                        + "\"live numeric inode count unavailable; probe status authoritative\""),
+                "zero-inode refusal must explain launch numeric inode nullability");
     }
 
     private static void verifyLiveProbeFailurePreventsLaunchAcrossTiers(Path root) throws Exception {
