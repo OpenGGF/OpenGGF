@@ -768,10 +768,19 @@ def _quarantine_session(root_fd: int, name: str, expected: os.stat_result) -> st
             if not _rename_noreplace_at(lane_fd, name, quarantine_fd, target):
                 continue
             try:
-                moved = os.stat(target, dir_fd=quarantine_fd, follow_symlinks=False)
+                moved_fd = os.open(target, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                   dir_fd=quarantine_fd)
             except OSError:
                 return None
-            return target if stat.S_ISDIR(moved.st_mode) and _same_identity(moved, expected) else None
+            try:
+                moved = os.fstat(moved_fd)
+                if not stat.S_ISDIR(moved.st_mode) or not _same_identity(moved, expected):
+                    return None
+                moved_at = time.time_ns()
+                os.utime(moved_fd, ns=(moved_at, moved_at))
+                return target if _same_identity(os.fstat(moved_fd), expected) else None
+            finally:
+                os.close(moved_fd)
     raise ScratchError("quarantine name space exhausted")
 
 

@@ -280,6 +280,27 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual(1, len(quarantined))
         self.assertEqual("preserve me", (quarantined[0] / "evidence").read_text())
 
+    def test_prune_quarantine_starts_a_fresh_fourteen_day_retention_period(self):
+        root, session = self._session("very-old", "RUNNING", pid=999999999,
+                                      start=1)
+        (session / "evidence").write_text("retain until quarantine expires")
+        then = time.time() - 90 * 86400
+        os.utime(session, (then, then))
+
+        self.assertEqual(0, self.run_helper(["prune"])[0])
+        quarantined, = (root / "quarantine").iterdir()
+        self.assertTrue(quarantined.exists())
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertNotIn(f"removed quarantine/{quarantined.name}", output)
+        self.assertTrue(quarantined.exists())
+        expired = time.time() - 15 * 86400
+        os.utime(quarantined, (expired, expired))
+        self.assertEqual(0, self.run_helper(["prune"])[0])
+        self.assertFalse(quarantined.exists())
+
     def test_prune_removes_expired_terminal_session_unless_kept(self):
         root, removable = self._session("terminal", "PASSED")
         _, kept = self._session("kept", "PASSED")
