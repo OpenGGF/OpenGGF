@@ -199,14 +199,16 @@ class TestLbzTubeElevatorInstance {
     void waitExitStaysOpenWhileReleasedPlayerIsStillStandingOnElevator() throws Exception {
         ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
         TestablePlayableSprite player = playerAt(0x1200, 0x0600);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        setServices(elevator, new ObjectManagerOnlyServices(objectManager));
 
         setField(elevator, "state", 8);
         Object p1State = field(elevator, "p1").get(elevator);
         setField(p1State, "phase", 2);
 
-        player.setOnObject(true);
+        when(objectManager.getRidingObject(player)).thenReturn(elevator);
         elevator.update(0, player);
-        elevator.update(0, player);
+        elevator.update(1, player);
 
         SolidObjectParams params = ((SolidObjectProvider) elevator).getSolidParams();
         assertEquals(8, params.airHalfHeight(),
