@@ -67,7 +67,8 @@ class TestAutomaticTunnelObjectInstance {
         TestPlayableSprite replacementP2 = playerAt(0x0100, 0x0100);
         List<com.openggf.game.PlayableEntity> sidekicks = new ArrayList<>(List.of(capturedP2, replacementP2));
         tunnel.setServices(new StubObjectServices().withPlayerQuery(
-                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+                new ObjectPlayerQuery(() -> main, () -> sidekicks))
+                .withIsolatedObjectManager());
         tunnel.update(0, main);
 
         sidekicks.clear();
@@ -90,7 +91,8 @@ class TestAutomaticTunnelObjectInstance {
         TestPlayableSprite extra = playerAt(0x0F60, 0x0578);
         List<com.openggf.game.PlayableEntity> sidekicks = new ArrayList<>(List.of(nativeP2, extra));
         tunnel.setServices(new StubObjectServices().withPlayerQuery(
-                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+                new ObjectPlayerQuery(() -> main, () -> sidekicks))
+                .withIsolatedObjectManager());
         tunnel.update(0, main);
         assertTrue(extra.isObjectControlled());
 
@@ -117,7 +119,8 @@ class TestAutomaticTunnelObjectInstance {
         TestPlayableSprite extra = playerAt(0x0F60, 0x0578);
         List<com.openggf.game.PlayableEntity> sidekicks = new ArrayList<>(List.of(nativeP2, extra));
         tunnel.setServices(new StubObjectServices().withPlayerQuery(
-                new ObjectPlayerQuery(() -> main, () -> sidekicks)));
+                new ObjectPlayerQuery(() -> main, () -> sidekicks))
+                .withIsolatedObjectManager());
         tunnel.update(0, main);
 
         ObjectControlState.nativeBit7FullControl().applyTo(extra);
@@ -138,7 +141,8 @@ class TestAutomaticTunnelObjectInstance {
         TestPlayableSprite oldP2 = playerAt(0x0100, 0x0100);
         TestPlayableSprite oldExtra = playerAt(0x0F60, 0x0578);
         tunnel.setServices(new StubObjectServices().withPlayerQuery(
-                new ObjectPlayerQuery(() -> oldMain, () -> List.of(oldP2, oldExtra))));
+                new ObjectPlayerQuery(() -> oldMain, () -> List.of(oldP2, oldExtra)))
+                .withIsolatedObjectManager());
         tunnel.update(0, oldMain);
         RewindIdentityTable captured = identities(oldMain, oldP2, oldExtra);
         var snapshot = tunnel.captureRewindState(RewindCaptureContext.withIdentityTable(captured));
@@ -147,7 +151,8 @@ class TestAutomaticTunnelObjectInstance {
         TestPlayableSprite newP2 = playerAt(0x0100, 0x0100);
         TestPlayableSprite newExtra = playerAt(0x0F60, 0x0578);
         tunnel.setServices(new StubObjectServices().withPlayerQuery(
-                new ObjectPlayerQuery(() -> newMain, () -> List.of(newP2, newExtra))));
+                new ObjectPlayerQuery(() -> newMain, () -> List.of(newP2, newExtra)))
+                .withIsolatedObjectManager());
         tunnel.restoreRewindState(snapshot,
                 RewindCaptureContext.withIdentityTable(identities(newMain, newP2, newExtra)));
         ObjectControlState.nativeBit7FullControl().applyTo(newExtra);

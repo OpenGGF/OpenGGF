@@ -496,7 +496,7 @@ class TestLbzTubeElevatorInstance {
             public ObjectPlayerQuery playerQuery() {
                 return query;
             }
-        };
+        }.withIsolatedObjectManager();
     }
 
     private static RewindCaptureContext rewindContext(

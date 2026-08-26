@@ -80,6 +80,7 @@ class TestSonic3kSpringObjectInstance {
         QueryBackedServices(PlayableEntity main, List<PlayableEntity> queriedSidekicks) {
             this.main = main;
             this.queriedSidekicks = List.copyOf(queriedSidekicks);
+            withIsolatedObjectManager();
         }
 
         @Override
@@ -320,7 +321,8 @@ class TestSonic3kSpringObjectInstance {
 
         Sonic3kSpringObjectInstance upper = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x2000, 0x0890, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
-        upper.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        upper.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(upper, "ensureInitialized");
         invoke(upper, "applyHorizontalSpring",
                 new Class<?>[]{AbstractPlayableSprite.class}, player);
@@ -352,7 +354,8 @@ class TestSonic3kSpringObjectInstance {
                 new ObjectSpawn(0x2000, 0x0890, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
         Sonic3kSpringObjectInstance lower = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x2000, 0x08B0, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
-        ObjectManager manager = objectManagerWith(upper, lower);
+        ObjectManager manager = objectManagerWithPlayers(
+                player, List.of(nativeP2, extraSidekick), upper, lower);
 
         upper.update(-1, player);
         lower.update(-1, player);
@@ -734,30 +737,6 @@ class TestSonic3kSpringObjectInstance {
         return player;
     }
 
-    private static ObjectManager objectManagerWith(ObjectInstance... instances) {
-        ObjectRegistry registry = new ObjectRegistry() {
-            @Override
-            public ObjectInstance create(ObjectSpawn spawn) {
-                return instances[0];
-            }
-
-            @Override
-            public void reportCoverage(List<ObjectSpawn> spawns) {
-            }
-
-            @Override
-            public String getPrimaryName(int objectId) {
-                return "Spring";
-            }
-        };
-        ObjectManager manager = new ObjectManager(List.of(), registry, 0, null, null);
-        manager.reset(0);
-        for (ObjectInstance instance : instances) {
-            manager.addDynamicObject(instance);
-        }
-        return manager;
-    }
-
     private static ObjectManager objectManagerWithPlayers(
             PlayableEntity main, List<PlayableEntity> sidekicks, ObjectInstance... instances) {
         Camera camera = new Camera() {
@@ -778,6 +757,7 @@ class TestSonic3kSpringObjectInstance {
         };
         ObjectManager manager = new ObjectManager(List.of(), registry, 0,
                 null, null, null, camera, services);
+        services.withDirectObjectManager(manager);
         manager.reset(0);
         for (ObjectInstance instance : instances) {
             manager.addDynamicObject(instance);

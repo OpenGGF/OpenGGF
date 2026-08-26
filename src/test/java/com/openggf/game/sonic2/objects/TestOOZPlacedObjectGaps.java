@@ -562,7 +562,7 @@ class TestOOZPlacedObjectGaps {
             public ObjectPlayerQuery playerQuery() {
                 return playerQuery;
             }
-        };
+        }.withIsolatedObjectManager();
     }
 
     private static int intField(Object target, String fieldName) throws Exception {

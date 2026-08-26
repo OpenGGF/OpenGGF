@@ -36,6 +36,7 @@ import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Lightweight test double for {@link ObjectServices}.
@@ -83,6 +84,12 @@ public class TestObjectServices implements ObjectServices {
                     List.of(), null, 0, null, null,
                     graphicsManager, camera, this);
         }
+        return this;
+    }
+
+    /** Installs the real manager owned by a direct {@link ObjectManager} test. */
+    public TestObjectServices withDirectObjectManager(ObjectManager objectManager) {
+        this.isolatedObjectManager = Objects.requireNonNull(objectManager, "objectManager");
         return this;
     }
 

@@ -206,7 +206,7 @@ class TestSonic1JunctionObjectInstance {
             public <T> T gameService(Class<T> type) {
                 return type == Sonic1SwitchManager.class ? type.cast(switches) : null;
             }
-        };
+        }.withIsolatedObjectManager();
     }
 
     private static final class TestableJunction extends Sonic1JunctionObjectInstance {
