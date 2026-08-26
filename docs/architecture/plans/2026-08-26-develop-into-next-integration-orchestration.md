@@ -172,9 +172,11 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
     <(git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/TestSessionCoordinator.java)
   cmp -s tools/testing/TestSessionCoordinatorSelfTest.java \
     <(git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/TestSessionCoordinatorSelfTest.java)
+  OPENGGF_PROCESS_HARNESS_ROOT="$(agent-scratch new frozen-develop-process-harness)"
   OPENGGF_COORDINATOR_CLASSES="$(agent-scratch new frozen-develop-coordinator-classes)"
   OPENGGF_COORDINATOR_SELF_TEST_ROOT="$(agent-scratch new frozen-develop-coordinator-self-test)"
-  tools/testing/run-session-process-harness.sh
+  OPENGGF_HARNESS_ROOT="$OPENGGF_PROCESS_HARNESS_ROOT" \
+    tools/testing/run-session-process-harness.sh
   javac --release 21 -d "$OPENGGF_COORDINATOR_CLASSES" \
     tools/testing/TestSessionCoordinator.java \
     tools/testing/TestSessionCoordinatorSelfTest.java
