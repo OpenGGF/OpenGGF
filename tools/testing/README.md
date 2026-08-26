@@ -156,20 +156,19 @@ The Maven invocation must contain exactly one canonical absolute
 `surefire.includesFile=<selector>` definition. The preflight parses all Maven
 property spellings supported by this workflow: `-Dname[=value]`,
 split `-D name[=value]`, `--define name[=value]`, and
-`--define=name[=value]`. It rejects `test`, includes/excludes files or patterns,
-suites, groups, excluded groups, JUnit engine/tag selectors, discovery-provider
-selectors, duplicate includes-file definitions, and related aliases.
-Selection names are matched case-insensitively through a maintained exact list
-plus membership-bearing terms such as `include`, `exclude`, `engine`,
-`provider`, and `scan`; this fails closed for unknown properties whose names
-plausibly change discovery. It deliberately does not blanket-reject the
-`surefire.*` namespace: adapter plumbing such as `surefire.argLine`,
-`surefire.forkCount`, and `surefire.reuseForks` does not select test membership
-and is allowed. Fork settings remain bound by the effective-POM comparison.
-`-Dtest` is specifically forbidden because it replaces the POM's ordinary
-includes and excludes. The selector must be present exactly once in
-`OPENGGF_RUNTIME_INPUTS`, so the coordinator records pre/post hashes of the
-same file.
+`--define=name[=value]`. Apart from the required `surefire.includesFile`, its
+case-insensitive allowlist is exactly `mse`, `sonic1.rom.path`,
+`sonic2.rom.path`, `s3k.rom.path`, `surefire.argLine`,
+`surefire.forkCount`, and `surefire.reuseForks`: these are the properties proven
+necessary by the frozen ordinary invocation and adapter. Every other Maven
+property is rejected, including `test`, includes/excludes files or patterns,
+suites, groups, excluded groups, `systemPropertiesFile`, unknown `surefire.*`
+properties, and JUnit/provider configuration carriers. This closed boundary
+prevents an unreviewed property from becoming a second selector or an arbitrary
+configuration carrier. `-Dtest` is specifically forbidden because it replaces
+the POM's ordinary includes and excludes. The selector must be present exactly
+once in `OPENGGF_RUNTIME_INPUTS`, so the coordinator records pre/post hashes of
+the same file.
 
 Before accepting this fallback, capture the exact effective POM once without
 and once with the selector property. Select the ordinary
@@ -178,7 +177,10 @@ contain no includes or includes-file selector. The selector effective POM must
 contain exactly the authenticated canonical `includesFile` path. Neither POM
 may contain a competing includes pattern, excludes file, suite XML, dependency
 scan, or JUnit engine/tag selector. Their ordered excludes, groups, excluded
-groups, fork count, and fork-reuse value must be identical.
+groups, exact argument line, fork count, and fork-reuse value must be identical.
+When `surefire.argLine`, `surefire.forkCount`, or `surefire.reuseForks` appears
+in argv, its value must also equal that authenticated effective configuration;
+the allowlist therefore cannot be used to inject arbitrary plumbing values.
 
 The exporter exposes one atomic preflight for the roots/patterns, canonical
 selector path, exact Maven argv, authenticated runtime inputs, baseline

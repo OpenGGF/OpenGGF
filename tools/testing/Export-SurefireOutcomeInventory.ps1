@@ -154,38 +154,19 @@ function Read-MavenPropertyArguments {
     return $properties.ToArray()
 }
 
-function Test-IsSelectionProperty {
+function Get-ApprovedMavenPropertyName {
     param([string] $Name)
-    $normalized = $Name.ToLowerInvariant()
-    $exactNames = @(
-        'test', 'it.test', 'skiptests', 'maven.test.skip', 'groups', 'excludedgroups',
-        'includes', 'excludes', 'includesfile', 'excludesfile', 'suitexmlfiles',
-        'includetags', 'excludetags', 'includejunit5engines', 'excludejunit5engines',
-        'dependenciestoscan', 'testclassesdirectory', 'testsourcedirectory',
-        'provider', 'providers', 'providerclassname', 'selector', 'selectors',
-        'filter', 'filters'
+    $approvedNames = @(
+        'mse',
+        'sonic1.rom.path', 'sonic2.rom.path', 's3k.rom.path',
+        'surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks'
     )
-    if ($exactNames -ccontains $normalized) {
-        return $true
-    }
-    foreach ($prefix in @('surefire.', 'failsafe.', 'junit.', 'testng.')) {
-        if ($normalized.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
-            $normalized = $normalized.Substring($prefix.Length)
-            break
+    foreach ($approvedName in $approvedNames) {
+        if ($Name.Equals($approvedName, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $approvedName
         }
     }
-    if ($exactNames -ccontains $normalized) {
-        return $true
-    }
-    foreach ($membershipTerm in @(
-        'include', 'exclude', 'group', 'suite', 'engine', 'provider',
-        'selector', 'filter', 'tag', 'scan', 'condition'
-    )) {
-        if ($normalized.Contains($membershipTerm, [System.StringComparison]::Ordinal)) {
-            return $true
-        }
-    }
-    return $false
+    return ''
 }
 
 function Assert-ExplicitSourceSelectorContract {
@@ -234,6 +215,7 @@ function Assert-ExplicitSourceSelectorContract {
     }
 
     $includesFileValues = [System.Collections.Generic.List[string]]::new()
+    $approvedProperties = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($property in (Read-MavenPropertyArguments $ArgumentPath)) {
         if ([string]$property.Name -ceq 'surefire.includesFile') {
             if (-not $property.HasValue -or ([string]$property.Value).Length -eq 0) {
@@ -242,9 +224,20 @@ function Assert-ExplicitSourceSelectorContract {
             $includesFileValues.Add([string]$property.Value)
             continue
         }
-        if (Test-IsSelectionProperty ([string]$property.Name)) {
-            throw "Maven selector override is forbidden with surefire.includesFile: $($property.Argument)"
+        $approvedName = Get-ApprovedMavenPropertyName ([string]$property.Name)
+        if ($approvedName.Length -eq 0) {
+            throw "Maven property is unapproved for explicit-source preflight: $($property.Argument)"
         }
+        if (-not $property.HasValue -or ([string]$property.Value).Length -eq 0) {
+            throw "Approved Maven property requires an explicit value: $($property.Argument)"
+        }
+        if ($approvedProperties.ContainsKey($approvedName)) {
+            throw "Approved Maven property appears more than once: $approvedName"
+        }
+        if ($approvedName -ceq 'mse' -and @('off', 'relaxed') -cnotcontains [string]$property.Value) {
+            throw "Maven Silent Extension mode is not an approved production value: $($property.Value)"
+        }
+        $approvedProperties.Add($approvedName, $property)
     }
     if ($includesFileValues.Count -ne 1) {
         throw "Explicit-source invocation requires exactly one -Dsurefire.includesFile property; found $($includesFileValues.Count)"
@@ -264,7 +257,10 @@ function Assert-ExplicitSourceSelectorContract {
     if ($runtimeMatches -ne 1) {
         throw "OPENGGF_RUNTIME_INPUTS must contain the canonical selector exactly once; found $runtimeMatches"
     }
-    return $canonicalPatternPath
+    return [pscustomobject]@{
+        SelectorPath = $canonicalPatternPath
+        ApprovedProperties = $approvedProperties
+    }
 }
 
 function Read-EffectiveSurefireConfiguration {
@@ -313,7 +309,7 @@ function Read-EffectiveSurefireConfiguration {
     }
     $values.includesFile = if ($includesFileNodes.Count -eq 0) { '' } else { $includesFileNodes[0].InnerText }
     $values.excludes = [string[]]@($configuration.SelectNodes("./*[local-name()='excludes']/*[local-name()='exclude']") | ForEach-Object { $_.InnerText })
-    foreach ($name in @('groups', 'excludedGroups', 'forkCount', 'reuseForks')) {
+    foreach ($name in @('groups', 'excludedGroups', 'argLine', 'forkCount', 'reuseForks')) {
         $node = $configuration.SelectSingleNode("./*[local-name()='$name']")
         $values[$name] = if ($null -eq $node) { '' } else { $node.InnerText }
     }
@@ -321,7 +317,13 @@ function Read-EffectiveSurefireConfiguration {
 }
 
 function Assert-EffectiveSurefireContract {
-    param([string] $BaselinePath, [string] $SelectorPath, [string] $ExecutionId, [string] $AuthenticatedSelectorPath)
+    param(
+        [string] $BaselinePath,
+        [string] $SelectorPath,
+        [string] $ExecutionId,
+        [string] $AuthenticatedSelectorPath,
+        [System.Collections.Generic.Dictionary[string, object]] $ApprovedProperties
+    )
     $baseline = Read-EffectiveSurefireConfiguration $BaselinePath $ExecutionId
     $selector = Read-EffectiveSurefireConfiguration $SelectorPath $ExecutionId
     if (([string]$baseline.includesFile).Length -ne 0) {
@@ -340,12 +342,28 @@ function Assert-EffectiveSurefireContract {
             throw "Effective Surefire excludes changed under the selector property at ordinal $index`: baseline=[$($baselineExcludes[$index])] selector=[$($selectorExcludes[$index])]"
         }
     }
-    foreach ($name in @('groups', 'excludedGroups', 'forkCount', 'reuseForks')) {
+    foreach ($name in @('groups', 'excludedGroups', 'argLine', 'forkCount', 'reuseForks')) {
         if ([string]$baseline.$name -cne [string]$selector.$name) {
             throw "Effective Surefire $name changed under the selector property: baseline=[$($baseline.$name)] selector=[$($selector.$name)]"
         }
     }
-    Write-Host "Effective Surefire unchanged: excludes=$($baselineExcludes -join ',') groups=$($baseline.groups) excludedGroups=$($baseline.excludedGroups) forkCount=$($baseline.forkCount) reuseForks=$($baseline.reuseForks)"
+    $effectivePropertyNames = [ordered]@{
+        'surefire.argLine' = 'argLine'
+        'surefire.forkCount' = 'forkCount'
+        'surefire.reuseForks' = 'reuseForks'
+    }
+    foreach ($propertyName in $effectivePropertyNames.Keys) {
+        if (-not $ApprovedProperties.ContainsKey($propertyName)) {
+            continue
+        }
+        $effectiveName = $effectivePropertyNames[$propertyName]
+        $argumentValue = [string]$ApprovedProperties[$propertyName].Value
+        $effectiveValue = [string]$selector.$effectiveName
+        if ($argumentValue -cne $effectiveValue) {
+            throw "Approved Maven property $propertyName does not equal the authenticated effective value: argv=[$argumentValue] effective=[$effectiveValue]"
+        }
+    }
+    Write-Host "Effective Surefire unchanged: excludes=$($baselineExcludes -join ',') groups=$($baseline.groups) excludedGroups=$($baseline.excludedGroups) argLine=$($baseline.argLine) forkCount=$($baseline.forkCount) reuseForks=$($baseline.reuseForks)"
 }
 
 function Normalize-TokenizedText {
@@ -468,8 +486,13 @@ if ($suppliedPreflight -ne 0 -and $suppliedPreflight -ne $preflightValues.Count)
     throw "Explicit-source preflight is atomic; missing: $($missingPreflight -join ', ')"
 }
 if ($suppliedPreflight -eq $preflightValues.Count) {
-    $authenticatedSelectorPath = Assert-ExplicitSourceSelectorContract $sourceClasses $SelectorPatternInventory $MavenArgumentInventory $RuntimeInputs
-    Assert-EffectiveSurefireContract $EffectivePomPath $SelectorEffectivePomPath $SurefireExecutionId $authenticatedSelectorPath
+    $selectorContract = Assert-ExplicitSourceSelectorContract $sourceClasses $SelectorPatternInventory $MavenArgumentInventory $RuntimeInputs
+    Assert-EffectiveSurefireContract `
+        $EffectivePomPath `
+        $SelectorEffectivePomPath `
+        $SurefireExecutionId `
+        $selectorContract.SelectorPath `
+        $selectorContract.ApprovedProperties
 }
 $selected = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($className in $sourceClasses) {

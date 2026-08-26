@@ -114,16 +114,18 @@ function New-EffectivePomText {
         [string] $IncludesFile = '',
         [string] $AdditionalSelection = '',
         [string] $ForkCount = '1',
+        [string] $ArgLine = '-Xshare:off -javaagent:/harness/mockito-agent.jar',
         [string[]] $Excludes = @('**/*Guard.java', '**/ExcludedTest.java')
     )
     $includesFileElement = if ($IncludesFile.Length -eq 0) { '' } else { "<includesFile>$IncludesFile</includesFile>" }
     $excludeElements = ($Excludes | ForEach-Object { "<exclude>$([System.Security.SecurityElement]::Escape($_))</exclude>" }) -join ''
+    $escapedArgLine = [System.Security.SecurityElement]::Escape($ArgLine)
     return @"
 <project xmlns="http://maven.apache.org/POM/4.0.0"><build><plugins><plugin>
   <artifactId>maven-surefire-plugin</artifactId><executions><execution><id>default-test</id><configuration>
     $includesFileElement$AdditionalSelection
     <excludes>$excludeElements</excludes>
-    <groups>ordinary</groups><excludedGroups>quarantined</excludedGroups><forkCount>$ForkCount</forkCount><reuseForks>true</reuseForks>
+    <groups>ordinary</groups><excludedGroups>quarantined</excludedGroups><argLine>$escapedArgLine</argLine><forkCount>$ForkCount</forkCount><reuseForks>true</reuseForks>
   </configuration></execution></executions>
 </plugin></plugins></build></project>
 "@
@@ -413,6 +415,9 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Write-Utf8File $patterns "com/openggf/AdapterTest.java`n"
         Write-Utf8File $arguments @"
 -Dmse=relaxed
+-Dsonic1.rom.path=/roms/sonic1.gen
+-Dsonic2.rom.path=/roms/sonic2.gen
+-Ds3k.rom.path=/roms/sonic3k.gen
 -Dsurefire.argLine=-Xshare:off -javaagent:/harness/mockito-agent.jar
 -Dsurefire.forkCount=1
 -Dsurefire.reuseForks=true
@@ -474,6 +479,12 @@ test
             [pscustomobject]@{ Name = 'JUnit engine selector'; Content = "--define=includeJUnit5Engines=junit-jupiter`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'includeJUnit5Engines|selector override' },
             [pscustomobject]@{ Name = 'split short provider selector'; Content = "-D`nsurefire.providers=custom.Provider`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'providers|selector override' },
             [pscustomobject]@{ Name = 'case-insensitive selector alias'; Content = "--define=Surefire.Excludes=**/Hidden.java`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'Surefire.Excludes|selector override' },
+            [pscustomobject]@{ Name = 'system properties carrier'; Content = "-Dsurefire.systemPropertiesFile=$case/injected.properties`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'systemPropertiesFile|unapproved|property' },
+            [pscustomobject]@{ Name = 'unknown surefire property'; Content = "-Dsurefire.magicCarrier=payload`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'magicCarrier|unapproved|property' },
+            [pscustomobject]@{ Name = 'unapproved generic property'; Content = "-DunapprovedCarrier=payload`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'unapprovedCarrier|unapproved|property' },
+            [pscustomobject]@{ Name = 'arbitrary argLine carrier'; Content = "-Dsurefire.argLine=-Dtest=com.openggf.HiddenTest`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'argLine|effective|authenticated|value' },
+            [pscustomobject]@{ Name = 'fork count mismatch'; Content = "-Dsurefire.forkCount=2`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'forkCount|effective|value' },
+            [pscustomobject]@{ Name = 'fork reuse mismatch'; Content = "-Dsurefire.reuseForks=false`n-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = $patterns; Pattern = 'reuseForks|effective|value' },
             [pscustomobject]@{ Name = 'split short missing definition'; Content = "-Dsurefire.includesFile=$patterns`n-D`n"; Runtime = $patterns; Pattern = '-D.*missing|property definition' },
             [pscustomobject]@{ Name = 'missing runtime input'; Content = "-Dsurefire.includesFile=$patterns`ntest`n"; Runtime = (Join-Path $case 'other-input'); Pattern = 'OPENGGF_RUNTIME_INPUTS|runtime input' },
             [pscustomobject]@{ Name = 'relative includes file'; Content = "-Dsurefire.includesFile=ordinary.includes`ntest`n"; Runtime = $patterns; Pattern = 'canonical absolute|includesFile' }
@@ -536,6 +547,15 @@ test
             '-SelectorEffectivePomPath', $selectorPom, '-SurefireExecutionId', 'default-test',
             '-OutputPath', $output, '-ReportRoot', $case
         )) 'forkCount|unchanged|effective' 'changed effective fork setting'
+
+        Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns -ArgLine '-Xshare:off -Dinjected=true')
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $patterns,
+            '-EffectivePomPath', $baselinePom,
+            '-SelectorEffectivePomPath', $selectorPom, '-SurefireExecutionId', 'default-test',
+            '-OutputPath', $output, '-ReportRoot', $case
+        )) 'argLine|unchanged|effective' 'changed effective argLine'
 
         Write-Utf8File $baselinePom (New-EffectivePomText -Excludes @('a,b', 'c'))
         Write-Utf8File $selectorPom (New-EffectivePomText -IncludesFile $patterns -Excludes @('a', 'b,c'))
