@@ -3830,7 +3830,6 @@ public class Engine {
 		if (resultsScreen == null) {
 			return;
 		}
-		resultsScreen.setViewportWidth((int) projectionWidth);
 		camera.setX((short) 0);
 		camera.setY((short) 0);
 		applyViewportWidth(resultsScreen, (int) projectionWidth);
