@@ -55,6 +55,7 @@ public final class AttemptReplayHarness {
 
             EngineContext services = EngineServices.current();
             services.roms().setRom(rom);
+            services.audio().setRom(rom);
             GameModule rootModule = services.romDetection().detectAndCreateModule(rom)
                     .orElseThrow(() -> new IllegalArgumentException("unsupported ROM"));
             if (!rootModule.getGameId().code().equals(recording.start().gameId())) {
