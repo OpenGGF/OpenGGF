@@ -323,6 +323,33 @@ remain identity-invalid. A failing Maven child keeps its original status when
 normalization succeeds; normalization failure controls only an otherwise
 successful result and is always diagnosed.
 
+An adapter safety or cleanup failure must also be visible to the frozen
+coordinator's final source digest. This is necessary because `target` is ignored
+on frozen `next`: replacing that directory with a symlink can make namespace
+teardown and outer cleanup fail while the coordinator would otherwise publish
+`FAILED` / `valid=true`. On such a failure, and only on such a failure, the
+adapter arms a pinned identity tripwire at the same authenticated historical
+report path. If the probe has already made the report dirty, it leaves those
+bytes untouched. If the report still exactly matches the authenticated
+preimage, it writes a deterministic, session-identified invalidation marker and
+records the reason, run ID, child Maven status, adapter namespace-teardown
+status, resulting hash, and byte length in diagnostics. It must not restore or
+normalize the tripwire before coordinator finalization. The unsafe-target
+symlink fixture binds the observed provenance separately: child Maven status N
+is the launcher/coordinator process status, namespace teardown status 75 is the
+pre-finalization safety failure that arms the tripwire, and authenticated outer
+cleanup status 73 preserves the symlink after finalization.
+Failure to arm the tripwire is itself a hard launcher failure and can never be
+accepted as evidence. After finalization, the launcher restores the exact
+authenticated preimage; it does not repair, remove, or disguise the unsafe
+`target` object.
+
+The tripwire does not apply to an ordinary Maven failure when adapter safety and
+cleanup succeed: that result remains `FAILED` / `valid=true` and is admissible
+terminal-red parent evidence. Parent-baseline consumers must authenticate the
+launcher's terminal outcome and cleanup diagnostics as well as the coordinator
+manifest; a manifest emitted by an adapter run is never consumed alone.
+
 The launcher's outer recovery is mandatory. Before Maven, the adapter writes
 the authenticated recovery marker with run ID, frozen HEAD, canonical
 worktree/report paths, exact preimage archive path/hash/length, ordinary target
@@ -366,6 +393,14 @@ terminal line or the explicitly diagnosed frozen-coordinator race above,
 followed by authenticated outer worktree restoration. The
 archived generated report is parent hygiene evidence, not a repository
 deliverable and not a parent test failure.
+
+Adapter safety/cleanup failure after child 0 yields nonzero /
+`INVALID_IDENTITY_CHANGED` / `valid=false`; after child N it preserves N while
+the manifest is `INVALID_IDENTITY_CHANGED` / `valid=false`. In both cases the
+launcher restores only the authenticated report preimage after finalization and
+preserves any unsafe target for inspection. A tripwire-arm failure is a hard,
+non-certifying launcher failure even if the frozen coordinator happened to emit
+a superficially valid manifest.
 
 The full parent baseline cannot start until the adapter self-tests and the
 coordinator's own self-test pass.

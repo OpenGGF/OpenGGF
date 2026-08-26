@@ -331,6 +331,30 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   nonzero and remain coordinator-invalid. Preserve an already-failing Maven
   status when normalization succeeds.
 
+  Add a pinned identity tripwire for adapter safety or cleanup failures. Frozen
+  `next` ignores `target`, so an unsafe target replacement can otherwise leave
+  a `FAILED` / `valid=true` coordinator manifest even though namespace teardown
+  or outer cleanup failed. When such a failure occurs before adapter return:
+
+  - if the authenticated report is already dirty, leave it untouched until the
+    coordinator final digest;
+  - if it is still the exact authenticated preimage, write a deterministic
+    invalidation marker containing the current run identity and record the
+    safety reason, hash, and byte length in session diagnostics;
+  - never normalize or restore this tripwire before coordinator finalization;
+  - preserve an existing nonzero Maven status, or return nonzero when the child
+    succeeded; and
+  - treat inability to arm the tripwire as a hard non-certifying launcher
+    failure, regardless of any superficially valid coordinator manifest.
+
+  After coordinator finalization, outer recovery restores only the exact
+  authenticated report preimage. It must preserve any unsafe `target` object
+  for inspection and continue to refuse unlink/readlink recovery. Ordinary
+  Maven failure with successful adapter safety and cleanup remains
+  `FAILED` / `valid=true`. Every parent-baseline consumer must require the
+  authenticated launcher outcome and cleanup diagnostics in addition to the
+  manifest; never admit an adapter-produced manifest by itself.
+
 - [ ] **Step 4: Extend the adapter matrix with fail-closed cases**
 
   Add cases for exact-report mutation on success and child failure, no report
@@ -351,6 +375,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   | child N + authorized normalization | N | `FAILED` | `true` |
   | normalization failure after child 0 | nonzero | `INVALID_IDENTITY_CHANGED` | `false` |
   | normalization failure after child N | N | `INVALID_IDENTITY_CHANGED` | `false` |
+  | adapter safety/cleanup failure after child 0 | nonzero | `INVALID_IDENTITY_CHANGED` | `false` |
+  | adapter safety/cleanup failure after child N | N | `INVALID_IDENTITY_CHANGED` | `false` |
+  | tripwire-arm failure | hard launcher failure; never accepted | non-certifying regardless of manifest | never accepted |
   | launcher INT/TERM, outer recovery after digest | 130/143 | on-disk `INVALID_IDENTITY_CHANGED`; terminal marker present or explicitly diagnosed frozen race | `false` |
 
   Require clean exact final bytes and a valid manifest only for authorized
@@ -361,6 +388,15 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   manifest, explicitly classify any missing terminal line as non-certifying,
   and prove the session is never certifying. Do not add a new
   cross-process graceful-signal handshake merely to manufacture `ABORTED`.
+  Add explicit unsafe-target fixtures for a symlink replacement after child N,
+  a cleanup failure after child 0, and tripwire-arm failure. The first must
+  preserve child N as the launcher/coordinator process status, separately
+  record adapter namespace-teardown status 75 as the pre-finalization failure
+  that armed the tripwire, publish invalid/false, restore the report
+  externally, retain the symlink, and separately diagnose authenticated outer
+  cleanup status 73. The fixture must reject a tripwire armed for an unrelated
+  reason. Also retain a control case proving an ordinary child N with no adapter
+  safety failure stays `FAILED` / `valid=true`.
 
 - [ ] **Step 5: Run focused real frozen-next proof**
 
@@ -569,8 +605,10 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Record both run IDs, manifests, logs, terminal states, and inventories. A
   terminal red parent baseline is valid evidence: classify every failure/error
   and continue inventory construction. A missing terminal marker, invalid
-  source identity, or incomplete inventory is not valid evidence and triggers
-  the partition fallback in Step 8.
+  source identity, missing or failed launcher/cleanup authentication, or
+  incomplete inventory is not valid evidence and triggers the partition
+  fallback in Step 8. Never accept the coordinator manifest without the
+  launcher's authenticated terminal and cleanup records.
 
 - [ ] **Step 7: Run frozen-next ordinary and explicit guard baselines**
 
