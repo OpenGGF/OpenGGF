@@ -170,6 +170,66 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-Equal $error.report 'TEST-fixture.xml' 'relative report identity'
     }
 
+    Invoke-Case 'export preserves boundary whitespace in exact parameterized identities' {
+        $case = Join-Path $scratch 'export-boundary-identities'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes " example.BoundaryTest`nexample.BoundaryTest`nexample.BoundaryTest `n"
+        Write-Utf8File (Join-Path $case 'TEST-boundaries.xml') @'
+<testsuite>
+  <testcase classname=" example.BoundaryTest" name="case[1]"/>
+  <testcase classname="example.BoundaryTest" name=" case[1]"/>
+  <testcase classname="example.BoundaryTest" name="case[1]"/>
+  <testcase classname="example.BoundaryTest" name="case[1] "/>
+  <testcase classname="example.BoundaryTest " name="case[1]"/>
+</testsuite>
+'@
+        $result = Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)
+        Assert-Succeeded $result 'boundary identity export'
+        $rows = @(Import-Csv -Delimiter "`t" -LiteralPath $output)
+        Assert-Equal (($rows.identity) -join '|') '\sexample.BoundaryTest#case[1]|example.BoundaryTest #case[1]|example.BoundaryTest# case[1]|example.BoundaryTest#case[1]|example.BoundaryTest#case[1]\s' 'boundary whitespace remains identity data'
+        Assert-Equal (($rows.class) -join '|') '\sexample.BoundaryTest|example.BoundaryTest\s|example.BoundaryTest|example.BoundaryTest|example.BoundaryTest' 'boundary classname values remain exact'
+        Assert-Equal (($rows.method) -join '|') 'case[1]|case[1]|\scase[1]|case[1]|case[1]\s' 'boundary parameterized names remain exact'
+    }
+
+    Invoke-Case 'export reversibly escapes actual controls and literal backslash sequences' {
+        $case = Join-Path $scratch 'export-tsv-escaping'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.EscapeTest`n"
+        Write-Utf8File (Join-Path $case 'TEST-escape.xml') @'
+<testsuite>
+  <testcase classname="example.EscapeTest" name="case&#xA;value"/>
+  <testcase classname="example.EscapeTest" name="case&#xD;value"/>
+  <testcase classname="example.EscapeTest" name="case\nvalue"/>
+  <testcase classname="example.EscapeTest" name="red"><failure type="example.Type\Kind" message="actual&#xA;line carriage&#xD;return literal \n tab&#x9;slash\end">body</failure></testcase>
+</testsuite>
+'@
+        $result = Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes,
+            '-OutputPath', $output,
+            '-CanonicalWorktree', '/work/tree',
+            '-SessionRoot', '/session/root',
+            '-RunId', 'run-escape-12345678',
+            '-ReportRoot', $case
+        )
+        Assert-Succeeded $result 'TSV escaping export'
+        $rows = @(Import-Csv -Delimiter "`t" -LiteralPath $output)
+        Assert-Equal $rows[0].identity 'example.EscapeTest#case\nvalue' 'actual identity newline encoding'
+        Assert-Equal $rows[1].identity 'example.EscapeTest#case\rvalue' 'actual identity carriage-return encoding'
+        Assert-Equal $rows[2].identity 'example.EscapeTest#case\\nvalue' 'literal identity backslash-n encoding'
+        Assert-True ($rows[0].identity -cne $rows[2].identity) 'actual newline and literal backslash-n identities stay distinct'
+        Assert-Equal $rows[3].exception_type 'example.Type\\Kind' 'exception type backslash encoding'
+        Assert-Equal $rows[3].normalized_message 'actual\nline carriage\nreturn literal \\n tab\tslash\\end' 'normalized newlines literal backslash-n tab and backslash encoding'
+
+        $compareOutput = Join-Path $case 'comparison.tsv'
+        $comparison = Invoke-Tool $compareScript @('-CandidateInventoryPath', $output, '-OutputPath', $compareOutput, '-ParentInventoryPath', $output)
+        Assert-Succeeded $comparison 'escaped inventory decode and validation'
+        Assert-Equal ((Import-Csv -Delimiter "`t" -LiteralPath $compareOutput).classification -join '|') 'MATCH|MATCH|MATCH|MATCH' 'escaped identities round-trip through consumer'
+    }
+
     Invoke-Case 'export reads all report roots and accepts only reviewed empty helpers with reasons' {
         $case = Join-Path $scratch 'export-roots-helper'
         $rootA = Join-Path $case 'a'
@@ -231,6 +291,25 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-ReportRoot', $missingRoot, '-OutputPath', $output)) 'ABSENT[\s\S]*example\.OneTest' 'missing selected class'
     }
 
+    Invoke-Case 'export rejects multiple semantic outcomes including red plus skip and repeated skip' {
+        $case = Join-Path $scratch 'export-multiple-outcomes'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.OutcomeTest`n"
+        Write-Utf8File (Join-Path $case 'TEST-red-skip.xml') '<testsuite><testcase classname="example.OutcomeTest" name="both"><failure type="example.Failure" message="red">body</failure><skipped/></testcase></testsuite>'
+        $redSkip = Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-OutputPath', $output,
+            '-CanonicalWorktree', '/work/tree', '-SessionRoot', '/session/root', '-RunId', 'run-outcomes-12345678',
+            '-ReportRoot', $case
+        )
+        Assert-Failed $redSkip 'multiple semantic outcomes|multiple.*outcomes' 'red plus skip outcome'
+
+        Write-Utf8File (Join-Path $case 'TEST-red-skip.xml') '<testsuite><testcase classname="example.OutcomeTest" name="twice"><skipped/><disabled/></testcase></testsuite>'
+        $repeatedSkip = Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)
+        Assert-Failed $repeatedSkip 'multiple semantic outcomes|multiple.*outcomes' 'repeated skip outcome'
+    }
+
     Invoke-Case 'export rejects red elements without deterministic kind type message and body signature' {
         $case = Join-Path $scratch 'export-red-signature'
         New-Item -ItemType Directory -Path $case -Force | Out-Null
@@ -238,7 +317,11 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         $output = Join-Path $case 'outcomes.tsv'
         Write-Utf8File $classes "example.RedTest`n"
         Write-Utf8File (Join-Path $case 'TEST-red.xml') '<testsuite><testcase classname="example.RedTest" name="red"><failure type="" message=""></failure></testcase></testsuite>'
-        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-ReportRoot', $case, '-OutputPath', $output)) 'deterministic signature|red signature' 'empty red signature'
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-OutputPath', $output,
+            '-CanonicalWorktree', '/work/tree', '-SessionRoot', '/session/root', '-RunId', 'run-red-12345678',
+            '-ReportRoot', $case
+        )) 'deterministic signature|red signature' 'empty red signature'
     }
 
     Invoke-Case 'export accepts an empty exception message when type and complete body are deterministic' {
@@ -260,6 +343,51 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         $row = @(Import-Csv -Delimiter "`t" -LiteralPath $output)[0]
         Assert-Equal $row.normalized_message '' 'empty message remains deterministic empty data'
         Assert-Equal $row.red_body_sha256 '795173f7d6efb18432c702234cd3754e36885ea42ab46330124ceee197feff80' 'body still owns deterministic hash'
+    }
+
+    Invoke-Case 'export requires red normalization inputs and accepts a deterministic empty body' {
+        $case = Join-Path $scratch 'export-red-context-empty-body'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.EmptyBodyTest`n"
+        Write-Utf8File (Join-Path $case 'TEST-empty-body.xml') '<testsuite><testcase classname="example.EmptyBodyTest" name="empty"><error type="example.Empty" message="empty"></error></testcase></testsuite>'
+        $missingContext = Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)
+        Assert-Failed $missingContext 'CanonicalWorktree|SessionRoot|RunId|normalization' 'missing red normalization context'
+
+        $result = Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-OutputPath', $output,
+            '-CanonicalWorktree', '/work/tree', '-SessionRoot', '/session/root', '-RunId', 'run-empty-12345678',
+            '-ReportRoot', $case
+        )
+        Assert-Succeeded $result 'deterministic empty red body'
+        $row = @(Import-Csv -Delimiter "`t" -LiteralPath $output)[0]
+        Assert-Equal $row.red_body_bytes '0' 'empty normalized body byte count'
+        Assert-Equal $row.red_body_sha256 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' 'empty normalized body SHA-256'
+    }
+
+    Invoke-Case 'export normalizes zoned offset and unzoned ISO timestamps to prevent false red changes' {
+        $case = Join-Path $scratch 'export-timestamp-equivalence'
+        $parentReports = Join-Path $case 'parent-reports'
+        $candidateReports = Join-Path $case 'candidate-reports'
+        New-Item -ItemType Directory -Path $parentReports, $candidateReports -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $parentOutput = Join-Path $case 'parent.tsv'
+        $candidateOutput = Join-Path $case 'candidate.tsv'
+        $compareOutput = Join-Path $case 'comparison.tsv'
+        Write-Utf8File $classes "example.TimeTest`n"
+        Write-Utf8File (Join-Path $parentReports 'TEST-time.xml') '<testsuite><testcase classname="example.TimeTest" name="time"><failure type="example.Time" message="/parent/tree /parent/session parent-run-12345678 2026-08-26T12:34:56Z 2026-08-26T13:34:56+01:00 2026-08-26T12:34:56">at /parent/tree in /parent/session parent-run-12345678 2026-08-26T12:34:56.123Z 2026-08-26T13:34:56+0100 2026-08-26T12:34:56.123</failure></testcase></testsuite>'
+        Write-Utf8File (Join-Path $candidateReports 'TEST-time.xml') '<testsuite><testcase classname="example.TimeTest" name="time"><failure type="example.Time" message="/candidate/tree /candidate/session candidate-run-87654321 2030-01-02T03:04:05Z 2030-01-02T04:04:05+01:00 2030-01-02T03:04:05">at /candidate/tree in /candidate/session candidate-run-87654321 2030-01-02T03:04:05.987Z 2030-01-02T04:04:05+0100 2030-01-02T03:04:05.987</failure></testcase></testsuite>'
+        Assert-Succeeded (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $parentOutput, '-CanonicalWorktree', '/parent/tree', '-SessionRoot', '/parent/session', '-RunId', 'parent-run-12345678', '-ReportRoot', $parentReports)) 'parent timestamp export'
+        Assert-Succeeded (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $candidateOutput, '-CanonicalWorktree', '/candidate/tree', '-SessionRoot', '/candidate/session', '-RunId', 'candidate-run-87654321', '-ReportRoot', $candidateReports)) 'candidate timestamp export'
+        $parentRow = @(Import-Csv -Delimiter "`t" -LiteralPath $parentOutput)[0]
+        $candidateRow = @(Import-Csv -Delimiter "`t" -LiteralPath $candidateOutput)[0]
+        Assert-Equal $parentRow.normalized_message '<WORKTREE> <SESSION_ROOT> <RUN_ID> <TIMESTAMP> <TIMESTAMP> <TIMESTAMP>' 'all parent timestamp forms normalize'
+        Assert-Equal $candidateRow.normalized_message $parentRow.normalized_message 'timestamp/path/run normalization equivalence'
+        Assert-Equal $candidateRow.red_body_bytes $parentRow.red_body_bytes 'normalized red body byte equivalence'
+        Assert-Equal $candidateRow.red_body_sha256 $parentRow.red_body_sha256 'normalized red body hash equivalence'
+        Assert-Succeeded (Invoke-Tool $compareScript @('-CandidateInventoryPath', $candidateOutput, '-OutputPath', $compareOutput, '-ParentInventoryPath', $parentOutput)) 'normalized false-change comparison'
+        Assert-Equal @(Import-Csv -Delimiter "`t" -LiteralPath $compareOutput)[0].classification 'MATCH' 'normalized volatile tokens do not create false signature change'
     }
 
     Invoke-Case 'comparison emits deterministic union classifications including false ABSENT and approved removal' {
@@ -364,6 +492,40 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-Equal @(Import-Csv -Delimiter "`t" -LiteralPath $output)[0].classification 'MATCH' 'empty-message red signatures match'
     }
 
+    Invoke-Case 'comparison validates decoded identity outcome metadata counts hashes and schema' {
+        $case = Join-Path $scratch 'compare-validation'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $header = "identity`tclass`tmethod`toutcome`tred_kind`texception_type`tnormalized_message`tred_body_bytes`tred_body_sha256`treport"
+        $candidate = Join-Path $case 'candidate.tsv'
+        $parent = Join-Path $case 'parent.tsv'
+        $output = Join-Path $case 'comparison.tsv'
+        $validPass = New-InventoryRow 'a.Test#method' 'a.Test' 'method' 'PASS'
+        Write-Utf8File $candidate (($header, $validPass) -join "`n")
+
+        $invalidRows = @(
+            [pscustomobject]@{ Name = 'identity mismatch'; Row = (New-InventoryRow 'a.Test#other' 'a.Test' 'method' 'PASS'); Pattern = 'identity.*class.*method|does not equal' },
+            [pscustomobject]@{ Name = 'failure red kind'; Row = (New-InventoryRow 'a.Test#method' 'a.Test' 'method' 'FAILURE' 'error' 'example.Type' '' '1' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); Pattern = 'red_kind|FAILURE' },
+            [pscustomobject]@{ Name = 'error red kind'; Row = (New-InventoryRow 'a.Test#method' 'a.Test' 'method' 'ERROR' 'failure' 'example.Type' '' '1' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); Pattern = 'red_kind|ERROR' },
+            [pscustomobject]@{ Name = 'pass red metadata'; Row = (New-InventoryRow 'a.Test#method' 'a.Test' 'method' 'PASS' 'failure' '' '' '' ''); Pattern = 'non-red|metadata' },
+            [pscustomobject]@{ Name = 'negative body bytes'; Row = (New-InventoryRow 'a.Test#method' 'a.Test' 'method' 'ERROR' 'error' 'example.Type' '' '-1' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); Pattern = 'non-negative|byte' },
+            [pscustomobject]@{ Name = 'wrong empty hash'; Row = (New-InventoryRow 'a.Test#method' 'a.Test' 'method' 'ERROR' 'error' 'example.Type' '' '0' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); Pattern = 'empty-body|empty body|SHA' },
+            [pscustomobject]@{ Name = 'bad escape'; Row = (New-InventoryRow 'a.Test#method\q' 'a.Test' 'method\q' 'PASS'); Pattern = 'escape' }
+        )
+        foreach ($fixture in $invalidRows) {
+            Write-Utf8File $parent (($header, $fixture.Row) -join "`n")
+            Assert-Failed (Invoke-Tool $compareScript @('-CandidateInventoryPath', $candidate, '-OutputPath', $output, '-ParentInventoryPath', $parent)) $fixture.Pattern $fixture.Name
+        }
+
+        $extraHeader = "$header`textra"
+        Write-Utf8File $parent (($extraHeader, "$validPass`textra") -join "`n")
+        Assert-Failed (Invoke-Tool $compareScript @('-CandidateInventoryPath', $candidate, '-OutputPath', $output, '-ParentInventoryPath', $parent)) 'schema|column' 'extra schema column'
+
+        $emptyRed = New-InventoryRow 'a.Test#empty' 'a.Test' 'empty' 'ERROR' 'error' 'example.Type' '' '0' 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+        Write-Utf8File $parent (($header, $emptyRed) -join "`n")
+        Write-Utf8File $candidate (($header, $emptyRed) -join "`n")
+        Assert-Succeeded (Invoke-Tool $compareScript @('-CandidateInventoryPath', $candidate, '-OutputPath', $output, '-ParentInventoryPath', $parent)) 'valid zero-byte red signature'
+    }
+
     Invoke-Case 'comparison evaluates both parents independently and rejects duplicate inventories or reasonless removals' {
         $case = Join-Path $scratch 'compare-parents-validation'
         New-Item -ItemType Directory -Path $case -Force | Out-Null
@@ -384,6 +546,31 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         $removals = Join-Path $case 'removals.tsv'
         Write-Utf8File $removals "identity`treason`na.Test#one`t`n"
         Assert-Failed (Invoke-Tool $compareScript @('-CandidateInventoryPath', $candidate, '-OutputPath', $output, '-ReviewedRemovalPath', $removals, '-ParentInventoryPath', $parentB)) 'reason' 'reasonless reviewed removal'
+    }
+
+    Invoke-Case 'comparison emits one exact source-bound row per parent identity and one candidate-only row' {
+        $case = Join-Path $scratch 'compare-source-attribution'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $header = "identity`tclass`tmethod`toutcome`tred_kind`texception_type`tnormalized_message`tred_body_bytes`tred_body_sha256`treport"
+        $parentA = Join-Path $case 'frozen-next.tsv'
+        $parentB = Join-Path $case 'frozen-develop.tsv'
+        $candidate = Join-Path $case 'candidate.tsv'
+        $output = Join-Path $case 'comparison.tsv'
+        Write-Utf8File $parentA (($header, (New-InventoryRow 'a.SharedTest#same' 'a.SharedTest' 'same' 'PASS')) -join "`n")
+        Write-Utf8File $parentB (($header, (New-InventoryRow 'a.SharedTest#same' 'a.SharedTest' 'same' 'FAILURE' 'failure' 'example.Failure' 'old' '1' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')) -join "`n")
+        Write-Utf8File $candidate (($header,
+            (New-InventoryRow 'a.SharedTest#same' 'a.SharedTest' 'same' 'FAILURE' 'failure' 'example.Failure' 'old' '1' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),
+            (New-InventoryRow 'z.NewTest#new' 'z.NewTest' 'new' 'PASS')) -join "`n")
+        $result = Invoke-Tool $compareScript @('-CandidateInventoryPath', $candidate, '-OutputPath', $output, '-ParentInventoryPath', ($parentA + [System.IO.Path]::PathSeparator + $parentB))
+        Assert-Failed $result 'frozen-next|REGRESSION_PASS_TO_FAILURE' 'source-bound parent regression'
+        $rows = @(Import-Csv -Delimiter "`t" -LiteralPath $output)
+        Assert-Equal $rows.Count 3 'two parent rows plus one candidate-only row'
+        Assert-Equal (($rows.identity) -join '|') 'a.SharedTest#same|a.SharedTest#same|z.NewTest#new' 'identity-primary deterministic ordering'
+        Assert-Equal (($rows.baseline_source) -join '|') 'frozen-develop|frozen-next|CANDIDATE_ONLY' 'source-secondary deterministic ordering and explicit candidate row'
+        Assert-Equal (($rows.baseline_outcome) -join '|') 'FAILURE|PASS|ABSENT' 'source-bound baseline outcomes'
+        Assert-Equal (($rows.classification) -join '|') 'MATCH|REGRESSION_PASS_TO_FAILURE|CANDIDATE_ONLY' 'source-bound classifications'
+        Assert-True ($rows[0].baseline_red_signature.Length -gt 0) 'develop row keeps its exact red signature'
+        Assert-Equal $rows[1].baseline_red_signature '' 'next pass row carries no borrowed red signature'
     }
 
     Invoke-Case 'partition map is an ordinal union with stable bounded slots and per-tree filters' {

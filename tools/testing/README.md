@@ -40,7 +40,10 @@ When `pwsh -File` must carry multiple paths, join them with
 `[IO.Path]::PathSeparator` (`:` on POSIX, `;` on Windows). XML is loaded with
 DTDs prohibited and no external resolver. Malformed XML, duplicate testcase
 identities, unselected reported classes, missing selected classes, and red
-outcomes without a deterministic type/body signature are fatal.
+outcomes without a deterministic type/body signature are fatal. A testcase
+with more than one semantic outcome element across `failure`, `error`,
+`skipped`, and `disabled` is also invalid. If any red testcase is present,
+`CanonicalWorktree`, `SessionRoot`, and `RunId` are all required.
 
 The export schema is:
 
@@ -48,11 +51,22 @@ The export schema is:
 identity	class	method	outcome	red_kind	exception_type	normalized_message	red_body_bytes	red_body_sha256	report
 ```
 
-`identity` is the exact normalized `classname#name`, including a
-parameterized testcase's complete Surefire `name`. Outcomes are exactly
+Decoded `identity` is the exact XML `classname#name` without trimming either
+attribute, including a parameterized testcase's complete Surefire `name` and
+any boundary whitespace. Outcomes are exactly
 `PASS`, `FAILURE`, `ERROR`, or `SKIPPED`. Red bodies have LF line endings and
 replace the supplied worktree, session root, run ID, and ISO-8601 timestamps
 before their complete UTF-8 byte length and streaming SHA-256 are recorded.
+Zoned, numeric-offset, and unzoned ISO-8601 timestamps normalize to the same
+`<TIMESTAMP>` token. A zero-byte red body is valid and uses SHA-256
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+
+All textual TSV values use a reversible escape layer before joining columns:
+`\\` is backslash, `\t` is tab, `\r` is carriage return, `\n` is line feed,
+and `\s` protects a boundary space that an import parser could otherwise
+trim. Consumers decode and validate these escapes. Therefore an actual line
+feed encoded as `\n` remains distinct from a literal backslash followed by
+`n`, which encodes as `\\n`.
 
 Compare the candidate against both frozen parents with:
 
@@ -72,15 +86,26 @@ columns. It exempts only that exact parent identity when it is absent from the
 candidate. The comparison schema is:
 
 ```text
-identity	baseline_sources	baseline_outcome	candidate_outcome	baseline_red_signature	candidate_red_signature	classification	owner	disposition
+identity	baseline_source	baseline_outcome	candidate_outcome	baseline_red_signature	candidate_red_signature	classification	owner	disposition
 ```
 
-Missing candidate identities are emitted as `ABSENT`. Parent PASS regressions,
+Each parent source that owns an identity receives its own row, sorted by
+decoded identity and then source, so the outcome, signature, classification,
+and requested isolated rerun remain bound to one exact frozen parent. An
+identity owned by no parent receives one row whose `baseline_source` is
+`CANDIDATE_ONLY` and whose baseline outcome is `ABSENT`. Missing candidate
+identities are emitted as `ABSENT`. Parent PASS regressions,
 unapproved removals, red-kind changes, and same-kind red signature changes make
 the command nonzero after it writes the report. A same-kind signature change
 is `RED_SIGNATURE_CHANGED_REQUIRES_PAIRED_RERUN`; rerun that exact identity in
 the frozen parent and candidate under the same selector/environment, then
 record its owner and disposition in the review ledger.
+
+Inventory consumption requires the exact export schema and reversibly decodes
+every field. It verifies `identity == class + '#' + method`, exact
+`FAILURE`/`failure` and `ERROR`/`error` pairing, empty red metadata on non-red
+rows, a non-negative body byte count, a 64-digit lowercase SHA-256, and the
+canonical empty-body hash when the byte count is zero.
 
 ## Deterministic OOM-safe partitions
 

@@ -35,7 +35,7 @@ function Read-ClassInventory {
     $classes = [System.Collections.Generic.List[string]]::new()
     $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
     foreach ($raw in [System.IO.File]::ReadAllLines((Resolve-Path -LiteralPath $Path).Path)) {
-        $className = $raw.Trim()
+        $className = $raw
         if ($className.Length -eq 0) {
             continue
         }
@@ -68,8 +68,8 @@ function Read-HelperAllowlist {
             -not ($row.PSObject.Properties.Name -ccontains 'reason')) {
             throw 'Empty-helper allowlist requires class and reason columns'
         }
-        $className = ([string]$row.class).Trim()
-        $reason = ([string]$row.reason).Trim()
+        $className = ConvertFrom-TsvField ([string]$row.class) 'class'
+        $reason = ConvertFrom-TsvField ([string]$row.reason) 'reason'
         if ($className.Length -eq 0 -or $reason.Length -eq 0) {
             throw 'Every empty-helper allowlist entry must name a class and a reason'
         }
@@ -99,7 +99,7 @@ function Normalize-TokenizedText {
     foreach ($replacement in ($replacements | Sort-Object { $_.Token.Length } -Descending)) {
         $normalized = $normalized.Replace($replacement.Token, $replacement.Replacement)
     }
-    $iso8601 = '(?<![0-9A-Za-z])\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:?\d{2})(?![0-9A-Za-z])'
+    $iso8601 = '(?<![0-9A-Za-z])\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:?\d{2})?(?![0-9A-Za-z:+-])'
     return [System.Text.RegularExpressions.Regex]::Replace(
         $normalized,
         $iso8601,
@@ -140,12 +140,51 @@ function Get-BodySignature {
     }
 }
 
-function Escape-TsvField {
-    param([AllowEmptyString()] [string] $Value, [string] $FieldName)
-    if ($Value.Contains("`t") -or $Value.Contains("`r") -or $Value.Contains("`n")) {
-        throw "TSV field $FieldName contains a tab or line break"
+function ConvertTo-TsvField {
+    param([AllowEmptyString()] [string] $Value)
+    $builder = [System.Text.StringBuilder]::new()
+    $firstNonSpace = 0
+    while ($firstNonSpace -lt $Value.Length -and $Value[$firstNonSpace] -eq ' ') { $firstNonSpace++ }
+    $lastNonSpace = $Value.Length - 1
+    while ($lastNonSpace -ge 0 -and $Value[$lastNonSpace] -eq ' ') { $lastNonSpace-- }
+    for ($index = 0; $index -lt $Value.Length; $index++) {
+        switch ($Value[$index]) {
+            '\' { [void]$builder.Append('\\') }
+            "`t" { [void]$builder.Append('\t') }
+            "`r" { [void]$builder.Append('\r') }
+            "`n" { [void]$builder.Append('\n') }
+            ' ' {
+                if ($index -lt $firstNonSpace -or $index -gt $lastNonSpace) { [void]$builder.Append('\s') }
+                else { [void]$builder.Append(' ') }
+            }
+            default { [void]$builder.Append($Value[$index]) }
+        }
     }
-    return $Value
+    return $builder.ToString()
+}
+
+function ConvertFrom-TsvField {
+    param([AllowEmptyString()] [string] $Value, [string] $FieldName)
+    $builder = [System.Text.StringBuilder]::new()
+    for ($index = 0; $index -lt $Value.Length; $index++) {
+        $character = $Value[$index]
+        if ($character -ne '\') {
+            [void]$builder.Append($character)
+            continue
+        }
+        if (++$index -ge $Value.Length) {
+            throw "TSV field $FieldName has a dangling escape"
+        }
+        switch ($Value[$index]) {
+            '\' { [void]$builder.Append('\') }
+            't' { [void]$builder.Append("`t") }
+            'r' { [void]$builder.Append("`r") }
+            'n' { [void]$builder.Append("`n") }
+            's' { [void]$builder.Append(' ') }
+            default { throw "TSV field $FieldName has an invalid escape: \$($Value[$index])" }
+        }
+    }
+    return $builder.ToString()
 }
 
 $sourceClasses = Read-ClassInventory $SourceClassInventory
@@ -198,14 +237,10 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
     }
 
     foreach ($testcase in $document.GetElementsByTagName('testcase')) {
-        $className = ([string]$testcase.GetAttribute('classname')).Trim()
-        $methodName = ([string]$testcase.GetAttribute('name')).Trim()
+        $className = [string]$testcase.GetAttribute('classname')
+        $methodName = [string]$testcase.GetAttribute('name')
         if ($className.Length -eq 0 -or $methodName.Length -eq 0) {
             throw "Surefire testcase in $reportPath lacks classname or name"
-        }
-        if ($className.IndexOfAny([char[]]@("`t", "`r", "`n", '#')) -ge 0 -or
-            $methodName.IndexOfAny([char[]]@("`t", "`r", "`n")) -ge 0) {
-            throw "Surefire testcase in $reportPath has an invalid classname or name"
         }
         if (-not $selected.Contains($className)) {
             throw "Surefire report contains unselected executable class: $className"
@@ -219,8 +254,8 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
         $failureElements = @($testcase.ChildNodes | Where-Object { $_.LocalName -eq 'failure' })
         $errorElements = @($testcase.ChildNodes | Where-Object { $_.LocalName -eq 'error' })
         $skipElements = @($testcase.ChildNodes | Where-Object { $_.LocalName -eq 'skipped' -or $_.LocalName -eq 'disabled' })
-        if (($failureElements.Count + $errorElements.Count) -gt 1) {
-            throw "Surefire testcase has multiple red outcomes: $identity"
+        if (($failureElements.Count + $errorElements.Count + $skipElements.Count) -gt 1) {
+            throw "Surefire testcase has multiple semantic outcomes: $identity"
         }
 
         $outcome = 'PASS'
@@ -245,16 +280,20 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
         }
 
         if ($null -ne $redElement) {
-            $exceptionType = ([string]$redElement.GetAttribute('type')).Trim()
-            $normalizedMessage = Normalize-TokenizedText ([string]$redElement.GetAttribute('message')).Trim()
+            if ([string]::IsNullOrWhiteSpace($CanonicalWorktree) -or
+                [string]::IsNullOrWhiteSpace($SessionRoot) -or
+                [string]::IsNullOrWhiteSpace($RunId)) {
+                throw "Red outcome normalization requires CanonicalWorktree, SessionRoot, and RunId: $identity"
+            }
+            $exceptionType = [string]$redElement.GetAttribute('type')
+            $normalizedMessage = Normalize-TokenizedText ([string]$redElement.GetAttribute('message'))
             $normalizedBody = Normalize-TokenizedText ([string]$redElement.InnerText)
-            if ($exceptionType.Length -eq 0 -or $normalizedBody.Length -eq 0) {
+            if ($exceptionType.Length -eq 0) {
                 throw "Red outcome lacks a deterministic signature: $identity"
             }
             $signature = Get-BodySignature $normalizedBody
             $redBodyBytes = $signature.Bytes
             $redBodySha256 = $signature.Sha256
-            $normalizedMessage = $normalizedMessage.Replace("`n", '\n')
         }
 
         $rowsByIdentity.Add($identity, [pscustomobject]@{
@@ -287,7 +326,7 @@ $lines.Add($columns -join "`t")
 foreach ($identity in (Get-OrdinalSorted @($rowsByIdentity.Keys))) {
     $row = $rowsByIdentity[$identity]
     $fields = foreach ($column in $columns) {
-        Escape-TsvField ([string]$row.$column) $column
+        ConvertTo-TsvField ([string]$row.$column)
     }
     $lines.Add($fields -join "`t")
 }
