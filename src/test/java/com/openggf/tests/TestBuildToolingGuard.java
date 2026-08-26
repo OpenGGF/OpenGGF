@@ -725,6 +725,9 @@ class TestBuildToolingGuard {
                 "UNAVAILABLE_IN_SANDBOX",
                 "test-session-locks",
                 "lease_root");
+        Pattern dynamicInodeGuidance = Pattern.compile(
+                "UNAVAILABLE_DYNAMIC[^.]*JSON-null[^.]*usable_inodes[^.]*"
+                        + "live probe[^.]*(?:authoritative|authority)");
         for (String file : List.of("AGENTS.md", "CLAUDE.md", "tools/testing/README.md",
                 "docs/agent-workflow/README.md")) {
             String text = Files.readString(Path.of(file), StandardCharsets.UTF_8);
@@ -732,6 +735,10 @@ class TestBuildToolingGuard {
                 if (!text.contains(requiredText)) {
                     violations.add(file + " does not contain required storage guidance: " + requiredText);
                 }
+            }
+            if (!dynamicInodeGuidance.matcher(text).find()) {
+                violations.add(file + " must state in one semantic rule that UNAVAILABLE_DYNAMIC"
+                        + " uses JSON-null usable_inodes and the live probe is authoritative");
             }
         }
         String isolationDesign = Files.readString(Path.of(

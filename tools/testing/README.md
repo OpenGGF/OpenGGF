@@ -50,9 +50,9 @@ live contained create/write/flush/read/unlink inode-availability probe at
 launch and completion. A managed reservation reports `inode_count_status` as
 `MEASURED` with numeric `usable_inodes`, where zero refuses immediately, or as
 `UNAVAILABLE_DYNAMIC` with JSON-null `usable_inodes` for a dynamically
-allocated inode pool. Dynamic/unavailable never means measured exhaustion: the
-live probe is authoritative. Unmanaged tiers likewise do not fabricate a
-numeric inode count.
+allocated inode pool, for which the live probe is authoritative rather than
+treating dynamic allocation as measured exhaustion. Unmanaged tiers likewise
+do not fabricate a numeric inode count.
 
 Explicit `--lock-root` or `OPENGGF_TEST_LOCK_ROOT` remains highest priority.
 Without an override, a managed reservation uses its verified `lease_root`, the

@@ -140,8 +140,9 @@ lower values fail startup. Capacity and the live inode probe are measured again 
 finalisation. A managed reservation reports `inode_count_status=MEASURED` with numeric
 `usable_inodes` (where zero refuses immediately), or
 `inode_count_status=UNAVAILABLE_DYNAMIC` with JSON-null `usable_inodes` for a dynamic inode
-pool. The latter is not measured exhaustion: the live probe is authoritative. Other tiers
-record why a numeric count is unavailable rather than inventing one.
+pool, for which the live probe is authoritative rather than treating dynamic allocation as
+measured exhaustion. Other tiers record why a numeric count is unavailable rather than
+inventing one.
 
 An explicit `--lock-root` or `OPENGGF_TEST_LOCK_ROOT` has highest lock-root priority.
 Otherwise a managed reservation uses its verified `lease_root` under
