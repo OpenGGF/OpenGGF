@@ -711,6 +711,16 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   or competing selector properties. Run all Task 2 fixtures and obtain
   independent review before Task 3 resumes.
 
+  Keep duplicate XML testcase identities fatal by default. When immutable
+  parent XML collapses distinct invocations of a reviewed `@RepeatedTest`, an
+  optional authenticated TSV may name the exact base identity, expected
+  cardinality, and reason. Require exact cardinality in one report, selected
+  root ownership, one runtime-input occurrence, and use of every declaration;
+  preserve each XML-order occurrence as `@xml-occurrence[i/n]` without claiming
+  a JUnit display name or unique ID. Reject undeclared duplicates, wrong counts,
+  cross-report duplicates, malformed/unused declarations, and missing or
+  repeated runtime-input authentication.
+
 ---
 
 ### Task 3: Freeze Refs, Create Parent Worktrees, and Record Parent Baselines

@@ -7,6 +7,7 @@ param(
     [string] $SessionRoot = '',
     [string] $RunId = '',
     [string] $EmptyHelperAllowlist = '',
+    [string] $RepeatedIdentityCardinalityPath = '',
     [string] $SelectorPatternInventory = '',
     [string] $MavenArgumentInventory = '',
     [string] $RuntimeInputs = '',
@@ -110,6 +111,84 @@ function Read-HelperAllowlist {
         }
     }
     return ,$helpers
+}
+
+function Get-SelectedOwningRoot {
+    param([string] $ClassName, [System.Collections.Generic.HashSet[string]] $SelectedClasses)
+    if ($SelectedClasses.Contains($ClassName)) {
+        return $ClassName
+    }
+    foreach ($selectedClass in $SelectedClasses) {
+        if ($ClassName.StartsWith($selectedClass + '$', [System.StringComparison]::Ordinal)) {
+            return $selectedClass
+        }
+    }
+    return ''
+}
+
+function Read-RepeatedIdentityCardinality {
+    param([string] $Path, [System.Collections.Generic.HashSet[string]] $SelectedClasses)
+    $entries = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return [pscustomobject]@{ Path = ''; Entries = $entries }
+    }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Repeated-identity cardinality allowlist does not exist: $Path"
+    }
+    $canonicalPath = (Resolve-Path -LiteralPath $Path).Path
+    $lines = @([System.IO.File]::ReadAllLines($canonicalPath))
+    if ($lines.Count -eq 0 -or $lines[0] -cne "identity`tcardinality`treason") {
+        throw 'Repeated-identity cardinality allowlist requires exactly identity, cardinality, and reason columns'
+    }
+    for ($index = 1; $index -lt $lines.Count; $index++) {
+        if ([System.Text.RegularExpressions.Regex]::Matches($lines[$index], "`t").Count -ne 2) {
+            throw "Repeated-identity cardinality allowlist row $($index + 1) must contain exactly three fields"
+        }
+    }
+    foreach ($row in @(Import-Csv -Delimiter "`t" -LiteralPath $canonicalPath)) {
+        $identity = ConvertFrom-TsvField ([string]$row.identity) 'identity'
+        $cardinalityText = ConvertFrom-TsvField ([string]$row.cardinality) 'cardinality'
+        $reason = ConvertFrom-TsvField ([string]$row.reason) 'reason'
+        $separator = $identity.IndexOf('#', [System.StringComparison]::Ordinal)
+        if ($separator -le 0 -or $separator -eq ($identity.Length - 1)) {
+            throw "Repeated-identity allowlist identity must contain a non-empty class and method separated by the first #: [$identity]"
+        }
+        $className = $identity.Substring(0, $separator)
+        $methodName = $identity.Substring($separator + 1)
+        if ((Get-SelectedOwningRoot $className $SelectedClasses).Length -eq 0) {
+            throw "Repeated-identity allowlist identity is not owned by a selected root: $identity"
+        }
+        if ($cardinalityText -notmatch '^(?:[2-9]|[1-9][0-9]+)$') {
+            throw "Repeated-identity allowlist cardinality must be an integer at least 2: $identity=[$cardinalityText]"
+        }
+        if ($reason.Length -eq 0) {
+            throw "Repeated-identity allowlist reason must be non-empty: $identity"
+        }
+        if ($entries.ContainsKey($identity)) {
+            throw "Duplicate repeated-identity allowlist identity: $identity"
+        }
+        $entries.Add($identity, [pscustomobject]@{
+            class = $className
+            method = $methodName
+            cardinality = [int]::Parse($cardinalityText, [System.Globalization.CultureInfo]::InvariantCulture)
+            reason = $reason
+        })
+    }
+    return [pscustomobject]@{ Path = $canonicalPath; Entries = $entries }
+}
+
+function Assert-RuntimeInputExactlyOnce {
+    param([string] $CanonicalPath, [string] $AuthenticatedRuntimeInputs, [string] $Description)
+    $matches = 0
+    foreach ($runtimeInput in $AuthenticatedRuntimeInputs.Split([System.IO.Path]::PathSeparator, [System.StringSplitOptions]::RemoveEmptyEntries)) {
+        if ([System.IO.Path]::IsPathFullyQualified($runtimeInput) -and
+            [System.IO.Path]::GetFullPath($runtimeInput) -ceq $CanonicalPath) {
+            $matches++
+        }
+    }
+    if ($matches -ne 1) {
+        throw "$Description must appear in OPENGGF_RUNTIME_INPUTS exactly once; found $matches"
+    }
 }
 
 function ConvertFrom-MavenPropertyDefinition {
@@ -457,6 +536,11 @@ function ConvertFrom-TsvField {
 }
 
 $sourceClasses = Read-ClassInventory $SourceClassInventory
+$selected = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+foreach ($className in $sourceClasses) {
+    [void]$selected.Add($className)
+}
+$repeatedIdentityContract = Read-RepeatedIdentityCardinality $RepeatedIdentityCardinalityPath $selected
 $preflightValues = [ordered]@{
     SelectorPatternInventory = $SelectorPatternInventory
     MavenArgumentInventory = $MavenArgumentInventory
@@ -468,16 +552,18 @@ if ($suppliedPreflight -ne 0 -and $suppliedPreflight -ne $preflightValues.Count)
     $missingPreflight = @($preflightValues.Keys | Where-Object { [string]::IsNullOrWhiteSpace([string]$preflightValues[$_]) })
     throw "Explicit-source preflight is atomic; missing: $($missingPreflight -join ', ')"
 }
+if ($repeatedIdentityContract.Path.Length -ne 0 -and $suppliedPreflight -ne $preflightValues.Count) {
+    throw 'RepeatedIdentityCardinalityPath requires the complete atomic explicit-source preflight'
+}
 if ($suppliedPreflight -eq $preflightValues.Count) {
     $selectorContract = Assert-ExplicitSourceSelectorContract $sourceClasses $SelectorPatternInventory $MavenArgumentInventory $RuntimeInputs
     Assert-EffectiveSurefireContract `
         $EffectivePomPath `
         $SurefireExecutionId `
         $selectorContract.ApprovedProperties
-}
-$selected = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
-foreach ($className in $sourceClasses) {
-    [void]$selected.Add($className)
+    if ($repeatedIdentityContract.Path.Length -ne 0) {
+        Assert-RuntimeInputExactlyOnce $repeatedIdentityContract.Path $RuntimeInputs 'Repeated-identity cardinality allowlist'
+    }
 }
 $helpers = Read-HelperAllowlist $EmptyHelperAllowlist $selected
 
@@ -529,20 +615,19 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
         if ($className.Length -eq 0 -or $methodName.Length -eq 0) {
             throw "Surefire testcase in $reportPath lacks classname or name"
         }
-        $owningRoot = $className
-        if (-not $selected.Contains($owningRoot)) {
-            $nestedBoundary = $className.IndexOf('$', [System.StringComparison]::Ordinal)
-            if ($nestedBoundary -ge 0) {
-                $owningRoot = $className.Substring(0, $nestedBoundary)
-            }
-        }
-        if (-not $selected.Contains($owningRoot)) {
+        $owningRoot = Get-SelectedOwningRoot $className $selected
+        if ($owningRoot.Length -eq 0) {
             throw "Surefire report contains unselected executable class: $className"
         }
         [void]$coveredRoots.Add($owningRoot)
         $identity = "$className#$methodName"
         if ($rowsByIdentity.ContainsKey($identity)) {
-            throw "Duplicate Surefire testcase identity: $identity"
+            if (-not $repeatedIdentityContract.Entries.ContainsKey($identity)) {
+                throw "Duplicate Surefire testcase identity: $identity"
+            }
+        }
+        else {
+            $rowsByIdentity.Add($identity, [System.Collections.Generic.List[object]]::new())
         }
 
         $failureElements = @($testcase.ChildNodes | Where-Object { $_.LocalName -eq 'failure' })
@@ -590,7 +675,7 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
             $redBodySha256 = $signature.Sha256
         }
 
-        $rowsByIdentity.Add($identity, [pscustomobject]@{
+        $rowsByIdentity[$identity].Add([pscustomobject]@{
             identity = $identity
             class = $className
             method = $methodName
@@ -601,7 +686,23 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
             red_body_bytes = $redBodyBytes
             red_body_sha256 = $redBodySha256
             report = [System.IO.Path]::GetFileName($reportPath)
+            report_path = $reportPath
         })
+    }
+}
+
+foreach ($identity in $repeatedIdentityContract.Entries.Keys) {
+    $expected = $repeatedIdentityContract.Entries[$identity].cardinality
+    $actual = if ($rowsByIdentity.ContainsKey($identity)) { $rowsByIdentity[$identity].Count } else { 0 }
+    if ($actual -ne $expected) {
+        throw "Repeated Surefire testcase identity cardinality mismatch: $identity expected=$expected actual=$actual"
+    }
+    $reports = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    foreach ($row in $rowsByIdentity[$identity]) {
+        [void]$reports.Add([string]$row.report_path)
+    }
+    if ($reports.Count -ne 1) {
+        throw "Repeated Surefire testcase identity must occur in exactly one report: $identity reports=$($reports.Count)"
     }
 }
 
@@ -617,12 +718,26 @@ if ($missingClasses.Count -gt 0) {
 
 $lines = [System.Collections.Generic.List[string]]::new()
 $lines.Add($columns -join "`t")
+$exportedIdentityCount = 0
+$emittedIdentities = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($identity in (Get-OrdinalSorted @($rowsByIdentity.Keys))) {
-    $row = $rowsByIdentity[$identity]
-    $fields = foreach ($column in $columns) {
-        ConvertTo-TsvField ([string]$row.$column)
+    $identityRows = $rowsByIdentity[$identity]
+    for ($index = 0; $index -lt $identityRows.Count; $index++) {
+        $row = $identityRows[$index].PSObject.Copy()
+        if ($identityRows.Count -gt 1) {
+            $suffix = "@xml-occurrence[$($index + 1)/$($identityRows.Count)]"
+            $row.method = [string]$row.method + $suffix
+            $row.identity = [string]$row.class + '#' + [string]$row.method
+        }
+        if (-not $emittedIdentities.Add([string]$row.identity)) {
+            throw "Repeated-identity occurrence suffix collides with another exported identity: $($row.identity)"
+        }
+        $fields = foreach ($column in $columns) {
+            ConvertTo-TsvField ([string]$row.$column)
+        }
+        $lines.Add($fields -join "`t")
+        $exportedIdentityCount++
     }
-    $lines.Add($fields -join "`t")
 }
 $outputDirectory = Split-Path -Parent $OutputPath
 if ($outputDirectory -and -not (Test-Path -LiteralPath $outputDirectory)) {
@@ -630,4 +745,4 @@ if ($outputDirectory -and -not (Test-Path -LiteralPath $outputDirectory)) {
 }
 [System.IO.File]::WriteAllText($OutputPath, (($lines -join "`n") + "`n"), [System.Text.UTF8Encoding]::new($false))
 
-Write-Host "Exported $($rowsByIdentity.Count) Surefire testcase outcomes to $OutputPath"
+Write-Host "Exported $exportedIdentityCount Surefire testcase outcomes to $OutputPath"

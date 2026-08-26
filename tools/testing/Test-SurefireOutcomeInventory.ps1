@@ -649,6 +649,128 @@ test
         Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-ReportRoot', $missingRoot, '-OutputPath', $output)) 'ABSENT[\s\S]*example\.OneTest' 'missing selected class'
     }
 
+    Invoke-Case 'export emits allowlisted repeated identities in XML occurrence order with separate outcomes' {
+        $case = Join-Path $scratch 'export-repeated-identity'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $patterns = Join-Path $case 'ordinary.includes'
+        $arguments = Join-Path $case 'maven-arguments.txt'
+        $effectivePom = Join-Path $case 'selector-invocation-effective-pom.xml'
+        $allowlist = Join-Path $case 'repeated-identities.tsv'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.RepeatTest`n"
+        Write-Utf8File $patterns "example/RepeatTest.java`n"
+        Write-Utf8File $arguments "-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText)
+        Write-Utf8File $allowlist "identity`tcardinality`treason`nexample.RepeatTest#case[#1]`t2`tReviewed repeated invocation`n"
+        Write-Utf8File (Join-Path $case 'TEST-repeat.xml') '<testsuite><testcase classname="example.RepeatTest" name="case[#1]"><failure type="example.First" message="first">first body</failure></testcase><testcase classname="example.RepeatTest" name="case[#1]"><error type="example.Second" message="second">second body</error></testcase></testsuite>'
+
+        $result = Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments,
+            '-RuntimeInputs', ($patterns + [IO.Path]::PathSeparator + $allowlist),
+            '-EffectivePomPath', $effectivePom,
+            '-RepeatedIdentityCardinalityPath', $allowlist,
+            '-CanonicalWorktree', '/work/tree', '-SessionRoot', '/session/root', '-RunId', 'repeat-run-12345678',
+            '-OutputPath', $output, '-ReportRoot', $case
+        )
+        Assert-Succeeded $result 'allowlisted repeated identity export'
+        $rows = @(Import-Csv -Delimiter "`t" -LiteralPath $output)
+        Assert-Equal $rows.Count 2 'repeated identity row count'
+        Assert-Equal (($rows.identity) -join '|') 'example.RepeatTest#case[#1]@xml-occurrence[1/2]|example.RepeatTest#case[#1]@xml-occurrence[2/2]' 'repeated identities use XML occurrence suffixes'
+        Assert-Equal (($rows.method) -join '|') 'case[#1]@xml-occurrence[1/2]|case[#1]@xml-occurrence[2/2]' 'repeated methods use XML occurrence suffixes'
+        Assert-Equal (($rows.outcome) -join '|') 'FAILURE|ERROR' 'repeated outcomes remain separate'
+        Assert-True ($rows[0].red_body_sha256 -cne $rows[1].red_body_sha256) 'repeated red signatures remain separate'
+    }
+
+    Invoke-Case 'export rejects invalid repeated identity cardinality scope reports and allowlists' {
+        $case = Join-Path $scratch 'export-repeated-rejections'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        $allowlist = Join-Path $case 'repeated-identities.tsv'
+        Write-Utf8File $classes "example.RepeatTest`n"
+
+        $sameReport = Join-Path $case 'same-report'
+        New-Item -ItemType Directory -Path $sameReport | Out-Null
+        Write-Utf8File (Join-Path $sameReport 'TEST-repeat.xml') '<testsuite><testcase classname="example.RepeatTest" name="same"/><testcase classname="example.RepeatTest" name="same"/></testsuite>'
+
+        $patterns = Join-Path $case 'ordinary.includes'
+        $arguments = Join-Path $case 'maven-arguments.txt'
+        $effectivePom = Join-Path $case 'selector-invocation-effective-pom.xml'
+        Write-Utf8File $patterns "example/RepeatTest.java`n"
+        Write-Utf8File $arguments "-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText)
+        $invokeAuthenticated = {
+            param([string] $Reports)
+            Invoke-Tool $exportScript @(
+                '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+                '-MavenArgumentInventory', $arguments,
+                '-RuntimeInputs', ($patterns + [IO.Path]::PathSeparator + $allowlist),
+                '-EffectivePomPath', $effectivePom, '-RepeatedIdentityCardinalityPath', $allowlist,
+                '-OutputPath', $output, '-ReportRoot', $Reports
+            )
+        }
+
+        Write-Utf8File $allowlist "identity`tcardinality`treason`nexample.RepeatTest#same`t2`tReviewed repeated invocation`n"
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-RepeatedIdentityCardinalityPath', $allowlist,
+            '-OutputPath', $output, '-ReportRoot', $sameReport
+        )) 'atomic|preflight|SelectorPatternInventory' 'standalone repeated allowlist without preflight'
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-RepeatedIdentityCardinalityPath', $allowlist,
+            '-RuntimeInputs', $allowlist, '-OutputPath', $output, '-ReportRoot', $sameReport
+        )) 'atomic|preflight|SelectorPatternInventory' 'standalone repeated allowlist with runtime input only'
+
+        Write-Utf8File $allowlist "identity`tcardinality`treason`nexample.RepeatTest#same`t1`tToo small`n"
+        Assert-Failed (& $invokeAuthenticated $sameReport) 'cardinality|at least 2|>=2' 'cardinality one'
+
+        Write-Utf8File $allowlist "identity`tcardinality`treason`nexample.RepeatTest#same`t3`tWrong count`n"
+        Assert-Failed (& $invokeAuthenticated $sameReport) 'cardinality|expected.*3|actual.*2' 'wrong repeated cardinality'
+
+        Write-Utf8File $allowlist "identity`tcardinality`treason`nexample.RepeatTest#same`t10`tLarge reviewed count`n"
+        Assert-Failed (& $invokeAuthenticated $sameReport) 'expected=10.*actual=2|expected.*10.*actual.*2' 'multi-digit cardinality is parsed before mismatch validation'
+
+        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $sameReport)) 'duplicate.*example\.RepeatTest#same' 'unlisted same-report duplicate'
+
+        $crossReports = Join-Path $case 'cross-reports'
+        New-Item -ItemType Directory -Path $crossReports | Out-Null
+        Write-Utf8File (Join-Path $crossReports 'TEST-a.xml') '<testsuite><testcase classname="example.RepeatTest" name="same"/></testsuite>'
+        Write-Utf8File (Join-Path $crossReports 'TEST-b.xml') '<testsuite><testcase classname="example.RepeatTest" name="same"/></testsuite>'
+        Write-Utf8File $allowlist "identity`tcardinality`treason`nexample.RepeatTest#same`t2`tCross-report duplicate forbidden`n"
+        Assert-Failed (& $invokeAuthenticated $crossReports) 'exactly one report|across reports|duplicate' 'allowlisted cross-report duplicate'
+
+        $singleReport = Join-Path $case 'single-report'
+        New-Item -ItemType Directory -Path $singleReport | Out-Null
+        Write-Utf8File (Join-Path $singleReport 'TEST-one.xml') '<testsuite><testcase classname="example.RepeatTest" name="other"/></testsuite>'
+        Write-Utf8File $allowlist "identity`tcardinality`treason`nexample.RepeatTest#missing`t2`tMissing repeated identity`n"
+        Assert-Failed (& $invokeAuthenticated $singleReport) 'unused|missing|actual.*0|cardinality' 'unused repeated identity entry'
+
+        foreach ($fixture in @(
+            [pscustomobject]@{ Name = 'malformed identity'; Content = "identity`tcardinality`treason`nmissing-delimiter`t2`tReason`n"; Pattern = 'identity|class.*method|malformed' },
+            [pscustomobject]@{ Name = 'extra allowlist field'; Content = "identity`tcardinality`treason`nexample.RepeatTest#same`t2`tReason`textra`n"; Pattern = 'exactly.*columns|field|malformed' },
+            [pscustomobject]@{ Name = 'empty reason'; Content = "identity`tcardinality`treason`nexample.RepeatTest#same`t2`t`n"; Pattern = 'reason' },
+            [pscustomobject]@{ Name = 'duplicate entry'; Content = "identity`tcardinality`treason`nexample.RepeatTest#same`t2`tFirst`nexample.RepeatTest#same`t2`tSecond`n"; Pattern = 'duplicate.*allowlist|duplicate.*identity' },
+            [pscustomobject]@{ Name = 'unowned identity'; Content = "identity`tcardinality`treason`nexample.OtherTest#same`t2`tNot selected`n"; Pattern = 'selected|owned|unselected' }
+        )) {
+            Write-Utf8File $allowlist $fixture.Content
+            Assert-Failed (& $invokeAuthenticated $sameReport) $fixture.Pattern $fixture.Name
+        }
+
+        Write-Utf8File $allowlist "identity`tcardinality`treason`nexample.RepeatTest#same`t2`tReviewed repeated invocation`n"
+        foreach ($runtimeFixture in @(
+            [pscustomobject]@{ Name = 'missing repeated allowlist runtime input'; Value = $patterns },
+            [pscustomobject]@{ Name = 'duplicate repeated allowlist runtime input'; Value = ($patterns + [IO.Path]::PathSeparator + $allowlist + [IO.Path]::PathSeparator + $allowlist) }
+        )) {
+            Assert-Failed (Invoke-Tool $exportScript @(
+                '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+                '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $runtimeFixture.Value,
+                '-EffectivePomPath', $effectivePom, '-RepeatedIdentityCardinalityPath', $allowlist,
+                '-OutputPath', $output, '-ReportRoot', $sameReport
+            )) 'RuntimeInputs|runtime input|exactly once' $runtimeFixture.Name
+        }
+    }
+
     Invoke-Case 'export rejects multiple semantic outcomes including red plus skip and repeated skip' {
         $case = Join-Path $scratch 'export-multiple-outcomes'
         New-Item -ItemType Directory -Path $case -Force | Out-Null

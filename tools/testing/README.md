@@ -91,8 +91,17 @@ identity, while `example.Outerish$Nested` remains unselected. Selector roots
 must consist only of non-keyword Java identifier segments separated by single
 dots. Empty segments, leading/trailing dots, whitespace, slash/backslash,
 wildcards, `$`, and other identifier metacharacters are fatal before any
-slash-path mapping. Lookalike prefixes, duplicate nested identities, and roots
-with neither exact nor nested testcase coverage are also fatal.
+slash-path mapping. Lookalike prefixes and roots with neither exact nor nested
+testcase coverage are fatal. Duplicate testcase identities are also fatal by
+default. A reviewed repeated invocation may instead be declared through
+`-RepeatedIdentityCardinalityPath` using an exact
+`identity<TAB>cardinality<TAB>reason` TSV. The identity is split at its first
+`#` (so later `#` characters remain part of the method name), the cardinality
+must be at least two, and the reason must be non-empty. The identity must be
+owned by a selected root, occur with exactly that cardinality in one report,
+and every listed identity must be used. Each accepted occurrence is exported
+in XML order with `@xml-occurrence[i/n]` appended to its method and identity;
+this is an inventory ordinal, not a JUnit unique or display ID.
 Naming-convention helpers that execute no tests require a separately reviewed
 TSV with `class` and non-empty `reason` columns.
 
@@ -151,6 +160,10 @@ $existingInputs = @($env:OPENGGF_RUNTIME_INPUTS -split [IO.Path]::PathSeparator 
 $env:OPENGGF_RUNTIME_INPUTS = (@($existingInputs) + $selector) -join [IO.Path]::PathSeparator
 $mavenArguments = @('-Dmse=relaxed', "-Dsurefire.includesFile=$selector", 'test')
 ```
+
+When a repeated-identity cardinality TSV is supplied to this explicit-source
+preflight, add its canonical path to `OPENGGF_RUNTIME_INPUTS` exactly once as
+well. The selector must still appear exactly once independently.
 
 The Maven invocation must contain exactly one canonical absolute
 `surefire.includesFile=<selector>` definition. The preflight parses all Maven
@@ -218,9 +231,10 @@ parent and the later merged candidate.
 
 When `pwsh -File` must carry multiple paths, join them with
 `[IO.Path]::PathSeparator` (`:` on POSIX, `;` on Windows). XML is loaded with
-DTDs prohibited and no external resolver. Malformed XML, duplicate testcase
-identities, unselected reported classes, missing selected classes, and red
-outcomes without a deterministic type/body signature are fatal. A testcase
+DTDs prohibited and no external resolver. Malformed XML, undeclared duplicate
+testcase identities, declared cardinality/report mismatches, unselected
+reported classes, missing selected classes, and red outcomes without a
+deterministic type/body signature are fatal. A testcase
 with more than one semantic outcome element across `failure`, `error`,
 `skipped`, and `disabled` is also invalid. If any red testcase is present,
 `CanonicalWorktree`, `SessionRoot`, and `RunId` are all required.
@@ -231,9 +245,14 @@ The export schema is:
 identity	class	method	outcome	red_kind	exception_type	normalized_message	red_body_bytes	red_body_sha256	report
 ```
 
-Decoded `identity` is the exact XML `classname#name` without trimming either
-attribute, including a parameterized testcase's complete Surefire `name` and
-any boundary whitespace. Outcomes are exactly
+For ordinary rows, decoded `class` and `method` exactly mirror the XML
+`classname` and `name` attributes without trimming, and `identity` is their
+exact `class + '#' + method`, including a parameterized testcase's complete
+Surefire `name` and any boundary whitespace. For reviewed repeated rows only,
+the exporter appends the synthetic deterministic
+`@xml-occurrence[i/n]` suffix to the XML method and derived identity. That
+suffix records inventory order and is not claimed to be a JUnit unique ID or
+display name. Outcomes are exactly
 `PASS`, `FAILURE`, `ERROR`, or `SKIPPED`. Red bodies have LF line endings and
 replace the supplied worktree, session root, run ID, and ISO-8601 timestamps
 before their complete UTF-8 byte length and streaming SHA-256 are recorded.
