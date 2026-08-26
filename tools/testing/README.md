@@ -62,11 +62,14 @@ Zoned, numeric-offset, and unzoned ISO-8601 timestamps normalize to the same
 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
 
 All textual TSV values use a reversible escape layer before joining columns:
-`\\` is backslash, `\t` is tab, `\r` is carriage return, `\n` is line feed,
-and `\s` protects a boundary space that an import parser could otherwise
-trim. Consumers decode and validate these escapes. Therefore an actual line
-feed encoded as `\n` remains distinct from a literal backslash followed by
-`n`, which encodes as `\\n`.
+`\\` is backslash, `\q` is a double quote, `\t` is tab, `\r` is carriage
+return, `\n` is line feed, and `\s` protects a boundary space that an import
+parser could otherwise trim. Consumers decode and validate these escapes.
+Therefore an actual line feed encoded as `\n` remains distinct from a literal
+backslash followed by `n`, which encodes as `\\n`; likewise, a quote encoded
+as `\q` remains distinct from a literal backslash followed by `q`, which
+encodes as `\\q`. Wire rows contain no literal double quote for quote-aware
+TSV import to reinterpret.
 
 Compare the candidate against both frozen parents with:
 

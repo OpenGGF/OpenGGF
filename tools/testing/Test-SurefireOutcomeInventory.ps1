@@ -230,6 +230,43 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-Equal ((Import-Csv -Delimiter "`t" -LiteralPath $compareOutput).classification -join '|') 'MATCH|MATCH|MATCH|MATCH' 'escaped identities round-trip through consumer'
     }
 
+    Invoke-Case 'export reversibly escapes quotes at every position and distinguishes literal quote escapes' {
+        $case = Join-Path $scratch 'export-tsv-quotes'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.QuoteTest`n"
+        Write-Utf8File (Join-Path $case 'TEST-quotes.xml') @'
+<testsuite>
+  <testcase classname="example.QuoteTest" name="&quot;begin"><failure type="&quot;Type&quot;" message="&quot;quoted&quot; mid&quot;dle end&quot;">body</failure></testcase>
+  <testcase classname="example.QuoteTest" name="mid&quot;dle"/>
+  <testcase classname="example.QuoteTest" name="end&quot;"/>
+  <testcase classname="example.QuoteTest" name="\q"/>
+</testsuite>
+'@
+        $result = Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes,
+            '-OutputPath', $output,
+            '-CanonicalWorktree', '/work/tree',
+            '-SessionRoot', '/session/root',
+            '-RunId', 'run-quotes-12345678',
+            '-ReportRoot', $case
+        )
+        Assert-Succeeded $result 'quote TSV export'
+        $rows = @(Import-Csv -Delimiter "`t" -LiteralPath $output)
+        Assert-Equal (($rows.identity) -join '|') 'example.QuoteTest#\qbegin|example.QuoteTest#\\q|example.QuoteTest#end\q|example.QuoteTest#mid\qdle' 'quote identities use reversible wire escapes in ordinal raw order'
+        Assert-Equal (($rows.method) -join '|') '\qbegin|\\q|end\q|mid\qdle' 'beginning middle end and literal quote escapes remain distinct'
+        Assert-Equal $rows[0].exception_type '\qType\q' 'exception type boundary quotes escape'
+        Assert-Equal $rows[0].normalized_message '\qquoted\q mid\qdle end\q' 'message beginning middle and end quotes escape'
+        Assert-True (([System.IO.File]::ReadAllText($output)).IndexOf('"', [System.StringComparison]::Ordinal) -lt 0) 'wire rows contain no quote characters for Import-Csv to reinterpret'
+
+        $compareOutput = Join-Path $case 'comparison.tsv'
+        $comparison = Invoke-Tool $compareScript @('-CandidateInventoryPath', $output, '-OutputPath', $compareOutput, '-ParentInventoryPath', $output)
+        Assert-Succeeded $comparison 'quoted inventory decode and validation'
+        Assert-Equal ((Import-Csv -Delimiter "`t" -LiteralPath $compareOutput).classification -join '|') 'MATCH|MATCH|MATCH|MATCH' 'quotes round-trip through consumer'
+        Assert-True (([System.IO.File]::ReadAllText($compareOutput)).IndexOf('"', [System.StringComparison]::Ordinal) -lt 0) 'comparison wire rows also contain no quote characters'
+    }
+
     Invoke-Case 'export reads all report roots and accepts only reviewed empty helpers with reasons' {
         $case = Join-Path $scratch 'export-roots-helper'
         $rootA = Join-Path $case 'a'
@@ -509,7 +546,7 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
             [pscustomobject]@{ Name = 'pass red metadata'; Row = (New-InventoryRow 'a.Test#method' 'a.Test' 'method' 'PASS' 'failure' '' '' '' ''); Pattern = 'non-red|metadata' },
             [pscustomobject]@{ Name = 'negative body bytes'; Row = (New-InventoryRow 'a.Test#method' 'a.Test' 'method' 'ERROR' 'error' 'example.Type' '' '-1' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); Pattern = 'non-negative|byte' },
             [pscustomobject]@{ Name = 'wrong empty hash'; Row = (New-InventoryRow 'a.Test#method' 'a.Test' 'method' 'ERROR' 'error' 'example.Type' '' '0' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); Pattern = 'empty-body|empty body|SHA' },
-            [pscustomobject]@{ Name = 'bad escape'; Row = (New-InventoryRow 'a.Test#method\q' 'a.Test' 'method\q' 'PASS'); Pattern = 'escape' }
+            [pscustomobject]@{ Name = 'bad escape'; Row = (New-InventoryRow 'a.Test#method\x' 'a.Test' 'method\x' 'PASS'); Pattern = 'escape' }
         )
         foreach ($fixture in $invalidRows) {
             Write-Utf8File $parent (($header, $fixture.Row) -join "`n")

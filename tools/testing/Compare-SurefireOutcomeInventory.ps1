@@ -54,6 +54,7 @@ function ConvertTo-TsvField {
     for ($index = 0; $index -lt $Value.Length; $index++) {
         switch ($Value[$index]) {
             '\' { [void]$builder.Append('\\') }
+            '"' { [void]$builder.Append('\q') }
             "`t" { [void]$builder.Append('\t') }
             "`r" { [void]$builder.Append('\r') }
             "`n" { [void]$builder.Append('\n') }
@@ -81,6 +82,7 @@ function ConvertFrom-TsvField {
         }
         switch ($Value[$index]) {
             '\' { [void]$builder.Append('\') }
+            'q' { [void]$builder.Append('"') }
             't' { [void]$builder.Append("`t") }
             'r' { [void]$builder.Append("`r") }
             'n' { [void]$builder.Append("`n") }
