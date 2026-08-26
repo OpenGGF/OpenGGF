@@ -29,11 +29,16 @@ Storage selection is fail-closed and visible. An explicit `OPENGGF_TEST_ROOT`
 uses `EXPLICIT_OVERRIDE`. Otherwise a configured managed root must pass
 `agent-scratch verify` and `agent-scratch reserve-test-session --json`; the
 versioned reservation supplies the canonical root/allocation, tier
-`MANAGED_CODEX_TEST_SESSIONS`, filesystem identity, byte/inode snapshot,
-retention deadline, and helper version. Re-run `tools/agent-scratch install`
-after helper-source updates, then run `agent-scratch verify`. A missing, stale,
-malformed, unsafe, timed-out, or failed configured helper is a startup error;
-it never falls through to project storage.
+`MANAGED_CODEX_TEST_SESSIONS`, filesystem identity, byte snapshot,
+inode-count status/value, canonical `lease_root`, retention deadline, and
+helper version. Re-run `tools/agent-scratch install` after helper-source
+updates, then run `agent-scratch verify`. Static verification of the installed
+helper, configuration, lanes, writable-root policy, and unit-file content is
+mandatory. When the sandbox cannot reach the user service bus, its runtime
+timer states are visibly `UNAVAILABLE_IN_SANDBOX`; that does not invalidate
+otherwise verified static state. Unknown service-manager errors and any
+missing, stale, malformed, unsafe, timed-out, or failed configured helper still
+fail startup and never fall through to project storage.
 
 Only when managed scratch is not configured may the coordinator use the
 visibly warned `PROJECT_LOCAL_FALLBACK`. `SYSTEM_TMP_EXPLICIT` requires
@@ -42,8 +47,20 @@ least `max(20 GiB, 5% of filesystem capacity)`. An unsigned decimal
 `OPENGGF_TEST_MIN_FREE_BYTES` can raise, but never lower, that floor; a blank,
 whitespace, malformed, or lower value is invalid. Every tier also performs a
 live contained create/write/flush/read/unlink inode-availability probe at
-launch and completion. Managed numeric inode data is an allocation-time
-snapshot only; unmanaged tiers do not fabricate a numeric inode count.
+launch and completion. A managed reservation reports `inode_count_status` as
+`MEASURED` with numeric `usable_inodes`, where zero refuses immediately, or as
+`UNAVAILABLE_DYNAMIC` with JSON-null `usable_inodes` for a dynamically
+allocated inode pool. Dynamic/unavailable never means measured exhaustion: the
+live probe is authoritative. Unmanaged tiers likewise do not fabricate a
+numeric inode count.
+
+Explicit `--lock-root` or `OPENGGF_TEST_LOCK_ROOT` remains highest priority.
+Without an override, a managed reservation uses its verified `lease_root`, the
+installed `$AGENT_SCRATCH_ROOT/codex/test-session-locks` lane, so an ordinary
+sandboxed wrapper run never needs writable Git metadata. Only unmanaged tiers
+default to the per-worktree Git lock root. The coordinator still owns namespace
+creation, owner/liveness evidence, recovery, and removal; the helper only
+creates and verifies the shared managed lane.
 
 Terminal finalisation removes only `tmp` and `build/test-classes/traces` after
 binding them to the manifest's verified session identity. A provider must

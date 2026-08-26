@@ -720,7 +720,11 @@ class TestBuildToolingGuard {
                 "MANAGED_CODEX_TEST_SESSIONS",
                 "OPENGGF_TEST_MIN_FREE_BYTES",
                 "--retain-ephemeral",
-                "STORAGE_FINALIZATION_FAILED");
+                "STORAGE_FINALIZATION_FAILED",
+                "UNAVAILABLE_DYNAMIC",
+                "UNAVAILABLE_IN_SANDBOX",
+                "test-session-locks",
+                "lease_root");
         for (String file : List.of("AGENTS.md", "CLAUDE.md", "tools/testing/README.md",
                 "docs/agent-workflow/README.md")) {
             String text = Files.readString(Path.of(file), StandardCharsets.UTF_8);

@@ -90,10 +90,18 @@ The project-local fallback is ephemeral test output, not a replacement for
 durable agent artifacts. A report that must outlive normal retention is copied
 to the managed scratch/archive location by the caller.
 
+The managed schema includes canonical allocation and `lease_root` paths. Its
+`inode_count_status` is `MEASURED` with numeric `usable_inodes`, or
+`UNAVAILABLE_DYNAMIC` with JSON-null `usable_inodes` for a dynamic inode pool.
+Static helper/configuration/lane/unit-file verification remains mandatory in a
+sandbox; an unreachable user service bus is recorded separately as runtime
+state `UNAVAILABLE_IN_SANDBOX`, while unknown service-manager errors fail.
+
 Every tier applies the addendum's pre-launch floor of
 `max(20 GiB, 5% of filesystem capacity)`, with
 `OPENGGF_TEST_MIN_FREE_BYTES` able only to raise it, and its all-tier live inode
-probe. Terminal compaction is limited to `tmp` and
+probe. A measured zero refuses immediately; a dynamic unavailable count relies
+on the live probe and is never treated as zero. Terminal compaction is limited to `tmp` and
 `build/test-classes/traces`; `--retain-ephemeral` retains them for diagnosis.
 
 Each session is created with an ID containing a UTC timestamp, the launcher PID,
@@ -127,22 +135,26 @@ reused.
 
 ## Worktree lease and supported entrypoints
 
-The launcher acquires an atomic lease in the per-worktree Git metadata
-directory returned by `git rev-parse --git-dir`, at:
+The launcher acquires an atomic lease under a root selected independently from
+the output root. An explicit `--lock-root` or `OPENGGF_TEST_LOCK_ROOT` has
+highest priority. Otherwise a managed reservation supplies the verified
+`<AGENT_SCRATCH_ROOT>/codex/test-session-locks` root, allowing the exact default
+wrapper to operate inside Codex's writable sandbox boundary. Unmanaged tiers
+fall back to the per-worktree Git metadata directory returned by
+`git rev-parse --git-dir`:
 
 ```text
-.git/                                  # main worktree; per-worktree metadata for linked worktrees
-  openggf-test-session.lock/
-    lease.lock                          # regular file held with Java FileChannel/FileLock
+<selected-lock-root>/
+  openggf-test-session.lock[-<worktree-hash>]/
+    lease.lock                         # regular file held with Java FileChannel/FileLock
     owner.json
 ```
 
-This location survives `git clean -fdx` and is distinct for linked worktrees.
-There is no deletable in-worktree lease fallback. If the per-worktree Git
-metadata is not writable, the launcher requires an explicit external lock root
-(`OPENGGF_TEST_LOCK_ROOT`) or a writable managed scratch location outside the
-worktree. If neither exists, startup fails closed before Maven; it never claims
-single-session protection from a lock that `git clean -fdx` can remove.
+Both the Git and managed locations survive `git clean -fdx`; external/managed
+namespaces include a stable worktree hash so linked worktrees remain distinct.
+There is no deletable in-worktree lease fallback. If neither a verified managed
+lease root, explicit external root, nor writable per-worktree Git metadata is
+available, startup fails closed before Maven.
 
 `owner.json` records the run ID, process ID, host, worktree path, start time,
 command, branch, and starting `HEAD`. If the directory already exists, the
@@ -542,9 +554,9 @@ or identity failure as the primary result.
 
 - No writable root: emit `STARTUP_FAILED`, explain each candidate path, and do
   not invoke Maven.
-- No writable per-worktree Git metadata or explicit external lock root: emit
-  `STARTUP_FAILED` and do not use a project-root lock that destructive cleanup
-  can remove.
+- No verified managed lease root, writable per-worktree Git metadata, or
+  explicit external lock root: emit `STARTUP_FAILED` and do not use a
+  project-root lock that destructive cleanup can remove.
 - Existing lease: emit the owner manifest and exit without touching build
   outputs, reports, or the active session.
 - Maven startup failure: retain the manifest and Maven log as
