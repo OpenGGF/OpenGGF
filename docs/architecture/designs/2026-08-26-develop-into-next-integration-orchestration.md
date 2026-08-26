@@ -18,16 +18,19 @@ exercise and must not use blanket `ours`, `theirs`, or fitted trace behavior.
 
 ## Frozen starting evidence
 
-The design was approved against these fetched local tips:
+The design was approved against these fetched local tips, last verified at the
+start of the 2026-08-26 integration session:
 
 - `next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
+- `origin/next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
 - committed local `develop`: `9b46505eb10675a4ab19772dd2707566a0432973`
-- `origin/develop`: `0ceb48eb35e4596c061455957a5728c0889c139e`
+- `origin/develop`: `9b46505eb10675a4ab19772dd2707566a0432973`
 - merge base: `59e59c8feb5fb5a247ff0ab43da63aeccc742cb0`
 
-Local `develop` is clean and contains four committed changes beyond
-`origin/develop`. The integration consumes the committed local tip, never
-workspace dirt.
+Local `develop` is clean and matches the fetched remote-tracking tip. The
+integration consumes this exact committed tip, never workspace dirt. The
+earlier audit observed `origin/develop` four commits behind; the remote advanced
+without changing the selected source hash before the design review completed.
 
 From the merge base, `next` and `develop` have 611 and 1,866 unique commits
 respectively. They changed 2,324 and 1,931 files, with 228 paths touched by both
@@ -40,7 +43,8 @@ files.
 ### Goals
 
 1. Make the complete committed `develop` history an ancestor of the resulting
-   integration commit while retaining `next` as first parent.
+   integration commit while retaining the frozen `next` line as first-parent
+   ancestry through the committed design and planning artifacts.
 2. Preserve `develop` as the authority for current shared ROM-accuracy fixes,
    trace-v5 behavior, runtime ownership, test-session isolation, and build/hook
    policy.
@@ -78,8 +82,15 @@ files.
   scheduling contract.
 - Conflict decisions follow the smallest accurate runtime owner and the
   shipped-ROM `FixBugs = 0` path.
-- Every certifying Maven invocation uses `tools/testing/test-session.sh`, JDK
-  21, quiet markers, and a session-owned temporary root.
+- Every certifying Maven invocation uses the test-session coordinator at the
+  pinned `develop` source commit, JDK 21, quiet markers, and a session-owned
+  temporary root. The merged tree uses its own
+  `tools/testing/test-session.sh`; the frozen `next` baseline, whose tree
+  predates that wrapper, invokes the pinned `develop` wrapper by absolute path
+  from inside an immutable detached `next` baseline worktree. The coordinator
+  discovers the current working tree independently of the script location, so
+  this isolates and builds `next` without modifying it. Evidence records the
+  wrapper commit, file hash, command, and separate session manifest.
 - Ordinary and `-Pguards` sessions are separate; raw Maven output is not
   certification evidence.
 - Repository hooks and documentation/trailer policy remain enabled; no
@@ -90,15 +101,22 @@ files.
 ### History and workspace shape
 
 The integration is a direct merge of committed `develop` into a branch created
-from `next`. `next` remains first parent so its 0.7 development line is legible,
-while the merge records all of `develop` as ancestry. A single coordinating
-agent owns the merge index because Git cannot safely compose independent
-partial resolutions of one conflicted index.
+from `next`. The integration branch already contains the approved design and
+planning commits above frozen `next`; therefore the merge commit's exact first
+parent is the final pre-merge integration-branch commit, whose uninterrupted
+first-parent ancestry reaches frozen `next` `84d9a3761`. Its exact second parent
+is frozen `develop` `9b46505eb`. This keeps the 0.7 development line legible
+while recording all of `develop` as ancestry. A single coordinating agent owns
+the merge index because Git cannot safely compose independent partial
+resolutions of one conflicted index.
 
 The integration worktree is
 `.worktrees/next-develop-integration-20260826`. Subagents may inspect this
-worktree, but parallel edits are allowed only after the coordinator assigns
-disjoint file ownership or provides a separate worktree.
+worktree, but the coordinator alone stages or resolves its merge index. Before
+implementation, the coordinator publishes a file-level conflict ledger with
+one owner and integration order per path. Any parallel edit or verification
+runs in a separate worktree and a separate test-session namespace; completed
+patches are reviewed and applied centrally in ledger order.
 
 ### Conflict authority
 
@@ -130,6 +148,15 @@ intent, conflict risks, recommended resolutions, and focused verification.
 Implementation is then assigned only where file ownership is disjoint. Every
 implementation result receives independent review before integration.
 
+The third lane also owns Milestone 0 bookkeeping: regenerate the candidate
+`src/test/resources/mods/mod-api-signatures-0.7.txt` only after production
+conflicts settle; update the current 0.7 roadmap and README claims from measured
+results; create
+`docs/architecture/validation/2026-08-26-develop-into-next-integration.md`; and
+update `docs/status/trace-frontier-log.md` whenever a required sweep moves or
+selects a frontier. The validation report contains an owner and 0.7 release
+disposition for every remaining failure or error.
+
 ### Failure handling and rollback
 
 The original `next` and `develop` branches remain untouched during development.
@@ -139,18 +166,44 @@ are established; it is never hidden by accepting an entire side.
 
 Parent baseline failures are recorded rather than erased. An integration result
 is rejected if a parent-passing test becomes red, a parent failure changes or
-worsens due to the merge, a required `next` capability disappears, or a
-certifying session lacks its start/end markers.
+worsens due to the merge, a parent test identity is absent from the merged
+inventory, a required `next` capability disappears, or a certifying session
+lacks its start/end markers.
+
+Before implementation and again before human review, the coordinator fetches
+and verifies all four refs (`next`, `origin/next`, `develop`, and
+`origin/develop`) against the frozen hashes. Drift on either line pauses
+promotion, updates both design and plan, and requires a reviewed reintegration
+and repeated affected baselines. A later target update is attempted only after
+the same drift check. Because the original branches remain unchanged, rollback
+before promotion is branch abandonment; any partial remote update is recovered
+with a new reviewed commit or an explicit human-authorized remote correction,
+never a forced rewrite inferred by the agent.
 
 ## Verification design
 
 ### Parent baselines
 
 Record exact, wrapper-produced ordinary and structural-guard sessions for both
-frozen parents. Capture run IDs, manifests, logs, pass/failure/error/skip
-outcomes, and environmental limitations. ROM-backed runs use the discovered
-canonical S1 REV01, S2 REV01, and locked-on S3K images through their documented
-properties.
+frozen parents in immutable detached worktrees. `develop` uses its in-tree
+wrapper. Frozen `next` runs the wrapper and coordinator from frozen `develop`
+`9b46505eb` by absolute path while its process working directory remains the
+detached `next` worktree. First self-test and hash that external coordinator,
+then record its commit and SHA-256 in the validation report. Capture run IDs,
+manifests, logs, pass/failure/error/skip outcomes, complete test inventories,
+and environmental limitations.
+
+ROM-backed runs discover the actual files and verify their bytes before use:
+
+- S1 REV01: CRC32 `AFE05EEE`, SHA-1
+  `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`, property
+  `sonic1.rom.path`;
+- S2 REV01: CRC32 `7B905383`, SHA-1
+  `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`, property
+  `sonic2.rom.path`; and
+- locked-on S3K: CRC32 `63522553`, SHA-1
+  `CFBF98C36C776677290A872547AC47C53D2761D6`, property
+  `s3k.rom.path`.
 
 ### Conflict-family verification
 
@@ -172,36 +225,65 @@ dependent families. The focused matrix must cover at least:
 ### Final certification
 
 Run the ordinary suite and separate fresh-JVM structural guards through the
-test-session coordinator. Normalize outcomes by test identity and compare them
-with both parents. Rerun order-sensitive or environment-sensitive changes in
-isolation before classification. Record any legitimate pre-existing red,
-sandbox-only limitation, or explicitly deferred risk without weakening tests.
+test-session coordinator. Build a clean class inventory for each tree and
+normalize every Surefire outcome as class, method or parameterized identity,
+and `PASS|FAILURE|ERROR|SKIPPED`. Duplicate identities are invalid. A test
+identity that exists or executes on either parent but is absent from the merged
+inventory is classified `ABSENT` and is a regression unless a documented,
+reviewed removal is itself an intended merge deliverable. A selected executable
+test class that produces no report is also `ABSENT`; non-test helpers require an
+explicit evidence-backed allowlist.
+
+Attempt the ordinary suite as one certifying session first. If the Surefire JVM
+exhausts memory or terminates before producing a complete inventory, retain that
+failed session and run an OOM-safe deterministic partition of the complete test
+class inventory through separate wrapper sessions. Each executable class must
+appear in exactly one successful partition, with zero missing or duplicate
+classes, and the aggregation manifest records every child run ID and outcome.
+Use the same partition map for the parent comparison needed to distinguish
+order-sensitive behavior. This partitioned aggregate, plus the separate fresh
+JVM guard session, is the certifying fallback; a partial full run is never
+reported as the suite result.
+
+Rerun order-sensitive or environment-sensitive changes in isolation before
+classification. Record any legitimate pre-existing red, sandbox-only
+limitation, or explicitly deferred risk without weakening tests. Install the
+tracked `develop` hook path explicitly in every worktree that lacks the current
+installer, and record the exact final range-policy invocation and its base/head
+hashes.
 
 ## Acceptance criteria
 
 The integration is ready for human review only when:
 
-1. The integration commit has `next` as first parent and the frozen committed
-   `develop` tip as second-parent ancestry.
+1. The integration merge commit's first parent is the reviewed pre-merge
+   integration-branch commit rooted at frozen `next` `84d9a3761`, and its exact
+   second parent is frozen committed `develop` `9b46505eb`.
 2. No conflict markers, unresolved index entries, unintended generated output,
    or executable disassembly dependency remains.
 3. Every conflict decision is traceable to parent behavior, current ownership,
    ROM/disassembly evidence, or focused tests.
-4. Both parent baselines and the merged result have certifying evidence.
-5. No test passing on either parent regresses in the merged result, and no
-   baseline failure worsens in a merge-attributable way.
+4. Both parent baselines and the merged result have certifying evidence, clean
+   test inventories, and no unexplained missing or duplicate identity.
+5. No test passing on either parent regresses or becomes `ABSENT` in the merged
+   result, and no baseline failure worsens in a merge-attributable way.
 6. The current `next` feature gates named above remain present and verified.
-7. Documentation accurately distinguishes 0.6 release records from the 0.7
-   candidate roadmap.
-8. Independent end-to-end review reports no unresolved blocker.
-9. The branch remains local and `next` remains unchanged pending explicit human
+7. The Mod API 0.7 candidate snapshot is regenerated from the resolved merged
+   production surface, and its policy and signature guards pass.
+8. README and roadmap claims use current measured evidence; the integration
+   validation report assigns an owner and 0.7 release disposition to every
+   remaining failure/error; and trace-frontier documentation is updated when
+   required by the executed sweep. The documentation accurately distinguishes
+   0.6 release records from the 0.7 candidate roadmap.
+9. Independent end-to-end review reports no unresolved blocker.
+10. The branch remains local and `next` remains unchanged pending explicit human
    approval.
 
 ## Assumptions and risks
 
-- The four local commits beyond `origin/develop` are intended members of the
-  committed `develop` tip. If `develop` changes before the merge starts, the
-  coordinator refreezes the baseline and updates the implementation artifact.
+- Local and fetched remote-tracking refs currently agree on both frozen tips.
+  Any source or target drift before merge or promotion triggers the amendment
+  and review process rather than being silently absorbed.
 - Both parents may have pre-existing red tests. Exact outcome comparison, not a
   simplistic all-green requirement, governs acceptance.
 - Trace payload volume makes file and line counts poor estimates of manual
@@ -221,4 +303,6 @@ The integration is ready for human review only when:
 The coordinator will present the merged history, decisions, changed files,
 test-session evidence, unresolved risks, and end-to-end review. Updating or
 pushing `next` is a separate action and occurs only after explicit human
-confirmation.
+confirmation. Immediately before that action, the coordinator fetches again,
+verifies the frozen target is unchanged, runs the exact range policy on the
+reviewed head, and records the intended local branch update and push command.
