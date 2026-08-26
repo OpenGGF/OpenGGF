@@ -159,8 +159,8 @@ split `-D name[=value]`, `--define name[=value]`, and
 `--define=name[=value]`. Apart from the required `surefire.includesFile`, its
 case-insensitive allowlist is exactly `mse`, `sonic1.rom.path`,
 `sonic2.rom.path`, `s3k.rom.path`, `surefire.argLine`,
-`surefire.forkCount`, and `surefire.reuseForks`: these are the properties proven
-necessary by the frozen ordinary invocation and adapter. Every other Maven
+and `surefire.forkCount`: these are the properties proven necessary by the
+frozen ordinary invocation and adapter. Every other Maven
 property is rejected, including `test`, includes/excludes files or patterns,
 suites, groups, excluded groups, `systemPropertiesFile`, unknown `surefire.*`
 properties, and JUnit/provider configuration carriers. This closed boundary
@@ -170,23 +170,29 @@ the POM's ordinary includes and excludes. The selector must be present exactly
 once in `OPENGGF_RUNTIME_INPUTS`, so the coordinator records pre/post hashes of
 the same file.
 
-Before accepting this fallback, capture the exact effective POM once without
-and once with the selector property. Select the ordinary
-`maven-surefire-plugin` execution (normally `default-test`). The baseline must
-contain no includes or includes-file selector. The selector effective POM must
-contain exactly the authenticated canonical `includesFile` path. Neither POM
-may contain a competing includes pattern, excludes file, suite XML, dependency
-scan, or JUnit engine/tag selector. Their ordered excludes, groups, excluded
-groups, exact argument line, fork count, and fork-reuse value must be identical.
-When `surefire.argLine`, `surefire.forkCount`, or `surefire.reuseForks` appears
-in argv, its value must also equal that authenticated effective configuration;
-the allowlist therefore cannot be used to inject arbitrary plumbing values.
+Before accepting this fallback, capture the selector invocation's exact
+effective POM and select the ordinary `maven-surefire-plugin` execution
+(normally `default-test`). Maven's effective-POM model does not materialize the
+CLI-bound `surefire.includesFile` mojo property, so the effective execution
+must contain no configured includes or includes-file selector and no competing
+excludes file, suite XML, dependency scan, or JUnit engine/tag selector. Record
+its ordered excludes, groups, excluded groups, project `surefire.argLine`,
+composed execution `<argLine>`, fork count, and fork-reuse value. The canonical
+selector itself is authenticated by the exact
+Maven argv and `OPENGGF_RUNTIME_INPUTS`; the required focused frozen-POM run
+proves its operational effect. When `surefire.argLine` appears in argv, it must
+preserve the effective project `surefire.argLine` property and add only the
+adapter-owned session home and per-fork LWJGL extraction properties; the
+execution `<argLine>` is recorded separately because the POM may compose its
+own suffixes around that property. When `surefire.forkCount`
+appears, it must equal the effective configuration. The allowlist therefore
+cannot be used to inject arbitrary plumbing values.
 
 The exporter exposes one atomic preflight for the roots/patterns, canonical
-selector path, exact Maven argv, authenticated runtime inputs, baseline
-effective POM, and selector effective POM. Supplying only part of this evidence
-is fatal. Put the exact Maven argument vector in a UTF-8 file, one argv element
-per line, and invoke the exporter once:
+selector path, exact Maven argv, authenticated runtime inputs, and the selector
+invocation's effective POM. Supplying only part of this evidence is fatal. Put
+the exact Maven argument vector in a UTF-8 file, one argv element per line, and
+invoke the exporter once:
 
 ```powershell
 & ./tools/testing/Export-SurefireOutcomeInventory.ps1 `
@@ -194,8 +200,7 @@ per line, and invoke the exporter once:
     -SelectorPatternInventory $selector `
     -MavenArgumentInventory ./evidence/candidate-maven-arguments.txt `
     -RuntimeInputs $env:OPENGGF_RUNTIME_INPUTS `
-    -EffectivePomPath ./evidence/candidate-effective-ordinary.xml `
-    -SelectorEffectivePomPath ./evidence/candidate-effective-selector.xml `
+    -EffectivePomPath ./evidence/candidate-effective-selector.xml `
     -SurefireExecutionId default-test `
     -ReportRoot ./evidence/candidate-ordinary/surefire-reports `
     -OutputPath ./evidence/candidate-outcomes.tsv

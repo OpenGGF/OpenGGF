@@ -695,9 +695,14 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 - [ ] **Step 5: Prove effective-POM and real selector semantics**
 
   For frozen next, frozen develop, and later the merged candidate, parse the
-  exact effective ordinary Surefire execution. Require no configured
-  `<includes>`, record effective excludes/groups/fork settings, and prove they
-  remain unchanged under the selector property. In each frozen parent, run a
+  selector invocation's exact effective ordinary Surefire execution. Require
+  no POM-configured `<includes>` or `<includesFile>` and no other competing
+  selector channel. Record effective excludes/groups/fork settings, the
+  project `surefire.argLine` property, and the separately composed execution
+  `<argLine>`. Maven's effective-POM model does not materialize the CLI-bound
+  `surefire.includesFile` mojo property, so authenticate that canonical path
+  through the exact argv and `OPENGGF_RUNTIME_INPUTS`; reject inert
+  `surefire.reuseForks` as an unapproved property. In each frozen parent, run a
   focused authenticated selector containing one exact top-level root with
   `@Nested` and one class named by an effective POM exclude. Require the nested
   testcase exactly once, no report for the excluded class, exact selector

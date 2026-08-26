@@ -11,7 +11,6 @@ param(
     [string] $MavenArgumentInventory = '',
     [string] $RuntimeInputs = '',
     [string] $EffectivePomPath = '',
-    [string] $SelectorEffectivePomPath = '',
     [string] $SurefireExecutionId = 'default-test'
 )
 
@@ -159,7 +158,7 @@ function Get-ApprovedMavenPropertyName {
     $approvedNames = @(
         'mse',
         'sonic1.rom.path', 'sonic2.rom.path', 's3k.rom.path',
-        'surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks'
+        'surefire.argLine', 'surefire.forkCount'
     )
     foreach ($approvedName in $approvedNames) {
         if ($Name.Equals($approvedName, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -288,12 +287,16 @@ function Read-EffectiveSurefireConfiguration {
     if ($executions.Count -ne 1) {
         throw "Effective POM must contain exactly one maven-surefire-plugin execution '$ExecutionId'; found $($executions.Count)"
     }
+    $projectArgLineNodes = @($document.DocumentElement.SelectNodes("./*[local-name()='properties']/*[local-name()='surefire.argLine']"))
+    if ($projectArgLineNodes.Count -ne 1 -or [string]::IsNullOrEmpty([string]$projectArgLineNodes[0].InnerText)) {
+        throw "Effective POM must contain exactly one non-empty project property surefire.argLine; found $($projectArgLineNodes.Count)"
+    }
     $configuration = $executions[0].SelectSingleNode("./*[local-name()='configuration']")
     if ($null -eq $configuration) {
         throw "Effective Surefire execution '$ExecutionId' has no configuration"
     }
     $competingNames = @(
-        'includes', 'excludesFile', 'suiteXmlFiles', 'dependenciesToScan', 'test',
+        'includes', 'includesFile', 'excludesFile', 'suiteXmlFiles', 'dependenciesToScan', 'test',
         'includeJUnit5Engines', 'excludeJUnit5Engines', 'includeTags', 'excludeTags'
     )
     foreach ($name in $competingNames) {
@@ -303,11 +306,7 @@ function Read-EffectiveSurefireConfiguration {
     }
 
     $values = [ordered]@{}
-    $includesFileNodes = @($configuration.SelectNodes("./*[local-name()='includesFile']"))
-    if ($includesFileNodes.Count -gt 1) {
-        throw "Effective Surefire execution '$ExecutionId' contains duplicate includesFile channels"
-    }
-    $values.includesFile = if ($includesFileNodes.Count -eq 0) { '' } else { $includesFileNodes[0].InnerText }
+    $values.projectArgLine = $projectArgLineNodes[0].InnerText
     $values.excludes = [string[]]@($configuration.SelectNodes("./*[local-name()='excludes']/*[local-name()='exclude']") | ForEach-Object { $_.InnerText })
     foreach ($name in @('groups', 'excludedGroups', 'argLine', 'forkCount', 'reuseForks')) {
         $node = $configuration.SelectSingleNode("./*[local-name()='$name']")
@@ -318,52 +317,37 @@ function Read-EffectiveSurefireConfiguration {
 
 function Assert-EffectiveSurefireContract {
     param(
-        [string] $BaselinePath,
-        [string] $SelectorPath,
+        [string] $Path,
         [string] $ExecutionId,
-        [string] $AuthenticatedSelectorPath,
         [System.Collections.Generic.Dictionary[string, object]] $ApprovedProperties
     )
-    $baseline = Read-EffectiveSurefireConfiguration $BaselinePath $ExecutionId
-    $selector = Read-EffectiveSurefireConfiguration $SelectorPath $ExecutionId
-    if (([string]$baseline.includesFile).Length -ne 0) {
-        throw "Baseline effective Surefire execution contains selector override includesFile: $($baseline.includesFile)"
-    }
-    if ([string]$selector.includesFile -cne $AuthenticatedSelectorPath) {
-        throw "Selector effective Surefire includesFile must equal the authenticated canonical path: expected=[$AuthenticatedSelectorPath] actual=[$($selector.includesFile)]"
-    }
-    $baselineExcludes = @($baseline.excludes)
-    $selectorExcludes = @($selector.excludes)
-    if ($baselineExcludes.Count -ne $selectorExcludes.Count) {
-        throw "Effective Surefire excludes changed under the selector property: baseline=[$($baselineExcludes -join ',')] selector=[$($selectorExcludes -join ',')]"
-    }
-    for ($index = 0; $index -lt $baselineExcludes.Count; $index++) {
-        if ([string]$baselineExcludes[$index] -cne [string]$selectorExcludes[$index]) {
-            throw "Effective Surefire excludes changed under the selector property at ordinal $index`: baseline=[$($baselineExcludes[$index])] selector=[$($selectorExcludes[$index])]"
+    $effective = Read-EffectiveSurefireConfiguration $Path $ExecutionId
+    if ($ApprovedProperties.ContainsKey('surefire.argLine')) {
+        $argumentValue = [string]$ApprovedProperties['surefire.argLine'].Value
+        $expectedPrefix = [string]$effective.projectArgLine + ' -Duser.home='
+        if (-not $argumentValue.StartsWith($expectedPrefix, [System.StringComparison]::Ordinal)) {
+            throw 'Approved Maven property surefire.argLine must preserve the effective project property before adapter-owned session properties'
+        }
+        $adapterSuffix = $argumentValue.Substring($expectedPrefix.Length)
+        $lwjglMarker = ' -Dorg.lwjgl.system.SharedLibraryExtractPath='
+        $lwjglOffset = $adapterSuffix.IndexOf($lwjglMarker, [System.StringComparison]::Ordinal)
+        if ($lwjglOffset -le 0) {
+            throw 'Approved Maven property surefire.argLine must contain the adapter-owned user.home and LWJGL extraction properties'
+        }
+        $userHomeValue = $adapterSuffix.Substring(0, $lwjglOffset)
+        $lwjglValue = $adapterSuffix.Substring($lwjglOffset + $lwjglMarker.Length)
+        if ($userHomeValue -match '\s' -or $lwjglValue -match '\s' -or
+            $lwjglValue -notmatch '[/\\]lwjgl-\$\{surefire\.forkNumber\}$') {
+            throw 'Approved Maven property surefire.argLine has invalid adapter-owned session property values'
         }
     }
-    foreach ($name in @('groups', 'excludedGroups', 'argLine', 'forkCount', 'reuseForks')) {
-        if ([string]$baseline.$name -cne [string]$selector.$name) {
-            throw "Effective Surefire $name changed under the selector property: baseline=[$($baseline.$name)] selector=[$($selector.$name)]"
+    if ($ApprovedProperties.ContainsKey('surefire.forkCount')) {
+        $argumentValue = [string]$ApprovedProperties['surefire.forkCount'].Value
+        if ($argumentValue -cne [string]$effective.forkCount) {
+            throw "Approved Maven property surefire.forkCount does not equal the effective forkCount: argv=[$argumentValue] effective=[$($effective.forkCount)]"
         }
     }
-    $effectivePropertyNames = [ordered]@{
-        'surefire.argLine' = 'argLine'
-        'surefire.forkCount' = 'forkCount'
-        'surefire.reuseForks' = 'reuseForks'
-    }
-    foreach ($propertyName in $effectivePropertyNames.Keys) {
-        if (-not $ApprovedProperties.ContainsKey($propertyName)) {
-            continue
-        }
-        $effectiveName = $effectivePropertyNames[$propertyName]
-        $argumentValue = [string]$ApprovedProperties[$propertyName].Value
-        $effectiveValue = [string]$selector.$effectiveName
-        if ($argumentValue -cne $effectiveValue) {
-            throw "Approved Maven property $propertyName does not equal the authenticated effective value: argv=[$argumentValue] effective=[$effectiveValue]"
-        }
-    }
-    Write-Host "Effective Surefire unchanged: excludes=$($baselineExcludes -join ',') groups=$($baseline.groups) excludedGroups=$($baseline.excludedGroups) argLine=$($baseline.argLine) forkCount=$($baseline.forkCount) reuseForks=$($baseline.reuseForks)"
+    Write-Host "Effective Surefire configuration: excludes=$(@($effective.excludes) -join ',') groups=$($effective.groups) excludedGroups=$($effective.excludedGroups) projectArgLine=$($effective.projectArgLine) executionArgLine=$($effective.argLine) forkCount=$($effective.forkCount) reuseForks=$($effective.reuseForks)"
 }
 
 function Normalize-TokenizedText {
@@ -478,7 +462,6 @@ $preflightValues = [ordered]@{
     MavenArgumentInventory = $MavenArgumentInventory
     RuntimeInputs = $RuntimeInputs
     EffectivePomPath = $EffectivePomPath
-    SelectorEffectivePomPath = $SelectorEffectivePomPath
 }
 $suppliedPreflight = @($preflightValues.Values | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count
 if ($suppliedPreflight -ne 0 -and $suppliedPreflight -ne $preflightValues.Count) {
@@ -489,9 +472,7 @@ if ($suppliedPreflight -eq $preflightValues.Count) {
     $selectorContract = Assert-ExplicitSourceSelectorContract $sourceClasses $SelectorPatternInventory $MavenArgumentInventory $RuntimeInputs
     Assert-EffectiveSurefireContract `
         $EffectivePomPath `
-        $SelectorEffectivePomPath `
         $SurefireExecutionId `
-        $selectorContract.SelectorPath `
         $selectorContract.ApprovedProperties
 }
 $selected = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
