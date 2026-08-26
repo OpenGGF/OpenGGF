@@ -580,6 +580,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return audioManager;
     }
 
+    @Override
+    public void restoreMusic() {
+        audioManager.restoreMusic();
+    }
+
     /**
      * Optional: provide another SMPS data set (usually the currently playing music)
      * to supply instrument voices if this sequence has no local voice table.

@@ -849,7 +849,7 @@ public class TestSonic3kAIZEvents {
             frame++;
         }
         assertTrue(events.isAct2TransitionRequested());
-        verify(audio, never()).restoreMusic();
+        verify(audio, never()).playMusic(Sonic3kMusic.AIZ1.id);
         assertFalse(audioTimeline.entries().subList(audioEntriesBeforeTransition,
                         audioTimeline.entries().size()).stream()
                 .map(entry -> entry.command())
@@ -861,7 +861,7 @@ public class TestSonic3kAIZEvents {
         for (int continuationFrame = 0; continuationFrame <= 0x120; continuationFrame++) {
             updateFireTransitionWithHardware(events, 1, frame + continuationFrame);
         }
-        verify(audio).restoreMusic();
+        verify(audio).playMusic(Sonic3kMusic.AIZ2.id);
     }
 
     @Test

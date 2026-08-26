@@ -240,6 +240,9 @@ recorded hardware traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K temporary-music restoration:** extra-life completion now preserves its
+  fade-to-previous request through the presentation boundary, while the AIZ1
+  miniboss escape restores the current level track directly.
 - **AIZ presentation continuity:** the Angel Island fire curtain now remains
   continuous across exact art-loading seams and completes its ROM-shaped
   release tail in normal play and trace renders, while level music restoration
