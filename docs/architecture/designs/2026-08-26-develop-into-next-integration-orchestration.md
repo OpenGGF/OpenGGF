@@ -549,18 +549,61 @@ reviewed removal is itself an intended merge deliverable. A selected executable
 test class that produces no report is also `ABSENT`; non-test helpers require an
 explicit evidence-backed allowlist.
 
-Attempt the ordinary suite as one certifying session first. If the Surefire JVM
-exhausts memory or terminates before producing a complete inventory, retain that
-failed session and run an OOM-safe deterministic partition of the complete test
-class inventory through separate wrapper sessions. Each executable class must
+Attempt the ordinary suite as one certifying session first. Both frozen parents
+currently complete Maven but are inventory-invalid because Surefire separately
+discovers a compiled nested class and Jupiter also discovers it through its
+top-level owner, producing a duplicate testcase identity. The POMs' explicit
+ordinary excludes mean Surefire does not add its default inner-class exclude.
+Do not normalize that duplicate away and do not use `-Dtest`, which overrides
+the POM's ordinary includes and excludes.
+
+The first fallback is one authenticated explicit-source session per tree. Build
+a sorted selector by mapping each exact fully-qualified top-level ordinary
+source root to its generated-test-classes-relative slash path plus `.java`
+(`com.openggf.Foo` becomes `com/openggf/Foo.java`) after applying that tree's
+normal Surefire source includes and POM excludes. The selector contains no `$`
+names or wildcards, is stored at a canonical absolute managed-scratch path, and
+is added to
+`OPENGGF_RUNTIME_INPUTS` before launch so the coordinator hashes it before and
+after execution. Pass it through
+exactly one `-Dsurefire.includesFile=<authenticated-selector>` property; reject
+`-Dtest`, `surefire.includes`, another `surefire.includesFile`, or any other
+caller selector override. Surefire 3.2.5 then selects
+each top-level class once while Jupiter recursively discovers its `@Nested`
+tests; existing POM excludes, groups, fork count, fork reuse, system properties,
+and cross-class JVM lifetime remain unchanged.
+
+Before accepting an explicit-source session, capture and parse that exact
+tree's effective ordinary Surefire configuration. Require no configured
+ordinary `<includes>` (because `includesFile` appends to them), record the
+effective excludes and groups, and prove those values are unchanged in the
+selector invocation. A focused real frozen-POM proof supplies one exact
+top-level root containing `@Nested` plus a class excluded by the effective POM;
+the nested testcase must execute exactly once and the excluded class must emit
+no report. Repeat this gate for the merged candidate because its effective POM
+can differ from either parent.
+
+The outcome exporter treats a selected top-level class as owning its exact XML
+classname and classnames beginning with the exact `root + '$'` boundary. It
+preserves each nested classname in the testcase identity, rejects `$` in the
+selector roots, rejects lookalike prefixes and duplicate nested identities, and
+counts a root covered when either it or a nested descendant emits a testcase.
+The selector root list and slash-path patterns must be an ordinal bijection, and
+every root must be covered or explicitly allowlisted as a non-test helper.
+
+If the authenticated explicit-source session exhausts memory or terminates
+before producing a complete inventory, retain both invalid attempts and run an
+OOM-safe deterministic partition of the complete test class inventory through
+separate wrapper sessions. Each executable class must
 appear in exactly one successful partition, with zero missing or duplicate
 classes, and the aggregation manifest records every child run ID and outcome.
 Use one deterministic union partition map across all three trees, filtering
 each partition to classes present in the tree being run so parent-only or
 merged-only classes do not create false selector failures. Preserve the union
 slot identity in the aggregation report. This partitioned aggregate, plus the
-separate fresh-JVM guard session, is the certifying fallback; a partial full run
-is never reported as the suite result.
+separate fresh-JVM guard session, is the second certifying fallback; neither a
+partial full run nor a duplicate-identity monolith is ever reported as the
+suite result.
 
 Rerun order-sensitive or environment-sensitive changes in isolation before
 classification. A parent red whose candidate has the same outcome kind but a

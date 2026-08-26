@@ -593,6 +593,73 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 ---
 
+### Task 2A: Add Nested-Aware Explicit-Source Inventory Fallback
+
+**Files:**
+
+- Modify: `tools/testing/Export-SurefireOutcomeInventory.ps1`
+- Modify: `tools/testing/Test-SurefireOutcomeInventory.ps1`
+- Modify: `tools/testing/README.md`
+
+**Interfaces:**
+
+- Consumes: a sorted inventory of exact top-level ordinary source classes and
+  Surefire XML from an authenticated `surefire.includesFile` run.
+- Produces: complete nested-aware testcase inventories without admitting
+  duplicate discovery or unrelated classnames.
+
+- [ ] **Step 1: Preserve the duplicate-discovery RED**
+
+  Record both frozen-parent ordinary monoliths as inventory-invalid because the
+  same nested testcase identity appears twice. Do not deduplicate their XML or
+  reinterpret their counts. Record the non-certifying partition collision with
+  unrelated Maven sessions; it is environmental evidence, not a child result.
+
+- [ ] **Step 2: Add failing nested ownership fixtures**
+
+  Require a selected top-level `Outer` plus nested-only XML to be accepted and
+  cover `Outer`; accept combined outer/nested XML while preserving
+  `Outer$Nested#method`; reject selector roots containing `$`, lookalike
+  `Outerish$Nested`, duplicate nested identities, and a root with neither exact
+  nor nested testcase coverage. Include a nested red-signature fixture.
+
+- [ ] **Step 3: Implement exact nested ownership**
+
+  Treat a testcase classname as selected only when it equals a selector root or
+  begins with the exact `root + '$'` boundary. Preserve the actual classname in
+  exported identity rows. Keep malformed XML, duplicate identity, extra class,
+  missing root, helper allowlist, and red-signature rules unchanged.
+
+- [ ] **Step 4: Document and review the fallback**
+
+  Document construction of sorted exact generated-test-classes-relative
+  selector patterns by mapping `com.openggf.Foo` to
+  `com/openggf/Foo.java` after each tree's ordinary source includes/POM
+  excludes. Require no `$` or wildcard patterns, ordinal bijection with selector
+  roots, canonical absolute owner-only managed-scratch storage,
+  SHA-256/count evidence, and inclusion in
+  `OPENGGF_RUNTIME_INPUTS` before passing
+  exactly one `-Dsurefire.includesFile=<absolute-path>`. Explicitly prohibit
+  `-Dtest`, `surefire.includes`, another `surefire.includesFile`, or any other
+  selector override. `-Dtest` is forbidden because it overrides POM
+  includes/excludes.
+
+- [ ] **Step 5: Prove effective-POM and real selector semantics**
+
+  For frozen next, frozen develop, and later the merged candidate, parse the
+  exact effective ordinary Surefire execution. Require no configured
+  `<includes>`, record effective excludes/groups/fork settings, and prove they
+  remain unchanged under the selector property. In each frozen parent, run a
+  focused authenticated selector containing one exact top-level root with
+  `@Nested` and one class named by an effective POM exclude. Require the nested
+  testcase exactly once, no report for the excluded class, exact selector
+  runtime-input hashing, and no unrelated report. Add a static/plugin fixture
+  for FQCN-to-slash-path mapping and an invocation fixture rejecting duplicate
+  or competing selector properties. Run all Task 2 fixtures and obtain
+  independent review before Task 3 resumes.
+
+---
+
 ### Task 3: Freeze Refs, Create Parent Worktrees, and Record Parent Baselines
 
 **Files:**
@@ -701,9 +768,14 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   Use Task 2 tooling to export normalized TSVs. Reject malformed/duplicate
   identities and selected classes without reports. If a monolithic session is
-  incomplete or OOMs, retain it, create the deterministic union partition map,
-  run all filtered partitions in separate sessions, and require exact aggregate
-  class coverage before calling the baseline complete.
+  duplicate-invalid, retain it and run one Task 2A authenticated explicit-source
+  session using that tree's complete top-level ordinary selector. Require exact
+  root/descendant coverage, no duplicate identity, and no unselected classname.
+  If that session is incomplete or OOMs, retain it, create the deterministic
+  union partition map, run all filtered partitions in separate sessions, and
+  require exact aggregate class coverage before calling the baseline complete.
+  Any partition overlapped by unrelated Maven is environmental-invalid and must
+  be rerun; it contributes no inventory row or suite count.
 
 - [ ] **Step 9: Preserve evidence paths**
 
@@ -1233,10 +1305,17 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 - [ ] **Step 2: Export inventory or execute the partition fallback**
 
-  If the full run is complete, export it. If it OOMs or is incomplete, retain
-  the failed manifest, generate the deterministic union partition map from the
-  three trees, run every merged filtered slot in its own wrapper session, and
-  require exactly-once class coverage before aggregation.
+  If the full run is complete and duplicate-free, export it. If Maven completes
+  but the inventory is duplicate-invalid, retain that run, generate and
+  authenticate the merged tree's exact top-level ordinary slash-path selector,
+  add it to `OPENGGF_RUNTIME_INPUTS`, and run one session with exactly one
+  `-Dsurefire.includesFile=<selector>` property. First repeat Task 2A's
+  effective-POM and real nested/excluded selector gate against the merged tree.
+  Require exact root-or-`root + '$'` coverage, no extra classname, and no
+  duplicate identity. If the original or explicit-source run OOMs or is
+  incomplete, retain the failed manifests, generate the deterministic union
+  partition map from the three trees, run every merged filtered slot in its own
+  wrapper session, and require exactly-once class coverage before aggregation.
 
 - [ ] **Step 3: Run the fresh structural guards**
 
