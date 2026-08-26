@@ -176,6 +176,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private int postTitleAct2TargetMinY;
     private int postTitleAct2TargetMaxY;
     private boolean postTitleAct2WorkersCreatedThisPass;
+    private boolean postTitleAct2BigArmCreationEntriesSeeded;
     private int act2MaxXAccumulator;
     private int act2MinYAccumulator;
     private int act2MaxYAccumulator;
@@ -242,6 +243,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         postTitleAct2TargetMinY = 0;
         postTitleAct2TargetMaxY = 0;
         postTitleAct2WorkersCreatedThisPass = false;
+        postTitleAct2BigArmCreationEntriesSeeded = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
@@ -333,7 +335,17 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     /** Native Big Arm {@code loc_74DA4}: literal stored targets, not current bounds. */
     public void prepareBigArmFloorTransition() {
         if (activeAct == 1) {
+            boolean alreadyActive = postTitleAct2SizeChangeActive;
             prepareAct2SizeChange(0x6000, 0, 0x1000);
+            if (!alreadyActive && postTitleAct2SizeChangeActive) {
+                // The settling floor creates the gradual workers in later SST
+                // slots, so their creation entries run later in this same
+                // Process_Sprites pass (AllocateObjectAfterCurrent).
+                act2MaxXAccumulator += 0x4000;
+                act2MinYAccumulator += 0x4000;
+                act2MaxYAccumulator += 0x8000;
+                postTitleAct2BigArmCreationEntriesSeeded = true;
+            }
         }
     }
 
@@ -346,11 +358,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         postTitleAct2TargetMaxY = targetMaxY;
         postTitleAct2SizeChangeActive = true;
         postTitleAct2WorkersCreatedThisPass = true;
-        // Make_LevelSizeObj allocates the Child1_Act2LevelSize workers with
-        // AllocateObjectAfterCurrent (sonic3k.asm:180598-180616,176924-176950,
-        // 37917-37930), so the ascending Process_Sprites walk reaches them in
-        // the creating pass. That pass is dispatch 1 and every accumulator
-        // starts at zero -- neither pre-charge them nor skip the dispatch.
+        postTitleAct2BigArmCreationEntriesSeeded = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
@@ -407,7 +415,22 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (!postTitleAct2SizeChangeActive) {
             return;
         }
-        postTitleAct2WorkersCreatedThisPass = false;
+        if (postTitleAct2WorkersCreatedThisPass) {
+            postTitleAct2WorkersCreatedThisPass = false;
+            if (!postTitleAct2BigArmCreationEntriesSeeded) {
+                // Generic title-card completion creates the retained workers
+                // outside their eligible object-loop pass. This centralized
+                // call consumes that creation marker without running an entry.
+                return;
+            }
+            // Big Arm's later-slot children already ran their creation entries;
+            // this centralized call is their following entry.
+            postTitleAct2BigArmCreationEntriesSeeded = false;
+        }
+        updatePostTitleAct2WorkerEntries();
+    }
+
+    private void updatePostTitleAct2WorkerEntries() {
         if (act2MaxXWorkerActive && updateGradualMaxX()) {
             act2MaxXWorkerActive = false;
             act2MaxXWorkerCompleted = true;
