@@ -90,15 +90,21 @@ public abstract class AbstractResultsScreen extends AbstractObjectInstance imple
      * SPECIAL_STAGE_RESULTS path which gets the width from Engine before each draw).
      */
     protected int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
+
+    /** Resolves the live projection width, falling back to the lifecycle width. */
+    protected int viewportWidth() {
         try {
             com.openggf.graphics.GraphicsManager gm = services().graphicsManager();
             if (gm != null) {
-                return (gm.getProjectionWidth() - SCREEN_WIDTH) / 2;
+                int width = gm.getProjectionWidth();
+                return Math.max(SCREEN_WIDTH, width);
             }
         } catch (Exception ignored) {
             // services() may throw if called outside a valid context (e.g. tests)
         }
-        return (viewportWidth - SCREEN_WIDTH) / 2;
+        return viewportWidth;
     }
 
     @Override

@@ -34,6 +34,7 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
     private final BooleanSupplier pausedSupplier;
     private final Supplier<String> focusLabelSupplier;
     private final Supplier<String> rewindStatusSupplier;
+    private final boolean centeredNative;
     private boolean desyncPauseMessageShown;
     private boolean desyncPauseMessageDismissed;
 
@@ -59,7 +60,7 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                            Supplier<String> rewindStatusSupplier) {
         this(model, TraceHudOverlay::configuredPauseKeyLabel,
                 TraceHudOverlay::isGameLoopPaused,
-                focusLabelSupplier, rewindStatusSupplier);
+                focusLabelSupplier, rewindStatusSupplier, true);
     }
 
     TraceHudOverlay(LiveTraceComparator comparator,
@@ -72,6 +73,7 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         this.pausedSupplier = pausedSupplier;
         this.focusLabelSupplier = focusLabelSupplier;
         this.rewindStatusSupplier = rewindStatusSupplier;
+        this.centeredNative = true;
     }
 
     TraceHudOverlay(TraceHudModel model,
@@ -79,11 +81,22 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                     BooleanSupplier pausedSupplier,
                     Supplier<String> focusLabelSupplier,
                     Supplier<String> rewindStatusSupplier) {
+        this(model, pauseKeyLabelSupplier, pausedSupplier, focusLabelSupplier,
+                rewindStatusSupplier, false);
+    }
+
+    TraceHudOverlay(TraceHudModel model,
+                    Supplier<String> pauseKeyLabelSupplier,
+                    BooleanSupplier pausedSupplier,
+                    Supplier<String> focusLabelSupplier,
+                    Supplier<String> rewindStatusSupplier,
+                    boolean centeredNative) {
         this.model = model;
         this.pauseKeyLabelSupplier = pauseKeyLabelSupplier;
         this.pausedSupplier = pausedSupplier;
         this.focusLabelSupplier = focusLabelSupplier;
         this.rewindStatusSupplier = rewindStatusSupplier;
+        this.centeredNative = centeredNative;
     }
 
     TraceHudOverlay(LiveTraceComparator comparator,
@@ -114,6 +127,7 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         text.beginBatch();
         try {
             renderPlaybackStatus(text);
+            int x = horizontalOrigin() + X;
             int y = TOP_Y;
             boolean paused = pausedSupplier.getAsBoolean();
             if (desyncPauseMessageShown && !paused) {
@@ -123,17 +137,17 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                 desyncPauseMessageShown = true;
                 text.drawShadowedText("Game Paused due to recording desync. Press "
                                 + pauseKeyLabelSupplier.get() + " to resume",
-                        X, TOP_Y - LINE_HEIGHT, DebugColor.RED, SCALE);
+                        x, TOP_Y - LINE_HEIGHT, DebugColor.RED, SCALE);
             }
 
             text.drawShadowedText(String.format("ERRORS %4d", model.errorCount()),
-                    X, y, DebugColor.RED, SCALE);
+                    x, y, DebugColor.RED, SCALE);
             y += LINE_HEIGHT;
             text.drawShadowedText(String.format("WARN   %4d", model.warningCount()),
-                    X, y, DebugColor.ORANGE, SCALE);
+                    x, y, DebugColor.ORANGE, SCALE);
             y += LINE_HEIGHT;
             text.drawShadowedText(String.format("LAG    %4d", model.laggedFrames()),
-                    X, y, DebugColor.GRAY, SCALE);
+                    x, y, DebugColor.GRAY, SCALE);
             y += SECTION_GAP;
 
             int actionMask = model.recentActionMask();
@@ -148,16 +162,16 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
             active.append(bit(inputMask, AbstractPlayableSprite.INPUT_LEFT, 'L'));
             active.append(bit(inputMask, AbstractPlayableSprite.INPUT_RIGHT, 'R'));
             active.append(start ? 'S' : '.');
-            text.drawShadowedText(active.toString(), X, y, DebugColor.GREEN, SCALE);
+            text.drawShadowedText(active.toString(), x, y, DebugColor.GREEN, SCALE);
             y += SECTION_GAP;
 
             String rewindStatus = rewindStatusSupplier.get();
             if (rewindStatus != null && !rewindStatus.isBlank()) {
-                text.drawShadowedText(rewindStatus, X, y, DebugColor.CYAN, SCALE);
+                text.drawShadowedText(rewindStatus, x, y, DebugColor.CYAN, SCALE);
                 y += SECTION_GAP;
             }
 
-            text.drawShadowedText("Last mismatches:", X, y, DebugColor.LIGHT_GRAY, SCALE);
+            text.drawShadowedText("Last mismatches:", x, y, DebugColor.LIGHT_GRAY, SCALE);
             y += LINE_HEIGHT;
             List<MismatchEntry> recent = model.recentMismatches();
             for (MismatchEntry m : recent) {
@@ -167,12 +181,12 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                         m.repeatCount() > 1 ? (" \u00D7" + m.repeatCount()) : "");
                 DebugColor color = m.severity() == Severity.ERROR
                         ? DebugColor.RED : DebugColor.ORANGE;
-                text.drawShadowedText(line, X, y, color, SCALE);
+                text.drawShadowedText(line, x, y, color, SCALE);
                 y += LINE_HEIGHT;
             }
 
             if (model.isComplete()) {
-                text.drawShadowedText("TRACE COMPLETE", X, COMPLETE_BANNER_Y,
+                text.drawShadowedText("TRACE COMPLETE", x, COMPLETE_BANNER_Y,
                         DebugColor.YELLOW, SCALE);
             }
 
@@ -187,9 +201,9 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                     // so it stays in the top-right corner at any viewport width.
                     // Falls back to NATIVE_WIDTH (320) when GraphicsManager is unavailable
                     // (e.g. headless tests). At native 320 the value is unchanged.
-                    int projW = projectionWidth();
-                    int mainX = projW - RIGHT_MARGIN - mainW;
-                    int hintX = projW - RIGHT_MARGIN - hintW;
+                    int right = horizontalOrigin() + NATIVE_WIDTH - RIGHT_MARGIN;
+                    int mainX = right - mainW;
+                    int hintX = right - hintW;
                     text.drawShadowedText(main, mainX, TOP_Y, DebugColor.LIGHT_GRAY, SCALE);
                     text.drawShadowedText(hint, hintX, TOP_Y + LINE_HEIGHT, DebugColor.GRAY, SCALE);
                 }
@@ -217,6 +231,10 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         return NATIVE_WIDTH;
     }
 
+    private int horizontalOrigin() {
+        return centeredNative ? Math.max(0, (projectionWidth() - NATIVE_WIDTH) / 2) : 0;
+    }
+
     /**
      * Paints the transport summary this HUD took over from the legacy
      * {@code == PLAYBACK ==} panel, right-anchored in the top-right corner.
@@ -228,7 +246,7 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         if (status == null) {
             return;
         }
-        int right = projectionWidth() - RIGHT_MARGIN;
+        int right = horizontalOrigin() + NATIVE_WIDTH - RIGHT_MARGIN;
         int y = STATUS_TOP_Y;
         y = drawRightAligned(text, status.movieName(), right, y, DebugColor.LIGHT_GRAY);
         y = drawRightAligned(text, "Mode: " + status.mode(), right, y, DebugColor.GRAY);

@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.titlecard;
 
+import com.openggf.game.GameServices;
+import com.openggf.graphics.GraphicsManager;
+
 /**
  * Models the residual ROM lifetime of the title-card owner object after the
  * level loop starts.
@@ -107,8 +110,10 @@ public final class Sonic3kTitleCardTeardownModel {
 
         /** Render_Sprites bounds test for a render_flags $40 sprite — 36444-36468. */
         private boolean visible() {
-            int dx = x - SCREEN_ORIGIN;
-            if (dx + width < 0 || dx - width >= SCREEN_WIDTH) {
+            int logicalWidth = viewportWidth();
+            int xOffset = (logicalWidth - SCREEN_WIDTH) / 2;
+            int dx = x - SCREEN_ORIGIN + xOffset;
+            if (dx + width < 0 || dx - width >= logicalWidth) {
                 return false;
             }
             int dy = y - SCREEN_ORIGIN;
@@ -169,6 +174,17 @@ public final class Sonic3kTitleCardTeardownModel {
 
     public Sonic3kTitleCardTeardownModel() {
         elementsLeft = elements.length;
+    }
+
+    /** Reads the active logical projection for every visibility pass. */
+    private static int viewportWidth() {
+        try {
+            GraphicsManager graphics = GameServices.graphics();
+            int width = graphics.getProjectionWidth();
+            return width > 0 ? width : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
     }
 
     /**

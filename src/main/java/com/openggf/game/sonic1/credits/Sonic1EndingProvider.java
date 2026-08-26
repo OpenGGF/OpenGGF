@@ -35,6 +35,7 @@ public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycle
     private Sonic1CreditsManager creditsManager;
     private TryAgainEndManager tryAgainEndManager;
     private EndingPhase currentPhase = EndingPhase.CREDITS_TEXT;
+    private int viewportWidth = 320;
     private boolean complete;
     private NativeFadeLifecycle nativeFadeLifecycle = NoOpNativeFadeLifecycle.INSTANCE;
     private final FadeManager injectedFadeManager;
@@ -61,6 +62,7 @@ public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycle
     @Override
     public void initialize() {
         creditsManager = new Sonic1CreditsManager(nativeFadeLifecycle);
+        creditsManager.setViewportWidth(viewportWidth);
         creditsManager.initialize();
         currentPhase = EndingPhase.CREDITS_TEXT;
         complete = false;
@@ -99,6 +101,17 @@ public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycle
             tryAgainEndManager.draw();
         }
         // CREDITS_DEMO drawing is handled by the level renderer in Engine.java
+    }
+
+    @Override
+    public void setViewportWidth(int width) {
+        viewportWidth = Math.max(320, width);
+        if (creditsManager != null) {
+            creditsManager.setViewportWidth(viewportWidth);
+        }
+        if (tryAgainEndManager != null) {
+            tryAgainEndManager.setViewportWidth(viewportWidth);
+        }
     }
 
     @Override
@@ -308,6 +321,7 @@ public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycle
             injectedPostCreditsInitializer.run();
         } else {
             tryAgainEndManager = new TryAgainEndManager();
+            tryAgainEndManager.setViewportWidth(viewportWidth);
             tryAgainEndManager.initialize();
         }
         fadeManager().startFadeFromBlack(nativeFadeLifecycle.beginNativeBlockingFade()

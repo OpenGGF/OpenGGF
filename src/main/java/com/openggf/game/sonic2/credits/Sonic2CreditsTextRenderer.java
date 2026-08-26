@@ -50,6 +50,7 @@ public class Sonic2CreditsTextRenderer {
     private Palette[] endingPalettes;
     private boolean initialized;
     private boolean gpuDirty;
+    private int viewportWidth = 320;
 
     /**
      * Initializes the renderer by loading credit text patterns and ending
@@ -127,8 +128,16 @@ public class Sonic2CreditsTextRenderer {
 
         GraphicsManager gm = GameServices.graphics();
         gm.beginPatternBatch();
-        renderer.drawFrameIndex(creditsNum, SCREEN_CENTER_X, SCREEN_CENTER_Y);
+        renderer.drawFrameIndex(creditsNum, centerXForWidth(viewportWidth), SCREEN_CENTER_Y);
         gm.flushPatternBatch();
+    }
+
+    public void setViewportWidth(int width) {
+        viewportWidth = Math.max(320, width);
+    }
+
+    static int centerXForWidth(int width) {
+        return SCREEN_CENTER_X + Math.max(0, (width - 320) / 2);
     }
 
     /**

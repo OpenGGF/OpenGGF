@@ -626,7 +626,8 @@ public class TitleCardManager implements TitleCardProvider {
         if (leftSwooshElement != null) {
             leftSwooshElement.updateSlideOut();
 
-            if (leftSwooshElement.hasExited()) {
+            if (viewportWidth() == SCREEN_WIDTH || leftSwooshElement == null
+                    || leftSwooshElement.hasExited()) {
                 // Trigger bottom bar exit - from disassembly line 27303:
                 // move.b #$10,TitleCard_Bottom-TitleCard_Left+routine(a0)
                 state = TitleCardState.EXIT_BOTTOM_BAR;
@@ -655,7 +656,8 @@ public class TitleCardManager implements TitleCardProvider {
         if (bottomBarElement != null) {
             bottomBarElement.updateSlideOut();
 
-            if (bottomBarElement.hasExited()) {
+            if (viewportWidth() == SCREEN_WIDTH || bottomBarElement == null
+                    || bottomBarElement.hasExited()) {
                 // Trigger background exit - from disassembly line 27328:
                 // move.b #$12,TitleCard_Background-TitleCard_Bottom+routine(a0)
                 state = TitleCardState.EXIT_BACKGROUND;

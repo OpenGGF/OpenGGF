@@ -616,6 +616,22 @@ public class MasterTitleScreen {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+        drawContent();
+    }
+
+    /**
+     * Runs the title draw body without touching OpenGL blend state.
+     * Package-private for command-recording tests that use recording renderers
+     * without a live context.
+     */
+    void drawForRecording() {
+        if (renderer != null) {
+            drawContent();
+        }
+    }
+
+    private void drawContent() {
+
         if (tracePicker != null) {
             // Paint solid black behind the picker so the regular master-title
             // artwork doesn't bleed through. Fill the full projection width.

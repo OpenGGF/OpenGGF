@@ -78,6 +78,14 @@ public interface EndingProvider {
         org.lwjgl.opengl.GL11.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     }
 
+    /**
+     * Sets the resolved logical viewport width for widescreen-aware ending
+     * presentations. Native width 320 remains the default no-op.
+     */
+    default void setViewportWidth(int width) {
+        // no-op until an ending surface consumes the lifecycle contract
+    }
+
     // --- Demo playback support (S1-style interleaved credits/demos) ---
 
     /**

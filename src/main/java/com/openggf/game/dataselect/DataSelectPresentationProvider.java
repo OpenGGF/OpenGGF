@@ -51,6 +51,11 @@ public final class DataSelectPresentationProvider extends AbstractDataSelectProv
     }
 
     @Override
+    public void setViewportWidth(int width) {
+        requireDelegate().setViewportWidth(width);
+    }
+
+    @Override
     public void setClearColor() {
         requireDelegate().setClearColor();
     }

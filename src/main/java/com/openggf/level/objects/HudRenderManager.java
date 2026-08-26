@@ -44,6 +44,7 @@ public class HudRenderManager {
     private boolean routeLivesPaletteOverrideThroughOwnership;
     private boolean bonusStageHudLayout;
     private HudProfile profile = HudProfile.stock();
+    private int viewportWidth = 320;
 
     public HudRenderManager(GraphicsManager graphicsManager, Camera camera, GameStateManager gameState) {
         this.graphicsManager = graphicsManager;
@@ -66,6 +67,11 @@ public class HudRenderManager {
 
     public void setBonusStageHudLayout(boolean enabled) {
         this.bonusStageHudLayout = enabled;
+    }
+
+    /** Supplies the current gameplay logical width for the next HUD draw. */
+    public void setViewportWidth(int viewportWidth) {
+        this.viewportWidth = Math.max(320, viewportWidth);
     }
 
     void installProfile(HudProfile profile) {
@@ -171,6 +177,8 @@ public class HudRenderManager {
                 return;
             }
 
+            int hudOrigin = nativeOrigin();
+
             boolean debugMode = player != null && player.isDebugMode();
             List<HudRow> rows = debugMode
                     ? HudProfile.stock().rows() : profile.rows();
@@ -178,7 +186,7 @@ public class HudRenderManager {
             for (HudRow row : rows) {
                 if (row.visible() && !isLivesRow(row)) {
                     drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
-                            row.labelX(), row.labelY());
+                            row.labelX(), row.labelY(), hudOrigin);
                 }
             }
 
@@ -186,16 +194,16 @@ public class HudRenderManager {
                 int hexStartX = 48;
                 int playerX = player.getCentreX() & 0xFFFF;
                 int playerY = player.getCentreY() & 0xFFFF;
-                drawSmallHexCoordinates(hexStartX, 8, playerX, playerY);
+                drawSmallHexCoordinates(hexStartX, 8, playerX, playerY, hudOrigin);
 
                 int camX = camera.getX() & 0xFFFF;
                 int camY = camera.getY() & 0xFFFF;
-                drawSmallHexCoordinates(hexStartX, 16, camX, camY);
+                drawSmallHexCoordinates(hexStartX, 16, camX, camY, hudOrigin);
             }
             for (HudRow row : rows) {
                 if (row.visible() && !isLivesRow(row)
                         && !(debugMode && row.metric() == HudMetric.SCORE)) {
-                    drawMetric(row, levelGamestate);
+                    drawMetric(row, levelGamestate, hudOrigin);
                 }
             }
 
@@ -212,8 +220,8 @@ public class HudRenderManager {
             for (HudRow row : rows) {
                 if (row.visible() && isLivesRow(row)) {
                     drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
-                            row.labelX(), row.labelY());
-                    drawMetric(row, levelGamestate);
+                            row.labelX(), row.labelY(), hudOrigin);
+                    drawMetric(row, levelGamestate, hudOrigin);
                 }
             }
             graphicsManager.flushPatternBatch();
@@ -271,28 +279,28 @@ public class HudRenderManager {
         };
     }
 
-    private void drawMetric(HudRow row, LevelState levelState) {
+    private void drawMetric(HudRow row, LevelState levelState, int hudOrigin) {
         switch (row.metric()) {
             case SCORE -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
-                    gameState.getScore(), row.maxDigits());
-            case TIME -> drawTime(row.valueRightX(), row.valueY(), levelState.getDisplayTime());
+                    gameState.getScore(), row.maxDigits(), hudOrigin);
+            case TIME -> drawTime(row.valueRightX(), row.valueY(), levelState.getDisplayTime(), hudOrigin);
             case RINGS -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
-                    levelState.getRings(), row.maxDigits());
+                    levelState.getRings(), row.maxDigits(), hudOrigin);
             case LIVES -> drawLives(gameState.getLives(), row.valueRightX(), row.valueY(),
-                    row.maxDigits());
+                    row.maxDigits(), hudOrigin);
         }
     }
 
     private void drawBonusStageHud(LevelState levelGamestate) {
-        drawStaticFrame(selectRingsFrame(levelGamestate.getRings(), levelGamestate.getFlashCycle()), 16, 8);
-        drawRings(levelGamestate.getRings(), 8);
+        drawStaticFrame(selectRingsFrame(levelGamestate.getRings(), levelGamestate.getFlashCycle()), 16, 8, 0);
+        drawRings(levelGamestate.getRings(), 8, 0);
     }
 
-    private void drawRings(int rings, int y) {
-        drawNumberRightAligned(64, y, rings, 3);
+    private void drawRings(int rings, int y, int hudOrigin) {
+        drawNumberRightAligned(64, y, rings, 3, hudOrigin);
     }
 
-    private void drawLives(int lives, int numDrawX, int line2Y, int maxDigits) {
+    private void drawLives(int lives, int numDrawX, int line2Y, int maxDigits, int hudOrigin) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
 
@@ -302,7 +310,8 @@ public class HudRenderManager {
         int digitCount = numberToDigits(saturateNumeric(lives, maxDigits), numericDigits);
         for (int i = 0; i < digitCount; i++) {
             int digit = numericDigits[i];
-            renderSafe(livesNumbersPatternIndex + digit, iconPatternDesc, numDrawX + camX + (i * 8), line2Y + camY);
+            renderSafe(livesNumbersPatternIndex + digit, iconPatternDesc,
+                    hudOrigin + numDrawX + camX + (i * 8), line2Y + camY);
         }
     }
 
@@ -344,7 +353,7 @@ public class HudRenderManager {
         return livesPaletteOverride;
     }
 
-    private void drawStaticFrame(SpriteMappingFrame frame, int originX, int originY) {
+    private void drawStaticFrame(SpriteMappingFrame frame, int originX, int originY, int hudOrigin) {
         if (frame == null || staticHudArt == null || staticHudPatternIndex <= 0) {
             return;
         }
@@ -352,7 +361,7 @@ public class HudRenderManager {
         int camY = camera.getYWithShake();
         SpritePieceRenderer.renderPieces(
                 frame.pieces(),
-                originX + camX,
+                originX + hudOrigin + camX,
                 originY + camY,
                 staticHudPatternIndex,
                 -1,
@@ -407,19 +416,19 @@ public class HudRenderManager {
      * @param xCoord X coordinate to display (will be masked to 16-bit)
      * @param yCoord Y coordinate to display (will be masked to 16-bit)
      */
-    private void drawSmallHexCoordinates(int x, int y, int xCoord, int yCoord) {
+    private void drawSmallHexCoordinates(int x, int y, int xCoord, int yCoord, int hudOrigin) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
 
         for (int i = 0; i < 4; i++) {
             int nibble = (xCoord >> (12 - i * 4)) & 0xF;
-            drawSmallHexDigit(x + camX + (i * 8), y + camY, nibble);
+            drawSmallHexDigit(hudOrigin + x + camX + (i * 8), y + camY, nibble);
         }
 
         int yStartX = x + 32;
         for (int i = 0; i < 4; i++) {
             int nibble = (yCoord >> (12 - i * 4)) & 0xF;
-            drawSmallHexDigit(yStartX + camX + (i * 8), y + camY, nibble);
+            drawSmallHexDigit(hudOrigin + yStartX + camX + (i * 8), y + camY, nibble);
         }
     }
 
@@ -445,7 +454,7 @@ public class HudRenderManager {
         }
     }
 
-    private void drawNumberRightAligned(int startX, int y, int value, int maxDigits) {
+    private void drawNumberRightAligned(int startX, int y, int value, int maxDigits, int hudOrigin) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
         int digitCount = numberToDigits(saturateNumeric(value, maxDigits), numericDigits);
@@ -453,7 +462,7 @@ public class HudRenderManager {
 
         for (int i = 0; i < digitCount; i++) {
             int digit = numericDigits[i];
-            int xPos = startX + (padding + i) * 8;
+            int xPos = hudOrigin + startX + (padding + i) * 8;
             renderSafe(digitPatternIndex + (digit * 2), hudPatternDesc, xPos + camX, y + camY);
             renderSafe(digitPatternIndex + (digit * 2) + 1, hudPatternDesc, xPos + camX, y + camY + 8);
         }
@@ -470,7 +479,7 @@ public class HudRenderManager {
         return Math.max(0, Math.min(value, maximum));
     }
 
-    private void drawTime(int x, int y, String timeStr) {
+    private void drawTime(int x, int y, String timeStr, int hudOrigin) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
         for (int i = 0; i < timeStr.length(); i++) {
@@ -478,9 +487,13 @@ public class HudRenderManager {
             int patternIdx = (c == ':')
                     ? digitPatternIndex + 20
                     : digitPatternIndex + ((c - '0') * 2);
-            renderSafe(patternIdx, hudPatternDesc, x + camX + (i * 8), y + camY);
-            renderSafe(patternIdx + 1, hudPatternDesc, x + camX + (i * 8), y + camY + 8);
+            renderSafe(patternIdx, hudPatternDesc, hudOrigin + x + camX + (i * 8), y + camY);
+            renderSafe(patternIdx + 1, hudPatternDesc, hudOrigin + x + camX + (i * 8), y + camY + 8);
         }
+    }
+
+    private int nativeOrigin() {
+        return (viewportWidth - 320) / 2;
     }
 
     private void renderSafe(int patternId, PatternDesc desc, int x, int y) {

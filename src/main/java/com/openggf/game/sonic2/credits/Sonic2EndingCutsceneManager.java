@@ -126,6 +126,7 @@ public class Sonic2EndingCutsceneManager {
 
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
+    private int viewportWidth = SCREEN_WIDTH;
 
     /** ROM: Camera_BG_Y_pos initial value ($C8 = 200). Fixed for entire ending. */
     private static final int INITIAL_BG_Y_POS = 0xC8;
@@ -762,7 +763,7 @@ public class Sonic2EndingCutsceneManager {
                 int patternId = Sonic2EndingArt.PATTERN_BASE_PICS
                         + reusableDesc.getPatternIndex() - Sonic2Constants.ART_TILE_ENDING_PICS;
                 gm.renderPatternWithId(patternId, reusableDesc,
-                        PHOTO_X + tx * 8, PHOTO_Y + ty * 8);
+                        screenXForWidth(PHOTO_X + tx * 8, viewportWidth), PHOTO_Y + ty * 8);
             }
         }
 
@@ -1532,9 +1533,9 @@ public class Sonic2EndingCutsceneManager {
 
             int tx = i % ENDING_PLANE_WIDTH_TILES;
             int ty = i / ENDING_PLANE_WIDTH_TILES;
-            int drawX = originX + tx * 8;
+            int drawX = screenXForWidth(originX + tx * 8, viewportWidth);
             int drawY = originY + ty * 8;
-            if (drawX < -8 || drawX >= SCREEN_WIDTH || drawY < -8 || drawY >= SCREEN_HEIGHT) {
+            if (drawX < -8 || drawX >= viewportWidth || drawY < -8 || drawY >= SCREEN_HEIGHT) {
                 continue;
             }
 
@@ -1566,7 +1567,10 @@ public class Sonic2EndingCutsceneManager {
         int tx = tornadoXSub >> 8;
         int ty = tornadoYSub >> 8;
 
-        if (tx < -64 || tx > SCREEN_WIDTH + 64 || ty < -64 || ty > SCREEN_HEIGHT + 64) {
+        int liveWidth = Math.max(SCREEN_WIDTH, viewportWidth);
+        if (tx + (liveWidth - SCREEN_WIDTH) / 2 < -64
+                || tx + (liveWidth - SCREEN_WIDTH) / 2 > liveWidth + 64
+                || ty < -64 || ty > SCREEN_HEIGHT + 64) {
             return;
         }
 
@@ -1797,7 +1801,7 @@ public class Sonic2EndingCutsceneManager {
             SpriteMappingPiece piece = pieces.get(i);
             boolean piecePriority = piece.priority();
             SpritePieceRenderer.renderPiece(
-                    piece, originX, originY,
+                    piece, screenXForWidth(originX, viewportWidth), originY,
                     Sonic2EndingArt.PATTERN_BASE_VRAM + artTile, paletteOverride,
                     false, false,
                     (patternIdx, pieceHFlip, pieceVFlip, palIdx, drawX, drawY) -> {
@@ -1827,7 +1831,7 @@ public class Sonic2EndingCutsceneManager {
             SpriteMappingPiece piece = pieces.get(i);
             boolean piecePriority = piece.priority();
             SpritePieceRenderer.renderPiece(
-                    piece, originX, originY,
+                    piece, screenXForWidth(originX, viewportWidth), originY,
                     basePatternIdx, paletteOverride,
                     false, false,
                     (patternIdx, pieceHFlip, pieceVFlip, palIdx, drawX, drawY) -> {
@@ -1840,6 +1844,14 @@ public class Sonic2EndingCutsceneManager {
                         gm.renderPatternWithId(patternIdx, reusableDesc, drawX, drawY);
                     });
         }
+    }
+
+    public void setViewportWidth(int width) {
+        viewportWidth = Math.max(SCREEN_WIDTH, width);
+    }
+
+    static int screenXForWidth(int nativeX, int width) {
+        return nativeX + Math.max(0, (width - SCREEN_WIDTH) / 2);
     }
 
     // ========================================================================

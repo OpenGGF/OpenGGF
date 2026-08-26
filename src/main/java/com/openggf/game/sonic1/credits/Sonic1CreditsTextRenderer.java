@@ -30,6 +30,7 @@ public class Sonic1CreditsTextRenderer {
     private Sonic1TitleScreenDataLoader dataLoaderRef;
     private boolean initialized;
     private boolean gpuDirty; // Set when zone loading may have overwritten GPU patterns/palette
+    private int viewportWidth = 320;
 
     /**
      * Initializes the renderer. Loads credit text patterns and creates
@@ -95,8 +96,16 @@ public class Sonic1CreditsTextRenderer {
 
         GraphicsManager gm = GameServices.graphics();
         gm.beginPatternBatch();
-        renderer.drawFrameIndex(creditsNum, SCREEN_CENTER_X, SCREEN_CENTER_Y);
+        renderer.drawFrameIndex(creditsNum, centerXForWidth(viewportWidth), SCREEN_CENTER_Y);
         gm.flushPatternBatch();
+    }
+
+    public void setViewportWidth(int width) {
+        viewportWidth = Math.max(320, width);
+    }
+
+    static int centerXForWidth(int width) {
+        return SCREEN_CENTER_X + Math.max(0, (width - 320) / 2);
     }
 
     /**

@@ -163,7 +163,7 @@ public final class S3kResultsElementObjectInstance extends AbstractObjectInstanc
                 return;
             }
             currentX += slidesFromLeft ? -SLIDE_OUT_SPEED : SLIDE_OUT_SPEED;
-            renderedOnScreen = isWithinNativeRenderWindow();
+            renderedOnScreen = isWithinRenderWindow();
             return;
         }
 
@@ -172,11 +172,21 @@ public final class S3kResultsElementObjectInstance extends AbstractObjectInstanc
         } else if (currentX > targetX) {
             currentX = Math.max(currentX - SLIDE_IN_SPEED, targetX);
         }
-        renderedOnScreen = isWithinNativeRenderWindow();
+        renderedOnScreen = isWithinRenderWindow();
     }
 
-    private boolean isWithinNativeRenderWindow() {
-        return withinNativeRenderWindow(currentX, widthPixels);
+    private boolean isWithinRenderWindow() {
+        int viewportWidth = NATIVE_SCREEN_WIDTH;
+        try {
+            int liveWidth = services().graphicsManager().getProjectionWidth();
+            viewportWidth = Math.max(NATIVE_SCREEN_WIDTH, liveWidth);
+        } catch (Exception ignored) {
+            // Native bounds remain the safe fallback outside a live session.
+        }
+        int xOffset = (viewportWidth - NATIVE_SCREEN_WIDTH) / 2;
+        int renderedX = currentX + xOffset;
+        return renderedX + widthPixels >= 0
+                && renderedX - widthPixels < viewportWidth;
     }
 
     static boolean withinNativeRenderWindow(int screenX, int widthPixels) {

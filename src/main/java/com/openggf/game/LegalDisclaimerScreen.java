@@ -112,6 +112,7 @@ public class LegalDisclaimerScreen {
     private PixelFont font;
     private int solidWhiteTextureId;
     private List<String> wrappedBodyLines;
+    private int logicalWidth = SCREEN_W;
 
     public LegalDisclaimerScreen(FadeManager fadeManager) {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
@@ -173,8 +174,18 @@ public class LegalDisclaimerScreen {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+        drawContent();
+    }
+
+    /** Package-private command seam for layout tests without an OpenGL context. */
+    void drawForTesting() {
+        drawContent();
+    }
+
+    private void drawContent() {
+
         // Solid black background (separate texture; not batched with text).
-        renderer.drawTexture(solidWhiteTextureId, 0, 0, SCREEN_W, SCREEN_H,
+        renderer.drawTexture(solidWhiteTextureId, 0, 0, backdropWidthForWidth(logicalWidth), SCREEN_H,
                 0f, 0f, 0f, 1f);
 
         // All text (header + body + prompt) shares the font atlas, so we
@@ -182,7 +193,8 @@ public class LegalDisclaimerScreen {
         font.beginMegaBatch();
 
         // Header (full scale)
-        font.drawTextCentered(HEADER, SCREEN_W, 22, 1f, 1f, 1f, 1f);
+        font.drawText(HEADER, centeredTextXForWidth(logicalWidth, font.measureWidth(HEADER)),
+                22, 1f, 1f, 1f, 1f);
 
         // Body — iterate cached wrapped lines (computed once at init).
         int bodyY = BODY_START_Y;
@@ -192,7 +204,7 @@ public class LegalDisclaimerScreen {
                 bodyY += BODY_PARAGRAPH_GAP;
                 continue;
             }
-            int x = (SCREEN_W - measure.applyAsInt(line)) / 2;
+            int x = centeredTextXForWidth(logicalWidth, measure.applyAsInt(line));
             font.drawText(line, x, bodyY, BODY_SCALE, 0.95f, 0.95f, 0.95f, 1f);
             bodyY += BODY_LINE_HEIGHT;
         }
@@ -208,7 +220,8 @@ public class LegalDisclaimerScreen {
                     : dismissibleFrames / (float) PROMPT_FADE_IN_FRAMES;
             float pulse = 0.6f - 0.4f * (float) Math.cos(dismissibleFrames * PROMPT_PULSE_OMEGA);
             float brightness = pulse * fadeIn;
-            font.drawTextCentered(PROMPT, SCREEN_W, PROMPT_Y, brightness, brightness, brightness, 1f);
+            font.drawText(PROMPT, centeredTextXForWidth(logicalWidth, font.measureWidth(PROMPT)),
+                    PROMPT_Y, brightness, brightness, brightness, 1f);
         }
 
         font.endMegaBatch();
@@ -249,6 +262,23 @@ public class LegalDisclaimerScreen {
             out.add(current.toString());
         }
         return out;
+    }
+
+    /** Supplies the current logical width for the next legal-screen draw. */
+    public void setViewportWidth(int logicalWidth) {
+        this.logicalWidth = Math.max(SCREEN_W, logicalWidth);
+    }
+
+    static int nativeOriginForWidth(int logicalWidth) {
+        return (logicalWidth - SCREEN_W) / 2;
+    }
+
+    static int backdropWidthForWidth(int logicalWidth) {
+        return Math.max(SCREEN_W, logicalWidth);
+    }
+
+    static int centeredTextXForWidth(int logicalWidth, int textWidth) {
+        return nativeOriginForWidth(logicalWidth) + (SCREEN_W - textWidth) / 2;
     }
 
     public void setProjectionMatrix(float[] projectionMatrix) {

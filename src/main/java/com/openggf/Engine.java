@@ -3418,7 +3418,8 @@ public class Engine {
 		float scale = 1.0f;
 		int y = 224 - traceHudTextRenderer.lineHeight(scale) - 4;
 		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
+		traceHudTextRenderer.drawShadowedText(
+				text, centeredDiagnosticX((int) projectionWidth, 4), y, DebugColor.YELLOW, scale);
 	}
 
 	private void renderDisplayShaderNotification() {
@@ -3432,7 +3433,8 @@ public class Engine {
 		float scale = 1.0f;
 		int y = 224 - traceHudTextRenderer.lineHeight(scale) * 2 - 4;
 		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
+		traceHudTextRenderer.drawShadowedText(
+				text, centeredDiagnosticX((int) projectionWidth, 4), y, DebugColor.YELLOW, scale);
 	}
 
 	private void renderDiagnosticOverlays(boolean userRecordingSceneSuppressed,
@@ -3493,45 +3495,56 @@ public class Engine {
 			postFadeRecorder.recordPostFadeDiagnostic("EscapeToMasterTitlePrompt");
 		}
 		float scale = 1.0f;
-		int x = 4;
+		int x = centeredDiagnosticX((int) projectionWidth, 4);
 		int y = 4;
 		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		traceHudTextRenderer.drawShadowedText(controller.message(), x, y, DebugColor.WHITE, scale);
-		renderEscapeProgressBar(x, y + traceHudTextRenderer.lineHeight(scale) + 2, controller.progress());
+		renderEscapeProgressBar(y + traceHudTextRenderer.lineHeight(scale) + 2, controller.progress());
 	}
 
-	private void renderEscapeProgressBar(int x, int y, double progress) {
-		final int width = 144;
-		final int height = 6;
-		int fillWidth = (int) Math.round(Math.max(0.0, Math.min(1.0, progress)) * (width - 2));
-
-		drawEscapeProgressRect(x, y, x + width, y + height,
-				0.0f, 0.0f, 0.0f, 0.65f, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA);
-		drawEscapeProgressRect(x, y, x + width, y + 1,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
-		drawEscapeProgressRect(x, y + height - 1, x + width, y + height,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
-		drawEscapeProgressRect(x, y, x + 1, y + height,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
-		drawEscapeProgressRect(x + width - 1, y, x + width, y + height,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID);
-		if (fillWidth > 0) {
-			drawEscapeProgressRect(x + 1, y + 1, x + 1 + fillWidth, y + height - 1,
-					1.0f, 1.0f, 0.0f, 1.0f, GLCommand.BlendType.SOLID);
+	private void renderEscapeProgressBar(int y, double progress) {
+		for (GLCommand command : escapeProgressRectCommands((int) projectionWidth, y, progress)) {
+			command.execute(0, 0, 0, 0);
 		}
 	}
 
-	private void drawEscapeProgressRect(
-			int x1,
-			int y1,
-			int x2,
-			int y2,
-			float red,
-			float green,
-			float blue,
-			float alpha,
+	static int centeredDiagnosticOrigin(int logicalWidth) {
+		return Math.max(0, (logicalWidth - 320) / 2);
+	}
+
+	static int centeredDiagnosticX(int logicalWidth, int margin) {
+		return centeredDiagnosticOrigin(logicalWidth) + margin;
+	}
+
+	static List<GLCommand> escapeProgressRectCommands(int logicalWidth, int y, double progress) {
+		final int x = centeredDiagnosticX(logicalWidth, 4);
+		final int width = 144;
+		final int height = 6;
+		int fillWidth = (int) Math.round(Math.max(0.0, Math.min(1.0, progress)) * (width - 2));
+		List<GLCommand> commands = new ArrayList<>(6);
+
+		commands.add(escapeProgressRectCommand(x, y, x + width, y + height,
+				0.0f, 0.0f, 0.0f, 0.65f, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA));
+		commands.add(escapeProgressRectCommand(x, y, x + width, y + 1,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
+		commands.add(escapeProgressRectCommand(x, y + height - 1, x + width, y + height,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
+		commands.add(escapeProgressRectCommand(x, y, x + 1, y + height,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
+		commands.add(escapeProgressRectCommand(x + width - 1, y, x + width, y + height,
+				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
+		if (fillWidth > 0) {
+			commands.add(escapeProgressRectCommand(x + 1, y + 1, x + 1 + fillWidth, y + height - 1,
+					1.0f, 1.0f, 0.0f, 1.0f, GLCommand.BlendType.SOLID));
+		}
+		return commands;
+	}
+
+	private static GLCommand escapeProgressRectCommand(
+			int x1, int y1, int x2, int y2,
+			float red, float green, float blue, float alpha,
 			GLCommand.BlendType blendType) {
-		new GLCommand(
+		return new GLCommand(
 				GLCommand.CommandType.RECTI,
 				GL_TRIANGLE_FAN,
 				blendType,
@@ -3542,7 +3555,7 @@ public class Engine {
 				x1,
 				y1,
 				x2,
-				y2).execute(0, 0, 0, 0);
+				y2);
 	}
 
 	private boolean updateDisplayShaderInput() {
@@ -3733,9 +3746,34 @@ public class Engine {
 		renderDispatcher.draw(getCurrentGameMode(), debugViewEnabled, debugState, drawActions);
 	}
 
+	static void applyViewportWidth(LevelSelectProvider provider, int width) {
+		if (provider != null) {
+			provider.setViewportWidth(width);
+		}
+	}
+
+	static void applyViewportWidth(DataSelectProvider provider, int width) {
+		if (provider != null) {
+			provider.setViewportWidth(width);
+		}
+	}
+
+	static void applyViewportWidth(ResultsScreen provider, int width) {
+		if (provider != null) {
+			provider.setViewportWidth(width);
+		}
+	}
+
+	static void applyViewportWidth(EndingProvider provider, int width) {
+		if (provider != null) {
+			provider.setViewportWidth(width);
+		}
+	}
+
 	private void drawLegalDisclaimer() {
 		resetCameraForScreenSpaceIfPresent();
 		if (legalDisclaimerScreen != null) {
+			legalDisclaimerScreen.setViewportWidth((int) projectionWidth);
 			legalDisclaimerScreen.setProjectionMatrix(getProjectionMatrixBuffer());
 			legalDisclaimerScreen.draw();
 		}
@@ -3790,6 +3828,7 @@ public class Engine {
 		}
 		camera.setX((short) 0);
 		camera.setY((short) 0);
+		applyViewportWidth(resultsScreen, (int) projectionWidth);
 
 		graphicsManager.beginPatternBatch();
 
@@ -3817,6 +3856,7 @@ public class Engine {
 		resetCameraForScreenSpace();
 		LevelSelectProvider levelSelect = gameLoop.getLevelSelectProvider();
 		if (levelSelect != null) {
+			applyViewportWidth(levelSelect, (int) projectionWidth);
 			levelSelect.draw();
 		}
 	}
@@ -3825,6 +3865,7 @@ public class Engine {
 		resetCameraForScreenSpace();
 		DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
 		if (dataSelect != null) {
+			applyViewportWidth(dataSelect, (int) projectionWidth);
 			dataSelect.draw();
 		}
 	}
@@ -3835,6 +3876,7 @@ public class Engine {
 		if (provider == null) {
 			return;
 		}
+		applyViewportWidth(provider, (int) projectionWidth);
 		if (provider.needsLevelBackground()) {
 			levelManager.renderEndingBackground(
 					provider.getBackgroundVscroll(),
@@ -3848,12 +3890,14 @@ public class Engine {
 		resetCameraForScreenSpace();
 		EndingProvider provider = gameLoop.getEndingProvider();
 		if (provider != null) {
+			applyViewportWidth(provider, (int) projectionWidth);
 			provider.draw();
 		}
 	}
 
 	private void drawCreditsDemo() {
 		EndingProvider provider = gameLoop.getEndingProvider();
+		applyViewportWidth(provider, (int) projectionWidth);
 		boolean includeSprites = provider == null || !provider.shouldRenderDemoSpritesOverFade();
 		levelManager.drawWithSpritePriority(spriteManager, includeSprites);
 	}
@@ -3862,6 +3906,7 @@ public class Engine {
 		resetCameraForScreenSpace();
 		EndingProvider provider = gameLoop.getEndingProvider();
 		if (provider != null) {
+			applyViewportWidth(provider, (int) projectionWidth);
 			provider.draw();
 		}
 	}

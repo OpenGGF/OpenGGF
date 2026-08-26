@@ -65,6 +65,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
     private Sonic2EndingCutsceneManager cutsceneManager;
     private Sonic2CreditsTextRenderer textRenderer;
     private Sonic2LogoFlashManager logoFlashManager;
+    private int viewportWidth = 320;
 
     // Internal state machine
     private InternalState state = InternalState.CUTSCENE;
@@ -110,6 +111,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
                             GameId.S2, decision.owner(), decision.mappingFrame(),
                             decision.dplcFrame(), decision.kind());
             cutsceneManager = new Sonic2EndingCutsceneManager(decisionSink);
+            cutsceneManager.setViewportWidth(viewportWidth);
             cutsceneManager.initialize(GameServices.rom().getRom());
         } catch (IOException e) {
             LOGGER.warning("Failed to get ROM for cutscene: " + e.getMessage());
@@ -183,6 +185,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
             }
             case LOGO_LOADING -> {
                 logoFlashManager = new Sonic2LogoFlashManager();
+                logoFlashManager.setViewportWidth(viewportWidth);
                 logoFlashManager.initialize();
                 state = InternalState.LOGO_FLASH;
                 // ROM: PaletteFadeIn to reveal logo
@@ -224,6 +227,20 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
             case FINISHED -> {
                 // Nothing to draw
             }
+        }
+    }
+
+    @Override
+    public void setViewportWidth(int width) {
+        viewportWidth = Math.max(320, width);
+        if (cutsceneManager != null) {
+            cutsceneManager.setViewportWidth(viewportWidth);
+        }
+        if (textRenderer != null) {
+            textRenderer.setViewportWidth(viewportWidth);
+        }
+        if (logoFlashManager != null) {
+            logoFlashManager.setViewportWidth(viewportWidth);
         }
     }
 
@@ -331,6 +348,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
 
         // Initialize credits text renderer
         textRenderer = new Sonic2CreditsTextRenderer();
+        textRenderer.setViewportWidth(viewportWidth);
         textRenderer.initialize();
 
         currentSlide = 0;

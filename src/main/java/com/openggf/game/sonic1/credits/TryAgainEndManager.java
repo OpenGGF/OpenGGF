@@ -117,6 +117,7 @@ public class TryAgainEndManager {
     private boolean exitRequested;
     private boolean initialized;
     private boolean hasAllEmeralds;
+    private int viewportWidth = 320;
 
     /**
      * Initializes the TRY AGAIN / END screen.
@@ -138,6 +139,7 @@ public class TryAgainEndManager {
             dataLoader.loadData();
         }
         textRenderer.initialize(dataLoader);
+        textRenderer.setViewportWidth(viewportWidth);
 
         // Initialize Eggman (Object 8B)
         if (hasAllEmeralds) {
@@ -473,7 +475,7 @@ public class TryAgainEndManager {
         // Draw emeralds and Eggman in a single batch
         GraphicsManager gm = GameServices.graphics();
         Camera camera = GameServices.camera();
-        int camX = camera.getX();
+        int camX = camera.getX() + (viewportWidth - 320) / 2;
         int camY = camera.getY();
 
         gm.beginPatternBatch();
@@ -491,6 +493,17 @@ public class TryAgainEndManager {
         }
 
         gm.flushPatternBatch();
+    }
+
+    public void setViewportWidth(int width) {
+        viewportWidth = Math.max(320, width);
+        if (textRenderer != null) {
+            textRenderer.setViewportWidth(viewportWidth);
+        }
+    }
+
+    static int centerXForWidth(int width) {
+        return Sonic1CreditsTextRenderer.centerXForWidth(width);
     }
 
     /**

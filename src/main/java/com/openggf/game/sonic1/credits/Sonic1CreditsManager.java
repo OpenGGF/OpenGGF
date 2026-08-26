@@ -59,6 +59,7 @@ public class Sonic1CreditsManager {
     private boolean requestDemoLoad;
     private boolean requestTextReturn;
     private boolean requestFinished;
+    private int viewportWidth = 320;
     private final NativeFadeLifecycle nativeFadeLifecycle;
     private final com.openggf.graphics.FadeManager injectedFadeManager;
 
@@ -103,6 +104,7 @@ public class Sonic1CreditsManager {
             dataLoader.loadData();
         }
         textRenderer.initialize(dataLoader);
+        textRenderer.setViewportWidth(viewportWidth);
 
         // Play credits music (ROM: move.w #MusID_Credits,d0; jsr PlaySound)
         GameServices.audio().playMusic(Sonic1Music.CREDITS.id);
@@ -326,6 +328,11 @@ public class Sonic1CreditsManager {
      */
     public void drawCreditText() {
         textRenderer.draw(creditsNum);
+    }
+
+    public void setViewportWidth(int width) {
+        viewportWidth = Math.max(320, width);
+        textRenderer.setViewportWidth(viewportWidth);
     }
 
     // ========================================================================

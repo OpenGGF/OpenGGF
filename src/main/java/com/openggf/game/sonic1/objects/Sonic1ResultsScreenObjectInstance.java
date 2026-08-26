@@ -764,13 +764,13 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
      */
     private void appendPlaceholderRenderCommands(List<GLCommand> commands, Camera camera) {
         int worldBaseY = camera.getY();
-        // xOffset() shifts the whole content block right for widescreen centering; 0 at native 320.
-        int worldXBase = camera.getX() - 128 + xOffset();
+        int offset = xOffset();
+        int liveWidth = viewportWidth();
 
         // Convert VDP X to screen-relative for placeholder boxes
         // "SONIC HAS" - blue
-        int sonicHasScreenX = elemCurrentX[ELEM_SONIC_HAS] - 128;
-        if (sonicHasScreenX >= 0 && sonicHasScreenX < SCREEN_WIDTH + 100) {
+        int sonicHasScreenX = elemCurrentX[ELEM_SONIC_HAS] - 128 + offset;
+        if (sonicHasScreenX >= 0 && sonicHasScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
                     camera.getX() + sonicHasScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_SONIC_HAS],
@@ -778,8 +778,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         }
 
         // "PASSED" - blue
-        int passedScreenX = elemCurrentX[ELEM_PASSED] - 128;
-        if (passedScreenX >= -100 && passedScreenX < SCREEN_WIDTH + 100) {
+        int passedScreenX = elemCurrentX[ELEM_PASSED] - 128 + offset;
+        if (passedScreenX >= -100 && passedScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
                     camera.getX() + passedScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_PASSED],
@@ -787,8 +787,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         }
 
         // "ACT N" - green
-        int actScreenX = elemCurrentX[ELEM_ACT] - 128;
-        if (actScreenX >= 0 && actScreenX < SCREEN_WIDTH + 100) {
+        int actScreenX = elemCurrentX[ELEM_ACT] - 128 + offset;
+        if (actScreenX >= 0 && actScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
                     camera.getX() + actScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_ACT],
@@ -796,8 +796,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         }
 
         // Score - yellow
-        int scoreScreenX = elemCurrentX[ELEM_SCORE] - 128;
-        if (scoreScreenX >= 0 && scoreScreenX < SCREEN_WIDTH + 100) {
+        int scoreScreenX = elemCurrentX[ELEM_SCORE] - 128 + offset;
+        if (scoreScreenX >= 0 && scoreScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
                     camera.getX() + scoreScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_SCORE],
@@ -805,8 +805,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         }
 
         // Time Bonus - yellow
-        int timeBonusScreenX = elemCurrentX[ELEM_TIME_BONUS] - 128;
-        if (timeBonusScreenX >= 0 && timeBonusScreenX < SCREEN_WIDTH + 100) {
+        int timeBonusScreenX = elemCurrentX[ELEM_TIME_BONUS] - 128 + offset;
+        if (timeBonusScreenX >= 0 && timeBonusScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
                     camera.getX() + timeBonusScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_TIME_BONUS],
@@ -814,8 +814,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         }
 
         // Ring Bonus - orange
-        int ringBonusScreenX = elemCurrentX[ELEM_RING_BONUS] - 128;
-        if (ringBonusScreenX >= 0 && ringBonusScreenX < SCREEN_WIDTH + 100) {
+        int ringBonusScreenX = elemCurrentX[ELEM_RING_BONUS] - 128 + offset;
+        if (ringBonusScreenX >= 0 && ringBonusScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
                     camera.getX() + ringBonusScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_RING_BONUS],
@@ -823,8 +823,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         }
 
         // Oval - grey
-        int ovalScreenX = elemCurrentX[ELEM_OVAL] - 128;
-        if (ovalScreenX >= 0 && ovalScreenX < SCREEN_WIDTH + 100) {
+        int ovalScreenX = elemCurrentX[ELEM_OVAL] - 128 + offset;
+        if (ovalScreenX >= 0 && ovalScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
                     camera.getX() + ovalScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_OVAL],

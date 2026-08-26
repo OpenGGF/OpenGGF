@@ -1195,7 +1195,9 @@ public class Sonic3kTitleCardManager
             return elemY[idx] + BANNER_RENDER_HEIGHT < 0;
         }
         int renderWidth = bonusMode ? 0x80 : ELEMENT_RENDER_WIDTH[idx];
-        return elemX[idx] - renderWidth >= SCREEN_WIDTH;
+        // Elements are authored in native 320-space and rendered at xOffset().
+        // Retire them only after the rendered bound clears the live viewport.
+        return elemX[idx] + xOffset() - renderWidth >= viewportWidth();
     }
 
     private boolean isElementVertical(int idx) {

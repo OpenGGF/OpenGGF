@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.debug.DebugColor;
+import com.openggf.game.GameServices;
 import com.openggf.graphics.PixelFontTextRenderer;
 
 import java.util.Objects;
@@ -27,10 +28,11 @@ final class LiveRewindHudOverlay {
         if (status == null || status.isBlank()) {
             return;
         }
+        int x = Math.max(0, (GameServices.graphics().getProjectionWidth() - 320) / 2) + X;
         text.beginBatch();
         try {
-            text.drawShadowedText("LIVE REWIND", X, TOP_Y, DebugColor.LIGHT_GRAY, SCALE);
-            text.drawShadowedText(status, X, TOP_Y + LINE_HEIGHT, DebugColor.CYAN, SCALE);
+            text.drawShadowedText("LIVE REWIND", x, TOP_Y, DebugColor.LIGHT_GRAY, SCALE);
+            text.drawShadowedText(status, x, TOP_Y + LINE_HEIGHT, DebugColor.CYAN, SCALE);
         } finally {
             text.endBatch();
         }

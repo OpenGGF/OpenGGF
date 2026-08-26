@@ -108,6 +108,7 @@ public class Sonic2LogoFlashManager {
     private PatternSpriteRenderer renderer;
     private Pattern[] logoPatterns;
     private boolean initialized;
+    private int viewportWidth = 320;
 
     /**
      * Initializes the logo flash manager: loads art, decodes mapping, sets up renderer.
@@ -281,8 +282,16 @@ public class Sonic2LogoFlashManager {
         GraphicsManager gm = GameServices.graphics();
         gm.beginPatternBatch();
         // Draw at screen center; piece offsets are relative to center
-        renderer.drawFrameIndex(0, SCREEN_CENTER_X, SCREEN_CENTER_Y);
+        renderer.drawFrameIndex(0, centerXForWidth(viewportWidth), SCREEN_CENTER_Y);
         gm.flushPatternBatch();
+    }
+
+    public void setViewportWidth(int width) {
+        viewportWidth = Math.max(320, width);
+    }
+
+    static int centerXForWidth(int width) {
+        return SCREEN_CENTER_X + Math.max(0, (width - 320) / 2);
     }
 
     /**
