@@ -115,7 +115,11 @@ public enum LevelData implements LevelDescriptor {
     S3K_LRZ_BOSS(0xEC, 0x0040, 0x0070),
     S3K_HIDDEN_PALACE(0xED, 0x0030, 0x0AEC),
     S3K_DEZ_BOSS(0xEE, 0x0060, 0x0070),
-    S3K_SPECIAL_STAGE_ARENA(0xEF, 0x1640, 0x03AC);
+    S3K_SPECIAL_STAGE_ARENA(0xEF, 0x1640, 0x03AC),
+
+    // Canonical HPZ identity ($1601), backed by the ROM's nonlinear $1701
+    // Super Emerald sanctuary resource slot.
+    S3K_HIDDEN_PALACE_SANCTUARY(0xED, 0x1640, 0x03AC);
 
     private final int levelIndex;
     private final int startXPos;
