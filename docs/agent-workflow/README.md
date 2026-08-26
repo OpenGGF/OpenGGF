@@ -173,6 +173,10 @@ gzip as deferred. Normal completion directory-syncs the gzip rename, publishes t
 terminal manifest naming the gzip, and only then removes the source and syncs again.
 If the bounded shutdown wait cannot prove drain completion, it leaves the `RUNNING`
 manifest and log untouched for stale-session recovery.
+Gzip publication, terminal-manifest publication, and source deletion each record a
+directory-sync outcome: `SYNCED`, `UNSUPPORTED`, or `FAILED`. Native providers that
+cannot open directories for sync remain certifying as `UNSUPPORTED`; real I/O errors
+on a supporting provider retain recovery evidence and fail storage finalisation.
 
 Destructive compaction requires either descriptor-relative `SecureDirectoryStream` support
 or a non-null stable file key with same-store atomic tombstoning and identity revalidation.

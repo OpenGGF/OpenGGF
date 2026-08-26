@@ -125,6 +125,10 @@ completion, the gzip rename is directory-synced, the terminal manifest names it,
 and only then is the original removed and the directory synced again.
 If shutdown cannot prove drain completion within its bound, it leaves the `RUNNING`
 manifest and log untouched for stale-session recovery.
+Directory durability is reported as `SYNCED`, `UNSUPPORTED`, or `FAILED` for gzip
+publication, terminal-manifest publication, and source deletion. Native providers
+that cannot open directories for syncing remain certifying as `UNSUPPORTED`; a real
+I/O failure on a provider that supports directory sync is a storage-finalisation failure.
 
 Automatic deletion requires secure descriptor-relative streams or a stable
 file-key tombstone strategy. Native Windows on OpenJDK 21 exposes neither and

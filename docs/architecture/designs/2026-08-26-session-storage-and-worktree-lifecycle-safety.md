@@ -381,6 +381,11 @@ has a distinct single owner: after stopping the child tree it waits for output d
 keeps `maven.log`, and records compression as deferred rather than racing the writer.
 If its bounded drain wait cannot prove completion, it performs no compaction or log
 mutation and leaves the `RUNNING` manifest for stale-session recovery.
+Each gzip, terminal-manifest, and source-deletion directory barrier records `SYNCED`,
+`UNSUPPORTED`, or `FAILED`. Linux and other supporting providers fsync the directory.
+Native providers that cannot open directories for syncing, including OpenJDK Windows,
+remain certifying but visibly `UNSUPPORTED`; genuine I/O errors on a supporting provider
+remain storage-finalisation failures and retain the source log whenever it still exists.
 
 The immediate emergency delivery is intentionally a containment slice:
 fail-closed managed allocation, capacity gates, terminal compaction, and

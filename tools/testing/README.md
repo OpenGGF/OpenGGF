@@ -90,6 +90,10 @@ completion directory-syncs the gzip publication, publishes the terminal manifest
 that names it, then removes the source and directory-syncs that deletion.
 If shutdown cannot prove output-drain completion within its bound, it leaves the
 `RUNNING` manifest and log untouched for stale-session recovery.
+The terminal manifest records gzip, manifest, and source-deletion directory-sync
+outcomes as `SYNCED`, `UNSUPPORTED`, or `FAILED`. Native providers such as OpenJDK
+Windows that cannot sync an opened directory remain certifying as `UNSUPPORTED`;
+real I/O failure on a supporting provider retains the source and is non-certifying.
 
 The start marker fields are exactly `run_id`, `isolation`, `lwjgl`,
 `manifest`, `lease`, `log`, `state`, `storage_tier`, `launch_usable_bytes`, and

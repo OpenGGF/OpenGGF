@@ -50,6 +50,8 @@ public final class TestSessionCoordinatorSelfTest {
             "compaction_reclaimed_bytes",
             "compaction_error", "retain_ephemeral",
             "storage_finalization_error", "numeric_inode_unavailable_reason",
+            "gzip_directory_sync_status", "manifest_directory_sync_status",
+            "source_delete_directory_sync_status",
             "launch_capacity_error", "launch_inode_probe_status", "launch_inode_probe_error",
             "launch_directory_flush_status", "completion_capacity_error",
             "completion_inode_probe_status", "completion_inode_probe_error",
@@ -105,6 +107,9 @@ public final class TestSessionCoordinatorSelfTest {
         verifyChildExitPropagation(root, outputRoot);
         verifyLogCompressionFailureVerdictPrecedence(root, outputRoot);
         verifyPublishedLogSurvivesSourceRemovalFailure(root, outputRoot);
+        verifyManifestBarrierFailureRetainsSource(root, outputRoot);
+        verifyUnsupportedDirectorySyncRemainsCertifying(root, outputRoot);
+        verifyRealDirectorySyncFailureIsNonCertifying(root, outputRoot);
         verifyCompactionFailureVerdictPrecedence(root, outputRoot);
         verifyShutdownFinalizesSession(root, outputRoot);
         verifyShutdownStopsProcessTree(root, outputRoot);
@@ -1432,6 +1437,61 @@ public final class TestSessionCoordinatorSelfTest {
                 "source-removal failure must leave both recovery-safe log copies");
         check(readGzip(gzip).contains("CHILD_ENV_OK"),
                 "published gzip must remain readable after source-removal failure");
+    }
+
+    private static void verifyManifestBarrierFailureRetainsSource(Path root, Path outputRoot)
+            throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-manifest-barrier-failure"));
+        ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        builder.environment().put("OPENGGF_TEST_MANIFEST_DIRECTORY_SYNC", "failure");
+        CommandResult result = finish(builder.start());
+        check(result.exitCode != 0, "failed terminal-manifest barrier must be non-certifying");
+        Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String json = Files.readString(manifest);
+        check(Files.isRegularFile(manifest.getParent().resolve("maven.log")),
+                "manifest barrier failure must not delete the source log");
+        check(json.contains("\"manifest_directory_sync_status\": \"FAILED\"")
+                        && !json.contains("\"storage_finalization_error\": null"),
+                "manifest barrier failure must remain visible in terminal evidence");
+    }
+
+    private static void verifyUnsupportedDirectorySyncRemainsCertifying(Path root, Path outputRoot)
+            throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-directory-sync-unsupported"));
+        ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        builder.environment().put("OPENGGF_TEST_LOG_DIRECTORY_SYNC", "unsupported");
+        builder.environment().put("OPENGGF_TEST_MANIFEST_DIRECTORY_SYNC", "unsupported");
+        CommandResult result = finish(builder.start());
+        check(result.exitCode == 0, "unsupported directory sync must remain certifying:\n" + result.output);
+        Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String json = Files.readString(manifest);
+        check(json.contains("\"gzip_directory_sync_status\": \"UNSUPPORTED\"")
+                        && json.contains("\"manifest_directory_sync_status\": \"UNSUPPORTED\"")
+                        && json.contains("\"source_delete_directory_sync_status\": \"UNSUPPORTED\""),
+                "unsupported sync outcomes must be explicit in terminal evidence");
+        check(!Files.exists(manifest.getParent().resolve("maven.log"))
+                        && Files.isRegularFile(manifest.getParent().resolve("maven.log.gz")),
+                "unsupported directory sync must still complete portable gzip replacement");
+    }
+
+    private static void verifyRealDirectorySyncFailureIsNonCertifying(Path root, Path outputRoot)
+            throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-directory-sync-failure"));
+        ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        builder.environment().put("OPENGGF_TEST_LOG_DIRECTORY_SYNC", "failure");
+        CommandResult result = finish(builder.start());
+        check(result.exitCode != 0, "real directory-sync failure must be non-certifying");
+        Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String json = Files.readString(manifest);
+        check(json.contains("\"gzip_directory_sync_status\": \"FAILED\"")
+                        && Files.isRegularFile(manifest.getParent().resolve("maven.log")),
+                "real gzip publication sync failure must retain source and be visible");
     }
 
     private static String readGzip(Path path) throws IOException {
