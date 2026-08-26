@@ -181,22 +181,55 @@ coordinator's child command in a newly created immutable detached worktree and:
    session-owned build root;
 3. creates build-root links for `surefire-reports`, `test-tmp`, trace reports,
    diagnostics, artifacts, and distribution to their coordinator-owned roots;
-4. invokes Maven with an override of frozen `next`'s user-defined
-   `surefire.argLine` that preserves its CDS, Mockito agent, and heap options
-   while adding
+4. resolves frozen `next`'s platform-effective `surefire.argLine` under the
+   active Maven profiles, preserving CDS, Mockito agent, heap, and macOS
+   `-XstartOnFirstThread` options, then appends
    `org.lwjgl.system.SharedLibraryExtractPath=<session tmp>/lwjgl-${surefire.forkNumber}`;
-5. declares the adapter itself in `OPENGGF_RUNTIME_INPUTS`, so the coordinator's
-   runtime-input digest detects any change during a run; and
-6. removes only the ignored `target` symlink on exit, leaving the immutable
-   source identity unchanged and the session evidence intact.
+5. installs its cleanup trap before creating any link and writes a session-side
+   recovery marker containing the canonical worktree path, link path, run ID,
+   and exact session build target; and
+6. removes only the ignored `target` symlink after a no-follow `lstat` confirms
+   that it is a symlink and its canonical target exactly matches the recorded
+   session build root. It never recursively deletes, follows, replaces, or
+   empties `target`.
+
+The orchestrator, not the child adapter, starts the coordinator with
+`OPENGGF_RUNTIME_INPUTS` already containing the pinned adapter, wrapper, and
+coordinator-source paths. The coordinator reads and hashes those inputs before
+the child starts, so any mid-run change invalidates the session. Adapter
+commands may invoke Maven lifecycle phases such as `test` or `package`, but
+must never include `clean`: the historical clean plugin could unlink the routed
+`target` symlink and recreate a worktree-local directory.
+
+An outer recovery/finally step runs after every coordinator outcome. This is
+separate from the child trap because forced process-tree termination can prevent
+the trap from running. Recovery accepts only a marker whose run ID, canonical
+worktree, link path, and link target agree with the just-started session; it
+uses no-follow inspection and unlinks only that exact symlink. A missing,
+ordinary directory, changed target, or mismatched marker is reported for human
+inspection and is never deleted automatically.
 
 The adapter is test infrastructure, not a production or gameplay change. Its
-self-test runs one frozen-next guard through the pinned coordinator, requires
-start/end markers and a valid manifest, proves the expected Surefire XML is in
-the manifest inventory, and verifies the report's JVM properties point
-`java.io.tmpdir` at the session root and LWJGL extraction at the resolved
-per-fork path. The full parent baseline cannot start until that self-test and
-the coordinator's own self-test pass.
+self-test suite covers successful Maven completion, ordinary Maven failure, and
+forced child-process termination. Every case checks exact detached HEAD, clean
+tracked/non-ignored source inventory, post-run `target` absence, and unchanged
+source digest. The forced-termination case proves the outer recovery path, and
+a negative case proves that an ordinary directory or mismatched symlink is left
+untouched.
+
+The successful self-test selects enough frozen-next guards to force at least two
+Surefire JVMs with a two-fork configuration. It requires start/end markers and
+a valid manifest, proves every expected Surefire XML is in the manifest
+inventory, and extracts the report JVM properties and process evidence. At
+least two distinct fork identities must expose two distinct resolved
+`lwjgl-<fork>` directories beneath the session tmp root; a literal unresolved
+`${surefire.forkNumber}`, duplicate path, path outside the session, or
+worktree-local `java.io.tmpdir` fails the adapter. A mutation test changes a
+scratch copy named in pre-launch `OPENGGF_RUNTIME_INPUTS` during a controlled
+run and requires the coordinator to end `INVALID_IDENTITY_CHANGED`.
+
+The full parent baseline cannot start until the adapter self-tests and the
+coordinator's own self-test pass.
 
 ### Failure handling and rollback
 
