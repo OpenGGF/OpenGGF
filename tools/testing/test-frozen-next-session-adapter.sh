@@ -2,8 +2,72 @@
 # Exercises the frozen-next compatibility adapter against the immutable next parent.
 set -euo pipefail
 
+if [[ "${OPENGGF_ADAPTER_TEST_SHIM:-}" == 1 ]]; then
+    shim_name=$(basename -- "$0")
+    case "$shim_name" in
+        unshare)
+            if [[ "${OPENGGF_TEST_FAIL_PREFLIGHT:-}" == 1 && "${4:-}" == bash ]]; then
+                printf 'controlled unshare preflight failure\n' >&2
+                exit 68
+            fi
+            exec "${OPENGGF_TEST_REAL_UNSHARE:?}" "$@"
+            ;;
+        mount)
+            mount_target=${*: -1}
+            if [[ "${OPENGGF_TEST_FAIL_BIND:-}" == 1 && " $* " == *' --bind '* \
+                && "$mount_target" == "${OPENGGF_TEST_WORKTREE:?}/target" ]]; then
+                printf 'controlled bind failure: %s\n' "$mount_target" >&2
+                exit 72
+            fi
+            exec "${OPENGGF_TEST_REAL_MOUNT:?}" "$@"
+            ;;
+        stat)
+            stat_path=${*: -1}
+            if [[ "${OPENGGF_TEST_WRONG_MOUNT_IDENTITY:-}" == 1 \
+                && " $* " == *" -Lc %d:%i "* \
+                && "$stat_path" == "${OPENGGF_TEST_WORKTREE:?}/target" ]]; then
+                printf '0:0\n'
+                exit 0
+            fi
+            exec "${OPENGGF_TEST_REAL_STAT:?}" "$@"
+            ;;
+        mountpoint)
+            mountpoint_target=${*: -1}
+            if [[ "${OPENGGF_TEST_PROPAGATION_LEAK:-}" == 1 \
+                && "$mountpoint_target" == "${OPENGGF_TEST_WORKTREE:?}/target" \
+                && -f "${OPENGGF_TEST_DIAGNOSTICS:?}/frozen-next-namespace-leader.env" ]]; then
+                exit 0
+            fi
+            exec "${OPENGGF_TEST_REAL_MOUNTPOINT:?}" "$@"
+            ;;
+        *) ;;
+    esac
+fi
+
+if [[ "${1:-}" == --contained-nested ]]; then
+    evidence=${2:?nested containment evidence required}
+    nested_host= nested_start=
+    while IFS=: read -r key value; do
+        if [[ "$key" == NSpid ]]; then
+            value=${value#[$' \t']}
+            read -r nested_host _ <<< "$value"
+            break
+        fi
+    done < /proc/self/status
+    nested_start=$(sed 's/^[^)]*) //' "/proc/$nested_host/stat" | awk '{print $20}')
+    nested_mount=$(stat -Lc %i /proc/self/ns/mnt)
+    printf 'pid=%s\nstart=%s\nmount_namespace_inode=%s\n' \
+        "$nested_host" "$nested_start" "$nested_mount" > "$evidence"
+    sleep 300
+    exit 0
+fi
+
 if [[ "${OPENGGF_FAKE_MAVEN:-}" == 1 ]]; then
     if [[ " $* " == *' help:evaluate '* ]]; then
+        if [[ "${OPENGGF_TEST_RESOLVED_USER_HOME:-}" == 1 ]]; then
+            printf '%s\n' '-Xshare:off -Duser.home=/attacker -Xmx1g'
+            exit 0
+        fi
         printf '%s\n' '-Xshare:off -Xmx1g'
         exit 0
     fi
@@ -104,6 +168,37 @@ if [[ "${OPENGGF_FAKE_MAVEN:-}" == 1 ]]; then
             "$$" "$PPID" "$OPENGGF_TEST_MANIFEST" > "${OPENGGF_TEST_INTERRUPT_READY:?}"
         while :; do sleep 1; done
     fi
+    if [[ " $* " == *' --spawn-contained-descendants '* ]]; then
+        detached_evidence="${OPENGGF_TEST_DIAGNOSTICS:?}/frozen-next-contained-detached.env"
+        nested_evidence="${OPENGGF_TEST_DIAGNOSTICS:?}/frozen-next-contained-nested.env"
+        setsid perl -e '
+            use strict; use warnings;
+            my $file = shift;
+            my $p = fork(); die "fork1: $!" unless defined $p; exit 0 if $p;
+            my $q = fork(); die "fork2: $!" unless defined $q; exit 0 if $q;
+            open my $s, "<", "/proc/self/status" or die $!;
+            my $host;
+            while (<$s>) { if (/^NSpid:\s+(\d+)/) { $host=$1; last } }
+            open my $stat, "<", "/proc/$host/stat" or die $!;
+            my $line = <$stat>; $line =~ s/^[^)]*\) //;
+            my @fields = split / /, $line;
+            my $start = $fields[19];
+            open my $f, ">", $file or die $!;
+            print {$f} "pid=$host\nstart=$start\n"; close $f;
+            sleep 300;
+        ' "$detached_evidence" </dev/null >/dev/null 2>&1 &
+        unshare --mount --fork "$0" --contained-nested "$nested_evidence" \
+            </dev/null >/dev/null 2>&1 &
+        for _ in {1..200}; do
+            [[ -s "$detached_evidence" && -s "$nested_evidence" ]] && break
+            sleep 0.05
+        done
+        [[ -s "$detached_evidence" && -s "$nested_evidence" ]] || exit 67
+        if [[ " $* " == *' --wait-contained '* ]]; then
+            printf 'manifest=%s\n' "$OPENGGF_TEST_MANIFEST" > "${OPENGGF_TEST_CONTAINED_READY:?}"
+            while :; do sleep 1; done
+        fi
+    fi
     [[ " $* " == *' --fail '* ]] && exit 23
     exit 0
 fi
@@ -185,6 +280,201 @@ assert_report_restored() {
     [[ "$(git -C "$next_tree" hash-object --no-filters docs/status/rewind-round-trip-gaps.md)" \
         == d83614ec3a32abd1d6636d2be247ade01331bf3c ]] \
         || fail "historical report bytes were not restored"
+}
+recorded_identity_gone() {
+    local evidence=$1 pid start current_start
+    pid=$(sed -n 's/^pid=//p' "$evidence")
+    start=$(sed -n 's/^start=//p' "$evidence")
+    [[ "$pid" =~ ^[0-9]+$ && "$start" =~ ^[0-9]+$ ]] || return 1
+    current_start=$(sed 's/^[^)]*) //' "/proc/$pid/stat" 2>/dev/null | awk '{print $20}' || true)
+    [[ "$current_start" != "$start" ]]
+}
+test_pid_containment() {
+    local containment_manifest containment_diagnostics marker common_mount nested_mount evidence
+    OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" --assert-mount-topology --spawn-contained-descendants \
+        || fail "normal PID containment run failed"
+    containment_manifest=$(manifest_from_output "$launch_output")
+    containment_diagnostics="$(dirname -- "$containment_manifest")/diagnostics"
+    marker="$containment_diagnostics/frozen-next-session-recovery.env"
+    common_mount=$(sed -n 's/^common_mount_namespace_inode=//p' "$marker")
+    nested_mount=$(sed -n 's/^mount_namespace_inode=//p' \
+        "$containment_diagnostics/frozen-next-contained-nested.env")
+    [[ "$common_mount" =~ ^[0-9]+$ && "$nested_mount" =~ ^[0-9]+$ \
+        && "$nested_mount" != "$common_mount" ]] \
+        || fail "nested descendant did not prove a distinct mount namespace"
+    for evidence in "$containment_diagnostics/frozen-next-contained-detached.env" \
+        "$containment_diagnostics/frozen-next-contained-nested.env"; do
+        recorded_identity_gone "$evidence" || fail "normal PID containment left $(basename -- "$evidence") alive"
+    done
+    [[ "$launch_output" == *'authenticated=true admissible=true'* ]] \
+        || fail "normal PID containment lacked authenticated admission"
+    [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+        || fail "normal PID containment left target"
+    printf 'PASS: normal PID1 exit contains detached and nested-mount descendants\n'
+
+    local ready="$test_root/forced-containment-ready.env" output="$test_root/forced-containment.out"
+    local launcher_pid forced_status forced_manifest forced_diagnostics supervisor_pid supervisor_start
+    set +e
+    OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_CONTAINED_READY="$ready" \
+        "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
+        --harness-worktree "$harness_tree" --expected-harness-head "$frozen_harness" \
+        --wrapper "$wrapper" --coordinator "$coordinator" --adapter "$adapter" -- \
+        "$fake_maven" --spawn-contained-descendants --wait-contained > "$output" 2>&1 &
+    launcher_pid=$!
+    set -e
+    for _ in {1..400}; do [[ -s "$ready" ]] && break; sleep 0.05; done
+    [[ -s "$ready" ]] || fail "forced containment did not reach descendant-ready barrier"
+    forced_manifest=$(sed -n 's/^manifest=//p' "$ready")
+    forced_diagnostics="$(dirname -- "$forced_manifest")/diagnostics"
+    marker="$forced_diagnostics/frozen-next-session-recovery.env"
+    [[ -f "$marker" ]] || fail "forced containment omitted recovery marker"
+    supervisor_pid=$(sed -n 's/^supervisor_pid=//p' "$marker")
+    supervisor_start=$(sed -n 's/^supervisor_start=//p' "$marker")
+    [[ "$supervisor_pid" =~ ^[0-9]+$ && "$supervisor_start" =~ ^[0-9]+$ \
+        && "$(sed 's/^[^)]*) //' "/proc/$supervisor_pid/stat" | awk '{print $20}')" == "$supervisor_start" ]] \
+        || fail "forced containment supervisor identity was not live and exact"
+    kill -KILL "$supervisor_pid"
+    set +e
+    wait "$launcher_pid"
+    forced_status=$?
+    set -e
+    (( forced_status != 0 )) || fail "forced supervisor death was accepted"
+    launch_output=$(<"$output")
+    [[ "$launch_output" == *'state=INVALID_IDENTITY_CHANGED valid=false'* \
+        && "$launch_output" == *'authenticated=true admissible=false'* ]] \
+        || fail "forced supervisor death lacked authenticated invalid outcome"
+    for evidence in "$forced_diagnostics/frozen-next-contained-detached.env" \
+        "$forced_diagnostics/frozen-next-contained-nested.env"; do
+        recorded_identity_gone "$evidence" || fail "forced supervisor death left $(basename -- "$evidence") alive"
+    done
+    assert_report_restored
+    [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+        || fail "forced supervisor death left target"
+    printf 'PASS: forced supervisor death contains detached and nested-mount descendants\n'
+}
+test_namespace_safety_negatives() {
+    local shim_dir="$test_root/namespace-safety-bin" real_unshare real_mount real_stat real_mountpoint
+    local negative manifest diagnostics log
+    mkdir -- "$shim_dir"
+    real_unshare=$(command -v unshare)
+    real_mount=$(command -v mount)
+    real_stat=$(command -v stat)
+    real_mountpoint=$(command -v mountpoint)
+    for negative in unshare mount stat mountpoint; do ln -s -- "$fake_maven" "$shim_dir/$negative"; done
+
+    for negative in bind wrong-identity propagation published-pid-namespace; do
+        case "$negative" in
+            bind)
+                PATH="$shim_dir:$PATH" OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_FAIL_BIND=1 \
+                    OPENGGF_TEST_REAL_UNSHARE="$real_unshare" OPENGGF_TEST_REAL_MOUNT="$real_mount" \
+                    OPENGGF_TEST_REAL_STAT="$real_stat" OPENGGF_TEST_REAL_MOUNTPOINT="$real_mountpoint" \
+                    OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" && fail "bind failure was accepted"
+                ;;
+            wrong-identity)
+                PATH="$shim_dir:$PATH" OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_WRONG_MOUNT_IDENTITY=1 \
+                    OPENGGF_TEST_REAL_UNSHARE="$real_unshare" OPENGGF_TEST_REAL_MOUNT="$real_mount" \
+                    OPENGGF_TEST_REAL_STAT="$real_stat" OPENGGF_TEST_REAL_MOUNTPOINT="$real_mountpoint" \
+                    OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" && fail "wrong mount identity was accepted"
+                ;;
+            propagation)
+                PATH="$shim_dir:$PATH" OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_PROPAGATION_LEAK=1 \
+                    OPENGGF_TEST_REAL_UNSHARE="$real_unshare" OPENGGF_TEST_REAL_MOUNT="$real_mount" \
+                    OPENGGF_TEST_REAL_STAT="$real_stat" OPENGGF_TEST_REAL_MOUNTPOINT="$real_mountpoint" \
+                    OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" && fail "propagation leak was accepted"
+                ;;
+            published-pid-namespace)
+                OPENGGF_TEST_PUBLISHED_PID_NAMESPACE_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
+                    run_launcher "$fake_maven" && fail "published PID namespace mismatch was accepted"
+                ;;
+        esac
+        manifest=$(manifest_from_output "$launch_output")
+        [[ -f "$manifest" ]] || fail "$negative safety failure omitted manifest"
+        diagnostics="$(dirname -- "$manifest")/diagnostics"
+        log="$(dirname -- "$manifest")/maven.log"
+        rg -F '"state": "INVALID_IDENTITY_CHANGED"' "$manifest" >/dev/null \
+            || fail "$negative safety failure remained superficially valid"
+        [[ "$launch_output" == *'authenticated=true admissible=false'* ]] \
+            || fail "$negative safety failure lacked authenticated rejection"
+        [[ -f "$diagnostics/frozen-next-identity-tripwire.env" ]] \
+            || fail "$negative safety failure omitted tripwire"
+        case "$negative" in
+            bind) rg -F 'bind mount failed' "$log" >/dev/null || fail "bind failure lacked diagnostic" ;;
+            wrong-identity) rg -F 'bind identity mismatch' "$log" >/dev/null || fail "mount identity failure lacked diagnostic" ;;
+            propagation) rg -F 'private bind mount propagated' "$log" >/dev/null || fail "propagation failure lacked diagnostic" ;;
+            published-pid-namespace) rg -F 'supervisor/private PID 1 identity changed' "$log" >/dev/null || fail "PID identity failure lacked diagnostic" ;;
+        esac
+        assert_report_restored
+        if [[ -e "$next_tree/target" || -L "$next_tree/target" ]]; then
+            [[ "$negative" == propagation && -d "$next_tree/target" && ! -L "$next_tree/target" \
+                && -z "$(find "$next_tree/target" -mindepth 1 -maxdepth 1 -print -quit)" ]] \
+                || fail "$negative left an unexpected target"
+            "$real_mountpoint" -q -- "$next_tree/target" && fail "propagation fixture leaked a real parent mount"
+            rmdir -- "$next_tree/target"
+        fi
+    done
+    printf 'PASS: bind, mount identity, propagation, and ready PID-identity failures reject safely\n'
+}
+test_recovery_marker_identity_mismatch() {
+    local ready="$test_root/marker-mismatch-ready.env" go="$test_root/marker-mismatch-go"
+    local output="$test_root/marker-mismatch.out" launcher_pid status manifest diagnostics marker temporary
+    set +e
+    OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_PARENT_MUTATION_READY="$ready" \
+        OPENGGF_TEST_PARENT_MUTATION_GO="$go" \
+        "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
+        --harness-worktree "$harness_tree" --expected-harness-head "$frozen_harness" \
+        --wrapper "$wrapper" --coordinator "$coordinator" --adapter "$adapter" -- \
+        "$fake_maven" --wait-for-parent-mutation > "$output" 2>&1 &
+    launcher_pid=$!
+    set -e
+    for _ in {1..400}; do [[ -s "$ready" ]] && break; sleep 0.05; done
+    [[ -s "$ready" ]] || fail "recovery marker mismatch did not reach child barrier"
+    manifest=$(sed -n 's/^manifest=//p' "$ready")
+    diagnostics="$(dirname -- "$manifest")/diagnostics"
+    marker="$diagnostics/frozen-next-session-recovery.env"
+    [[ -f "$marker" ]] || fail "recovery marker mismatch omitted marker"
+    temporary="$diagnostics/.fixture-marker-mismatch.tmp"
+    sed 's/^private_pid_namespace_inode=.*/private_pid_namespace_inode=1/' "$marker" > "$temporary"
+    mv -- "$temporary" "$marker"
+    : > "$go"
+    set +e
+    wait "$launcher_pid"
+    status=$?
+    set -e
+    (( status == 74 )) || fail "recovery marker PID namespace mismatch returned $status instead of 74"
+    launch_output=$(<"$output")
+    [[ "$launch_output" == *'authenticated target cleanup failed: status=74'* \
+        && "$launch_output" == *'authenticated=true admissible=false'* ]] \
+        || fail "recovery marker mismatch lacked authenticated launcher rejection"
+    assert_report_restored
+    [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+        || fail "recovery marker mismatch left target after adapter cleanup"
+    printf 'PASS: recovery marker PID-namespace mismatch rejects launcher admission\n'
+}
+test_identity_lifecycle_semantics() {
+    local definitions pid start survivor_target recycled_target status=0
+    definitions=$(sed -n \
+        -e '/^process_start()/p' \
+        -e '/^wait_process_pair_gone()/,/^}/p' "$adapter")
+    [[ "$definitions" == *'wait_process_pair_gone()'* ]] \
+        || fail "could not load exact production identity lifecycle helper"
+    eval "$definitions"
+    pid=$BASHPID
+    start=$(process_start "$pid")
+    [[ "$start" =~ ^[0-9]+$ ]] || fail "could not record fixture process start"
+    survivor_target="$test_root/identity-survivor-target"
+    mkdir -- "$survivor_target"
+    wait_process_pair_gone "$pid" "$start" "$pid" "$start" || status=$?
+    (( status == 76 )) || fail "same PID and start did not classify as survivor"
+    [[ -d "$survivor_target" ]] || fail "surviving identity did not preserve target"
+    rmdir -- "$survivor_target"
+
+    recycled_target="$test_root/identity-recycled-target"
+    mkdir -- "$recycled_target"
+    wait_process_pair_gone "$pid" "$((start + 1))" "$pid" "$((start + 1))" \
+        || fail "same PID with different start did not classify recorded identity as gone"
+    rmdir -- "$recycled_target"
+    [[ ! -e "$recycled_target" ]] || fail "recycled identity did not permit exact rmdir"
+    printf 'PASS: exact PID/start survivor preserves target; recycled identity permits rmdir\n'
 }
 test_launcher_signal_recovery() {
     local signal_case expected_signal_status interrupt_ready interrupt_output interrupt_tmp
@@ -295,6 +585,85 @@ test_authenticated_rmdir_failure() {
     fi
 }
 
+test_preflight_safety_tripwire() {
+    local shim_dir="$test_root/preflight-failure-bin"
+    local real_unshare preflight_manifest preflight_diagnostics
+    mkdir -- "$shim_dir"
+    real_unshare=$(command -v unshare)
+    ln -s -- "$fake_maven" "$shim_dir/unshare"
+    if PATH="$shim_dir:$PATH" OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_FAIL_PREFLIGHT=1 \
+        OPENGGF_TEST_REAL_UNSHARE="$real_unshare" OPENGGF_FAKE_MAVEN=1 \
+        run_launcher "$fake_maven"; then
+        fail "unavailable namespace preflight was accepted"
+    fi
+    preflight_manifest=$(manifest_from_output "$launch_output")
+    [[ -f "$preflight_manifest" ]] || fail "preflight safety failure omitted its manifest"
+    rg -F '"state": "INVALID_IDENTITY_CHANGED"' "$preflight_manifest" >/dev/null \
+        || fail "preflight safety failure remained superficially valid"
+    [[ "$launch_output" == *'valid=false'* ]] \
+        || fail "preflight safety failure lacked invalid terminal evidence"
+    preflight_diagnostics="$(dirname -- "$preflight_manifest")/diagnostics"
+    rg -Fx 'reason=adapter-safety-preflight' "$preflight_diagnostics/frozen-next-safety-failure.env" >/dev/null \
+        || fail "preflight safety failure did not arm the phase tripwire"
+    [[ -f "$preflight_diagnostics/frozen-next-identity-tripwire.env" ]] \
+        || fail "preflight safety failure omitted tripwire evidence"
+    assert_report_restored
+    [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+        || fail "preflight safety failure created a target"
+    [[ "$launch_output" == *'OPENGGF_FROZEN_NEXT_LAUNCH_END '* \
+        && "$launch_output" == *'admissible=false'* ]] \
+        || fail "preflight safety failure lacked authenticated launcher rejection"
+    printf 'PASS: unavailable namespace preflight is identity-invalid before setup\n'
+}
+
+test_resolved_base_user_home_rejection() {
+    local resolved_manifest resolved_log
+    if OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_RESOLVED_USER_HOME=1 run_launcher "$fake_maven"; then
+        fail "resolved Surefire base user.home override was accepted"
+    fi
+    resolved_manifest=$(manifest_from_output "$launch_output")
+    [[ -f "$resolved_manifest" ]] || fail "resolved user.home rejection omitted its manifest"
+    rg -F '"state": "INVALID_IDENTITY_CHANGED"' "$resolved_manifest" >/dev/null \
+        || fail "resolved user.home rejection remained superficially valid"
+    resolved_log="$(dirname -- "$resolved_manifest")/maven.log"
+    rg -F 'resolved surefire.argLine user.home override is forbidden' "$resolved_log" >/dev/null \
+        || fail "resolved user.home rejection lacked the exact diagnostic"
+    assert_report_restored
+    [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+        || fail "resolved user.home rejection left target"
+    printf 'PASS: resolved Surefire base user.home override rejected\n'
+}
+
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == review-safety ]]; then
+    test_preflight_safety_tripwire
+    exit 0
+fi
+
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == resolved-user-home ]]; then
+    test_resolved_base_user_home_rejection
+    exit 0
+fi
+
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == pid-containment ]]; then
+    test_pid_containment
+    exit 0
+fi
+
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == namespace-negatives ]]; then
+    test_namespace_safety_negatives
+    exit 0
+fi
+
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == marker-mismatch ]]; then
+    test_recovery_marker_identity_mismatch
+    exit 0
+fi
+
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == identity-lifecycle ]]; then
+    test_identity_lifecycle_semantics
+    exit 0
+fi
+
 if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == cleanup-failure ]]; then
     test_authenticated_rmdir_failure
     (( review_failures == 0 )) || fail "$review_failures focused cleanup regression case(s) remain"
@@ -344,6 +713,11 @@ if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == mount-red ]]; then
     printf 'PASS: private authenticated bind-mount topology\n'
     exit 0
 fi
+
+test_pid_containment
+test_namespace_safety_negatives
+test_recovery_marker_identity_mismatch
+test_identity_lifecycle_semantics
 
 # The selected guards are independent and force two Surefire processes when forkCount=2.
 run_launcher mvn -DforkCount=2 -Dtest=TestAudioBackendBypassGuard,TestProductionAwtBlacklistGuard test
@@ -444,6 +818,9 @@ printf '%s\n' \
     'destination=${!#}' \
     'if [[ "${OPENGGF_TEST_FAIL_GENERATED_ARCHIVE:-}" == 1' \
     '    && "$destination" == */frozen-next-generated-report/generated.md ]]; then exit 67; fi' \
+    'if [[ "${OPENGGF_TEST_CORRUPT_GENERATED_ARCHIVE:-}" == 1' \
+    '    && "$destination" == */frozen-next-generated-report/generated.md ]]; then' \
+    '  "${OPENGGF_TEST_REAL_CP:?}" "$@"; printf "controlled archive corruption\n" >> "$destination"; exit 0; fi' \
     'exec "${OPENGGF_TEST_REAL_CP:?}" "$@"' > "$failure_shim_dir/cp"
 printf '%s\n' \
     '#!/usr/bin/env bash' \
@@ -467,6 +844,20 @@ failure_manifest=$(manifest_from_output "$launch_output")
 rg -F 'normalization failed: generated-archive-failed' "$(dirname -- "$failure_manifest")/maven.log" >/dev/null \
     || fail "generated archive failure lacked an explicit diagnostic"
 printf 'PASS: generated archive failure remains identity-invalid\n'
+
+if PATH="$failure_shim_dir:$PATH" OPENGGF_TEST_REAL_CP="$real_cp" OPENGGF_TEST_REAL_MV="$real_mv" \
+    OPENGGF_TEST_CORRUPT_GENERATED_ARCHIVE=1 OPENGGF_FAKE_MAVEN=1 \
+    run_launcher "$fake_maven" --emit-report --rewrite-report; then
+    fail "generated archive byte corruption was accepted"
+fi
+(( launch_status == 70 )) || fail "generated archive corruption returned unexpected status: $launch_status"
+assert_session_outcome INVALID_IDENTITY_CHANGED false
+assert_report_restored
+failure_manifest=$(manifest_from_output "$launch_output")
+rg -F 'normalization failed: generated-archive-identity-failed' \
+    "$(dirname -- "$failure_manifest")/maven.log" >/dev/null \
+    || fail "generated archive corruption lacked an explicit diagnostic"
+printf 'PASS: generated archive copy is byte-verified against authenticated measurement\n'
 
 if PATH="$failure_shim_dir:$PATH" OPENGGF_TEST_REAL_CP="$real_cp" OPENGGF_TEST_REAL_MV="$real_mv" \
     OPENGGF_TEST_FAIL_RESTORE=1 OPENGGF_FAKE_MAVEN=1 \

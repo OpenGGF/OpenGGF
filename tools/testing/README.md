@@ -6,7 +6,7 @@ Frozen commit `84d9a3761` predates the session-output Maven properties. Its
 baseline evidence therefore uses `frozen-next-session-launch.sh` and
 `frozen-next-session-adapter.sh` with the pinned detached develop harness.
 They are historical baseline-only tooling, never a production launcher. The
-adapter preflights Linux unprivileged user and mount namespaces, creates an
+adapter preflights Linux unprivileged user, mount, and PID namespaces, creates an
 ignored empty real `target` directory, and privately bind-mounts the exact
 coordinator build root there. Nested private binds route temporary, Surefire,
 trace, diagnostic, artifact, and distribution output to their exact session
@@ -24,11 +24,17 @@ change Java's home to `/root`, the adapter authenticates the outer UID's passwd
 home against canonical `HOME` and appends that `user.home` to both Maven JVMs
 and Surefire forks. Caller overrides of these channels are rejected.
 
-The namespace leader records its PID/start time and mount-namespace inode and
-waits at a ready/go barrier while the parent proves its own `target` view is
-the original empty non-mount directory. Teardown unmounts nested binds in
-reverse order, proves every namespace holder is gone, and removes only the
-same empty ordinary directory with `rmdir`. Normal and outer recovery never
+An exact `unshare --fork --kill-child=KILL` supervisor owns a private PID 1.
+PID 1 shell-natively publishes its host `NSpid` identity without remounting
+`/proc`; the parent authenticates the supervisor's single child edge, both
+PID/start identities, the private PID namespace, and their common mount
+namespace at the ready/go barrier while proving its own `target` view is the
+original empty non-mount directory. Teardown unmounts nested binds in reverse
+order and requires both exact process identities to be absent or recycled
+before removing only the same empty ordinary directory with `rmdir`. PID-1
+exit contains detached and nested-namespace descendants; forced cleanup kills
+the exact supervisor so `--kill-child=KILL` kills PID 1. The adapter does not
+scan unrelated host processes. Normal and outer recovery never
 recursively delete, follow, replace, read, or unlink a target link; an unsafe
 target is preserved for inspection.
 

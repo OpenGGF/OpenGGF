@@ -16,24 +16,17 @@ directory_empty() {
     [[ -d "$1" && ! -L "$1" ]] || return 1
     [[ -z "$(find "$1" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]
 }
-namespace_holders() {
-    local expected=$1 link inode pid
-    for link in /proc/[0-9]*/ns/mnt; do
-        inode=$(stat -Lc '%i' -- "$link" 2>/dev/null) || continue
-        [[ "$inode" == "$expected" ]] || continue
-        pid=${link#/proc/}
-        printf '%s\n' "${pid%%/*}"
-    done
-}
-wait_namespace_gone() {
-    local pid=$1 start=$2 namespace=$3 attempt current_start holders
+wait_process_pair_gone() {
+    local supervisor=$1 supervisor_start=$2 private_pid1=$3 private_pid1_start=$4
+    local attempt current_supervisor_start current_private_pid1_start
     for ((attempt = 0; attempt < 200; attempt++)); do
-        current_start=$(process_start "$pid" || true)
-        holders=$(namespace_holders "$namespace")
-        if [[ "$current_start" != "$start" && -z "$holders" ]]; then return 0; fi
+        current_supervisor_start=$(process_start "$supervisor" || true)
+        current_private_pid1_start=$(process_start "$private_pid1" || true)
+        if [[ "$current_supervisor_start" != "$supervisor_start" \
+            && "$current_private_pid1_start" != "$private_pid1_start" ]]; then return 0; fi
         sleep 0.05
     done
-    return 1
+    return 76
 }
 marker_value() { sed -n "s/^$2=//p" "$1"; }
 manifest_value() { sed -n "s/.*\"$2\": \"\([^\"]*\)\".*/\1/p" "$1" | head -1; }
@@ -43,8 +36,10 @@ authenticate_tripwire() {
     trigger="$diagnostics/frozen-next-safety-failure.env"
     evidence="$diagnostics/frozen-next-identity-tripwire.env"
     if [[ ! -e "$trigger" && ! -L "$trigger" && ! -e "$evidence" && ! -L "$evidence" ]]; then
+        recovery_tripwire=false
         return 0
     fi
+    recovery_tripwire=true
     if [[ ! -f "$trigger" || -L "$trigger" || ! -f "$evidence" || -L "$evidence" ]]; then
         printf 'frozen-next launcher: authenticated identity tripwire evidence is incomplete\n' >&2
         return 77
@@ -57,9 +52,16 @@ authenticate_tripwire() {
     [[ "$reason" == "$(marker_value "$evidence" reason)" \
         && "$child" == "$(marker_value "$evidence" child_status)" \
         && "$adapter_status" == "$(marker_value "$evidence" adapter_status)" \
-        && "$child" =~ ^[0-9]+$ && "$adapter_status" =~ ^[0-9]+$ ]] || return 77
-    case "$reason:$adapter_status" in
-        namespace-teardown:75|target-cleanup:73|target-cleanup:76) ;;
+        && ( "$child" == not-started || "$child" =~ ^[0-9]+$ ) \
+        && "$adapter_status" =~ ^[0-9]+$ ]] || return 77
+    case "$reason" in
+        namespace-teardown)
+            [[ "$adapter_status" == 75 ]] || return 77
+            ;;
+        target-cleanup)
+            [[ "$adapter_status" == 73 || "$adapter_status" == 76 ]] || return 77
+            ;;
+        adapter-safety-*) ;;
         *)
             printf 'frozen-next launcher: rejected unrelated identity tripwire trigger: reason=%s status=%s\n' \
                 "$reason" "$adapter_status" >&2
@@ -143,18 +145,20 @@ export "$config_key" "$config_value"
 export GIT_CONFIG_COUNT=$((config_count + 1))
 
 recover_report() {
-    local marker=$1 manifest=$2 run_id=$3 diagnostics recorded_head recorded_worktree recorded_report
+    local authority=$1 manifest=$2 run_id=$3 diagnostics recorded_head recorded_worktree recorded_report
     local recorded_relative archive archive_hash archive_length archive_blob canonical_archive tripwire_status=0
-    recorded_worktree=$(marker_value "$marker" worktree)
-    recorded_head=$(marker_value "$marker" frozen_head)
-    recorded_report=$(marker_value "$marker" report)
-    recorded_relative=$(marker_value "$marker" report_relative)
-    archive=$(marker_value "$marker" preimage_archive)
-    archive_hash=$(marker_value "$marker" preimage_hash)
-    archive_length=$(marker_value "$marker" preimage_length)
-    archive_blob=$(marker_value "$marker" preimage_blob)
+    [[ "$(marker_value "$authority" authority_version)" == 1 ]] || return 74
+    recorded_worktree=$(marker_value "$authority" worktree)
+    recorded_head=$(marker_value "$authority" frozen_head)
+    recorded_report=$(marker_value "$authority" report)
+    recorded_relative=$(marker_value "$authority" report_relative)
+    archive=$(marker_value "$authority" preimage_archive)
+    archive_hash=$(marker_value "$authority" preimage_hash)
+    archive_length=$(marker_value "$authority" preimage_length)
+    archive_blob=$(marker_value "$authority" preimage_blob)
     diagnostics="$(dirname -- "$manifest")/diagnostics"
-    [[ "$(marker_value "$marker" run_id)" == "$run_id" && "$recorded_worktree" == "$worktree" ]] || return 74
+    [[ "$(marker_value "$authority" run_id)" == "$run_id" && "$recorded_worktree" == "$worktree" \
+        && "$(marker_value "$authority" diagnostics_root)" == "$diagnostics" ]] || return 74
     [[ "$recorded_head" == "$expected_head" && "$(git -C "$worktree" rev-parse HEAD)" == "$expected_head" ]] || return 74
     git -C "$worktree" symbolic-ref -q HEAD >/dev/null && return 74
     [[ "$recorded_relative" == docs/status/rewind-round-trip-gaps.md \
@@ -173,30 +177,42 @@ recover_report() {
         atomic_restore_report "$archive" "$recorded_report" "$archive_hash" "$archive_length" || return $?
         printf 'frozen-next launcher: restored authenticated historical generated report after non-certifying child outcome\n' >&2
     fi
+    recovery_report_authenticated=1
     return "$tripwire_status"
 }
 
 recover() {
-    local output=$1 manifest run_id marker diagnostics target kind device inode expected_empty expected_mount
-    local leader_pid leader_start namespace build tmp surefire trace artifacts distribution recovery_status=0
-    local outer_uid authenticated_home
+    local output=$1 manifest run_id marker authority diagnostics target kind device inode expected_empty expected_mount
+    local supervisor_pid supervisor_start private_pid1_pid private_pid1_start private_pid1_nspid parent_identity
+    local private_pid_namespace common_mount_namespace build tmp surefire trace artifacts distribution recovery_status=0
+    local outer_uid authenticated_home marker_phase
     manifest=$(printf '%s\n' "$output" | sed -n 's/.*manifest=\([^ ]*\).*/\1/p' | tail -1)
     [[ -n "$manifest" && -f "$manifest" ]] || return 0
     run_id=$(manifest_value "$manifest" run_id)
     diagnostics="$(dirname -- "$manifest")/diagnostics"
+    authority="$diagnostics/frozen-next-report-authority.env"
+    [[ -n "$run_id" && -f "$authority" && ! -L "$authority" ]] || return 77
+    recover_report "$authority" "$manifest" "$run_id" || recovery_status=$?
     marker="$diagnostics/frozen-next-session-recovery.env"
-    [[ -n "$run_id" && -f "$marker" && ! -L "$marker" ]] || return 0
+    [[ -f "$marker" && ! -L "$marker" ]] || return "$recovery_status"
     [[ "$(marker_value "$marker" run_id)" == "$run_id" \
-        && "$(marker_value "$marker" worktree)" == "$worktree" ]] || return 74
+        && "$(marker_value "$marker" worktree)" == "$worktree" \
+        && "$(marker_value "$marker" report_authority)" == "$authority" ]] || return 74
+    marker_phase=$(marker_value "$marker" marker_phase)
     target=$(marker_value "$marker" target)
     kind=$(marker_value "$marker" target_kind)
     device=$(marker_value "$marker" target_device)
     inode=$(marker_value "$marker" target_inode)
     expected_empty=$(marker_value "$marker" parent_expected_empty)
     expected_mount=$(marker_value "$marker" parent_expected_mount)
-    leader_pid=$(marker_value "$marker" leader_pid)
-    leader_start=$(marker_value "$marker" leader_start)
-    namespace=$(marker_value "$marker" mount_namespace_inode)
+    supervisor_pid=$(marker_value "$marker" supervisor_pid)
+    supervisor_start=$(marker_value "$marker" supervisor_start)
+    private_pid1_pid=$(marker_value "$marker" private_pid1_pid)
+    private_pid1_start=$(marker_value "$marker" private_pid1_start)
+    private_pid1_nspid=$(marker_value "$marker" private_pid1_nspid)
+    private_pid_namespace=$(marker_value "$marker" private_pid_namespace_inode)
+    common_mount_namespace=$(marker_value "$marker" common_mount_namespace_inode)
+    parent_identity=$(marker_value "$marker" parent_process_identity)
     build=$(marker_value "$marker" build_root)
     tmp=$(marker_value "$marker" tmp_root)
     surefire=$(marker_value "$marker" surefire_reports)
@@ -206,8 +222,7 @@ recover() {
     outer_uid=$(marker_value "$marker" outer_uid)
     authenticated_home=$(marker_value "$marker" authenticated_home)
     [[ "$target" == "$worktree/target" && "$kind" == directory && "$device" =~ ^[0-9]+$ \
-        && "$inode" =~ ^[0-9]+$ && "$expected_empty" == true && "$expected_mount" == false \
-        && "$leader_pid" =~ ^[0-9]+$ && "$leader_start" =~ ^[0-9]+$ && "$namespace" =~ ^[0-9]+$ ]] \
+        && "$inode" =~ ^[0-9]+$ && "$expected_empty" == true && "$expected_mount" == false ]] \
         || return 74
     [[ "$outer_uid" == "$(id -u)" && "$authenticated_home" == "$(readlink -f -- "$HOME")" ]] \
         || return 74
@@ -219,21 +234,51 @@ recover() {
         && "$artifacts" == "$(manifest_value "$manifest" artifact_root)" \
         && "$distribution" == "$(manifest_value "$manifest" distribution_root)" ]] || return 74
 
-    wait_namespace_gone "$leader_pid" "$leader_start" "$namespace" || return 76
-    [[ -z "$(namespace_holders "$namespace")" ]] || return 76
-    recover_report "$marker" "$manifest" "$run_id" || recovery_status=$?
+    case "$marker_phase" in
+        ready-verified)
+            [[ "$supervisor_pid" =~ ^[0-9]+$ && "$supervisor_start" =~ ^[0-9]+$ \
+                && "$private_pid1_pid" =~ ^[0-9]+$ && "$private_pid1_start" =~ ^[0-9]+$ \
+                && "$private_pid1_nspid" == *$'\t1' \
+                && "$private_pid_namespace" =~ ^[0-9]+$ && "$common_mount_namespace" =~ ^[0-9]+$ ]] \
+                || return 74
+            [[ "$parent_identity" == "$diagnostics/frozen-next-parent-process-identity.env" \
+                && -f "$parent_identity" && ! -L "$parent_identity" \
+                && "$(marker_value "$parent_identity" supervisor_pid)" == "$supervisor_pid" \
+                && "$(marker_value "$parent_identity" supervisor_start)" == "$supervisor_start" \
+                && "$(marker_value "$parent_identity" private_pid1_pid)" == "$private_pid1_pid" \
+                && "$(marker_value "$parent_identity" private_pid1_start)" == "$private_pid1_start" \
+                && "$(marker_value "$parent_identity" private_pid1_nspid)" == "$private_pid1_nspid" \
+                && "$(marker_value "$parent_identity" private_pid_namespace_inode)" == "$private_pid_namespace" \
+                && "$(marker_value "$parent_identity" common_mount_namespace_inode)" == "$common_mount_namespace" ]] \
+                || return 74
+            wait_process_pair_gone "$supervisor_pid" "$supervisor_start" \
+                "$private_pid1_pid" "$private_pid1_start" || return 76
+            recovery_full_marker=1
+            ;;
+        target-authenticated)
+            [[ "$supervisor_pid" == pending && "$supervisor_start" == pending \
+                && "$private_pid1_pid" == pending && "$private_pid1_start" == pending \
+                && "$private_pid_namespace" == pending && "$common_mount_namespace" == pending \
+                && -z "$parent_identity" ]] \
+                || return 74
+            ;;
+        *) return 74 ;;
+    esac
 
     if [[ -e "$target" || -L "$target" ]]; then
+        [[ "$marker_phase" == ready-verified ]] || return 73
         [[ "$(lstat_kind "$target")" == "$kind" && "$(lstat_device "$target")" == "$device" \
             && "$(lstat_inode "$target")" == "$inode" ]] || return 73
         mountpoint -q -- "$target" && return 73
         directory_empty "$target" || return 73
         rmdir -- "$target" || return 73
     fi
+    recovery_target_clean=1
     return "$recovery_status"
 }
 
-capture_file= wrapper_pid= finalized=0 finalize_status=0
+capture_file= wrapper_pid= finalized=0 finalize_status=0 final_output= final_run_id=
+recovery_report_authenticated=0 recovery_full_marker=0 recovery_target_clean=0 recovery_tripwire=false
 finalize() {
     (( finalized == 0 )) || return "$finalize_status"
     finalized=1
@@ -245,16 +290,32 @@ finalize() {
             printf 'frozen-next launcher: authenticated target cleanup failed: status=%s target=%s\n' \
                 "$cleanup_status" "$worktree/target" >&2
         fi
+        final_output=$output
+        final_run_id=$(printf '%s\n' "$output" | sed -n 's/.*run_id=\([^ ]*\).*/\1/p' | tail -1)
         printf '%s\n' "$output"
         unlink -- "$capture_file" || true
     fi
     finalize_status=$cleanup_status
     return "$finalize_status"
 }
+emit_launcher_outcome() {
+    local adapter_status=$1 cleanup_status=$2 admissible=false authenticated=false
+    (( recovery_report_authenticated == 1 )) && authenticated=true
+    if (( cleanup_status == 0 && recovery_report_authenticated == 1 \
+        && recovery_full_marker == 1 && recovery_target_clean == 1 )) \
+        && [[ "$recovery_tripwire" == false \
+            && "$final_output" == *'OPENGGF_TEST_RUN_END '* \
+            && "$final_output" == *'valid=true'* ]]; then
+        admissible=true
+    fi
+    printf 'OPENGGF_FROZEN_NEXT_LAUNCH_END run_id=%s adapter_status=%s cleanup_status=%s authenticated=%s admissible=%s\n' \
+        "${final_run_id:-unknown}" "$adapter_status" "$cleanup_status" "$authenticated" "$admissible"
+}
 on_exit() {
     local status=$? cleanup_status=0
     trap - EXIT
     finalize || cleanup_status=$?
+    emit_launcher_outcome "$status" "$cleanup_status"
     if (( status != 0 )); then exit "$status"; fi
     exit "$cleanup_status"
 }
