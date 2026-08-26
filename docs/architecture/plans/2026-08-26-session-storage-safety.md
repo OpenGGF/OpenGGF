@@ -406,20 +406,24 @@ Also assert a compaction error changes an otherwise green run to `STORAGE_FINALI
 
 Exercise both deletion strategies through an injectable provider capability.
 For secure streams, deterministically swap a bound candidate and prove an
-outside sentinel survives. For the native no-secure-stream strategy, require
+outside sentinel survives. For the generic stable-key/no-secure-stream
+strategy, require
 same-store atomic tombstoning into an identity-bound private staging lane,
 moved-file-key equality, no-follow/reparse rejection, per-ancestor identity
 revalidation, and exact partial accounting. Prove the fallback succeeds for a
-normal Windows-shaped fixture, while candidate/ancestor swaps move or refuse
-the replacement itself and never touch the outside sentinel. Do not require
-symlink creation in the native Windows test path; use an injectable reparse or
-identity mismatch fixture when privileges do not permit it.
+generic forced-provider fixture, while candidate/ancestor swaps move or refuse
+the replacement itself and never touch the outside sentinel. Do not label the
+injected stable-key fixture as native Windows evidence. Use an injectable
+reparse or identity mismatch fixture when privileges do not permit symlinks.
 
 Add an injectable provider fixture with neither `SecureDirectoryStream` nor a
 non-null stable `fileKey()`. Assert the test fails before the branch exists,
 then prove the implementation performs no mutation, preserves both compactable
 paths, returns certifying `RETAINED_PLATFORM_UNSUPPORTED`, and records the
 exact provider/file-store reason.
+Name this as the JDK 21 native-Windows contract in tests/docs while keeping it
+provider-injected and portable; do not claim native-host coverage unless a
+Windows JDK 21 run actually occurred.
 
 - [ ] **Step 2: Run focused Java tests and observe failures**
 
@@ -454,7 +458,8 @@ atomically move each fully bound candidate into a private same-store staging
 lane, verify its moved identity, and delete the tombstone with no-follow,
 reparse, and ancestor-identity checks. Never fall back to an ordinary unbound
 pathname walk, and do not fail a healthy native Windows session merely because
-secure streams are unavailable. Use a non-null provider
+secure streams are unavailable: under JDK 21 it remains certifying as
+`RETAINED_PLATFORM_UNSUPPORTED`. Use a non-null provider
 `BasicFileAttributes.fileKey()` plus file-store identity as the stable native
 token. If both secure streams and a stable token are unavailable, perform no
 mutation and return certifying `RETAINED_PLATFORM_UNSUPPORTED` with an exact
@@ -462,6 +467,11 @@ reason. Record full and partial candidate progress separately through the two
 result lists. Write a terminal pre-compaction manifest, compact, measure exact
 reclaimed bytes after each successful deletion, then atomically write the final
 manifest. Apply the same function from normal and shutdown finalisation.
+
+Task 6 documentation must state that automatic terminal compaction is active
+on secure-stream or stable-key providers, while native Windows JDK 21 visibly
+retains with `RETAINED_PLATFORM_UNSUPPORTED` pending a future native file-ID
+bridge. Capacity refusal and managed retention still apply there.
 
 - [ ] **Step 4: Add and translate the opt-out flag**
 

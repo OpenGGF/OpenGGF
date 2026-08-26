@@ -265,7 +265,8 @@ Deletion has two platform strategies with the same fail-closed result schema:
 
 - When `SecureDirectoryStream` is available, traversal and deletion stay
   relative to identity-checked open parent descriptors.
-- On native providers without secure directory streams (notably Windows), the
+- On providers without secure directory streams but with a stable public file
+  key, the
   coordinator first binds and preflights every candidate, creates an
   identity-bound private staging lane inside the session on the same file
   store, atomically moves one candidate at a time to an unpredictable
@@ -278,9 +279,14 @@ Deletion has two platform strategies with the same fail-closed result schema:
 
 The stable identity token is the provider's non-null
 `BasicFileAttributes.fileKey()` paired with the captured file-store identity.
-The standard JDK Windows provider exposes its volume/file identity through
-that token. If a provider supplies neither `SecureDirectoryStream` nor a
-non-null stable file key, the coordinator performs no mutation and records
+OpenJDK 21's native Windows provider keeps a volume/file index internally but
+returns `null` from the public `fileKey()` contract, so this containment
+delivery cannot safely bind Windows tombstones without a separate native
+file-ID bridge. An injected stable-key fixture proves only the generic
+tombstone algorithm, not native Windows support.
+
+If a provider supplies neither `SecureDirectoryStream` nor a non-null stable
+file key, the coordinator performs no mutation and records
 `RETAINED_PLATFORM_UNSUPPORTED` with the provider/file-store reason. That
 visible retained result is certifying rather than a storage-finalisation
 failure because no destructive operation was attempted; the capacity gate and
@@ -290,9 +296,10 @@ trust.
 There is no ordinary pathname-walk fallback. Both strategies inspect and bind
 all allowlisted candidates before the first mutation, never touch an external
 target through a link, and report fully removed and partially modified
-relative paths separately. Native Windows/PowerShell sessions must remain
-certifying under the tombstone strategy; lack of `SecureDirectoryStream` alone
-is not a storage-finalisation failure.
+relative paths separately. Native Windows/PowerShell sessions remain
+certifying as visibly retained/unsupported under JDK 21; automatic Windows
+compaction is a deferred Actworks/Slipmat native-file-identity capability, not
+a claim of this containment delivery.
 
 ### Compactable data
 
