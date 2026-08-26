@@ -177,6 +177,9 @@ Gzip publication, terminal-manifest publication, and source deletion each record
 directory-sync outcome: `SYNCED`, `UNSUPPORTED`, or `FAILED`. Native providers that
 cannot open directories for sync remain certifying as `UNSUPPORTED`; real I/O errors
 on a supporting provider retain recovery evidence and fail storage finalisation.
+Initial, recorded-status, post-deletion, and startup-failure terminal-manifest barriers
+all contribute to the final verdict. A late barrier failure receives one bounded
+best-effort evidence rewrite rather than an indefinite retry loop.
 
 Destructive compaction requires either descriptor-relative `SecureDirectoryStream` support
 or a non-null stable file key with same-store atomic tombstoning and identity revalidation.

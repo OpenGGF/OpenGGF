@@ -129,6 +129,9 @@ Directory durability is reported as `SYNCED`, `UNSUPPORTED`, or `FAILED` for gzi
 publication, terminal-manifest publication, and source deletion. Native providers
 that cannot open directories for syncing remain certifying as `UNSUPPORTED`; a real
 I/O failure on a provider that supports directory sync is a storage-finalisation failure.
+Every terminal-manifest barrier contributes to the verdict, including startup-failure
+rewrites and the post-deletion evidence rewrite; one bounded best-effort rewrite records
+a late failure without retrying indefinitely.
 
 Automatic deletion requires secure descriptor-relative streams or a stable
 file-key tombstone strategy. Native Windows on OpenJDK 21 exposes neither and

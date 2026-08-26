@@ -43,6 +43,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -69,6 +70,7 @@ public final class TestSessionCoordinator {
     private static final Duration MAX_MANAGED_RETENTION = Duration.ofDays(7);
     private static final long GIB = 1024L * 1024L * 1024L;
     private static final long DEFAULT_MIN_FREE_BYTES = 20L * GIB;
+    private static final AtomicInteger TERMINAL_MANIFEST_SYNC_CALLS = new AtomicInteger();
     private static final Set<String> TERMINAL_SESSION_STATES = Set.of(
             "PASSED", "FAILED", "INVALID_IDENTITY_CHANGED", "ABORTED",
             "STARTUP_FAILED", "STORAGE_FINALIZATION_FAILED");
@@ -492,6 +494,19 @@ public final class TestSessionCoordinator {
                             manifest(paths, runId, state, worktree, leasePath, commandHash,
                                     capability, allowedPhases, sourceAfter, runtimeAfter,
                                     reports, artifacts, terminalContext, capacityFloor));
+                    logCompression = logCompression.withManifestSync(recordedBarrier.status);
+                    if (recordedBarrier.status == DirectorySyncStatus.FAILED) {
+                        String barrierError = "recorded terminal manifest directory sync failed: "
+                                + recordedBarrier.error;
+                        logCompression = logCompression.withError(barrierError);
+                        storageFinalizationError = combineStorageErrors(
+                                storageFinalizationError, barrierError);
+                        if (primaryState.equals("PASSED")) {
+                            state = "STORAGE_FINALIZATION_FAILED";
+                            exitCode = 1;
+                            valid = false;
+                        }
+                    }
                     if (manifestBarrier.status != DirectorySyncStatus.FAILED
                             && recordedBarrier.status != DirectorySyncStatus.FAILED) {
                         LogCompressionResult removal = removeCompressedLogSource(paths, logCompression);
@@ -505,6 +520,28 @@ public final class TestSessionCoordinator {
                             }
                         }
                         logCompression = removal;
+                    }
+                    terminalContext = new ManifestContext(
+                            allocation, launchCapacity, completionObservation.capacity, compaction,
+                            options.retainEphemeral, storageFinalizationError, logCompression,
+                            sessionIdentity, null, launchObservation.liveProbe,
+                            completionObservation.capacityError, completionObservation.liveProbe);
+                    DirectorySyncResult finalEvidenceBarrier = writeTerminalManifest(paths.manifest,
+                            manifest(paths, runId, state, worktree, leasePath, commandHash,
+                                    capability, allowedPhases, sourceAfter, runtimeAfter,
+                                    reports, artifacts, terminalContext, capacityFloor));
+                    if (finalEvidenceBarrier.status == DirectorySyncStatus.FAILED) {
+                        String barrierError = "final terminal manifest directory sync failed: "
+                                + finalEvidenceBarrier.error;
+                        logCompression = logCompression.withManifestSync(DirectorySyncStatus.FAILED)
+                                .withError(barrierError);
+                        storageFinalizationError = combineStorageErrors(
+                                storageFinalizationError, barrierError);
+                        if (primaryState.equals("PASSED")) {
+                            state = "STORAGE_FINALIZATION_FAILED";
+                            exitCode = 1;
+                            valid = false;
+                        }
                         terminalContext = new ManifestContext(
                                 allocation, launchCapacity, completionObservation.capacity, compaction,
                                 options.retainEphemeral, storageFinalizationError, logCompression,
@@ -581,25 +618,54 @@ public final class TestSessionCoordinator {
                     sessionIdentity, launchObservation.capacityError,
                     launchObservation.liveProbe, completionObservation.capacityError,
                     completionObservation.liveProbe);
-            writeTerminalManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
+            DirectorySyncResult recordedBarrier = writeTerminalManifest(paths.manifest,
+                    manifest(paths, runId, "STARTUP_FAILED", worktree,
                     leasePath, commandHash, capability, allowedPhases, source, runtime,
                     reports, artifacts, context, capacityFloor));
-            if (manifestBarrier.status != DirectorySyncStatus.FAILED) {
+            logCompression = logCompression.withManifestSync(recordedBarrier.status);
+            if (recordedBarrier.status == DirectorySyncStatus.FAILED) {
+                String barrierError = "recorded terminal manifest directory sync failed: "
+                        + recordedBarrier.error;
+                logCompression = logCompression.withError(barrierError);
+                storageFinalizationError = combineStorageErrors(storageFinalizationError,
+                        barrierError);
+            }
+            if (manifestBarrier.status != DirectorySyncStatus.FAILED
+                    && recordedBarrier.status != DirectorySyncStatus.FAILED) {
                 LogCompressionResult removal = removeCompressedLogSource(paths, logCompression);
                 if (!java.util.Objects.equals(removal.error, logCompression.error)) {
                     storageFinalizationError = combineStorageErrors(storageFinalizationError,
                             removal.error);
                 }
                 logCompression = removal;
+            }
+            context = new ManifestContext(
+                    allocation, launchObservation.capacity, completionObservation.capacity,
+                    compaction, retainEphemeral, storageFinalizationError, logCompression,
+                    sessionIdentity, launchObservation.capacityError,
+                    launchObservation.liveProbe, completionObservation.capacityError,
+                    completionObservation.liveProbe);
+            DirectorySyncResult finalEvidenceBarrier = writeTerminalManifest(paths.manifest,
+                    manifest(paths, runId, "STARTUP_FAILED", worktree,
+                            leasePath, commandHash, capability, allowedPhases, source, runtime,
+                            reports, artifacts, context, capacityFloor));
+            if (finalEvidenceBarrier.status == DirectorySyncStatus.FAILED) {
+                String barrierError = "final terminal manifest directory sync failed: "
+                        + finalEvidenceBarrier.error;
+                logCompression = logCompression.withManifestSync(DirectorySyncStatus.FAILED)
+                        .withError(barrierError);
+                storageFinalizationError = combineStorageErrors(storageFinalizationError,
+                        barrierError);
                 context = new ManifestContext(
                         allocation, launchObservation.capacity, completionObservation.capacity,
                         compaction, retainEphemeral, storageFinalizationError, logCompression,
                         sessionIdentity, launchObservation.capacityError,
                         launchObservation.liveProbe, completionObservation.capacityError,
                         completionObservation.liveProbe);
-                writeTerminalManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
-                        leasePath, commandHash, capability, allowedPhases, source, runtime,
-                        reports, artifacts, context, capacityFloor));
+                writeTerminalManifest(paths.manifest,
+                        manifest(paths, runId, "STARTUP_FAILED", worktree,
+                                leasePath, commandHash, capability, allowedPhases, source, runtime,
+                                reports, artifacts, context, capacityFloor));
             }
             printStartMarker(paths, runId, leasePath, context, capacityFloor, "STARTUP_FAILED");
             printEndMarker(paths, runId, 1, "STARTUP_FAILED", false, context);
@@ -1589,7 +1655,15 @@ public final class TestSessionCoordinator {
 
     private static DirectorySyncResult writeTerminalManifest(Path path, String json)
             throws IOException {
-        return writeManifest(path, json, "OPENGGF_TEST_MANIFEST_DIRECTORY_SYNC");
+        DirectorySyncResult result = writeManifest(
+                path, json, "OPENGGF_TEST_MANIFEST_DIRECTORY_SYNC");
+        String failCall = System.getenv("OPENGGF_TEST_MANIFEST_SYNC_FAIL_CALL");
+        int call = TERMINAL_MANIFEST_SYNC_CALLS.incrementAndGet();
+        if (Integer.toString(call).equals(failCall)) {
+            return new DirectorySyncResult(DirectorySyncStatus.FAILED,
+                    "injected one-shot terminal manifest sync failure at call " + call);
+        }
+        return result;
     }
 
     private static DirectorySyncResult writeManifest(Path path, String json, String injectionKey)

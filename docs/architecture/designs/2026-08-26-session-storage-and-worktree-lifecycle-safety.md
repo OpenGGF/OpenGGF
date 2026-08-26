@@ -386,6 +386,9 @@ Each gzip, terminal-manifest, and source-deletion directory barrier records `SYN
 Native providers that cannot open directories for syncing, including OpenJDK Windows,
 remain certifying but visibly `UNSUPPORTED`; genuine I/O errors on a supporting provider
 remain storage-finalisation failures and retain the source log whenever it still exists.
+All terminal-manifest writes are verdict-bearing, including startup-failure rewrites and
+the post-source-deletion evidence write. A late barrier failure receives exactly one
+best-effort rewrite so evidence is updated when possible without an infinite retry loop.
 
 The immediate emergency delivery is intentionally a containment slice:
 fail-closed managed allocation, capacity gates, terminal compaction, and

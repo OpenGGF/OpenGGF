@@ -110,6 +110,8 @@ public final class TestSessionCoordinatorSelfTest {
         verifyManifestBarrierFailureRetainsSource(root, outputRoot);
         verifyUnsupportedDirectorySyncRemainsCertifying(root, outputRoot);
         verifyRealDirectorySyncFailureIsNonCertifying(root, outputRoot);
+        verifyEveryTerminalManifestBarrierFailureIsPropagated(root, outputRoot);
+        verifyEveryStartupManifestBarrierFailureIsPropagated(root, outputRoot);
         verifyCompactionFailureVerdictPrecedence(root, outputRoot);
         verifyShutdownFinalizesSession(root, outputRoot);
         verifyShutdownStopsProcessTree(root, outputRoot);
@@ -1492,6 +1494,62 @@ public final class TestSessionCoordinatorSelfTest {
         check(json.contains("\"gzip_directory_sync_status\": \"FAILED\"")
                         && Files.isRegularFile(manifest.getParent().resolve("maven.log")),
                 "real gzip publication sync failure must retain source and be visible");
+    }
+
+    private static void verifyEveryTerminalManifestBarrierFailureIsPropagated(
+            Path root, Path outputRoot) throws Exception {
+        for (int call = 1; call <= 3; call++) {
+            Path lockRoot = createOwnedDirectory(root.resolve("locks-manifest-call-" + call));
+            ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
+                    "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                    TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+            builder.environment().put("OPENGGF_TEST_MANIFEST_SYNC_FAIL_CALL", Integer.toString(call));
+            CommandResult result = finish(builder.start());
+            check(result.exitCode != 0,
+                    "terminal manifest barrier call " + call + " must make green non-certifying");
+            String end = findLine(result.output, "OPENGGF_TEST_RUN_END");
+            check("STORAGE_FINALIZATION_FAILED".equals(markerValue(end, "state")),
+                    "end marker must expose manifest barrier failure at call " + call);
+            Path manifest = Path.of(markerValue(
+                    findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+            String json = Files.readString(manifest);
+            check(json.contains("\"state\": \"STORAGE_FINALIZATION_FAILED\"")
+                            && !json.contains("\"storage_finalization_error\": null"),
+                    "manifest must expose barrier failure at call " + call);
+            check(Files.isRegularFile(manifest.getParent().resolve("maven.log.gz")),
+                    "published gzip must remain recovery evidence at call " + call);
+            check(Files.exists(manifest.getParent().resolve("maven.log")) == (call < 3),
+                    "source preservation must match pre/post-deletion barrier call " + call);
+        }
+    }
+
+    private static void verifyEveryStartupManifestBarrierFailureIsPropagated(
+            Path root, Path outputRoot) throws Exception {
+        for (int call = 1; call <= 3; call++) {
+            Path lockRoot = createOwnedDirectory(root.resolve("locks-startup-manifest-call-" + call));
+            ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
+                    "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                    TestSessionCoordinatorSelfTest.class.getName(), "child-must-not-run"));
+            builder.environment().put("OPENGGF_TEST_MIN_FREE_BYTES", Long.toString(Long.MAX_VALUE));
+            builder.environment().put("OPENGGF_TEST_MANIFEST_SYNC_FAIL_CALL", Integer.toString(call));
+            CommandResult result = finish(builder.start());
+            check(result.exitCode != 0, "startup barrier call " + call + " must remain non-certifying");
+            String end = findLine(result.output, "OPENGGF_TEST_RUN_END");
+            check("STARTUP_FAILED".equals(markerValue(end, "state")),
+                    "startup barrier failure must preserve primary startup state at call " + call);
+            Path manifest = Path.of(markerValue(
+                    findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+            String json = Files.readString(manifest);
+            check(json.contains("\"state\": \"STARTUP_FAILED\"")
+                            && !json.contains("\"storage_finalization_error\": null"),
+                    "startup manifest must retain barrier failure at call " + call);
+            check(!result.output.contains("CHILD_MUST_NOT_RUN"),
+                    "startup barrier test must not launch the child");
+            check(Files.isRegularFile(manifest.getParent().resolve("maven.log.gz")),
+                    "startup barrier must retain gzip evidence at call " + call);
+            check(Files.exists(manifest.getParent().resolve("maven.log")) == (call < 3),
+                    "startup source preservation must match barrier call " + call);
+        }
     }
 
     private static String readGzip(Path path) throws IOException {
