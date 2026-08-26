@@ -69,8 +69,10 @@ wrapper sessions, even when they are testing the same commit.
 
 The wrapper's `OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` markers, plus
 the referenced manifest, are part of the evidence. The wrapper is quiet by
-default: both markers print the session-owned `manifest=` and `log=` paths while
-the full child output is retained only in `maven.log`. Agent runs must keep this
+default: both markers print the session-owned `manifest=` and `log=` paths. The
+start marker names the live `maven.log`; terminal finalisation atomically publishes
+`maven.log.gz`, removes the original only after successful compression, and makes
+the terminal manifest/end marker name the gzip. Agent runs must keep this
 default; do not pass `--verbose`, pipe through `tee`, or print the complete log
 back into context. Diagnose with targeted `rg` searches and bounded `tail`/`sed`
 reads against the reported log. `--quiet` is accepted when an invocation needs
@@ -110,12 +112,13 @@ not need writable Git metadata. Unmanaged tiers retain the per-worktree Git
 lock default, and coordinator lease ownership/recovery semantics are unchanged.
 
 Terminal compaction removes only `tmp` and `build/test-classes/traces`; manifests,
-command/Maven logs, reports, diagnostics, ordinary resources, other classes,
+command files, terminal `maven.log.gz`, reports, diagnostics, ordinary resources, other classes,
 JAR/native/package output, `artifacts/`, `distribution/`, and inventoried paths
 remain. Use `--retain-ephemeral` (PowerShell `-RetainEphemeral`) to retain the two
 reproducible trees for diagnosis without changing expiry. A compaction failure
 makes an otherwise green run `STORAGE_FINALIZATION_FAILED`; an existing child or
-identity failure remains primary.
+identity failure remains primary. Log-compression failure follows the same verdict
+precedence and preserves the uncompressed `maven.log` as evidence.
 
 Automatic deletion requires secure descriptor-relative streams or a stable
 file-key tombstone strategy. Native Windows on OpenJDK 21 exposes neither and

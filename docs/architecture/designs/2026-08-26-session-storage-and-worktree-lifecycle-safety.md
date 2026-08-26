@@ -348,7 +348,8 @@ Automatic terminal compaction removes only:
 Those paths were measured as the dominant reproducible storage cost. The
 following remain intact:
 
-- `manifest.json`, `command.txt`, and `maven.log`;
+- `manifest.json`, `command.txt`, and terminal `maven.log.gz` (or the original
+  `maven.log` when compression cannot be published safely);
 - Surefire and trace reports;
 - diagnostics;
 - compiled production and test classes other than copied trace resources;
@@ -371,6 +372,13 @@ exits nonzero with terminal state `STORAGE_FINALIZATION_FAILED`. If the child
 or identity validation already failed, that original failure remains primary
 and the storage-finalisation error is recorded as an additional failure. No
 cleanup failure may turn a red run green.
+
+The immediate emergency delivery is intentionally a containment slice:
+fail-closed managed allocation, capacity gates, terminal compaction, and
+terminal log compression. Full managed-envelope retirement and the worktree
+lifecycle command remain follow-up work. In particular, direct-manifest
+retention does not prove or repair retention for nested or broken envelopes,
+so this slice makes no such claim.
 
 `--retain-ephemeral` skips automatic compaction for a deliberate diagnostic
 run. The manifest records who requested it through the command line, the paths

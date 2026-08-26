@@ -15,8 +15,10 @@ configuration during `validate`.
 
 The coordinator is quiet by default. It prints compact
 `OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` markers containing the
-session-owned manifest and `maven.log` paths while retaining the full child
-output in that log. Search or read bounded portions of the reported log for
+session-owned manifest and log paths. The start marker names the live `maven.log`;
+terminal finalisation atomically publishes `maven.log.gz`, removes the original
+only after successful compression, and makes the terminal manifest/end marker
+name the gzip. Search or read bounded portions of the reported log for
 diagnosis. Pass `--verbose` before `--` only when interactive troubleshooting
 requires live child output; `--quiet` is an accepted explicit form of the
 default. The terminal manifest is authoritative for `surefire_reports`,
@@ -72,7 +74,7 @@ so native Windows runs remain certifying with
 Actworks/Slipmat native file-ID bridge exists. Capacity checks and managed
 retention still apply there.
 
-Compaction preserves `manifest.json`, `command.txt`, `maven.log`, reports,
+Compaction preserves `manifest.json`, `command.txt`, terminal `maven.log.gz`, reports,
 diagnostics, ordinary resources, compiled classes other than copied traces,
 JAR/native/package outputs, `artifacts/`, `distribution/`, and every manifest
 inventory entry. Use `--retain-ephemeral` (PowerShell:
@@ -80,7 +82,8 @@ inventory entry. Use `--retain-ephemeral` (PowerShell:
 `RETAINED_BY_REQUEST` but does not disable retention expiry. A compaction
 failure changes an otherwise green run to `STORAGE_FINALIZATION_FAILED`; an
 existing child or identity failure remains primary and the storage error is
-additional evidence.
+additional evidence. Compression failure uses the same precedence and retains
+the uncompressed `maven.log` rather than discarding the only full child log.
 
 The start marker fields are exactly `run_id`, `isolation`, `lwjgl`,
 `manifest`, `lease`, `log`, `state`, `storage_tier`, `launch_usable_bytes`, and

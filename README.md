@@ -284,6 +284,8 @@ traces.
   LWJGL extraction per Surefire fork so concurrent agent runs cannot corrupt
   one another. Their full build output stays in a searchable session log by
   default, while compact start/end markers expose the manifest and log paths.
+  Completed session logs are atomically published as `maven.log.gz` to reduce
+  retained test evidence without losing the live log on compression failure.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
   and isolated test-session procedures.

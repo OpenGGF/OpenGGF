@@ -153,13 +153,20 @@ and verifies the shared managed lane; coordinator namespace ownership, liveness,
 and deletion semantics are unchanged.
 
 After any terminal state, automatic compaction may remove only `tmp` and
-`build/test-classes/traces`. It preserves manifests, command and Maven logs, reports,
+`build/test-classes/traces`. It preserves manifests, command files, terminal
+`maven.log.gz`, reports,
 diagnostics, ordinary resources, other compiled classes, JAR/native/package outputs,
 `artifacts/`, `distribution/`, and every path in the report/artifact inventories. Use
 `--retain-ephemeral` (PowerShell `-RetainEphemeral`) only when those reproducible trees are
 needed for diagnosis; it records `RETAINED_BY_REQUEST` and does not extend expiry. A storage
 failure turns an otherwise successful child into `STORAGE_FINALIZATION_FAILED`; a prior
 child or identity failure remains primary.
+
+The child writes to live `maven.log`. Terminal finalisation streams it into a
+same-session temporary gzip, atomically publishes `maven.log.gz`, and removes the
+source only after publication. The terminal manifest/end marker name the gzip;
+compression failure retains `maven.log`, is additional storage-finalisation evidence,
+and never changes an existing child or identity failure into success.
 
 Destructive compaction requires either descriptor-relative `SecureDirectoryStream` support
 or a non-null stable file key with same-store atomic tombstoning and identity revalidation.

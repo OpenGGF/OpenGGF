@@ -4,6 +4,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Test sessions now preserve headroom by default:** managed allocation fails closed,
+  launch/completion capacity is gated, reproducible terminal trees are compacted, and
+  the live `maven.log` is atomically published as `maven.log.gz` after completion.
+  Compression failure retains the original log and cannot turn a failed child green.
+
 - **Aquatic Ruin's Robotnik hit flash no longer flashes Sonic:** the Act 2
   boss now alternates color 1 on the ROM's second palette line, preserving the
   ship and pillar effect without modifying Sonic's first-line palette.

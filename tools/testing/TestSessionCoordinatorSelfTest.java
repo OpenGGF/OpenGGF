@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
 import java.io.Writer;
@@ -26,6 +27,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 public final class TestSessionCoordinatorSelfTest {
     private static final Pattern RUN_ID = Pattern.compile("\\d{8}T\\d{6}Z-p\\d+-[0-9a-f]{6}");
@@ -33,7 +35,7 @@ public final class TestSessionCoordinatorSelfTest {
             "run_id", "state", "manifest", "worktree", "lease_path", "source_digest",
             "runtime_inputs_digest", "build_root", "tmp_root", "surefire_reports", "trace_reports",
             "diagnostics_root", "artifact_root", "distribution_root", "isolation",
-            "lwjgl_extraction", "lwjgl_extract_template", "command_file", "reports", "artifacts",
+            "lwjgl_extraction", "lwjgl_extract_template", "command_file", "log", "reports", "artifacts",
             "storage_tier", "allocation_path", "managed_root", "allocation_schema",
             "helper_version", "filesystem_device", "allocation_usable_bytes",
             "allocation_total_bytes", "allocation_inode_count_status",
@@ -101,6 +103,7 @@ public final class TestSessionCoordinatorSelfTest {
         verifySpaceContainingRoot(root);
         verifyInWorktreeSymlinkLockRootIsRejected(root, outputRoot);
         verifyChildExitPropagation(root, outputRoot);
+        verifyLogCompressionFailureVerdictPrecedence(root, outputRoot);
         verifyCompactionFailureVerdictPrecedence(root, outputRoot);
         verifyShutdownFinalizesSession(root, outputRoot);
         verifyShutdownStopsProcessTree(root, outputRoot);
@@ -1264,8 +1267,9 @@ public final class TestSessionCoordinatorSelfTest {
         Path mavenLog = Path.of(markerValue(startLine, "log"));
         check(mavenLog.equals(manifest.getParent().resolve("maven.log")),
                 "start marker must identify the session Maven log");
-        check(mavenLog.equals(Path.of(markerValue(endLine, "log"))),
-                "start and end markers must identify the same Maven log");
+        Path compressedLog = Path.of(markerValue(endLine, "log"));
+        check(compressedLog.equals(manifest.getParent().resolve("maven.log.gz")),
+                "end marker must identify the terminal gzip log");
         Path commandFile = manifest.getParent().resolve("command.txt");
         check(Files.isRegularFile(commandFile), "successful session must preserve command.txt");
         check(Files.readString(commandFile).contains("child-success"),
@@ -1312,8 +1316,15 @@ public final class TestSessionCoordinatorSelfTest {
                 + "distribution_root=" + session.resolve("distribution") + "\n";
         check(exported.equals(expectedExport),
                 "export file must contain the manifest and session roots:\n" + exported);
-        check(Files.readString(mavenLog).contains("CHILD_ENV_OK"),
-                "child output must be captured in maven.log");
+        check(!Files.exists(mavenLog), "successful gzip publication must remove the live Maven log");
+        check(readGzip(compressedLog).contains("CHILD_ENV_OK"),
+                "child output must be readable from maven.log.gz");
+        byte[] gzipHeader = Files.readAllBytes(compressedLog);
+        check(gzipHeader.length >= 10 && gzipHeader[4] == 0 && gzipHeader[5] == 0
+                        && gzipHeader[6] == 0 && gzipHeader[7] == 0,
+                "terminal gzip metadata must not embed wall-clock modification time");
+        check(json.contains("\"log\": \"" + escapeForJson(compressedLog.toString()) + "\""),
+                "terminal manifest must identify the gzip log");
         check(!result.output.contains("CHILD_ENV_OK"),
                 "child output must not be streamed to stdout by default");
         return new BasicRun(runId, lease, lockRoot);
@@ -1339,9 +1350,9 @@ public final class TestSessionCoordinatorSelfTest {
         check(result.exitCode == 0, "verbose mode must succeed:\n" + result.output);
         check(result.output.contains("CHILD_ENV_OK"),
                 "verbose mode must stream child output to stdout");
-        Path log = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "log"));
-        check(Files.readString(log).contains("CHILD_ENV_OK"),
-                "verbose mode must continue capturing child output in maven.log");
+        Path log = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_END"), "log"));
+        check(readGzip(log).contains("CHILD_ENV_OK"),
+                "verbose mode must retain captured child output in maven.log.gz");
     }
 
     private static void verifyChildExitPropagation(Path root, Path outputRoot) throws Exception {
@@ -1356,6 +1367,56 @@ public final class TestSessionCoordinatorSelfTest {
         Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
         check(Files.readString(manifest).contains("\"state\": \"FAILED\""),
                 "nonzero child exit must produce a FAILED manifest");
+        Path compressedLog = Path.of(markerValue(
+                findLine(result.output, "OPENGGF_TEST_RUN_END"), "log"));
+        check(Files.isRegularFile(compressedLog),
+                "a failing-child log must still be published as gzip");
+        readGzip(compressedLog);
+    }
+
+    private static void verifyLogCompressionFailureVerdictPrecedence(Path root, Path outputRoot)
+            throws Exception {
+        Path greenLockRoot = createOwnedDirectory(root.resolve("locks-log-compression-green"));
+        ProcessBuilder greenBuilder = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", greenLockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        greenBuilder.environment().put("OPENGGF_TEST_LOG_COMPRESSION_FAIL", "1");
+        CommandResult green = finish(greenBuilder.start());
+        check(green.exitCode != 0, "a green child with failed log compression must be non-certifying");
+        Path greenManifest = Path.of(markerValue(
+                findLine(green.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String greenJson = Files.readString(greenManifest);
+        check(greenJson.contains("\"state\": \"STORAGE_FINALIZATION_FAILED\""),
+                "failed log compression must replace an otherwise PASSED state");
+        check(Files.isRegularFile(greenManifest.getParent().resolve("maven.log")),
+                "failed compression must preserve the original log");
+        check(!Files.exists(greenManifest.getParent().resolve("maven.log.gz")),
+                "failed compression must not publish a gzip log");
+
+        Path redLockRoot = createOwnedDirectory(root.resolve("locks-log-compression-red"));
+        ProcessBuilder redBuilder = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", redLockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-exit-7"));
+        redBuilder.environment().put("OPENGGF_TEST_LOG_COMPRESSION_FAIL", "1");
+        CommandResult red = finish(redBuilder.start());
+        check(red.exitCode == 7, "log compression failure must preserve a child failure exit code");
+        Path redManifest = Path.of(markerValue(
+                findLine(red.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String redJson = Files.readString(redManifest);
+        check(redJson.contains("\"state\": \"FAILED\""),
+                "log compression failure must not replace an existing child failure");
+        check(!redJson.contains("\"storage_finalization_error\": null"),
+                "child failure must retain log compression failure as secondary evidence");
+    }
+
+    private static String readGzip(Path path) throws IOException {
+        try (InputStream input = new GZIPInputStream(Files.newInputStream(path))) {
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private static String escapeForJson(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private static void verifyCompactionFailureVerdictPrecedence(Path root, Path outputRoot)

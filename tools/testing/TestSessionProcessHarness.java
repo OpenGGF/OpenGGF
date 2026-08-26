@@ -19,6 +19,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 /** External-process acceptance harness for the isolated test-session coordinator. */
 public final class TestSessionProcessHarness {
@@ -219,6 +220,7 @@ public final class TestSessionProcessHarness {
             capacityRefusalPreventsLaunch();
             liveProbeFailurePreventsLaunch();
             completionProbeFailurePreservesPrimaryFailure();
+            logCompressionFailurePreservesEvidence();
             markerFieldsAreEncoded();
             sameWorktreeContention();
             linkedWorktreesRunIndependently();
@@ -326,6 +328,29 @@ public final class TestSessionProcessHarness {
                     "completion probe failure must preserve FAILED state");
             check(!Files.readString(manifest).contains("\"state\": \"RUNNING\""),
                     "completion probe failure must not strand the manifest in RUNNING");
+            Path compressedLog = manifest.getParent().resolve("maven.log.gz");
+            check(Files.isRegularFile(compressedLog) && !Files.exists(
+                            manifest.getParent().resolve("maven.log")),
+                    "failing child must still publish only the terminal gzip log");
+            try (var gzip = new GZIPInputStream(Files.newInputStream(compressedLog))) {
+                check(new String(gzip.readAllBytes(), StandardCharsets.UTF_8).contains("BUILD SUCCESS"),
+                        "failing child gzip must retain its output");
+            }
+        }
+
+        private void logCompressionFailurePreservesEvidence() throws Exception {
+            SessionProcess process = start(baseRepo, "log-compression-failure", externalLockRoot,
+                    null, null, List.of(), null,
+                    Map.of("OPENGGF_TEST_LOG_COMPRESSION_FAIL", "1"));
+            Path manifest = process.awaitManifest();
+            check(process.finish() != 0,
+                    "failed log compression must make a green child non-certifying");
+            check(jsonString(manifest, "state").equals("STORAGE_FINALIZATION_FAILED"),
+                    "failed log compression must persist storage finalization failure");
+            check(Files.isRegularFile(manifest.getParent().resolve("maven.log")),
+                    "failed log compression must retain the original log");
+            check(!Files.exists(manifest.getParent().resolve("maven.log.gz")),
+                    "failed log compression must not publish a gzip");
         }
 
         private void markerFieldsAreEncoded() throws Exception {
@@ -413,11 +438,17 @@ public final class TestSessionProcessHarness {
             check(!Files.exists(session.resolve("build/test-classes/traces")),
                     "terminal compaction must remove copied trace resources");
             for (String retained : List.of(
-                    "manifest.json", "command.txt", "maven.log",
+                    "manifest.json", "command.txt", "maven.log.gz",
                     "diagnostics/collision-report.txt", "build/test-classes/ordinary.bin",
                     "build/OpenGGF.jar", "artifacts/promoted.bin")) {
                 check(Files.isRegularFile(session.resolve(retained)),
                         "terminal compaction removed preserved evidence: " + retained);
+            }
+            check(!Files.exists(session.resolve("maven.log")),
+                    "terminal finalization must remove the live uncompressed log");
+            try (var gzip = new GZIPInputStream(Files.newInputStream(session.resolve("maven.log.gz")))) {
+                check(new String(gzip.readAllBytes(), StandardCharsets.UTF_8).contains("BUILD SUCCESS"),
+                        "terminal gzip log must be readable and contain child output");
             }
         }
 
@@ -435,6 +466,9 @@ public final class TestSessionProcessHarness {
                             && Files.isRegularFile(session.resolve(
                             "build/test-classes/traces/copied.bin")),
                     "retain flag must preserve compactable paths");
+            check(Files.isRegularFile(session.resolve("maven.log.gz"))
+                            && !Files.exists(session.resolve("maven.log")),
+                    "retain-ephemeral must not disable terminal log compression");
         }
 
         private void reportRootsAreIsolated() throws Exception {

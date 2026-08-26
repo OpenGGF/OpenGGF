@@ -724,7 +724,8 @@ class TestBuildToolingGuard {
                 "UNAVAILABLE_DYNAMIC",
                 "UNAVAILABLE_IN_SANDBOX",
                 "test-session-locks",
-                "lease_root");
+                "lease_root",
+                "maven.log.gz");
         Pattern dynamicInodeGuidance = Pattern.compile(
                 "UNAVAILABLE_DYNAMIC[^.]*JSON-null[^.]*usable_inodes[^.]*"
                         + "live probe[^.]*(?:authoritative|authority)");

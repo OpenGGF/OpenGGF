@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.channels.FileChannel;
@@ -47,6 +48,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import java.util.zip.GZIPOutputStream;
 
 /** Standalone coordinator for isolated OpenGGF test/build sessions. */
 public final class TestSessionCoordinator {
@@ -137,6 +139,9 @@ public final class TestSessionCoordinator {
             String error) {
     }
 
+    private record LogCompressionResult(Path publishedLog, String error) {
+    }
+
     private record BoundEntry(
             Path relativePath, Object fileKey, boolean directory, long size) {
     }
@@ -172,6 +177,7 @@ public final class TestSessionCoordinator {
             CompactionResult compaction,
             boolean retainEphemeral,
             String storageFinalizationError,
+            LogCompressionResult logCompression,
             SessionDirectoryIdentity sessionIdentity,
             String launchCapacityError,
             LiveProbeResult launchProbe,
@@ -330,7 +336,7 @@ public final class TestSessionCoordinator {
                     sessionIdentity, options.retainEphemeral);
         }
         ManifestContext runningContext = new ManifestContext(allocation, launchCapacity,
-                null, null, options.retainEphemeral, null, sessionIdentity,
+                null, null, options.retainEphemeral, null, null, sessionIdentity,
                 null, launchObservation.liveProbe, null, null);
         writeManifest(paths.manifest, manifest(paths, runId, "RUNNING", worktree, leasePath,
                 commandHash, capability, allowedPhases, sourceBefore, runtimeBefore,
@@ -407,7 +413,7 @@ public final class TestSessionCoordinator {
             List<String> artifacts = artifactInventory(paths);
             ManifestContext preCompactionContext = new ManifestContext(allocation, launchCapacity,
                     completionObservation.capacity, null, options.retainEphemeral,
-                    storageFinalizationError, sessionIdentity, null, launchObservation.liveProbe,
+                    storageFinalizationError, null, sessionIdentity, null, launchObservation.liveProbe,
                     completionObservation.capacityError, completionObservation.liveProbe);
             writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                     commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
@@ -417,6 +423,9 @@ public final class TestSessionCoordinator {
                     options.retainEphemeral, reports, artifacts, sessionIdentity);
             storageFinalizationError = combineStorageErrors(storageFinalizationError,
                     compactionFailure(compaction));
+            LogCompressionResult logCompression = compressTerminalLog(paths);
+            storageFinalizationError = combineStorageErrors(storageFinalizationError,
+                    logCompression.error);
             if (storageFinalizationError != null && primaryState.equals("PASSED")) {
                 state = "STORAGE_FINALIZATION_FAILED";
                 exitCode = 1;
@@ -424,7 +433,7 @@ public final class TestSessionCoordinator {
             }
             ManifestContext terminalContext = new ManifestContext(allocation, launchCapacity,
                     completionObservation.capacity, compaction, options.retainEphemeral,
-                    storageFinalizationError, sessionIdentity, null, launchObservation.liveProbe,
+                    storageFinalizationError, logCompression, sessionIdentity, null, launchObservation.liveProbe,
                     completionObservation.capacityError, completionObservation.liveProbe);
             writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                     commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
@@ -459,7 +468,7 @@ public final class TestSessionCoordinator {
             List<String> artifacts = artifactInventory(paths);
             ManifestContext preCompactionContext = new ManifestContext(
                     allocation, launchObservation.capacity, completionObservation.capacity,
-                    null, retainEphemeral, storageFinalizationError, sessionIdentity,
+                    null, retainEphemeral, storageFinalizationError, null, sessionIdentity,
                     launchObservation.capacityError, launchObservation.liveProbe,
                     completionObservation.capacityError, completionObservation.liveProbe);
             writeManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
@@ -469,9 +478,12 @@ public final class TestSessionCoordinator {
                     retainEphemeral, reports, artifacts, sessionIdentity);
             storageFinalizationError = combineStorageErrors(storageFinalizationError,
                     compactionFailure(compaction));
+            LogCompressionResult logCompression = compressTerminalLog(paths);
+            storageFinalizationError = combineStorageErrors(storageFinalizationError,
+                    logCompression.error);
             ManifestContext context = new ManifestContext(
                     allocation, launchObservation.capacity, completionObservation.capacity,
-                    compaction, retainEphemeral, storageFinalizationError, sessionIdentity,
+                    compaction, retainEphemeral, storageFinalizationError, logCompression, sessionIdentity,
                     launchObservation.capacityError, launchObservation.liveProbe,
                     completionObservation.capacityError, completionObservation.liveProbe);
             writeManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
@@ -636,11 +648,13 @@ public final class TestSessionCoordinator {
     private static void printStartMarker(Paths paths, String runId, Path leasePath,
                                          ManifestContext context, long capacityFloor,
                                          String state) {
+        Path publishedLog = context.logCompression == null
+                ? paths.mavenLog : context.logCompression.publishedLog;
         System.out.println("OPENGGF_TEST_RUN_START run_id=" + markerToken(runId) + " isolation="
                 + markerToken(SESSION_ISOLATION) + " lwjgl=" + markerToken(LWJGL_EXTRACTION_ISOLATION)
                 + " manifest=" + markerToken(paths.manifest.toString())
                 + " lease=" + markerToken(leasePath.toString())
-                + " log=" + markerToken(paths.mavenLog.toString())
+                + " log=" + markerToken(publishedLog.toString())
                 + " state=" + markerToken(state)
                 + " storage_tier=" + markerToken(context.allocation.tier.name())
                 + " launch_usable_bytes=" + context.launchCapacity.usableBytes
@@ -662,11 +676,13 @@ public final class TestSessionCoordinator {
                 ? -1 : context.completionCapacity.usableBytes;
         String processTreeField = processTreeStopped == null
                 ? "" : " process_tree_stopped=" + processTreeStopped;
+        Path terminalLog = context.logCompression == null
+                ? paths.mavenLog : context.logCompression.publishedLog;
         System.out.println("OPENGGF_TEST_RUN_END run_id=" + markerToken(runId) + " isolation="
                 + markerToken(SESSION_ISOLATION) + " lwjgl=" + markerToken(LWJGL_EXTRACTION_ISOLATION)
                 + " exit_code=" + exitCode + " state=" + markerToken(state)
                 + " valid=" + valid + " manifest=" + markerToken(paths.manifest.toString())
-                + " log=" + markerToken(paths.mavenLog.toString())
+                + " log=" + markerToken(terminalLog.toString())
                 + " compaction_status=" + markerToken(compactionStatus)
                 + " reclaimed_bytes=" + reclaimedBytes
                 + " completion_usable_bytes=" + completionBytes + processTreeField);
@@ -1285,6 +1301,8 @@ public final class TestSessionCoordinator {
                 + "  \"artifact_root\": \"" + escape(paths.artifacts.toString()) + "\",\n"
                 + "  \"distribution_root\": \"" + escape(paths.distribution.toString()) + "\",\n"
                 + "  \"command_file\": \"" + escape(paths.command.toString()) + "\",\n"
+                + "  \"log\": \"" + escape(context.logCompression == null
+                ? paths.mavenLog.toString() : context.logCompression.publishedLog.toString()) + "\",\n"
                 + "  \"storage_tier\": \"" + allocation.tier + "\",\n"
                 + "  \"allocation_path\": \"" + escape(allocation.outputRoot.toString()) + "\",\n"
                 + "  \"managed_root\": " + jsonNullablePath(allocation.managedRoot) + ",\n"
@@ -2182,6 +2200,45 @@ public final class TestSessionCoordinator {
         }
         return "terminal compaction " + compaction.status.name().toLowerCase(
                 java.util.Locale.ROOT) + ": " + compaction.error;
+    }
+
+    private static LogCompressionResult compressTerminalLog(Paths paths) {
+        Path compressed = paths.session.resolve("maven.log.gz");
+        Path temporary = paths.session.resolve(".maven.log.gz-" + createProbeSuffix() + ".tmp");
+        boolean published = false;
+        try {
+            if ("1".equals(System.getenv("OPENGGF_TEST_LOG_COMPRESSION_FAIL"))) {
+                throw new IOException("injected log compression failure");
+            }
+            try (var input = Files.newInputStream(paths.mavenLog, StandardOpenOption.READ);
+                 OutputStream file = Files.newOutputStream(temporary, StandardOpenOption.CREATE_NEW,
+                         StandardOpenOption.WRITE);
+                 var gzip = new GZIPOutputStream(file, 64 * 1024)) {
+                byte[] buffer = new byte[64 * 1024];
+                int count;
+                while ((count = input.read(buffer)) >= 0) {
+                    if (count > 0) {
+                        gzip.write(buffer, 0, count);
+                    }
+                }
+                gzip.finish();
+            }
+            try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
+                channel.force(true);
+            }
+            Files.move(temporary, compressed, StandardCopyOption.ATOMIC_MOVE);
+            published = true;
+            Files.delete(paths.mavenLog);
+            return new LogCompressionResult(compressed, null);
+        } catch (IOException | RuntimeException e) {
+            String error = "terminal log compression failed: " + boundedSingleLine(message(e));
+            try {
+                Files.deleteIfExists(temporary);
+            } catch (IOException cleanup) {
+                error += "; temporary cleanup failed: " + boundedSingleLine(message(cleanup));
+            }
+            return new LogCompressionResult(published ? compressed : paths.mavenLog, error);
+        }
     }
 
     private static String combineStorageErrors(String first, String second) {
@@ -3083,7 +3140,7 @@ public final class TestSessionCoordinator {
                 String storageFinalizationError = completionObservation.error();
                 ManifestContext preCompactionContext = new ManifestContext(
                         allocation, launchCapacity, completionObservation.capacity, null,
-                        retainEphemeral, storageFinalizationError, sessionIdentity,
+                        retainEphemeral, storageFinalizationError, null, sessionIdentity,
                         null, launchProbe, completionObservation.capacityError,
                         completionObservation.liveProbe);
                 writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
@@ -3094,9 +3151,12 @@ public final class TestSessionCoordinator {
                         retainEphemeral, reports, artifacts, sessionIdentity);
                 storageFinalizationError = combineStorageErrors(storageFinalizationError,
                         compactionFailure(compaction));
+                LogCompressionResult logCompression = compressTerminalLog(paths);
+                storageFinalizationError = combineStorageErrors(storageFinalizationError,
+                        logCompression.error);
                 ManifestContext terminalContext = new ManifestContext(
                         allocation, launchCapacity, completionObservation.capacity, compaction,
-                        retainEphemeral, storageFinalizationError, sessionIdentity,
+                        retainEphemeral, storageFinalizationError, logCompression, sessionIdentity,
                         null, launchProbe, completionObservation.capacityError,
                         completionObservation.liveProbe);
                 writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
