@@ -311,6 +311,23 @@ Add an injectable capacity probe returning sufficient bytes but zero usable
 inodes. Assert the coordinator writes `STARTUP_FAILED`, records the zero-inode
 measurement, and never starts the fake Maven child.
 
+Add all-tier live inode-availability fixtures. The real production probe must
+create, write, file-flush, read, and unlink a private file inside the unique
+session directory, then flush the directory where the platform supports it.
+Inject portable-file-probe failure before launch and assert every tier fails
+closed with terminal evidence and no child; inject completion failure and
+assert the primary child state remains terminal rather than `RUNNING`. Add a
+platform-capability fixture proving unsupported directory flush records
+`DIRECTORY_FLUSH_UNSUPPORTED` without refusing an otherwise successful probe.
+Managed numeric inode zero still refuses immediately; unmanaged numeric counts
+remain explicitly unavailable while a successful live probe records
+`AVAILABLE`.
+
+Add capacity-probe `IOException` tests before launch and at completion, blank
+and whitespace-only override tests, and a `--lock-root` containing an encoded
+newline/marker payload. Assert terminal evidence survives probe failures and
+no output line can be forged as `OPENGGF_TEST_RUN_START` or `_END`.
+
 - [ ] **Step 2: Run self-test and process harness for red evidence**
 
 Run Task 3 Step 2 and `tools/testing/run-session-process-harness.sh`. Expected: new capacity/manifest tests fail.
@@ -333,11 +350,20 @@ private record ManifestContext(
 ```
 
 Calculate `max(DEFAULT_MIN_FREE_BYTES, totalBytes / 20)`, allow the environment
-to raise it, and refuse launch when usable bytes are below that threshold **or
-usable inodes are zero**. Write `STARTUP_FAILED` after a session directory
-exists and ensure no child process starts. Add `command.txt` before launch.
-Extend manifest generation and both markers with the exact spec fields;
-unmanaged helper fields serialize as JSON `null` plus a reason.
+to raise it, and reject explicitly blank as well as malformed/lower values.
+Refuse launch when usable bytes are below the threshold, a managed numeric
+inode snapshot is zero, or the all-tier live inode-availability probe fails.
+The portable file operations are authoritative; directory flush is required
+only where supported and otherwise produces explicit observability rather than
+a false inode failure.
+Write `STARTUP_FAILED` after a session directory exists and ensure no child
+process starts, even when the byte/inode probe itself throws. Add `command.txt`
+before launch. Completion probe failures must be recorded without leaving a
+`RUNNING` manifest. Extend manifest generation and both markers with the exact
+spec fields, numeric inode nullability/reason, and live inode-probe status;
+unmanaged helper fields serialize as JSON `null` plus a reason. Encode or
+reject every string marker field, including lease paths, to keep markers
+single-line and unforgeable.
 
 - [ ] **Step 4: Run focused Java tests**
 

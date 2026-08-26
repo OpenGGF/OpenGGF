@@ -205,16 +205,44 @@ max(20 GiB, 5% of filesystem capacity)
 lower or disable the default. The value must be an unsigned decimal integer;
 invalid values are startup errors.
 
-The launch is refused when either usable bytes are below the floor or usable
-inodes are zero. Once an allocation directory exists, the coordinator records
-that refusal in a `STARTUP_FAILED` manifest before returning. The error reports
+The launch is refused when either usable bytes are below the floor or inode
+availability cannot be proved. Java has no portable API for a live numeric
+free-inode count on every supported filesystem, so this proof has two parts:
+
+- when the managed helper supplies a numeric allocation-time inode snapshot,
+  zero refuses immediately and the snapshot is retained as observability;
+- for every storage tier, immediately before launch the coordinator performs a
+  contained create, write, file flush, read, and unlink probe inside the unique
+  session directory. It also flushes the directory where the platform supports
+  opening directories for durability. Failure of the portable file probe
+  refuses launch; lack of directory-flush support records
+  `DIRECTORY_FLUSH_UNSUPPORTED` observability and does not masquerade as inode
+  exhaustion. Success records `AVAILABLE` without pretending it measured a
+  numeric count.
+
+Unmanaged tiers record their numeric inode count as unavailable with an exact
+reason, never as a fabricated value. The same live availability probe runs at
+completion and is recorded independently. It is a point-in-time guard, not a
+reservation of a future inode.
+
+Once an allocation directory exists, the coordinator records a capacity or
+probe refusal in a `STARTUP_FAILED` manifest before returning. A failure to
+measure capacity is itself fail-closed and uses the last verified allocation
+snapshot plus a bounded diagnostic to publish terminal evidence; failure of a
+completion probe never strands the manifest in `RUNNING`. The error reports
 the allocation path, storage tier, usable capacity, required capacity, and the
 non-destructive commands to inspect or prune managed storage. There is no
 `--allow-low-disk` bypass for certifying runs.
 
-Capacity is measured again during finalisation and recorded even when the child
-process fails. The guardrail is not a reservation guarantee; it is an early
-refusal that prevents a known-low-capacity run from worsening the incident.
+An explicitly present but blank or whitespace-only
+`OPENGGF_TEST_MIN_FREE_BYTES` is invalid. Every string placed in a start/end
+marker, including configured lock paths, is encoded or rejected so control
+characters cannot create counterfeit marker lines.
+
+Byte capacity and live inode availability are measured again during
+finalisation and recorded even when the child process fails. The guardrail is
+not a reservation guarantee; it is an early refusal that prevents a
+known-low-capacity run from worsening the incident.
 
 ## Terminal session compaction
 
