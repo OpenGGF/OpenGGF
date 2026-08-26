@@ -84,6 +84,12 @@ failure changes an otherwise green run to `STORAGE_FINALIZATION_FAILED`; an
 existing child or identity failure remains primary and the storage error is
 additional evidence. Compression failure uses the same precedence and retains
 the uncompressed `maven.log` rather than discarding the only full child log.
+Forced shutdown has one finalization owner: it stops the child tree, waits for the
+output drain, preserves `maven.log`, and records compression as deferred. Normal
+completion directory-syncs the gzip publication, publishes the terminal manifest
+that names it, then removes the source and directory-syncs that deletion.
+If shutdown cannot prove output-drain completion within its bound, it leaves the
+`RUNNING` manifest and log untouched for stale-session recovery.
 
 The start marker fields are exactly `run_id`, `isolation`, `lwjgl`,
 `manifest`, `lease`, `log`, `state`, `storage_tier`, `launch_usable_bytes`, and

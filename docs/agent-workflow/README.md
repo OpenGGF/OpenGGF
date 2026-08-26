@@ -167,6 +167,12 @@ same-session temporary gzip, atomically publishes `maven.log.gz`, and removes th
 source only after publication. The terminal manifest/end marker name the gzip;
 compression failure retains `maven.log`, is additional storage-finalisation evidence,
 and never changes an existing child or identity failure into success.
+During forced JVM shutdown, a single shutdown owner stops the process tree and waits
+for output drain before finalizing; it deliberately retains `maven.log` and records
+gzip as deferred. Normal completion directory-syncs the gzip rename, publishes the
+terminal manifest naming the gzip, and only then removes the source and syncs again.
+If the bounded shutdown wait cannot prove drain completion, it leaves the `RUNNING`
+manifest and log untouched for stale-session recovery.
 
 Destructive compaction requires either descriptor-relative `SecureDirectoryStream` support
 or a non-null stable file key with same-store atomic tombstoning and identity revalidation.

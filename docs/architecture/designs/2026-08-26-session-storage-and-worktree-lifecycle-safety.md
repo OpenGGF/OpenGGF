@@ -373,6 +373,15 @@ or identity validation already failed, that original failure remains primary
 and the storage-finalisation error is recorded as an additional failure. No
 cleanup failure may turn a red run green.
 
+Normal log finalisation publishes and directory-syncs `maven.log.gz`, atomically
+publishes the terminal manifest that names the gzip, and only then removes
+`maven.log` and directory-syncs the deletion. A crash before source removal therefore
+leaves two usable copies and a manifest naming the published gzip. Forced shutdown
+has a distinct single owner: after stopping the child tree it waits for output drain,
+keeps `maven.log`, and records compression as deferred rather than racing the writer.
+If its bounded drain wait cannot prove completion, it performs no compaction or log
+mutation and leaves the `RUNNING` manifest for stale-session recovery.
+
 The immediate emergency delivery is intentionally a containment slice:
 fail-closed managed allocation, capacity gates, terminal compaction, and
 terminal log compression. Full managed-envelope retirement and the worktree

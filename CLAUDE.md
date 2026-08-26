@@ -119,6 +119,12 @@ reproducible trees for diagnosis without changing expiry. A compaction failure
 makes an otherwise green run `STORAGE_FINALIZATION_FAILED`; an existing child or
 identity failure remains primary. Log-compression failure follows the same verdict
 precedence and preserves the uncompressed `maven.log` as evidence.
+Forced JVM shutdown is also conservative: the shutdown owner stops the child tree,
+waits for output drain, retains `maven.log`, and records gzip as deferred. On normal
+completion, the gzip rename is directory-synced, the terminal manifest names it,
+and only then is the original removed and the directory synced again.
+If shutdown cannot prove drain completion within its bound, it leaves the `RUNNING`
+manifest and log untouched for stale-session recovery.
 
 Automatic deletion requires secure descriptor-relative streams or a stable
 file-key tombstone strategy. Native Windows on OpenJDK 21 exposes neither and

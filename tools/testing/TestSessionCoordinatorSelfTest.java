@@ -104,6 +104,7 @@ public final class TestSessionCoordinatorSelfTest {
         verifyInWorktreeSymlinkLockRootIsRejected(root, outputRoot);
         verifyChildExitPropagation(root, outputRoot);
         verifyLogCompressionFailureVerdictPrecedence(root, outputRoot);
+        verifyPublishedLogSurvivesSourceRemovalFailure(root, outputRoot);
         verifyCompactionFailureVerdictPrecedence(root, outputRoot);
         verifyShutdownFinalizesSession(root, outputRoot);
         verifyShutdownStopsProcessTree(root, outputRoot);
@@ -1409,6 +1410,30 @@ public final class TestSessionCoordinatorSelfTest {
                 "child failure must retain log compression failure as secondary evidence");
     }
 
+    private static void verifyPublishedLogSurvivesSourceRemovalFailure(Path root, Path outputRoot)
+            throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve("locks-log-removal-failure"));
+        ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        builder.environment().put("OPENGGF_TEST_LOG_SOURCE_DELETE_FAIL", "1");
+        CommandResult result = finish(builder.start());
+        check(result.exitCode != 0,
+                "source-removal failure must make a green child non-certifying");
+        Path manifest = Path.of(markerValue(
+                findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String json = Files.readString(manifest);
+        Path gzip = manifest.getParent().resolve("maven.log.gz");
+        check(json.contains("\"state\": \"STORAGE_FINALIZATION_FAILED\"")
+                        && json.contains("\"log\": \"" + escapeForJson(gzip.toString()) + "\""),
+                "terminal manifest must name the already-published gzip on removal failure");
+        check(Files.isRegularFile(gzip) && Files.isRegularFile(
+                        manifest.getParent().resolve("maven.log")),
+                "source-removal failure must leave both recovery-safe log copies");
+        check(readGzip(gzip).contains("CHILD_ENV_OK"),
+                "published gzip must remain readable after source-removal failure");
+    }
+
     private static String readGzip(Path path) throws IOException {
         try (InputStream input = new GZIPInputStream(Files.newInputStream(path))) {
             return new String(input.readAllBytes(), StandardCharsets.UTF_8);
@@ -1591,9 +1616,12 @@ public final class TestSessionCoordinatorSelfTest {
 
     private static void verifyShutdownFinalizesSession(Path root, Path outputRoot) throws Exception {
         Path lockRoot = createOwnedDirectory(root.resolve("locks-shutdown"));
-        Process process = coordinatorProcess(outputRoot, List.of(
+        Path sentinelReady = root.resolve("shutdown-sentinel-ready");
+        ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
                 "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
-                TestSessionCoordinatorSelfTest.class.getName(), "child-sleep")).start();
+                TestSessionCoordinatorSelfTest.class.getName(), "child-slow-sentinel"));
+        builder.environment().put("OPENGGF_TEST_SENTINEL_READY", sentinelReady.toString());
+        Process process = builder.start();
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
         String line;
         Path manifest = null;
@@ -1604,6 +1632,10 @@ public final class TestSessionCoordinatorSelfTest {
             }
         }
         check(manifest != null, "shutdown test must observe the run start marker");
+        for (int attempt = 0; attempt < 500 && !Files.exists(sentinelReady); attempt++) {
+            Thread.sleep(10);
+        }
+        check(Files.isRegularFile(sentinelReady), "child must emit its final sentinel before shutdown");
         process.destroy();
         check(process.waitFor(Duration.ofSeconds(10).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS),
                 "coordinator must terminate after SIGTERM");
@@ -1614,6 +1646,14 @@ public final class TestSessionCoordinatorSelfTest {
                 "shutdown must use terminal compaction");
         check(!Files.exists(manifest.getParent().resolve("tmp")),
                 "shutdown terminal compaction must remove tmp");
+        Path liveLog = manifest.getParent().resolve("maven.log");
+        check(Files.isRegularFile(liveLog) && !Files.exists(
+                        manifest.getParent().resolve("maven.log.gz")),
+                "shutdown finalization must preserve only the uncompressed log");
+        check(Files.readString(liveLog).contains("SHUTDOWN_SENTINEL"),
+                "shutdown finalization must wait until final child output reaches the live log");
+        check(json.contains("terminal log compression deferred during shutdown"),
+                "shutdown manifest must explain why gzip was deferred");
     }
 
     private static void verifyShutdownStopsProcessTree(Path root, Path outputRoot) throws Exception {
@@ -2137,6 +2177,19 @@ public final class TestSessionCoordinatorSelfTest {
                 Thread.sleep(Duration.ofSeconds(30).toMillis());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+            }
+        }
+        if (mode.equals("child-slow-sentinel")) {
+            try {
+                System.out.print("x".repeat(2 * 1024 * 1024));
+                System.out.println("SHUTDOWN_SENTINEL");
+                System.out.flush();
+                Files.writeString(Path.of(System.getenv("OPENGGF_TEST_SENTINEL_READY")),
+                        "ready\n", StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+                Thread.sleep(Duration.ofSeconds(30).toMillis());
+            } catch (IOException | InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(e);
             }
         }
         if (mode.equals("child-spawn-grandchild")) {

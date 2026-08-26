@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -139,7 +140,7 @@ public final class TestSessionCoordinator {
             String error) {
     }
 
-    private record LogCompressionResult(Path publishedLog, String error) {
+    private record LogCompressionResult(Path publishedLog, String error, boolean published) {
     }
 
     private record BoundEntry(
@@ -390,79 +391,98 @@ public final class TestSessionCoordinator {
             }
             Thread.currentThread().interrupt();
         } finally {
-            String sourceAfter = sourceDigest(worktree);
-            String runtimeAfter = runtimeDigest(options.command);
-            boolean sourceChanged = !sourceBefore.equals(sourceAfter);
-            boolean runtimeChanged = !runtimeBefore.equals(runtimeAfter);
-            boolean leaseChanged = !leaseStillOwned(lease.namespace, leasePath, runId);
-            identityChanged = sourceChanged || runtimeChanged || leaseChanged;
-            boolean valid = !identityChanged && !interrupted;
-            String primaryState = interrupted ? "ABORTED"
-                    : (identityChanged ? "INVALID_IDENTITY_CHANGED"
-                    : (exitCode == 0 ? "PASSED" : "FAILED"));
-            String state = primaryState;
-            StorageObservation completionObservation = observeStorage(
-                    paths, allocation, capacityProbe, ProbePhase.COMPLETION);
-            String storageFinalizationError = completionObservation.error();
-            if (storageFinalizationError != null && state.equals("PASSED")) {
-                state = "STORAGE_FINALIZATION_FAILED";
-                exitCode = 1;
-                valid = false;
+            shutdown.outputDrainComplete.countDown();
+            if (shutdown.claimNormalFinalization()) {
+                try {
+                    String sourceAfter = sourceDigest(worktree);
+                    String runtimeAfter = runtimeDigest(options.command);
+                    boolean sourceChanged = !sourceBefore.equals(sourceAfter);
+                    boolean runtimeChanged = !runtimeBefore.equals(runtimeAfter);
+                    boolean leaseChanged = !leaseStillOwned(lease.namespace, leasePath, runId);
+                    identityChanged = sourceChanged || runtimeChanged || leaseChanged;
+                    boolean valid = !identityChanged && !interrupted;
+                    String primaryState = interrupted ? "ABORTED"
+                                                      : (identityChanged ? "INVALID_IDENTITY_CHANGED"
+                                                                         : (exitCode == 0 ? "PASSED" : "FAILED"));
+                    String state = primaryState;
+                    StorageObservation completionObservation =
+                            observeStorage(paths, allocation, capacityProbe, ProbePhase.COMPLETION);
+                    String storageFinalizationError = completionObservation.error();
+                    if (storageFinalizationError != null && state.equals("PASSED")) {
+                        state = "STORAGE_FINALIZATION_FAILED";
+                        exitCode = 1;
+                        valid = false;
+                    }
+                    List<String> reports = reportInventory(paths);
+                    List<String> artifacts = artifactInventory(paths);
+                    ManifestContext preCompactionContext = new ManifestContext(
+                            allocation, launchCapacity, completionObservation.capacity, null, options.retainEphemeral,
+                            storageFinalizationError, null, sessionIdentity, null, launchObservation.liveProbe,
+                            completionObservation.capacityError, completionObservation.liveProbe);
+                    writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath, commandHash,
+                                                           capability, allowedPhases, sourceAfter, runtimeAfter,
+                                                           reports, artifacts, preCompactionContext, capacityFloor));
+                    CompactionResult compaction = compactTerminalSession(paths, state, options.retainEphemeral, reports,
+                                                                         artifacts, sessionIdentity);
+                    storageFinalizationError =
+                            combineStorageErrors(storageFinalizationError, compactionFailure(compaction));
+                    LogCompressionResult logCompression = compressTerminalLog(paths);
+                    storageFinalizationError = combineStorageErrors(storageFinalizationError, logCompression.error);
+                    if (storageFinalizationError != null && primaryState.equals("PASSED")) {
+                        state = "STORAGE_FINALIZATION_FAILED";
+                        exitCode = 1;
+                        valid = false;
+                    }
+                    ManifestContext terminalContext =
+                            new ManifestContext(allocation, launchCapacity, completionObservation.capacity, compaction,
+                                                options.retainEphemeral, storageFinalizationError, logCompression,
+                                                sessionIdentity, null, launchObservation.liveProbe,
+                                                completionObservation.capacityError, completionObservation.liveProbe);
+                    writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath, commandHash,
+                                                           capability, allowedPhases, sourceAfter, runtimeAfter,
+                                                           reports, artifacts, terminalContext, capacityFloor));
+                    String logRemovalError = removeCompressedLogSource(paths, logCompression);
+                    if (logRemovalError != null) {
+                        storageFinalizationError = combineStorageErrors(storageFinalizationError, logRemovalError);
+                        if (primaryState.equals("PASSED")) {
+                            state = "STORAGE_FINALIZATION_FAILED";
+                            exitCode = 1;
+                            valid = false;
+                        }
+                        terminalContext = new ManifestContext(
+                                allocation, launchCapacity, completionObservation.capacity, compaction,
+                                options.retainEphemeral, storageFinalizationError, logCompression, sessionIdentity,
+                                null, launchObservation.liveProbe, completionObservation.capacityError,
+                                completionObservation.liveProbe);
+                        writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath, commandHash,
+                                                               capability, allowedPhases, sourceAfter, runtimeAfter,
+                                                               reports, artifacts, terminalContext, capacityFloor));
+                    }
+                    if (options.exportFile != null) {
+                        writeExport(options.exportFile, paths.manifest, runId);
+                    }
+                    printEndMarker(paths, runId, exitCode, state, valid, terminalContext);
+                    lease.close();
+                } finally {
+                    shutdown.completeNormalFinalization();
+                }
             }
-            List<String> reports = reportInventory(paths);
-            List<String> artifacts = artifactInventory(paths);
-            ManifestContext preCompactionContext = new ManifestContext(allocation, launchCapacity,
-                    completionObservation.capacity, null, options.retainEphemeral,
-                    storageFinalizationError, null, sessionIdentity, null, launchObservation.liveProbe,
-                    completionObservation.capacityError, completionObservation.liveProbe);
-            writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
-                    commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
-                    reports, artifacts, preCompactionContext,
-                    capacityFloor));
-            CompactionResult compaction = compactTerminalSession(paths, state,
-                    options.retainEphemeral, reports, artifacts, sessionIdentity);
-            storageFinalizationError = combineStorageErrors(storageFinalizationError,
-                    compactionFailure(compaction));
-            LogCompressionResult logCompression = compressTerminalLog(paths);
-            storageFinalizationError = combineStorageErrors(storageFinalizationError,
-                    logCompression.error);
-            if (storageFinalizationError != null && primaryState.equals("PASSED")) {
-                state = "STORAGE_FINALIZATION_FAILED";
-                exitCode = 1;
-                valid = false;
-            }
-            ManifestContext terminalContext = new ManifestContext(allocation, launchCapacity,
-                    completionObservation.capacity, compaction, options.retainEphemeral,
-                    storageFinalizationError, logCompression, sessionIdentity, null, launchObservation.liveProbe,
-                    completionObservation.capacityError, completionObservation.liveProbe);
-            writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
-                    commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
-                    reports, artifacts, terminalContext, capacityFloor));
-            if (options.exportFile != null) {
-                writeExport(options.exportFile, paths.manifest, runId);
-            }
-            printEndMarker(paths, runId, exitCode, state, valid, terminalContext);
-            shutdown.completed = true;
-            lease.close();
         }
-        return interrupted || identityChanged
-                ? (exitCode == 0 ? 1 : exitCode) : exitCode;
+        return interrupted || identityChanged ? (exitCode == 0 ? 1 : exitCode) : exitCode;
     }
 
-    private static int startupFailed(Paths paths, String runId, Path worktree, Path leasePath,
-                                     String commandHash, String capability, String allowedPhases,
-                                     String source, String runtime, StorageAllocation allocation,
-                                     StorageObservation launchObservation, long capacityFloor,
-                                     String reason, Lease lease,
-                                     CapacityProbe capacityProbe,
-                                     SessionDirectoryIdentity sessionIdentity,
-                                     boolean retainEphemeral) throws Exception {
+    private static int startupFailed(Paths paths, String runId, Path worktree, Path leasePath, String commandHash,
+                                     String capability, String allowedPhases, String source, String runtime,
+                                     StorageAllocation allocation, StorageObservation launchObservation,
+                                     long capacityFloor, String reason, Lease lease, CapacityProbe capacityProbe,
+                                     SessionDirectoryIdentity sessionIdentity, boolean retainEphemeral)
+            throws Exception {
         try {
             if (!Files.exists(paths.mavenLog)) {
                 Files.createFile(paths.mavenLog);
             }
-            StorageObservation completionObservation = observeStorage(
-                    paths, allocation, capacityProbe, ProbePhase.COMPLETION);
+            StorageObservation completionObservation =
+                    observeStorage(paths, allocation, capacityProbe, ProbePhase.COMPLETION);
             String storageFinalizationError = completionObservation.error();
             List<String> reports = reportInventory(paths);
             List<String> artifacts = artifactInventory(paths);
@@ -489,6 +509,20 @@ public final class TestSessionCoordinator {
             writeManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
                     leasePath, commandHash, capability, allowedPhases, source, runtime,
                     reports, artifacts, context, capacityFloor));
+            String logRemovalError = removeCompressedLogSource(paths, logCompression);
+            if (logRemovalError != null) {
+                storageFinalizationError = combineStorageErrors(storageFinalizationError,
+                        logRemovalError);
+                context = new ManifestContext(
+                        allocation, launchObservation.capacity, completionObservation.capacity,
+                        compaction, retainEphemeral, storageFinalizationError, logCompression,
+                        sessionIdentity, launchObservation.capacityError,
+                        launchObservation.liveProbe, completionObservation.capacityError,
+                        completionObservation.liveProbe);
+                writeManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
+                        leasePath, commandHash, capability, allowedPhases, source, runtime,
+                        reports, artifacts, context, capacityFloor));
+            }
             printStartMarker(paths, runId, leasePath, context, capacityFloor, "STARTUP_FAILED");
             printEndMarker(paths, runId, 1, "STARTUP_FAILED", false, context);
             System.err.println("OPENGGF_TEST_SESSION_ERROR " + boundedSingleLine(reason)
@@ -2205,7 +2239,6 @@ public final class TestSessionCoordinator {
     private static LogCompressionResult compressTerminalLog(Paths paths) {
         Path compressed = paths.session.resolve("maven.log.gz");
         Path temporary = paths.session.resolve(".maven.log.gz-" + createProbeSuffix() + ".tmp");
-        boolean published = false;
         try {
             if ("1".equals(System.getenv("OPENGGF_TEST_LOG_COMPRESSION_FAIL"))) {
                 throw new IOException("injected log compression failure");
@@ -2227,9 +2260,8 @@ public final class TestSessionCoordinator {
                 channel.force(true);
             }
             Files.move(temporary, compressed, StandardCopyOption.ATOMIC_MOVE);
-            published = true;
-            Files.delete(paths.mavenLog);
-            return new LogCompressionResult(compressed, null);
+            forceDirectory(paths.session);
+            return new LogCompressionResult(compressed, null, true);
         } catch (IOException | RuntimeException e) {
             String error = "terminal log compression failed: " + boundedSingleLine(message(e));
             try {
@@ -2237,7 +2269,30 @@ public final class TestSessionCoordinator {
             } catch (IOException cleanup) {
                 error += "; temporary cleanup failed: " + boundedSingleLine(message(cleanup));
             }
-            return new LogCompressionResult(published ? compressed : paths.mavenLog, error);
+            boolean published = Files.isRegularFile(compressed, LinkOption.NOFOLLOW_LINKS);
+            return new LogCompressionResult(published ? compressed : paths.mavenLog, error, published);
+        }
+    }
+
+    private static String removeCompressedLogSource(Paths paths, LogCompressionResult compression) {
+        if (!compression.published || compression.error != null) {
+            return null;
+        }
+        try {
+            if ("1".equals(System.getenv("OPENGGF_TEST_LOG_SOURCE_DELETE_FAIL"))) {
+                throw new IOException("injected log source removal failure");
+            }
+            Files.delete(paths.mavenLog);
+            forceDirectory(paths.session);
+            return null;
+        } catch (IOException | RuntimeException e) {
+            return "terminal log source removal failed: " + boundedSingleLine(message(e));
+        }
+    }
+
+    private static void forceDirectory(Path directory) throws IOException {
+        try (FileChannel channel = FileChannel.open(directory, StandardOpenOption.READ)) {
+            channel.force(true);
         }
     }
 
@@ -3065,6 +3120,12 @@ public final class TestSessionCoordinator {
     }
 
     private static final class ShutdownState {
+        private enum FinalizationOwner {
+            NONE,
+            NORMAL,
+            SHUTDOWN
+        }
+
         private final Paths paths;
         private final String runId;
         private final Path worktree;
@@ -3084,8 +3145,11 @@ public final class TestSessionCoordinator {
         private final LiveProbeResult launchProbe;
         private final SessionDirectoryIdentity sessionIdentity;
         private final boolean retainEphemeral;
+        private final CountDownLatch outputDrainComplete = new CountDownLatch(1);
+        private final CountDownLatch finalizationComplete = new CountDownLatch(1);
         private volatile Process child;
         private volatile boolean completed;
+        private FinalizationOwner owner = FinalizationOwner.NONE;
 
         private ShutdownState(Paths paths, String runId, Path worktree, Path leasePath,
                               String sourceBefore, String runtimeBefore, List<String> command,
@@ -3116,14 +3180,55 @@ public final class TestSessionCoordinator {
             this.retainEphemeral = retainEphemeral;
         }
 
-        private synchronized void abort() {
-            if (completed) {
+        private synchronized boolean claimNormalFinalization() {
+            if (owner != FinalizationOwner.NONE) {
+                return false;
+            }
+            owner = FinalizationOwner.NORMAL;
+            return true;
+        }
+
+        private void completeNormalFinalization() {
+            synchronized (this) {
+                completed = true;
+            }
+            finalizationComplete.countDown();
+        }
+
+        private void abort() {
+            boolean waitForNormal;
+            synchronized (this) {
+                if (completed) {
+                    return;
+                }
+                waitForNormal = owner == FinalizationOwner.NORMAL;
+                if (owner == FinalizationOwner.NONE) {
+                    owner = FinalizationOwner.SHUTDOWN;
+                } else if (!waitForNormal) {
+                    return;
+                }
+            }
+            if (waitForNormal) {
+                awaitUninterruptibly(finalizationComplete);
                 return;
             }
             Process process = child;
             ProcessTreeResult treeResult = process == null
                     ? new ProcessTreeResult(true, List.of()) : terminateProcessTree(process);
             boolean treeStopped = treeResult.stopped();
+            if (!awaitOutputDrain()) {
+                synchronized (this) {
+                    completed = true;
+                }
+                finalizationComplete.countDown();
+                if (treeStopped) {
+                    try {
+                        lease.close();
+                    } catch (IOException ignored) {
+                    }
+                }
+                return;
+            }
             try {
                 if (!treeStopped) {
                     writeProcessTreeMarker(leasePath.getParent(), runId, treeResult.survivors());
@@ -3151,7 +3256,8 @@ public final class TestSessionCoordinator {
                         retainEphemeral, reports, artifacts, sessionIdentity);
                 storageFinalizationError = combineStorageErrors(storageFinalizationError,
                         compactionFailure(compaction));
-                LogCompressionResult logCompression = compressTerminalLog(paths);
+                LogCompressionResult logCompression = new LogCompressionResult(paths.mavenLog,
+                        "terminal log compression deferred during shutdown", false);
                 storageFinalizationError = combineStorageErrors(storageFinalizationError,
                         logCompression.error);
                 ManifestContext terminalContext = new ManifestContext(
@@ -3171,12 +3277,51 @@ public final class TestSessionCoordinator {
             } catch (Exception e) {
                 e.printStackTrace(System.err);
             } finally {
-                completed = true;
+                synchronized (this) {
+                    completed = true;
+                }
+                finalizationComplete.countDown();
                 if (treeStopped) {
                     try {
                         lease.close();
                     } catch (IOException ignored) {
                     }
+                }
+            }
+        }
+
+        private static void awaitUninterruptibly(CountDownLatch latch) {
+            boolean interrupted = false;
+            for (;;) {
+                try {
+                    latch.await();
+                    break;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        private boolean awaitOutputDrain() {
+            boolean interrupted = false;
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            try {
+                while (System.nanoTime() < deadline) {
+                    try {
+                        if (outputDrainComplete.await(100, TimeUnit.MILLISECONDS)) {
+                            return true;
+                        }
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    }
+                }
+                return false;
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
                 }
             }
         }
