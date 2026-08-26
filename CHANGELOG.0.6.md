@@ -4,6 +4,10 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Live and trace capture can target DaVinci Resolve on Linux:** the capture
+  codec options now include DNxHR SQ video and lossless 24-bit PCM audio for
+  use together in a QuickTime MOV container.
+
 - **Test sessions now preserve headroom by default:** managed allocation fails closed,
   launch/completion capacity is gated, reproducible terminal trees are compacted, and
   the live `maven.log` is atomically published as `maven.log.gz` after completion.

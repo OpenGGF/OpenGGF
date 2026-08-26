@@ -356,11 +356,11 @@ public enum SonicConfiguration {
 	CAPTURE_SCALE,
 	/** Output frame rate for trace capture. */
 	CAPTURE_FPS,
-	/** Trace capture video codec (e.g. "ffv1"). */
+	/** Capture video codec, e.g. "ffv1" or "dnxhr-sq". */
 	CAPTURE_CODEC,
-	/** Capture audio codec: flac (lossless), aac or mp3 (both lossy). */
+	/** Capture audio codec: flac/pcm-s24le (lossless), aac/mp3 (lossy). */
 	CAPTURE_AUDIO_CODEC,
-	/** Output container extension for recordings, e.g. mkv or mp4. */
+	/** Output container extension for recordings, e.g. mkv, mp4 or mov. */
 	CAPTURE_CONTAINER,
 	/** Memory budget in MB for the live-recording encoder queue. */
 	CAPTURE_QUEUE_BUDGET_MB,
