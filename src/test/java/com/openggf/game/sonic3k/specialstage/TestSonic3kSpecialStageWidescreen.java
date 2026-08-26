@@ -176,4 +176,3 @@ class TestSonic3kSpecialStageWidescreen {
         }
     }
 }
-

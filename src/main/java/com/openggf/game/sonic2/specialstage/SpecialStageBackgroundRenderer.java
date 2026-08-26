@@ -423,20 +423,20 @@ public class SpecialStageBackgroundRenderer {
         }
         if (hScrollBuffer != null) {
             HScrollBuffer resource = hScrollBuffer;
-            Throwable before = failure;
-            failure = attempt(failure, resource::cleanup);
-            if (failure == before) hScrollBuffer = null;
+            CleanupAttempt cleanup = attemptCleanup(failure, resource::cleanup);
+            failure = cleanup.failure();
+            if (cleanup.succeeded()) hScrollBuffer = null;
         }
         if (shader != null) {
             ParallaxShaderProgram resource = shader;
-            Throwable before = failure;
-            failure = attempt(failure, resource::cleanup);
-            if (failure == before) shader = null;
+            CleanupAttempt cleanup = attemptCleanup(failure, resource::cleanup);
+            failure = cleanup.failure();
+            if (cleanup.succeeded()) shader = null;
         }
         if (quadRendererOwned) {
-            Throwable before = failure;
-            failure = attempt(failure, quadRenderer::cleanup);
-            if (failure == before) quadRendererOwned = false;
+            CleanupAttempt cleanup = attemptCleanup(failure, quadRenderer::cleanup);
+            failure = cleanup.failure();
+            if (cleanup.succeeded()) quadRendererOwned = false;
         }
         if (fboHandle != null) {
             SpecialStageOwnedFramebuffer resource = fboHandle;
@@ -456,5 +456,17 @@ public class SpecialStageBackgroundRenderer {
     public boolean hasCleanupPendingOwnership() {
         return activeTilePassState != null || hScrollBuffer != null || shader != null
                 || quadRendererOwned || (fboHandle != null && fboHandle.hasPendingOwnership());
+    }
+
+    private record CleanupAttempt(Throwable failure, boolean succeeded) {
+    }
+
+    private static CleanupAttempt attemptCleanup(Throwable failure, Runnable action) {
+        try {
+            action.run();
+            return new CleanupAttempt(failure, true);
+        } catch (RuntimeException | Error nextFailure) {
+            return new CleanupAttempt(attempt(failure, () -> { throw nextFailure; }), false);
+        }
     }
 }

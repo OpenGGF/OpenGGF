@@ -71,8 +71,7 @@ class Sonic1SpecialStageWidescreenPresentationTest {
                 0x10600, 0x10700, 0x10800, 0x10900, 0x10A00, 0x10B00,
                 0x10C00, 0x10D00, 0x10D20, 0x10D40, 0x10D60, 0x10D80,
                 0x10DA0, 0x10E00, 0x10E80);
-    }
-
+}
     @AfterEach
     void tearDown() {
         graphics.cleanup();
@@ -284,4 +283,3 @@ class Sonic1SpecialStageWidescreenPresentationTest {
         private static final int GL_FUNC_ADD = 0x8006;
     }
 }
-

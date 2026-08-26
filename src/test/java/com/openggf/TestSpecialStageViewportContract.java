@@ -233,4 +233,3 @@ class TestSpecialStageViewportContract {
     private record EngineHarness(Engine engine, GameLoop gameLoop) {
     }
 }
-
