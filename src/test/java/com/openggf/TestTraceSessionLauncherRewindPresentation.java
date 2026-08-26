@@ -304,6 +304,35 @@ class TestTraceSessionLauncherRewindPresentation {
                 "Trace rewind must not cross a seamless transition boundary");
     }
 
+    @Test
+    void inFrameTraceBoundaryRecordsCompletedFrameBeforeRerooting() throws Exception {
+        TraceSessionLauncher launcher = newLauncher();
+        RewindController rewindController = new RewindController(
+                new RewindRegistry(),
+                new InMemoryKeyframeStore(),
+                new FakeInputSource(20),
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
+                3,
+                AudioManager.getInstance());
+        for (int i = 0; i < 5; i++) {
+            rewindController.recordExternalStep();
+        }
+        setField(launcher, "rewindController", rewindController);
+
+        launcher.recordExternalRewindFrame(true);
+
+        assertEquals(6, rewindController.currentFrame());
+        assertEquals(6, rewindController.earliestAvailableFrame());
+        assertFalse(rewindController.stepBackward(),
+                "the completed in-frame transition must replace pre-act trace history");
+
+        launcher.recordExternalRewindFrame(false);
+
+        assertTrue(rewindController.stepBackward(),
+                "trace rewind must remain available among post-transition frames");
+        assertEquals(6, rewindController.currentFrame());
+    }
+
     private static TraceSessionLauncher newLauncher() throws Exception {
         Constructor<TraceSessionLauncher> constructor = TraceSessionLauncher.class.getDeclaredConstructor(
                 TraceEntry.class,

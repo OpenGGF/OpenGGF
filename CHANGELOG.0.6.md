@@ -4,6 +4,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Live rewind now stops safely at in-frame act reloads:** transitions such
+  as AIZ's fire-curtain reload record their completed destination frame and
+  re-root rewind history there. Rewinding remains available within AIZ2 but
+  can no longer restore an AIZ1 runtime snapshot into the act-2 registry.
+
 - **Wing Fortress Tornado state now follows ObjB2's retail SST lifecycle:**
   standing status survives the manual solid checkpoint, newly allocated planes
   publish routine 0 until `ObjB2_Init`, and WFZ-end publishes the reused

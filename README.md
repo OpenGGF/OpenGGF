@@ -257,7 +257,10 @@ recorded hardware traces.
   pipeline.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,
   level events, audio history, and relevant static state are captured and
-  restored with explicit ownership rules.
+  restored with explicit ownership rules. Completed in-frame act reloads such
+  as the AIZ fire-curtain transition now re-root history at the destination
+  frame, preventing incompatible cross-act restores while preserving rewind
+  within the new act.
 - **Modern development and validation tools:** level-editor foundations,
   ROM offset and compression tools, headless gameplay tests, BizHawk trace
   replay, visual/audio regression checks, and release/architecture guards.
