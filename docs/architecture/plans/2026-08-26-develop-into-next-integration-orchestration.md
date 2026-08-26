@@ -6,7 +6,7 @@
 
 **Goal:** Produce a locally reviewed `next` integration commit whose first-parent
 line is rooted at frozen `next` `84d9a3761`, whose exact second parent is frozen
-`develop` `e3f390e9f`, and whose measured behavior introduces no regression
+`develop` `a17adaba5`, and whose measured behavior introduces no regression
 relative to either parent.
 
 **Architecture:** Keep one coordinator-owned merge index in the isolated
@@ -25,7 +25,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 ## Global Constraints
 
 - Frozen `next` is `84d9a3761f618035dd1caa40a3d5fc72a1019693`.
-- Frozen `develop` is `e3f390e9fe381b89cc54a2399b5a49843ba044e4`.
+- Frozen `develop` is `a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb`.
 - The merge base is `59e59c8feb5fb5a247ff0ab43da63aeccc742cb0`.
 - The main workspace remains on `develop`; no branch switch is permitted there.
 - The coordinator alone owns the integration worktree's index, staging, merge,
@@ -163,15 +163,15 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 - [ ] **Step 6: Run existing coordinator harnesses**
 
   From the detached harness worktree at exact
-  `e3f390e9fe381b89cc54a2399b5a49843ba044e4`, byte-authenticate both frozen
+  `a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb`, byte-authenticate both frozen
   Java sources against their Git blobs before compilation, then run the
   process harness and compiled coordinator self-test from managed scratch:
 
   ```bash
   cmp -s tools/testing/TestSessionCoordinator.java \
-    <(git show e3f390e9fe381b89cc54a2399b5a49843ba044e4:tools/testing/TestSessionCoordinator.java)
+    <(git show a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb:tools/testing/TestSessionCoordinator.java)
   cmp -s tools/testing/TestSessionCoordinatorSelfTest.java \
-    <(git show e3f390e9fe381b89cc54a2399b5a49843ba044e4:tools/testing/TestSessionCoordinatorSelfTest.java)
+    <(git show a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb:tools/testing/TestSessionCoordinatorSelfTest.java)
   OPENGGF_PROCESS_HARNESS_ROOT="$(agent-scratch new frozen-develop-process-harness)"
   OPENGGF_COORDINATOR_CLASSES="$(agent-scratch new frozen-develop-coordinator-classes)"
   OPENGGF_COORDINATOR_SELF_TEST_ROOT="$(agent-scratch new frozen-develop-coordinator-self-test)"
@@ -498,6 +498,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 ### Task 1C: Re-pin the Reconciled and Pushed Develop Snapshot
 
+Historical provisional snapshot only. Its unfinished parent-evidence and ledger
+steps are superseded by Task 1D against the official scope freeze.
+
 **Files:**
 
 - Modify: `tools/testing/test-frozen-next-session-adapter.sh`
@@ -507,7 +510,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 - Consumes: historical pin `97bc177ee`, reconciled and pushed snapshot
   `e3f390e9f`, and the independently green Task 1A/1B adapter.
 - Produces: the unchanged authenticated adapter contract pinned to the exact
-  merge second parent.
+  then-provisional planned merge parent.
 
 - [x] **Step 1: Prove harness bytes and merge shape are unchanged**
 
@@ -541,6 +544,55 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   `README.md`, `docs/status/known-discrepancies.md`,
   `Sonic3kCoordFlagHandler.java`, and `TestSonic3kAIZEvents.java` against the
   `97bc177ee..e3f390e9f` source delta.
+
+---
+
+### Task 1D: Re-pin the Official 0.6 Scope Freeze
+
+**Files:**
+
+- Modify: `tools/testing/test-frozen-next-session-adapter.sh`
+
+**Interfaces:**
+
+- Consumes: provisional snapshot `e3f390e9f`, official pushed scope freeze
+  `a17adaba5`, and the independently green adapter/inventory tooling.
+- Produces: the unchanged authenticated adapter contract pinned to the exact
+  official merge second parent.
+
+- [x] **Step 1: Prove prerequisite bytes and merge shape are unchanged**
+
+  Require an empty `e3f390e9f..a17adaba5` diff for the wrapper, coordinator,
+  coordinator self-test, process harness, hook paths, `.mvn`, and `pom.xml`.
+  Record the four-commit, 11-path scope-freeze delta. A fresh recursive merge
+  simulation must retain the exact 77-path planning conflict set.
+
+- [x] **Step 2: Update only the exact harness pin**
+
+  Change the adapter self-test's frozen harness constant from
+  `e3f390e9fe381b89cc54a2399b5a49843ba044e4` to
+  `a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb`. Do not weaken authentication,
+  admission, cleanup, or source-identity checks.
+
+- [x] **Step 3: Repeat the complete adapter matrix**
+
+  Run `tools/testing/test-frozen-next-session-adapter.sh`. Require exit 0,
+  including the real authenticated/admissible frozen-next proof and every
+  deliberate failure-path fixture.
+
+- [ ] **Step 4: Repeat official parent evidence and review**
+
+  Repeat the pinned process/coordinator harnesses, both parent ordinary/guard
+  evidence sets, and independent review. Regenerate the 2,376-class union map.
+  Include `TestSonic2ZoneFeatureProvider` and `TestShaderLoader` in focused
+  scope-freeze preservation coverage.
+
+- [ ] **Step 5: Renew affected merge review**
+
+  Re-review the existing `README.md` conflict row against the official freeze,
+  semantically review the automatically merged 0.6 release-scope documents,
+  and preserve the CPZ2 waterline offset plus both priority-shader viewport
+  calculations in the final merge.
 
 ---
 
@@ -754,22 +806,22 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   ```text
   next == origin/next == 84d9a3761f618035dd1caa40a3d5fc72a1019693
-  develop == origin/develop == e3f390e9fe381b89cc54a2399b5a49843ba044e4
+  develop == origin/develop == a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb
   ```
 
   Freeze detached baseline worktrees at these exact hashes. At every later
-  gate, require `next == origin/next == 84d9a3761` and require `e3f390e9f` to
+  gate, require `next == origin/next == 84d9a3761` and require `a17adaba5` to
   remain an ancestor of both current develop refs. Also require clean main and
   integration worktrees. Target drift or loss of snapshot ancestry requires an
   amendment. Record every later develop descendant as a follow-up source-line
   delta without refreezing or rebaselining this merge; keep the detached parent
-  baseline at `e3f390e9f`. Non-linear post-snapshot descendants do not block
+  baseline at `a17adaba5`. Non-linear post-snapshot descendants do not block
   detached baseline work, but must be reconciled into one pushed develop tip
   and verified separately before final delivery.
   Evidence captured against `f1b82774d` is historical and must not be reused as
-  the `e3f390e9f` develop parent baseline. All evidence captured at
-  `97bc177ee` is historical. Frozen-next evidence must also be
-  repeated through the Task 1C harness pin even though the authenticated
+  the `a17adaba5` develop parent baseline. All evidence captured at
+  `97bc177ee` or `e3f390e9f` is historical. Frozen-next evidence must also be
+  repeated through the Task 1D harness pin even though the authenticated
   wrapper/coordinator bytes are unchanged.
 
 - [ ] **Step 2: Create managed scratch and detached baseline worktrees**
@@ -802,9 +854,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   In the detached frozen-develop harness worktree, byte-compare the wrapper and
   coordinator source with
-  `git show e3f390e9fe381b89cc54a2399b5a49843ba044e4:tools/testing/test-session.sh`
+  `git show a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb:tools/testing/test-session.sh`
   and
-  `git show e3f390e9fe381b89cc54a2399b5a49843ba044e4:tools/testing/TestSessionCoordinator.java`,
+  `git show a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb:tools/testing/TestSessionCoordinator.java`,
   then hash them together with the launcher, exclude, and adapter. Run the coordinator harness
   and the repaired Task 1/1A self-test, including
   wrong-wrapper/wrong-coordinator rejection, private bind-mount isolation,
@@ -959,7 +1011,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Verify the four frozen refs again. Run:
 
   ```bash
-  git merge --no-ff --no-commit e3f390e9fe381b89cc54a2399b5a49843ba044e4
+  git merge --no-ff --no-commit a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb
   ```
 
   Expected: conflicts; do not commit or abort.
@@ -1301,7 +1353,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Immediately before commit, require `MERGE_HEAD` equals frozen develop and the
   current first parent descends by uninterrupted first-parent history from
   frozen next. Commit the merge without bypassing hooks. Record the resulting
-  parents and ensure the second parent is exactly `e3f390e9f`.
+  parents and ensure the second parent is exactly `a17adaba5`.
 
 - [ ] **Step 5: Rerun focused selectors on the committed merge**
 
@@ -1431,61 +1483,31 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 ---
 
-### Task 12A: Reconcile Post-Snapshot Develop Descendants
+### Task 12A: Record the Official Scope-Freeze Reconciliation
 
-**Files:**
+This is completed source-history context, not a later delivery step. Local
+scope-freeze tip `75f64e53c` and remote CPZ2 tip `ed9f55941`, both descending
+from provisional snapshot `e3f390e9f`, were reconciled by merge
+`a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb`. Local `develop` and
+`origin/develop` are clean and equal at that pushed commit. The merge includes
+the policy-required `README.md` scope summary.
 
-- Main workspace `develop`; no integration-parent or baseline mutation.
-- Modify: `README.md` with the merge-policy-required concise release/change-log
-  summary for this post-snapshot reconciliation.
-- Update the final validation artifact with the follow-up evidence.
+- [x] **Step 1: Verify official topology**
 
-**Interfaces:**
+  Record both parents, the four-commit/11-path `e3f390e9f..a17adaba5` delta,
+  pushed-ref equality, and `e3f390e9f` ancestry.
 
-- Consumes: frozen snapshot `e3f390e9f`, local descendant
-  `75f64e53c379e4ac65fdde1d3c37fc2f52701711`, fetched remote descendant
-  `ed9f55941343093e226b5ad55d80ece7a9417267`, and the completed integration
-  evidence.
-- Produces: one tested and pushed `develop` follow-up tip that still contains
-  `e3f390e9f`; it is not substituted as this integration merge's second parent.
+- [x] **Step 2: Promote the official freeze to the integration parent**
 
-- [ ] **Step 1: Fetch, classify, and protect the main workspace**
+  Replace the provisional parent everywhere normative with `a17adaba5`; keep
+  the earlier chronology and evidence explicitly historical.
 
-  In the clean main workspace on `develop`, fetch origin and resolve the exact
-  local and remote tips. Require both to contain `e3f390e9f`; never switch the
-  main workspace, rewrite history, discard user changes, or force-push.
+- [ ] **Step 3: Certify the official freeze for this integration**
 
-- [ ] **Step 2: Record the updated-origin baseline**
-
-  In a detached worktree at the exact fetched `origin/develop`, run the ordinary
-  full suite, fresh `-Pguards` suite, and focused tests covering the descendant
-  changes through quiet `tools/testing/test-session.sh` sessions. Record exact
-  failures, errors, markers, manifests, and logs as the comparison baseline.
-
-- [ ] **Step 3: Merge the exact fetched source tip**
-
-  Merge the fetched `origin/develop` commit into clean main-workspace `develop`
-  without switching branches or bypassing hooks. Reconcile conflicts narrowly;
-  before committing, stage a concise `README.md` release/change-log summary as
-  required by the non-master-into-develop merge policy. Keep this commit outside
-  the frozen integration branch's second-parent and parent-baseline identities.
-
-- [ ] **Step 4: Verify no follow-up regression**
-
-  Run the same ordinary full suite and fresh guards on the reconciled main tip,
-  plus the relevant focused tests for both descendant lines. Compare against
-  the updated-origin baseline: no baseline pass may become red, and no baseline
-  failure may worsen or change due to the reconciliation. Classify the staged
-  README delta as intentional reconciliation-only documentation and record it
-  in the final validation evidence.
-
-- [ ] **Step 5: Push and verify the follow-up source tip**
-
-  Push only main-workspace `develop`, fetch again, and require local develop and
-  `origin/develop` to equal the exact reconciliation commit with `e3f390e9f` as
-  an ancestor. Record the pushed commit and all verification evidence. Do not
-  change the frozen integration parent or rerun its parent baselines solely
-  because this follow-up tip exists.
+  No standalone pre-reconciliation baseline is claimed here. Task 1D and Task 3
+  repeat the adapter, focused delta coverage, ordinary suite, guards, and full
+  inventory directly against official `a17adaba5`; that fresh evidence is the
+  only parent certification used by this integration.
 
 ---
 
@@ -1529,7 +1551,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 - [ ] **Step 4: Verify final drift and topology**
 
   Fetch origin and require `next`/`origin/next` still equal the frozen target.
-  Verify the merge second parent is exact frozen snapshot `e3f390e9f`, both
+  Verify the merge second parent is exact frozen snapshot `a17adaba5`, both
   current develop refs retain that commit as an ancestor, first-parent ancestry
   reaches frozen next, the branch is clean, and `next` itself is unchanged.
   Record newer develop descendants as later follow-up source-line deltas; do

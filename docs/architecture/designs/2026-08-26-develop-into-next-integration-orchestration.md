@@ -18,13 +18,13 @@ exercise and must not use blanket `ours`, `theirs`, or fitted trace behavior.
 
 ## Frozen starting evidence
 
-The design was approved against these fetched local tips, last verified at the
-start of the 2026-08-26 integration session:
+The current official scope-freeze amendment is verified against these fetched
+local tips:
 
 - `next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
 - `origin/next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
-- committed local `develop`: `e3f390e9fe381b89cc54a2399b5a49843ba044e4`
-- `origin/develop`: `e3f390e9fe381b89cc54a2399b5a49843ba044e4`
+- committed local `develop`: `a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb`
+- `origin/develop`: `a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb`
 - merge base: `59e59c8feb5fb5a247ff0ab43da63aeccc742cb0`
 
 Local `develop` is clean and matches the fetched remote-tracking tip. The
@@ -51,24 +51,24 @@ tip is seven commits and 28 changed paths beyond `97bc177ee`. Its wrapper,
 coordinator, self-test, hook, Maven, and adapter prerequisite bytes are
 unchanged; a fresh recursive merge simulation still reports exactly 77
 conflict paths. Evidence captured at `97bc177ee` is nevertheless historical.
-The adapter pin, both parent baselines, union inventory, and the four affected
-conflict-ledger rows must be repeated against `e3f390e9f`. This pushed commit is
-the immutable merge snapshot; later `develop` descendants are follow-up
-fast-forward deltas on the source line and do not change this merge's exact
-second parent or imply that `next` itself can fast-forward to them.
+The adapter pin and matrix were provisionally repeated against `e3f390e9f`,
+while its incomplete parent-baseline, union, and ledger work is historical and
+superseded by the official scope freeze below.
 
-After that snapshot was frozen, the 2026-08-26 source refs advanced on separate
-lines from common ancestor `e3f390e9f`: local `develop` reached
+After that provisional snapshot was frozen, the 2026-08-26 source refs advanced
+on separate lines from common ancestor `e3f390e9f`: local `develop` reached
 `75f64e53c379e4ac65fdde1d3c37fc2f52701711` through the 0.6 scope-freeze
 documentation merge (two local-only commits), while `origin/develop` reached
 `ed9f55941343093e226b5ad55d80ece7a9417267` through the S2 CPZ2 water-palette
-fix (one remote-only commit). These descendants are outside the frozen merge
-snapshot and its parent baselines. Their reconciliation is a separately tested
-and pushed source-line follow-up before final delivery; it does not alter the
-exact `e3f390e9f` second parent.
+fix (one remote-only commit). Merge `a17adaba5` reconciled those lines and was
+pushed as the official 0.6 scope freeze. The official snapshot is four commits
+and 11 changed paths beyond provisional `e3f390e9f`, with unchanged harness
+prerequisites and conflict-path set. Evidence at `e3f390e9f` is historical;
+the adapter and both parent baselines repeat against `a17adaba5`, which is now
+the exact integration second parent.
 
-From the merge base, `next` and `develop` have 611 and 1,879 unique commits
-respectively. They changed 2,324 and 1,950 files, with 232 paths touched by both
+From the merge base, `next` and `develop` have 611 and 1,883 unique commits
+respectively. They changed 2,324 and 1,953 files, with 232 paths touched by both
 sides. An isolated recursive merge simulation at the final pre-baseline
 integration head reports 77 conflicts: 49 production files, 17 test or guard
 files, and 11 build, policy, tooling, or documentation files. The additional
@@ -148,7 +148,7 @@ from `next`. The integration branch already contains the approved design and
 planning commits above frozen `next`; therefore the merge commit's exact first
 parent is the final pre-merge integration-branch commit, whose uninterrupted
 first-parent ancestry reaches frozen `next` `84d9a3761`. Its exact second parent
-is frozen `develop` `e3f390e9f`. This keeps the 0.7 development line legible
+is frozen `develop` `a17adaba5`. This keeps the 0.7 development line legible
 while recording all of `develop` as ancestry. A single coordinating agent owns
 the merge index because Git cannot safely compose independent partial
 resolutions of one conflicted index.
@@ -295,12 +295,12 @@ unprivileged adapter can prove its absence. The authenticated private PID
 namespace is the bounded ownership boundary for cleanup.
 
 The orchestrator invokes the pinned launcher with expected harness commit
-`e3f390e9f`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
+`a17adaba5`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
 an immutable detached worktree at that exact commit. Before launch, the
 launcher asserts the harness worktree's detached clean identity and byte-checks
 `tools/testing/test-session.sh` and
 `tools/testing/TestSessionCoordinator.java` against their corresponding blobs
-from `git show e3f390e9fe381b89cc54a2399b5a49843ba044e4`; a wrapper or coordinator
+from `git show a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb`; a wrapper or coordinator
 outside that worktree, at another commit, or with different bytes is rejected. It then
 starts the coordinator with `OPENGGF_RUNTIME_INPUTS` already containing the
 launcher, exclude file, adapter, wrapper, and coordinator-source paths. The
@@ -490,12 +490,12 @@ lacks its start/end markers.
 
 Before implementation and again before human review, the coordinator fetches
 and verifies `next` and `origin/next` against the frozen target hash, and
-verifies that both `develop` refs still contain frozen snapshot `e3f390e9f`.
+verifies that both `develop` refs still contain frozen snapshot `a17adaba5`.
 Target drift or loss of snapshot ancestry pauses promotion and requires a
 reviewed amendment. Any later source-line descendants, whether currently
 linear or awaiting their own reconciliation merge, are recorded as follow-up
 deltas; they do not refreeze or invalidate this integration snapshot, and the
-parent baseline remains detached at `e3f390e9f`. Before final delivery, those
+parent baseline remains detached at `a17adaba5`. Before final delivery, those
 descendants must be reconciled into one pushed source tip without rewriting
 history, but that follow-up reconciliation is verified separately rather than
 silently changing this merge's second parent. A later target update is
@@ -512,7 +512,7 @@ never a forced rewrite inferred by the agent.
 Record exact, wrapper-produced ordinary and structural-guard sessions for both
 frozen parents in immutable detached worktrees. `develop` uses its in-tree
 wrapper and `-Pguards` profile. Frozen `next` runs the wrapper and coordinator
-from frozen `develop` `e3f390e9f` by absolute path while its process working
+from frozen `develop` `a17adaba5` by absolute path while its process working
 directory remains the detached `next` worktree and the compatibility adapter
 routes every output into that coordinator session. Because frozen `next` has
 no `guards` Maven profile, generate its explicit fresh-JVM guard selector from
@@ -652,7 +652,7 @@ The integration is ready for human review only when:
 
 1. The integration merge commit's first parent is the reviewed pre-merge
    integration-branch commit rooted at frozen `next` `84d9a3761`, and its exact
-   second parent is frozen committed `develop` `e3f390e9f`.
+   second parent is frozen committed `develop` `a17adaba5`.
 2. No conflict markers, unresolved index entries, unintended generated output,
    or executable disassembly dependency remains.
 3. Every conflict decision is traceable to parent behavior, current ownership,
@@ -676,7 +676,7 @@ The integration is ready for human review only when:
 ## Assumptions and risks
 
 - Local and fetched remote-tracking refs agree on frozen `next` and pushed
-  snapshot `e3f390e9f`. Target drift or loss of source-snapshot ancestry before
+  snapshot `a17adaba5`. Target drift or loss of source-snapshot ancestry before
   merge or promotion triggers the amendment and review process. A later
   `develop` descendant is recorded as a follow-up source-line delta instead of
   being silently absorbed into this merge; divergent post-snapshot descendant

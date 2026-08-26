@@ -211,7 +211,7 @@ adapter="$script_dir/frozen-next-session-adapter.sh"
 fake_maven="$script_dir/test-frozen-next-session-adapter.sh"
 exclude="$script_dir/frozen-next-session.exclude"
 frozen_next="84d9a3761f618035dd1caa40a3d5fc72a1019693"
-frozen_harness="e3f390e9fe381b89cc54a2399b5a49843ba044e4"
+frozen_harness="a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb"
 
 fail() {
     printf 'FAIL: %s\n' "$*" >&2
