@@ -4,6 +4,10 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Aquatic Ruin's Robotnik hit flash no longer flashes Sonic:** the Act 2
+  boss now alternates color 1 on the ROM's second palette line, preserving the
+  ship and pillar effect without modifying Sonic's first-line palette.
+
 - **Water palettes now meet the water surface on sprites as well as terrain:**
   sprite-priority shaders resolve their logical scanline after removing the
   viewport's letterbox offset, and Sonic 2 no longer moves only the sprite

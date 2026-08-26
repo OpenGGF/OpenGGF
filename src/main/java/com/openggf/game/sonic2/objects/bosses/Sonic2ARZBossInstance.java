@@ -149,7 +149,9 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected int getPaletteLineForFlash() {
-        return 0; // ARZ flashes palette line 0
+        // Obj89_Main_Flash writes Normal_palette_line2+2: color 1 of the
+        // second CRAM line, not Sonic's first line.
+        return 1;
     }
 
     @Override

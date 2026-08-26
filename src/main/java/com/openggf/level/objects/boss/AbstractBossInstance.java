@@ -218,7 +218,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
     /**
      * Get palette line index for flash effect.
-     * Most bosses flash palette line 1, but ARZ flashes palette line 0.
+     * Sonic 2 bosses flash palette line 1 unless their ROM routine says otherwise.
      */
     protected int getPaletteLineForFlash() {
         return 1;
