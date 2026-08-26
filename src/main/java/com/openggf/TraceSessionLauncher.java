@@ -749,7 +749,7 @@ public final class TraceSessionLauncher {
             GameLoop loop, SpecialStageProvider provider, int stageIndex) {
         loop.doEnterSpecialStage(provider, stageIndex, true,
                 SpecialStageStartupPolicy.TRACE_ACCURATE);
-        // Startup observations and external frame pacing are independent contracts.
+        // Compatibility notification only; trace-row scheduling remains authoritative.
         provider.setLagCompensation(0);
     }
 

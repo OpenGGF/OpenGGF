@@ -164,8 +164,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         assertEquals(1.25, (double) get(manager, "alignmentRainbowSpeedScale"), 0.0001);
         assertEquals(0.5, (double) get(manager, "alignmentRainbowSpeedAccumulator"), 0.0001);
         assertEquals(true, get(manager, "alignmentStepByTrackFrame"));
-        assertEquals(0.25, (double) get(manager, "lagCompensation"), 0.0001);
-        assertEquals(true, get(manager, "lagCompensationDisplayEnabled"));
         assertEquals(1_234_567L, get(manager, "diagnosticWallStartTime"));
         assertEquals(8, get(manager, "diagnosticUpdateCount"));
         assertEquals(9, get(manager, "diagnosticTrackAdvances"));
@@ -461,8 +459,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alignmentRainbowSpeedScale", 1.25);
         set(manager, "alignmentRainbowSpeedAccumulator", 0.5);
         set(manager, "alignmentStepByTrackFrame", true);
-        set(manager, "lagCompensation", 0.25);
-        set(manager, "lagCompensationDisplayEnabled", true);
         set(manager, "diagnosticWallStartTime", 1_234_567L);
         set(manager, "diagnosticUpdateCount", 8);
         set(manager, "diagnosticTrackAdvances", 9);
@@ -536,8 +532,6 @@ class TestSonic2SpecialStageRewindSnapshot {
         set(manager, "alignmentRainbowSpeedScale", 9.0);
         set(manager, "alignmentRainbowSpeedAccumulator", 9.0);
         set(manager, "alignmentStepByTrackFrame", false);
-        set(manager, "lagCompensation", 0.5);
-        set(manager, "lagCompensationDisplayEnabled", false);
         set(manager, "diagnosticWallStartTime", 99L);
         set(manager, "diagnosticUpdateCount", 99);
         set(manager, "diagnosticTrackAdvances", 99);

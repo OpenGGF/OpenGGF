@@ -1460,10 +1460,9 @@ public class GameLoop {
             }
             final SpecialStageObservationPacing pacing = installed;
             if (pacing != null) {
-                // The recorded pass stream IS the pacing authority, so the
-                // runtime's own lag model must not also pace it -- the
-                // standalone S2 special-stage harness and the chain harness
-                // both turn it off for exactly this reason.
+                // Retain the compatibility notification for providers that
+                // distinguish externally paced sessions. Recorded pass timing
+                // and lag-row admission remain authoritative here.
                 ssProvider.setLagCompensation(0);
             }
             LevelFrameStep.executeHardwareTimedObjectScan(
@@ -2278,16 +2277,10 @@ public class GameLoop {
         SpecialStageStartupPolicy startupPolicy = defaultSpecialStageStartupPolicy();
         doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy);
         if (startupPolicy == SpecialStageStartupPolicy.TRACE_ACCURATE) {
-            // TraceSessionLauncher#enterSpecialStageTrace pairs its TRACE_ACCURATE
-            // entry with provider.setLagCompensation(0) -- "startup observations
-            // and external frame pacing are independent contracts". A BK2-driven
-            // caller reaching this organic entry path needs the same pairing: the
-            // provider's stateless lag model would insert ADDITIONAL synthetic
-            // skipped frames on top of the real cadence the caller drives,
-            // desyncing object timing from the recorded run. Disabling it here
-            // (before the provider's first post-entry tick; reset() does not
-            // touch this field) is the same force-off switch the standalone SS
-            // trace-replay harnesses already require.
+            // Startup policy and external scheduling admission are independent
+            // contracts. Retain the legacy provider notification for callers
+            // that still implement it; S2's provider intentionally ignores the
+            // scalar because recorded lag rows are admitted at the timing port.
             ssProvider.setLagCompensation(0);
         }
     }

@@ -41,12 +41,35 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 27. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
 28. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
 29. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
+30. [S2 Interactive Special-Stage Hardware Lag Is Not Predicted](#s2-interactive-special-stage-hardware-lag-is-not-predicted)
 
 ---
 
 ## Special-stage Live Rewind Scope
 
 Held live rewind is supported only inside rewind-capable special-stage providers. It does not rewind across the LEVEL -> SPECIAL_STAGE or SPECIAL_STAGE -> results/LEVEL boundaries; those transitions intentionally start fresh rewind timelines.
+
+---
+
+## S2 Interactive Special-Stage Hardware Lag Is Not Predicted
+
+**Location:** `Sonic2SpecialStageProvider.java`, `GameLoop.java`
+**ROM Reference:** `docs/s2disasm/s2.asm` `V_Int`, `Vint_Lag`, `Vint_S2SS`, and `SS_MainLoop`
+
+The shipped game takes `Vint_Lag` when the 68K main loop has not re-armed
+`Vint_routine` before the next VBlank. In a Sonic 2 special stage, that result
+depends on the variable cost of the complete `SS_MainLoop`, the substantial
+`Vint_S2SS` service path, DMA/DPLC work, and hardware contention. OpenGGF does
+not yet model those costs at cycle granularity, so ordinary interactive special
+stages currently execute one update per host tick instead of predicting live
+hardware lag.
+
+The removed alternative selected skipped frames from segment/speed ratios
+regenerated from one Stage 1 trace. Those ratios described that fixture rather
+than the ROM routine and could not generalize to an arbitrary movie. Trace
+replay remains exact through the separate scheduling-only contract: a recorded
+`lag_state.lagged` outcome admits the already-existing `VBlank_Lag` loop and
+supplies no gameplay value or work.
 
 ---
 
