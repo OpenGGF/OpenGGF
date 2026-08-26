@@ -57,7 +57,7 @@ export "$config_key" "$config_value"
 export GIT_CONFIG_COUNT=$((config_count + 1))
 
 recover() {
-    local output=$1 manifest run_id marker recorded_worktree recorded_link recorded_target actual_target
+    local output=$1 manifest run_id marker recorded_worktree recorded_link recorded_target linked actual_target
     manifest=$(printf '%s\n' "$output" | sed -n 's/.*manifest=\([^ ]*\).*/\1/p' | tail -1)
     [[ -n "$manifest" && -f "$manifest" ]] || return 0
     run_id=$(sed -n 's/.*"run_id": "\([^"]*\)".*/\1/p' "$manifest" | head -1)
@@ -70,20 +70,56 @@ recover() {
     [[ "$recorded_worktree" == "$worktree" && "$recorded_link" == "$worktree/target" ]] || return 0
     [[ "$recorded_target" == "$OPENGGF_RECOVERY_BUILD_ROOT" ]] || return 0
     [[ -L "$recorded_link" ]] || return 0
+    linked=$(readlink -- "$recorded_link")
+    [[ "$linked" == "$recorded_target" ]] || return 0
     actual_target=$(readlink -f -- "$recorded_link")
     [[ "$actual_target" == "$recorded_target" ]] || return 0
     unlink -- "$recorded_link"
 }
 
+capture_file=
+wrapper_pid=
+finalized=0
+finalize() {
+    (( finalized == 0 )) || return 0
+    finalized=1
+    local output=
+    if [[ -n "$capture_file" && -f "$capture_file" && ! -L "$capture_file" ]]; then
+        output=$(<"$capture_file")
+        OPENGGF_RECOVERY_BUILD_ROOT=
+        manifest=$(printf '%s\n' "$output" | sed -n 's/.*manifest=\([^ ]*\).*/\1/p' | tail -1)
+        if [[ -n "$manifest" && -f "$manifest" ]]; then
+            OPENGGF_RECOVERY_BUILD_ROOT=$(sed -n 's/.*"build_root": "\([^"]*\)".*/\1/p' "$manifest" | head -1)
+        fi
+        recover "$output" || true
+        printf '%s\n' "$output"
+        unlink -- "$capture_file" || true
+    fi
+}
+on_exit() {
+    local status=$?
+    finalize
+    return "$status"
+}
+on_signal() {
+    local signal=$1 status=$2
+    trap - INT TERM
+    if [[ -n "$wrapper_pid" ]]; then
+        kill -"$signal" "$wrapper_pid" 2>/dev/null || true
+        wait "$wrapper_pid" 2>/dev/null || true
+    fi
+    exit "$status"
+}
+
+capture_file=$(mktemp "${TMPDIR:-/tmp}/openggf-frozen-next-launch.XXXXXX")
+trap on_exit EXIT
+trap 'on_signal INT 130' INT
+trap 'on_signal TERM 143' TERM
 set +e
-output=$(cd "$worktree" && "$wrapper" -- "$adapter" "$@" 2>&1)
+(cd "$worktree" && exec "$wrapper" -- "$adapter" "$@") > "$capture_file" 2>&1 &
+wrapper_pid=$!
+wait "$wrapper_pid"
 status=$?
+wrapper_pid=
 set -e
-OPENGGF_RECOVERY_BUILD_ROOT=
-manifest=$(printf '%s\n' "$output" | sed -n 's/.*manifest=\([^ ]*\).*/\1/p' | tail -1)
-if [[ -n "$manifest" && -f "$manifest" ]]; then
-    OPENGGF_RECOVERY_BUILD_ROOT=$(sed -n 's/.*"build_root": "\([^"]*\)".*/\1/p' "$manifest" | head -1)
-fi
-recover "$output"
-printf '%s\n' "$output"
 exit "$status"

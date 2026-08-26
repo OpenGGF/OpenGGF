@@ -15,6 +15,21 @@ if [[ "${OPENGGF_FAKE_MAVEN:-}" == 1 ]]; then
         kill -KILL "$PPID"
         sleep 2
     fi
+    if [[ " $* " == *' --replace-target-equivalent '* ]]; then
+        target_link="$OPENGGF_TEST_WORKTREE/target"
+        replacement="$OPENGGF_BUILD_DIRECTORY/../build"
+        unlink "$target_link"
+        ln -s -- "$replacement" "$target_link"
+        if [[ " $* " == *' --kill-after-replace '* ]]; then
+            kill -KILL "$PPID"
+            sleep 2
+        fi
+    fi
+    if [[ " $* " == *' --wait-for-launcher-interrupt '* ]]; then
+        printf 'fake_pid=%s\nadapter_pid=%s\nmanifest=%s\n' \
+            "$$" "$PPID" "$OPENGGF_TEST_MANIFEST" > "${OPENGGF_TEST_INTERRUPT_READY:?}"
+        while :; do sleep 1; done
+    fi
     [[ " $* " == *' --fail '* ]] && exit 23
     exit 0
 fi
@@ -31,6 +46,11 @@ frozen_harness="f1b82774d4aeb9585e75bd74e90856e7b67256d7"
 fail() {
     printf 'FAIL: %s\n' "$*" >&2
     exit 1
+}
+review_failures=0
+review_fail() {
+    printf 'EXPECTED RED: %s\n' "$*" >&2
+    review_failures=$((review_failures + 1))
 }
 
 [[ -x "$launcher" ]] || fail "frozen-next-session-launch.sh missing or not executable"
@@ -124,6 +144,87 @@ fi
 [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] || fail "outer recovery left target"
 printf 'PASS: forced child termination outer recovery\n'
 
+# A replacement symlink whose raw payload differs from the adapter-created
+# absolute target must survive even when it resolves to the same build path.
+OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" --replace-target-equivalent
+equivalent_manifest=$(manifest_from_output "$launch_output")
+equivalent_build=$(sed -n 's/.*"build_root": "\([^"]*\)".*/\1/p' "$equivalent_manifest" | head -1)
+equivalent_raw="$equivalent_build/../build"
+if [[ ! -L "$next_tree/target" ]]; then
+    review_fail "normal child/outer cleanup unlinked a same-canonical different-raw target"
+elif [[ "$(readlink -- "$next_tree/target")" != "$equivalent_raw" ]]; then
+    fail "normal cleanup changed the replacement target payload"
+else
+    unlink "$next_tree/target"
+fi
+printf 'PASS: same-canonical different-raw normal cleanup refusal\n'
+
+if OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" --replace-target-equivalent --kill-after-replace; then
+    fail "forced equivalent-target child termination was accepted"
+fi
+equivalent_manifest=$(manifest_from_output "$launch_output")
+equivalent_build=$(sed -n 's/.*"build_root": "\([^"]*\)".*/\1/p' "$equivalent_manifest" | head -1)
+equivalent_raw="$equivalent_build/../build"
+if [[ ! -L "$next_tree/target" ]]; then
+    review_fail "outer recovery unlinked a same-canonical different-raw target"
+elif [[ "$(readlink -- "$next_tree/target")" != "$equivalent_raw" ]]; then
+    fail "outer recovery changed the replacement target payload"
+else
+    unlink "$next_tree/target"
+fi
+printf 'PASS: same-canonical different-raw outer recovery refusal\n'
+
+# Stop the launcher before killing its adapter child so the coordinator can
+# publish a recoverable marker while the launcher remains interrupted.
+interrupt_ready="$test_root/launcher-interrupt-ready.env"
+interrupt_output="$test_root/launcher-interrupt.out"
+interrupt_tmp="$test_root/launcher-tmp"
+mkdir "$interrupt_tmp"
+TMPDIR="$interrupt_tmp" OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_INTERRUPT_READY="$interrupt_ready" \
+    "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
+    --harness-worktree "$harness_tree" --expected-harness-head "$frozen_harness" \
+    --wrapper "$wrapper" --coordinator "$coordinator" --adapter "$adapter" \
+    -- "$fake_maven" --wait-for-launcher-interrupt > "$interrupt_output" 2>&1 &
+launcher_pid=$!
+for _ in {1..200}; do
+    [[ -f "$interrupt_ready" ]] && break
+    sleep 0.05
+done
+[[ -f "$interrupt_ready" ]] || fail "launcher interruption child did not become ready"
+fake_pid=$(sed -n 's/^fake_pid=//p' "$interrupt_ready")
+adapter_pid=$(sed -n 's/^adapter_pid=//p' "$interrupt_ready")
+interrupt_manifest=$(sed -n 's/^manifest=//p' "$interrupt_ready")
+kill -STOP "$launcher_pid"
+kill -KILL "$fake_pid" 2>/dev/null || true
+kill -KILL "$adapter_pid"
+for _ in {1..200}; do
+    [[ -f "$interrupt_manifest" ]] && rg -q '"state": "FAILED"' "$interrupt_manifest" && break
+    sleep 0.05
+done
+[[ -f "$interrupt_manifest" ]] && rg -q '"state": "FAILED"' "$interrupt_manifest" \
+    || fail "launcher interruption coordinator did not finalize the failed child"
+kill -TERM "$launcher_pid"
+kill -CONT "$launcher_pid"
+set +e
+wait "$launcher_pid"
+interrupt_status=$?
+set -e
+(( interrupt_status == 143 )) || fail "interrupted launcher did not preserve TERM status: $interrupt_status"
+if [[ -L "$next_tree/target" ]]; then
+    interrupt_build=$(sed -n 's/.*"build_root": "\([^"]*\)".*/\1/p' "$interrupt_manifest" | head -1)
+    [[ "$(readlink -- "$next_tree/target")" == "$interrupt_build" ]] \
+        || fail "launcher interruption left an unexpected target payload"
+    unlink "$next_tree/target"
+    review_fail "launcher interruption skipped outer recovery"
+elif [[ -e "$next_tree/target" ]]; then
+    fail "launcher interruption replaced target with a non-symlink"
+fi
+shopt -s nullglob
+interrupt_captures=("$interrupt_tmp"/*)
+shopt -u nullglob
+(( ${#interrupt_captures[@]} == 0 )) || fail "launcher interruption retained its private capture"
+printf 'PASS: interrupted launcher outer recovery\n'
+
 mutation_input="$test_root/runtime-input"
 cp "$exclude" "$mutation_input"
 if OPENGGF_RUNTIME_INPUTS="$mutation_input" OPENGGF_TEST_MUTATION_INPUT="$mutation_input" \
@@ -144,6 +245,33 @@ rg -F 'clean is forbidden for the frozen adapter' "$(dirname -- "$clean_manifest
     || fail "clean rejection did not identify the forbidden lifecycle in the session log"
 [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] || fail "clean rejection left target"
 printf 'PASS: clean lifecycle rejection\n'
+
+for clean_goal in clean:clean org.apache.maven.plugins:maven-clean-plugin:3.2.0:clean; do
+    if OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" "$clean_goal"; then
+        review_fail "accepted Maven clean invocation: $clean_goal"
+        continue
+    fi
+    alternate_clean_manifest=$(manifest_from_output "$launch_output")
+    if [[ ! -f "$alternate_clean_manifest" ]] || \
+        ! rg -F 'clean is forbidden for the frozen adapter' \
+            "$(dirname -- "$alternate_clean_manifest")/maven.log" >/dev/null; then
+        review_fail "did not identify forbidden Maven clean invocation: $clean_goal"
+    fi
+done
+printf 'PASS: alternate Maven clean goal rejection\n'
+
+if OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" \
+    '-Dsurefire.argLine=-Dorg.lwjgl.system.SharedLibraryExtractPath=/attacker'; then
+    review_fail "accepted a caller-supplied surefire.argLine override"
+else
+    override_manifest=$(manifest_from_output "$launch_output")
+    if [[ ! -f "$override_manifest" ]] || \
+        ! rg -F 'caller surefire.argLine is forbidden' \
+            "$(dirname -- "$override_manifest")/maven.log" >/dev/null; then
+        review_fail "surefire.argLine override was not rejected by the adapter"
+    fi
+fi
+printf 'PASS: caller surefire.argLine override rejection\n'
 
 if "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
     --harness-worktree "$harness_tree" --expected-harness-head deadbeef \
@@ -175,5 +303,7 @@ git -C "$next_tree" symbolic-ref -q HEAD >/dev/null && fail "final frozen next H
 [[ -z "$(git -C "$next_tree" status --porcelain --untracked-files=all)" ]] \
     || fail "final frozen next source inventory is dirty"
 [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] || fail "final frozen next target remains"
+
+(( review_failures == 0 )) || fail "$review_failures review regression case(s) remain"
 
 printf 'PASS: frozen-next session adapter safety checks\n'

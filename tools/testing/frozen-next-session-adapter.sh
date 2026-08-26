@@ -11,7 +11,12 @@ xml_property() {
 }
 
 (( $# > 0 )) || die "Maven command required"
-for argument in "$@"; do [[ "$argument" != clean ]] || die "clean is forbidden for the frozen adapter"; done
+for argument in "$@"; do
+    case "$argument" in
+        clean|clean@*|*:clean|*:clean@*) die "clean is forbidden for the frozen adapter" ;;
+    esac
+    [[ "$argument" != *surefire.argLine* ]] || die "caller surefire.argLine is forbidden"
+done
 worktree=$(canonical_dir "${OPENGGF_TEST_WORKTREE:-}")
 [[ "$(git -C "$worktree" rev-parse HEAD)" == 84d9a3761f618035dd1caa40a3d5fc72a1019693 ]] \
     || die "unexpected frozen-next HEAD"
@@ -50,15 +55,17 @@ marker="$diagnostics/frozen-next-session-recovery.env"
 [[ ! -e "$marker" && ! -L "$marker" ]] || die "recovery marker already exists"
 
 cleanup() {
-    local linked
+    local linked canonical
     [[ -f "$marker" && ! -L "$marker" ]] || return 0
     [[ "$(sed -n 's/^run_id=//p' "$marker")" == "$OPENGGF_TEST_RUN_ID" ]] || return 0
     [[ "$(sed -n 's/^worktree=//p' "$marker")" == "$worktree" ]] || return 0
     [[ "$(sed -n 's/^target_link=//p' "$marker")" == "$target_link" ]] || return 0
     [[ "$(sed -n 's/^target=//p' "$marker")" == "$build" ]] || return 0
     [[ -L "$target_link" ]] || return 0
-    linked=$(readlink -f -- "$target_link")
+    linked=$(readlink -- "$target_link")
     [[ "$linked" == "$build" ]] || return 0
+    canonical=$(readlink -f -- "$target_link")
+    [[ "$canonical" == "$build" ]] || return 0
     unlink -- "$target_link"
 }
 trap cleanup EXIT INT TERM
