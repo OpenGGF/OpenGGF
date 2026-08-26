@@ -77,7 +77,9 @@ void main()
             indexedColor = texture(UnderwaterPalette, vec2(paletteX, paletteY));
         } else {
             // Waterline on screen - check per-pixel
-            float normalizedY = 1.0 - (gl_FragCoord.y / WindowHeight);
+            // gl_FragCoord is in window coordinates, so remove the viewport's
+            // letterbox offset before converting to a logical game scanline.
+            float normalizedY = 1.0 - ((gl_FragCoord.y - ViewportOffset.y) / WindowHeight);
             float pixelYFromTop = normalizedY * ScreenHeight;
             if (pixelYFromTop >= WaterlineScreenY) {
                 indexedColor = texture(UnderwaterPalette, vec2(paletteX, paletteY));

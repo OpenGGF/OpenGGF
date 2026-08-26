@@ -237,6 +237,9 @@ traces.
 - **Sonic 2 CNZ slot-machine parity:** Casino Night now runs its zone-global
   slot routine in the retail post-object order with ROM-accurate word
   arithmetic; both release traces match every compared row exactly.
+- **Sonic 2 water-palette alignment:** sprite-priority shaders now resolve
+  logical scanlines after removing viewport letterboxing, keeping characters,
+  objects, terrain, and backgrounds aligned at dynamic waterlines such as CPZ2.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
