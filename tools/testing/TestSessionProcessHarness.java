@@ -6,12 +6,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -57,6 +59,7 @@ public final class TestSessionProcessHarness {
         private final Path outputRoot;
         private final Path managedRoot;
         private final Path managedAllocation;
+        private final Path managedLeaseRoot;
         private final Path externalLockRoot;
         private final Path sessionScript;
         private final boolean windows;
@@ -71,6 +74,7 @@ public final class TestSessionProcessHarness {
             this.managedRoot = root.resolve("managed-root");
             this.managedAllocation = managedRoot.resolve(
                     "codex/test-sessions/session-btrfs-shaped");
+            this.managedLeaseRoot = managedRoot.resolve("codex/test-session-locks");
             this.externalLockRoot = root.resolve("external-lock-root");
             this.windows = System.getProperty("os.name", "").toLowerCase().contains("win");
             this.sessionScript = baseRepo.resolve("tools/testing/")
@@ -180,6 +184,7 @@ public final class TestSessionProcessHarness {
 
         private void writeBtrfsShapedAgentScratch() throws IOException {
             Files.createDirectories(managedAllocation);
+            Files.createDirectories(managedLeaseRoot);
             long device = ((Number) Files.getAttribute(
                     managedAllocation, "unix:dev")).longValue();
             var store = Files.getFileStore(managedAllocation);
@@ -188,6 +193,7 @@ public final class TestSessionProcessHarness {
                     + "\"storage_tier\":\"MANAGED_CODEX_TEST_SESSIONS\","
                     + "\"managed_root\":\"" + jsonEscape(managedRoot.toString()) + "\","
                     + "\"allocation_path\":\"" + jsonEscape(managedAllocation.toString()) + "\","
+                    + "\"lease_root\":\"" + jsonEscape(managedLeaseRoot.toString()) + "\","
                     + "\"filesystem_device\":" + device + ","
                     + "\"usable_bytes\":" + store.getUsableSpace() + ","
                     + "\"total_bytes\":" + store.getTotalSpace() + ","
@@ -236,14 +242,25 @@ public final class TestSessionProcessHarness {
             if (windows) {
                 return;
             }
-            SessionProcess process = start(baseRepo, "managed-dynamic-inodes", externalLockRoot,
-                    null, null, List.of(), null, Map.of(
-                            "OPENGGF_TEST_ROOT", "",
-                            "AGENT_SCRATCH_ROOT", managedRoot.toString(),
-                            "OGGF_SCRATCH_ROOT", managedRoot.toString()));
-            Path manifest = process.awaitManifest();
-            check(process.finish() == 0,
-                    "Btrfs-shaped managed reservation must reach fake Maven:\n" + process.output());
+            Path gitCommon = baseRepo.resolve(".git");
+            Set<PosixFilePermission> originalPermissions = Files.getPosixFilePermissions(gitCommon);
+            SessionProcess process;
+            Path manifest;
+            try {
+                Files.setPosixFilePermissions(gitCommon, Set.of(
+                        PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_EXECUTE));
+                process = start(baseRepo, "managed-dynamic-inodes", null,
+                        null, null, List.of(), null, Map.of(
+                                "OPENGGF_TEST_ROOT", "",
+                                "AGENT_SCRATCH_ROOT", managedRoot.toString(),
+                                "OGGF_SCRATCH_ROOT", managedRoot.toString()));
+                manifest = process.awaitManifest();
+                check(process.finish() == 0,
+                        "Btrfs-shaped managed reservation must reach fake Maven:\n"
+                                + process.output());
+            } finally {
+                Files.setPosixFilePermissions(gitCommon, originalPermissions);
+            }
             check(Files.exists(root.resolve("markers/managed-dynamic-inodes.txt")),
                     "Btrfs-shaped managed reservation did not start fake Maven");
             String json = Files.readString(manifest, StandardCharsets.UTF_8);
@@ -253,6 +270,11 @@ public final class TestSessionProcessHarness {
                     "managed process manifest fabricated dynamic inode count");
             check(json.contains("\"launch_inode_probe_status\": \"AVAILABLE\""),
                     "managed process launch did not use the live probe");
+            Path lease = Path.of(jsonString(manifest, "lease_path"));
+            check(lease.getParent().getParent().equals(managedLeaseRoot),
+                    "managed process lease metadata escaped the verified lease root: " + lease);
+            check(Files.isRegularFile(lease.getParent().resolve("owner.json")),
+                    "managed process lease namespace lost owner metadata");
         }
 
         private void capacityRefusalPreventsLaunch() throws Exception {
@@ -549,7 +571,9 @@ public final class TestSessionProcessHarness {
                 command.add("-File");
             }
             command.add(sessionScript.toString());
-            command.addAll(List.of("--lock-root", lockRoot.toString()));
+            if (lockRoot != null) {
+                command.addAll(List.of("--lock-root", lockRoot.toString()));
+            }
             List<String> childOptions = new ArrayList<>();
             for (String option : options) {
                 if (option.equals("--retain-ephemeral") || option.equals("-RetainEphemeral")) {

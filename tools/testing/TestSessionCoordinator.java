@@ -73,8 +73,8 @@ public final class TestSessionCoordinator {
             "tmp", "build/test-classes/traces");
     private static final Set<String> RESERVATION_FIELDS = Set.of(
             "schema_version", "storage_tier", "managed_root", "allocation_path",
-            "filesystem_device", "usable_bytes", "total_bytes", "inode_count_status",
-            "usable_inodes",
+            "lease_root", "filesystem_device", "usable_bytes", "total_bytes",
+            "inode_count_status", "usable_inodes",
             "retention_deadline", "helper_version");
 
     private enum StorageTier {
@@ -113,6 +113,7 @@ public final class TestSessionCoordinator {
 
     private record StorageAllocation(
             Path outputRoot, StorageTier tier, Path managedRoot,
+            Path managedLeaseRoot,
             int allocationSchema, String helperVersion, String filesystemDevice,
             CapacitySnapshot allocationCapacity, InodeSnapshot allocationInodes,
             Instant retentionDeadline,
@@ -258,9 +259,10 @@ public final class TestSessionCoordinator {
             System.err.println(allocation.warning);
         }
         Files.createDirectories(outputRoot);
-        Path lockParent = resolveLockParent(worktree, options.lockRoot);
+        Path lockParent = resolveLockParent(worktree, options.lockRoot, allocation);
         String runId = createRunId();
-        Path namespace = namespace(lockParent, worktree, externalLockRequested(options));
+        Path namespace = namespace(lockParent, worktree,
+                externalLockRequested(options, allocation));
         if (options.reuseStale && Files.isDirectory(namespace)) {
             int reclaimResult = reclaimStaleLease(namespace.resolve("lease.lock"));
             if (reclaimResult != 0 && reclaimResult != EX_TEMPFAIL) {
@@ -707,9 +709,10 @@ public final class TestSessionCoordinator {
         if (allocation.warning != null) {
             System.err.println(allocation.warning);
         }
-        Path lockParent = resolveLockParent(worktree, options.lockRoot);
+        Path lockParent = resolveLockParent(worktree, options.lockRoot, allocation);
         String runId = createRunId();
-        Path namespace = namespace(lockParent, worktree, externalLockRequested(options));
+        Path namespace = namespace(lockParent, worktree,
+                externalLockRequested(options, allocation));
         if (options.debugGuard.equals("staged")) {
             Path staging = createStaging(lockParent, runId, worktree, namespace.resolve("lease.lock"), options.command);
             System.out.println("OPENGGF_TEST_GUARD phase=staged");
@@ -724,7 +727,7 @@ public final class TestSessionCoordinator {
         }
         if (options.reclaim != null || options.debugGuard.equals("reclaim-claimed")) {
             Path target = options.reclaim == null
-                    ? namespace(lockParent, worktree, externalLockRequested(options))
+                    ? namespace(lockParent, worktree, externalLockRequested(options, allocation))
                     : options.reclaim.getParent();
             Files.writeString(target.resolve("reclaiming.json"), reclaimJson(runId, target),
                     StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
@@ -2309,11 +2312,20 @@ public final class TestSessionCoordinator {
             throw managedFailure("reservation allocation is outside the managed test-session lane");
         }
 
+        Path expectedLeaseRoot = canonicalConfiguredRoot.resolve("codex/test-session-locks");
+        Path reportedLeaseRoot = canonicalReservationPath(requiredString(record, "lease_root"),
+                "lease_root");
+        validateExistingDirectory(reportedLeaseRoot, "managed test-session lease root");
+        if (!reportedLeaseRoot.equals(expectedLeaseRoot)) {
+            throw managedFailure("reservation lease_root is outside the managed lease lane");
+        }
+
         long device = requiredLong(record, "filesystem_device");
         long actualDevice = filesystemDevice(allocation);
         if (device < 0 || device != actualDevice
                 || actualDevice != filesystemDevice(canonicalConfiguredRoot)
-                || actualDevice != filesystemDevice(canonicalLane)) {
+                || actualDevice != filesystemDevice(canonicalLane)
+                || actualDevice != filesystemDevice(reportedLeaseRoot)) {
             throw managedFailure("reservation filesystem device does not match the allocation");
         }
         long usableBytes = requiredLong(record, "usable_bytes");
@@ -2340,7 +2352,7 @@ public final class TestSessionCoordinator {
         }
 
         return new StorageAllocation(allocation, StorageTier.MANAGED_CODEX_TEST_SESSIONS,
-                reportedRoot, schema, helperVersion, Long.toString(device),
+                reportedRoot, reportedLeaseRoot, schema, helperVersion, Long.toString(device),
                 new CapacitySnapshot(usableBytes, totalBytes,
                         inodeSnapshot.usableInodes == null ? -1 : inodeSnapshot.usableInodes),
                 inodeSnapshot, retentionDeadline, null, null);
@@ -2349,7 +2361,7 @@ public final class TestSessionCoordinator {
     private static StorageAllocation localAllocation(Path root, StorageTier tier, String warning)
             throws IOException {
         FileStore store = Files.getFileStore(root);
-        return new StorageAllocation(root, tier, null, 0, null,
+        return new StorageAllocation(root, tier, null, null, 0, null,
                 store.name().isBlank() ? store.type() : store.name(),
                 new CapacitySnapshot(store.getUsableSpace(), store.getTotalSpace(), -1), null, null,
                 "managed reservation fields do not apply to " + tier, warning);
@@ -2748,7 +2760,8 @@ public final class TestSessionCoordinator {
         }
     }
 
-    private static Path resolveLockParent(Path worktree, Path explicit) throws IOException {
+    private static Path resolveLockParent(Path worktree, Path explicit,
+                                          StorageAllocation allocation) throws IOException {
         Path parent;
         boolean external = explicit != null;
         if (explicit != null) {
@@ -2758,6 +2771,9 @@ public final class TestSessionCoordinator {
             if (env != null && !env.isBlank()) {
                 external = true;
                 parent = Path.of(env).toAbsolutePath().normalize();
+            } else if (allocation.managedLeaseRoot != null) {
+                external = true;
+                parent = allocation.managedLeaseRoot;
             } else {
                 Path git = gitPath("--git-dir");
                 parent = (git.isAbsolute() ? git : worktree.resolve(git)).toAbsolutePath().normalize();
@@ -2777,9 +2793,10 @@ public final class TestSessionCoordinator {
         return realParent;
     }
 
-    private static boolean externalLockRequested(Options options) {
+    private static boolean externalLockRequested(Options options, StorageAllocation allocation) {
         return options.lockRoot != null || (System.getenv("OPENGGF_TEST_LOCK_ROOT") != null
-                && !System.getenv("OPENGGF_TEST_LOCK_ROOT").isBlank());
+                && !System.getenv("OPENGGF_TEST_LOCK_ROOT").isBlank())
+                || allocation.managedLeaseRoot != null;
     }
 
     private static Path namespace(Path lockParent, Path worktree, boolean external) {

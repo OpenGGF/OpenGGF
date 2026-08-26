@@ -79,6 +79,7 @@ public final class TestSessionCoordinatorSelfTest {
         verifyJdk21NativeWindowsUnsupportedContract(root);
         verifyRequiredFreeBytesFormula();
         verifyManagedReservationIsValidated(root);
+        verifyManagedLeaseRootDefaultsOutsideReadOnlyGitCommon(root);
         verifyManagedDynamicInodesUseLiveProbe(root);
         verifyManagedHelperFailureDoesNotFallback(root);
         verifyManagedMalformedJsonDoesNotFallback(root);
@@ -672,8 +673,15 @@ public final class TestSessionCoordinatorSelfTest {
 
         check(result.exitCode == 0, "validated managed reservation must run successfully:\n" + result.output);
         Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        Path lease = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "lease"));
         check(manifest.getParent().getParent().equals(allocation),
                 "managed reservation must be the parent of the coordinator-created run: " + manifest);
+        check(lease.getParent().getParent().equals(lockRoot),
+                "explicit lock-root must take priority over the managed lease root: " + lease);
+        try (var entries = Files.list(managedLeaseRoot(managedRoot))) {
+            check(entries.findAny().isEmpty(),
+                    "explicit lock-root run must not publish metadata in the managed lease root");
+        }
         check(!Files.exists(project.resolve(".openggf/test-runs")),
                 "validated managed allocation must not create a project-local fallback");
         String json = Files.readString(manifest);
@@ -705,6 +713,43 @@ public final class TestSessionCoordinatorSelfTest {
                 "managed launch must record a successful live inode probe");
         check(json.contains("\"completion_inode_probe_status\": \"AVAILABLE\""),
                 "managed completion must record a successful live inode probe");
+    }
+
+    private static void verifyManagedLeaseRootDefaultsOutsideReadOnlyGitCommon(Path root)
+            throws Exception {
+        Path project = createTestProject(root.resolve("managed-default-lease-project"));
+        Path managedRoot = createOwnedDirectory(root.resolve("managed-default-lease-root"));
+        Path allocation = createOwnedDirectory(
+                managedRoot.resolve("codex/test-sessions/session-reserved"));
+        Path leaseRoot = managedLeaseRoot(managedRoot);
+        Path fakeBin = createFakeAgentScratch(root.resolve("managed-default-lease-bin"),
+                reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6))));
+        Path gitCommon = project.resolve(".git");
+        Set<java.nio.file.attribute.PosixFilePermission> originalPermissions =
+                Files.getPosixFilePermissions(gitCommon);
+        CommandResult result;
+        try {
+            Files.setPosixFilePermissions(gitCommon, Set.of(
+                    java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+                    java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE));
+            result = runStorageCoordinator(project, managedRoot, fakeBin, null, List.of(
+                    "--", javaCommand(), "-cp", classPath(),
+                    TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        } finally {
+            Files.setPosixFilePermissions(gitCommon, originalPermissions);
+        }
+
+        check(result.exitCode == 0,
+                "managed default lease root must permit launch when Git common is read-only:\n"
+                        + result.output);
+        String start = findLine(result.output, "OPENGGF_TEST_RUN_START");
+        Path lease = Path.of(markerValue(start, "lease"));
+        check(lease.getParent().getParent().equals(leaseRoot),
+                "managed default lease must be published under the verified lease lane: " + lease);
+        check(Files.isRegularFile(lease.getParent().resolve("owner.json")),
+                "managed default lease namespace must retain owner metadata");
+        check(!Files.exists(gitCommon.resolve("openggf-test-session.lock")),
+                "managed default must not attempt to publish lock metadata in Git common");
     }
 
     private static void verifyManagedDynamicInodesUseLiveProbe(Path root) throws Exception {
@@ -767,6 +812,13 @@ public final class TestSessionCoordinatorSelfTest {
         Path allocation = createOwnedDirectory(managedRoot.resolve("codex/test-sessions/session-reserved"));
         Path mismatchedManagedRoot = createOwnedDirectory(root.resolve("managed-mismatched-root"));
         Path outsideAllocation = createOwnedDirectory(managedRoot.resolve("codex/outside-allocation"));
+        Path expectedLeaseRoot = managedLeaseRoot(managedRoot);
+        Path outsideLeaseRoot = createOwnedDirectory(root.resolve("managed-outside-lease-root"));
+        Path symlinkLeaseRoot = managedRoot.resolve("codex/symlink-lease-root");
+        Files.createSymbolicLink(symlinkLeaseRoot, outsideLeaseRoot);
+        Path fileLeaseRoot = managedRoot.resolve("codex/file-lease-root");
+        Files.writeString(fileLeaseRoot, "not a directory\n", StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
         String valid = reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6)));
         Map<String, String> malformed = new LinkedHashMap<>();
         malformed.put("syntax", "{");
@@ -780,6 +832,17 @@ public final class TestSessionCoordinatorSelfTest {
                 "\"managed_root\":\"" + jsonEscape(mismatchedManagedRoot.toString()) + "\""));
         malformed.put("allocation", valid.replace(jsonEscape(allocation.toString()),
                 jsonEscape(outsideAllocation.toString())));
+        malformed.put("missing-lease-root", valid.replace(
+                ",\"lease_root\":\"" + jsonEscape(expectedLeaseRoot.toString()) + "\"", ""));
+        malformed.put("lease-root-type", valid.replace(
+                "\"lease_root\":\"" + jsonEscape(expectedLeaseRoot.toString()) + "\"",
+                "\"lease_root\":1"));
+        malformed.put("lease-root-outside-lane", valid.replace(
+                jsonEscape(expectedLeaseRoot.toString()), jsonEscape(outsideLeaseRoot.toString())));
+        malformed.put("lease-root-symlink", valid.replace(
+                jsonEscape(expectedLeaseRoot.toString()), jsonEscape(symlinkLeaseRoot.toString())));
+        malformed.put("lease-root-wrong-type", valid.replace(
+                jsonEscape(expectedLeaseRoot.toString()), jsonEscape(fileLeaseRoot.toString())));
         malformed.put("device-type", valid.replaceFirst("\"filesystem_device\":\\d+",
                 "\"filesystem_device\":\"1\""));
         malformed.put("device-mismatch", valid.replaceFirst("\"filesystem_device\":\\d+",
@@ -1854,11 +1917,13 @@ public final class TestSessionCoordinatorSelfTest {
     private static String reservationJson(Path managedRoot, Path allocation, Instant deadline,
                                           long usableBytes, long totalBytes,
                                           String inodeCountStatus, Long usableInodes) {
+        Path leaseRoot = managedLeaseRoot(managedRoot);
         return "{"
                 + "\"schema_version\":1,"
                 + "\"storage_tier\":\"MANAGED_CODEX_TEST_SESSIONS\","
                 + "\"managed_root\":\"" + jsonEscape(managedRoot.toString()) + "\","
                 + "\"allocation_path\":\"" + jsonEscape(allocation.toString()) + "\","
+                + "\"lease_root\":\"" + jsonEscape(leaseRoot.toString()) + "\","
                 + "\"filesystem_device\":" + filesystemDevice(allocation) + ","
                 + "\"usable_bytes\":" + usableBytes + ","
                 + "\"total_bytes\":" + totalBytes + ","
@@ -1867,6 +1932,14 @@ public final class TestSessionCoordinatorSelfTest {
                 + "\"retention_deadline\":\"" + deadline.toString().replace("Z", "+00:00") + "\","
                 + "\"helper_version\":\"openggf-agent-scratch-v2\""
                 + "}";
+    }
+
+    private static Path managedLeaseRoot(Path managedRoot) {
+        try {
+            return createOwnedDirectory(managedRoot.resolve("codex/test-session-locks"));
+        } catch (IOException e) {
+            throw new AssertionError("cannot create managed lease-root fixture", e);
+        }
     }
 
     private static long filesystemDevice(Path path) {
