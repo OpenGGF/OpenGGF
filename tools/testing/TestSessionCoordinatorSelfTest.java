@@ -36,7 +36,8 @@ public final class TestSessionCoordinatorSelfTest {
             "lwjgl_extraction", "lwjgl_extract_template", "command_file", "reports", "artifacts",
             "storage_tier", "allocation_path", "managed_root", "allocation_schema",
             "helper_version", "filesystem_device", "allocation_usable_bytes",
-            "allocation_total_bytes", "allocation_usable_inodes", "retention_deadline",
+            "allocation_total_bytes", "allocation_inode_count_status",
+            "allocation_usable_inodes", "allocation_usable_inodes_reason", "retention_deadline",
             "allocation_not_applicable_reason", "storage_warning", "allocation_verified",
             "session_real_path", "session_file_key", "session_file_store",
             "capacity_floor_bytes", "launch_usable_bytes", "launch_total_bytes",
@@ -78,6 +79,7 @@ public final class TestSessionCoordinatorSelfTest {
         verifyJdk21NativeWindowsUnsupportedContract(root);
         verifyRequiredFreeBytesFormula();
         verifyManagedReservationIsValidated(root);
+        verifyManagedDynamicInodesUseLiveProbe(root);
         verifyManagedHelperFailureDoesNotFallback(root);
         verifyManagedMalformedJsonDoesNotFallback(root);
         verifyUnmanagedProjectFallbackIsVisible(root);
@@ -685,6 +687,10 @@ public final class TestSessionCoordinatorSelfTest {
                 "managed manifest must not invent a not-applicable reason");
         check(json.contains("\"allocation_usable_inodes\": 1024"),
                 "managed manifest must retain the helper allocation-time inode snapshot");
+        check(json.contains("\"allocation_inode_count_status\": \"MEASURED\""),
+                "managed manifest must preserve measured inode provenance");
+        check(json.contains("\"allocation_usable_inodes_reason\": null"),
+                "measured managed inodes must not carry an unavailable reason");
         check(json.contains("\"launch_usable_inodes\": null"),
                 "managed launch must not publish an allocation snapshot as a live numeric measurement");
         check(json.contains("\"launch_usable_inodes_reason\": "
@@ -699,6 +705,41 @@ public final class TestSessionCoordinatorSelfTest {
                 "managed launch must record a successful live inode probe");
         check(json.contains("\"completion_inode_probe_status\": \"AVAILABLE\""),
                 "managed completion must record a successful live inode probe");
+    }
+
+    private static void verifyManagedDynamicInodesUseLiveProbe(Path root) throws Exception {
+        Path project = createTestProject(root.resolve("managed-dynamic-inodes-project"));
+        Path managedRoot = createOwnedDirectory(root.resolve("managed-dynamic-inodes-root"));
+        Path allocation = createOwnedDirectory(
+                managedRoot.resolve("codex/test-sessions/session-reserved"));
+        var store = Files.getFileStore(allocation);
+        Path fakeBin = createFakeAgentScratch(root.resolve("managed-dynamic-inodes-bin"),
+                reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6)),
+                        store.getUsableSpace(), store.getTotalSpace(), "UNAVAILABLE_DYNAMIC", null));
+
+        CommandResult result = runStorageCoordinator(project, managedRoot, fakeBin, null, List.of(
+                "--lock-root", createOwnedDirectory(
+                        root.resolve("managed-dynamic-inodes-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+
+        check(result.exitCode == 0,
+                "dynamic-inode managed allocation must launch after a successful live probe:\n"
+                        + result.output);
+        Path manifest = Path.of(markerValue(
+                findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String json = Files.readString(manifest);
+        check(json.contains("\"allocation_inode_count_status\": \"UNAVAILABLE_DYNAMIC\""),
+                "dynamic-inode manifest must preserve helper status");
+        check(json.contains("\"allocation_usable_inodes\": null"),
+                "dynamic-inode manifest must not fabricate a numeric allocation count");
+        check(json.contains("\"allocation_usable_inodes_reason\": "
+                        + "\"filesystem uses dynamic inode allocation; numeric count unavailable\""),
+                "dynamic-inode manifest must explain numeric nullability");
+        check(json.contains("\"launch_inode_probe_status\": \"AVAILABLE\""),
+                "dynamic-inode launch must use the phase-current live probe");
+        check(json.contains("\"completion_inode_probe_status\": \"AVAILABLE\""),
+                "dynamic-inode completion must use its independent live probe");
     }
 
     private static void verifyManagedHelperFailureDoesNotFallback(Path root) throws Exception {
@@ -749,6 +790,19 @@ public final class TestSessionCoordinatorSelfTest {
                 "\"total_bytes\":\"2097152\""));
         malformed.put("inodes-type", valid.replaceFirst("\"usable_inodes\":\\d+",
                 "\"usable_inodes\":\"1024\""));
+        malformed.put("inode-status-unknown", valid.replace(
+                "\"inode_count_status\":\"MEASURED\"",
+                "\"inode_count_status\":\"UNKNOWN\""));
+        malformed.put("inode-status-type", valid.replace(
+                "\"inode_count_status\":\"MEASURED\"", "\"inode_count_status\":1"));
+        malformed.put("measured-null", valid.replace("\"usable_inodes\":1024",
+                "\"usable_inodes\":null"));
+        malformed.put("dynamic-numeric", valid.replace(
+                "\"inode_count_status\":\"MEASURED\"",
+                "\"inode_count_status\":\"UNAVAILABLE_DYNAMIC\""));
+        malformed.put("dynamic-negative", valid.replace(
+                "\"inode_count_status\":\"MEASURED\",\"usable_inodes\":1024",
+                "\"inode_count_status\":\"UNAVAILABLE_DYNAMIC\",\"usable_inodes\":-1"));
         malformed.put("missing-retention", valid.replaceFirst(
                 ",\"retention_deadline\":\"[^\"]+\"", ""));
         malformed.put("past-retention", reservationJson(managedRoot, allocation,
@@ -813,6 +867,12 @@ public final class TestSessionCoordinatorSelfTest {
                 "unmanaged manifest must preserve the actionable storage warning");
         check(json.contains("\"allocation_usable_inodes\": null"),
                 "unmanaged numeric inode count must be unavailable rather than fabricated");
+        check(json.contains("\"allocation_inode_count_status\": null"),
+                "unmanaged allocation must not claim a helper inode-count status");
+        check(json.contains("\"allocation_usable_inodes_reason\": "
+                        + "\"numeric inode count is unavailable for PROJECT_LOCAL_FALLBACK; "
+                        + "live availability probe is authoritative\""),
+                "unmanaged allocation must explain numeric inode nullability");
         check(json.contains("\"launch_usable_inodes\": null"),
                 "unmanaged launch inode count must be explicitly null");
         check(json.contains("\"completion_usable_inodes\": null"),
@@ -897,7 +957,7 @@ public final class TestSessionCoordinatorSelfTest {
         var store = Files.getFileStore(allocation);
         Path fakeBin = createFakeAgentScratch(root.resolve("capacity-zero-inodes-bin"),
                 reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6)),
-                        store.getUsableSpace(), store.getTotalSpace(), 0));
+                        store.getUsableSpace(), store.getTotalSpace(), "MEASURED", 0L));
         Path childMarker = root.resolve("capacity-zero-inodes-child-started");
         ProcessBuilder builder = storageCoordinatorProcess(
                 project, managedRoot, fakeBin, childMarker, List.of(
@@ -1785,14 +1845,15 @@ public final class TestSessionCoordinatorSelfTest {
         try {
             var store = Files.getFileStore(allocation);
             return reservationJson(managedRoot, allocation, deadline,
-                    store.getUsableSpace(), store.getTotalSpace(), 1024L);
+                    store.getUsableSpace(), store.getTotalSpace(), "MEASURED", 1024L);
         } catch (IOException e) {
             throw new AssertionError("cannot measure reservation fixture capacity", e);
         }
     }
 
     private static String reservationJson(Path managedRoot, Path allocation, Instant deadline,
-                                          long usableBytes, long totalBytes, long usableInodes) {
+                                          long usableBytes, long totalBytes,
+                                          String inodeCountStatus, Long usableInodes) {
         return "{"
                 + "\"schema_version\":1,"
                 + "\"storage_tier\":\"MANAGED_CODEX_TEST_SESSIONS\","
@@ -1801,7 +1862,8 @@ public final class TestSessionCoordinatorSelfTest {
                 + "\"filesystem_device\":" + filesystemDevice(allocation) + ","
                 + "\"usable_bytes\":" + usableBytes + ","
                 + "\"total_bytes\":" + totalBytes + ","
-                + "\"usable_inodes\":" + usableInodes + ","
+                + "\"inode_count_status\":\"" + inodeCountStatus + "\","
+                + "\"usable_inodes\":" + (usableInodes == null ? "null" : usableInodes) + ","
                 + "\"retention_deadline\":\"" + deadline.toString().replace("Z", "+00:00") + "\","
                 + "\"helper_version\":\"openggf-agent-scratch-v2\""
                 + "}";

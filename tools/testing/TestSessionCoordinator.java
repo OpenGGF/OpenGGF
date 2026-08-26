@@ -73,7 +73,8 @@ public final class TestSessionCoordinator {
             "tmp", "build/test-classes/traces");
     private static final Set<String> RESERVATION_FIELDS = Set.of(
             "schema_version", "storage_tier", "managed_root", "allocation_path",
-            "filesystem_device", "usable_bytes", "total_bytes", "usable_inodes",
+            "filesystem_device", "usable_bytes", "total_bytes", "inode_count_status",
+            "usable_inodes",
             "retention_deadline", "helper_version");
 
     private enum StorageTier {
@@ -86,10 +87,35 @@ public final class TestSessionCoordinator {
     private record CapacitySnapshot(long usableBytes, long totalBytes, long usableInodes) {
     }
 
+    private enum InodeCountStatus {
+        MEASURED,
+        UNAVAILABLE_DYNAMIC
+    }
+
+    private record InodeSnapshot(
+            InodeCountStatus status, Long usableInodes, String unavailableReason) {
+        private InodeSnapshot {
+            if (status == null) {
+                throw new IllegalArgumentException("inode count status is required");
+            }
+            if (status == InodeCountStatus.MEASURED) {
+                if (usableInodes == null || usableInodes < 0 || unavailableReason != null) {
+                    throw new IllegalArgumentException(
+                            "measured inode snapshot requires a nonnegative count and no reason");
+                }
+            } else if (usableInodes != null
+                    || unavailableReason == null || unavailableReason.isBlank()) {
+                throw new IllegalArgumentException(
+                        "unavailable inode snapshot requires null count and a reason");
+            }
+        }
+    }
+
     private record StorageAllocation(
             Path outputRoot, StorageTier tier, Path managedRoot,
             int allocationSchema, String helperVersion, String filesystemDevice,
-            CapacitySnapshot allocationCapacity, Instant retentionDeadline,
+            CapacitySnapshot allocationCapacity, InodeSnapshot allocationInodes,
+            Instant retentionDeadline,
             String notApplicableReason, String warning) {
     }
 
@@ -281,10 +307,11 @@ public final class TestSessionCoordinator {
                     capacityFloor, launchObservation.capacityError, lease, capacityProbe,
                     sessionIdentity, options.retainEphemeral);
         }
-        if (launchCapacity.usableBytes < capacityFloor
-                || allocation.tier == StorageTier.MANAGED_CODEX_TEST_SESSIONS
-                && launchCapacity.usableInodes == 0) {
-            String reason = launchCapacity.usableInodes == 0
+        boolean measuredZeroInodes = allocation.allocationInodes != null
+                && allocation.allocationInodes.status == InodeCountStatus.MEASURED
+                && launchCapacity.usableInodes == 0;
+        if (launchCapacity.usableBytes < capacityFloor || measuredZeroInodes) {
+            String reason = measuredZeroInodes
                     ? "allocation filesystem reports zero usable inodes"
                     : "allocation filesystem is below the required free-byte floor";
             return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
@@ -1227,8 +1254,9 @@ public final class TestSessionCoordinator {
         CapacitySnapshot launch = context.launchCapacity;
         CapacitySnapshot completion = context.completionCapacity;
         CompactionResult compaction = context.compaction;
-        boolean managedNumericInodes = allocation.tier == StorageTier.MANAGED_CODEX_TEST_SESSIONS;
-        String numericInodeUnavailableReason = managedNumericInodes ? null
+        InodeSnapshot allocationInodes = allocation.allocationInodes;
+        String numericInodeUnavailableReason = allocationInodes != null
+                ? allocationInodes.unavailableReason
                 : "numeric inode count is unavailable for " + allocation.tier
                 + "; live availability probe is authoritative";
         return "{\n"
@@ -1263,9 +1291,13 @@ public final class TestSessionCoordinator {
                 + "  \"filesystem_device\": \"" + escape(allocation.filesystemDevice) + "\",\n"
                 + "  \"allocation_usable_bytes\": " + allocation.allocationCapacity.usableBytes + ",\n"
                 + "  \"allocation_total_bytes\": " + allocation.allocationCapacity.totalBytes + ",\n"
+                + "  \"allocation_inode_count_status\": "
+                + jsonNullable(allocationInodes == null ? null : allocationInodes.status.name()) + ",\n"
                 + "  \"allocation_usable_inodes\": "
-                + jsonNullableLong(managedNumericInodes
-                ? allocation.allocationCapacity.usableInodes : null) + ",\n"
+                + jsonNullableLong(allocationInodes == null
+                ? null : allocationInodes.usableInodes) + ",\n"
+                + "  \"allocation_usable_inodes_reason\": "
+                + jsonNullable(numericInodeUnavailableReason) + ",\n"
                 + "  \"numeric_inode_unavailable_reason\": "
                 + jsonNullable(numericInodeUnavailableReason) + ",\n"
                 + "  \"retention_deadline\": "
@@ -2286,8 +2318,8 @@ public final class TestSessionCoordinator {
         }
         long usableBytes = requiredLong(record, "usable_bytes");
         long totalBytes = requiredLong(record, "total_bytes");
-        long usableInodes = requiredLong(record, "usable_inodes");
-        if (usableBytes < 0 || totalBytes <= 0 || usableBytes > totalBytes || usableInodes < 0) {
+        InodeSnapshot inodeSnapshot = requiredInodeSnapshot(record);
+        if (usableBytes < 0 || totalBytes <= 0 || usableBytes > totalBytes) {
             throw managedFailure("reservation capacity values are outside their valid ranges");
         }
 
@@ -2309,8 +2341,9 @@ public final class TestSessionCoordinator {
 
         return new StorageAllocation(allocation, StorageTier.MANAGED_CODEX_TEST_SESSIONS,
                 reportedRoot, schema, helperVersion, Long.toString(device),
-                new CapacitySnapshot(usableBytes, totalBytes, usableInodes), retentionDeadline,
-                null, null);
+                new CapacitySnapshot(usableBytes, totalBytes,
+                        inodeSnapshot.usableInodes == null ? -1 : inodeSnapshot.usableInodes),
+                inodeSnapshot, retentionDeadline, null, null);
     }
 
     private static StorageAllocation localAllocation(Path root, StorageTier tier, String warning)
@@ -2318,7 +2351,7 @@ public final class TestSessionCoordinator {
         FileStore store = Files.getFileStore(root);
         return new StorageAllocation(root, tier, null, 0, null,
                 store.name().isBlank() ? store.type() : store.name(),
-                new CapacitySnapshot(store.getUsableSpace(), store.getTotalSpace(), -1), null,
+                new CapacitySnapshot(store.getUsableSpace(), store.getTotalSpace(), -1), null, null,
                 "managed reservation fields do not apply to " + tier, warning);
     }
 
@@ -2481,6 +2514,35 @@ public final class TestSessionCoordinator {
         }
     }
 
+    private static InodeSnapshot requiredInodeSnapshot(Map<String, JsonValue> values) {
+        String statusText = requiredString(values, "inode_count_status");
+        InodeCountStatus status;
+        try {
+            status = InodeCountStatus.valueOf(statusText);
+        } catch (IllegalArgumentException e) {
+            throw managedFailure("reservation field inode_count_status has unknown value: "
+                    + statusText);
+        }
+        JsonValue value = values.get("usable_inodes");
+        if (status == InodeCountStatus.MEASURED) {
+            if (value == null || value.type != JsonType.INTEGER) {
+                throw managedFailure(
+                        "reservation usable_inodes must be an integer when inode_count_status is MEASURED");
+            }
+            long count = requiredLong(values, "usable_inodes");
+            if (count < 0) {
+                throw managedFailure("reservation usable_inodes must be nonnegative when measured");
+            }
+            return new InodeSnapshot(status, count, null);
+        }
+        if (value == null || value.type != JsonType.NULL) {
+            throw managedFailure(
+                    "reservation usable_inodes must be null when inode_count_status is UNAVAILABLE_DYNAMIC");
+        }
+        return new InodeSnapshot(status, null,
+                "filesystem uses dynamic inode allocation; numeric count unavailable");
+    }
+
     private static int requiredInt(Map<String, JsonValue> values, String field) {
         long value = requiredLong(values, field);
         if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
@@ -2491,7 +2553,8 @@ public final class TestSessionCoordinator {
 
     private enum JsonType {
         STRING,
-        INTEGER
+        INTEGER,
+        NULL
     }
 
     private record JsonValue(JsonType type, String value) {
@@ -2539,6 +2602,10 @@ public final class TestSessionCoordinator {
         private JsonValue value() {
             if (peek() == '"') {
                 return new JsonValue(JsonType.STRING, string());
+            }
+            if (source.startsWith("null", index)) {
+                index += 4;
+                return new JsonValue(JsonType.NULL, null);
             }
             int start = index;
             take('-');

@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -54,6 +55,8 @@ public final class TestSessionProcessHarness {
         private final Path linkedRepo;
         private final Path fakeBin;
         private final Path outputRoot;
+        private final Path managedRoot;
+        private final Path managedAllocation;
         private final Path externalLockRoot;
         private final Path sessionScript;
         private final boolean windows;
@@ -65,6 +68,9 @@ public final class TestSessionProcessHarness {
             this.linkedRepo = root.resolve("linked-worktree");
             this.fakeBin = root.resolve("fake-bin");
             this.outputRoot = root.resolve("sessions");
+            this.managedRoot = root.resolve("managed-root");
+            this.managedAllocation = managedRoot.resolve(
+                    "codex/test-sessions/session-btrfs-shaped");
             this.externalLockRoot = root.resolve("external-lock-root");
             this.windows = System.getProperty("os.name", "").toLowerCase().contains("win");
             this.sessionScript = baseRepo.resolve("tools/testing/")
@@ -90,6 +96,9 @@ public final class TestSessionProcessHarness {
             Files.writeString(baseRepo.resolve("tracked.txt"), "baseline\n", StandardCharsets.UTF_8);
             Files.writeString(baseRepo.resolve(".gitignore"), "*.gen\ntarget/\n", StandardCharsets.UTF_8);
             writeFakeMaven();
+            if (!windows) {
+                writeBtrfsShapedAgentScratch();
+            }
             runGit(baseRepo, "add", ".");
             runGit(baseRepo, "commit", "-qm", "session harness baseline");
             runGit(baseRepo, "worktree", "add", "--detach", linkedRepo.toString());
@@ -169,7 +178,38 @@ public final class TestSessionProcessHarness {
             script.toFile().setExecutable(true);
         }
 
+        private void writeBtrfsShapedAgentScratch() throws IOException {
+            Files.createDirectories(managedAllocation);
+            long device = ((Number) Files.getAttribute(
+                    managedAllocation, "unix:dev")).longValue();
+            var store = Files.getFileStore(managedAllocation);
+            String reservation = "{"
+                    + "\"schema_version\":1,"
+                    + "\"storage_tier\":\"MANAGED_CODEX_TEST_SESSIONS\","
+                    + "\"managed_root\":\"" + jsonEscape(managedRoot.toString()) + "\","
+                    + "\"allocation_path\":\"" + jsonEscape(managedAllocation.toString()) + "\","
+                    + "\"filesystem_device\":" + device + ","
+                    + "\"usable_bytes\":" + store.getUsableSpace() + ","
+                    + "\"total_bytes\":" + store.getTotalSpace() + ","
+                    + "\"usable_inodes\":null,"
+                    + "\"inode_count_status\":\"UNAVAILABLE_DYNAMIC\","
+                    + "\"retention_deadline\":\"" + Instant.now().plus(Duration.ofDays(6)) + "\","
+                    + "\"helper_version\":\"openggf-agent-scratch-v2\""
+                    + "}";
+            Path helper = fakeBin.resolve("agent-scratch");
+            Files.writeString(helper, "#!/bin/sh\n"
+                    + "if [ \"$1\" = \"verify\" ]; then exit 0; fi\n"
+                    + "if [ \"$1\" = \"reserve-test-session\" ] "
+                    + "&& [ \"$2\" = \"--json\" ]; then\n"
+                    + "  printf '%s\\n' " + shellQuote(reservation) + "\n"
+                    + "  exit 0\n"
+                    + "fi\n"
+                    + "exit 64\n", StandardCharsets.UTF_8);
+            helper.toFile().setExecutable(true);
+        }
+
         private void runAll() throws Exception {
+            managedDynamicInodesReachChild();
             capacityRefusalPreventsLaunch();
             liveProbeFailurePreventsLaunch();
             completionProbeFailurePreservesPrimaryFailure();
@@ -190,6 +230,29 @@ public final class TestSessionProcessHarness {
             interruptionAndReclaim();
             rawLifecycleIsRejected();
             activeSessionSurvivesRawCleanAttempt();
+        }
+
+        private void managedDynamicInodesReachChild() throws Exception {
+            if (windows) {
+                return;
+            }
+            SessionProcess process = start(baseRepo, "managed-dynamic-inodes", externalLockRoot,
+                    null, null, List.of(), null, Map.of(
+                            "OPENGGF_TEST_ROOT", "",
+                            "AGENT_SCRATCH_ROOT", managedRoot.toString(),
+                            "OGGF_SCRATCH_ROOT", managedRoot.toString()));
+            Path manifest = process.awaitManifest();
+            check(process.finish() == 0,
+                    "Btrfs-shaped managed reservation must reach fake Maven:\n" + process.output());
+            check(Files.exists(root.resolve("markers/managed-dynamic-inodes.txt")),
+                    "Btrfs-shaped managed reservation did not start fake Maven");
+            String json = Files.readString(manifest, StandardCharsets.UTF_8);
+            check(json.contains("\"allocation_inode_count_status\": \"UNAVAILABLE_DYNAMIC\""),
+                    "managed process manifest lost dynamic inode status");
+            check(json.contains("\"allocation_usable_inodes\": null"),
+                    "managed process manifest fabricated dynamic inode count");
+            check(json.contains("\"launch_inode_probe_status\": \"AVAILABLE\""),
+                    "managed process launch did not use the live probe");
         }
 
         private void capacityRefusalPreventsLaunch() throws Exception {
@@ -611,6 +674,14 @@ public final class TestSessionProcessHarness {
         int quoteStart = array.lastIndexOf('"', fragmentIndex);
         int quoteEnd = array.indexOf('"', fragmentIndex + fragment.length());
         return array.substring(quoteStart + 1, quoteEnd).replace("\\\\", "\\");
+    }
+
+    private static String jsonEscape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String shellQuote(String value) {
+        return "'" + value.replace("'", "'\"'\"'") + "'";
     }
 
     private static String runGit(Path directory, String... arguments) throws Exception {
