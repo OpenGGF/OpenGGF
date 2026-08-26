@@ -113,6 +113,92 @@ Existing Claude/Codex sessions and old output are audited rather than migrated i
 Inspect and explicitly archive or quarantine them; a newly installed root affects new
 sessions after the relevant client restarts.
 
+### Certifying test-session storage
+
+Re-run `tools/agent-scratch install` after helper-source changes and require
+`agent-scratch verify` to succeed before relying on managed sessions. The test-session
+coordinator independently invokes that verification and
+`agent-scratch reserve-test-session --json`. The versioned response binds the canonical
+managed root and allocation, storage tier `MANAGED_CODEX_TEST_SESSIONS`, filesystem device,
+usable byte snapshot, inode-count status/value, canonical `lease_root`, retention deadline,
+and helper version. Static verification of helper bytes, configuration, lane ownership,
+writable-root policy, and unit-file content remains mandatory. When the Codex sandbox cannot
+reach the user service bus, runtime timer state is reported as
+`UNAVAILABLE_IN_SANDBOX` without invalidating otherwise verified static state. Unknown
+service-manager failures, or any missing, stale, malformed, timed-out, unsafe, or failed
+configured helper response, remain startup failures and must never fall back into the
+project.
+
+Storage tiers are selected in this order: `EXPLICIT_OVERRIDE` for
+`OPENGGF_TEST_ROOT`, verified `MANAGED_CODEX_TEST_SESSIONS`, visibly warned
+`PROJECT_LOCAL_FALLBACK` only when managed scratch is not configured, and
+`SYSTEM_TMP_EXPLICIT` only with `--allow-system-tmp`. Before Maven starts, every tier must
+prove usable bytes of at least `max(20 GiB, 5% of filesystem capacity)` and pass a live
+contained create/write/flush/read/unlink inode probe. `OPENGGF_TEST_MIN_FREE_BYTES` accepts
+only an unsigned decimal that raises the default; blank, whitespace-only, malformed, or
+lower values fail startup. Capacity and the live inode probe are measured again at
+finalisation. A managed reservation reports `inode_count_status=MEASURED` with numeric
+`usable_inodes` (where zero refuses immediately), or
+`inode_count_status=UNAVAILABLE_DYNAMIC` with JSON-null `usable_inodes` for a dynamic inode
+pool, for which the live probe is authoritative rather than treating dynamic allocation as
+measured exhaustion. Other tiers record why a numeric count is unavailable rather than
+inventing one.
+
+An explicit `--lock-root` or `OPENGGF_TEST_LOCK_ROOT` has highest lock-root priority.
+Otherwise a managed reservation uses its verified `lease_root` under
+`$AGENT_SCRATCH_ROOT/codex/test-session-locks`, allowing the exact default wrapper to lease
+inside the existing Codex writable boundary without touching protected Git metadata.
+Unmanaged tiers continue to default to the per-worktree Git lock root. The helper creates
+and verifies the shared managed lane; coordinator namespace ownership, liveness, reclaim,
+and deletion semantics are unchanged.
+
+After any terminal state, automatic compaction may remove only `tmp` and
+`build/test-classes/traces`. It preserves manifests, command files, terminal
+`maven.log.gz`, reports,
+diagnostics, ordinary resources, other compiled classes, JAR/native/package outputs,
+`artifacts/`, `distribution/`, and every path in the report/artifact inventories. Use
+`--retain-ephemeral` (PowerShell `-RetainEphemeral`) only when those reproducible trees are
+needed for diagnosis; it records `RETAINED_BY_REQUEST` and does not extend expiry. A storage
+failure turns an otherwise successful child into `STORAGE_FINALIZATION_FAILED`; a prior
+child or identity failure remains primary.
+
+The child writes to live `maven.log`. Terminal finalisation streams it into a
+same-session temporary gzip, atomically publishes `maven.log.gz`, and removes the
+source only after publication. The terminal manifest/end marker name the gzip;
+compression failure retains `maven.log`, is additional storage-finalisation evidence,
+and never changes an existing child or identity failure into success.
+During forced JVM shutdown, a single shutdown owner stops the process tree and waits
+for output drain before finalizing; it deliberately retains `maven.log` and records
+gzip as deferred. Normal completion directory-syncs the gzip rename, publishes the
+terminal manifest naming the gzip, and only then removes the source and syncs again.
+If the bounded shutdown wait cannot prove drain completion, it leaves the `RUNNING`
+manifest and log untouched for stale-session recovery.
+Gzip publication, terminal-manifest publication, and source deletion each record a
+directory-sync outcome: `SYNCED`, `UNSUPPORTED`, or `FAILED`. Native providers that
+cannot open directories for sync remain certifying as `UNSUPPORTED`; real I/O errors
+on a supporting provider retain recovery evidence and fail storage finalisation.
+Initial, recorded-status, post-deletion, and startup-failure terminal-manifest barriers
+all contribute to the final verdict. A late barrier failure receives one bounded
+best-effort evidence rewrite rather than an indefinite retry loop.
+
+Destructive compaction requires either descriptor-relative `SecureDirectoryStream` support
+or a non-null stable file key with same-store atomic tombstoning and identity revalidation.
+There is no unbound pathname fallback. Native Windows on OpenJDK 21 therefore certifies as
+`RETAINED_PLATFORM_UNSUPPORTED` without automatic compaction, pending a future
+Actworks/Slipmat native file-ID bridge; capacity checks and retention still apply. Managed
+terminal sessions expire after seven days unless kept. A live `RUNNING` lease is never
+compacted or pruned; an expired stale `RUNNING` session is atomically quarantined for the
+normal fourteen-day quarantine period instead of being deleted directly.
+
+For evidence parsing, `OPENGGF_TEST_RUN_START` has exactly `run_id`, `isolation`, `lwjgl`,
+`manifest`, `lease`, `log`, `state`, `storage_tier`, `launch_usable_bytes`, and
+`capacity_floor_bytes`. `OPENGGF_TEST_RUN_END` has `run_id`, `isolation`, `lwjgl`,
+`exit_code`, `state`, `valid`, `manifest`, `log`, `compaction_status`, `reclaimed_bytes`, and
+`completion_usable_bytes`, with `process_tree_stopped` only when shutdown handling has that
+result. The first group identifies the run, isolation, evidence paths and capacity gate;
+the second preserves the run/identity verdict while reporting storage finalisation
+separately. Marker strings are encoded so one value cannot create a counterfeit marker.
+
 ### `/tmp` output audit
 
 The scoped audit must include POSIX and Windows temporary-root forms, ignored files, and

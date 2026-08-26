@@ -69,8 +69,10 @@ wrapper sessions, even when they are testing the same commit.
 
 The wrapper's `OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` markers, plus
 the referenced manifest, are part of the evidence. The wrapper is quiet by
-default: both markers print the session-owned `manifest=` and `log=` paths while
-the full child output is retained only in `maven.log`. Agent runs must keep this
+default: both markers print the session-owned `manifest=` and `log=` paths. The
+start marker names the live `maven.log`; terminal finalisation atomically publishes
+`maven.log.gz`, removes the original only after successful compression, and makes
+the terminal manifest/end marker name the gzip. Agent runs must keep this
 default; do not pass `--verbose`, pipe through `tee`, or print the complete log
 back into context. Diagnose with targeted `rg` searches and bounded `tail`/`sed`
 reads against the reported log. `--quiet` is accepted when an invocation needs
@@ -78,6 +80,74 @@ to state the default explicitly; `--verbose` is reserved for interactive human
 troubleshooting that genuinely needs live output. Report the run ID, manifest
 path, and log path; if the start/end markers are absent, the result is
 non-certifying.
+
+#### Session storage lifecycle
+
+After `tools/agent-scratch` changes, run `tools/agent-scratch install` and
+`agent-scratch verify`. A configured managed root must verify and return a valid
+`agent-scratch reserve-test-session --json` allocation in the
+`MANAGED_CODEX_TEST_SESSIONS` tier; missing, stale, malformed, unsafe, timed-out,
+or failed managed allocation is a startup error and never project-falls back.
+Helper bytes, configuration, lane ownership, writable-root policy, and unit-file
+content must still verify statically when the sandbox cannot reach the user
+service bus; only runtime timer state becomes `UNAVAILABLE_IN_SANDBOX`. Unknown
+service-manager errors remain fatal.
+`OPENGGF_TEST_ROOT` remains the highest-priority explicit tier. Project-local
+fallback is visibly labelled and is allowed only when managed scratch is not
+configured; system temporary storage requires `--allow-system-tmp`.
+
+Before Maven starts, every storage tier must have usable bytes of at least
+`max(20 GiB, 5% of filesystem capacity)` and pass a live contained inode probe.
+`OPENGGF_TEST_MIN_FREE_BYTES` may only be an unsigned decimal that raises this
+floor; blank, whitespace-only, malformed, or lower values fail startup. Capacity
+and live inode availability are measured again at finalisation. Managed
+`inode_count_status=MEASURED` requires numeric `usable_inodes`, with zero
+refusing launch; `UNAVAILABLE_DYNAMIC` requires JSON-null `usable_inodes` and
+uses the live probe as authority instead of treating dynamic allocation as zero.
+
+Explicit `--lock-root`/`OPENGGF_TEST_LOCK_ROOT` has highest lock priority.
+Otherwise a managed reservation uses its verified `lease_root` under
+`$AGENT_SCRATCH_ROOT/codex/test-session-locks`; the exact default wrapper does
+not need writable Git metadata. Unmanaged tiers retain the per-worktree Git
+lock default, and coordinator lease ownership/recovery semantics are unchanged.
+
+Terminal compaction removes only `tmp` and `build/test-classes/traces`; manifests,
+command files, terminal `maven.log.gz`, reports, diagnostics, ordinary resources, other classes,
+JAR/native/package output, `artifacts/`, `distribution/`, and inventoried paths
+remain. Use `--retain-ephemeral` (PowerShell `-RetainEphemeral`) to retain the two
+reproducible trees for diagnosis without changing expiry. A compaction failure
+makes an otherwise green run `STORAGE_FINALIZATION_FAILED`; an existing child or
+identity failure remains primary. Log-compression failure follows the same verdict
+precedence and preserves the uncompressed `maven.log` as evidence.
+Forced JVM shutdown is also conservative: the shutdown owner stops the child tree,
+waits for output drain, retains `maven.log`, and records gzip as deferred. On normal
+completion, the gzip rename is directory-synced, the terminal manifest names it,
+and only then is the original removed and the directory synced again.
+If shutdown cannot prove drain completion within its bound, it leaves the `RUNNING`
+manifest and log untouched for stale-session recovery.
+Directory durability is reported as `SYNCED`, `UNSUPPORTED`, or `FAILED` for gzip
+publication, terminal-manifest publication, and source deletion. Native providers
+that cannot open directories for syncing remain certifying as `UNSUPPORTED`; a real
+I/O failure on a provider that supports directory sync is a storage-finalisation failure.
+Every terminal-manifest barrier contributes to the verdict, including startup-failure
+rewrites and the post-deletion evidence rewrite; one bounded best-effort rewrite records
+a late failure without retrying indefinitely.
+
+Automatic deletion requires secure descriptor-relative streams or a stable
+file-key tombstone strategy. Native Windows on OpenJDK 21 exposes neither and
+therefore remains certifying as `RETAINED_PLATFORM_UNSUPPORTED`, with no
+automatic compaction pending a future Actworks/Slipmat native file-ID bridge;
+capacity and retention still apply. Managed terminal sessions expire after seven
+days unless kept. Live `RUNNING` sessions are never pruned; expired stale
+`RUNNING` sessions move atomically to the fourteen-day quarantine lane.
+
+The start marker fields are exactly `run_id`, `isolation`, `lwjgl`, `manifest`,
+`lease`, `log`, `state`, `storage_tier`, `launch_usable_bytes`, and
+`capacity_floor_bytes`. The end fields are `run_id`, `isolation`, `lwjgl`,
+`exit_code`, `state`, `valid`, `manifest`, `log`, `compaction_status`,
+`reclaimed_bytes`, and `completion_usable_bytes`, plus `process_tree_stopped`
+when shutdown handling reports it. Run/identity verdict fields keep their prior
+meaning; compaction fields report storage finalisation only.
 
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.

@@ -68,7 +68,7 @@ class AgentScratchTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(dir=CACHE)
         self.root = pathlib.Path(self.temp.name) / "managed"
-        self.env = {"AGENT_SCRATCH_ROOT": str(self.root)}
+        self.env = {"AGENT_SCRATCH_ROOT": str(self.root), "OGGF_SCRATCH_ROOT": None}
 
     def tearDown(self):
         self.temp.cleanup()
@@ -98,7 +98,8 @@ class AgentScratchTests(unittest.TestCase):
         root = self.helper.ensure_root(self.env)
         self.assertEqual(self.root, root)
         self.assertEqual(0o700, stat.S_IMODE(root.stat().st_mode))
-        for child in ("claude", "codex/tmp", "tasks", "quarantine"):
+        for child in ("claude", "codex/tmp", "codex/test-sessions", "codex/test-session-locks",
+                      "tasks", "quarantine"):
             self.assertTrue((root / child).is_dir())
 
     def test_static_symlink_root_is_rejected(self):
@@ -118,6 +119,395 @@ class AgentScratchTests(unittest.TestCase):
         created = pathlib.Path(output.splitlines()[-1])
         self.assertTrue(created.is_dir())
         self.assertEqual(0o700, stat.S_IMODE(created.stat().st_mode))
+
+    def test_reserve_test_session_returns_structured_private_allocation(self):
+        root = self.helper.ensure_root(self.env)
+        with environment(**self.env):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
+        record = json.loads(output.getvalue())
+        allocation = pathlib.Path(record["allocation_path"])
+        self.assertEqual(1, record["schema_version"])
+        self.assertEqual("MANAGED_CODEX_TEST_SESSIONS", record["storage_tier"])
+        self.assertEqual(str(root.resolve()), record["managed_root"])
+        self.assertEqual(str(allocation.resolve()), record["allocation_path"])
+        self.assertEqual(str((root / "codex" / "test-session-locks").resolve()),
+                         record["lease_root"])
+        self.assertEqual(root / "codex" / "test-sessions", allocation.parent)
+        self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
+        self.assertTrue(record["filesystem_device"])
+        self.assertGreater(record["usable_bytes"], 0)
+        self.assertIn(record["inode_count_status"], {"MEASURED", "UNAVAILABLE_DYNAMIC"})
+        if record["inode_count_status"] == "MEASURED":
+            self.assertGreaterEqual(record["usable_inodes"], 0)
+        else:
+            self.assertIsNone(record["usable_inodes"])
+        self.assertRegex(record["retention_deadline"], r"^\d{4}-\d{2}-\d{2}T")
+        self.assertTrue(record["helper_version"])
+
+    def test_reserve_uses_only_the_existing_writable_lane(self):
+        root = self.helper.ensure_root(self.env)
+        protected = [root / "claude", root / "tasks", root / "quarantine",
+                     root / "codex" / "tmp"]
+        for path in protected:
+            os.chmod(path, 0o500)
+        before = {path: (stat.S_IMODE(path.stat().st_mode), path.stat().st_mtime_ns,
+                         sorted(child.name for child in path.iterdir()))
+                  for path in protected}
+        lease_lane = root / "codex" / "test-session-locks"
+        lease_before = (stat.S_IMODE(lease_lane.stat().st_mode), lease_lane.stat().st_mtime_ns,
+                        sorted(child.name for child in lease_lane.iterdir()))
+
+        with environment(**self.env):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
+
+        record = json.loads(output.getvalue())
+        allocation = pathlib.Path(record["allocation_path"])
+        self.assertEqual([], list(allocation.iterdir()))
+        self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
+        self.assertFalse((root / ".agent-scratch.lock").exists())
+        after = {path: (stat.S_IMODE(path.stat().st_mode), path.stat().st_mtime_ns,
+                        sorted(child.name for child in path.iterdir()))
+                 for path in protected}
+        self.assertEqual(before, after)
+        self.assertEqual(lease_before, (stat.S_IMODE(lease_lane.stat().st_mode),
+                                        lease_lane.stat().st_mtime_ns,
+                                        sorted(child.name for child in lease_lane.iterdir())))
+
+    def test_concurrent_reservations_serialize_inside_the_lane(self):
+        root = self.helper.ensure_root(self.env)
+        child_env = {key: value for key, value in {**os.environ, **self.env}.items()
+                     if value is not None}
+        commands = [[sys.executable, str(HELPER), "reserve-test-session", "--json"]
+                    for _ in range(2)]
+        children = [subprocess.Popen(command, env=child_env, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, text=True)
+                    for command in commands]
+        completed = [child.communicate() for child in children]
+
+        self.assertEqual([0, 0], [child.returncode for child in children])
+        records = [json.loads(stdout) for stdout, _ in completed]
+        allocations = [pathlib.Path(record["allocation_path"]) for record in records]
+        self.assertEqual(2, len(set(allocations)))
+        self.assertFalse((root / ".agent-scratch.lock").exists())
+        for allocation in allocations:
+            self.assertEqual(0o700, stat.S_IMODE(allocation.stat().st_mode))
+            self.assertEqual([], list(allocation.iterdir()))
+
+    def test_reserve_missing_or_unsafe_lane_fails_without_repair(self):
+        root = self.helper.ensure_root(self.env)
+        lane = root / "codex" / "test-sessions"
+        lane.rmdir()
+
+        status, _, error = self.run_helper(["reserve-test-session", "--json"])
+
+        self.assertEqual(2, status)
+        self.assertIn("test-session lane", error)
+        self.assertFalse(lane.exists())
+        self.assertFalse((root / ".agent-scratch.lock").exists())
+        outside = pathlib.Path(self.temp.name) / "outside"
+        outside.mkdir()
+        lane.symlink_to(outside, target_is_directory=True)
+
+        status, _, error = self.run_helper(["reserve-test-session", "--json"])
+
+        self.assertEqual(2, status)
+        self.assertIn("test-session lane", error)
+        self.assertTrue(lane.is_symlink())
+        self.assertEqual([], list(outside.iterdir()))
+
+    def test_statvfs_reports_dynamic_inode_unavailability_separately_from_zero(self):
+        unavailable = type("Statvfs", (), {
+            "f_bavail": 4, "f_frsize": 1024, "f_blocks": 16,
+            "f_files": 0, "f_favail": 0,
+        })()
+        measured_zero = type("Statvfs", (), {
+            "f_bavail": 4, "f_frsize": 1024, "f_blocks": 16,
+            "f_files": 32, "f_favail": 0,
+        })()
+
+        self.assertEqual({
+            "usable_bytes": 4096,
+            "total_bytes": 16384,
+            "usable_inodes": None,
+            "inode_count_status": "UNAVAILABLE_DYNAMIC",
+        }, self.helper._statvfs_values(unavailable))
+        self.assertEqual({
+            "usable_bytes": 4096,
+            "total_bytes": 16384,
+            "usable_inodes": 0,
+            "inode_count_status": "MEASURED",
+        }, self.helper._statvfs_values(measured_zero))
+
+    def test_reserve_test_session_rejects_a_recreated_allocation_name(self):
+        root = self.helper.ensure_root(self.env)
+        lane = root / "codex" / "test-sessions"
+
+        def recreate_allocation(_allocation_fd):
+            allocation, = [entry for entry in lane.iterdir()
+                           if entry.name.startswith("session-")]
+            os.rename(allocation, lane / "probed-allocation")
+            allocation.mkdir(mode=self.helper.MODE)
+
+        with environment(**self.env), \
+             mock.patch.object(self.helper, "_probe_directory", side_effect=recreate_allocation), \
+             self.assertRaises(self.helper.ScratchError):
+            self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
+
+    def test_reserve_test_session_rejects_a_symlinked_lane(self):
+        root = self.helper.ensure_root(self.env)
+        lane = root / "codex" / "test-sessions"
+        outside = pathlib.Path(self.temp.name) / "outside"
+        outside.mkdir()
+        lane.rmdir()
+        lane.symlink_to(outside, target_is_directory=True)
+
+        with environment(**self.env), self.assertRaises(self.helper.ScratchError):
+            self.helper.cmd_reserve_test_session(argparse.Namespace(json=True))
+
+    def test_reserve_rejects_missing_or_unsafe_lease_lane_without_repair(self):
+        root = self.helper.ensure_root(self.env)
+        lease_lane = root / "codex" / "test-session-locks"
+        lease_lane.rmdir()
+
+        status, _, error = self.run_helper(["reserve-test-session", "--json"])
+
+        self.assertEqual(2, status)
+        self.assertIn("test-session lock lane", error)
+        self.assertFalse(lease_lane.exists())
+        self.assertEqual([], list((root / "codex" / "test-sessions").iterdir()))
+        outside = pathlib.Path(self.temp.name) / "outside-lease"
+        outside.mkdir()
+        lease_lane.symlink_to(outside, target_is_directory=True)
+
+        status, _, error = self.run_helper(["reserve-test-session", "--json"])
+
+        self.assertEqual(2, status)
+        self.assertIn("test-session lock lane", error)
+        self.assertTrue(lease_lane.is_symlink())
+        self.assertEqual([], list(outside.iterdir()))
+
+    def test_reservation_record_rejects_a_replaced_allocation_parent(self):
+        root = self.helper.ensure_root(self.env)
+        lane = root / "codex" / "test-sessions"
+        allocation = lane / "session-replaced-parent"
+        allocation.mkdir()
+        parked = root / "codex" / "parked-test-sessions"
+        os.rename(lane, parked)
+        replacement = root / "codex" / "replacement-test-sessions"
+        replacement.mkdir()
+        os.rename(replacement, lane)
+
+        with self.assertRaises(self.helper.ScratchError):
+            self.helper._reservation_record(root, allocation)
+
+    def _installed_configuration(self):
+        """Install the real generated contract into an isolated home directory."""
+        root = self.helper.ensure_root(self.env)
+        home = pathlib.Path(self.temp.name) / "home"
+        home.mkdir()
+        with environment(**self.env), \
+             mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+             mock.patch.object(self.helper, "_retire_legacy_units", return_value="absent"), \
+             mock.patch.object(self.helper, "_run_systemd_install", return_value="timer active"):
+            self.assertEqual(0, self.helper.cmd_install(argparse.Namespace()))
+        return root, home
+
+    def _verify_installed_configuration(self, root, home):
+        with environment(**self.env), \
+             mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+             mock.patch.object(self.helper, "_verify_unit_syntax", return_value="verified"), \
+             mock.patch.object(self.helper, "_verify_timer", return_value="verified"), \
+             mock.patch.object(self.helper, "_verify_legacy_timer", return_value="absent"), \
+             mock.patch.object(self.helper, "_verify_claude_tmpdir", return_value="unverified"):
+            return self.helper.cmd_verify(argparse.Namespace())
+
+    def test_verify_rejects_missing_test_session_lane(self):
+        root, home = self._installed_configuration()
+        (root / "codex" / "test-sessions").rmdir()
+
+        with self.assertRaisesRegex(self.helper.ScratchError, "test-session lane"):
+            self._verify_installed_configuration(root, home)
+
+    def test_install_creates_test_session_lock_lane_idempotently(self):
+        root, home = self._installed_configuration()
+        lease_lane = root / "codex" / "test-session-locks"
+        lease_lane.rmdir()
+
+        with environment(**self.env), \
+             mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+             mock.patch.object(self.helper, "_retire_legacy_units", return_value="absent"), \
+             mock.patch.object(self.helper, "_run_systemd_install", return_value="timer active"):
+            self.assertEqual(0, self.helper.cmd_install(argparse.Namespace()))
+
+        self.assertTrue(lease_lane.is_dir())
+        self.assertEqual(0o700, stat.S_IMODE(lease_lane.stat().st_mode))
+
+    def test_verify_rejects_missing_test_session_lock_lane(self):
+        root, home = self._installed_configuration()
+        (root / "codex" / "test-session-locks").rmdir()
+
+        with self.assertRaisesRegex(self.helper.ScratchError, "test-session lock lane"):
+            self._verify_installed_configuration(root, home)
+
+    def test_verify_rejects_stale_installed_helper(self):
+        root, home = self._installed_configuration()
+        installed = self.helper._installed_helper_path(home)
+        installed.write_bytes(installed.read_bytes() + b"\n# stale\n")
+
+        with self.assertRaisesRegex(self.helper.ScratchError, "does not match"):
+            self._verify_installed_configuration(root, home)
+
+    def test_verify_reports_known_user_bus_diagnostics_after_static_checks(self):
+        root, home = self._installed_configuration()
+        for diagnostic in ("Failed to connect to bus", "Failed to connect to user scope bus"):
+            unavailable = type("Run", (), {
+                "returncode": 1, "stdout": "", "stderr": diagnostic,
+            })()
+            output = io.StringIO()
+            with environment(**self.env), \
+                 mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+                 mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+                 mock.patch.object(self.helper, "_verify_unit_syntax", return_value="verified"), \
+                 mock.patch.object(self.helper, "_verify_legacy_timer", return_value="absent"), \
+                 mock.patch.object(self.helper, "_verify_claude_tmpdir", return_value="unverified"), \
+                 mock.patch.object(self.helper.subprocess, "run", return_value=unavailable), \
+                 contextlib.redirect_stdout(output):
+                self.assertEqual(0, self.helper.cmd_verify(argparse.Namespace()))
+            self.assertIn("config=verified", output.getvalue())
+            self.assertIn("systemd_timer=UNAVAILABLE_IN_SANDBOX", output.getvalue())
+
+    def test_verify_bounds_the_optional_claude_probe(self):
+        root, home = self._installed_configuration()
+        timed_out = []
+
+        def timeout_probe(command, **kwargs):
+            timed_out.append(kwargs["timeout"])
+            raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+        output = io.StringIO()
+        started = time.monotonic()
+        with environment(**self.env), \
+             mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+             mock.patch.object(self.helper, "_verify_unit_syntax", return_value="verified"), \
+             mock.patch.object(self.helper, "_verify_timer", return_value="verified"), \
+             mock.patch.object(self.helper, "_verify_legacy_timer", return_value="absent"), \
+             mock.patch.object(self.helper.shutil, "which", return_value="claude"), \
+             mock.patch.object(self.helper.subprocess, "run", side_effect=timeout_probe), \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(0, self.helper.cmd_verify(argparse.Namespace()))
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual([self.helper.CLAUDE_VERIFY_TIMEOUT_SECONDS], timed_out)
+        self.assertLessEqual(self.helper.CLAUDE_VERIFY_TIMEOUT_SECONDS, 2)
+        self.assertIn("claude=unverified", output.getvalue())
+
+    def _session(self, name, state, *, pid=None, start=None, old=True):
+        root = self.helper.ensure_root(self.env)
+        session = root / "codex" / "test-sessions" / name
+        session.mkdir()
+        manifest = {"state": state}
+        if pid is not None:
+            manifest["pid"] = pid
+            manifest["process_start_epoch_ms"] = start
+        (session / "manifest.json").write_text(json.dumps(manifest) + "\n")
+        if old:
+            then = time.time() - (self.helper.TEST_SESSION_RETENTION_DAYS + 2) * 86400
+            os.utime(session, (then, then))
+        return root, session
+
+    def test_prune_preserves_live_running_session(self):
+        start = self.helper._process_start_epoch_ms(os.getpid())
+        self.assertIsNotNone(start)
+        _, session = self._session("live", "RUNNING", pid=os.getpid(), start=start)
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertIn("protected-live test-sessions/live", output)
+        self.assertTrue(session.exists())
+
+    def test_prune_uses_live_owner_metadata_from_the_manifest_lease(self):
+        start = self.helper._process_start_epoch_ms(os.getpid())
+        self.assertIsNotNone(start)
+        _, session = self._session("leased", "RUNNING", old=True)
+        lease = pathlib.Path(self.temp.name) / "lease" / "lease.lock"
+        lease.parent.mkdir()
+        lease.write_text("lease\n")
+        (lease.parent / "owner.json").write_text(json.dumps({
+            "pid": os.getpid(), "process_start_epoch_ms": start
+        }) + "\n")
+        (session / "manifest.json").write_text(json.dumps({
+            "state": "RUNNING", "lease_path": str(lease)
+        }) + "\n")
+        then = time.time() - (self.helper.TEST_SESSION_RETENTION_DAYS + 2) * 86400
+        os.utime(session, (then, then))
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertIn("protected-live test-sessions/leased", output)
+        self.assertTrue(session.exists())
+
+    def test_prune_moves_expired_stale_running_session_to_quarantine(self):
+        root, session = self._session("stale", "RUNNING", pid=999999999,
+                                      start=1)
+        (session / "evidence").write_text("preserve me")
+        then = time.time() - (self.helper.TEST_SESSION_RETENTION_DAYS + 2) * 86400
+        os.utime(session, (then, then))
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertIn("quarantined test-sessions/stale", output)
+        self.assertFalse(session.exists())
+        quarantined = list((root / "quarantine").iterdir())
+        self.assertEqual(1, len(quarantined))
+        self.assertEqual("preserve me", (quarantined[0] / "evidence").read_text())
+
+    def test_prune_quarantine_starts_a_fresh_fourteen_day_retention_period(self):
+        root, session = self._session("very-old", "RUNNING", pid=999999999,
+                                      start=1)
+        (session / "evidence").write_text("retain until quarantine expires")
+        then = time.time() - 90 * 86400
+        os.utime(session, (then, then))
+
+        self.assertEqual(0, self.run_helper(["prune"])[0])
+        quarantined, = (root / "quarantine").iterdir()
+        self.assertTrue(quarantined.exists())
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertNotIn(f"removed quarantine/{quarantined.name}", output)
+        self.assertTrue(quarantined.exists())
+        expired = time.time() - 15 * 86400
+        os.utime(quarantined, (expired, expired))
+        self.assertEqual(0, self.run_helper(["prune"])[0])
+        self.assertFalse(quarantined.exists())
+
+    def test_prune_removes_expired_terminal_session_unless_kept(self):
+        root, removable = self._session("terminal", "PASSED")
+        _, kept = self._session("kept", "PASSED")
+        until = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+        self.assertEqual(0, self.run_helper(["keep", str(kept), "--until", until])[0])
+        then = time.time() - (self.helper.TEST_SESSION_RETENTION_DAYS + 2) * 86400
+        os.utime(kept, (then, then))
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertIn("removed test-sessions/terminal", output)
+        self.assertIn("protected-keep test-sessions/kept", output)
+        self.assertFalse(removable.exists())
+        self.assertTrue(kept.exists())
+        self.assertTrue((root / "quarantine").is_dir())
 
     def test_symlink_swap_race_does_not_remove_outside_sentinel(self):
         root = self.helper.ensure_root(self.env)
@@ -193,7 +583,8 @@ class AgentScratchTests(unittest.TestCase):
 
     def test_concurrent_new_and_prune_share_lock(self):
         self.helper.ensure_root(self.env)
-        child_env = {**os.environ, **self.env}
+        child_env = {key: value for key, value in {**os.environ, **self.env}.items()
+                     if value is not None}
         commands = [[sys.executable, str(HELPER), "new", "parallel"] for _ in range(4)]
         commands += [[sys.executable, str(HELPER), "prune", "--dry-run"] for _ in range(4)]
         children = [subprocess.Popen(command, env=child_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -583,9 +974,24 @@ class AgentScratchTests(unittest.TestCase):
         trigger = type("Run", (), {"returncode": 0, "stdout": "Fri 2026-08-14 14:00:00 BST\n", "stderr": ""})()
         with mock.patch.object(self.helper.subprocess, "run", side_effect=[enabled, trigger]):
             self.assertEqual("verified", self.helper._verify_timer())
-        unavailable = type("Run", (), {"returncode": 1, "stdout": "", "stderr": "Failed to connect to bus"})()
-        with mock.patch.object(self.helper.subprocess, "run", return_value=unavailable):
-            self.assertEqual("unverified", self.helper._verify_timer())
+        for diagnostic in ("Failed to connect to bus", "Failed to connect to user scope bus"):
+            unavailable = type("Run", (), {"returncode": 1, "stdout": "", "stderr": diagnostic})()
+            with mock.patch.object(self.helper.subprocess, "run", return_value=unavailable):
+                self.assertEqual("unavailable_in_sandbox", self.helper._verify_timer())
+
+    def test_legacy_timer_state_requires_explicit_inactive_or_known_sandbox_status(self):
+        disabled = type("Run", (), {"returncode": 1, "stdout": "disabled\n", "stderr": ""})()
+        inactive = type("Run", (), {"returncode": 3, "stdout": "inactive\n", "stderr": ""})()
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=[disabled, inactive]):
+            self.assertEqual("inactive", self.helper._legacy_timer_state())
+        for diagnostic in ("Failed to connect to bus", "Failed to connect to user scope bus"):
+            unavailable = type("Run", (), {"returncode": 1, "stdout": "", "stderr": diagnostic})()
+            with mock.patch.object(self.helper.subprocess, "run", side_effect=[unavailable, unavailable]):
+                self.assertEqual("unavailable_in_sandbox", self.helper._legacy_timer_state())
+        unexpected = type("Run", (), {"returncode": 1, "stdout": "", "stderr": "permission denied"})()
+        with mock.patch.object(self.helper.subprocess, "run", side_effect=[unexpected, unexpected]), \
+             self.assertRaisesRegex(self.helper.ScratchError, "cannot inspect legacy cleanup timer"):
+            self.helper._legacy_timer_state()
 
     def test_claude_timeout_and_launch_failure_are_unverified(self):
         root = self.helper.ensure_root(self.env)
@@ -633,6 +1039,19 @@ class AgentScratchTests(unittest.TestCase):
         self.assertEqual(0, status, error)
         self.assertTrue(output.strip().endswith("/tasks"))
         self.assertEqual("safe", sentinel.read_text())
+
+    def test_path_test_session_locks_is_canonical_and_read_only(self):
+        root = self.helper.ensure_root(self.env)
+        lease_lane = root / "codex" / "test-session-locks"
+        before = (stat.S_IMODE(lease_lane.stat().st_mode), lease_lane.stat().st_mtime_ns,
+                  sorted(child.name for child in lease_lane.iterdir()))
+
+        status, output, error = self.run_helper(["path", "test-session-locks"])
+
+        self.assertEqual(0, status, error)
+        self.assertEqual(str(lease_lane.resolve()), output.strip())
+        self.assertEqual(before, (stat.S_IMODE(lease_lane.stat().st_mode), lease_lane.stat().st_mtime_ns,
+                                  sorted(child.name for child in lease_lane.iterdir())))
 
 
 if __name__ == "__main__":

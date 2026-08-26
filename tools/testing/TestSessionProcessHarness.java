@@ -1,20 +1,25 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 /** External-process acceptance harness for the isolated test-session coordinator. */
 public final class TestSessionProcessHarness {
@@ -53,6 +58,9 @@ public final class TestSessionProcessHarness {
         private final Path linkedRepo;
         private final Path fakeBin;
         private final Path outputRoot;
+        private final Path managedRoot;
+        private final Path managedAllocation;
+        private final Path managedLeaseRoot;
         private final Path externalLockRoot;
         private final Path sessionScript;
         private final boolean windows;
@@ -64,6 +72,10 @@ public final class TestSessionProcessHarness {
             this.linkedRepo = root.resolve("linked-worktree");
             this.fakeBin = root.resolve("fake-bin");
             this.outputRoot = root.resolve("sessions");
+            this.managedRoot = root.resolve("managed-root");
+            this.managedAllocation = managedRoot.resolve(
+                    "codex/test-sessions/session-btrfs-shaped");
+            this.managedLeaseRoot = managedRoot.resolve("codex/test-session-locks");
             this.externalLockRoot = root.resolve("external-lock-root");
             this.windows = System.getProperty("os.name", "").toLowerCase().contains("win");
             this.sessionScript = baseRepo.resolve("tools/testing/")
@@ -89,6 +101,9 @@ public final class TestSessionProcessHarness {
             Files.writeString(baseRepo.resolve("tracked.txt"), "baseline\n", StandardCharsets.UTF_8);
             Files.writeString(baseRepo.resolve(".gitignore"), "*.gen\ntarget/\n", StandardCharsets.UTF_8);
             writeFakeMaven();
+            if (!windows) {
+                writeBtrfsShapedAgentScratch();
+            }
             runGit(baseRepo, "add", ".");
             runGit(baseRepo, "commit", "-qm", "session harness baseline");
             runGit(baseRepo, "worktree", "add", "--detach", linkedRepo.toString());
@@ -121,6 +136,12 @@ public final class TestSessionProcessHarness {
                         if "%FAKE_MAVEN_MUTATION%"=="runtime" echo runtime-mutated>runtime-input.gen
                         if not exist "%OPENGGF_TEST_DIAGNOSTICS%" mkdir "%OPENGGF_TEST_DIAGNOSTICS%"
                         echo %FAKE_MAVEN_MARKER%>"%OPENGGF_TEST_DIAGNOSTICS%\\collision-report.txt"
+                        if not exist "%OPENGGF_BUILD_DIRECTORY%\\test-classes\\traces" mkdir "%OPENGGF_BUILD_DIRECTORY%\\test-classes\\traces"
+                        echo trace-copy>"%OPENGGF_BUILD_DIRECTORY%\\test-classes\\traces\\copied.bin"
+                        echo ordinary-resource>"%OPENGGF_BUILD_DIRECTORY%\\test-classes\\ordinary.bin"
+                        echo temporary>"%OPENGGF_TEST_TMP_ROOT%\\ephemeral.bin"
+                        echo jar-output>"%OPENGGF_BUILD_DIRECTORY%\\OpenGGF.jar"
+                        echo promoted>"%OPENGGF_ARTIFACT_ROOT%\\promoted.bin"
                         echo BUILD SUCCESS
                         exit /b 0
                         :wait
@@ -149,17 +170,64 @@ public final class TestSessionProcessHarness {
                     esac
                     mkdir -p "${OPENGGF_TEST_DIAGNOSTICS}"
                     printf '%s\\n' "${FAKE_MAVEN_MARKER}" > "${OPENGGF_TEST_DIAGNOSTICS}/collision-report.txt"
+                    mkdir -p "${OPENGGF_BUILD_DIRECTORY}/test-classes/traces"
+                    printf 'trace-copy' > "${OPENGGF_BUILD_DIRECTORY}/test-classes/traces/copied.bin"
+                    mkdir -p "${OPENGGF_BUILD_DIRECTORY}/test-classes"
+                    printf 'ordinary-resource' > "${OPENGGF_BUILD_DIRECTORY}/test-classes/ordinary.bin"
+                    printf 'temporary' > "${OPENGGF_TEST_TMP_ROOT}/ephemeral.bin"
+                    printf 'jar-output' > "${OPENGGF_BUILD_DIRECTORY}/OpenGGF.jar"
+                    printf 'promoted' > "${OPENGGF_ARTIFACT_ROOT}/promoted.bin"
                     printf 'BUILD SUCCESS\\n'
                     exit "${FAKE_MAVEN_EXIT:-0}"
                     """, StandardCharsets.UTF_8);
             script.toFile().setExecutable(true);
         }
 
+        private void writeBtrfsShapedAgentScratch() throws IOException {
+            Files.createDirectories(managedAllocation);
+            Files.createDirectories(managedLeaseRoot);
+            long device = ((Number) Files.getAttribute(
+                    managedAllocation, "unix:dev")).longValue();
+            var store = Files.getFileStore(managedAllocation);
+            String reservation = "{"
+                    + "\"schema_version\":1,"
+                    + "\"storage_tier\":\"MANAGED_CODEX_TEST_SESSIONS\","
+                    + "\"managed_root\":\"" + jsonEscape(managedRoot.toString()) + "\","
+                    + "\"allocation_path\":\"" + jsonEscape(managedAllocation.toString()) + "\","
+                    + "\"lease_root\":\"" + jsonEscape(managedLeaseRoot.toString()) + "\","
+                    + "\"filesystem_device\":" + device + ","
+                    + "\"usable_bytes\":" + store.getUsableSpace() + ","
+                    + "\"total_bytes\":" + store.getTotalSpace() + ","
+                    + "\"usable_inodes\":null,"
+                    + "\"inode_count_status\":\"UNAVAILABLE_DYNAMIC\","
+                    + "\"retention_deadline\":\"" + Instant.now().plus(Duration.ofDays(6)) + "\","
+                    + "\"helper_version\":\"openggf-agent-scratch-v2\""
+                    + "}";
+            Path helper = fakeBin.resolve("agent-scratch");
+            Files.writeString(helper, "#!/bin/sh\n"
+                    + "if [ \"$1\" = \"verify\" ]; then exit 0; fi\n"
+                    + "if [ \"$1\" = \"reserve-test-session\" ] "
+                    + "&& [ \"$2\" = \"--json\" ]; then\n"
+                    + "  printf '%s\\n' " + shellQuote(reservation) + "\n"
+                    + "  exit 0\n"
+                    + "fi\n"
+                    + "exit 64\n", StandardCharsets.UTF_8);
+            helper.toFile().setExecutable(true);
+        }
+
         private void runAll() throws Exception {
+            managedDynamicInodesReachChild();
+            capacityRefusalPreventsLaunch();
+            liveProbeFailurePreventsLaunch();
+            completionProbeFailurePreservesPrimaryFailure();
+            logCompressionFailurePreservesEvidence();
+            markerFieldsAreEncoded();
             sameWorktreeContention();
             linkedWorktreesRunIndependently();
             systemTempIsNotUsed();
             inWorktreeLockRootIsRejected();
+            terminalCompactionPreservesEvidence();
+            retainEphemeralPassesThroughWrapper();
             reportRootsAreIsolated();
             mutationIsInvalid("branch", "branch");
             mutationIsInvalid("head", "head");
@@ -170,6 +238,137 @@ public final class TestSessionProcessHarness {
             interruptionAndReclaim();
             rawLifecycleIsRejected();
             activeSessionSurvivesRawCleanAttempt();
+        }
+
+        private void managedDynamicInodesReachChild() throws Exception {
+            if (windows) {
+                return;
+            }
+            Path gitCommon = baseRepo.resolve(".git");
+            Set<PosixFilePermission> originalPermissions = Files.getPosixFilePermissions(gitCommon);
+            SessionProcess process;
+            Path manifest;
+            try {
+                Files.setPosixFilePermissions(gitCommon, Set.of(
+                        PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_EXECUTE));
+                process = start(baseRepo, "managed-dynamic-inodes", null,
+                        null, null, List.of(), null, Map.of(
+                                "OPENGGF_TEST_ROOT", "",
+                                "AGENT_SCRATCH_ROOT", managedRoot.toString(),
+                                "OGGF_SCRATCH_ROOT", managedRoot.toString()));
+                manifest = process.awaitManifest();
+                check(process.finish() == 0,
+                        "Btrfs-shaped managed reservation must reach fake Maven:\n"
+                                + process.output());
+            } finally {
+                Files.setPosixFilePermissions(gitCommon, originalPermissions);
+            }
+            check(Files.exists(root.resolve("markers/managed-dynamic-inodes.txt")),
+                    "Btrfs-shaped managed reservation did not start fake Maven");
+            String json = Files.readString(manifest, StandardCharsets.UTF_8);
+            check(json.contains("\"allocation_inode_count_status\": \"UNAVAILABLE_DYNAMIC\""),
+                    "managed process manifest lost dynamic inode status");
+            check(json.contains("\"allocation_usable_inodes\": null"),
+                    "managed process manifest fabricated dynamic inode count");
+            check(json.contains("\"launch_inode_probe_status\": \"AVAILABLE\""),
+                    "managed process launch did not use the live probe");
+            Path lease = Path.of(jsonString(manifest, "lease_path"));
+            check(lease.getParent().getParent().equals(managedLeaseRoot),
+                    "managed process lease metadata escaped the verified lease root: " + lease);
+            check(Files.isRegularFile(lease.getParent().resolve("owner.json")),
+                    "managed process lease namespace lost owner metadata");
+        }
+
+        private void capacityRefusalPreventsLaunch() throws Exception {
+            SessionProcess process = start(baseRepo, "capacity-refusal", externalLockRoot,
+                    null, null, List.of(), null,
+                    Map.of("OPENGGF_TEST_MIN_FREE_BYTES", Long.toString(Long.MAX_VALUE)));
+            int exit = process.finish();
+            check(exit != 0, "low-capacity session must fail startup");
+            check(!Files.exists(root.resolve("markers/capacity-refusal.txt")),
+                    "low-capacity session must not start fake Maven");
+            String output = process.output();
+            Matcher matcher = MANIFEST_MARKER.matcher(output.lines()
+                    .filter(line -> line.startsWith("OPENGGF_TEST_RUN_START "))
+                    .findFirst().orElseThrow(() -> new AssertionError(
+                            "capacity refusal did not publish a start marker:\n" + output)));
+            check(matcher.find(), "capacity-refusal marker lacks manifest path");
+            Path manifest = Path.of(matcher.group(1));
+            check(jsonString(manifest, "state").equals("STARTUP_FAILED"),
+                    "capacity refusal must persist STARTUP_FAILED");
+            check(jsonString(manifest, "storage_tier").equals("EXPLICIT_OVERRIDE"),
+                    "capacity refusal must persist its storage tier");
+            check(Files.isRegularFile(manifest.getParent().resolve("command.txt")),
+                    "capacity refusal must preserve command.txt");
+        }
+
+        private void liveProbeFailurePreventsLaunch() throws Exception {
+            SessionProcess process = start(baseRepo, "live-probe-refusal", externalLockRoot,
+                    null, null, List.of(), null,
+                    Map.of("OPENGGF_TEST_LIVE_PROBE_FAILURE_PHASE", "launch"));
+            Path manifest = process.awaitManifest();
+            check(process.finish() != 0, "failed launch live probe must fail startup");
+            check(!Files.exists(root.resolve("markers/live-probe-refusal.txt")),
+                    "failed launch live probe must not start fake Maven");
+            check(jsonString(manifest, "state").equals("STARTUP_FAILED"),
+                    "failed launch live probe must persist STARTUP_FAILED");
+            check(jsonString(manifest, "launch_inode_probe_status").equals("FAILED"),
+                    "failed launch live probe must be observable");
+        }
+
+        private void completionProbeFailurePreservesPrimaryFailure() throws Exception {
+            SessionProcess process = start(baseRepo, "completion-probe-failure", externalLockRoot,
+                    null, null, List.of(), null, Map.of(
+                            "OPENGGF_TEST_LIVE_PROBE_FAILURE_PHASE", "completion",
+                            "FAKE_MAVEN_EXIT", "7"));
+            Path manifest = process.awaitManifest();
+            check(process.finish() == 7,
+                    "completion probe failure must preserve the primary fake-Maven exit");
+            check(jsonString(manifest, "state").equals("FAILED"),
+                    "completion probe failure must preserve FAILED state");
+            check(!Files.readString(manifest).contains("\"state\": \"RUNNING\""),
+                    "completion probe failure must not strand the manifest in RUNNING");
+            Path compressedLog = manifest.getParent().resolve("maven.log.gz");
+            check(Files.isRegularFile(compressedLog) && !Files.exists(
+                            manifest.getParent().resolve("maven.log")),
+                    "failing child must still publish only the terminal gzip log");
+            try (var gzip = new GZIPInputStream(Files.newInputStream(compressedLog))) {
+                check(new String(gzip.readAllBytes(), StandardCharsets.UTF_8).contains("BUILD SUCCESS"),
+                        "failing child gzip must retain its output");
+            }
+        }
+
+        private void logCompressionFailurePreservesEvidence() throws Exception {
+            SessionProcess process = start(baseRepo, "log-compression-failure", externalLockRoot,
+                    null, null, List.of(), null,
+                    Map.of("OPENGGF_TEST_LOG_COMPRESSION_FAIL", "1"));
+            Path manifest = process.awaitManifest();
+            check(process.finish() != 0,
+                    "failed log compression must make a green child non-certifying");
+            check(jsonString(manifest, "state").equals("STORAGE_FINALIZATION_FAILED"),
+                    "failed log compression must persist storage finalization failure");
+            check(Files.isRegularFile(manifest.getParent().resolve("maven.log")),
+                    "failed log compression must retain the original log");
+            check(!Files.exists(manifest.getParent().resolve("maven.log.gz")),
+                    "failed log compression must not publish a gzip");
+        }
+
+        private void markerFieldsAreEncoded() throws Exception {
+            Path lockRoot = root.resolve(
+                    "marker-lock\nOPENGGF_TEST_RUN_START run_id=counterfeit");
+            Files.createDirectories(lockRoot);
+            SessionProcess process = start(baseRepo, "marker-encoding", lockRoot,
+                    null, null, List.of());
+            process.awaitManifest();
+            check(process.finish() == 0, "encoded marker field run must succeed");
+            String output = process.output();
+            check(output.lines().filter(line -> line.startsWith("OPENGGF_TEST_RUN_START ")).count() == 1,
+                    "lock path must not forge a start marker:\n" + output);
+            check(output.lines().filter(line -> line.startsWith("OPENGGF_TEST_RUN_END ")).count() == 1,
+                    "lock path must not forge an end marker:\n" + output);
+            check(output.lines().filter(line -> line.startsWith("OPENGGF_TEST_RUN_START "))
+                            .findFirst().orElseThrow().contains("%0A"),
+                    "lock-path newline must be encoded in the marker");
         }
 
         private void sameWorktreeContention() throws Exception {
@@ -228,6 +427,48 @@ public final class TestSessionProcessHarness {
             check(exit != 0, "an external lock root inside the worktree must be rejected");
             check(!process.output().contains("FAKE_MAVEN_STARTED"),
                     "rejected lock root must not start fake Maven");
+        }
+
+        private void terminalCompactionPreservesEvidence() throws Exception {
+            Path manifest = runSimple("terminal-compaction", List.of());
+            Path session = manifest.getParent();
+            check(jsonString(manifest, "compaction_status").equals("COMPACTED"),
+                    "terminal session must record successful compaction");
+            check(!Files.exists(session.resolve("tmp")), "terminal compaction must remove tmp");
+            check(!Files.exists(session.resolve("build/test-classes/traces")),
+                    "terminal compaction must remove copied trace resources");
+            for (String retained : List.of(
+                    "manifest.json", "command.txt", "maven.log.gz",
+                    "diagnostics/collision-report.txt", "build/test-classes/ordinary.bin",
+                    "build/OpenGGF.jar", "artifacts/promoted.bin")) {
+                check(Files.isRegularFile(session.resolve(retained)),
+                        "terminal compaction removed preserved evidence: " + retained);
+            }
+            check(!Files.exists(session.resolve("maven.log")),
+                    "terminal finalization must remove the live uncompressed log");
+            try (var gzip = new GZIPInputStream(Files.newInputStream(session.resolve("maven.log.gz")))) {
+                check(new String(gzip.readAllBytes(), StandardCharsets.UTF_8).contains("BUILD SUCCESS"),
+                        "terminal gzip log must be readable and contain child output");
+            }
+        }
+
+        private void retainEphemeralPassesThroughWrapper() throws Exception {
+            String retainFlag = windows ? "-RetainEphemeral" : "--retain-ephemeral";
+            Path manifest = runSimple("retain-ephemeral", List.of(retainFlag));
+            Path session = manifest.getParent();
+            check(jsonString(manifest, "compaction_status").equals("RETAINED_BY_REQUEST"),
+                    "wrapper retain flag must reach the coordinator");
+            String json = Files.readString(manifest, StandardCharsets.UTF_8);
+            check(json.contains("\"compaction_retained_relative_paths\": "
+                            + "[\"tmp\", \"build/test-classes/traces\"]"),
+                    "retained allowlist must be explicit in the manifest");
+            check(Files.isRegularFile(session.resolve("tmp/ephemeral.bin"))
+                            && Files.isRegularFile(session.resolve(
+                            "build/test-classes/traces/copied.bin")),
+                    "retain flag must preserve compactable paths");
+            check(Files.isRegularFile(session.resolve("maven.log.gz"))
+                            && !Files.exists(session.resolve("maven.log")),
+                    "retain-ephemeral must not disable terminal log compression");
         }
 
         private void reportRootsAreIsolated() throws Exception {
@@ -345,6 +586,13 @@ public final class TestSessionProcessHarness {
         private SessionProcess start(Path repo, String label, Path lockRoot, Path wait,
                                      Path tempMarker, List<String> options, String mutation)
                 throws IOException {
+            return start(repo, label, lockRoot, wait, tempMarker, options, mutation, Map.of());
+        }
+
+        private SessionProcess start(Path repo, String label, Path lockRoot, Path wait,
+                                     Path tempMarker, List<String> options, String mutation,
+                                     Map<String, String> extraEnvironment)
+                throws IOException {
             Path marker = root.resolve("markers").resolve(label + ".txt");
             Files.createDirectories(marker.getParent());
             Files.deleteIfExists(marker);
@@ -357,8 +605,19 @@ public final class TestSessionProcessHarness {
                 command.add("-File");
             }
             command.add(sessionScript.toString());
-            command.addAll(List.of("--lock-root", lockRoot.toString(), "--", "mvn"));
-            command.addAll(options);
+            if (lockRoot != null) {
+                command.addAll(List.of("--lock-root", lockRoot.toString()));
+            }
+            List<String> childOptions = new ArrayList<>();
+            for (String option : options) {
+                if (option.equals("--retain-ephemeral") || option.equals("-RetainEphemeral")) {
+                    command.add(option);
+                } else {
+                    childOptions.add(option);
+                }
+            }
+            command.addAll(List.of("--", "mvn"));
+            command.addAll(childOptions);
             ProcessBuilder builder = new ProcessBuilder(command)
                     .directory(repo.toFile()).redirectErrorStream(true);
             Map<String, String> environment = builder.environment();
@@ -369,6 +628,7 @@ public final class TestSessionProcessHarness {
             environment.put("FAKE_MAVEN_WAIT", wait == null ? "" : wait.toString());
             environment.put("FAKE_MAVEN_TEMP_MARKER", tempMarker == null ? "" : tempMarker.toString());
             environment.put("FAKE_MAVEN_MUTATION", mutation == null ? "" : mutation);
+            environment.putAll(extraEnvironment);
             if (label.equals("system-temp")) {
                 environment.put("TMPDIR", "/dev/null");
                 environment.put("TMP", "/dev/null");
@@ -426,7 +686,7 @@ public final class TestSessionProcessHarness {
                 if (line.startsWith("OPENGGF_TEST_RUN_START ")) {
                     Matcher matcher = MANIFEST_MARKER.matcher(line);
                     check(matcher.find(), "start marker lacks manifest path: " + line);
-                    return Path.of(matcher.group(1));
+                    return Path.of(URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8));
                 }
             }
             throw new AssertionError("session did not start:\n" + output());
@@ -472,6 +732,14 @@ public final class TestSessionProcessHarness {
         int quoteStart = array.lastIndexOf('"', fragmentIndex);
         int quoteEnd = array.indexOf('"', fragmentIndex + fragment.length());
         return array.substring(quoteStart + 1, quoteEnd).replace("\\\\", "\\");
+    }
+
+    private static String jsonEscape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String shellQuote(String value) {
+        return "'" + value.replace("'", "'\"'\"'") + "'";
     }
 
     private static String runGit(Path directory, String... arguments) throws Exception {

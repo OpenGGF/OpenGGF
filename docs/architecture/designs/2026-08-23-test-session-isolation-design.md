@@ -6,6 +6,13 @@ Approved in discussion as the direction for implementation and amended after
 independent review. This document specifies the implementation boundary; no
 runtime or build changes are made by the design commit.
 
+The terminal allocation, capacity, retention, and compaction contract is
+defined by the later
+[session storage and worktree lifecycle safety addendum](2026-08-26-session-storage-and-worktree-lifecycle-safety.md).
+That addendum supersedes this document's original root-selection and cleanup
+assumptions without changing the session identity, lease, source-validity, or
+evidence ownership contracts below.
+
 ## Motivation
 
 OpenGGF's test workflow currently has several independent shared-state hazards:
@@ -65,22 +72,37 @@ The test workflow will provide a named **test session** with these guarantees:
 
 The default session root is outside Maven's normal `target` directory so that a
 clean of the legacy output directory cannot delete an active session's
-evidence. The root resolver uses the following order:
+evidence. As amended by the terminal-storage addendum, the resolver uses:
 
 1. An explicit `OPENGGF_TEST_ROOT` override. If it is present but not absolute,
    writable, or owned by the current user, startup fails; it never silently
    falls through to another root.
-2. A task directory returned by `agent-scratch new` when the managed scratch
-   helper is available and writable. The launcher does not guess a child path
-   beneath `$AGENT_SCRATCH_ROOT/tasks`, because the helper owns naming, locking,
-   and retention there.
-3. The ignored project-local `.openggf/test-runs` directory.
+2. A verified versioned `agent-scratch reserve-test-session --json` allocation
+   in `MANAGED_CODEX_TEST_SESSIONS` when managed scratch is configured. Any
+   configured helper/install/verification/reservation failure fails closed;
+   project fallback is forbidden.
+3. The visibly labelled ignored project-local `.openggf/test-runs` directory,
+   only when managed scratch is not configured.
 4. A verified writable system temporary directory only when explicitly enabled
-   by the caller.
+   by the caller with `--allow-system-tmp`.
 
 The project-local fallback is ephemeral test output, not a replacement for
 durable agent artifacts. A report that must outlive normal retention is copied
 to the managed scratch/archive location by the caller.
+
+The managed schema includes canonical allocation and `lease_root` paths. Its
+`inode_count_status` is `MEASURED` with numeric `usable_inodes`, or
+`UNAVAILABLE_DYNAMIC` with JSON-null `usable_inodes` for a dynamic inode pool.
+Static helper/configuration/lane/unit-file verification remains mandatory in a
+sandbox; an unreachable user service bus is recorded separately as runtime
+state `UNAVAILABLE_IN_SANDBOX`, while unknown service-manager errors fail.
+
+Every tier applies the addendum's pre-launch floor of
+`max(20 GiB, 5% of filesystem capacity)`, with
+`OPENGGF_TEST_MIN_FREE_BYTES` able only to raise it, and its all-tier live inode
+probe. A measured zero refuses immediately; a dynamic unavailable count relies
+on the live probe and is never treated as zero. Terminal compaction is limited to `tmp` and
+`build/test-classes/traces`; `--retain-ephemeral` retains them for diagnosis.
 
 Each session is created with an ID containing a UTC timestamp, the launcher PID,
 and a cryptographically random suffix, for example:
@@ -106,29 +128,33 @@ identity because two invocations can share a clock tick or the clock can move.
 ```
 
 The run manifest starts in `RUNNING` state and ends in exactly one of
-`PASSED`, `FAILED`, `INVALID_IDENTITY_CHANGED`, `ABORTED`, or
-`STARTUP_FAILED`.
+`PASSED`, `FAILED`, `INVALID_IDENTITY_CHANGED`, `ABORTED`, `STARTUP_FAILED`, or
+`STORAGE_FINALIZATION_FAILED`.
 An orphaned `RUNNING` manifest is retained for diagnosis and is never silently
 reused.
 
 ## Worktree lease and supported entrypoints
 
-The launcher acquires an atomic lease in the per-worktree Git metadata
-directory returned by `git rev-parse --git-dir`, at:
+The launcher acquires an atomic lease under a root selected independently from
+the output root. An explicit `--lock-root` or `OPENGGF_TEST_LOCK_ROOT` has
+highest priority. Otherwise a managed reservation supplies the verified
+`<AGENT_SCRATCH_ROOT>/codex/test-session-locks` root, allowing the exact default
+wrapper to operate inside Codex's writable sandbox boundary. Unmanaged tiers
+fall back to the per-worktree Git metadata directory returned by
+`git rev-parse --git-dir`:
 
 ```text
-.git/                                  # main worktree; per-worktree metadata for linked worktrees
-  openggf-test-session.lock/
-    lease.lock                          # regular file held with Java FileChannel/FileLock
+<selected-lock-root>/
+  openggf-test-session.lock[-<worktree-hash>]/
+    lease.lock                         # regular file held with Java FileChannel/FileLock
     owner.json
 ```
 
-This location survives `git clean -fdx` and is distinct for linked worktrees.
-There is no deletable in-worktree lease fallback. If the per-worktree Git
-metadata is not writable, the launcher requires an explicit external lock root
-(`OPENGGF_TEST_LOCK_ROOT`) or a writable managed scratch location outside the
-worktree. If neither exists, startup fails closed before Maven; it never claims
-single-session protection from a lock that `git clean -fdx` can remove.
+Both the Git and managed locations survive `git clean -fdx`; external/managed
+namespaces include a stable worktree hash so linked worktrees remain distinct.
+There is no deletable in-worktree lease fallback. If neither a verified managed
+lease root, explicit external root, nor writable per-worktree Git metadata is
+available, startup fails closed before Maven.
 
 `owner.json` records the run ID, process ID, host, worktree path, start time,
 command, branch, and starting `HEAD`. If the directory already exists, the
@@ -209,10 +235,14 @@ the recorded initializing process is revalidated dead. If all four attempts
 fail, reclaim exits 75 and leaves every marker and namespace retained for a
 later explicit invocation.
 
-The lease is placed in per-worktree metadata rather than the common repository
-metadata. This permits independent linked worktrees to run concurrently. The
-external lock-root fallback is keyed by the canonical worktree path and is
-used only when explicitly provisioned outside the worktree.
+Linked worktrees never share one lease namespace in common repository metadata.
+For unmanaged Git-local locking, the main worktree uses common `.git` and each
+linked worktree uses `.git/worktrees/<name>`; explicit and managed external
+roots key their namespace by the canonical worktree path. This permits
+independent linked worktrees to run concurrently.
+Managed external storage is the default for a managed reservation, while an
+explicit external root is selected only by `--lock-root` or
+`OPENGGF_TEST_LOCK_ROOT`.
 
 The launcher owns the lease for the entire Maven invocation, including `clean`,
 `compile`, `test-compile`, `test`, `verify`, `package`, and report aggregation. It holds an
@@ -516,13 +546,21 @@ the separate `-Pguards` profile through a fresh wrapper session so whole-
 production ArchUnit imports cannot retain their graph behind the long ordinary
 suite.
 
+The storage addendum extends but does not reinterpret those markers. Start adds
+`storage_tier`, `launch_usable_bytes`, and `capacity_floor_bytes` alongside the
+existing run/isolation/evidence-path fields. End adds `compaction_status`,
+`reclaimed_bytes`, and `completion_usable_bytes` alongside the existing
+exit/state/identity verdict. Storage finalisation can turn an otherwise green
+run into `STORAGE_FINALIZATION_FAILED`, but it cannot replace an existing child
+or identity failure as the primary result.
+
 ## Failure handling and cleanup
 
 - No writable root: emit `STARTUP_FAILED`, explain each candidate path, and do
   not invoke Maven.
-- No writable per-worktree Git metadata or explicit external lock root: emit
-  `STARTUP_FAILED` and do not use a project-root lock that destructive cleanup
-  can remove.
+- No verified managed lease root, writable per-worktree Git metadata, or
+  explicit external lock root: emit `STARTUP_FAILED` and do not use a
+  project-root lock that destructive cleanup can remove.
 - Existing lease: emit the owner manifest and exit without touching build
   outputs, reports, or the active session.
 - Maven startup failure: retain the manifest and Maven log as
@@ -531,16 +569,24 @@ suite.
   exit code is zero.
 - Source or declared runtime-input identity changed: mark
   `INVALID_IDENTITY_CHANGED` and return nonzero.
-- Stale session: retain it until explicit bounded cleanup. Cleanup may remove
-  only completed sessions owned by the current project root and must never
-  target an active or unknown path.
+- Stale session: managed terminal sessions use seven-day retention unless kept;
+  a live `RUNNING` lease is preserved, while an expired stale `RUNNING` session
+  is atomically moved to the fourteen-day quarantine lane rather than deleted.
+- Terminal storage: preserve manifest, command/log, reports, diagnostics,
+  artifacts, distributions, package output, ordinary resources, and manifest
+  inventories. Remove only the addendum's two allowlisted reproducible trees.
+- Unsupported destructive identity: retain without mutation as
+  `RETAINED_PLATFORM_UNSUPPORTED`. In particular, native Windows on OpenJDK 21
+  remains certifying and retained pending an Actworks/Slipmat native file-ID
+  bridge; its capacity and retention policies still apply.
 
-The launcher does not run a broad recursive deletion. Cleanup is limited to
-known session directories and is separate from test execution. Maven no longer
-installs Git hooks by mutating shared `.git/config` during `validate`; hook
-installation is an explicit bootstrap command. A read-only Git configuration
-therefore does not produce a build-side mutation attempt or hide behind a
-non-fatal Maven error.
+The launcher does not run a broad recursive pathname deletion. Terminal
+compaction requires descriptor-relative secure streams or a stable-key,
+same-store atomic tombstone strategy; uncertainty retains evidence. Maven no
+longer installs Git hooks by mutating shared `.git/config` during `validate`;
+hook installation is an explicit bootstrap command. A read-only Git
+configuration therefore does not produce a build-side mutation attempt or hide
+behind a non-fatal Maven error.
 
 ## Verification contract
 
