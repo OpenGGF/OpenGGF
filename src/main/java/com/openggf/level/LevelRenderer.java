@@ -1107,7 +1107,7 @@ public final class LevelRenderer {
         if (options.includeHud() && lm.hudRenderManager != null && !lm.isHudSuppressed()
                 && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
             AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
-            lm.hudRenderManager.setViewportWidth(lm.graphicsManager.getProjectionWidth());
+            prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
             lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
         }
         profiler.endSection("render.hud");
@@ -1122,6 +1122,11 @@ public final class LevelRenderer {
                     spriteManager, lm.gameModule, lm.configService, lm.frameCounter);
         }
         lm.graphicsManager.enqueueDefaultShaderState();
+    }
+
+    /** Package-private owner seam for executable HUD viewport wiring tests. */
+    static void prepareHudForDraw(HudRenderManager hud, GraphicsManager graphics) {
+        hud.setViewportWidth(graphics.getProjectionWidth());
     }
 
     private void updateWaterShaderState(Camera camera) {

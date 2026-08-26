@@ -6,8 +6,8 @@ import com.openggf.graphics.pipeline.UiRenderPipeline;
 import com.openggf.level.objects.HudRenderManager;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,16 +33,23 @@ class TestHudViewportWiring {
     }
 
     @Test
-    void levelRendererDirectHudPathForwardsProjectionWidthBeforeDraw() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
-        String drawCall = "lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);";
-        int drawIndex = source.indexOf(drawCall);
-        assertTrue(drawIndex >= 0, "LevelRenderer must retain the direct gameplay HUD draw path");
+    void levelRendererHudPreparationForwardsProjectionWidthBeforeDraw() throws Exception {
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.setProjectionWidth(528);
+        RecordingHud hud = new RecordingHud(graphics);
 
-        String beforeDraw = source.substring(Math.max(0, drawIndex - 240), drawIndex);
-        assertTrue(beforeDraw.contains(
-                        "lm.hudRenderManager.setViewportWidth(lm.graphicsManager.getProjectionWidth());"),
-                "the direct gameplay HUD path must forward the live projection width before drawing");
+        Method preparation = Arrays.stream(LevelRenderer.class.getDeclaredMethods())
+                .filter(method -> method.getName().equals("prepareHudForDraw"))
+                .findFirst()
+                .orElse(null);
+        assertTrue(preparation != null,
+                "LevelRenderer must expose the executable HUD preparation seam");
+        preparation.setAccessible(true);
+        preparation.invoke(null, hud, graphics);
+        hud.draw(mock(LevelState.class), null);
+
+        assertEquals(528, hud.viewportWidthAtDraw,
+                "the direct gameplay HUD owner must forward width before drawing");
     }
 
     private static final class RecordingHud extends HudRenderManager {
