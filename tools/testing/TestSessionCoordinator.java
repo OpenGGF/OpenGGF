@@ -48,6 +48,7 @@ public final class TestSessionCoordinator {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final HexFormat HEX = HexFormat.of();
     private static final int STORAGE_ALLOCATION_SCHEMA = 1;
+    private static final String SUPPORTED_AGENT_SCRATCH_HELPER_VERSION = "openggf-agent-scratch-v2";
     private static final Duration MAX_MANAGED_RETENTION = Duration.ofDays(7);
     private static final Set<String> RESERVATION_FIELDS = Set.of(
             "schema_version", "storage_tier", "managed_root", "allocation_path",
@@ -995,8 +996,8 @@ public final class TestSessionCoordinator {
             throw managedFailure("reservation retention_deadline is outside the bounded seven-day policy");
         }
         String helperVersion = requiredString(record, "helper_version");
-        if (helperVersion.isBlank()) {
-            throw managedFailure("reservation helper_version must not be blank");
+        if (!SUPPORTED_AGENT_SCRATCH_HELPER_VERSION.equals(helperVersion)) {
+            throw managedFailure("unsupported reservation helper_version: " + helperVersion);
         }
 
         return new StorageAllocation(allocation, StorageTier.MANAGED_CODEX_TEST_SESSIONS,

@@ -120,6 +120,8 @@ public final class TestSessionCoordinatorSelfTest {
     private static void verifyManagedMalformedJsonDoesNotFallback(Path root) throws Exception {
         Path managedRoot = createOwnedDirectory(root.resolve("managed-malformed-root"));
         Path allocation = createOwnedDirectory(managedRoot.resolve("codex/test-sessions/session-reserved"));
+        Path mismatchedManagedRoot = createOwnedDirectory(root.resolve("managed-mismatched-root"));
+        Path outsideAllocation = createOwnedDirectory(managedRoot.resolve("codex/outside-allocation"));
         String valid = reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6)));
         Map<String, String> malformed = new LinkedHashMap<>();
         malformed.put("syntax", "{");
@@ -128,10 +130,11 @@ public final class TestSessionCoordinatorSelfTest {
         malformed.put("unknown", valid.substring(0, valid.length() - 1) + ",\"future_field\":1}");
         malformed.put("schema-type", valid.replace("\"schema_version\":1", "\"schema_version\":\"1\""));
         malformed.put("tier", valid.replace("MANAGED_CODEX_TEST_SESSIONS", "PROJECT_LOCAL_FALLBACK"));
-        malformed.put("managed-root", valid.replace(jsonEscape(managedRoot.toString()),
-                jsonEscape(root.resolve("different-managed-root").toString())));
+        malformed.put("managed-root", valid.replace(
+                "\"managed_root\":\"" + jsonEscape(managedRoot.toString()) + "\"",
+                "\"managed_root\":\"" + jsonEscape(mismatchedManagedRoot.toString()) + "\""));
         malformed.put("allocation", valid.replace(jsonEscape(allocation.toString()),
-                jsonEscape(root.resolve("outside-allocation").toString())));
+                jsonEscape(outsideAllocation.toString())));
         malformed.put("device-type", valid.replaceFirst("\"filesystem_device\":\\d+",
                 "\"filesystem_device\":\"1\""));
         malformed.put("device-mismatch", valid.replaceFirst("\"filesystem_device\":\\d+",
@@ -150,6 +153,8 @@ public final class TestSessionCoordinatorSelfTest {
                 Instant.now().plus(Duration.ofDays(8))));
         malformed.put("helper-version-type", valid.replace(
                 "\"helper_version\":\"openggf-agent-scratch-v2\"", "\"helper_version\":2"));
+        malformed.put("helper-version-value", valid.replace("openggf-agent-scratch-v2",
+                "openggf-agent-scratch-v3"));
         malformed.put("trailing-object", valid + "{}");
 
         int index = 0;
