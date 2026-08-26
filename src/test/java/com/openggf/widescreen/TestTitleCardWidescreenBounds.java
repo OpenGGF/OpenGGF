@@ -11,12 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestTitleCardWidescreenBounds {
 
     @Test
-    void s2ExitTailsWaitForTheLiveViewportAtWideWidths() throws IOException {
+    void s2ExitTailsUseElementCompletionAtEveryViewportWidth() throws IOException {
         String source = Files.readString(Path.of(
                 "src/main/java/com/openggf/game/sonic2/titlecard/TitleCardManager.java"));
 
-        assertTrue(source.contains("viewportWidth() == SCREEN_WIDTH || leftSwooshElement == null"));
-        assertTrue(source.contains("viewportWidth() == SCREEN_WIDTH || bottomBarElement == null"));
+        assertTrue(source.contains("if (leftSwooshElement.hasExited())"));
+        assertTrue(source.contains("if (bottomBarElement.hasExited())"));
     }
 
     @Test
