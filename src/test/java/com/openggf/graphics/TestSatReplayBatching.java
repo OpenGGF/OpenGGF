@@ -21,8 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Proves the SAT replay path routes through the instanced batcher when available:
  * one InstancedBatchCommand replaces N per-tile PatternRenderCommands, while
  * preserving the bucket-major replay order and per-tile VDP priority (carried as
- * per-instance data). Also proves the direct per-tile fallback is retained when
- * instanced batching is unavailable (headless default).
+ * a per-instance tile-occlusion palette mask). Also proves the direct per-tile
+ * fallback is retained when instanced batching is unavailable (headless default).
  */
 public class TestSatReplayBatching {
 
@@ -76,10 +76,12 @@ public class TestSatReplayBatching {
         assertEquals(10f, instanceBuffer.get(FLOATS_PER_INSTANCE), "second instance x");
         assertEquals(30f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE), "third instance x");
 
-        // Per-instance VDP priority survives batching (instance float 9).
-        assertEquals(1f, instanceBuffer.get(9), "bucket-4 piece carries high priority");
-        assertEquals(0f, instanceBuffer.get(FLOATS_PER_INSTANCE + 9));
-        assertEquals(0f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE + 9));
+        // Per-instance VDP priority survives batching as the tile-occlusion
+        // palette mask (instance float 9): high-priority pieces are occluded by
+        // no priority-tile palette line, while ordinary pieces are occluded by all.
+        assertEquals(0f, instanceBuffer.get(9), "bucket-4 piece carries high priority");
+        assertEquals(15f, instanceBuffer.get(FLOATS_PER_INSTANCE + 9));
+        assertEquals(15f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE + 9));
 
         // Parity with the direct path: its commands resolve the shader at flush time,
         // after the sprite pass cleared the priority-shader flag, so the batch must
