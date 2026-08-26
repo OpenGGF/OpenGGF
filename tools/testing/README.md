@@ -73,8 +73,11 @@ exact self-test mode and publish a run-bound `frozen-next-test-seam.env` marker.
 The launcher independently authenticates the complete inherited seam-variable
 list and always marks such a run non-admissible, even when its coordinator
 manifest is otherwise `PASSED` and valid. A seam variable without exact mode,
-or a missing/mismatched seam marker, fails closed. Normal production evidence
-contains no seam marker and remains eligible for admission.
+or a missing/mismatched seam marker, fails closed. Empty-valued seam variables
+still activate quarantine; the self-test mechanically compares the adapter and
+launcher inventories against every referenced test control and rejects marker
+mode or variable-list mutation. Normal production evidence contains no seam
+marker and remains eligible for admission.
 
 ## Complete Surefire outcome inventories
 

@@ -695,7 +695,90 @@ test_test_seam_admission() {
         || fail "adapter test seam marker omitted the activating variable"
     [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
         || fail "successful adapter test seam left target"
+
+    OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 OPENGGF_TEST_CORRUPT_GENERATED_ARCHIVE= \
+        OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" \
+        || fail "empty-valued archive-corruption seam run failed"
+    manifest=$(manifest_from_output "$launch_output")
+    seam_marker="$(dirname -- "$manifest")/diagnostics/frozen-next-test-seam.env"
+    seam_names=$(sed -n 's/^variables=//p' "$seam_marker")
+    [[ ",$seam_names," == *,OPENGGF_TEST_CORRUPT_GENERATED_ARCHIVE,* \
+        && "$launch_output" == *'authenticated=true admissible=false'* ]] \
+        || fail "empty-valued archive-corruption seam was not authenticated and rejected"
     printf 'PASS: lifecycle/test shims are explicit and never admissible\n'
+}
+
+test_test_seam_inventory_audit() {
+    local adapter_inventory launcher_inventory referenced variable
+    local non_seam=',OPENGGF_TEST_WORKTREE,OPENGGF_TEST_TMP_ROOT,OPENGGF_TEST_DIAGNOSTICS,'
+    non_seam+='OPENGGF_TEST_RUN_ID,OPENGGF_TEST_MANIFEST,OPENGGF_TEST_CONTAINED_READY,'
+    non_seam+='OPENGGF_TEST_INTERRUPT_READY,OPENGGF_TEST_MUTATION_INPUT,'
+    non_seam+='OPENGGF_TEST_PARENT_MUTATION_READY,OPENGGF_TEST_PARENT_MUTATION_GO,'
+    non_seam+='OPENGGF_TEST_RESOLVED_USER_HOME,OPENGGF_TEST_RUN_END,'
+    adapter_inventory=$(sed -n '/^test_seam_variables=$/,/^done$/p' "$adapter" \
+        | rg -o 'OPENGGF_(FROZEN_NEXT_SELF_TEST_MODE|ADAPTER_TEST_SHIM|TEST_[A-Z0-9_]+)' | sort -u)
+    launcher_inventory=$(sed -n '/^launcher_test_seam_variables=$/,/^done$/p' "$launcher" \
+        | rg -o 'OPENGGF_(FROZEN_NEXT_SELF_TEST_MODE|ADAPTER_TEST_SHIM|TEST_[A-Z0-9_]+)' | sort -u)
+    [[ "$adapter_inventory" == "$launcher_inventory" ]] \
+        || fail "adapter and launcher authenticated test-seam inventories differ"
+    [[ "$adapter_inventory" == *OPENGGF_TEST_CORRUPT_GENERATED_ARCHIVE* ]] \
+        || fail "archive-corruption control is absent from authenticated test-seam inventory"
+    referenced=$(rg --no-filename -o 'OPENGGF_TEST_[A-Z0-9_]+' \
+        "$adapter" "$launcher" "$fake_maven" | sort -u)
+    while IFS= read -r variable; do
+        [[ -n "$variable" ]] || continue
+        if rg -Fxq -- "$variable" <<< "$adapter_inventory" \
+            || [[ "$non_seam" == *",$variable,"* ]]; then
+            continue
+        fi
+        fail "unclassified OPENGGF_TEST control escaped seam audit: $variable"
+    done <<< "$referenced"
+    printf 'PASS: adapter/launcher seam inventories mechanically cover test controls\n'
+}
+
+test_test_seam_marker_mutation() {
+    local mutation ready go output launcher_pid status manifest diagnostics marker temporary
+    for mutation in mode variables; do
+        ready="$test_root/seam-$mutation-ready.env"
+        go="$test_root/seam-$mutation-go"
+        output="$test_root/seam-$mutation.out"
+        set +e
+        OPENGGF_FROZEN_NEXT_SELF_TEST_MODE=1 OPENGGF_ADAPTER_TEST_SHIM=1 \
+            OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_PARENT_MUTATION_READY="$ready" \
+            OPENGGF_TEST_PARENT_MUTATION_GO="$go" \
+            "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
+            --harness-worktree "$harness_tree" --expected-harness-head "$frozen_harness" \
+            --wrapper "$wrapper" --coordinator "$coordinator" --adapter "$adapter" -- \
+            "$fake_maven" --wait-for-parent-mutation > "$output" 2>&1 &
+        launcher_pid=$!
+        set -e
+        for _ in {1..400}; do [[ -s "$ready" ]] && break; sleep 0.05; done
+        [[ -s "$ready" ]] || fail "seam $mutation mutation did not reach barrier"
+        manifest=$(sed -n 's/^manifest=//p' "$ready")
+        diagnostics="$(dirname -- "$manifest")/diagnostics"
+        marker="$diagnostics/frozen-next-test-seam.env"
+        [[ -f "$marker" && ! -L "$marker" ]] || fail "seam $mutation mutation omitted marker"
+        temporary="$diagnostics/.fixture-seam-mutation.tmp"
+        case "$mutation" in
+            mode) sed 's/^mode=.*/mode=attacker/' "$marker" > "$temporary" ;;
+            variables) sed 's/^variables=.*/variables=OPENGGF_ADAPTER_TEST_SHIM/' "$marker" > "$temporary" ;;
+        esac
+        mv -- "$temporary" "$marker"
+        : > "$go"
+        set +e
+        wait "$launcher_pid"
+        status=$?
+        set -e
+        (( status == 77 )) || fail "seam $mutation mutation returned $status instead of 77"
+        launch_output=$(<"$output")
+        [[ "$launch_output" == *'authenticated target cleanup failed: status=77'* \
+            && "$launch_output" == *'authenticated=true admissible=false'* ]] \
+            || fail "seam $mutation mutation lacked authenticated launcher rejection"
+        assert_report_restored
+        [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+            || fail "seam $mutation mutation left target"
+    done
+    printf 'PASS: test-seam marker mode/list mutation rejects launcher admission\n'
 }
 test_launcher_signal_recovery() {
     local signal_case expected_signal_status interrupt_ready interrupt_output interrupt_tmp
@@ -898,6 +981,16 @@ if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == seam-admission ]]; then
     exit 0
 fi
 
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == seam-audit ]]; then
+    test_test_seam_inventory_audit
+    exit 0
+fi
+
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == seam-mutation ]]; then
+    test_test_seam_marker_mutation
+    exit 0
+fi
+
 if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == terminal-auth ]]; then
     test_terminal_line_authentication
     exit 0
@@ -959,6 +1052,8 @@ test_recovery_marker_identity_mismatch
 test_identity_lifecycle_semantics
 test_functional_identity_cleanup
 test_test_seam_admission
+test_test_seam_inventory_audit
+test_test_seam_marker_mutation
 test_terminal_line_authentication
 
 # The selected guards are independent and force two Surefire processes when forkCount=2.
