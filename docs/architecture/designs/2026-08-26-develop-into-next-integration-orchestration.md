@@ -195,7 +195,10 @@ immutable detached worktree and:
    diagnostics, artifacts, and distribution to their coordinator-owned roots;
 4. resolves frozen `next`'s platform-effective `surefire.argLine` under the
    active Maven profiles, preserving CDS, Mockito agent, heap, and macOS
-   `-XstartOnFirstThread` options, then appends both
+   `-XstartOnFirstThread` options, constructs the complete effective fork
+   argument line, and supplies it through Surefire's final user property
+   `-DargLine=...` so the frozen POM's later plugin-local tmp option is
+   displaced; the constructed line ends with both
    `java.io.tmpdir=<canonical session tmp>` and
    `org.lwjgl.system.SharedLibraryExtractPath=<session tmp>/lwjgl-${surefire.forkNumber}`
    after the historical POM's own properties so the coordinator paths win;
@@ -279,20 +282,39 @@ to frozen HEAD `84d9a3761f618035dd1caa40a3d5fc72a1019693`, exact path
 regular, non-symlink preimage and archives its bytes outside the worktree. After
 the child exits it may archive a changed regular report under session
 diagnostics only when the file retains the expected report title and summary
-shape. It records original/generated SHA-256 values and byte lengths, then
-atomically restores the exact committed bytes before the coordinator takes its
-final digest. The generated hash is evidence, not an allowlisted constant: the
-report embeds the current date and does not contractually guarantee iteration or
-locale ordering.
+shape **and** the current authenticated session's Surefire XML records exact
+class `com.openggf.game.rewind.coverage.TestRewindRoundTripProbe`, method
+`probeReportIsWrittenToDisk`, and its outcome. It records that outcome plus
+original/generated SHA-256 values and byte lengths, then atomically restores
+the exact committed bytes before the coordinator takes its final digest. The
+generated hash is evidence, not an allowlisted constant: the report embeds the
+current date and does not contractually guarantee iteration or locale ordering.
 
 No other path is normalized. An unexpected initial blob, missing or replaced
 report, archive/restore failure, or any second tracked/untracked mutation must
 remain identity-invalid. A failing Maven child keeps its original status when
 normalization succeeds; normalization failure controls only an otherwise
-successful result and is always diagnosed. Signal/outer recovery must either
-restore the exact preimage or leave an explicit identity-invalid session—never
-silently accept a dirty tree. The archived generated report is parent hygiene
-evidence, not a repository deliverable and not a parent test failure.
+successful result and is always diagnosed.
+
+The launcher's outer recovery is mandatory. Before Maven, the adapter writes
+the authenticated recovery marker with run ID, frozen HEAD, canonical
+worktree/report paths, exact preimage archive path/hash/length, and target-link
+identity. If forced termination bypasses the child trap, outer recovery uses
+no-follow type checks and those identities to restore only that exact report.
+It may restore for hygiene without Surefire proof, but such a run remains
+non-certifying: `ABORTED` when the child trap restored before the coordinator
+digest, otherwise `INVALID_IDENTITY_CHANGED`. It is never `PASSED` or valid.
+
+The exact outcome matrix is binding. Child status 0 plus authorized successful
+normalization yields status 0 / `PASSED` / `valid=true`; child status N plus
+authorized successful normalization preserves N / `FAILED` / `valid=true`.
+Normalization failure after child 0 yields nonzero /
+`INVALID_IDENTITY_CHANGED` / `valid=false`; after child N it preserves N while
+the manifest is `INVALID_IDENTITY_CHANGED` / `valid=false`. Signal propagation
+preserves 130 or 143 and yields `ABORTED` if restoration preceded the
+coordinator digest, otherwise `INVALID_IDENTITY_CHANGED`, always
+`valid=false`. The archived generated report is parent hygiene evidence, not a
+repository deliverable and not a parent test failure.
 
 The full parent baseline cannot start until the adapter self-tests and the
 coordinator's own self-test pass.
