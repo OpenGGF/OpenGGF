@@ -23,17 +23,19 @@ start of the 2026-08-26 integration session:
 
 - `next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
 - `origin/next`: `84d9a3761f618035dd1caa40a3d5fc72a1019693`
-- committed local `develop`: `9b46505eb10675a4ab19772dd2707566a0432973`
-- `origin/develop`: `9b46505eb10675a4ab19772dd2707566a0432973`
+- committed local `develop`: `f1b82774d4aeb9585e75bd74e90856e7b67256d7`
+- `origin/develop`: `f1b82774d4aeb9585e75bd74e90856e7b67256d7`
 - merge base: `59e59c8feb5fb5a247ff0ab43da63aeccc742cb0`
 
 Local `develop` is clean and matches the fetched remote-tracking tip. The
-integration consumes this exact committed tip, never workspace dirt. The
-earlier audit observed `origin/develop` four commits behind; the remote advanced
-without changing the selected source hash before the design review completed.
+integration consumes this exact committed tip, never workspace dirt. During
+plan review, both refs advanced together from `9b46505eb` by merge commit
+`f1b82774d` (`bugfix/ai-s2-cadence-tests`). The source was therefore re-frozen,
+the merge simulation repeated, and both design and plan returned through their
+independent review loops before implementation.
 
-From the merge base, `next` and `develop` have 611 and 1,866 unique commits
-respectively. They changed 2,324 and 1,931 files, with 228 paths touched by both
+From the merge base, `next` and `develop` have 611 and 1,868 unique commits
+respectively. They changed 2,324 and 1,933 files, with 228 paths touched by both
 sides. An isolated recursive merge simulation reports 76 conflicts: 49
 production files, 17 test or guard files, and 10 build, policy, or documentation
 files.
@@ -110,7 +112,7 @@ from `next`. The integration branch already contains the approved design and
 planning commits above frozen `next`; therefore the merge commit's exact first
 parent is the final pre-merge integration-branch commit, whose uninterrupted
 first-parent ancestry reaches frozen `next` `84d9a3761`. Its exact second parent
-is frozen `develop` `9b46505eb`. This keeps the 0.7 development line legible
+is frozen `develop` `f1b82774d`. This keeps the 0.7 development line legible
 while recording all of `develop` as ancestry. A single coordinating agent owns
 the merge index because Git cannot safely compose independent partial
 resolutions of one conflicted index.
@@ -203,12 +205,20 @@ immutable detached worktree and:
    session build root. It never recursively deletes, follows, replaces, or
    empties `target`.
 
-The orchestrator invokes the pinned launcher, which starts the coordinator with
-`OPENGGF_RUNTIME_INPUTS` already containing the launcher, exclude file,
-adapter, wrapper, and coordinator-source paths. The coordinator reads and
-hashes those inputs before the child starts, so any mid-run change invalidates
-the session. The exact Git-config environment and input hashes are recorded in
-the adapter evidence, and the adapter asserts an empty
+The orchestrator invokes the pinned launcher with expected harness commit
+`f1b82774d`. The wrapper and `TestSessionCoordinator.java` must resolve beneath
+an immutable detached worktree at that exact commit. Before launch, the
+launcher asserts the harness worktree's detached clean identity and byte-checks
+`tools/testing/test-session.sh` and
+`tools/testing/TestSessionCoordinator.java` against their corresponding blobs
+from `git show f1b82774d4aeb9585e75bd74e90856e7b67256d7`; a wrapper or coordinator
+outside that worktree, at another commit, or with different bytes is rejected. It then
+starts the coordinator with `OPENGGF_RUNTIME_INPUTS` already containing the
+launcher, exclude file, adapter, wrapper, and coordinator-source paths. The
+coordinator reads and hashes those inputs before the child starts, so any
+mid-run change invalidates the session. The exact harness commit, Git-config
+environment, and input hashes are recorded in the adapter evidence, and the
+adapter asserts an empty
 `git status --porcelain --untracked-files=all` both before and after link
 creation while the run is active. Adapter commands may invoke Maven lifecycle
 phases such as `test` or `package`, but must never include `clean`: the
@@ -284,7 +294,7 @@ never a forced rewrite inferred by the agent.
 Record exact, wrapper-produced ordinary and structural-guard sessions for both
 frozen parents in immutable detached worktrees. `develop` uses its in-tree
 wrapper and `-Pguards` profile. Frozen `next` runs the wrapper and coordinator
-from frozen `develop` `9b46505eb` by absolute path while its process working
+from frozen `develop` `f1b82774d` by absolute path while its process working
 directory remains the detached `next` worktree and the compatibility adapter
 routes every output into that coordinator session. Because frozen `next` has
 no `guards` Maven profile, generate its explicit fresh-JVM guard selector from
@@ -297,6 +307,13 @@ First self-test and hash the external coordinator, then record its commit and
 SHA-256 in the validation report. Capture run IDs, manifests, logs,
 pass/failure/error/skip outcomes, complete test inventories, and environmental
 limitations.
+
+Persist the three verified canonical ROM paths and their CRC32/SHA-1 identities
+in a task-owned managed-scratch evidence file with owner-only permissions. The
+file contains paths and hashes, never ROM bytes. Every independent command,
+agent, and worktree reloads that file and immediately requires non-empty values,
+regular-file existence, and matching hashes before starting a ROM-backed run;
+no shell-process assignment is assumed to survive into a later invocation.
 
 ROM-backed runs discover the actual files and verify their bytes before use:
 
@@ -332,7 +349,12 @@ dependent families. The focused matrix must cover at least:
 Run the ordinary suite and separate fresh-JVM structural guards through the
 test-session coordinator. Build a clean class inventory for each tree and
 normalize every Surefire outcome as class, method or parameterized identity,
-and `PASS|FAILURE|ERROR|SKIPPED`. Duplicate identities are invalid. A test
+and `PASS|FAILURE|ERROR|SKIPPED`. Red outcomes also retain a deterministic
+signature containing element kind, exception type, normalized message, and a
+SHA-256 of the first 65,536 UTF-8 bytes of the normalized failure body. The
+normalizer converts line endings to LF and replaces the canonical worktree,
+session-root, run-ID, and ISO-8601 timestamp tokens before truncation and
+hashing. Duplicate identities are invalid. A test
 identity that exists or executes on either parent but is absent from the merged
 inventory is classified `ABSENT` and is a regression unless a documented,
 reviewed removal is itself an intended merge deliverable. A selected executable
@@ -353,7 +375,10 @@ separate fresh-JVM guard session, is the certifying fallback; a partial full run
 is never reported as the suite result.
 
 Rerun order-sensitive or environment-sensitive changes in isolation before
-classification. Record any legitimate pre-existing red, sandbox-only
+classification. A parent red whose candidate has the same outcome kind but a
+different signature is not silently accepted: it requires an isolated matching
+rerun, ledger owner, and documented disposition, and remains a regression if
+the change is merge-attributable. Record any legitimate pre-existing red, sandbox-only
 limitation, or explicitly deferred risk without weakening tests. Install the
 tracked `develop` hook path explicitly in every worktree that lacks the current
 installer, and record the exact final range-policy invocation and its base/head
@@ -365,7 +390,7 @@ The integration is ready for human review only when:
 
 1. The integration merge commit's first parent is the reviewed pre-merge
    integration-branch commit rooted at frozen `next` `84d9a3761`, and its exact
-   second parent is frozen committed `develop` `9b46505eb`.
+   second parent is frozen committed `develop` `f1b82774d`.
 2. No conflict markers, unresolved index entries, unintended generated output,
    or executable disassembly dependency remains.
 3. Every conflict decision is traceable to parent behavior, current ownership,

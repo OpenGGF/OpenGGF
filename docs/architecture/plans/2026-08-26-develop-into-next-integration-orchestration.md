@@ -6,7 +6,7 @@
 
 **Goal:** Produce a locally reviewed `next` integration commit whose first-parent
 line is rooted at frozen `next` `84d9a3761`, whose exact second parent is frozen
-`develop` `9b46505eb`, and whose measured behavior introduces no regression
+`develop` `f1b82774d`, and whose measured behavior introduces no regression
 relative to either parent.
 
 **Architecture:** Keep one coordinator-owned merge index in the isolated
@@ -25,7 +25,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 ## Global Constraints
 
 - Frozen `next` is `84d9a3761f618035dd1caa40a3d5fc72a1019693`.
-- Frozen `develop` is `9b46505eb10675a4ab19772dd2707566a0432973`.
+- Frozen `develop` is `f1b82774d4aeb9585e75bd74e90856e7b67256d7`.
 - The merge base is `59e59c8feb5fb5a247ff0ab43da63aeccc742cb0`.
 - The main workspace remains on `develop`; no branch switch is permitted there.
 - The coordinator alone owns the integration worktree's index, staging, merge,
@@ -68,7 +68,8 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 **Interfaces:**
 
-- Consumes: frozen-next worktree path, expected commit, pinned develop wrapper,
+- Consumes: frozen-next worktree path, expected commit, detached frozen-develop
+  harness worktree, expected harness commit, pinned wrapper/coordinator paths,
   Maven command, and inherited `OPENGGF_*` coordinator identity.
 - Produces: a coordinator-launched Maven run whose frozen POM output is routed
   into the session roots, plus recovery evidence and a cleanup command.
@@ -88,7 +89,10 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   6. runtime-input mutation ending `INVALID_IDENTITY_CHANGED`;
   7. in-run clean `git status` and `git check-ignore -v target` attribution to
      the pinned external exclude file; and
-  8. post-run exact detached HEAD, clean source inventory, and absent `target`.
+  8. post-run exact detached HEAD, clean source inventory, and absent `target`;
+     and
+  9. rejection of a wrong harness commit, wrapper outside the harness
+     worktree, and coordinator bytes that differ from the expected Git blob.
 
 - [ ] **Step 2: Run the self-test and confirm RED**
 
@@ -104,9 +108,14 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   Make `frozen-next-session-launch.sh`:
 
-  - accept `--worktree`, `--expected-head`, `--wrapper`, `--adapter`, then `--`
-    and the Maven arguments;
+  - accept `--worktree`, `--expected-head`, `--harness-worktree`,
+    `--expected-harness-head`, `--wrapper`, `--coordinator`, `--adapter`, then
+    `--` and the Maven arguments;
   - canonicalize every path and reject a non-detached or wrong HEAD;
+  - require wrapper and coordinator paths beneath the canonical detached clean
+    harness worktree at the expected harness HEAD, and byte-compare both files
+    against `git show $EXPECTED_HARNESS_HEAD:tools/testing/test-session.sh` and
+    `git show $EXPECTED_HARNESS_HEAD:tools/testing/TestSessionCoordinator.java`;
   - append one temporary Git config entry without overwriting any inherited
     `GIT_CONFIG_COUNT` entries: key `core.excludesFile`, value the canonical
     tracked exclude file;
@@ -203,7 +212,9 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   pass, failure, error, skipped, disabled, parameterized identities, malformed
   XML, duplicate identity, missing selected class, parent-only class,
   candidate-only class, and an approved-removal record. Assert exact ordinal
-  ordering and exact `PASS|FAILURE|ERROR|SKIPPED|ABSENT` values.
+  ordering and exact `PASS|FAILURE|ERROR|SKIPPED|ABSENT` values. Add separate
+  fixtures for FAILURE-to-different-FAILURE and
+  ERROR-to-different-ERROR signatures.
 
 - [ ] **Step 2: Run the fixture tests and confirm RED**
 
@@ -223,8 +234,13 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   least one report/testcase, and write TSV columns:
 
   ```text
-  identity	class	method	outcome	report
+  identity	class	method	outcome	red_kind	exception_type	normalized_message	red_body_sha256	report
   ```
+
+  For red outcomes, convert line endings to LF; replace canonical worktree,
+  session-root, generated run-ID, and ISO-8601 timestamp tokens; encode UTF-8;
+  take the first 65,536 bytes; and hash that bounded body. Reject a red element
+  lacking a deterministic signature.
 
   Empty helper classes are accepted only through a separate reviewed allowlist
   whose entries name a reason.
@@ -234,9 +250,11 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   `Compare-SurefireOutcomeInventory.ps1` must compare ordinal identities from
   either parent with the candidate, synthesize `ABSENT` for missing candidate
   identities, reject PASS→red/SKIPPED/ABSENT, flag changed failure/error kinds,
-  and write a TSV with baseline, candidate, classification, owner, and
-  disposition fields. A reviewed-removal input may exempt only an explicitly
-  named identity with a reason.
+  and flag every same-kind red signature change for isolated matching rerun and
+  owner/disposition classification. It writes a TSV with baseline, candidate,
+  red signatures, classification, owner, and disposition fields. A
+  reviewed-removal input may exempt only an explicitly named identity with a
+  reason.
 
 - [ ] **Step 5: Implement deterministic partitions**
 
@@ -287,7 +305,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
   ```text
   next == origin/next == 84d9a3761f618035dd1caa40a3d5fc72a1019693
-  develop == origin/develop == 9b46505eb10675a4ab19772dd2707566a0432973
+  develop == origin/develop == f1b82774d4aeb9585e75bd74e90856e7b67256d7
   ```
 
   Also require clean main and integration worktrees. If any hash differs, amend
@@ -296,17 +314,22 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 - [ ] **Step 2: Create managed scratch and detached baseline worktrees**
 
   Use `agent-scratch new next-develop-integration-20260826` for evidence. Create
-  separate cowtrees detached at each frozen parent. Verify clean status, install
-  the tracked develop hook path without changing source, and ensure frozen-next
-  starts with no `target`.
+  separate cowtrees detached at each frozen parent. The frozen-develop cowtree
+  is also the authenticated harness worktree. Verify detached clean status,
+  install the tracked develop hook path without changing source, and ensure
+  frozen-next starts with no `target`.
 
 - [ ] **Step 3: Verify JDK and ROM identities**
 
   Record `mvn -v` showing Java 21. Use `cksum -a crc32b` and `sha1sum` on the
   discovered S1 REV01, S2 REV01, and locked-on S3K files. Pass their canonical
   paths through `sonic1.rom.path`, `sonic2.rom.path`, and `s3k.rom.path`.
-  Assign the verified canonical paths to shell variables `OPENGGF_S1_ROM`,
-  `OPENGGF_S2_ROM`, and `OPENGGF_S3K_ROM` for every later command in this plan.
+  Write the verified canonical paths and both hashes to a task-owned managed-
+  scratch TSV with mode `0600`; never copy ROM bytes and never shell-source the
+  file. Parse its `game`, `canonical_path`, `crc32`, and `sha1` columns into
+  `OPENGGF_S1_ROM`, `OPENGGF_S2_ROM`, and `OPENGGF_S3K_ROM`. Every later
+  independent command or agent reloads the TSV, then immediately checks that
+  each value is non-empty, names a regular file, and still matches both hashes.
 
 - [ ] **Step 4: Read the measurement-hazard briefing**
 
@@ -316,9 +339,14 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
 
 - [ ] **Step 5: Self-test the pinned coordinator and adapter**
 
-  Hash the wrapper, coordinator source, launcher, exclude, and adapter. Run the
-  coordinator harness and Task 1 self-test. Expected: green; otherwise no parent
-  baseline may start.
+  In the detached frozen-develop harness worktree, byte-compare the wrapper and
+  coordinator source with
+  `git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/test-session.sh`
+  and
+  `git show f1b82774d4aeb9585e75bd74e90856e7b67256d7:tools/testing/TestSessionCoordinator.java`,
+  then hash them together with the launcher, exclude, and adapter. Run the coordinator harness
+  and Task 1 self-test, including wrong-wrapper/wrong-coordinator rejection.
+  Expected: green; otherwise no parent baseline may start.
 
 - [ ] **Step 6: Run frozen-develop ordinary and guard baselines**
 
@@ -455,7 +483,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Verify the four frozen refs again. Run:
 
   ```bash
-  git merge --no-ff --no-commit 9b46505eb10675a4ab19772dd2707566a0432973
+  git merge --no-ff --no-commit f1b82774d4aeb9585e75bd74e90856e7b67256d7
   ```
 
   Expected: conflicts; do not commit or abort.
@@ -797,7 +825,7 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   Immediately before commit, require `MERGE_HEAD` equals frozen develop and the
   current first parent descends by uninterrupted first-parent history from
   frozen next. Commit the merge without bypassing hooks. Record the resulting
-  parents and ensure the second parent is exactly `9b46505eb`.
+  parents and ensure the second parent is exactly `f1b82774d`.
 
 - [ ] **Step 5: Rerun focused selectors on the committed merge**
 
