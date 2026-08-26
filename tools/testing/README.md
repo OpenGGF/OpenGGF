@@ -55,10 +55,19 @@ restores only the exact report preimage after finalization while leaving any
 unsafe target untouched. Ordinary Maven failure with successful cleanup stays
 `FAILED` and valid; parent evidence must authenticate launcher and cleanup
 diagnostics as well as the manifest. A tripwire-arm failure, unrelated trigger,
-or missing terminal marker is non-certifying. The exact frozen coordinator can
+or missing terminal marker is non-certifying. The launcher authenticates one
+exact, line-anchored coordinator end marker whose run ID, manifest, state, and
+valid fields agree with the recovered manifest; prefix collisions, wrong-run
+markers, and duplicates are rejected. The exact frozen coordinator can
 omit its end marker during a diagnosed `manifest.json.tmp` signal race, but
 that shape is accepted only by the interruption safety fixture to prove
 hygiene—never as baseline evidence.
+
+The adapter self-test exercises supervisor and private-PID-1 start-time, PID
+namespace, and common mount-namespace mismatches at ready/go and recovery.
+Functional normal and forced-cleanup cases also prove that the same PID with
+the same recorded start returns cleanup status 76 and preserves the exact
+authenticated target, while a different start permits its exact `rmdir`.
 
 ## Complete Surefire outcome inventories
 

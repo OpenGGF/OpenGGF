@@ -375,17 +375,27 @@ arm_identity_tripwire() {
         "$current_hash" "$current_length" > "$tripwire_evidence"
 }
 cleanup_target() {
-    local current_start
+    local current_start cleanup_supervisor=$supervisor_pid cleanup_supervisor_start=$supervisor_start
+    local cleanup_private_pid1=$private_pid1_pid cleanup_private_pid1_start=$private_pid1_start
     [[ "$target_created" == 1 ]] || return 0
-    if [[ -n "$supervisor_pid" && -n "$supervisor_start" \
-        && -n "$private_pid1_pid" && -n "$private_pid1_start" ]]; then
-        current_start=$(process_start "$supervisor_pid" || true)
-        if [[ "$current_start" == "$supervisor_start" ]]; then
-            kill -KILL "$supervisor_pid" 2>/dev/null || true
-            wait "$supervisor_pid" 2>/dev/null || true
+    if [[ "${OPENGGF_ADAPTER_TEST_SHIM:-}" == 1 \
+        && -n "${OPENGGF_TEST_CLEANUP_IDENTITY_PID:-}" ]]; then
+        cleanup_supervisor=$OPENGGF_TEST_CLEANUP_IDENTITY_PID
+        cleanup_supervisor_start=${OPENGGF_TEST_CLEANUP_IDENTITY_RECORDED_START:?}
+        cleanup_private_pid1=$cleanup_supervisor
+        cleanup_private_pid1_start=$cleanup_supervisor_start
+    fi
+    if [[ -n "$cleanup_supervisor" && -n "$cleanup_supervisor_start" \
+        && -n "$cleanup_private_pid1" && -n "$cleanup_private_pid1_start" ]]; then
+        current_start=$(process_start "$cleanup_supervisor" || true)
+        if [[ "$current_start" == "$cleanup_supervisor_start" \
+            && !( "${OPENGGF_ADAPTER_TEST_SHIM:-}" == 1 \
+                && -n "${OPENGGF_TEST_CLEANUP_IDENTITY_PID:-}" ) ]]; then
+            kill -KILL "$cleanup_supervisor" 2>/dev/null || true
+            wait "$cleanup_supervisor" 2>/dev/null || true
         fi
-        wait_process_pair_gone "$supervisor_pid" "$supervisor_start" \
-            "$private_pid1_pid" "$private_pid1_start" || return 76
+        wait_process_pair_gone "$cleanup_supervisor" "$cleanup_supervisor_start" \
+            "$cleanup_private_pid1" "$cleanup_private_pid1_start" || return 76
     elif [[ -n "$supervisor_pid" ]]; then
         kill -KILL "$supervisor_pid" 2>/dev/null || true
         wait "$supervisor_pid" 2>/dev/null || true
@@ -512,15 +522,27 @@ private_pid_namespace=$(sed -n 's/^private_pid_namespace_inode=//p' "$leader_inf
 common_mount_namespace=$(sed -n 's/^common_mount_namespace_inode=//p' "$leader_info")
 supervisor_children=$(process_children "$supervisor_pid")
 set -- $supervisor_children
+observed_supervisor_start=$(process_start "$supervisor_pid")
+observed_private_pid1_start=$(process_start "$private_pid1_pid")
+observed_supervisor_mount=$(mount_namespace_inode "$supervisor_pid")
+observed_private_pid1_mount=$(mount_namespace_inode "$private_pid1_pid")
+[[ -z "${OPENGGF_TEST_READY_SUPERVISOR_START_OVERRIDE:-}" ]] \
+    || observed_supervisor_start=$OPENGGF_TEST_READY_SUPERVISOR_START_OVERRIDE
+[[ -z "${OPENGGF_TEST_READY_PRIVATE_PID1_START_OVERRIDE:-}" ]] \
+    || observed_private_pid1_start=$OPENGGF_TEST_READY_PRIVATE_PID1_START_OVERRIDE
+if [[ -n "${OPENGGF_TEST_READY_COMMON_MOUNT_OVERRIDE:-}" ]]; then
+    observed_supervisor_mount=$OPENGGF_TEST_READY_COMMON_MOUNT_OVERRIDE
+    observed_private_pid1_mount=$OPENGGF_TEST_READY_COMMON_MOUNT_OVERRIDE
+fi
 [[ "$recorded_supervisor_pid" == "$supervisor_pid" \
-    && "$(process_start "$supervisor_pid")" == "$supervisor_start" \
+    && "$observed_supervisor_start" == "$supervisor_start" \
     && $# == 1 && "$1" == "$private_pid1_pid" \
-    && "$(process_start "$private_pid1_pid")" == "$private_pid1_start" \
+    && "$observed_private_pid1_start" == "$private_pid1_start" \
     && "$(process_nspid "$private_pid1_pid")" == "$private_pid1_nspid" \
     && "$private_pid1_nspid" == *$'\t1' \
     && "$(pid_namespace_inode "$private_pid1_pid")" == "$private_pid_namespace" \
-    && "$(mount_namespace_inode "$supervisor_pid")" == "$common_mount_namespace" \
-    && "$(mount_namespace_inode "$private_pid1_pid")" == "$common_mount_namespace" ]] \
+    && "$observed_supervisor_mount" == "$common_mount_namespace" \
+    && "$observed_private_pid1_mount" == "$common_mount_namespace" ]] \
     || die "namespace supervisor/private PID 1 identity changed before release"
 parent_identity="$diagnostics/frozen-next-parent-process-identity.env"
 printf 'supervisor_pid=%s\nsupervisor_start=%s\nprivate_pid1_pid=%s\nprivate_pid1_start=%s\n' \
@@ -552,6 +574,29 @@ printf '%s\n' \
     "diagnostics_root=$diagnostics" "artifact_root=$artifacts" "distribution_root=$distribution" \
     > "$marker_tmp"
 mv -- "$marker_tmp" "$marker"
+if [[ "${OPENGGF_ADAPTER_TEST_SHIM:-}" == 1 \
+    && -n "${OPENGGF_TEST_CLEANUP_IDENTITY_PID:-}" ]]; then
+    fixture_pid=$OPENGGF_TEST_CLEANUP_IDENTITY_PID
+    fixture_actual_start=${OPENGGF_TEST_CLEANUP_IDENTITY_ACTUAL_START:?}
+    fixture_recorded_start=${OPENGGF_TEST_CLEANUP_IDENTITY_RECORDED_START:?}
+    [[ "$fixture_pid" =~ ^[0-9]+$ && "$fixture_actual_start" =~ ^[0-9]+$ \
+        && "$fixture_recorded_start" =~ ^[0-9]+$ \
+        && "$(process_start "$fixture_pid")" == "$fixture_actual_start" ]] \
+        || die "controlled cleanup identity fixture is not live and exact"
+    sed -e "s/^supervisor_pid=.*/supervisor_pid=$fixture_pid/" \
+        -e "s/^supervisor_start=.*/supervisor_start=$fixture_recorded_start/" \
+        -e "s/^private_pid1_pid=.*/private_pid1_pid=$fixture_pid/" \
+        -e "s/^private_pid1_start=.*/private_pid1_start=$fixture_recorded_start/" \
+        "$marker" > "$marker_tmp"
+    mv -- "$marker_tmp" "$marker"
+    parent_identity_tmp="$diagnostics/.frozen-next-parent-process-identity.env.tmp"
+    sed -e "s/^supervisor_pid=.*/supervisor_pid=$fixture_pid/" \
+        -e "s/^supervisor_start=.*/supervisor_start=$fixture_recorded_start/" \
+        -e "s/^private_pid1_pid=.*/private_pid1_pid=$fixture_pid/" \
+        -e "s/^private_pid1_start=.*/private_pid1_start=$fixture_recorded_start/" \
+        "$parent_identity" > "$parent_identity_tmp"
+    mv -- "$parent_identity_tmp" "$parent_identity"
+fi
 safety_phase=coordinator-release
 printf 'go\n' >&"$go_fd"
 exec {ready_fd}>&-

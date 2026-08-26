@@ -30,6 +30,44 @@ wait_process_pair_gone() {
 }
 marker_value() { sed -n "s/^$2=//p" "$1"; }
 manifest_value() { sed -n "s/.*\"$2\": \"\([^\"]*\)\".*/\1/p" "$1" | head -1; }
+authenticate_terminal_line() {
+    local output=$1 expected_run_id=$2 expected_manifest=$3 line field key value
+    local manifest_state manifest_valid run_id= manifest= state= valid=
+    local run_count=0 manifest_count=0 state_count=0 valid_count=0
+    local -a lines fields
+    mapfile -t lines < <(printf '%s\n' "$output" | sed -n '/^OPENGGF_TEST_RUN_END /p')
+    (( ${#lines[@]} == 1 )) || { (( ${#lines[@]} == 0 )) && return 1; return 77; }
+    line=${lines[0]}
+    read -r -a fields <<< "$line"
+    [[ "${fields[0]:-}" == OPENGGF_TEST_RUN_END ]] || return 77
+    for field in "${fields[@]:1}"; do
+        [[ "$field" == *=* ]] || return 77
+        key=${field%%=*}
+        value=${field#*=}
+        case "$key" in
+            run_id) run_id=$value; run_count=$((run_count + 1)) ;;
+            manifest) manifest=$value; manifest_count=$((manifest_count + 1)) ;;
+            state) state=$value; state_count=$((state_count + 1)) ;;
+            valid) valid=$value; valid_count=$((valid_count + 1)) ;;
+        esac
+    done
+    (( run_count == 1 && manifest_count == 1 && state_count == 1 && valid_count == 1 )) || return 77
+    [[ "$run_id" == "$expected_run_id" && "$manifest" == "$expected_manifest" \
+        && "$state" =~ ^(PASSED|FAILED|ABORTED|INVALID_IDENTITY_CHANGED)$ \
+        && "$valid" =~ ^(true|false)$ ]] || return 77
+    manifest_state=$(sed -n 's/.*"state": "\([^"]*\)".*/\1/p' "$expected_manifest" | head -1)
+    case "$manifest_state" in
+        PASSED|FAILED) manifest_valid=true ;;
+        ABORTED|INVALID_IDENTITY_CHANGED) manifest_valid=false ;;
+        *) return 77 ;;
+    esac
+    [[ "$state" == "$manifest_state" && "$valid" == "$manifest_valid" ]] || return 77
+    terminal_run_id=$run_id
+    terminal_manifest=$manifest
+    terminal_state=$state
+    terminal_valid=$valid
+    return 0
+}
 authenticate_tripwire() {
     local diagnostics=$1 run_id=$2 report=$3 trigger evidence reason child adapter_status mode
     local report_hash report_length current_hash current_length
@@ -185,13 +223,21 @@ recover() {
     local output=$1 manifest run_id marker authority diagnostics target kind device inode expected_empty expected_mount
     local supervisor_pid supervisor_start private_pid1_pid private_pid1_start private_pid1_nspid parent_identity
     local private_pid_namespace common_mount_namespace build tmp surefire trace artifacts distribution recovery_status=0
-    local outer_uid authenticated_home marker_phase
+    local outer_uid authenticated_home marker_phase terminal_status=0
     manifest=$(printf '%s\n' "$output" | sed -n 's/.*manifest=\([^ ]*\).*/\1/p' | tail -1)
     [[ -n "$manifest" && -f "$manifest" ]] || return 0
     run_id=$(manifest_value "$manifest" run_id)
+    recovery_run_id=$run_id
     diagnostics="$(dirname -- "$manifest")/diagnostics"
     authority="$diagnostics/frozen-next-report-authority.env"
     [[ -n "$run_id" && -f "$authority" && ! -L "$authority" ]] || return 77
+    authenticate_terminal_line "$output" "$run_id" "$manifest" || terminal_status=$?
+    if (( terminal_status == 0 )); then
+        recovery_terminal_authenticated=1
+    elif (( terminal_status != 1 )); then
+        recovery_status=$terminal_status
+        printf 'frozen-next launcher: coordinator terminal line is duplicate or identity-invalid\n' >&2
+    fi
     recover_report "$authority" "$manifest" "$run_id" || recovery_status=$?
     marker="$diagnostics/frozen-next-session-recovery.env"
     [[ -f "$marker" && ! -L "$marker" ]] || return "$recovery_status"
@@ -279,6 +325,7 @@ recover() {
 
 capture_file= wrapper_pid= finalized=0 finalize_status=0 final_output= final_run_id=
 recovery_report_authenticated=0 recovery_full_marker=0 recovery_target_clean=0 recovery_tripwire=false
+recovery_terminal_authenticated=0 recovery_run_id= terminal_run_id= terminal_manifest= terminal_state= terminal_valid=
 finalize() {
     (( finalized == 0 )) || return "$finalize_status"
     finalized=1
@@ -291,7 +338,7 @@ finalize() {
                 "$cleanup_status" "$worktree/target" >&2
         fi
         final_output=$output
-        final_run_id=$(printf '%s\n' "$output" | sed -n 's/.*run_id=\([^ ]*\).*/\1/p' | tail -1)
+        final_run_id=$recovery_run_id
         printf '%s\n' "$output"
         unlink -- "$capture_file" || true
     fi
@@ -302,10 +349,11 @@ emit_launcher_outcome() {
     local adapter_status=$1 cleanup_status=$2 admissible=false authenticated=false
     (( recovery_report_authenticated == 1 )) && authenticated=true
     if (( cleanup_status == 0 && recovery_report_authenticated == 1 \
-        && recovery_full_marker == 1 && recovery_target_clean == 1 )) \
+        && recovery_full_marker == 1 && recovery_target_clean == 1 \
+        && recovery_terminal_authenticated == 1 )) \
         && [[ "$recovery_tripwire" == false \
-            && "$final_output" == *'OPENGGF_TEST_RUN_END '* \
-            && "$final_output" == *'valid=true'* ]]; then
+            && "$terminal_run_id" == "$final_run_id" && "$terminal_manifest" != '' \
+            && "$terminal_valid" == true ]]; then
         admissible=true
     fi
     printf 'OPENGGF_FROZEN_NEXT_LAUNCH_END run_id=%s adapter_status=%s cleanup_status=%s authenticated=%s admissible=%s\n' \

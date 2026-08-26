@@ -155,8 +155,9 @@ if [[ "${OPENGGF_FAKE_MAVEN:-}" == 1 ]]; then
         sleep 2
     fi
     if [[ " $* " == *' --wait-for-parent-mutation '* ]]; then
-        printf 'manifest=%s\ntarget=%s\n' "$OPENGGF_TEST_MANIFEST" \
-            "$OPENGGF_TEST_WORKTREE/target" > "${OPENGGF_TEST_PARENT_MUTATION_READY:?}"
+        printf 'manifest=%s\ntarget=%s\nadapter_pid=%s\n' "$OPENGGF_TEST_MANIFEST" \
+            "$OPENGGF_TEST_WORKTREE/target" "${OPENGGF_FROZEN_ADAPTER_PARENT_PID:?}" \
+            > "${OPENGGF_TEST_PARENT_MUTATION_READY:?}"
         for _ in {1..400}; do
             [[ -f "${OPENGGF_TEST_PARENT_MUTATION_GO:?}" ]] && break
             sleep 0.05
@@ -231,7 +232,14 @@ mkdir -p "$scratch_root"
 test_root="$scratch_root/run-$$"
 next_tree="$test_root/next"
 harness_tree="$test_root/harness"
-trap 'git worktree remove --force "$next_tree" 2>/dev/null || true; git worktree remove --force "$harness_tree" 2>/dev/null || true' EXIT
+fixture_pids=()
+cleanup_fixtures() {
+    local pid
+    for pid in "${fixture_pids[@]}"; do kill -KILL "$pid" 2>/dev/null || true; done
+    git worktree remove --force "$next_tree" 2>/dev/null || true
+    git worktree remove --force "$harness_tree" 2>/dev/null || true
+}
+trap cleanup_fixtures EXIT
 
 mkdir -p "$test_root"
 git cowtree add --from "$project_root" --detach "$next_tree" "$frozen_next" >/dev/null
@@ -362,7 +370,8 @@ test_namespace_safety_negatives() {
     real_mountpoint=$(command -v mountpoint)
     for negative in unshare mount stat mountpoint; do ln -s -- "$fake_maven" "$shim_dir/$negative"; done
 
-    for negative in bind wrong-identity propagation published-pid-namespace; do
+    for negative in bind wrong-identity propagation published-pid-namespace \
+        ready-supervisor-start ready-pid1-start ready-common-mount; do
         case "$negative" in
             bind)
                 PATH="$shim_dir:$PATH" OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_FAIL_BIND=1 \
@@ -386,6 +395,18 @@ test_namespace_safety_negatives() {
                 OPENGGF_TEST_PUBLISHED_PID_NAMESPACE_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
                     run_launcher "$fake_maven" && fail "published PID namespace mismatch was accepted"
                 ;;
+            ready-supervisor-start)
+                OPENGGF_TEST_READY_SUPERVISOR_START_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
+                    run_launcher "$fake_maven" && fail "ready supervisor start mismatch was accepted"
+                ;;
+            ready-pid1-start)
+                OPENGGF_TEST_READY_PRIVATE_PID1_START_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
+                    run_launcher "$fake_maven" && fail "ready PID1 start mismatch was accepted"
+                ;;
+            ready-common-mount)
+                OPENGGF_TEST_READY_COMMON_MOUNT_OVERRIDE=1 OPENGGF_FAKE_MAVEN=1 \
+                    run_launcher "$fake_maven" && fail "ready common mount mismatch was accepted"
+                ;;
         esac
         manifest=$(manifest_from_output "$launch_output")
         [[ -f "$manifest" ]] || fail "$negative safety failure omitted manifest"
@@ -401,7 +422,10 @@ test_namespace_safety_negatives() {
             bind) rg -F 'bind mount failed' "$log" >/dev/null || fail "bind failure lacked diagnostic" ;;
             wrong-identity) rg -F 'bind identity mismatch' "$log" >/dev/null || fail "mount identity failure lacked diagnostic" ;;
             propagation) rg -F 'private bind mount propagated' "$log" >/dev/null || fail "propagation failure lacked diagnostic" ;;
-            published-pid-namespace) rg -F 'supervisor/private PID 1 identity changed' "$log" >/dev/null || fail "PID identity failure lacked diagnostic" ;;
+            published-pid-namespace|ready-supervisor-start|ready-pid1-start|ready-common-mount)
+                rg -F 'supervisor/private PID 1 identity changed' "$log" >/dev/null \
+                    || fail "$negative identity failure lacked diagnostic"
+                ;;
         esac
         assert_report_restored
         if [[ -e "$next_tree/target" || -L "$next_tree/target" ]]; then
@@ -416,39 +440,69 @@ test_namespace_safety_negatives() {
 }
 test_recovery_marker_identity_mismatch() {
     local ready="$test_root/marker-mismatch-ready.env" go="$test_root/marker-mismatch-go"
-    local output="$test_root/marker-mismatch.out" launcher_pid status manifest diagnostics marker temporary
-    set +e
-    OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_PARENT_MUTATION_READY="$ready" \
-        OPENGGF_TEST_PARENT_MUTATION_GO="$go" \
-        "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
-        --harness-worktree "$harness_tree" --expected-harness-head "$frozen_harness" \
-        --wrapper "$wrapper" --coordinator "$coordinator" --adapter "$adapter" -- \
-        "$fake_maven" --wait-for-parent-mutation > "$output" 2>&1 &
-    launcher_pid=$!
-    set -e
-    for _ in {1..400}; do [[ -s "$ready" ]] && break; sleep 0.05; done
-    [[ -s "$ready" ]] || fail "recovery marker mismatch did not reach child barrier"
-    manifest=$(sed -n 's/^manifest=//p' "$ready")
-    diagnostics="$(dirname -- "$manifest")/diagnostics"
-    marker="$diagnostics/frozen-next-session-recovery.env"
-    [[ -f "$marker" ]] || fail "recovery marker mismatch omitted marker"
-    temporary="$diagnostics/.fixture-marker-mismatch.tmp"
-    sed 's/^private_pid_namespace_inode=.*/private_pid_namespace_inode=1/' "$marker" > "$temporary"
-    mv -- "$temporary" "$marker"
-    : > "$go"
-    set +e
-    wait "$launcher_pid"
-    status=$?
-    set -e
-    (( status == 74 )) || fail "recovery marker PID namespace mismatch returned $status instead of 74"
-    launch_output=$(<"$output")
-    [[ "$launch_output" == *'authenticated target cleanup failed: status=74'* \
-        && "$launch_output" == *'authenticated=true admissible=false'* ]] \
-        || fail "recovery marker mismatch lacked authenticated launcher rejection"
-    assert_report_restored
-    [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
-        || fail "recovery marker mismatch left target after adapter cleanup"
-    printf 'PASS: recovery marker PID-namespace mismatch rejects launcher admission\n'
+    local output launcher_pid status manifest diagnostics marker parent_identity temporary mismatch
+    for mismatch in supervisor_start private_pid1_start private_pid_namespace_inode common_mount_namespace_inode; do
+        ready="$test_root/marker-$mismatch-ready.env"
+        go="$test_root/marker-$mismatch-go"
+        output="$test_root/marker-$mismatch.out"
+        set +e
+        OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_PARENT_MUTATION_READY="$ready" \
+            OPENGGF_TEST_PARENT_MUTATION_GO="$go" \
+            "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
+            --harness-worktree "$harness_tree" --expected-harness-head "$frozen_harness" \
+            --wrapper "$wrapper" --coordinator "$coordinator" --adapter "$adapter" -- \
+            "$fake_maven" --wait-for-parent-mutation > "$output" 2>&1 &
+        launcher_pid=$!
+        set -e
+        for _ in {1..400}; do [[ -s "$ready" ]] && break; sleep 0.05; done
+        [[ -s "$ready" ]] || fail "recovery $mismatch mismatch did not reach child barrier"
+        manifest=$(sed -n 's/^manifest=//p' "$ready")
+        diagnostics="$(dirname -- "$manifest")/diagnostics"
+        marker="$diagnostics/frozen-next-session-recovery.env"
+        parent_identity="$diagnostics/frozen-next-parent-process-identity.env"
+        [[ -f "$marker" && -f "$parent_identity" ]] || fail "recovery $mismatch mismatch omitted identity evidence"
+        temporary="$diagnostics/.fixture-marker-mismatch.tmp"
+        sed "s/^$mismatch=.*/$mismatch=1/" "$marker" > "$temporary"
+        mv -- "$temporary" "$marker"
+        : > "$go"
+        set +e
+        wait "$launcher_pid"
+        status=$?
+        set -e
+        (( status == 74 )) || fail "recovery $mismatch mismatch returned $status instead of 74"
+        launch_output=$(<"$output")
+        [[ "$launch_output" == *'authenticated target cleanup failed: status=74'* \
+            && "$launch_output" == *'authenticated=true admissible=false'* ]] \
+            || fail "recovery $mismatch mismatch lacked authenticated launcher rejection"
+        assert_report_restored
+        [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+            || fail "recovery $mismatch mismatch left target after adapter cleanup"
+    done
+    printf 'PASS: recovery marker PID/start/namespace/mount mismatches reject launcher admission\n'
+}
+
+test_terminal_line_authentication() {
+    local definitions run_id=fixture-run manifest="$test_root/terminal-manifest.json" status=0
+    definitions=$(sed -n '/^authenticate_terminal_line()/,/^}/p' "$launcher")
+    [[ "$definitions" == *'authenticate_terminal_line()'* ]] \
+        || fail "launcher lacks exact terminal-line authentication"
+    eval "$definitions"
+    printf '{"run_id": "%s", "state": "PASSED", "valid": true}\n' "$run_id" > "$manifest"
+    terminal_state= terminal_valid= terminal_run_id= terminal_manifest=
+    authenticate_terminal_line \
+        $'noise valid=false\n'"OPENGGF_TEST_RUN_END run_id=$run_id state=PASSED valid=true manifest=$manifest" \
+        "$run_id" "$manifest" || fail "single exact terminal line was rejected"
+    [[ "$terminal_state" == PASSED && "$terminal_valid" == true ]] \
+        || fail "terminal line did not publish authenticated state/valid"
+    for collision in \
+        "prefix-OPENGGF_TEST_RUN_END run_id=$run_id state=PASSED valid=true manifest=$manifest" \
+        "OPENGGF_TEST_RUN_END run_id=wrong-run state=PASSED valid=true manifest=$manifest" \
+        $'OPENGGF_TEST_RUN_END run_id=fixture-run state=PASSED valid=true manifest='"$manifest"$'\nOPENGGF_TEST_RUN_END run_id=fixture-run state=PASSED valid=true manifest='"$manifest"; do
+        status=0
+        authenticate_terminal_line "$collision" "$run_id" "$manifest" || status=$?
+        (( status != 0 )) || fail "terminal collision/duplicate/wrong-run output was authenticated"
+    done
+    printf 'PASS: launcher authenticates one exact matching coordinator terminal line\n'
 }
 test_identity_lifecycle_semantics() {
     local definitions pid start survivor_target recycled_target status=0
@@ -475,6 +529,110 @@ test_identity_lifecycle_semantics() {
     rmdir -- "$recycled_target"
     [[ ! -e "$recycled_target" ]] || fail "recycled identity did not permit exact rmdir"
     printf 'PASS: exact PID/start survivor preserves target; recycled identity permits rmdir\n'
+}
+
+test_functional_identity_cleanup() {
+    local path normal_status output ready go launcher_pid manifest diagnostics marker parent_identity
+    local sleeper_pid actual_start recorded_start target_device target_inode adapter_pid supervisor_pid
+    for path in normal forced; do
+        for lifecycle in survivor recycled; do
+            sleep 300 &
+            sleeper_pid=$!
+            fixture_pids+=("$sleeper_pid")
+            actual_start=$(sed 's/^[^)]*) //' "/proc/$sleeper_pid/stat" | awk '{print $20}')
+            [[ "$actual_start" =~ ^[0-9]+$ ]] || fail "$path $lifecycle could not authenticate fixture identity"
+            recorded_start=$actual_start
+            [[ "$lifecycle" == recycled ]] && recorded_start=$((actual_start + 1))
+            if [[ "$path" == normal ]]; then
+                if OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_CLEANUP_IDENTITY_PID="$sleeper_pid" \
+                    OPENGGF_TEST_CLEANUP_IDENTITY_ACTUAL_START="$actual_start" \
+                    OPENGGF_TEST_CLEANUP_IDENTITY_RECORDED_START="$recorded_start" \
+                    OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven"; then
+                    normal_status=0
+                else
+                    normal_status=$launch_status
+                fi
+                if [[ "$lifecycle" == survivor ]]; then
+                    (( normal_status == 76 )) || fail "normal live identity returned $normal_status instead of 76"
+                    [[ "$launch_output" == *'cleanup_status=76'* \
+                        && "$launch_output" == *'authenticated=true admissible=false'* ]] \
+                        || fail "normal live identity lacked authenticated cleanup-76 rejection"
+                    manifest=$(manifest_from_output "$launch_output")
+                    marker="$(dirname -- "$manifest")/diagnostics/frozen-next-session-recovery.env"
+                    target_device=$(sed -n 's/^target_device=//p' "$marker")
+                    target_inode=$(sed -n 's/^target_inode=//p' "$marker")
+                    [[ -d "$next_tree/target" && ! -L "$next_tree/target" \
+                        && "$(stat -c %d -- "$next_tree/target")" == "$target_device" \
+                        && "$(stat -c %i -- "$next_tree/target")" == "$target_inode" ]] \
+                        || fail "normal live identity did not preserve the exact authenticated target"
+                    rmdir -- "$next_tree/target"
+                else
+                    (( normal_status == 0 )) || fail "normal recycled identity returned $normal_status"
+                    [[ "$launch_output" == *'authenticated=true admissible=true'* ]] \
+                        || fail "normal recycled identity did not remain admissible"
+                    [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+                        || fail "normal recycled identity did not permit exact rmdir"
+                fi
+            else
+                ready="$test_root/forced-$lifecycle-ready.env"
+                go="$test_root/forced-$lifecycle-go"
+                output="$test_root/forced-$lifecycle.out"
+                set +e
+                OPENGGF_ADAPTER_TEST_SHIM=1 OPENGGF_TEST_CLEANUP_IDENTITY_PID="$sleeper_pid" \
+                    OPENGGF_TEST_CLEANUP_IDENTITY_ACTUAL_START="$actual_start" \
+                    OPENGGF_TEST_CLEANUP_IDENTITY_RECORDED_START="$recorded_start" \
+                    OPENGGF_FAKE_MAVEN=1 OPENGGF_TEST_PARENT_MUTATION_READY="$ready" \
+                    OPENGGF_TEST_PARENT_MUTATION_GO="$go" \
+                    "$launcher" --worktree "$next_tree" --expected-head "$frozen_next" \
+                    --harness-worktree "$harness_tree" --expected-harness-head "$frozen_harness" \
+                    --wrapper "$wrapper" --coordinator "$coordinator" --adapter "$adapter" -- \
+                    "$fake_maven" --emit-report --rewrite-report --wait-for-parent-mutation > "$output" 2>&1 &
+                launcher_pid=$!
+                set -e
+                for _ in {1..400}; do [[ -s "$ready" ]] && break; sleep 0.05; done
+                [[ -s "$ready" ]] || fail "forced $lifecycle did not reach authenticated barrier"
+                manifest=$(sed -n 's/^manifest=//p' "$ready")
+                adapter_pid=$(sed -n 's/^adapter_pid=//p' "$ready")
+                diagnostics="$(dirname -- "$manifest")/diagnostics"
+                marker="$diagnostics/frozen-next-session-recovery.env"
+                parent_identity="$diagnostics/frozen-next-parent-process-identity.env"
+                supervisor_pid=$(sed -n 's/^supervisor_host_pid=//p' "$diagnostics/frozen-next-namespace-leader.env")
+                [[ "$adapter_pid" =~ ^[0-9]+$ && "$supervisor_pid" =~ ^[0-9]+$ \
+                    && "$(sed -n 's/^supervisor_pid=//p' "$marker")" == "$sleeper_pid" \
+                    && "$(sed -n 's/^supervisor_pid=//p' "$parent_identity")" == "$sleeper_pid" ]] \
+                    || fail "forced $lifecycle did not publish controlled recovery identity"
+                target_device=$(sed -n 's/^target_device=//p' "$marker")
+                target_inode=$(sed -n 's/^target_inode=//p' "$marker")
+                kill -KILL "$adapter_pid" 2>/dev/null || true
+                kill -KILL "$supervisor_pid" 2>/dev/null || true
+                : > "$go"
+                set +e
+                wait "$launcher_pid"
+                forced_status=$?
+                set -e
+                (( forced_status != 0 )) || fail "forced $lifecycle termination was accepted"
+                launch_output=$(<"$output")
+                if [[ "$lifecycle" == survivor ]]; then
+                    [[ "$launch_output" == *'cleanup_status=76'* ]] \
+                        || fail "forced live identity lacked cleanup status 76"
+                    [[ -d "$next_tree/target" && ! -L "$next_tree/target" \
+                        && "$(stat -c %d -- "$next_tree/target")" == "$target_device" \
+                        && "$(stat -c %i -- "$next_tree/target")" == "$target_inode" ]] \
+                        || fail "forced live identity did not preserve the exact authenticated target"
+                    rmdir -- "$next_tree/target"
+                else
+                    [[ "$launch_output" == *'cleanup_status=0'* ]] \
+                        || fail "forced recycled identity did not complete authenticated cleanup"
+                    [[ ! -e "$next_tree/target" && ! -L "$next_tree/target" ]] \
+                        || fail "forced recycled identity did not permit exact rmdir"
+                fi
+                assert_report_restored
+            fi
+            kill -KILL "$sleeper_pid" 2>/dev/null || true
+            wait "$sleeper_pid" 2>/dev/null || true
+        done
+    done
+    printf 'PASS: normal and forced cleanup preserve live identities and remove recycled identities\n'
 }
 test_launcher_signal_recovery() {
     local signal_case expected_signal_status interrupt_ready interrupt_output interrupt_tmp
@@ -664,6 +822,16 @@ if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == identity-lifecycle ]]; then
     exit 0
 fi
 
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == functional-lifecycle ]]; then
+    test_functional_identity_cleanup
+    exit 0
+fi
+
+if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == terminal-auth ]]; then
+    test_terminal_line_authentication
+    exit 0
+fi
+
 if [[ "${OPENGGF_FROZEN_NEXT_ADAPTER_FOCUS:-}" == cleanup-failure ]]; then
     test_authenticated_rmdir_failure
     (( review_failures == 0 )) || fail "$review_failures focused cleanup regression case(s) remain"
@@ -718,6 +886,8 @@ test_pid_containment
 test_namespace_safety_negatives
 test_recovery_marker_identity_mismatch
 test_identity_lifecycle_semantics
+test_functional_identity_cleanup
+test_terminal_line_authentication
 
 # The selected guards are independent and force two Surefire processes when forkCount=2.
 run_launcher mvn -DforkCount=2 -Dtest=TestAudioBackendBypassGuard,TestProductionAwtBlacklistGuard test
@@ -942,6 +1112,9 @@ if OPENGGF_FAKE_MAVEN=1 run_launcher "$fake_maven" --fail; then
 fi
 (( launch_status == 23 )) || fail "ordinary child failure status changed: $launch_status"
 assert_session_outcome FAILED true
+[[ "$launch_output" == *'OPENGGF_FROZEN_NEXT_LAUNCH_END '* \
+    && "$launch_output" == *'authenticated=true admissible=true'* ]] \
+    || fail "ordinary child failure lacked explicit authenticated launcher admission"
 ordinary_manifest=$(manifest_from_output "$launch_output")
 ordinary_diagnostics="$(dirname -- "$ordinary_manifest")/diagnostics"
 [[ ! -e "$ordinary_diagnostics/frozen-next-safety-failure.env" \
