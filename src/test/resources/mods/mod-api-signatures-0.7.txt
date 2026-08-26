@@ -12576,6 +12576,7 @@ METHOD com.openggf.sprites.playable.SuperStateController protected  boolean pass
 METHOD com.openggf.sprites.playable.SuperStateController protected  boolean usesAutomaticJumpTrigger()
 METHOD com.openggf.sprites.playable.SuperStateController protected  boolean usesExplicitAirAbilityTrigger()
 METHOD com.openggf.sprites.playable.SuperStateController protected  com.openggf.sprites.playable.SuperStateController$PaletteTarget resolvePaletteTarget(int)
+METHOD com.openggf.sprites.playable.SuperStateController protected  int getInitialRingDrainCounter()
 METHOD com.openggf.sprites.playable.SuperStateController protected  int getSuperRunSpeedThreshold()
 METHOD com.openggf.sprites.playable.SuperStateController protected  int getTransformationAnimationId()
 METHOD com.openggf.sprites.playable.SuperStateController protected  void updatePostRevertEffects()

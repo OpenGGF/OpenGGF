@@ -2938,14 +2938,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// (sonic3k.asm:21995-22022). Clearing here would put a push-free byte
 		// into the follower history ring one routine early.
 		sprite.setAnimationId(idleAnimId);
-		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
-		if (animationRules != null && animationRules.animationChangeClearsPush()) {
-			// ROM Tails_RollSpeed/Sonic_RollSpeed writes anim=$05 on roll stop
-			// (sonic3k.asm:28198-28210) and the S2/S3K animation driver clears
-			// Status_Push when anim != prev_anim (sonic3k.asm:29359-29364,
-			// 29681-29686; s2.asm:38033-38038,40879-40884).
-			sprite.setPushing(false);
-		}
 	}
 
 	/**

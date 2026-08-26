@@ -803,6 +803,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setJumping(true);
                 mockSprite.setYSpeed((short) 0);
 
+                mockSprite.getSuperStateController().checkTransformationBeforeMove();
                 mockSprite.getSuperStateController().update();
 
                 assertEquals(SuperState.TRANSFORMING, mockSprite.getSuperStateController().getState(),
@@ -823,6 +824,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setJumping(true);
                 mockSprite.setYSpeed((short) 0);
 
+                mockSprite.getSuperStateController().checkTransformationBeforeMove();
                 mockSprite.getSuperStateController().update();
 
                 assertEquals(SuperState.NORMAL, mockSprite.getSuperStateController().getState(),

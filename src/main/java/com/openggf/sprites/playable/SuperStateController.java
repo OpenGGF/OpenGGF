@@ -303,6 +303,14 @@ public abstract class SuperStateController {
     }
 
     /**
+     * Initial value of the ROM-owned ring-drain counter when transformation starts.
+     * S2 leaves its counter untouched, so the reset value of zero is authoritative.
+     */
+    protected int getInitialRingDrainCounter() {
+        return 0;
+    }
+
+    /**
      * Returns the animation ID to play during the transformation.
      * Default is 0x1F (AniIDSupSonAni_Transform), used by both S2 and S3K.
      * ROM: move.b #$1F,anim(a0) in Sonic_Transform_Super.
@@ -388,12 +396,12 @@ public abstract class SuperStateController {
         // instead left the transform frame on the normal constants, an ordinary
         // $18 step rather than the ROM's $60.
         player.applyExternalPhysicsProfile(getSuperProfile());
-        // Sonic_CheckGoSuper does NOT write Super_Sonic_frame_count, so the
+        // S2 Sonic_CheckGoSuper does NOT write Super_Sonic_frame_count, so the
         // first Sonic_Super pass decrements whatever it already held -- zero --
         // and drains a ring on the transformation frame itself before reloading
-        // 60 (:37510-37512). Arming the counter to a full interval here, or at
-        // animation completion, skips that first drain.
-        ringDrainCounter = 0;
+        // 60 (:37510-37512). Other games override the ROM-owned seed when their
+        // transform routine explicitly writes the counter.
+        ringDrainCounter = getInitialRingDrainCounter();
     }
 
     private void updateTransformation() {

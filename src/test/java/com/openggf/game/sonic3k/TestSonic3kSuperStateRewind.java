@@ -154,6 +154,8 @@ class TestSonic3kSuperStateRewind {
         SuperStateController.RewindState expected =
                 snapshot.playerExtra().controllerState().superStateState();
         assertNotNull(expected);
+        assertEquals(55, expected.ringDrainCounter(),
+                "S3K seeds Super_frame_count to 60 before its per-frame decrement");
 
         for (int i = 0; i < 7; i++) {
             controller.update();
