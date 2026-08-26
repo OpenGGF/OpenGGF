@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.net.URLDecoder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +36,11 @@ public final class TestSessionCoordinatorSelfTest {
             "launch_usable_inodes", "completion_usable_bytes", "completion_total_bytes",
             "completion_usable_inodes", "compaction_status", "compaction_removed_relative_paths",
             "compaction_reclaimed_bytes", "compaction_error", "retain_ephemeral",
-            "storage_finalization_error");
+            "storage_finalization_error", "numeric_inode_unavailable_reason",
+            "launch_capacity_error", "launch_inode_probe_status", "launch_inode_probe_error",
+            "launch_directory_flush_status", "completion_capacity_error",
+            "completion_inode_probe_status", "completion_inode_probe_error",
+            "completion_directory_flush_status");
 
     private TestSessionCoordinatorSelfTest() {
     }
@@ -62,6 +67,11 @@ public final class TestSessionCoordinatorSelfTest {
         verifyLowCapacityPreventsLaunch(root);
         verifyInvalidAndLowerCapacityOverridesFail(root);
         verifyZeroUsableInodesPreventLaunch(root);
+        verifyLiveProbeFailurePreventsLaunchAcrossTiers(root);
+        verifyCapacityProbeFailurePublishesStartupEvidence(root);
+        verifyCompletionProbeFailuresPreserveTerminalState(root);
+        verifyUnsupportedDirectoryFlushIsObservable(root);
+        verifyMarkerFieldsCannotForgeLines(root, outputRoot);
         BasicRun first = verifySuccessfulRun(root, outputRoot);
         verifyExplicitQuietRun(root, outputRoot);
         verifyVerboseRun(root, outputRoot);
@@ -129,6 +139,10 @@ public final class TestSessionCoordinatorSelfTest {
                 "managed manifest must preserve the helper version");
         check(json.contains("\"allocation_not_applicable_reason\": null"),
                 "managed manifest must not invent a not-applicable reason");
+        check(json.contains("\"launch_inode_probe_status\": \"AVAILABLE\""),
+                "managed launch must record a successful live inode probe");
+        check(json.contains("\"completion_inode_probe_status\": \"AVAILABLE\""),
+                "managed completion must record a successful live inode probe");
     }
 
     private static void verifyManagedHelperFailureDoesNotFallback(Path root) throws Exception {
@@ -241,6 +255,18 @@ public final class TestSessionCoordinatorSelfTest {
                         + "storage_tier=PROJECT_LOCAL_FALLBACK reason=managed-scratch-not-configured "
                         + "action=install-agent-scratch\""),
                 "unmanaged manifest must preserve the actionable storage warning");
+        check(json.contains("\"allocation_usable_inodes\": null"),
+                "unmanaged numeric inode count must be unavailable rather than fabricated");
+        check(json.contains("\"launch_usable_inodes\": null"),
+                "unmanaged launch inode count must be explicitly null");
+        check(json.contains("\"completion_usable_inodes\": null"),
+                "unmanaged completion inode count must be explicitly null");
+        check(json.contains("\"numeric_inode_unavailable_reason\": "
+                        + "\"numeric inode count is unavailable for PROJECT_LOCAL_FALLBACK; "
+                        + "live availability probe is authoritative\""),
+                "unmanaged manifest must explain numeric inode nullability");
+        check(json.contains("\"launch_inode_probe_status\": \"AVAILABLE\""),
+                "unmanaged launch must record live inode availability");
     }
 
     private static void verifyLowCapacityPreventsLaunch(Path root) throws Exception {
@@ -283,7 +309,7 @@ public final class TestSessionCoordinatorSelfTest {
 
     private static void verifyInvalidAndLowerCapacityOverridesFail(Path root) throws Exception {
         int index = 0;
-        for (String override : List.of("not-a-number", "1")) {
+        for (String override : List.of("not-a-number", "1", "", "   \t")) {
             Path project = createTestProject(root.resolve("capacity-invalid-project-" + index));
             Path outputRoot = createOwnedDirectory(root.resolve("capacity-invalid-output-" + index));
             Path childMarker = root.resolve("capacity-invalid-child-" + index);
@@ -304,21 +330,181 @@ public final class TestSessionCoordinatorSelfTest {
 
     private static void verifyZeroUsableInodesPreventLaunch(Path root) throws Exception {
         Path project = createTestProject(root.resolve("capacity-zero-inodes-project"));
-        Path outputRoot = createOwnedDirectory(root.resolve("capacity-zero-inodes-output"));
+        Path managedRoot = createOwnedDirectory(root.resolve("capacity-zero-inodes-managed"));
+        Path allocation = createOwnedDirectory(managedRoot.resolve("codex/test-sessions/session-reserved"));
+        var store = Files.getFileStore(allocation);
+        Path fakeBin = createFakeAgentScratch(root.resolve("capacity-zero-inodes-bin"),
+                reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6)),
+                        store.getUsableSpace(), store.getTotalSpace(), 0));
         Path childMarker = root.resolve("capacity-zero-inodes-child-started");
-        ProcessBuilder builder = storageCoordinatorProcess(project, null, null, childMarker, List.of(
+        ProcessBuilder builder = storageCoordinatorProcess(
+                project, managedRoot, fakeBin, childMarker, List.of(
                 "--lock-root", createOwnedDirectory(root.resolve("capacity-zero-inodes-locks")).toString(),
                 "--", javaCommand(), "-cp", classPath(),
                 TestSessionCoordinatorSelfTest.class.getName(), "child-mark-start"));
-        builder.environment().put("OPENGGF_TEST_ROOT", outputRoot.toString());
-        builder.environment().put("OPENGGF_TEST_CAPACITY_INODE_LIMIT", "0");
 
         CommandResult result = finish(builder.start());
 
-        Path manifest = assertStartupFailedWithoutChild(result, outputRoot, childMarker,
+        Path manifest = assertStartupFailedWithoutChild(result, allocation, childMarker,
                 "zero usable inodes");
         check(Files.readString(manifest).contains("\"launch_usable_inodes\": 0"),
                 "zero-inode refusal must preserve the measured inode count");
+    }
+
+    private static void verifyLiveProbeFailurePreventsLaunchAcrossTiers(Path root) throws Exception {
+        int index = 0;
+
+        Path explicitProject = createTestProject(root.resolve("live-probe-explicit-project"));
+        Path explicitOutput = createOwnedDirectory(root.resolve("live-probe-explicit-output"));
+        Path explicitChild = root.resolve("live-probe-explicit-child");
+        ProcessBuilder explicit = storageCoordinatorProcess(
+                explicitProject, null, null, explicitChild, childMarkCommand(
+                        createOwnedDirectory(root.resolve("live-probe-explicit-locks"))));
+        explicit.environment().put("OPENGGF_TEST_ROOT", explicitOutput.toString());
+        assertInjectedLaunchProbeFailure(explicit, explicitOutput, explicitChild,
+                "EXPLICIT_OVERRIDE", index++);
+
+        Path fallbackProject = createTestProject(root.resolve("live-probe-fallback-project"));
+        Path fallbackChild = root.resolve("live-probe-fallback-child");
+        ProcessBuilder fallback = storageCoordinatorProcess(
+                fallbackProject, null, null, fallbackChild, childMarkCommand(
+                        createOwnedDirectory(root.resolve("live-probe-fallback-locks"))));
+        assertInjectedLaunchProbeFailure(fallback, fallbackProject.resolve(".openggf/test-runs"),
+                fallbackChild, "PROJECT_LOCAL_FALLBACK", index++);
+
+        Path systemProject = createTestProject(root.resolve("live-probe-system-project"));
+        Path systemChild = root.resolve("live-probe-system-child");
+        ProcessBuilder system = storageCoordinatorProcess(
+                systemProject, null, null, systemChild, childMarkCommand(
+                        createOwnedDirectory(root.resolve("live-probe-system-locks")),
+                        "--allow-system-tmp"));
+        Path systemTmp = createOwnedDirectory(root.resolve("live-probe-system-tmp"));
+        system.environment().put("JAVA_TOOL_OPTIONS", "-Dselftest.java=preserved -Djava.io.tmpdir="
+                + systemTmp);
+        assertInjectedLaunchProbeFailure(system, null, systemChild,
+                "SYSTEM_TMP_EXPLICIT", index++);
+
+        Path managedProject = createTestProject(root.resolve("live-probe-managed-project"));
+        Path managedRoot = createOwnedDirectory(root.resolve("live-probe-managed-root"));
+        Path allocation = createOwnedDirectory(managedRoot.resolve("codex/test-sessions/session-reserved"));
+        Path fakeBin = createFakeAgentScratch(root.resolve("live-probe-managed-bin"),
+                reservationJson(managedRoot, allocation, Instant.now().plus(Duration.ofDays(6))));
+        Path managedChild = root.resolve("live-probe-managed-child");
+        ProcessBuilder managed = storageCoordinatorProcess(
+                managedProject, managedRoot, fakeBin, managedChild, childMarkCommand(
+                        createOwnedDirectory(root.resolve("live-probe-managed-locks"))));
+        assertInjectedLaunchProbeFailure(managed, allocation, managedChild,
+                "MANAGED_CODEX_TEST_SESSIONS", index);
+    }
+
+    private static void assertInjectedLaunchProbeFailure(ProcessBuilder builder, Path outputRoot,
+                                                         Path childMarker, String tier, int index)
+            throws Exception {
+        builder.environment().put("OPENGGF_TEST_LIVE_PROBE_FAILURE_PHASE", "launch");
+        CommandResult result = finish(builder.start());
+        Path manifest = assertStartupFailedWithoutChild(result, outputRoot, childMarker,
+                "injected launch live-probe failure " + index);
+        String json = Files.readString(manifest);
+        check(json.contains("\"storage_tier\": \"" + tier + "\""),
+                "live-probe refusal must preserve tier " + tier);
+        check(json.contains("\"launch_inode_probe_status\": \"FAILED\""),
+                "live-probe refusal must record FAILED for " + tier);
+    }
+
+    private static void verifyCapacityProbeFailurePublishesStartupEvidence(Path root) throws Exception {
+        Path project = createTestProject(root.resolve("capacity-io-project"));
+        Path outputRoot = createOwnedDirectory(root.resolve("capacity-io-output"));
+        Path childMarker = root.resolve("capacity-io-child");
+        ProcessBuilder builder = storageCoordinatorProcess(project, null, null, childMarker,
+                childMarkCommand(createOwnedDirectory(root.resolve("capacity-io-locks"))));
+        builder.environment().put("OPENGGF_TEST_ROOT", outputRoot.toString());
+        builder.environment().put("OPENGGF_TEST_CAPACITY_PROBE_FAILURE_PHASE", "launch");
+
+        CommandResult result = finish(builder.start());
+
+        Path manifest = assertStartupFailedWithoutChild(
+                result, outputRoot, childMarker, "launch capacity-probe IOException");
+        String json = Files.readString(manifest);
+        check(json.contains("\"launch_capacity_error\": \"injected launch capacity probe failure\""),
+                "launch capacity IOException must be recorded in terminal evidence");
+    }
+
+    private static void verifyCompletionProbeFailuresPreserveTerminalState(Path root) throws Exception {
+        for (String probe : List.of("capacity", "live")) {
+            Path project = createTestProject(root.resolve("completion-" + probe + "-project"));
+            Path outputRoot = createOwnedDirectory(root.resolve("completion-" + probe + "-output"));
+            ProcessBuilder builder = storageCoordinatorProcess(project, null, null, null, List.of(
+                    "--lock-root", createOwnedDirectory(root.resolve("completion-" + probe + "-locks")).toString(),
+                    "--", javaCommand(), "-cp", classPath(),
+                    TestSessionCoordinatorSelfTest.class.getName(), "child-exit-7"));
+            builder.environment().put("OPENGGF_TEST_ROOT", outputRoot.toString());
+            builder.environment().put(probe.equals("capacity")
+                    ? "OPENGGF_TEST_CAPACITY_PROBE_FAILURE_PHASE"
+                    : "OPENGGF_TEST_LIVE_PROBE_FAILURE_PHASE", "completion");
+
+            CommandResult result = finish(builder.start());
+
+            check(result.exitCode == 7, "completion " + probe
+                    + " probe failure must preserve the primary child exit code");
+            Path manifest = Path.of(markerValue(
+                    findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+            String json = Files.readString(manifest);
+            check(json.contains("\"state\": \"FAILED\""),
+                    "completion " + probe + " failure must preserve FAILED state");
+            check(!json.contains("\"state\": \"RUNNING\""),
+                    "completion " + probe + " failure must not strand RUNNING");
+            check(json.contains("\"storage_finalization_error\":"),
+                    "completion " + probe + " failure must record an additional storage error");
+        }
+    }
+
+    private static void verifyUnsupportedDirectoryFlushIsObservable(Path root) throws Exception {
+        Path outputRoot = createOwnedDirectory(root.resolve("directory-flush-output"));
+        ProcessBuilder builder = coordinatorProcess(outputRoot, List.of(
+                "--lock-root", createOwnedDirectory(root.resolve("directory-flush-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+        builder.environment().put("OPENGGF_TEST_DIRECTORY_FLUSH_UNSUPPORTED", "1");
+
+        CommandResult result = finish(builder.start());
+
+        check(result.exitCode == 0,
+                "unsupported directory flush must not reject a successful portable probe:\n" + result.output);
+        Path manifest = Path.of(markerValue(
+                findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
+        String json = Files.readString(manifest);
+        check(json.contains("\"launch_directory_flush_status\": \"DIRECTORY_FLUSH_UNSUPPORTED\""),
+                "launch must record unsupported directory flush capability");
+        check(json.contains("\"completion_directory_flush_status\": \"DIRECTORY_FLUSH_UNSUPPORTED\""),
+                "completion must record unsupported directory flush capability");
+        check(json.contains("\"completion_inode_probe_status\": \"AVAILABLE\""),
+                "portable file probe must remain authoritative when directory flush is unsupported");
+    }
+
+    private static void verifyMarkerFieldsCannotForgeLines(Path root, Path outputRoot) throws Exception {
+        Path lockRoot = createOwnedDirectory(root.resolve(
+                "locks-marker-payload\nOPENGGF_TEST_RUN_END run_id=counterfeit"));
+        CommandResult result = runCoordinator(outputRoot, List.of(
+                "--lock-root", lockRoot.toString(), "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-success"));
+
+        check(result.exitCode == 0, "encoded marker-path payload must not break the run");
+        check(result.output.lines().filter(line -> line.startsWith("OPENGGF_TEST_RUN_START ")).count() == 1,
+                "marker path must not forge a second start line:\n" + result.output);
+        check(result.output.lines().filter(line -> line.startsWith("OPENGGF_TEST_RUN_END ")).count() == 1,
+                "marker path must not forge a second end line:\n" + result.output);
+        String start = findLine(result.output, "OPENGGF_TEST_RUN_START");
+        check(!start.contains("\n") && start.contains("%0A"),
+                "marker control characters must be percent encoded: " + start);
+    }
+
+    private static List<String> childMarkCommand(Path lockRoot, String... options) {
+        List<String> command = new ArrayList<>();
+        command.addAll(List.of("--lock-root", lockRoot.toString()));
+        command.addAll(List.of(options));
+        command.addAll(List.of("--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-mark-start"));
+        return List.copyOf(command);
     }
 
     private static Path assertStartupFailedWithoutChild(CommandResult result, Path outputRoot,
@@ -327,7 +513,8 @@ public final class TestSessionCoordinatorSelfTest {
         check(!Files.exists(childMarker), label + " must not start the child");
         String start = findLine(result.output, "OPENGGF_TEST_RUN_START");
         Path manifest = Path.of(markerValue(start, "manifest"));
-        check(manifest.startsWith(outputRoot), label + " manifest must use the selected allocation");
+        check(outputRoot == null || manifest.startsWith(outputRoot),
+                label + " manifest must use the selected allocation");
         String json = Files.readString(manifest);
         check(json.contains("\"state\": \"STARTUP_FAILED\""),
                 label + " must write a STARTUP_FAILED manifest");
@@ -1185,7 +1372,7 @@ public final class TestSessionCoordinatorSelfTest {
         if (!matcher.find()) {
             throw new AssertionError("marker missing " + key + ": " + line);
         }
-        return matcher.group(1);
+        return URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
     }
 
     private static String jsonString(String json, String key) {

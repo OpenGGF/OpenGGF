@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -157,6 +158,9 @@ public final class TestSessionProcessHarness {
 
         private void runAll() throws Exception {
             capacityRefusalPreventsLaunch();
+            liveProbeFailurePreventsLaunch();
+            completionProbeFailurePreservesPrimaryFailure();
+            markerFieldsAreEncoded();
             sameWorktreeContention();
             linkedWorktreesRunIndependently();
             systemTempIsNotUsed();
@@ -194,6 +198,52 @@ public final class TestSessionProcessHarness {
                     "capacity refusal must persist its storage tier");
             check(Files.isRegularFile(manifest.getParent().resolve("command.txt")),
                     "capacity refusal must preserve command.txt");
+        }
+
+        private void liveProbeFailurePreventsLaunch() throws Exception {
+            SessionProcess process = start(baseRepo, "live-probe-refusal", externalLockRoot,
+                    null, null, List.of(), null,
+                    Map.of("OPENGGF_TEST_LIVE_PROBE_FAILURE_PHASE", "launch"));
+            Path manifest = process.awaitManifest();
+            check(process.finish() != 0, "failed launch live probe must fail startup");
+            check(!Files.exists(root.resolve("markers/live-probe-refusal.txt")),
+                    "failed launch live probe must not start fake Maven");
+            check(jsonString(manifest, "state").equals("STARTUP_FAILED"),
+                    "failed launch live probe must persist STARTUP_FAILED");
+            check(jsonString(manifest, "launch_inode_probe_status").equals("FAILED"),
+                    "failed launch live probe must be observable");
+        }
+
+        private void completionProbeFailurePreservesPrimaryFailure() throws Exception {
+            SessionProcess process = start(baseRepo, "completion-probe-failure", externalLockRoot,
+                    null, null, List.of(), null, Map.of(
+                            "OPENGGF_TEST_LIVE_PROBE_FAILURE_PHASE", "completion",
+                            "FAKE_MAVEN_EXIT", "7"));
+            Path manifest = process.awaitManifest();
+            check(process.finish() == 7,
+                    "completion probe failure must preserve the primary fake-Maven exit");
+            check(jsonString(manifest, "state").equals("FAILED"),
+                    "completion probe failure must preserve FAILED state");
+            check(!Files.readString(manifest).contains("\"state\": \"RUNNING\""),
+                    "completion probe failure must not strand the manifest in RUNNING");
+        }
+
+        private void markerFieldsAreEncoded() throws Exception {
+            Path lockRoot = root.resolve(
+                    "marker-lock\nOPENGGF_TEST_RUN_START run_id=counterfeit");
+            Files.createDirectories(lockRoot);
+            SessionProcess process = start(baseRepo, "marker-encoding", lockRoot,
+                    null, null, List.of());
+            process.awaitManifest();
+            check(process.finish() == 0, "encoded marker field run must succeed");
+            String output = process.output();
+            check(output.lines().filter(line -> line.startsWith("OPENGGF_TEST_RUN_START ")).count() == 1,
+                    "lock path must not forge a start marker:\n" + output);
+            check(output.lines().filter(line -> line.startsWith("OPENGGF_TEST_RUN_END ")).count() == 1,
+                    "lock path must not forge an end marker:\n" + output);
+            check(output.lines().filter(line -> line.startsWith("OPENGGF_TEST_RUN_START "))
+                            .findFirst().orElseThrow().contains("%0A"),
+                    "lock-path newline must be encoded in the marker");
         }
 
         private void sameWorktreeContention() throws Exception {
@@ -458,7 +508,7 @@ public final class TestSessionProcessHarness {
                 if (line.startsWith("OPENGGF_TEST_RUN_START ")) {
                     Matcher matcher = MANIFEST_MARKER.matcher(line);
                     check(matcher.find(), "start marker lacks manifest path: " + line);
-                    return Path.of(matcher.group(1));
+                    return Path.of(URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8));
                 }
             }
             throw new AssertionError("session did not start:\n" + output());

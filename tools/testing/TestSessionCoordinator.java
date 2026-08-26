@@ -6,6 +6,7 @@ import java.io.Writer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
@@ -96,12 +97,58 @@ public final class TestSessionCoordinator {
             CapacitySnapshot completionCapacity,
             CompactionResult compaction,
             boolean retainEphemeral,
-            String storageFinalizationError) {
+            String storageFinalizationError,
+            String launchCapacityError,
+            LiveProbeResult launchProbe,
+            String completionCapacityError,
+            LiveProbeResult completionProbe) {
+    }
+
+    private enum ProbePhase {
+        LAUNCH,
+        COMPLETION
+    }
+
+    private enum InodeProbeStatus {
+        AVAILABLE,
+        FAILED,
+        NOT_RUN
+    }
+
+    private enum DirectoryFlushStatus {
+        FLUSHED,
+        DIRECTORY_FLUSH_UNSUPPORTED,
+        NOT_RUN
+    }
+
+    private record LiveProbeResult(
+            InodeProbeStatus status,
+            DirectoryFlushStatus directoryFlushStatus,
+            String error) {
+        private static LiveProbeResult notRun() {
+            return new LiveProbeResult(InodeProbeStatus.NOT_RUN,
+                    DirectoryFlushStatus.NOT_RUN, null);
+        }
+    }
+
+    private record StorageObservation(
+            CapacitySnapshot capacity,
+            String capacityError,
+            LiveProbeResult liveProbe) {
+        private String error() {
+            if (capacityError == null) {
+                return liveProbe.error;
+            }
+            if (liveProbe.error == null) {
+                return capacityError;
+            }
+            return capacityError + "; " + liveProbe.error;
+        }
     }
 
     @FunctionalInterface
     private interface CapacityProbe {
-        CapacitySnapshot measure(StorageAllocation allocation) throws IOException;
+        CapacitySnapshot measure(StorageAllocation allocation, ProbePhase phase) throws IOException;
     }
 
     private TestSessionCoordinator() {
@@ -166,26 +213,43 @@ public final class TestSessionCoordinator {
         writeOwner(lease.namespace.resolve("owner.json"), runId, worktree, leasePath,
                 options.command, commandHash, "owner");
         CapacityProbe capacityProbe = capacityProbe();
-        CapacitySnapshot launchCapacity = capacityProbe.measure(allocation);
+        StorageObservation launchObservation = observeCapacity(
+                allocation, capacityProbe, ProbePhase.LAUNCH);
+        CapacitySnapshot launchCapacity = launchObservation.capacity;
         long defaultCapacityFloor = requiredFreeBytes(launchCapacity);
         long capacityFloor;
         try {
             capacityFloor = configuredRequiredFreeBytes(launchCapacity);
         } catch (StartupFailure failure) {
             return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
-                    allowedPhases, sourceBefore, runtimeBefore, allocation, launchCapacity,
+                    allowedPhases, sourceBefore, runtimeBefore, allocation, launchObservation,
                     defaultCapacityFloor, failure.getMessage(), lease, capacityProbe);
         }
-        if (launchCapacity.usableBytes < capacityFloor || launchCapacity.usableInodes == 0) {
+        if (launchObservation.capacityError != null) {
+            return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
+                    allowedPhases, sourceBefore, runtimeBefore, allocation, launchObservation,
+                    capacityFloor, launchObservation.capacityError, lease, capacityProbe);
+        }
+        if (launchCapacity.usableBytes < capacityFloor
+                || allocation.tier == StorageTier.MANAGED_CODEX_TEST_SESSIONS
+                && launchCapacity.usableInodes == 0) {
             String reason = launchCapacity.usableInodes == 0
                     ? "allocation filesystem reports zero usable inodes"
                     : "allocation filesystem is below the required free-byte floor";
             return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
-                    allowedPhases, sourceBefore, runtimeBefore, allocation, launchCapacity,
+                    allowedPhases, sourceBefore, runtimeBefore, allocation, launchObservation,
                     capacityFloor, reason, lease, capacityProbe);
         }
+        launchObservation = new StorageObservation(launchCapacity, null,
+                liveStorageProbe(paths.session, ProbePhase.LAUNCH));
+        if (launchObservation.liveProbe.status == InodeProbeStatus.FAILED) {
+            return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
+                    allowedPhases, sourceBefore, runtimeBefore, allocation, launchObservation,
+                    capacityFloor, launchObservation.liveProbe.error, lease, capacityProbe);
+        }
         ManifestContext runningContext = new ManifestContext(allocation, launchCapacity,
-                null, null, false, null);
+                null, null, false, null, null, launchObservation.liveProbe,
+                null, null);
         writeManifest(paths.manifest, manifest(paths, runId, "RUNNING", worktree, leasePath,
                 commandHash, capability, allowedPhases, sourceBefore, runtimeBefore,
                 List.of(), List.of(), runningContext, capacityFloor));
@@ -194,7 +258,7 @@ public final class TestSessionCoordinator {
         ShutdownState shutdown = new ShutdownState(paths, runId, worktree, leasePath,
                 sourceBefore, runtimeBefore, options.command, commandHash, capability,
                 allowedPhases, options.exportFile, lease, allocation, launchCapacity,
-                capacityFloor, capacityProbe);
+                capacityFloor, capacityProbe, launchObservation.liveProbe);
         Runtime.getRuntime().addShutdownHook(new Thread(shutdown::abort, "openggf-test-session-shutdown"));
         Process child = null;
         int exitCode = 1;
@@ -247,9 +311,18 @@ public final class TestSessionCoordinator {
             String state = interrupted ? "ABORTED"
                     : (identityChanged ? "INVALID_IDENTITY_CHANGED"
                     : (exitCode == 0 ? "PASSED" : "FAILED"));
-            CapacitySnapshot completionCapacity = capacityProbe.measure(allocation);
+            StorageObservation completionObservation = observeStorage(
+                    paths, allocation, capacityProbe, ProbePhase.COMPLETION);
+            String storageFinalizationError = completionObservation.error();
+            if (storageFinalizationError != null && state.equals("PASSED")) {
+                state = "STORAGE_FINALIZATION_FAILED";
+                exitCode = 1;
+                valid = false;
+            }
             ManifestContext terminalContext = new ManifestContext(allocation, launchCapacity,
-                    completionCapacity, null, false, null);
+                    completionObservation.capacity, null, false, storageFinalizationError,
+                    null, launchObservation.liveProbe, completionObservation.capacityError,
+                    completionObservation.liveProbe);
             writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                     commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
                     reportInventory(paths), artifactInventory(paths), terminalContext,
@@ -268,16 +341,19 @@ public final class TestSessionCoordinator {
     private static int startupFailed(Paths paths, String runId, Path worktree, Path leasePath,
                                      String commandHash, String capability, String allowedPhases,
                                      String source, String runtime, StorageAllocation allocation,
-                                     CapacitySnapshot launchCapacity, long capacityFloor,
+                                     StorageObservation launchObservation, long capacityFloor,
                                      String reason, Lease lease,
                                      CapacityProbe capacityProbe) throws Exception {
         try {
             if (!Files.exists(paths.mavenLog)) {
                 Files.createFile(paths.mavenLog);
             }
-            CapacitySnapshot completionCapacity = capacityProbe.measure(allocation);
-            ManifestContext context = new ManifestContext(allocation, launchCapacity,
-                    completionCapacity, null, false, null);
+            StorageObservation completionObservation = observeStorage(
+                    paths, allocation, capacityProbe, ProbePhase.COMPLETION);
+            ManifestContext context = new ManifestContext(allocation, launchObservation.capacity,
+                    completionObservation.capacity, null, false, completionObservation.error(),
+                    launchObservation.capacityError, launchObservation.liveProbe,
+                    completionObservation.capacityError, completionObservation.liveProbe);
             writeManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
                     leasePath, commandHash, capability, allowedPhases, source, runtime,
                     List.of(), List.of(), context, capacityFloor));
@@ -286,9 +362,9 @@ public final class TestSessionCoordinator {
             System.err.println("OPENGGF_TEST_SESSION_ERROR " + boundedSingleLine(reason)
                     + " allocation_path=" + boundedSingleLine(allocation.outputRoot.toString())
                     + " storage_tier=" + allocation.tier
-                    + " usable_bytes=" + launchCapacity.usableBytes
+                    + " usable_bytes=" + launchObservation.capacity.usableBytes
                     + " required_free_bytes=" + capacityFloor
-                    + " usable_inodes=" + launchCapacity.usableInodes
+                    + " usable_inodes=" + launchObservation.capacity.usableInodes
                     + " inspect_command='agent-scratch status'"
                     + " prune_preview_command='agent-scratch prune --dry-run'");
             return 1;
@@ -308,9 +384,12 @@ public final class TestSessionCoordinator {
 
     private static long configuredRequiredFreeBytes(CapacitySnapshot capacity) {
         long required = requiredFreeBytes(capacity);
-        String configured = nonBlank(System.getenv("OPENGGF_TEST_MIN_FREE_BYTES"));
+        String configured = System.getenv("OPENGGF_TEST_MIN_FREE_BYTES");
         if (configured == null) {
             return required;
+        }
+        if (configured.isBlank()) {
+            throw new StartupFailure("OPENGGF_TEST_MIN_FREE_BYTES must not be blank", 1);
         }
         if (!configured.matches("[0-9]+")) {
             throw new StartupFailure("OPENGGF_TEST_MIN_FREE_BYTES must be an unsigned decimal integer", 1);
@@ -328,16 +407,18 @@ public final class TestSessionCoordinator {
     }
 
     private static CapacityProbe capacityProbe() {
-        String inodeLimit = nonBlank(System.getenv("OPENGGF_TEST_CAPACITY_INODE_LIMIT"));
-        if (inodeLimit == null) {
-            return TestSessionCoordinator::measureCapacity;
-        }
-        if (!inodeLimit.equals("0")) {
+        String inodeLimit = System.getenv("OPENGGF_TEST_CAPACITY_INODE_LIMIT");
+        if (inodeLimit != null && !inodeLimit.equals("0")) {
             throw new StartupFailure("OPENGGF_TEST_CAPACITY_INODE_LIMIT may only force zero", 1);
         }
-        return allocation -> {
+        String failurePhase = System.getenv("OPENGGF_TEST_CAPACITY_PROBE_FAILURE_PHASE");
+        return (allocation, phase) -> {
+            if (phaseName(phase).equals(failurePhase)) {
+                throw new IOException("injected " + phaseName(phase) + " capacity probe failure");
+            }
             CapacitySnapshot measured = measureCapacity(allocation);
-            return new CapacitySnapshot(measured.usableBytes, measured.totalBytes, 0);
+            return inodeLimit == null ? measured
+                    : new CapacitySnapshot(measured.usableBytes, measured.totalBytes, 0);
         };
     }
 
@@ -347,35 +428,148 @@ public final class TestSessionCoordinator {
         return new CapacitySnapshot(store.getUsableSpace(), store.getTotalSpace(), usableInodes);
     }
 
+    private static StorageObservation observeCapacity(StorageAllocation allocation,
+                                                      CapacityProbe capacityProbe,
+                                                      ProbePhase phase) {
+        try {
+            return new StorageObservation(capacityProbe.measure(allocation, phase),
+                    null, LiveProbeResult.notRun());
+        } catch (IOException | RuntimeException e) {
+            return new StorageObservation(allocation.allocationCapacity,
+                    boundedSingleLine(message(e)), LiveProbeResult.notRun());
+        }
+    }
+
+    private static StorageObservation observeStorage(Paths paths, StorageAllocation allocation,
+                                                     CapacityProbe capacityProbe,
+                                                     ProbePhase phase) {
+        StorageObservation capacity = observeCapacity(allocation, capacityProbe, phase);
+        return new StorageObservation(capacity.capacity, capacity.capacityError,
+                liveStorageProbe(paths.session, phase));
+    }
+
+    private static LiveProbeResult liveStorageProbe(Path session, ProbePhase phase) {
+        String phaseName = phaseName(phase);
+        if (phaseName.equals(System.getenv("OPENGGF_TEST_LIVE_PROBE_FAILURE_PHASE"))) {
+            return new LiveProbeResult(InodeProbeStatus.FAILED,
+                    DirectoryFlushStatus.NOT_RUN,
+                    "injected " + phaseName + " live probe failure");
+        }
+        Path probe = session.resolve(".storage-probe-" + createProbeSuffix());
+        byte[] expected = "OpenGGF storage probe\n".getBytes(StandardCharsets.UTF_8);
+        try {
+            try (FileChannel channel = FileChannel.open(probe, StandardOpenOption.CREATE_NEW,
+                    StandardOpenOption.WRITE)) {
+                ByteBuffer bytes = ByteBuffer.wrap(expected);
+                while (bytes.hasRemaining()) {
+                    channel.write(bytes);
+                }
+                channel.force(true);
+            }
+            byte[] actual = Files.readAllBytes(probe);
+            if (!Arrays.equals(expected, actual)) {
+                throw new IOException("private storage probe readback mismatch");
+            }
+            Files.delete(probe);
+            return new LiveProbeResult(InodeProbeStatus.AVAILABLE,
+                    flushDirectory(session), null);
+        } catch (IOException | RuntimeException e) {
+            String error = boundedSingleLine(message(e));
+            try {
+                Files.deleteIfExists(probe);
+            } catch (IOException cleanup) {
+                error += "; probe cleanup failed: " + boundedSingleLine(message(cleanup));
+            }
+            return new LiveProbeResult(InodeProbeStatus.FAILED,
+                    DirectoryFlushStatus.NOT_RUN, error);
+        }
+    }
+
+    private static DirectoryFlushStatus flushDirectory(Path session) {
+        if ("1".equals(System.getenv("OPENGGF_TEST_DIRECTORY_FLUSH_UNSUPPORTED"))) {
+            return DirectoryFlushStatus.DIRECTORY_FLUSH_UNSUPPORTED;
+        }
+        try (FileChannel directory = FileChannel.open(session, StandardOpenOption.READ)) {
+            directory.force(true);
+            return DirectoryFlushStatus.FLUSHED;
+        } catch (IOException | RuntimeException e) {
+            return DirectoryFlushStatus.DIRECTORY_FLUSH_UNSUPPORTED;
+        }
+    }
+
+    private static String createProbeSuffix() {
+        byte[] random = new byte[6];
+        RANDOM.nextBytes(random);
+        return HEX.formatHex(random);
+    }
+
+    private static String phaseName(ProbePhase phase) {
+        return phase.name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private static String message(Throwable error) {
+        String message = error.getMessage();
+        return message == null || message.isBlank()
+                ? error.getClass().getSimpleName() : message;
+    }
+
     private static void printStartMarker(Paths paths, String runId, Path leasePath,
                                          ManifestContext context, long capacityFloor,
                                          String state) {
-        System.out.println("OPENGGF_TEST_RUN_START run_id=" + runId + " isolation="
-                + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " manifest="
-                + paths.manifest + " lease=" + leasePath + " log=" + paths.mavenLog
-                + " state=" + state + " storage_tier=" + context.allocation.tier
+        System.out.println("OPENGGF_TEST_RUN_START run_id=" + markerToken(runId) + " isolation="
+                + markerToken(SESSION_ISOLATION) + " lwjgl=" + markerToken(LWJGL_EXTRACTION_ISOLATION)
+                + " manifest=" + markerToken(paths.manifest.toString())
+                + " lease=" + markerToken(leasePath.toString())
+                + " log=" + markerToken(paths.mavenLog.toString())
+                + " state=" + markerToken(state)
+                + " storage_tier=" + markerToken(context.allocation.tier.name())
                 + " launch_usable_bytes=" + context.launchCapacity.usableBytes
                 + " capacity_floor_bytes=" + capacityFloor);
     }
 
     private static void printEndMarker(Paths paths, String runId, int exitCode, String state,
                                        boolean valid, ManifestContext context) {
-        printEndMarker(paths, runId, exitCode, state, valid, context, "");
+        printEndMarker(paths, runId, exitCode, state, valid, context, null);
     }
 
     private static void printEndMarker(Paths paths, String runId, int exitCode, String state,
-                                       boolean valid, ManifestContext context, String suffix) {
+                                       boolean valid, ManifestContext context,
+                                       Boolean processTreeStopped) {
         String compactionStatus = context.compaction == null
                 ? "NOT_RUN" : context.compaction.status.name();
         long reclaimedBytes = context.compaction == null ? 0 : context.compaction.reclaimedBytes;
         long completionBytes = context.completionCapacity == null
                 ? -1 : context.completionCapacity.usableBytes;
-        System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId + " isolation="
-                + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " exit_code="
-                + exitCode + " state=" + state + " valid=" + valid + " manifest=" + paths.manifest
-                + " log=" + paths.mavenLog + " compaction_status=" + compactionStatus
+        String processTreeField = processTreeStopped == null
+                ? "" : " process_tree_stopped=" + processTreeStopped;
+        System.out.println("OPENGGF_TEST_RUN_END run_id=" + markerToken(runId) + " isolation="
+                + markerToken(SESSION_ISOLATION) + " lwjgl=" + markerToken(LWJGL_EXTRACTION_ISOLATION)
+                + " exit_code=" + exitCode + " state=" + markerToken(state)
+                + " valid=" + valid + " manifest=" + markerToken(paths.manifest.toString())
+                + " log=" + markerToken(paths.mavenLog.toString())
+                + " compaction_status=" + markerToken(compactionStatus)
                 + " reclaimed_bytes=" + reclaimedBytes
-                + " completion_usable_bytes=" + completionBytes + suffix);
+                + " completion_usable_bytes=" + completionBytes + processTreeField);
+    }
+
+    private static String markerToken(String value) {
+        StringBuilder encoded = new StringBuilder(value.length());
+        for (byte raw : value.getBytes(StandardCharsets.UTF_8)) {
+            int character = raw & 0xff;
+            if (character >= 'a' && character <= 'z'
+                    || character >= 'A' && character <= 'Z'
+                    || character >= '0' && character <= '9'
+                    || character == '-' || character == '_' || character == '.'
+                    || character == '~' || character == '/' || character == ':'
+                    || character == '@') {
+                encoded.append((char) character);
+            } else {
+                encoded.append('%');
+                encoded.append("0123456789ABCDEF".charAt(character >>> 4));
+                encoded.append("0123456789ABCDEF".charAt(character & 0xf));
+            }
+        }
+        return encoded.toString();
     }
 
     /** Reuses a completed wrapper lease only after the normal reclaim checks pass. */
@@ -942,6 +1136,10 @@ public final class TestSessionCoordinator {
         CapacitySnapshot launch = context.launchCapacity;
         CapacitySnapshot completion = context.completionCapacity;
         CompactionResult compaction = context.compaction;
+        boolean managedNumericInodes = allocation.tier == StorageTier.MANAGED_CODEX_TEST_SESSIONS;
+        String numericInodeUnavailableReason = managedNumericInodes ? null
+                : "numeric inode count is unavailable for " + allocation.tier
+                + "; live availability probe is authoritative";
         return "{\n"
                 + "  \"run_id\": \"" + escape(runId) + "\",\n"
                 + "  \"state\": \"" + state + "\",\n"
@@ -974,7 +1172,11 @@ public final class TestSessionCoordinator {
                 + "  \"filesystem_device\": \"" + escape(allocation.filesystemDevice) + "\",\n"
                 + "  \"allocation_usable_bytes\": " + allocation.allocationCapacity.usableBytes + ",\n"
                 + "  \"allocation_total_bytes\": " + allocation.allocationCapacity.totalBytes + ",\n"
-                + "  \"allocation_usable_inodes\": " + allocation.allocationCapacity.usableInodes + ",\n"
+                + "  \"allocation_usable_inodes\": "
+                + jsonNullableLong(managedNumericInodes
+                ? allocation.allocationCapacity.usableInodes : null) + ",\n"
+                + "  \"numeric_inode_unavailable_reason\": "
+                + jsonNullable(numericInodeUnavailableReason) + ",\n"
                 + "  \"retention_deadline\": "
                 + jsonNullable(allocation.retentionDeadline == null
                 ? null : allocation.retentionDeadline.toString()) + ",\n"
@@ -985,13 +1187,36 @@ public final class TestSessionCoordinator {
                 + "  \"capacity_floor_bytes\": " + capacityFloor + ",\n"
                 + "  \"launch_usable_bytes\": " + launch.usableBytes + ",\n"
                 + "  \"launch_total_bytes\": " + launch.totalBytes + ",\n"
-                + "  \"launch_usable_inodes\": " + launch.usableInodes + ",\n"
+                + "  \"launch_usable_inodes\": "
+                + jsonNullableLong(managedNumericInodes ? launch.usableInodes : null) + ",\n"
+                + "  \"launch_capacity_error\": "
+                + jsonNullable(context.launchCapacityError) + ",\n"
+                + "  \"launch_inode_probe_status\": "
+                + jsonNullable(context.launchProbe == null
+                ? null : context.launchProbe.status.name()) + ",\n"
+                + "  \"launch_inode_probe_error\": "
+                + jsonNullable(context.launchProbe == null ? null : context.launchProbe.error) + ",\n"
+                + "  \"launch_directory_flush_status\": "
+                + jsonNullable(context.launchProbe == null
+                ? null : context.launchProbe.directoryFlushStatus.name()) + ",\n"
                 + "  \"completion_usable_bytes\": "
                 + jsonNullableLong(completion == null ? null : completion.usableBytes) + ",\n"
                 + "  \"completion_total_bytes\": "
                 + jsonNullableLong(completion == null ? null : completion.totalBytes) + ",\n"
                 + "  \"completion_usable_inodes\": "
-                + jsonNullableLong(completion == null ? null : completion.usableInodes) + ",\n"
+                + jsonNullableLong(completion == null || !managedNumericInodes
+                ? null : completion.usableInodes) + ",\n"
+                + "  \"completion_capacity_error\": "
+                + jsonNullable(context.completionCapacityError) + ",\n"
+                + "  \"completion_inode_probe_status\": "
+                + jsonNullable(context.completionProbe == null
+                ? null : context.completionProbe.status.name()) + ",\n"
+                + "  \"completion_inode_probe_error\": "
+                + jsonNullable(context.completionProbe == null
+                ? null : context.completionProbe.error) + ",\n"
+                + "  \"completion_directory_flush_status\": "
+                + jsonNullable(context.completionProbe == null
+                ? null : context.completionProbe.directoryFlushStatus.name()) + ",\n"
                 + "  \"compaction_status\": "
                 + jsonNullable(compaction == null ? null : compaction.status.name()) + ",\n"
                 + "  \"compaction_removed_relative_paths\": "
@@ -1856,6 +2081,7 @@ public final class TestSessionCoordinator {
         private final CapacitySnapshot launchCapacity;
         private final long capacityFloor;
         private final CapacityProbe capacityProbe;
+        private final LiveProbeResult launchProbe;
         private volatile Process child;
         private volatile boolean completed;
 
@@ -1864,7 +2090,7 @@ public final class TestSessionCoordinator {
                               String commandHash, String capability, String allowedPhases,
                               Path exportFile, Lease lease, StorageAllocation allocation,
                               CapacitySnapshot launchCapacity, long capacityFloor,
-                              CapacityProbe capacityProbe) {
+                              CapacityProbe capacityProbe, LiveProbeResult launchProbe) {
             this.paths = paths;
             this.runId = runId;
             this.worktree = worktree;
@@ -1881,6 +2107,7 @@ public final class TestSessionCoordinator {
             this.launchCapacity = launchCapacity;
             this.capacityFloor = capacityFloor;
             this.capacityProbe = capacityProbe;
+            this.launchProbe = launchProbe;
         }
 
         private synchronized void abort() {
@@ -1900,9 +2127,12 @@ public final class TestSessionCoordinator {
                 String state = sourceBefore.equals(sourceAfter) && runtimeBefore.equals(runtimeAfter)
                         && treeStopped && leaseStillOwned(leasePath.getParent(), leasePath, runId)
                         ? "ABORTED" : "INVALID_IDENTITY_CHANGED";
-                CapacitySnapshot completionCapacity = capacityProbe.measure(allocation);
+                StorageObservation completionObservation = observeStorage(
+                        paths, allocation, capacityProbe, ProbePhase.COMPLETION);
                 ManifestContext terminalContext = new ManifestContext(allocation, launchCapacity,
-                        completionCapacity, null, false, null);
+                        completionObservation.capacity, null, false, completionObservation.error(),
+                        null, launchProbe, completionObservation.capacityError,
+                        completionObservation.liveProbe);
                 writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                         commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
                         reportInventory(paths), artifactInventory(paths), terminalContext,
@@ -1911,7 +2141,7 @@ public final class TestSessionCoordinator {
                     writeExport(exportFile, paths.manifest, runId);
                 }
                 printEndMarker(paths, runId, 143, state, false, terminalContext,
-                        " process_tree_stopped=" + treeStopped);
+                        treeStopped);
                 System.out.flush();
             } catch (Exception e) {
                 e.printStackTrace(System.err);
