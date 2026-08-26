@@ -307,19 +307,23 @@ worktree/report paths, exact preimage archive path/hash/length, and target-link
 identity. If forced termination bypasses the child trap, outer recovery uses
 no-follow type checks and those identities to restore only that exact report.
 It may restore for hygiene without Surefire proof, but such a run remains
-non-certifying: `ABORTED` when the child trap restored before the coordinator
-digest, otherwise `INVALID_IDENTITY_CHANGED`. It is never `PASSED` or valid.
+non-certifying. Empirical INT/TERM tests against the exact authenticated frozen
+coordinator show that its shutdown hook forcibly terminates the adapter before
+the child trap can finish, then takes the dirty final digest. The binding
+launcher-signal outcome is therefore `INVALID_IDENTITY_CHANGED`, followed by
+outer restoration after finalization. It is never `PASSED`, `ABORTED`, or valid;
+the restored worktree does not retroactively change the invalid manifest.
 
 The exact outcome matrix is binding. Child status 0 plus authorized successful
 normalization yields status 0 / `PASSED` / `valid=true`; child status N plus
 authorized successful normalization preserves N / `FAILED` / `valid=true`.
 Normalization failure after child 0 yields nonzero /
 `INVALID_IDENTITY_CHANGED` / `valid=false`; after child N it preserves N while
-the manifest is `INVALID_IDENTITY_CHANGED` / `valid=false`. Signal propagation
-preserves 130 or 143 and yields `ABORTED` if restoration preceded the
-coordinator digest, otherwise `INVALID_IDENTITY_CHANGED`, always
-`valid=false`. The archived generated report is parent hygiene evidence, not a
-repository deliverable and not a parent test failure.
+the manifest is `INVALID_IDENTITY_CHANGED` / `valid=false`. Launcher signal
+propagation preserves 130 or 143 and yields `INVALID_IDENTITY_CHANGED` /
+`valid=false`, followed by authenticated outer worktree restoration. The
+archived generated report is parent hygiene evidence, not a repository
+deliverable and not a parent test failure.
 
 The full parent baseline cannot start until the adapter self-tests and the
 coordinator's own self-test pass.
