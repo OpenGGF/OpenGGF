@@ -721,6 +721,16 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   cross-report duplicates, malformed/unused declarations, and missing or
   repeated runtime-input authentication.
 
+  Preserve source-selected FQCN roots as authoritative when a JUnit descriptor
+  (notably an ArchUnit `FieldSource`) emits only the suite's simple classname.
+  Normalize such a testcase only when it is otherwise unselected, its one
+  enclosing suite names an exact selected FQCN or nested descendant, the raw
+  classname exactly equals that suite's simple name, and the report basename is
+  exactly `TEST-<suite-fqcn>.xml`. Preserve method and report provenance; reject
+  mismatches, unselected suites, fully qualified lookalikes, and normalized/raw
+  identity collisions. Keep non-executable compatibility facades in the
+  reviewed empty-helper allowlist rather than aliasing them to executable suites.
+
 ---
 
 ### Task 3: Freeze Refs, Create Parent Worktrees, and Record Parent Baselines

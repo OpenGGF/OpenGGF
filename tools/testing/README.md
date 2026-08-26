@@ -245,11 +245,15 @@ The export schema is:
 identity	class	method	outcome	red_kind	exception_type	normalized_message	red_body_bytes	red_body_sha256	report
 ```
 
-For ordinary rows, decoded `class` and `method` exactly mirror the XML
+For XML-normal rows, decoded `class` and `method` exactly mirror the XML
 `classname` and `name` attributes without trimming, and `identity` is their
 exact `class + '#' + method`, including a parameterized testcase's complete
-Surefire `name` and any boundary whitespace. For reviewed repeated rows only,
-the exporter appends the synthetic deterministic
+Surefire `name` and any boundary whitespace. The guarded ArchUnit FieldSource
+exception normalizes an otherwise-unselected simple XML `classname` to its
+selected fully qualified owning `testsuite` name only when the suite simple
+name and exact `TEST-<suite-name>.xml` basename also match; `method` and report
+provenance remain unchanged. For reviewed repeated rows, the exporter appends
+the synthetic deterministic
 `@xml-occurrence[i/n]` suffix to the XML method and derived identity. That
 suffix records inventory order and is not claimed to be a JUnit unique ID or
 display name. Outcomes are exactly

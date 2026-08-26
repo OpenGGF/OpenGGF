@@ -126,6 +126,49 @@ function Get-SelectedOwningRoot {
     return ''
 }
 
+function Resolve-SurefireTestcaseClassName {
+    param(
+        [string] $RawClassName,
+        [System.Xml.XmlElement] $Testcase,
+        [string] $ReportPath,
+        [System.Collections.Generic.HashSet[string]] $SelectedClasses
+    )
+    if ((Get-SelectedOwningRoot $RawClassName $SelectedClasses).Length -ne 0) {
+        return $RawClassName
+    }
+    if ($RawClassName.Contains('.')) {
+        return $RawClassName
+    }
+
+    $owningSuites = [System.Collections.Generic.List[System.Xml.XmlElement]]::new()
+    $ancestor = $Testcase.ParentNode
+    while ($null -ne $ancestor) {
+        if ($ancestor.NodeType -eq [System.Xml.XmlNodeType]::Element -and $ancestor.LocalName -ceq 'testsuite') {
+            $owningSuites.Add([System.Xml.XmlElement]$ancestor)
+        }
+        $ancestor = $ancestor.ParentNode
+    }
+    if ($owningSuites.Count -ne 1) {
+        throw "Unselected simple Surefire testcase classname requires exactly one owning testsuite: $RawClassName suites=$($owningSuites.Count)"
+    }
+
+    $suiteName = [string]$owningSuites[0].GetAttribute('name')
+    if ($suiteName.Length -eq 0 -or (Get-SelectedOwningRoot $suiteName $SelectedClasses).Length -eq 0) {
+        throw "Surefire testsuite name is not owned by a selected root: [$suiteName]"
+    }
+    $simpleBoundary = $suiteName.LastIndexOf('.', [System.StringComparison]::Ordinal)
+    $suiteSimpleName = if ($simpleBoundary -lt 0) { $suiteName } else { $suiteName.Substring($simpleBoundary + 1) }
+    if ($RawClassName -cne $suiteSimpleName) {
+        throw "Surefire simple classname mismatch with selected suite: raw=[$RawClassName] expected=[$suiteSimpleName]"
+    }
+    $expectedReportName = "TEST-$suiteName.xml"
+    $actualReportName = [System.IO.Path]::GetFileName($ReportPath)
+    if ($actualReportName -cne $expectedReportName) {
+        throw "Surefire simple-classname report basename mismatch: expected=[$expectedReportName] actual=[$actualReportName]"
+    }
+    return $suiteName
+}
+
 function Read-RepeatedIdentityCardinality {
     param([string] $Path, [System.Collections.Generic.HashSet[string]] $SelectedClasses)
     $entries = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
@@ -610,11 +653,12 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
     }
 
     foreach ($testcase in $document.GetElementsByTagName('testcase')) {
-        $className = [string]$testcase.GetAttribute('classname')
+        $rawClassName = [string]$testcase.GetAttribute('classname')
         $methodName = [string]$testcase.GetAttribute('name')
-        if ($className.Length -eq 0 -or $methodName.Length -eq 0) {
+        if ($rawClassName.Length -eq 0 -or $methodName.Length -eq 0) {
             throw "Surefire testcase in $reportPath lacks classname or name"
         }
+        $className = Resolve-SurefireTestcaseClassName $rawClassName $testcase $reportPath $selected
         $owningRoot = Get-SelectedOwningRoot $className $selected
         if ($owningRoot.Length -eq 0) {
             throw "Surefire report contains unselected executable class: $className"

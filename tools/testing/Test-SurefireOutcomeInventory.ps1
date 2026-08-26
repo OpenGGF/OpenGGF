@@ -381,6 +381,53 @@ run session-20260826-abcdef12 2026-08-26T12:34:56Z</failure></testcase>
         Assert-Equal $row.red_body_sha256 '3d28e9114476422d99e9e02cfda0a90cb67e5cec0ac467acb1ef03adfa311529' 'nested red body SHA-256'
     }
 
+    Invoke-Case 'export normalizes suite-scoped ArchUnit FieldSource classnames' {
+        $case = Join-Path $scratch 'export-field-source-classname'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "com.openggf.guard.TestArchitecture`ncom.openggf.guard.TestOuter`n"
+        Write-Utf8File (Join-Path $case 'TEST-com.openggf.guard.TestArchitecture.xml') '<testsuite name="com.openggf.guard.TestArchitecture"><testcase classname="TestArchitecture" name="architectureRule"/></testsuite>'
+        Write-Utf8File (Join-Path $case 'TEST-com.openggf.guard.TestOuter$Nested.xml') '<testsuite name="com.openggf.guard.TestOuter$Nested"><testcase classname="TestOuter$Nested" name="nestedRule"/></testsuite>'
+
+        $result = Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $case)
+        Assert-Succeeded $result 'suite-scoped FieldSource classname export'
+        $rows = @(Import-Csv -Delimiter "`t" -LiteralPath $output)
+        Assert-Equal $rows[0].class 'com.openggf.guard.TestArchitecture' 'FieldSource classname normalizes to suite FQCN'
+        Assert-Equal $rows[0].identity 'com.openggf.guard.TestArchitecture#architectureRule' 'FieldSource identity uses normalized suite FQCN'
+        Assert-Equal $rows[0].report 'TEST-com.openggf.guard.TestArchitecture.xml' 'FieldSource report provenance remains original'
+        Assert-Equal $rows[1].class 'com.openggf.guard.TestOuter$Nested' 'nested FieldSource suite remains owned by selected top-level root'
+        Assert-Equal $rows[1].identity 'com.openggf.guard.TestOuter$Nested#nestedRule' 'nested FieldSource identity uses suite FQCN'
+    }
+
+    Invoke-Case 'export rejects mismatched FieldSource evidence and normalized identity collisions' {
+        $case = Join-Path $scratch 'export-field-source-rejections'
+        New-Item -ItemType Directory -Path $case -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "com.openggf.guard.TestArchitecture`n"
+
+        $wrongClass = Join-Path $case 'wrong-class'
+        New-Item -ItemType Directory -Path $wrongClass | Out-Null
+        Write-Utf8File (Join-Path $wrongClass 'TEST-com.openggf.guard.TestArchitecture.xml') '<testsuite name="com.openggf.guard.TestArchitecture"><testcase classname="OtherArchitecture" name="rule"/></testsuite>'
+        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $wrongClass)) 'classname.*suite simple name|simple classname' 'mismatched FieldSource simple classname'
+
+        $wrongReport = Join-Path $case 'wrong-report'
+        New-Item -ItemType Directory -Path $wrongReport | Out-Null
+        Write-Utf8File (Join-Path $wrongReport 'TEST-wrong.xml') '<testsuite name="com.openggf.guard.TestArchitecture"><testcase classname="TestArchitecture" name="rule"/></testsuite>'
+        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $wrongReport)) 'report.*TEST-com\.openggf\.guard\.TestArchitecture\.xml|basename' 'mismatched FieldSource report filename'
+
+        $wrongSuite = Join-Path $case 'wrong-suite'
+        New-Item -ItemType Directory -Path $wrongSuite | Out-Null
+        Write-Utf8File (Join-Path $wrongSuite 'TEST-com.openggf.guard.OtherArchitecture.xml') '<testsuite name="com.openggf.guard.OtherArchitecture"><testcase classname="OtherArchitecture" name="rule"/></testsuite>'
+        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $wrongSuite)) 'suite.*selected|unselected.*suite' 'unselected FieldSource suite name'
+
+        $collision = Join-Path $case 'collision'
+        New-Item -ItemType Directory -Path $collision | Out-Null
+        Write-Utf8File (Join-Path $collision 'TEST-com.openggf.guard.TestArchitecture.xml') '<testsuite name="com.openggf.guard.TestArchitecture"><testcase classname="TestArchitecture" name="same"/><testcase classname="com.openggf.guard.TestArchitecture" name="same"/></testsuite>'
+        Assert-Failed (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $output, '-ReportRoot', $collision)) 'duplicate[\s\S]*com\.openggf\.guard\.TestArchitecture#same' 'normalized and raw identity collision'
+    }
+
     Invoke-Case 'export authenticates exact source selector mapping invocation and runtime input' {
         $case = Join-Path $scratch 'export-selector-contract'
         New-Item -ItemType Directory -Path $case -Force | Out-Null
