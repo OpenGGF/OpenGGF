@@ -51,6 +51,8 @@ public final class TestSessionCoordinator {
     private static final String SUPPORTED_AGENT_SCRATCH_HELPER_VERSION = "openggf-agent-scratch-v2";
     private static final int MAX_MANAGED_DIAGNOSTIC_LENGTH = 240;
     private static final Duration MAX_MANAGED_RETENTION = Duration.ofDays(7);
+    private static final long GIB = 1024L * 1024L * 1024L;
+    private static final long DEFAULT_MIN_FREE_BYTES = 20L * GIB;
     private static final Set<String> RESERVATION_FIELDS = Set.of(
             "schema_version", "storage_tier", "managed_root", "allocation_path",
             "filesystem_device", "usable_bytes", "total_bytes", "usable_inodes",
@@ -71,6 +73,35 @@ public final class TestSessionCoordinator {
             int allocationSchema, String helperVersion, String filesystemDevice,
             CapacitySnapshot allocationCapacity, Instant retentionDeadline,
             String notApplicableReason, String warning) {
+    }
+
+    private enum CompactionStatus {
+        COMPACTED,
+        NOTHING_TO_REMOVE,
+        RETAINED_BY_REQUEST,
+        FAILED,
+        REFUSED
+    }
+
+    private record CompactionResult(
+            CompactionStatus status,
+            List<String> removedRelativePaths,
+            long reclaimedBytes,
+            String error) {
+    }
+
+    private record ManifestContext(
+            StorageAllocation allocation,
+            CapacitySnapshot launchCapacity,
+            CapacitySnapshot completionCapacity,
+            CompactionResult compaction,
+            boolean retainEphemeral,
+            String storageFinalizationError) {
+    }
+
+    @FunctionalInterface
+    private interface CapacityProbe {
+        CapacitySnapshot measure(StorageAllocation allocation) throws IOException;
     }
 
     private TestSessionCoordinator() {
@@ -127,22 +158,43 @@ public final class TestSessionCoordinator {
         Path leasePath = lease.namespace.resolve("lease.lock");
         String commandHash = sha256(String.join("\0", options.command));
         String allowedPhases = allowedPhases(options.command);
+        writeCommand(paths.command, options.command);
         String capability = writeCapability(session, runId, commandHash, worktree, leasePath,
                 allowedPhases);
         String sourceBefore = sourceDigest(worktree);
         String runtimeBefore = runtimeDigest(options.command);
         writeOwner(lease.namespace.resolve("owner.json"), runId, worktree, leasePath,
                 options.command, commandHash, "owner");
+        CapacityProbe capacityProbe = capacityProbe();
+        CapacitySnapshot launchCapacity = capacityProbe.measure(allocation);
+        long defaultCapacityFloor = requiredFreeBytes(launchCapacity);
+        long capacityFloor;
+        try {
+            capacityFloor = configuredRequiredFreeBytes(launchCapacity);
+        } catch (StartupFailure failure) {
+            return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
+                    allowedPhases, sourceBefore, runtimeBefore, allocation, launchCapacity,
+                    defaultCapacityFloor, failure.getMessage(), lease, capacityProbe);
+        }
+        if (launchCapacity.usableBytes < capacityFloor || launchCapacity.usableInodes == 0) {
+            String reason = launchCapacity.usableInodes == 0
+                    ? "allocation filesystem reports zero usable inodes"
+                    : "allocation filesystem is below the required free-byte floor";
+            return startupFailed(paths, runId, worktree, leasePath, commandHash, capability,
+                    allowedPhases, sourceBefore, runtimeBefore, allocation, launchCapacity,
+                    capacityFloor, reason, lease, capacityProbe);
+        }
+        ManifestContext runningContext = new ManifestContext(allocation, launchCapacity,
+                null, null, false, null);
         writeManifest(paths.manifest, manifest(paths, runId, "RUNNING", worktree, leasePath,
                 commandHash, capability, allowedPhases, sourceBefore, runtimeBefore,
-                List.of(), List.of()));
-        System.out.println("OPENGGF_TEST_RUN_START run_id=" + runId + " isolation="
-                + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " manifest="
-                + paths.manifest + " lease=" + leasePath + " log=" + paths.mavenLog);
+                List.of(), List.of(), runningContext, capacityFloor));
+        printStartMarker(paths, runId, leasePath, runningContext, capacityFloor, "RUNNING");
 
         ShutdownState shutdown = new ShutdownState(paths, runId, worktree, leasePath,
                 sourceBefore, runtimeBefore, options.command, commandHash, capability,
-                allowedPhases, options.exportFile, lease);
+                allowedPhases, options.exportFile, lease, allocation, launchCapacity,
+                capacityFloor, capacityProbe);
         Runtime.getRuntime().addShutdownHook(new Thread(shutdown::abort, "openggf-test-session-shutdown"));
         Process child = null;
         int exitCode = 1;
@@ -195,21 +247,135 @@ public final class TestSessionCoordinator {
             String state = interrupted ? "ABORTED"
                     : (identityChanged ? "INVALID_IDENTITY_CHANGED"
                     : (exitCode == 0 ? "PASSED" : "FAILED"));
+            CapacitySnapshot completionCapacity = capacityProbe.measure(allocation);
+            ManifestContext terminalContext = new ManifestContext(allocation, launchCapacity,
+                    completionCapacity, null, false, null);
             writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                     commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
-                    reportInventory(paths), artifactInventory(paths)));
+                    reportInventory(paths), artifactInventory(paths), terminalContext,
+                    capacityFloor));
             if (options.exportFile != null) {
                 writeExport(options.exportFile, paths.manifest, runId);
             }
-            System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId + " isolation="
-                    + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " exit_code="
-                    + exitCode + " state=" + state + " valid=" + valid + " manifest=" + paths.manifest
-                    + " log=" + paths.mavenLog);
+            printEndMarker(paths, runId, exitCode, state, valid, terminalContext);
             shutdown.completed = true;
             lease.close();
         }
         return interrupted || identityChanged
                 ? (exitCode == 0 ? 1 : exitCode) : exitCode;
+    }
+
+    private static int startupFailed(Paths paths, String runId, Path worktree, Path leasePath,
+                                     String commandHash, String capability, String allowedPhases,
+                                     String source, String runtime, StorageAllocation allocation,
+                                     CapacitySnapshot launchCapacity, long capacityFloor,
+                                     String reason, Lease lease,
+                                     CapacityProbe capacityProbe) throws Exception {
+        try {
+            if (!Files.exists(paths.mavenLog)) {
+                Files.createFile(paths.mavenLog);
+            }
+            CapacitySnapshot completionCapacity = capacityProbe.measure(allocation);
+            ManifestContext context = new ManifestContext(allocation, launchCapacity,
+                    completionCapacity, null, false, null);
+            writeManifest(paths.manifest, manifest(paths, runId, "STARTUP_FAILED", worktree,
+                    leasePath, commandHash, capability, allowedPhases, source, runtime,
+                    List.of(), List.of(), context, capacityFloor));
+            printStartMarker(paths, runId, leasePath, context, capacityFloor, "STARTUP_FAILED");
+            printEndMarker(paths, runId, 1, "STARTUP_FAILED", false, context);
+            System.err.println("OPENGGF_TEST_SESSION_ERROR " + boundedSingleLine(reason)
+                    + " allocation_path=" + boundedSingleLine(allocation.outputRoot.toString())
+                    + " storage_tier=" + allocation.tier
+                    + " usable_bytes=" + launchCapacity.usableBytes
+                    + " required_free_bytes=" + capacityFloor
+                    + " usable_inodes=" + launchCapacity.usableInodes
+                    + " inspect_command='agent-scratch status'"
+                    + " prune_preview_command='agent-scratch prune --dry-run'");
+            return 1;
+        } finally {
+            lease.close();
+        }
+    }
+
+    private static void writeCommand(Path path, List<String> command) throws IOException {
+        Files.writeString(path, String.join("\n", command) + "\n", StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+    }
+
+    private static long requiredFreeBytes(CapacitySnapshot capacity) {
+        return Math.max(DEFAULT_MIN_FREE_BYTES, capacity.totalBytes / 20L);
+    }
+
+    private static long configuredRequiredFreeBytes(CapacitySnapshot capacity) {
+        long required = requiredFreeBytes(capacity);
+        String configured = nonBlank(System.getenv("OPENGGF_TEST_MIN_FREE_BYTES"));
+        if (configured == null) {
+            return required;
+        }
+        if (!configured.matches("[0-9]+")) {
+            throw new StartupFailure("OPENGGF_TEST_MIN_FREE_BYTES must be an unsigned decimal integer", 1);
+        }
+        long override;
+        try {
+            override = Long.parseLong(configured);
+        } catch (NumberFormatException e) {
+            throw new StartupFailure("OPENGGF_TEST_MIN_FREE_BYTES is outside the supported integer range", 1);
+        }
+        if (override < required) {
+            throw new StartupFailure("OPENGGF_TEST_MIN_FREE_BYTES may raise but not lower the default floor", 1);
+        }
+        return override;
+    }
+
+    private static CapacityProbe capacityProbe() {
+        String inodeLimit = nonBlank(System.getenv("OPENGGF_TEST_CAPACITY_INODE_LIMIT"));
+        if (inodeLimit == null) {
+            return TestSessionCoordinator::measureCapacity;
+        }
+        if (!inodeLimit.equals("0")) {
+            throw new StartupFailure("OPENGGF_TEST_CAPACITY_INODE_LIMIT may only force zero", 1);
+        }
+        return allocation -> {
+            CapacitySnapshot measured = measureCapacity(allocation);
+            return new CapacitySnapshot(measured.usableBytes, measured.totalBytes, 0);
+        };
+    }
+
+    private static CapacitySnapshot measureCapacity(StorageAllocation allocation) throws IOException {
+        FileStore store = Files.getFileStore(allocation.outputRoot);
+        long usableInodes = allocation.allocationCapacity.usableInodes;
+        return new CapacitySnapshot(store.getUsableSpace(), store.getTotalSpace(), usableInodes);
+    }
+
+    private static void printStartMarker(Paths paths, String runId, Path leasePath,
+                                         ManifestContext context, long capacityFloor,
+                                         String state) {
+        System.out.println("OPENGGF_TEST_RUN_START run_id=" + runId + " isolation="
+                + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " manifest="
+                + paths.manifest + " lease=" + leasePath + " log=" + paths.mavenLog
+                + " state=" + state + " storage_tier=" + context.allocation.tier
+                + " launch_usable_bytes=" + context.launchCapacity.usableBytes
+                + " capacity_floor_bytes=" + capacityFloor);
+    }
+
+    private static void printEndMarker(Paths paths, String runId, int exitCode, String state,
+                                       boolean valid, ManifestContext context) {
+        printEndMarker(paths, runId, exitCode, state, valid, context, "");
+    }
+
+    private static void printEndMarker(Paths paths, String runId, int exitCode, String state,
+                                       boolean valid, ManifestContext context, String suffix) {
+        String compactionStatus = context.compaction == null
+                ? "NOT_RUN" : context.compaction.status.name();
+        long reclaimedBytes = context.compaction == null ? 0 : context.compaction.reclaimedBytes;
+        long completionBytes = context.completionCapacity == null
+                ? -1 : context.completionCapacity.usableBytes;
+        System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId + " isolation="
+                + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION + " exit_code="
+                + exitCode + " state=" + state + " valid=" + valid + " manifest=" + paths.manifest
+                + " log=" + paths.mavenLog + " compaction_status=" + compactionStatus
+                + " reclaimed_bytes=" + reclaimedBytes
+                + " completion_usable_bytes=" + completionBytes + suffix);
     }
 
     /** Reuses a completed wrapper lease only after the normal reclaim checks pass. */
@@ -770,7 +936,12 @@ public final class TestSessionCoordinator {
     private static String manifest(Paths paths, String runId, String state, Path worktree,
                                    Path lease, String commandHash, String capability,
                                    String allowedPhases, String source, String runtime,
-                                   List<String> reports, List<String> artifacts) {
+                                   List<String> reports, List<String> artifacts,
+                                   ManifestContext context, long capacityFloor) {
+        StorageAllocation allocation = context.allocation;
+        CapacitySnapshot launch = context.launchCapacity;
+        CapacitySnapshot completion = context.completionCapacity;
+        CompactionResult compaction = context.compaction;
         return "{\n"
                 + "  \"run_id\": \"" + escape(runId) + "\",\n"
                 + "  \"state\": \"" + state + "\",\n"
@@ -793,6 +964,45 @@ public final class TestSessionCoordinator {
                 + "  \"diagnostics_root\": \"" + escape(paths.diagnostics.toString()) + "\",\n"
                 + "  \"artifact_root\": \"" + escape(paths.artifacts.toString()) + "\",\n"
                 + "  \"distribution_root\": \"" + escape(paths.distribution.toString()) + "\",\n"
+                + "  \"command_file\": \"" + escape(paths.command.toString()) + "\",\n"
+                + "  \"storage_tier\": \"" + allocation.tier + "\",\n"
+                + "  \"allocation_path\": \"" + escape(allocation.outputRoot.toString()) + "\",\n"
+                + "  \"managed_root\": " + jsonNullablePath(allocation.managedRoot) + ",\n"
+                + "  \"allocation_schema\": "
+                + (allocation.allocationSchema == 0 ? "null" : allocation.allocationSchema) + ",\n"
+                + "  \"helper_version\": " + jsonNullable(allocation.helperVersion) + ",\n"
+                + "  \"filesystem_device\": \"" + escape(allocation.filesystemDevice) + "\",\n"
+                + "  \"allocation_usable_bytes\": " + allocation.allocationCapacity.usableBytes + ",\n"
+                + "  \"allocation_total_bytes\": " + allocation.allocationCapacity.totalBytes + ",\n"
+                + "  \"allocation_usable_inodes\": " + allocation.allocationCapacity.usableInodes + ",\n"
+                + "  \"retention_deadline\": "
+                + jsonNullable(allocation.retentionDeadline == null
+                ? null : allocation.retentionDeadline.toString()) + ",\n"
+                + "  \"allocation_not_applicable_reason\": "
+                + jsonNullable(allocation.notApplicableReason) + ",\n"
+                + "  \"storage_warning\": " + jsonNullable(allocation.warning) + ",\n"
+                + "  \"allocation_verified\": true,\n"
+                + "  \"capacity_floor_bytes\": " + capacityFloor + ",\n"
+                + "  \"launch_usable_bytes\": " + launch.usableBytes + ",\n"
+                + "  \"launch_total_bytes\": " + launch.totalBytes + ",\n"
+                + "  \"launch_usable_inodes\": " + launch.usableInodes + ",\n"
+                + "  \"completion_usable_bytes\": "
+                + jsonNullableLong(completion == null ? null : completion.usableBytes) + ",\n"
+                + "  \"completion_total_bytes\": "
+                + jsonNullableLong(completion == null ? null : completion.totalBytes) + ",\n"
+                + "  \"completion_usable_inodes\": "
+                + jsonNullableLong(completion == null ? null : completion.usableInodes) + ",\n"
+                + "  \"compaction_status\": "
+                + jsonNullable(compaction == null ? null : compaction.status.name()) + ",\n"
+                + "  \"compaction_removed_relative_paths\": "
+                + (compaction == null ? "[]" : jsonArray(compaction.removedRelativePaths)) + ",\n"
+                + "  \"compaction_reclaimed_bytes\": "
+                + jsonNullableLong(compaction == null ? null : compaction.reclaimedBytes) + ",\n"
+                + "  \"compaction_error\": "
+                + jsonNullable(compaction == null ? null : compaction.error) + ",\n"
+                + "  \"retain_ephemeral\": " + context.retainEphemeral + ",\n"
+                + "  \"storage_finalization_error\": "
+                + jsonNullable(context.storageFinalizationError) + ",\n"
                 + "  \"reports\": " + jsonArray(reports) + ",\n"
                 + "  \"artifacts\": " + jsonArray(artifacts) + "\n}\n";
     }
@@ -843,6 +1053,18 @@ public final class TestSessionCoordinator {
             json.append('\"').append(escape(values.get(index))).append('\"');
         }
         return json.append(']').toString();
+    }
+
+    private static String jsonNullable(String value) {
+        return value == null ? "null" : "\"" + escape(value) + "\"";
+    }
+
+    private static String jsonNullablePath(Path value) {
+        return value == null ? "null" : jsonNullable(value.toString());
+    }
+
+    private static String jsonNullableLong(Long value) {
+        return value == null ? "null" : Long.toString(value);
     }
 
     private static void writeManifest(Path path, String json) throws IOException {
@@ -1630,13 +1852,19 @@ public final class TestSessionCoordinator {
         private final String allowedPhases;
         private final Path exportFile;
         private final Lease lease;
+        private final StorageAllocation allocation;
+        private final CapacitySnapshot launchCapacity;
+        private final long capacityFloor;
+        private final CapacityProbe capacityProbe;
         private volatile Process child;
         private volatile boolean completed;
 
         private ShutdownState(Paths paths, String runId, Path worktree, Path leasePath,
                               String sourceBefore, String runtimeBefore, List<String> command,
                               String commandHash, String capability, String allowedPhases,
-                              Path exportFile, Lease lease) {
+                              Path exportFile, Lease lease, StorageAllocation allocation,
+                              CapacitySnapshot launchCapacity, long capacityFloor,
+                              CapacityProbe capacityProbe) {
             this.paths = paths;
             this.runId = runId;
             this.worktree = worktree;
@@ -1649,6 +1877,10 @@ public final class TestSessionCoordinator {
             this.allowedPhases = allowedPhases;
             this.exportFile = exportFile;
             this.lease = lease;
+            this.allocation = allocation;
+            this.launchCapacity = launchCapacity;
+            this.capacityFloor = capacityFloor;
+            this.capacityProbe = capacityProbe;
         }
 
         private synchronized void abort() {
@@ -1668,16 +1900,18 @@ public final class TestSessionCoordinator {
                 String state = sourceBefore.equals(sourceAfter) && runtimeBefore.equals(runtimeAfter)
                         && treeStopped && leaseStillOwned(leasePath.getParent(), leasePath, runId)
                         ? "ABORTED" : "INVALID_IDENTITY_CHANGED";
+                CapacitySnapshot completionCapacity = capacityProbe.measure(allocation);
+                ManifestContext terminalContext = new ManifestContext(allocation, launchCapacity,
+                        completionCapacity, null, false, null);
                 writeManifest(paths.manifest, manifest(paths, runId, state, worktree, leasePath,
                         commandHash, capability, allowedPhases, sourceAfter, runtimeAfter,
-                        reportInventory(paths), artifactInventory(paths)));
+                        reportInventory(paths), artifactInventory(paths), terminalContext,
+                        capacityFloor));
                 if (exportFile != null) {
                     writeExport(exportFile, paths.manifest, runId);
                 }
-                System.out.println("OPENGGF_TEST_RUN_END run_id=" + runId + " isolation="
-                        + SESSION_ISOLATION + " lwjgl=" + LWJGL_EXTRACTION_ISOLATION
-                        + " exit_code=143 state=" + state + " valid=false process_tree_stopped="
-                        + treeStopped + " manifest=" + paths.manifest);
+                printEndMarker(paths, runId, 143, state, false, terminalContext,
+                        " process_tree_stopped=" + treeStopped);
                 System.out.flush();
             } catch (Exception e) {
                 e.printStackTrace(System.err);
@@ -1741,7 +1975,7 @@ public final class TestSessionCoordinator {
 
     private record Paths(Path session, Path build, Path tmp, Path surefire, Path trace,
                          Path diagnostics, Path artifacts, Path distribution,
-                         Path manifest, Path mavenLog) {
+                         Path manifest, Path mavenLog, Path command) {
         static Paths create(Path session) throws IOException {
             Path build = Files.createDirectories(session.resolve("build"));
             Path tmp = Files.createDirectories(session.resolve("tmp"));
@@ -1751,7 +1985,8 @@ public final class TestSessionCoordinator {
             Path artifacts = Files.createDirectories(session.resolve("artifacts"));
             Path distribution = Files.createDirectories(session.resolve("distribution"));
             return new Paths(session, build, tmp, surefire, trace, diagnostics, artifacts,
-                    distribution, session.resolve("manifest.json"), session.resolve("maven.log"));
+                    distribution, session.resolve("manifest.json"), session.resolve("maven.log"),
+                    session.resolve("command.txt"));
         }
     }
 

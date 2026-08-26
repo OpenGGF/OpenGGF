@@ -26,7 +26,16 @@ public final class TestSessionCoordinatorSelfTest {
             "run_id", "state", "manifest", "worktree", "lease_path", "source_digest",
             "runtime_inputs_digest", "build_root", "tmp_root", "surefire_reports", "trace_reports",
             "diagnostics_root", "artifact_root", "distribution_root", "isolation",
-            "lwjgl_extraction", "lwjgl_extract_template", "reports", "artifacts");
+            "lwjgl_extraction", "lwjgl_extract_template", "command_file", "reports", "artifacts",
+            "storage_tier", "allocation_path", "managed_root", "allocation_schema",
+            "helper_version", "filesystem_device", "allocation_usable_bytes",
+            "allocation_total_bytes", "allocation_usable_inodes", "retention_deadline",
+            "allocation_not_applicable_reason", "storage_warning", "allocation_verified",
+            "capacity_floor_bytes", "launch_usable_bytes", "launch_total_bytes",
+            "launch_usable_inodes", "completion_usable_bytes", "completion_total_bytes",
+            "completion_usable_inodes", "compaction_status", "compaction_removed_relative_paths",
+            "compaction_reclaimed_bytes", "compaction_error", "retain_ephemeral",
+            "storage_finalization_error");
 
     private TestSessionCoordinatorSelfTest() {
     }
@@ -44,11 +53,15 @@ public final class TestSessionCoordinatorSelfTest {
         Files.createDirectories(root);
         Path outputRoot = createOwnedDirectory(root.resolve("output"));
 
+        verifyRequiredFreeBytesFormula();
         verifyManagedReservationIsValidated(root);
         verifyManagedHelperFailureDoesNotFallback(root);
         verifyManagedMalformedJsonDoesNotFallback(root);
         verifyUnmanagedProjectFallbackIsVisible(root);
         verifyExplicitRootRemainsFailClosed(root);
+        verifyLowCapacityPreventsLaunch(root);
+        verifyInvalidAndLowerCapacityOverridesFail(root);
+        verifyZeroUsableInodesPreventLaunch(root);
         BasicRun first = verifySuccessfulRun(root, outputRoot);
         verifyExplicitQuietRun(root, outputRoot);
         verifyVerboseRun(root, outputRoot);
@@ -77,6 +90,18 @@ public final class TestSessionCoordinatorSelfTest {
         System.out.println("TestSessionCoordinatorSelfTest: PASS");
     }
 
+    private static void verifyRequiredFreeBytesFormula() throws Exception {
+        Class<?> capacityType = Class.forName("TestSessionCoordinator$CapacitySnapshot");
+        var constructor = capacityType.getDeclaredConstructor(long.class, long.class, long.class);
+        constructor.setAccessible(true);
+        var method = TestSessionCoordinator.class.getDeclaredMethod("requiredFreeBytes", capacityType);
+        method.setAccessible(true);
+        long fivePercent = (long) method.invoke(null, constructor.newInstance(0L, 1_000L << 30, 1L));
+        long minimum = (long) method.invoke(null, constructor.newInstance(0L, 100L << 30, 1L));
+        check(fivePercent == 50L << 30, "five percent should exceed 20 GiB");
+        check(minimum == 20L << 30, "20 GiB should be the minimum floor");
+    }
+
     private static void verifyManagedReservationIsValidated(Path root) throws Exception {
         Path project = createTestProject(root.resolve("managed-valid-project"));
         Path managedRoot = createOwnedDirectory(root.resolve("managed-valid-root"));
@@ -95,6 +120,15 @@ public final class TestSessionCoordinatorSelfTest {
                 "managed reservation must be the parent of the coordinator-created run: " + manifest);
         check(!Files.exists(project.resolve(".openggf/test-runs")),
                 "validated managed allocation must not create a project-local fallback");
+        String json = Files.readString(manifest);
+        check(json.contains("\"storage_tier\": \"MANAGED_CODEX_TEST_SESSIONS\""),
+                "managed manifest must identify its storage tier");
+        check(json.contains("\"allocation_schema\": 1"),
+                "managed manifest must preserve the allocation schema");
+        check(json.contains("\"helper_version\": \"openggf-agent-scratch-v2\""),
+                "managed manifest must preserve the helper version");
+        check(json.contains("\"allocation_not_applicable_reason\": null"),
+                "managed manifest must not invent a not-applicable reason");
     }
 
     private static void verifyManagedHelperFailureDoesNotFallback(Path root) throws Exception {
@@ -139,11 +173,11 @@ public final class TestSessionCoordinatorSelfTest {
                 "\"filesystem_device\":\"1\""));
         malformed.put("device-mismatch", valid.replaceFirst("\"filesystem_device\":\\d+",
                 "\"filesystem_device\":9223372036854775807"));
-        malformed.put("usable-bytes-type", valid.replace("\"usable_bytes\":1048576",
+        malformed.put("usable-bytes-type", valid.replaceFirst("\"usable_bytes\":\\d+",
                 "\"usable_bytes\":\"1048576\""));
-        malformed.put("total-bytes-type", valid.replace("\"total_bytes\":2097152",
+        malformed.put("total-bytes-type", valid.replaceFirst("\"total_bytes\":\\d+",
                 "\"total_bytes\":\"2097152\""));
-        malformed.put("inodes-type", valid.replace("\"usable_inodes\":1024",
+        malformed.put("inodes-type", valid.replaceFirst("\"usable_inodes\":\\d+",
                 "\"usable_inodes\":\"1024\""));
         malformed.put("missing-retention", valid.replaceFirst(
                 ",\"retention_deadline\":\"[^\"]+\"", ""));
@@ -193,6 +227,113 @@ public final class TestSessionCoordinatorSelfTest {
         Path manifest = Path.of(markerValue(findLine(result.output, "OPENGGF_TEST_RUN_START"), "manifest"));
         check(manifest.startsWith(project.resolve(".openggf/test-runs")),
                 "unmanaged fallback must allocate beneath the project-local lane: " + manifest);
+        String json = Files.readString(manifest);
+        check(json.contains("\"storage_tier\": \"PROJECT_LOCAL_FALLBACK\""),
+                "unmanaged manifest must preserve the fallback tier");
+        check(json.contains("\"allocation_schema\": null"),
+                "unmanaged allocation schema must be explicitly null");
+        check(json.contains("\"helper_version\": null"),
+                "unmanaged helper version must be explicitly null");
+        check(json.contains("\"allocation_not_applicable_reason\": "
+                        + "\"managed reservation fields do not apply to PROJECT_LOCAL_FALLBACK\""),
+                "unmanaged manifest must explain helper-field nullability");
+        check(json.contains("\"storage_warning\": \"OPENGGF_TEST_SESSION_WARNING "
+                        + "storage_tier=PROJECT_LOCAL_FALLBACK reason=managed-scratch-not-configured "
+                        + "action=install-agent-scratch\""),
+                "unmanaged manifest must preserve the actionable storage warning");
+    }
+
+    private static void verifyLowCapacityPreventsLaunch(Path root) throws Exception {
+        Path project = createTestProject(root.resolve("capacity-low-project"));
+        Path outputRoot = createOwnedDirectory(root.resolve("capacity-low-output"));
+        Path childMarker = root.resolve("capacity-low-child-started");
+        ProcessBuilder builder = storageCoordinatorProcess(project, null, null, childMarker, List.of(
+                "--lock-root", createOwnedDirectory(root.resolve("capacity-low-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-mark-start"));
+        builder.environment().put("OPENGGF_TEST_ROOT", outputRoot.toString());
+        builder.environment().put("OPENGGF_TEST_MIN_FREE_BYTES", Long.toString(Long.MAX_VALUE));
+
+        CommandResult result = finish(builder.start());
+
+        Path manifest = assertStartupFailedWithoutChild(
+                result, outputRoot, childMarker, "low-capacity override");
+        String start = findLine(result.output, "OPENGGF_TEST_RUN_START");
+        String end = findLine(result.output, "OPENGGF_TEST_RUN_END");
+        check("EXPLICIT_OVERRIDE".equals(markerValue(start, "storage_tier")),
+                "capacity-refusal start marker must preserve the storage tier");
+        check(Long.toString(Long.MAX_VALUE).equals(markerValue(start, "capacity_floor_bytes")),
+                "capacity-refusal start marker must publish the raised floor");
+        check(markerValue(start, "launch_usable_bytes").matches("\\d+"),
+                "capacity-refusal start marker must publish launch bytes");
+        check("STARTUP_FAILED".equals(markerValue(end, "state")),
+                "capacity-refusal end marker must publish STARTUP_FAILED");
+        String json = Files.readString(manifest);
+        check(json.contains("\"capacity_floor_bytes\": " + Long.MAX_VALUE),
+                "capacity-refusal manifest must publish the raised floor");
+        check(json.matches("(?s).*\"launch_usable_bytes\": \\d+.*"),
+                "capacity-refusal manifest must publish launch bytes");
+        check(json.contains("\"allocation_schema\": null"),
+                "explicit allocation schema must be explicitly null");
+        check(json.contains("\"helper_version\": null"),
+                "explicit helper version must be explicitly null");
+        check(json.contains("\"storage_warning\": null"),
+                "explicit allocation warning must be explicitly null");
+    }
+
+    private static void verifyInvalidAndLowerCapacityOverridesFail(Path root) throws Exception {
+        int index = 0;
+        for (String override : List.of("not-a-number", "1")) {
+            Path project = createTestProject(root.resolve("capacity-invalid-project-" + index));
+            Path outputRoot = createOwnedDirectory(root.resolve("capacity-invalid-output-" + index));
+            Path childMarker = root.resolve("capacity-invalid-child-" + index);
+            ProcessBuilder builder = storageCoordinatorProcess(project, null, null, childMarker, List.of(
+                    "--lock-root", createOwnedDirectory(root.resolve("capacity-invalid-locks-" + index)).toString(),
+                    "--", javaCommand(), "-cp", classPath(),
+                    TestSessionCoordinatorSelfTest.class.getName(), "child-mark-start"));
+            builder.environment().put("OPENGGF_TEST_ROOT", outputRoot.toString());
+            builder.environment().put("OPENGGF_TEST_MIN_FREE_BYTES", override);
+
+            CommandResult result = finish(builder.start());
+
+            assertStartupFailedWithoutChild(result, outputRoot, childMarker,
+                    "invalid or lower capacity override " + override);
+            index++;
+        }
+    }
+
+    private static void verifyZeroUsableInodesPreventLaunch(Path root) throws Exception {
+        Path project = createTestProject(root.resolve("capacity-zero-inodes-project"));
+        Path outputRoot = createOwnedDirectory(root.resolve("capacity-zero-inodes-output"));
+        Path childMarker = root.resolve("capacity-zero-inodes-child-started");
+        ProcessBuilder builder = storageCoordinatorProcess(project, null, null, childMarker, List.of(
+                "--lock-root", createOwnedDirectory(root.resolve("capacity-zero-inodes-locks")).toString(),
+                "--", javaCommand(), "-cp", classPath(),
+                TestSessionCoordinatorSelfTest.class.getName(), "child-mark-start"));
+        builder.environment().put("OPENGGF_TEST_ROOT", outputRoot.toString());
+        builder.environment().put("OPENGGF_TEST_CAPACITY_INODE_LIMIT", "0");
+
+        CommandResult result = finish(builder.start());
+
+        Path manifest = assertStartupFailedWithoutChild(result, outputRoot, childMarker,
+                "zero usable inodes");
+        check(Files.readString(manifest).contains("\"launch_usable_inodes\": 0"),
+                "zero-inode refusal must preserve the measured inode count");
+    }
+
+    private static Path assertStartupFailedWithoutChild(CommandResult result, Path outputRoot,
+                                                        Path childMarker, String label) throws Exception {
+        check(result.exitCode != 0, label + " must fail startup:\n" + result.output);
+        check(!Files.exists(childMarker), label + " must not start the child");
+        String start = findLine(result.output, "OPENGGF_TEST_RUN_START");
+        Path manifest = Path.of(markerValue(start, "manifest"));
+        check(manifest.startsWith(outputRoot), label + " manifest must use the selected allocation");
+        String json = Files.readString(manifest);
+        check(json.contains("\"state\": \"STARTUP_FAILED\""),
+                label + " must write a STARTUP_FAILED manifest");
+        check(Files.isRegularFile(manifest.getParent().resolve("command.txt")),
+                label + " must preserve command.txt before refusing launch");
+        return manifest;
     }
 
     private static void verifyExplicitRootRemainsFailClosed(Path root) throws Exception {
@@ -247,6 +388,10 @@ public final class TestSessionCoordinatorSelfTest {
                 "start marker must identify the session Maven log");
         check(mavenLog.equals(Path.of(markerValue(endLine, "log"))),
                 "start and end markers must identify the same Maven log");
+        Path commandFile = manifest.getParent().resolve("command.txt");
+        check(Files.isRegularFile(commandFile), "successful session must preserve command.txt");
+        check(Files.readString(commandFile).contains("child-success"),
+                "command.txt must identify the launched child command");
         String json = Files.readString(manifest);
         for (String key : MANIFEST_KEYS) {
             check(json.contains("\"" + key + "\""), "manifest missing required key: " + key);
@@ -842,15 +987,26 @@ public final class TestSessionCoordinatorSelfTest {
     }
 
     private static String reservationJson(Path managedRoot, Path allocation, Instant deadline) {
+        try {
+            var store = Files.getFileStore(allocation);
+            return reservationJson(managedRoot, allocation, deadline,
+                    store.getUsableSpace(), store.getTotalSpace(), 1024L);
+        } catch (IOException e) {
+            throw new AssertionError("cannot measure reservation fixture capacity", e);
+        }
+    }
+
+    private static String reservationJson(Path managedRoot, Path allocation, Instant deadline,
+                                          long usableBytes, long totalBytes, long usableInodes) {
         return "{"
                 + "\"schema_version\":1,"
                 + "\"storage_tier\":\"MANAGED_CODEX_TEST_SESSIONS\","
                 + "\"managed_root\":\"" + jsonEscape(managedRoot.toString()) + "\","
                 + "\"allocation_path\":\"" + jsonEscape(allocation.toString()) + "\","
                 + "\"filesystem_device\":" + filesystemDevice(allocation) + ","
-                + "\"usable_bytes\":1048576,"
-                + "\"total_bytes\":2097152,"
-                + "\"usable_inodes\":1024,"
+                + "\"usable_bytes\":" + usableBytes + ","
+                + "\"total_bytes\":" + totalBytes + ","
+                + "\"usable_inodes\":" + usableInodes + ","
                 + "\"retention_deadline\":\"" + deadline.toString().replace("Z", "+00:00") + "\","
                 + "\"helper_version\":\"openggf-agent-scratch-v2\""
                 + "}";

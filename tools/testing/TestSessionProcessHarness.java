@@ -156,6 +156,7 @@ public final class TestSessionProcessHarness {
         }
 
         private void runAll() throws Exception {
+            capacityRefusalPreventsLaunch();
             sameWorktreeContention();
             linkedWorktreesRunIndependently();
             systemTempIsNotUsed();
@@ -170,6 +171,29 @@ public final class TestSessionProcessHarness {
             interruptionAndReclaim();
             rawLifecycleIsRejected();
             activeSessionSurvivesRawCleanAttempt();
+        }
+
+        private void capacityRefusalPreventsLaunch() throws Exception {
+            SessionProcess process = start(baseRepo, "capacity-refusal", externalLockRoot,
+                    null, null, List.of(), null,
+                    Map.of("OPENGGF_TEST_MIN_FREE_BYTES", Long.toString(Long.MAX_VALUE)));
+            int exit = process.finish();
+            check(exit != 0, "low-capacity session must fail startup");
+            check(!Files.exists(root.resolve("markers/capacity-refusal.txt")),
+                    "low-capacity session must not start fake Maven");
+            String output = process.output();
+            Matcher matcher = MANIFEST_MARKER.matcher(output.lines()
+                    .filter(line -> line.startsWith("OPENGGF_TEST_RUN_START "))
+                    .findFirst().orElseThrow(() -> new AssertionError(
+                            "capacity refusal did not publish a start marker:\n" + output)));
+            check(matcher.find(), "capacity-refusal marker lacks manifest path");
+            Path manifest = Path.of(matcher.group(1));
+            check(jsonString(manifest, "state").equals("STARTUP_FAILED"),
+                    "capacity refusal must persist STARTUP_FAILED");
+            check(jsonString(manifest, "storage_tier").equals("EXPLICIT_OVERRIDE"),
+                    "capacity refusal must persist its storage tier");
+            check(Files.isRegularFile(manifest.getParent().resolve("command.txt")),
+                    "capacity refusal must preserve command.txt");
         }
 
         private void sameWorktreeContention() throws Exception {
@@ -345,6 +369,13 @@ public final class TestSessionProcessHarness {
         private SessionProcess start(Path repo, String label, Path lockRoot, Path wait,
                                      Path tempMarker, List<String> options, String mutation)
                 throws IOException {
+            return start(repo, label, lockRoot, wait, tempMarker, options, mutation, Map.of());
+        }
+
+        private SessionProcess start(Path repo, String label, Path lockRoot, Path wait,
+                                     Path tempMarker, List<String> options, String mutation,
+                                     Map<String, String> extraEnvironment)
+                throws IOException {
             Path marker = root.resolve("markers").resolve(label + ".txt");
             Files.createDirectories(marker.getParent());
             Files.deleteIfExists(marker);
@@ -369,6 +400,7 @@ public final class TestSessionProcessHarness {
             environment.put("FAKE_MAVEN_WAIT", wait == null ? "" : wait.toString());
             environment.put("FAKE_MAVEN_TEMP_MARKER", tempMarker == null ? "" : tempMarker.toString());
             environment.put("FAKE_MAVEN_MUTATION", mutation == null ? "" : mutation);
+            environment.putAll(extraEnvironment);
             if (label.equals("system-temp")) {
                 environment.put("TMPDIR", "/dev/null");
                 environment.put("TMP", "/dev/null");
