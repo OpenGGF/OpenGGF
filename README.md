@@ -216,10 +216,10 @@ straightforward to add new objects, zones, and game-specific behaviour.
 ### v0.6.prerelease — Current development snapshot
 
 OpenGGF 0.6 is the current development release focused on accurate, playable
-routes through the main Sonic 3 & Knuckles slice, while continuing to improve
-Sonic 1 and Sonic 2 parity. The engine loads runtime data from user-supplied
-ROMs and validates behavior against the original games' disassemblies and
-recorded hardware traces.
+routes through the main Sonic 3 & Knuckles slice and broad Sonic 1 and Sonic 2
+gameplay. The engine loads runtime data from user-supplied ROMs and validates
+behavior against the original games' disassemblies and recorded hardware
+traces.
 
 #### 0.6 highlights
 
@@ -290,10 +290,13 @@ recorded hardware traces.
 
 #### Current release status
 
-0.6 is not a final release yet. The automated suite and trace-replay gates are
-active, but known parity gaps remain in parts of the Sonic 2 CPZ/WFZ
-frontier and the Sonic 3 & Knuckles trace/run-chain frontier. Human end-to-end
-gameplay and audio QA are still required before release sign-off.
+0.6 is not a final release yet. Automated build, test, guard, and trace
+no-regression gates remain active, and human end-to-end gameplay and audio QA
+are still required before release sign-off. Known-red Sonic 2 CPZ/WFZ and
+Sonic 3 & Knuckles trace/run-chain frontiers are documented 0.6 limitations;
+finishing those parity campaigns is deferred to the next release. A frontier
+still returns to the 0.6 fix queue when it exposes a confirmed release-impacting
+gameplay defect.
 
 The current S3K release priority is the AIZ → HCZ playable route. Knuckles
 routes, later-zone completeness, and some bonus/special-stage paths remain
@@ -304,7 +307,7 @@ outside the primary release slice or are still under active development.
 - [0.6 changelog](CHANGELOG.0.6.md)
 - [Release Summary for website and GitHub](docs/changelog/v0.6-release-summary.md)
 - [Detailed development ledger](docs/changelog/v0.6-prerelease-detailed.md)
-- [Trace scope and release gate](docs/status/trace-scope-release-6.md)
+- [Trace scope and release evidence](docs/status/trace-scope-release-6.md)
 - [Known discrepancies](docs/status/known-discrepancies.md)
 - [Release-readiness roadmap](docs/project/release-readiness-roadmap.md)
 

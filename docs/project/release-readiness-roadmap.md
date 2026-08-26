@@ -15,6 +15,17 @@ The work is split into two phases:
 - Phase 2: Broad cleanup - remove tolerated debt, strengthen architectural
   boundaries, and reduce future trace/object/runtime migration risk.
 
+## 2026-08-26 release freeze
+
+Phase 1 now closes on release hardening, fresh automated candidate evidence,
+and human gameplay/audio QA. Known-red trace frontiers are retained as visible
+limitations under the no-regression contract in
+[`docs/status/trace-scope-release-6.md`](../status/trace-scope-release-6.md);
+closing each frontier is not itself a 0.6 sign-off requirement. Phase 2,
+parity-only trace work, and other broad changes are deferred to the next
+release. After this freeze, `develop` accepts only confirmed gameplay, crash,
+packaging, platform, policy, and regression fixes needed to ship 0.6.
+
 ## Phase 1: Release Hardening
 
 These items should be completed, explicitly documented as release limitations,
