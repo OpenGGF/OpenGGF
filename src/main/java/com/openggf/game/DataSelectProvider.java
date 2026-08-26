@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.control.InputHandler;
+import com.openggf.game.dataselect.DataSelectExitTransition;
 
 /**
  * Provider interface for the Data Select screen (S3K save file selection).
@@ -62,4 +63,9 @@ public interface DataSelectProvider {
 
     /** Returns true if the screen is in the ACTIVE state. */
     boolean isActive();
+
+    /** Host-native audio and reveal timing used when a gameplay selection exits. */
+    default DataSelectExitTransition exitTransition() {
+        return DataSelectExitTransition.defaultTransition();
+    }
 }

@@ -32,6 +32,13 @@ public abstract class AbstractDataSelectProvider implements DataSelectProvider {
     }
 
     @Override
+    public DataSelectExitTransition exitTransition() {
+        return sessionController != null
+                ? sessionController.hostProfile().exitTransition()
+                : DataSelectProvider.super.exitTransition();
+    }
+
+    @Override
     public void showLaunchError(String message) {
         launchErrorMessage = message == null || message.isBlank()
                 ? "Unable to load selected save."

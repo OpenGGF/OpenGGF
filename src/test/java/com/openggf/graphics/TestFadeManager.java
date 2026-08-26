@@ -80,4 +80,27 @@ public class TestFadeManager {
         assertEquals(1, completions[0]);
         assertEquals(FadeManager.FadeState.HOLD_BLACK, fadeManager.getState());
     }
+
+    @Test
+    void fadeFromBlackCanRetainTheRomTerminalNoOpVblank() {
+        FadeManager fadeManager = GameServices.fade();
+        fadeManager.resetState();
+        int[] completions = {0};
+
+        fadeManager.startFadeFromBlack(() -> completions[0]++, 1);
+        for (int i = 0; i < FADE_DURATION_FRAMES; i++) {
+            fadeManager.update();
+        }
+
+        assertEquals(FadeManager.FadeState.FADING_FROM_BLACK, fadeManager.getState());
+        assertEquals(0, completions[0]);
+        assertEquals(0.0f, fadeManager.getFadeColor()[0]);
+        assertEquals(0.0f, fadeManager.getFadeColor()[1]);
+        assertEquals(0.0f, fadeManager.getFadeColor()[2]);
+
+        fadeManager.update();
+
+        assertEquals(FadeManager.FadeState.NONE, fadeManager.getState());
+        assertEquals(1, completions[0]);
+    }
 }

@@ -1,11 +1,13 @@
 package com.openggf.game.sonic2.dataselect;
 
 import com.openggf.game.dataselect.DataSelectDestination;
+import com.openggf.game.dataselect.DataSelectExitTransition;
 import com.openggf.game.dataselect.DataSelectGameProfile;
 import com.openggf.game.dataselect.HostSlotPreview;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.audio.Sonic2Sfx;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +31,9 @@ public final class S2DataSelectProfile implements DataSelectGameProfile {
 
     @Override public String gameCode() { return "s2"; }
     @Override public int slotCount() { return 8; }
+    @Override public DataSelectExitTransition exitTransition() {
+        return new DataSelectExitTransition(Sonic2Sfx.SPECIAL_STAGE_ENTRY.id, 0x28, 3, 1);
+    }
     @Override public List<SelectedTeam> builtInTeams() {
         return List.of(
                 new SelectedTeam("sonic", List.of()),

@@ -4,6 +4,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Data-select launches now retain each host game's retail transition:** native
+  S3K plays `sfx_EnterSS` before its 40-step, delay-6 music fade, while S1 and
+  S2 hosts using the donated S3K presentation play their own equivalent entry
+  cue and delay-3 fade. The destination reveal also retains the ROM's 22nd,
+  fully revealed no-op VBlank before the fade lifecycle completes.
+
 - **Wing Fortress Tornado state now follows ObjB2's retail SST lifecycle:**
   standing status survives the manual solid checkpoint, newly allocated planes
   publish routine 0 until `ObjB2_Init`, and WFZ-end publishes the reused

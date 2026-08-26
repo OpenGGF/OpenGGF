@@ -241,7 +241,10 @@ recorded hardware traces.
 - **ROM-accurate gameplay systems:** physics, subpixel movement, sensors,
   collision, solid objects, water, camera behavior, title cards, level events,
   bosses, badniks, sidekicks, Super Sonic, and cross-game feature donation are
-  implemented through ROM-owned rules and data.
+  implemented through ROM-owned rules and data. S3K data-select launches retain
+  their retail entry cue, music-fade cadence, and destination reveal timing,
+  including host-native equivalents when that presentation is donated to S1 or
+  S2.
 - **Audio and video hardware modeling:** YM2612 FM, PSG, DAC/PCM, SMPS
   sequencing, pause/resume behavior, PAL clocks, priority rendering, tilemaps,
   shaders, sprite batching, and staged art loading have received substantial
