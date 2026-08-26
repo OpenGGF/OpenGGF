@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -112,7 +114,9 @@ class TestGameLoopTraceRunPostIteration {
                         DynamicArtLifecycleService.class.getDeclaredFields())
                 .anyMatch(field -> field.getType().getName()
                         .startsWith("com.openggf.trace")));
-        assertEquals(3, DynamicArtDiagnosticsProvider.class
-                .getDeclaredMethods().length);
+        assertEquals(Set.of("latestSnapshot", "gapTransitions", "gapSnapshot", "gapOpeningSnapshot"),
+                Arrays.stream(DynamicArtDiagnosticsProvider.class.getDeclaredMethods())
+                        .map(method -> method.getName())
+                        .collect(Collectors.toSet()));
     }
 }
