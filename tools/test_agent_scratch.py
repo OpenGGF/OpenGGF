@@ -179,6 +179,124 @@ class AgentScratchTests(unittest.TestCase):
         with self.assertRaises(self.helper.ScratchError):
             self.helper._reservation_record(root, allocation)
 
+    def _installed_configuration(self):
+        """Install the real generated contract into an isolated home directory."""
+        root = self.helper.ensure_root(self.env)
+        home = pathlib.Path(self.temp.name) / "home"
+        home.mkdir()
+        with environment(**self.env), \
+             mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+             mock.patch.object(self.helper, "_retire_legacy_units", return_value="absent"), \
+             mock.patch.object(self.helper, "_run_systemd_install", return_value="timer active"):
+            self.assertEqual(0, self.helper.cmd_install(argparse.Namespace()))
+        return root, home
+
+    def _verify_installed_configuration(self, root, home):
+        with environment(**self.env), \
+             mock.patch.object(self.helper.pathlib.Path, "home", return_value=home), \
+             mock.patch.object(self.helper, "_legacy_migration_preflight", return_value="absent"), \
+             mock.patch.object(self.helper, "_verify_unit_syntax", return_value="verified"), \
+             mock.patch.object(self.helper, "_verify_timer", return_value="verified"), \
+             mock.patch.object(self.helper, "_verify_legacy_timer", return_value="absent"), \
+             mock.patch.object(self.helper, "_verify_claude_tmpdir", return_value="unverified"):
+            return self.helper.cmd_verify(argparse.Namespace())
+
+    def test_verify_rejects_missing_test_session_lane(self):
+        root, home = self._installed_configuration()
+        (root / "codex" / "test-sessions").rmdir()
+
+        with self.assertRaisesRegex(self.helper.ScratchError, "test-session lane"):
+            self._verify_installed_configuration(root, home)
+
+    def test_verify_rejects_stale_installed_helper(self):
+        root, home = self._installed_configuration()
+        installed = self.helper._installed_helper_path(home)
+        installed.write_bytes(installed.read_bytes() + b"\n# stale\n")
+
+        with self.assertRaisesRegex(self.helper.ScratchError, "does not match"):
+            self._verify_installed_configuration(root, home)
+
+    def _session(self, name, state, *, pid=None, start=None, old=True):
+        root = self.helper.ensure_root(self.env)
+        session = root / "codex" / "test-sessions" / name
+        session.mkdir()
+        manifest = {"state": state}
+        if pid is not None:
+            manifest["pid"] = pid
+            manifest["process_start_epoch_ms"] = start
+        (session / "manifest.json").write_text(json.dumps(manifest) + "\n")
+        if old:
+            then = time.time() - (self.helper.TEST_SESSION_RETENTION_DAYS + 2) * 86400
+            os.utime(session, (then, then))
+        return root, session
+
+    def test_prune_preserves_live_running_session(self):
+        start = self.helper._process_start_epoch_ms(os.getpid())
+        self.assertIsNotNone(start)
+        _, session = self._session("live", "RUNNING", pid=os.getpid(), start=start)
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertIn("protected-live test-sessions/live", output)
+        self.assertTrue(session.exists())
+
+    def test_prune_uses_live_owner_metadata_from_the_manifest_lease(self):
+        start = self.helper._process_start_epoch_ms(os.getpid())
+        self.assertIsNotNone(start)
+        _, session = self._session("leased", "RUNNING", old=True)
+        lease = pathlib.Path(self.temp.name) / "lease" / "lease.lock"
+        lease.parent.mkdir()
+        lease.write_text("lease\n")
+        (lease.parent / "owner.json").write_text(json.dumps({
+            "pid": os.getpid(), "process_start_epoch_ms": start
+        }) + "\n")
+        (session / "manifest.json").write_text(json.dumps({
+            "state": "RUNNING", "lease_path": str(lease)
+        }) + "\n")
+        then = time.time() - (self.helper.TEST_SESSION_RETENTION_DAYS + 2) * 86400
+        os.utime(session, (then, then))
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertIn("protected-live test-sessions/leased", output)
+        self.assertTrue(session.exists())
+
+    def test_prune_moves_expired_stale_running_session_to_quarantine(self):
+        root, session = self._session("stale", "RUNNING", pid=999999999,
+                                      start=1)
+        (session / "evidence").write_text("preserve me")
+        then = time.time() - (self.helper.TEST_SESSION_RETENTION_DAYS + 2) * 86400
+        os.utime(session, (then, then))
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertIn("quarantined test-sessions/stale", output)
+        self.assertFalse(session.exists())
+        quarantined = list((root / "quarantine").iterdir())
+        self.assertEqual(1, len(quarantined))
+        self.assertEqual("preserve me", (quarantined[0] / "evidence").read_text())
+
+    def test_prune_removes_expired_terminal_session_unless_kept(self):
+        root, removable = self._session("terminal", "PASSED")
+        _, kept = self._session("kept", "PASSED")
+        until = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+        self.assertEqual(0, self.run_helper(["keep", str(kept), "--until", until])[0])
+        then = time.time() - (self.helper.TEST_SESSION_RETENTION_DAYS + 2) * 86400
+        os.utime(kept, (then, then))
+
+        status, output, error = self.run_helper(["prune"])
+
+        self.assertEqual(0, status, error)
+        self.assertIn("removed test-sessions/terminal", output)
+        self.assertIn("protected-keep test-sessions/kept", output)
+        self.assertFalse(removable.exists())
+        self.assertTrue(kept.exists())
+        self.assertTrue((root / "quarantine").is_dir())
+
     def test_symlink_swap_race_does_not_remove_outside_sentinel(self):
         root = self.helper.ensure_root(self.env)
         tasks = root / "tasks"

@@ -411,7 +411,9 @@ def _open_relative_directory(root_fd: int, root: pathlib.Path, value: str) -> in
     if os.path.commonpath((str(root), str(resolved))) != str(root) or resolved == root:
         raise ScratchError("keep path must be a directory below the managed root")
     rel = resolved.relative_to(root)
-    if not any(rel.parts[:-1] == definition[:-1] for definition in AREAS.values()):
+    candidate_parents = {definition[:-1] for definition in AREAS.values()}
+    candidate_parents.add(TEST_SESSION_LANE)
+    if rel.parts[:-1] not in candidate_parents:
         raise ScratchError("keep path must be one direct managed prune candidate")
     fd = os.dup(root_fd)
     try:
@@ -530,14 +532,15 @@ def _staging_name() -> str:
     return f".agent-scratch-pruning-{os.getpid()}-{random.SystemRandom().getrandbits(128):032x}"
 
 
-def _rename_noreplace(parent_fd: int, old: str, new: str) -> bool:
+def _rename_noreplace_at(old_parent_fd: int, old: str, new_parent_fd: int, new: str) -> bool:
     """renameat2(RENAME_NOREPLACE), failing closed when the kernel lacks it."""
     syscall_numbers = {"x86_64": 316, "amd64": 316, "aarch64": 276, "arm64": 276}
     number = syscall_numbers.get(platform.machine().lower())
     if number is None:
         raise ScratchError("renameat2 RENAME_NOREPLACE is unavailable on this architecture")
     libc = ctypes.CDLL(None, use_errno=True)
-    result = libc.syscall(number, parent_fd, os.fsencode(old), parent_fd, os.fsencode(new), 1)
+    result = libc.syscall(number, old_parent_fd, os.fsencode(old), new_parent_fd,
+                          os.fsencode(new), 1)
     if result == 0:
         return True
     error = ctypes.get_errno()
@@ -548,6 +551,10 @@ def _rename_noreplace(parent_fd: int, old: str, new: str) -> bool:
     if error in {errno.ENOENT, errno.ENOTDIR}:
         return False
     raise ScratchError(f"cannot atomically stage prune entry: {os.strerror(error)}")
+
+
+def _rename_noreplace(parent_fd: int, old: str, new: str) -> bool:
+    return _rename_noreplace_at(parent_fd, old, parent_fd, new)
 
 
 def _stage_entry(parent_fd: int, name: str, expected: os.stat_result) -> str | None:
@@ -627,6 +634,218 @@ def _finalize_directory(parent_fd: int, name: str, expected: os.stat_result) -> 
         return False
 
 
+SESSION_STATES = {"RUNNING", "PASSED", "FAILED", "ABORTED",
+                  "INVALID_IDENTITY_CHANGED", "STARTUP_FAILED",
+                  "STORAGE_FINALIZATION_FAILED"}
+
+
+def _session_manifest(session_fd: int) -> dict[str, object] | None:
+    """Read one bounded, stable manifest without following an untrusted path."""
+    try:
+        before = os.stat("manifest.json", dir_fd=session_fd, follow_symlinks=False)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > 65536:
+            return None
+        manifest_fd = os.open("manifest.json", os.O_RDONLY | os.O_NOFOLLOW,
+                              dir_fd=session_fd)
+    except OSError:
+        return None
+    try:
+        after = os.fstat(manifest_fd)
+        if not stat.S_ISREG(after.st_mode) or not _same_identity(before, after):
+            return None
+        data = bytearray()
+        while chunk := os.read(manifest_fd, 65537 - len(data)):
+            data.extend(chunk)
+            if len(data) > 65536:
+                return None
+    except OSError:
+        return None
+    finally:
+        os.close(manifest_fd)
+    try:
+        parsed = json.loads(data.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _session_manifest_state(session_fd: int) -> str | None:
+    manifest = _session_manifest(session_fd)
+    state = manifest.get("state") if manifest else None
+    return state if isinstance(state, str) and state in SESSION_STATES else None
+
+
+def _regular_json_path(path: pathlib.Path) -> dict[str, object] | None:
+    try:
+        before = path.lstat()
+        if not stat.S_ISREG(before.st_mode) or stat.S_ISLNK(before.st_mode) or before.st_size > 65536:
+            return None
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    except OSError:
+        return None
+    try:
+        after = os.fstat(fd)
+        if not stat.S_ISREG(after.st_mode) or not _same_identity(before, after):
+            return None
+        data = os.read(fd, 65537)
+        if len(data) > 65536:
+            return None
+    except OSError:
+        return None
+    finally:
+        os.close(fd)
+    try:
+        parsed = json.loads(data.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _session_owner_record(manifest: dict[str, object]) -> dict[str, object] | None:
+    if isinstance(manifest.get("pid"), int) and isinstance(manifest.get("process_start_epoch_ms"), int):
+        return manifest
+    owner = manifest.get("owner")
+    if isinstance(owner, dict):
+        return owner
+    lease_text = manifest.get("lease_path")
+    if not isinstance(lease_text, str) or not os.path.isabs(lease_text):
+        return None
+    lease = pathlib.Path(lease_text)
+    try:
+        lease_info = lease.lstat()
+    except OSError:
+        return None
+    if not stat.S_ISREG(lease_info.st_mode) or stat.S_ISLNK(lease_info.st_mode):
+        return None
+    return _regular_json_path(lease.parent / "owner.json")
+
+
+def _process_start_epoch_ms(pid: int) -> int | None:
+    """Return Linux' PID-reuse-safe process identity, or no identity on error."""
+    if pid <= 0:
+        return None
+    try:
+        stat_text = pathlib.Path(f"/proc/{pid}/stat").read_text()
+        close = stat_text.rfind(")")
+        fields = stat_text[close + 2:].split()
+        start_ticks = int(fields[19])  # field 22, after state (field 3).
+        boot_seconds = next(int(line.split()[1]) for line in pathlib.Path("/proc/stat").read_text().splitlines()
+                            if line.startswith("btime "))
+        return boot_seconds * 1000 + start_ticks * 1000 // os.sysconf("SC_CLK_TCK")
+    except (IndexError, OSError, StopIteration, ValueError):
+        return None
+
+
+def _session_owner_live(session_fd: int) -> str:
+    """Classify a RUNNING owner's PID/start identity without PID-reuse risk."""
+    manifest = _session_manifest(session_fd)
+    if not manifest:
+        return "unknown"
+    owner = _session_owner_record(manifest)
+    if not owner:
+        return "unknown"
+    pid = owner.get("pid")
+    start = owner.get("process_start_epoch_ms")
+    if not isinstance(pid, int) or isinstance(pid, bool) or not isinstance(start, int) or isinstance(start, bool):
+        return "unknown"
+    observed = _process_start_epoch_ms(pid)
+    if observed is None:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return "stale"
+        except PermissionError:
+            return "unknown"
+        return "unknown"
+    return "live" if observed == start else "stale"
+
+
+def _quarantine_session(root_fd: int, name: str, expected: os.stat_result) -> str | None:
+    """Atomically move a vetted stale session into a collision-safe quarantine name."""
+    with child_fd(root_fd, TEST_SESSION_LANE) as lane_fd, child_fd(root_fd, ("quarantine",)) as quarantine_fd:
+        for suffix in range(1000):
+            target = f"{name}.stale-running" if suffix == 0 else f"{name}.stale-running-{suffix}"
+            if not _rename_noreplace_at(lane_fd, name, quarantine_fd, target):
+                continue
+            try:
+                moved = os.stat(target, dir_fd=quarantine_fd, follow_symlinks=False)
+            except OSError:
+                return None
+            return target if stat.S_ISDIR(moved.st_mode) and _same_identity(moved, expected) else None
+    raise ScratchError("quarantine name space exhausted")
+
+
+def _prune_test_sessions(root_fd: int, args: argparse.Namespace, today: float) -> None:
+    with child_fd(root_fd, TEST_SESSION_LANE) as lane_fd:
+        with os.scandir(lane_fd) as scan:
+            entries = [entry.name for entry in scan]
+        for name in entries:
+            try:
+                info = os.stat(name, dir_fd=lane_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                print(f"skipped-raced test-sessions/{name}")
+                continue
+            if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+                if stat.S_ISLNK(info.st_mode):
+                    print(f"skipped-unsafe test-sessions/{name}")
+                continue
+            try:
+                session_fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                     dir_fd=lane_fd)
+            except OSError as exc:
+                print(f"skipped-raced test-sessions/{name}: {exc.strerror or 'unsafe replacement'}")
+                continue
+            try:
+                if not _same_identity(os.fstat(session_fd), info):
+                    print(f"skipped-raced test-sessions/{name}: candidate identity changed")
+                    continue
+                expiry = _marker_expiry(session_fd)
+                state = _session_manifest_state(session_fd)
+                owner = _session_owner_live(session_fd) if state == "RUNNING" else None
+            finally:
+                os.close(session_fd)
+            if expiry and expiry >= dt.date.today():
+                print(f"protected-keep test-sessions/{name} until {expiry.isoformat()}")
+                continue
+            if state is None:
+                print(f"protected-unknown test-sessions/{name}: invalid manifest")
+                continue
+            if state == "RUNNING" and owner == "live":
+                print(f"protected-live test-sessions/{name}")
+                continue
+            if state == "RUNNING" and owner != "stale":
+                print(f"protected-unknown test-sessions/{name}: owner identity unavailable")
+                continue
+            if today - info.st_mtime < TEST_SESSION_RETENTION_DAYS * 86400:
+                continue
+            if state == "RUNNING":
+                if args.dry_run:
+                    print(f"would-quarantine test-sessions/{name}")
+                    continue
+                try:
+                    quarantined = _quarantine_session(root_fd, name, info)
+                except ScratchError as exc:
+                    print(f"skipped-raced test-sessions/{name}: {exc}")
+                    continue
+                if quarantined is None:
+                    print(f"skipped-raced test-sessions/{name}: candidate identity changed")
+                else:
+                    print(f"quarantined test-sessions/{name} as quarantine/{quarantined}")
+                continue
+            if args.dry_run:
+                print(f"would-remove test-sessions/{name}")
+                continue
+            try:
+                staged = _stage_directory(lane_fd, name, info)
+                if staged is None:
+                    print(f"skipped-raced test-sessions/{name}: candidate identity changed")
+                    continue
+                _remove_tree(lane_fd, staged, info)
+                print(f"removed test-sessions/{name}")
+            except (FileNotFoundError, NotADirectoryError, ScratchError) as exc:
+                print(f"skipped-raced test-sessions/{name}: {exc}")
+
+
 def cmd_prune(args: argparse.Namespace) -> int:
     root = ensure_root()
     today = time.time()
@@ -678,6 +897,7 @@ def cmd_prune(args: argparse.Namespace) -> int:
                             print(f"removed {key}/{name}")
                         except (FileNotFoundError, NotADirectoryError, ScratchError) as exc:
                             print(f"skipped-raced {key}/{name}: {exc}")
+        _prune_test_sessions(fd, args, today)
     print(f"root={root}")
     return 0
 
@@ -695,6 +915,45 @@ def _require_regular(path: pathlib.Path, *, missing_ok: bool = True) -> None:
 
 def _installed_helper_path(home: pathlib.Path | None = None) -> pathlib.Path:
     return (pathlib.Path.home() if home is None else home) / ".local" / "bin" / "agent-scratch"
+
+
+def _verification_source_helper() -> pathlib.Path:
+    """Locate the checkout helper that an installed verifier must match."""
+    current = pathlib.Path(__file__).resolve()
+    if current.parent.name == "tools":
+        return current
+    candidate = pathlib.Path.cwd() / "tools" / "agent-scratch"
+    _require_regular(candidate, missing_ok=False)
+    return candidate.resolve()
+
+
+def _regular_file_digest(path: pathlib.Path) -> bytes:
+    _require_regular(path, missing_ok=False)
+    before = path.lstat()
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        opened = os.fstat(fd)
+        if not stat.S_ISREG(opened.st_mode) or not _same_identity(before, opened):
+            raise ScratchError(f"regular file changed while opening: {path}")
+        digest = hashlib.sha256()
+        while data := os.read(fd, 1024 * 1024):
+            digest.update(data)
+        if not _same_identity(os.fstat(fd), opened):
+            raise ScratchError(f"regular file changed while reading: {path}")
+        return digest.digest()
+    finally:
+        os.close(fd)
+
+
+def _verify_test_session_lane(root: pathlib.Path) -> None:
+    try:
+        with open_root(root) as root_fd:
+            with child_fd(root_fd, TEST_SESSION_LANE) as lane_fd:
+                info = os.fstat(lane_fd)
+                if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != MODE:
+                    raise ScratchError("managed test-session lane ownership or mode is invalid")
+    except (FileNotFoundError, NotADirectoryError, OSError) as exc:
+        raise ScratchError("managed test-session lane is missing or unsafe") from exc
 
 
 def _ensure_private_user_bin(home: pathlib.Path) -> pathlib.Path:
@@ -1446,7 +1705,8 @@ def _verify_claude_tmpdir(root: pathlib.Path) -> str:
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
-    root = ensure_root()
+    root = _safe_root_path()
+    _verify_test_session_lane(root)
     home = pathlib.Path.home()
     _legacy_migration_preflight(home, root)
     try:
@@ -1489,6 +1749,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
     _require_regular(installed_helper, missing_ok=False)
     if not (installed_helper.stat().st_mode & 0o111):
         raise ScratchError("installed agent-scratch helper is not executable")
+    source_helper = _verification_source_helper()
+    if _regular_file_digest(installed_helper) != _regular_file_digest(source_helper):
+        raise ScratchError("installed agent-scratch helper does not match this checkout source")
     env_path = home / ".config" / "agent-scratch" / "environment"
     _require_regular(env_path, missing_ok=False)
     if stat.S_IMODE(env_path.stat().st_mode) != 0o600:
