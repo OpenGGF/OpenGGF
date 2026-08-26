@@ -6,8 +6,8 @@ import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.mods.code.ModApiSignatureSurface;
 import com.openggf.mods.code.ModApiSurfaceInventory;
 import com.openggf.physics.GroundSensor;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
-import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
@@ -92,8 +92,7 @@ class TestModApiSignatureSurface {
     @Test
     void annotatedClasspathInventoryExactlyMatchesRecursiveSurface() {
         Set<String> annotated = new ClassFileImporter()
-                .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
-                .importPackages("com.openggf")
+                .importPath(TestSessionOutputPaths.compiledClasses())
                 .stream()
                 .filter(type -> type.isAnnotatedWith(ModApi.class))
                 .map(type -> type.getName())

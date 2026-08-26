@@ -51,9 +51,10 @@ input:
 audio:
   enabled: true   # Enable music and SFX
   region: "NTSC"   # Region for audio timing
-  dacInterpolate: true   # DAC interpolation (smoother sound)
+  dacInterpolate: false   # Raw DAC sample steps (hardware-authentic); true enables smoothing
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
-  psgNoiseShiftEveryToggle: true   # PSG noise LFSR clock mode: true=shift on every toggle (MAME), false=positive edges (GPGX)
+  psgNoiseShiftEveryToggle: false   # PSG noise LFSR clock mode: false=positive edges (GPGX/libvgm), true=every toggle (MAME)
+  referenceDefaultsVersion: 1   # Internal one-time migration marker for reference chip defaults
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 
 # ── Characters ──
@@ -131,7 +132,7 @@ discord:
 
 # ── Trace Capture ──
 capture:
-  outputDir: "target/trace-videos"   # Output directory for trace capture videos
+  outputDir: "target/trace-videos"   # No-session default; coordinator runs override this diagnostic path
   # TRACE CAPTURE ONLY. Live viewport recording (Shift+O) records the game
   # viewport at its current on-screen size instead, so the recording includes
   # menu and debug-overlay elements that scale outside the game's pixel space.

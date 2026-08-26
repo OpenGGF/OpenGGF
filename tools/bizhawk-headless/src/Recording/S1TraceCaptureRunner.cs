@@ -40,7 +40,8 @@ namespace OpenGGF.BizHawk.Headless
             TextWriter physicsCsv,
             TextWriter auxStateJsonl,
             TextWriter metadataJson,
-            byte[] requiredDynamicArtRom)
+            byte[] requiredDynamicArtRom,
+            TextWriter hardwareTimingJsonl = null)
         {
             if (requiredDynamicArtRom == null)
             {
@@ -50,7 +51,7 @@ namespace OpenGGF.BizHawk.Headless
             }
             return CaptureCore(
                 movie, host, recordingDate, physicsCsv, auxStateJsonl,
-                metadataJson, requiredDynamicArtRom);
+                metadataJson, requiredDynamicArtRom, hardwareTimingJsonl);
         }
 
         /// <summary>
@@ -67,7 +68,7 @@ namespace OpenGGF.BizHawk.Headless
         {
             return CaptureCore(
                 movie, host, recordingDate, physicsCsv, auxStateJsonl,
-                metadataJson, null);
+                metadataJson, null, null);
         }
 
         private static S1TraceCaptureResult CaptureCore(
@@ -77,7 +78,8 @@ namespace OpenGGF.BizHawk.Headless
             TextWriter physicsCsv,
             TextWriter auxStateJsonl,
             TextWriter metadataJson,
-            byte[] loadQueueRom)
+            byte[] loadQueueRom,
+            TextWriter hardwareTimingJsonl)
         {
             if (movie == null)
             {
@@ -109,6 +111,16 @@ namespace OpenGGF.BizHawk.Headless
                 ? null
                 : new S1DynamicArtObserver(
                     loadQueueRom, host, () => dynamicArtLogicalFrame);
+            // Hardware-timing readiness observation: RunPLC arming, read at
+            // the routine's entry PC because the routine destroys the head
+            // identity (see S1PlcHardwareTimingObserver). It needs the ROM
+            // image for the Nemesis header, so the scratch-only legacy
+            // capture -- which has no ROM -- records nothing, and its
+            // writer therefore never opens a file.
+            S1PlcHardwareTimingObserver hardwareTiming =
+                loadQueueRom == null || hardwareTimingJsonl == null
+                    ? null
+                    : new S1PlcHardwareTimingObserver(loadQueueRom, host);
             try
             {
                 using (IEnumerator<Bk2Frame> frames =
@@ -136,6 +148,10 @@ namespace OpenGGF.BizHawk.Headless
                     }
                     dynamicArtLogicalFrame = rowsConsumed;
                     ApplyFrame(frames.Current, host);
+                    if (hardwareTiming != null)
+                    {
+                        hardwareTiming.BeginFrame();
+                    }
                     host.Advance();
                     rowsConsumed++;
                     if (host.CompletedFrame != rowsConsumed)
@@ -171,6 +187,10 @@ namespace OpenGGF.BizHawk.Headless
                     dynamicArt.PublishGap();
                     dynamicArt.ArmSegment();
                 }
+                if (hardwareTiming != null)
+                {
+                    hardwareTiming.ArmSegment(hardwareTimingJsonl);
+                }
                 DynamicArtCaptureRowBuffer rowBuffer = dynamicArt == null
                     ? null
                     : new DynamicArtCaptureRowBuffer(
@@ -205,6 +225,10 @@ namespace OpenGGF.BizHawk.Headless
                     Bk2Frame frame = frames.Current;
                     dynamicArtLogicalFrame = traceFrame;
                     ApplyFrame(frame, host);
+                    if (hardwareTiming != null)
+                    {
+                        hardwareTiming.BeginFrame();
+                    }
                     host.Advance();
                     int expectedCompletedFrame = offset + traceFrame + 1;
                     if (host.CompletedFrame != expectedCompletedFrame)
@@ -250,9 +274,17 @@ namespace OpenGGF.BizHawk.Headless
                             auxStateJsonl.Write('\n');
                         }
                     }
+                    if (hardwareTiming != null)
+                    {
+                        hardwareTiming.CommitRow(traceFrame);
+                    }
                     traceFrame++;
                 }
 
+                if (hardwareTiming != null)
+                {
+                    hardwareTiming.EndSegment();
+                }
                 if (dynamicArt != null)
                 {
                     if (traceFrame > 0)
@@ -277,6 +309,10 @@ namespace OpenGGF.BizHawk.Headless
             }
             finally
             {
+                if (hardwareTiming != null)
+                {
+                    hardwareTiming.Dispose();
+                }
                 if (dynamicArt != null)
                 {
                     dynamicArt.Dispose();

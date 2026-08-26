@@ -17,6 +17,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -33,7 +34,23 @@ import java.util.List;
  * ({@code sonic3k.asm:53515-53779}).
  */
 public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_LBZPipePlug} is installed from the S3K object pointer table at
+     * {@code $000273E4} (table read from the user-supplied ROM; the
+     * label is defined at docs/skdisasm/sonic3k.asm:53520).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0002}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0002;
+    }
+
     private static final int SOLID_HALF_WIDTH = 0x1B;
     private static final int AIR_HALF_HEIGHT = 0x20;
     private static final int GROUND_HALF_HEIGHT = 0x21;
@@ -232,7 +249,7 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
         broken = true;
     }
 
-    private static void clearPushStateForBreak(AbstractPlayableSprite player, int savedXVel,
+    private void clearPushStateForBreak(AbstractPlayableSprite player, int savedXVel,
             SolidCheckpointBatch batch, boolean mainPlayerPath) {
         if (batch != null) {
             for (var entry : batch.perPlayer().entrySet()) {
@@ -240,6 +257,9 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
                         || !(entry.getKey() instanceof AbstractPlayableSprite other)) {
                     continue;
                 }
+                // ROM's test-and-clear on the plug's own p2 bit gates the
+                // Player_2 leg (docs/skdisasm/sonic3k.asm:53562, :53587).
+                services().objectManager().solidContacts().releaseObjectPushLatch(other, this);
                 other.setPushing(false);
                 if (mainPlayerPath && entry.getValue().preContact().animationId() == BREAK_ANIMATION_ID) {
                     int otherSavedXVel = entry.getValue().preContact().xSpeed();
@@ -248,6 +268,9 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
                 }
             }
         }
+        // ROM loc_274D6 test-and-clears the plug's own p1 bit before the
+        // Player_1 break (docs/skdisasm/sonic3k.asm:53592).
+        services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
         player.setXSpeed((short) savedXVel);
         player.setGSpeed((short) savedXVel);

@@ -8,6 +8,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.AbstractSmpsAudioBackend;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.StreamedMusicPort;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
@@ -20,6 +21,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleEntry;
 import com.openggf.game.MusicReference;
 import com.openggf.game.PhysicsProfile;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.io.ModInputLimits;
 import com.openggf.level.ModLevel;
 import com.openggf.level.objects.ObjectManager;
@@ -129,10 +131,12 @@ class TestPhase3StandaloneSampleIntegration {
             assertEquals(0x500, player.getPhysicsProfile().max(),
                     "The sample's literal profile must drive the constructed player");
 
-            RecordingBackend backend = new RecordingBackend();
+            NullAudioBackend backend = new NullAudioBackend();
             AudioManager audio = AudioManager.getInstance();
             audio.resetState();
             audio.setBackend(backend);
+            audio.installStreamedMusicPort(
+                    preparePackagedAudioPort(fixture, audio.outputSampleRate()));
             ObjectRegistry registry = module.createObjectRegistry();
             ObjectManager[] holder = new ObjectManager[1];
             StubObjectServices services = new StubObjectServices() {
@@ -146,8 +150,11 @@ class TestPhase3StandaloneSampleIntegration {
             badnik.update(1, player);
             badnik.update(2, player);
             assertNotEquals(before, badnik.getX());
-            assertEquals(new StreamedMusicPort.SfxRef(OWNER, "hit"), backend.sfx,
-                    "The normal injected ObjectServices path must preserve the namespaced SFX key");
+            StreamedMusicPort.SfxRef hit = new StreamedMusicPort.SfxRef(OWNER, "hit");
+            assertTrue(audio.commandTimeline().entries().stream()
+                            .anyMatch(entry -> new AudioCommand.PlayNamespacedSfx(hit)
+                                    .equals(entry.command())),
+                    "The normal injected ObjectServices path must record the exact namespaced SFX key");
 
             ModAudioManifest audioManifest;
             try (JarFile packed = new JarFile(jar.toFile())) {
@@ -165,6 +172,28 @@ class TestPhase3StandaloneSampleIntegration {
 
             exerciseMasterTitleNewCompleteAndContinue(fixture, module, backend);
         }
+    }
+
+    private static com.openggf.ModStreamedMusicPort preparePackagedAudioPort(
+            Fixture fixture, int outputRate) throws Exception {
+        ModAudioManifest manifest;
+        try (JarFile packed = new JarFile(fixture.descriptor.jarPath().toFile())) {
+            byte[] yaml = packed.getInputStream(packed.getJarEntry("audio/audio-manifest.yaml"))
+                    .readAllBytes();
+            manifest = new ModAudioManifestParser(OWNER).parse(yaml);
+        }
+        ModTrackRegistry tracks = new ModTrackRegistry(manifest.tracks());
+        ModSfxRegistry sfx = new ModSfxRegistry(manifest.sfx());
+        ModAudioPreparer preparer = new ModAudioPreparer(
+                fixture.descriptor.jarPath().getParent().toAbsolutePath().normalize(),
+                ModInputLimits.production(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved());
+        PreparedAudioSession session = preparer.prepare(
+                fixture.catalog.effective(), tracks, sfx, outputRate);
+        PreparedModMusic music = PreparedModMusic.build(
+                fixture.catalog.effective(), tracks, sfx, session, outputRate, OWNER);
+        return new com.openggf.ModStreamedMusicPort(
+                music, new StreamedMusicPlayer(outputRate), OWNER);
     }
 
     private void assertPackagedSfxTraversesBoundedPcmPool(Fixture fixture,
@@ -199,13 +228,10 @@ class TestPhase3StandaloneSampleIntegration {
     }
 
     private void exerciseMasterTitleNewCompleteAndContinue(Fixture fixture, GameModule module,
-                                                            RecordingBackend backend) throws Exception {
+                                                            NullAudioBackend backend) throws Exception {
         previousSaveRoot = System.getProperty("openggf.saveRoot");
         Path saveRoot = temp.resolve("saves");
         System.setProperty("openggf.saveRoot", saveRoot.toString());
-        ModSubsystem.installProcess(new ModSubsystem(fixture.catalog, new ModRuntimeFindingStore(),
-                (rate, game) -> SessionExternalContentView.EMPTY));
-
         EngineContext previous = EngineServices.current();
         previousEngineContext = previous;
         SonicConfigurationService config = SonicConfigurationService.createStandalone(temp.resolve("config"));
@@ -219,6 +245,17 @@ class TestPhase3StandaloneSampleIntegration {
         AudioManager audio = services.audio();
         audio.resetState();
         audio.setBackend(backend);
+        ModSubsystem.installProcess(new ModSubsystem(fixture.catalog, new ModRuntimeFindingStore(),
+                (rate, game) -> {
+                    try {
+                        return new SessionExternalContentView(
+                                ModMusicResolver.EMPTY,
+                                preparePackagedAudioPort(fixture, rate));
+                    } catch (Exception failure) {
+                        throw new IllegalStateException(
+                                "Failed to prepare packaged standalone audio", failure);
+                    }
+                }, ModSubsystem.SessionAudioBoundary.audioManager(audio)));
         Engine engine = new Engine(services);
         setField(engine, "modRuntime", fixture.runtime);
         installUninitializedTitleScreen(engine);
@@ -233,7 +270,12 @@ class TestPhase3StandaloneSampleIntegration {
         assertEquals(RUNNER, saveContext.selectedTeam().mainCharacter());
         assertTrue(saveContext.selectedTeam().sidekicks().isEmpty());
         assertEquals(0, GameServices.level().getCurrentZone());
-        assertEquals(new StreamedMusicPort.TrackRef(OWNER, "zone-theme"), backend.track);
+        StreamedMusicPort.TrackRef zoneTheme =
+                new StreamedMusicPort.TrackRef(OWNER, "zone-theme");
+        assertTrue(audio.commandTimeline().entries().stream()
+                        .anyMatch(entry -> new AudioCommand.PlayNamespacedMusic(zoneTheme)
+                                .equals(entry.command())),
+                "Standalone launch must record its exact namespaced level track");
         assertTrue(Files.isRegularFile(saveRoot.resolve(OWNER).resolve("slot1.json")),
                 "New Game must reserve and write namespaced slot 1");
 
@@ -345,9 +387,10 @@ class TestPhase3StandaloneSampleIntegration {
     private Path buildSample() throws Exception {
         Path engine = temp.resolve("engine-local.jar");
         Path sdk = temp.resolve("openggf-mod-sdk-local.jar");
-        createJar(Path.of("target/classes"), engine, entry -> !entry.startsWith("com/openggf/tools/modsdk/")
+        Path sessionClasses = TestSessionOutputPaths.compiledClasses();
+        createJar(sessionClasses, engine, entry -> !entry.startsWith("com/openggf/tools/modsdk/")
                 && !entry.startsWith("META-INF/openggf-mod-sdk/"));
-        createJar(Path.of("target/classes"), sdk, entry -> entry.startsWith("com/openggf/tools/modsdk/")
+        createJar(sessionClasses, sdk, entry -> entry.startsWith("com/openggf/tools/modsdk/")
                 || entry.startsWith("META-INF/openggf-mod-sdk/"));
         Path source = Path.of("src/test/resources/mods/sample-standalone-src").toAbsolutePath();
         Path project = temp.resolve("sample-standalone-project");
@@ -452,23 +495,6 @@ class TestPhase3StandaloneSampleIntegration {
     private record Fixture(ModRuntime runtime, ModDescriptor descriptor, ModCatalog catalog)
             implements AutoCloseable {
         @Override public void close() throws Exception { runtime.close(); }
-    }
-
-    private static final class RecordingBackend extends NullAudioBackend {
-        private StreamedMusicPort.SfxRef sfx;
-        private StreamedMusicPort.TrackRef track;
-        @Override public boolean tryPlayStreamedMusic(StreamedMusicPort.TrackRef value) {
-            track = value; return true;
-        }
-        // The engine preflights a namespaced track with hasStreamedMusic and lets the
-        // presentation layer play it from the recorded command, so this query — not
-        // tryPlayStreamedMusic — is where the resolved key is now observable.
-        @Override public boolean hasStreamedMusic(StreamedMusicPort.TrackRef value) {
-            track = value; return true;
-        }
-        @Override public boolean tryPlayStreamedSfx(StreamedMusicPort.SfxRef value) {
-            sfx = value; return true;
-        }
     }
 
     private static final class PcmPoolBackend extends AbstractSmpsAudioBackend {

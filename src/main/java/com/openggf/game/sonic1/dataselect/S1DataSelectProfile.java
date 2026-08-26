@@ -1,11 +1,13 @@
 package com.openggf.game.sonic1.dataselect;
 
 import com.openggf.game.dataselect.DataSelectDestination;
+import com.openggf.game.dataselect.DataSelectExitTransition;
 import com.openggf.game.dataselect.DataSelectGameProfile;
 import com.openggf.game.dataselect.HostSlotPreview;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
+import com.openggf.game.sonic1.audio.Sonic1Sfx;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +27,9 @@ public final class S1DataSelectProfile implements DataSelectGameProfile {
 
     @Override public String gameCode() { return "s1"; }
     @Override public int slotCount() { return 8; }
+    @Override public DataSelectExitTransition exitTransition() {
+        return new DataSelectExitTransition(Sonic1Sfx.ENTER_SS.id, 0x28, 3, 1);
+    }
     @Override public List<SelectedTeam> builtInTeams() {
         return List.of(
                 new SelectedTeam("sonic", List.of()),

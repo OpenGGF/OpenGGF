@@ -32,6 +32,17 @@ public class Sonic1SplashObjectInstance extends AbstractObjectInstance implement
     private int posY;
     private int animTimer;
     private int frameIndex;
+    /**
+     * ROM {@code obRoutine}: {@code 2} while {@code Spla_Display} runs,
+     * {@code 4} once {@code afRoutine} has ended the script. The object still
+     * occupies its SST for that one extra frame, because {@code Spla_Delete}
+     * calls {@code DeleteObject} on the NEXT pass rather than on the frame the
+     * animation finished (docs/s1disasm/_incObj/08 LZ Water Splash.asm:29-40).
+     */
+    private int routine = ROUTINE_DISPLAY;
+
+    private static final int ROUTINE_DISPLAY = 2;
+    private static final int ROUTINE_DELETE = 4;
 
     /**
      * Creates a splash at the player's X position and the water surface Y.
@@ -63,13 +74,24 @@ public class Sonic1SplashObjectInstance extends AbstractObjectInstance implement
                     services().featureZoneId(), services().featureActId());
         }
 
-        // AnimateSprite with Ani_Splash: duration 4, frames 0/1/2, afRoutine
+        // Spla_Delete (routine 4): jmp (DeleteObject).l. Reached on the pass
+        // AFTER the one where afRoutine advanced obRoutine, so the object is
+        // still an SST occupant for that frame -- which is why the recording
+        // shows sixteen rows per splash, fifteen at routine $02 and one at $04
+        // (lz1_completerun slot 12: 11934-11948 then 11949).
+        if (routine == ROUTINE_DELETE) {
+            setDestroyed(true);
+            return;
+        }
+
+        // AnimateSprite with Ani_Splash: duration 4, frames 0/1/2, afRoutine.
+        // afRoutine advances obRoutine; it does not delete here.
         animTimer--;
         if (animTimer < 0) {
             animTimer = FRAME_DELAY;
             frameIndex++;
             if (frameIndex >= FRAME_COUNT) {
-                setDestroyed(true);
+                routine = ROUTINE_DELETE;
             }
         }
     }

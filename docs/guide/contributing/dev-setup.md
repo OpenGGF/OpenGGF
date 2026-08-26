@@ -19,12 +19,15 @@ includes IntelliJ project files. Any IDE with Maven support will work.
 ```bash
 git clone https://github.com/OpenGGF/OpenGGF.git
 cd OpenGGF
-mvn package
+tools/testing/install-hooks.sh
+tools/testing/test-session.sh -- mvn package
 ```
 
-The build produces an executable OpenGGF JAR with all dependencies at:
+The coordinator prints a session manifest at the start and end of the build.
+Read its `artifact_root` entry for the executable OpenGGF JAR with all
+dependencies; raw Maven lifecycle commands are non-certifying.
 ```
-target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+<session>/artifacts/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
 
 Maven Silent Extension (MSE) is configured via `.mvn/extensions.xml`. By default, Maven
@@ -45,7 +48,7 @@ absent, so you can build and run most tests without any ROMs.
 
 For S3K-specific tests, the ROM path can also be passed as a system property:
 ```bash
-mvn test -Ds3k.rom.path=s3k.gen
+tools/testing/test-session.sh -- mvn test -Ds3k.rom.path=s3k.gen
 ```
 
 ## Run the Engine
@@ -59,6 +62,11 @@ Build and run a distributable jar with the launcher for your platform:
 # Windows
 run.cmd
 ```
+
+The normal launchers are intentionally non-certifying: they explicitly bypass
+the session guard so they can keep writing the distributable to `target/` and
+launching it in the usual way. Use the test-session commands above whenever
+you need certifying build, test, trace, or release evidence.
 
 For faster iteration, `dev.sh` (Linux) and `dev.cmd` (Windows) compile only
 changed sources and run directly from `target/classes`. The first offline
@@ -75,13 +83,13 @@ arrow keys and press Space. If a ROM file is missing, you will see an error mess
 
 ```bash
 # Run all tests
-mvn test
+tools/testing/test-session.sh -- mvn test
 
 # Run a single test class
-mvn test -Dtest=TestCollisionLogic
+tools/testing/test-session.sh -- mvn test -Dtest=TestCollisionLogic
 
 # Run a single test method
-mvn test -Dtest=TestCollisionLogic#testSlopeAngle
+tools/testing/test-session.sh -- mvn test -Dtest=TestCollisionLogic#testSlopeAngle
 ```
 
 Tests are configured for parallel execution across 8 JVM forks. ROM-dependent tests
@@ -117,7 +125,7 @@ To build a native image, you need GraalVM 21+ with the `native-image` tool insta
 The build is configured in `pom.xml` under the `native` profile:
 
 ```bash
-mvn package -Pnative
+tools/testing/test-session.sh -- mvn package -Pnative
 ```
 
 Native image metadata is maintained in `src/main/resources/META-INF/native-image/`.

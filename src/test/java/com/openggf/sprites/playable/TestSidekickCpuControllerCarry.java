@@ -1026,6 +1026,7 @@ class TestSidekickCpuControllerCarry {
                 source.skipPhysicsThisFrame(),
                 source.deadOnObjectReenteredVisibleWindow(),
                 source.deferredDespawnDeadFallContinuingThisFrame(),
+                source.levelStartLeaderHistoryPrefillPending(),
                 source.bootstrapPreludePlacementApplied(),
                 source.cpuFrameCounterFromStoredLevelFrame(),
                 source.nextCpuFrameCounterOverride(),
@@ -1046,7 +1047,9 @@ class TestSidekickCpuControllerCarry {
                 mgzReleasedChaseYAccel,
                 source.flightTimer(),
                 source.catchUpTargetX(),
-                source.catchUpTargetY());
+                source.catchUpTargetY(),
+                source.initialPresentationSuppressed(),
+                source.initialPresentationWasHidden());
     }
 
     @Test

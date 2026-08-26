@@ -97,22 +97,31 @@ class TestS3kSignpostInstance {
     }
 
     @Test
-    void sameFrameNativeP2BumpCanOverwriteNativeP1Velocity() {
+    void nativeP1BumpSuppressesTheSameFrameNativeP2Bump() {
         TestablePlayableSprite sonic = eligibleBumpPlayer("sonic", 0x32B0, 0x045D);
         TestablePlayableSprite tails = eligibleBumpPlayer("tails", 0x329A, 0x045D);
         int signpostX = 0x329F;
         int signpostY = 0x045D;
 
+        // Both are geometrically eligible; the ROM still only lets one of them
+        // land the hit.
+        assertTrue(S3kSignpostInstance.isRomBumpCandidate(signpostX, signpostY, sonic));
+        assertTrue(S3kSignpostInstance.isRomBumpCandidate(signpostX, signpostY, tails));
+
         int finalVelocity = 0;
         for (TestablePlayableSprite player : List.of(sonic, tails)) {
-            assertTrue(S3kSignpostInstance.isRomBumpCandidate(signpostX, signpostY, player));
             finalVelocity = S3kSignpostInstance.romBumpXVelocity(signpostX, player.getCentreX());
+            break; // sub_83A70 tail-jumps away; Player 2 is never evaluated
         }
 
-        assertEquals(0x0050, finalVelocity,
-                "EndSign_CheckPlayerHit calls sub_83A70 for Sonic and then Tails after one cooldown check, "
-                        + "so a same-frame native P2 hit overwrites the signpost x_vel "
-                        + "(docs/skdisasm/sonic3k.asm:176342-176365, 176372-176387)");
+        assertEquals(-0x0110, finalVelocity,
+                "Under FixBugs = 0 (docs/skdisasm/sonic3k.asm:176357-176365) sub_83A70 ends in "
+                        + "jmp (HUD_AddToScore).l, so that routine's rts returns to loc_83A6A with d0 "
+                        + "holding the 32-bit Score rather than the packed player addresses "
+                        + "(docs/skdisasm/sonic3k.asm:17654-17665). The following swap/tst.w therefore "
+                        + "cannot reach Tails, and the surviving wild read is inert: Score caps at "
+                        + "$F423F so a1 is 0..$F, and every vector-table y_vel word it can address is "
+                        + "$0000, which bpl.s locret_83ABC rejects. Player 1's kick stands.");
     }
 
     @Test

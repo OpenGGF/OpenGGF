@@ -118,7 +118,7 @@ public class TestTraceEventFormatting {
                 """.trim(),
                 mapper);
 
-        assertTrue(event instanceof TraceEvent.StateSnapshot);
+        assertTrue(event instanceof TraceEvent.S2TornadoState);
         assertEquals("s2Tornado s16 @0x04B6,0x008F sub=0xC000 yv=0x0000 rtn=0x02/0x00 st=0x08 2e=0x08 2f=0x00 30=0x00 31=0xFF",
                 TraceEventFormatter.summariseFrameEvents(List.of(event)));
     }

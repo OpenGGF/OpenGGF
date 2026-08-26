@@ -127,6 +127,19 @@ class TestLevelRendererBucketInvalidation {
     }
 
     @Test
+    void unifiedObjectPassAppliesPerObjectTileOcclusionMask() {
+        ObjectManager manager = newObjectManager();
+        TestObject bridge = new TestObject(0x100, 2, false);
+        bridge.tileOcclusionPaletteMask = 0b0111;
+        bridge.graphicsManager = graphicsManager;
+        manager.addDynamicObjectAtSlot(bridge, 40);
+
+        manager.drawUnifiedBucketWithPriority(2, graphicsManager);
+
+        assertEquals(List.of(0b0111), bridge.observedTileOcclusionMasks);
+    }
+
+    @Test
     void spriteManagerLazyRebuildMatchesEagerOrderAcrossMutations() throws Exception {
         SpriteManager manager = new SpriteManager();
         manager.clearAllSprites();
@@ -381,6 +394,9 @@ class TestLevelRendererBucketInvalidation {
     private static final class TestObject extends AbstractObjectInstance {
         private int priorityBucket;
         private boolean highPriority;
+        private int tileOcclusionPaletteMask = -1;
+        private GraphicsManager graphicsManager;
+        private final List<Integer> observedTileOcclusionMasks = new ArrayList<>();
 
         private TestObject(int x, int priorityBucket, boolean highPriority) {
             super(new ObjectSpawn(x, 0x100, 0x01, 0, 0, false, 0), "bucket-test-object");
@@ -399,7 +415,17 @@ class TestLevelRendererBucketInvalidation {
         }
 
         @Override
+        public int getTileOcclusionPaletteMask() {
+            return tileOcclusionPaletteMask >= 0
+                    ? tileOcclusionPaletteMask
+                    : super.getTileOcclusionPaletteMask();
+        }
+
+        @Override
         public void appendRenderCommands(List<GLCommand> commands) {
+            if (graphicsManager != null) {
+                observedTileOcclusionMasks.add(graphicsManager.getCurrentSpriteTileOcclusionPaletteMask());
+            }
         }
     }
 }

@@ -72,7 +72,9 @@ class TestGameLoopTraceRunPostIteration {
                 "private void installRunComparator(", method);
         String admission = source.substring(method, end);
 
-        int timing = admission.indexOf("runHardwareTiming.handoffToSegment(");
+        // enterSegment() performs the same source-schedule handoff and also
+        // declares the drive's membership of the destination.
+        int timing = admission.indexOf("runHardwareTiming.enterSegment(");
         int dynamicArt = admission.indexOf("runDynamicArtSegments.beginSegment()");
         int comparator = admission.indexOf("installRunComparator(");
         assertTrue(timing >= 0 && dynamicArt > timing && comparator > timing,

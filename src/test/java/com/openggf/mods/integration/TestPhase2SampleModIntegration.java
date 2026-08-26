@@ -20,6 +20,7 @@ import com.openggf.tools.HeadlessGameBoot;
 import com.openggf.tools.modsdk.GgfModCli;
 import com.openggf.tests.HeadlessTestRunner;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.physics.GroundSensor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -185,9 +186,10 @@ class TestPhase2SampleModIntegration {
         Path checkedFixture = materializeCheckedFixture();
         assertTreesEqual(checkedFixture, regenerated);
         Path engine=temp.resolve("engine-local.jar"),sdk=temp.resolve("openggf-mod-sdk-local.jar");
-        createJar(Path.of("target/classes"),engine,entry->!entry.startsWith("com/openggf/tools/modsdk/")
+        Path sessionClasses = TestSessionOutputPaths.compiledClasses();
+        createJar(sessionClasses,engine,entry->!entry.startsWith("com/openggf/tools/modsdk/")
                 && !entry.startsWith("META-INF/openggf-mod-sdk/"));
-        createJar(Path.of("target/classes"),sdk,entry->entry.startsWith("com/openggf/tools/modsdk/")
+        createJar(sessionClasses,sdk,entry->entry.startsWith("com/openggf/tools/modsdk/")
                 || entry.startsWith("META-INF/openggf-mod-sdk/"));
         try(JarFile engineJar=new JarFile(engine.toFile());JarFile sdkJar=new JarFile(sdk.toFile())){
             assertNotNull(engineJar.getEntry("com/openggf/mods/code/ModContext.class"));

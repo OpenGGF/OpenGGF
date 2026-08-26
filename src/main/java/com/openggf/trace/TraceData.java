@@ -38,9 +38,13 @@ public class TraceData {
     private final Map<Integer, TraceEvent.Checkpoint> checkpointsByFrame;
     private final List<Integer> zoneActStateFramesAscending;
     private final Map<Integer, TraceEvent.ZoneActState> zoneActStatesByFrame;
-    private final Map<Integer, List<TraceEvent.LoadQueueState>> comparisonLoadQueueStatesByFrame;
     private final Map<Integer, HardwareCompletionEdge> unobservedDirectChildrenByFrame;
     private List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger = List.of();
+    // Memoised pure derivations of the immutable event map. Both are queried
+    // once per replayed frame, and each full computation is O(total events),
+    // so recomputing them made replay quadratic in trace length.
+    private List<TraceEvent.DynamicArtTransferState> cachedDynamicArtTransferStates;
+    private Boolean cachedHasRecordedPreLevelPrefix;
 
     // Package-private so same-package test fixtures in src/test can
     // construct in-memory instances without going through disk I/O.
@@ -56,11 +60,7 @@ public class TraceData {
         this.zoneActStatesByFrame = new HashMap<>();
         this.zoneActStateFramesAscending = new ArrayList<>();
         this.observedEventTypes = buildLatestEventIndexes();
-        LoadQueueComparisonNormalization loadQueueNormalization =
-                buildComparisonLoadQueueStates();
-        this.comparisonLoadQueueStatesByFrame = loadQueueNormalization.states();
-        this.unobservedDirectChildrenByFrame =
-                loadQueueNormalization.unobservedDirectChildren();
+        this.unobservedDirectChildrenByFrame = buildUnobservedDirectChildren();
     }
 
     public static TraceData load(Path traceDirectory) throws IOException {
@@ -239,6 +239,29 @@ public class TraceData {
         return eventsByFrame.getOrDefault(traceFrame, Collections.emptyList());
     }
 
+    /**
+     * The ROM's own {@code SlotMachineVariables} for this row, or {@code null}
+     * when the fixture does not carry the event. Comparison-only.
+     */
+    /** ObjB2's recorded SST for this row, or {@code null}. Comparison-only. */
+    public TraceEvent.S2TornadoState s2TornadoStateForFrame(int frame) {
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.S2TornadoState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    public TraceEvent.CnzSlotMachineState cnzSlotMachineStateForFrame(int frame) {
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.CnzSlotMachineState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
     public List<TraceEvent.LoadQueueState> loadQueueStatesForFrame(int frame) {
         List<TraceEvent.LoadQueueState> states = new ArrayList<>();
         for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
@@ -250,21 +273,20 @@ public class TraceData {
     }
 
     /**
-     * Returns the queue heartbeat at the recorder's atomic comparison boundary.
+     * Returns the queue heartbeat this row is compared against.
      *
-     * <p>S3K services its module queue immediately before its direct Kosinski
-     * queue. A VBlank can therefore record a held-tail row after the module
-     * queue has published a child but before the direct queue has serviced it.
-     * Replay publishes queue diagnostics atomically after both services. For a
-     * module batch that was already active before that held tail, compare the
-     * row with the matching post-direct-service heartbeat from the following
-     * lag row. Batches first admitted on the held tail retain their recorded
-     * state because their child admission is itself deferred as one unit.
+     * <p>Recorded queue rows are compared as sampled. A child published by
+     * {@code Process_Kos_Module_Queue} in LevelLoop's tail
+     * (docs/skdisasm/sonic3k.asm:7908) is decompressed by the next pass's
+     * {@code Process_Kos_Queue} (7887), which V-int can interrupt and bookmark
+     * mid-stream (2840-2843, {@code Restore_Kos_Bookmark} at 2957). Its
+     * {@code Kos_decomp_queue_count} entry is therefore still an unfinished
+     * FIFO head at the {@code Wait_VSync} sample that follows (7888), on a held
+     * loop tail as much as on any other row, and replay reproduces that head.
      */
     public List<TraceEvent.LoadQueueState> loadQueueStatesForComparisonFrame(
             int frame) {
-        return comparisonLoadQueueStatesByFrame.getOrDefault(
-                frame, loadQueueStatesForFrame(frame));
+        return loadQueueStatesForFrame(frame);
     }
 
     public HardwareCompletionEdge unobservedDirectChildForComparisonFrame(
@@ -272,16 +294,14 @@ public class TraceData {
         return unobservedDirectChildrenByFrame.get(frame);
     }
 
-    private LoadQueueComparisonNormalization
-            buildComparisonLoadQueueStates() {
+    private Map<Integer, HardwareCompletionEdge> buildUnobservedDirectChildren() {
         // Selection below is by queue-kind wire name (s3k_kos_module /
         // s3k_kos_direct) and by KOS_DECOMPRESSION_QUEUE completion edges, which
         // no other game emits; a trace without those rows normalizes to an empty
         // map on its own, so no game-name gate belongs here.
         if (frames.size() < 2 || hardwareTimingSchedule == null) {
-            return LoadQueueComparisonNormalization.empty();
+            return Map.of();
         }
-        Map<Integer, List<TraceEvent.LoadQueueState>> normalized = new HashMap<>();
         Map<Integer, HardwareCompletionEdge> unobservedDirectChildren =
                 new HashMap<>();
         boolean moduleBatchActive = false;
@@ -312,21 +332,6 @@ public class TraceData {
                 moduleBatchAdmittedOnHeldTail = false;
             }
 
-            if (heldTail && moduleBatchActive
-                    && !moduleBatchAdmittedOnHeldTail
-                    && isUnservicedDirectChild(currentDirect)
-                    && isIdle(nextDirect)
-                    && sameQueueStateIgnoringFrame(currentModule, nextModule)
-                    && hasDirectCompletionEdge(nextFrame.frame())) {
-                List<TraceEvent.LoadQueueState> comparison = new ArrayList<>();
-                for (TraceEvent.LoadQueueState state : currentStates) {
-                    comparison.add("s3k_kos_direct".equals(state.kind())
-                            ? withFrame(nextDirect, currentFrame.frame())
-                            : state);
-                }
-                normalized.put(currentFrame.frame(), List.copyOf(comparison));
-            }
-
             List<HardwareCompletionEdge> nextDirectCompletions =
                     directCompletionEdges(nextFrame.frame());
             if (heldTail && moduleBatchActive
@@ -339,12 +344,7 @@ public class TraceData {
                         currentFrame.frame(), nextDirectCompletions.getFirst());
             }
         }
-        return new LoadQueueComparisonNormalization(
-                normalized, unobservedDirectChildren);
-    }
-
-    private boolean hasDirectCompletionEdge(int rawFrame) {
-        return !directCompletionEdges(rawFrame).isEmpty();
+        return Map.copyOf(unobservedDirectChildren);
     }
 
     private List<HardwareCompletionEdge> directCompletionEdges(int rawFrame) {
@@ -356,20 +356,6 @@ public class TraceData {
                 .toList();
     }
 
-    private record LoadQueueComparisonNormalization(
-            Map<Integer, List<TraceEvent.LoadQueueState>> states,
-            Map<Integer, HardwareCompletionEdge> unobservedDirectChildren) {
-
-        private LoadQueueComparisonNormalization {
-            states = Map.copyOf(states);
-            unobservedDirectChildren = Map.copyOf(unobservedDirectChildren);
-        }
-
-        private static LoadQueueComparisonNormalization empty() {
-            return new LoadQueueComparisonNormalization(Map.of(), Map.of());
-        }
-    }
-
     private static boolean isHeldTail(TraceFrame current, TraceFrame next) {
         return current.gameplayFrameCounter() >= 0
                 && current.gameplayFrameCounter()
@@ -378,11 +364,6 @@ public class TraceData {
                 && next.lagCounter() > current.lagCounter()
                 && current.vblankCounter() >= 0
                 && next.vblankCounter() > current.vblankCounter();
-    }
-
-    private static boolean isUnservicedDirectChild(
-            TraceEvent.LoadQueueState state) {
-        return state != null && state.busy() && !state.prepared();
     }
 
     private static boolean isIdle(TraceEvent.LoadQueueState state) {
@@ -410,15 +391,6 @@ public class TraceData {
                 && left.remainingWork() == right.remainingWork()
                 && left.queuedFingerprints().equals(right.queuedFingerprints())
                 && left.serviceObservations().equals(right.serviceObservations());
-    }
-
-    private static TraceEvent.LoadQueueState withFrame(
-            TraceEvent.LoadQueueState state, int frame) {
-        return new TraceEvent.LoadQueueState(
-                frame, state.kind(), state.busy(), state.prepared(),
-                state.activeSource(), state.activeDestination(),
-                state.totalWork(), state.remainingWork(),
-                state.queuedFingerprints(), state.serviceObservations());
     }
 
     public List<TraceEvent.DynamicArtTransferState>
@@ -538,6 +510,21 @@ public class TraceData {
     }
 
     public List<TraceEvent.DynamicArtTransferState> dynamicArtTransferStates() {
+        if (cachedDynamicArtTransferStates == null) {
+            cachedDynamicArtTransferStates = computeDynamicArtTransferStates();
+        }
+        return cachedDynamicArtTransferStates;
+    }
+
+    Boolean cachedPreLevelPrefix() {
+        return cachedHasRecordedPreLevelPrefix;
+    }
+
+    void cachePreLevelPrefix(boolean value) {
+        cachedHasRecordedPreLevelPrefix = value;
+    }
+
+    private List<TraceEvent.DynamicArtTransferState> computeDynamicArtTransferStates() {
         return eventsByFrame.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .flatMap(entry -> entry.getValue().stream())
@@ -972,9 +959,25 @@ public class TraceData {
      * v3.11+ per-frame {@code lag_state} snapshots or when no event is present for
      * that frame.
      *
-     * <p><strong>Diagnostic only.</strong> Used to confirm whether the
-     * counter/oscillation "skip" frames coincide with emulator lag frames; the
-     * engine must NOT change its stepping from these values.
+     * <p><strong>Comparison-diagnostic by default, with one sanctioned
+     * scheduling use.</strong> Gameplay state must never be hydrated from this
+     * event, and no physics, object, camera or input value may be derived from
+     * it. What it may do is answer the main-loop admission question that the
+     * cross-game hardware-timing contract's first replay contract already
+     * assigns to the recorded lag outcome: whether the ROM's main loop ran for
+     * a represented row. A lagged row's V-int took {@code VBlank_Lag}
+     * (docs/s1disasm/sonic.asm:656-657), which reaches no {@code ProcessPLC}
+     * call (:712-746) while still advancing {@code v_vblank_count} (:684-687),
+     * so the row owns a V-int closure with no mode handler.
+     *
+     * <p>{@code TraceRunSpecialStageRows.syntheticLagPhase} is the existing
+     * precedent for that use; the presentation-bridge disposition in
+     * {@code TraceRunFrameDriver} is the second. Both consume the boolean
+     * alone -- the special-stage path to gate main-loop admission and select a
+     * {@link com.openggf.game.resources.PlcLifecyclePhase}, the bridge path to
+     * select the suppressed-closure {@code Disposition}. Anything reading
+     * {@code lagcount}, or deriving a value rather than an admission, is
+     * outside the sanction.
      */
     public TraceEvent.LagState lagStateForFrame(int frame) {
         List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());

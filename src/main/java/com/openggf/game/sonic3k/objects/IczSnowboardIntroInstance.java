@@ -44,6 +44,10 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     private static final int SECOND_SCRIPT_MIN_X = 0x2210;
     private static final int SECOND_SCRIPT_MAX_X = 0x2230;
     private static final int CRASH_X = 0x3880;
+    /** ROM loc_394A0 airborne branch: cmpi.w #$1000,x_vel / move.w #$1000,x_vel (sonic3k.asm:76802-76805). */
+    private static final int AIRBORNE_MAX_X_SPEED = 0x1000;
+    /** ROM loc_394E2: cmpi.w #-$200,y_vel / move.w #-$200,y_vel (sonic3k.asm:76806-76809). */
+    private static final int AIRBORNE_MIN_Y_SPEED = -0x0200;
     private static final int POST_CRASH_X_SPEED = -0x0200;
     private static final int POST_CRASH_Y_SPEED = -0x0400;
     private static final int STARTUP_OBJECT_CONTROL_FRAMES = 30;
@@ -354,13 +358,35 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             }
         }
 
-        if (player.getCentreX() >= FIRST_SCRIPT_MIN_X && player.getCentreX() < FIRST_SCRIPT_MAX_X) {
-            beginScriptedSlope(player, 1);
-            return;
-        }
-        if (player.getCentreX() >= SECOND_SCRIPT_MIN_X && player.getCentreX() < SECOND_SCRIPT_MAX_X) {
-            beginScriptedSlope(player, 2);
-            return;
+        // ROM loc_394A0 (sonic3k.asm:76797-76815) branches on the player's air
+        // bit BEFORE the scripted-slope x windows are ever looked at:
+        //     btst #Status_InAir,status(a2)
+        //     beq.s loc_39502      ; grounded -> skid sfx + the x window tests
+        //     move.b #0,anim(a0)   ; airborne -> velocity caps, then bra loc_39554
+        // The x window tests live entirely under loc_39502 (sonic3k.asm:76816),
+        // so an airborne player crossing $1310..$132F never enters the slope
+        // script. Testing the windows unconditionally made the engine hand the
+        // player to the slope table mid-jump, freezing x_sub/y_sub (the table
+        // writes only the position words) and stalling y_vel.
+        if (player.getAir()) {
+            // ROM loc_394A0 airborne branch (sonic3k.asm:76799-76811). Both caps
+            // are writes to the player, so they belong here even though they are
+            // no-ops while the board arc stays inside these limits.
+            if (player.getXSpeed() != 0 && player.getXSpeed() >= AIRBORNE_MAX_X_SPEED) {
+                player.setXSpeed((short) AIRBORNE_MAX_X_SPEED);
+            }
+            if (player.getYSpeed() < AIRBORNE_MIN_Y_SPEED) {
+                player.setYSpeed((short) AIRBORNE_MIN_Y_SPEED);
+            }
+        } else {
+            if (player.getCentreX() >= FIRST_SCRIPT_MIN_X && player.getCentreX() < FIRST_SCRIPT_MAX_X) {
+                beginScriptedSlope(player, 1);
+                return;
+            }
+            if (player.getCentreX() >= SECOND_SCRIPT_MIN_X && player.getCentreX() < SECOND_SCRIPT_MAX_X) {
+                beginScriptedSlope(player, 2);
+                return;
+            }
         }
         if (player.getCentreX() >= CRASH_X && player.getXSpeed() == 0) {
             crash(player);

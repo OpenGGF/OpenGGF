@@ -6,6 +6,7 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.AizEndBossArmChild;
 import com.openggf.game.sonic3k.objects.AizEndBossBombChild;
@@ -692,7 +693,8 @@ class TestS3kAizEndBossGraphRewind {
 
     private static SonicConfigurationService createDefaultConfiguration() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(
-                java.nio.file.Path.of("target", "rewind-aiz-endboss-graph-config"));
+                TestSessionOutputPaths.diagnostics("rewind")
+                        .resolve("rewind-aiz-endboss-graph-config"));
         config.resetToDefaults();
         return config;
     }

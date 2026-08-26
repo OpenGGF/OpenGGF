@@ -4,7 +4,9 @@ import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageComparisonState;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.SessionInvocationExtension;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.trace.TraceFixtureRoot;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData;
@@ -15,6 +17,7 @@ import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.timing.HardwareTimingStreamLoader;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +43,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * {@link com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider}
  * through {@link S3kSpecialStageReplayHarness}, comparing each stepped frame
  * against the recorded ROM trace and emitting a divergence report to
- * {@code target/trace-reports/s3k_special_stage_&lt;index&gt;_report.json}.
+ * the session-owned {@code special-stage} report directory (or the legacy
+ * {@code target/trace-reports} default when run without a session).
  * Modeled on {@code AbstractS2SpecialStageTraceReplayTest}, simplified for
  * the S3K SS's single ROM pacing model (no RunObjects-pass binder, no lag
  * compensator to disable).
@@ -93,6 +97,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>The pipeline writes a complete report and
  * {@link #assertNoReleaseBlockingDivergences} rejects any comparator ERROR.
  */
+@ExtendWith(SessionInvocationExtension.class)
 public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
     /** Location of the committed trace (when one exists). */
@@ -138,6 +143,21 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
         S3kSpecialStageReplayHarness harness = bootHarness(trace, dir, romFile);
         DivergenceReport report = compareReplay(trace, harness);
+
+        // Write the divergence report BEFORE closing hardware timing. The close
+        // below throws on an unconsumed edge, and it used to run first, so a
+        // timing failure discarded the comparison that had already completed:
+        // the shared legacy report directory held nothing, and nine classes read as though
+        // they never reached frame comparison at all. They had -- each has a
+        // real physics divergence, and the unconsumed edge is its downstream
+        // symptom (the stage never reaches clearRoutine 2, so the emerald art
+        // module is never queued and the recorded completion has nothing to
+        // match). Writing first costs nothing and keeps the actual first error
+        // visible. Neither assertion is weakened: the close still throws and
+        // the test still fails.
+        int ssIndex = specialStageIndex(trace);
+        TestSessionOutputPaths.ReportAllocation allocation = writeReport(report, ssIndex);
+
         // Every recorded hardware-timing edge must have been consumed by a
         // matching production submission (kind, ordinal and submission
         // fingerprint). An emerald art module the engine never queued -- or
@@ -145,12 +165,9 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
         // its edge unconsumed and fails here rather than silently drifting.
         harness.closeHardwareTiming();
 
-        int ssIndex = specialStageIndex(trace);
-        writeReport(report, ssIndex);
-
         // Pipeline assertion: the report file was written where consumers expect.
-        Path jsonPath = reportDir().resolve("s3k_special_stage_" + ssIndex + "_report.json");
-        assertTrue(Files.exists(jsonPath), "report JSON should be written to " + jsonPath);
+        assertTrue(Files.exists(allocation.physicalPath()),
+                "report JSON should be written to " + allocation.physicalPath());
 
         assertNoReleaseBlockingDivergences(report);
     }
@@ -182,12 +199,31 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
         int offset = trace.metadata().bk2FrameOffset();
         int ssIndex = specialStageIndex(trace);
-        Path bk2 = dir.resolve(trace.metadata().sourceBk2());
+        Path bk2 = resolveSourceBk2(dir, trace.metadata().sourceBk2());
         S3kSpecialStageReplayHarness harness =
                 new S3kSpecialStageReplayHarness(bk2, offset, ssIndex);
         harness.installHardwareTiming(
                 HardwareTimingStreamLoader.load(dir, trace.metadata()));
         return harness;
+    }
+
+    /**
+     * Locates the movie named by {@code metadata.source_bk2}. A standalone
+     * trace keeps its movie beside its own {@code metadata.json}; a segment of
+     * a multi-segment run has no movie of its own, because the run commits one
+     * copy at the run root beside {@code run_manifest.json} and every segment
+     * indexes into it from its own {@code bk2_frame_offset}. This mirrors the
+     * placement {@code AbstractTraceReplayTest#resolveBk2File} already accepts
+     * for level and bonus segments; it is file location only, and reads
+     * nothing from the run manifest.
+     */
+    static Path resolveSourceBk2(Path traceDir, String sourceBk2) {
+        Path inSegment = traceDir.resolve(sourceBk2);
+        if (Files.exists(inSegment)) {
+            return inSegment;
+        }
+        Path runRoot = traceDir.getParent();
+        return runRoot == null ? inSegment : runRoot.resolve(sourceBk2);
     }
 
     // ==================== Comparator ====================
@@ -390,13 +426,15 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
     // ==================== Report output ====================
 
-    static void writeReport(DivergenceReport report, int ssIndex) throws IOException {
-        TraceReportWriter.writeSpecialStageReport(
-                report, reportDir(), "s3k_special_stage_" + ssIndex, CONTEXT_RADIUS);
+    static TestSessionOutputPaths.ReportAllocation writeReport(
+            DivergenceReport report, int ssIndex) throws IOException {
+        return TraceReportWriter.writeSpecialStageReport(
+                report, "special-stage", SessionInvocationExtension.SessionInvocation.current(),
+                "s3k-" + ssIndex, "s3k_special_stage_" + ssIndex, CONTEXT_RADIUS);
     }
 
     static Path reportDir() {
-        return Path.of("target", "trace-reports");
+        return TestSessionOutputPaths.traceReports();
     }
 
     static int specialStageIndex(S3kSpecialStageTraceData trace) {

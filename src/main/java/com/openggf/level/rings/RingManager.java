@@ -373,6 +373,37 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         player.addRings(1);
     }
 
+    /**
+     * Captures the engine's model of ROM {@code Ring_status_table}: which
+     * layout rings are already collected.
+     *
+     * <p>Used only to carry that state across a level reload the ROM performs
+     * with {@code Respawn_table_keep} set, where {@code sub_EB1A} skips its
+     * {@code Ring_status_table} wipe
+     * (docs/skdisasm/sonic3k.asm:18561-18570, reached from :18232-18238).
+     */
+    public long[] captureRingStatusTable() {
+        return placement.collected.toLongArray();
+    }
+
+    /**
+     * Re-establishes a captured {@code Ring_status_table} on a freshly built
+     * ring manager, for a reload the ROM performed without clearing it.
+     *
+     * <p>This only marks rings collected; it never un-collects one, because the
+     * ROM's skipped branch leaves the table exactly as it stood and the fresh
+     * table is all-zero. No window surgery is needed: both the touch scan and
+     * the draw pass already skip an active index whose collected bit is set.
+     *
+     * @see #captureRingStatusTable()
+     */
+    public void restoreRingStatusTable(long[] bits) {
+        if (bits == null || bits.length == 0) {
+            return;
+        }
+        placement.collected.or(BitSet.valueOf(bits));
+    }
+
     private static boolean cannotCollectRings(AbstractPlayableSprite player) {
         if (player == null || player.getDead()) {
             return true;
@@ -417,6 +448,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      */
     public void updateLostRingPhysics(int frameCounter) {
         lostRings.tickSpillAnimation();
+        lostRings.retireEntriesWhoseObjectTwinIsGone(
+                levelManager != null ? levelManager.getObjectManager() : null);
     }
 
     public void draw(int frameCounter) {
@@ -1560,6 +1593,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 ring.setSlotIndex(-1);
             }
             activeRingCount = 0;
+        }
+
+        /** Retires only the mirror after its object-owned SST twin has gone. */
+        private void retireEntriesWhoseObjectTwinIsGone(ObjectManager objectManager) {
+            if (objectManager == null || activeRingCount == 0) {
+                return;
+            }
+            for (int i = 0; i < activeRingCount; i++) {
+                LostRing ring = ringPool[i];
+                if (ring == null || !ring.isActive() || ring.getSlotIndex() < 0) {
+                    continue;
+                }
+                if (!objectManager.hasLiveLostRingAtSlot(ring.getSlotIndex())) {
+                    ring.deactivate();
+                }
+            }
         }
 
         private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,

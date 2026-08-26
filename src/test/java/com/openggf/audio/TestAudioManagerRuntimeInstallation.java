@@ -3,6 +3,7 @@ package com.openggf.audio;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +59,7 @@ class TestAudioManagerRuntimeInstallation {
         audio.resetState();
         audio.setBackend(new FixedRateNullBackend(48_000));
         audio.setAudioProfile(musicProfile());
-        audio.setRom(null);
+        audio.setRom(new Rom());
         audio.registerDonorSound(GameSound.RING, "s3k", 0x2B);
         audio.playMusic(MUSIC_ID);
         audio.playSfx(GameSound.RING);
@@ -118,7 +119,7 @@ class TestAudioManagerRuntimeInstallation {
         audio.resetState();
         audio.setBackend(new FixedRateNullBackend(48_000));
         audio.setAudioProfile(musicProfile());
-        audio.setRom(null);
+        audio.setRom(new Rom());
         audio.registerDonorSound(GameSound.RING, "s3k", 0x2B);
         audio.playMusic(MUSIC_ID);
         audio.presentFrame(PresentationMode.SILENT);

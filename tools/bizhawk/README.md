@@ -92,6 +92,43 @@ usage. A status of `3` is a successful diagnostic run, not a capture failure.
 Inspect the printed run directory before changing audio code; the tool never
 realigns ticks or changes chip-port ordering.
 
+## Sonic 1 GHZ1 gameplay-audio timeline
+
+The gameplay timeline is a separate, stricter diagnostic: schema v2 compares
+raw caller/ROM queue requests and later resolved admissions at their own frame
+boundaries, followed by per-role contention decisions and final ownership over
+the committed GHZ1 complete-run interval. Run it with the pinned REV01 ROM:
+
+```bash
+tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh \
+  --rom "/absolute/path/to/Sonic The Hedgehog (W) (REV01) [!].gen"
+```
+
+It accepts only an optional `--bizhawk-home` override. The movie, output root,
+ROM hash, EmuHawk, installed core assembly, and Genesis Plus GX binary identities
+are pinned. A run creates one unique child
+of `target/audio-parity/s1-ghz1-gameplay/`, captures each producer twice, and
+requires byte-identical captures before reporting semantic parity. BizHawk
+writes only a fresh `.staging` child; Java validates the complete strict JSONL
+stream and atomically create-new publishes it after a successful producer. A
+failed producer enters a separate trusted discard path and never invokes
+publication, even for complete staging bytes. The runner rejects Java/Mono command replacement environment seams,
+never overwrites a capture or report, and preserves the four captures, logs,
+and two reports for investigation. Exit status `3` is a valid semantic
+mismatch; `4` is an untrusted/failed capture or tool failure.
+
+This runner has an explicit trusted-launch boundary. The kernel, system dynamic
+loader, and parent environment are trusted until the runner process is created;
+callers must launch it without any `LD_*` loader-injection variable. Because
+Bash is dynamically linked, `LD_PRELOAD` or `LD_AUDIT` can execute (or, for an
+inexistent library, make the loader print a diagnostic) before the script gets
+control. The runner does not claim protection for that pre-start interval. Once
+started, it rejects every inherited `LD_*` variable with exit status `4` before
+argument parsing or project/tool work, retains its fixed absolute bootstrap
+tools, and launches all producer/tool children from an `env -i` allowlist. Use
+an external clean launcher or static bootstrap if the parent environment itself
+is not trusted.
+
 ## Native S1/S2 v5 capture contract
 
 Current S1 and S2 publication runs through
@@ -1426,12 +1463,44 @@ PowerShell `Start-Process` argument array:
 ```bat
 set OGGF_START=16300
 set OGGF_STOP=16320
-set OGGF_OUT=C:\tmp\htz2_diag.txt
+set "AGENT_WSL_SCRATCH_ROOT=/mnt/<drive>/agent-scratch"
+set "OGGF_TASK_DIR="
+for /f "usebackq delims=" %%I in (`wsl.exe bash -lc "export AGENT_SCRATCH_ROOT=^"%AGENT_WSL_SCRATCH_ROOT%^" ^&^& agent-scratch status ^>/dev/null ^&^& task_dir=$^(agent-scratch new htz2-diag ^| tail -n 1^) ^&^& wslpath -w ^"$task_dir^""`) do set "OGGF_TASK_DIR=%%I"
+if not defined OGGF_TASK_DIR (
+  >&2 echo ERROR: WSL did not provision OGGF_TASK_DIR
+  exit /b 2
+)
+if /i not "%OGGF_TASK_DIR:~1,2%"==":\" (
+  >&2 echo ERROR: OGGF_TASK_DIR is not a Windows drive path
+  exit /b 2
+)
+if not exist "%OGGF_TASK_DIR%\NUL" (
+  >&2 echo ERROR: OGGF_TASK_DIR is not an accessible directory
+  exit /b 2
+)
+set "OGGF_OUT=%OGGF_TASK_DIR%\htz2_diag.txt"
 tools\bizhawk\run_bizhawk_lua.bat ^
   tools\bizhawk\diag_s2_htz2_obj30.lua ^
   src\test\resources\traces\s2\htz2\s2-lvl-select-HTZ.bk2 ^
   s2.gen
 ```
+
+`tools/agent-scratch` is POSIX-only bootstrap/source, so native Windows must provision
+`OGGF_TASK_DIR` through WSL rather than invoking the helper with Windows Python. From any WSL
+source checkout, run `tools/agent-scratch install` after helper updates to install the stable
+user-wide `agent-scratch` command; normal WSL execution has no checkout/worktree dependency.
+Set `AGENT_WSL_SCRATCH_ROOT` to the shared disk-backed root. The installer configures clients
+and the cleanup service, not a WSL Bash startup file, so the command explicitly exports that
+root and runs `agent-scratch status` as a preflight. Only then does it capture the final
+task-directory line printed by `agent-scratch new` and use `wslpath -w` before the `for /f`
+assignment sets the Windows-form `OGGF_TASK_DIR`. The recipe clears any stale value and aborts
+before setting `OGGF_OUT` if the handoff produced no value, a non-drive path, or a path that is
+not an accessible directory.
+
+The WSL `AGENT_SCRATCH_ROOT` must be a disk-backed location shared with and accessible from
+Windows (typically under `/mnt/<drive>/...`); do not use a WSL-only tmpfs root. Do not replace
+the resulting task path with `C:\tmp`, `%TEMP%`, or `%TMP%`: those paths are only suitable for
+the launcher's short-lived wrapper/config files, never durable diagnostic output.
 
 The launcher resolves all three input paths to absolute paths, writes a per-launch
 temporary no-audio/offscreen diagnostic config, passes `--audiosync false`, wraps

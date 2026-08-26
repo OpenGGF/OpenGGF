@@ -32,6 +32,7 @@ import java.util.List;
 public class OctusBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
 
     private enum State {
+        INIT,               // routine 0: Obj4A_Init, falls until it lands, then returns
         WAIT_FOR_PLAYER,    // routine_secondary 0: check player distance
         DELAY_BEFORE_RISE,  // routine_secondary 2: countdown 0x20 frames
         MOVING_UP,          // routine_secondary 4: rise with decel
@@ -44,7 +45,20 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     private static final int RISE_DELAY = 0x20; // 32 frames
     private static final int INITIAL_Y_VEL = -0x200; // Rise speed
     private static final int Y_ACCEL = 0x10; // Deceleration/acceleration per frame
-    private static final int HOVER_DURATION = 59; // Obj4A_Hover seeds #60 before a pre-decrement/bmi countdown
+    // KNOWN FITTED CONSTANT -- deliberately retained, do not "correct" in isolation.
+    // The ROM literal is #60 (s2.asm:60457) and Obj4A_Hover is a post-decrement/bmi
+    // countdown (s2.asm:60461-60468), so the ROM hovers for 61 dispatches and the
+    // faithful seed here would be 60. The engine seeds 59 because its Octus begins
+    // its descent one object pass late for a cause that is still unattributed;
+    // 59 cancels that lateness. Correcting it to 60 alone turns
+    // TestS2OozLevelSelectTraceReplay from green to a missed enemy bounce at frame
+    // 6639. Measured and RULED OUT as its partner: the missing routine-0 Init
+    // dispatch (added below), the Obj4A_MoveUp transition-frame move, and the
+    // Obj4A_MoveDown pre-move comparison -- none of them restores the bounce.
+    private static final int HOVER_DURATION = 59;
+    // ObjectMoveAndFall applies #$38 gravity after moving with the old y_vel
+    // (s2.asm:30164-30177).
+    private static final int OBJECT_GRAVITY = 0x38;
     private static final int BULLET_X_VEL = 0x200; // Bullet speed
     private static final int BULLET_DELAY = 0x0F; // 15 frames stationary before moving
     private static final int INIT_FLOOR_Y_RADIUS = 0x0B;
@@ -57,7 +71,6 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     private int timer;
     private final SubpixelMotion.State motionState;
     private boolean bulletFired;
-    private boolean initialFacingResolved;
     private final ObjectAnimationState animationState;
 
     public OctusBadnikInstance(ObjectSpawn spawn) {
@@ -65,27 +78,56 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
         this.xFlip = (spawn.renderFlags() & 0x01) != 0;
         // Octus faces left by default; x_flip in spawn means face right
         this.facingLeft = !xFlip;
-        this.state = State.WAIT_FOR_PLAYER;
+        // ROM Obj4A_Init falls under gravity across as many dispatches as it
+        // takes to reach the floor; it is not an instantaneous snap at spawn.
+        this.state = State.INIT;
         this.timer = 0;
-        int snappedY = snapToFloorLikeRom(spawn.x(), spawn.y());
-        this.currentY = snappedY;
-        this.startY = snappedY;
-        this.motionState = new SubpixelMotion.State(spawn.x(), snappedY, 0, 0, 0, 0);
+        this.currentY = spawn.y();
+        this.startY = spawn.y();
+        this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         this.bulletFired = false;
-        this.initialFacingResolved = false;
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 1);
     }
 
-    private int snapToFloorLikeRom(int x, int y) {
+    /**
+     * Obj4A_Init (docs/s2disasm/s2.asm:60380-60401).
+     *
+     * <p>A falling init: every dispatch runs ObjectMoveAndFall then
+     * ObjCheckFloorDist, and only the dispatch on which the Octus is overlapping
+     * the floor (d1 negative) corrects y_pos, zeroes y_vel, advances the routine
+     * and performs the one-shot x_flip toggle. That dispatch still ends in
+     * {@code rts}, so Obj4A_Main does not run until the following frame.
+     * octus_start_position is rewritten every init dispatch, landed or not.
+     */
+    private void updateInit(AbstractPlayableSprite player) {
+        motionState.y = currentY;
+        motionState.yVel = yVelocity;
+        SubpixelMotion.moveSprite(motionState, OBJECT_GRAVITY);
+        currentY = motionState.y;
+        yVelocity = motionState.yVel;
+
+        TerrainCheckResult floor = null;
         try {
-            TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(x, y, INIT_FLOOR_Y_RADIUS);
-            if (floor.foundSurface() && floor.distance() < 0) {
-                return y + floor.distance();
-            }
+            floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, INIT_FLOOR_Y_RADIUS);
         } catch (RuntimeException ignored) {
-            // Tests without a level keep the placement coordinate.
+            // Tests without a level never land; they stay in INIT, as the ROM would.
         }
-        return y;
+        if (floor != null && floor.foundSurface() && floor.distance() < 0) {
+            currentY += floor.distance();
+            motionState.y = currentY;
+            motionState.ySub = 0;
+            yVelocity = 0;
+            motionState.yVel = 0;
+            state = State.WAIT_FOR_PLAYER;
+            // s2.asm:60394-60397: bchg status.x_flip once, on the landing
+            // dispatch, if the main character is to the right.
+            if (player != null && !player.isDebugMode()
+                    && (short) ((currentX - player.getCentreX()) & 0xFFFF) < 0) {
+                xFlip = !xFlip;
+                facingLeft = !xFlip;
+            }
+        }
+        startY = currentY;
     }
 
     @Override
@@ -96,26 +138,13 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        resolveInitialFacing(player);
         switch (state) {
+            case INIT -> updateInit(player);
             case WAIT_FOR_PLAYER -> updateWaitForPlayer(player);
             case DELAY_BEFORE_RISE -> updateDelayBeforeRise();
             case MOVING_UP -> updateMovingUp();
             case HOVERING -> updateHovering();
             case MOVING_DOWN -> updateMovingDown();
-        }
-    }
-
-    private void resolveInitialFacing(AbstractPlayableSprite player) {
-        if (initialFacingResolved || player == null || player.isDebugMode()) {
-            return;
-        }
-        initialFacingResolved = true;
-        // ROM Obj4A_Init copies the layout x-flip, then toggles status.x_flip
-        // once if MainCharacter is to the right (s2.asm:60391-60397).
-        if ((short) ((currentX - player.getCentreX()) & 0xFFFF) < 0) {
-            xFlip = !xFlip;
-            facingLeft = !xFlip;
         }
     }
 
@@ -163,17 +192,24 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateMovingUp() {
-        // Decelerate: y_vel starts at -0x200, add +0x10 per frame
+        // ROM Obj4A_MoveUp (s2.asm:60450-60458):
+        //   addi.w #$10,y_vel(a0)
+        //   bpl.s  +                ; y_vel >= 0 -> transition, WITHOUT moving
+        //   jmpto  ObjectMove       ; still rising -> move, and that is the whole
+        //                             dispatch
+        // + addq.b #2,routine_secondary(a0)
+        //   move.w #60,objoff_2C(a0)
+        //   bra.w  Obj4A_FireBullet
+        // The transition dispatch performs no ObjectMove and leaves y_vel at its
+        // just-incremented value; it does not zero it.
         yVelocity += Y_ACCEL;
-        applyYMovement();
-
-        if (yVelocity >= 0) {
-            // Reached peak - fire bullet and start hovering
-            yVelocity = 0;
-            state = State.HOVERING;
-            timer = HOVER_DURATION;
-            fireBullet();
+        if (yVelocity < 0) {
+            applyYMovement();
+            return;
         }
+        state = State.HOVERING;
+        timer = HOVER_DURATION;
+        fireBullet();
     }
 
     private void updateHovering() {
@@ -192,20 +228,27 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateMovingDown() {
-        // Accelerate downward: +0x10 per frame
+        // ROM Obj4A_MoveDown (s2.asm:60471-60483):
+        //   addi.w #$10,y_vel(a0)
+        //   move.w y_pos(a0),d0
+        //   cmp.w  octus_start_position(a0),d0
+        //   bhs.s  +                ; already at/below start -> stop, WITHOUT moving
+        //   jmpto  ObjectMove
+        // + clr.b routine_secondary(a0) / clr.b anim(a0) / clr.w y_vel(a0)
+        //   move.b #1,mapping_frame(a0) / rts
+        // The comparison is made before the move, and the stopping dispatch does
+        // not write y_pos -- the ROM leaves the Octus wherever it came to rest
+        // rather than snapping it back to octus_start_position.
         yVelocity += Y_ACCEL;
-        applyYMovement();
-
-        if (currentY >= startY) {
-            // Returned to start position - reset
-            currentY = startY;
-            yVelocity = 0;
-            motionState.ySub = 0;
-            state = State.WAIT_FOR_PLAYER;
-            bulletFired = false;
-            animationState.setAnimId(0); // Back to idle
-            animFrame = 1; // mapping_frame = 1
+        if (currentY < startY) {
+            applyYMovement();
+            return;
         }
+        state = State.WAIT_FOR_PLAYER;
+        yVelocity = 0;
+        bulletFired = false;
+        animationState.setAnimId(0);
+        animFrame = 1;
     }
 
     private void applyYMovement() {
@@ -235,6 +278,15 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
                 false,      // No gravity
                 bulletHFlip,
                 BULLET_DELAY));
+    }
+
+    /**
+     * Test-only: run the routine-0 Init dispatch that Obj4A_Init occupies in the
+     * ROM, so a unit test can observe the landed state that used to be produced
+     * in the constructor. Setup only -- it runs exactly the production init path.
+     */
+    void testRunInitDispatch(AbstractPlayableSprite player) {
+        updateInit(player);
     }
 
     @Override

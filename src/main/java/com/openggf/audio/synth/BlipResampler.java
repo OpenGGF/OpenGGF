@@ -167,6 +167,40 @@ public class BlipResampler {
         }
     }
 
+    static void validateSnapshot(Snapshot snapshot) {
+        if (snapshot == null) {
+            throw new IllegalArgumentException(
+                    "blip resampler snapshot cannot be null");
+        }
+        if (!Double.isFinite(snapshot.ratio()) || snapshot.ratio() <= 0.0) {
+            throw new IllegalArgumentException(
+                    "blip resampler ratio must be finite and positive");
+        }
+        int[] tailL = snapshot.historyTailLRef();
+        int[] tailR = snapshot.historyTailRRef();
+        if (tailL.length != tailR.length || tailL.length > BUFFER_SIZE) {
+            throw new IllegalArgumentException(
+                    "blip resampler history tails have invalid lengths");
+        }
+        if (snapshot.head() < 0 || snapshot.head() >= BUFFER_SIZE
+                || snapshot.inputIndex() < 0
+                || snapshot.head()
+                != (int) (snapshot.inputIndex() & BUFFER_MASK)
+                || tailL.length > snapshot.inputIndex()) {
+            throw new IllegalArgumentException(
+                    "blip resampler history position is invalid");
+        }
+        double nextOutputLimit = snapshot.inputIndex() + snapshot.ratio()
+                - (FILTER_TAPS / 2.0);
+        if (!Double.isFinite(snapshot.outputPos())
+                || snapshot.outputPos() < 0.0
+                || (snapshot.outputPos() != 0.0
+                && snapshot.outputPos() >= nextOutputLimit)) {
+            throw new IllegalArgumentException(
+                    "blip resampler output position is invalid");
+        }
+    }
+
     /**
      * Add one input sample to the history buffer.
      */
@@ -335,5 +369,31 @@ public class BlipResampler {
 
         /** Non-copying view for in-memory restore paths only. Do not mutate. */
         int[] historyTailRRef() { return historyTailR; }
+
+        @Override
+        public boolean equals(Object candidate) {
+            if (this == candidate) {
+                return true;
+            }
+            if (!(candidate instanceof Snapshot other)) {
+                return false;
+            }
+            return Double.compare(ratio, other.ratio) == 0
+                    && head == other.head
+                    && inputIndex == other.inputIndex
+                    && Double.compare(outputPos, other.outputPos) == 0
+                    && Arrays.equals(historyTailL, other.historyTailL)
+                    && Arrays.equals(historyTailR, other.historyTailR);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Double.hashCode(ratio);
+            result = 31 * result + Arrays.hashCode(historyTailL);
+            result = 31 * result + Arrays.hashCode(historyTailR);
+            result = 31 * result + Integer.hashCode(head);
+            result = 31 * result + Long.hashCode(inputIndex);
+            return 31 * result + Double.hashCode(outputPos);
+        }
     }
 }

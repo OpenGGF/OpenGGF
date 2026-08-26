@@ -167,6 +167,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         super();
     }
 
+    @Override
+    public void initLevel(int zone, int act) {
+        super.initLevel(zone, act);
+        // Shared-level fixtures may reinitialize the provider after the player
+        // roster already exists. Keep the setup presentation decision at the
+        // event-provider boundary so the next initial Process_Sprites pass
+        // cannot expose a dormant intro sidekick.
+        primeSidekickIntroPresentation();
+    }
+
     // =========================================================================
     // AbstractLevelEventManager contract
     // =========================================================================
@@ -847,6 +857,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // so the carrier survives. The handler self-gates on act 0 + SONIC_ALONE.
         if (currentZone == Sonic3kZoneIds.ZONE_CNZ && cnzEvents != null) {
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
+        }
+        primeSidekickIntroPresentation();
+    }
+
+    private void primeSidekickIntroPresentation() {
+        SpriteManager spriteManager = GameServices.spritesOrNull();
+        if (spriteManager == null) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            SidekickCpuController controller = sidekick.getCpuController();
+            if (controller != null) {
+                controller.suppressInitialLevelEventPresentationIfNeeded();
+            }
         }
     }
 
@@ -1704,14 +1728,31 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             if (!GameServices.gameState().isEndOfLevelFlag()) {
                 return;
             }
-            // Obj_EndSignControlDoStart observes End_of_level_flag and calls
-            // Change_Act2Sizes on that same dispatch
-            // (docs/skdisasm/sonic3k.asm:180420-180424); Change_Act2Sizes falls
-            // through into Make_LevelSizeObj (:180580-180604), which creates the
-            // gradual bound children immediately. The ROM delay between
-            // observing the flag and the size change is therefore zero
-            // dispatches -- do not reintroduce a countdown here.
+            // Obj_TitleCardWait2 publishes End_of_level_flag from its own slot
+            // inside Process_Sprites (docs/skdisasm/sonic3k.asm:62244-62279),
+            // and the retained Obj_EndSignControl slot is walked *ahead* of it
+            // in the ascending Process_Sprites walk
+            // (docs/skdisasm/sonic3k.asm:35965-35995; see the same slot
+            // relationship recorded in Sonic3kTitleCardManager). Its
+            // `tst.b (End_of_level_flag)` poll for the publishing pass has
+            // therefore already run and taken the `beq` exit
+            // (docs/skdisasm/sonic3k.asm:180419-180424), so DoStart is first
+            // satisfied on the following pass. Latch the publication here and
+            // run the DoStart body on the next dispatch.
             GameServices.gameState().setEndOfLevelFlag(false);
+            cnzPendingPostTransitionAct2SizeFrames = 1;
+            return;
+        }
+        if (cnzPendingPostTransitionAct2SizeFrames > 0) {
+            // The pass on which Obj_EndSignControlDoStart actually observes the
+            // flag: it calls Change_Act2Sizes, which falls through into
+            // Make_LevelSizeObj (docs/skdisasm/sonic3k.asm:180580-180604).
+            // Make_LevelSizeObj allocates the gradual children with
+            // AllocateObjectAfterCurrent (:176924-176950,:37917-37930), i.e.
+            // into slots *after* the current one, so they are reached by this
+            // same ascending Process_Sprites walk and take their first update
+            // on this dispatch. There is no further delay after this point --
+            // do not reintroduce a countdown here.
             cnzPendingPostTransitionAct2SizeFrames = 0;
             cnzPostTransitionAct2SizeActive = true;
             cnzAct2MinXAccumulator = 0;

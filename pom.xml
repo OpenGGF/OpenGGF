@@ -21,6 +21,24 @@
         <test.cds.argLine>-Xshare:off</test.cds.argLine>
         <test.logging.config.file>${project.basedir}/src/test/resources/quiet-logging.properties</test.logging.config.file>
         <test.slf4j.verbosity>ERROR</test.slf4j.verbosity>
+        <!-- Coordinator-launched runs replace these with absolute session paths;
+             the defaults retain the legacy target layout for IDE use. -->
+        <openggf.build.directory>${project.basedir}/target</openggf.build.directory>
+        <openggf.test.tmpdir>${openggf.build.directory}/test-tmp</openggf.test.tmpdir>
+        <openggf.surefire.reports>${openggf.build.directory}/surefire-reports</openggf.surefire.reports>
+        <openggf.trace.reports>${openggf.build.directory}/trace-reports</openggf.trace.reports>
+        <openggf.test.diagnostics>${openggf.build.directory}/diagnostics</openggf.test.diagnostics>
+        <openggf.artifact.root>${openggf.build.directory}</openggf.artifact.root>
+        <openggf.distribution.root>${openggf.build.directory}</openggf.distribution.root>
+        <openggf.session.manifest></openggf.session.manifest>
+        <openggf.session.capability></openggf.session.capability>
+        <openggf.session.run-id></openggf.session.run-id>
+        <openggf.session.command-hash></openggf.session.command-hash>
+        <openggf.session.worktree></openggf.session.worktree>
+        <openggf.session.lease-path></openggf.session.lease-path>
+        <openggf.session.allowed-phases></openggf.session.allowed-phases>
+        <!-- Explicitly enabled only by the non-certifying local launchers. -->
+        <openggf.session.guard.skip>false</openggf.session.guard.skip>
         <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
         <surefire.forkCount>4</surefire.forkCount>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
@@ -72,7 +90,7 @@
             </properties>
         </profile>
 
-        <!-- Fast local dev launcher: run the engine straight from target/classes
+        <!-- Fast local dev launcher: run the engine straight from ${project.build.directory}/classes
              without building the jar-with-dependencies. Activate explicitly:
 
                mvn -q -Pdev-run compile exec:exec
@@ -114,7 +132,9 @@
              Activated automatically when CI=true (GitHub Actions, GitLab CI, etc.)
              or manually via: mvn test -Pci
 
-             Current release suite size requires a single 1GB fork in CI.
+             The ordinary suite uses a single 1GB fork in CI. Structural guards
+             run separately through -Pguards, so broad source-graph imports do
+             not accumulate behind the ordinary suite's reused fork.
              Keeping one fork also avoids native-library races between test JVMs.
         -->
         <profile>
@@ -140,7 +160,27 @@
                mvn -Ptrace-replay test
         -->
         <profile>
-            <id>trace-replay</id>
+            <!--
+              Performance measurements, separated from the correctness suites because they
+              are wall-clock sensitive. TestVerifierCostBenchmark asserts fps() over 100
+              ("headless replay implausibly slow"), which is a real signal on a quiet box
+              and pure noise beside a parallel trace sweep. Together the two heavy classes
+              were about 16 minutes, 37 percent of the trace-replay profile, and neither
+              verifies a trace field: TestVerifierPoolBenchmark's own javadoc says per-frame
+              trace validation is excluded, being the trace suite's job and not a verifier's.
+              Selected by tag rather than filename, because most Benchmark-named classes in
+              this tree are fast unit tests about benchmark tooling.
+              Run with: mvn -Pbenchmarks test
+            -->
+            <id>benchmarks</id>
+            <!-- Benchmarks are wall-clock sensitive, so they default to a single
+                 fork. That default is expressed as the shared surefire.forkCount
+                 property rather than a literal, so the one documented property
+                 still controls fork count everywhere (and -Dsurefire.forkCount
+                 on the command line still wins). -->
+            <properties>
+                <surefire.forkCount>1</surefire.forkCount>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -148,13 +188,106 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>3.2.5</version>
                         <configuration combine.self="override">
-                            <argLine>${surefire.argLine}</argLine>
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
+                            <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <forkCount>${surefire.forkCount}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <groups>performance-measurement</groups>
+                            <systemPropertyVariables>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                                <project.basedir>${project.basedir}</project.basedir>
+                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
+                                <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
+                                <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
+                                <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
+                                <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
+                                <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
+                                <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
+                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
+                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
+                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
+                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
+                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
+                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
+                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>trace-replay</id>
+            <!--
+              The trace-replay suite needs more heap than the shared 1g default,
+              because a run-chain test holds every segment of its run at once:
+              TraceRunReplayWalker.plan() loads all segments eagerly into one
+              TraceData[] and returns a List<SegmentPlan> that retains them for
+              the whole walk. Measured live heap after plan(), per run fixture:
+
+                s3k-knuckles-complete-superemeralds   67 segments   1041 MB
+                s2-sonic-tails-complete-emeralds      35 segments    449 MB
+                s1-sonic-complete-withemeralds        34 segments    322 MB
+                s3k-multibonus / s3-knux-multibonus-ss 25 segments   286 MB
+
+              Only the Knuckles super-emerald run exceeded 1g, which is why it
+              alone died with "Java heap space" and wrote no report while every
+              other chain passed. Its measured peak live heap including the
+              engine was 1245 MB, which is what took this profile from 1g to 2g.
+
+              2g in turn stopped being enough once the 63-segment
+              s3k-sonic-tails-complete-emeralds run landed. Measured on this
+              worktree with -Xlog:gc* over the whole profile at -Xmx2500m
+              (forkCount=1, 834 tests, no OOM): four Full GCs, the largest
+              post-Full-GC live set 2069 MB, just above 2g's 2048 MB, so the
+              fork died mid-suite after 41 report files with every class
+              alphabetically after TestS3kMegaRunChain unexecuted, and reported
+              a truncated 401 tests that looked healthier than the real run.
+              The same profile completes all 834 tests at both 3g and 4g with
+              an identical red set, so 3g is the landed value: ~48% headroom
+              over the 2069 MB measured live set, and forkCount still defaults
+              to 4 here (4 x 3g = 12g worst case).
+
+              The cost is aux events, not physics rows: across the Knuckles run,
+              aux_state.jsonl is 1476 MB uncompressed against 56 MB of
+              physics.csv, and a heap histogram puts TraceFrame at 3% of the
+              retained bytes. Streaming the rows would not have helped; streaming
+              the aux events would, and is the durable fix if a future capture
+              pushes past this ceiling again.
+            -->
+            <properties>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
+                            <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
                                 <project.basedir>${project.basedir}</project.basedir>
+                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
+                                <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
+                                <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
+                                <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
+                                <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
+                                <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
+                                <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
+                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
+                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
+                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
+                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
+                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
+                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
+                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/tests/trace/**/*.java</include>
@@ -162,6 +295,18 @@
                                 <include>**/tests/trace/**/*ReplayBootstrap.java</include>
                                 <include>**/tests/trace/s2/*Regression.java</include>
                             </includes>
+                            <!--
+                              Release scope is carried by a JUnit tag as well as by the
+                              file-name lists below. A zone-per-file trace class holds
+                              several character sets, and the release-6 split cuts
+                              between characters, not between files: the Sonic+Tails
+                              Slots replay is in scope while the Knuckles one is not,
+                              and both now live in TestS3kSlotsBonusTraceReplay. Nested
+                              classes tagged trace-scope-r7 are dropped here and picked
+                              up by -Ptrace-replay-r7; the file-name lists still gate the
+                              trace classes that have not been converted yet.
+                            -->
+                            <excludedGroups>performance-measurement,trace-scope-r7</excludedGroups>
                             <excludes>
                                 <exclude>**/Debug*.java</exclude>
                                 <exclude>**/*Debug*.java</exclude>
@@ -173,7 +318,293 @@
                                 <exclude>**/TestAizFireCurtainGpuDiag.java</exclude>
                                 <exclude>**/TestS3kSpecialStageResultsVisual.java</exclude>
                                 <exclude>**/TestInstaShieldVisual.java</exclude>
+                                <!--
+                                  Release-6 scope gate. Release 6 is the Sonic path through
+                                  S1, S2 and S3; the S&K-half zones (ids 7-13, MHZ onward)
+                                  and every Knuckles route are expected red and run in
+                                  -Ptrace-replay-r7 instead. Kept in one place and mirrored
+                                  by that profile's includes — if you add a trace class for
+                                  an out-of-scope zone or run, add it to BOTH lists.
+                                  Rationale and the measured split:
+                                  docs/status/trace-scope-release-6.md
+                                -->
+                                <exclude>**/tests/trace/s3k/**/*Mhz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Fbz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Ssz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Soz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Lrz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Hpz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Ddz*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Dez*.java</exclude>
+                                <exclude>**/tests/trace/s3k/**/*Zone0c*.java</exclude>
+                                <exclude>**/tests/trace/s3k/TestS3kGumballBonusTraceReplay.java</exclude>
+                                <exclude>**/tests/trace/s3k/TestS3kPachinkoBonusTraceReplay.java</exclude>
+                                <exclude>**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java</exclude>
+                                <exclude>**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java</exclude>
+                                <exclude>**/tests/trace/runs/TestS3kMegaRunChain.java</exclude>
+                                <!--
+                                  Segment gate. A per-zone or per-act segment RESUMES a
+                                  playthrough: it inherits progression state (emeralds above
+                                  all) that it cannot earn, so a green segment proves only
+                                  "given this boundary state, do frames 1..N evolve
+                                  correctly". That is instrumentation, not parity evidence.
+                                  The run chains earn everything by playing and are the gate.
+                                  Segments run in -Ptrace-segments.
+                                  Note the *CompleteRunTraceReplay classes are ALSO per-zone
+                                  slices despite the name — each covers one zone's two acts
+                                  plus the handoff, all sliced from one movie. They differ
+                                  from the sonictails/ set only in that their source movie
+                                  never collects emeralds, so they miss the boundary rather
+                                  than clearing it.
+                                  See docs/status/trace-scope-release-6.md.
+                                -->
+                                <exclude>**/tests/trace/s3k/sonictails/*.java</exclude>
+                                <exclude>**/tests/trace/s3k/*ZoneSliceTraceReplay.java</exclude>
                             </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!--
+          Segment traces: instrumentation, not the release gate.
+
+          A per-zone or per-act segment resumes a playthrough mid-flight. It is
+          seeded with position/zone/act from metadata but inherits progression
+          state — emeralds above all — that it has no way to earn, so its
+          comparison answers only "given this boundary state, do frames 1..N
+          evolve correctly". Useful for localisation (a chain red says "somewhere
+          after cursor N"; a segment red names the zone) and cheap to iterate on,
+          but not evidence of parity.
+
+            mvn -Ptrace-segments test
+
+          The run chains are the gate: they play through and earn every piece of
+          run state, so their greens are parity claims.
+        -->
+        <profile>
+            <id>trace-segments</id>
+            <properties>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
+                            <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <forkCount>${surefire.forkCount}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <systemPropertyVariables>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                                <project.basedir>${project.basedir}</project.basedir>
+                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
+                                <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
+                                <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
+                                <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
+                                <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
+                                <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
+                                <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
+                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
+                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
+                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
+                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
+                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
+                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
+                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
+                            </systemPropertyVariables>
+                            <includes>
+                                <include>**/tests/trace/s3k/sonictails/*.java</include>
+                                <include>**/tests/trace/s3k/*ZoneSliceTraceReplay.java</include>
+                            </includes>
+                            <excludedGroups>performance-measurement</excludedGroups>
+                            <excludes>
+                                <exclude>**/Debug*.java</exclude>
+                                <exclude>**/*Probe*.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!--
+          Release-7 trace scope: the traces deliberately outside release 6.
+
+          Release 6 is the Sonic path through S1, S2 and S3. S3K is only partly
+          implemented past Launch Base, and the Knuckles routes are not a release-6
+          deliverable, so these classes are EXPECTED red and would otherwise dominate
+          the blocking sweep by error count — 30 S&K-half classes carried 49,261 of
+          the 80,236 measured S3K errors at 9900b3114, against 30,975 in scope.
+
+          Nothing here is deleted, weakened or made advisory. These classes assert
+          exactly what they asserted before and still fail if they regress; they are
+          gated out of the release-blocking suite, not silenced.
+
+            mvn -Ptrace-replay-r7 test
+
+          RUN THIS ANYWAY when a change touches shared runtime rather than one
+          release-6 zone — the sidekick CPU/despawn path, the bonus-stage runtime,
+          the hardware-timing port, PLC/Kosinski queues, the camera, or
+          AbstractTraceReplayTest. The three GREEN Knuckles bonus classes are the best
+          cross-check available for slot-runtime changes, and a ROM-cited sidekick fix
+          landed earlier moved both FBZ and SSZ, which live here.
+
+          The include list below mirrors the exclude list in the trace-replay profile.
+          Add a new out-of-scope class to BOTH.
+          See docs/status/trace-scope-release-6.md.
+        -->
+        <profile>
+            <id>trace-replay-r7</id>
+            <properties>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
+                            <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <forkCount>${surefire.forkCount}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <systemPropertyVariables>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                                <project.basedir>${project.basedir}</project.basedir>
+                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
+                                <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
+                                <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
+                                <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
+                                <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
+                                <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
+                                <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
+                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
+                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
+                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
+                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
+                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
+                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
+                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
+                            </systemPropertyVariables>
+                            <includes>
+                                <include>**/tests/trace/s3k/**/*Mhz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Fbz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Ssz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Soz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Lrz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Hpz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Ddz*.java</include>
+                                <include>**/tests/trace/s3k/**/*Dez*.java</include>
+                                <include>**/tests/trace/s3k/**/*Zone0c*.java</include>
+                                <include>**/tests/trace/s3k/TestS3kSlotsBonusTraceReplay.java</include>
+                                <include>**/tests/trace/s3k/TestS3kGumballBonusTraceReplay.java</include>
+                                <include>**/tests/trace/s3k/TestS3kPachinkoBonusTraceReplay.java</include>
+                                <include>**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java</include>
+                                <include>**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java</include>
+                                <include>**/tests/trace/runs/TestS3kMegaRunChain.java</include>
+                                <include>**/tests/trace/s3k/tailsfullchain/*.java</include>
+                                <include>**/tests/trace/runs/TestS3kTailsFullChainRunChain.java</include>
+                            </includes>
+                            <!--
+                              Companion to the tag gate in -Ptrace-replay. A converted
+                              zone-per-file class is included by name below, and its
+                              in-scope character sets (tagged trace-scope-r6) are
+                              dropped here so only the out-of-scope ones run.
+
+                              NOT a strict mirror, and do not "repair" it into one.
+                              TestS3kSlotsBonusTraceReplay is included here by name but
+                              is deliberately ABSENT from the exclude list in
+                              -Ptrace-replay, because tags do the r6-side gating for
+                              converted classes. Adding it there would exclude the
+                              r6-tagged nested class by file name in -Ptrace-replay while
+                              the r7 tag filter already excludes it here, and the
+                              in-scope Slots tests would then run in NEITHER profile,
+                              silently.
+                            -->
+                            <excludedGroups>performance-measurement,trace-scope-r6</excludedGroups>
+                            <excludes>
+                                <exclude>**/Debug*.java</exclude>
+                                <exclude>**/*Debug*.java</exclude>
+                                <exclude>**/*Probe.java</exclude>
+                                <exclude>**/*Probe*.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Structural guard tests: the architectural invariants that no
+             trace fixture can prove and that must never silently stop being
+             enforced.
+
+             They previously lived in the default profile, which the trace suites do
+             not run and which is expensive and ROM-sensitive locally, so a red
+             guard could sit unnoticed on develop (TestS1S2PlcComparisonOnlyGuard
+             did). This profile is source-only, needs no ROM, and runs in about
+             a minute, so CI can gate every push to the integration branches on
+             it - the default `test` job is skipped on push entirely.
+
+               mvn -Pguards test
+
+             The include is a name convention, not a path: a guard may live in
+             any package. TestBuildToolingGuard
+             .everyGuardTestClassIsSelectedByTheGuardsProfile checks that every
+             *Guard* test class on disk is actually selected here. -->
+        <profile>
+            <id>guards</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
+                            <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <forkCount>${surefire.forkCount}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <systemPropertyVariables>
+                                <project.basedir>${project.basedir}</project.basedir>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
+                                <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
+                                <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
+                                <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
+                                <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
+                                <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
+                                <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
+                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
+                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
+                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
+                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
+                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
+                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
+                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
+                            </systemPropertyVariables>
+                            <includes>
+                                <include>**/Test*Guard*.java</include>
+                                <!-- Prohibition guards predate the *Guard suffix and enforce
+                                     hard rules 5 and 6 (no getInstance() in objects, no direct
+                                     map mutation). Same three conventions are checked by
+                                     TestBuildToolingGuard, so a new one under any of them is
+                                     picked up automatically. -->
+                                <include>**/TestNo*.java</include>
+                                <include>**/TestArchUnit*.java</include>
+                                <!-- This boundary test performs a whole-production ArchUnit
+                                     import but predates the structural-guard naming convention. -->
+                                <include>**/TestAudioPresentationBoundary.java</include>
+                            </includes>
+                            <excludedGroups>performance-measurement</excludedGroups>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -193,13 +624,28 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>3.2.5</version>
                         <configuration combine.self="override">
-                            <argLine>${surefire.argLine}</argLine>
+                            <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
+                            <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
                                 <project.basedir>${project.basedir}</project.basedir>
+                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
+                                <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
+                                <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
+                                <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
+                                <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
+                                <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
+                                <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
+                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
+                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
+                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
+                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
+                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
+                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
+                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/tests/trace/**/Debug*.java</include>
@@ -236,7 +682,7 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!-- Flatten extracted native libs into target/native-libs/ -->
+                    <!-- Flatten extracted native libs into ${project.build.directory}/native-libs/ -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
@@ -256,8 +702,8 @@
                                                 <include name="**/*.dll"/>
                                             </fileset>
                                         </copy>
-                                        <!-- Also copy to target/ alongside the native binary
-                                             so bare execution (target/OpenGGF) works -->
+                                        <!-- Also copy alongside the native binary so bare
+                                             execution (${project.build.directory}/OpenGGF) works. -->
                                         <copy todir="${project.build.directory}" flatten="true">
                                             <fileset dir="${project.build.directory}/lwjgl-unpack">
                                                 <include name="**/*.dylib"/>
@@ -311,8 +757,8 @@
                                     <executable>bash</executable>
                                     <arguments>
                                         <argument>${basedir}/src/packaging/assemble-macos-app.sh</argument>
-                                        <argument>${basedir}/target/OpenGGF</argument>
-                                        <argument>${basedir}/target</argument>
+                                        <argument>${project.build.directory}/OpenGGF</argument>
+                                        <argument>${openggf.distribution.root}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -586,6 +1032,7 @@
     </dependencyManagement>
 
     <build>
+        <directory>${openggf.build.directory}</directory>
         <sourceDirectory>src/main/java</sourceDirectory>
         <testSourceDirectory>src/test/java</testSourceDirectory>
         <resources>
@@ -607,6 +1054,7 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.1.1</version>
                 <configuration>
+                    <outputDirectory>${openggf.artifact.root}</outputDirectory>
                     <descriptors>
                         <descriptor>src/assembly/openggf-jar-with-dependencies.xml</descriptor>
                     </descriptors>
@@ -631,16 +1079,58 @@
                 </executions>
             </plugin>
 
-            <!-- Install the repo's tracked commit-policy hooks for local development.
-                 Points git at .githooks so the documentation/changelog gate runs on
-                 local commits without each contributor configuring it by hand. Runs
-                 early on every build; idempotent; a no-op outside a git checkout
-                 (failonerror=false) so source-tarball/offline builds are unaffected. -->
+            <!-- Session guards run before Maven can clean, compile, or write reports.
+                 Hook installation is an explicit developer action, never a Maven side
+                 effect. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>3.1.0</version>
                 <executions>
+                    <execution>
+                        <id>openggf-session-pre-clean-guard</id>
+                        <phase>pre-clean</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <skip>${openggf.session.guard.skip}</skip>
+                            <target>
+                                <exec executable="${java.home}/bin/java" failonerror="true">
+                                    <arg value="-Dopenggf.session.manifest=${openggf.session.manifest}"/>
+                                    <arg value="-Dopenggf.session.capability=${openggf.session.capability}"/>
+                                    <arg value="-Dopenggf.session.run-id=${openggf.session.run-id}"/>
+                                    <arg value="-Dopenggf.session.command-hash=${openggf.session.command-hash}"/>
+                                    <arg value="-Dopenggf.session.worktree=${openggf.session.worktree}"/>
+                                    <arg value="-Dopenggf.session.lease-path=${openggf.session.lease-path}"/>
+                                    <arg value="-Dopenggf.session.allowed-phases=${openggf.session.allowed-phases}"/>
+                                    <arg value="--source"/><arg value="21"/>
+                                    <arg value="${project.basedir}/tools/testing/TestSessionCoordinator.java"/>
+                                    <arg value="--guard"/><arg value="pre-clean"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>openggf-session-validate-guard</id>
+                        <phase>validate</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <skip>${openggf.session.guard.skip}</skip>
+                            <target>
+                                <exec executable="${java.home}/bin/java" failonerror="true">
+                                    <arg value="-Dopenggf.session.manifest=${openggf.session.manifest}"/>
+                                    <arg value="-Dopenggf.session.capability=${openggf.session.capability}"/>
+                                    <arg value="-Dopenggf.session.run-id=${openggf.session.run-id}"/>
+                                    <arg value="-Dopenggf.session.command-hash=${openggf.session.command-hash}"/>
+                                    <arg value="-Dopenggf.session.worktree=${openggf.session.worktree}"/>
+                                    <arg value="-Dopenggf.session.lease-path=${openggf.session.lease-path}"/>
+                                    <arg value="-Dopenggf.session.allowed-phases=${openggf.session.allowed-phases}"/>
+                                    <arg value="--source"/><arg value="21"/>
+                                    <arg value="${project.basedir}/tools/testing/TestSessionCoordinator.java"/>
+                                    <arg value="--guard"/><arg value="validate"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
                     <!-- Fail fast when the build JVM is not the JDK the project targets.
                          Surefire forks inherit Maven's JVM, not whatever `java` is on PATH,
                          so a newer JDK silently reaches the tests: Mockito/ByteBuddy then
@@ -709,25 +1199,6 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                                         <length string="${openggf.git.dirty.raw}" when="greater" length="0"/>
                                     </and>
                                 </condition>
-                            </target>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>install-git-hooks</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <exec executable="git" dir="${project.basedir}" failonerror="false">
-                                    <arg value="config"/>
-                                    <arg value="core.hooksPath"/>
-                                    <arg value=".githooks"/>
-                                </exec>
-                                <!-- java.io.tmpdir for surefire forks; the JVM
-                                     requires it to exist before it starts. -->
-                                <mkdir dir="${project.build.directory}/test-tmp"/>
                             </target>
                         </configuration>
                     </execution>
@@ -825,6 +1296,14 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                 <version>3.2.5</version>
                 <configuration>
                     <!-- LWJGL/GLFW on macOS requires -XstartOnFirstThread (set via profile) -->
+                    <!--
+                         LWJGL otherwise derives one native extraction directory from
+                         java.io.tmpdir. Give every Surefire fork its own extraction root:
+                         two forks, or two coordinator sessions in different worktrees,
+                         must never replace or unlink one another's libglfw/liblwjgl files.
+                         Surefire expands its fork number in argLine after Maven resolves
+                         the shared session properties.
+                    -->
                     <!-- java.io.tmpdir must be set on the command line, not via
                          systemPropertyVariables: java.nio.file.TempFileHelper caches it
                          in a static initialiser that surefire's own early temp-file use
@@ -836,9 +1315,11 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                          RAM-backed tmpfs, eventually filled it and broke unrelated
                          features that legitimately need temporary space. Here the mess
                          is bounded, invisible to the rest of the machine, and removed by
-                         `mvn clean`. Tests should still clean up after themselves; this
-                         makes forgetting harmless rather than cumulative. -->
-                    <argLine>${surefire.argLine} -Djava.io.tmpdir=${project.build.directory}/test-tmp</argLine>
+                         a coordinator-launched clean. Raw lifecycle clean is rejected by
+                         the session guard. Tests should still clean up after themselves;
+                         this makes forgetting harmless rather than cumulative. -->
+                    <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
+                    <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                     <!-- Run test classes in parallel forked JVMs.
                          Thread-level parallelism is unsafe due to singleton state,
                          but process-level forks each get isolated singletons.
@@ -852,9 +1333,31 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                         <project.basedir>${project.basedir}</project.basedir>
                         <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                         <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                        <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
+                        <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
+                        <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
+                        <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
+                        <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
+                        <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
+                        <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
+                        <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
+                        <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
+                        <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
+                        <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
+                        <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
+                        <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
+                        <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                     </systemPropertyVariables>
                     <!-- Exclude tests that require a GL context/display -->
                     <excludes>
+                        <!-- Structural guards, especially whole-production ArchUnit
+                             imports, run in the separate -Pguards session. Keeping
+                             them out of the long ordinary suite gives that graph a
+                             fresh JVM and prevents the known late-suite heap failure. -->
+                        <exclude>**/Test*Guard*.java</exclude>
+                        <exclude>**/TestNo*.java</exclude>
+                        <exclude>**/TestArchUnit*.java</exclude>
+                        <exclude>**/TestAudioPresentationBoundary.java</exclude>
                         <exclude>**/TestGraphicsManagerHeadless.java</exclude>
                         <exclude>**/VisualRegressionTest.java</exclude>
                         <exclude>**/VisualReferenceGenerator.java</exclude>

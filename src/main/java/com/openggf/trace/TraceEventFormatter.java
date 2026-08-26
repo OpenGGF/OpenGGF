@@ -302,6 +302,7 @@ public final class TraceEventFormatter {
                             state.solidPreY() & 0xFFFF,
                             state.solidSurfaceY() & 0xFFFF,
                             state.solidDelta() & 0xFFFF);
+            case TraceEvent.S2TornadoState tornado -> summariseS2Tornado(tornado);
             case TraceEvent.StateSnapshot snapshot -> summariseStateSnapshot(snapshot);
             case TraceEvent.VObjState vObjState -> summariseVObjState(vObjState);
             case TraceEvent.VOscillate vOscillate -> summariseVOscillate(vOscillate);
@@ -398,23 +399,21 @@ public final class TraceEventFormatter {
         return sb.toString();
     }
 
+    /**
+     * Renders ObjB2's SST exactly as the generic-snapshot branch used to, so
+     * promoting {@code s2_tornado_state} to a typed event leaves every report
+     * and context dump byte-identical.
+     */
+    private static String summariseS2Tornado(TraceEvent.S2TornadoState t) {
+        return String.format(
+                "s2Tornado s%d @0x%04X,0x%04X sub=0x%04X yv=0x%04X rtn=0x%02X/0x%02X"
+                        + " st=0x%02X 2e=0x%02X 2f=0x%02X 30=0x%02X 31=0x%02X",
+                t.slot(), t.x(), t.y(), t.ySub(), t.yVel(),
+                t.routine(), t.routineSecondary(), t.statusByte(),
+                t.objoff2E(), t.objoff2F(), t.objoff30(), t.objoff31());
+    }
+
     private static String summariseStateSnapshot(TraceEvent.StateSnapshot snapshot) {
-        Object event = snapshot.fields().get("event");
-        if ("s2_tornado_state".equals(event)) {
-            return String.format("s2Tornado s%s @%s,%s sub=%s yv=%s rtn=%s/%s st=%s 2e=%s 2f=%s 30=%s 31=%s",
-                    snapshot.fields().getOrDefault("slot", "?"),
-                    snapshot.fields().getOrDefault("x", "?"),
-                    snapshot.fields().getOrDefault("y", "?"),
-                    snapshot.fields().getOrDefault("y_sub", "?"),
-                    snapshot.fields().getOrDefault("y_vel", "?"),
-                    snapshot.fields().getOrDefault("routine", "?"),
-                    snapshot.fields().getOrDefault("routine_secondary", "?"),
-                    snapshot.fields().getOrDefault("status_byte", "?"),
-                    snapshot.fields().getOrDefault("objoff_2e", "?"),
-                    snapshot.fields().getOrDefault("objoff_2f", "?"),
-                    snapshot.fields().getOrDefault("objoff_30", "?"),
-                    snapshot.fields().getOrDefault("objoff_31", "?"));
-        }
         String character = String.valueOf(snapshot.fields().getOrDefault("character", ""));
         String prefix = character == null || character.isBlank()
                 ? "state"

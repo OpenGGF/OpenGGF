@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -30,7 +31,23 @@ import java.util.List;
  * directly from the parent for simplicity.
  */
 public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_AIZDrawBridge} is installed from the S3K object pointer table at
+     * {@code $0002B12A} (table read from the user-supplied ROM; the
+     * label is defined at docs/skdisasm/sonic3k.asm:59495).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0002}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0002;
+    }
+
 
     private static final int PRIORITY = 5;
     private static final int SEGMENT_COUNT = 14;
@@ -56,7 +73,6 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     private boolean settled;
     private boolean settledAngleReached;
     private boolean collapseStarted;
-    private boolean collapseInitializedBeforeEntry;
     private int collapseTimer;
 
     private final List<PlayableEntity> standingPlayers = new ArrayList<>(2);
@@ -101,17 +117,6 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         return bridge;
     }
 
-    public void beginCollapseFromEarlierButtonSlot() {
-        if (!settled || collapseStarted) {
-            return;
-        }
-        collapseStarted = true;
-        collapseInitializedBeforeEntry = !Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch();
-        collapseTimer = COLLAPSE_DELAY;
-        spawnFallingSegments();
-        services().playSfx(Sonic3kSfx.BRIDGE_COLLAPSE.id);
-    }
-
     @Override
     public int getX() {
         return currentX;
@@ -126,7 +131,11 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     public boolean isPersistent() {
         // Normal/wait routines reach AIZDrawBridge_Solid's range tail, but
         // loc_2B452 only counts down then deletes (sonic3k.asm:59769-59791).
-        return collapseStarted && !isDestroyed();
+        // The cutscene replacement represents a layout owner that was already
+        // live and settled when folded out of the native SST graph. Keep it
+        // alive until the button starts loc_2B452; otherwise the dynamic object
+        // cannot respawn after the ordinary range tail removes it.
+        return (cutsceneOverride || collapseStarted) && !isDestroyed();
     }
 
     @Override
@@ -158,7 +167,17 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        return true;
+        // This engine flag means "above every terrain pixel". Keep the bridge
+        // tile-occluded so priority terrain masks it, with the palette mask
+        // below preserving its position in front of the waterfall.
+        return false;
+    }
+
+    @Override
+    public int getTileOcclusionPaletteMask() {
+        // The ROM arena's palette-3 high-priority pixels are the waterfall;
+        // palette 0-2 high-priority pixels are foreground terrain.
+        return 0b0111;
     }
 
     @Override
@@ -259,15 +278,6 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
 
         if (collapseStarted) {
-            if (collapseInitializedBeforeEntry) {
-                // The semantic lower button owner publishes _unkFAA9 before
-                // this folded Java owner runs. Native loc_2B2E8 consumes that
-                // flag, initializes $34=$E, creates the pieces, and returns;
-                // loc_2B452 must not decrement until the next SST entry
-                // (sonic3k.asm:59614-59623, 59764-59791).
-                collapseInitializedBeforeEntry = false;
-                return;
-            }
             if (collapseTimer > 0) {
                 collapseTimer--;
                 // ROM keeps the standing bits alongside the newly-set air/roll
@@ -379,7 +389,12 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
         @Override
         public boolean isHighPriority() {
-            return true;
+            return false;
+        }
+
+        @Override
+        public int getTileOcclusionPaletteMask() {
+            return 0b0111;
         }
 
         @Override

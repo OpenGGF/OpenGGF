@@ -17,12 +17,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             RunManifestSegment manifestEntry,
             string physicsCsv,
             string auxStateJsonl,
-            string metadataJson)
+            string metadataJson,
+            string hardwareTimingJsonl = null)
         {
             ManifestEntry = manifestEntry;
             PhysicsCsv = physicsCsv;
             AuxStateJsonl = auxStateJsonl;
             MetadataJson = metadataJson;
+            HardwareTimingJsonl = hardwareTimingJsonl;
         }
 
         internal RunManifestSegment ManifestEntry { get; private set; }
@@ -35,6 +37,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
         internal string PhysicsCsv { get; private set; }
         internal string AuxStateJsonl { get; private set; }
         internal string MetadataJson { get; private set; }
+
+        /// <summary>
+        /// The segment's hardware-timing stream, or null when the segment
+        /// never opened one — which is exactly the production shape: no
+        /// edge, no file.
+        /// </summary>
+        internal string HardwareTimingJsonl { get; private set; }
     }
 
     /// <summary>
@@ -54,6 +63,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private StringWriter physics;
         private StringWriter aux;
+        private StringWriter hardwareTiming;
         private string openDirToken;
 
         internal IList<RunSegmentOutput> Segments
@@ -77,7 +87,25 @@ namespace OpenGGF.BizHawk.Headless.Tests
             openDirToken = dirToken;
             physics = new StringWriter();
             aux = new StringWriter();
+            hardwareTiming = null;
             return new RunSegmentStreams(physics, aux);
+        }
+
+        public TextWriter OpenHardwareTimingStream()
+        {
+            if (openDirToken == null)
+            {
+                throw new InvalidOperationException(
+                    "No segment is open for a hardware-timing stream.");
+            }
+            if (hardwareTiming != null)
+            {
+                throw new InvalidOperationException(
+                    "Segment " + openDirToken + " already opened its"
+                    + " hardware-timing stream.");
+            }
+            hardwareTiming = new StringWriter();
+            return hardwareTiming;
         }
 
         public void EndSegment(RunManifestSegment entry, string metadataJson)
@@ -105,9 +133,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 entry,
                 physics.ToString(),
                 aux.ToString(),
-                metadataJson));
+                metadataJson,
+                hardwareTiming == null ? null : hardwareTiming.ToString()));
             physics = null;
             aux = null;
+            hardwareTiming = null;
             openDirToken = null;
         }
     }

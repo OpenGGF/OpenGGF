@@ -108,9 +108,10 @@ class TestSonic3kSmpsMetaCommandOperands {
 
         sequencer.read(new short[0]);
 
-        assertEquals(0xF2, sequencer.getData()[0x45] & 0xFF,
+        assertEquals(0xF2, sequencer.programView().dataByteAt(0x45) & 0xFF,
                 "syntax-only FF 03 must not copy into sequence memory");
-        assertNotEquals(sequencer.getData()[0x70], sequencer.getData()[0x45],
+        assertNotEquals(sequencer.programView().dataByteAt(0x70),
+                sequencer.programView().dataByteAt(0x45),
                 "the unchanged destination must remain distinct from the source byte");
         SmpsSequencer.Track fm = fmTrack(sequencer, 0);
         assertFalse(fm.active);

@@ -211,6 +211,23 @@ public final class ObjectSolidContactController {
         ObjectSpawn spawn = instance.getSpawn();
         // Spawn record is stable across slot reload; fall back to the
         // instance reference for dynamic / spawn-less objects.
+        //
+        // CAUTION: that stability is the opposite of what the ROM does, so every
+        // latch keyed here OUTLIVES the object it describes. Object-side state
+        // lives in the SST slot and dies with it -- S2
+        // DeleteObject/DeleteObject2 (docs/s2disasm/s2.asm:30329-30345), S1
+        // DeleteObject/DeleteChild (docs/s1disasm/_incObj/sub
+        // DeleteObject.asm:10-20) and S3K
+        // Delete_Current_Sprite/Delete_Referenced_Sprite
+        // (docs/skdisasm/sonic3k.asm:36108-36125) all zero the whole slot -- so
+        // an object that unloads and reloads from the same layout entry must
+        // come back with its per-player bits CLEAR. Any new map keyed on this
+        // value therefore needs an expiry paired with the object's removal, the
+        // way the pushing bits are released at
+        // ObjectManager.removeActiveObject. Without one, a reloaded instance
+        // reads a bit its predecessor set: an EHZ2 monitor did exactly that
+        // 2,778 frames after the fact and published a solid-release animation
+        // word the ROM never writes.
         return spawn != null ? spawn : instance;
     }
 
@@ -239,9 +256,56 @@ public final class ObjectSolidContactController {
         if (key == null) {
             return;
         }
-        objectStandingBitSet
-                .computeIfAbsent(player, p -> new HashSet<>())
-                .add(key);
+        Set<Object> set = objectStandingBitSet.computeIfAbsent(player, p -> new HashSet<>());
+        evictPreviousStandingBitOwner(set, key);
+        set.add(key);
+    }
+
+    /**
+     * ROM: seating a player on an object clears the PREVIOUS owner's standing
+     * bit, so at most one object holds a given player's bit at a time. Every
+     * S3K seating helper carries the same prologue verbatim --
+     * {@code btst #Status_OnObj,status(a1) / movea.w interact(a1),a3 /
+     * bclr d6,status(a3)} -- before {@code move.w a0,interact(a1)} and
+     * {@code bset d6,status(a0)}: {@code RideObject_SetRide}
+     * (docs/skdisasm/sonic3k.asm:42027-42039), {@code sub_337D8} (:69781-69812),
+     * {@code sub_33C34} (:70166-70186), {@code loc_422D6} (:87546-87558) and
+     * {@code sub_42636} (:87789-87795). S2's {@code RideObject_SetRide}
+     * (docs/s2disasm/s2.asm:35986-35998) is the same routine with a byte
+     * {@code interact} index, and S1 enforces the same invariant through
+     * {@code standonobject} -- {@code Plat_NoCheck}'s {@code bclr #3,obStatus(a2)}
+     * is annotated in the listing as "clear platform bit for the other platform"
+     * (docs/s1disasm/_incObj/sub PlatformObject &amp; SlopeObject.asm:68-80).
+     * This is therefore a universal correction, not a per-game divergence.
+     * <p>
+     * The remaining S3K writers of the bit uphold the same invariant by the
+     * other route -- {@code btst #Status_OnObj,status(a1) / bne} refuses to seat
+     * an already-seated player (:84607, :84719, :84821, :84933, :85216) -- so
+     * the one-object-per-player property holds across all ten ride sites.
+     * <p>
+     * Two S3K sites set {@code d6,status(a0)} WITHOUT it being a ride and are
+     * deliberately outside this model: the HCZ water-skim marker (:75416) and
+     * {@code sub_47F9C} (:94066) never write {@code Status_OnObj} and use the
+     * bit as a per-player object-local flag. Every caller of this method is one
+     * of this controller's own ride/landing paths, so no non-ride marker is
+     * recorded here and neither site reaches this eviction.
+     * <p>
+     * Eviction is per OBJECT, not per piece: {@code bclr d6,status(a3)} clears
+     * one object's status byte, so sibling pieces of the object being seated
+     * keep their engine piece-scoped bits.
+     */
+    private static void evictPreviousStandingBitOwner(Set<Object> set, Object newKey) {
+        if (set.isEmpty()) {
+            return;
+        }
+        Object newOwner = standingBitOwnerOf(newKey);
+        set.removeIf(existing ->
+                !java.util.Objects.equals(standingBitOwnerOf(existing), newOwner));
+    }
+
+    /** The object a standing-bit key belongs to, collapsing piece-scoped keys. */
+    private static Object standingBitOwnerOf(Object key) {
+        return key instanceof PieceStandingLatchKey piece ? piece.objectKey() : key;
     }
 
     private boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
@@ -359,6 +423,104 @@ public final class ObjectSolidContactController {
                 .add(key);
     }
 
+    /**
+     * Clears the object-side p1/p2 pushing bits for every player, without the
+     * paired player-side clear or the {@code SolidObject_TestClearPush}
+     * Walk/Run restart write.
+     *
+     * <p>ROM equivalent: the two {@code bclr ...,status(a0)} instructions an
+     * object may execute on its own, outside {@code Solid_NotPushing} -- for
+     * example the Obj41 horizontal spring's launch tail at {@code loc_18BAA}
+     * (docs/s2disasm/s2.asm:34073-34076), which clears {@code p1_pushing_bit}
+     * and {@code p2_pushing_bit} on the spring and
+     * {@code status.player.pushing} on the launched character before playing
+     * the spring sound. Clearing the object-side bits there is what stops the
+     * following frame's {@code SolidObject_TestClearPush}
+     * {@code btst d4,status(a0)} (docs/s2disasm/s2.asm:35462-35466) from
+     * passing.
+     */
+    public void releaseObjectPushLatchForAllPlayers(ObjectInstance instance) {
+        Object key = airUnseatLatchKeyFor(instance);
+        if (key == null) {
+            return;
+        }
+        objectPushingBitSet.values().removeIf(set -> {
+            set.remove(key);
+            return set.isEmpty();
+        });
+    }
+
+    /**
+     * Clears the object-side p1/p2 STANDING bits for every player, without
+     * touching the player's own {@code Status_OnObj} or the engine's riding
+     * state.
+     *
+     * <p>ROM equivalent: the object half of {@code DeleteObject}. Object-side
+     * state lives in the SST slot and is zeroed wholesale when the slot is
+     * released -- S2 {@code DeleteObject}/{@code DeleteObject2}
+     * (docs/s2disasm/s2.asm:30329-30345), S1 {@code DeleteObject}/
+     * {@code DeleteChild} (docs/s1disasm/_incObj/sub DeleteObject.asm:10-20),
+     * S3K {@code Delete_Current_Sprite}/{@code Delete_Referenced_Sprite}
+     * (docs/skdisasm/sonic3k.asm:36108-36125).
+     *
+     * <p>Deliberately object-side ONLY. None of the three delete routines
+     * touches the player's slot, so a player standing on an object that
+     * deletes itself keeps {@code Status_OnObj} set and keeps
+     * {@code interact}/{@code standonobject} pointing at the freed slot until
+     * some other routine changes it. Clearing the player's bit here would be a
+     * second, unrelated behaviour change.
+     *
+     * <p>Piece-scoped keys are collapsed to their owning object, matching
+     * {@code bclr d6,status(a0)} clearing one status byte for the whole object.
+     */
+    public void releaseObjectStandingLatchForAllPlayers(ObjectInstance instance) {
+        Object owner = airUnseatLatchKeyFor(instance);
+        if (owner == null) {
+            return;
+        }
+        objectStandingBitSet.values().removeIf(set -> {
+            set.removeIf(existing ->
+                    java.util.Objects.equals(standingBitOwnerOf(existing), owner));
+            return set.isEmpty();
+        });
+    }
+
+    /**
+     * Clears the object-side pushing bit for one player only, without the
+     * paired player-side clear or the {@code SolidObject_TestClearPush}
+     * Walk/Run restart write, and reports whether the bit had been set.
+     *
+     * <p>ROM equivalent: a single {@code bclr #pN_pushing_bit,status(a0)} an
+     * object routine executes on its own. Many such sites are per-character --
+     * S2 {@code Obj36_Sideways} clears only {@code p1_pushing_bit} in its
+     * MainCharacter branch and only {@code p2_pushing_bit} in its Sidekick
+     * branch (docs/s2disasm/s2.asm:29438-29450) -- so clearing both would be
+     * wrong. Others are a test-and-clear whose {@code beq} decides whether the
+     * rest of the routine runs at all, for example S2 {@code Obj45}'s
+     * {@code loc_243EA} (docs/s2disasm/s2.asm:50543-50545); the return value is
+     * that {@code bclr}'s Z flag, so a caller can branch on it exactly as the
+     * ROM does.
+     *
+     * @return true when the object's pushing bit for that player was set
+     */
+    public boolean releaseObjectPushLatch(PlayableEntity player, ObjectInstance instance) {
+        if (player == null) {
+            return false;
+        }
+        Object key = airUnseatLatchKeyFor(instance);
+        if (key == null) {
+            return false;
+        }
+        Set<Object> set = objectPushingBitSet.get(player);
+        if (set == null || !set.remove(key)) {
+            return false;
+        }
+        if (set.isEmpty()) {
+            objectPushingBitSet.remove(player);
+        }
+        return true;
+    }
+
     boolean hasPushingLatch(PlayableEntity player) {
         Set<Object> set = objectPushingBitSet.get(player);
         return set != null && !set.isEmpty();
@@ -382,20 +544,31 @@ public final class ObjectSolidContactController {
         return true;
     }
 
+    // Engine-side push ownership for the synthetic off-screen release above.
+    // Not a native predicate: it decides whether that gate is standing in for a
+    // solid whose tail the ROM still runs.
+    private boolean offscreenReleaseStillOwnsWalkRunWord(PlayableEntity player, ObjectInstance instance) {
+        if (!(player instanceof AbstractPlayableSprite sprite)) {
+            return false;
+        }
+        if (sprite.getPushing()) {
+            return true;
+        }
+        if (checkpointPushingLastFrame && sprite.getPushingAtFrameStart()) {
+            return true;
+        }
+        return instance instanceof SolidObjectProvider provider
+                && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();
+    }
+
+    // Callers reach this only after clearObjectPushingBit(player, instance) has
+    // returned true, which is the native `btst d4,status(a0)` on the OBJECT's own
+    // per-player pushing bit. All three games gate the Walk/Run word on that bit
+    // and not on the player's own Status_Push, which their own tails clear
+    // immediately afterwards: S1 Solid_NoCollision (`btst #5,obStatus(a0)`,
+    // _incObj/sub SolidObject.asm:253-263), S2 SolidObject_TestClearPush
+    // (s2.asm:35462-35486), S3K loc_1E0A2 (sonic3k.asm:41517-41528).
     private void publishSolidPushReleaseAnimationWord(PlayableEntity player, ObjectInstance instance) {
-        publishSolidPushReleaseAnimationWord(
-                player, instance, false, checkpointPushingLastFrame);
-    }
-
-    private void publishSolidPushReleaseAnimationWord(
-            PlayableEntity player, ObjectInstance instance, boolean foldedSiblingNoCollisionRelease) {
-        publishSolidPushReleaseAnimationWord(
-                player, instance, foldedSiblingNoCollisionRelease, checkpointPushingLastFrame);
-    }
-
-    private void publishSolidPushReleaseAnimationWord(
-            PlayableEntity player, ObjectInstance instance, boolean foldedSiblingNoCollisionRelease,
-            boolean pushingAtPreviousCheckpoint) {
         ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
         if (rules == null
                 || !rules.solidPushReleaseWritesWalkRunAnimationWord()
@@ -427,28 +600,15 @@ public final class ObjectSolidContactController {
             return;
         }
         int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
-        boolean persistentNativeLatch = instance instanceof SolidObjectProvider provider
-                && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();
-        boolean previousCheckpointStillOwnsWalk = pushingAtPreviousCheckpoint
-                && sprite.getPushingAtFrameStart();
-        boolean persistentLatchStillOwnsWalk = persistentNativeLatch;
-        if (!foldedSiblingNoCollisionRelease
-                && !sprite.getPushing()
-                && !previousCheckpointStillOwnsWalk
-                && !persistentLatchStillOwnsWalk) {
-            return;
-        }
         // Retail S1's FixBugs=0 Solid_NoCollision path executes
         // `move.w #id_Run,obAnim(a1)` before Solid_NotPushing. Because anim and
         // prev_anim are adjacent bytes, this publishes anim=Walk ($00) and
         // prev_anim=Run ($01), restarting Walk on the next player slot without
-        // changing the mapping already rendered this frame. Normal releases need
-        // the paired player/checkpoint state; this prevents a stale engine latch
-        // from restarting Roll or an unrelated Walk/Run cadence. A folded
-        // multi-piece standing-only release is already the exact native
-        // Solid_NoCollision owner and can publish without that global pair.
-        // Push-block states 4/6 preserve that same latch until their next state-0
-        // checkpoint consumes it.
+        // changing the mapping already rendered this frame. S1 exempts nothing
+        // here (its FixBugs=0 walk-jump bug), S2 exempts Roll only, and S3K
+        // exempts Roll and Spindash; Hurt is in none of the exemption lists, so
+        // a player hurt on the same frame a solid releases his pushing bit
+        // genuinely loses the hurt animation.
         // (_incObj/sub SolidObject.asm:251-263; sub SolidWall.asm:36-51).
         if (walkAnimationId >= 0) {
             sprite.setAnimationId(walkAnimationId);
@@ -1702,8 +1862,7 @@ public final class ObjectSolidContactController {
                         && result.aggregateContact() != null
                         && !result.aggregateContact().touchSide();
                 if (result.aggregateContact() == null || foldedSiblingNoCollisionRelease) {
-                    publishSolidPushReleaseAnimationWord(
-                            player, instance, foldedSiblingNoCollisionRelease);
+                    publishSolidPushReleaseAnimationWord(player, instance);
                 }
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
@@ -1830,14 +1989,24 @@ public final class ObjectSolidContactController {
                 && !solidProfile.bypassesOffscreenSolidGate()
                 && !topOnlyBypassesOffscreenGate
                 && !instance.isWithinSolidContactBounds()) {
-            // ROM sub_1E0C2 (sonic3k.asm:41528-41532): off-screen / no-contact
-            // path clears the player's push status and the object's pushing-bit
-            // bookkeeping but does not touch ground_vel/x_vel. It still enters
-            // SolidObject_TestClearPush, whose paired Walk/Run word write is
-            // visible before the player animation slot runs. Matches both S2
-            // SolidObject_TestClearPush and S1 Solid_NotPushing.
+            // This gate is an ENGINE construct with no native counterpart: it
+            // stands in for a solid whose slot the ROM would simply stop
+            // dispatching. Every native no-contact branch of
+            // SolidObjectFull_Offset_1P reaches loc_1E0A2 and therefore the
+            // Walk/Run word (sonic3k.asm:41287-41316); an object that is not
+            // executed at all reaches nothing and writes nothing. So this path
+            // clears the push bookkeeping the way sub_1E0C2 would
+            // (sonic3k.asm:41528-41532), but its Walk/Run word needs the
+            // engine-side push ownership check below: this path conflates a
+            // solid that has merely left the contact window (still dispatched by
+            // the ROM, so its tail really does write) with one the ROM has
+            // stopped dispatching altogether (which writes nothing). Publishing
+            // unconditionally here overwrites a live routine-owned byte such as
+            // a hurt $1A.
             if (clearObjectPushingBit(player, instance)) {
-                publishSolidPushReleaseAnimationWord(player, instance);
+                if (offscreenReleaseStillOwnsWalkRunWord(player, instance)) {
+                    publishSolidPushReleaseAnimationWord(player, instance);
+                }
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }
@@ -1885,11 +2054,25 @@ public final class ObjectSolidContactController {
             player.setPushing(true);
             setObjectPushingBit(player, instance);
             provider.setPlayerPushing(player, true);
-        } else if (contact.touchSide() && clearObjectPushingBit(player, instance)) {
+        } else if (contact.touchSide()) {
             // Solid_SideAir calls Solid_NotPushing directly when the player is
             // airborne or within four pixels of the top/bottom edge. Unlike
             // Solid_NoCollision, that entry does not execute retail S1's
             // walk-jump-bug animation-word write.
+            //
+            // Solid_NotPushing clears the PLAYER's pushing bit unconditionally
+            // (`bclr #5,obStatus(a1)` / `bclr #status.player.pushing,status(a1)`
+            // / `bclr #Status_Push,status(a1)`), with no test of whether this
+            // object owns the push -- only the object's own bit clear is
+            // guarded, and `bclr` on an already-clear bit is a no-op. All three
+            // games agree: docs/s1disasm/_incObj/sub SolidObject.asm:246-263,
+            // docs/s2disasm/s2.asm:35453-35487, docs/skdisasm/sonic3k.asm:41509,
+            // 41527-41531. So the player's bit must clear here even when this
+            // object never set it; a neighbouring solid that raised the push
+            // this frame (S2 Obj74 blocks tile vertically, and the slot below
+            // takes the four-pixel Solid_SideAir branch) is exactly the case
+            // the ROM relies on to leave the player not pushing.
+            clearObjectPushingBit(player, instance);
             player.setPushing(false);
             provider.setPlayerPushing(player, false);
         }
@@ -2920,7 +3103,7 @@ public final class ObjectSolidContactController {
                 provider.setPlayerPushing(player, true);
             } else if (clearObjectPushingBit(player, instance)) {
                 if (result.aggregateContact() == null) {
-                    publishSolidPushReleaseAnimationWord(player, instance, false, true);
+                    publishSolidPushReleaseAnimationWord(player, instance);
                 }
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
@@ -2980,7 +3163,8 @@ public final class ObjectSolidContactController {
             player.setPushing(true);
             setObjectPushingBit(player, instance);
             provider.setPlayerPushing(player, true);
-        } else if (contact.touchSide() && clearObjectPushingBit(player, instance)) {
+        } else if (contact.touchSide()) {
+            clearObjectPushingBit(player, instance);
             player.setPushing(false);
             provider.setPlayerPushing(player, false);
         }
@@ -3781,7 +3965,19 @@ public final class ObjectSolidContactController {
         // bit so Obj26_Break can use it to airborne Sonic when the monitor
         // is broken two frames later.
         boolean leftSide = playerCenterX <= anchorX;
-        boolean movingInto = leftSide ? player.getXSpeed() > 0 : player.getXSpeed() < 0;
+        // ROM Mon_Solid `.sidetouch` skips the horizontal correction only when Sonic is
+        // already moving AWAY from the monitor, not merely when he is not moving into it
+        // (docs/s1disasm/_incObj/"26, 2E Monitors and Power-Ups.asm":121-141). With Sonic
+        // in the monitor's left half (d0 > 0) `.sonicright` runs `tst.w obVelX(a1) /
+        // bmi.s .push`, so a zero x_vel falls through to `.stopsonic` and IS aligned;
+        // only a strictly-negative (leftward, i.e. away) x_vel skips it. The right half
+        // is the mirror: `.sonicleft` runs `bpl.s .push`, so there the correction needs a
+        // strictly-negative x_vel. Requiring a strictly-positive x_vel on the left half
+        // dropped the second of the two corrections the ROM applies in SYZ1 f8396 of the
+        // complete-emerald run, where Sonic falls with x_vel = 0 between a spring at
+        // $1F4E and this monitor at $1F7E: the spring's generic Solid_AlignToSide shoves
+        // him right to $1F69 and the monitor must shove him back to $1F64.
+        boolean movingInto = leftSide ? player.getXSpeed() >= 0 : player.getXSpeed() < 0;
         boolean exactEdgeOverlap = absDistX == 0;
         boolean pushing = !player.getAir();
         boolean skipMonitorSide = deferSideToPostMovement && player.getAir();

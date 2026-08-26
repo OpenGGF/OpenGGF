@@ -1,6 +1,8 @@
 package com.openggf.game.sonic1.audio;
 
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSequencerConfig.FmSfxTakeoverMode;
+import com.openggf.audio.smps.SmpsSequencerConfig.FmVoiceWriteProfile;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,8 +18,8 @@ import java.util.Set;
  *       covering zone themes + invincibility + extra life. The s1disasm notes
  *       that songs beyond the table will read into MusicIndex as fallback tempos.</li>
  *   <li>FM and PSG channel orders are the same as Sonic 2.</li>
- *   <li>Tempo algorithm uses the same TIMEOUT approach (counter decremented per
- *       frame, track update skipped when it wraps). TEMPO_MOD_BASE is 0x100.</li>
+ *   <li>Tempo uses a TIMEOUT counter. Every VInt services tracks; when the
+ *       counter expires, the driver extends each duration before service.</li>
  * </ul>
  *
  * <p>Speed-up tempo values from s1disasm SpeedUpIndex (s1.sounddriver.asm).
@@ -65,12 +67,41 @@ public final class Sonic1SmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                .palServicePolicy(SmpsSequencerConfig.PalServicePolicy.NONE)
+                .tempoPhasePolicy(SmpsSequencerConfig.TempoPhasePolicy.RESET_TO_EFFECTIVE_TEMPO)
+                .sfxPriorityPolicy(SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH)
+                .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder.MUSIC_THEN_SFX)
+                // UpdateMusic processes PlaySoundID before the music/SFX
+                // loops, so a newly admitted SFX is serviced immediately.
+                .sfxStartTiming(
+                        SmpsSequencerConfig.SfxStartTiming.SAME_DRIVER_UPDATE)
                 .coordFlagParamOverrides(coordOverrides)
                 .applyModOnNote(false)   // S1: don't apply modulation during note start (ModAlgo = 68k)
-                .halveModSteps(false)    // S1: don't halve mod steps (68k driver has no srl a)
+                .halveModSteps(true)     // S1 cfModulation and FinishTrackUpdate both use lsr.b #1
                 .extraTrkEndFlags(Set.of(0xEE))
                 .relativePointers(true)  // S1: PC-relative pointers for F6/F7/F8
-                .tempoOnFirstTick(true)  // S1: process tempo on first frame (DOTEMPO)
+                .direct68kDriver(true)   // S1 writes the YM/PSG cores from the 68k driver
+                .fmVoiceWriteProfile(FmVoiceWriteProfile.S1_68K)
+                .ymServiceTimingProfile(Sonic1YmServiceTimingProfile.PROFILE)
+                // The shipped Sound_PlaySFX initializes track RAM only. SetVoice and the
+                // track's own note-off establish the takeover during UpdateMusic.
+                .fmSfxTakeoverMode(FmSfxTakeoverMode.REGISTER_SEQUENCE)
+                .psgSfxReleaseMode(
+                        SmpsSequencerConfig.PsgSfxReleaseMode.REST_UNTIL_NEXT_NOTE)
+                .fadeOutClearsSpeedShoes(true)
+                .fadeOutStopsSfxImmediately(true)
+                // Sound_PlaySFX rejects new normal and special SFX while
+                // v_fadeout_counter is nonzero.
+                .blocksSfxDuringFadeOut(true)
+                .musicOverrideRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideRestorePolicy
+                                .DRIVER_FADE_IN)
+                // Retail FixBugs=0 omits the $2B DAC-disable repair in
+                // cfFadeInToPrevious, so a restored FM6 can remain masked.
+                .musicOverrideDacRestorePolicy(
+                        SmpsSequencerConfig.MusicOverrideDacRestorePolicy
+                                .PRESERVE_OVERRIDE_DAC_MODE)
+                .pausePolicy(SmpsSequencerConfig.PausePolicy.S1_PAN_KEYOFF)
                 .build();
     }
 

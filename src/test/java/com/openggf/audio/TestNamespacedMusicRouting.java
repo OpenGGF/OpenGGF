@@ -6,6 +6,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @Isolated
@@ -32,12 +34,15 @@ class TestNamespacedMusicRouting {
         RecordingBackend backend = new RecordingBackend();
         audio.resetState();
         audio.setBackend(backend);
+        RoutingPort port = new RoutingPort();
+        audio.installStreamedMusicPort(port);
         audio.beginCommandTimelineFrame(9);
 
         assertTrue(audio.playNamespacedMusic(
                 new StreamedMusicPort.TrackRef("owner", "level-theme")));
 
-        assertEquals(new StreamedMusicPort.TrackRef("owner", "level-theme"), backend.track);
+        assertEquals(new StreamedMusicPort.TrackRef("owner", "level-theme"),
+                port.lastPlayedTrack);
         assertEquals(-1, backend.stockMusicId);
         AudioCommand command = audio.commandTimeline().entries().getFirst().command();
         assertEquals(new AudioCommand.PlayNamespacedMusic(
@@ -64,17 +69,17 @@ class TestNamespacedMusicRouting {
     @Test
     void missingNamespacedTrackFailsBeforeTimelineOrPresentationMutation() {
         RecordingBackend backend = new RecordingBackend();
-        backend.available = false;
-        backend.track = new StreamedMusicPort.TrackRef("owner", "existing");
         audio.resetState();
         audio.setBackend(backend);
+        RoutingPort port = new RoutingPort();
+        audio.installStreamedMusicPort(port);
         audio.beginCommandTimelineFrame(4);
 
         assertThrows(IllegalArgumentException.class, () -> audio.playNamespacedMusic(
                 new StreamedMusicPort.TrackRef("owner", "missing")));
 
         assertEquals(0, audio.commandTimeline().entryCount());
-        assertEquals(new StreamedMusicPort.TrackRef("owner", "existing"), backend.track);
+        assertNull(port.lastPlayedTrack);
         assertEquals(0, backend.livePlayCount);
     }
 
@@ -83,12 +88,14 @@ class TestNamespacedMusicRouting {
         RecordingBackend backend = new RecordingBackend();
         audio.resetState();
         audio.setBackend(backend);
+        RoutingPort port = new RoutingPort();
+        audio.installStreamedMusicPort(port);
         audio.beginCommandTimelineFrame(6);
         StreamedMusicPort.SfxRef sfx = new StreamedMusicPort.SfxRef("owner", "jump");
 
         assertTrue(audio.playNamespacedSfx(sfx));
 
-        assertEquals(sfx, backend.sfx);
+        assertEquals(sfx, port.lastSfxLookup);
         assertEquals(1, audio.commandTimeline().entryCount(),
                 "creator one-shots record like stock SFX rather than bypassing rewind");
         assertEquals(new AudioCommand.PlayNamespacedSfx(sfx),
@@ -100,16 +107,18 @@ class TestNamespacedMusicRouting {
         RecordingBackend backend = new RecordingBackend();
         audio.resetState();
         audio.setBackend(backend);
-        backend.sfxAvailable = false;
+        RoutingPort port = new RoutingPort();
+        audio.installStreamedMusicPort(port);
         assertFalse(audio.playNamespacedSfx(new StreamedMusicPort.SfxRef("owner", "missing")));
-        assertNull(backend.sfx);
+        assertEquals(new StreamedMusicPort.SfxRef("owner", "missing"),
+                port.lastSfxLookup);
 
-        backend.sfxAvailable = true;
         try (var ignored = audio.beginRewindReplay(10, 5,
                 com.openggf.audio.rewind.AudioReplayReason.SEEK)) {
             assertFalse(audio.playNamespacedSfx(new StreamedMusicPort.SfxRef("owner", "jump")));
         }
-        assertNull(backend.sfx);
+        assertEquals(new StreamedMusicPort.SfxRef("owner", "missing"),
+                port.lastSfxLookup, "rewind suppression occurs before port preflight");
     }
 
     @Test
@@ -179,5 +188,55 @@ class TestNamespacedMusicRouting {
             return true;
         }
 
+    }
+
+    private static final class RoutingPort implements StreamedMusicPort {
+        private TrackRef lastPlayedTrack;
+        private SfxRef lastSfxLookup;
+        private State state;
+
+        @Override public int outputRate() { return 48_000; }
+        @Override public boolean hasStockOverride(int musicId) { return false; }
+        @Override public boolean isCurrentStockOverride(int musicId) { return false; }
+        @Override public void playStockOverride(int musicId) {
+            throw new IllegalArgumentException("no stock override");
+        }
+        @Override public boolean hasTrack(TrackRef track) {
+            return "owner".equals(track.owner()) && !"missing".equals(track.name());
+        }
+        @Override public void playTrack(TrackRef track) {
+            if (!hasTrack(track)) throw new IllegalArgumentException(track.toString());
+            lastPlayedTrack = track;
+            state = new State(track, -1, 0, 0, FadeState.idle(), 1);
+        }
+        @Override public boolean hasSfx(SfxRef sfx) {
+            lastSfxLookup = sfx;
+            return "owner".equals(sfx.owner()) && "jump".equals(sfx.name());
+        }
+        @Override public Optional<SfxPcm> sfxPcm(SfxRef sfx) {
+            return hasSfx(sfx)
+                    ? Optional.of(new SfxPcm(48_000, 1,
+                    new short[]{100, 200}, 1)) : Optional.empty();
+        }
+        @Override public boolean hasSource() { return state != null; }
+        @Override public int mixInto(short[] output, int frames) { return 0; }
+        @Override public void pause(int reason) { }
+        @Override public void resume(int reason) { }
+        @Override public void fadeOut(int steps, int stepDelay) { }
+        @Override public void fadeIn(int steps, int stepDelay) { }
+        @Override public void advanceFade() { }
+        @Override public boolean fadeActive() { return false; }
+        @Override public boolean fadeAtFullGain() { return true; }
+        @Override public void setSpeedMultiplier(int multiplier) { }
+        @Override public void stop() { state = null; }
+        @Override public void reset() { state = null; }
+        @Override public Optional<State> captureState() {
+            return Optional.ofNullable(state);
+        }
+        @Override public boolean restoreState(State restored) {
+            state = restored;
+            return hasTrack(restored.track());
+        }
+        @Override public void close() { state = null; }
     }
 }

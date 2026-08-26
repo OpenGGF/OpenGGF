@@ -33,15 +33,57 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
      * docs/s2disasm/s2.asm:46678-46686, docs/s1disasm/_incObj/24, 27 &amp; 3F
      * Explosions.asm (ExItem_Animate), docs/skdisasm/sonic3k.asm:42199-42208.
      * <p>
-     * The ROM init routine falls through into the animate routine on the same
-     * frame the object is allocated, so the first {@link #update} both seeds and
-     * applies the first predecrement — matching the engine's same-frame child
-     * execution in {@code ObjectManager}. Only the initial duration differs per
-     * game (S1 = 7, S2/S3K = 3); see {@link com.openggf.game.GameModule#explosionInitialAnimDuration()}.
+     * Only the initial duration differs per game (S1 = 7, S2/S3K = 3); see
+     * {@link com.openggf.game.GameModule#explosionInitialAnimDuration()}.
+     * <p>
+     * Whether the object's own spawn frame already takes a predecrement does
+     * <em>not</em> follow the animate routine: it depends on how each init
+     * routine ends. See {@link #initFallsThroughToAnimate()}.
      */
     private static final int RELOAD_DURATION = 7;
     private static final int FINAL_MAPPING_FRAME = 5;
+    /**
+     * Sonic 1 object $3F, the fiery explosion used by the prison capsule, the
+     * Walking Bomb badnik and the Ball Hog cannonball. It is the one explosion
+     * whose init does not fall through into the animate routine.
+     */
+    private static final int S1_FIERY_EXPLOSION_ID = 0x3F;
     private int animFrameDuration = -1; // resolved lazily from the game module on first update
+    /**
+     * Whether the ROM's init routine falls through into the animate routine on
+     * the frame the object is allocated, so that frame already takes the
+     * predecrement.
+     *
+     * <p>Obj27's init ends {@code jsr (QueueSound2).l} and the next instruction
+     * <em>is</em> {@code ExItem_Animate}, so it falls through
+     * (docs/s1disasm/sonic.lst: 9450 then 9456). S2's {@code Obj27_Init} ends
+     * {@code jsr (PlaySound).l} immediately above {@code Obj27_Main}
+     * (docs/s2disasm/s2.asm:46734-46737), and S3K writes
+     * {@code move.l #loc_1E66E,(a0)} immediately above {@code loc_1E66E}
+     * (docs/skdisasm/sonic3k.asm:42202-42205). All three take the predecrement
+     * on their spawn frame.
+     *
+     * <p>Sonic 1's Obj3F does not. {@code Expl_Main} ends
+     * {@code jmp (QueueSound2).l} and returns to the object loop
+     * (docs/s1disasm/sonic.lst: 94C0; the bytes at 94C6 are the unrelated Ball
+     * Hog animation script), so its animate routine does not run until the
+     * following frame and the object lives exactly one frame longer -- 40
+     * frames from spawn to delete rather than 39. Measured on the shipped ROM
+     * by tools/bizhawk/probes/s1_lz3_explosion_lifetime_probe.lua.
+     *
+     * <p>That one frame decides when the explosion's object slot is freed, and
+     * therefore which slot {@code FindFreeObj} hands the next allocation. In
+     * LZ3 it decides whether the prison capsule's first burst animal lands
+     * above or below the capsule, which decides whether it executes in the same
+     * frame or the next, which rotates the eight animals' species draws.
+     *
+     * <p>Read from the spawn's object id rather than cached, because that is
+     * what the ROM's own routine dispatch reads, and it keeps the answer
+     * reconstructible from the rewind-captured spawn alone.
+     */
+    private boolean initFallsThroughToAnimate() {
+        return (spawn.objectId() & 0xFF) != S1_FIERY_EXPLOSION_ID;
+    }
 
     public ExplosionObjectInstance(int id, int x, int y, ObjectRenderManager renderManager) {
         this(id, x, y, renderManager, -1);
@@ -108,6 +150,11 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
         spawnDestructionChildrenOnce();
         if (animFrameDuration < 0) {
             animFrameDuration = resolveInitialAnimDuration();
+            if (!initFallsThroughToAnimate()) {
+                // Expl_Main returned rather than falling through, so this frame
+                // ran the init alone and the animate routine starts next frame.
+                return;
+            }
         }
         // ROM: subq.b #1,anim_frame_duration / bpl.s + (still showing this frame)
         animFrameDuration--;

@@ -107,6 +107,14 @@ class TestS3kSlotBonusStageCoordinator {
 
         coordinator.onFrameUpdate();
         int firstFrame = runtime.lastFrameCounterForTest();
+        // Production drives one level frame between two coordinator updates:
+        // LevelFrameStep calls bonusStageProvider.onFrameUpdate()
+        // (LevelFrameStep.java:507) and then levelManager.update()
+        // (LevelFrameStep.java:519), whose frameCounter++ (LevelManager.java:1266)
+        // is the engine's only advance of the ROM Level_frame_counter that the
+        // coordinator now reads. Without that step the harness would be asking the
+        // coordinator to observe a frame that never happened.
+        GameServices.level().update();
         coordinator.onFrameUpdate();
         int secondFrame = runtime.lastFrameCounterForTest();
 

@@ -8,6 +8,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Sonic;
@@ -100,6 +101,8 @@ public class TestS3kAizIntroEventsHeadless {
                 "Load_Level must not run Tails_Control before its first ordinary Player_2 dispatch");
         assertFalse(tails.isObjectControlled(),
                 "AIZ bootstrap must not eagerly manufacture the dormant object_control state");
+        assertTrue(tails.isHidden(),
+                "AIZ setup must suppress the registered Player_2 presentation before Tails' first CPU dispatch");
 
         fixture.stepFrame(false, false, false, false, false);
 
@@ -113,6 +116,107 @@ public class TestS3kAizIntroEventsHeadless {
                 "ROM object_control=$83 keeps dormant intro Tails under object control");
         assertTrue(tails.isControlLocked(),
                 "Dormant intro Tails should be locked before the first replay frame renders");
+        assertTrue(tails.isHidden(),
+                "AIZ dormant Tails remains hidden until the level-event release boundary");
+
+        for (int frame = 0; frame < 8; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "dormant intro Tails must remain at the ROM marker while routine $0A is active");
+        assertEquals(0, tails.getCentreY() & 0xFFFF,
+                "dormant intro Tails must not enter generic falling physics before release");
+        assertTrue(tails.isHidden(),
+                "dormant intro Tails remains suppressed throughout the pre-release frames");
+    }
+
+    @Test
+    void aizDormantMarkerUsesProviderStateWhenRosterMetadataIsStale() throws Exception {
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+        Sonic3kLevelEventManager levelEvents =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        Object oldConfiguredSidekick =
+                config.getConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
+        ZoneRuntimeState oldRuntimeState = GameServices.zoneRuntimeRegistry().current();
+        Field gameRulesField = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        gameRulesField.setAccessible(true);
+        Object oldGameRules = gameRulesField.get(tails);
+        try {
+            // The live Player_2 object is authoritative at this boundary. Model
+            // a session rebind that has already created Tails but has stale
+            // roster/rules metadata, then verify the provider-owned ROM branch
+            // still parks the object before generic falling physics can run.
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            GameServices.zoneRuntimeRegistry().clear();
+            gameRulesField.set(tails, null);
+
+            assertTrue(levelEvents.getAizEvents()
+                            .shouldEnterIntroSidekickDormantMarker(tails),
+                    "AIZ provider state must not be vetoed by stale roster metadata");
+            controller.reset();
+            tails.setHidden(false);
+            controller.setInitialState(SidekickCpuController.State.INIT);
+            controller.update(1);
+
+            assertEquals(SidekickCpuController.State.DORMANT_MARKER, controller.getState());
+            assertTrue(tails.isHidden());
+            // With the synthetic rules metadata removed, the controller's
+            // documented no-rules fallback is the S2 marker. The important
+            // boundary here is that the provider branch still owns the tick
+            // and prevents normal falling; production S3K rules retain $7F00.
+            assertEquals(0x4000, tails.getCentreX() & 0xFFFF);
+            assertEquals(0, tails.getCentreY() & 0xFFFF);
+        } finally {
+            gameRulesField.set(tails, oldGameRules);
+            GameServices.zoneRuntimeRegistry().install(oldRuntimeState);
+            config.setConfigValue(
+                    SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                    oldConfiguredSidekick != null ? oldConfiguredSidekick : "tails");
+        }
+    }
+
+    @Test
+    void aizDormantMarkerDispatchReassertsSuppressionIfSetupRevealedTails() {
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+
+        // Model a production setup/rebind that reconstructs the CPU state after
+        // the event provider has made the AIZ decision but before Tails_Control's
+        // routine-0 dispatch. The ROM branch itself must still own the dormant
+        // presentation gate (sonic3k.asm:26389-26397).
+        controller.reset();
+        tails.setHidden(false);
+        controller.setInitialState(SidekickCpuController.State.INIT);
+        assertFalse(tails.isHidden(), "test setup must model a revealed sidekick");
+
+        controller.update(1);
+
+        assertEquals(SidekickCpuController.State.DORMANT_MARKER, controller.getState());
+        assertTrue(tails.isHidden(),
+                "the routine-0 AIZ dormant-marker branch must reassert suppression before physics/render");
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF);
+        assertEquals(0, tails.getCentreY() & 0xFFFF);
+    }
+
+    @Test
+    void aizIntroDoesNotReleaseTailsAtKnucklesSpawnThreshold() {
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+        fixture.stepFrame(false, false, false, false, false);
+
+        Sonic3kLevelEventManager levelEvents =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        fixture.camera().setX((short) 0x0918);
+        levelEvents.getAizEvents().updatePrePhysics(ACT_1);
+
+        assertEquals(SidekickCpuController.State.DORMANT_MARKER, controller.getState(),
+                "Knuckles' $918 spawn threshold must not release AIZ Tails");
+        assertTrue(tails.isHidden(),
+                "AIZ Tails remains suppressed while the Knuckles intro is still active");
     }
 
     @Test
@@ -125,6 +229,9 @@ public class TestS3kAizIntroEventsHeadless {
 
         controller.setInitialState(SidekickCpuController.State.INIT);
         fixture.stepFrame(false, false, false, false, false);
+
+        assertTrue(tails.isHidden(),
+                "AIZ Tails is hidden while the dormant marker owns the intro presentation");
 
         assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
                 "ROM loc_13A10/sub_13ECA parks AIZ intro Tails at x_pos=$7F00");
@@ -153,6 +260,8 @@ public class TestS3kAizIntroEventsHeadless {
                 "AIZ1_Resize's prior-frame Tails_CPU_routine=2 write is visible before the next sidekick CPU slot");
         assertTrue(tails.isObjectMappingFrameControl(),
                 "routine 2 retains object_control=$83 until its 64-frame catch-up trigger");
+        assertFalse(tails.isHidden(),
+                "AIZ resize release must restore the sidekick presentation state");
     }
 
     @Test
@@ -173,6 +282,8 @@ public class TestS3kAizIntroEventsHeadless {
         aizEvents.updatePrePhysics(ACT_1);
         assertEquals(SidekickCpuController.State.INIT, controller.getState(),
                 "A late dynamic-event release before Tails reaches routine $0A must be a no-op");
+        assertTrue(tails.isHidden(),
+                "A no-op release must not clear the setup-owned presentation latch");
 
         tails.setCentreX((short) 0x7F00);
         tails.setCentreY((short) 0);
@@ -184,6 +295,20 @@ public class TestS3kAizIntroEventsHeadless {
 
         assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
                 "AIZ pre-physics must retry until the dormant marker is actually released, independent of palette state");
+    }
+
+    @Test
+    void dormantPresentationReleaseRestoresAHiddenValueOwnedBeforeSetup() {
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+        tails.setHidden(true);
+        controller.reset();
+        controller.suppressInitialLevelEventPresentationIfNeeded();
+        controller.setInitialState(SidekickCpuController.State.DORMANT_MARKER);
+
+        assertTrue(controller.releaseDormantMarkerForLevelEvent());
+        assertTrue(tails.isHidden(),
+                "A dormant release must restore a pre-existing hidden owner value");
     }
 
     @Test

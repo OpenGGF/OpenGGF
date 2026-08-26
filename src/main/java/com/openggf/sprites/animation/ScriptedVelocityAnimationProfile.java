@@ -135,6 +135,59 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setFallbackFrame(int fallbackFrame) { this.fallbackFrame = fallbackFrame; return this; }
     public ScriptedVelocityAnimationProfile setAnglePreAdjust(boolean anglePreAdjust) { this.anglePreAdjust = anglePreAdjust; return this; }
     public ScriptedVelocityAnimationProfile setCompactSuperRunSlope(boolean compactSuperRunSlope) { this.compactSuperRunSlope = compactSuperRunSlope; return this; }
+
+    /**
+     * S2 Super Sonic's alternate-frame step. {@code SAnim_SuperWalk} writes the
+     * ordinary {@code mapping_frame = script byte + slope offset} and then, on
+     * one frame in four, bumps it into the bright Super variants
+     * (docs/s2disasm/s2.asm:38534-38539):
+     * <pre>
+     *   move.b (Level_frame_counter+1).w,d1
+     *   andi.b #3,d1
+     *   bne.s  +
+     *   cmpi.b #$B5,mapping_frame(a0)
+     *   bhs.s  +
+     *   addi.b #$20,mapping_frame(a0)
+     * </pre>
+     * All three numbers are read out of that block: the mask is the
+     * {@code andi.b #3}, the ceiling is the {@code cmpi.b #$B5} (the Super run
+     * and push frames are already bright and are skipped), and the step is the
+     * {@code addi.b #$20}. The rule is off unless a game installs it.
+     */
+    private int superAlternateFrameMask;
+    private int superAlternateFrameStep;
+    private int superAlternateFrameCeiling;
+
+    public ScriptedVelocityAnimationProfile setSuperAlternateFrameStep(
+            int mask, int step, int ceiling) {
+        this.superAlternateFrameMask = mask;
+        this.superAlternateFrameStep = step;
+        this.superAlternateFrameCeiling = ceiling;
+        return this;
+    }
+
+    public int getSuperAlternateFrameMask() { return superAlternateFrameMask; }
+    public int getSuperAlternateFrameStep() { return superAlternateFrameStep; }
+    public int getSuperAlternateFrameCeiling() { return superAlternateFrameCeiling; }
+
+    /**
+     * Applies the alternate-frame step to an already-resolved walk/run mapping
+     * frame. Returns the frame unchanged when the game installs no such rule,
+     * when the sprite is not Super, or when either ROM gate rejects it.
+     */
+    public int applySuperAlternateFrame(
+            int mappingFrame, boolean superActive, int levelFrameCounter) {
+        if (superAlternateFrameStep == 0 || !superActive) {
+            return mappingFrame;
+        }
+        if ((levelFrameCounter & superAlternateFrameMask) != 0) {
+            return mappingFrame;
+        }
+        if (mappingFrame >= superAlternateFrameCeiling) {
+            return mappingFrame;
+        }
+        return mappingFrame + superAlternateFrameStep;
+    }
     public ScriptedVelocityAnimationProfile setWalkRunPublishesFrameBeforeTimerAdvance(boolean value) { this.walkRunPublishesFrameBeforeTimerAdvance = value; return this; }
     public ScriptedVelocityAnimationProfile setHighSpeedWalkRunAnimId(int value) { this.highSpeedWalkRunAnimId = value; return this; }
     public ScriptedVelocityAnimationProfile setHighSpeedWalkRunThreshold(int value) { this.highSpeedWalkRunThreshold = value; return this; }
@@ -213,9 +266,22 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         if (sprite.getDead() && deathAnimId >= 0) {
             return deathAnimId;
         }
-        // Hurt state uses separate hurt animation (animation 0x19)
+        // Hurt state uses separate hurt animation (animation 0x19).
+        //
+        // The native hurt animation is a ONE-SHOT byte write on HurtCharacter's
+        // common tail (`move.b #$1A,anim(a0)`, sonic3k.asm:21321; equivalents in
+        // s1disasm/_incObj/01 Sonic.asm and s2.asm). The hurt ROUTINE that runs on
+        // the following frames -- S3K loc_1569C, S1 Sonic_Hurt, S2 Obj01_Hurt --
+        // never rewrites anim, so any later owner that stores the byte during the
+        // hurt keeps it. The solid push-release tail is exactly such an owner:
+        // S3K loc_1E0A2 / S2 SolidObject_TestClearPush / S1 Solid_NoCollision
+        // store anim=Walk, prev_anim=Run and exempt only Roll (and Spindash in
+        // S3K) -- never Hurt. Re-deriving the hurt animation from the hurt state
+        // every frame would clobber that store, so this branch only re-publishes
+        // a hurt byte that is still live, exactly as the blink/get-up interrupt
+        // above leaves a foreign byte alone.
         if (sprite.isHurt() && hurtAnimId >= 0) {
-            return hurtAnimId;
+            return sprite.getAnimationId() == hurtAnimId ? hurtAnimId : null;
         }
         // Tails_FlyingSwimming calls Tails_Set_Flying_Animation every frame and
         // writes anim $20-$28 before the shared animation routine runs
@@ -692,6 +758,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         copy.fallbackFrame = this.fallbackFrame;
         copy.anglePreAdjust = this.anglePreAdjust;
         copy.compactSuperRunSlope = this.compactSuperRunSlope;
+        copy.superAlternateFrameMask = this.superAlternateFrameMask;
+        copy.superAlternateFrameStep = this.superAlternateFrameStep;
+        copy.superAlternateFrameCeiling = this.superAlternateFrameCeiling;
         copy.walkRunPublishesFrameBeforeTimerAdvance = this.walkRunPublishesFrameBeforeTimerAdvance;
         copy.highSpeedWalkRunAnimId = this.highSpeedWalkRunAnimId;
         copy.highSpeedWalkRunThreshold = this.highSpeedWalkRunThreshold;

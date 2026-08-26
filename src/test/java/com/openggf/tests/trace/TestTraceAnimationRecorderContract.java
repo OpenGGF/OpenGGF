@@ -41,6 +41,12 @@ class TestTraceAnimationRecorderContract {
             assertTrue(script.contains("player_mapping_frame"), name);
             assertTrue(script.contains("sidekick_animation_id"), name);
             assertTrue(script.contains("sidekick_mapping_frame"), name);
+            // Trailing life_count column: a death or 1UP must be attributable to
+            // the exact frame it happened on. Read from Life_count ($FFFFFE12 in
+            // all three games); comparison-only.
+            assertTrue(script.contains("life_count"), name);
+            assertTrue(script.contains("ADDR_LIFE_COUNT"), name);
+            assertTrue(script.contains("0xFE12"), name);
         }
     }
 
@@ -231,7 +237,14 @@ class TestTraceAnimationRecorderContract {
                 TraceMetadata metadata = TraceMetadata.load(fixture.resolve("metadata.json"));
                 assertEquals(5, metadata.traceSchema(), fixture.toString());
                 String header = readPhysicsHeader(fixture);
-                assertEquals(42, header.split(",", -1).length, fixture.toString());
+                // 42 = recorded before the trailing life_count column existed,
+                // 43 = with it. Both parse; TraceFrame reports life_count absent
+                // for the narrower shape.
+                int columns = header.split(",", -1).length;
+                assertTrue(columns == 42 || columns == 43,
+                        fixture + " has " + columns + " columns");
+                assertEquals(columns == 43, header.endsWith("life_count"),
+                        fixture + " must carry life_count as the trailing column");
                 assertTrue(header.contains("player_animation_id"), fixture.toString());
                 assertTrue(header.contains("sidekick_mapping_frame"), fixture.toString());
             }

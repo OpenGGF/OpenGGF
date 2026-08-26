@@ -57,6 +57,10 @@ class TestSidekickCpuControllerRewindCapture {
         PerObjectRewindSnapshot snap1 = tails.captureRewindState();
         Object cpuExtra1 = readRecordComponent(snap1.playerExtra(), "sidekickCpuExtra");
         assertNotNull(cpuExtra1, "PlayerRewindExtra must include SidekickCpuController state");
+        assertTrue(hasRecordComponent(cpuExtra1, "initialPresentationSuppressed"),
+                "Sidekick rewind state must capture setup presentation ownership");
+        assertTrue(hasRecordComponent(cpuExtra1, "initialPresentationWasHidden"),
+                "Sidekick rewind state must capture the pre-latch hidden value");
 
         assertNoRecordComponent(cpuExtra1, "leader");
         assertNoRecordComponent(cpuExtra1, "respawnStrategy");
@@ -86,6 +90,20 @@ class TestSidekickCpuControllerRewindCapture {
             assertEquals(entry.getValue(), readField(restored, entry.getKey()),
                     entry.getKey() + " not restored to controller");
         }
+    }
+
+    @Test
+    void resetClearsInitialPresentationOwnershipAlongsidePlayableReset() throws Exception {
+        Sonic leader = new Sonic("sonic", (short) 0x100, (short) 0x200);
+        Tails tails = new Tails("tails_p2", (short) 0x80, (short) 0x220);
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        writeField(controller, "initialPresentationSuppressed", true);
+        writeField(controller, "initialPresentationWasHidden", true);
+
+        controller.reset();
+
+        assertFalse((Boolean) readField(controller, "initialPresentationSuppressed"));
+        assertFalse((Boolean) readField(controller, "initialPresentationWasHidden"));
     }
 
     private static Map<String, Object> scalarSentinels() {
@@ -118,6 +136,7 @@ class TestSidekickCpuControllerRewindCapture {
         values.put("catchUpUsesRomVisibleLevelFrameCounter", true);
         values.put("skipPhysicsThisFrame", true);
         values.put("deferredDespawnDeadFallContinuingThisFrame", true);
+        values.put("levelStartLeaderHistoryPrefillPending", true);
         values.put("bootstrapPreludePlacementApplied", true);
         values.put("cpuFrameCounterFromStoredLevelFrame", true);
         values.put("nextCpuFrameCounterOverride", 0x4567);
@@ -131,6 +150,8 @@ class TestSidekickCpuControllerRewindCapture {
         values.put("flightTimer", 77);
         values.put("catchUpTargetX", 0x3456);
         values.put("catchUpTargetY", 0x0789);
+        values.put("initialPresentationSuppressed", true);
+        values.put("initialPresentationWasHidden", true);
         return values;
     }
 
@@ -158,6 +179,16 @@ class TestSidekickCpuControllerRewindCapture {
         }
         fail("Missing record component: " + name);
         return null;
+    }
+
+    private static boolean hasRecordComponent(Object record, String name) {
+        assertTrue(record.getClass().isRecord(), "Expected record: " + record.getClass());
+        for (RecordComponent component : record.getClass().getRecordComponents()) {
+            if (component.getName().equals(name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void assertNoRecordComponent(Object record, String name) {

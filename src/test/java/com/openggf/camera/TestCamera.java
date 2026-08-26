@@ -399,6 +399,15 @@ public class TestCamera {
     }
 
     @Test
+    public void ordinaryCameraWritesPublishTheRenderCopy() {
+        camera.setX((short) 0x1234);
+        camera.setY((short) 0x0567);
+
+        assertEquals(0x1234, camera.getXCopy() & 0xFFFF);
+        assertEquals(0x0567, camera.getYCopy() & 0xFFFF);
+    }
+
+    @Test
     public void testPlayableRenderFlagVisibilityUsesGameRules() {
         camera.setX((short) 0);
         camera.setY((short) 100);

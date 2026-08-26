@@ -64,14 +64,35 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     private Sonic3kDustArt dustArt;
     private Sonic3kRingArt ringArt;
     private Sonic3kLevelAnimationManager levelAnimationManager;
-    private final Sonic3kGlobalAnimationState globalAnimationState =
-            new Sonic3kGlobalAnimationState();
+    // ROM AIZ_vine_angle ($FFFFFEBA) is deliberately OUTSIDE the level-init
+    // clear: Level does clearRAM Oscillating_table,(AIZ_vine_angle-Oscillating_table)
+    // (sonic3k.asm:10609) and the special stage repeats the same bounded clear
+    // (sonic3k.asm:10606-10607 region), both stopping one word short of it, so the
+    // word free-runs for the whole session. A Game instance does NOT: LevelManager
+    // rebuilds one on every load (LevelManager.java:459), so this state is injected
+    // by the session-lived Sonic3kGameModule instead of being owned here.
+    private final Sonic3kGlobalAnimationState globalAnimationState;
     private Level levelAnimationLevel;
     private int levelAnimationZone = -1;
 
     public Sonic3k(Rom rom) throws IOException {
+        this(rom, new Sonic3kGlobalAnimationState());
+    }
+
+    /**
+     * Session-scoped construction: the module supplies the
+     * {@code AIZ_vine_angle} carrier so it survives the level loads that
+     * replace this {@code Game}.
+     */
+    Sonic3k(Rom rom, Sonic3kGlobalAnimationState globalAnimationState) throws IOException {
         this.rom = rom;
+        this.globalAnimationState = globalAnimationState;
         ensureAddressTablesReady();
+    }
+
+    /** Package-private view for the module-ownership pin in {@code TestSonic3kVineAngleOwnership}. */
+    Sonic3kGlobalAnimationState globalAnimationState() {
+        return globalAnimationState;
     }
 
     @Override
@@ -238,16 +259,26 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 zone, act, bootstrap, llbIndex, secondaryArtAddr, -1);
         secondaryArtAddr = overlay.secondaryArtAddr();
         S3kRuntimeArtCoordinator coordinator = S3kRuntimeArtCoordinator.current();
-        // A displayed whole-run load reaches this call at the native retained
-        // title-owner boundary. Its parent batch is already visible to the
-        // following loop tail; an omitted presentation has no retained owner
-        // and uses the ordinary deferred publication service.
-        if (GameServices.levelOrNull() != null
-                && GameServices.levelOrNull().hasPendingFreshLevelTransitionBoundary()) {
-            coordinator.submitFreshLevelRuntimeArt(
+        // LoadLevelLoadBlock queues both parents at the call and only then
+        // blocks at loc_7870 until Kos_modules_left reaches zero
+        // (docs/skdisasm/sonic3k.asm:9727 and 9734 queue the two parents,
+        // 9736-9743 is the wait; Level: calls it at :7761), so the
+        // parents are in the FIFO before anything else can reach it. Nothing
+        // in Level: defers that queueing, and the enemy art that follows comes
+        // later still, from Obj_TitleCardWait2's LoadEnemyArt (:62298). A
+        // deferred publication inverted that order: it released the slots it
+        // had, and the following level frames' object art took all four before
+        // the deferred batch could retry, leaving the terrain art permanently
+        // starved behind a full FIFO.
+        // Reaching LoadLevelLoadBlock means the card's own modules have already
+        // drained (Obj_TitleCardCreate waits on Kos_modules_left, :62169-62171).
+        // A caller that arrives while they are still outstanding is ahead of
+        // that gate, and waits for the queue rather than queueing behind it.
+        if (coordinator.freshLevelArtWaitsForModuleQueue()) {
+            coordinator.deferFreshLevelRuntimeArt(
                     rom, primaryArtAddr, secondaryArtAddr);
         } else {
-            coordinator.deferFreshLevelRuntimeArt(
+            coordinator.submitFreshLevelRuntimeArt(
                     rom, primaryArtAddr, secondaryArtAddr);
         }
     }

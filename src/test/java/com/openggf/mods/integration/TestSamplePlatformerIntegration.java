@@ -5,10 +5,16 @@ import com.openggf.GameLoop;
 import com.openggf.ModSubsystem;
 import com.openggf.SessionExternalContentView;
 import com.openggf.audio.AudioManager;
-import com.openggf.audio.AbstractSmpsAudioBackend;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.StreamedMusicPort;
+import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceMusic;
+import com.openggf.audio.presentation.AudioPresentationMixer;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.StreamedMusicVoice;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
@@ -36,6 +42,7 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -158,7 +165,7 @@ class TestSamplePlatformerIntegration {
             assertEquals(0x780, player.getPhysicsProfile().jump());
             exerciseDoubleJumpAndRewindLatch(player);
 
-            RecordingBackend backend = new RecordingBackend();
+            NullAudioBackend backend = new NullAudioBackend();
             AudioManager audio = AudioManager.getInstance();
             audio.resetState();
             audio.setBackend(backend);
@@ -249,10 +256,12 @@ class TestSamplePlatformerIntegration {
             assertNotNull(renderManager.getRenderer("sample-platformer:springpad"),
                     "springpad renderer must resolve through the shipped module art provider");
 
-            RecordingBackend backend = new RecordingBackend();
+            NullAudioBackend backend = new NullAudioBackend();
             AudioManager audio = AudioManager.getInstance();
             audio.resetState();
             audio.setBackend(backend);
+            audio.installStreamedMusicPort(
+                    preparePackagedAudioPort(fixture, audio.outputSampleRate()));
 
             ObjectRegistry registry = module.createObjectRegistry();
             ObjectManager[] holder = new ObjectManager[1];
@@ -334,8 +343,12 @@ class TestSamplePlatformerIntegration {
             springPad.update(1, faller);
             assertEquals((short) SpringBounceHelper.STRENGTH_YELLOW, faller.getYSpeed(),
                     "SpringPad must apply the yellow spring strength verbatim (already negative = upward)");
-            assertEquals(new StreamedMusicPort.SfxRef(OWNER, "spring"), backend.sfx,
-                    "SpringPad must fire its namespaced spring SFX on contact");
+            StreamedMusicPort.SfxRef springSfx =
+                    new StreamedMusicPort.SfxRef(OWNER, "spring");
+            assertTrue(audio.commandTimeline().entries().stream()
+                            .anyMatch(entry -> new AudioCommand.PlayNamespacedSfx(springSfx)
+                                    .equals(entry.command())),
+                    "SpringPad must record its exact namespaced spring SFX on contact");
             assertDoesNotThrow(() -> springPad.appendRenderCommands(new ArrayList<>()),
                     "SpringPad must render through the resolved springpad PatternSpriteRenderer without throwing");
 
@@ -474,6 +487,28 @@ class TestSamplePlatformerIntegration {
         }
     }
 
+    private static com.openggf.ModStreamedMusicPort preparePackagedAudioPort(
+            Fixture fixture, int outputRate) throws Exception {
+        ModAudioManifest manifest;
+        try (JarFile packed = new JarFile(fixture.descriptor.jarPath().toFile())) {
+            byte[] yaml = packed.getInputStream(packed.getJarEntry("audio/audio-manifest.yaml"))
+                    .readAllBytes();
+            manifest = new ModAudioManifestParser(OWNER).parse(yaml);
+        }
+        ModTrackRegistry tracks = new ModTrackRegistry(manifest.tracks());
+        ModSfxRegistry sfx = new ModSfxRegistry(manifest.sfx());
+        ModAudioPreparer preparer = new ModAudioPreparer(
+                fixture.descriptor.jarPath().getParent().toAbsolutePath().normalize(),
+                ModInputLimits.production(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved());
+        PreparedAudioSession session = preparer.prepare(
+                fixture.catalog.effective(), tracks, sfx, outputRate);
+        PreparedModMusic music = PreparedModMusic.build(
+                fixture.catalog.effective(), tracks, sfx, session, outputRate, OWNER);
+        return new com.openggf.ModStreamedMusicPort(
+                music, new StreamedMusicPlayer(outputRate), OWNER);
+    }
+
     /**
      * Asserts a packaged asset decodes to non-zero PCM through the real streamed path.
      *
@@ -500,28 +535,35 @@ class TestSamplePlatformerIntegration {
             if (isTrack) {
                 StreamedMusicPort.TrackRef track = new StreamedMusicPort.TrackRef(OWNER, name);
                 assertTrue(port.hasTrack(track), name + " track must resolve through the port");
-                port.playTrack(track);
-                assertTrue(port.hasSource(), name + " track must install a streamed source");
-
                 int frames = 1_024;
-                StreamedMusicVoice voice = new StreamedMusicVoice(1L, port,
-                        com.openggf.audio.rewind.AudioSourceDescriptor.streamedTrack(OWNER + ":" + name));
-                long[] accumulation = new long[frames * 2];
-                // A compressed track can open on silence, so mix until it speaks rather than
-                // asserting the first block; the bound keeps a genuinely silent asset failing.
-                boolean sounded = false;
-                for (int block = 0; block < 32 && !sounded; block++) {
-                    java.util.Arrays.fill(accumulation, 0L);
-                    voice.mixInto(accumulation, frames);
-                    for (long sample : accumulation) {
-                        if (sample != 0L) {
-                            sounded = true;
-                            break;
+                SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                        new SmpsCoordFlagRuntimeState());
+                AudioPresentationSourceFactory sourceFactory =
+                        new AudioPresentationSourceFactory(() -> true, handlers);
+                sourceFactory.installStreamedMusicPort(port);
+                try {
+                    AudioVoiceRegistry voices = new AudioVoiceRegistry(
+                            sourceFactory, sourceFactory, handlers, ignored -> { });
+                    voices.apply(new ReplaceMusic(sourceFactory.streamedTrack(1L, track)));
+                    AudioPresentationMixer mixer = new AudioPresentationMixer(frames);
+
+                    // A compressed track can open on silence, so mix until it speaks rather than
+                    // asserting the first block; the bound keeps a genuinely silent asset failing.
+                    boolean sounded = false;
+                    for (int block = 0; block < 32 && !sounded; block++) {
+                        short[] output = mixer.mix(voices, frames);
+                        for (short sample : output) {
+                            if (sample != 0) {
+                                sounded = true;
+                                break;
+                            }
                         }
                     }
+                    assertTrue(sounded,
+                            "The packaged " + name + " track must decode and mix non-zero PCM");
+                } finally {
+                    sourceFactory.retireStreamedMusicPort();
                 }
-                assertTrue(sounded,
-                        "The packaged " + name + " track must decode and mix non-zero PCM");
             } else {
                 StreamedMusicPort.SfxRef ref = new StreamedMusicPort.SfxRef(OWNER, name);
                 assertTrue(port.hasSfx(ref), name + " sfx must resolve through the port");
@@ -543,13 +585,10 @@ class TestSamplePlatformerIntegration {
      * empty sidekick list instead of phase-3's {@code FRIEND} second character.
      */
     private void exerciseMasterTitleNewCompleteAndContinue(Fixture fixture, GameModule module,
-                                                            RecordingBackend backend) throws Exception {
+                                                            NullAudioBackend backend) throws Exception {
         previousSaveRoot = System.getProperty("openggf.saveRoot");
         Path saveRoot = temp.resolve("saves");
         System.setProperty("openggf.saveRoot", saveRoot.toString());
-        ModSubsystem.installProcess(new ModSubsystem(fixture.catalog, new ModRuntimeFindingStore(),
-                (rate, game) -> SessionExternalContentView.EMPTY));
-
         EngineContext previous = EngineServices.current();
         previousEngineContext = previous;
         SonicConfigurationService config = SonicConfigurationService.createStandalone(temp.resolve("config"));
@@ -563,6 +602,17 @@ class TestSamplePlatformerIntegration {
         AudioManager audio = services.audio();
         audio.resetState();
         audio.setBackend(backend);
+        ModSubsystem.installProcess(new ModSubsystem(fixture.catalog, new ModRuntimeFindingStore(),
+                (rate, game) -> {
+                    try {
+                        return new SessionExternalContentView(
+                                ModMusicResolver.EMPTY,
+                                preparePackagedAudioPort(fixture, rate));
+                    } catch (Exception failure) {
+                        throw new IllegalStateException(
+                                "Failed to prepare packaged sample audio", failure);
+                    }
+                }, ModSubsystem.SessionAudioBoundary.audioManager(audio)));
         Engine engine = new Engine(services);
         setField(engine, "modRuntime", fixture.runtime);
         installUninitializedTitleScreen(engine);
@@ -577,7 +627,12 @@ class TestSamplePlatformerIntegration {
         assertEquals(RUNNER, saveContext.selectedTeam().mainCharacter());
         assertTrue(saveContext.selectedTeam().sidekicks().isEmpty());
         assertEquals(0, GameServices.level().getCurrentZone());
-        assertEquals(new StreamedMusicPort.TrackRef(OWNER, "zone-theme"), backend.track);
+        StreamedMusicPort.TrackRef zoneTheme =
+                new StreamedMusicPort.TrackRef(OWNER, "zone-theme");
+        assertTrue(audio.commandTimeline().entries().stream()
+                        .anyMatch(entry -> new AudioCommand.PlayNamespacedMusic(zoneTheme)
+                                .equals(entry.command())),
+                "Standalone launch must record its exact namespaced level track");
         assertTrue(Files.isRegularFile(saveRoot.resolve(OWNER).resolve("slot1.json")),
                 "New Game must reserve and write namespaced slot 1");
 
@@ -689,9 +744,10 @@ class TestSamplePlatformerIntegration {
     private Path buildSample() throws Exception {
         Path engine = temp.resolve("engine-local.jar");
         Path sdk = temp.resolve("openggf-mod-sdk-local.jar");
-        createJar(Path.of("target/classes"), engine, entry -> !entry.startsWith("com/openggf/tools/modsdk/")
+        Path sessionClasses = TestSessionOutputPaths.compiledClasses();
+        createJar(sessionClasses, engine, entry -> !entry.startsWith("com/openggf/tools/modsdk/")
                 && !entry.startsWith("META-INF/openggf-mod-sdk/"));
-        createJar(Path.of("target/classes"), sdk, entry -> entry.startsWith("com/openggf/tools/modsdk/")
+        createJar(sessionClasses, sdk, entry -> entry.startsWith("com/openggf/tools/modsdk/")
                 || entry.startsWith("META-INF/openggf-mod-sdk/"));
         Path source = Path.of("src/test/resources/mods/sample-platformer-src").toAbsolutePath();
         Path project = temp.resolve("sample-platformer-project");
@@ -796,23 +852,6 @@ class TestSamplePlatformerIntegration {
     private record Fixture(ModRuntime runtime, ModDescriptor descriptor, ModCatalog catalog)
             implements AutoCloseable {
         @Override public void close() throws Exception { runtime.close(); }
-    }
-
-    private static final class RecordingBackend extends NullAudioBackend {
-        private StreamedMusicPort.SfxRef sfx;
-        private StreamedMusicPort.TrackRef track;
-        @Override public boolean tryPlayStreamedMusic(StreamedMusicPort.TrackRef value) {
-            track = value; return true;
-        }
-        // The engine preflights a namespaced track with hasStreamedMusic and lets the
-        // presentation layer play it from the recorded command, so this query — not
-        // tryPlayStreamedMusic — is where the resolved key is now observable.
-        @Override public boolean hasStreamedMusic(StreamedMusicPort.TrackRef value) {
-            track = value; return true;
-        }
-        @Override public boolean tryPlayStreamedSfx(StreamedMusicPort.SfxRef value) {
-            sfx = value; return true;
-        }
     }
 
 }

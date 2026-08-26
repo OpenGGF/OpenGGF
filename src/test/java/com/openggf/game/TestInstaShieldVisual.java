@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
@@ -77,14 +78,14 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * <pre>
  * mvn test -Dtest=TestInstaShieldVisual -Ds3k.rom.path="Sonic and Knuckles &amp; Sonic 3 (W) [!].gen"
  * </pre>
- * Output PNGs go to {@code target/insta-shield-visual/}.
+ * Output PNGs go to the session diagnostics {@code insta-shield-visual/} namespace.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestInstaShieldVisual {
 
     private static final int W = 320;
     private static final int H = 224;
-    private static final Path OUT_DIR = Paths.get("target", "insta-shield-visual");
+    private static final Path OUT_DIR = TestSessionOutputPaths.diagnostics("insta-shield-visual");
 
     private static long window;
     private static boolean initialized;
@@ -344,4 +345,3 @@ public class TestInstaShieldVisual {
         return count;
     }
 }
-

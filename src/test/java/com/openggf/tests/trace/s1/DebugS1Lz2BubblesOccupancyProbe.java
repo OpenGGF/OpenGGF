@@ -57,6 +57,15 @@ class DebugS1Lz2BubblesOccupancyProbe {
     private static final int WATCH_SLOT = Integer.getInteger("trace.watchSlot", -1);
     private static final int WATCH_EVERY = Math.max(1, Integer.getInteger("trace.watchEvery", 30));
     private static final int OBJ_BUBBLES = 0x64;
+    /**
+     * Compare-phase offset for the Obj64 streams. The v3.4+ recorder samples
+     * s1_obj64_state BEFORE the frame's ExecuteObjects pass, so ROM row N holds
+     * the SST as pass N-1 left it. Set to 1 to line the engine's post-pass state
+     * for frame N up against the ROM row that describes the same instant.
+     */
+    private static final int DUMP_FROM = Integer.getInteger("trace.obj64DumpFrom", -1);
+    private static final int DUMP_TO = Integer.getInteger("trace.obj64DumpTo", -1);
+    private static final int OBJ64_PHASE = Integer.getInteger("trace.obj64Phase", 0);
     private static final int FIRST_DYNAMIC_SLOT =
             ObjectSlotLayout.SONIC_1.firstDynamicSlot();
 
@@ -310,9 +319,13 @@ class DebugS1Lz2BubblesOccupancyProbe {
                     }
                 }
 
+                int cmpFrame = i + OBJ64_PHASE;
+                if (cmpFrame >= trace.frameCount()) {
+                    continue;
+                }
                 if (!HAS_TARGET && !slotDivergenceReported) {
                     Obj64SlotDivergence slotDivergence =
-                            firstObj64SlotDivergence(trace, objectManager, i);
+                            firstObj64SlotDivergence(trace, objectManager, cmpFrame);
                     if (slotDivergence != null) {
                         slotDivergenceReported = true;
                         System.out.printf(
@@ -341,9 +354,16 @@ class DebugS1Lz2BubblesOccupancyProbe {
                     }
                 }
 
+                if (DUMP_FROM >= 0 && cmpFrame >= DUMP_FROM && cmpFrame <= DUMP_TO) {
+                    System.out.printf("[%s-obj64-dump] cmpFrame=%d ROM: %s%n",
+                            LABEL, cmpFrame, summarizeRomObj64(trace, cmpFrame));
+                    System.out.printf("[%s-obj64-dump] cmpFrame=%d ENG: %s%n",
+                            LABEL, cmpFrame, summarizeEngineObj64(objectManager));
+                }
+
                 if (!makerStateDivergenceReported) {
                     MakerStateDivergence stateDivergence =
-                            firstMakerStateDivergence(trace, objectManager, i);
+                            firstMakerStateDivergence(trace, objectManager, cmpFrame);
                     if (stateDivergence != null) {
                         makerStateDivergenceReported = true;
                         System.out.printf(
@@ -369,7 +389,7 @@ class DebugS1Lz2BubblesOccupancyProbe {
                             ObjectOccupancyOracle.firstTransientCountDivergence(
                                     trace,
                                     objectManager,
-                                    i,
+                                    cmpFrame,
                                     FIRST_DYNAMIC_SLOT,
                                     Set.of(OBJ_BUBBLES),
                                     false);
@@ -448,7 +468,15 @@ class DebugS1Lz2BubblesOccupancyProbe {
                 return new MakerStateDivergence(frame, state.x(), state.y(),
                         "present", expected.toString(), "absent");
             }
-            for (String field : List.of("freq", "time", "prod", "type", "delay", "tbl")) {
+            // bub_typelist (objoff_3C) is zero until the maker's first
+            // .tryAgain draw writes a Bub_BblTypes pointer
+            // (docs/s1disasm/_incObj/64 LZ Air Bubbles.asm:173-175). Before
+            // that the "tbl" byte is a subtraction against an address the ROM
+            // has not written, so it carries no comparable value.
+            List<String> fields = state.objoff3c() == 0L
+                    ? List.of("freq", "time", "prod", "type", "delay")
+                    : List.of("freq", "time", "prod", "type", "delay", "tbl");
+            for (String field : fields) {
                 String want = expected.fieldValue(field);
                 String got = actual.fieldValue(field);
                 if (!want.equals(got)) {

@@ -363,18 +363,28 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void updatePrePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
-        if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ && cnzSlotMachineManager != null) {
-            // ROM LevEvents_CNZ calls SlotMachine before object execution
-            // (s2.asm:21494, 58827-58840), so PointPokey sees completion
-            // on the same frame the slot routine goes inactive.
-            cnzSlotMachineManager.update();
-        }
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_WFZ) {
             updateWfzPrePhysicsLevelEvents();
             updateWfzWindTunnel(player);
         } else {
             wfzWindTunnelActive = false;
         }
+    }
+
+    @Override
+    public void updateAfterObjectExecution(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        if (zoneIndex != Sonic2ZoneConstants.ROM_ZONE_CNZ || cnzSlotMachineManager == null) {
+            return;
+        }
+        // Level_MainLoop runs RunObjects before DeformBgLayer (s2.asm:5095,
+        // 5098); DeformBgLayer dispatches LevEvents_CNZ and its SlotMachine
+        // call (s2.asm:15175, 21511-21512). ObjD6 therefore observes the
+        // previous SlotMachine result during this frame's object pass, while
+        // SlotMachine reads the V_int_run_count published by that same pass.
+        // LevelManager invokes this callback for each playable, but the ROM
+        // routine is zone-global. CNZSlotMachineManager suppresses the second
+        // callback for the same V-int count.
+        cnzSlotMachineManager.update();
     }
 
     private void updateWfzPrePhysicsLevelEvents() {
@@ -497,6 +507,13 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     @Override
     public int getWaterLevel(int zoneIndex, int actIndex) {
         return GameServices.water().getWaterLevelY(zoneIndex, actIndex);
+    }
+
+    @Override
+    public float getWaterlineOffset(int zoneIndex, int actIndex) {
+        // S2's palette split follows the visual water level. The separately
+        // rendered surface strip must not move the sprite palette boundary.
+        return 0.0f;
     }
 
     @Override

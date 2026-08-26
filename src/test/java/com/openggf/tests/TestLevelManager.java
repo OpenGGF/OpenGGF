@@ -104,7 +104,7 @@ public class TestLevelManager {
     public void failedLoadClearsPendingBonusReturnRespawnState() throws Exception {
         LevelManager levelManager = GameServices.level();
         levelManager.restorePersistentRespawnOnNextObjectReset(
-                new PersistentRespawnState(new long[]{1L}, new long[0]));
+                new PersistentRespawnState(new long[]{1L}, new long[0], new long[0]));
 
         assertThrows(IndexOutOfBoundsException.class,
                 () -> levelManager.loadZoneAndAct(-1, 0));
@@ -117,6 +117,43 @@ public class TestLevelManager {
         pendingState.setAccessible(true);
         assertNull(pendingState.get(checkpointCoordinator),
                 "A failed return load must not apply its respawn table to a later level");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void directLoadFailureClearsBothPersistentRespawnHandoffPhases() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        Field levelsField = LevelManager.class.getDeclaredField("levels");
+        levelsField.setAccessible(true);
+        ((java.util.List<java.util.List<LevelDescriptor>>) levelsField.get(levelManager))
+                .add(java.util.List.of());
+
+        Field coordinatorField = LevelManager.class.getDeclaredField("checkpointCoordinator");
+        coordinatorField.setAccessible(true);
+        Object checkpointCoordinator = coordinatorField.get(levelManager);
+        Field pendingState = checkpointCoordinator.getClass().getDeclaredField(
+                "pendingPersistentRespawn");
+        pendingState.setAccessible(true);
+        Field cameraSnapState = checkpointCoordinator.getClass().getDeclaredField(
+                "persistentRespawnForCameraSnap");
+        cameraSnapState.setAccessible(true);
+        Method advanceToCameraSnap = checkpointCoordinator.getClass().getDeclaredMethod(
+                "consumePersistentRespawn");
+        advanceToCameraSnap.setAccessible(true);
+
+        for (boolean cameraSnapPhase : new boolean[]{false, true}) {
+            levelManager.restorePersistentRespawnOnNextObjectReset(
+                    new PersistentRespawnState(new long[]{1L}, new long[0], new long[0]));
+            if (cameraSnapPhase) {
+                advanceToCameraSnap.invoke(checkpointCoordinator);
+            }
+
+            assertThrows(IndexOutOfBoundsException.class, levelManager::loadCurrentLevel);
+            assertNull(pendingState.get(checkpointCoordinator),
+                    "A direct load failure must drain the pending object-reset handoff");
+            assertNull(cameraSnapState.get(checkpointCoordinator),
+                    "A direct load failure must drain the post-reset camera-snap handoff");
+        }
     }
 
     @Nested

@@ -68,5 +68,15 @@ namespace OpenGGF.BizHawk.Headless
         /// RAM samples are not available at the arm.
         /// </summary>
         void EndSegment(RunManifestSegment entry, string metadataJson);
+
+        /// <summary>
+        /// Opens the open segment's hardware-timing readiness stream. The
+        /// runner calls this at most once per segment, and only when the
+        /// segment actually records a readiness edge, so a segment with no
+        /// edge publishes no such file and every already-published run
+        /// keeps its exact inventory. The sink completes the stream at the
+        /// segment's <see cref="EndSegment"/>.
+        /// </summary>
+        TextWriter OpenHardwareTimingStream();
     }
 }

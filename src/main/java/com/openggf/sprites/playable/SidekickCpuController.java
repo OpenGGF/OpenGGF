@@ -168,6 +168,9 @@ public class SidekickCpuController {
     private SidekickRespawnStrategy respawnStrategy;
 
     private State state = State.INIT;
+    /** Presentation-only latch while a level-event dormant marker owns the intro. */
+    private boolean initialPresentationSuppressed;
+    private boolean initialPresentationWasHidden;
     private int despawnCounter;
     private int frameCounter;
     private int controlCounter;
@@ -232,6 +235,7 @@ public class SidekickCpuController {
     // skips its post-kill collision pass when this flag is set. Cleared at the start of
     // every CPU update tick.
     private boolean deferredDespawnDeadFallContinuingThisFrame;
+    private boolean levelStartLeaderHistoryPrefillPending;
     private boolean bootstrapPreludePlacementApplied;
     /**
      * Leader centre coordinates captured at level-load time
@@ -688,11 +692,29 @@ public class SidekickCpuController {
         return null;
     }
 
+    /** {@code Tails_CPU_routine} value for the fly/swim carry state. */
+    private static final int ROM_CPU_ROUTINE_FLY_SWIM = 0x04;
+
     public int getDiagnosticRomCpuRoutine() {
         if (state == State.DEAD_FALLING && deadFallingRomCpuRoutine >= 0) {
             return deadFallingRomCpuRoutine;
         }
         return romCpuRoutineForState(state);
+    }
+
+    /**
+     * Whether the ROM's {@code Tails_CPU_routine} currently holds 4 -- the
+     * {@code Tails_FlySwim_Unknown} entry of {@code Tails_CPU_Control_Index}
+     * (docs/skdisasm/sonic3k.asm:26368-26371), the state Tails is in while a
+     * carry/flight owner is driving him.
+     *
+     * <p>Several object routines read that word directly to decide whether
+     * Player 2 participates at all, rather than testing anything about the
+     * sidekick's own position or air state. It is a state of the CPU
+     * controller, so it is answered here rather than re-read at each site.
+     */
+    public boolean isInRomFlySwimCpuRoutine() {
+        return getDiagnosticRomCpuRoutine() == ROM_CPU_ROUTINE_FLY_SWIM;
     }
 
     public int getDiagnosticGeneratedHeldInput() {
@@ -1141,6 +1163,12 @@ public class SidekickCpuController {
         }
 
         if (shouldEnterLevelEventDormantMarker()) {
+            // Keep the presentation decision at the same ROM owner boundary as
+            // the gameplay marker. A level rebind can clear the setup-only
+            // hidden latch before this first routine-0 dispatch; loc_13A10
+            // (sonic3k.asm:26389-26397) still suppresses Player_2 before
+            // object_control=$83 parks her at the dormant sentinel.
+            suppressInitialLevelEventPresentationIfNeeded();
             // ROM Tails_Init (sonic3k.asm:26101-26156) plus the loc_13A10
             // dormant-marker block (sonic3k.asm:26389-26397) run inside one
             // ROM tick: SpawnLevelMainSprites installs the Tails object,
@@ -1200,24 +1228,27 @@ public class SidekickCpuController {
 
         state = State.NORMAL;
 
-        if (!establishedFollowerEntry && freshS3kSpawnUsesInitOnlyFrame()) {
-            // S3K SpawnLevelMainSprites creates a fresh Obj_Tails with
-            // routine=0; Tails_Init advances the routine and returns before
-            // TailsCPU_Normal runs on the following object tick
-            // (sonic3k.asm:8359-8369,26101-26156). Established mid-run
-            // followers are already past routine 0 and continue immediately.
+        if (!establishedFollowerEntry) {
+            // A fresh CPU-sidekick spawn enters the steering dispatcher at
+            // routine 0, and in every ROM that has a CPU sidekick the routine-0
+            // handler sets up and RETURNS rather than falling through to the
+            // normal steering routine, so the init pass never steers:
+            //   S2  TailsCPU_Init ends in rts (s2disasm/s2.asm:39093-39103); the
+            //       dispatcher jumps via TailsCPU_States (:39070-39087), so
+            //       TailsCPU_Normal is only reached on the NEXT pass.
+            //   S3K routine 0 (loc_13A10, reached via Tails_CPU_Control_Index,
+            //       sonic3k.asm:26363-26369) ends every path in rts
+            //       (:26397, :26415, :26424, :26449, :26468-26471).
+            //   S1  has no CPU sidekick at all, so this path is unreachable
+            //       there and no per-game rule is needed.
+            // Established mid-run followers are already past routine 0 (S2/S3K
+            // Tails_CPU_routine == 6): the ROM dispatcher sends them straight to
+            // the normal steering routine on the very same pass, so they
+            // continue immediately.
             return;
         }
 
-        // S2 trace/bootstrap paths have historically compared after Obj02/Tails
-        // init has already completed, while established S3K followers are not a
-        // fresh routine-0 spawn. Continue those paths into normal CPU follow.
         updateNormal();
-    }
-
-    private boolean freshS3kSpawnUsesInitOnlyFrame() {
-        SidekickCpuRules rules = sidekickCpuRulesOrNull();
-        return rules != null && rules.sidekickRespawnEntersCatchUpFlight();
     }
 
     private void initializeLevelStartSidekickPlacement() {
@@ -1225,23 +1256,27 @@ public class SidekickCpuController {
         // centre" behaviour. Native title-card prelude paths that have already
         // reproduced the ROM Pos_table pre-fill go through
         // applyLevelStartSidekickPlacementForBootstrap() first.
-        applyLevelStartSidekickPlacement(false);
+        applyLevelStartSidekickPlacement(false, false);
     }
 
     /**
-     * Native-prelude-aware variant of
-     * {@link #initializeLevelStartSidekickPlacement()}: when level startup has
-     * already established the ROM-accurate Pos_table pre-fill (S2 only today,
-     * via {@link #applyLevelStartSidekickPlacementForBootstrap()}),
-     * {@code updateInit} must NOT re-pre-fill the ring or it would obliterate
-     * the rows that the native leader-record path has already written. Falls
-     * back to the legacy reset for non-bootstrap paths.
+     * Level-start-ownership-aware variant of
+     * {@link #initializeLevelStartSidekickPlacement()}. Production level
+     * assembly can adopt an already-established ROM Pos_table prefill through
+     * {@link #adoptLevelStartLeaderHistoryPrefill()}, while trace bootstrap can
+     * establish its own prefill through
+     * {@link #applyLevelStartSidekickPlacementForBootstrap()}. The next INIT
+     * must not overwrite either owner's ring; ordinary paths retain the legacy
+     * reset.
      */
     private void initializeLevelStartSidekickPlacementIfNeeded() {
-        if (bootstrapPreludePlacementApplied) {
+        if (levelStartLeaderHistoryPrefillPending) {
+            levelStartLeaderHistoryPrefillPending = false;
+            applyLevelStartSidekickPlacement(false, true);
+        } else if (bootstrapPreludePlacementApplied) {
             applyLevelStartSidekickPlacementSkipPrefill();
         } else {
-            applyLevelStartSidekickPlacement(false);
+            applyLevelStartSidekickPlacement(false, false);
         }
     }
 
@@ -1254,10 +1289,11 @@ public class SidekickCpuController {
      * than overwriting the pre-fill from the inside of {@code updateInit}.
      */
     public void applyLevelStartSidekickPlacementForBootstrap() {
-        applyLevelStartSidekickPlacement(true);
+        applyLevelStartSidekickPlacement(true, false);
     }
 
-    private void applyLevelStartSidekickPlacement(boolean useRomAccuratePrefill) {
+    private void applyLevelStartSidekickPlacement(
+            boolean useRomAccuratePrefill, boolean preserveExistingLeaderPrefill) {
         // S2 InitPlayers (s2.asm:5192-5195) and S3K SpawnLevelMainSprites
         // (s3.asm:6334-6337, sonic3k.asm:8364-8367) place Player_2 with centre
         // coordinates at Player_1 - $20 X, +4 Y. The engine's level-load
@@ -1301,7 +1337,7 @@ public class SidekickCpuController {
         // first gravity tick. Leave the air state as set by level load.
 
         if (useRomAccuratePrefill) {
-            // ROM Obj01_Init (s2.asm:35907-35918, sonic3k.asm:21936-21940)
+            // ROM Obj01_Init (s2.asm:36201-36217, sonic3k.asm:21936-21940)
             // temporarily applies the same Tails-spawn offset to Sonic's centre,
             // fills Sonic_Pos_Record_Buf 64 times via Sonic_RecordPos, then
             // restores Sonic's centre. The result is a pre-fill ring containing
@@ -1312,14 +1348,15 @@ public class SidekickCpuController {
             // 16 leader-record writes layer on top of the sidekick-offset
             // pre-fill rather than the live Sonic centre.
             //
-            // Note: only the bootstrap path requests the ROM-accurate pre-fill
-            // today. Trace replay setups without a recorded title-card prelude
-            // (S1, S3K) keep the legacy "fill with current Sonic centre"
-            // behaviour to avoid altering already-tuned sidekick CPU traces.
+            // This branch synthesizes the ROM-accurate prefill when trace
+            // bootstrap explicitly requests it. Ordinary production assembly
+            // and standalone metadata repositioning create the equivalent
+            // prefill through LevelManager; their exact-leader ownership token
+            // instead selects preserveExistingLeaderPrefill=true.
             leader.prefillPositionHistoryWithCentre(
                     (short) (anchorX + LEVEL_START_X_OFFSET),
                     (short) (anchorY + LEVEL_START_Y_OFFSET));
-        } else {
+        } else if (!preserveExistingLeaderPrefill) {
             // The ROM CPU routine reads Sonic's delayed position buffer
             // (S2 s2.asm:38808-38815, S3K sonic3k.asm:26564-26565).
             // Trace/bootstrap level placement can move the leader after sprite
@@ -1483,10 +1520,11 @@ public class SidekickCpuController {
     }
 
     private boolean shouldEnterLevelEventDormantMarker() {
-        SidekickCpuRules rules = sidekickCpuRulesOrNull();
-        if (rules == null || !rules.sidekickRespawnEntersCatchUpFlight()) {
-            return false;
-        }
+        // The level-event provider owns the ROM's Current_zone_and_act and
+        // Tails_CPU_star_post_flag decision. Do not pre-filter it through the
+        // sidekick physics rules: those rules describe later catch-up/respawn
+        // behavior and can be stale during a live level rebind even though the
+        // already-created Player_2 object still has a valid provider branch.
         // ROM loc_13A10 (sonic3k.asm:26389-26397): when Tails_CPU_Control runs
         // with routine=0 (uninitialized Tails) and Current_zone_and_act=0
         // (AIZ Act 1), the special AIZ1 dormant-marker branch fires
@@ -1540,6 +1578,20 @@ public class SidekickCpuController {
         sidekick.setObjectMappingFrameControl(true);
         lastInteractObjectId = -1; // ROM Tails_interact_ID unset until next UpdateObjInteract
         diagnosticS3kInteractWord = 0;
+    }
+
+    /**
+     * Suppresses only the setup presentation for a sidekick whose level-event
+     * provider owns a dormant-marker intro. The first ordinary CPU dispatch
+     * still owns the gameplay marker itself (sonic3k.asm:26389-26397).
+     */
+    public void suppressInitialLevelEventPresentationIfNeeded() {
+        if (initialPresentationSuppressed || !shouldEnterLevelEventDormantMarker()) {
+            return;
+        }
+        initialPresentationWasHidden = sidekick.isHidden();
+        initialPresentationSuppressed = true;
+        sidekick.setHidden(true);
     }
 
     /**
@@ -4006,6 +4058,17 @@ public class SidekickCpuController {
         // first routine-4 frame where x_pos == target (no facing write).
         sidekick.setDirection(Direction.RIGHT);
         sidekick.setDoubleJumpFlag(0);
+        // ROM loc_13B50 also clears the spindash charge before installing the
+        // flight state: `move.b d0,spin_dash_flag(a0)` (written twice) and
+        // `move.w d0,spin_dash_counter(a0)` (sonic3k.asm:26522-26524).
+        // Catch-up flight can fire while Tails is mid-charge, and the flag is
+        // read at the TOP of Tails_Spindash (:28696), which only runs from the
+        // grounded routine. Without this clear the charge survives the whole
+        // recovery flight and the first grounded frame after landing takes the
+        // release path with a decayed counter, launching Tails at the speed
+        // table's index-0 entry instead of leaving him running.
+        sidekick.setSpindash(false);
+        sidekick.setSpindashCounter((short) 0);
 
         flightTimer = 0;
         catchUpUsesRomVisibleLevelFrameCounter = false;
@@ -4605,18 +4668,29 @@ public class SidekickCpuController {
             // switched to a different-code object while off-screen) despawns through
             // sub_13ECA. This is the general word-change trigger; the riding-instance
             // loss above is the special case where the slot's word was zeroed by
-            // Delete_Referenced_Sprite. The armed check is diagnosticS3kInteractWord
-            // != 0: a real object code high word is always non-zero (ROM object code
-            // lives at >= 0x0003xxxx), and the reset paths zero the latch, so a
-            // non-zero latch means a real word was captured on a prior on-object
-            // frame. sub_13ECA preserves the latch, but sets object_control/off-object
-            // so no compare runs post-despawn until the next on-object landing
-            // re-latches through refreshInteractIdSnapshot below. Compared BEFORE the
-            // fall-through refreshInteractIdSnapshot so the latch still holds the
-            // previous on-object frame's word (ROM compare-then-latch).
+            // Delete_Referenced_Sprite. sub_13ECA preserves the latch, but sets
+            // object_control/off-object so no compare runs post-despawn until the
+            // next on-object landing re-latches through refreshInteractIdSnapshot
+            // below. Compared BEFORE the fall-through refreshInteractIdSnapshot so
+            // the latch still holds the previous on-object frame's word (ROM
+            // compare-then-latch).
+            //
+            // ROM performs `cmp.w (a3),d0` UNCONDITIONALLY once the off-screen +
+            // Status_OnObj branch is taken -- there is no "latch already armed"
+            // precondition. Tails_CPU_interact is zeroed with the rest of the CPU
+            // block at level init (clearRAM Tails_CPU_interact,$100,
+            // sonic3k.asm:5415,7621) and the refresh at loc_13F2E only runs on a
+            // frame where Tails is ALREADY on an object, so the FIRST off-screen
+            // on-object CPU frame always compares 0 against a live object code high
+            // word (>= 3) and mismatches. That is the ROM's real behaviour: landing
+            // on anything while off-screen hands Tails straight to sub_13ECA. An
+            // earlier engine-side `!= 0` arming guard suppressed exactly this first
+            // landing and left Tails following on the ground where ROM had already
+            // parked him at ($7F00,0) (FBZ1 sonic+tails trace, frame 116: slot 5
+            // code $0003BA4A vs latch 0).
             boolean useInteractWordChangeDespawn = rules != null
                     && rules.sidekickDespawnUsesInteractCodeWordChange();
-            if (useInteractWordChangeDespawn && (diagnosticS3kInteractWord & 0xFFFF) != 0) {
+            if (useInteractWordChangeDespawn) {
                 Integer currentWord = currentS3kInteractWord();
                 if (currentWord != null
                         && (currentWord & 0xFFFF) != (diagnosticS3kInteractWord & 0xFFFF)) {
@@ -5314,7 +5388,11 @@ public class SidekickCpuController {
             return false;
         }
         if (!usesS3kCatchUpMarker()) {
-            return releaseDormantMarkerThroughRespawnStrategy();
+            boolean released = releaseDormantMarkerThroughRespawnStrategy();
+            if (released) {
+                restoreInitialLevelEventPresentation();
+            }
+            return released;
         }
         LevelManager levelManager = sidekick.currentLevelManager();
         if (levelManager != null) {
@@ -5340,7 +5418,17 @@ public class SidekickCpuController {
         // The level-event write changes only Tails_CPU_routine. Preserve the
         // dormant marker's object_control=$83 animation suppression until
         // Tails_Catch_Up_Flying reaches loc_13B50 and writes $81.
+        restoreInitialLevelEventPresentation();
         return true;
+    }
+
+    private void restoreInitialLevelEventPresentation() {
+        if (!initialPresentationSuppressed) {
+            return;
+        }
+        sidekick.setHidden(initialPresentationWasHidden);
+        initialPresentationSuppressed = false;
+        initialPresentationWasHidden = false;
     }
 
     private boolean releaseDormantMarkerThroughRespawnStrategy() {
@@ -5652,6 +5740,15 @@ public class SidekickCpuController {
     }
 
     /**
+     * Adopts the ROM-owned Pos_table/Stat_table prefill already written for this
+     * controller's direct leader during level assembly. Consumed by the next INIT
+     * placement; it does not authorize trace data or bootstrap placement.
+     */
+    public void adoptLevelStartLeaderHistoryPrefill() {
+        levelStartLeaderHistoryPrefillPending = true;
+    }
+
+    /**
      * Re-captures the spawn anchor from the leader's own current position.
      *
      * <p>ROM {@code InitPlayers} copies the sidekick's spawn coordinates from
@@ -5818,6 +5915,7 @@ public class SidekickCpuController {
                 skipPhysicsThisFrame,
                 deadOnObjectReenteredVisibleWindow,
                 deferredDespawnDeadFallContinuingThisFrame,
+                levelStartLeaderHistoryPrefillPending,
                 bootstrapPreludePlacementApplied,
                 cpuFrameCounterFromStoredLevelFrame,
                 nextCpuFrameCounterOverride,
@@ -5838,7 +5936,9 @@ public class SidekickCpuController {
                 mgzReleasedChaseYAccel,
                 flightTimer,
                 catchUpTargetX,
-                catchUpTargetY);
+                catchUpTargetY,
+                initialPresentationSuppressed,
+                initialPresentationWasHidden);
     }
 
     public void restoreRewindState(SidekickCpuRewindExtra snapshot) {
@@ -5885,6 +5985,7 @@ public class SidekickCpuController {
         skipPhysicsThisFrame = snapshot.skipPhysicsThisFrame();
         deadOnObjectReenteredVisibleWindow = snapshot.deadOnObjectReenteredVisibleWindow();
         deferredDespawnDeadFallContinuingThisFrame = snapshot.deferredDespawnDeadFallContinuingThisFrame();
+        levelStartLeaderHistoryPrefillPending = snapshot.levelStartLeaderHistoryPrefillPending();
         bootstrapPreludePlacementApplied = snapshot.bootstrapPreludePlacementApplied();
         cpuFrameCounterFromStoredLevelFrame = snapshot.cpuFrameCounterFromStoredLevelFrame();
         nextCpuFrameCounterOverride = snapshot.nextCpuFrameCounterOverride();
@@ -5901,6 +6002,8 @@ public class SidekickCpuController {
         flightTimer = snapshot.flightTimer();
         catchUpTargetX = snapshot.catchUpTargetX();
         catchUpTargetY = snapshot.catchUpTargetY();
+        initialPresentationSuppressed = snapshot.initialPresentationSuppressed();
+        initialPresentationWasHidden = snapshot.initialPresentationWasHidden();
     }
 
     private void restoreLegacyCarryRewindState(SidekickCpuRewindExtra snapshot) {
@@ -5948,8 +6051,15 @@ public class SidekickCpuController {
      */
     public void resetForInitialProcessSpritesSlot() {
         int assemblyAnimation = sidekick.getForcedAnimationId();
+        boolean preserveInitialPresentationLatch =
+                initialPresentationSuppressed && sidekick.isHidden();
+        boolean previousInitialPresentationWasHidden = initialPresentationWasHidden;
         carryController().clearState();
         resetCpuState();
+        if (preserveInitialPresentationLatch) {
+            initialPresentationSuppressed = true;
+            initialPresentationWasHidden = previousInitialPresentationWasHidden;
+        }
         // Tails_Init clears the CPU globals but does not write anim(a0).
         // Preserve an animation selected earlier by SpawnLevelMainSprites
         // (for example the simple falling intro's $1B).
@@ -5999,6 +6109,8 @@ public class SidekickCpuController {
         flightTimer = 0;
         catchUpTargetX = 0;
         catchUpTargetY = 0;
+        initialPresentationSuppressed = false;
+        initialPresentationWasHidden = false;
     }
 
     /**

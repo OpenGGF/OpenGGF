@@ -134,7 +134,18 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private static final int SLOW_RISE_VEL = -0x20;
     private static final int VORTEX_APPROACH_Y = 0x108;
     private static final int CONTINUOUS_SFX_INTERVAL = 16;
-    private static final int DEFEAT_HANDOFF_WAIT = REOPEN_TIME + 1;
+    /**
+     * ROM {@code BossDefeated}: {@code move.w #$3F,$2E(a0)}
+     * (docs/skdisasm/sonic3k.asm:180821), reached from {@code loc_6ACA6}'s tail-jump through
+     * {@code BossDefeated_StopTimer} (:140594-140599).
+     *
+     * <p>This was {@code REOPEN_TIME + 1}. Both halves of that were wrong and they cancelled:
+     * the {@code +1} compensated for the defeated arm being dispatched on the install frame,
+     * and {@code REOPEN_TIME} is the miniboss's <em>reopen</em> delay - an unrelated ROM
+     * quantity that merely happens to share {@code $3F}, so the value looked sourced when it
+     * was fitted.
+     */
+    private static final int BOSS_DEFEATED_WAIT = 0x3F;
 
 
     private static final int[][] ATTACK_PATTERNS = {
@@ -238,6 +249,18 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private boolean vortexTrackedP2;
     private int defeatHandoffTimer;
     private boolean defeatHandoffStarted;
+    /**
+     * Consumes the dispatch that installed the defeat handler.
+     *
+     * <p>{@code Obj_HCZ_MinibossLoop} reads {@code routine(a0)} at its head, {@code jsr}s the
+     * selected arm and only then {@code bsr.w sub_6AC48}
+     * (docs/skdisasm/sonic3k.asm:139296-139302); when {@code collision_property} has reached
+     * zero, {@code loc_6ACA6} installs {@code Wait_FadeToLevelMusic} into {@code (a0)}
+     * (:140594-140599). The dispatcher has already called this slot's handler for the frame,
+     * so that wait's first decrement belongs to the next object pass and the killing frame
+     * ends at {@code $3F}.
+     */
+    private boolean pendingDefeatDispatch;
     private int lastVIntRunCount;
     private int lastHitFrame = -1;
     private int lastHitRoutine = -1;
@@ -368,6 +391,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         vortexFinalPullPending = false;
         defeatHandoffTimer = -1;
         defeatHandoffStarted = false;
+        pendingDefeatDispatch = false;
         lastHitFrame = -1;
         lastHitRoutine = -1;
         lastHitWaitTimer = -1;
@@ -484,9 +508,17 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectPullReady = false;
         vortexFinalPullPending = false;
         // Touch_Enemy sets the defeated status after Obj_HCZ_MinibossLoop has
-        // already dispatched, so the native wait begins on the next object pass.
-        defeatHandoffTimer = DEFEAT_HANDOFF_WAIT;
+        // already run. On the following object pass sub_6AC48 installs
+        // Wait_FadeToLevelMusic, which counts the retained $3F wait before
+        // loc_6A22A calls Obj_EndSignControl (sonic3k.asm:140574-140594,
+        // 179651-179669,180372-180379). The explosion controller is a separate
+        // child and must not gate this parent handoff.
+        // Touch_Enemy runs from Draw_And_Touch_Sprite after the boss routine
+        // dispatch, so Wait_FadeToLevelMusic's first decrement is necessarily
+        // on the following object pass (sonic3k.asm:139242-139249,20900-20925).
+        defeatHandoffTimer = BOSS_DEFEATED_WAIT;
         defeatHandoffStarted = false;
+        pendingDefeatDispatch = true;
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         loadBossPalette();
@@ -516,7 +548,14 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             case ROUTINE_PRE_VORTEX_DRIFT -> updatePreVortexDrift();
             case ROUTINE_VORTEX -> updateVortex(player);
             case ROUTINE_SLOW_RISE -> updateSlowRise();
-            case ROUTINE_DEFEATED -> updateDefeated();
+            case ROUTINE_DEFEATED -> {
+                if (pendingDefeatDispatch) {
+                    // Wait_FadeToLevelMusic was installed after this frame's arm already ran.
+                    pendingDefeatDispatch = false;
+                } else {
+                    updateDefeated();
+                }
+            }
             default -> {
             }
         }

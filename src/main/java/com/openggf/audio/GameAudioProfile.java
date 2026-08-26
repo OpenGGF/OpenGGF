@@ -1,5 +1,6 @@
 package com.openggf.audio;
 
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -9,6 +10,18 @@ import java.util.Map;
 
 @com.openggf.game.ModApi
 public interface GameAudioProfile {
+    @com.openggf.game.ModApi
+    enum OrdinaryMusicSfxPolicy {
+        PRESERVE_ACTIVE,
+        STOP_ALL
+    }
+
+    @com.openggf.game.ModApi
+    enum SegaPcmPlaybackPolicy {
+        MIX_WITH_ACTIVE,
+        EXCLUSIVE_STOP_ALL
+    }
+
     default String presentationGameId() {
         return "base";
     }
@@ -78,6 +91,46 @@ public interface GameAudioProfile {
         return musicId == getExtraLifeMusicId();
     }
 
+    /** How an ordinary music request interacts with an active 1-up override. */
+    @com.openggf.game.ModApi
+    enum MusicDuringOverridePolicy {
+        /** S1/S2 load the new song immediately and abandon the saved song. */
+        REPLACE_IMMEDIATELY,
+        /** S3K keeps the request queued until the 1-up jingle restores. */
+        DEFER_UNTIL_RESTORE
+    }
+
+    default MusicDuringOverridePolicy getMusicDuringOverridePolicy() {
+        return MusicDuringOverridePolicy.REPLACE_IMMEDIATELY;
+    }
+
+    /** How another 1-up request behaves while the 1-up jingle is active. */
+    @com.openggf.game.ModApi
+    enum MusicOverrideRetriggerPolicy {
+        /** S1 and S3K consume the request without restarting the jingle. */
+        IGNORE,
+        /** S2 reloads the jingle but preserves the original saved song. */
+        RESTART
+    }
+
+    default MusicOverrideRetriggerPolicy getMusicOverrideRetriggerPolicy() {
+        return MusicOverrideRetriggerPolicy.IGNORE;
+    }
+
+    /** How fade/stop commands behave while the 1-up jingle is active. */
+    @com.openggf.game.ModApi
+    enum SystemCommandDuringOverridePolicy {
+        /** S1/S2 service the command against the active jingle. */
+        APPLY,
+        /** S3K consumes the queued command without disturbing the jingle. */
+        DISCARD
+    }
+
+    default SystemCommandDuringOverridePolicy
+            getSystemCommandDuringOverridePolicy() {
+        return SystemCommandDuringOverridePolicy.APPLY;
+    }
+
     /**
      * Returns true if SFX should be completely blocked during this music.
      * In the original ROM, only the 1-up jingle sets 1upPlaying flag which blocks SFX.
@@ -101,6 +154,25 @@ public interface GameAudioProfile {
      */
     default int getSfxPriority(int soundId) {
         return 0x70; // Default priority
+    }
+
+    /**
+     * Returns an optional game-owned whole-request SFX admission policy. The
+     * stateful shipped S1/S2 priority latch is owned by {@code SmpsDriver}; the
+     * shared default adds no policy beyond that driver rule.
+     */
+    default SmpsRequestAdmissionPolicy getSfxAdmissionPolicy() {
+        return SmpsRequestAdmissionPolicy.PERMISSIVE;
+    }
+
+    /** How an ordinary (non-1-up) BGM load treats already-active SFX. */
+    default OrdinaryMusicSfxPolicy getOrdinaryMusicSfxPolicy() {
+        return OrdinaryMusicSfxPolicy.STOP_ALL;
+    }
+
+    /** How the game's SEGA PCM command interacts with active SMPS voices. */
+    default SegaPcmPlaybackPolicy getSegaPcmPlaybackPolicy() {
+        return SegaPcmPlaybackPolicy.MIX_WITH_ACTIVE;
     }
 
     /**

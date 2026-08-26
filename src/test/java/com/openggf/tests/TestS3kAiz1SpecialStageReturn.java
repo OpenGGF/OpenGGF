@@ -4,9 +4,13 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;
@@ -219,6 +223,9 @@ public class TestS3kAiz1SpecialStageReturn {
                     + " topSolidBit=0x" + Integer.toHexString(sprite.getTopSolidBit())
                     + " lrbSolidBit=0x" + Integer.toHexString(sprite.getLrbSolidBit()));
 
+            assertEquals(bigRingY - 0x60, fixture.camera().getY(),
+                    "Return load should apply Saved2_camera_max_Y_pos before its first camera snap");
+
             // Simulate enterTitleCardFromResults: restore position + solid bits
             assertTrue(lm.hasBigRingReturn(), "BigRingReturn should be active after reload");
             lm.getBigRingReturn().restoreToPlayer(sprite, fixture.camera(), lm.getLevelGamestate());
@@ -236,6 +243,9 @@ public class TestS3kAiz1SpecialStageReturn {
                     + " centreY=0x" + Integer.toHexString(sprite.getCentreY())
                     + " topSolidBit=0x" + Integer.toHexString(sprite.getTopSolidBit())
                     + " lrbSolidBit=0x" + Integer.toHexString(sprite.getLrbSolidBit()));
+
+            assertEquals(bigRingY - 0x60, fixture.camera().getY(),
+                    "Camera should use the ROM's player-centred return position after applying saved max Y");
 
             // Ground snap with correct solid bits
             GameServices.collision().resolveGroundAttachment(sprite, 14, () -> false);
@@ -267,6 +277,51 @@ public class TestS3kAiz1SpecialStageReturn {
         } finally {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
         }
+    }
+
+    @Test
+    public void specialStageReturn_preservesBrokenMonitorRespawnState() throws Exception {
+        LevelManager lm = GameServices.level();
+        ObjectManager objectManager = lm.getObjectManager();
+        ObjectSpawn monitor = lm.getCurrentLevel().getObjects().stream()
+                .filter(spawn -> (spawn.objectId() & 0xFF) == 0x01)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("AIZ1 should contain a monitor spawn"));
+
+        fixture.camera().setX((short) (monitor.x() - 0xA0));
+        fixture.camera().setY((short) (monitor.y() - 0x60));
+        objectManager.reset(fixture.camera().getX());
+        assertTrue(objectManager.getActiveSpawns().contains(monitor),
+                "The selected monitor should be in the active placement window");
+
+        objectManager.markRemembered(monitor);
+        assertTrue(objectManager.isRemembered(monitor),
+                "The setup monitor should be marked as broken before entering the special stage");
+
+        lm.saveBigRingReturn(new BigRingReturnState(
+                monitor.x(), monitor.y(),
+                monitor.x() - 0xA0, monitor.y() - 0x60, sprite.getRingCount(),
+                sprite.getTopSolidBit(), sprite.getLrbSolidBit(), fixture.camera().getMaxY(), 0));
+        lm.loadCurrentLevel();
+
+        ObjectSpawn reloadedMonitor = lm.getCurrentLevel().getObjects().stream()
+                .filter(spawn -> (spawn.objectId() & 0xFF) == 0x01)
+                .filter(spawn -> spawn.x() == monitor.x() && spawn.y() == monitor.y())
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("The saved monitor should exist after reload"));
+        ObjectManager reloadedObjectManager = lm.getObjectManager();
+        assertTrue(reloadedObjectManager.isRemembered(reloadedMonitor),
+                "A monitor broken before the special stage must remain broken on return");
+        reloadedObjectManager.preloadInitialSpawnsForHydration();
+        ObjectInstance reloadedInstance = reloadedObjectManager.getActiveObjects().stream()
+                .filter(instance -> reloadedMonitor.equals(instance.getSpawn()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("The remembered monitor should remain materialized"));
+        Sonic3kMonitorObjectInstance reloadedMonitorInstance =
+                assertInstanceOf(Sonic3kMonitorObjectInstance.class, reloadedInstance);
+        reloadedMonitorInstance.update(0, sprite);
+        assertEquals(0, reloadedMonitorInstance.getCollisionFlags(),
+                "A remembered monitor should materialize as a broken shell, not an intact monitor");
     }
 
     private void specialStageReturnFlowTest(String label, int teleportX, int teleportY) {
@@ -381,5 +436,3 @@ public class TestS3kAiz1SpecialStageReturn {
         return false;
     }
 }
-
-

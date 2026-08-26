@@ -639,6 +639,11 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
+    public void clearLastStarPostHit() {
+        lm().clearLastStarPostHit();
+    }
+
+    @Override
     public void requestSessionSave(SaveReason reason) {
         SessionSaveRequests.requestCurrentSessionSave(reason);
     }

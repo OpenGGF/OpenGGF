@@ -11,6 +11,7 @@ import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -51,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * S3K is omitted until its traces pass. Traces that cannot be warm-reused
  * (power-on / fresh-load-required) or fail to replay are skipped and logged.
  */
+@Tag("performance-measurement")
 public class TestVerifierPoolBenchmark {
 
     private static final int JOB_COUNT = 100;

@@ -5,7 +5,7 @@ import java.util.List;
 /** Executable inventory of the S1 snapshot fields considered by the parity contract. */
 public final class S1AudioFieldRegistry {
     public enum Signedness { BOOLEAN, UNSIGNED_BYTE, SIGNED_BYTE, UNSIGNED_WORD, RELATIVE_POSITION, STRUCTURAL }
-    public enum Applicability { GLOBAL, ALL_ROLES, ACTIVE_ROLES, FM_DAC_ONLY, PSG_ONLY }
+    public enum Applicability { GLOBAL, ALL_ROLES, ACTIVE_ROLES, FM_DAC_ONLY, FM_PSG_ONLY, PSG_ONLY }
     public enum Comparison { GATE, DIAGNOSTIC }
 
     public record Field(String name, String source, Signedness signedness,
@@ -61,7 +61,7 @@ public final class S1AudioFieldRegistry {
             field("durationReload", "SmpsTrackSnapshot.scaledDuration", Signedness.UNSIGNED_BYTE,
                     Applicability.ACTIVE_ROLES, Comparison.GATE),
             field("baseFrequency", "SmpsTrackSnapshot.baseBlock/baseFnum", Signedness.UNSIGNED_WORD,
-                    Applicability.ACTIVE_ROLES, Comparison.GATE),
+                    Applicability.FM_PSG_ONLY, Comparison.GATE),
             field("detune", "SmpsTrackSnapshot.detune", Signedness.SIGNED_BYTE,
                     Applicability.ACTIVE_ROLES, Comparison.GATE),
             field("loopCounters", "SmpsTrackSnapshot.loopCounters at parsed GHZ $F7 indices",

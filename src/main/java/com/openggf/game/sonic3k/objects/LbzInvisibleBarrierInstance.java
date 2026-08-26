@@ -7,6 +7,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 
@@ -22,7 +23,23 @@ import java.util.List;
  * itself once {@code Camera_X_pos} reaches {@code $3D80}.
  */
 public final class LbzInvisibleBarrierInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_LBZ1InvisibleBarrier} (docs/skdisasm/sonic3k.asm:111150) is spawned by its parent rather than from the
+     * object pointer table; every routine in its code block lies in the
+     * {@code $0005xxxx} bank.
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0005}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0005;
+    }
+
     private static final int BARRIER_X = 0x3BC0;
     private static final int BARRIER_Y = 0x0100;
     private static final int RELEASE_CAMERA_X = 0x3D80;

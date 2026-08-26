@@ -109,7 +109,9 @@ class TestLbzTubeElevatorInstance {
         LbzTubeElevatorInstance elevator = (LbzTubeElevatorInstance) elevator(0x1200, 0x0600, 0);
         TestablePlayableSprite tails = playerAt(0x1200, 0x0600);
         tails.setAir(true);
-        elevator.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+        elevator.setServices(new TestObjectServices()
+                .withSidekicks(List.of(tails))
+                .withIsolatedObjectManager());
 
         elevator.update(0, playerAt(0x1200, 0x0600));
 
@@ -471,7 +473,7 @@ class TestLbzTubeElevatorInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_LBZ);
         ObjectInstance elevator = registry.create(new ObjectSpawn(x, y, 0x10, subtype, 0, false, 0));
         if (elevator instanceof com.openggf.level.objects.AbstractObjectInstance object) {
-            object.setServices(new TestObjectServices());
+            object.setServices(new TestObjectServices().withIsolatedObjectManager());
         }
         return elevator;
     }

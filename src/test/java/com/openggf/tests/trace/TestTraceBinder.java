@@ -1,5 +1,6 @@
 package com.openggf.tests.trace;
 
+import com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager;
 import com.openggf.trace.*;
 
 import org.junit.jupiter.api.Test;
@@ -7,6 +8,41 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TestTraceBinder {
+
+    @Test
+    void cnzSlotMismatchesAreErrorsAfterTheFrontierIsGreen() {
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        TraceEvent.CnzSlotMachineState expected = new TraceEvent.CnzSlotMachineState(
+                7, 0x1234, false, 0x04, 1, 0, 0,
+                java.util.List.of(0, 0, 0), java.util.List.of(8, 8, 8),
+                java.util.List.of(0, 0, 0));
+        CNZSlotMachineManager.Snapshot actual = new CNZSlotMachineManager.Snapshot(
+                false, 0x08, 1, 0, 0,
+                java.util.List.of(0, 0, 0), java.util.List.of(8, 8, 8),
+                java.util.List.of(0, 0, 0));
+
+        binder.compareCnzSlotMachine(7, expected, actual);
+
+        DivergenceReport report = binder.buildReport();
+        assertEquals(1, report.errors().size());
+        assertEquals(0, report.warnings().size());
+    }
+
+    @Test
+    void tornadoMismatchesRemainWarningsUntilThatCoverageBoundaryCloses() {
+        TraceBinder binder = new TraceBinder(ToleranceConfig.DEFAULT);
+        TraceEvent.S2TornadoState expected = new TraceEvent.S2TornadoState(
+                7, 3, 0x100, 0x200, 0, 0, 2, 0, 0, 0, 0, 0, 0);
+        com.openggf.game.sonic2.objects.TornadoObjectInstance.Snapshot actual =
+                new com.openggf.game.sonic2.objects.TornadoObjectInstance.Snapshot(
+                        0x100, 0x200, 0, 0, 4, 0, 0, 0, 0, 0, 0);
+
+        binder.compareS2Tornado(7, expected, actual);
+
+        DivergenceReport report = binder.buildReport();
+        assertEquals(0, report.errors().size());
+        assertEquals(1, report.warnings().size());
+    }
 
     @Test
     void playerAndSidekickAnimationMismatchesUseIndependentGate() {

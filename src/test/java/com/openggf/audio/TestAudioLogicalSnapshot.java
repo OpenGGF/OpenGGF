@@ -125,7 +125,9 @@ class TestAudioLogicalSnapshot {
         audio.setBackend(backend);
         AudioTestFixtures.StubSmpsLoader donor = new AudioTestFixtures.StubSmpsLoader();
         donor.musicResults.put(0x2A, new AudioTestFixtures.StubSmpsData("donor-music"));
-        audio.registerDonorLoader("s3k", donor, AudioTestFixtures.EMPTY_DAC);
+        audio.registerDonorLoader(
+                "s3k", donor, AudioTestFixtures.EMPTY_DAC,
+                new SmpsSequencerConfig.Builder().build());
 
         audio.playDonorMusic("s3k", 0x2A);
 

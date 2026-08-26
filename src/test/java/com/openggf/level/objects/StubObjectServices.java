@@ -46,13 +46,28 @@ public class StubObjectServices implements ObjectServices {
     private final ZoneRuntimeRegistry zoneRuntimeRegistry = new ZoneRuntimeRegistry();
     private final ZoneLayoutMutationPipeline zoneLayoutMutationPipeline = new ZoneLayoutMutationPipeline();
     private ObjectPlayerQuery playerQuery;
+    private ObjectManager isolatedObjectManager;
+
+    /**
+     * Installs a real empty object manager for direct object tests that exercise
+     * solid-contact ownership without loading a level. The default remains null
+     * so tests that intentionally model an absent level manager stay explicit.
+     */
+    public StubObjectServices withIsolatedObjectManager() {
+        if (isolatedObjectManager == null) {
+            isolatedObjectManager = new ObjectManager(
+                    List.of(), null, 0, null, null,
+                    null, null, this);
+        }
+        return this;
+    }
 
     public StubObjectServices withPlayerQuery(ObjectPlayerQuery playerQuery) {
         this.playerQuery = Objects.requireNonNull(playerQuery, "playerQuery");
         return this;
     }
 
-    @Override public ObjectManager objectManager() { return null; }
+    @Override public ObjectManager objectManager() { return isolatedObjectManager; }
     @Override public ObjectRenderManager renderManager() { return null; }
     @Override public LevelState levelGamestate() { return null; }
     @Override public RespawnState checkpointState() { return null; }
@@ -166,6 +181,6 @@ public class StubObjectServices implements ObjectServices {
     @Override public int getCurrentLevelMusicId() { return 0; }
     @Override public int[] findPatternOffset(int refX, int refY, int minTileIdx, int maxTileIdx, int searchRadius) { return null; }
     @Override public void saveBigRingReturn(com.openggf.level.BigRingReturnState state) {}
+    @Override public void clearLastStarPostHit() {}
     @Override public ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() { return zoneLayoutMutationPipeline; }
 }
-

@@ -1,5 +1,6 @@
 package com.openggf.mods.code;
 
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
@@ -298,7 +299,7 @@ class TestSampleRomArtRemixIntegration {
     private static void compileJava(Path source, Path output) throws Exception {
         List<String> arguments = new ArrayList<>(List.of(
                 "--release", "21", "-classpath",
-                Path.of("target/classes").toAbsolutePath().toString(),
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
                 "-d", output.toString()));
         try (var files = Files.walk(source)) {
             files.filter(path -> path.toString().endsWith(".java")).sorted()

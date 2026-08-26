@@ -20,7 +20,10 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -29,6 +32,29 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSoundTestPresentationHost {
+    @Test
+    void interactiveDeviceLifecycleRunsOnItsAudioThread() throws Exception {
+        Thread caller = Thread.currentThread();
+        AtomicReference<Thread> openedOn = new AtomicReference<>();
+        AtomicReference<Thread> closedOn = new AtomicReference<>();
+        ScheduledExecutorService audioThread =
+                Executors.newSingleThreadScheduledExecutor();
+        AutoCloseable resource = SoundTestApp.callOnAudioThread(
+                audioThread, () -> {
+                    openedOn.set(Thread.currentThread());
+                    return () -> closedOn.set(Thread.currentThread());
+                });
+
+        SoundTestApp.callOnAudioThread(audioThread, () -> {
+            resource.close();
+            return null;
+        });
+        audioThread.shutdownNow();
+
+        assertFalse(openedOn.get() == caller);
+        assertSame(openedOn.get(), closedOn.get());
+    }
+
     @Test
     void directBackendPlaybackCallsAreAbsentFromSoundTestApp()
             throws IOException {
@@ -76,7 +102,7 @@ class TestSoundTestPresentationHost {
         String source = Files.readString(Path.of(
                 "src/main/java/com/openggf/audio/debug/SoundTestApp.java"));
         assertTrue(source.contains(
-                "runInteractiveWindow(options, loader, dacData, host"));
+                "runInteractiveWindow(options, loader, dacData, catalog"));
         assertTrue(source.contains(
                 "runConsole(options, loader, dacData, host"));
         assertTrue(source.contains(

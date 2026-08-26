@@ -14,15 +14,20 @@ import com.openggf.level.objects.ObjectServices;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 /** S3K-owned facade for the direct Kosinski FIFO and KosM parent queue. */
 public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         RewindSnapshottable<S3kRuntimeArtCoordinator.Snapshot> {
     public static final String REWIND_KEY = "s3k-runtime-art-coordinator";
 
+    private static final Logger LOG =
+            Logger.getLogger(S3kRuntimeArtCoordinator.class.getName());
+
     private final S3kKosDecompressionQueue directQueue;
     private final S3kKosModuleQueue moduleQueue;
     private FreshLevelRuntimeArtRequest deferredFreshLevelRuntimeArt;
+    private boolean deferredFreshLevelPublicationBlockedReported;
 
     private record FreshLevelRuntimeArtRequest(
             Rom rom, int primarySource, int secondarySource) {
@@ -71,8 +76,16 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
 
     /**
      * Defers a fresh-level terrain submission until the current loop tail has
-     * serviced PRE_MAIN_LOOP. The ROM publishes the new KosM parents after
-     * that service, so their first module begins on the following iteration.
+     * serviced PRE_MAIN_LOOP.
+     *
+     * <p>Used only when the caller is still ahead of the ROM's
+     * {@code Kos_modules_left} gate; see
+     * {@link #freshLevelArtWaitsForModuleQueue}. Once that gate is clear,
+     * {@code LoadLevelLoadBlock} queues both parents at the call and only then
+     * blocks (docs/skdisasm/sonic3k.asm:9727, 9734, 9736-9743), so deferring
+     * there would invert the ROM's order against everything that queues later:
+     * the deferred batch releases its slots and the following frames' object
+     * art takes them, starving the terrain art behind a full FIFO.
      */
     public void deferFreshLevelRuntimeArt(
             Rom rom, int primarySource, int secondarySource) {
@@ -80,6 +93,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         // publication tail. No production work for the older request exists.
         deferredFreshLevelRuntimeArt = new FreshLevelRuntimeArtRequest(
                 Objects.requireNonNull(rom, "rom"), primarySource, secondarySource);
+        deferredFreshLevelPublicationBlockedReported = false;
     }
 
     /**
@@ -88,6 +102,23 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
      * held transition boundary; the first child is then exposed by the next
      * loop's VBlank services.
      */
+    /**
+     * Whether the module queue is still draining a previous producer's
+     * parents, which is the ROM's own precondition for reaching
+     * {@code LoadLevelLoadBlock} at all.
+     *
+     * <p>{@code Obj_TitleCardCreate} holds the card's routine on
+     * {@code tst.b (Kos_modules_left).w} (docs/skdisasm/sonic3k.asm:62169-62171)
+     * until the archives {@code Obj_TitleCardInit} queued have finished, and
+     * only then does the locked loop release and {@code Level:} run
+     * {@code LoadLevelLoadBlock} (:7761). So a caller arriving while modules
+     * are still outstanding is ahead of the ROM's control flow, not short of
+     * FIFO capacity.
+     */
+    public boolean freshLevelArtWaitsForModuleQueue() {
+        return moduleQueue.hasPendingPhysicalModules();
+    }
+
     public void submitFreshLevelRuntimeArt(
             Rom rom, int primarySource, int secondarySource) {
         Objects.requireNonNull(rom, "rom");
@@ -144,6 +175,23 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
                 sources.add(request.secondarySource());
             }
             if (!moduleQueue.hasCapacityFor(sources.size())) {
+                // The retry is per-service and silent by design: the ROM's own
+                // producer simply finds no free slot this frame and comes back.
+                // A queue that never drains turns that into an unbounded silent
+                // stall, though, and the request is then never published at all.
+                // Say so once per request rather than once per attempt.
+                if (!deferredFreshLevelPublicationBlockedReported) {
+                    deferredFreshLevelPublicationBlockedReported = true;
+                    LOG.warning(String.format(
+                            "S3K fresh-level KosM batch cannot publish: needs %d"
+                                    + " slots, module FIFO holds %d of %d"
+                                    + " (primary source 0x%X). Retrying every"
+                                    + " service; this is silent from here on.",
+                            sources.size(),
+                            moduleQueue.physicalQueueSize(),
+                            S3kKosModuleQueue.MAX_QUEUE_DEPTH,
+                            request.primarySource()));
+                }
                 return;
             }
             try {
@@ -153,6 +201,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
                     moduleQueue.claimAfterFreshLevelHandoff(handle);
                 }
                 deferredFreshLevelRuntimeArt = null;
+                deferredFreshLevelPublicationBlockedReported = false;
             } catch (java.io.IOException exception) {
                 throw new IllegalStateException(
                         "Unable to publish deferred fresh-level runtime art", exception);
@@ -214,6 +263,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
                         "invalid empty fresh-level runtime-art snapshot");
             }
             deferredFreshLevelRuntimeArt = null;
+            deferredFreshLevelPublicationBlockedReported = false;
             return;
         }
         if (snapshot.deferredRom() == null
@@ -224,6 +274,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         deferredFreshLevelRuntimeArt = new FreshLevelRuntimeArtRequest(
                 snapshot.deferredRom(), snapshot.deferredPrimarySource(),
                 snapshot.deferredSecondarySource());
+        deferredFreshLevelPublicationBlockedReported = false;
     }
 
     @Override
@@ -250,5 +301,6 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         directQueue.resetForMissingSnapshot();
         moduleQueue.resetForMissingSnapshot();
         deferredFreshLevelRuntimeArt = null;
+        deferredFreshLevelPublicationBlockedReported = false;
     }
 }

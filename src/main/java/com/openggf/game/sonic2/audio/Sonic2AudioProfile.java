@@ -99,8 +99,23 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     }
 
     @Override
+    public MusicOverrideRetriggerPolicy getMusicOverrideRetriggerPolicy() {
+        return MusicOverrideRetriggerPolicy.RESTART;
+    }
+
+    @Override
     public int getSuperSonicMusicId() {
         return Sonic2Music.SUPER_SONIC.id;
+    }
+
+    @Override
+    protected int getFadeOutCommandId() {
+        return Sonic2SmpsConstants.CMD_FADE_OUT;
+    }
+
+    @Override
+    protected int getStopAllCommandId() {
+        return Sonic2SmpsConstants.CMD_STOP_ALL;
     }
 
     @Override

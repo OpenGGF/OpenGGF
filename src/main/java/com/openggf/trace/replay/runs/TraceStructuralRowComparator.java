@@ -4,6 +4,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameServices;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
+import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
@@ -34,6 +35,7 @@ public final class TraceStructuralRowComparator implements TraceHudModel {
     private final TraceData trace;
     private final TraceBinder binder;
     private final Supplier<List<QueueDiagnosticSnapshot>> queueSnapshots;
+    private final Supplier<HardwareTimingSnapshot> hardwareTiming;
 
     private int cursor;
     private Bk2FrameInput preparedInput;
@@ -55,7 +57,8 @@ public final class TraceStructuralRowComparator implements TraceHudModel {
             ToleranceConfig tolerances,
             int initialCursor) {
         this(trace, tolerances, initialCursor,
-                GameServices::captureQueueDiagnostics);
+                GameServices::captureQueueDiagnostics,
+                () -> GameServices.hardwareTiming().capture());
     }
 
     public TraceStructuralRowComparator(
@@ -63,6 +66,16 @@ public final class TraceStructuralRowComparator implements TraceHudModel {
             ToleranceConfig tolerances,
             int initialCursor,
             Supplier<List<QueueDiagnosticSnapshot>> queueSnapshots) {
+        this(trace, tolerances, initialCursor, queueSnapshots,
+                () -> GameServices.hardwareTiming().capture());
+    }
+
+    public TraceStructuralRowComparator(
+            TraceData trace,
+            ToleranceConfig tolerances,
+            int initialCursor,
+            Supplier<List<QueueDiagnosticSnapshot>> queueSnapshots,
+            Supplier<HardwareTimingSnapshot> hardwareTiming) {
         this.trace = Objects.requireNonNull(trace, "trace");
         this.binder = new TraceBinder(
                 Objects.requireNonNull(tolerances, "tolerances"));
@@ -73,6 +86,8 @@ public final class TraceStructuralRowComparator implements TraceHudModel {
         this.cursor = initialCursor;
         this.queueSnapshots = Objects.requireNonNull(
                 queueSnapshots, "queueSnapshots");
+        this.hardwareTiming = Objects.requireNonNull(
+                hardwareTiming, "hardwareTiming");
     }
 
     /** Selects the exact physical BK2 frame represented by the next row. */
@@ -278,7 +293,7 @@ public final class TraceStructuralRowComparator implements TraceHudModel {
                             expected.frame(),
                             trace.loadQueueStatesForComparisonFrame(expected.frame()),
                             queueSnapshots.get(),
-                            GameServices.hardwareTiming().capture());
+                            hardwareTiming.get());
             binder.compareLoadQueues(
                     expected.frame(), projection.expected(), projection.actual());
             result = Objects.requireNonNull(

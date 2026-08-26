@@ -267,12 +267,17 @@ public class TestPhysicsProfile {
 
     @Test
     public void testSpeedShoesTimerPhaseCompensation_PerGame() {
-        assertEquals(0, GameRules.SONIC_1.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
-                "S1 word timer clears on the display-time decrement that reaches zero");
+        // S1 and S2 have the same structure: the control routine dispatches the
+        // movement modes and only then calls Sonic_Display, which decrements the
+        // shoes timer and restores acceleration
+        // (s1disasm/_incObj/01 Sonic.asm:76,80,186-191; s2.asm:36240,36244,36310-36312).
+        // The engine ticks timers before movement, so both need one extra tick.
+        assertEquals(1, GameRules.SONIC_1.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
+                "S1 restores acceleration in Sonic_Display, after that frame's movement modes have run");
         assertEquals(1, GameRules.SONIC_2.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
                 "S2 display-time decrement happens after movement, while the engine timer updates before movement");
         assertEquals(0, GameRules.SONIC_3K.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
-                "S3K clears speed shoes from Sonic_Display before the next movement frame consumes acceleration");
+                "S3K phase is set by its every-eighth-frame decrement gate, not by this offset");
     }
 
     @Test

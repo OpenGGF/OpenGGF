@@ -20,9 +20,7 @@ public sealed interface TraceEvent {
     Set<String> KNOWN_GENERIC_NATIVE_EVENTS = Set.of(
             "state_snapshot",
             "cursor_state",
-            "slot_dump",
-            "s2_tornado_state",
-            "cnz_slot_machine_state");
+            "slot_dump");
 
     int frame();
 
@@ -711,6 +709,70 @@ public sealed interface TraceEvent {
     }
 
     /** Mandatory per-stored-row player-art lifecycle heartbeat. */
+    /**
+     * Per-frame snapshot of the ROM's {@code SlotMachineVariables} block, emitted
+     * by the S2 recorder on every row of a CNZ capture. Purely a comparison
+     * oracle: replay must never hydrate engine slot state from these values.
+     *
+     * <p>The ROM derives {@code slotN_speed} and {@code timer} from
+     * {@code V_int_run_count} by byte arithmetic in {@code SlotMachine_Routine3}
+     * and {@code Routine4} (s2.asm:59360-59375), so these fields pin the exact
+     * counter the ROM's {@code SlotMachine} consumed. That is what makes them
+     * worth comparing rather than merely recording: a clock or call-ordering
+     * error at this site shows up here as a field mismatch instead of surfacing
+     * thousands of rows later as a ring or speed divergence.
+     *
+     * <p>{@code pos} packs the reel index in the high byte and the sub-tile
+     * offset in the low byte, matching the ROM's 16-bit
+     * {@code (index, offset)} word.
+     */
+    /**
+     * Per-frame snapshot of ObjB2's SST, emitted by the S2 recorder on every row
+     * of an SCZ or WFZ capture. Comparison-only.
+     *
+     * <p>The scratch bytes carry routine-specific ROM idioms rather than plain
+     * numbers. In the SCZ routine, {@code objoff_2E} is the standing-bit
+     * transition — ObjB2 saves
+     * {@code status(a0)}, then stores {@code (saved ^ current) & p1_standing}
+     * (s2.asm:78827, 78834-78839), so it is `$00` or `$08`;
+     * {@code objoff_2F} and {@code objoff_30} are `st.b`/`clr.b` flags, hence
+     * `$FF` or `$00` (s2.asm:79382-79383, 79390); and {@code objoff_31} is the
+     * vertical-move countdown loaded with `$14` (s2.asm:79385-79388).
+     * In the WFZ-end routine, {@code objoff_2E}/{@code objoff_2F} are instead
+     * the big-endian leader-wait word, reused as the jump countdown
+     * (s2.asm:78972-78979, 79041-79068).
+     *
+     * <p>{@code y_sub} is the ROM's 16-bit sub-pixel word. Its low byte is zero
+     * on all 7629 rows of the SCZ fixture, so the engine's 8-bit sub-pixel is a
+     * faithful model of it and the comparison is exact rather than truncating.
+     */
+    @com.openggf.game.ModApi
+    record S2TornadoState(
+            int frame, int slot, int x, int y, int ySub, int yVel,
+            int routine, int routineSecondary, int statusByte,
+            int objoff2E, int objoff2F, int objoff30, int objoff31)
+            implements TraceEvent {}
+
+    @com.openggf.game.ModApi
+    record CnzSlotMachineState(
+            int frame,
+            int vbc,
+            boolean inUse,
+            int routine,
+            int timer,
+            int index,
+            int reward,
+            List<Integer> slotPos,
+            List<Integer> slotSpeed,
+            List<Integer> slotRoutine)
+            implements TraceEvent {
+        public CnzSlotMachineState {
+            slotPos = List.copyOf(slotPos);
+            slotSpeed = List.copyOf(slotSpeed);
+            slotRoutine = List.copyOf(slotRoutine);
+        }
+    }
+
     record DynamicArtTransferState(
             int frame,
             List<DynamicArtTransfer.SegmentEdge> edges,
@@ -747,6 +809,23 @@ public sealed interface TraceEvent {
 
             return switch (event) {
                 case "load_queue_state" -> parseLoadQueueState(frame, node);
+                case "cnz_slot_machine_state" ->
+                        parseCnzSlotMachineState(frame, node);
+                case "s2_tornado_state" -> new S2TornadoState(
+                    frame,
+                    node.has("slot") ? node.get("slot").asInt() : -1,
+                    parseHexInt(node, "x") & 0xFFFF,
+                    parseHexInt(node, "y") & 0xFFFF,
+                    parseHexInt(node, "y_sub") & 0xFFFF,
+                    parseHexInt(node, "y_vel") & 0xFFFF,
+                    parseHexInt(node, "routine") & 0xFF,
+                    parseHexInt(node, "routine_secondary") & 0xFF,
+                    parseHexInt(node, "status_byte") & 0xFF,
+                    parseHexInt(node, "objoff_2e") & 0xFF,
+                    parseHexInt(node, "objoff_2f") & 0xFF,
+                    parseHexInt(node, "objoff_30") & 0xFF,
+                    parseHexInt(node, "objoff_31") & 0xFF
+                );
                 case "dynamic_art_transfer_state" ->
                         parseDynamicArtTransferState(frame, node);
                 case "object_appeared" -> new ObjectAppeared(
@@ -1417,6 +1496,28 @@ public sealed interface TraceEvent {
             outstanding.add(id.asLong());
         }
         return new DynamicArtTransferState(frame, edges, outstanding);
+    }
+
+    private static CnzSlotMachineState parseCnzSlotMachineState(int frame, JsonNode node) {
+        List<Integer> pos = new ArrayList<>();
+        List<Integer> speed = new ArrayList<>();
+        List<Integer> routine = new ArrayList<>();
+        for (int slot = 1; slot <= 3; slot++) {
+            pos.add(parseHexInt(node, "slot" + slot + "_pos") & 0xFFFF);
+            speed.add(parseHexInt(node, "slot" + slot + "_speed") & 0xFF);
+            routine.add(parseHexInt(node, "slot" + slot + "_routine") & 0xFF);
+        }
+        return new CnzSlotMachineState(
+                frame,
+                parseHexInt(node, "vbc") & 0xFFFF,
+                (parseHexInt(node, "in_use") & 0xFFFF) != 0,
+                parseHexInt(node, "routine") & 0xFF,
+                parseHexInt(node, "timer") & 0xFF,
+                parseHexInt(node, "index") & 0xFF,
+                parseHexInt(node, "reward") & 0xFFFF,
+                pos,
+                speed,
+                routine);
     }
 
     private static LoadQueueState parseLoadQueueState(int frame, JsonNode node) {

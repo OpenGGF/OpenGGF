@@ -55,8 +55,9 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
         //
         // ROM processes both Player 1 and Player 2 every frame; mirror that for
         // the camera-focused character and every registered sidekick.
+        ObjectPlayerQuery playerQuery = playerQueryFromRuntime();
         for (PlayableEntity participant :
-                playerQueryFromRuntime().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (participant instanceof AbstractPlayableSprite playable) {
                 oilManager.updateSlides(playable);
             }

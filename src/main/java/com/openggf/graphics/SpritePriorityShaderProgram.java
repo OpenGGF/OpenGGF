@@ -20,7 +20,7 @@ public class SpritePriorityShaderProgram extends ShaderProgram {
 
     // Uniform locations for priority compositing
     private int tilePriorityTextureLocation = -1;
-    private int spriteHighPriorityLocation = -1;
+    private int tileOcclusionPaletteMaskLocation = -1;
     private int screenSizeLocation = -1;
     private int viewportOffsetLocation = -1;
     // Uniform locations for underwater palette support
@@ -45,7 +45,7 @@ public class SpritePriorityShaderProgram extends ShaderProgram {
 
         // Cache priority-specific uniforms
         tilePriorityTextureLocation = glGetUniformLocation(programId, "TilePriorityTexture");
-        spriteHighPriorityLocation = glGetUniformLocation(programId, "SpriteHighPriority");
+        tileOcclusionPaletteMaskLocation = glGetUniformLocation(programId, "TileOcclusionPaletteMask");
         screenSizeLocation = glGetUniformLocation(programId, "ScreenSize");
         viewportOffsetLocation = glGetUniformLocation(programId, "ViewportOffset");
         // Cache underwater palette uniforms
@@ -79,8 +79,12 @@ public class SpritePriorityShaderProgram extends ShaderProgram {
      *                     should appear behind high-priority tiles
      */
     public void setSpriteHighPriority(boolean highPriority) {
-        if (spriteHighPriorityLocation != -1) {
-            glUniform1i(spriteHighPriorityLocation, highPriority ? 1 : 0);
+        setTileOcclusionPaletteMask(highPriority ? 0 : 0xF);
+    }
+
+    public void setTileOcclusionPaletteMask(int mask) {
+        if (tileOcclusionPaletteMaskLocation != -1) {
+            glUniform1i(tileOcclusionPaletteMaskLocation, mask & 0xF);
         }
     }
 

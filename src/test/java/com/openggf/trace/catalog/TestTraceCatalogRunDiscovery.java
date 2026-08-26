@@ -50,11 +50,13 @@ class TestTraceCatalogRunDiscovery {
                 .findFirst()
                 .orElseThrow();
 
-        TraceCatalog.PreparedRunLaunch prepared =
-                TraceCatalog.prepareRunLaunch(run);
+        TraceCatalog.PreparedDescriptorRunLaunch descriptors =
+                TraceCatalog.prepareDescriptorRunLaunch(run);
 
         assertEquals(run.runManifest().segments().size(),
-                prepared.segments().size());
+                descriptors.segments().size());
+        assertEquals(run.runManifest().segments(), descriptors.segments().stream()
+                .map(descriptor -> descriptor.segment()).toList());
     }
 
     @Test

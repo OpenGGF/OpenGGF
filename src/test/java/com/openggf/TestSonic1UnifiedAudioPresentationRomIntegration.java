@@ -11,6 +11,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic1.audio.Sonic1Music;
+import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
+import com.openggf.game.sonic1.audio.Sonic1YmServiceTimingProfile;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -54,6 +56,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @RequiresRom(SonicGame.SONIC_1)
 class TestSonic1UnifiedAudioPresentationRomIntegration {
+
+    @Test
+    void sourceAuthenticatedYmTimingProfileIsEnabled() {
+        assertTrue(Sonic1SmpsSequencerConfig.CONFIG
+                        .getYmServiceTimingProfile()
+                        == Sonic1YmServiceTimingProfile.PROFILE,
+                "S1 must use the reviewed source-authenticated FM5 timing profile");
+    }
 
     private static final int ZONE = 0;
     private static final int ACT = 0;

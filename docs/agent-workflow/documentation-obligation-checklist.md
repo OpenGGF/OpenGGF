@@ -154,6 +154,43 @@ recorded an S3K parity gap; no config, guide, or root-agent-doc changes.)
 
 ---
 
+## Validating trailers before you push
+
+The local hooks and CI compute "is this file staged?" from **different bases**, so a
+commit that satisfies one can still be rejected by the other. Run CI's own validator
+before every push; it is silent on success and takes under a second:
+
+```bash
+bash .githooks/validate-policy.sh ci-push "$(git rev-parse @{u})" "$(git rev-parse HEAD)" develop
+```
+
+Two consequences are worth knowing in advance, because both have cost real time:
+
+**Amending a documented commit is rejected.** The `pre-commit` hook validates the
+**staged index** against `HEAD`, not the commit's own diff. When you amend, the
+documentation files are already in `HEAD`, so they are not in the index and
+`Changelog: updated` reads as a lie — even though the file is unambiguously part of
+the commit being amended. `git commit --amend -F msg` therefore fails with
+"`Changelog` says updated, but `CHANGELOG.md` is not staged". Use
+`git reset --soft HEAD~1` followed by a fresh commit instead. Note that a soft reset
+of a **merge** commit drops `MERGE_HEAD`, so for a merge, redo the merge from
+scratch (`git reset --hard <upstream>` then re-merge) rather than resetting.
+
+**A merge commit is measured against its second parent.** `commit_parent_or_empty_tree`
+prefers `^2` for a merge, so `commit_candidates` diffs the merge against the *merged
+branch*, not against the integration branch. A file counts as staged by the merge only
+if the merge changed it **relative to the branch**. In practice:
+
+- If the branch already wrote the `CHANGELOG.md` entry and it merged cleanly, the merge
+  contributes nothing there — the honest trailer is `Changelog: n/a: <reason>`, not
+  `updated`. A bare `n/a` is rejected; the reason is required.
+- If the branch predates other work on the integration branch, the merge *does* carry
+  that side's edits to those files, and the trailer must say `updated` even though this
+  round changed nothing in them.
+- Whether `CHANGELOG.md` conflicted therefore decides which answer is correct. The same
+  merge procedure can pass or fail depending on that alone, which is why the validator
+  must be run rather than reasoned about.
+
 ## Quick decision summary
 
 - Touched `src/main/` engine behavior? → `Changelog: updated` + `CHANGELOG.md`,

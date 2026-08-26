@@ -117,6 +117,30 @@ public class ObjectManager {
     private final int[] playerCentreYAtSlotStart;
     private final boolean[] playerCentreAtSlotStartValid;
     private int currentExecSlot = -1; // -1 when not in update loop
+
+    /** ROM object-loop counter for the current pass; see ObjectLoopSlotBudget. */
+    private final ObjectLoopSlotBudget objectLoopBudget = new ObjectLoopSlotBudget();
+
+    /**
+     * Rewrites the remaining length of this frame's object walk from the calling
+     * object's own slot, modelling a ROM routine that writes the loop counter
+     * register. {@code remainingSlots} is the ROM's own number; callers cite
+     * where it comes from and this method invents nothing.
+     */
+    public void overrideRemainingObjectLoopSlots(ObjectInstance source, int remainingSlots) {
+        if (source instanceof AbstractObjectInstance aoi) objectLoopBudget.overrideFrom(
+                executionSlotIndex(aoi), remainingSlots);
+    }
+
+    /**
+     * Whether this frame's walk got past the managed dynamic window and so would
+     * have reached the fixed-in-level slots the ROM places straight after it --
+     * S2 {@code LevelOnly_Object_RAM} (docs/s2disasm/s2.constants.asm:1145-1150),
+     * S3K {@code Level_object_RAM}.
+     */
+    public boolean objectLoopReachedFixedInLevelSlots() {
+        return objectLoopBudget.reaches(slotLayout.lastProcessSlotExclusive());
+    }
     private final boolean skipVerticalSpawnLoadFilterForGame;
 
     private final ObjectServices objectServices;
@@ -433,8 +457,7 @@ public class ObjectManager {
         rewindObjectIds.clear();
         s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
-        placement.reset(cameraX);
-        placement.restorePersistentRespawn(persistentRespawnState);
+        placement.reset(cameraX, persistentRespawnState);
         if (registry != null) {
             registry.reportCoverage(placement.getAllSpawns());
         }
@@ -470,7 +493,7 @@ public class ObjectManager {
 
     /**
      * Captures the persistent respawn-remember state (broken/collected/remembered
-     * spawns) to carry across a bonus-stage round-trip reload. See
+     * spawns) to carry across a bonus-stage or special-stage round-trip reload. See
      * {@link PersistentRespawnState} for the ROM {@code Respawn_table_keep} model.
      */
     public PersistentRespawnState capturePersistentRespawn() {
@@ -480,7 +503,7 @@ public class ObjectManager {
     /**
      * Re-establishes respawn-remember state captured by
      * {@link #capturePersistentRespawn()} onto this (freshly reloaded) manager's
-     * placement, so bonus-return respawns broken/collected objects in the state
+     * placement, so stage-return respawns broken/collected objects in the state
      * the player left them (e.g. a monitor broken before the bonus stays broken).
      */
     public void restorePersistentRespawn(PersistentRespawnState state) {
@@ -609,11 +632,21 @@ public class ObjectManager {
     }
 
     private void refreshTouchResponseSnapshot(ObjectInstance inst) {
-        if (collisionResponseList.shouldRefreshFrameStartSnapshot()) {
-            objectCallbacks.run(inst, inst::snapshotTouchResponseState);
-        } else {
-            objectCallbacks.run(inst, inst::clearSpawnTouchSkip); // S3K previous-list path
-        }
+        // ROM Touch_Loop stores object RAM POINTERS, not snapshots: `movea.w (a4)+,a1`
+        // then `x_pos(a1)` (docs/skdisasm/sonic3k.asm:20660-20663, 20674-20681; the S1
+        // ReactToItem and S2 Touch_Response forms are the same shape). Every placed
+        // object sits in a slot after the player, so the player always sees each
+        // object's END-OF-PREVIOUS-FRAME position.
+        //
+        // This runs from LevelManager.prepareTouchResponseSnapshots before any object
+        // updates this frame, so the snapshot captures exactly that position for every
+        // object, whatever phase its own update falls in. The S3K previous-list path
+        // used to skip it, leaving the cache holding whatever the object's own last
+        // update wrote -- still end-of-previous-frame for an object updated before the
+        // touch pass, but one pass older for a spawnChild-created object updated after
+        // it. Collision flags are unaffected: the previous-list path reads them live at
+        // the touch site rather than from this cache.
+        objectCallbacks.run(inst, inst::snapshotTouchResponseState);
     }
 
     public void refreshPostCameraRenderState() {
@@ -903,8 +936,10 @@ public class ObjectManager {
         // Phase 2: ExecuteObjects — run objects in slot order with inline out_of_range.
         updating = true;
         boolean objectsRemoved = false;
+        objectLoopBudget.reset();
         try {
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                if (objectLoopBudget.walkEndedBefore(slotIndexForExec(currentExecSlot))) break;
                 capturePlayerCentreAtSlotStart(player);
                 if (slotRetirement.consumeChildRelease(currentExecSlot)) {
                     releaseSlot(slotIndexForExec(currentExecSlot));
@@ -1099,9 +1134,11 @@ public class ObjectManager {
         // doesn't double-update objects that lost their slot mid-frame.
         // Reused per frame; cleared in the finally block below.
         Set<ObjectInstance> processedInExecLoop = processedInExecLoopScratch;
+        objectLoopBudget.reset();
         try {
             // ROM parity: Iterate slots in ascending order, matching ExecuteObjects.
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                if (objectLoopBudget.walkEndedBefore(slotIndexForExec(currentExecSlot))) break;
                 capturePlayerCentreAtSlotStart(player);
                 if (slotRetirement.consumeChildRelease(currentExecSlot)) {
                     releaseSlot(slotIndexForExec(currentExecSlot));
@@ -1473,7 +1510,15 @@ public class ObjectManager {
         try {
             renderCommands.clear();
             for (ObjectInstance instance : instances) {
-                objectCallbacks.run(instance, () -> instance.appendRenderCommands(renderCommands));
+                objectCallbacks.run(instance, () -> {
+                    int mask = instance.getTileOcclusionPaletteMask();
+                    if (graphicsManager.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
+                        graphicsManager.flushPatternBatch();
+                        graphicsManager.setCurrentSpriteTileOcclusionPaletteMask(mask);
+                        graphicsManager.beginPatternBatch();
+                    }
+                    instance.appendRenderCommands(renderCommands);
+                });
             }
 
             if (renderCommands.isEmpty()) {
@@ -1561,10 +1606,9 @@ public class ObjectManager {
         ensureBucketsPopulated();
         int idx = RenderPriority.clamp(bucket) - RenderPriority.MIN;
 
-        // The BatchedPatternRenderer uses a single global priority uniform for
-        // the entire batch — it cannot vary per-instance. We must flush and
-        // restart the batch at each LOW→HIGH transition so that each group
-        // gets its own batch with the correct priority.
+        // The BatchedPatternRenderer uses a single tile-occlusion uniform for
+        // the entire batch — it cannot vary per-instance. The helper flushes
+        // at every mask transition while retaining SST slot order.
         // (The InstancedPatternRenderer bakes priority per-instance and doesn't
         // need the flush, but it's harmless — empty flushes are no-ops.)
 
@@ -1572,18 +1616,18 @@ public class ObjectManager {
             gfx.flushPatternBatch();
             gfx.setCurrentSpriteHighPriority(false);
             gfx.beginPatternBatch();
-            drawBucketInstancesWithPriority(lowPriorityBuckets[idx]);
+            drawBucketInstancesWithPriority(lowPriorityBuckets[idx], gfx);
         }
 
         if (!highPriorityBuckets[idx].isEmpty()) {
             gfx.flushPatternBatch();
             gfx.setCurrentSpriteHighPriority(true);
             gfx.beginPatternBatch();
-            drawBucketInstancesWithPriority(highPriorityBuckets[idx]);
+            drawBucketInstancesWithPriority(highPriorityBuckets[idx], gfx);
         }
     }
 
-    private void drawBucketInstancesWithPriority(List<ObjectInstance> instances) {
+    private void drawBucketInstancesWithPriority(List<ObjectInstance> instances, GraphicsManager gfx) {
         if (instances.isEmpty()) {
             return;
         }
@@ -1592,7 +1636,15 @@ public class ObjectManager {
         try {
             renderCommands.clear();
             for (ObjectInstance instance : instances) {
-                objectCallbacks.run(instance, () -> instance.appendRenderCommands(renderCommands));
+                objectCallbacks.run(instance, () -> {
+                    int mask = instance.getTileOcclusionPaletteMask();
+                    if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
+                        gfx.flushPatternBatch();
+                        gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
+                        gfx.beginPatternBatch();
+                    }
+                    instance.appendRenderCommands(renderCommands);
+                });
             }
 
             if (!renderCommands.isEmpty()) {
@@ -1714,6 +1766,29 @@ public class ObjectManager {
     }
 
     boolean touchUsesPreviousCollisionResponseList() { return collisionResponseList.usesPrevious(); }
+
+    /**
+     * Publishes the {@code Collision_response_list} that a <em>represented</em>
+     * (already-reconstructed, never dispatched) initial {@code Process_Sprites}
+     * pass would have built, so the first {@code LevelLoop} pass's player slots
+     * read a populated list rather than an empty one.
+     * <p>
+     * ROM: level entry runs {@code Load_Sprites} then {@code Process_Sprites}
+     * once at {@code loc_6468} (docs/skdisasm/sonic3k.asm:7848-7854), before
+     * {@code LevelLoop} begins. Every object executed in that pass tail-calls
+     * {@code Add_SpriteToCollisionResponseList}
+     * (docs/skdisasm/sonic3k.asm:21199-21207), so the list is already populated
+     * when the first {@code LevelLoop} pass's Player_1/Player_2 slots walk it in
+     * {@code Touch_Response} (docs/skdisasm/sonic3k.asm:20656).
+     * <p>
+     * Callers that <em>execute</em> the setup pass must not call this — the
+     * dispatch publishes the list itself. It exists only for entry paths that
+     * reconstruct the pass's resulting object state directly and would otherwise
+     * leave S3K's previous-list read view empty for one pass.
+     */
+    public void publishRepresentedInitialCollisionResponseList() {
+        captureCollisionResponseListForNextFrame();
+    }
 
     private void captureCollisionResponseListForNextFrame() {
         rebuildActiveObjectCaches();
@@ -2183,6 +2258,21 @@ public class ObjectManager {
     public boolean reservedSlotWaitsForNextObjectPass(int slotIndex) {
         return placement.reservedSlotWaitsForNextObjectPass(
                 slotIndex, updating, currentExecSlot, slotLayout);
+    }
+
+    /** Read-only retirement probe for the ring manager's legacy mirror. */
+    public boolean hasLiveLostRingAtSlot(int slotIndex) {
+        if (slotIndex < 0) {
+            return false;
+        }
+        for (ObjectInstance inst : dynamicObjects) {
+            if (inst instanceof com.openggf.level.rings.LostRingObjectInstance ring
+                    && !ring.isDestroyed()
+                    && ring.getSlotIndex() == slotIndex) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -3647,6 +3737,27 @@ public class ObjectManager {
         if (removed != null) {
             objectCallbacks.unregister(removed);
             instanceToSpawn.remove(removed);
+            // ROM parity: an object's per-player pushing bits live in its SST
+            // slot's status byte, and every game's delete routine zeroes the
+            // whole slot -- S2 DeleteObject/DeleteObject2 (s2.asm:30329-30345),
+            // S1 DeleteObject/DeleteChild (_incObj/sub DeleteObject.asm:10-20),
+            // S3K Delete_Current_Sprite/Delete_Referenced_Sprite
+            // (sonic3k.asm:36108-36125). So a solid that unloads and is later
+            // reloaded from the same layout entry comes back with its pushing
+            // bits CLEAR, and its first SolidObject_TestClearPush takes the
+            // `beq SolidObject_NoCollision` exit (s2.asm:35462-35466) without
+            // writing the Walk/Run animation word. The engine keys that bit on
+            // the persistent ObjectSpawn record, which outlives the instance, so
+            // without this the stale bit survives the unload and the reloaded
+            // object publishes a release the ROM never performs.
+            solidContacts.releaseObjectPushLatchForAllPlayers(removed);
+            // Same delete-routine citation, standing half. The object-side
+            // standing bit is in that same zeroed status byte, so a reloaded
+            // solid must not answer "this player is standing on me" on the
+            // strength of a bit its predecessor set. Object-side only: none of
+            // the three routines touches the player's slot, so the player's own
+            // Status_OnObj and the engine's riding state are left alone.
+            solidContacts.releaseObjectStandingLatchForAllPlayers(removed);
             notifyObjectManagerRemoval(removed);
             // Prune the live-map so rewindObjectIds stays lean during normal play.
             // (Not strictly required — stale entries are harmless since rewindCaptureContext

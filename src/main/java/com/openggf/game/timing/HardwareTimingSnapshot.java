@@ -3,6 +3,7 @@ package com.openggf.game.timing;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /** Immutable rewind state for the production timing FIFO and admission ledger. */
 public record HardwareTimingSnapshot(
@@ -11,7 +12,8 @@ public record HardwareTimingSnapshot(
         Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> admissionPolicies,
         boolean recordedAdmissionActive,
         boolean hasSubmitted,
-        HardwareServiceBoundary lastServicedBoundary) {
+        HardwareServiceBoundary lastServicedBoundary,
+        Set<HardwareWorkHandle> unrepresentedSubmissions) {
 
     public HardwareTimingSnapshot {
         Objects.requireNonNull(nextOrdinals, "nextOrdinals");
@@ -21,6 +23,20 @@ public record HardwareTimingSnapshot(
         nextOrdinals = Map.copyOf(nextOrdinals);
         admissionPolicies = Map.copyOf(admissionPolicies);
         jobs = List.copyOf(jobs);
+        unrepresentedSubmissions = Set.copyOf(Objects.requireNonNull(
+                unrepresentedSubmissions, "unrepresentedSubmissions"));
+    }
+
+    /** Legacy shape for callers predating unrepresented-submission tracking. */
+    public HardwareTimingSnapshot(
+            Map<HardwareWorkKind, Long> nextOrdinals,
+            List<HardwareTimingJob.Snapshot> jobs,
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> admissionPolicies,
+            boolean recordedAdmissionActive,
+            boolean hasSubmitted,
+            HardwareServiceBoundary lastServicedBoundary) {
+        this(nextOrdinals, jobs, admissionPolicies, recordedAdmissionActive,
+                hasSubmitted, lastServicedBoundary, Set.of());
     }
 
     /** Compatibility summary for callers that only distinguish active replay from live mode. */

@@ -18,6 +18,7 @@ public final class Sonic3kObjectIds {
     public static final int FBZ_SNAKE_PLATFORM = 0x75;
     public static final int FBZ_BENT_PIPE = 0x76;
     public static final int FBZ_ROTATING_PLATFORM = 0x77;
+    /** Obj_FBZDEZPlayerLauncher -- id $78 in both SK object pointer sets. */
     public static final int FBZ_DEZ_PLAYER_LAUNCHER = 0x78;
     public static final int FBZ_DISAPPEARING_PLATFORM = 0x79;
     public static final int FBZ_SCREW_DOOR = 0x7A;

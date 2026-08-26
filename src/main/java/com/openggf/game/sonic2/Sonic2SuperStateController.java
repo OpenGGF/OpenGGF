@@ -4,6 +4,10 @@ import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.PhysicsProfile;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PowerUpRules;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance;
@@ -45,8 +49,6 @@ public class Sonic2SuperStateController extends SuperStateController {
     private int paletteFrame;
     /** Countdown timer between palette frame advances. */
     private int paletteTimer;
-    /** Frames remaining in the transformation animation (30 frame timer). */
-    private int transformFramesRemaining;
 
     /**
      * Raw ROM palette data from CyclingPal_SSTransformation.
@@ -84,7 +86,6 @@ public class Sonic2SuperStateController extends SuperStateController {
         paletteState = 0;
         paletteFrame = 0;
         paletteTimer = 0;
-        transformFramesRemaining = 0;
     }
 
     @Override
@@ -137,8 +138,12 @@ public class Sonic2SuperStateController extends SuperStateController {
         // carries over from whatever the previous cycle left - $0000 on a fresh level
         // (RAM clear), $00F8 after a revert on the shipped ROM (see updatePaletteFade).
         // Zeroing it here would be the fixBugs = 1 behaviour by proxy.
-        paletteTimer = 3;
-        transformFramesRemaining = 30;
+        // ROM Sonic_CheckGoSuper: move.b #$F,(Palette_timer).w (s2.asm:37477).
+        // $F is the transformation's own first interval; 3 is only the value
+        // PalCycle_SuperSonic reloads on every step AFTER the first
+        // (s2.asm:3129). Seeding 3 here shortened the fade's opening step from
+        // 16 frames to 4.
+        paletteTimer = 0xF;
         // Play transformation SFX
         try {
             if (CrossGameFeatureProvider.isActive()) {
@@ -155,9 +160,20 @@ public class Sonic2SuperStateController extends SuperStateController {
 
     @Override
     protected boolean updateTransformationAnimation() {
+        // The transformation ends when the PALETTE FADE ends, not when an
+        // animation or a counter does. Nothing in Sonic's own code clears
+        // obj_control after Sonic_CheckGoSuper sets it to $81 (s2.asm:37479):
+        // there is no `clr.b obj_control(a0)` anywhere in s2.asm, and
+        // SupSonAni_Transform terminates `$FD, 0` (:38818), which SAnim_End_FD
+        // handles by writing anim(a0) and nothing else (:38439). The one clear
+        // that runs on this path is PalCycle_SuperSonic's, on the pass that
+        // takes Palette_frame to $30:
+        //   move.b #0,(MainCharacter+obj_control).w  ; restore Sonic's movement
+        // (s2.asm:3139). So the freeze's length is a consequence of $F, the
+        // reloads of 3 and the six steps to $30 -- derived, never chosen. This
+        // used to count down an invented 30-frame timer instead.
         updatePaletteFade();
-        transformFramesRemaining--;
-        return transformFramesRemaining <= 0;
+        return paletteState != 1;
     }
 
     @Override
@@ -188,9 +204,31 @@ public class Sonic2SuperStateController extends SuperStateController {
         // Spawn Super Sonic stars sparkle effect (Obj7E)
         if (starsObject == null) {
             starsObject = new SuperSonicStarsObjectInstance(player);
-            GameServices.level().getObjectManager().addDynamicObject(starsObject);
+            addStarsObject(starsObject);
         }
         LOGGER.info("Super Sonic activated (S2)");
+    }
+
+    /**
+     * Places the super-form stars in the SST the game's ROM owns for it.
+     *
+     * <p>{@code ObjID_SuperSonicStars} is written straight into the fixed
+     * {@code SuperSonicStars} SST and never runs {@code FindFreeObj}, so
+     * allocating one from the dynamic pool would consume a level-object slot the
+     * ROM never consumes and displace every later object -- and SST order is
+     * execution order. See {@link PowerUpRules#superStarsFixedSlotIndex()}.
+     * A negative index keeps ordinary dynamic allocation.
+     */
+    private void addStarsObject(SuperSonicStarsObjectInstance stars) {
+        ObjectManager objects = GameServices.level().getObjectManager();
+        GameRules rules = player != null ? player.getGameRules() : null;
+        PowerUpRules powerUp = rules != null ? rules.powerUp() : null;
+        int fixedSlot = powerUp != null ? powerUp.superStarsFixedSlotIndex() : -1;
+        if (fixedSlot >= 0) {
+            ObjectLifetimeOps.addDynamicAtReservedSlot(objects, stars, fixedSlot);
+            return;
+        }
+        objects.addDynamicObject(stars);
     }
 
     @Override

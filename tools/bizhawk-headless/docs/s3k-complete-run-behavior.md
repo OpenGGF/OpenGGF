@@ -235,6 +235,60 @@ The gap is **not** a constant — do not hard-code 1469. It is
 `SS-results + level reload + the locked level intro until both control
 locks clear`, and it varies with route state.
 
+#### 0.2.1 The interstitial hardware-timing stream
+
+The unrecorded gap is a gap in *rows*, not in the machine. The ROM keeps
+queuing and retiring Kosinski work across SS-results, the level reload
+and the locked intro, and the recorder's ledger has always followed it:
+`ObserveUnexportedHardwareBoundary` and
+`ObserveSpecialStageResultsBoundary` already called
+`HardwareTimingEventEngine.ObserveFrameEnd` on those frames. They passed
+a **null writer**, so the ordinals were consumed and the completions
+thrown away. That is what left the published module/decomp ordinal
+sequence with a hole across each SS exit — for
+`s3k-sonic-tails-complete-emeralds`, `KOS_MODULE_QUEUE` runs `..13` in
+`ss` and resumes at `24` in `aiz_2`, with `14..23` unpublished — and
+what a replay sees as work it submitted that can never complete.
+
+Those completions are now written to a **run-level** stream,
+`hardware_timing_interstitial.jsonl`, at the run root:
+
+```json
+{"event":"hardware_work_completed","origin":"interstitial","after_segment":"ss","after_segment_index":12,"bk2_frame":52900,"boundary":"post_objects","kind":"kos_module_queue","ordinal":14,"submission_fingerprint":"sha256:…"}
+```
+
+Four properties are deliberate:
+
+- **It is a different file at a different level.** Per-segment
+  `hardware_timing.jsonl` bytes are untouched, so every existing capture
+  and every v5 per-segment reader is unaffected. A segment directory
+  published on its own — set (C)'s `special_stage/`, for instance —
+  carries no interstitial data, because none of it was ever its.
+- **The record shape is field-disjoint from the per-segment shape.**
+  An interstitial observation belongs to no row, so there is no
+  segment-relative `raw_frame` that could name one, and the field is
+  absent rather than zero. A v5 per-segment parser rejects these records
+  on sight, which is the intent: neither file can be read by the other's
+  parser by accident.
+- **It names the preceding segment, not the following one.** That is
+  the only side of the boundary known while the span is being observed,
+  and it is the side that matters: these completions retire work
+  submitted before that segment ended, so they belong at its hand-off.
+- **`bk2_frame` is provenance only.** It is the absolute movie frame,
+  recorded so a capture can be audited; it indexes no row, and nothing
+  may key replay behaviour on it.
+
+The file is created lazily, on the first interstitial completion, so a
+capture that has none publishes none and its inventory is unchanged.
+
+**Consumer note.** The engine's `HardwareTimingStreamLoader` reads only
+the per-segment file, so nothing on the Java side reads this stream yet
+and nothing on the Java side is changed by it. Closing the ordinal hole
+needs a matching engine change — load the run-level stream and admit the
+edges belonging to a segment at its hand-off, before
+`HardwareTimingReplayPort.handoffTo` validates pending submissions.
+That is scoped separately.
+
 ### 0.3 Set (C) — second run pass over the same movie, `run_id = s3k-multibonus`
 
 Published as four standalone dirs (`bonus_gumball/`, `bonus_pachinko/`,

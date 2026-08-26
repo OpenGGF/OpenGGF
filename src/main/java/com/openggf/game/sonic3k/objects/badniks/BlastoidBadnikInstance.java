@@ -126,6 +126,13 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
     private int animIndex;
     private boolean waitingForOnscreen = true;
     private boolean placeholderRenderedOnscreen;
+    /**
+     * routine 0. Obj_WaitOffscreen's release pass (loc_85B02) restores the saved
+     * operation pointer and returns without dispatching, leaving routine at 0, so
+     * the dispatch AFTER the gate releases is the one that runs Blastoid_Init.
+     * Both dispatches are consumed; neither runs Blastoid_DetectPlayer.
+     */
+    private boolean initPending = true;
     private boolean publishedTouchResponseListEntryThisFrame;
     private int collisionProperty;
 
@@ -156,6 +163,23 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
 
+        if (initPending) {
+            // Blastoid_Init (sonic3k.asm:183586-183588) is
+            // `lea ObjDat_Blastoid,a1 / jmp SetUp_ObjAttributes`, whose tail is
+            // `addq.b #2,routine(a0)` then `rts`
+            // (sonic3k.asm:176901-176919). Init RETURNS rather than falling
+            // through to Blastoid_DetectPlayer, so this dispatch runs no player
+            // detection and starts no attack; the routine-2 detect begins on the
+            // next dispatch.
+            initPending = false;
+            // Obj_Blastoid (sonic3k.asm:183570-183578) still runs
+            // Blastoid_CheckPlayerTouch and Sprite_CheckDeleteTouch after the
+            // routine returns, so the tail work happens on the Init dispatch too.
+            processPendingTouch();
+            publishedTouchResponseListEntryThisFrame = true;
+            return;
+        }
+
         switch (state) {
             case DETECT -> updateDetect((AbstractPlayableSprite) playerEntity);
             case ATTACK -> updateAttack();
@@ -182,7 +206,10 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
     public int getCollisionFlags() {
         // Obj_WaitOffscreen returns before SetUp_ObjAttributes has been
         // reached and before Sprite_CheckDeleteTouch can publish this object.
-        return waitingForOnscreen ? 0 : COLLISION_FLAGS;
+        // collision_flags stays zero through the Init dispatch as well: the
+        // frame's touch scan runs at the player slot before this object's
+        // routine writes it.
+        return (waitingForOnscreen || initPending) ? 0 : COLLISION_FLAGS;
     }
 
     @Override

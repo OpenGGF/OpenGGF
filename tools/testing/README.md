@@ -1,8 +1,58 @@
 # Test session tooling
 
+## Current coordinator contract
+
+Supported Maven/build commands run through the coordinator so each invocation
+has a lease, isolated temporary/output roots, and a retained manifest:
+
+```bash
+tools/testing/install-hooks.sh
+tools/testing/test-session.sh -- mvn test
+tools/testing/test-session.sh -- mvn package
+tools/testing/test-session.sh -- mvn -Dmse=off -Pguards test -B
+```
+
+PowerShell uses `install-hooks.ps1` and `test-session.ps1` with the same
+arguments. Hook installation is explicit; Maven does not mutate Git
+configuration during `validate`. Ordinary and structural-guard suites run in
+separate coordinator sessions so guards receive a fresh production graph.
+
+The coordinator is quiet by default. It prints compact
+`OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` markers containing the
+session-owned manifest and `maven.log` paths while retaining the full child
+output in that log. Search or read bounded portions of the reported log for
+diagnosis. Pass `--verbose` before `--` only when interactive troubleshooting
+requires live child output; `--quiet` is an accepted explicit form of the
+default. The terminal manifest is authoritative for `surefire_reports`,
+`trace_reports`, `diagnostics_root`, `artifact_root`, and `distribution_root`;
+never read a fixed `target/` report directory to certify a run.
+
+Parallel coordinator sessions are supported when every agent uses a separate
+worktree, lease, wrapper session, and session-owned temporary/report roots.
+There is no host-wide Maven exclusion requirement: an unrelated Maven process
+does not contaminate an otherwise isolated and authenticated session. Never
+share writable Maven output, Surefire report, temporary, or LWJGL extraction
+paths between sessions.
+
+The external acceptance harness creates disposable repositories and fake Maven
+processes to exercise lease contention, linked worktrees, temporary-directory
+isolation, report ownership, source/runtime mutation, interruption/reclaim, and
+raw lifecycle rejection:
+
+```bash
+tools/testing/run-session-process-harness.sh
+```
+
+Harness roots are retained on failure. Set `OPENGGF_HARNESS_ROOT` to place the
+disposable repository under a managed scratch directory. The frozen-baseline
+workflow byte-authenticates the wrapper, coordinator, self-test, and process
+harness from official develop snapshot
+`a17adaba5b57298ffd88c6d7b6ab3a4d6aff87bb`.
+
 ## Frozen-next baseline adapter
 
-Frozen commit `84d9a3761` predates the session-output Maven properties. Its
+Frozen next commit `84d9a3761f618035dd1caa40a3d5fc72a1019693`
+predates the session-output Maven properties. Its
 baseline evidence therefore uses `frozen-next-session-launch.sh` and
 `frozen-next-session-adapter.sh` with the pinned detached develop harness.
 They are historical baseline-only tooling, never a production launcher. The

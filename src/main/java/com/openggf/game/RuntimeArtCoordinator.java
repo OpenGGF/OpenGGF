@@ -58,6 +58,24 @@ public interface RuntimeArtCoordinator extends QueueDiagnosticsProvider {
         return false;
     }
 
+    /**
+     * Runs the loop tail of an iteration that absorbed a lag V-blank, on the
+     * closure that consumed it.
+     *
+     * <p>{@code VBlank_Lag} (docs/s1disasm/sonic.asm:709) fires inside an
+     * iteration that has not yet reached the loop top's re-arm (:3000), so that
+     * iteration's {@code RunPLC} (:3032) still runs before the row is sampled --
+     * a V-blank-only closure has no loop tail of its own but does carry the
+     * held one. Whether the tail's arm becomes visible on this row is still the
+     * arm owner's decision from its own submitted job's readiness; this call
+     * only offers the tail the row the ROM ran it on.
+     *
+     * <p>Default is a no-op: a coordinator whose loop tail is not hardware-timed
+     * has nothing to offer here.
+     */
+    default void runHeldIterationLoopTail() {
+    }
+
     default void registerRewindAdapters(RewindRegistry registry) {
     }
 

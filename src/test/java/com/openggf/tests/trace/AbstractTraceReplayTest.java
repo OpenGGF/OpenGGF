@@ -6,6 +6,10 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
+import com.openggf.game.sonic2.objects.TornadoObjectInstance;
+import com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager;
+import com.openggf.level.LevelManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -23,6 +27,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
+import com.openggf.tests.SessionInvocationExtension;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.trace.s2.S2SkyChaseBadnikDiagnostics;
@@ -57,6 +63,7 @@ import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -77,6 +84,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * <p>Originally used JUnit 4 because the ROM fixture was exposed as a JUnit 4 rule.
  */
+@ExtendWith(SessionInvocationExtension.class)
 public abstract class AbstractTraceReplayTest {
     private static final Logger LOGGER = Logger.getLogger(AbstractTraceReplayTest.class.getName());
     private static final boolean QUIET_TRACE_LOGS =
@@ -129,7 +137,7 @@ public abstract class AbstractTraceReplayTest {
 
     /** Override to change report output directory. */
     protected Path reportOutputDir() {
-        return Path.of("target/trace-reports");
+        return TestSessionOutputPaths.traceReports();
     }
 
     /** Override only for explicitly diagnostic trace fixtures that are not release gates. */
@@ -339,6 +347,7 @@ public abstract class AbstractTraceReplayTest {
         TraceBinder binder = null;
         HeadlessTestFixture fixture = null;
         boolean hardwareTimingReplayClosed = false;
+        Throwable replayFailure = null;
         // Comparison-only, env-gated (OGGF_SLOT_PROBE=1) SST occupancy diff. Off in
         // every normal run, and it never touches engine or binder state.
         slotOccupancyProbe = SlotOccupancyProbe.createIfEnabled(trace, game() + "_" + zone() + act());
@@ -407,6 +416,11 @@ public abstract class AbstractTraceReplayTest {
             TraceReplaySessionBootstrap.BootstrapResult boot =
                     TraceReplaySessionBootstrap.applyBootstrap(trace, fixture,
                             overridePreTraceOscFrames());
+            // This driver owns a comparison report, so it takes reporting
+            // responsibility for close-time leftover hardware submissions
+            // instead of letting them abort ahead of the divergence that
+            // caused them. Drivers that do not opt in still fail hard.
+            fixture.reportPendingRecordedHardwareSubmissionsAtClose();
             TraceReplayBootstrap.SnapshotReport snapshotReport = boot.snapshotReport();
             TraceReplayBootstrap.ReplayStartState replayStart = boot.replayStart();
             ObjectManager om = GameServices.level().getObjectManager();
@@ -536,13 +550,20 @@ public abstract class AbstractTraceReplayTest {
                         EngineDiagnostics.formattedWithCameraAnimationAndRings(
                                 engineDiag.cameraX(), engineDiag.cameraY(),
                                 engineDiag.animationId(), engineDiag.mappingFrame(),
-                                engineDiag.rings(), engineDiagText),
+                                engineDiag.rings(), engineDiagText)
+                                .withLives(engineDiag.lives()),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
                     compareLoadQueuesIfAdvertised(
                             trace, binder, comparisonExpected.frame());
+                    compareCnzSlotMachineIfRecorded(
+                            trace, binder, comparisonExpected.frame());
+                    compareS2TornadoIfRecorded(
+                            trace, binder, comparisonExpected.frame());
                     compareDynamicArtIfAdvertised(
                             trace, binder, expected.frame());
+                    recordUnmatchedHardwareCompletions(
+                            fixture, binder, expected.frame());
                     if (compareObjectNearEvents()) {
                         binder.compareObjectNear(
                                 comparisonExpected.frame(),
@@ -572,9 +593,15 @@ public abstract class AbstractTraceReplayTest {
                 }
                 hardwareTimingReplayClosed = true;
             }
+            recordPendingHardwareSubmissions(fixture, binder);
 
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
+            // Asserted here rather than inside writeReport: the finally block below
+            // rewrites the report best-effort and only swallows RuntimeException, so
+            // an AssertionError thrown from there would replace the real divergence
+            // failure instead of adding to it.
+            TraceReportWriter.assertGroupAccountingHolds(report);
 
             // 7. Write report if there are any divergences
             if (report.hasErrors() || report.hasWarnings()) {
@@ -592,10 +619,16 @@ public abstract class AbstractTraceReplayTest {
                         report.firstErrorFrame(verificationScope), TraceReplayConsole.contextRadius()));
             }
             assertReportHasNoReleaseBlockingDivergences(report);
+        } catch (Exception | Error failure) {
+            replayFailure = failure;
+            throw failure;
         } finally {
             // Always (re)write the report from the latest binder state so a stale
             // *_report.json from a prior run can never mask the current result.
-            // Best-effort: report regeneration must not suppress the real failure.
+            // Equivalent publication is idempotent. A real publication failure
+            // is attached to the primary replay failure, or fails a run that
+            // otherwise had no primary failure.
+            Throwable reportFailure = null;
             if (binder != null) {
                 try {
                     // Unconditional: a run that aborts mid-replay with a clean
@@ -605,8 +638,12 @@ public abstract class AbstractTraceReplayTest {
                     // started. The report's total_frames is the only record of
                     // how far the replay actually reached.
                     writeReport(buildDivergenceReport(binder, meta, trace), meta);
-                } catch (RuntimeException | java.io.IOError ignored) {
-                    // diagnostics only
+                } catch (Exception | Error failure) {
+                    if (replayFailure != null) {
+                        replayFailure.addSuppressed(failure);
+                    } else {
+                        reportFailure = failure;
+                    }
                 }
             }
             if (slotOccupancyProbe != null) {
@@ -620,6 +657,15 @@ public abstract class AbstractTraceReplayTest {
                 sharedLevel.dispose();
             } else {
                 TestEnvironment.resetAll();
+            }
+            if (reportFailure != null) {
+                if (reportFailure instanceof Exception exception) {
+                    throw exception;
+                }
+                if (reportFailure instanceof Error error) {
+                    throw error;
+                }
+                throw new AssertionError("unexpected report publication failure", reportFailure);
             }
         }
     }
@@ -717,6 +763,8 @@ public abstract class AbstractTraceReplayTest {
                     expectedSidekickNormalStep);
             compareDynamicArtIfAdvertised(
                     trace, binder, seededFrame.frame());
+            recordUnmatchedHardwareCompletions(
+                    fixture, binder, seededFrame.frame());
             observeFrontierAndShouldStop(frontierStopper, binder, seededFrame.frame());
 
             for (int frame = 0; frame <= replayStart.seededTraceIndex(); frame++) {
@@ -831,6 +879,9 @@ public abstract class AbstractTraceReplayTest {
 
             S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), comparedSprite(fixture));
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
+            // Unconditional: a dropped recorded completion belongs to the row
+            // that produced it whether or not that row compares gameplay.
+            recordUnmatchedHardwareCompletions(fixture, binder, driveFrame.frame());
 
             if (slotOccupancyProbe != null && GameServices.level() != null) {
                 slotOccupancyProbe.observe(
@@ -923,6 +974,99 @@ public abstract class AbstractTraceReplayTest {
                             + ", last_prefix_raw_frame=" + lastPrefixRawFrame);
         }
         return true;
+    }
+
+    /**
+     * Records recorded hardware-completion edges the engine never submitted as
+     * an error on the row that produced them. The edge itself released
+     * nothing; only its severity and ordering change, so an earlier physics
+     * divergence stays the first reported error.
+     */
+    /**
+     * Records production submissions the recorded stream never completed as an
+     * error on the closing row. Nothing was admitted or released; only the
+     * severity and ordering of the complaint change, so an earlier physics
+     * divergence stays the first reported error.
+     */
+    private static void recordPendingHardwareSubmissions(
+            HeadlessTestFixture fixture, TraceBinder binder) {
+        if (fixture == null) {
+            return;
+        }
+        binder.comparePendingRecordedHardwareSubmissions(
+                fixture.drainPendingRecordedHardwareSubmissions());
+    }
+
+    private static void recordUnmatchedHardwareCompletions(
+            HeadlessTestFixture fixture, TraceBinder binder, int frame) {
+        if (fixture == null) {
+            return;
+        }
+        binder.compareRecordedHardwareCompletions(
+                frame, fixture.drainUnmatchedRecordedHardwareCompletions());
+    }
+
+    /**
+     * Compares the ROM's recorded {@code SlotMachineVariables} against the
+     * engine's whenever the fixture carries the event and this session has a
+     * CNZ slot manager. A no-op on every other fixture and game.
+     *
+     * <p>The recording has always carried this block on every row of both CNZ
+     * captures and nothing read it. It is the instrument that makes a clock or
+     * call-ordering error at the slot site show up as a field mismatch on the
+     * frame it happens, instead of surfacing thousands of rows later as a ring
+     * or speed divergence: see the 2026-08-21 tick-ownership entries in
+     * docs/status/trace-frontier-log.md, where exactly that cost three rounds.
+     */
+    /**
+     * Compares ObjB2's recorded SST against the engine's whenever the fixture
+     * carries the event. Identity is by content, not by the recorded slot index:
+     * the comparison runs only when exactly one tornado instance is active, so
+     * no engine-slot-to-ROM-slot mapping is invented.
+     */
+    private static void compareS2TornadoIfRecorded(
+            TraceData trace, TraceBinder binder, int frame) {
+        TraceEvent.S2TornadoState expected = trace.s2TornadoStateForFrame(frame);
+        if (expected == null) {
+            return;
+        }
+        LevelManager levelManager = GameServices.levelOrNull();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return;
+        }
+        TornadoObjectInstance found = null;
+        for (ObjectInstance instance : levelManager.getObjectManager().getActiveObjects()) {
+            if (instance instanceof TornadoObjectInstance tornado) {
+                if (found != null) {
+                    return; // ambiguous; do not guess which one the recorder meant
+                }
+                found = tornado;
+            }
+        }
+        if (found == null) {
+            return;
+        }
+        binder.compareS2Tornado(frame, expected, found.snapshot());
+    }
+
+    private static void compareCnzSlotMachineIfRecorded(
+            TraceData trace, TraceBinder binder, int frame) {
+        TraceEvent.CnzSlotMachineState expected =
+                trace.cnzSlotMachineStateForFrame(frame);
+        if (expected == null) {
+            return;
+        }
+        LevelManager levelManager = GameServices.levelOrNull();
+        if (levelManager == null
+                || !(levelManager.getZoneFeatureProvider()
+                        instanceof Sonic2ZoneFeatureProvider provider)) {
+            return;
+        }
+        CNZSlotMachineManager manager = provider.getSlotMachineManager();
+        if (manager == null) {
+            return;
+        }
+        binder.compareCnzSlotMachine(frame, expected, manager.snapshot());
     }
 
     private static void compareLoadQueuesIfAdvertised(
@@ -1270,9 +1414,17 @@ public abstract class AbstractTraceReplayTest {
             solidEvent = combineDiagnostics(solidEvent, additionalEngineObjectDiagnostics(om));
         }
 
+        // Life count for the recorded life_count column. GameServices.gameStateOrNull()
+        // is null outside a gameplay session, in which case -1 makes TraceBinder
+        // raise lives_present rather than dropping the comparison.
+        int lives = GameServices.gameStateOrNull() != null
+                ? GameServices.gameStateOrNull().getLives()
+                : EngineDiagnostics.LIVES_ABSENT;
+
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
-                ridingObject, standingSnapshot, sprite.getAnimationId(), sprite.getMappingFrame());
+                ridingObject, standingSnapshot, sprite.getAnimationId(), sprite.getMappingFrame(),
+                lives);
     }
 
     private List<TraceEvent.ObjectNear> objectNearEventsForPrimary(TraceData trace, int frame) {
@@ -1491,28 +1643,16 @@ public abstract class AbstractTraceReplayTest {
         return sidekick.getCpuController().formatLatestNormalStepDiagnostics();
     }
 
-    private void writeReport(DivergenceReport report, TraceMetadata meta) {
-        try {
-            Path outDir = reportOutputDir();
-            Files.createDirectories(outDir);
-
-            String prefix = meta.game() + "_" + meta.zone() + meta.act();
-            TraceVerificationScope scope = verificationScope();
-            String scopeSuffix = scope == TraceVerificationScope.ALL
-                    ? ""
-                    : "_" + scope.name().toLowerCase();
-            Path jsonPath = outDir.resolve(prefix + scopeSuffix + "_report.json");
-            Files.writeString(jsonPath, report.toJson());
-
-            if (report.hasErrors(scope)) {
-                Path contextPath = outDir.resolve(prefix + scopeSuffix + "_context.txt");
-                Files.writeString(contextPath,
-                    report.getContextWindow(
-                            report.firstErrorFrame(scope), TraceReplayConsole.contextRadius()));
-            }
-        } catch (IOException e) {
-            System.err.println("Warning: failed to write report: " + e.getMessage());
-        }
+    private void writeReport(DivergenceReport report, TraceMetadata meta) throws IOException {
+        String prefix = meta.game() + "_" + meta.zone() + meta.act();
+        TraceVerificationScope scope = verificationScope();
+        String scopeSuffix = scope == TraceVerificationScope.ALL
+                ? ""
+                : "_" + scope.name().toLowerCase();
+        TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
+                SessionInvocationExtension.SessionInvocation.current(),
+                "single", prefix + scopeSuffix, scope,
+                TraceReplayConsole.contextRadius());
     }
 
 }

@@ -30,10 +30,6 @@ final class ObjectCollisionResponseList {
         return usePrevious;
     }
 
-    boolean shouldRefreshFrameStartSnapshot() {
-        return !usePrevious;
-    }
-
     List<ObjectInstance> touchResponseObjects(List<ObjectInstance> currentObjects) {
         return usePrevious ? previousObjects : currentObjects;
     }

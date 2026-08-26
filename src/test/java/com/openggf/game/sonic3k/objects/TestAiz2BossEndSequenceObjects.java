@@ -226,11 +226,52 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void settledCutsceneBridgeSurvivesUntilItsTimedCollapse() {
+        AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+
+        assertTrue(bridge.isPersistent(),
+                "the folded settled layout owner must not range-delete before Sonic reaches it");
+    }
+
+    @Test
+    void aizBossArenaBridgesRemainOccludedByPriorityTerrain() {
+        AizDrawBridgeObjectInstance drawBridge =
+                new AizDrawBridgeObjectInstance(new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 1, false, 0));
+        AizCollapsingLogBridgeObjectInstance fireBridge =
+                new AizCollapsingLogBridgeObjectInstance(new ObjectSpawn(0x48E0, 0x0218, 0x2C, 0x88, 0, false, 0));
+
+        assertFalse(drawBridge.isHighPriority(),
+                "The draw bridge must not bypass all priority terrain");
+        assertFalse(fireBridge.isHighPriority(),
+                "The fire bridge must not bypass all priority terrain");
+    }
+
+    @Test
+    void aizBossArenaBridgesMaskOnlyTerrainPalettes() {
+        AizDrawBridgeObjectInstance drawBridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+        AizCollapsingLogBridgeObjectInstance fireBridge =
+                new AizCollapsingLogBridgeObjectInstance(new ObjectSpawn(0x48E0, 0x0218, 0x2C, 0x88, 0, false, 0));
+        AizCollapsingLogBridgeObjectInstance normalBridge =
+                new AizCollapsingLogBridgeObjectInstance(new ObjectSpawn(0x2000, 0x0218, 0x2C, 0x08, 0, false, 0));
+
+        assertEquals(0b0111, drawBridge.getTileOcclusionPaletteMask());
+        assertEquals(0b0111, fireBridge.getTileOcclusionPaletteMask());
+        assertEquals(0b1111, normalBridge.getTileOcclusionPaletteMask());
+        assertEquals(0, drawBridge.getTileOcclusionPaletteMask() & (1 << 3),
+                "Palette-line 3 waterfall pixels must remain behind the bridge");
+        assertTrue((drawBridge.getTileOcclusionPaletteMask() & (1 << 2)) != 0,
+                "Palette-line 2 terrain pixels must remain in front of the bridge");
+    }
+
+    @Test
     void drawBridgeCollapseCountdownSuppressesTheNormalRangeTailUntilTimedDeletion() {
         AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
         bridge.setServices(new TestObjectServices().withGameState(new GameStateManager()));
 
-        bridge.beginCollapseFromEarlierButtonSlot();
+        // The button owns the lower AIZ2 layout slot, so it has published
+        // _unkFAA9 by the time this bridge entry runs in the same scan.
+        Aiz2BossEndSequenceState.pressButton();
+        bridge.update(0, null);
 
         assertTrue(bridge.isPersistent(),
                 "loc_2B452 counts $34 down without branching through AIZDrawBridge_Solid's range tail");
@@ -245,7 +286,7 @@ class TestAiz2BossEndSequenceObjects {
         player.setOnObject(true);
         bridge.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
 
-        bridge.beginCollapseFromEarlierButtonSlot();
+        Aiz2BossEndSequenceState.pressButton();
         bridge.update(0, player);
         for (int i = 0; i < 14; i++) {
             bridge.update(i + 1, player);
@@ -259,24 +300,6 @@ class TestAiz2BossEndSequenceObjects {
 
         assertFalse(bridge.isSolidFor(player));
         assertTrue(player.getAir());
-    }
-
-    @Test
-    void alreadyConsumedBridgeOwnerStartsCountdownOnFollowingJavaEntry() {
-        Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(true);
-        AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
-        bridge.setServices(new TestObjectServices().withGameState(new GameStateManager()));
-
-        bridge.beginCollapseFromEarlierButtonSlot();
-        for (int i = 0; i < 14; i++) {
-            bridge.update(i, null);
-        }
-
-        assertTrue(bridge.isSolidFor(null));
-
-        bridge.update(14, null);
-
-        assertFalse(bridge.isSolidFor(null));
     }
 
     @Test
@@ -1149,12 +1172,15 @@ class TestAiz2BossEndSequenceObjects {
         assertFalse(player.isControlLocked());
         assertFalse(player.isForceInputRight());
 
-        Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(true);
         Aiz2BossEndSequenceState.releaseEggCapsule();
         controller.update(1, player);
         assertEquals(0x4880, camera.getMaxXTarget() & 0xFFFF);
+        // This controller occupies a lower SST slot than the capsule that
+        // publishes the release, so its first entry that observes the release
+        // is already loc_694D4's Restore_PlayerControl pass; Ctrl_1_locked
+        // stays asserted for loc_69526 (sonic3k.asm:138263-138272).
         assertTrue(player.isControlLocked());
-        assertTrue(player.isObjectControlled());
+        assertFalse(player.isObjectControlled());
         assertFalse(player.isForceInputRight());
 
         for (int i = 0; i < 10; i++) {
@@ -1261,33 +1287,6 @@ class TestAiz2BossEndSequenceObjects {
                 "loc_69526 keeps native player control restored");
         assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
         assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
-    }
-
-    @Test
-    void controllerRetainsOneEntryWhenResultsOwnerRunsAfterIt() {
-        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
-        camera.resetState();
-        camera.setMaxX((short) 0x4880);
-        camera.setX((short) 0x4880);
-
-        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        player.setObjectControlled(true);
-        player.setAnimationId(Sonic3kAnimationIds.VICTORY);
-
-        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
-        controller.setServices(new QueryOnlyServices(camera, player, List.of()));
-        Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(true);
-        Aiz2BossEndSequenceState.releaseEggCapsule();
-
-        controller.update(1, player);
-        assertTrue(player.isObjectControlled(),
-                "A later results owner has not cleared _unkFAA8 when loc_694D4 runs this pass");
-        assertEquals(Sonic3kAnimationIds.VICTORY.id(), player.getAnimationId());
-
-        controller.update(2, player);
-        assertFalse(player.isObjectControlled());
-        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
-        assertFalse(player.isForceInputRight());
     }
 
     @Test

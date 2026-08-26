@@ -3508,6 +3508,31 @@ while moving away.
 
 **Originating commit.** `<pending: shared spike squash-edge push milestone>`.
 
+## P85 -- Only the horizontal spring locks the player's grounded controls
+
+**Symptom.** After a vertical or diagonal launcher, the player's first grounded
+frames ignore held left/right. The trace shows both sides landing with the same
+`inertia`, then the ROM applying acceleration on the very next frame while the
+engine holds the landing value for several frames before catching up. The drift
+is small at first and compounds for the rest of the act.
+
+**Root cause.** `move_lock` is the ROM's only grounded-input lock, and in the
+spring family only the horizontal spring `loc_18AEE` (`loc_18B1C`, `move.w #$F,move_lock(a1)`) writes it. The up (`loc_189ca`, s2.asm:33924-33966), down (`loc_18cc6`, :34177-34196) and diagonal launches, the springboard `obj40` (:52262) and the cpz pipe-exit spring `obj7b` (:56341) write no lock
+of any kind. An engine "springing"/"recently launched" marker used by objects
+for their own re-contact and carry tests must not also gate horizontal input --
+doing so invents a control lock the ROM has nowhere. It is easy to miss because
+`move_lock` is decremented only in the grounded slope-repel step, so an invented
+timer that ticks every frame looks harmless in the air and then bites on the
+landing frame, several hundred rows from the object that set it.
+
+**Correct pattern.** Gate grounded input on the modelled `move_lock` timer
+alone. A spring that really does set `move_lock` should call the engine's
+move-lock setter; keep any launch marker free of input semantics.
+
+**ROM citation.** docs/s2disasm/s2.asm:34031.
+
+**Originating commit.** `<pending: spring grounded control lock milestone>`.
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

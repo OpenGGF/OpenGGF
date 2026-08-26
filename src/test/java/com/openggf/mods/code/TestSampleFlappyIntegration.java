@@ -3,6 +3,7 @@ package com.openggf.mods.code;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.ModSubsystem;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -738,6 +739,10 @@ class TestSampleFlappyIntegration {
             EngineContext injected = withResolver(
                     previous, resolver, isolatedRomManager(), configuration);
             try {
+                // Each helper invocation is an independent engine launch. Match the
+                // production title-to-game boundary before publishing the new ROM so
+                // AudioManager cannot retain the prior invocation's now-closed ROM.
+                injected.audio().resetState();
                 EngineServices.configure(injected);
                 injected.roms().setRom(rom);
                 GameplayModeContext gameplay = SessionManager.openGameplaySession(
@@ -870,7 +875,8 @@ class TestSampleFlappyIntegration {
 
     private static void compileJava(Path source, Path output) throws Exception {
         List<String> arguments = new ArrayList<>(List.of("--release", "21", "-classpath",
-                Path.of("target/classes").toAbsolutePath().toString(), "-d", output.toString()));
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
+                "-d", output.toString()));
         try (var files = Files.walk(source)) {
             files.filter(path -> path.toString().endsWith(".java")).sorted()
                     .map(Path::toString).forEach(arguments::add);

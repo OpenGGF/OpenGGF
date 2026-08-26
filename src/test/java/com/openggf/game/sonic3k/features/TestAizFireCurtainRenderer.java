@@ -1,8 +1,14 @@
 package com.openggf.game.sonic3k.features;
 
+import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.FireCurtainStage;
+import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -207,6 +213,64 @@ public class TestAizFireCurtainRenderer {
     }
 
     @Test
+    public void act2ContinuationWrapsCachedCurtainBeforeWaitFireLatch() throws Exception {
+        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
+        markCachedFireDescriptors(renderer, 40);
+
+        for (int phaseOrdinal : new int[] {4, 5}) {
+            events.setFireSequencePhaseOrdinal(phaseOrdinal);
+            events.setAct2WaitFireDrawActive(false);
+            events.setFireBgCopyFixed(0x0400_0000);
+            events.setFireTransitionFrames(240);
+            events.setFireOverlayTileCount(121);
+
+            FireCurtainRenderState state = events.getFireCurtainRenderState(224);
+            assertTrue(state.active(), "AIZ2 continuation phase must keep the curtain active");
+            assertTrue(state.wrapFireTiles(),
+                    "AIZ2 fire continuation must wrap the cached curtain while FireRedraw/WaitFire is active");
+
+            AizFireCurtainRenderer.CurtainCompositionPlan plan =
+                    renderer.buildCompositionPlan(state, 320, 224);
+            assertFalse(plan.columns().isEmpty(),
+                    "AIZ2 continuation must render cached fire tiles after the rise crosses the fire-zone boundary");
+        }
+    }
+
+    @Test
+    public void latchedWaitFireReleasesCachedCurtainWithoutRefillingDenseBody() throws Exception {
+        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
+        markCachedFireDescriptors(renderer, 40);
+
+        events.setFireSequencePhaseOrdinal(5);
+        events.setAct2WaitFireDrawActive(true);
+        events.setFireBgCopyFixed(0x02F0_0000);
+        events.setFireTransitionFrames(0);
+        events.setFireOverlayTileCount(121);
+
+        FireCurtainRenderState state = events.getFireCurtainRenderState(224);
+        assertTrue(state.active(), "Latched WaitFire must keep the curtain active during its outro");
+        assertEquals(0x0200, state.sourceWorldX(),
+                "Latched WaitFire must retain the ROM's AIZ2 source strip");
+        assertFalse(state.wrapFireTiles(),
+                "Latched WaitFire must let the trailing fire rows scroll off instead of refilling the body");
+
+        AizFireCurtainRenderer.CurtainCompositionPlan plan =
+                renderer.buildCompositionPlan(state, 320, 224);
+        assertFalse(plan.columns().isEmpty(),
+                "Latched WaitFire must render the finite trailing fire tail");
+        for (AizFireCurtainRenderer.ColumnRenderPlan column : plan.columns()) {
+            for (AizFireCurtainRenderer.TileDraw draw : column.draws()) {
+                assertTrue(draw.renderPatternId() >= 0x500 + 60
+                                && draw.renderPatternId() < 0x500 + 66,
+                        "Latched WaitFire must not wrap a row back into the dense curtain body: "
+                                + Integer.toHexString(draw.renderPatternId()));
+            }
+        }
+    }
+
+    @Test
     public void act2ContinuationWithoutCachedDescriptorsFailsClosed() {
         AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
         FireCurtainRenderState redraw = new FireCurtainRenderState(
@@ -225,6 +289,51 @@ public class TestAizFireCurtainRenderer {
         assertTrue(plan.columns().isEmpty(),
                 "Act 2 continuation must use cached ROM descriptors, not synthetic overlay tiles");
     }
+
+    @ParameterizedTest
+    @CsvSource({"320,40", "352,44", "400,50", "528,66", "800,100"})
+    public void cachedCurtainCoversTheEntireConfiguredViewport(int screenWidth, int cacheColumns)
+            throws Exception {
+        AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
+        markCachedFireDescriptors(renderer, cacheColumns);
+        FireCurtainRenderState state = new FireCurtainRenderState(
+                true,
+                224,
+                0,
+                8,
+                0x0200,
+                0x0400,
+                new int[20],
+                FireCurtainStage.AIZ2_REDRAW,
+                0x500,
+                121);
+
+        AizFireCurtainRenderer.CurtainCompositionPlan plan =
+                renderer.buildCompositionPlan(state, screenWidth, 224);
+
+        int rightmostDrawEdge = plan.columns().stream()
+                .flatMap(column -> column.draws().stream())
+                .mapToInt(draw -> draw.screenX() + 8)
+                .max()
+                .orElse(-1);
+        assertTrue(rightmostDrawEdge >= screenWidth,
+                "cached AIZ fire must fill the right edge at every configured viewport width");
+    }
+
+    private static void markCachedFireDescriptors(AizFireCurtainRenderer renderer, int cacheColumns)
+            throws Exception {
+        Field descriptors = AizFireCurtainRenderer.class.getDeclaredField("cachedFireDescriptors");
+        descriptors.setAccessible(true);
+        int[][] cached = new int[66][cacheColumns];
+        for (int row = 0; row < cached.length; row++) {
+            for (int column = 0; column < cached[row].length; column++) {
+                cached[row][column] = (3 << 13) | (0x500 + row);
+            }
+        }
+        descriptors.set(renderer, cached);
+
+        Field cachedFlag = AizFireCurtainRenderer.class.getDeclaredField("fireDescriptorsCached");
+        cachedFlag.setAccessible(true);
+        cachedFlag.setBoolean(renderer, true);
+    }
 }
-
-

@@ -162,6 +162,37 @@ class TestSonic3kUnifiedAudioPresentationRomIntegration {
                 "ROM special stage music must reach the final packet");
     }
 
+    @Test
+    void aizMusicResumesWhenTheRealExtraLifeJingleFinishes() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE, ACT)
+                .build();
+        int levelMusicId = GameServices.level().getCurrentLevelMusicId();
+        audio.playMusic(levelMusicId);
+        fixture.stepIdleFrames(1);
+
+        assertTrue(audio.playMusic(GameMusic.EXTRA_LIFE));
+        fixture.stepIdleFrames(1);
+        assertEquals(Sonic3kMusic.EXTRA_LIFE.id,
+                audio.captureLogicalSnapshot().presentation()
+                        .activeMusic().musicId());
+
+        fixture.stepIdleFrames(10 * 60);
+
+        assertNotNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
+                "natural 1-up completion must not leave AIZ in silence");
+        assertEquals(levelMusicId,
+                audio.captureLogicalSnapshot().presentation()
+                        .activeMusic().musicId(),
+                "natural 1-up completion restores the AIZ level music");
+
+        speaker = AudioManagerTestDiagnostics.attachPresentationCapture(
+                audio, audio.presentationFrameRate());
+        recording = audio.beginLiveCaptureAudio(audio.presentationFrameRate());
+        assertTrue(presentUntilAudible(fixture),
+                "restored AIZ music must produce non-zero final PCM");
+    }
+
     /**
      * Steps real outer frames until one presented packet carries non-zero final
      * PCM, asserting on every frame that the recorder and the speaker received

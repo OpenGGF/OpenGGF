@@ -64,7 +64,6 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
     // Timing constants
     private static final int COUNTDOWN_FRAMES = 0x78;   // 120 frames (~2 seconds)
-    private static final int SFX_FRAME_OFFSET = 3;      // Offset for SFX timing (s2.asm: Vint_runcount+3)
     private static final int ACTIVE_ANIM_SPEED = 2;     // Toggle animation frame every 2 frames (from Ani_objD6)
 
     // Exit velocity
@@ -445,8 +444,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
                 playerState = STATE_SPAWNING_PRIZES;
             }
         } else {
-            // Play sound at 16-frame intervals using global counter (s2.asm: (Vint_runcount+3) & 0x0F == 0)
-            if (((vIntRunCount + SFX_FRAME_OFFSET) & 0x0F) == 0) {
+            // Play sound at 16-frame intervals using the global counter
+            // (s2.asm:59207-59209: move.b (Vint_runcount+3).w,d0 / andi.w #$F,d0 / bne).
+            // "+3" there is the address of the longword's low byte, not an addend --
+            // the gate is the raw counter masked, with no offset.
+            if ((vIntRunCount & 0x0F) == 0) {
                 playCasinoBonusSound();
             }
         }

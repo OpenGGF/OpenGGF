@@ -9,6 +9,7 @@ import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 
 import java.util.Objects;
@@ -120,6 +121,41 @@ final class LevelIterationAdmissionController {
                         appliedFrame,
                         playback.getMovieFrameCount(),
                         playback.isSessionPlaying()));
+    }
+
+    /**
+     * Consumes one recorded row for a frame frozen by a level-to-level
+     * transition fade. Every game's fade-out is {@code move.w #$15,d4} over a
+     * {@code dbf} around a V-blank wait -- S3K {@code Pal_FadeToBlack}
+     * (docs/skdisasm/sonic3k.asm:5042-5052), S2 {@code Pal_FadeToBlack}
+     * (docs/s2disasm/s2.asm:3370-3382), S1 {@code PaletteFadeOut}
+     * (docs/s1disasm/_inc/Palette Fading.asm:134-145, which spells the count
+     * {@code 22-1}) -- so V_int, the recorder's row source, keeps ticking for
+     * all 22 while gameplay is frozen, exactly as the bonus-exit hold in
+     * {@code GameLoop.updateBonusStageMode} already models.
+     *
+     * <p>The rows are only ours to consume while the span being compared still
+     * holds rows the cursor has not reached. Where a recorder cut the segment
+     * on its last live gameplay row, the fade rows fall in the driver-owned gap
+     * between segments and consuming them would double-count. That question is
+     * answered from each run's own recorded data by the row observer, never
+     * from a game name, zone, route, or frame index -- and no fade length is
+     * written down anywhere here.
+     */
+    void consumeTransitionFreezeRow(
+            PlaybackDebugManager playback,
+            ObjectManager objects,
+            LevelFrameContext context) {
+        if (!playback.observerHasUnconsumedRecordedRows()) {
+            return;
+        }
+        if (objects != null) {
+            LevelFrameStep.serviceHardwareVBlankOnly(context);
+            // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank
+            // invariant on ObjectManager.vblaCounter.
+            objects.advanceVblaCounter();
+        }
+        playback.onLevelFrameAdvanced();
     }
 
     void advanceTraceRunPhysicalRow(

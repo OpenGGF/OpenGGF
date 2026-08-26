@@ -26,7 +26,6 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -95,6 +94,23 @@ public class AizEndBossInstance extends AbstractBossInstance
     private static final int REPOSITION_TIME = 0x7F;      // ROM: move.w #$7F,$2E
     private static final int POST_DEFEAT_SONIC = 0xBF;    // ROM: move.w #$BF
     private static final int POST_DEFEAT_KNUX = 0xFF;     // ROM: move.w #$FF
+    /**
+     * ROM {@code BossDefeated}: {@code move.w #$3F,$2E(a0)}
+     * (sonic3k.asm:180820-180821). {@code AIZEndBoss_StartDefeatCallback} ends
+     * with {@code jmp (BossDefeated_StopTimer).l}, and that label is a single
+     * {@code clr.b (Update_HUD_timer).w} which FALLS THROUGH into
+     * {@code BossDefeated} — so the defeat path does write {@code $2E}, and the
+     * fade-out stage is a fixed $3F rather than the boss's inherited timer.
+     * The fall-through is easy to miss: the routine that is jumped to is named
+     * for stopping the timer, not for setting this one.
+     */
+    private static final int BOSS_DEFEATED_WAIT = 0x3F;
+    /**
+     * ROM {@code loc_85674}: {@code move.w #(2*60)-1,$2E(a0)} — the delay
+     * {@code Wait_FadeToLevelMusic} installs on expiry, counted down by
+     * {@code Obj_Wait} before the egg capsule is created (sonic3k.asm:179663).
+     */
+    private static final int FADE_TO_LEVEL_MUSIC_WAIT = (2 * 60) - 1;
     // ===== Swing parameters (ROM: loc_6933A) =====
     private static final int SWING_AMPLITUDE = 0xC0;     // ROM: move.w #$C0,$3E(a0)
     private static final int SWING_INITIAL_VEL = 0xC0;   // ROM: move.w #$C0,y_vel(a0)
@@ -140,7 +156,11 @@ public class AizEndBossInstance extends AbstractBossInstance
         BEGIN_RETREAT,
         BEGIN_RE_SUBMERGE,
         ON_RE_SUBMERGE_COMPLETE,
-        LOOP_BACK_TO_EMERGE
+        LOOP_BACK_TO_EMERGE,
+        /** ROM {@code AIZEndBoss_StartDefeat}, installed in {@code $34} by the defeat callback. */
+        START_DEFEAT,
+        /** ROM {@code AIZEndBoss_StartCapsuleSequence}, installed in {@code $34} by StartDefeat. */
+        START_CAPSULE_SEQUENCE
     }
 
     /** ROM: angle ($26) — selects position index (0, 4, 8, or $C). */
@@ -184,8 +204,6 @@ public class AizEndBossInstance extends AbstractBossInstance
     // Defeat sequence
     private S3kBossExplosionController defeatExplosionController;
     private boolean defeatRenderComplete;
-    private int defeatPhaseTimer;
-    private int defeatExplosionWaitTimer;
 
     // Children references
     private AizEndBossShipChild shipChild;
@@ -212,8 +230,6 @@ public class AizEndBossInstance extends AbstractBossInstance
         waitCallback = WaitCallback.NONE;
         cameraScrollBoundsPending = false;
         cameraScrollMaxCatchUpPending = false;
-        defeatPhaseTimer = 0;
-        defeatExplosionWaitTimer = 0;
         defeatRenderComplete = false;
         defeatExplosionController = null;
         fireSignalActive = false;
@@ -763,8 +779,12 @@ public class AizEndBossInstance extends AbstractBossInstance
         state.routine = ROUTINE_DEFEATED;
         state.xVel = 0;
         state.yVel = 0;
-        waitTimer = -1;
-        waitCallback = WaitCallback.NONE;
+        // ROM AIZEndBoss_StartDefeatCallback installs Wait_FadeToLevelMusic in
+        // (a0) and AIZEndBoss_StartDefeat in $34, then tail-jumps through
+        // BossDefeated_StopTimer, which falls through into BossDefeated and
+        // sets $2E to $3F (sonic3k.asm:138945-138951, 180814-180821).
+        waitTimer = BOSS_DEFEATED_WAIT;
+        waitCallback = WaitCallback.START_DEFEAT;
         flags38 |= FLAG_DEFEAT_STARTED;
         // ROM: loc_47A74 — bset #7,art_tile hides the boss machine body.
         // The Robotnik ship child (AizEndBossShipChild) keeps rendering independently.
@@ -788,10 +808,19 @@ public class AizEndBossInstance extends AbstractBossInstance
         if (services().objectManager() != null) {
             spawnDebris();
         }
-        // The ship/explosion handoff remains in Wait_Draw before loc_47360's
-        // independent $7F wait begins.
-        defeatExplosionWaitTimer = 0x37;
-        defeatPhaseTimer = 0x7F;
+    }
+
+    /**
+     * ROM {@code loc_85674} into {@code AIZEndBoss_StartDefeat}: when
+     * {@code Wait_FadeToLevelMusic} expires it installs the fixed
+     * {@code (2*60)-1} delay, starts the music fade, and tail-jumps through
+     * {@code $34} in the same frame, switching the boss to {@code Obj_Wait}
+     * with the capsule sequence as its callback
+     * (sonic3k.asm:179661-179669, 138240-138247).
+     */
+    private void startDefeat() {
+        waitTimer = FADE_TO_LEVEL_MUSIC_WAIT;
+        waitCallback = WaitCallback.START_CAPSULE_SEQUENCE;
     }
 
     private void updateDefeated() {
@@ -800,15 +829,18 @@ public class AizEndBossInstance extends AbstractBossInstance
             spawnPendingExplosions();
         }
 
-        if (defeatExplosionWaitTimer >= 0) {
-            defeatExplosionWaitTimer--;
-            return;
-        }
-
-        if (defeatPhaseTimer >= 0) {
-            defeatPhaseTimer--;
-            if (defeatPhaseTimer < 0) {
-                spawnEggCapsuleAndFinish();
+        // ROM Wait_FadeToLevelMusic (sonic3k.asm:179656-179660) and Obj_Wait
+        // (sonic3k.asm:177949-177952) are the same shape -- subq.w #1,$2E then
+        // bmi through $34 -- so both defeat stages are one countdown over the
+        // one timer, differing only in which callback is armed. The countdown
+        // stops once the capsule sequence has run, because ROM
+        // AIZEndBoss_StartCapsuleSequence installs
+        // AIZEndBoss_StartPostDefeatCutscene in (a0) and the boss leaves
+        // Obj_Wait entirely (sonic3k.asm:138248-138249).
+        if (waitCallback != WaitCallback.NONE) {
+            waitTimer--;
+            if (waitTimer < 0) {
+                runWaitCallback();
             }
         }
     }
@@ -848,21 +880,26 @@ public class AizEndBossInstance extends AbstractBossInstance
             spawnChild(() -> Aiz2EndEggCapsuleInstance.createForCamera(
                     services().camera().getX(), services().camera().getY()));
             Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
-            PlayableEntity mainPlayer = services().playerQuery().mainPlayerOrNull();
-            // The consolidated replacement normally occupies slot 8. Preserve
-            // the earlier native bridge dispatch when Player_1's live interact
-            // pointer identifies an owner below the replacement's allocated
-            // slot; an interact owner at or after it already matches the
-            // replacement's ordinary pass.
+            // These two replacements stand in for AIZ2 layout objects, so they
+            // must reproduce the layout's relative SST order. The AIZ2 (zone 0,
+            // act 2) sprite list read from the user-supplied ROM through
+            // Sonic3kObjectPlacement holds Obj_CutsceneButton (id $83) at
+            // x=$4B18 immediately BEFORE Obj_AIZDrawBridge (id $32) at x=$4B48,
+            // and Obj_Load allocates ascending free slots in that order. The
+            // button therefore always occupies the lower slot and is reached
+            // first in every object scan, which is why the bridge's
+            // AIZDrawBridge_WaitCollapseTrigger observes the button's
+            // st (_unkFAA9).w on the same frame the button sets it
+            // (sonic3k.asm:59622-59628, 133936-133953).
+            S3kCutsceneButtonObjectInstance cutsceneButton = spawnFreeChild(
+                    S3kCutsceneButtonObjectInstance::createCutsceneOverride);
             AizDrawBridgeObjectInstance cutsceneBridge = spawnFreeChild(
                     AizDrawBridgeObjectInstance::createCutsceneOverride);
             if (aizState != null) {
                 aizState.setButtonBeforeBridgeDispatch(
-                        mainPlayer instanceof AbstractPlayableSprite sprite
-                                && sprite.getInteractSlotIndex() >= 0
-                                && sprite.getInteractSlotIndex() < cutsceneBridge.getSlotIndex());
+                        cutsceneButton != null && cutsceneBridge != null
+                                && cutsceneButton.getSlotIndex() < cutsceneBridge.getSlotIndex());
             }
-            spawnFreeChild(S3kCutsceneButtonObjectInstance::createCutsceneOverride);
             spawnFreeChild(() -> new Aiz2BossEndSequenceController(targetMaxX, yBase));
         } else {
             int newMaxX = targetMaxX + 0x158;
@@ -1181,6 +1218,8 @@ public class AizEndBossInstance extends AbstractBossInstance
             case BEGIN_RE_SUBMERGE -> beginReSubmerge();
             case ON_RE_SUBMERGE_COMPLETE -> onReSubmergeComplete();
             case LOOP_BACK_TO_EMERGE -> loopBackToEmerge();
+            case START_DEFEAT -> startDefeat();
+            case START_CAPSULE_SEQUENCE -> spawnEggCapsuleAndFinish();
             case NONE -> {}
         }
     }

@@ -350,12 +350,12 @@ public class BatchedPatternRenderer {
 
         GraphicsManager gm = graphicsManager;
         boolean usePriority = gm.isUseSpritePriorityShader();
-        boolean highPri = gm.getCurrentSpriteHighPriority();
+        int tileOcclusionPaletteMask = gm.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghostEffectActive = gm.isGhostRenderEffectActive();
         float ghostAlpha = gm.getGhostRenderAlpha();
         BatchRenderCommand command = obtainBatchCommand();
         command.load(vertexData, texCoordData, paletteCoordData, patternCount,
-                usePriority, highPri, ghostEffectActive, ghostAlpha);
+                usePriority, tileOcclusionPaletteMask, ghostEffectActive, ghostAlpha);
 
         // Reset for next batch
         patternCount = 0;
@@ -529,7 +529,7 @@ public class BatchedPatternRenderer {
         private int texCoordFloatCount;
         private int paletteFloatCount;
         private boolean usePriorityShader;
-        private boolean capturedHighPriority; // captured at batch creation, not read at execute time
+        private int capturedTileOcclusionPaletteMask;
         private boolean capturedGhostEffectActive;
         private float capturedGhostAlpha;
         private FloatBuffer vertexBuffer;
@@ -553,11 +553,11 @@ public class BatchedPatternRenderer {
         private int cachedShaderProgramId = -1;
 
         private void load(float[] vertexData, float[] texCoordData, float[] paletteCoordData,
-                          int patternCount, boolean usePriorityShader, boolean highPriority,
+                          int patternCount, boolean usePriorityShader, int tileOcclusionPaletteMask,
                           boolean ghostEffectActive, float ghostAlpha) {
             this.patternCount = patternCount;
             this.usePriorityShader = usePriorityShader;
-            this.capturedHighPriority = highPriority;
+            this.capturedTileOcclusionPaletteMask = tileOcclusionPaletteMask;
             this.capturedGhostEffectActive = ghostEffectActive;
             this.capturedGhostAlpha = ghostAlpha;
             this.vertexFloatCount = patternCount * FLOATS_PER_PATTERN_VERTS;
@@ -646,7 +646,7 @@ public class BatchedPatternRenderer {
             // Use the priority captured at batch creation time (not the current global
             // state, which may have changed since the batch was created).
             if (shader instanceof SpritePriorityShaderProgram priorityShader) {
-                priorityShader.setSpriteHighPriority(capturedHighPriority);
+                priorityShader.setTileOcclusionPaletteMask(capturedTileOcclusionPaletteMask);
 
                 // Bind tile priority FBO texture to unit 5 (avoid conflict with TilemapGpuRenderer which uses 0-4)
                 TilePriorityFBO fbo = gm.getTilePriorityFBO();

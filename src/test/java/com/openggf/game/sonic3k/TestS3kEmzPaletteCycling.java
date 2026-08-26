@@ -201,8 +201,9 @@ public class TestS3kEmzPaletteCycling {
         EmzStubLevel level = new EmzStubLevel();
         RomByteReader cyclerReader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
 
-        // EMZ zone index = 0x11
-        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x11, 0);
+        // EMZ is ROM zone $12: OffsAnPal entries 36/37
+        // (skdisasm/sonic3k.asm:3154-3155), indexed zone*2 + act.
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x12, 0);
 
         cycler.update();
 
@@ -228,7 +229,7 @@ public class TestS3kEmzPaletteCycling {
         EmzStubLevel level = new EmzStubLevel();
         RomByteReader cyclerReader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
 
-        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x11, 0);
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x12, 0);
 
         cycler.update();
 
@@ -256,7 +257,7 @@ public class TestS3kEmzPaletteCycling {
         EmzStubLevel level = new EmzStubLevel();
         RomByteReader cyclerReader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
 
-        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x11, 0);
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x12, 0);
 
         int distinctCount = 0;
         int prevR = -1, prevG = -1, prevB = -1;
@@ -288,7 +289,7 @@ public class TestS3kEmzPaletteCycling {
         PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
         RomByteReader cyclerReader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
 
-        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x11, 0, registry, null);
+        Sonic3kPaletteCycler cycler = new Sonic3kPaletteCycler(cyclerReader, level, 0x12, 0, registry, null);
 
         registry.beginFrame();
         cycler.update();
@@ -336,7 +337,7 @@ public class TestS3kEmzPaletteCycling {
         @Override public int getMaxX() { return 0; }
         @Override public int getMinY() { return 0; }
         @Override public int getMaxY() { return 0; }
-        @Override public int getZoneIndex() { return 0x11; }
+        @Override public int getZoneIndex() { return 0x12; }
     }
 }
 

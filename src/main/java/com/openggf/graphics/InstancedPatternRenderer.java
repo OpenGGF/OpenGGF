@@ -243,7 +243,8 @@ public class InstancedPatternRenderer {
         // PatternDesc (bit 15), OR'd with the global override for backward compat
         // (lost rings, hurt state, bonus stage player override).
         GraphicsManager gm = graphicsManager;
-        float highPriority = (desc.getPriority() || gm.getCurrentSpriteHighPriority()) ? 1.0f : 0.0f;
+        float highPriority = desc.getPriority()
+                ? 0.0f : gm.getCurrentSpriteTileOcclusionPaletteMask();
 
         int offset = instanceCount * FLOATS_PER_INSTANCE;
         instanceData[offset] = x;
@@ -302,7 +303,8 @@ public class InstancedPatternRenderer {
 
         // Per-piece VDP priority (same OR logic as addPattern)
         GraphicsManager gm = graphicsManager;
-        float highPriority = (desc.getPriority() || gm.getCurrentSpriteHighPriority()) ? 1.0f : 0.0f;
+        float highPriority = desc.getPriority()
+                ? 0.0f : gm.getCurrentSpriteTileOcclusionPaletteMask();
 
         int offset = instanceCount * FLOATS_PER_INSTANCE;
         instanceData[offset] = x;

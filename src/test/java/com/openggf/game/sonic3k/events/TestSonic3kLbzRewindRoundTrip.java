@@ -17,7 +17,6 @@ class TestSonic3kLbzRewindRoundTrip {
         setField(original, "postTitleAct2TargetMaxX", 0x4300);
         setField(original, "postTitleAct2TargetMinY", 0x0100);
         setField(original, "postTitleAct2TargetMaxY", 0x0668);
-        setField(original, "postTitleAct2WorkersCreatedThisPass", false);
         setField(original, "act2MaxXAccumulator", 0xC000);
         setField(original, "act2MinYAccumulator", 0x8000);
         setField(original, "act2MaxYAccumulator", 0x18000);

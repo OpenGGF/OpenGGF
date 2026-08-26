@@ -3,6 +3,7 @@ package com.openggf.audio.smps;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -46,6 +47,33 @@ public final class SmpsCoordFlagHandlerOwner {
                 Objects.requireNonNull(factory.apply(state), "factory result");
         handlers.put(key, created);
         return created;
+    }
+
+    /**
+     * Applies handler registration and a dependent publication as one change.
+     * If either callback fails, both factory registrations and already-created
+     * handler identities are restored exactly to their entry state.
+     */
+    public void configureTransactionally(
+            Consumer<SmpsCoordFlagHandlerOwner> configuration,
+            Runnable dependentPublication) {
+        Objects.requireNonNull(configuration, "configuration");
+        Objects.requireNonNull(dependentPublication,
+                "dependentPublication");
+        Map<String, Function<SmpsCoordFlagRuntimeState, CoordFlagHandler>>
+                previousFactories = new HashMap<>(factories);
+        Map<String, CoordFlagHandler> previousHandlers =
+                new HashMap<>(handlers);
+        try {
+            configuration.accept(this);
+            dependentPublication.run();
+        } catch (RuntimeException | Error failure) {
+            factories.clear();
+            factories.putAll(previousFactories);
+            handlers.clear();
+            handlers.putAll(previousHandlers);
+            throw failure;
+        }
     }
 
     public SmpsCoordFlagRuntimeState state() {

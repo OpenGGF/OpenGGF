@@ -439,8 +439,15 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         animateRaw();
         currentY -= 1; // subq.w #1,y_pos(a0)
 
-        // ObjCheckCeilingDist: check distance to ceiling from top of object
-        TerrainCheckResult result = ObjectTerrainUtils.checkCeilingDist(
+        // ObjCheckCeilingDist (docs/skdisasm/sonic3k.asm:20351-20366) reaches the
+        // ceiling through FindFloor with the caller's `eori.w #$F,d2` low-nibble
+        // transform, which is what checkNativeUpwardCeilingDist models -- the
+        // legacy checkCeilingDist entry is the S1/S2 object-ceiling contract and
+        // reports one pixel more clearance here, costing an extra rise frame and
+        // leaving the whole rumble ladder 1px low. MgzMinibossInstance, which
+        // ports this same TunnelbotMiniboss_CeilingRise routine, already uses the
+        // native probe.
+        TerrainCheckResult result = ObjectTerrainUtils.checkNativeUpwardCeilingDist(
                 currentX, currentY, Y_RADIUS);
         if (result.distance() < 0) {
             // Ceiling reached — transition to shaking (loc_88514)

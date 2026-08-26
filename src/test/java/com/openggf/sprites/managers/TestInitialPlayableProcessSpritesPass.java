@@ -389,6 +389,7 @@ class TestInitialPlayableProcessSpritesPass {
                 source.skipPhysicsThisFrame(),
                 source.deadOnObjectReenteredVisibleWindow(),
                 source.deferredDespawnDeadFallContinuingThisFrame(),
+                source.levelStartLeaderHistoryPrefillPending(),
                 source.bootstrapPreludePlacementApplied(),
                 source.cpuFrameCounterFromStoredLevelFrame(),
                 0x78,
@@ -409,7 +410,9 @@ class TestInitialPlayableProcessSpritesPass {
                 (short) 0x5678,
                 0x7D,
                 0x1357,
-                0x2468);
+                0x2468,
+                source.initialPresentationSuppressed(),
+                source.initialPresentationWasHidden());
     }
 
     private static void assertSecondaryStatusAndPowerTimersZero(

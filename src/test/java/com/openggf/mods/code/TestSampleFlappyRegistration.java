@@ -17,6 +17,7 @@ import com.openggf.mods.ModManifest;
 import com.openggf.mods.ModManifestParser;
 import com.openggf.mods.ModType;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tools.modsdk.GgfModCli;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -101,7 +102,7 @@ class TestSampleFlappyRegistration {
         Files.createDirectories(classes);
         List<String> arguments = new ArrayList<>(List.of(
                 "--release", "21", "-classpath",
-                Path.of("target/classes").toAbsolutePath().toString(),
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
                 "-d", classes.toString()));
         try (var sources = Files.walk(SAMPLE.resolve("src/main/java"))) {
             sources.filter(path -> path.toString().endsWith(".java")).sorted()

@@ -134,6 +134,7 @@ public final class AudioPresentationProducer {
             int stereoFrames = clock.samplesForNextFrame();
             short[] pcm;
             if (mode == PresentationMode.FORWARD) {
+                registry.beginDriverService();
                 commands.applyPending(commandApplier);
                 registry.beginRendering();
                 try {
@@ -148,7 +149,9 @@ public final class AudioPresentationProducer {
                     history.write(pcm, stereoFrames);
                 }
             } else if (mode == PresentationMode.SILENT) {
+                registry.beginDriverService();
                 commands.applyPending(commandApplier);
+                registry.advancePausedSmpsHardware(stereoFrames);
                 Arrays.fill(silence, 0, stereoFrames * CHANNELS, (short) 0);
                 pcm = silence;
             } else {

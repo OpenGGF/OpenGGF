@@ -331,7 +331,7 @@ class TestHardwareTimingService {
     }
 
     @Test
-    void recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty() {
+    void recordedAdmissionStartsOnlyBeforeTheFirstSubmission() {
         HardwareTimingService service = new HardwareTimingService();
         RecordedCompletionAuthority authority = service.beginRecordedAdmission();
         assertThrows(IllegalStateException.class, service::beginRecordedAdmission);
@@ -339,7 +339,6 @@ class TestHardwareTimingService {
         HardwareWorkHandle handle = service.submit(submission(1, new byte[] {10}));
         assertEquals(List.of(new PendingRecordedSubmission(handle, false)),
                 authority.pendingSubmissions());
-        assertThrows(IllegalStateException.class, authority::endRecordedAdmission);
 
         service.service(POST_OBJECTS);
         authority.admitRecordedCompletion(
@@ -352,6 +351,37 @@ class TestHardwareTimingService {
         service.service(POST_OBJECTS);
         assertTrue(service.isReady(liveHandle));
         assertThrows(IllegalStateException.class, service::beginRecordedAdmission);
+    }
+
+    /**
+     * Closing with a leftover submission reports it and still ends recorded
+     * admission. {@code 52b0f2859} made the close describe the leftover rather
+     * than abort on it, so the ledger really is live again afterwards -- the
+     * clause this replaces asserted the older abort-and-stay-open behaviour and
+     * had been red since that commit.
+     */
+    @Test
+    void recordedAdmissionEndsEvenWhenASubmissionIsStillOutstanding() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {12}));
+        PendingRecordedSubmissionsException leftover = assertThrows(
+                PendingRecordedSubmissionsException.class,
+                authority::endRecordedAdmission);
+        assertEquals(List.of(new PendingRecordedSubmission(handle, false)),
+                leftover.pending());
+
+        // Admission is over, so the authority no longer answers at all...
+        assertThrows(IllegalStateException.class, authority::pendingSubmissions);
+        // ...and the leftover was described, never admitted or released.
+        assertFalse(service.isReady(handle));
+        assertTrue(service.isPending(handle));
+
+        // The ledger is live again: the leftover is released by ordinary
+        // servicing, with no recorded edge and no authority left to supply one.
+        service.service(POST_OBJECTS);
+        assertTrue(service.isReady(handle));
     }
 
     @Test
@@ -384,6 +414,110 @@ class TestHardwareTimingService {
 
         assertThrows(IllegalArgumentException.class,
                 () -> service.beginRecordedAdmission(Map.of()));
+    }
+
+    /**
+     * The identity return moves the allocator, so it is bounded by the same
+     * invariant {@code advanceOrdinalCursorAcrossRecordedSpan}'s guard states:
+     * it may only move while production holds nothing unclaimed that the move
+     * would renumber, and only the most recently allocated identity may go
+     * back. Each rejection leaves the cursor and the ledger untouched.
+     */
+    @Test
+    void returningAnUnrepresentedIdentityIsRefusedUnlessTheAxisIsProvablyFree() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        authority.setRecordedRowRepresentation(false);
+
+        HardwareWorkHandle first = service.submit(submission(1, new byte[] {41}));
+        service.service(POST_OBJECTS);
+        service.admitUnrepresentedReadiness(first);
+
+        // Unclaimed: production still owns the result behind this identity.
+        assertThrows(IllegalStateException.class,
+                () -> service.releaseUnrepresentedIdentity(first));
+        assertEquals(1L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+
+        HardwareWorkHandle second = service.submit(submission(1, new byte[] {42}));
+        service.service(POST_OBJECTS);
+        service.admitUnrepresentedReadiness(second);
+        service.claim(second);
+
+        // Claimed, and the most recent -- but `first` is still unclaimed and
+        // would be stranded on the old axis by the move.
+        assertThrows(IllegalStateException.class,
+                () -> service.releaseUnrepresentedIdentity(second));
+        assertEquals(2L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+
+        service.claim(first);
+        // Claimed and nothing pending -- but not the most recently allocated.
+        assertThrows(IllegalStateException.class,
+                () -> service.releaseUnrepresentedIdentity(first));
+        assertEquals(2L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+
+        service.releaseUnrepresentedIdentity(second);
+        assertEquals(1L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+        // The spent record is retired, so the reissued ordinal is unambiguous.
+        HardwareWorkHandle reissued = service.submit(submission(1, new byte[] {43}));
+        assertEquals(1L, reissued.ordinal());
+        assertEquals(List.of(reissued), service.pendingHandles());
+    }
+
+    /**
+     * Membership is fixed at submission, not at the moment of release: an
+     * identity borrowed while row authority was deactivated is still returned
+     * once production claims it, even though the run has since re-entered
+     * coverage. Production cannot choose when it claims, so the opposite rule
+     * would strand the borrowed ordinal whenever a claim landed on a
+     * represented row.
+     */
+    @Test
+    void anIdentityBorrowedOutsideCoverageIsReturnedAfterReenteringIt() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        authority.setRecordedRowRepresentation(false);
+
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {44}));
+        service.service(POST_OBJECTS);
+        service.admitUnrepresentedReadiness(handle);
+        service.claim(handle);
+
+        authority.setRecordedRowRepresentation(true);
+        service.releaseUnrepresentedIdentity(handle);
+        assertEquals(0L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
+    }
+
+    /**
+     * The other half of the same rule, and the clause that keeps the escape
+     * narrow: work the recorder <em>did</em> count is on the recording's axis,
+     * so its identity can never be returned while row authority represents a
+     * row.
+     */
+    @Test
+    void anIdentitySubmittedInsideCoverageIsNeverReturned() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        authority.setRecordedRowRepresentation(true);
+
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {45}));
+        service.service(POST_OBJECTS);
+        authority.admitRecordedCompletion(
+                POST_OBJECTS, handle.kind(), handle.ordinal(),
+                handle.submissionFingerprint());
+        service.claim(handle);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> service.releaseUnrepresentedIdentity(handle));
+        assertTrue(error.getMessage().contains(
+                "only returned while recorded row authority is deactivated"),
+                error::getMessage);
+        assertEquals(1L, service.capture().nextOrdinals()
+                .get(HardwareWorkKind.KOS_MODULE_QUEUE));
     }
 
     private static HardwareWorkSubmission submission(int workUnits, byte[] payload) {

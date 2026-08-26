@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 
 namespace OpenGGF.BizHawk.Headless
@@ -70,6 +71,15 @@ namespace OpenGGF.BizHawk.Headless
         /// survives (spec §2.3).
         /// </summary>
         void EndSegment(RunManifestSegment entry, string metadataJson);
+
+        /// <summary>
+        /// Opens the run-level interstitial hardware-timing stream. Called
+        /// at most once per capture, and only when a hardware completion
+        /// actually occurs in a span that belongs to no segment — so a
+        /// capture with no such completion publishes no such file, and
+        /// every already-published run keeps its exact inventory.
+        /// </summary>
+        TextWriter OpenInterstitialHardwareTimingStream();
     }
 
     /// <summary>
@@ -398,6 +408,7 @@ namespace OpenGGF.BizHawk.Headless
             private TextWriter physics;
             private TextWriter aux;
             private TextWriter hardwareTiming;
+            private LazyOpenTextWriter interstitial;
             private readonly HardwareTimingEventEngine hardwareTimingEngine;
             private readonly byte[] rom;
             private readonly bool loadQueueState;
@@ -531,20 +542,87 @@ namespace OpenGGF.BizHawk.Headless
                     host));
             }
 
+            /// <summary>
+            /// A frame the segmenter represents in no segment: the pre-arm
+            /// level intro before every arm, and — the span this exists for
+            /// — the whole special-stage exit, where SS-results, the level
+            /// reload and the locked intro run between two segments.
+            ///
+            /// The ledger already advanced here (this call is not new). What
+            /// is new is that a completion occurring here is now written
+            /// down, into the run-level interstitial stream, instead of
+            /// being dropped on the floor and leaving the published ordinal
+            /// sequence with a hole.
+            /// </summary>
             internal void ObserveUnexportedHardwareBoundary()
             {
                 byte gameMode = S3KRam.U8(host, S3KRam.GameMode);
                 if (S3KRam.IsLevelFamilyMode(gameMode)
                     || gameMode == S3KRam.GameModeSpecialStage)
                 {
-                    hardwareTimingEngine.ObserveFrameEnd(0, host, null);
+                    ObserveInterstitial();
                 }
             }
 
             internal void ObserveSpecialStageResultsBoundary()
             {
-                hardwareTimingEngine.ObserveFrameEnd(
-                    0, host, null);
+                ObserveInterstitial();
+            }
+
+            private void ObserveInterstitial()
+            {
+                hardwareTimingEngine.InterstitialContext =
+                    InterstitialContext();
+                try
+                {
+                    hardwareTimingEngine.ObserveFrameEnd(
+                        0, host, InterstitialWriter());
+                }
+                finally
+                {
+                    hardwareTimingEngine.InterstitialContext = null;
+                }
+            }
+
+            /// <summary>
+            /// Run-level provenance for an interstitial record. It names the
+            /// last CLOSED segment rather than the next one, which is the
+            /// only side of the boundary known while the span is being
+            /// observed, and is also the side a consumer needs: these
+            /// completions are the tail of that segment's outstanding work,
+            /// and belong at its hand-off. Before the first arm there is no
+            /// such segment and the index is -1.
+            ///
+            /// bk2_frame is the absolute movie frame and is provenance only:
+            /// it names no row in any segment, and nothing may key on it.
+            /// </summary>
+            private string InterstitialContext()
+            {
+                int index = ManifestSegments.Count - 1;
+                string after = index < 0
+                    ? "null"
+                    : Quote(ManifestSegments[index].Dir);
+                return "\"after_segment\":" + after
+                    + ",\"after_segment_index\":"
+                    + index.ToString(CultureInfo.InvariantCulture)
+                    + ",\"bk2_frame\":"
+                    + host.CompletedFrame.ToString(
+                        CultureInfo.InvariantCulture);
+            }
+
+            private static string Quote(string value)
+            {
+                return "\"" + value + "\"";
+            }
+
+            private TextWriter InterstitialWriter()
+            {
+                if (interstitial == null)
+                {
+                    interstitial = new LazyOpenTextWriter(
+                        sink.OpenInterstitialHardwareTimingStream);
+                }
+                return interstitial;
             }
 
             /// <summary>

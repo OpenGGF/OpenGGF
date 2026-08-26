@@ -21,6 +21,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
@@ -249,7 +250,14 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private void updateCeilingShake(int vIntRunCount) {
         enforceArenaLock();
         animateRaw();
-        int vIntLowByte = vIntRunCount + 3;
+        // ROM TunnelbotMiniboss_RumbleWait (docs/skdisasm/sonic3k.asm:184790-184796):
+        //   moveq #-2,d0 / move.b (V_int_run_count+3).w,d1 / btst #0,d1 / beq.s + / moveq #1,d0
+        // (V_int_run_count+3) is an ADDRESS: V_int_run_count is a longword
+        // (addq.l #1,(V_int_run_count).w, sonic3k.asm:543), so +3 selects its LOW
+        // BYTE. It is not "counter plus three" -- adding 3 inverts bit 0 and so
+        // inverts the -2/+1 rumble step, putting the boss's hitbox one frame out
+        // of phase with the ROM.
+        int vIntLowByte = vIntRunCount & 0xFF;
         state.y += ((vIntLowByte & 1) == 0) ? -2 : 1;
         applyContinuousShake(vIntLowByte);
         if ((vIntLowByte & 7) == 0) {
@@ -287,7 +295,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private void updateDropShake(int vIntRunCount, PlayableEntity playerEntity) {
         enforceArenaLock();
         animateRaw();
-        int vIntLowByte = vIntRunCount + 3;
+        // ROM MGZMiniboss_DropRumbleWait (docs/skdisasm/sonic3k.asm:184932-184940):
+        // same (V_int_run_count+3) low-byte read as updateCeilingShake above,
+        // with the step signs mirrored (+2 / -1).
+        int vIntLowByte = vIntRunCount & 0xFF;
         state.y += ((vIntLowByte & 1) == 0) ? 2 : -1;
         applyContinuousShake(vIntLowByte);
         if ((vIntLowByte & 7) == 0) {
@@ -1131,7 +1142,23 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     }
 
     private static final class KnucklesSpikePlatformChild extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, RomObjectCodePointerProvider {
+
+        /**
+         * Word 0 of this object's S3K SST holds its live ROM code pointer.
+         * ROM {@code Obj_MGZMiniboss} is installed from the S3K object pointer table at
+         * {@code $00088568} (table read from the user-supplied ROM; the
+         * label is defined at docs/skdisasm/sonic3k.asm:184816).
+         * Its whole code block lies in one bank, so the HIGH word that
+         * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+         * on the next off-screen on-object frame is {@code $0008}
+         * (docs/skdisasm/sonic3k.asm:26816-26843).
+         */
+        @Override
+        public int romObjectCodePointerHighWord() {
+            return 0x0008;
+        }
+
         private static final int PRIORITY_BUCKET = 5;
         private static final int HALF_WIDTH = 0x18;
         private static final int HALF_HEIGHT = 0x30;

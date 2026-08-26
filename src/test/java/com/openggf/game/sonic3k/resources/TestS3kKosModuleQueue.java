@@ -372,6 +372,8 @@ class TestS3kKosModuleQueue {
                     HardwareWorkKind.KOS_MODULE_QUEUE,
                     HardwareReadinessAdmissionPolicy.RECORDED,
                     HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                    HardwareReadinessAdmissionPolicy.LIVE,
+                    HardwareWorkKind.NEMESIS_PLC_QUEUE,
                     HardwareReadinessAdmissionPolicy.LIVE));
             S3kKosDecompressionQueue direct = new S3kKosDecompressionQueue(timing);
             S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);

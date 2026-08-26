@@ -186,7 +186,8 @@ class TestOOZPlacedObjectGaps {
         TestablePlayableSprite tails = playerAt(0x1004, 0x04EC);
         ((AbstractObjectInstance) spring).setServices(new TestObjectServices()
                 .withSidekicks(List.of(tails))
-                .withSolidExecutionRegistry(new BothPlayersStandingRegistry()));
+                .withSolidExecutionRegistry(new BothPlayersStandingRegistry())
+                .withIsolatedObjectManager());
 
         spring.update(1, sonic);
 
@@ -259,7 +260,8 @@ class TestOOZPlacedObjectGaps {
                 .withSolidExecutionRegistry(new ScriptedSolidRegistry(
                         spring,
                         Map.of(sonic, sonicPush),
-                        Map.of(tails, new PlayerStandingState(ContactKind.TOP, true, false)))));
+                        Map.of(tails, new PlayerStandingState(ContactKind.TOP, true, false))))
+                .withIsolatedObjectManager());
 
         spring.update(0, sonic);
 
@@ -291,7 +293,8 @@ class TestOOZPlacedObjectGaps {
                 .withSolidExecutionRegistry(new ScriptedSolidRegistry(
                         spring,
                         Map.of(sonic, airborneSide),
-                        Map.of())));
+                        Map.of()))
+                .withIsolatedObjectManager());
 
         spring.update(0, sonic);
 
@@ -332,7 +335,8 @@ class TestOOZPlacedObjectGaps {
                 .withSolidExecutionRegistry(new ScriptedSolidRegistry(
                         spring,
                         Map.of(tails, sideAirClearedPush),
-                        Map.of(tails, new PlayerStandingState(ContactKind.SIDE, false, true)))));
+                        Map.of(tails, new PlayerStandingState(ContactKind.SIDE, false, true))))
+                .withIsolatedObjectManager());
 
         spring.update(0, playerAt(0x0400, 0x0300));
 
@@ -368,7 +372,8 @@ class TestOOZPlacedObjectGaps {
                 .withSolidExecutionRegistry(new ScriptedSolidRegistry(
                         spring,
                         Map.of(sonic, sonicPush),
-                        Map.of(tails, new PlayerStandingState(ContactKind.SIDE, true, true)))));
+                        Map.of(tails, new PlayerStandingState(ContactKind.SIDE, true, true))))
+                .withIsolatedObjectManager());
 
         spring.update(0, sonic);
         assertEquals(0x04B5, spring.getX());
@@ -405,7 +410,8 @@ class TestOOZPlacedObjectGaps {
                 .withSolidExecutionRegistry(new ScriptedSolidRegistry(
                         spring,
                         Map.of(sonic, exactEdgePush),
-                        Map.of(sonic, new PlayerStandingState(ContactKind.SIDE, false, true)))));
+                        Map.of(sonic, new PlayerStandingState(ContactKind.SIDE, false, true))))
+                .withIsolatedObjectManager());
 
         spring.update(0, sonic);
 
@@ -441,7 +447,8 @@ class TestOOZPlacedObjectGaps {
                 .withSolidExecutionRegistry(new ScriptedSolidRegistry(
                         spring,
                         Map.of(sonic, pushCleared),
-                        Map.of(sonic, new PlayerStandingState(ContactKind.SIDE, false, true)))));
+                        Map.of(sonic, new PlayerStandingState(ContactKind.SIDE, false, true))))
+                .withIsolatedObjectManager());
 
         spring.update(0, sonic);
 
@@ -476,7 +483,8 @@ class TestOOZPlacedObjectGaps {
                 .withSolidExecutionRegistry(new ScriptedSolidRegistry(
                         spring,
                         Map.of(sonic, exactEdgePushMovingAway),
-                        Map.of(sonic, new PlayerStandingState(ContactKind.SIDE, false, true)))));
+                        Map.of(sonic, new PlayerStandingState(ContactKind.SIDE, false, true))))
+                .withIsolatedObjectManager());
 
         spring.update(0, sonic);
 
@@ -514,7 +522,8 @@ class TestOOZPlacedObjectGaps {
     private static ObjectInstance newSlidingSpike(int x, int y, int subtype) throws Exception {
         ObjectInstance object = newObject("com.openggf.game.sonic2.objects.SlidingSpikeObjectInstance",
                 new ObjectSpawn(x, y, 0x43, subtype, 0, false, 0));
-        ((AbstractObjectInstance) object).setServices(new TestObjectServices());
+        ((AbstractObjectInstance) object).setServices(
+                new TestObjectServices().withIsolatedObjectManager());
         return object;
     }
 
@@ -525,7 +534,8 @@ class TestOOZPlacedObjectGaps {
     private static ObjectInstance newOOZSpring(int x, int y, int subtype, int renderFlags) throws Exception {
         ObjectInstance object = newObject("com.openggf.game.sonic2.objects.OOZSpringObjectInstance",
                 new ObjectSpawn(x, y, 0x45, subtype, renderFlags, false, 0));
-        ((AbstractObjectInstance) object).setServices(new TestObjectServices());
+        ((AbstractObjectInstance) object).setServices(
+                new TestObjectServices().withIsolatedObjectManager());
         return object;
     }
 

@@ -197,7 +197,8 @@ class TestSonic3kSpringObjectInstance {
         tails.setCentreY((short) 0x0770);
         tails.setGSpeed((short) 0x24);
         spring.setServices(new QueryBackedServices(tails, List.of())
-                .withGameState(new GameStateManager()));
+                .withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
 
         spring.update(1846, tails);
         assertFalse(spring.isSolidFor(tails),
@@ -217,12 +218,14 @@ class TestSonic3kSpringObjectInstance {
 
         Sonic3kSpringObjectInstance up = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
-        up.setServices(new TestObjectServices().withGameState(gameState));
+        up.setServices(new TestObjectServices()
+                .withGameState(gameState).withIsolatedObjectManager());
         invoke(up, "ensureInitialized");
 
         Sonic3kSpringObjectInstance down = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x20, 0, false, 0));
-        down.setServices(new TestObjectServices().withGameState(gameState));
+        down.setServices(new TestObjectServices()
+                .withGameState(gameState).withIsolatedObjectManager());
         invoke(down, "ensureInitialized");
 
         assertEquals(4, intField(up, "springType"),
@@ -248,7 +251,8 @@ class TestSonic3kSpringObjectInstance {
     void upSpringPositionNudgePreservesYSubpixel() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -266,7 +270,8 @@ class TestSonic3kSpringObjectInstance {
     void upSpringPreservesGSpeedWhenSubtypeDoesNotOverrideInertia() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -285,7 +290,8 @@ class TestSonic3kSpringObjectInstance {
     void horizontalSpringPositionNudgePreservesXSubpixelAndUsesMoveLock() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -420,7 +426,8 @@ class TestSonic3kSpringObjectInstance {
     void airborneHorizontalSpringSideContactLaunchesWithoutGroundPushingFlag() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -444,12 +451,14 @@ class TestSonic3kSpringObjectInstance {
     void allSpringVariantsUseInclusiveSolidRightEdge() throws Exception {
         Sonic3kSpringObjectInstance horizontal = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
-        horizontal.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        horizontal.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(horizontal, "ensureInitialized");
 
         Sonic3kSpringObjectInstance vertical = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
-        vertical.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        vertical.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(vertical, "ensureInitialized");
 
         // Every Obj_Spring variant resolves solidity through SolidObjectFull2_1P
@@ -465,7 +474,8 @@ class TestSonic3kSpringObjectInstance {
     void horizontalSpringLandingHandoffTriggersOnDescendingAirborneFrame() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x1D37, 0x08B0, Sonic3kObjectIds.SPRING, 0x12, 1, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite tooEarly = new TestableSprite("tails_p2");
@@ -507,7 +517,8 @@ class TestSonic3kSpringObjectInstance {
     void horizontalApproachUsesRomHalfOpenCoordinateWindow() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x1888, 0x0330, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("tails_p2");
@@ -530,7 +541,8 @@ class TestSonic3kSpringObjectInstance {
     void underwaterAirborneHorizontalSpringApproachDoesNotUseLandingHandoff() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x031A, 0x0610, Sonic3kObjectIds.SPRING, 0x10, 1, true, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("tails_p2");
@@ -573,7 +585,8 @@ class TestSonic3kSpringObjectInstance {
         extraSidekick.setGSpeed((short) 0x0400);
 
         spring.setServices(new QueryBackedServices(main, List.of(nativeP2, extraSidekick))
-                .withGameState(new GameStateManager()));
+                .withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
 
         spring.update(0, main); // Obj_Spring init-only execution
         spring.update(1, main); // Obj_Spring_Horizontal
@@ -598,7 +611,8 @@ class TestSonic3kSpringObjectInstance {
         // at loc_13DA6 / sonic3k.asm:26690).
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -624,7 +638,8 @@ class TestSonic3kSpringObjectInstance {
         //   bclr #Status_OnObj,status(a1)
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x20, 0, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -649,7 +664,8 @@ class TestSonic3kSpringObjectInstance {
         //   bclr #Status_OnObj,status(a1)
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x30, 0, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -674,7 +690,8 @@ class TestSonic3kSpringObjectInstance {
         // up-diagonal tail's Status_InAir/routine=2 transition.
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x40, 0, false, 0));
-        spring.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");

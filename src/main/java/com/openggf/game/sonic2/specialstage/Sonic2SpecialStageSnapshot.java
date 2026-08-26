@@ -16,6 +16,7 @@ final class Sonic2SpecialStageSnapshot {
     final int p2HeldButtons;
     final int p2LogicalButtons;
     final boolean recurringMainPassPending;
+    final boolean introFirstRecurringPassDeferred;
     final int pendingMainHeldButtons;
     final int pendingMainPressedButtons;
     final int pendingMainP2HeldButtons;
@@ -50,8 +51,7 @@ final class Sonic2SpecialStageSnapshot {
     final double alignmentRainbowSpeedScale;
     final double alignmentRainbowSpeedAccumulator;
     final boolean alignmentStepByTrackFrame;
-    final double lagCompensation;
-    final boolean lagCompensationDisplayEnabled;
+    final boolean liveLagSimulationEnabled;
     final long diagnosticWallStartTime;
     final int diagnosticUpdateCount;
     final int diagnosticTrackAdvances;
@@ -92,6 +92,7 @@ final class Sonic2SpecialStageSnapshot {
             int p2HeldButtons,
             int p2LogicalButtons,
             boolean recurringMainPassPending,
+            boolean introFirstRecurringPassDeferred,
             int pendingMainHeldButtons,
             int pendingMainPressedButtons,
             int pendingMainP2HeldButtons,
@@ -126,8 +127,7 @@ final class Sonic2SpecialStageSnapshot {
             double alignmentRainbowSpeedScale,
             double alignmentRainbowSpeedAccumulator,
             boolean alignmentStepByTrackFrame,
-            double lagCompensation,
-            boolean lagCompensationDisplayEnabled,
+            boolean liveLagSimulationEnabled,
             long diagnosticWallStartTime,
             int diagnosticUpdateCount,
             int diagnosticTrackAdvances,
@@ -166,6 +166,7 @@ final class Sonic2SpecialStageSnapshot {
         this.p2HeldButtons = p2HeldButtons;
         this.p2LogicalButtons = p2LogicalButtons;
         this.recurringMainPassPending = recurringMainPassPending;
+        this.introFirstRecurringPassDeferred = introFirstRecurringPassDeferred;
         this.pendingMainHeldButtons = pendingMainHeldButtons;
         this.pendingMainPressedButtons = pendingMainPressedButtons;
         this.pendingMainP2HeldButtons = pendingMainP2HeldButtons;
@@ -200,8 +201,7 @@ final class Sonic2SpecialStageSnapshot {
         this.alignmentRainbowSpeedScale = alignmentRainbowSpeedScale;
         this.alignmentRainbowSpeedAccumulator = alignmentRainbowSpeedAccumulator;
         this.alignmentStepByTrackFrame = alignmentStepByTrackFrame;
-        this.lagCompensation = lagCompensation;
-        this.lagCompensationDisplayEnabled = lagCompensationDisplayEnabled;
+        this.liveLagSimulationEnabled = liveLagSimulationEnabled;
         this.diagnosticWallStartTime = diagnosticWallStartTime;
         this.diagnosticUpdateCount = diagnosticUpdateCount;
         this.diagnosticTrackAdvances = diagnosticTrackAdvances;

@@ -51,7 +51,6 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator 
                     PachinkoEnergyTrapObjectInstance::new);
 
     private S3kSlotBonusStageRuntime slotRuntime;
-    private int slotFrameCounter;
 
     @Override
     public BonusStageProvider.BootstrapObject bootstrapObject(BonusStageType type) {
@@ -99,17 +98,14 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator 
         slotRuntime.bootstrap();
         if (!slotRuntime.isInitialized()) {
             slotRuntime = null;
-            slotFrameCounter = 0;
             return;
         }
-        var levelManager = GameServices.levelOrNull();
-        slotFrameCounter = levelManager != null ? levelManager.getFrameCounter() : 0;
     }
 
     @Override
     public void onFrameUpdate() {
         if (slotRuntime != null) {
-            slotRuntime.update(slotFrameCounter++);
+            slotRuntime.update(romLevelFrameCounter());
             if (slotRuntime.isExitTriggered()) {
                 requestExit();
             }
@@ -137,8 +133,34 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator 
             slotRuntime.shutdown();
             slotRuntime = null;
         }
-        slotFrameCounter = 0;
         super.onExit();
+    }
+
+    /**
+     * The ROM's object-visible {@code Level_frame_counter}.
+     *
+     * <p>Every S3K/S2/S1 main loop increments it immediately after
+     * {@code Wait_VSync} and BEFORE the object pass -- for the bonus/special
+     * stages see {@code sonic3k.asm:10742-10744} and {@code :63207-63209}, where
+     * {@code addq.w #1,(Level_frame_counter).w} sits between {@code Wait_VSync}
+     * and {@code Process_Sprites} -- so an object running this frame reads the
+     * already-incremented value. The engine advances its own counter in
+     * {@code LevelManager.update()}, after object execution, which is why every
+     * ported {@code Level_frame_counter} gate in the engine reads
+     * {@code getFrameCounter() + 1} (see {@code LevelManager}:922 passing exactly
+     * that into {@code ObjectManager.update}, and {@code CnzBumperObjectInstance},
+     * {@code AizFallingLogObjectInstance}, {@code PointPokeyObjectInstance} and
+     * others).
+     *
+     * <p>This replaces a free-running counter that was seeded from the level
+     * counter once at stage setup and then self-incremented. It read one below
+     * the ROM's object-visible value, so the cage's reward-spawn gate
+     * {@code btst #0,(Level_frame_counter+1).w} ({@code sonic3k.asm:99435},
+     * {@code :99417}) fired on the ROM's EVEN frames instead of its odd ones.
+     */
+    private int romLevelFrameCounter() {
+        var levelManager = GameServices.levelOrNull();
+        return levelManager != null ? levelManager.getFrameCounter() + 1 : 0;
     }
 
     public S3kSlotBonusStageRuntime activeSlotRuntime() {

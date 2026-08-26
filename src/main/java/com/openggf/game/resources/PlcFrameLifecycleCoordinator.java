@@ -81,12 +81,41 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                 : DynamicArtDmaServiceModel.EVERY_CLAIM;
     }
 
+    /**
+     * Latches the represented V-blank's PLC token, pre-assigning it to an
+     * active native blocking fade unless the V-blank about to run is a declared
+     * DMA-queue-only handler.
+     *
+     * <p>A DMA-queue-only V-blank is a lag row by construction. The ROM arms
+     * {@code Vint_CtrlDMA} (docs/s2disasm/s2.asm:6665) and that handler is
+     * nothing but {@code stopZ80 / jsr ProcessDMAQueue / startZ80 / rts}
+     * (s2.asm:998-1002); it never reaches {@code ReadJoypads}, which only the
+     * ordinary per-mode handlers run ({@code Vint_Level}, s2.asm:701, reached
+     * from s2.asm:698). The represented row it closes therefore carries no
+     * joypad poll and is a lag row for publication purposes.
+     *
+     * <p>It is equally not an iteration of the blocking fade around it: the ROM
+     * waits on this V-int <em>before</em> entering {@code Pal_FadeFromWhite}
+     * (s2.asm:6665-6672, routine at s2.asm:3460), whose own iterations arm
+     * {@code VintID_Fade} instead (s2.asm:3477). So the fade must not own this
+     * represented V-blank, and the fade's per-iteration {@code RunPLC_RAM}
+     * (s2.asm:3480) does not run on it either.
+     *
+     * <p>The token is left unclaimed for the row's own owner: a represented lag
+     * closure claims {@link PlcLifecyclePhase#LAG} and defers its dynamic-art
+     * publication to the next boundary, exactly as any other lag row does.
+     * Whichever phase claims, the queue is still serviced, because
+     * {@link PlcLifecycleFrame#claim} consumes the same one-shot declaration --
+     * both facts are true of {@code Vint_CtrlDMA} at once: it drains the DMA
+     * queue, and it is a lag row. Nothing here keys on a frame index, row,
+     * route, zone or game name.
+     */
     public PlcLifecycleFrame latchBeforeFadeUpdate() {
         if (activeFrame != null && !activeFrame.finished) {
             throw new IllegalStateException("previous PLC lifecycle frame is still active");
         }
         activeFrame = new PlcLifecycleFrame(serviceSupplier.get());
-        if (activeFade != null && !activeFade.closed) {
+        if (activeFade != null && !activeFade.closed && !nextVblankServicesDmaQueue) {
             activeFrame.claim(PlcLifecyclePhase.PALETTE_FADE);
         }
         return activeFrame;
@@ -389,7 +418,12 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             }
             return;
         }
-        if (dynamicArtLifecycle != null) {
+        if (dynamicArtLifecycle != null
+                && dynamicArtLifecycle.isComparisonSegmentOpen()) {
+            // The window can already have closed itself on the ROM iteration
+            // that wrote the special-stage game mode (Obj79_Star,
+            // docs/s2disasm/s2.asm:44877); that iteration still completes, so
+            // this structural close arrives after it.
             dynamicArtLifecycle.closeComparisonSegment();
         }
     }
@@ -405,6 +439,21 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             this.service = service;
         }
 
+        /**
+         * Assigns this represented V-blank's single semantic PLC owner.
+         *
+         * <p>Returns {@code false} when the token is already owned. That is a
+         * real precedence rule, not a no-op: an active native blocking fade
+         * pre-claims the token in {@link #latchBeforeFadeUpdate()} and keeps it
+         * for the whole iteration, including across its completion callback. A
+         * losing claim's <em>publication</em> semantics are therefore dropped
+         * with it -- notably a {@link PlcLifecyclePhase#LAG} row's deferral of
+         * its dynamic-art edges to the following boundary. Callers that own a
+         * row's phase outright must not ignore the result; see
+         * {@code LevelFrameStep.serviceVBlankOnly}.
+         *
+         * @return true when this call assigned the owner
+         */
         public boolean claim(PlcLifecyclePhase phase) {
             requireOpen();
             Objects.requireNonNull(phase, "phase");
@@ -428,6 +477,11 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                     service.prepareAfterLoop(held);
                 }
             }
+            // The DMA-queue-only declaration is a one-shot consumed by the very
+            // next claim whether or not a run comparison is active, so it can
+            // never leak into a later represented V-blank.
+            boolean declaredDmaVblank = nextVblankServicesDmaQueue;
+            nextVblankServicesDmaQueue = false;
             if (dynamicArtLifecycle != null
                     && dynamicArtLifecycle.isRunActive()) {
                 // A represented iteration whose V-blank had not yet bumped
@@ -439,8 +493,6 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                 // be LAG to keep gameplay suppressed. A genuine Vint_Lag row
                 // (Vint_routine still 0, s2.asm:483-484) never reaches
                 // ProcessDMAQueue and keeps the per-game phase policy's answer.
-                boolean declaredDmaVblank = nextVblankServicesDmaQueue;
-                nextVblankServicesDmaQueue = false;
                 if (dynamicArtDmaService.services(phase)
                         || representedIterationWithoutVblank
                         || declaredDmaVblank) {
@@ -465,14 +517,18 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             if (prepared) {
                 throw new IllegalStateException("PLC lifecycle frame was already prepared");
             }
-            if (representedIterationDefersLoopTailPreparation) {
-                // The ROM had not reached this iteration's loop tail when the
-                // row was sampled. A runtime-art coordinator without a PLC
-                // service still owns that same held tail.
+            // A service whose loop-tail arm is itself submitted hardware work
+            // decides its own visibility from that job's readiness, so the
+            // row-shape hold does not also apply to it. Every other owner --
+            // including a runtime-art coordinator with no PLC service at all --
+            // still holds the tail for a later closure.
+            boolean timedArm = service != null && service.ownsTimedLoopTailArm();
+            boolean held = representedIterationDefersLoopTailPreparation && !timedArm;
+            if (held) {
                 heldLoopTailPreparation = phase;
             }
             if (service != null && service.hasPreparationBoundary(phase)) {
-                if (!representedIterationDefersLoopTailPreparation) {
+                if (!held) {
                     service.prepareAfterLoop(phase);
                 }
                 prepared = true;

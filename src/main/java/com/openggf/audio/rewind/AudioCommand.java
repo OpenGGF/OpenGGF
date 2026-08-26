@@ -1,5 +1,7 @@
 package com.openggf.audio.rewind;
 
+import com.openggf.audio.GameAudioProfile;
+
 @com.openggf.game.ModApi
 public sealed interface AudioCommand {
     @com.openggf.game.ModApi
@@ -27,7 +29,28 @@ public sealed interface AudioCommand {
 
     @com.openggf.game.ModApi
     record PlayMusic(int musicId, MusicRoute route, boolean override,
-                     String donorGameId) implements AudioCommand {}
+                     String donorGameId,
+                     GameAudioProfile.MusicDuringOverridePolicy
+                             musicDuringOverridePolicy,
+                     GameAudioProfile.MusicOverrideRetriggerPolicy
+                             overrideRetriggerPolicy) implements AudioCommand {
+        public PlayMusic(int musicId, MusicRoute route, boolean override,
+                         String donorGameId,
+                         GameAudioProfile.MusicDuringOverridePolicy
+                                 musicDuringOverridePolicy) {
+            this(musicId, route, override, donorGameId,
+                    musicDuringOverridePolicy,
+                    GameAudioProfile.MusicOverrideRetriggerPolicy.IGNORE);
+        }
+
+        public PlayMusic(int musicId, MusicRoute route, boolean override,
+                         String donorGameId) {
+            this(musicId, route, override, donorGameId,
+                    GameAudioProfile.MusicDuringOverridePolicy
+                            .REPLACE_IMMEDIATELY,
+                    GameAudioProfile.MusicOverrideRetriggerPolicy.IGNORE);
+        }
+    }
 
     @com.openggf.game.ModApi
     record PlayNamespacedMusic(com.openggf.audio.StreamedMusicPort.TrackRef track)
@@ -46,10 +69,25 @@ public sealed interface AudioCommand {
                    String donorGameId) implements AudioCommand {}
 
     @com.openggf.game.ModApi
-    record FadeOutMusic(int steps, int delay) implements AudioCommand {}
+    record FadeOutMusic(
+            int steps,
+            int delay,
+            GameAudioProfile.SystemCommandDuringOverridePolicy
+                    systemCommandDuringOverridePolicy) implements AudioCommand {
+        public FadeOutMusic(int steps, int delay) {
+            this(steps, delay,
+                    GameAudioProfile.SystemCommandDuringOverridePolicy.APPLY);
+        }
+    }
 
     @com.openggf.game.ModApi
-    record StopMusic() implements AudioCommand {}
+    record StopMusic(
+            GameAudioProfile.SystemCommandDuringOverridePolicy
+                    systemCommandDuringOverridePolicy) implements AudioCommand {
+        public StopMusic() {
+            this(GameAudioProfile.SystemCommandDuringOverridePolicy.APPLY);
+        }
+    }
 
     @com.openggf.game.ModApi
     record StopAllSfx() implements AudioCommand {}

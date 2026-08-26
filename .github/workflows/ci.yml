@@ -30,8 +30,42 @@ jobs:
         if: github.event_name == 'push' && github.event.deleted == false
         run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
 
+  # Structural guards are source-only and ROM-free, so unlike the default
+  # `test` job below they can run on every push - which is how work actually
+  # lands on develop. TestS1S2PlcComparisonOnlyGuard sat red on develop for
+  # weeks because the only profile selecting it was one no push ever ran.
+  #
+  # Pinned to the integration branches so all-branch pushes stay policy-only
+  # and free of Maven, which is what allBranchPushPolicyShouldRemainLightweight
+  # in TestBuildToolingGuard requires.
+  guards:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # TestBuildToolingGuard replays real history against the policy script
+          # -- `git show 53de63da2:...` for the machine-local-path grandfather
+          # baseline, and `git switch -c <branch> ccdd33edf4...` to rebuild the
+          # cutover repositories its branch-policy cases need. actions/checkout
+          # defaults to a depth-1 clone, so those commits are absent and eight
+          # cases fail in CI while passing on any developer clone. The policy
+          # job above already takes full history for the same reason.
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run structural guards
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off -Pguards test -B
+
   test:
-    if: github.event_name != 'push'
+    if: github.event_name != 'push' || github.ref == 'refs/heads/next'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -45,26 +79,37 @@ jobs:
           cache: maven
 
       - name: Run tests (pull request)
+        id: default-tests-pr
         if: github.event_name == 'pull_request'
-        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.base_ref }}"
+        shell: bash
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.base_ref }}"
 
       - name: Run tests (push)
+        id: default-tests-push
         if: github.event_name == 'push'
-        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
+        shell: bash
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
 
       - name: Run tests (manual or scheduled)
+        id: default-tests-manual
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
-        run: mvn -Dmse=off test -B
+        shell: bash
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B
 
       - name: Assert default test coverage
         shell: bash
+        env:
+          MANIFEST: ${{ steps.default-tests-pr.outputs.manifest || steps.default-tests-push.outputs.manifest || steps.default-tests-manual.outputs.manifest }}
         run: |
           python3 - <<'PY'
+          import json
+          import os
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          reports = sorted(Path("target/surefire-reports").glob("TEST-*.xml"))
+          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
+          reports = sorted(Path(session["surefire_reports"]).glob("TEST-*.xml"))
           total = 0
           skipped = 0
           for report in reports:
@@ -121,25 +166,31 @@ jobs:
           exit "$missing"
 
       - name: Run trace replay profile
+        id: develop-trace
         shell: bash
         run: |
-          mvn -Dmse=off test -Ptrace-replay -B \
+          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Assert trace replay coverage
         shell: bash
+        env:
+          MANIFEST: ${{ steps.develop-trace.outputs.manifest }}
         run: |
           python3 - <<'PY'
           import fnmatch
           import json
           import re
+          import os
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          surefire_dir = Path("target/surefire-reports")
+          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
+          surefire_dir = Path(session["surefire_reports"])
+          trace_dir = Path(session["trace_reports"])
           source_root = Path("src/test/java/com/openggf/tests/trace")
           diagnostic_excludes = (
               "Debug*.java",
@@ -237,7 +288,7 @@ jobs:
                   print(f"{report}: skipped={skipped_count}", file=sys.stderr)
               sys.exit(1)
 
-          required_ss_report = Path("target/trace-reports/s2_special_stage_0_report.json")
+          required_ss_report = trace_dir / "s2_special_stage_0_report.json"
           if not required_ss_report.exists():
               print(f"Missing required keep-green divergence report: {required_ss_report}",
                     file=sys.stderr)
@@ -253,7 +304,7 @@ jobs:
               sys.exit(1)
 
           warning_reports = []
-          for report in sorted(Path("target/trace-reports").glob("*_report.json")):
+          for report in sorted(trace_dir.glob("*_report.json")):
               data = json.loads(report.read_text(encoding="utf-8"))
               warning_count = int(data.get("warning_count", 0))
               if warning_count > 0:

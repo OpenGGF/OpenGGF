@@ -474,6 +474,40 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
         // loc_B5EA: glass_dist is current value
     }
 
+    /**
+     * The pillar's SST {@code obActWid}.
+     *
+     * <p>{@code Glass_Main} sets {@code move.b #64/2,obActWid(a1)} for the
+     * pillar and only then overwrites it with {@code #32/2} for the reflection
+     * child (docs/s1disasm/_incObj/30 MZ Large Green Glass Blocks.asm:78,84).
+     * The pillar's own slot is child 0, reused via {@code movea.l a0,a1} at
+     * {@code :57}, and the shine is a separate instance here, so this class is
+     * always the pillar and always the wider value.
+     *
+     * <p>The byte is supplied here rather than at
+     * {@link #getBalanceWidthPixels()} because both of its ROM consumers want
+     * it. {@code BuildSprites} uses it as the horizontal on-screen cull bound,
+     * testing {@code obX - cameraX +/- obActWid} against 0 and 320
+     * (docs/s1disasm/_inc/BuildSprites.asm:49-58), and {@code Sonic_Balance}
+     * reads the same byte off the stood-on object
+     * (docs/s1disasm/_incObj/01 Sonic.asm:423). {@code getBalanceWidthPixels()}
+     * defaults to this accessor, so overriding it alone would have left the
+     * pillar culled at 16 where the ROM culls at 32. Neither is the rendered
+     * extent -- {@code Map_Glass} owns that -- nor the collision width, which
+     * is {@code #64/2+sonic_solid_width} = {@code $2B} at {@code :99,:117} and
+     * is modelled separately as {@link #HALF_WIDTH}.
+     *
+     * <p>Without the override the inherited 16 makes the balance test
+     * {@code d1 = player_x + width - object_x} read 16px lower than the ROM's,
+     * which puts a player standing anywhere in the pillar's left half below the
+     * {@code #4} left-edge threshold and starts the balancing animation where
+     * the ROM stands still (_incObj/01 Sonic.asm:425-433).
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 64 / 2;
+    }
+
     // --- Helpers ---
 
     /**

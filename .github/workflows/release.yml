@@ -59,75 +59,143 @@ jobs:
           exit "$missing"
 
       - name: Run tests (pull request)
+        id: release-default-tests-pr
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
-          mvn -Dmse=off test -B \
+          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B \
             -DmodApi.destinationBranch="${{ github.base_ref }}" \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Run tests (push)
+        id: release-default-tests-push
         if: github.event_name == 'push'
         shell: bash
         run: |
-          mvn -Dmse=off test -B \
+          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B \
             -DmodApi.destinationBranch="${{ github.ref_name }}" \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Run tests (manual)
+        id: release-default-tests-manual
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
-          mvn -Dmse=off test -B \
+          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
+      - name: Assert default test skip classification
+        shell: bash
+        env:
+          MANIFEST: ${{ steps.release-default-tests-pr.outputs.manifest || steps.release-default-tests-push.outputs.manifest || steps.release-default-tests-manual.outputs.manifest }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
+          surefire_dir = Path(session["surefire_reports"])
+          RELEASE_OPTIONAL_TEST_SKIPS = {
+              "com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds",
+              "com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance#measureMixedRouteDispatchAllocationAndTime",
+              "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes",
+              "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#postWarmupRenderSamplingAllocationProbe",
+              "com.openggf.tests.TestCPZObjectBugs#testSpinTubeForcesRolling",
+              "com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval",
+              "com.openggf.tools.audio.completerun.s2.TestS2CompleteRunRealRow769DecodeGate#capturesAndDecodesTheExactRealRow769Boundary",
+              "com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics#writeCompatibilityReportForLocalShaderPack",
+              "com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput",
+              "com.openggf.tools.audio.completerun.s3k.TestS3kCompleteRunRealRow810DecodeGate#capturesAndDecodesTheExactRealRow810Boundary",
+              "com.openggf.audio.AudioRegressionTest#testMusicEhzMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testMusicCpzMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testMusicHtzMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testSfxRingMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testSfxJumpMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testSfxSpringMatchesReference",
+              "com.openggf.audio.AudioRegressionTest#testMixedMusicSfxMatchesReference",
+              "com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples",
+              "com.openggf.audio.synth.TestYm2612ChipGpgxParity#nativeEnvelopeHarnessReproducesTrackedVectorsWhenCoreIsPresent",
+          }
+
+          skipped = set()
+          for report in sorted(surefire_dir.glob("TEST-*.xml")):
+              root = ET.parse(report).getroot()
+              for testcase in root.iter("testcase"):
+                  if testcase.find("skipped") is not None:
+                      skipped.add(f"{testcase.attrib.get('classname', root.attrib.get('name', report.stem))}#{testcase.attrib.get('name', '<unnamed>')}")
+
+          unexpected_skips = sorted(skipped - RELEASE_OPTIONAL_TEST_SKIPS)
+          if unexpected_skips:
+              print("Unclassified default-suite skips are release-blocking", file=sys.stderr)
+              for identity in unexpected_skips:
+                  print(identity, file=sys.stderr)
+              sys.exit(1)
+          print(f"Default test skip classification: skipped={len(skipped)} allowed={len(RELEASE_OPTIONAL_TEST_SKIPS)}")
+          PY
+
+      - name: Run structural guards in a fresh session
+        id: release-guard-tests
+        shell: bash
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off -Pguards test -B
+
       - name: Run trace replay policy tests (pull request)
+        id: release-trace-tests-pr
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
-          mvn -Dmse=off test -Ptrace-replay -B \
+          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
             -DmodApi.destinationBranch="${{ github.base_ref }}" \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Run trace replay policy tests (push)
+        id: release-trace-tests-push
         if: github.event_name == 'push'
         shell: bash
         run: |
-          mvn -Dmse=off test -Ptrace-replay -B \
+          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
             -DmodApi.destinationBranch="${{ github.ref_name }}" \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Run trace replay policy tests (manual)
+        id: release-trace-tests-manual
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
-          mvn -Dmse=off test -Ptrace-replay -B \
+          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Assert trace replay coverage
         shell: bash
+        env:
+          MANIFEST: ${{ steps.release-trace-tests-pr.outputs.manifest || steps.release-trace-tests-push.outputs.manifest || steps.release-trace-tests-manual.outputs.manifest }}
         run: |
           python3 - <<'PY'
           import fnmatch
           import json
+          import os
           import re
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          surefire_dir = Path("target/surefire-reports")
+          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
+          surefire_dir = Path(session["surefire_reports"])
+          trace_dir = Path(session["trace_reports"])
           source_root = Path("src/test/java/com/openggf/tests/trace")
           TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = (
               "Debug*.java",
@@ -135,15 +203,50 @@ jobs:
               "*Probe.java",
               "*Probe*.java",
           )
+          TRACE_REPLAY_PROFILE_EXCLUDES = (
+              "**/tests/trace/s3k/**/*Mhz*.java",
+              "**/tests/trace/s3k/**/*Fbz*.java",
+              "**/tests/trace/s3k/**/*Ssz*.java",
+              "**/tests/trace/s3k/**/*Soz*.java",
+              "**/tests/trace/s3k/**/*Lrz*.java",
+              "**/tests/trace/s3k/**/*Hpz*.java",
+              "**/tests/trace/s3k/**/*Ddz*.java",
+              "**/tests/trace/s3k/**/*Dez*.java",
+              "**/tests/trace/s3k/**/*Zone0c*.java",
+              "**/tests/trace/s3k/TestS3kGumballBonusTraceReplay.java",
+              "**/tests/trace/s3k/TestS3kPachinkoBonusTraceReplay.java",
+              "**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java",
+              "**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java",
+              "**/tests/trace/runs/TestS3kMegaRunChain.java",
+              "**/tests/trace/s3k/sonictails/*.java",
+              "**/tests/trace/s3k/*ZoneSliceTraceReplay.java",
+          )
 
           def is_diagnostic_trace_source(source):
               return any(fnmatch.fnmatch(source.name, pattern)
                          for pattern in TRACE_REPLAY_DIAGNOSTIC_EXCLUDES)
 
+          def is_release_profile_excluded_source(source):
+              relative = source.relative_to(Path("src/test/java")).as_posix()
+              if not relative.startswith("com/openggf/tests/trace/"):
+                  return False
+              for pattern in TRACE_REPLAY_PROFILE_EXCLUDES:
+                  if "/tests/trace/s3k/" in pattern and not relative.startswith(
+                          "com/openggf/tests/trace/s3k/"):
+                      continue
+                  if "/tests/trace/runs/" in pattern and not relative.startswith(
+                          "com/openggf/tests/trace/runs/"):
+                      continue
+                  if fnmatch.fnmatch(source.name, pattern.rsplit("/", 1)[-1]):
+                      return True
+              return False
+
           expected_policy_reports = set()
           expected_trace_reports = set()
           for source in sorted(source_root.rglob("Test*.java")):
               if is_diagnostic_trace_source(source):
+                  continue
+              if is_release_profile_excluded_source(source):
                   continue
               rel = source.relative_to(Path("src/test/java")).with_suffix("")
               class_name = ".".join(rel.parts)
@@ -231,7 +334,7 @@ jobs:
               sys.exit(1)
 
           warning_reports = []
-          for report in sorted(Path("target/trace-reports").glob("*_report.json")):
+          for report in sorted(trace_dir.glob("*_report.json")):
               data = json.loads(report.read_text(encoding="utf-8"))
               warning_count = int(data.get("warning_count", 0))
               if warning_count > 0:
@@ -279,42 +382,56 @@ jobs:
           cache: maven
 
       - name: Build native image
-        run: mvn -Dmse=off package -Pnative -DskipTests -B
+        id: native-build
+        shell: bash
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off package -Pnative -DskipTests -B
 
       - name: Package (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
+        env:
+          BUILD_ROOT: ${{ steps.native-build.outputs.build_root }}
+          DISTRIBUTION_ROOT: ${{ steps.native-build.outputs.distribution_root }}
         run: |
-          New-Item -ItemType Directory -Force -Path dist/OpenGGF
-          Copy-Item "target/OpenGGF.exe" "dist/OpenGGF/"
-          Copy-Item "target/config.yaml" "dist/OpenGGF/"
-          Copy-Item "target/native-libs/*.dll" "dist/OpenGGF/"
-          Compress-Archive -Path "dist/OpenGGF" -DestinationPath "dist/OpenGGF-windows.zip"
-          Remove-Item -Recurse -Force "dist/OpenGGF"
+          New-Item -ItemType Directory -Force -Path "$env:DISTRIBUTION_ROOT/OpenGGF"
+          Copy-Item "$env:BUILD_ROOT/OpenGGF.exe" "$env:DISTRIBUTION_ROOT/OpenGGF/"
+          Copy-Item "$env:BUILD_ROOT/config.yaml" "$env:DISTRIBUTION_ROOT/OpenGGF/"
+          Copy-Item "$env:BUILD_ROOT/native-libs/*.dll" "$env:DISTRIBUTION_ROOT/OpenGGF/"
+          Compress-Archive -Path "$env:DISTRIBUTION_ROOT/OpenGGF" -DestinationPath "$env:DISTRIBUTION_ROOT/OpenGGF-windows.zip"
+          Remove-Item -Recurse -Force "$env:DISTRIBUTION_ROOT/OpenGGF"
 
       - name: Package (macOS)
         if: matrix.platform == 'macos'
+        env:
+          BUILD_ROOT: ${{ steps.native-build.outputs.build_root }}
+          DISTRIBUTION_ROOT: ${{ steps.native-build.outputs.distribution_root }}
         run: |
-          mkdir -p dist
-          bash src/packaging/assemble-macos-app.sh target/OpenGGF dist
-          cd dist
+          mkdir -p "$DISTRIBUTION_ROOT"
+          bash src/packaging/assemble-macos-app.sh "$BUILD_ROOT/OpenGGF" "$DISTRIBUTION_ROOT"
+          cd "$DISTRIBUTION_ROOT"
           zip -r OpenGGF-macos.zip OpenGGF.app config.yaml
           rm -rf OpenGGF.app
 
       - name: Package (Linux)
         if: matrix.platform == 'linux'
+        env:
+          BUILD_ROOT: ${{ steps.native-build.outputs.build_root }}
+          DISTRIBUTION_ROOT: ${{ steps.native-build.outputs.distribution_root }}
         run: |
-          mkdir -p dist/OpenGGF
-          cp target/OpenGGF dist/OpenGGF/
-          cp target/config.yaml dist/OpenGGF/
-          cp target/native-libs/*.so dist/OpenGGF/
-          tar -czvf dist/OpenGGF-linux.tar.gz -C dist OpenGGF
-          rm -rf dist/OpenGGF
+          mkdir -p "$DISTRIBUTION_ROOT/OpenGGF"
+          cp "$BUILD_ROOT/OpenGGF" "$DISTRIBUTION_ROOT/OpenGGF/"
+          cp "$BUILD_ROOT/config.yaml" "$DISTRIBUTION_ROOT/OpenGGF/"
+          cp "$BUILD_ROOT"/native-libs/*.so "$DISTRIBUTION_ROOT/OpenGGF/"
+          tar -czvf "$DISTRIBUTION_ROOT/OpenGGF-linux.tar.gz" -C "$DISTRIBUTION_ROOT" OpenGGF
+          rm -rf "$DISTRIBUTION_ROOT/OpenGGF"
 
       - name: Smoke validate packaged artifact
         shell: bash
         env:
           PLATFORM: ${{ matrix.platform }}
+          BUILD_ROOT: ${{ steps.native-build.outputs.build_root }}
+          ARTIFACT_ROOT: ${{ steps.native-build.outputs.artifact_root }}
+          DISTRIBUTION_ROOT: ${{ steps.native-build.outputs.distribution_root }}
         run: |
           if command -v python3 >/dev/null 2>&1; then
             PYTHON=python3
@@ -331,6 +448,9 @@ jobs:
           import os
 
           platform = os.environ["PLATFORM"]
+          build_root = Path(os.environ["BUILD_ROOT"])
+          artifact_root = Path(os.environ["ARTIFACT_ROOT"])
+          distribution_root = Path(os.environ["DISTRIBUTION_ROOT"])
 
           def fail(message):
               print(f"::error ::{message}", file=sys.stderr)
@@ -342,7 +462,7 @@ jobs:
               fail("Could not read project version from pom.xml")
           version = match.group(1)
 
-          jar = Path(f"target/OpenGGF-{version}-jar-with-dependencies.jar")
+          jar = artifact_root / f"OpenGGF-{version}-jar-with-dependencies.jar"
           if not jar.is_file():
               fail(f"Missing packaged JVM jar: {jar}")
           with zipfile.ZipFile(jar) as archive:
@@ -358,7 +478,7 @@ jobs:
               fail(f"{jar} manifest contains obsolete dependency metadata: {', '.join(stale_terms)}")
 
           if platform == "windows":
-              archive_path = Path("dist/OpenGGF-windows.zip")
+              archive_path = distribution_root / "OpenGGF-windows.zip"
               if not archive_path.is_file():
                   fail(f"Missing Windows archive: {archive_path}")
               with zipfile.ZipFile(archive_path) as archive:
@@ -370,7 +490,7 @@ jobs:
               if not any(name.startswith("OpenGGF/") and name.endswith(".dll") for name in names):
                   fail(f"{archive_path} does not include packaged LWJGL .dll libraries")
           elif platform == "macos":
-              archive_path = Path("dist/OpenGGF-macos.zip")
+              archive_path = distribution_root / "OpenGGF-macos.zip"
               if not archive_path.is_file():
                   fail(f"Missing macOS archive: {archive_path}")
               with zipfile.ZipFile(archive_path) as archive:
@@ -396,7 +516,7 @@ jobs:
                   if not re.search(pattern, info_plist, re.DOTALL):
                       fail(f"{archive_path} {key} does not match Maven version {version}")
           elif platform == "linux":
-              archive_path = Path("dist/OpenGGF-linux.tar.gz")
+              archive_path = distribution_root / "OpenGGF-linux.tar.gz"
               if not archive_path.is_file():
                   fail(f"Missing Linux archive: {archive_path}")
               with tarfile.open(archive_path, "r:gz") as archive:
@@ -419,7 +539,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openggf-${{ matrix.platform }}
-          path: dist/*
+          path: ${{ steps.native-build.outputs.distribution_root }}/*
           retention-days: 30
 
   universal-jar:
@@ -438,13 +558,19 @@ jobs:
           cache: maven
 
       - name: Build universal JVM jar
-        run: mvn -Dmse=off package -Puniversal-jar -DskipTests -B
+        id: universal-jar-build
+        shell: bash
+        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off package -Puniversal-jar -DskipTests -B
 
       - name: Smoke validate universal JVM jar
         shell: bash
+        env:
+          ARTIFACT_ROOT: ${{ steps.universal-jar-build.outputs.artifact_root }}
+          DISTRIBUTION_ROOT: ${{ steps.universal-jar-build.outputs.distribution_root }}
         run: |
           python3 - <<'PY'
           import re
+          import os
           import sys
           import zipfile
           from pathlib import Path
@@ -459,7 +585,9 @@ jobs:
               fail("Could not read project version from pom.xml")
           version = match.group(1)
 
-          jar = Path(f"target/OpenGGF-{version}-jar-with-dependencies.jar")
+          artifact_root = Path(os.environ["ARTIFACT_ROOT"])
+          distribution_root = Path(os.environ["DISTRIBUTION_ROOT"])
+          jar = artifact_root / f"OpenGGF-{version}-jar-with-dependencies.jar"
           if not jar.is_file():
               fail(f"Missing packaged universal JVM jar: {jar}")
           with zipfile.ZipFile(jar) as archive:
@@ -485,8 +613,8 @@ jobs:
               if not any(name.startswith(prefix) and name.endswith(suffix) for name in names):
                   fail(f"{jar} is missing LWJGL {classifier} payload entries under {prefix} ending in {suffix}")
 
-          Path("dist").mkdir(exist_ok=True)
-          stable_jar = Path("dist/OpenGGF-universal.jar")
+          distribution_root.mkdir(parents=True, exist_ok=True)
+          stable_jar = distribution_root / "OpenGGF-universal.jar"
           stable_jar.write_bytes(jar.read_bytes())
           print(f"Smoke validated universal JVM jar for version {version}: {stable_jar}")
           PY
@@ -495,7 +623,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openggf-universal-jar
-          path: dist/OpenGGF-universal.jar
+          path: ${{ steps.universal-jar-build.outputs.distribution_root }}/OpenGGF-universal.jar
           retention-days: 30
 
   release:

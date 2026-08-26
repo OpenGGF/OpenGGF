@@ -114,6 +114,7 @@ public class GraphicsManager {
 	// Sprite priority shader mode flags
 	private boolean useSpritePriorityShader = false;
 	private boolean currentSpriteHighPriority = false;
+	private int currentSpriteTileOcclusionPaletteMask = 0xF;
 	private boolean ghostRenderEffectActive = false;
 	private float ghostRenderAlpha = 1.0f;
 	private boolean spriteSatCollectionActive = false;
@@ -1680,6 +1681,7 @@ public class GraphicsManager {
 		useUnderwaterPaletteForBackground = false;
 		useSpritePriorityShader = false;
 		currentSpriteHighPriority = false;
+		currentSpriteTileOcclusionPaletteMask = 0xF;
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
 		satReplayBatchOpen = false;
@@ -1813,6 +1815,7 @@ public class GraphicsManager {
 	 */
 	public void setCurrentSpriteHighPriority(boolean highPriority) {
 		this.currentSpriteHighPriority = highPriority;
+		this.currentSpriteTileOcclusionPaletteMask = highPriority ? 0 : 0xF;
 	}
 
 	/**
@@ -1820,6 +1823,15 @@ public class GraphicsManager {
 	 */
 	public boolean getCurrentSpriteHighPriority() {
 		return currentSpriteHighPriority;
+	}
+
+	public void setCurrentSpriteTileOcclusionPaletteMask(int mask) {
+		currentSpriteTileOcclusionPaletteMask = mask & 0xF;
+		currentSpriteHighPriority = currentSpriteTileOcclusionPaletteMask == 0;
+	}
+
+	public int getCurrentSpriteTileOcclusionPaletteMask() {
+		return currentSpriteTileOcclusionPaletteMask;
 	}
 
 	public void beginSpriteSatCollection() {

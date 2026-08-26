@@ -25,6 +25,8 @@ class TestCheckpointStateRewind {
                 true,
                 (byte) 0x0A,
                 (byte) 0x0B,
+                true,
+                12345L,
                 true);
 
         state.restoreRewindState(snapshot);
@@ -47,6 +49,8 @@ class TestCheckpointStateRewind {
         assertTrue(state.hasSolidBits());
         assertEquals((byte) 0x0A, state.getSavedTopSolidBit());
         assertEquals((byte) 0x0B, state.getSavedLrbSolidBit());
+        assertTrue(state.hasSavedTimer());
+        assertEquals(12345L, state.getSavedTimerFrames());
     }
 
     @Test
@@ -71,6 +75,8 @@ class TestCheckpointStateRewind {
                 true,
                 (byte) 1,
                 (byte) 2,
+                true,
+                999L,
                 true));
         state.restoreRewindState(inactive);
 
@@ -86,5 +92,7 @@ class TestCheckpointStateRewind {
         assertFalse(state.hasSolidBits());
         assertEquals((byte) 0x0C, state.getSavedTopSolidBit());
         assertEquals((byte) 0x0D, state.getSavedLrbSolidBit());
+        assertFalse(state.hasSavedTimer());
+        assertEquals(0L, state.getSavedTimerFrames());
     }
 }

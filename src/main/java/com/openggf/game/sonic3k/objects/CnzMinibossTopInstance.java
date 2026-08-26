@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -54,7 +55,23 @@ import java.util.List;
  * keep the object -&gt; events dependency testable.
  */
 public final class CnzMinibossTopInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements TouchResponseProvider, SolidObjectProvider, SolidObjectListener, RewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_CNZMinibossTop} (docs/skdisasm/sonic3k.asm:145009) is spawned by its parent rather than from the
+     * object pointer table; every routine in its code block lies in the
+     * {@code $0006xxxx} bank.
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0006}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0006;
+    }
+
 
     // ---- Routine indices (CNZMinibossTop_Index, sonic3k.asm:145011) ----
     /** Routine 0 — Obj_CNZMinibossTopInit (sonic3k.asm:145018). */

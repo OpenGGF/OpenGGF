@@ -34,6 +34,12 @@ public final class Sonic2SmpsConstants {
     /** Sonic 2 SEGA screen command (SndID_SegaSound / CmdPtr_SegaSound). */
     public static final int CMD_SEGA = 0xFA;
 
+    /** Sonic 2 music fade command (MusID_FadeOut / CmdPtr_FadeOut). */
+    public static final int CMD_FADE_OUT = 0xF9;
+
+    /** Sonic 2 stop-all command (MusID_Stop / CmdPtr_Stop). */
+    public static final int CMD_STOP_ALL = 0xFD;
+
     /** Raw SEGA PCM sample aligned to the end of the 0x0E0000 PCM bank. */
     public static final int SEGA_SOUND_ADDR = 0x0F1E8C;
 

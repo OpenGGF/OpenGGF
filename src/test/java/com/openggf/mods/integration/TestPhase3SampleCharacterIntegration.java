@@ -12,6 +12,7 @@ import com.openggf.io.ModInputLimits;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -114,10 +115,11 @@ class TestPhase3SampleCharacterIntegration {
 
     private Path buildSample() throws Exception {
         Path engine = temp.resolve("engine.jar"), sdk = temp.resolve("sdk.jar");
-        createJar(Path.of("target/classes"), engine, entry ->
+        Path sessionClasses = TestSessionOutputPaths.compiledClasses();
+        createJar(sessionClasses, engine, entry ->
                 !entry.startsWith("com/openggf/tools/modsdk/")
                         && !entry.startsWith("META-INF/openggf-mod-sdk/"));
-        createJar(Path.of("target/classes"), sdk, entry ->
+        createJar(sessionClasses, sdk, entry ->
                 entry.startsWith("com/openggf/tools/modsdk/")
                         || entry.startsWith("META-INF/openggf-mod-sdk/"));
         Path output = temp.resolve("sample-character");

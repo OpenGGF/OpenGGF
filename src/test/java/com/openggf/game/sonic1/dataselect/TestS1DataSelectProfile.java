@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.dataselect;
 
 import com.openggf.game.dataselect.DataSelectHostProfile;
+import com.openggf.game.dataselect.DataSelectExitTransition;
 import com.openggf.game.dataselect.DataSelectDestination;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.dataselect.HostSlotPreview;
@@ -9,6 +10,7 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.game.sonic3k.dataselect.S3kDataSelectManager;
 import org.junit.jupiter.api.AfterEach;
@@ -40,6 +42,12 @@ class TestS1DataSelectProfile {
     @Test
     void gameCode_returnsS1() {
         assertEquals("s1", new S1DataSelectProfile().gameCode());
+    }
+
+    @Test
+    void exitTransition_usesNativeS1EntryCueAndFadeCadence() {
+        assertEquals(new DataSelectExitTransition(Sonic1Sfx.ENTER_SS.id, 0x28, 3, 1),
+                new S1DataSelectProfile().exitTransition());
     }
 
     @Test
@@ -124,6 +132,7 @@ class TestS1DataSelectProfile {
 
         assertNotNull(hostProfile);
         assertEquals("s1", hostProfile.gameCode());
+        assertEquals(hostProfile.exitTransition(), provider.exitTransition());
         assertInstanceOf(S3kDataSelectManager.class, provider.delegate(),
                 "S1 donated Data Select should use the S3K presentation manager");
     }

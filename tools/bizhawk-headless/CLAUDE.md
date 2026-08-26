@@ -173,15 +173,27 @@ each, behind `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS`. This harness implements **non
 them, and that is a decision rather than a gap — `docs/s3k-profiles-and-hooks.md` §2.4
 records the reasoning, and `tests/S3KHookAbsenceTests.cs` pins it to the fixture bytes.
 
-Do not "helpfully" add general M68K exec/memory-write callback support. The sole
-permitted exception is the address-filtered S3K hardware-timing submission observer at
-`M68K BUS` PC `0x001B46`, immediately after `Process_Kos_Module_Queue` returns from
-`Queue_Kos`. It may mirror or stage direct-FIFO submission lifecycle only; it must not
-emit a completion, select a trace sync point, mutate emulation state, or enable any
-diagnostic-hook output. Its Mono delegate must remain strongly rooted while registered
-and be deterministically unregistered when capture ends. Behavioral tests,
-ROM/disassembly evidence, independent review, and corrected-candidate differentials gate
-this exception.
+Do not "helpfully" add general M68K exec/memory-write callback support. Two
+address-filtered hardware-timing observers are permitted exceptions, and nothing else is.
+
+The first is the S3K hardware-timing submission observer at `M68K BUS` PC `0x001B46`,
+immediately after `Process_Kos_Module_Queue` returns from `Queue_Kos`. It may mirror or
+stage direct-FIFO submission lifecycle only.
+
+The second is the S1 PLC arming observer at `M68K BUS` PC `0x0015E4`, the entry of
+`RunPLC` (`sonic.asm:1379`) in Sonic 1 World REV01. An entry-PC observation is required
+rather than per-frame RAM sampling because the routine DESTROYS the head identity:
+`move.l a0,(v_plc_buffer).w` (`sonic.asm:1405`) writes the pointer back already advanced
+past the Nemesis header, so no later sample can recover the descriptor that was armed,
+and the arm predicate itself (`v_plc_buffer` non-zero, `v_plc_patternsleft` zero) is only
+true on entry. It records readiness edges into the per-segment `hardware_timing.jsonl`
+and nothing else.
+
+Both are observers. Neither may select a trace sync point, mutate emulation state, carry
+a gameplay value, or enable any diagnostic-hook output. Each one's Mono delegate must
+remain strongly rooted while registered and be deterministically unregistered when
+capture ends. Behavioral tests, ROM/disassembly evidence, independent review, and
+corrected-candidate differentials gate these exceptions.
 
 No other fixture contains hook output, so broader callback support would be the only
 significant surface here with no differential coverage, in a harness whose value depends

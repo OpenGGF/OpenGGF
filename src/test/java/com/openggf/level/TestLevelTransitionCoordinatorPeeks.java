@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.game.BonusStageType;
+import com.openggf.level.objects.PersistentRespawnState;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,6 +26,18 @@ class TestLevelTransitionCoordinatorPeeks {
         assertTrue(c.isSpecialStageRequested());
         assertTrue(c.isSpecialStageRequested()); // still pending
         assertTrue(c.consumeSpecialStageRequest());
+        assertFalse(c.isSpecialStageRequested());
+    }
+
+    @Test
+    void armedTypedSpecialStageEntryIsPeekableAndAdvancesExactlyOnce() {
+        LevelTransitionCoordinator c = new LevelTransitionCoordinator();
+        c.advanceToSpecialStageEntryRoutine();
+
+        assertTrue(c.isSpecialStageRequested());
+        assertNotNull(c.consumeSpecialStageEntryRequest());
+        assertTrue(c.consumeSpecialStageEntryLevelAdvance());
+        assertFalse(c.consumeSpecialStageEntryLevelAdvance());
         assertFalse(c.isSpecialStageRequested());
     }
 
@@ -61,7 +74,10 @@ class TestLevelTransitionCoordinatorPeeks {
         LevelTransitionCoordinator c = new LevelTransitionCoordinator();
         BigRingReturnState saved = new BigRingReturnState(
                 1, 2, 3, 4, 5, (byte) 6, (byte) 7, 8, 9, 10);
-        c.saveBigRingReturn(saved);
+        PersistentRespawnState respawn = new PersistentRespawnState(
+                new long[]{1L}, new long[]{2L}, new long[]{3L}, new long[]{4L});
+        c.saveBigRingReturn(saved, respawn);
+        c.clearLastStarPostHit();
         c.markSanctuaryReentry(2, true);
         LevelTransitionRewindAdapter adapter = new LevelTransitionRewindAdapter(c);
         LevelTransitionCoordinator.SanctuaryRewindState snapshot = adapter.capture();
@@ -74,9 +90,29 @@ class TestLevelTransitionCoordinatorPeeks {
         assertEquals(new SanctuaryReturnContext(2, true),
                 c.sanctuaryReturnContext().orElseThrow());
         assertSame(saved, c.getBigRingReturn());
+        assertSame(respawn, c.getBigRingReturnRespawnState());
+        assertFalse(c.isLastStarPostHitSet());
         assertFalse(c.isSanctuaryOriginRestorePending(-1, -1));
         assertFalse(c.consumeZoneActRequest(),
                 "rewind before exit request must not retain a generic zone request");
+    }
+
+    @Test
+    void completingSanctuaryRestoreClearsSaved2AndRespawnRingSnapshot() {
+        LevelTransitionCoordinator c = new LevelTransitionCoordinator();
+        BigRingReturnState saved = new BigRingReturnState(
+                1, 2, 3, 4, 5, (byte) 6, (byte) 7, 8, 9, 10,
+                7, 1, 2, 3, 4, 5, 6, 7);
+        c.saveBigRingReturn(saved, new PersistentRespawnState(
+                new long[]{1L}, new long[]{2L}, new long[]{3L}, new long[]{4L}));
+        c.markSanctuaryReentry(4);
+        assertTrue(c.requestSanctuaryExit());
+
+        c.completeSanctuaryOriginRestore();
+
+        assertFalse(c.hasBigRingReturn());
+        assertNull(c.getBigRingReturnRespawnState());
+        assertNull(c.bigRingReturnRingStatusTable());
     }
 
     @Test

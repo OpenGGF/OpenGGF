@@ -96,6 +96,22 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     private boolean introStarted;
     private boolean hitFlashActive;
     private boolean defeatStarted;
+    /**
+     * Consumes the dispatch that installed the defeat handler.
+     *
+     * <p>{@code Obj_LBZEndBoss} runs its routine arm and only then
+     * {@code bsr.w sub_73FE2} (docs/skdisasm/sonic3k.asm:153345-153354), so the
+     * {@code loc_73A52} pointer that {@code loc_7403A} writes into {@code (a0)}
+     * along with {@code $2E = $7F} (:154049-154058) cannot be reached until the
+     * following object pass. {@code TouchResponse} runs from the player's own
+     * control routine (:21947, :26159, :30389) and therefore clears
+     * {@code collision_property} before the boss's slot, exactly as the engine's
+     * touch scan precedes this object's {@code update()} - so the install lands
+     * mid-frame here too, and the installed handler must not run on the dispatch
+     * that installed it. Without this the first {@code Obj_Wait} decrement lands
+     * on the killing frame and the countdown ends it at $7E instead of $7F.
+     */
+    private boolean pendingDefeatDispatch;
     private int collisionFlags;
     private int collisionBackup;
     private int launchCount;
@@ -171,6 +187,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         introStarted = false;
         hitFlashActive = false;
         defeatStarted = false;
+        pendingDefeatDispatch = false;
         launchCount = 0;
         defeatTimer = 0;
         requestedPlcId = -1;
@@ -206,6 +223,11 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
         updateHitFlash();
         if (defeatStarted) {
+            if (pendingDefeatDispatch) {
+                // loc_73A52 was installed after this frame's routine arm already ran.
+                pendingDefeatDispatch = false;
+                return;
+            }
             updateDefeat();
             return;
         }
@@ -843,6 +865,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
 
     private void startDefeat() {
         defeatStarted = true;
+        pendingDefeatDispatch = true;
         state.defeated = true;
         state.routine = ROUTINE_DEFEAT;
         collisionFlags = 0;

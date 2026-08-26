@@ -557,6 +557,31 @@ public class DivergenceReport {
         return scope.includes(VerificationGroup.PHYSICS) ? count + bootstrapErrorCount() : count;
     }
 
+    /**
+     * Sum of the per-group {@code error_count} values this report publishes under
+     * {@code verification_groups}. Bootstrap errors are folded into PHYSICS by
+     * {@link #appendVerificationGroupJson}, so this is exactly what a reader
+     * adding up the published groups gets, and it must equal the flat
+     * {@code error_count}. Exposed so the report writers can assert that
+     * accounting rather than merely display it -- the chain reports publish the
+     * same breakdown and assert the same invariant, and the reason both do is
+     * that the chain path drifted once where nobody was checking.
+     */
+    public int errorCountByVerificationGroups() {
+        int sum = 0;
+        for (VerificationGroup group : VerificationGroup.values()) {
+            sum += totalErrorCount(group == VerificationGroup.PHYSICS
+                    ? TraceVerificationScope.PHYSICS
+                    : TraceVerificationScope.ANIMATION);
+        }
+        return sum;
+    }
+
+    /** Flat error total, including bootstrap errors. */
+    public int publishedErrorCount() {
+        return totalErrorCount();
+    }
+
     private int totalWarningCount() {
         return warnings.size() + bootstrapWarningCount();
     }

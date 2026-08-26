@@ -198,6 +198,23 @@ public final class LiveRewindManager {
      *     during those windows, via {@code GameLoop.isRewindBlocked()}.
      */
     public void recordExternalFrame(GameMode mode, boolean nonRewindableTransitionPending, InputHandler input) {
+        recordExternalFrame(mode, nonRewindableTransitionPending, input, false);
+    }
+
+    /**
+     * Records a completed host frame and optionally makes it the first frame of
+     * a new seamless-transition rewind segment.
+     *
+     * <p>The boundary is applied after recording so an act reload performed
+     * inside {@code LevelFrameStep} is captured only after the rest of that
+     * logical frame has completed. Capturing directly from the reload call
+     * would expose a mid-frame snapshot to rewind replay.
+     */
+    public void recordExternalFrame(
+            GameMode mode,
+            boolean nonRewindableTransitionPending,
+            InputHandler input,
+            boolean seamlessTransitionCompleted) {
         RewindContext context = rewindContextForPublicEntry(mode);
         if (!context.supported() || nonRewindableTransitionPending || input == null || !enabled()) {
             activeInputHandler = null;
@@ -215,6 +232,9 @@ public final class LiveRewindManager {
         inputSource.appendFrame(input, config);
         if (rewindController.recordExternalStep()) {
             pruneOldHistory();
+        }
+        if (seamlessTransitionCompleted) {
+            handleSeamlessLevelTransitionBoundary(context);
         }
     }
 

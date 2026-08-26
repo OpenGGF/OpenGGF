@@ -1677,8 +1677,11 @@ public class Engine {
 				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
 			}
 			ModSubsystem subsystem = ModSubsystem.current();
-			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)
-					&& subsystem.policy().mayUseInSession()) {
+			// Muting speaker output does not remove creator asset identity. Level
+			// initialization and object callbacks still route exact namespaced
+			// tracks/SFX through the launch-owned port, so prepare that port for
+			// every content-enabled session even when no device backend is opened.
+			if (subsystem.policy().mayUseInSession()) {
 				subsystem.beginNormalSession(audioManager.outputSampleRate(), module.getGameCode());
 			}
 			return true;

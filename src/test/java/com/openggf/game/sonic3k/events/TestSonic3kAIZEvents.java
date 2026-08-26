@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.rewind.AudioCommandTimeline;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.tests.TestEnvironment;
@@ -16,6 +19,7 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
@@ -70,8 +74,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static com.openggf.game.sonic3k.events.AizEventTestFixtures.newFireTransitionEvents;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestSonic3kAIZEvents {
@@ -83,6 +87,29 @@ public class TestSonic3kAIZEvents {
     private static Sonic3kAIZEvents newFireTransitionEvents() {
         AtomicInteger vblankCounter = new AtomicInteger();
         return new Sonic3kAIZEvents(FIRE_TRANSITION_BOOTSTRAP, vblankCounter::getAndIncrement);
+    }
+
+    private static RecordingAizEvents newRecordingFireTransitionEvents(AudioManager audio) {
+        AtomicInteger vblankCounter = new AtomicInteger();
+        return new RecordingAizEvents(
+                FIRE_TRANSITION_BOOTSTRAP, vblankCounter, audio);
+    }
+
+    private static final class RecordingAizEvents extends Sonic3kAIZEvents {
+        private final AudioManager audio;
+
+        private RecordingAizEvents(
+                Sonic3kLoadBootstrap bootstrap,
+                AtomicInteger vblankCounter,
+                AudioManager audio) {
+            super(bootstrap, vblankCounter::getAndIncrement);
+            this.audio = audio;
+        }
+
+        @Override
+        protected AudioManager audio() {
+            return audio;
+        }
     }
 
     private static void updateWithHardware(
@@ -801,6 +828,46 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
+    public void fireMusicRestoreFollowsRomEscapeTimerAcrossActReload() {
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x2F10);
+        camera.setY((short) 0x0200);
+
+        AudioManager audio = mock(AudioManager.class);
+        RecordingAizEvents events = newRecordingFireTransitionEvents(audio);
+        events.init(0);
+        events.setEventsFg5(true);
+        AudioCommandTimeline audioTimeline = GameServices.audio().commandTimeline();
+        int audioEntriesBeforeTransition = audioTimeline.entries().size();
+
+        // AIZMinibossCutscene_StartEscape arms $120 and returns. The first
+        // decrement occurs on the following object pass, and Restore_LevelMusic
+        // runs only when that counter becomes negative. The act reload must
+        // carry the remaining timer because the escape object is destroyed by
+        // the reload.
+        int frame = 0;
+        while (!events.isAct2TransitionRequested()
+                && frame < HARDWARE_DRAIN_FRAME_LIMIT) {
+            updateFireTransitionWithHardware(events, 0, frame);
+            frame++;
+        }
+        assertTrue(events.isAct2TransitionRequested());
+        verify(audio, never()).playMusic(Sonic3kMusic.AIZ1.id);
+        assertFalse(audioTimeline.entries().subList(audioEntriesBeforeTransition,
+                        audioTimeline.entries().size()).stream()
+                .map(entry -> entry.command())
+                .anyMatch(command -> command instanceof AudioCommand.PlayMusic play
+                        && play.musicId() == Sonic3kMusic.AIZ1.id),
+                "AIZ1 music must not be started by the act reload");
+
+        events.init(1);
+        for (int continuationFrame = 0; continuationFrame <= 0x120; continuationFrame++) {
+            updateFireTransitionWithHardware(events, 1, frame + continuationFrame);
+        }
+        verify(audio).playMusic(Sonic3kMusic.AIZ2.id);
+    }
+
+    @Test
     public void eventsFg5TransitionWritesProgressionSaveForActiveSlot() throws Exception {
         SessionManager.clear();
         SessionManager.clear();
@@ -1022,8 +1089,12 @@ public class TestSonic3kAIZEvents {
         assertTrue(afterReload.active());
         assertEquals(224, afterReload.coverHeightPx());
         assertEquals(beforeReload.wavePhase(), afterReload.wavePhase());
-        // requestAct2Transition() intentionally resets BG Y to 0x140 for scroll-off start.
-        assertEquals(0x0140, afterReload.sourceWorldY());
+        // ROM AIZ1BGE_Finish performs the whole act reload without ever writing
+        // Camera_Y_pos_BG_copy (sonic3k.asm:104727-104802), so the AIZ1_FireRise
+        // ramp carries across the reload untouched; AIZ2BGE_WaitFire's
+        // $180 + (bgY & $7F) re-seat (sonic3k.asm:105070-105076) is the only
+        // thing that ever brings it back into the fire zone.
+        assertEquals(beforeReload.sourceWorldY(), afterReload.sourceWorldY());
         assertEquals(FireCurtainStage.AIZ2_REDRAW, afterReload.stage());
     }
 
@@ -1184,20 +1255,35 @@ public class TestSonic3kAIZEvents {
         assertEquals(FireCurtainStage.AIZ2_REDRAW, state.stage());
 
         boolean sawWaitFire = false;
+        boolean sawUnlatchedWaitFire = false;
+        boolean sawLatchedWaitFire = false;
         boolean sawAiz2SourceStrip = false;
+        int latchedWaitFireSourceY = -1;
         for (int i = 0; i < 240 && act2Events.getFireCurtainRenderState(224).active(); i++) {
             updateWithHardware(act2Events, 1, i);
             state = act2Events.getFireCurtainRenderState(224);
             if (state.stage() == FireCurtainStage.AIZ2_WAIT_FIRE) {
                 sawWaitFire = true;
                 if (state.sourceWorldX() == 0x0200) {
+                    sawLatchedWaitFire = true;
                     sawAiz2SourceStrip = true;
+                    latchedWaitFireSourceY = state.sourceWorldY();
+                    assertFalse(state.wrapFireTiles(),
+                            "The latched WaitFire outro must stop wrapping the cached fire body");
+                } else {
+                    sawUnlatchedWaitFire = true;
+                    assertTrue(state.wrapFireTiles(),
+                            "The pre-latch WaitFire continuation must keep the cached plane wrapped");
                 }
             }
         }
 
         assertTrue(sawWaitFire, "Expected to reach AIZ2 WaitFire continuation");
+        assertTrue(sawUnlatchedWaitFire, "Expected to observe WaitFire before its ROM release latch");
+        assertTrue(sawLatchedWaitFire, "Expected to observe WaitFire after its ROM release latch");
         assertTrue(sawAiz2SourceStrip, "Expected WaitFire to switch to the $200 source strip");
+        assertTrue(latchedWaitFireSourceY >= 0x180 && latchedWaitFireSourceY < 0x310,
+                "The latched WaitFire source Y must remain in the ROM's finite release interval");
         assertFalse(act2Events.getFireCurtainRenderState(224).active(), "Curtain should eventually clear after AIZ2 WaitFire");
     }
 

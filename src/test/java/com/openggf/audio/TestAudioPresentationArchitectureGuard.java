@@ -1,20 +1,34 @@
 package com.openggf.audio;
 
+import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
+import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.runtime.AudioFrameClock;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.synth.PsgChip;
+import com.openggf.audio.synth.Ym2612Chip;
+import com.tngtech.archunit.core.domain.Dependency;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
-import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,6 +44,26 @@ class TestAudioPresentationArchitectureGuard {
     private static final Set<String> BACKEND_COMMANDS = Set.of(
             "playMusic", "playSfx", "playSmps", "playSfxSmps",
             "toggleMute", "toggleSolo", "isMuted", "isSoloed");
+    /**
+     * The v2 timeline schema has no production-audio data dependency. Future
+     * entries need a plan-mandated immutable/read-only interface and an
+     * explicit review here; mutating owners are never allow-listed.
+     */
+    private static final Set<String> TIMELINE_READ_ONLY_AUDIO_DEPENDENCIES = Set.of();
+
+    @Test
+    void chipPcmTapInstallationIsConfinedToItsPackageDiagnosticFactory() {
+        JavaClasses classes = productionClasses();
+        List<JavaMethodCall> calls = classes.stream()
+                .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                .filter(call -> call.getName().equals("installPcmDiagnosticTap"))
+                .filter(call -> call.getTargetOwner().isEquivalentTo(Ym2612Chip.class)
+                        || call.getTargetOwner().isEquivalentTo(PsgChip.class))
+                .toList();
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().allMatch(call -> call.getOriginOwner().getFullName()
+                .equals("com.openggf.audio.synth.ChipPcmDiagnosticFactory")));
+    }
 
     /**
      * Superseded split-runtime / recording-lease-switch identifiers. None may
@@ -103,6 +137,1542 @@ class TestAudioPresentationArchitectureGuard {
             "alSourcei(",
             "AL_LOOPING",
             "AL_PITCH");
+
+    @Test
+    void smpsOwnershipDetectorRejectsRepresentativeHotPathRegressions() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/smps/DacData.java",
+                "public byte[] rawSample() { return bytes; }");
+        sources.put("audio/smps/SmpsProgramView.java",
+                "public int[] rawPointers();");
+        sources.put("audio/presentation/AudioPresentationSourceFactory.java",
+                "void freshSource() {} void copyDac() {} "
+                        + "void newSequencer() { SmpsSourceDescriptor.from(data); }");
+        sources.put("audio/presentation/AudioPresentationCommandResolver.java",
+                "private Object resolveSmpsSfxCommand() { loadNow(); "
+                        + "factory.findRegisteredSmpsSfxAsset(key, generation); } "
+                        + "private Object loadNow() { return loader.load(); }");
+        sources.put("audio/presentation/AudioVoiceRegistry.java",
+                "private void addSmpsSfxToOwner() { "
+                        + "captureLiveCommandMutation(); }");
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "hasChipWriteObserver(); "
+                        + "captureLiveCommandMutation(); }");
+        sources.put("audio/AudioManager.java",
+                safeAudioManagerClassificationMethods()
+                        + " private boolean ensureRegisteredSmpsSfx() { "
+                        + "loadAsset(); catalog.findRegisteredSmpsSfxAsset(); "
+                        + "return true; } "
+                        + "private Object loadAsset() { "
+                        + "return source.loader().loadSfx(1); }");
+
+        assertEquals(List.of(
+                "public raw DAC array @ audio/smps/DacData.java",
+                "public raw SMPS array @ audio/smps/SmpsProgramView.java",
+                "freshSource/copyDac @ audio/presentation/AudioPresentationSourceFactory.java",
+                "load before lookup @ audio/presentation/AudioPresentationCommandResolver.java",
+                "load before lookup @ audio/AudioManager.java",
+                "observer-free registry snapshot @ audio/presentation/AudioVoiceRegistry.java",
+                "warmed descriptor materialization @ audio/presentation/AudioPresentationSourceFactory.java",
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
+                smpsOwnershipViolations(sources));
+    }
+
+    @Test
+    void productionSmpsOwnershipKeepsAssetWorkOutOfTheWarmedPath()
+            throws IOException {
+        Map<String, String> sources = new LinkedHashMap<>();
+        for (String relative : List.of(
+                "audio/smps/DacData.java",
+                "audio/smps/SmpsProgramView.java",
+                "audio/AudioManager.java",
+                "audio/presentation/AudioPresentationSourceFactory.java",
+                "audio/presentation/AudioPresentationCommandResolver.java",
+                "audio/presentation/AudioVoiceRegistry.java",
+                "audio/driver/SmpsDriver.java")) {
+            sources.put(relative,
+                    Files.readString(PRODUCTION_ROOT.resolve(relative)));
+        }
+        assertEquals(List.of(), smpsOwnershipViolations(sources));
+    }
+
+    @Test
+    void smpsOwnershipDetectorFailsClosedOnRenamedMethods() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/AudioManager.java",
+                safeAudioManagerClassificationMethods().replace(
+                        "ensureRegisteredSmpsSfx(", "renamedOwner(")
+                        + " private boolean renamedOwner() { return true; }");
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void renamedAdmission() {}");
+
+        List<String> violations = smpsOwnershipViolations(sources);
+
+        assertTrue(violations.contains(
+                "missing method ensureRegisteredSmpsSfx( @ audio/AudioManager.java"));
+        assertTrue(violations.contains(
+                "missing method commitSfxAdmission( @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void smpsOwnershipDetectorIgnoresCommentsAndRequiresObserverControlFlow() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "String lie = \"hasChipWriteObserver() ? \"; "
+                        + "// captureLiveCommandMutation()\n"
+                        + "captureLiveCommandMutation(); }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void smpsOwnershipDetectorRejectsPublicAndExtractedLoadBeforeLookup() {
+        for (String mutation : List.of(
+                "source.loader().loadSfx(sfxName); "
+                        + "ensureRegisteredSmpsSfx();",
+                "loadBeforeOwner(); ensureRegisteredSmpsSfx(); "
+                        + "} private final void loadBeforeOwner() { "
+                        + "source.loader().loadSfx(7);",
+                "this.source.loader().loadSfx(7); "
+                        + "ensureRegisteredSmpsSfx();")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/AudioManager.java",
+                    safeAudioManagerClassificationMethods().replace(
+                            "ensureRegisteredSmpsSfx(); } "
+                                    + "public void playSfx(GameSound",
+                            mutation + " } public void playSfx(GameSound")
+                            + " private synchronized boolean "
+                            + "ensureRegisteredSmpsSfx() { "
+                            + "catalog.findRegisteredSmpsSfxAsset(); "
+                            + "return source.loader().loadSfx(1) != null; }");
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "load before lookup @ audio/AudioManager.java"),
+                    mutation);
+        }
+    }
+
+    @Test
+    void observerGuardRejectsEveryUnconditionalOrExtractedCapture() {
+        for (String driver : List.of(
+                "public void commitSfxAdmission() { Object state = "
+                        + "hasChipWriteObserver() ? "
+                        + "captureLiveCommandMutation() : null; "
+                        + "captureLiveCommandMutation(); }",
+                "public synchronized void commitSfxAdmission() { "
+                        + "captureFallback(); } private final void "
+                        + "captureFallback() { captureLiveCommandMutation(); }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/driver/SmpsDriver.java", driver);
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
+                    driver);
+        }
+    }
+
+    @Test
+    void lookupGuardTraversesUnsafeLaterOverloadsAndThrowsHelpers() {
+        for (String helperDeclarations : List.of(
+                "private void classify(int id) { "
+                        + "catalog.findRegisteredSmpsSfxAsset(); "
+                        + "source.loader().loadSfx(id); } "
+                        + "private void classify(String name) { "
+                        + "source.loader().loadSfx(name); }",
+                "private final synchronized void classify(int id) "
+                        + "throws IOException { "
+                        + "source.loader().loadSfx(id); }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/AudioManager.java",
+                    safeAudioManagerClassificationMethods().replace(
+                            "ensureRegisteredSmpsSfx(); } "
+                                    + "public void playSfx(GameSound",
+                            "classify(7); ensureRegisteredSmpsSfx(); } "
+                                    + "public void playSfx(GameSound")
+                            + helperDeclarations
+                            + " private boolean ensureRegisteredSmpsSfx() { "
+                            + "catalog.findRegisteredSmpsSfxAsset(); "
+                            + "return source.loader().loadSfx(1) != null; }");
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "load before lookup @ audio/AudioManager.java"),
+                    helperDeclarations);
+        }
+    }
+
+    @Test
+    void observerGuardRejectsNonPositiveConditionsAndRegistryHelpers() {
+        for (String driver : List.of(
+                "public void commitSfxAdmission() { if "
+                        + "(!hasChipWriteObserver()) { "
+                        + "captureLiveCommandMutation(); } }",
+                "public void commitSfxAdmission() { if "
+                        + "(hasChipWriteObserver() || true) { "
+                        + "captureLiveCommandMutation(); } }",
+                "public void commitSfxAdmission() { Object state = "
+                        + "!hasChipWriteObserver() ? "
+                        + "captureLiveCommandMutation() : null; }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/driver/SmpsDriver.java", driver);
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
+                    driver);
+        }
+
+        Map<String, String> registryMutation = representativeSafeSmpsSources();
+        registryMutation.put("audio/presentation/AudioVoiceRegistry.java",
+                "private void addSmpsSfxToOwner() { captureHelper(); } "
+                        + "private final void captureHelper() throws IOException { "
+                        + "captureLiveCommandMutation(); }");
+        assertTrue(smpsOwnershipViolations(registryMutation).contains(
+                "observer-free registry snapshot @ "
+                        + "audio/presentation/AudioVoiceRegistry.java"));
+    }
+
+    @Test
+    void observerGuardTraversesAllDriverHelperOverloads() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { captureHelper(1); } "
+                        + "private void captureHelper(int id) { } "
+                        + "private void captureHelper(String id) "
+                        + "throws IOException { captureLiveCommandMutation(); }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void lookupGuardTraversesAnnotatedHelpersIncludingArgumentsAndStacks() {
+        for (String declaration : List.of(
+                "@Deprecated private void annotatedLoad() { "
+                        + "source.loader().loadSfx(7); }",
+                "@SuppressWarnings(value = \"unchecked\") @Deprecated "
+                        + "private final synchronized void annotatedLoad() "
+                        + "throws IOException { source.loader().loadSfx(7); }",
+                "@Outer(value = @Inner(factory(\"unsafe\"))) @Deprecated "
+                        + "private void annotatedLoad() { "
+                        + "source.loader().loadSfx(7); }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/AudioManager.java",
+                    safeAudioManagerClassificationMethods().replace(
+                            "ensureRegisteredSmpsSfx(); } "
+                                    + "public void playSfx(GameSound",
+                            "annotatedLoad(); ensureRegisteredSmpsSfx(); } "
+                                    + "public void playSfx(GameSound")
+                            + declaration
+                            + " private boolean ensureRegisteredSmpsSfx() { "
+                            + "catalog.findRegisteredSmpsSfxAsset(); "
+                            + "return source.loader().loadSfx(1) != null; }");
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "load before lookup @ audio/AudioManager.java"),
+                    declaration);
+        }
+    }
+
+    @Test
+    void observerGuardTraversesUnsafeAnnotatedDriverHelpers() {
+        for (String declaration : List.of(
+                "@Deprecated private void annotatedCapture() { "
+                        + "captureLiveCommandMutation(); }",
+                "@SuppressWarnings(value = \"unchecked\") @Deprecated "
+                        + "private final void annotatedCapture() "
+                        + "throws IOException { "
+                        + "captureLiveCommandMutation(); }",
+                "@Outer(value = @Inner(factory(\"unsafe\"))) @Deprecated "
+                        + "private void annotatedCapture() { "
+                        + "captureLiveCommandMutation(); }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/driver/SmpsDriver.java",
+                    "public void commitSfxAdmission() { "
+                            + "annotatedCapture(); } " + declaration);
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
+                    declaration);
+        }
+    }
+
+    @Test
+    void registryGuardRejectsEveryCaptureEvenUnderPositiveObserverGate() {
+        for (String registry : List.of(
+                "private void addSmpsSfxToOwner() { "
+                        + "captureLiveCommandMutation(); }",
+                "private void addSmpsSfxToOwner() { "
+                        + "if (hasChipWriteObserver()) { "
+                        + "captureLiveCommandMutation(); } }",
+                "private void addSmpsSfxToOwner() { "
+                        + "if (this.hasChipWriteObserver()) { "
+                        + "annotatedCapture(); } } "
+                        + "@SuppressWarnings(value = nested(\"unchecked\")) "
+                        + "@Deprecated private final void annotatedCapture() "
+                        + "throws IOException { "
+                        + "captureLiveCommandMutation(); }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/presentation/AudioVoiceRegistry.java",
+                    registry);
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "observer-free registry snapshot @ "
+                            + "audio/presentation/AudioVoiceRegistry.java"),
+                    registry);
+        }
+    }
+
+    @Test
+    void driverGuardAllowsOnlyItsExactPositiveObserverBranches() {
+        for (String driver : List.of(
+                "public void commitSfxAdmission() { "
+                        + "if (hasChipWriteObserver()) { "
+                        + "captureLiveCommandMutation(); } }",
+                "public void commitSfxAdmission() { Object state = "
+                        + "this.hasChipWriteObserver() "
+                        + "? captureLiveCommandMutation() : null; }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/driver/SmpsDriver.java", driver);
+
+            assertFalse(smpsOwnershipViolations(sources).contains(
+                    "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
+                    driver);
+        }
+    }
+
+    @Test
+    void driverGuardAllowsOnlyTheReviewedTimedAdmissionRollbackCallsite() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); "
+                        + "if (ymServiceTransaction != null) { "
+                        + "throw new IllegalStateException("
+                        + "\"a YM driver service transaction is already active\"); } "
+                        + "if (ymDriverServiceReservation == null) { "
+                        + "preflightYmServiceCapacity("
+                        + "aggregateYmServiceWriteBound(source)); } "
+                        + "long cursor = Math.max(ymServiceCursor, Math.max("
+                        + "renderedYmMasterCycle(), "
+                        + "lastPendingYmWriteDueCycle())); "
+                        + "ymServiceTransaction = new ServiceTransaction("
+                        + "rollback, source, nextYmServiceOrdinal, "
+                        + "ymTimelineGeneration(), cursor, implicit, "
+                        + "isOrderedSiblingFence(source)); "
+                        + "return ymServiceTransaction; }");
+
+        assertFalse(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsYmTransactionRollbackAtAnUnreviewedCallsite() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); return transaction; }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsAnExtraSnapshotInsideTheReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); "
+                        + "captureLiveCommandMutation(); return transaction; }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsConditionalCaptureInsideReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { if (implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); } return transaction; }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsCaptureAfterMutationInsideReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { mutateDriverState(); "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); return transaction; } "
+                        + "private void mutateDriverState() { }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void driverGuardRejectsUnexpectedWorkInsideReviewedHelper() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { "
+                        + "if (timingProfileFor(admission.sequencer()) "
+                        + "!= YmServiceTimingProfile.none()) { "
+                        + "beginYmServiceTransaction(admission.sequencer(), false); } } "
+                        + "private ServiceTransaction beginYmServiceTransaction("
+                        + "Object source, boolean implicit) { "
+                        + "LiveCommandMutationToken rollback = "
+                        + "captureLiveCommandMutation(); unexpectedWork(); "
+                        + "return transaction; } private void unexpectedWork() { }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
+    }
+
+    @Test
+    void productionYmRollbackSeamRetainsItsReviewedShape() throws IOException {
+        String source = Files.readString(
+                AUDIO_ROOT.resolve("driver/SmpsDriver.java"));
+        Map<MethodSignature, String> methods = methodBodies(source);
+        Map.Entry<MethodSignature, String> helper = methods.entrySet().stream()
+                .filter(entry -> entry.getKey().name().equals(
+                        "beginYmServiceTransaction"))
+                .findFirst().orElseThrow();
+        assertTrue(reviewedYmTransactionHelper(
+                helper.getKey(), helper.getValue()),
+                () -> "unreviewed statements: "
+                        + topLevelStatements(helper.getValue()).stream()
+                        .map(statement -> statement.replaceAll("\\s+", ""))
+                        .toList());
+        String admission = methodsNamed(methods, "commitSfxAdmission")
+                .getFirst().getValue();
+        int call = admission.indexOf("beginYmServiceTransaction(");
+        assertTrue(call >= 0 && reviewedYmTransactionCallDominates(
+                new MethodSignature("commitSfxAdmission", ""),
+                admission, call));
+    }
+
+    @Test
+    void s1SourceTimingPortRemainsConfinedToSequencerAndDriver() throws IOException {
+        Set<Path> allowed = Set.of(
+                Path.of("audio/synth/Synthesizer.java"),
+                Path.of("audio/driver/SmpsDriver.java"),
+                Path.of("audio/smps/SmpsSequencer.java"));
+        List<String> violations = new ArrayList<>();
+        try (var paths = Files.walk(PRODUCTION_ROOT)) {
+            for (Path path : paths.filter(value -> value.toString().endsWith(".java"))
+                    .toList()) {
+                String source = Files.readString(path);
+                if ((source.contains("beginYmSourceProgram(")
+                        || source.contains("enterYmSourceProgramSection(")
+                        || source.contains("hasReservableExclusiveYmSourceProgram()"))
+                        && !allowed.contains(PRODUCTION_ROOT.relativize(path))) {
+                    violations.add(PRODUCTION_ROOT.relativize(path).toString());
+                }
+            }
+        }
+        assertEquals(List.of(), violations,
+                "source-program timing is a private audio-driver protocol, not "
+                        + "a general production timing API");
+
+        String sequencer = Files.readString(
+                AUDIO_ROOT.resolve("smps/SmpsSequencer.java"));
+        assertEquals(1, occurrences(sequencer, "beginYmSourceProgram("));
+        assertEquals(3, occurrences(sequencer, "enterYmSourceProgramSection("));
+        String driver = Files.readString(
+                AUDIO_ROOT.resolve("driver/SmpsDriver.java"));
+        assertEquals(1, occurrences(driver,
+                "hasReservableExclusiveYmSourceProgram()"));
+    }
+
+    @Test
+    void stoppedSfxFmReleasePortHasOneReviewedProductionCallsite() {
+        String portName = "releaseStoppedSfxFmTrackFromSequencer";
+        List<Method> namedPorts = java.util.Arrays.stream(
+                        SmpsDriver.class.getDeclaredMethods())
+                .filter(method -> method.getName().equals(portName))
+                .toList();
+        assertEquals(1, namedPorts.size(),
+                "the internal cross-package port has no overloads");
+        Method port = namedPorts.getFirst();
+        assertTrue(Modifier.isPublic(port.getModifiers()));
+        assertTrue(Modifier.isFinal(port.getModifiers()),
+                "the cross-package sequencer port cannot be overridden");
+        assertFalse(Modifier.isStatic(port.getModifiers()));
+        assertEquals(List.of(SmpsSequencer.class, int.class),
+                List.of(port.getParameterTypes()));
+
+        JavaClasses classes = productionClasses();
+        List<JavaMethodCall> calls = classes.stream()
+                .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner()
+                        .isEquivalentTo(SmpsDriver.class))
+                .filter(call -> call.getName().equals(portName))
+                .toList();
+        assertEquals(1, calls.size(),
+                "the port has exactly one bytecode callsite");
+        assertTrue(calls.getFirst().getOriginOwner()
+                .isEquivalentTo(SmpsSequencer.class));
+        assertEquals("stopNote", calls.getFirst().getOrigin().getName());
+
+        List<String> methodReferences = classes.stream()
+                .flatMap(owner -> owner.getMethodReferencesFromSelf().stream())
+                .filter(reference -> reference.getTargetOwner()
+                        .isEquivalentTo(SmpsDriver.class))
+                .filter(reference -> reference.getName().equals(portName))
+                .map(reference -> reference.getDescription())
+                .toList();
+        assertEquals(List.of(), methodReferences,
+                "method references cannot bypass the reviewed callsite");
+    }
+
+    @Test
+    void deferredSfxInputClockPortsAreConfinedToSmpsDriver() {
+        JavaClasses classes = productionClasses();
+        Map<String, String> expectedOrigins = Map.of(
+                "advanceDeferredSfxAdmissionClock",
+                "advancePendingSfxInputClocks",
+                "consumeDeferredSfxAdmission", "consumeDeferredSfxInput");
+        for (Map.Entry<String, String> expected
+                : expectedOrigins.entrySet()) {
+            List<Method> methods = java.util.Arrays.stream(
+                            SmpsSequencer.class.getDeclaredMethods())
+                    .filter(method -> method.getName().equals(
+                            expected.getKey()))
+                    .toList();
+            assertEquals(1, methods.size());
+            assertTrue(Modifier.isPublic(methods.getFirst().getModifiers()));
+            assertTrue(Modifier.isFinal(methods.getFirst().getModifiers()));
+            assertFalse(Modifier.isStatic(methods.getFirst().getModifiers()));
+
+            List<JavaMethodCall> calls = classes.stream()
+                    .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                    .filter(call -> call.getTargetOwner()
+                            .isEquivalentTo(SmpsSequencer.class))
+                    .filter(call -> call.getName().equals(expected.getKey()))
+                    .toList();
+            assertEquals(1, calls.size(), expected.getKey());
+            assertTrue(calls.getFirst().getOriginOwner()
+                    .isEquivalentTo(SmpsDriver.class));
+            assertEquals(expected.getValue(),
+                    calls.getFirst().getOrigin().getName());
+
+            assertEquals(List.of(), classes.stream()
+                    .flatMap(owner -> owner.getMethodReferencesFromSelf()
+                            .stream())
+                    .filter(reference -> reference.getTargetOwner()
+                            .isEquivalentTo(SmpsSequencer.class))
+                    .filter(reference -> reference.getName().equals(
+                            expected.getKey()))
+                    .map(reference -> reference.getDescription())
+                    .toList());
+        }
+    }
+
+    @Test
+    void warmedMaterializationGuardTraversesAnnotatedHelpers() {
+        for (String forbidden : List.of(
+                "SmpsSourceDescriptor.from(data);",
+                "data.getData();",
+                "describeSfx(data);")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put(
+                    "audio/presentation/AudioPresentationSourceFactory.java",
+                    "private void newSequencer() { materialize(); } "
+                            + "@SuppressWarnings(value = nested(\"unsafe\")) "
+                            + "@Deprecated private final void materialize() { "
+                            + forbidden + " }");
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "warmed descriptor materialization @ "
+                            + "audio/presentation/AudioPresentationSourceFactory.java"),
+                    forbidden);
+        }
+    }
+
+    @Test
+    void lookupGuardRejectsMutuallyExclusiveLookupAndLoadBranches() {
+        Map<String, String> resolverMutation = representativeSafeSmpsSources();
+        resolverMutation.put(
+                "audio/presentation/AudioPresentationCommandResolver.java",
+                "private Object resolveSmpsSfxCommand() { "
+                        + "if (catalogReady) { "
+                        + "factory.findRegisteredSmpsSfxAsset(); "
+                        + "} else { return loader.load(); } return null; }");
+        assertTrue(smpsOwnershipViolations(resolverMutation).contains(
+                "load before lookup @ "
+                        + "audio/presentation/AudioPresentationCommandResolver.java"));
+
+        Map<String, String> managerMutation = representativeSafeSmpsSources();
+        managerMutation.put("audio/AudioManager.java",
+                safeAudioManagerClassificationMethods()
+                        + " private boolean ensureRegisteredSmpsSfx() { "
+                        + "if (catalogReady) { "
+                        + "catalog.findRegisteredSmpsSfxAsset(); "
+                        + "} else { return source.loader().loadSfx(1) != null; } "
+                        + "return true; }");
+        assertTrue(smpsOwnershipViolations(managerMutation).contains(
+                "load before lookup @ audio/AudioManager.java"));
+    }
+
+    @Test
+    void lookupGuardRejectsMutuallyExclusiveAnnotatedHelperBranches() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put(
+                "audio/presentation/AudioPresentationCommandResolver.java",
+                "private Object resolveSmpsSfxCommand() { "
+                        + "if (catalogReady) { lookupHelper(); } "
+                        + "else { return loadHelper(); } return null; } "
+                        + "@Deprecated private void lookupHelper() { "
+                        + "factory.findRegisteredSmpsSfxAsset(); } "
+                        + "@SuppressWarnings(value = nested(\"unsafe\")) "
+                        + "private Object loadHelper() { return loader.load(); }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "load before lookup @ "
+                        + "audio/presentation/AudioPresentationCommandResolver.java"));
+    }
+
+    @Test
+    void frozenRomDependencyShapeFieldHasNoRuntimeAccesses() {
+        JavaClasses classes = new ClassFileImporter()
+                .importClasses(AudioManager.class);
+        List<String> runtimeAccesses = classes.get(AudioManager.class)
+                .getField("rom")
+                .getAccessesToSelf().stream()
+                .filter(access -> !access.getOrigin().isConstructor())
+                .map(access -> access.getOrigin().getFullName())
+                .sorted()
+                .toList();
+
+        assertEquals(List.of(), runtimeAccesses,
+                "the frozen AudioManager -> Rom field is architecture-only; "
+                        + "runtime ROM state must come from BaseAudioSource");
+    }
+
+    private static Map<String, String> representativeSafeSmpsSources() {
+        Map<String, String> sources = new LinkedHashMap<>();
+        sources.put("audio/smps/DacData.java", "final class DacData {}");
+        sources.put("audio/smps/SmpsProgramView.java",
+                "interface SmpsProgramView {}");
+        sources.put("audio/AudioManager.java",
+                safeAudioManagerClassificationMethods()
+                        + " private boolean ensureRegisteredSmpsSfx() { "
+                        + "catalog.findRegisteredSmpsSfxAsset(); "
+                        + "return source.loader().loadSfx(1) != null; }");
+        sources.put("audio/presentation/AudioPresentationSourceFactory.java",
+                "private void newSequencer() {}");
+        sources.put("audio/presentation/AudioPresentationCommandResolver.java",
+                "private Object resolveSmpsSfxCommand() { "
+                        + "factory.findRegisteredSmpsSfxAsset(); "
+                        + "return loader.load(); }");
+        sources.put("audio/presentation/AudioVoiceRegistry.java",
+                "private void addSmpsSfxToOwner() {}");
+        sources.put("audio/driver/SmpsDriver.java",
+                "public void commitSfxAdmission() { Object state = "
+                        + "hasChipWriteObserver() "
+                        + "? captureLiveCommandMutation() : null; }");
+        return sources;
+    }
+
+    private static String safeAudioManagerClassificationMethods() {
+        return "public void playSfx(String sfxName, float pitch) { "
+                + "ensureRegisteredSmpsSfx(); } "
+                + "public void playSfx(GameSound sound, float pitch) { "
+                + "playBaseSfx(); ensureRegisteredSmpsSfx(); } "
+                + "public boolean playSfx(int sfxId, float pitch) { "
+                + "return playBaseSfx(); } "
+                + "public void playDonorSfx(String donorGameId, int sfxId) { "
+                + "ensureRegisteredSmpsSfx(); }";
+    }
+
+    private static List<String> smpsOwnershipViolations(
+            Map<String, String> sources) {
+        List<String> violations = new ArrayList<>();
+        String dac = sanitizedSource(
+                source(sources, "audio/smps/DacData.java"));
+        if (Pattern.compile(
+                "\\bpublic\\s+(?:final\\s+)?(?:byte|short|int|long)\\[\\]"
+                        + "\\s+\\w+")
+                .matcher(dac).find()
+                || Pattern.compile(
+                "\\bpublic\\s+(?:final\\s+)?Map<[^>]*\\[\\][^>]*>")
+                .matcher(dac).find()) {
+            violations.add("public raw DAC array @ audio/smps/DacData.java");
+        }
+
+        String programView = sanitizedSource(source(
+                sources, "audio/smps/SmpsProgramView.java"));
+        if (Pattern.compile(
+                "\\b(?:byte|short|int|long)\\[\\]\\s+\\w+\\s*\\(")
+                .matcher(programView).find()) {
+            violations.add(
+                    "public raw SMPS array @ audio/smps/SmpsProgramView.java");
+        }
+
+        String factory = sanitizedSource(source(sources,
+                "audio/presentation/AudioPresentationSourceFactory.java"));
+        if (factory.contains("freshSource") || factory.contains("copyDac")) {
+            violations.add("freshSource/copyDac @ "
+                    + "audio/presentation/AudioPresentationSourceFactory.java");
+        }
+
+        String resolverSource = sanitizedSource(source(sources,
+                "audio/presentation/AudioPresentationCommandResolver.java"));
+        String resolver = requiredMethodBody(resolverSource,
+                "resolveSmpsSfxCommand(",
+                "audio/presentation/AudioPresentationCommandResolver.java",
+                violations);
+        if (resolver != null && !lookupPrecedesEveryLoad(
+                resolverSource, "resolveSmpsSfxCommand")) {
+            violations.add("load before lookup @ "
+                    + "audio/presentation/AudioPresentationCommandResolver.java");
+        }
+
+        String managerSource = sanitizedSource(
+                source(sources, "audio/AudioManager.java"));
+        requireClassificationMethod(managerSource,
+                "public void playSfx(String sfxName, float pitch)",
+                "ensureRegisteredSmpsSfx(", violations);
+        requireClassificationMethod(managerSource,
+                "public void playSfx(GameSound sound, float pitch)",
+                "ensureRegisteredSmpsSfx(", violations);
+        requireClassificationMethod(managerSource,
+                "public boolean playSfx(int sfxId, float pitch)",
+                "playBaseSfx(", violations);
+        requireClassificationMethod(managerSource,
+                "public void playDonorSfx(String donorGameId, int sfxId)",
+                "ensureRegisteredSmpsSfx(", violations);
+        String managerOwner = requiredMethodBody(managerSource,
+                "ensureRegisteredSmpsSfx(", "audio/AudioManager.java",
+                violations);
+        if (managerOwner != null && !lookupPrecedesEveryLoad(
+                managerSource, "ensureRegisteredSmpsSfx")) {
+            violations.add("load before lookup @ audio/AudioManager.java");
+        }
+        Map<MethodSignature, String> managerMethods = methodBodies(managerSource);
+        Set<String> managerRelevantMethods =
+                lookupRelevantMethods(managerMethods);
+        for (String marker : List.of(
+                "public void playSfx(String sfxName, float pitch)",
+                "public void playSfx(GameSound sound, float pitch)",
+                "public boolean playSfx(int sfxId, float pitch)",
+                "public void playDonorSfx(String donorGameId, int sfxId)")) {
+            String route = methodBody(managerSource, marker);
+            if (route != null && !inspectLookupOrder(
+                    route, managerMethods, managerRelevantMethods,
+                    false, new HashSet<>()).valid()
+                    && !violations.contains(
+                    "load before lookup @ audio/AudioManager.java")) {
+                violations.add("load before lookup @ audio/AudioManager.java");
+            }
+        }
+
+        String registrySource = sanitizedSource(source(sources,
+                "audio/presentation/AudioVoiceRegistry.java"));
+        String registry = requiredMethodBody(registrySource,
+                "addSmpsSfxToOwner(",
+                "audio/presentation/AudioVoiceRegistry.java", violations);
+        if (registry != null && !observerSafeReachable(
+                registrySource, "addSmpsSfxToOwner", false)) {
+            violations.add("observer-free registry snapshot @ "
+                    + "audio/presentation/AudioVoiceRegistry.java");
+        }
+
+        String instantiation = requiredMethodBody(factory, "newSequencer(",
+                "audio/presentation/AudioPresentationSourceFactory.java",
+                violations);
+        if (instantiation != null
+                && reachableContainsAny(factory, "newSequencer", List.of(
+                "SmpsSourceDescriptor.from(", "getData()",
+                "describeSfx("))) {
+            violations.add("warmed descriptor materialization @ "
+                    + "audio/presentation/AudioPresentationSourceFactory.java");
+        }
+
+        String driverSource = sanitizedSource(source(sources,
+                "audio/driver/SmpsDriver.java"));
+        String driver = requiredMethodBody(driverSource,
+                "commitSfxAdmission(", "audio/driver/SmpsDriver.java",
+                violations);
+        if (driver != null && !observerSafeReachable(
+                driverSource, "commitSfxAdmission", true)) {
+            violations.add("unguarded driver snapshot @ "
+                    + "audio/driver/SmpsDriver.java");
+        }
+        return List.copyOf(violations);
+    }
+
+    private static String source(
+            Map<String, String> sources, String path) {
+        String source = sources.get(path);
+        if (source == null) {
+            throw new AssertionError("missing guard source " + path);
+        }
+        return source;
+    }
+
+    private static void requireClassificationMethod(
+            String source, String marker, String ownerCall,
+            List<String> violations) {
+        String path = "audio/AudioManager.java";
+        String body = requiredMethodBody(source, marker, path, violations);
+        boolean delegatedGameSoundClassification = marker.contains(
+                "playSfx(GameSound sound, float pitch)")
+                && body != null
+                && body.contains("playGameSfxResolved(");
+        if (body != null && !body.contains(ownerCall)
+                && !delegatedGameSoundClassification) {
+            violations.add("classification bypass " + marker + " @ " + path);
+        }
+    }
+
+    private static String requiredMethodBody(
+            String source, String marker, String path,
+            List<String> violations) {
+        String body = methodBody(source, marker);
+        if (body == null) {
+            violations.add("missing method " + marker + " @ " + path);
+        }
+        return body;
+    }
+
+    private static String methodBody(String source, String marker) {
+        int markerIndex = source.indexOf(marker);
+        if (markerIndex < 0) {
+            return null;
+        }
+        int open = source.indexOf('{', markerIndex + marker.length());
+        if (open < 0) {
+            return null;
+        }
+        int depth = 0;
+        for (int index = open; index < source.length(); index++) {
+            char character = source.charAt(index);
+            if (character == '{') {
+                depth++;
+            } else if (character == '}' && --depth == 0) {
+                return source.substring(open + 1, index);
+            }
+        }
+        return null;
+    }
+
+    private static boolean lookupPrecedesEveryLoad(
+            String source, String rootMethod) {
+        Map<MethodSignature, String> methods = methodBodies(source);
+        Set<String> relevantMethods = lookupRelevantMethods(methods);
+        List<Map.Entry<MethodSignature, String>> roots =
+                methodsNamed(methods, rootMethod);
+        return !roots.isEmpty() && roots.stream().allMatch(root ->
+                inspectLookupOrder(root.getValue(), methods,
+                        relevantMethods, false,
+                        new HashSet<>(Set.of(root.getKey()))).valid());
+    }
+
+    private static LookupInspection inspectLookupOrder(
+            String body,
+            Map<MethodSignature, String> methods,
+            Set<String> relevantMethods,
+            boolean lookupSeen,
+            Set<MethodSignature> activeMethods) {
+        ConditionalBranch branch = firstRelevantConditional(
+                body, relevantMethods);
+        if (branch == null) {
+            return inspectLinearLookupOrder(
+                    body, methods, relevantMethods,
+                    lookupSeen, activeMethods);
+        }
+        String prefix = body.substring(0, branch.start())
+                + branch.condition() + ";";
+        LookupInspection beforeBranch = inspectLinearLookupOrder(
+                prefix, methods, relevantMethods, lookupSeen,
+                new HashSet<>(activeMethods));
+        if (!beforeBranch.valid()) {
+            return beforeBranch;
+        }
+        String whenTrue = branch.compatibilityCondition()
+                ? maskCompatibilityLoads(branch.whenTrue())
+                : branch.whenTrue();
+        LookupInspection trueBranch = inspectLookupOrder(
+                whenTrue, methods, relevantMethods,
+                beforeBranch.lookupSeen(),
+                new HashSet<>(activeMethods));
+        if (!trueBranch.valid()) {
+            return trueBranch;
+        }
+        LookupInspection falseBranch = inspectLookupOrder(
+                branch.whenFalse(), methods, relevantMethods,
+                beforeBranch.lookupSeen(),
+                new HashSet<>(activeMethods));
+        if (!falseBranch.valid()) {
+            return falseBranch;
+        }
+        boolean everyBranchSeesLookup = trueBranch.lookupSeen()
+                && falseBranch.lookupSeen();
+        return inspectLookupOrder(
+                body.substring(branch.end()), methods, relevantMethods,
+                everyBranchSeesLookup, activeMethods);
+    }
+
+    private static LookupInspection inspectLinearLookupOrder(
+            String body,
+            Map<MethodSignature, String> methods,
+            Set<String> relevantMethods,
+            boolean lookupSeen,
+            Set<MethodSignature> activeMethods) {
+        List<GuardEvent> events = new ArrayList<>();
+        addEvents(events, body, "findRegisteredSmpsSfxAsset(", "lookup");
+        addEvents(events, body, "loader.load(", "load");
+        addEvents(events, body, ".loadSfx(", "load");
+        for (String method : methodNames(methods)) {
+            addLocalCallEvents(events, body, method);
+        }
+        events.sort(Comparator.comparingInt(GuardEvent::offset));
+        boolean seen = lookupSeen;
+        for (GuardEvent event : events) {
+            if (event.kind().equals("lookup")) {
+                seen = true;
+            } else if (event.kind().equals("load")) {
+                if (!seen && !isExplicitCompatibilityLoad(
+                        body, event.offset())) {
+                    return new LookupInspection(false, seen);
+                }
+            } else {
+                String called = event.kind().substring("call:".length());
+                boolean everyTargetSeesLookup = true;
+                for (Map.Entry<MethodSignature, String> target
+                        : methodsNamed(methods, called)) {
+                    if (activeMethods.add(target.getKey())) {
+                        LookupInspection nested = inspectLookupOrder(
+                                target.getValue(), methods,
+                                relevantMethods, seen,
+                                activeMethods);
+                        activeMethods.remove(target.getKey());
+                        if (!nested.valid()) {
+                            return nested;
+                        }
+                        everyTargetSeesLookup &= nested.lookupSeen();
+                    }
+                }
+                seen |= everyTargetSeesLookup;
+            }
+        }
+        return new LookupInspection(true, seen);
+    }
+
+    private static ConditionalBranch firstRelevantConditional(
+            String body, Set<String> relevantMethods) {
+        Matcher matcher = Pattern.compile("(?<![A-Za-z0-9_$])if\\s*\\(")
+                .matcher(body);
+        while (matcher.find()) {
+            int conditionOpen = body.indexOf('(', matcher.start());
+            int conditionClose = matching(body, conditionOpen, '(', ')');
+            if (conditionClose < 0) {
+                return null;
+            }
+            int thenOpen = skipWhitespace(body, conditionClose + 1);
+            if (thenOpen >= body.length() || body.charAt(thenOpen) != '{') {
+                continue;
+            }
+            int thenClose = matching(body, thenOpen, '{', '}');
+            if (thenClose < 0) {
+                return null;
+            }
+            int end = thenClose + 1;
+            String whenFalse = "";
+            int elseStart = skipWhitespace(body, end);
+            if (body.startsWith("else", elseStart)
+                    && identifierEndsAt(body, elseStart + 4)) {
+                int elseOpen = skipWhitespace(body, elseStart + 4);
+                if (elseOpen < body.length()
+                        && body.charAt(elseOpen) == '{') {
+                    int elseClose = matching(body, elseOpen, '{', '}');
+                    if (elseClose < 0) {
+                        return null;
+                    }
+                    whenFalse = body.substring(elseOpen + 1, elseClose);
+                    end = elseClose + 1;
+                }
+            }
+            String whenTrue = body.substring(thenOpen + 1, thenClose);
+            if (containsLookupEvent(whenTrue, relevantMethods)
+                    || containsLookupEvent(whenFalse, relevantMethods)) {
+                String condition = body.substring(
+                        conditionOpen + 1, conditionClose);
+                return new ConditionalBranch(
+                        matcher.start(), end, condition,
+                        whenTrue, whenFalse,
+                        isExplicitCompatibilityCondition(condition));
+            }
+        }
+        return null;
+    }
+
+    private static boolean containsLookupEvent(
+            String body, Set<String> relevantMethods) {
+        if (body.contains("findRegisteredSmpsSfxAsset(")
+                || body.contains("loader.load(")
+                || body.contains(".loadSfx(")) {
+            return true;
+        }
+        return relevantMethods.stream().anyMatch(method ->
+                localCallPattern(method).matcher(body).find());
+    }
+
+    private static Set<String> lookupRelevantMethods(
+            Map<MethodSignature, String> methods) {
+        Set<String> relevant = new HashSet<>();
+        methods.forEach((signature, body) -> {
+            if (containsLookupEvent(body, Set.of())) {
+                relevant.add(signature.name());
+            }
+        });
+        boolean changed;
+        do {
+            changed = false;
+            for (Map.Entry<MethodSignature, String> method
+                    : methods.entrySet()) {
+                if (!relevant.contains(method.getKey().name())
+                        && relevant.stream().anyMatch(name ->
+                        localCallPattern(name).matcher(
+                                method.getValue()).find())) {
+                    changed |= relevant.add(method.getKey().name());
+                }
+            }
+        } while (changed);
+        return Set.copyOf(relevant);
+    }
+
+    private static int skipWhitespace(String source, int offset) {
+        int cursor = offset;
+        while (cursor < source.length()
+                && Character.isWhitespace(source.charAt(cursor))) {
+            cursor++;
+        }
+        return cursor;
+    }
+
+    private static boolean identifierEndsAt(String source, int offset) {
+        return offset >= source.length()
+                || !Character.isJavaIdentifierPart(source.charAt(offset));
+    }
+
+    private static boolean isExplicitCompatibilityCondition(
+            String condition) {
+        return condition.contains("< 0")
+                || condition.contains(".isBlank(")
+                || condition.contains("!hasCatalogDependencies(");
+    }
+
+    private static String maskCompatibilityLoads(String body) {
+        return body.replace("loader.load(", "loader.compatibilityLoad(")
+                .replace(".loadSfx(", ".compatibilityLoadSfx(");
+    }
+
+    private static boolean reachableContainsAny(
+            String source, String rootMethod, List<String> tokens) {
+        Map<MethodSignature, String> methods = methodBodies(source);
+        return methodsNamed(methods, rootMethod).stream().anyMatch(root ->
+                reachableContainsAny(root.getValue(), methods, tokens,
+                        new HashSet<>(Set.of(root.getKey()))));
+    }
+
+    private static boolean reachableContainsAny(
+            String body,
+            Map<MethodSignature, String> methods,
+            List<String> tokens,
+            Set<MethodSignature> activeMethods) {
+        if (tokens.stream().anyMatch(body::contains)) {
+            return true;
+        }
+        for (Map.Entry<MethodSignature, String> method : methods.entrySet()) {
+            if (!localCallPattern(method.getKey().name())
+                    .matcher(body).find()) {
+                continue;
+            }
+            if (activeMethods.add(method.getKey())) {
+                boolean forbidden = reachableContainsAny(
+                        method.getValue(), methods, tokens, activeMethods);
+                activeMethods.remove(method.getKey());
+                if (forbidden) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static void addEvents(
+            List<GuardEvent> events, String body,
+            String token, String kind) {
+        int offset = body.indexOf(token);
+        while (offset >= 0) {
+            events.add(new GuardEvent(offset, kind));
+            offset = body.indexOf(token, offset + token.length());
+        }
+    }
+
+    private static void addLocalCallEvents(
+            List<GuardEvent> events, String body, String method) {
+        Matcher calls = localCallPattern(method).matcher(body);
+        while (calls.find()) {
+            events.add(new GuardEvent(calls.start(), "call:" + method));
+        }
+    }
+
+    private static Pattern localCallPattern(String method) {
+        return Pattern.compile("(?<![A-Za-z0-9_.$])(?:this\\s*\\.\\s*)?"
+                + Pattern.quote(method) + "\\s*\\(");
+    }
+
+    private static Map<MethodSignature, String> methodBodies(String source) {
+        String declarationsSource = annotationsElided(source);
+        Pattern declarations = Pattern.compile(
+                "(?:^|[;}])\\s*"
+                        + "(?:(?:public|protected|private|static|final|synchronized|"
+                        + "native|abstract|strictfp)\\s+)*"
+                        + "(?:[\\w<>?.,\\[\\]]+\\s+)+"
+                        + "([A-Za-z][A-Za-z0-9_]*)\\s*"
+                        + "\\(([^;{}]*)\\)\\s*"
+                        + "(?:throws\\s+[\\w.,\\s]+)?\\{");
+        Matcher matcher = declarations.matcher(declarationsSource);
+        Map<MethodSignature, String> methods = new LinkedHashMap<>();
+        while (matcher.find()) {
+            String name = matcher.group(1);
+            if (Set.of("if", "for", "while", "switch", "catch", "try",
+                    "else", "do", "synchronized").contains(name)) {
+                continue;
+            }
+            String body = bracedBody(
+                    declarationsSource, matcher.end() - 1);
+            MethodSignature signature = new MethodSignature(
+                    name, matcher.group(2).replaceAll("\\s+", " ").trim());
+            methods.put(signature, body);
+        }
+        return methods;
+    }
+
+    private static String annotationsElided(String source) {
+        char[] elided = source.toCharArray();
+        for (int index = 0; index < source.length(); index++) {
+            if (source.charAt(index) != '@'
+                    || source.startsWith("@interface", index)) {
+                continue;
+            }
+            int cursor = index + 1;
+            if (cursor >= source.length()
+                    || !Character.isJavaIdentifierStart(
+                    source.charAt(cursor))) {
+                continue;
+            }
+            cursor++;
+            while (cursor < source.length()) {
+                char current = source.charAt(cursor);
+                if (Character.isJavaIdentifierPart(current)
+                        || current == '.') {
+                    cursor++;
+                } else {
+                    break;
+                }
+            }
+            while (cursor < source.length()
+                    && Character.isWhitespace(source.charAt(cursor))) {
+                cursor++;
+            }
+            if (cursor < source.length() && source.charAt(cursor) == '(') {
+                int close = matching(source, cursor, '(', ')');
+                if (close < 0) {
+                    continue;
+                }
+                cursor = close + 1;
+            }
+            for (int blank = index; blank < cursor; blank++) {
+                if (elided[blank] != '\n' && elided[blank] != '\r') {
+                    elided[blank] = ' ';
+                }
+            }
+            index = cursor - 1;
+        }
+        return new String(elided);
+    }
+
+    private static Set<String> methodNames(
+            Map<MethodSignature, String> methods) {
+        Set<String> names = new HashSet<>();
+        methods.keySet().forEach(method -> names.add(method.name()));
+        return names;
+    }
+
+    private static List<Map.Entry<MethodSignature, String>> methodsNamed(
+            Map<MethodSignature, String> methods, String name) {
+        return methods.entrySet().stream()
+                .filter(entry -> entry.getKey().name().equals(name))
+                .toList();
+    }
+
+    private static String bracedBody(String source, int open) {
+        int depth = 0;
+        for (int index = open; index < source.length(); index++) {
+            char character = source.charAt(index);
+            if (character == '{') {
+                depth++;
+            } else if (character == '}' && --depth == 0) {
+                return source.substring(open + 1, index);
+            }
+        }
+        return "";
+    }
+
+    private static boolean isExplicitCompatibilityLoad(
+            String body, int loadOffset) {
+        int search = 0;
+        while ((search = body.indexOf("if", search)) >= 0) {
+            int conditionOpen = body.indexOf('(', search + 2);
+            if (conditionOpen < 0) {
+                return false;
+            }
+            int conditionClose = matching(body, conditionOpen, '(', ')');
+            int blockOpen = conditionClose < 0 ? -1
+                    : body.indexOf('{', conditionClose);
+            int blockClose = blockOpen < 0 ? -1
+                    : matching(body, blockOpen, '{', '}');
+            if (blockOpen >= 0 && loadOffset > blockOpen
+                    && loadOffset < blockClose) {
+                String condition = body.substring(
+                        conditionOpen + 1, conditionClose);
+                if (condition.contains("< 0")
+                        || condition.contains(".isBlank(")
+                        || condition.contains("!hasCatalogDependencies(")) {
+                    return true;
+                }
+            }
+            search += 2;
+        }
+        return false;
+    }
+
+    private static boolean observerSafeReachable(
+            String source, String rootMethod,
+            boolean allowDriverObserverGate) {
+        Map<MethodSignature, String> methods = methodBodies(source);
+        List<Map.Entry<MethodSignature, String>> roots =
+                methodsNamed(methods, rootMethod);
+        return !roots.isEmpty() && roots.stream().allMatch(root ->
+                observerSafe(root.getValue(), methods,
+                        allowDriverObserverGate, false,
+                        new HashSet<>(Set.of(root.getKey())), root.getKey()));
+    }
+
+    private static boolean observerSafe(
+            String body,
+            Map<MethodSignature, String> methods,
+            boolean allowDriverObserverGate,
+            boolean inheritedObserverDominance,
+            Set<MethodSignature> activeMethods,
+            MethodSignature currentMethod) {
+        int capture = body.indexOf("captureLiveCommandMutation(");
+        while (capture >= 0) {
+            if (!allowDriverObserverGate
+                    || (!inheritedObserverDominance
+                    && !observerDominates(body, capture))) {
+                return false;
+            }
+            capture = body.indexOf(
+                    "captureLiveCommandMutation(", capture + 1);
+        }
+        for (Map.Entry<MethodSignature, String> method : methods.entrySet()) {
+            String called = method.getKey().name();
+            if (called.equals("captureLiveCommandMutation")
+                    || called.equals("hasChipWriteObserver")) {
+                continue;
+            }
+            Matcher calls = localCallPattern(called).matcher(body);
+            while (calls.find()) {
+                int call = calls.start();
+                if (called.equals("beginYmServiceTransaction")) {
+                    if (!reviewedYmTransactionCallDominates(
+                                    currentMethod, body, call)
+                            || !reviewedYmTransactionHelper(
+                                    method.getKey(), method.getValue())) {
+                        return false;
+                    }
+                    continue;
+                }
+                if (activeMethods.add(method.getKey())) {
+                    boolean dominated = allowDriverObserverGate
+                            && (inheritedObserverDominance
+                            || observerDominates(body, call));
+                    boolean safe = observerSafe(method.getValue(), methods,
+                            allowDriverObserverGate, dominated, activeMethods,
+                            method.getKey());
+                    activeMethods.remove(method.getKey());
+                    if (!safe) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean reviewedYmTransactionHelper(
+            MethodSignature method, String body) {
+        String parameters = method.parameters().replaceAll("\\s+", "");
+        List<String> statements = topLevelStatements(body).stream()
+                .map(statement -> statement.replaceAll("\\s+", ""))
+                .toList();
+        List<String> setup = List.of(
+                "if(ymDriverServiceReservation==null){"
+                        + "preflightYmServiceCapacity("
+                        + "aggregateYmServiceWriteBound(source));}",
+                "longcursor=Math.max(ymServiceCursor,Math.max("
+                        + "renderedYmMasterCycle(),"
+                        + "lastPendingYmWriteDueCycle()));",
+                "ymServiceTransaction=newServiceTransaction("
+                        + "rollback,source,nextYmServiceOrdinal,"
+                        + "ymTimelineGeneration(),cursor,implicit,"
+                        + "isOrderedSiblingFence(source));",
+                "returnymServiceTransaction;");
+        return parameters.equals("Objectsource,booleanimplicit")
+                && occurrences(body.replaceAll("\\s+", ""),
+                        "captureLiveCommandMutation()") == 1
+                && statements.size() == 6
+                && statements.get(0).equals(
+                "LiveCommandMutationTokenrollback="
+                        + "captureLiveCommandMutation();")
+                && (statements.get(1).equals(
+                "if(ymServiceTransaction!=null){"
+                        + "thrownewIllegalStateException("
+                        + "\"aYMdriverservicetransactionisalreadyactive\");}")
+                || statements.get(1).equals(
+                "if(ymServiceTransaction!=null){"
+                        + "thrownewIllegalStateException();}"))
+                && statements.subList(2, 6).equals(setup);
+    }
+
+    private static List<String> topLevelStatements(String body) {
+        List<String> statements = new ArrayList<>();
+        int start = skipWhitespace(body, 0);
+        int parentheses = 0;
+        int brackets = 0;
+        int braces = 0;
+        for (int index = start; index < body.length(); index++) {
+            char value = body.charAt(index);
+            switch (value) {
+                case '(' -> parentheses++;
+                case ')' -> parentheses--;
+                case '[' -> brackets++;
+                case ']' -> brackets--;
+                case '{' -> braces++;
+                case '}' -> braces--;
+                default -> {
+                }
+            }
+            boolean simpleEnd = value == ';'
+                    && parentheses == 0 && brackets == 0 && braces == 0;
+            boolean blockEnd = value == '}'
+                    && parentheses == 0 && brackets == 0 && braces == 0;
+            if (!simpleEnd && !blockEnd) {
+                continue;
+            }
+            int next = skipWhitespace(body, index + 1);
+            if (blockEnd && body.startsWith("else", next)
+                    && identifierEndsAt(body, next + 4)) {
+                continue;
+            }
+            statements.add(body.substring(start, index + 1));
+            start = next;
+            index = next - 1;
+        }
+        if (start < body.length() && !body.substring(start).isBlank()) {
+            return List.of();
+        }
+        return statements;
+    }
+
+    private static boolean reviewedYmTransactionCallDominates(
+            MethodSignature currentMethod, String body, int offset) {
+        int search = 0;
+        while ((search = body.indexOf("if", search)) >= 0) {
+            int conditionOpen = body.indexOf('(', search + 2);
+            int conditionClose = conditionOpen < 0 ? -1
+                    : matching(body, conditionOpen, '(', ')');
+            int blockOpen = conditionClose < 0 ? -1
+                    : body.indexOf('{', conditionClose);
+            int blockClose = blockOpen < 0 ? -1
+                    : matching(body, blockOpen, '{', '}');
+            if (blockOpen >= 0 && offset > blockOpen && offset < blockClose) {
+                String compact = body.substring(
+                        conditionOpen + 1, conditionClose)
+                        .replaceAll("\\s+", "");
+                if (currentMethod.name().equals("commitSfxAdmission")
+                        && compact.equals(
+                                "timingProfileFor(admission.sequencer())"
+                                        + "!=YmServiceTimingProfile.none()")) {
+                    return true;
+                }
+                if (currentMethod.name().equals("beginYmTiming")
+                        && compact.equals("ymServiceTransaction==null")) {
+                    return true;
+                }
+            }
+            search += 2;
+        }
+        return false;
+    }
+
+    private static int occurrences(String text, String needle) {
+        int count = 0;
+        int offset = 0;
+        while ((offset = text.indexOf(needle, offset)) >= 0) {
+            count++;
+            offset += needle.length();
+        }
+        return count;
+    }
+
+    private static boolean observerDominates(String body, int offset) {
+        Matcher ternary = Pattern.compile(
+                "(?:^|[=,(])\\s*(?:this\\.)?hasChipWriteObserver"
+                        + "\\s*\\(\\s*\\)\\s*\\?")
+                .matcher(body);
+        while (ternary.find() && ternary.start() < offset) {
+            int colon = body.indexOf(':', ternary.end());
+            if (ternary.end() <= offset && colon > offset) {
+                return true;
+            }
+        }
+        int search = 0;
+        while ((search = body.indexOf("if", search)) >= 0) {
+            int conditionOpen = body.indexOf('(', search + 2);
+            int conditionClose = conditionOpen < 0 ? -1
+                    : matching(body, conditionOpen, '(', ')');
+            int blockOpen = conditionClose < 0 ? -1
+                    : body.indexOf('{', conditionClose);
+            int blockClose = blockOpen < 0 ? -1
+                    : matching(body, blockOpen, '{', '}');
+            if (blockOpen >= 0 && offset > blockOpen && offset < blockClose
+                    && isPositiveObserverCondition(body.substring(
+                    conditionOpen + 1, conditionClose))) {
+                return true;
+            }
+            search += 2;
+        }
+        return false;
+    }
+
+    private static boolean isPositiveObserverCondition(String condition) {
+        String compact = condition.replaceAll("\\s+", "");
+        return compact.equals("hasChipWriteObserver()")
+                || compact.equals("this.hasChipWriteObserver()")
+                || compact.equals("hasPotentiallyThrowingAdmissionObserver()")
+                || compact.equals(
+                        "this.hasPotentiallyThrowingAdmissionObserver()")
+                || compact.contains(
+                        "&&hasPotentiallyThrowingAdmissionObserver()");
+    }
+
+    private static int matching(
+            String source, int open, char opening, char closing) {
+        int depth = 0;
+        for (int index = open; index < source.length(); index++) {
+            if (source.charAt(index) == opening) {
+                depth++;
+            } else if (source.charAt(index) == closing && --depth == 0) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private static String sanitizedSource(String source) {
+        StringBuilder clean = new StringBuilder(source.length());
+        int state = 0;
+        for (int index = 0; index < source.length(); index++) {
+            char value = source.charAt(index);
+            char next = index + 1 < source.length()
+                    ? source.charAt(index + 1) : '\0';
+            if (state == 0 && value == '/' && next == '/') {
+                clean.append("  ");
+                index++;
+                state = 1;
+            } else if (state == 0 && value == '/' && next == '*') {
+                clean.append("  ");
+                index++;
+                state = 2;
+            } else if (state == 0 && (value == '"' || value == '\'')) {
+                clean.append(' ');
+                state = value == '"' ? 3 : 4;
+            } else if (state == 1 && (value == '\n' || value == '\r')) {
+                clean.append(value);
+                state = 0;
+            } else if (state == 2 && value == '*' && next == '/') {
+                clean.append("  ");
+                index++;
+                state = 0;
+            } else if ((state == 3 || state == 4) && value == '\\') {
+                clean.append(' ');
+                if (++index < source.length()) {
+                    clean.append(' ');
+                }
+            } else if ((state == 3 && value == '"')
+                    || (state == 4 && value == '\'')) {
+                clean.append(' ');
+                state = 0;
+            } else {
+                clean.append(state == 0 ? value : ' ');
+            }
+        }
+        return clean.toString();
+    }
+
+    private record GuardEvent(int offset, String kind) {
+    }
+
+    private record MethodSignature(String name, String parameters) {
+    }
+
+    private record LookupInspection(boolean valid, boolean lookupSeen) {
+    }
+
+    private record ConditionalBranch(
+            int start,
+            int end,
+            String condition,
+            String whenTrue,
+            String whenFalse,
+            boolean compatibilityCondition) {
+    }
 
     @Test
     void lwjglBackendDoesNotOwnIndependentMusicOrSfxSources()
@@ -305,6 +1875,32 @@ class TestAudioPresentationArchitectureGuard {
                 "OpenAL is written to only by the single final-PCM sink");
     }
 
+    @Test
+    void gameplayAudioTimelineIsToolingOnlyAndCannotDriveAudioOrTraceAuthority()
+            throws IOException {
+        JavaClasses production = productionClasses();
+        assertEquals(List.of(), timelineDependenciesOutsideTimeline(production),
+                "production runtime must not depend on gameplay-audio timeline tooling");
+
+        JavaClasses timeline = productionClasses();
+        assertEquals(List.of(), timelineAuthorityCallsFromTimeline(timeline),
+                "timeline tooling must remain a read-only schema boundary");
+        assertEquals(List.of(), timelineAudioOwnerDependenciesFromTimeline(timeline),
+                "timeline tooling may not depend on mutation-capable audio owners");
+
+        JavaClasses fixture = new ClassFileImporter()
+                .importClasses(RepresentativeTimelineAuthorityBypass.class);
+        assertEquals(1, timelineDependenciesOutsideTimeline(fixture).size(),
+                "fully-qualified timeline references must be visible as class dependencies");
+        assertEquals(13, timelineAuthorityCalls(fixture).size(),
+                "representative direct audio mutation/advance calls must be visible");
+
+        JavaClasses ownerFixture = new ClassFileImporter()
+                .importClasses(RepresentativeTimelineAudioOwnerBypass.class);
+        assertEquals(7, timelineAudioOwnerDependencies(ownerFixture).size(),
+                "fully-qualified mutation-capable audio owners must be denied by ownership");
+    }
+
     /**
      * @param allowedPaths repo-relative path suffixes (e.g.
      *                     {@code "audio/presentation/X.java"}) permitted to
@@ -338,11 +1934,88 @@ class TestAudioPresentationArchitectureGuard {
                 .anyMatch(suffix -> normalized.endsWith("/" + suffix));
     }
 
+    private static List<String> timelineDependenciesOutsideTimeline(JavaClasses classes) {
+        return classes.stream()
+                .filter(origin -> !origin.getPackageName().startsWith("com.openggf.tools.audio.timeline"))
+                .flatMap(origin -> origin.getDirectDependenciesFromSelf().stream())
+                .filter(dependency -> dependency.getTargetClass().getPackageName()
+                        .startsWith("com.openggf.tools.audio.timeline"))
+                .map(Dependency::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static List<String> timelineAuthorityCalls(JavaClasses classes) {
+        return classes.stream()
+                .flatMap(origin -> origin.getMethodCallsFromSelf().stream())
+                .filter(call -> isTimelineAuthorityCall(call, call.getTargetOwner()))
+                .map(JavaMethodCall::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static List<String> timelineAudioOwnerDependencies(JavaClasses classes) {
+        return classes.stream()
+                .flatMap(origin -> origin.getDirectDependenciesFromSelf().stream())
+                .filter(dependency -> dependency.getTargetClass().getPackageName()
+                        .startsWith("com.openggf.audio"))
+                .filter(dependency -> !TIMELINE_READ_ONLY_AUDIO_DEPENDENCIES
+                        .contains(dependency.getTargetClass().getFullName()))
+                .map(Dependency::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static List<String> timelineAuthorityCallsFromTimeline(
+            JavaClasses classes) {
+        return classes.stream()
+                .filter(origin -> origin.getPackageName()
+                        .startsWith("com.openggf.tools.audio.timeline"))
+                .flatMap(origin -> origin.getMethodCallsFromSelf().stream())
+                .filter(call -> isTimelineAuthorityCall(
+                        call, call.getTargetOwner()))
+                .map(JavaMethodCall::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static List<String> timelineAudioOwnerDependenciesFromTimeline(
+            JavaClasses classes) {
+        return classes.stream()
+                .filter(origin -> origin.getPackageName()
+                        .startsWith("com.openggf.tools.audio.timeline"))
+                .flatMap(origin -> origin.getDirectDependenciesFromSelf()
+                        .stream())
+                .filter(dependency -> dependency.getTargetClass()
+                        .getPackageName().startsWith("com.openggf.audio"))
+                .filter(dependency -> !TIMELINE_READ_ONLY_AUDIO_DEPENDENCIES
+                        .contains(dependency.getTargetClass().getFullName()))
+                .map(Dependency::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static boolean isTimelineAuthorityCall(JavaMethodCall call, JavaClass targetOwner) {
+        if (targetOwner.isEquivalentTo(AudioManager.class)) {
+            return Set.of("playMusic", "playSfx", "replayTimelineCommand",
+                    "replayTimelineCommandLogically", "restoreLogicalSnapshot", "presentFrame", "update")
+                    .contains(call.getName());
+        }
+        if (targetOwner.isEquivalentTo(AudioPresentationProducer.class)) {
+            return call.getName().equals("present");
+        }
+        if (targetOwner.isEquivalentTo(AudioKeyframeStore.class)) {
+            return call.getName().equals("replayTo") || call.getName().equals("replayToLogicalState");
+        }
+        if (targetOwner.isAssignableTo(AudioBackend.class)) {
+            return Set.of("playMusic", "playSfx", "update").contains(call.getName());
+        }
+        return targetOwner.getPackageName().startsWith("com.openggf.trace.timing");
+    }
+
     @Test
     void productionDoesNotBypassManagerOwnedAudioCommands() {
-        JavaClasses production = new ClassFileImporter()
-                .withImportOption(new ImportOption.DoNotIncludeTests())
-                .importPackages("com.openggf");
+        JavaClasses production = productionClasses();
 
         assertEquals(List.of(), directBackendCommandBypasses(production));
     }
@@ -359,6 +2032,11 @@ class TestAudioPresentationArchitectureGuard {
                 call -> call.contains(".playMusic(")));
         assertTrue(bypasses.stream().anyMatch(
                 call -> call.contains(".toggleMute(")));
+    }
+
+    private static JavaClasses productionClasses() {
+        return new ClassFileImporter().importUrl(SmpsDriver.class
+                .getProtectionDomain().getCodeSource().getLocation());
     }
 
     private static List<String> directBackendCommandBypasses(
@@ -392,6 +2070,41 @@ class TestAudioPresentationArchitectureGuard {
         private void bypass() {
             backend.playMusic(1);
             backend.toggleMute(ChannelType.FM, 0);
+        }
+    }
+
+    private static final class RepresentativeTimelineAuthorityBypass {
+        @SuppressWarnings("unused")
+        private final com.openggf.tools.audio.timeline.S1GameplayAudioTimeline.Metadata metadata = null;
+
+        private void bypass(com.openggf.audio.AudioManager audio,
+                com.openggf.audio.presentation.AudioPresentationProducer producer,
+                com.openggf.audio.rewind.AudioKeyframeStore keyframes,
+                com.openggf.audio.AudioBackend backend) {
+            audio.playMusic(0x81);
+            audio.playSfx("ring");
+            audio.replayTimelineCommand(null);
+            audio.replayTimelineCommandLogically(null);
+            audio.restoreLogicalSnapshot(null);
+            audio.presentFrame(null);
+            audio.update();
+            producer.present(0, null);
+            keyframes.replayTo(null, 0, null);
+            keyframes.replayToLogicalState(null, 0);
+            backend.playMusic(0x81);
+            backend.playSfx("ring");
+            backend.update();
+        }
+    }
+
+    private static final class RepresentativeTimelineAudioOwnerBypass {
+        private void bypass(com.openggf.audio.AudioManager audio,
+                com.openggf.audio.debug.StandaloneAudioPresentationHost host) {
+            audio.playStandaloneMusic(null, null);
+            audio.playStandaloneSfx(null, null, 1.0f);
+            host.playMusic(null, null);
+            host.playSfx(null, null, 1.0f);
+            host.presentFrame();
         }
     }
 }

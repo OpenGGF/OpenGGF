@@ -1,0 +1,1294 @@
+package com.openggf.audio.driver;
+
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.CoordFlagContext;
+import com.openggf.audio.smps.CoordFlagHandler;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.synth.PsgChip;
+import com.openggf.audio.synth.VirtualSynthesizer;
+import com.openggf.audio.synth.YmWriteTimeline;
+import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.RecordComponent;
+import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestPreparedSfxAdmission {
+    private static final int[] ALLOCATION_LIVE_COUNTS = {0, 1, 8, 32, 128};
+    private static final long VM_ALLOCATION_TOLERANCE_BYTES_PER_OP = 128;
+    private static volatile Object allocationSink;
+
+    @Test
+    void s3kPendingInputsUseTheRetailTwoCellOverwriteRules() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencerConfig config = deferredSfxConfig();
+
+        enqueue(driver, sequencer(driver, 0xA0, config, track(0, 1)));
+        enqueue(driver, sequencer(driver, 0xA0, config, track(0, 1)));
+        enqueue(driver, sequencer(driver, 0xA1, config, track(1, 1)));
+        enqueue(driver, sequencer(driver, 0xA2, config, track(2, 1)));
+
+        SmpsDriverSnapshot snapshot = driver.captureSnapshot();
+        assertEquals(List.of(0xA0, 0xA2), snapshot.pendingSfxInputs()
+                .stream()
+                .map(entry -> entry.sequencer().smpsData().getId())
+                .toList(),
+                "slot-0 duplicates are ignored and later requests overwrite slot 1");
+        assertEquals(List.of(0L, 2L), snapshot.pendingSfxInputs()
+                .stream()
+                .map(SmpsDriverSnapshot.PendingSfxEntry::requestOrdinal)
+                .toList());
+        assertEquals(3, snapshot.nextPendingSfxRequestOrdinal());
+        assertEquals(List.of(), driver.sequencersForTesting(),
+                "pending requests own no physical sequencer residence");
+    }
+
+    @Test
+    void ignoredS3kSlotZeroDuplicatePublishesNoDriverStart() {
+        SmpsDriver driver = new SmpsDriver();
+        AtomicInteger starts = new AtomicInteger();
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .sfxStartTiming(SmpsSequencerConfig.SfxStartTiming
+                        .NEXT_DRIVER_UPDATE)
+                .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder
+                        .SFX_THEN_MUSIC)
+                .coordFlagHandler(countingHandler(starts))
+                .build();
+
+        enqueue(driver, sequencer(driver, 0xA0, config, track(0, 1)));
+        enqueue(driver, sequencer(driver, 0xA0, config, track(0, 1)));
+
+        assertEquals(0, starts.get(),
+                "68K input-cell publication is not zPlaySound consumption");
+        driver.read(new short[735 * 2]);
+        assertEquals(1, starts.get(),
+                "only the retained slot-0 request reaches the driver");
+    }
+
+    @Test
+    void pendingInputsRoundTripAndStopAllSfxDiscardsThem() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencerConfig config = deferredSfxConfig();
+        enqueue(driver, sequencer(driver, 0xA0, config, track(0, 1)));
+        enqueue(driver, sequencer(driver, 0xA1, config, track(1, 1)));
+        SmpsDriverSnapshot expected = driver.captureSnapshot();
+
+        driver.restoreSnapshot(expected);
+        assertDeepEquals(expected, driver.captureSnapshot());
+
+        driver.stopAllSfx();
+        assertEquals(List.of(), driver.captureSnapshot().pendingSfxInputs());
+        assertEquals(List.of(), driver.sequencersForTesting());
+    }
+
+    @Test
+    void s3kConsumesBothPendingCellsInSourceOrderAtTheBoundary() {
+        SmpsDriver driver = new SmpsDriver();
+        List<Integer> admitted = new ArrayList<>();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission admission) {
+                admitted.add(admission.source().descriptor().id());
+            }
+        });
+        SmpsSequencerConfig config = deferredSfxConfig();
+        enqueue(driver, sequencer(driver, 0xA0, config, track(0, 1)));
+        enqueue(driver, sequencer(driver, 0xA1, config, track(1, 1)));
+
+        assertEquals(List.of(), admitted,
+                "pending input cells are not physical admissions");
+        driver.read(new short[735 * 2]);
+
+        assertEquals(List.of(0xA0, 0xA1), admitted);
+        assertEquals(List.of(), driver.captureSnapshot().pendingSfxInputs());
+        assertEquals(2, driver.sequencersForTesting().size());
+    }
+
+    @Test
+    void sameBoundaryPolicyStillAdmitsS1AndS2ShapeImmediately() {
+        for (SmpsSequencerConfig config : List.of(
+                config(null),
+                new SmpsSequencerConfig.Builder()
+                        .sfxStartTiming(SmpsSequencerConfig.SfxStartTiming
+                                .SAME_DRIVER_UPDATE)
+                        .driverServiceOrder(SmpsSequencerConfig
+                                .DriverServiceOrder.MUSIC_THEN_SFX)
+                        .build())) {
+            SmpsDriver driver = new SmpsDriver();
+            SmpsSequencer sfx = sequencer(
+                    driver, 0xA0, config, track(0, 1));
+            enqueue(driver, sfx);
+            assertEquals(List.of(sfx), driver.sequencersForTesting());
+            assertEquals(List.of(),
+                    driver.captureSnapshot().pendingSfxInputs());
+        }
+    }
+
+    @Test
+    void deferredBoundaryPreflightsTheWholeS3kServiceBeforeMutation() {
+        int s3kServiceBound = Sonic3kSmpsSequencerConfig.CONFIG
+                .getYmServiceTimingProfile()
+                .maximumWritesPerDriverService();
+
+        SmpsDriver exact = new SmpsDriver();
+        List<Integer> exactAdmissions = new ArrayList<>();
+        exact.setSfxContentionObserver(admissionObserver(exactAdmissions));
+        enqueue(exact, sequencer(exact, 0xB4,
+                Sonic3kSmpsSequencerConfig.CONFIG, track(5, 1)));
+        fillRemainingCapacity(exact, s3kServiceBound);
+
+        exact.read(new short[735 * 2]);
+
+        assertEquals(List.of(0xB4), exactAdmissions);
+        assertEquals(List.of(), exact.captureSnapshot().pendingSfxInputs());
+        assertEquals(1, exact.sequencersForTesting().size());
+
+        SmpsDriver shortDriver = new SmpsDriver();
+        List<Integer> shortAdmissions = new ArrayList<>();
+        shortDriver.setSfxContentionObserver(
+                admissionObserver(shortAdmissions));
+        enqueue(shortDriver, sequencer(shortDriver, 0xB4,
+                Sonic3kSmpsSequencerConfig.CONFIG, track(5, 1)));
+        fillRemainingCapacity(shortDriver, s3kServiceBound - 1);
+        SmpsDriverSnapshot before = shortDriver.captureSnapshot();
+
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> shortDriver.read(new short[735 * 2]));
+
+        assertTrue(failure.getMessage().contains(
+                "aggregate service bound " + s3kServiceBound));
+        assertDeepEquals(before, shortDriver.captureSnapshot());
+        assertEquals(List.of(), shortAdmissions);
+        assertEquals(List.of(), shortDriver.sequencersForTesting());
+    }
+
+    @Test
+    void pendingRequestOrdinalOverflowCannotPublishAPartialCell() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsDriverSnapshot base = driver.captureSnapshot();
+        driver.restoreSnapshot(new SmpsDriverSnapshot(
+                base.region(), base.readMode(), base.palFullUpdateCounter(),
+                base.sfxPriorityLatch(), base.spindashRevPlayingCounter(),
+                base.spindashRevFrequencyIndex(), base.continuousSfxId(),
+                base.continuousSfxFlag(), base.contSfxLoopCnt(),
+                base.sequencers(), base.fmLockSequencerIds(),
+                base.psgLockSequencerIds(), base.synthSnapshot(),
+                base.ymServiceCursor(), base.nextYmServiceOrdinal(),
+                base.nextYmWriteOrdinal(), base.driverGeneration(),
+                List.of(), Long.MAX_VALUE));
+        SmpsSequencer sequencer = sequencer(
+                driver, 0xB4, deferredSfxConfig(), track(5, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                sequencer, 0, sequencer.trackCount());
+        sequencer.beginSfxAdmission();
+
+        assertThrows(ArithmeticException.class,
+                () -> driver.commitSfxAdmission(admission));
+
+        SmpsDriverSnapshot after = driver.captureSnapshot();
+        assertEquals(List.of(), after.pendingSfxInputs());
+        assertEquals(Long.MAX_VALUE,
+                after.nextPendingSfxRequestOrdinal());
+        assertEquals(List.of(), driver.sequencersForTesting());
+    }
+
+    @Test
+    void s3kAdmissionUsesRetailKeyOffAndSsgEgWritesWithoutAChipReset() {
+        SmpsDriver driver = new SmpsDriver();
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.add(port + ":" + Integer.toHexString(register)
+                        + ":" + Integer.toHexString(value));
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+            }
+        });
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .fmSfxTakeoverMode(
+                        SmpsSequencerConfig.FmSfxTakeoverMode
+                                .KEY_OFF_CLEAR_SSG_EG)
+                .build();
+        SmpsSequencer blueSphere = sequencer(
+                driver, 0x65, config, track(5, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                blueSphere, 0, 1);
+
+        blueSphere.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(
+                "0:28:5",
+                "1:91:0", "1:99:0", "1:95:0", "1:9d:0"),
+                writes,
+                "fix_sndbugs=0 zPlaySound keys off FM5 and clears its four SSG-EG operators");
+    }
+
+    @Test
+    void sfxConstructionAndPreparationDoNotMutateDriverSynthOrCoordination() {
+        SmpsDriver driver = new SmpsDriver();
+        AtomicInteger starts = new AtomicInteger();
+        SmpsSequencerConfig config = config(countingHandler(starts));
+        Object synthBefore = driver.captureSynthSnapshot();
+        SmpsDriverSnapshot driverBefore = driver.captureSnapshot();
+
+        SmpsSequencer sequencer = sequencer(driver, 0xA0, config,
+                track(0, 1), track(0xC0, 2));
+        Object sequencerBefore = sequencer.captureSnapshot();
+
+        assertDeepEquals(synthBefore, driver.captureSynthSnapshot());
+        assertDriverStateEquals(driverBefore, driver.captureSnapshot());
+        assertDeepEquals(sequencerBefore, sequencer.captureSnapshot());
+        assertEquals(0, starts.get(),
+                "construction must not publish the SFX start");
+
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                sequencer, 0, 2);
+
+        assertSame(driver, admission.owner());
+        assertSame(sequencer, admission.sequencer());
+        assertFalse(admission.continuousExtension());
+        assertEquals(0b000001, admission.affectedFmMask());
+        assertEquals(0b0100, admission.affectedPsgMask());
+        assertDeepEquals(synthBefore, driver.captureSynthSnapshot());
+        assertDriverStateEquals(driverBefore, driver.captureSnapshot());
+        assertDeepEquals(sequencerBefore, sequencer.captureSnapshot());
+        assertEquals(0, starts.get(),
+                "preparation must not publish the SFX start");
+    }
+
+    @Test
+    void preparationFindsSameIdAndFmPsgConflictsWithoutApplyingThem() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer sameId = sequencer(driver, 0xA0, config(null),
+                track(1, 1));
+        SmpsSequencer contended = sequencer(driver, 0xA1, config(null),
+                track(0, 1), track(0xC0, 2));
+        driver.addSequencer(sameId, true);
+        driver.addSequencer(contended, true);
+        SmpsSequencer.Track fmTrack = contended.getTracks().get(0);
+        SmpsSequencer.Track psgTrack = contended.getTracks().get(1);
+        driver.writeFm(contended, 0, 0xA0, 0x22);
+        driver.writePsg(contended, 0xC4);
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+        List<SmpsSequencer> orderBefore = driver.sequencersForTesting();
+        SmpsSequencer replacement = sequencer(driver, 0xA0, config(null),
+                track(0, 1), track(0xC0, 2));
+
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                replacement, 0, 2);
+
+        assertEquals(0b000011, admission.affectedFmMask());
+        assertEquals(0b0100, admission.affectedPsgMask());
+        assertIdentityOrder(orderBefore, driver.sequencersForTesting());
+        assertTrue(fmTrack.active);
+        assertTrue(psgTrack.active);
+        assertDriverStateEquals(before, driver.captureSnapshot());
+
+        replacement.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(replacement), driver.sequencersForTesting());
+        assertFalse(fmTrack.active,
+                "FM contention must retire the displaced track at commit");
+        assertFalse(psgTrack.active,
+                "PSG contention must retire the displaced track at commit");
+    }
+
+    @Test
+    void mixedFm6DacAndDuplicateNewHeadersStopEachExactConflictOnceInHeaderOrder() {
+        OrderedStopDriver driver = new OrderedStopDriver();
+        SmpsSequencer existing = sequencer(driver, 0xA0, config(null),
+                track(6, 1), track(0x16, 2));
+        driver.addSequencer(existing, true);
+        driver.watch(existing);
+        SmpsSequencer replacement = sequencer(driver, 0xA1, config(null),
+                track(0x16, 1), track(6, 2), track(6, 3));
+
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                replacement, 0, 3);
+
+        assertEquals(3, conflictArrayCapacity(admission),
+                "ordered action storage must be sized by the new header");
+
+        replacement.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of("DAC", "FM"), driver.stopOrder,
+                "duplicate FM6 headers must not stop the old FM6 track twice");
+        assertFalse(existing.trackAt(0).active);
+        assertFalse(existing.trackAt(1).active);
+        assertEquals(List.of(replacement), driver.sequencersForTesting());
+    }
+
+    @Test
+    void reversedPsgHeadersPreserveLegacyWritesAndFinalChipLatch() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer existing = sequencer(driver, 0xA0, config(null),
+                track(0x80, 1), track(0xA0, 2));
+        driver.addSequencer(existing, true);
+        SmpsSequencer replacement = sequencer(driver, 0xA1, config(null),
+                track(0xA0, 1), track(0x80, 2));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                replacement, 0, 2);
+        var before = driver.captureSynthSnapshot();
+        PsgChip legacyOracle = new PsgChip();
+        legacyOracle.restoreSnapshot(before.psg());
+        legacyOracle.write(0xBF);
+        legacyOracle.write(0x9F);
+        List<Integer> psgWrites = new java.util.ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                psgWrites.add(value);
+            }
+        });
+
+        replacement.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(0xBF, 0x9F), psgWrites,
+                "each displaced PSG track is silenced once in header order");
+        assertDeepEquals(legacyOracle.captureSnapshot(),
+                driver.captureSynthSnapshot().psg());
+        assertEquals(1, driver.captureSynthSnapshot().psg().latch(),
+                "the final PSG latch must belong to header-last channel 0");
+    }
+
+    @Test
+    void commitRemovesAnUnrelatedZeroTrackSfxBeforeAddingDifferentId() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer empty = sequencer(driver, 0xA0, config(null));
+        driver.addSequencer(empty, true);
+        SmpsSequencer candidate = sequencer(
+                driver, 0xA1, config(null), track(0, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                candidate, 0, 1);
+
+        candidate.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(candidate), driver.sequencersForTesting(),
+                "legacy admission cleans an unrelated zero-track SFX");
+    }
+
+    @Test
+    void commitRemovesEveryFullyInactiveUnrelatedSfxButKeepsPartialOwner() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer inactive = sequencer(
+                driver, 0xA0, config(null), track(0x80, 1));
+        inactive.trackAt(0).active = false;
+        driver.addSequencer(inactive, true);
+        SmpsSequencer partial = sequencer(driver, 0xA1, config(null),
+                track(0xA0, 1), track(0xC0, 2));
+        partial.trackAt(0).active = false;
+        driver.addSequencer(partial, true);
+        SmpsSequencer candidate = sequencer(
+                driver, 0xA2, config(null), track(0, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                candidate, 0, 1);
+
+        candidate.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(partial, candidate),
+                driver.sequencersForTesting(),
+                "only owners with no active tracks are legacy-cleaned");
+        assertTrue(partial.trackAt(1).active,
+                "cleanup must retain a partially active unrelated owner");
+    }
+
+    @Test
+    void inactiveOwnerLocksReleaseInLegacyCandidateDeathOrder() {
+        SmpsDriver driver = new SmpsDriver();
+        OwnerPair owners = reverseHashOrderedOwners(driver);
+        SmpsSequencer first = owners.first();
+        SmpsSequencer second = owners.second();
+        driver.addSequencer(first, true);
+        driver.addSequencer(second, true);
+
+        first.trackAt(1).active = false;
+        driver.writePsg(first, 0xDF);
+        second.trackAt(1).active = false;
+        driver.writeFm(second, 1, 0xA1, 0x22);
+        driver.writePsg(second, 0xFF);
+
+        SmpsSequencer candidate = sequencer(driver, 0xA2, config(null),
+                track(0x80, 1), track(0xA0, 2));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                candidate, 0, 2);
+        VirtualSynthesizer.Snapshot before = driver.captureSynthSnapshot();
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(
+                    int port, int register, int value) {
+                writes.add("YM:" + port + ":" + register + ":" + value);
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                writes.add("PSG:" + value);
+            }
+        });
+
+        candidate.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(
+                "PSG:159",
+                "PSG:191",
+                "PSG:223",
+                "YM:1:129:255",
+                "YM:1:137:255",
+                "YM:1:133:255",
+                "YM:1:141:255",
+                "YM:1:65:127",
+                "YM:1:73:127",
+                "YM:1:69:127",
+                "YM:1:77:127",
+                "YM:0:40:5",
+                "PSG:255"), writes,
+                "dead owners release in the candidate-header action "
+                        + "that exhausted them");
+
+        VirtualSynthesizer legacyOracle = new VirtualSynthesizer();
+        legacyOracle.restoreSynthSnapshot(before);
+        legacyOracle.writePsg(null, 0x9F);
+        legacyOracle.writePsg(null, 0xBF);
+        legacyOracle.writePsg(null, 0xDF);
+        legacyOracle.writeFm(null, 1, 0x81, 0xFF);
+        legacyOracle.writeFm(null, 1, 0x89, 0xFF);
+        legacyOracle.writeFm(null, 1, 0x85, 0xFF);
+        legacyOracle.writeFm(null, 1, 0x8D, 0xFF);
+        legacyOracle.writeFm(null, 1, 0x41, 0x7F);
+        legacyOracle.writeFm(null, 1, 0x49, 0x7F);
+        legacyOracle.writeFm(null, 1, 0x45, 0x7F);
+        legacyOracle.writeFm(null, 1, 0x4D, 0x7F);
+        legacyOracle.writeFm(null, 0, 0x28, 5);
+        legacyOracle.writePsg(null, 0xFF);
+        assertDeepEquals(legacyOracle.captureSynthSnapshot(),
+                driver.captureSynthSnapshot());
+        assertEquals(7, driver.captureSynthSnapshot().psg().latch(),
+                "header-later owner leaves PSG3 volume as the final latch");
+        assertEquals(List.of(candidate), driver.sequencersForTesting());
+    }
+
+    @Test
+    void continuousExtensionPreparesWithoutASequencerOrCoordinationStart() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer existing = sequencer(driver, 0xBC, config(null),
+                track(0, 1));
+        driver.addSequencer(existing, true);
+        driver.startContinuousSfx(0xBC, 1);
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+
+        PreparedSfxAdmission admission =
+                driver.prepareContinuousSfxExtension(0xBC, 1);
+
+        assertNotNull(admission);
+        assertTrue(admission.continuousExtension());
+        assertNull(admission.sequencer());
+        assertEquals(0, admission.affectedFmMask());
+        assertEquals(0, admission.affectedPsgMask());
+        assertDriverStateEquals(before, driver.captureSnapshot());
+
+        driver.commitSfxAdmission(admission);
+
+        SmpsDriverSnapshot committed = driver.captureSnapshot();
+        assertEquals(0xBC, committed.continuousSfxId());
+        assertTrue(committed.continuousSfxFlag());
+        assertEquals(1, committed.contSfxLoopCnt());
+        assertEquals(List.of(existing), driver.sequencersForTesting());
+    }
+
+    @Test
+    void zeroTrackContinuousExtensionSkipsSequencerStart() {
+        SmpsDriver driver = new SmpsDriver();
+        AtomicInteger starts = new AtomicInteger();
+        SmpsSequencer existing = sequencer(
+                driver, 0xBC, config(countingHandler(starts)));
+        driver.addSequencer(existing, true);
+        starts.set(0);
+        driver.startContinuousSfx(0xBC, 0);
+
+        PreparedSfxAdmission admission =
+                driver.prepareContinuousSfxExtension(0xBC, 0);
+
+        assertNotNull(admission);
+        assertTrue(admission.continuousExtension());
+        assertNull(admission.sequencer());
+        assertEquals(0, admission.trackCount());
+        driver.commitSfxAdmission(admission);
+        assertEquals(0, starts.get());
+        assertTrue(driver.isContinuousSfxFlagSet());
+        assertEquals(0, driver.captureSnapshot().contSfxLoopCnt());
+    }
+
+    @Test
+    void nonMatchingOrDeadContinuousSfxDoesNotPrepareAnExtension() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer existing = sequencer(driver, 0xBC, config(null),
+                track(0, 1));
+        driver.addSequencer(existing, true);
+        driver.startContinuousSfx(0xBC, 1);
+
+        assertNull(driver.prepareContinuousSfxExtension(0xBD, 1));
+
+        driver.stopAllSfx();
+        assertNull(driver.prepareContinuousSfxExtension(0xBC, 1));
+    }
+
+    @Test
+    void preparationRejectsInvalidPointersChannelsPriorityAndContinuousMetadata() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer badPointer = sequencer(driver, 0xA0, config(null),
+                track(0, 99));
+        SmpsSequencer badChannel = sequencer(driver, 0xA1, config(null),
+                track(0x20, 1));
+        SmpsSequencer badPriority = sequencer(driver, 0xA2, config(null),
+                track(0, 1));
+        badPriority.setSfxPriority(-1);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> driver.prepareNewSfxAdmission(badPointer, 0, 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> driver.prepareNewSfxAdmission(badChannel, 0, 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> driver.prepareNewSfxAdmission(badPriority, 0, 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> driver.prepareContinuousSfxExtension(-1, 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> driver.prepareContinuousSfxExtension(0xBC, -1));
+    }
+
+    @Test
+    void commitRejectsAnotherDriverAndASecondCommitBeforeMutation() {
+        CountingRollbackDriver owner = new CountingRollbackDriver();
+        owner.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+            }
+        });
+        SmpsSequencer sequencer = sequencer(owner, 0xA0, config(null),
+                track(0, 1));
+        PreparedSfxAdmission admission = owner.prepareNewSfxAdmission(
+                sequencer, 0, 1);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new SmpsDriver().commitSfxAdmission(admission));
+        assertTrue(owner.sequencersForTesting().isEmpty());
+
+        sequencer.beginSfxAdmission();
+        owner.commitSfxAdmission(admission);
+        assertThrows(IllegalStateException.class,
+                () -> owner.commitSfxAdmission(admission));
+        assertEquals(0, owner.captureCalls,
+                "the selective journal never captures whole-driver state");
+        assertEquals(List.of(sequencer), owner.sequencersForTesting());
+    }
+
+    @Test
+    void observerFreeCommitDoesNotCaptureFallbackState() {
+        CountingRollbackDriver driver = new CountingRollbackDriver();
+        SmpsSequencer sequencer = sequencer(driver, 0xA0, config(null),
+                track(0, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                sequencer, 0, 1);
+
+        sequencer.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(0, driver.captureCalls,
+                "the normal observer-free path must allocate no fallback snapshot");
+        assertEquals(0, driver.rollbackCalls);
+    }
+
+    @Test
+    void ymObserverFailureRestoresFullStateAndReleasesAdmissionForRetry() {
+        CountingRollbackDriver driver = new CountingRollbackDriver();
+        SmpsSequencer existing = sequencer(driver, 0xA1, config(null),
+                track(0, 1));
+        driver.addSequencer(existing, true);
+        SmpsSequencer sequencer = sequencer(driver, 0xA0, config(null),
+                track(0, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                sequencer, 0, 1);
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                throw new IllegalStateException("injected YM observer failure");
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+            }
+        });
+
+        sequencer.beginSfxAdmission();
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> driver.commitSfxAdmission(admission));
+
+        assertEquals("injected YM observer failure", failure.getMessage());
+        assertDriverStateEquals(before, driver.captureSnapshot());
+        assertEquals(List.of(existing), driver.sequencersForTesting());
+        assertEquals(0, driver.captureCalls);
+        assertEquals(0, driver.rollbackCalls);
+
+        driver.setChipWriteObserver(null);
+        driver.commitSfxAdmission(admission);
+        assertEquals(List.of(sequencer), driver.sequencersForTesting(),
+                "the exact failed prepared admission must be retryable");
+    }
+
+    @Test
+    void psgObserverFailureRestoresConflictTrackAndChipBeforeRetry() {
+        CountingRollbackDriver driver = new CountingRollbackDriver();
+        SmpsSequencer existing = sequencer(driver, 0xA0, config(null),
+                track(0x80, 1));
+        driver.addSequencer(existing, true);
+        SmpsSequencer.Track originalTrack = existing.trackAt(0);
+        SmpsSequencer replacement = sequencer(driver, 0xA1, config(null),
+                track(0x80, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                replacement, 0, 1);
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                throw new IllegalStateException(
+                        "injected PSG observer failure");
+            }
+        });
+
+        replacement.beginSfxAdmission();
+        assertThrows(IllegalStateException.class,
+                () -> driver.commitSfxAdmission(admission));
+
+        assertDriverStateEquals(before, driver.captureSnapshot());
+        assertIdentityOrder(List.of(existing),
+                driver.sequencersForTesting());
+        assertSame(originalTrack, existing.trackAt(0),
+                "live rollback preserves prepared track identities");
+        assertTrue(existing.trackAt(0).active,
+                "the displaced track is live again after observer rollback");
+        assertEquals(0, driver.captureCalls);
+        assertEquals(0, driver.rollbackCalls);
+
+        driver.setChipWriteObserver(null);
+        driver.commitSfxAdmission(admission);
+        assertEquals(List.of(replacement), driver.sequencersForTesting());
+        assertFalse(existing.trackAt(0).active);
+    }
+
+    @Test
+    void observedContentionRollbackRestoresAffectedMusicOverride() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer music = sequencer(
+                driver, 0x81, config(null), track(0, 1));
+        driver.addSequencer(music, false);
+        music.writeFm(0, 0xA2, 0x22);
+        SmpsSequencer candidate = sequencer(
+                driver, 0xA0, config(null), track(0, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                candidate, 0, 1);
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission ignored) {
+                throw new IllegalStateException("stop after commit");
+            }
+        });
+
+        candidate.beginSfxAdmission();
+        assertThrows(IllegalStateException.class,
+                () -> driver.commitSfxAdmission(admission));
+
+        assertFalse(music.trackAt(0).overridden,
+                "rollback must restore the affected music channel override");
+    }
+
+    @Test
+    void sameIdReplacementJournalsOldOnlyChannelState() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer existing = sequencer(
+                driver, 0xA0, config(null), track(0, 1));
+        driver.addSequencer(existing, true);
+        existing.writeFm(0, 0xA2, 0x22);
+        SmpsSequencer replacement = sequencer(
+                driver, 0xA0, config(null), track(1, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                replacement, 0, 1);
+        VirtualSynthesizer.Snapshot before = driver.captureSynthSnapshot();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) { }
+
+            @Override
+            public void onPsgWrite(int value) { }
+        });
+        AtomicInteger failAdmission = new AtomicInteger();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission ignored) {
+                if (failAdmission.get() != 0) {
+                    throw new IllegalStateException("after old-only release");
+                }
+            }
+        });
+        failAdmission.set(1);
+
+        replacement.beginSfxAdmission();
+        assertThrows(IllegalStateException.class,
+                () -> driver.commitSfxAdmission(admission));
+
+        assertDeepEquals(before, driver.captureSynthSnapshot());
+    }
+
+    @Test
+    void failedReplacementRestoresDeferredConflictAttribution() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer displaced = sequencer(
+                driver, 0xA0, config(null), track(0x80, 1));
+        driver.addSequencer(displaced, true);
+        displaced.writePsg(0x90);
+        SmpsSequencer first = sequencer(
+                driver, 0xA1, config(null), track(0x80, 1));
+        PreparedSfxAdmission firstAdmission = driver.prepareNewSfxAdmission(
+                first, 0, 1);
+        List<SfxContentionObserver.Arbitration> arbitrations =
+                new ArrayList<>();
+        AtomicInteger failAdmissions = new AtomicInteger();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission ignored) {
+                if (failAdmissions.get() != 0) {
+                    throw new IllegalStateException("replace failed");
+                }
+            }
+
+            @Override
+            public void onRoleArbitrated(Arbitration arbitration) {
+                arbitrations.add(arbitration);
+            }
+        });
+        first.beginSfxAdmission();
+        driver.commitSfxAdmission(firstAdmission);
+
+        SmpsSequencer replacement = sequencer(
+                driver, 0xA1, config(null), track(0xA0, 1));
+        PreparedSfxAdmission replacementAdmission =
+                driver.prepareNewSfxAdmission(replacement, 0, 1);
+        failAdmissions.set(1);
+        replacement.beginSfxAdmission();
+        assertThrows(IllegalStateException.class,
+                () -> driver.commitSfxAdmission(replacementAdmission));
+
+        failAdmissions.set(0);
+        arbitrations.clear();
+        first.writePsg(0x90);
+        assertEquals(1, arbitrations.size());
+        assertEquals(displaced.getSourceDescriptor(),
+                arbitrations.getFirst().previousOwner().descriptor());
+    }
+
+    @Test
+    void preparedStateUsesOnlyChannelBoundedArraysAndNoGeneralCollections() {
+        for (Field field : PreparedSfxAdmission.class.getDeclaredFields()) {
+            assertFalse(Collection.class.isAssignableFrom(field.getType()),
+                    () -> field + " must not scale with unrelated live state");
+            assertFalse(Map.class.isAssignableFrom(field.getType()),
+                    () -> field + " must not scale with unrelated live state");
+        }
+    }
+
+    @Test
+    void retainedConflictStorageDoesNotGrowWithUnrelatedLiveSfx() {
+        for (int unrelatedCount : new int[] {0, 1, 8, 32, 128}) {
+            AllocationFixture fixture = allocationFixture(unrelatedCount);
+            SmpsDriver driver = fixture.driver;
+            SmpsSequencer candidate = fixture.candidate;
+
+            assertEquals(unrelatedCount,
+                    driver.sequencersForTesting().size());
+
+            for (int repetition = 0; repetition < 20; repetition++) {
+                PreparedSfxAdmission admission =
+                        driver.prepareNewSfxAdmission(candidate, 0, 1);
+
+                assertEquals(candidate.trackCount(),
+                        admission.displacedOwners.length,
+                        "owner storage must stay new-track-bounded at live size "
+                                + unrelatedCount);
+                assertEquals(candidate.trackCount(),
+                        admission.displacedTracks.length,
+                        "track storage must stay new-track-bounded at live size "
+                                + unrelatedCount);
+                assertNull(admission.displacedOwners[0]);
+                assertNull(admission.displacedTracks[0]);
+            }
+        }
+    }
+
+    @Test
+    void preparationAllocationSlopeIsIndependentOfUnrelatedLiveSfx() {
+        java.lang.management.ThreadMXBean baseBean =
+                ManagementFactory.getThreadMXBean();
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                baseBean instanceof com.sun.management.ThreadMXBean);
+        com.sun.management.ThreadMXBean bean =
+                (com.sun.management.ThreadMXBean) baseBean;
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                bean.isThreadAllocatedMemorySupported());
+        if (!bean.isThreadAllocatedMemoryEnabled()) {
+            bean.setThreadAllocatedMemoryEnabled(true);
+        }
+
+        AllocationFixture[] fixtures =
+                new AllocationFixture[ALLOCATION_LIVE_COUNTS.length];
+        for (int index = 0; index < ALLOCATION_LIVE_COUNTS.length; index++) {
+            fixtures[index] = allocationFixture(
+                    ALLOCATION_LIVE_COUNTS[index]);
+            warmPreparation(fixtures[index], 50_000);
+        }
+
+        long[] minimumBytes = new long[fixtures.length];
+        Arrays.fill(minimumBytes, Long.MAX_VALUE);
+        long controlBeforeMinimum = Long.MAX_VALUE;
+        long controlAfterMinimum = Long.MAX_VALUE;
+        for (int repetition = 0; repetition < 7; repetition++) {
+            controlBeforeMinimum = Math.min(controlBeforeMinimum,
+                    allocatedPerPreparation(bean, fixtures[0], 5_000));
+            for (int step = 0; step < fixtures.length; step++) {
+                int index = (repetition & 1) == 0
+                        ? step : fixtures.length - 1 - step;
+                minimumBytes[index] = Math.min(minimumBytes[index],
+                        allocatedPerPreparation(
+                                bean, fixtures[index], 5_000));
+            }
+            controlAfterMinimum = Math.min(controlAfterMinimum,
+                    allocatedPerPreparation(bean, fixtures[0], 5_000));
+        }
+
+        long minimum = Arrays.stream(minimumBytes).min().orElseThrow();
+        long maximum = Arrays.stream(minimumBytes).max().orElseThrow();
+        long controlSpread = Math.abs(
+                controlBeforeMinimum - controlAfterMinimum);
+        long allowedSlope = controlSpread
+                + VM_ALLOCATION_TOLERANCE_BYTES_PER_OP;
+        assertTrue(maximum - minimum <= allowedSlope,
+                () -> "preparation allocation grew with unrelated live SFX: "
+                        + Arrays.toString(minimumBytes)
+                        + " bytes/op for "
+                        + Arrays.toString(ALLOCATION_LIVE_COUNTS)
+                        + "; controlSpread=" + controlSpread
+                        + ", vmTolerance="
+                        + VM_ALLOCATION_TOLERANCE_BYTES_PER_OP);
+    }
+
+    private static AllocationFixture allocationFixture(int unrelatedCount) {
+        SmpsDriver driver = new SmpsDriver();
+        List<SmpsDriverSnapshot.SequencerEntry> entries =
+                new ArrayList<>(unrelatedCount);
+        for (int index = 0; index < unrelatedCount; index++) {
+            SmpsSequencer unrelated = sequencer(
+                    driver, 0x200 + index, config(null));
+            entries.add(new SmpsDriverSnapshot.SequencerEntry(
+                    true,
+                    unrelated.getSourceDescriptor(),
+                    null,
+                    unrelated.getSmpsData(),
+                    unrelated.getDacData(),
+                    unrelated.getAudioManager(),
+                    unrelated.getConfig(),
+                    unrelated.captureSnapshot()));
+        }
+        int[] fmLocks = {-1, -1, -1, -1, -1, -1};
+        int[] psgLocks = {-1, -1, -1, -1};
+        driver.restoreSnapshot(new SmpsDriverSnapshot(
+                SmpsSequencer.Region.NTSC,
+                SmpsDriver.ReadMode.HYBRID,
+                0,
+                false,
+                0,
+                entries,
+                fmLocks,
+                psgLocks,
+                driver.captureSynthSnapshot()));
+        return new AllocationFixture(driver, sequencer(
+                driver, 0xA0, config(null), track(0, 1)));
+    }
+
+    private static void warmPreparation(
+            AllocationFixture fixture, int iterations) {
+        for (int index = 0; index < iterations; index++) {
+            allocationSink = fixture.driver.prepareNewSfxAdmission(
+                    fixture.candidate, 0, 1);
+        }
+    }
+
+    private static long allocatedPerPreparation(
+            com.sun.management.ThreadMXBean bean,
+            AllocationFixture fixture,
+            int iterations) {
+        long threadId = Thread.currentThread().threadId();
+        long before = bean.getThreadAllocatedBytes(threadId);
+        warmPreparation(fixture, iterations);
+        return (bean.getThreadAllocatedBytes(threadId) - before)
+                / iterations;
+    }
+
+    private static SmpsSequencer sequencer(
+            SmpsDriver driver,
+            int id,
+            SmpsSequencerConfig config,
+            FixtureTrack... tracks) {
+        FixtureSfxData data = new FixtureSfxData(id, List.of(tracks));
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), config);
+        sequencer.setSfxPriority(0x70);
+        return sequencer;
+    }
+
+    private static void enqueue(
+            SmpsDriver driver, SmpsSequencer sequencer) {
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                sequencer, 0, sequencer.trackCount());
+        sequencer.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+    }
+
+    private static SmpsSequencerConfig deferredSfxConfig() {
+        return new SmpsSequencerConfig.Builder()
+                .sfxStartTiming(SmpsSequencerConfig.SfxStartTiming
+                        .NEXT_DRIVER_UPDATE)
+                .driverServiceOrder(SmpsSequencerConfig.DriverServiceOrder
+                        .SFX_THEN_MUSIC)
+                .build();
+    }
+
+    private static SfxContentionObserver admissionObserver(
+            List<Integer> admitted) {
+        return new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission admission) {
+                admitted.add(admission.source().descriptor().id());
+            }
+        };
+    }
+
+    private static void fillRemainingCapacity(
+            SmpsDriver driver, int remaining) {
+        SmpsDriverSnapshot base = driver.captureSnapshot();
+        VirtualSynthesizer.Snapshot synth = base.synthSnapshot();
+        int capacity = synth.ymWriteTimeline().capacity();
+        int occupied = capacity - remaining;
+        SmpsSourceDescriptor descriptor = new SmpsSourceDescriptor(
+                SmpsSourceDescriptor.Kind.UNKNOWN, 0x55,
+                "deferred-capacity-fixture", null, 0, 1, 1, false, 0);
+        List<YmWriteTimeline.Entry> pending = new ArrayList<>(occupied);
+        for (int ordinal = 0; ordinal < occupied; ordinal++) {
+            pending.add(new YmWriteTimeline.Entry(
+                    1, ordinal, 0, 0x22, ordinal & 0xFF,
+                    base.driverGeneration(), 0, descriptor, null));
+        }
+        VirtualSynthesizer.Snapshot filledSynth =
+                new VirtualSynthesizer.Snapshot(
+                        synth.outputSampleRate(), synth.ym(), synth.psg(),
+                        new YmWriteTimeline.Snapshot(
+                                capacity, occupied, pending),
+                        synth.renderedYmMasterCycle(),
+                        synth.ymTimelineGeneration());
+        driver.restoreSnapshot(new SmpsDriverSnapshot(
+                base.region(), base.readMode(), base.palFullUpdateCounter(),
+                base.sfxPriorityLatch(), base.spindashRevPlayingCounter(),
+                base.spindashRevFrequencyIndex(), base.continuousSfxId(),
+                base.continuousSfxFlag(), base.contSfxLoopCnt(),
+                base.sequencers(), base.fmLockSequencerIds(),
+                base.psgLockSequencerIds(), filledSynth,
+                1, base.nextYmServiceOrdinal(),
+                occupied, base.driverGeneration(), base.pendingSfxInputs(),
+                base.nextPendingSfxRequestOrdinal()));
+    }
+
+    private static OwnerPair reverseHashOrderedOwners(SmpsDriver driver) {
+        for (int attempt = 0; attempt < 1_000; attempt++) {
+            SmpsSequencer first = sequencer(driver, 0xA0, config(null),
+                    track(0x80, 1), track(0xC0, 2));
+            SmpsSequencer second = sequencer(driver, 0xA1, config(null),
+                    track(0xA0, 1), track(5, 2));
+            HashSet<SmpsSequencer> hashOrder = new HashSet<>();
+            hashOrder.add(first);
+            hashOrder.add(second);
+            if (hashOrder.iterator().next() == second) {
+                return new OwnerPair(first, second);
+            }
+        }
+        throw new AssertionError("could not construct reverse HashSet order");
+    }
+
+    private static FixtureTrack track(int channelMask, int pointer) {
+        return new FixtureTrack(channelMask, pointer, 0, 0);
+    }
+
+    private static SmpsSequencerConfig config(CoordFlagHandler handler) {
+        return new SmpsSequencerConfig.Builder()
+                .coordFlagHandler(handler)
+                .build();
+    }
+
+    private static CoordFlagHandler countingHandler(AtomicInteger starts) {
+        return new CoordFlagHandler() {
+            @Override
+            public void onSfxStart(int sfxId) {
+                starts.incrementAndGet();
+            }
+
+            @Override
+            public boolean handleFlag(CoordFlagContext context,
+                    SmpsSequencer.Track track, int command) {
+                return false;
+            }
+
+            @Override
+            public int flagParamLength(int command) {
+                return -1;
+            }
+        };
+    }
+
+    private static void assertDriverStateEquals(
+            SmpsDriverSnapshot expected, SmpsDriverSnapshot actual) {
+        assertDeepEquals(expected, actual);
+    }
+
+    private static void assertIdentityOrder(
+            List<?> expected, List<?> actual) {
+        assertEquals(expected.size(), actual.size());
+        for (int index = 0; index < expected.size(); index++) {
+            assertSame(expected.get(index), actual.get(index));
+        }
+    }
+
+    private static int conflictArrayCapacity(
+            PreparedSfxAdmission admission) {
+        int capacity = -1;
+        for (Field field : PreparedSfxAdmission.class.getDeclaredFields()) {
+            if (!field.getType().isArray()) {
+                continue;
+            }
+            Class<?> component = field.getType().componentType();
+            if (component != SmpsSequencer.class
+                    && component != SmpsSequencer.Track.class) {
+                continue;
+            }
+            try {
+                field.setAccessible(true);
+                int length = Array.getLength(field.get(admission));
+                if (capacity == -1) {
+                    capacity = length;
+                } else {
+                    assertEquals(capacity, length,
+                            "every ordered conflict array shares one bound");
+                }
+            } catch (IllegalAccessException failure) {
+                throw new AssertionError(failure);
+            }
+        }
+        return capacity;
+    }
+
+    private static void assertDeepEquals(Object expected, Object actual) {
+        assertDeepEquals(expected, actual, new IdentityHashMap<>());
+    }
+
+    private static void assertDeepEquals(
+            Object expected, Object actual, Map<Object, Object> seen) {
+        if (expected == actual) {
+            return;
+        }
+        assertNotNull(expected);
+        assertNotNull(actual);
+        assertEquals(expected.getClass(), actual.getClass());
+        if (expected.getClass().isArray()) {
+            assertEquals(Array.getLength(expected), Array.getLength(actual));
+            for (int index = 0; index < Array.getLength(expected); index++) {
+                assertDeepEquals(Array.get(expected, index),
+                        Array.get(actual, index), seen);
+            }
+            return;
+        }
+        if (expected instanceof Iterable<?> expectedValues
+                && actual instanceof Iterable<?> actualValues) {
+            var expectedIterator = expectedValues.iterator();
+            var actualIterator = actualValues.iterator();
+            while (expectedIterator.hasNext()) {
+                assertTrue(actualIterator.hasNext());
+                assertDeepEquals(expectedIterator.next(),
+                        actualIterator.next(), seen);
+            }
+            assertFalse(actualIterator.hasNext());
+            return;
+        }
+        if (!expected.getClass().isRecord()) {
+            assertEquals(expected, actual);
+            return;
+        }
+        if (seen.put(expected, actual) != null) {
+            return;
+        }
+        for (RecordComponent component
+                : expected.getClass().getRecordComponents()) {
+            try {
+                assertDeepEquals(component.getAccessor().invoke(expected),
+                        component.getAccessor().invoke(actual), seen);
+            } catch (ReflectiveOperationException failure) {
+                throw new AssertionError(failure);
+            }
+        }
+    }
+
+    private static final class FixtureSfxData extends AbstractSmpsData
+            implements SmpsSfxData {
+        private final List<FixtureTrack> tracks;
+
+        private FixtureSfxData(int id, List<FixtureTrack> tracks) {
+            super(new byte[16], 0);
+            setId(id);
+            this.tracks = tracks;
+        }
+
+        @Override
+        public int getTickMultiplier() {
+            return 1;
+        }
+
+        @Override
+        public List<? extends SmpsSfxTrack> getTrackEntries() {
+            return tracks;
+        }
+
+        @Override
+        protected void parseHeader() {
+        }
+
+        @Override
+        public byte[] getVoice(int voiceId) {
+            return voiceId == 0 ? new byte[25] : null;
+        }
+
+        @Override
+        public byte[] getPsgEnvelope(int id) {
+            return null;
+        }
+
+        @Override
+        public int read16(int offset) {
+            return 0;
+        }
+
+        @Override
+        public int getBaseNoteOffset() {
+            return 0;
+        }
+    }
+
+    private record AllocationFixture(
+            SmpsDriver driver, SmpsSequencer candidate) {
+    }
+
+    private record OwnerPair(
+            SmpsSequencer first, SmpsSequencer second) {
+    }
+
+    private record FixtureTrack(
+            int channelMask, int pointer, int transpose, int volume)
+            implements SmpsSfxData.SmpsSfxTrack {
+    }
+
+    private static final class OrderedStopDriver extends SmpsDriver {
+        private final List<String> stopOrder = new java.util.ArrayList<>();
+        private SmpsSequencer watched;
+
+        private void watch(SmpsSequencer sequencer) {
+            watched = sequencer;
+        }
+
+        @Override
+        public void writeFm(Object source, int port, int reg, int val) {
+            if (source == watched && reg == 0x28) {
+                stopOrder.add("FM");
+            }
+            super.writeFm(source, port, reg, val);
+        }
+
+        @Override
+        public void stopDac(Object source) {
+            if (source == watched) {
+                stopOrder.add("DAC");
+            }
+            super.stopDac(source);
+        }
+    }
+
+    private static final class CountingRollbackDriver extends SmpsDriver {
+        private int captureCalls;
+        private int rollbackCalls;
+
+        @Override
+        public LiveCommandMutationToken captureLiveCommandMutation() {
+            captureCalls++;
+            return super.captureLiveCommandMutation();
+        }
+
+        @Override
+        public void rollbackLiveCommandMutation(
+                LiveCommandMutationToken token) {
+            rollbackCalls++;
+            super.rollbackLiveCommandMutation(token);
+        }
+    }
+}

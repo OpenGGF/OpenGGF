@@ -149,8 +149,47 @@ public record TraceRunManifest(
         @JsonProperty("rings_before") Integer ringsBefore,
         @JsonProperty("rings_after") Integer ringsAfter,
         @JsonProperty("emeralds_before") Integer emeraldsBefore,
-        @JsonProperty("emeralds_after") Integer emeraldsAfter
-    ) {}
+        @JsonProperty("emeralds_after") Integer emeraldsAfter,
+        @JsonProperty("gap_admission_runs") List<Integer> gapAdmissionRuns
+    ) {
+
+        public Transition {
+            gapAdmissionRuns = gapAdmissionRuns == null
+                    ? null : List.copyOf(gapAdmissionRuns);
+        }
+
+        /**
+         * Contract-1 main-loop admission census for this transition's movie
+         * gap, run-length encoded, alternating, starting with a NON-lag run.
+         *
+         * <p>Each entry is a COUNT of physical frames on which the ROM's main
+         * loop did (even index) or did not (odd index) run — the recorder's
+         * {@code IsLagFrame}, which coincides with the S2 ROM's own
+         * {@code Vint_Lag} classification because {@code Vint_Lag} never calls
+         * {@code ReadJoypads} (s2.asm:481-484, 501, 529-583). It carries no
+         * position, speed, object state, or any comparison value, and it holds
+         * lengths, never a movie frame index.
+         *
+         * @return the census, or an empty list when the recorder did not
+         *         publish one for this transition
+         */
+        public List<Integer> gapAdmissionRuns() {
+            return gapAdmissionRuns == null ? List.of() : gapAdmissionRuns;
+        }
+
+        /** Legacy shape for fixtures and tests without an admission census. */
+        public Transition(
+                int fromSegment, int toSegment, String entryKind,
+                int modeChangeBk2Frame, Integer specialBonusEntryFlag,
+                Integer savedXPos, Integer savedYPos, Integer lastStarPostHit,
+                Integer ringsBefore, Integer ringsAfter,
+                Integer emeraldsBefore, Integer emeraldsAfter) {
+            this(fromSegment, toSegment, entryKind, modeChangeBk2Frame,
+                    specialBonusEntryFlag, savedXPos, savedYPos,
+                    lastStarPostHit, ringsBefore, ringsAfter, emeraldsBefore,
+                    emeraldsAfter, List.of());
+        }
+    }
 
     public static TraceRunManifest load(Path manifestPath) throws IOException {
         JsonFactory factory = new JsonFactory()
@@ -385,9 +424,38 @@ public record TraceRunManifest(
             throw new IllegalStateException(
                     "dynamic-art run trace count does not match segments");
         }
-        for (TraceData trace : traces) {
-            String game = trace.metadata().game();
-            if (!DynamicArtTransfer.supportsCapability(game)) {
+        DynamicArtRunValidator validator = new DynamicArtRunValidator();
+        for (int segmentIndex = 0; segmentIndex < traces.size(); segmentIndex++) {
+            validator.accept(segmentIndex, traces.get(segmentIndex));
+        }
+        validator.finish();
+    }
+
+    /**
+     * Incremental form of {@link #validateDynamicArtRun(List)} for planners
+     * that release each eager trace payload before opening the next segment.
+     */
+    public final class DynamicArtRunValidator {
+        private final DynamicArtTransfer.LifecycleIdentity identity =
+                new DynamicArtTransfer.LifecycleIdentity();
+        private int gapIndex;
+        private int nextSegmentIndex;
+        private List<DynamicArtTransfer.Descriptor> opening = List.of();
+        private boolean capabilitySupported = true;
+        private boolean finished;
+
+        public void accept(int segmentIndex, TraceData trace) {
+            if (finished) {
+                throw new IllegalStateException(
+                        "dynamic-art run validator is already finished");
+            }
+            if (segmentIndex != nextSegmentIndex || segmentIndex >= segments.size()) {
+                throw new IllegalStateException(
+                        "dynamic-art run segment index " + segmentIndex
+                                + " does not match expected " + nextSegmentIndex);
+            }
+            String traceGame = trace.metadata().game();
+            if (!DynamicArtTransfer.supportsCapability(traceGame)) {
                 // The capability is not merely absent from this recording -- it
                 // does not exist for this game at either end of the contract.
                 // DynamicArtTransfer.validateCallback pins a ROM-callback PC set
@@ -396,28 +464,32 @@ public record TraceRunManifest(
                 // it game-agnostically here demanded something the sibling
                 // validator refuses, so no S3K run fixture could pass chain
                 // validation however it was recorded.
+                capabilitySupported = false;
+                nextSegmentIndex++;
+                return;
+            }
+            if (!capabilitySupported) {
+                nextSegmentIndex++;
                 return;
             }
             if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
                 throw new IllegalStateException(
                         "trace_schema 5 segment omits dynamic-art capability");
             }
-        }
+            if (segmentIndex == 0) {
+                int firstOffset = segments.getFirst().bk2FrameOffset();
+                List<DynamicArtTransfer.GapTransition> beforeFirst =
+                        new ArrayList<>();
+                while (gapIndex < dynamicArtGapTransitions.size()
+                        && dynamicArtGapTransitions.get(gapIndex)
+                                .dynamicArtGapEdge().movieLogicalFrame()
+                                < firstOffset) {
+                    beforeFirst.add(dynamicArtGapTransitions.get(gapIndex++));
+                }
+                opening = validateGapSlice(
+                        beforeFirst, opening, false, identity);
+            }
 
-        DynamicArtTransfer.LifecycleIdentity identity =
-                new DynamicArtTransfer.LifecycleIdentity();
-        int gapIndex = 0;
-        List<DynamicArtTransfer.Descriptor> opening = List.of();
-        int firstOffset = segments.getFirst().bk2FrameOffset();
-        List<DynamicArtTransfer.GapTransition> beforeFirst = new ArrayList<>();
-        while (gapIndex < dynamicArtGapTransitions.size()
-                && dynamicArtGapTransitions.get(gapIndex).dynamicArtGapEdge()
-                        .movieLogicalFrame() < firstOffset) {
-            beforeFirst.add(dynamicArtGapTransitions.get(gapIndex++));
-        }
-        opening = validateGapSlice(beforeFirst, opening, false, identity);
-
-        for (int segmentIndex = 0; segmentIndex < segments.size(); segmentIndex++) {
             Segment segment = segments.get(segmentIndex);
             List<DynamicArtTransfer.Descriptor> declared =
                     segment.dynamicArtInitialLedgerDescriptors();
@@ -435,8 +507,7 @@ public record TraceRunManifest(
                         "dynamic-art post-gap ledger does not match next segment initial ledger");
             }
             try {
-                opening = traces.get(segmentIndex)
-                        .validateDynamicArtLifecycle(identity, declared);
+                opening = trace.validateDynamicArtLifecycle(identity, declared);
             } catch (IllegalArgumentException e) {
                 throw new IllegalStateException(
                         "Invalid dynamic-art segment lifecycle", e);
@@ -460,10 +531,24 @@ public record TraceRunManifest(
                 slice.add(transition);
             }
             opening = validateGapSlice(slice, opening, false, identity);
+            nextSegmentIndex++;
         }
-        if (gapIndex != dynamicArtGapTransitions.size()) {
-            throw new IllegalStateException(
-                    "dynamic-art gap transition lies beyond the run segment order");
+
+        public void finish() {
+            if (finished) {
+                throw new IllegalStateException(
+                        "dynamic-art run validator is already finished");
+            }
+            finished = true;
+            if (nextSegmentIndex != segments.size()) {
+                throw new IllegalStateException(
+                        "dynamic-art run trace count does not match segments");
+            }
+            if (capabilitySupported
+                    && gapIndex != dynamicArtGapTransitions.size()) {
+                throw new IllegalStateException(
+                        "dynamic-art gap transition lies beyond the run segment order");
+            }
         }
     }
 

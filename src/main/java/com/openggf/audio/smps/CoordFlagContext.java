@@ -15,8 +15,8 @@ public interface CoordFlagContext {
     // Data / config access
     // -----------------------------------------------------------------------
 
-    /** Raw SMPS data bytes. */
-    byte[] getData();
+    /** Allocation-free indexed access to the immutable SMPS program. */
+    SmpsProgramView programView();
 
     /** The parsed SMPS header data. */
     AbstractSmpsData getSmpsData();
@@ -87,6 +87,9 @@ public interface CoordFlagContext {
 
     /** Trigger a fade-out effect. */
     void triggerFadeOut(int steps, int delay);
+
+    /** Request restoration of music saved beneath a finite override. */
+    void restoreMusic();
 
     // -----------------------------------------------------------------------
     // Communication byte

@@ -49,7 +49,30 @@ public class AizEndBossFlameChild extends AbstractObjectInstance
             TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     private static final int COLLISION_FLAGS = 0x97; // Hurts player, size index $17
-    private static final int FLAME_DURATION = 40;    // Approximate flame animation duration
+    /**
+     * Frames the flame runs before it spawns its bomb.
+     *
+     * <p>Not approximate: it is the length of the flame's own animation script.
+     * {@code AIZEndBossFlame_Init} stores the by-angle script in {@code $30(a0)}
+     * and {@code AIZEndBossFlame_SpawnBomb} in {@code $34(a0)}
+     * (docs/skdisasm/sonic3k.asm:138579-138591), and
+     * {@code AIZEndBossFlame_Main} steps it with {@code Animate_Raw}
+     * (:138606-138611). That animator is the shared-delay form
+     * ({@code Animate_RawNoSST}, :177333-177352): the script's FIRST byte is one
+     * delay for the whole script and the rest is a flat frame list, walked one
+     * byte per advance.
+     *
+     * <p>Both scripts -- {@code AniRaw_AIZEndBossFlame_Diagonal} and
+     * {@code _Vertical} (:139123-139168) -- open with a delay byte of {@code 0},
+     * so each entry lasts one frame, and each carries exactly 20 pairs, i.e.
+     * <b>40 frame bytes</b>, before its {@code $F4} terminator. The terminator
+     * invokes {@code $34}, which is what spawns the bomb.
+     *
+     * <p>So 40 is the script's own length rather than a chosen number, and the
+     * flame's end is a script terminator invoking a stored callback -- the same
+     * structure as the boss's emerge.
+     */
+    private static final int FLAME_DURATION = 40;
     private static final int[][] FLAME_OFFSETS = {
             {0x03, 0x05},
             {0x00, 0x07},

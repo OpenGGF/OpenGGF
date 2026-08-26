@@ -71,8 +71,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private boolean frozen = false;
 	private boolean deferHorizontalBoundaryClampOnce = false;
 	private boolean customMaxXBoundaryEasingClaimed = false;
-	private boolean deferMaxYWriteUntilAfterUpdate = false;
-	private short deferredMaxYValue = 0;
 
 	// ROM: Level_started_flag.
 	// Used by HUD/start-state flow and intro/cutscene sequencing.
@@ -187,7 +185,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
 			forcedScrollRequested = false;
-			applyDeferredMaxYWrite();
 			return;
 		}
 
@@ -195,7 +192,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		if (frozen) {
 			fastVerticalScrollRequested = false;
 			forcedScrollRequested = false;
-			applyDeferredMaxYWrite();
 			return;
 		}
 
@@ -419,7 +415,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		}
 		fastVerticalScrollRequested = false;
 		forcedScrollRequested = false;
-		applyDeferredMaxYWrite();
 	}
 
 	/**
@@ -438,14 +433,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	private int currentFocusCentreY() {
 		return forcedScrollRequested ? forcedScrollY : focusedSprite.getCentreY();
-	}
-
-	private void applyDeferredMaxYWrite() {
-		if (!deferMaxYWriteUntilAfterUpdate) {
-			return;
-		}
-		setMaxY(deferredMaxYValue);
-		deferMaxYWriteUntilAfterUpdate = false;
 	}
 
 	private void wrapFocusedSpriteYPositionWord() {
@@ -599,6 +586,29 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * and never touches SV_MoveCameraUp's top clamp on the way (S1 MZ1 row 3,220:
 	 * v_limittop2 $340, v_limitbtm2 $33E, recorded camera $33E). Consulting minY
 	 * here left the camera unclamped for the whole ascent.
+	 * <p>
+	 * S3K reaches the same clamp by a different route, and it is LIVE — do not gate
+	 * it. Its {@code loc_1C202} (docs/skdisasm/sonic3k.asm:38561-38569) compares d1
+	 * against Camera_max_Y_pos, then subtracts {@code Screen_Y_wrap_value + 1} and
+	 * takes the hard clamp {@code move.w 6(a2),d1} at {@code loc_1C216} only when
+	 * that subtraction borrows. {@code Get_LevelSizeStart} writes
+	 * {@code Screen_Y_wrap_value = -1} (sonic3k.asm:38093), which would make the
+	 * subtraction unable to borrow — but that write survives for exactly one
+	 * DeformBgLayer call, because {@code LevelSetup} (sonic3k.asm:102205) then
+	 * writes {@code #$FFF} unconditionally for every level before LevelLoop begins
+	 * (sonic3k.constants.asm:434 documents the field as "either $7FF or $FFF").
+	 * So every gameplay frame borrows and clamps. The non-borrowing arm
+	 * ({@code sub.w d3,(a1)}) is the vertical WRAP, reached only where
+	 * Camera_max_Y_pos >= the wrap value + 1 — which the ROM's looping levels do
+	 * arrange, by writing {@code #$7FF} over the {@code $FFF} default in their
+	 * screen-init routines (ICZ1 {@code loc_53648}, sonic3k.asm:110069, commented
+	 * "We're in a looping level!"; SOZ2 :114222/:114251; Slots :119055) or by
+	 * carrying a LevelSizes yend of {@code $1000}. The engine does model that arm:
+	 * {@code LevelManager.initCameraForLevel} calls
+	 * {@link #setVerticalWrapEnabled(boolean, int)} with the layout height for
+	 * every level whose LevelSizes ystart is negative — exactly the S3K looping
+	 * levels — and the recorded ICZ1/SOZ2/MGZ1 wraps replay correctly.
+	 * See docs/status/trace-frontier-log.md, 2026-08-15 rounds 3 and 4.
 	 */
 	private short clampBottomBoundary(short value) {
 		return value > maxY ? maxY : value;
@@ -895,6 +905,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 	public void setX(short x) {
 		this.x = x;
+		this.renderCopyX = x;
 	}
 
 	public short getY() {
@@ -903,6 +914,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 	public void setY(short y) {
 		this.y = y;
+		this.renderCopyY = y;
 	}
 
 	/**
@@ -1185,17 +1197,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void setMaxYCurrent(short maxY) {
 		this.maxY = maxY;
 	}
-
-	/**
-	 * Defers an object-side max-Y boundary write until the current camera step has
-	 * consumed the previous boundary. This matches ROM paths where an object
-	 * routine runs after ScrollVerti for the visible frame.
-	 */
-	public void setMaxYAfterNextUpdate(short maxY) {
-		this.deferredMaxYValue = maxY;
-		this.deferMaxYWriteUntilAfterUpdate = true;
-	}
-
 	/**
 	 * Sets maxY target for smooth easing.
 	 * Current maxY will ease toward this value at 2px/frame.
@@ -1388,8 +1389,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		horizScrollDelayFrames = 0;
 		frozen = false;
 		deferHorizontalBoundaryClampOnce = false;
-		deferMaxYWriteUntilAfterUpdate = false;
-		deferredMaxYValue = 0;
 		levelStarted = true;
 		focusedSprite = null;
 		yPosBias = DEFAULT_Y_BIAS;
@@ -1471,7 +1470,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				shakeOffsetX, shakeOffsetY,
 				minXTarget, minYTarget, maxXTarget, maxYTarget, maxXBeforeBoundaryEasing,
 				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
-				deferMaxYWriteUntilAfterUpdate, deferredMaxYValue, levelStarted,
+				levelStarted,
 				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
 				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap,
 				customMaxXBoundaryEasingClaimed);
@@ -1498,8 +1497,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		horizScrollDelayFrames = snapshot.horizScrollDelayFrames();
 		frozen = snapshot.frozen();
 		deferHorizontalBoundaryClampOnce = snapshot.deferHorizontalBoundaryClampOnce();
-		deferMaxYWriteUntilAfterUpdate = snapshot.deferMaxYWriteUntilAfterUpdate();
-		deferredMaxYValue = snapshot.deferredMaxYValue();
 		levelStarted = snapshot.levelStarted();
 		verticalWrapEnabled = snapshot.verticalWrapEnabled();
 		verticalWrapRange = snapshot.verticalWrapRange();

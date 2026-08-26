@@ -1,5 +1,6 @@
 package com.openggf.tools.modsdk;
 
+import com.openggf.tests.TestSessionOutputPaths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -16,6 +17,63 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModApiSdkPackager {
     @TempDir Path temp;
+
+    @Test
+    void mergedCreatorContractTypesStayInCreatorApiClosure() {
+        Set<Class<?>> recursive = com.openggf.mods.code.ModApiSignatureSurface
+                .recursiveTypes();
+        List<Class<?>> creatorContractTypes = List.of(
+                com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.class,
+                com.openggf.audio.GameAudioProfile.SegaPcmPlaybackPolicy.class,
+                com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy.class,
+                com.openggf.audio.GameAudioProfile.MusicOverrideRetriggerPolicy.class,
+                com.openggf.audio.GameAudioProfile.SystemCommandDuringOverridePolicy.class,
+                com.openggf.audio.driver.SmpsRequestAdmissionPolicy.class,
+                com.openggf.audio.smps.DacData.Sample.class,
+                com.openggf.audio.smps.SmpsProgramView.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.PalServicePolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.TempoPhasePolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.SfxPriorityPolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.DriverServiceOrder.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.SfxStartTiming.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.FmSfxTakeoverMode.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.FmSfxReleaseMode.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.PsgSfxReleaseMode.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.FadeOutChannelPolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverrideSpeedPolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverrideRestorePolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverridePriorityPolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverrideDacRestorePolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.FadeInChannelPolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.PausePolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.SfxRequestTransformPolicy.class,
+                com.openggf.audio.smps.SmpsSequencerConfig.FmVoiceWriteProfile.class,
+                com.openggf.game.dataselect.DataSelectExitTransition.class);
+
+        assertTrue(creatorContractTypes.stream().allMatch(type ->
+                        type.isAnnotationPresent(com.openggf.game.ModApi.class)
+                                && recursive.contains(type)),
+                creatorContractTypes::toString);
+    }
+
+    @Test
+    void gameSpecificTraceDiagnosticsStayInCreatorApiClosure() {
+        List<Class<?>> creatorTraceEvents = List.of(
+                com.openggf.trace.TraceEvent.CnzSlotMachineState.class,
+                com.openggf.trace.TraceEvent.S2TornadoState.class);
+        Set<Class<?>> recursive = com.openggf.mods.code.ModApiSignatureSurface
+                .recursiveTypes();
+        Set<String> internal = com.openggf.mods.code.ModApiSignatureSurface
+                .engineInternalTypeNames();
+
+        for (Class<?> event : creatorTraceEvents) {
+            assertTrue(event.isAnnotationPresent(com.openggf.game.ModApi.class),
+                    event.getName());
+            assertTrue(recursive.contains(event), event.getName());
+            assertFalse(internal.contains(event.getName()), event.getName());
+        }
+    }
 
     @Test
     void copiesOnlySdkToolClassesTemplatesAndServiceResourcesAndGeneratesApiJavadocs() throws Exception {
@@ -86,6 +144,49 @@ class TestModApiSdkPackager {
     }
 
     @Test
+    void audioBackendDiagnosticSeamStaysOutsideCreatorApiClosure() {
+        assertFalse(com.openggf.audio.AudioBackend.class.isAnnotationPresent(
+                com.openggf.game.ModApi.class));
+        assertTrue(com.openggf.mods.code.ModApiSignatureSurface.engineInternalTypeNames()
+                .contains(com.openggf.audio.AudioBackend.class.getName()));
+        assertFalse(com.openggf.mods.code.ModApiSignatureSurface.recursiveTypes()
+                .contains(com.openggf.audio.AudioBackend.class));
+    }
+
+    @Test
+    void audioDiagnosticObserversStayOutsideCreatorApiClosure() {
+        List<Class<?>> diagnosticObservers = List.of(
+                com.openggf.audio.AudioRequestObserver.class,
+                com.openggf.audio.AudioAdmissionObserver.class,
+                com.openggf.audio.driver.SmpsDriverServiceObserver.class,
+                com.openggf.audio.synth.ChipWriteObserver.class,
+                com.openggf.audio.driver.SfxContentionObserver.class);
+        Set<String> internal = com.openggf.mods.code.ModApiSignatureSurface
+                .engineInternalTypeNames();
+        Set<Class<?>> recursive = com.openggf.mods.code.ModApiSignatureSurface
+                .recursiveTypes();
+
+        for (Class<?> observer : diagnosticObservers) {
+            assertFalse(observer.isAnnotationPresent(com.openggf.game.ModApi.class),
+                    observer.getName());
+            assertTrue(internal.contains(observer.getName()), observer.getName());
+            assertFalse(recursive.contains(observer), observer.getName());
+        }
+    }
+
+    @Test
+    void ymServiceTimingMetadataStaysOutsideCreatorApiClosure() {
+        Class<?> timingProfile = com.openggf.audio.smps.YmServiceTimingProfile.class;
+        assertFalse(timingProfile.isAnnotationPresent(com.openggf.game.ModApi.class));
+        assertTrue(com.openggf.mods.code.ModApiSignatureSurface.engineInternalTypeNames()
+                .contains(timingProfile.getName()));
+        assertFalse(com.openggf.mods.code.ModApiSignatureSurface.recursiveTypes()
+                .contains(timingProfile));
+        assertFalse(com.openggf.mods.code.ModApiSignatureSurface.recursiveTypes().stream()
+                .anyMatch(type -> type.getName().startsWith(timingProfile.getName() + "$")));
+    }
+
+    @Test
     void rejectsAnyRecursiveDeleteTargetOutsideTheCompiledClassesBuildRoot() throws Exception {
         Path compiled = temp.resolve("build/classes");
         copyCompiledFixture(compiled, com.openggf.mods.code.GgfMod.class);
@@ -137,14 +238,15 @@ class TestModApiSdkPackager {
         Path relative = Path.of(type.getName().replace('.', '/') + ".class");
         Path destination = compiledRoot.resolve(relative);
         Files.createDirectories(destination.getParent());
-        Files.copy(Path.of("target/classes").resolve(relative), destination);
+        Files.copy(TestSessionOutputPaths.compiledClasses().resolve(relative), destination);
     }
 
     private static void copyCompiledPackage(Path compiledRoot, Path relativeRoot) throws Exception {
-        Path sourceRoot = Path.of("target/classes").resolve(relativeRoot);
+        Path sessionClasses = TestSessionOutputPaths.compiledClasses();
+        Path sourceRoot = sessionClasses.resolve(relativeRoot);
         try (var paths = Files.walk(sourceRoot)) {
             for (Path source : paths.filter(Files::isRegularFile).toList()) {
-                Path destination = compiledRoot.resolve(Path.of("target/classes").relativize(source));
+                Path destination = compiledRoot.resolve(sessionClasses.relativize(source));
                 Files.createDirectories(destination.getParent());
                 Files.copy(source, destination);
             }

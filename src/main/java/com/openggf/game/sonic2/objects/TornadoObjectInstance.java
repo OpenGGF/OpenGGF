@@ -187,6 +187,62 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private int animId;
     private int animFrameIndex;
 
+    /**
+     * Read-only view of ObjB2's SST in ROM byte layout, for comparison against a
+     * recorded {@code s2_tornado_state} row. Comparison-only.
+     *
+     * <p>The engine models the ROM's reused scratch region semantically. In the
+     * SCZ routine, {@code objoff2E} is the {@code p1_standing} transition byte,
+     * {@code objoff2F}/{@code objoff30} are {@code st.b}/{@code clr.b} flags,
+     * and {@code objoff31} is the vertical countdown (s2.asm:78827-78839,
+     * 79382-79390). In the WFZ-end routine, {@code objoff2E}/{@code objoff2F}
+     * are instead the high/low bytes of one word: the leader-wait counter, then
+     * the jump countdown (s2.asm:78972-78979, 79041-79068).
+     */
+    public record Snapshot(
+            int x, int y, int ySub, int yVel,
+            int routine, int routineSecondary, int statusByte,
+            int objoff2E, int objoff2F, int objoff30, int objoff31) {}
+
+    private static final int P1_STANDING_BIT = 0x08;
+
+    public Snapshot snapshot() {
+        return new Snapshot(
+                currentX & 0xFFFF,
+                currentY & 0xFFFF,
+                (yPosFixed8 & 0xFF) << 8,
+                yVel & 0xFFFF,
+                initRoutinePending ? 0 : routine & 0xFF,
+                routineSecondary & 0xFF,
+                lastMainStanding ? P1_STANDING_BIT : 0,
+                snapshotObjoff2E(),
+                snapshotObjoff2F(),
+                moveVert2Active ? 0xFF : 0,
+                moveVertTimer & 0xFF);
+    }
+
+    private int snapshotObjoff2E() {
+        if (routine == ROUTINE_WFZ_END) {
+            return (wfzEndObjoff2EWord() >>> 8) & 0xFF;
+        }
+        return standingTransition ? P1_STANDING_BIT : 0;
+    }
+
+    private int snapshotObjoff2F() {
+        if (routine == ROUTINE_WFZ_END) {
+            return wfzEndObjoff2EWord() & 0xFF;
+        }
+        return moveVertActive ? 0xFF : 0;
+    }
+
+    private int wfzEndObjoff2EWord() {
+        // ObjB2_Wait_Leader_position increments the word at objoff_2E until
+        // $40. ObjB2_Prepare_to_jump later replaces that same word with the
+        // jump countdown as it enters state 8 (s2.asm:78972-78979,
+        // 79042-79052). The Java model keeps those two lifetimes separately.
+        return routineSecondary < 8 ? leaderWaitCounter : jumpTimer;
+    }
+
     // SCZ movement helpers (objoff_2E/$2F/$30/$31/$38 equivalents).
     private boolean standingTransition;
     private boolean moveVertActive;
@@ -368,6 +424,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         lastMainStanding = true;
         moveVertActive = false;
         moveVert2Active = false;
+        // ROM ObjB2_Move_vert/ObjB2_Move_vert2 treat objoff_31 as an expired
+        // byte countdown: subq.b #1 followed by bpl (s2.asm:79388-79390,
+        // 79460-79463). The native ride-start prelude therefore exposes -1
+        // (0xFF) until a vertical move loads $14 or $2B.
+        moveVertTimer = 0xFF;
     }
 
     /**
@@ -573,13 +634,29 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
         // ObjB2_Move_with_player reads Sonic's live Status_OnObj bit before
         // the inline SolidObject call refreshes this object's own standing bit
-        // (s2.asm:78298-78306, 78816-78823). That bit may have been set by a
-        // different object earlier in the previous frame (for example SCZ
-        // Turtloid), while the final release-frame bob still needs this
-        // object's previous checkpoint latch.
-        boolean playerOnObjectAtEntry = player.isOnObject() || lastMainStanding;
+        // (s2.asm:78298-78306, 78816-78823). The engine can still expose a
+        // marker left by another solid in that pass, while lastMainStanding
+        // records only ObjB2's own checkpoint result. For an airborne player
+        // with no horizontal launch velocity, model the release shape with
+        // Move_below_player and its decaying objoff_38 relation. A moving
+        // airborne player remains on the live Status_OnObj path; the split is
+        // derived from the ROM jump state (s2.asm:37056-37058), not a trace
+        // route or frame.
+        boolean stationarySolidRelease = player.isOnObject() && player.getAir()
+                && !lastMainStanding && player.getXSpeed() == 0;
+        if (stationarySolidRelease) {
+            smoothOffsetX = currentX - player.getCentreX();
+        }
+        boolean playerOnObjectAtEntry = (player.isOnObject() && !stationarySolidRelease)
+                || lastMainStanding;
         boolean objectStandingBeforeCheckpoint = lastMainStanding;
         moveWithPlayer(player, playerOnObjectAtEntry);
+        if (stationarySolidRelease) {
+            // ObjB2's next below-player pass has already consumed the
+            // release offset; the ROM's objoff_38 then decays from its
+            // cleared value rather than repeating this one-frame alignment.
+            smoothOffsetX = 0;
+        }
 
         PlayerSolidContactResult contact = checkpoint(player);
         boolean mainStandingNow = contact.standingNow();
@@ -1558,7 +1635,14 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {
-        return services().solidExecution().resolveSolidNow(player);
+        PlayerSolidContactResult contact = services().solidExecution().resolveSolidNow(player);
+        // ObjB2's inline SolidObject calls leave p1_standing in status(a0):
+        // RideObject_SetRide sets the bit on a top landing, and SolidObject's
+        // standing path clears it on release (s2.asm:35014-35044, 35986-36045).
+        // Keep the object-owned latch for every ObjB2 routine that reaches the
+        // shared manual checkpoint, not only ObjB2_Main_SCZ.
+        lastMainStanding = contact.standingNow();
+        return contact;
     }
 
     private void releasePlayersFromPlatform(AbstractPlayableSprite updatePlayer) {

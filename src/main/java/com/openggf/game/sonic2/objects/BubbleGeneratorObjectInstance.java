@@ -82,6 +82,17 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
     private boolean visible;
     private boolean romRenderOnScreen;
 
+    /**
+     * Whether the previous pass reached the ROM's {@code DisplaySprite} call at
+     * {@code loc_1FACE} (docs/s2disasm/s2.asm:45368-45376). {@code BuildSprites}
+     * only rewrites {@code render_flags} bit 7 for objects that queued
+     * themselves, so a pass that returned without displaying leaves the flag
+     * exactly as it was -- including {@code Obj24_Init}'s starting
+     * {@code $84} (:45209), which is why a freshly placed generator counts down
+     * on its own first pass whatever the camera is doing.
+     */
+    private boolean romDisplayedLastPass;
+
     // Bit 6 of objoff_36: Used to track if large bubble already spawned this burst
     private static final int FLAG_LARGE_SPAWNED = 0x40;
     private static final int FLAG_LARGE_MODE = 0x80;
@@ -112,6 +123,21 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         visible = false;
+
+        // ROM Level_MainLoop (docs/s2disasm/s2.asm:5088-5111) runs RunObjects
+        // (:5094) BEFORE JmpTo_DeformBgLayer (:5097) and calls BuildSprites
+        // (:5110) after that deform. So the object pass at frame N and
+        // BuildSprites at frame N-1 both see the same camera position, and the
+        // render_flags bit 7 this pass reads is BuildSprites' verdict on that
+        // camera -- not on the one the previous object pass saw. Evaluating the
+        // bounds here rather than carrying the previous pass's evaluation is
+        // what puts the flag in phase; carrying it left this generator one frame
+        // behind the ROM every time the camera brought it back on screen.
+        if (romDisplayedLastPass) {
+            romRenderOnScreen = isWithinRenderSpriteBounds(
+                    getOnScreenHalfWidth(), getOnScreenHalfHeight());
+        }
+        romDisplayedLastPass = false;
         boolean observedRomRenderOnScreen = romRenderOnScreen;
 
         // ROM: Check if generator is above water (only spawn when underwater)
@@ -174,9 +200,12 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
         refreshRomRenderFlag();
     }
 
+    // ROM loc_1FACE falls through to DisplaySprite while the generator is under
+    // water (docs/s2disasm/s2.asm:45368-45376); the paths that return before it
+    // leave render_flags untouched, so only this one arms next frame's refresh.
     private void refreshRomRenderFlag() {
-        romRenderOnScreen = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
-        visible = romRenderOnScreen;
+        romDisplayedLastPass = true;
+        visible = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
     /**
@@ -261,13 +290,14 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
             }
         }
 
-        // Create bubble with appropriate size
-        // Subtype 0 = tiny, 1 = small, 2 = large (breathable)
-        int bubbleSize = bubbleSubtype;
-        if (bubbleSubtype == 2) {
-            bubbleSize = 5; // Large breathable bubble needs size >= 3
-        }
-        int finalBubbleSize = bubbleSize;
+        // ROM loc_1FA2A writes the byte_1FAF0 type list entry (or the large
+        // override's #2) straight into subtype(a1), and Obj24_Init copies that
+        // to anim(a0) (docs/s2disasm/s2.asm:45217). Pass the ROM subtype through
+        // unchanged: the old translation of subtype 2 to a size of 5 existed only
+        // to satisfy BubbleObjectInstance's since-removed `bubbleSize >= 3`
+        // breathable test, and it discarded the very byte that selects the
+        // Ani_obj24 script.
+        int finalBubbleSize = bubbleSubtype;
 
         spawnFreeChild(() -> new BubbleObjectInstance(spawnX, spawnY, finalBubbleSize, 0, true));
 

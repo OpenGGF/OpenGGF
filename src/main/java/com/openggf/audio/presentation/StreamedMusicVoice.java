@@ -1,7 +1,7 @@
 package com.openggf.audio.presentation;
 
-import com.openggf.audio.StreamedMusicPort;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.util.Objects;
 
@@ -11,7 +11,8 @@ import java.util.Objects;
  * cursor, capture leases, and rewind snapshots exactly like SMPS and sample
  * music do.
  *
- * <p>The logical playback state stays owned by the {@link StreamedMusicPort}:
+ * <p>The logical playback state stays owned by the streamed presentation
+ * session:
  * loop points, fade ramps, the pause mask, and speed-shoes tempo are all
  * port-side concepts with their own validation, and re-expressing them as a
  * plain Q32.32 source cursor (as {@link SampleBackedVoice} does) would drop
@@ -28,23 +29,31 @@ public final class StreamedMusicVoice implements PresentationVoice {
 
     private final long voiceId;
     private final int priority;
-    private final StreamedMusicPort port;
+    private final StreamedPresentationSession.Cursor cursor;
     private final AudioSourceDescriptor sourceDescriptor;
+    private final RestorePolicy restorePolicy;
     private short[] scratch = new short[0];
     private boolean stopped;
 
-    public StreamedMusicVoice(long voiceId, StreamedMusicPort port,
+    StreamedMusicVoice(long voiceId, StreamedPresentationSession.Cursor cursor,
             AudioSourceDescriptor sourceDescriptor) {
-        this(voiceId, MUSIC_PRIORITY, port, sourceDescriptor, false);
+        this(voiceId, cursor, sourceDescriptor, RestorePolicy.immediate());
     }
 
-    private StreamedMusicVoice(long voiceId, int priority, StreamedMusicPort port,
-            AudioSourceDescriptor sourceDescriptor, boolean stopped) {
+    StreamedMusicVoice(long voiceId, StreamedPresentationSession.Cursor cursor,
+            AudioSourceDescriptor sourceDescriptor, RestorePolicy restorePolicy) {
+        this(voiceId, MUSIC_PRIORITY, cursor, sourceDescriptor, restorePolicy);
+    }
+
+    private StreamedMusicVoice(long voiceId, int priority,
+            StreamedPresentationSession.Cursor cursor,
+            AudioSourceDescriptor sourceDescriptor,
+            RestorePolicy restorePolicy) {
         this.voiceId = voiceId;
         this.priority = priority;
-        this.port = Objects.requireNonNull(port, "port");
+        this.cursor = Objects.requireNonNull(cursor, "cursor");
         this.sourceDescriptor = Objects.requireNonNull(sourceDescriptor, "sourceDescriptor");
-        this.stopped = stopped;
+        this.restorePolicy = Objects.requireNonNull(restorePolicy, "restorePolicy");
     }
 
     /**
@@ -53,21 +62,13 @@ public final class StreamedMusicVoice implements PresentationVoice {
      * only the port that prepared it can vouch for the restore; a port that no
      * longer holds the track rejects it rather than resuming silence.
      */
-    public static StreamedMusicVoice restore(PresentationVoiceSnapshot.Streamed snapshot,
-            StreamedMusicPort port) {
+    static StreamedMusicVoice restore(PresentationVoiceSnapshot.Streamed snapshot,
+            StreamedPresentationSession.Cursor cursor,
+            RestorePolicy restorePolicy) {
         Objects.requireNonNull(snapshot, "snapshot");
-        Objects.requireNonNull(port, "port");
-        if (!port.restoreState(snapshot.playback())) {
-            throw new IllegalStateException(
-                    "installed streamed port cannot restore "
-                            + snapshot.playback().track());
-        }
-        return new StreamedMusicVoice(snapshot.voiceId(), snapshot.priority(), port,
-                snapshot.sourceDescriptor(), snapshot.stopped());
-    }
-
-    public StreamedMusicPort port() {
-        return port;
+        return new StreamedMusicVoice(snapshot.voiceId(), snapshot.priority(),
+                Objects.requireNonNull(cursor, "cursor"),
+                snapshot.sourceDescriptor(), restorePolicy);
     }
 
     @Override
@@ -95,7 +96,7 @@ public final class StreamedMusicVoice implements PresentationVoice {
             // presentation hot path and the port's own mixInto is allocation-free.
             scratch = new short[samples];
         }
-        int mixedFrames = port.mixInto(scratch, stereoFrames);
+        int mixedFrames = cursor.mixInto(scratch, stereoFrames);
         for (int frame = 0; frame < mixedFrames; frame++) {
             int index = frame * 2;
             accumulation[index] += scratch[index];
@@ -103,20 +104,57 @@ public final class StreamedMusicVoice implements PresentationVoice {
         }
     }
 
-    /**
-     * Advances the fade ramp by one presentation frame. Fades step per frame
-     * rather than per sample, so the frame boundary drives this and not
-     * {@link #mixInto}.
-     */
-    public void advanceFade() {
-        if (!isComplete()) {
-            port.advanceFade();
+    public void fadeOut(int steps, int delay) {
+        cursor.fadeOut(steps, delay);
+    }
+
+    public void fadeIn(int steps, int delay) {
+        cursor.fadeIn(steps, delay);
+    }
+
+    public void setSpeedMultiplier(int multiplier) {
+        cursor.setSpeedMultiplier(multiplier);
+    }
+
+    void beginOverrideRestore() {
+        if (restorePolicy.fadeIn()) {
+            cursor.fadeIn(restorePolicy.steps(), restorePolicy.delay());
         }
+    }
+
+    boolean releasesSfxOnRestore() {
+        return !restorePolicy.fadeIn()
+                || restorePolicy.releasePolicy()
+                == SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.ON_RESTORE;
+    }
+
+    boolean restoreFadeComplete() {
+        return !restorePolicy.fadeIn()
+                || (!cursor.fadeActive() && cursor.fadeAtFullGain());
+    }
+
+    void retireCompleted() {
+        if (cursor.isComplete()) {
+            stopped = true;
+            cursor.retire();
+        }
+    }
+
+    /** Releases a descriptor-only cursor that was never published. */
+    void retireUnpublished() {
+        stopped = true;
+        cursor.retire();
+    }
+
+    void restoreMutation(PresentationVoiceSnapshot.Streamed snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        cursor.restoreMutation(snapshot.playback(), snapshot.stopped());
+        stopped = snapshot.stopped();
     }
 
     @Override
     public boolean isComplete() {
-        return stopped || !port.hasSource();
+        return stopped || cursor.isComplete();
     }
 
     @Override
@@ -125,21 +163,44 @@ public final class StreamedMusicVoice implements PresentationVoice {
             return;
         }
         stopped = true;
-        port.stop();
+        cursor.retire();
     }
 
     @Override
     public PresentationVoiceSnapshot snapshot() {
-        StreamedMusicPort.State playback = port.captureState().orElse(null);
-        if (playback == null) {
-            // A voice with no current source is already complete, so the
-            // registry's completion sweep owes us its removal before any
-            // snapshot. Failing loudly beats contributing a null the snapshot
-            // list would reject anyway, or inventing state never captured.
-            throw new IllegalStateException(
-                    "streamed music voice " + voiceId + " has no source to capture");
-        }
         return new PresentationVoiceSnapshot.Streamed(
-                voiceId, priority, sourceDescriptor, playback, stopped);
+                voiceId, priority, sourceDescriptor, cursor.snapshot(),
+                stopped || cursor.stopped());
+    }
+
+    record RestorePolicy(
+            boolean fadeIn,
+            int steps,
+            int delay,
+            SmpsSequencerConfig.MusicOverrideSfxReleasePolicy releasePolicy) {
+        RestorePolicy {
+            Objects.requireNonNull(releasePolicy, "releasePolicy");
+            if (fadeIn && (steps <= 0 || delay < 0)) {
+                throw new IllegalArgumentException(
+                        "invalid streamed restore fade");
+            }
+        }
+
+        static RestorePolicy from(SmpsSequencerConfig config) {
+            Objects.requireNonNull(config, "config");
+            boolean fade = config.getMusicOverrideRestorePolicy()
+                    == SmpsSequencerConfig.MusicOverrideRestorePolicy
+                            .DRIVER_FADE_IN;
+            return new RestorePolicy(fade,
+                    fade ? config.getFadeInSteps() : 0,
+                    fade ? config.getFadeInDelay() : 0,
+                    config.getMusicOverrideSfxReleasePolicy());
+        }
+
+        static RestorePolicy immediate() {
+            return new RestorePolicy(false, 0, 0,
+                    SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
+                            .ON_RESTORE);
+        }
     }
 }

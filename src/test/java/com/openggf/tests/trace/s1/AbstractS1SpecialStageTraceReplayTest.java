@@ -6,7 +6,9 @@ import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceData;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceFrame;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.SessionInvocationExtension;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.trace.TraceFixtureRoot;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
@@ -15,6 +17,7 @@ import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +42,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * {@link com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider}
  * through {@link S1SpecialStageReplayHarness}, comparing each stepped frame
  * against the recorded ROM trace and emitting a divergence report to
- * {@code target/trace-reports/s1_special_stage_&lt;index&gt;_report.json}.
+ * the session-owned {@code special-stage} report directory (or the legacy
+ * {@code target/trace-reports} default when run without a session).
  * Modeled on {@code AbstractS3kSpecialStageTraceReplayTest}, remapped for the
  * S1 maze's single-player physics-only trace columns.
  *
@@ -163,6 +167,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>The pipeline writes a complete report and
  * {@link #assertNoReleaseBlockingDivergences} rejects any comparator ERROR.
  */
+@ExtendWith(SessionInvocationExtension.class)
 public abstract class AbstractS1SpecialStageTraceReplayTest {
 
     /** Location of the committed trace (when one exists). */
@@ -195,11 +200,11 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         DivergenceReport report = compareReplay(trace, harness);
 
         int ssIndex = specialStageIndex(trace);
-        writeReport(report, ssIndex);
+        TestSessionOutputPaths.ReportAllocation allocation = writeReport(report, ssIndex);
 
         // Pipeline assertion: the report file was written where consumers expect.
-        Path jsonPath = reportDir().resolve("s1_special_stage_" + ssIndex + "_report.json");
-        assertTrue(Files.exists(jsonPath), "report JSON should be written to " + jsonPath);
+        assertTrue(Files.exists(allocation.physicalPath()),
+                "report JSON should be written to " + allocation.physicalPath());
 
         assertNoReleaseBlockingDivergences(report);
     }
@@ -511,13 +516,15 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
 
     // ==================== Report output ====================
 
-    static void writeReport(DivergenceReport report, int ssIndex) throws IOException {
-        TraceReportWriter.writeSpecialStageReport(
-                report, reportDir(), "s1_special_stage_" + ssIndex, CONTEXT_RADIUS);
+    static TestSessionOutputPaths.ReportAllocation writeReport(
+            DivergenceReport report, int ssIndex) throws IOException {
+        return TraceReportWriter.writeSpecialStageReport(
+                report, "special-stage", SessionInvocationExtension.SessionInvocation.current(),
+                "s1-" + ssIndex, "s1_special_stage_" + ssIndex, CONTEXT_RADIUS);
     }
 
     static Path reportDir() {
-        return Path.of("target", "trace-reports");
+        return TestSessionOutputPaths.traceReports();
     }
 
     static int specialStageIndex(Sonic1SpecialStageTraceData trace) {

@@ -55,7 +55,20 @@ class TestSidekickCpuControllerLevelStart {
         assertEquals(0x290, leader.getCentreY(ROM_FOLLOW_DELAY_FRAMES) & 0xFFFF);
         assertEquals(0x40, tails.getCentreX() & 0xFFFF);
         assertEquals(0x294, tails.getCentreY() & 0xFFFF);
-        assertTrue(controller.getInputRight(), "Tails should generate follow input on the first gameplay tick");
+        // TailsCPU_Init sets Tails_CPU_routine to 6 and RETURNS -- it does not fall
+        // through to TailsCPU_Normal (docs/s2disasm/s2.asm:39093-39103, next label
+        // TailsCPU_Spawning; dispatched via TailsCPU_States :39081-39087). S3K's
+        // routine-0 entry likewise ends every path in rts (sonic3k.asm:26389-26471).
+        // So the init pass sets up and steers nothing; the first follow input is
+        // produced on the NEXT pass, once the dispatcher reaches routine 6. This
+        // assertion previously required the opposite, pinning a fall-through the
+        // ROM does not perform.
+        assertFalse(controller.getInputRight(),
+                "TailsCPU_Init returns without steering; follow input starts on the next pass");
+
+        controller.update(2);
+        assertTrue(controller.getInputRight(),
+                "the pass after init dispatches TailsCPU_Normal and steers");
     }
 
     @Test

@@ -110,22 +110,21 @@ public class TestSonic3kVoiceData {
         synth.clearCapture();
         seq.refreshInstrument(fmTrackObj);
 
-        // Check that SSG-EG registers were re-written after setInstrument() cleared them
+        // Check that SSG-EG registers were re-written during instrument restoration.
         List<FmWrite> ssgWrites = synth.getSsgEgWrites();
 
-        // setInstrument() writes 0x00 to all 4 SSG-EG regs, then refreshInstrument()
-        // restores non-zero values. We should see both the clear and the restore.
         // Extract the final values written to each SSG-EG register.
         Map<Integer, Integer> lastSsgValues = new HashMap<>();
         for (FmWrite w : ssgWrites) {
             lastSsgValues.put(w.reg, w.val);
         }
 
-        // FM channel 1 = port 0, ch 1, so registers are 0x91, 0x95, 0x99, 0x9D
+        // S3K's table traverses operators at 0x90,0x98,0x94,0x9C.
+        // FM channel 1 adds one to each base register.
         int ch = fmTrackObj.channelId % 3;
         assertEquals(0x0A, (int) lastSsgValues.getOrDefault(0x90 + ch, 0), "SSG-EG slot 0 should be restored to 0x0A");
-        assertEquals(0x0B, (int) lastSsgValues.getOrDefault(0x94 + ch, 0), "SSG-EG slot 1 should be restored to 0x0B");
-        assertEquals(0x0C, (int) lastSsgValues.getOrDefault(0x98 + ch, 0), "SSG-EG slot 2 should be restored to 0x0C");
+        assertEquals(0x0B, (int) lastSsgValues.getOrDefault(0x98 + ch, 0), "SSG-EG slot 1 should be restored to 0x0B");
+        assertEquals(0x0C, (int) lastSsgValues.getOrDefault(0x94 + ch, 0), "SSG-EG slot 2 should be restored to 0x0C");
         assertEquals(0x0D, (int) lastSsgValues.getOrDefault(0x9C + ch, 0), "SSG-EG slot 3 should be restored to 0x0D");
     }
 
@@ -235,5 +234,3 @@ public class TestSonic3kVoiceData {
         data[offset + 1] = (byte) ((value >> 8) & 0xFF);
     }
 }
-
-

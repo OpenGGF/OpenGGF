@@ -7,6 +7,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 
@@ -30,7 +31,22 @@ import java.util.List;
  * {@link #bypassesOffscreenSolidGate()} and {@link #usesInclusiveRightEdge()}.
  */
 public final class CutsceneKnuxCnz2WallInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code loc_62458} is the routine this object runs, i.e. address
+     * {@code $00062458} (docs/skdisasm/sonic3k.asm:129180).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0006}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0006;
+    }
+
 
     // ROM loc_62458: moveq #$13,d1 (half-width); move.w #$100,d2 / move.w #$200,d3.
     // The tall vertical extent makes the barrier impassable across the whole

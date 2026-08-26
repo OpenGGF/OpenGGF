@@ -18,6 +18,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
 public class ConfigMigrationService {
 
     private static final Logger LOGGER = Logger.getLogger(ConfigMigrationService.class.getName());
+    private static final int AUDIO_REFERENCE_DEFAULTS_VERSION = 1;
 
     // AWT arrow key codes (used as detection sentinel)
     private static final int AWT_VK_LEFT = 37;
@@ -59,6 +60,44 @@ public class ConfigMigrationService {
         SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY,
         SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY
     );
+
+    /**
+     * Rewrites the paired audio-chip defaults persisted by releases before the
+     * GPGX/libvgm reference defaults were adopted. Those releases wrote both
+     * values as {@code true} into every generated config, so merely changing
+     * the registered defaults does not affect an existing installation.
+     *
+     * <p>The pair is the migration sentinel: an asymmetric pair is a user
+     * choice and is preserved. A persisted version marker makes this migration
+     * strictly one-shot, so a player may later opt back into both non-reference
+     * modes without having that explicit choice rewritten.</p>
+     *
+     * @param config flattened configuration map, modified in place
+     * @return true when the superseded generated pair was rewritten
+     */
+    public boolean migrateDeprecatedAudioChipDefaults(
+            Map<String, Object> config) {
+        if (config == null) {
+            return false;
+        }
+        String versionKey = SonicConfiguration.AUDIO_REFERENCE_DEFAULTS_VERSION.name();
+        Object version = config.get(versionKey);
+        if (version instanceof Number number
+                && number.intValue() >= AUDIO_REFERENCE_DEFAULTS_VERSION) {
+            return false;
+        }
+        String dacKey = SonicConfiguration.DAC_INTERPOLATE.name();
+        String psgKey = SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE.name();
+        if (Boolean.TRUE.equals(config.get(dacKey))
+                && Boolean.TRUE.equals(config.get(psgKey))) {
+            config.put(dacKey, false);
+            config.put(psgKey, false);
+            LOGGER.info("[ConfigMigration] Migrated superseded audio chip defaults: "
+                    + "DAC interpolation and every-toggle PSG noise -> reference modes");
+        }
+        config.put(versionKey, AUDIO_REFERENCE_DEFAULTS_VERSION);
+        return true;
+    }
 
     /**
      * Detect whether the config file contains AWT key codes.

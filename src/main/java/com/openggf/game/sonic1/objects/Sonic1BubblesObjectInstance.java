@@ -885,7 +885,18 @@ public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
         int actId = services().featureActId();
 
         if (waterSystem.hasWater(zoneId, actId)) {
-            return waterSystem.getWaterLevelY(zoneId, actId);
+            // Every water read in Obj64 is `move.w (v_waterpos1).w,d0` -- the
+            // height *including* the surface sway: Bub_ChkWater
+            // (docs/s1disasm/_incObj/64 LZ Air Bubbles.asm:66), Bub_BblMaker's
+            // underwater gate (:154) and the shared display tail (:241).
+            // v_waterpos1 is v_waterpos2 plus `(v_oscillate+2) >> 1`
+            // (docs/s1disasm/_inc/LZWaterFeatures.asm:23-28), which is what
+            // getGameplayWaterLevelY returns; getWaterLevelY is v_waterpos2
+            // alone and runs up to fifteen pixels low. The oscillator byte
+            // overshoots its $10 middle value before the direction flips, so it
+            // spans 0..31 across the recorded lz1_2 stream and the shifted term
+            // spans 0..15.
+            return waterSystem.getGameplayWaterLevelY(zoneId, actId);
         }
         return Integer.MAX_VALUE;
     }

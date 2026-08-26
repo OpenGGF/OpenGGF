@@ -1,9 +1,14 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.level.BigRingReturnState;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -99,6 +104,33 @@ public class TestSonic3kBootstrapResolver {
     }
 
     @Test
+    public void resolvesPostIntroBootstrapForAizBigRingReturn() {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
+        Object oldChar = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
+        try {
+            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+
+            GameplayModeContext gameplayMode = SessionManager.openGameplaySession(
+                    new Sonic3kGameModule());
+            GameplaySessionFactory.attachManagers(gameplayMode, EngineServices.current());
+            GameServices.level().saveBigRingReturn(new BigRingReturnState(
+                    0x800, 0x400, 0x780, 0x300, 12,
+                    (byte) 0, (byte) 0, 0x390, 0, 0));
+
+            Sonic3kLoadBootstrap bootstrap = Sonic3kBootstrapResolver.resolve(0, 0);
+
+            assertEquals(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, bootstrap.mode());
+            assertEquals(Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX,
+                    Sonic3k.resolveLevelLoadBlockIndex(0, 0, bootstrap));
+        } finally {
+            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, oldSkip);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, oldChar);
+        }
+    }
+
+    @Test
     public void resolvesSkipIntroForSessionSelectedKnucklesEvenWhenConfigIsSonic() {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         Object oldSkip = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
@@ -117,5 +149,4 @@ public class TestSonic3kBootstrapResolver {
         }
     }
 }
-
 

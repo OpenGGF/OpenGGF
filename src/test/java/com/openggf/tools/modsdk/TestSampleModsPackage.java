@@ -5,6 +5,7 @@ import com.openggf.mods.DefaultModRepositoryScanner;
 import com.openggf.mods.ModCatalogValidator;
 import com.openggf.mods.ModDescriptor;
 import com.openggf.mods.ModType;
+import com.openggf.tests.TestSessionOutputPaths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -295,7 +296,8 @@ class TestSampleModsPackage {
 
     private static void compileJava(Path source, Path output) throws Exception {
         List<String> arguments = new ArrayList<>(List.of("--release", "21", "-classpath",
-                Path.of("target/classes").toAbsolutePath().toString(), "-d", output.toString()));
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
+                "-d", output.toString()));
         try (var files = Files.walk(source)) {
             files.filter(path -> path.toString().endsWith(".java")).sorted()
                     .map(Path::toString).forEach(arguments::add);

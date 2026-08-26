@@ -674,6 +674,11 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public boolean shouldSuppressInitialTitleCard(int zoneIndex, int actIndex) {
+        // The ROM's $1701 arena restart bypasses Obj_TitleCard explicitly.
+        if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 1) {
+            return true;
+        }
+        // Canonical HPZ owns a separate nonlinear-resource presentation policy.
         if (zoneIndex == Sonic3kZoneIds.ZONE_HPZ && actIndex == 1) {
             return Sonic3kLevelResourceProfile.resolve(zoneIndex, actIndex)
                     .requireCustomResources().suppressTitleCard();

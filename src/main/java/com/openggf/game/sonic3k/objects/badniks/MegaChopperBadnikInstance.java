@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.EnemyDefeatBounce;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -49,6 +50,10 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     private static final int FRAME_SWIM_B = 1;
     private static final int FRAME_CARRY_ALT = 2;
 
+    // Obj_WaitOffscreen installs a $20-by-$20 Map_Offscreen placeholder
+    // (sonic3k.asm:180271-180302 move.b #$20,width_pixels / height_pixels).
+    private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
+
     private static final int DRAIN_TIMER_START = 60;
     private static final int DRAIN_TIMER_RESET = 59;
     private static final int SHAKE_WINDOW_START = 60;
@@ -62,6 +67,11 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private State state = State.SWIM;
+    private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
+    // routine 0. Obj_WaitOffscreen resumes at $34(a0) with routine still 0, so the
+    // first dispatch after the gate releases runs MegaChopper_Init, not the swim.
+    private boolean initPending = true;
     private int animationTimer;
 
     private int pendingCollisionProperty;
@@ -102,6 +112,44 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
 
+        // Obj_MegaChopper's FIRST instruction is jsr (Obj_WaitOffscreen).l
+        // (sonic3k.asm:184233), so no routine runs — not even MegaChopper_Init —
+        // until Render_Sprites has set render_flags bit 7 on the $20x$20
+        // Map_Offscreen placeholder. Render_Sprites publishes the on-screen bit
+        // after the object pass, so the restore (loc_85B02 move.l $34(a0),(a0);
+        // rts) consumes one further dispatch before the routine resumes.
+        if (waitingForOnscreen) {
+            if (isDeleteSpriteIfNotInRange()) {
+                // loc_85AF0: the placeholder still owns the ordinary coarse-X
+                // deletion path while it waits (sonic3k.asm:180288-180296). Without
+                // it a MegaChopper the camera has passed leaks its SST slot for the
+                // rest of the act, which shifts every later allocation.
+                setDestroyedByOffscreen();
+                return;
+            }
+            if (!placeholderRenderedOnscreen) {
+                return;
+            }
+            waitingForOnscreen = false;
+            placeholderRenderedOnscreen = false;
+            return;
+        }
+
+        if (initPending) {
+            // MegaChopper_Init (sonic3k.asm:184253-184263) calls
+            // SetUp_ObjAttributes, whose tail is addq.b #2,routine(a0) then rts
+            // (sonic3k.asm:176901-176919), sets the animation script pointer and
+            // clears child_dx/child_dy. It does NOT fall through to
+            // MegaChopper_Swim: it returns, so this dispatch moves the badnik
+            // zero pixels and never reaches MegaChopper_CheckCapture, which is
+            // reachable only from MegaChopper_Swim (sonic3k.asm:184266). The swim
+            // begins on the following dispatch.
+            initPending = false;
+            childDx = 0;
+            childDy = 0;
+            return;
+        }
+
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         switch (state) {
@@ -112,9 +160,41 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         }
     }
 
+    /**
+     * {@code loc_85AD2}'s deletion arm: {@code x_pos & $FF80} minus
+     * {@code Camera_X_pos_coarse_back}, compared {@code bhi #$280}
+     * ({@code sonic3k.asm:180281-180296}). The compare is unsigned, so a
+     * placeholder behind the camera wraps high and deletes too.
+     */
+    private boolean isDeleteSpriteIfNotInRange() {
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.camera() == null) {
+            return false;
+        }
+        int objectCoarse = currentX & 0xFF80;
+        int cameraCoarseBack = (svc.camera().getX() - 0x80) & 0xFF80;
+        return ((objectCoarse - cameraCoarseBack) & 0xFFFF) > 0x280;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE);
+        }
+    }
+
     @Override
     public int getCollisionFlags() {
         if (isDestroyed()) {
+            return 0;
+        }
+        if (waitingForOnscreen || initPending) {
+            // collision_flags is only written by SetUp_ObjAttributes in
+            // MegaChopper_Init (sonic3k.asm:184253-184255), which Obj_WaitOffscreen
+            // suppresses; the freshly allocated SST slot holds zero until then.
+            // It stays zero through the Init dispatch too, because the frame's
+            // touch scan runs at the player slot before this object's routine.
             return 0;
         }
         return SPECIAL_COLLISION_FLAGS;
@@ -263,7 +343,16 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         if (isPlayerAttackingRom(player)) {
+            // MegaChopper_CheckCapture's Check_PlayerAttack arm sets bset #7,status(a0),
+            // so Obj_MegaChopper falls through to MegaChopper_Defeated (sonic3k.asm:
+            // 184242-184244), which calls EnemyDefeated itself. The touch controller
+            // cannot supply this bounce: ObjDat_MegaChopper's flags are $D7, the ROM's
+            // Touch_Special route, so the engine's ENEMY-category bounce never runs.
+            // y_pos(a0) is read after EnemyDefeat_Score, but that routine does not move
+            // the badnik, so the pre-destroy centre Y is the ROM's value.
+            int enemyY = currentY;
             defeat(player);
+            EnemyDefeatBounce.apply(player, enemyY);
             return;
         }
 
@@ -492,5 +581,18 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         currentY = yPos24 >> 8;
         xSubpixel = xPos24 & 0xFF;
         ySubpixel = yPos24 & 0xFF;
+    }
+
+    /**
+     * Test-only: release the Obj_WaitOffscreen gate, as Render_Sprites setting
+     * render_flags bit 7 does in production. Mirrors
+     * {@code ClamerObjectInstance.testRunProductionInitializationAfterOffscreenWait}.
+     */
+    void testReleaseOffscreenWait() {
+        waitingForOnscreen = false;
+        placeholderRenderedOnscreen = false;
+        // Also consume the routine-0 Init dispatch, so the badnik is in its
+        // running state exactly as these tests assume. Setup only.
+        initPending = false;
     }
 }

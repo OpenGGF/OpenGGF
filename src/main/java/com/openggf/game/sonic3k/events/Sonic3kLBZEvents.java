@@ -176,7 +176,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private int postTitleAct2TargetMinY;
     private int postTitleAct2TargetMaxY;
     private boolean postTitleAct2WorkersCreatedThisPass;
-    private boolean postTitleAct2BigArmCreationEntriesSeeded;
     private int act2MaxXAccumulator;
     private int act2MinYAccumulator;
     private int act2MaxYAccumulator;
@@ -243,7 +242,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         postTitleAct2TargetMinY = 0;
         postTitleAct2TargetMaxY = 0;
         postTitleAct2WorkersCreatedThisPass = false;
-        postTitleAct2BigArmCreationEntriesSeeded = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
@@ -335,18 +333,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     /** Native Big Arm {@code loc_74DA4}: literal stored targets, not current bounds. */
     public void prepareBigArmFloorTransition() {
         if (activeAct == 1) {
-            boolean alreadyActive = postTitleAct2SizeChangeActive;
             prepareAct2SizeChange(0x6000, 0, 0x1000);
-            if (!alreadyActive && postTitleAct2SizeChangeActive) {
-                // Child1_Act2LevelSize occupies later SST slots, so all three
-                // creation entries run after the settling floor in this pass.
-                // Their zero high words make these entries accumulator-only;
-                // the first visible integer deltas belong to later entries.
-                act2MaxXAccumulator += 0x4000;
-                act2MinYAccumulator += 0x4000;
-                act2MaxYAccumulator += 0x8000;
-                postTitleAct2BigArmCreationEntriesSeeded = true;
-            }
         }
     }
 
@@ -359,7 +346,11 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         postTitleAct2TargetMaxY = targetMaxY;
         postTitleAct2SizeChangeActive = true;
         postTitleAct2WorkersCreatedThisPass = true;
-        postTitleAct2BigArmCreationEntriesSeeded = false;
+        // Make_LevelSizeObj allocates the Child1_Act2LevelSize workers with
+        // AllocateObjectAfterCurrent (sonic3k.asm:180598-180616,176924-176950,
+        // 37917-37930), so the ascending Process_Sprites walk reaches them in
+        // the creating pass. That pass is dispatch 1 and every accumulator
+        // starts at zero -- neither pre-charge them nor skip the dispatch.
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
@@ -416,21 +407,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (!postTitleAct2SizeChangeActive) {
             return;
         }
-        if (postTitleAct2WorkersCreatedThisPass) {
-            postTitleAct2WorkersCreatedThisPass = false;
-            if (!postTitleAct2BigArmCreationEntriesSeeded) {
-                // Generic Change_Act2Sizes creates the later SST workers after
-                // ScreenEvents, so its next centralized call is marker-only.
-                return;
-            }
-            // Big Arm already ran those creation entries in its later object
-            // slots; this call must therefore execute their second entries.
-            postTitleAct2BigArmCreationEntriesSeeded = false;
-        }
-        updatePostTitleAct2WorkerEntries();
-    }
-
-    private void updatePostTitleAct2WorkerEntries() {
+        postTitleAct2WorkersCreatedThisPass = false;
         if (act2MaxXWorkerActive && updateGradualMaxX()) {
             act2MaxXWorkerActive = false;
             act2MaxXWorkerCompleted = true;

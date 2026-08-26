@@ -40,9 +40,14 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
     private int animIndex;
     private int initialDelay;
 
+    /** ROM {@code $2E(a0)} while the fragment is still Obj_AIZBombExplosion. */
     private int delayTimer;
-    private int scriptStep;
-    private int scriptDelay;
+    /** ROM {@code anim_frame}: index of the NEXT script entry to load. */
+    private int animFrame;
+    /** ROM {@code anim_frame_timer}. */
+    private int frameTimer;
+    /** ROM {@code mapping_frame}. */
+    private int mappingFrame;
     private boolean active;
 
     /**
@@ -58,9 +63,10 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
         this.animIndex = Math.min(animIndex, ANIM_SCRIPTS.length - 1);
         this.initialDelay = delay;
         this.delayTimer = delay;
-        this.scriptStep = 0;
-        this.scriptDelay = currentStepDelay();
-        this.active = (delay == 0);
+        this.animFrame = 0;
+        this.frameTimer = 0;
+        this.mappingFrame = ANIM_SCRIPTS[this.animIndex][0][0];
+        this.active = false;
     }
 
     @Override
@@ -68,22 +74,37 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
         if (isDestroyed()) return;
 
         if (!active) {
+            // ROM Obj_AIZBombExplosion (sonic3k.asm:105471): subq.w #1,$2E(a0) /
+            // bmi.s loc_505B4 / rts. The wait therefore lasts delay+1 frames --
+            // it ends on the frame the counter goes negative, not the frame it
+            // reaches zero. loc_505B4 then falls through via `bra.s loc_505E4`,
+            // so the fragment animates on the very frame it becomes active.
             delayTimer--;
-            if (delayTimer <= 0) {
-                active = true;
-                scriptDelay = currentStepDelay();
+            if (delayTimer >= 0) {
+                return;
             }
-            return;
+            active = true;
         }
 
-        scriptDelay--;
-        if (scriptDelay <= 0) {
-            scriptStep++;
-            if (scriptStep >= ANIM_SCRIPTS[animIndex].length) {
+        // ROM loc_505E4 -> Animate_SpriteIrregularDelay (sonic3k.asm:36238):
+        // `subq.b #1,anim_frame_timer(a0) / bcc.s locret`. The branch is taken
+        // while the subtraction did not borrow, so a script entry whose delay
+        // byte is D is held for D+1 frames, and the timer of 0 that a freshly
+        // transitioned fragment carries advances on its first call.
+        frameTimer--;
+        if (frameTimer < 0) {
+            int[][] script = ANIM_SCRIPTS[animIndex];
+            if (animFrame >= script.length) {
+                // Script terminator $FC: Animate_SpriteIrregularDelay's loc_1AD0C
+                // adds 2 to routine, and loc_505E4's `tst.b routine(a0) / bne`
+                // jumps to Delete_Current_Sprite on that same frame -- so the
+                // terminator frame is never drawn and never collidable.
                 setDestroyed(true);
                 return;
             }
-            scriptDelay = currentStepDelay();
+            mappingFrame = script[animFrame][0];
+            frameTimer = script[animFrame][1];
+            animFrame++;
         }
     }
 
@@ -108,11 +129,11 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
 
     @Override
     public String traceDebugDetails() {
-        return String.format("anim=%d delay=%d step=%d stepDelay=%d active=%s map=%02X",
+        return String.format("anim=%d delay=%d frame=%d timer=%d active=%s map=%02X",
                 animIndex,
                 delayTimer,
-                scriptStep,
-                scriptDelay,
+                animFrame,
+                frameTimer,
                 active,
                 currentMappingFrame());
     }
@@ -142,18 +163,6 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
     public int getPriorityBucket() { return 1; }
 
     private int currentMappingFrame() {
-        int[][] script = ANIM_SCRIPTS[animIndex];
-        if (scriptStep < 0 || scriptStep >= script.length) {
-            return script[script.length - 1][0];
-        }
-        return script[scriptStep][0];
-    }
-
-    private int currentStepDelay() {
-        int[][] script = ANIM_SCRIPTS[animIndex];
-        if (scriptStep < 0 || scriptStep >= script.length) {
-            return 1;
-        }
-        return script[scriptStep][1];
+        return mappingFrame;
     }
 }

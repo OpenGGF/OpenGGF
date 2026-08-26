@@ -1,5 +1,7 @@
 package com.openggf.game.titlecard;
 
+import java.util.Objects;
+
 /**
  * Represents an individual animated element of the title card.
  * Each element slides from a start position to a target position, then back out.
@@ -14,6 +16,17 @@ package com.openggf.game.titlecard;
  * </ul>
  */
 public class TitleCardElement {
+
+    /** Immutable animation state used by title-card rewind owners. */
+    public record Snapshot(
+            int currentX,
+            int currentY,
+            int delayCounter,
+            boolean active,
+            boolean atTarget,
+            boolean exited,
+            int edgeMargin) {
+    }
 
     /** Slide speed during entry: 16 pixels per frame */
     public static final int SLIDE_SPEED_IN = 16;
@@ -288,6 +301,24 @@ public class TitleCardElement {
             // Off-screen if right edge is left of screen, or left edge is right of screen
             return currentX >= SCREEN_WIDTH || (currentX + widthPixels <= 0);
         }
+    }
+
+    /** Captures the mutable animation state without exposing the live element. */
+    public Snapshot capture() {
+        return new Snapshot(currentX, currentY, delayCounter, active, atTarget,
+                exited, edgeMargin);
+    }
+
+    /** Restores a previously captured animation state. */
+    public void restore(Snapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        currentX = snapshot.currentX();
+        currentY = snapshot.currentY();
+        delayCounter = snapshot.delayCounter();
+        active = snapshot.active();
+        atTarget = snapshot.atTarget();
+        exited = snapshot.exited();
+        edgeMargin = Math.max(0, snapshot.edgeMargin());
     }
 
     // Screen dimensions for off-screen calculations

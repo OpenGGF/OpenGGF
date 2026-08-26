@@ -40,7 +40,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     private final Sonic1FixedAirCountdownManager fixedAirCountdownManager =
             new Sonic1FixedAirCountdownManager(Sonic1ZoneEvents::focusedSpriteOrNull);
     private final Sonic1FixedTitleCardManager fixedTitleCardManager =
-            new Sonic1FixedTitleCardManager();
+            new Sonic1FixedTitleCardManager(() -> gameService(Sonic1PlcService.class));
 
     // Loop/plane switching manager
     private final Sonic1LoopManager loopManager = new Sonic1LoopManager();
@@ -185,7 +185,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         if (romAct == ACT_3) {
             return;
         }
-        var camera = Sonic1ZoneEvents.cameraOrNull();
+        var camera = cameraOrNull();
         if (camera == null) {
             return;
         }
@@ -208,7 +208,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         // so this is setMinX (immediate), not the eased setMinXTarget.
         camera.setMinX((short) threshold);
         // moveq #plcid_Signpost,d0 / bra.w NewPLC
-        Sonic1PlcService plcService = Sonic1ZoneEvents.currentGameService(Sonic1PlcService.class);
+        Sonic1PlcService plcService = gameService(Sonic1PlcService.class);
         if (plcService != null) {
             try {
                 plcService.replaceQueued(PLC_ID_SIGNPOST);

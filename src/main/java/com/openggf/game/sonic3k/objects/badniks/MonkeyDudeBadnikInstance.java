@@ -92,6 +92,12 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
     private int armRandomWaitTimer;
     private int armSetupDelay = 2;
     private boolean armRootActivated;
+    /**
+     * routine 0. Obj_WaitOffscreen's release pass (loc_85B02) returns without
+     * dispatching and leaves routine at 0, so the first dispatch that reaches the
+     * routine table runs MonkeyDude_Init, not MonkeyDude_Wait.
+     */
+    private boolean initPending = true;
     private boolean lastFacingLeft;
 
     private State state = State.WAIT;
@@ -139,6 +145,29 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
                 return;
             }
             armRootActivated = true;
+            // Obj_WaitOffscreen's release pass is loc_85B02: it restores the
+            // saved operation into (a0) and `rts` back to Process_Sprites
+            // (sonic3k.asm:180299-180301). It does NOT re-enter Obj_MonkeyDude,
+            // so the release frame runs no routine at all -- routine 0 is
+            // dispatched on the FOLLOWING frame. Returning here keeps that
+            // dispatch separate from the Init dispatch below; both frames exist
+            // in the ROM and both must be consumed.
+            return;
+        }
+
+        if (initPending) {
+            // MonkeyDude_Init (sonic3k.asm:182710-182728) calls
+            // SetUp_ObjAttributes (tail `addq.b #2,routine(a0)` / `rts`,
+            // sonic3k.asm:176901-176919), rewrites subtype = subtype >> 2 and
+            // $39 = subtype >> 3, points $30 at AniRaw_MonkeyDudeWait, sets
+            // $2E = 60-1 and $34 = MonkeyDude_StartActive, and ends by jumping to
+            // CreateChild4_LinkListRepeated for the arm chain. Every path RETURNS
+            // rather than falling through to MonkeyDude_Wait, so this dispatch
+            // runs no animation, no facing check and no throw cadence; routine 2
+            // starts on the next dispatch. The constructor already applies those
+            // field writes and builds the arm chain.
+            initPending = false;
+            return;
         }
 
         // Obj_WaitOffscreen replaces the operation only until the placeholder
@@ -161,6 +190,15 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
             case WAIT -> updateWait();
             case ACTIVE -> updateActive(player);
         }
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        // collision_flags is written by SetUp_ObjAttributes inside
+        // MonkeyDude_Init (sonic3k.asm:176910), so the SST slot still reads zero
+        // for the whole Init dispatch: the frame's touch scan runs at the player
+        // slot before this object's routine.
+        return initPending ? 0 : super.getCollisionFlags();
     }
 
     private void updateWait() {
@@ -448,8 +486,23 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         }
     }
 
+    /**
+     * The live collision/debug anchor follows the same facing-dependent origin as
+     * the body sprite. Keep the inherited frame-start anchor: S3K's player touch
+     * pass reads the object's frame-start {@code x_pos}, while the ROM's render
+     * flip does not move that field (sonic3k.asm:20655-20681).
+     */
+    @Override
+    public int getCollisionX() {
+        return facingAdjustedX(facingLeft);
+    }
+
     @Override
     protected int getRenderAnchorX() {
+        return facingAdjustedX(facingLeft);
+    }
+
+    private int facingAdjustedX(boolean facingLeft) {
         if (facingLeft == initialFacingLeft) {
             return currentX;
         }

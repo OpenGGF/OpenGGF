@@ -422,6 +422,12 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
 
+        // ROM: bclr #p1_pushing_bit,status(a0) -- the tunnel clears its OWN
+        // p1 bit and ONLY p1, even when the captured character is Player_2
+        // (docs/skdisasm/sonic3k.asm:57246). That asymmetry is the ROM's, so it
+        // is modelled as written rather than generalised per-character.
+        services().objectManager().solidContacts().releaseObjectPushLatch(
+                services().playerQuery().mainPlayerOrNull(), this);
         // ROM: bclr #Status_Push,status(a1); bset #Status_InAir,status(a1)
         player.setPushing(false);
         player.setAir(true);

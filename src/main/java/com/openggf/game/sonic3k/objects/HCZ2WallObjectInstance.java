@@ -7,6 +7,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
@@ -30,7 +31,23 @@ import java.util.List;
  * (Events_routine_bg != 4, i.e. wall-chase state ended).
  */
 public class HCZ2WallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, ZeroArgRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, ZeroArgRewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_HCZ2Wall} (docs/skdisasm/sonic3k.asm:106231) is spawned by its parent rather than from the
+     * object pointer table; every routine in its code block lies in the
+     * {@code $0005xxxx} bank.
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0005}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0005;
+    }
+
 
     /** ROM: d1 = $4B (75 pixels half-width for SolidObjectFull2). */
     private static final int HALF_WIDTH = 0x4B;
