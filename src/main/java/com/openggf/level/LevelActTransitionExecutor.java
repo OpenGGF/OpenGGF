@@ -21,6 +21,9 @@ import java.util.List;
  */
 final class LevelActTransitionExecutor {
     private final LevelManager levelManager;
+    private boolean executedDuringFrame;
+    private boolean rewindBoundaryDuringFrame;
+    private boolean oscillationAdvancedDuringFrame;
 
     LevelActTransitionExecutor(LevelManager levelManager) {
         this.levelManager = levelManager;
@@ -54,6 +57,8 @@ final class LevelActTransitionExecutor {
             // replay observes the identity reached; a no-op outside a run.
             com.openggf.TraceSessionLauncher.observeRunSeamlessLevelAdvance(
                     levelManager);
+            executedDuringFrame = true;
+            rewindBoundaryDuringFrame = true;
         } catch (IOException | RuntimeException failure) {
             if (claimed.handoff != null
                     && !claimed.transferComplete
@@ -63,6 +68,34 @@ final class LevelActTransitionExecutor {
             }
             throw failure;
         }
+    }
+
+    void markOscillationAdvancedDuringFrame() {
+        oscillationAdvancedDuringFrame = true;
+    }
+
+    boolean consumeExecutedDuringFrame() {
+        boolean executed = executedDuringFrame;
+        executedDuringFrame = false;
+        return executed;
+    }
+
+    boolean consumeRewindBoundaryDuringFrame() {
+        boolean boundary = rewindBoundaryDuringFrame;
+        rewindBoundaryDuringFrame = false;
+        return boundary;
+    }
+
+    boolean consumeOscillationAdvancedDuringFrame() {
+        boolean advanced = oscillationAdvancedDuringFrame;
+        oscillationAdvancedDuringFrame = false;
+        return advanced;
+    }
+
+    void resetFrameMarkers() {
+        executedDuringFrame = false;
+        rewindBoundaryDuringFrame = false;
+        oscillationAdvancedDuringFrame = false;
     }
 
     private void executeClaimed(

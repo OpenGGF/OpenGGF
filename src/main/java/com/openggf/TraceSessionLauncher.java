@@ -3938,10 +3938,21 @@ public final class TraceSessionLauncher {
 
     /** Records a normal visual replay frame after {@link GameLoop} has advanced it. */
     public void recordExternalRewindFrame() {
+        recordExternalRewindFrame(false);
+    }
+
+    /**
+     * Records a completed visual replay frame, then optionally makes it the
+     * first frame of a new seamless-transition rewind segment.
+     */
+    public void recordExternalRewindFrame(boolean seamlessTransitionCompleted) {
         if (realtimeRewinding || rewindController == null || fadeStarted) {
             return;
         }
         rewindController.recordExternalStep();
+        if (seamlessTransitionCompleted) {
+            rewindController.resetBufferAtCurrentFrame();
+        }
     }
 
     /**
@@ -3949,11 +3960,7 @@ public final class TraceSessionLauncher {
      * realtime rewind cannot cross the just-applied level boundary.
      */
     public void recordExternalRewindFrameAtBoundary() {
-        if (realtimeRewinding || rewindController == null || fadeStarted) {
-            return;
-        }
-        rewindController.recordExternalStep();
-        rewindController.resetBufferAtCurrentFrame();
+        recordExternalRewindFrame(true);
     }
 
     /** Called when Esc is pressed during a LEVEL tick. */

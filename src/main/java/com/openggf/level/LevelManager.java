@@ -166,8 +166,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     int currentZone = 0;
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
-    private boolean actTransitionExecutedDuringFrame;
-    private boolean actTransitionOscillationAdvancedDuringFrame;
     private boolean resetCounterPlacementAfterCameraSnap;
     private long completedProductionLoadGeneration;
 
@@ -3769,11 +3767,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void executeActTransition(SeamlessLevelTransitionRequest request) throws IOException {
         actTransitionExecutor.execute(request);
-        actTransitionExecutedDuringFrame = true;
     }
 
     void markActTransitionOscillationAdvancedDuringFrame() {
-        actTransitionOscillationAdvancedDuringFrame = true;
+        actTransitionExecutor.markOscillationAdvancedDuringFrame();
     }
 
     /**
@@ -3782,15 +3779,22 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * this frame's ordinary loop-tail advance.
      */
     public boolean consumeActTransitionExecutedDuringFrame() {
-        boolean executed = actTransitionExecutedDuringFrame;
-        actTransitionExecutedDuringFrame = false;
-        return executed;
+        return actTransitionExecutor.consumeExecutedDuringFrame();
+    }
+
+    /**
+     * Consumes the one-shot rewind boundary published by a completed in-place
+     * act reload. Frame-top seamless transitions consume this signal through
+     * {@link LevelSeamlessTransitionExecutor}; reloads executed inside the
+     * level-event pass leave it for {@code GameLoop} to apply after recording
+     * the rest of the logical frame.
+     */
+    public boolean consumeActTransitionRewindBoundaryDuringFrame() {
+        return actTransitionExecutor.consumeRewindBoundaryDuringFrame();
     }
 
     public boolean consumeActTransitionOscillationAdvancedDuringFrame() {
-        boolean advanced = actTransitionOscillationAdvancedDuringFrame;
-        actTransitionOscillationAdvancedDuringFrame = false;
-        return advanced;
+        return actTransitionExecutor.consumeOscillationAdvancedDuringFrame();
     }
 
     void restoreCameraBoundsForCurrentLevel(Camera cam) {
@@ -4324,8 +4328,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
-        actTransitionExecutedDuringFrame = false;
-        actTransitionOscillationAdvancedDuringFrame = false;
+        actTransitionExecutor.resetFrameMarkers();
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;
@@ -4355,8 +4358,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         this.frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
-        actTransitionExecutedDuringFrame = false;
-        actTransitionOscillationAdvancedDuringFrame = false;
+        actTransitionExecutor.resetFrameMarkers();
     }
 
     public void setClearColor() {
