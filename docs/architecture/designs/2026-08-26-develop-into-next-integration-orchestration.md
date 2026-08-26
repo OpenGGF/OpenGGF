@@ -345,14 +345,25 @@ launcher-signal outcome is therefore `INVALID_IDENTITY_CHANGED`, followed by
 outer restoration after finalization. It is never `PASSED`, `ABORTED`, or valid;
 the restored worktree does not retroactively change the invalid manifest.
 
+The exact frozen coordinator has a further shutdown race: its normal and
+shutdown finalizers can contend for the fixed `manifest.json.tmp`, leaving a
+correct on-disk `INVALID_IDENTITY_CHANGED` / `valid=false` manifest but no
+`OPENGGF_TEST_RUN_END` line. The signal matrix may recognize that shape only to
+prove non-certification and outer hygiene. It must record the missing marker and
+may never promote or compare the run. This is not an exception for parent or
+candidate evidence: every normal certifying run still requires both start and
+end markers, and an absent end marker is invalid regardless of the manifest.
+
 The exact outcome matrix is binding. Child status 0 plus authorized successful
 normalization yields status 0 / `PASSED` / `valid=true`; child status N plus
 authorized successful normalization preserves N / `FAILED` / `valid=true`.
 Normalization failure after child 0 yields nonzero /
 `INVALID_IDENTITY_CHANGED` / `valid=false`; after child N it preserves N while
 the manifest is `INVALID_IDENTITY_CHANGED` / `valid=false`. Launcher signal
-propagation preserves 130 or 143 and yields `INVALID_IDENTITY_CHANGED` /
-`valid=false`, followed by authenticated outer worktree restoration. The
+propagation preserves 130 or 143 and yields an on-disk
+`INVALID_IDENTITY_CHANGED` / `valid=false` manifest, with either its matching
+terminal line or the explicitly diagnosed frozen-coordinator race above,
+followed by authenticated outer worktree restoration. The
 archived generated report is parent hygiene evidence, not a repository
 deliverable and not a parent test failure.
 

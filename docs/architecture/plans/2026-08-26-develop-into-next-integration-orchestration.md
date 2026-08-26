@@ -317,7 +317,12 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   `20260826T053627Z-p1892866-17619a` proves the coordinator forcibly terminates
   the adapter before its trap completes, so launcher INT/TERM must remain
   `INVALID_IDENTITY_CHANGED` / `valid=false`; outer restoration happens only
-  after finalization and never upgrades that manifest.
+  after finalization and never upgrades that manifest. TERM evidence run
+  `20260826T064242Z-p2230037-e42daf` also records the exact frozen coordinator's
+  competing-finalizer race: the on-disk manifest is invalid/false and cleanup
+  succeeds, but `OPENGGF_TEST_RUN_END` can be absent. Permit that shape only in
+  the interruption safety fixture, record it explicitly, and reject it as
+  parent/candidate evidence exactly like every other missing-marker run.
 
   Do not pin the generated hash: the report contains the date and has
   non-contractual enumeration/locale ordering. Never ignore, delete, restore,
@@ -346,14 +351,15 @@ Surefire/JUnit 5, OpenGGF test-session coordinator, canonical S1/S2/S3K ROMs.
   | child N + authorized normalization | N | `FAILED` | `true` |
   | normalization failure after child 0 | nonzero | `INVALID_IDENTITY_CHANGED` | `false` |
   | normalization failure after child N | N | `INVALID_IDENTITY_CHANGED` | `false` |
-  | launcher INT/TERM, outer recovery after digest | 130/143 | `INVALID_IDENTITY_CHANGED` | `false` |
+  | launcher INT/TERM, outer recovery after digest | 130/143 | on-disk `INVALID_IDENTITY_CHANGED`; terminal marker present or explicitly diagnosed frozen race | `false` |
 
   Require clean exact final bytes and a valid manifest only for authorized
   successful normalization; every unsafe shape remains invalid and emits an
   explicit diagnostic. Verify the archived metadata and generated report are
   session-owned. The forced-kill case must bypass the child trap, exercise
   mandatory outer recovery after coordinator finalization, preserve the invalid
-  manifest, and prove the session is never certifying. Do not add a new
+  manifest, explicitly classify any missing terminal line as non-certifying,
+  and prove the session is never certifying. Do not add a new
   cross-process graceful-signal handshake merely to manufacture `ABORTED`.
 
 - [ ] **Step 5: Run focused real frozen-next proof**
