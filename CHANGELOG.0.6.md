@@ -4,6 +4,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Water palettes now meet the water surface on sprites as well as terrain:**
+  sprite-priority shaders resolve their logical scanline after removing the
+  viewport's letterbox offset, and Sonic 2 no longer moves only the sprite
+  palette boundary eight pixels above its visual water level. Sonic, objects,
+  tiles, and backgrounds now align at dynamic waterlines such as CPZ2.
+
 - **Sonic 2 CNZ slot machines now follow the retail object/event order:** the
   zone-global slot routine runs after `RunObjects`, uses the current native
   V-int count once per level-loop pass, preserves 16-bit reel-position

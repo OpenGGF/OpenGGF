@@ -510,6 +510,13 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     }
 
     @Override
+    public float getWaterlineOffset(int zoneIndex, int actIndex) {
+        // S2's palette split follows the visual water level. The separately
+        // rendered surface strip must not move the sprite palette boundary.
+        return 0.0f;
+    }
+
+    @Override
     public boolean bgWrapsHorizontally() {
         return true;
     }
