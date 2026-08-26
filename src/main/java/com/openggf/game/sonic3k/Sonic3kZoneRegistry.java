@@ -19,18 +19,6 @@ import java.util.List;
  * the citations.
  */
 public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
-    private static final LevelDescriptor UNAVAILABLE_HPZ_ACT_ZERO =
-            new LevelDescriptor() {
-                private IllegalArgumentException unavailable() {
-                    return new IllegalArgumentException(
-                            "canonical HPZ exposes only sanctuary act 1");
-                }
-
-                @Override public int levelIndex() { throw unavailable(); }
-                @Override public int startX() { throw unavailable(); }
-                @Override public int startY() { throw unavailable(); }
-            };
-
     // Zone display names -- indexed by ROM zone ID (0-23). The ROM's own
     // per-zone tables run 0-23 (LevelPtrs, LevelSizes and LevelMusic_Playlist
     // are each 48 entries indexed zone*2+act; see the constructor).
@@ -57,7 +45,7 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
             "GUMBALL",              // 19 (bonus stage)
             "GLOWING SPHERES",      // 20 (bonus stage)
             "SLOT MACHINE",         // 21 (bonus stage)
-            "HIDDEN PALACE",        // 22 canonical HPZ sanctuary
+            "LAVA REEF",            // 22 act 0 LRZ boss, act 1 Hidden Palace
             "DEATH EGG"             // 23 act 0 DEZ boss, act 1 special-stage arena
     };
 
@@ -126,9 +114,9 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
                 List.of(LevelData.S3K_GUMBALL, LevelData.S3K_GUMBALL_2),               // 19 Gumball
                 List.of(LevelData.S3K_GLOWING_SPHERE, LevelData.S3K_GLOWING_SPHERE_2), // 20 Glowing Spheres
                 List.of(LevelData.S3K_SLOT_MACHINE, LevelData.S3K_SLOT_MACHINE_2),     // 21 Slot Machine
-                // Canonical HPZ transitions use act 1 ($1601); its resource
-                // profile resolves the ROM's nonlinear $1701 sanctuary slot.
-                List.of(UNAVAILABLE_HPZ_ACT_ZERO,
+                // Keep the raw ROM's 24x2 zone table intact. Canonical HPZ
+                // act 1 resolves the nonlinear $1701 sanctuary resources.
+                List.of(LevelData.S3K_LRZ_BOSS,
                         LevelData.S3K_HIDDEN_PALACE_SANCTUARY),                         // 22 HPZ
                 List.of(LevelData.S3K_DEZ_BOSS, LevelData.S3K_SPECIAL_STAGE_ARENA)     // 23 DEZ boss / SS arena
         ), ZONE_NAMES);
@@ -149,11 +137,6 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
 
     @Override
     public int getMusicId(int zoneIndex, int actIndex) {
-        if (zoneIndex == com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_HPZ
-                && actIndex != 1) {
-            throw new IllegalArgumentException(
-                    "canonical HPZ exposes only sanctuary act 1");
-        }
         if (zoneIndex < 0 || zoneIndex >= ZONE_MUSIC.length) {
             return -1;
         }

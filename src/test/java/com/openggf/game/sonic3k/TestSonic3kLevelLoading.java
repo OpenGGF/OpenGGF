@@ -308,9 +308,14 @@ class TestSonic3kLevelLoading {
     }
 
     @Test
-    void canonicalHpzActZeroCannotLoad() {
-        assertThrows(IllegalArgumentException.class,
-                () -> levelManager.loadZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 0));
+    void rawZoneTableLrzBossSlotLoads() throws Exception {
+        preparePlayable();
+
+        levelManager.loadZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 0);
+
+        assertEquals(Sonic3kZoneIds.ZONE_HPZ, levelManager.getCurrentZone());
+        assertEquals(0, levelManager.getCurrentAct());
+        assertEquals(Sonic3kZoneIds.ZONE_HPZ, levelManager.getRomZoneId());
     }
 
     static Stream<Arguments> zoneActProvider() {
