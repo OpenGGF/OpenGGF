@@ -24,11 +24,40 @@ class TraceCaptureToolArgsTest {
         TraceCaptureTool.Args a = TraceCaptureTool.Args.parse(
                 new String[]{"--trace", "aiz1", "--scale", "2", "--fps", "30"});
         assertEquals("aiz1", a.trace());
+        assertEquals(320, a.width());
         assertEquals(2, a.scale());
         assertEquals(30, a.fps());
         assertEquals("ffv1", a.codec());            // default from config
         assertNotNull(a.outDir());                  // default from config
         assertTrue(a.showGhosts());                 // ghosts on by default
+    }
+
+    @Test
+    void parsesExplicitCaptureWidthWithoutChangingTraceDefaults() {
+        TraceCaptureTool.Args args = TraceCaptureTool.Args.parse(
+                new String[]{"--trace", "aiz1", "--width", "400", "--scale", "2"});
+
+        assertEquals(400, args.width());
+        assertEquals(TraceCaptureDimensions.resolve(400, 2),
+                TraceCaptureTool.captureDimensions(args));
+    }
+
+    @Test
+    void rejectsUnsupportedCaptureWidthWithTheOptionName() {
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> TraceCaptureTool.Args.parse(
+                        new String[]{"--trace", "aiz1", "--width", "321"}));
+
+        assertTrue(failure.getMessage().contains("--width"), failure.getMessage());
+        assertTrue(failure.getMessage().contains("320"), failure.getMessage());
+    }
+
+    @Test
+    void acceptsSemanticFireTransitionClip() {
+        TraceCaptureTool.Args args = TraceCaptureTool.Args.parse(
+                new String[]{"--trace", "aiz1", "--clip", "aiz-fire-transition"});
+
+        assertEquals("aiz-fire-transition", args.clip());
     }
 
     @Test
@@ -84,21 +113,18 @@ class TraceCaptureToolArgsTest {
 
     @Test
     void postBootFailureClosesSessionAndBootBeforePropagating() {
-        AtomicBoolean sessionClosed = new AtomicBoolean();
         AtomicBoolean bootClosed = new AtomicBoolean();
         RuntimeException primary = new RuntimeException("post-boot failure");
 
         RuntimeException actual = assertThrows(RuntimeException.class, () -> {
             try (TraceCaptureTool.BootOwnership<AutoCloseable> ignored =
                     new TraceCaptureTool.BootOwnership<>(
-                            () -> bootClosed.set(true),
-                            () -> sessionClosed.set(true))) {
+                            () -> bootClosed.set(true))) {
                 throw primary;
             }
         });
 
         assertSame(primary, actual);
-        assertTrue(sessionClosed.get());
         assertTrue(bootClosed.get());
     }
 

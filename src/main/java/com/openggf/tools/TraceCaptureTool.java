@@ -17,7 +17,9 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
@@ -66,7 +68,7 @@ import java.util.List;
 public final class TraceCaptureTool {
 
     private static final int SCREEN_WIDTH = 320;
-    private static final int SCREEN_HEIGHT = 224;
+    private static final int SCREEN_HEIGHT = TraceCaptureDimensions.LOGICAL_HEIGHT;
 
     private static final DateTimeFormatter UTC_STAMP =
             DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
@@ -75,11 +77,11 @@ public final class TraceCaptureTool {
     }
 
     /**
-     * Parsed CLI arguments. Unspecified {@code --scale}, {@code --fps},
+     * Parsed CLI arguments. Unspecified {@code --width}, {@code --scale}, {@code --fps},
      * {@code --codec}, and {@code --out-dir} fall back to the {@code CAPTURE_*}
      * config defaults.
      */
-    public record Args(String trace, Path outDir, int scale, int fps, String codec,
+    public record Args(String trace, Path outDir, int width, int scale, int fps, String codec,
                        boolean showGhosts, int[] verifyFrames,
                        String clip, int tailFrames) {
 
@@ -87,6 +89,7 @@ public final class TraceCaptureTool {
             SonicConfigurationService config = GameServices.configuration();
             String trace = null;
             String outDir = config.getString(SonicConfiguration.CAPTURE_OUTPUT_DIR);
+            int width = SCREEN_WIDTH;
             int scale = config.getInt(SonicConfiguration.CAPTURE_SCALE);
             int fps = config.getInt(SonicConfiguration.CAPTURE_FPS);
             String codec = config.getString(SonicConfiguration.CAPTURE_CODEC);
@@ -100,6 +103,8 @@ public final class TraceCaptureTool {
                 switch (arg) {
                     case "--trace" -> trace = CliArguments.requireValue(argv, ++i, arg);
                     case "--out-dir" -> outDir = CliArguments.requireValue(argv, ++i, arg);
+                    case "--width" -> width = CliArguments.parseInt(
+                            CliArguments.requireValue(argv, ++i, arg));
                     case "--scale" -> scale = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
                     case "--fps" -> fps = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
                     case "--codec" -> codec = CliArguments.requireValue(argv, ++i, arg);
@@ -114,7 +119,8 @@ public final class TraceCaptureTool {
             if (trace == null || trace.isBlank()) {
                 throw new IllegalArgumentException("--trace <id|name|dir> is required");
             }
-            return new Args(trace, Path.of(outDir), scale, fps, codec, showGhosts,
+            TraceCaptureDimensions.validateLogicalWidth(width);
+            return new Args(trace, Path.of(outDir), width, scale, fps, codec, showGhosts,
                     verifyFrames, clip, tailFrames);
         }
 
@@ -127,6 +133,71 @@ public final class TraceCaptureTool {
             return frames;
         }
 
+    }
+
+    static TraceCaptureDimensions captureDimensions(Args args) {
+        return TraceCaptureDimensions.resolve(args.width(), args.scale());
+    }
+
+    static String captureSetupSummary(TraceEntry entry, Args args,
+            TraceCaptureDimensions dimensions, boolean verifyOnly) {
+        return (verifyOnly ? "VERIFY setup: " : "Capture setup: ")
+                + "logical=" + dimensions.logicalWidth() + "x" + dimensions.logicalHeight()
+                + " physical=" + dimensions.physicalWidth() + "x" + dimensions.physicalHeight()
+                + " scale=" + dimensions.scale()
+                + " width-mode=" + dimensions.widthMode()
+                + " support-tier=" + dimensions.supportTier()
+                + " trace=" + entry.dir()
+                + " clip=" + (args.clip() == null ? "none" : args.clip())
+                + " comparison=native_320x224"
+                + (verifyOnly ? " (no video output)" : "");
+    }
+
+    private static void printCaptureSetup(TraceEntry entry, Args args,
+            TraceCaptureDimensions dimensions, boolean verifyOnly) {
+        System.out.println(captureSetupSummary(entry, args, dimensions, verifyOnly));
+    }
+
+    static void serviceHeadlessFastForwardHardware(
+            GameplayModeContext gameplayMode, TraceExecutionPhase phase) {
+        if (phase != TraceExecutionPhase.ADVANCE_ONLY) {
+            return;
+        }
+        gameplayMode.serviceHardwareTimingBoundary(HardwareServiceBoundary.POST_OBJECTS);
+        gameplayMode.serviceHardwareTimingBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
+    }
+
+    static boolean isFireTransitionClipStart(
+            Sonic3kAIZEvents events, boolean previousFireActive) {
+        return !previousFireActive && events != null && events.isFireTransitionActive();
+    }
+
+    static boolean isFireTransitionClipStop(Sonic3kAIZEvents events) {
+        return events != null && events.isPostFireHazeActive();
+    }
+
+    static boolean shouldPresentOuterFrame(TraceReplayDrive.DriveOutcome outcome,
+            TraceExecutionPhase phase) {
+        return outcome.consumedRow()
+                && (phase == TraceExecutionPhase.FULL_LEVEL_FRAME
+                || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD);
+    }
+
+    static void requireCapturedFrames(long captured) {
+        if (captured <= 0) {
+            throw new IllegalStateException(
+                    "capture produced zero rendered frames; refusing final mux");
+        }
+    }
+
+    static Path publishCaptureManifest(Path output, TraceEntry entry,
+            TraceMetadata trace, TraceCaptureDimensions dimensions,
+            String clip, int tailFrames) throws java.io.IOException {
+        if (!Files.isRegularFile(output) || Files.size(output) <= 0) {
+            throw new java.io.IOException("capture output is missing or empty: " + output);
+        }
+        return TraceCaptureManifest.write(output, entry, trace,
+                dimensions, clip, tailFrames);
     }
 
     public static void main(String[] argv) {
@@ -144,11 +215,6 @@ public final class TraceCaptureTool {
             System.exit(1);
         } finally {
             if (boot != null) {
-                try {
-                    SessionManager.closeGameplaySession();
-                } catch (Exception ignored) {
-                    // best-effort teardown
-                }
                 boot.close();
             }
         }
@@ -160,6 +226,7 @@ public final class TraceCaptureTool {
      * it down in {@code finally}.
      */
     private HeadlessGameBoot run(Args args) throws Exception {
+        TraceCaptureDimensions dimensions = captureDimensions(args);
         disableExternalContentForDeterminism();
         // Apply the desync-ghost toggle so the shared LevelRenderer gate
         // (TraceRenderVisibility) honors it during capture. A trace-faithful
@@ -179,6 +246,7 @@ public final class TraceCaptureTool {
 
         // --- resolve trace -------------------------------------------------
         TraceEntry entry = resolveTrace(args.trace());
+        printCaptureSetup(entry, args, dimensions, args.verifyFrames() != null);
         System.out.println("Capturing trace: " + entry.dir()
                 + " (" + entry.gameId() + " zone=" + entry.zone() + " act=" + entry.act() + ")");
 
@@ -192,21 +260,25 @@ public final class TraceCaptureTool {
         // loads the level AND registers the team, so this must precede boot().
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
 
+        TraceCapturePresentationSetup presentation = TraceCapturePresentationSetup.open(
+                GameServices.configuration(), dimensions);
+        try (presentation) {
         // --- boot headless gameplay session -------------------------------
         Path romPath = TraceToolRomLocations.resolve(
                 entry.gameId(), GameServices.configuration(), Path.of(""));
-        HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
-        try (BootOwnership<HeadlessGameBoot> ownership =
-                new BootOwnership<>(
-                        boot, SessionManager::closeGameplaySession)) {
-        GameLoop loop = boot.boot(
-                romPath,
-                entry.zone(),
-                entry.act(),
-                trace.hardwareTimingSchedule().hasRecordedInput()
-                        ? HardwareReadinessAdmissionPolicy.RECORDED
-                        : HardwareReadinessAdmissionPolicy.LIVE);
-
+        HeadlessGameBoot boot;
+        try (AutoCloseable nativeTraceWidth = presentation.pinNativeTraceWidth()) {
+            boot = new HeadlessGameBoot(
+                    dimensions.physicalWidth(), dimensions.physicalHeight(),
+                    dimensions.logicalWidth(), dimensions.logicalHeight());
+            try (BootOwnership<HeadlessGameBoot> ownership = new BootOwnership<>(boot)) {
+            GameLoop loop = boot.boot(
+                    romPath,
+                    entry.zone(),
+                    entry.act(),
+                    trace.hardwareTimingSchedule().hasRecordedInput()
+                            ? HardwareReadinessAdmissionPolicy.RECORDED
+                            : HardwareReadinessAdmissionPolicy.LIVE);
         // --- deterministic trace replay bootstrap -------------------------
         // Mirror AbstractTraceReplayTest steps 4-5: start position + ground
         // snap, then the shared replay bootstrap (timing prelude, native
@@ -254,7 +326,7 @@ public final class TraceCaptureTool {
         // --- capture pipeline ---------------------------------------------
         String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format(UTC_STAMP);
         String label = entry.dir().getFileName().toString();
-        FfmpegEncoder encoder = new FfmpegEncoder(resolveFfmpeg(), args.scale());
+        FfmpegEncoder encoder = new FfmpegEncoder(resolveFfmpeg(), 1);
         // --codec / capture.codec was parsed and then never reached the
         // encoder, so selecting one silently did nothing.
         SonicConfigurationService captureConfig = GameServices.configuration();
@@ -269,7 +341,8 @@ public final class TraceCaptureTool {
                 encoder, BackpressurePolicy.BLOCK, /* queueCapacity */ 8,
                 args.outDir(), label, timestamp);
 
-        GlReadPixelsGrabber grabber = new GlReadPixelsGrabber(SCREEN_WIDTH, SCREEN_HEIGHT);
+        GlReadPixelsGrabber grabber = new GlReadPixelsGrabber(
+                dimensions.physicalWidth(), dimensions.physicalHeight());
         DrainPcmAudioTap audioTap = new DrainPcmAudioTap(GameServices.audio());
         // The offline lease is a non-consuming view of the already-authoritative
         // presentation producer, so both its rate and the container's rate are
@@ -285,7 +358,8 @@ public final class TraceCaptureTool {
         }
         GameServices.audio().beginCaptureMode(sampleRate, frameRate);
         try {
-            recorder.start(SCREEN_WIDTH, SCREEN_HEIGHT, frameRate, sampleRate);
+            recorder.start(dimensions.physicalWidth(), dimensions.physicalHeight(),
+                    frameRate, sampleRate);
         } catch (Throwable failedToOpen) {
             // The recorder never opened, so nothing will stop it and run the
             // finally below: release the lease here or it is leaked onto the
@@ -297,21 +371,35 @@ public final class TraceCaptureTool {
                 new HeadlessOuterAudioFrames(audioTap);
 
         long captured = 0;
+        boolean captureSucceeded = false;
         try {
             captured = args.clip() != null
                     ? driveClip(trace, frameDriver, replayStart, grabber, audioFrames,
-                            recorder, args.clip(), args.tailFrames())
+                            recorder, args.clip(), args.tailFrames(), dimensions, fixture)
                     : driveAndCapture(trace, meta, frameDriver, replayStart,
-                            loop, grabber, audioFrames, recorder);
+                            loop, grabber, audioFrames, recorder, dimensions);
+            requireCapturedFrames(captured);
             if (args.clip() == null) {
                 fixture.closeHardwareTimingReplayRun();
             }
+            captureSucceeded = true;
         } finally {
+            if (args.clip() != null) {
+                // A clip ends before the trace does. Detach the timing
+                // observer before session teardown without inventing
+                // completions for rows beyond the certified semantic window.
+                fixture.abortHardwareTimingReplayRun();
+            }
             try {
-                Path out = recorder.stop();
-                System.out.println("Captured " + captured + " frames -> " + out.toAbsolutePath());
-                if (Files.isRegularFile(out)) {
+                if (captureSucceeded) {
+                    Path out = recorder.stop();
+                    System.out.println("Captured " + captured + " frames -> " + out.toAbsolutePath());
+                    Path manifest = publishCaptureManifest(
+                            out, entry, meta, dimensions, args.clip(), args.tailFrames());
                     System.out.println("Output size: " + Files.size(out) + " bytes");
+                    System.out.println("Capture manifest: " + manifest.toAbsolutePath());
+                } else {
+                    recorder.abort();
                 }
             } finally {
                 try {
@@ -325,6 +413,8 @@ public final class TraceCaptureTool {
         }
         return ownership.transfer();
         }
+        }
+        }
     }
 
     /**
@@ -335,13 +425,10 @@ public final class TraceCaptureTool {
     static final class BootOwnership<T extends AutoCloseable>
             implements AutoCloseable {
         private final T boot;
-        private final Runnable closeSession;
         private boolean transferred;
 
-        BootOwnership(T boot, Runnable closeSession) {
+        BootOwnership(T boot) {
             this.boot = java.util.Objects.requireNonNull(boot, "boot");
-            this.closeSession = java.util.Objects.requireNonNull(
-                    closeSession, "closeSession");
         }
 
         T transfer() {
@@ -354,27 +441,12 @@ public final class TraceCaptureTool {
             if (transferred) {
                 return;
             }
-            Throwable failure = null;
-            try {
-                closeSession.run();
-            } catch (Throwable sessionFailure) {
-                failure = sessionFailure;
-            }
             try {
                 boot.close();
-            } catch (Throwable bootFailure) {
-                if (failure == null) {
-                    failure = bootFailure;
-                } else {
-                    failure.addSuppressed(bootFailure);
-                }
-            }
-            if (failure instanceof Exception exception) {
-                throw exception;
-            }
-            if (failure != null) {
-                throw new IllegalStateException(
-                        "capture teardown failed", failure);
+            } catch (Exception failure) {
+                throw failure;
+            } catch (Throwable failure) {
+                throw new IllegalStateException("capture teardown failed", failure);
             }
         }
     }
@@ -468,7 +540,8 @@ public final class TraceCaptureTool {
                                  GameLoop loop,
                                  GlReadPixelsGrabber grabber,
                                  HeadlessOuterAudioFrames audioFrames,
-                                 CaptureRecorder recorder) throws Exception {
+                                 CaptureRecorder recorder,
+                                 TraceCaptureDimensions dimensions) throws Exception {
         short[] pcmBuffer = new short[16384];
         long frameIndex = 0;
 
@@ -488,13 +561,13 @@ public final class TraceCaptureTool {
                 continue;
             }
 
-            if (outcome.gameplayFrame()
-                    && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+            if (shouldPresentOuterFrame(outcome, phase)) {
                 audioFrames.presentOuterFrame();
-                TraceReplayDrive.renderFrame();
+                TraceReplayDrive.renderFrame(dimensions.logicalWidth());
                 byte[] rgba = grabber.grab();
                 int sampleCount = audioFrames.drainCaptured(pcmBuffer);
-                recorder.submit(new CapturedFrame(rgba, SCREEN_WIDTH, SCREEN_HEIGHT,
+                recorder.submit(new CapturedFrame(rgba, dimensions.physicalWidth(),
+                        dimensions.physicalHeight(),
                         pcmBuffer, sampleCount, frameIndex++));
             }
 
@@ -519,11 +592,15 @@ public final class TraceCaptureTool {
                            TraceReplayBootstrap.ReplayStartState replayStart,
                            GlReadPixelsGrabber grabber,
                            HeadlessOuterAudioFrames audioFrames,
-                           CaptureRecorder recorder, String clipName, int tailFrames)
+                           CaptureRecorder recorder, String clipName, int tailFrames,
+                           TraceCaptureDimensions dimensions,
+                           TraceReplayDrive.DriverFixture fixture)
             throws Exception {
-        if (!"aiz-battleship-to-boss".equals(clipName)) {
+        boolean fireTransitionClip = "aiz-fire-transition".equals(clipName);
+        boolean battleshipClip = "aiz-battleship-to-boss".equals(clipName);
+        if (!fireTransitionClip && !battleshipClip) {
             throw new IllegalArgumentException("Unknown --clip '" + clipName
-                    + "' (supported: aiz-battleship-to-boss)");
+                    + "' (supported: aiz-fire-transition, aiz-battleship-to-boss)");
         }
         // The aiz1_to_hcz trace transitions AIZ1 -> AIZ2 mid-run, and the act load
         // recreates the Sonic3kAIZEvents instance (Sonic3kLevelEventManager:189), so
@@ -531,12 +608,14 @@ public final class TraceCaptureTool {
         // battleship (and its auto-scroll flag) live on the AIZ2 instance.
         if (resolveAizEvents() == null) {
             throw new IllegalStateException(
-                    "--clip aiz-battleship-to-boss requires an S3K AIZ trace");
+                    "--clip " + clipName + " requires a live S3K AIZ event state");
         }
 
         short[] pcmBuffer = new short[16384];
         long frameIndex = 0;          // captured (submitted) frame count
         boolean capturing = false;
+        boolean previousFireActive = false;
+        boolean fireTransitionStartPending = false;
         long fadeBaseline = -1;
         long stopAtFrame = -1;        // captured-frame index at which to stop (after tail)
 
@@ -545,42 +624,58 @@ public final class TraceCaptureTool {
                 ? trace.getFrame(replayStart.seededTraceIndex())
                 : driveTraceIndex > 0 ? trace.getFrame(driveTraceIndex - 1) : null;
 
-        System.out.println("clip aiz-battleship-to-boss: fast-forwarding to battleship start...");
+        System.out.println("clip " + clipName + ": fast-forwarding to semantic start...");
         while (driveTraceIndex < trace.frameCount()) {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
             TraceReplayDrive.DriveOutcome outcome =
-                    TraceReplayDrive.driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+                    TraceReplayDrive.driveOneFrame(trace, frameDriver, replayStart, phase,
+                            driveTraceIndex);
             if (!outcome.consumedRow()) {
                 continue;
             }
 
-            if (outcome.gameplayFrame()
-                    && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+            if (!capturing) {
+                serviceHeadlessFastForwardHardware(
+                        SessionManager.getCurrentGameplayMode(), phase);
+                Sonic3kAIZEvents live = resolveAizEvents();
+                if (fireTransitionClip) {
+                    fireTransitionStartPending = fireTransitionStartPending
+                            || isFireTransitionClipStart(live, previousFireActive);
+                }
+            }
+
+            if (shouldPresentOuterFrame(outcome, phase)) {
                 if (!capturing) {
                     Sonic3kAIZEvents live = resolveAizEvents();
-                    if (live != null && live.isBattleshipAutoScrollActive()) {
+                    boolean start = fireTransitionClip
+                            ? fireTransitionStartPending
+                                    || isFireTransitionClipStart(live, previousFireActive)
+                            : live != null && live.isBattleshipAutoScrollActive();
+                    if (start) {
                         capturing = true;
                         fadeBaseline = GameServices.audio().musicFadeOutCount();
-                        System.out.println("clip: battleship start -> capture begins at trace frame "
-                                + driveFrame.frame());
+                        fireTransitionStartPending = false;
+                        System.out.println("clip: semantic start -> capture begins");
                     }
                 }
                 // Exactly one presentation per outer frame the clip treats as
                 // presented, whether or not the capture window is open.
                 audioFrames.presentOuterFrame();
                 if (capturing) {
-                    TraceReplayDrive.renderFrame();
+                    TraceReplayDrive.renderFrame(dimensions.logicalWidth());
                     byte[] rgba = grabber.grab();
                     int sampleCount = audioFrames.drainCaptured(pcmBuffer);
-                    recorder.submit(new CapturedFrame(rgba, SCREEN_WIDTH, SCREEN_HEIGHT,
+                    recorder.submit(new CapturedFrame(rgba, dimensions.physicalWidth(),
+                            dimensions.physicalHeight(),
                             pcmBuffer, sampleCount, frameIndex++));
-                    if (stopAtFrame < 0
-                            && GameServices.audio().musicFadeOutCount() > fadeBaseline) {
+                    boolean stop = fireTransitionClip
+                            ? isFireTransitionClipStop(resolveAizEvents())
+                            : GameServices.audio().musicFadeOutCount() > fadeBaseline;
+                    if (stopAtFrame < 0 && stop) {
                         stopAtFrame = frameIndex + tailFrames;
-                        System.out.println("clip: boss music fade at trace frame "
-                                + driveFrame.frame() + " -> recording " + tailFrames
+                        System.out.println("clip: semantic stop -> recording " + tailFrames
                                 + " more frame(s)");
                     }
                     if (stopAtFrame >= 0 && frameIndex >= stopAtFrame) {
@@ -594,13 +689,15 @@ public final class TraceCaptureTool {
                 }
             }
 
+            Sonic3kAIZEvents live = resolveAizEvents();
+            previousFireActive = live != null && live.isFireTransitionActive();
             driveTraceIndex++;
             previousDriveFrame = driveFrame;
         }
         if (!capturing) {
-            System.out.println("clip: WARNING battleship start never detected; nothing captured");
+            System.out.println("clip: WARNING semantic start never detected; nothing captured");
         } else if (stopAtFrame < 0) {
-            System.out.println("clip: WARNING boss music fade never detected; captured to end of "
+            System.out.println("clip: WARNING semantic stop never detected; captured to end of "
                     + "trace (" + frameIndex + " frames)");
         }
         return frameIndex;

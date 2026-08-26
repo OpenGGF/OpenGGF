@@ -295,7 +295,7 @@ class TestTraceCaptureUnifiedAudio {
         // presentation hoisted next to driveOneFrame(...) would fire on every
         // simulation step, including the cursor-only rows that never present.
         String capturedFrames = blockAfter(driveAndCapture,
-                "shouldCompareGameplayStateForReplay(phase)) {");
+                "if (shouldPresentOuterFrame(outcome, phase)) {");
         assertEquals(1, count(capturedFrames, "audioFrames.presentOuterFrame()"),
                 "the presentation belongs to the presented-frame branch");
         assertEquals(1, count(capturedFrames, "audioFrames.drainCaptured("),
@@ -307,7 +307,7 @@ class TestTraceCaptureUnifiedAudio {
                 "one presentation per outer frame the clip treats as presented,"
                         + " inside or outside the capture window");
         String presentedFrames = blockAfter(driveClip,
-                "shouldCompareGameplayStateForReplay(phase)) {");
+                "if (shouldPresentOuterFrame(outcome, phase)) {");
         assertEquals(1, count(presentedFrames, "audioFrames.presentOuterFrame()"),
                 "the presentation belongs to the presented-frame branch, not to"
                         + " the per-simulation-step body");

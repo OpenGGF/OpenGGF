@@ -80,6 +80,24 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  */
 public final class HeadlessGameBoot implements AutoCloseable {
 
+    @FunctionalInterface
+    interface BackendFactory {
+        Backend create();
+    }
+
+    interface Backend extends AutoCloseable {
+        void initialize(int width, int height, int logicalWidth, int logicalHeight)
+                throws Exception;
+
+        @Override
+        void close() throws Exception;
+    }
+
+    @FunctionalInterface
+    interface SessionCloser {
+        void close() throws Exception;
+    }
+
     private static final NativeGlLifecycle LWJGL_NATIVE_GL = new NativeGlLifecycle() {
         @Override
         public void initialize(HeadlessGameBoot boot) {
@@ -94,8 +112,12 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     private final int width;
     private final int height;
+    private final int logicalWidth;
+    private final int logicalHeight;
     private final EngineContext engineServices;
     private final NativeGlLifecycle nativeGlLifecycle;
+    private final Backend backend;
+    private final SessionCloser sessionCloser;
 
     private long window = NULL;
 
@@ -104,26 +126,88 @@ public final class HeadlessGameBoot implements AutoCloseable {
     private final float[] matrixBuffer = new float[16];
 
     private Rom rom;
+    private boolean closed;
 
     /**
      * Creates the hidden GLFW window and initialises the GL context /
      * graphics manager at the given framebuffer dimensions.
      */
     public HeadlessGameBoot(int width, int height) {
-        this(width, height, EngineContext.fromLegacySingletonsForBootstrap());
+        this(width, height, width, height,
+                EngineContext.fromLegacySingletonsForBootstrap(), LWJGL_NATIVE_GL,
+                SessionManager::closeGameplaySession);
+    }
+
+    public HeadlessGameBoot(int width, int height, int logicalWidth, int logicalHeight) {
+        this(width, height, logicalWidth, logicalHeight,
+                EngineContext.fromLegacySingletonsForBootstrap(), LWJGL_NATIVE_GL,
+                SessionManager::closeGameplaySession);
     }
 
     public HeadlessGameBoot(int width, int height, EngineContext engineServices) {
-        this(width, height, engineServices, LWJGL_NATIVE_GL);
+        this(width, height, width, height, engineServices, LWJGL_NATIVE_GL,
+                SessionManager::closeGameplaySession);
+    }
+
+    private HeadlessGameBoot(int width, int height, int logicalWidth, int logicalHeight,
+            EngineContext engineServices, NativeGlLifecycle nativeGlLifecycle,
+            SessionCloser sessionCloser) {
+        if (width <= 0 || height <= 0 || logicalWidth <= 0 || logicalHeight <= 0) {
+            throw new IllegalArgumentException("headless display dimensions must be positive");
+        }
+        this.width = width;
+        this.height = height;
+        this.logicalWidth = logicalWidth;
+        this.logicalHeight = logicalHeight;
+        this.engineServices = java.util.Objects.requireNonNull(engineServices, "engineServices");
+        this.nativeGlLifecycle = java.util.Objects.requireNonNull(nativeGlLifecycle,
+                "nativeGlLifecycle");
+        this.backend = null;
+        this.sessionCloser = java.util.Objects.requireNonNull(sessionCloser, "sessionCloser");
+        initializeNative();
     }
 
     HeadlessGameBoot(int width, int height, EngineContext engineServices,
                      NativeGlLifecycle nativeGlLifecycle) {
+        this(width, height, width, height, engineServices, nativeGlLifecycle,
+                SessionManager::closeGameplaySession);
+    }
+
+    HeadlessGameBoot(int width, int height, int logicalWidth, int logicalHeight,
+            BackendFactory backendFactory) {
+        this(width, height, logicalWidth, logicalHeight, backendFactory,
+                SessionManager::closeGameplaySession);
+    }
+
+    HeadlessGameBoot(int width, int height, int logicalWidth, int logicalHeight,
+            BackendFactory backendFactory, SessionCloser sessionCloser) {
+        if (width <= 0 || height <= 0 || logicalWidth <= 0 || logicalHeight <= 0) {
+            throw new IllegalArgumentException("headless display dimensions must be positive");
+        }
         this.width = width;
         this.height = height;
-        this.engineServices = java.util.Objects.requireNonNull(engineServices, "engineServices");
-        this.nativeGlLifecycle = java.util.Objects.requireNonNull(
-                nativeGlLifecycle, "nativeGlLifecycle");
+        this.logicalWidth = logicalWidth;
+        this.logicalHeight = logicalHeight;
+        this.engineServices = null;
+        this.nativeGlLifecycle = null;
+        this.backend = java.util.Objects.requireNonNull(backendFactory, "backendFactory").create();
+        java.util.Objects.requireNonNull(this.backend, "backendFactory.create()");
+        this.sessionCloser = java.util.Objects.requireNonNull(sessionCloser, "sessionCloser");
+        try {
+            backend.initialize(width, height, logicalWidth, logicalHeight);
+        } catch (Throwable initializationFailure) {
+            try {
+                backend.close();
+            } catch (Throwable cleanupFailure) {
+                initializationFailure.addSuppressed(cleanupFailure);
+            }
+            if (initializationFailure instanceof Error error) throw error;
+            if (initializationFailure instanceof RuntimeException exception) throw exception;
+            throw new IllegalStateException("headless setup failed", initializationFailure);
+        }
+    }
+
+    private void initializeNative() {
         try {
             nativeGlLifecycle.initialize(this);
         } catch (RuntimeException | Error initializationFailure) {
@@ -174,10 +258,12 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
 
         glViewport(0, 0, width, height);
+        graphicsManager.setProjectionWidth(logicalWidth);
+        graphicsManager.applyResolvedDisplayWidth(logicalWidth);
 
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        projectionMatrix.identity().ortho2D(0, width, 0, height);
+        projectionMatrix.identity().ortho2D(0, logicalWidth, 0, logicalHeight);
         projectionMatrix.get(matrixBuffer);
         glLoadMatrixf(matrixBuffer);
 
@@ -403,20 +489,42 @@ public final class HeadlessGameBoot implements AutoCloseable {
             int act,
             HardwareReadinessAdmissionPolicy admissionPolicy)
             throws IOException {
+        Throwable failure = null;
         try {
-            SessionManager.closeGameplaySession();
-        } catch (Exception ignored) {
-            // best-effort teardown; boot() below re-opens a fresh session
+            sessionCloser.close();
+        } catch (Throwable sessionFailure) {
+            failure = sessionFailure;
         }
         if (rom != null) {
             try {
                 rom.close();
-            } catch (Exception ignored) {
-                // best-effort teardown
+                rom = null;
+            } catch (Throwable romFailure) {
+                failure = combine(failure, romFailure);
             }
-            rom = null;
+        }
+        if (failure != null) {
+            rethrowCloseFailure(failure);
         }
         return boot(romPath, zone, act, admissionPolicy);
+    }
+
+    private static Throwable combine(Throwable first, Throwable later) {
+        if (first == null) {
+            return later;
+        }
+        first.addSuppressed(later);
+        return first;
+    }
+
+    private static void rethrowCloseFailure(Throwable failure) {
+        if (failure instanceof Error error) {
+            throw error;
+        }
+        if (failure instanceof RuntimeException exception) {
+            throw exception;
+        }
+        throw new IllegalStateException("headless teardown failed", failure);
     }
 
     /**
@@ -437,15 +545,46 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     @Override
     public void close() {
+        if (closed) {
+            return;
+        }
+        Throwable failure = null;
+        try {
+            sessionCloser.close();
+        } catch (Throwable sessionFailure) {
+            failure = sessionFailure;
+        }
+        if (failure != null) {
+            rethrowCloseFailure(failure);
+        }
         if (rom != null) {
             try {
                 rom.close();
-            } catch (Exception ignored) {
-                // best-effort teardown
+                rom = null;
+            } catch (Throwable romFailure) {
+                failure = romFailure;
             }
-            rom = null;
         }
-        nativeGlLifecycle.close(this);
+        if (failure != null) {
+            rethrowCloseFailure(failure);
+        }
+        if (backend != null) {
+            try {
+                backend.close();
+            } catch (Throwable backendFailure) {
+                failure = combine(failure, backendFailure);
+            }
+        } else {
+            try {
+                nativeGlLifecycle.close(this);
+            } catch (Throwable nativeFailure) {
+                failure = combine(failure, nativeFailure);
+            }
+        }
+        if (failure != null) {
+            rethrowCloseFailure(failure);
+        }
+        closed = true;
     }
 
     private void closeNativeGl() {

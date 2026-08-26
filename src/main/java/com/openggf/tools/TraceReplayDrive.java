@@ -51,10 +51,7 @@ final class TraceReplayDrive {
         static final DriveOutcome CONSUMED_GAMEPLAY = new DriveOutcome(true, true);
     }
 
-    /**
-     * Drives one trace frame using the same phase rules as the test S3K loop.
-     * Reports whether the row was consumed and whether gameplay actually ran.
-     */
+    /** Drives one trace frame using the same phase rules as the test S3K loop. */
     static DriveOutcome driveOneFrame(TraceData trace, RecordingFrameDriver frameDriver,
                                       TraceReplayBootstrap.ReplayStartState replayStart,
                                       TraceExecutionPhase phase, int driveTraceIndex) {
@@ -128,12 +125,22 @@ final class TraceReplayDrive {
      * sections visibly failed to add up to its frames.
      */
     static void renderFrame() {
+        renderFrame(GameServices.camera().getWidth());
+    }
+
+    /** Renders with a capture presentation width while replay camera state stays native. */
+    static void renderFrame(int presentationWidth) {
+        if (presentationWidth <= 0) {
+            throw new IllegalArgumentException("presentation width must be positive");
+        }
         LevelManager levelManager = GameServices.level();
         GraphicsManager graphicsManager = GameServices.graphics();
         levelManager.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         levelManager.drawWithSpritePriority(GameServices.sprites());
-        graphicsManager.flush();
+        var camera = GameServices.camera();
+        graphicsManager.flushWithCamera(camera.getXWithShake(), camera.getYWithShake(),
+                (short) presentationWidth, camera.getHeight());
         PerformanceProfiler profiler = GameServices.profiler();
         profiler.beginSection("render.gpu_wait");
         glFinish();
