@@ -7,6 +7,7 @@ import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
@@ -29,7 +30,23 @@ import java.util.Optional;
  */
 public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     private final Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
+    private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
     private boolean resultsPlcSubmitted;
+
+    public Sonic1SpecialStageProvider() {
+        manager.setSpecialStageViewport(viewport);
+    }
+
+    @Override
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.viewport = Objects.requireNonNull(viewport, "viewport");
+        manager.setSpecialStageViewport(viewport);
+    }
+
+    @Override
+    public SpecialStageViewport getSpecialStageViewport() {
+        return viewport;
+    }
 
     @Override
     public SpecialStageDebugCapabilities debugCapabilities() {

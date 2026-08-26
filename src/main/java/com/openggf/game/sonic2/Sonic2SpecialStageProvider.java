@@ -10,6 +10,7 @@ import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
@@ -37,7 +38,11 @@ import java.util.Optional;
  */
 public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     private final Sonic2SpecialStageManager manager;
+    private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
     private boolean resultsPlcSubmitted;
+    private int bonusCountdown1;
+    private int bonusCountdown2;
+    private boolean ringsLatched;
 
     @Override
     public SpecialStageDebugCapabilities debugCapabilities() {
@@ -50,6 +55,18 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     public Sonic2SpecialStageProvider(Sonic2SpecialStageManager manager) {
         this.manager = manager;
+        this.manager.setSpecialStageViewport(viewport);
+    }
+
+    @Override
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.viewport = Objects.requireNonNull(viewport, "viewport");
+        manager.setSpecialStageViewport(viewport);
+    }
+
+    @Override
+    public SpecialStageViewport getSpecialStageViewport() {
+        return viewport;
     }
 
     @Override
@@ -126,6 +143,11 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void resetForResults() {
+        bonusCountdown1 = manager.getRingsCollected(
+                com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayer.PlayerType.SONIC);
+        bonusCountdown2 = manager.getRingsCollected(
+                com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayer.PlayerType.TAILS);
+        ringsLatched = true;
         reset();
         resultsPlcSubmitted = false;
         onEnterResults();
@@ -267,9 +289,11 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
         }
         DefaultObjectServices services = new DefaultObjectServices(
                 gameplayMode, EngineServices.current());
+        int countdown1 = ringsLatched ? bonusCountdown1 : ringsCollected;
+        int countdown2 = ringsLatched ? bonusCountdown2 : 0;
         return ResultsScreen.withBeforeUpdate(ObjectConstructionContext.construct(services,
                 () -> new SpecialStageResultsScreenObjectInstance(
-                        ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services)),
+                        countdown1, countdown2, gotEmerald, stageIndex, totalEmeraldCount, services)),
                 this::onEnterResults);
     }
 

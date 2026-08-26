@@ -3445,16 +3445,19 @@ public class Engine {
 		boolean renderedDebugRenderer = false;
 		if (!userRecordingSceneSuppressed && getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
 			SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
+			SpecialStageViewport specialStageViewport = applySpecialStageViewport(ssProvider);
 			if (ssProvider.isAlignmentTestMode()) {
 				if (postFadeRecorder != null) {
 					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
 				}
-				ssProvider.renderAlignmentOverlay(windowWidth, windowHeight);
+				ssProvider.renderAlignmentOverlay(
+						specialStageViewport.logicalWidth(), specialStageViewport.logicalHeight());
 			} else if (ssProvider.isLagCompensationDisplayEnabled()) {
 				if (postFadeRecorder != null) {
 					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
 				}
-				ssProvider.renderLagCompensationOverlay(windowWidth, windowHeight);
+				ssProvider.renderLagCompensationOverlay(
+						specialStageViewport.logicalWidth(), specialStageViewport.logicalHeight());
 			}
 		} else if (!userRecordingSceneSuppressed && (debugViewEnabled || playbackHud)) {
 			getDebugRenderer().updateViewport(viewportWidth, viewportHeight);
@@ -3809,6 +3812,7 @@ public class Engine {
 
 	private void drawSpecialStage() {
 		SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
+		applySpecialStageViewport(ssProvider);
 		if (ssProvider.isSpriteDebugMode()) {
 			SpecialStageDebugProvider debugProvider = ssProvider.getDebugProvider();
 			if (debugProvider != null) {
@@ -3826,6 +3830,7 @@ public class Engine {
 		if (resultsScreen == null) {
 			return;
 		}
+		resultsScreen.setViewportWidth((int) projectionWidth);
 		camera.setX((short) 0);
 		camera.setY((short) 0);
 		applyViewportWidth(resultsScreen, (int) projectionWidth);
@@ -3842,6 +3847,12 @@ public class Engine {
 		}
 
 		graphicsManager.flushScreenSpace();
+	}
+
+	private SpecialStageViewport applySpecialStageViewport(SpecialStageProvider provider) {
+		SpecialStageViewport viewport = SpecialStageViewport.fromLogicalWidth((int) projectionWidth);
+		provider.setSpecialStageViewport(viewport);
+		return viewport;
 	}
 
 	private void drawTitleScreen() {

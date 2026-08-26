@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static com.openggf.game.sonic1.constants.Sonic1Constants.ARTTILE_RING;
@@ -91,6 +92,27 @@ public class Sonic1SpecialStageRendererTest {
         verify(recordingRenderer, times(1)).endTilePass();
         assertEquals(0, ordinaryTail.executions);
         assertEquals(1, ordinaryTail.discards);
+    }
+
+    @Test
+    void failedDeferredEndRetainsTilePassOwnershipForOneCleanupRetry() {
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.setGlInitialized(true);
+        Sonic1SpecialStageManager.BackgroundCommandPool pool =
+                new Sonic1SpecialStageManager.BackgroundCommandPool();
+        Sonic1SpecialStageBackgroundRenderer recordingRenderer =
+                mock(Sonic1SpecialStageBackgroundRenderer.class);
+        RuntimeException failure = new IllegalStateException("end once");
+        doThrow(failure).doNothing().when(recordingRenderer).endTilePass();
+
+        Sonic1SpecialStageManager.BackgroundCommand begin = pool.obtainBegin(recordingRenderer);
+        begin.execute(0, 0, 320, 224);
+        Sonic1SpecialStageManager.BackgroundCommand end = pool.obtainEnd(recordingRenderer);
+
+        assertThrows(IllegalStateException.class, () -> end.execute(0, 0, 320, 224));
+        end.unwindAfterFailure(0, 0, 320, 224);
+
+        verify(recordingRenderer, times(2)).endTilePass();
     }
 
     @Test

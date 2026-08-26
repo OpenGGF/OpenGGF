@@ -144,6 +144,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     // Input data
     private final int ringsCollected;
+    private final int ringsCollectedP2;
     private final boolean gotEmerald;
     private final int stageIndex;
     private final int totalEmeraldCount;
@@ -151,6 +152,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     // Bonus values
     private int displayedRingCount;
+    private int displayedRingCountP2;
     private int emeraldBonus;
     private int totalBonus;
 
@@ -192,7 +194,14 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     public SpecialStageResultsScreenObjectInstance(int ringsCollected, boolean gotEmerald,
                                                     int stageIndex, int totalEmeraldCount,
                                                     ObjectServices services) {
+        this(ringsCollected, 0, gotEmerald, stageIndex, totalEmeraldCount, services);
+    }
+
+    public SpecialStageResultsScreenObjectInstance(int ringsCollected, int ringsCollectedP2,
+                                                    boolean gotEmerald, int stageIndex,
+                                                    int totalEmeraldCount, ObjectServices services) {
         this.ringsCollected = ringsCollected;
+        this.ringsCollectedP2 = ringsCollectedP2;
         this.gotEmerald = gotEmerald;
         this.stageIndex = stageIndex;
         this.totalEmeraldCount = totalEmeraldCount;
@@ -559,6 +568,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private void calculateBonuses() {
         // Display actual ring count (score tally will multiply by 10 when adding to score)
         displayedRingCount = ringsCollected;
+        displayedRingCountP2 = ringsCollectedP2;
 
         // Emerald bonus: 1000 if collected an emerald
         emeraldBonus = gotEmerald ? Sonic2SpecialStageConstants.RESULTS_EMERALD_BONUS : 0;
@@ -682,8 +692,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     // ── State machine (inlined from AbstractResultsScreen) ─────────────
 
     private void updateSlideIn() {
-        slideProgress = Math.min(stateTimer, Sonic2SpecialStageConstants.RESULTS_SLIDE_DURATION);
-        if (stateTimer >= Sonic2SpecialStageConstants.RESULTS_SLIDE_DURATION) {
+        if (stateTimer >= Sonic2SpecialStageConstants.RESULTS_TITLE_ARRIVAL_FRAMES) {
             state = STATE_PRE_TALLY_DELAY;
             stateTimer = 0;
         }
@@ -705,6 +714,12 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         // This matches original game behavior: display shows ring count, score gets 10 pts per ring
         if (displayedRingCount > 0) {
             displayedRingCount--;
+            totalIncrement += Sonic2SpecialStageConstants.RESULTS_RING_MULTIPLIER;
+            anyRemaining = true;
+        }
+
+        if (displayedRingCountP2 > 0) {
+            displayedRingCountP2--;
             totalIncrement += Sonic2SpecialStageConstants.RESULTS_RING_MULTIPLIER;
             anyRemaining = true;
         }
@@ -765,6 +780,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         }
         stateTimer++;
         totalFrames++;
+        slideProgress = Math.min(totalFrames, Sonic2SpecialStageConstants.RESULTS_SLIDE_DURATION);
 
         if (state == STATE_SUPER_SONIC_DISPLAY) {
             updateSuperSonicMessages();
@@ -1294,6 +1310,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     // Getters for testing
     public int getDisplayedRingCount() { return displayedRingCount; }
+    public int getDisplayedRingCountP2() { return displayedRingCountP2; }
     public int getEmeraldBonus() { return emeraldBonus; }
     public int getTotalBonus() { return totalBonus; }
     public boolean didGetEmerald() { return gotEmerald; }

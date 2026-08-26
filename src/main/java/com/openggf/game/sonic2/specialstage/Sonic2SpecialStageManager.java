@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.specialstage;
 
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.GameServices;
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 
@@ -120,6 +121,7 @@ public class Sonic2SpecialStageManager {
 
     private Sonic2SpecialStageRenderer renderer;
     private SpecialStageBackgroundRenderer bgRenderer;
+    private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
     private long backgroundStageGeneration;
     private int frameCounter = 0;
     /** Last executed logic/render phase; Vint_Lag intentionally leaves it latched. */
@@ -947,12 +949,14 @@ public class Sonic2SpecialStageManager {
     private void setupRenderer() throws IOException {
         GraphicsManager graphicsManager = graphicsManager();
         renderer = new Sonic2SpecialStageRenderer(graphicsManager);
+        renderer.setSpecialStageViewport(specialStageViewport);
         renderer.beginStaticBackgroundStage(backgroundStageGeneration);
         renderer.onRenderContextGenerationChanged(graphicsManager.getPatternAtlas());
         // Pattern bases are set in setupPatterns() after they have valid values
 
         // Initialize shader-based background renderer
         bgRenderer = new SpecialStageBackgroundRenderer(graphicsManager);
+        bgRenderer.setSpecialStageViewport(specialStageViewport);
         bgRenderer.init();
         LOGGER.fine("Special Stage background renderer initialized with shader");
 
@@ -2421,6 +2425,16 @@ public class Sonic2SpecialStageManager {
         }
     }
 
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.specialStageViewport = java.util.Objects.requireNonNull(viewport, "viewport");
+        if (renderer != null) renderer.setSpecialStageViewport(viewport);
+        if (bgRenderer != null) bgRenderer.setSpecialStageViewport(viewport);
+    }
+
+    public SpecialStageViewport getSpecialStageViewport() {
+        return specialStageViewport;
+    }
+
     private void drawAlignmentTest() {
         GraphicsManager graphicsManager = graphicsManager();
         boolean renderPlaneB = planeDebugMode.renderPlaneB();
@@ -2544,8 +2558,10 @@ public class Sonic2SpecialStageManager {
 
         @Override
         public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            boolean completed = false;
             try {
                 if (renderer == null) {
+                    completed = true;
                     return;
                 }
                 switch (kind) {
@@ -2556,17 +2572,18 @@ public class Sonic2SpecialStageManager {
                     case BEGIN -> {
                         renderer.beginTilePass(H32_HEIGHT);
                         owner.armTilePass(renderer);
+                        completed = true;
                     }
                     case END -> {
-                        try {
-                            renderer.endTilePass();
-                        } finally {
-                            owner.disarmTilePass(renderer);
-                        }
+                        renderer.endTilePass();
+                        owner.disarmTilePass(renderer);
+                        completed = true;
                     }
                 }
             } finally {
-                discard();
+                if (completed || kind == Kind.SHADER) {
+                    discard();
+                }
             }
         }
 
@@ -2923,10 +2940,19 @@ public class Sonic2SpecialStageManager {
         flipDiagnosticDone = false;
         clearDiagnosticTimingState();
 
-        // Shader-based background renderer cleanup
-        if (bgRenderer != null) {
-            bgRenderer.cleanup();
-            bgRenderer = null;
+        // Shader-based background renderer cleanup retains failed ownership for
+        // the next reset attempt; deferred GL teardown must be retryable.
+        Throwable cleanupFailure = null;
+        SpecialStageBackgroundRenderer background = bgRenderer;
+        if (background != null) {
+            try {
+                background.cleanup();
+            } catch (RuntimeException | Error failure) {
+                cleanupFailure = failure;
+            }
+            if (!background.hasCleanupPendingOwnership()) {
+                bgRenderer = null;
+            }
         }
 
         // Skydome scroll state
@@ -2937,6 +2963,8 @@ public class Sonic2SpecialStageManager {
         drawingIndex = 0;
         lastAnimFrame = 0;
         planeDebugMode = PlaneDebugMode.BOTH;
+        if (cleanupFailure instanceof RuntimeException runtime) throw runtime;
+        if (cleanupFailure instanceof Error error) throw error;
     }
 
     public void cyclePlaneDebugMode() {
@@ -3334,6 +3362,15 @@ public class Sonic2SpecialStageManager {
      */
     public int getRingsCollected() {
         return objectManager != null ? objectManager.getRingsCollected() : 0;
+    }
+
+    public int getRingsCollected(Sonic2SpecialStagePlayer.PlayerType playerType) {
+        for (Sonic2SpecialStagePlayer player : players) {
+            if (player.getPlayerType() == playerType) {
+                return player.getRings();
+            }
+        }
+        return 0;
     }
 
     /**

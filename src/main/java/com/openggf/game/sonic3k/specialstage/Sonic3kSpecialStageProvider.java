@@ -10,6 +10,7 @@ import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 
@@ -26,6 +27,7 @@ import java.util.Optional;
  */
 public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
     private final Sonic3kSpecialStageManager manager;
+    private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
 
     public Sonic3kSpecialStageProvider() {
         this(new Sonic3kSpecialStageManager());
@@ -33,6 +35,18 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
 
     public Sonic3kSpecialStageProvider(Sonic3kSpecialStageManager manager) {
         this.manager = manager;
+        this.manager.setSpecialStageViewport(viewport);
+    }
+
+    @Override
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.viewport = java.util.Objects.requireNonNull(viewport, "viewport");
+        manager.setSpecialStageViewport(viewport);
+    }
+
+    @Override
+    public SpecialStageViewport getSpecialStageViewport() {
+        return viewport;
     }
 
     @Override

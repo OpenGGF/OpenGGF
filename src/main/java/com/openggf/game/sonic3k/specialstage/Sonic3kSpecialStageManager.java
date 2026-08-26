@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
@@ -16,6 +17,7 @@ import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import static com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageConstants.*;
@@ -191,6 +193,7 @@ public class Sonic3kSpecialStageManager {
 
     // Debug state
     private boolean spriteDebugMode;
+    private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
 
     public Sonic3kSpecialStageManager() {}
 
@@ -243,6 +246,7 @@ public class Sonic3kSpecialStageManager {
         if (renderer == null) {
             renderer = new Sonic3kSpecialStageRenderer(GameServices.graphics());
         }
+        renderer.setSpecialStageViewport(specialStageViewport);
         renderer.resetStageGeometryCache();
         palette = new Sonic3kSpecialStagePalette();
 
@@ -753,6 +757,18 @@ public class Sonic3kSpecialStageManager {
         if (renderer != null) {
             renderer.render(this);
         }
+    }
+
+    /** Supplies presentation geometry; gameplay remains in native coordinates. */
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.specialStageViewport = Objects.requireNonNull(viewport, "viewport");
+        if (renderer != null) {
+            renderer.setSpecialStageViewport(viewport);
+        }
+    }
+
+    public SpecialStageViewport getSpecialStageViewport() {
+        return specialStageViewport;
     }
 
     /**

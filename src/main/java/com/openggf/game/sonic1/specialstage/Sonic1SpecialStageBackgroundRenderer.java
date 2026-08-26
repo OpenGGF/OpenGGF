@@ -6,10 +6,14 @@ import com.openggf.graphics.HScrollBuffer;
 import com.openggf.graphics.ParallaxShaderProgram;
 import com.openggf.graphics.QuadRenderer;
 import com.openggf.level.PatternDesc;
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.util.FboHelper;
 
 import java.io.IOException;
 import java.util.logging.Logger;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Objects;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
@@ -82,9 +86,15 @@ public class Sonic1SpecialStageBackgroundRenderer {
     private float backdropB;
     private boolean fillTransparentWithBackdrop;
     private final GraphicsManager graphicsManager;
+    private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
+    private final Deque<TilePassState> tilePassStates = new ArrayDeque<>();
 
     public Sonic1SpecialStageBackgroundRenderer(GraphicsManager graphicsManager) {
         this.graphicsManager = java.util.Objects.requireNonNull(graphicsManager, "graphicsManager");
+    }
+
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.specialStageViewport = Objects.requireNonNull(viewport, "viewport");
     }
 
     /**
@@ -158,10 +168,7 @@ public class Sonic1SpecialStageBackgroundRenderer {
      * Call BEFORE creating the pattern batch.
      */
     public void beginFBOProjection() {
-        Engine engine = graphicsManager.getEngine();
-        if (engine != null) {
-            engine.beginFBOProjection(FBO_WIDTH, FBO_HEIGHT);
-        }
+        graphicsManager.setProjectionMatrixBuffer(fboProjectionBuffer());
     }
 
     /**
@@ -169,10 +176,7 @@ public class Sonic1SpecialStageBackgroundRenderer {
      * Call AFTER flushing the pattern batch.
      */
     public void endFBOProjection() {
-        Engine engine = graphicsManager.getEngine();
-        if (engine != null) {
-            engine.endFBOProjection();
-        }
+        graphicsManager.setProjectionMatrixBuffer(null);
     }
 
     /**
@@ -183,18 +187,31 @@ public class Sonic1SpecialStageBackgroundRenderer {
     public void beginTilePass(int displayHeight) {
         if (!initialized) return;
 
-        glGetIntegerv(GL_VIEWPORT, savedViewport);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-        glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
-
-        Engine engine = graphicsManager.getEngine();
-        if (engine != null) {
-            engine.beginFBOProjection(FBO_WIDTH, FBO_HEIGHT);
+        int[] viewport = new int[4];
+        int[] scissor = new int[4];
+        float[] clearColor = new float[4];
+        glGetIntegerv(GL_VIEWPORT, viewport);
+        glGetIntegerv(GL_SCISSOR_BOX, scissor);
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
+        TilePassState state = new TilePassState(
+                glGetInteger(GL_FRAMEBUFFER_BINDING), viewport, scissor, clearColor,
+                glIsEnabled(GL_SCISSOR_TEST), glIsEnabled(GL_BLEND),
+                glGetInteger(GL_BLEND_SRC_RGB), glGetInteger(GL_BLEND_DST_RGB),
+                glGetInteger(GL_BLEND_SRC_ALPHA), glGetInteger(GL_BLEND_DST_ALPHA),
+                glGetInteger(GL_BLEND_EQUATION_RGB), glGetInteger(GL_BLEND_EQUATION_ALPHA),
+                copyProjectionBuffer());
+        tilePassStates.push(state);
+        try {
+            graphicsManager.setProjectionMatrixBuffer(fboProjectionBuffer());
+            glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+            glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
+            glDisable(GL_SCISSOR_TEST);
+            glClearColor(0, 0, 0, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        } catch (RuntimeException | Error failure) {
+            Throwable cleanupFailure = finishTilePassState(state, failure);
+            throwFailure(cleanupFailure);
         }
-
-        glClearColor(0, 0, 0, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     /**
@@ -243,16 +260,82 @@ public class Sonic1SpecialStageBackgroundRenderer {
      * End the tile rendering pass - unbind FBO and restore viewport.
      */
     public void endTilePass() {
-        if (!initialized) return;
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        Engine engine = graphicsManager.getEngine();
-        if (engine != null) {
-            engine.endFBOProjection();
+        if (tilePassStates.isEmpty()) return;
+        TilePassState state = tilePassStates.peek();
+        Throwable failure = restoreTilePassState(state, null);
+        if (failure == null) {
+            tilePassStates.pop();
         }
+        throwFailure(failure);
+    }
 
-        FboHelper.restoreViewport(savedViewport);
+    private float[] fboProjectionBuffer() {
+        float[] buffer = new float[16];
+        new org.joml.Matrix4f().ortho2D(0, FBO_WIDTH, 0, FBO_HEIGHT).get(buffer);
+        return buffer;
+    }
+
+    private float[] copyProjectionBuffer() {
+        float[] current = graphicsManager.getProjectionMatrixBuffer();
+        return current == null ? null : current.clone();
+    }
+
+    private Throwable finishTilePassState(TilePassState state, Throwable failure) {
+        failure = restoreTilePassState(state, failure);
+        if (failure == null && tilePassStates.peek() == state) {
+            tilePassStates.pop();
+        }
+        return failure;
+    }
+
+    private Throwable restoreTilePassState(TilePassState state, Throwable failure) {
+        failure = attempt(failure, () -> glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer()));
+        failure = attempt(failure, () -> glViewport(state.viewport()[0], state.viewport()[1],
+                state.viewport()[2], state.viewport()[3]));
+        failure = attempt(failure, () -> glScissor(state.scissor()[0], state.scissor()[1],
+                state.scissor()[2], state.scissor()[3]));
+        failure = attempt(failure, () -> {
+            if (state.scissorEnabled()) glEnable(GL_SCISSOR_TEST);
+            else glDisable(GL_SCISSOR_TEST);
+        });
+        failure = attempt(failure, () -> glBlendEquationSeparate(
+                state.blendEquationRgb(), state.blendEquationAlpha()));
+        failure = attempt(failure, () -> glBlendFuncSeparate(state.blendSrcRgb(), state.blendDstRgb(),
+                state.blendSrcAlpha(), state.blendDstAlpha()));
+        failure = attempt(failure, () -> {
+            if (state.blendEnabled()) glEnable(GL_BLEND);
+            else glDisable(GL_BLEND);
+        });
+        failure = attempt(failure, () -> glClearColor(state.clearColor()[0], state.clearColor()[1],
+                state.clearColor()[2], state.clearColor()[3]));
+        if (failure == null) {
+            graphicsManager.setProjectionMatrixBuffer(state.projectionBuffer());
+        }
+        return failure;
+    }
+
+    private static Throwable attempt(Throwable failure, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException | Error nextFailure) {
+            if (failure == null) {
+                failure = nextFailure;
+            } else {
+                failure.addSuppressed(nextFailure);
+            }
+        }
+        return failure;
+    }
+
+    private static void throwFailure(Throwable failure) {
+        if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+        if (failure instanceof Error errorFailure) throw errorFailure;
+    }
+
+    private record TilePassState(int framebuffer, int[] viewport, int[] scissor, float[] clearColor,
+            boolean scissorEnabled, boolean blendEnabled,
+            int blendSrcRgb, int blendDstRgb, int blendSrcAlpha, int blendDstAlpha,
+            int blendEquationRgb, int blendEquationAlpha, float[] projectionBuffer) {
     }
 
     /**
@@ -263,59 +346,136 @@ public class Sonic1SpecialStageBackgroundRenderer {
     public void renderWithShader(float vScroll) {
         if (!initialized) return;
 
-        hScrollBuffer.upload(hScrollData);
+        ShaderState prior = ShaderState.capture();
+        boolean hScrollBound = false;
+        boolean shaderInUse = false;
+        Throwable primaryFailure = null;
+        try {
+            hScrollBuffer.upload(hScrollData);
 
-        // Bind 1D sampler texture before shader use; macOS may validate samplers
-        // at program-use time.
-        hScrollBuffer.bind(1);
+            // Bind 1D sampler texture before shader use; macOS may validate samplers
+            // at program-use time.
+            hScrollBuffer.bind(1);
+            hScrollBound = true;
 
-        shader.use();
-        shader.cacheUniformLocations();
+            shader.use();
+            shaderInUse = true;
+            shader.cacheUniformLocations();
 
-        shader.setBackgroundTexture(0);
-        shader.setHScrollTexture(1);
+            shader.setBackgroundTexture(0);
+            shader.setHScrollTexture(1);
 
-        glGetIntegerv(GL_VIEWPORT, shaderViewport);
-        int fullViewportX = shaderViewport[0];
-        int fullViewportY = shaderViewport[1];
-        int fullViewportWidth = shaderViewport[2];
-        int fullViewportHeight = shaderViewport[3];
+            int fullViewportX = prior.viewport()[0];
+            int fullViewportY = prior.viewport()[1];
+            int fullViewportWidth = prior.viewport()[2];
+            int fullViewportHeight = prior.viewport()[3];
+            int logicalWidth = Math.max(SpecialStageViewport.NATIVE_WIDTH,
+                    specialStageViewport.logicalWidth());
+            int outerPhysicalX = Math.round(
+                    specialStageViewport.outerOriginX() * fullViewportWidth / (float) logicalWidth);
+            int outerPhysicalWidth = Math.round(
+                    SpecialStageViewport.NATIVE_WIDTH * fullViewportWidth / (float) logicalWidth);
 
-        glViewport(fullViewportX, fullViewportY, fullViewportWidth, fullViewportHeight);
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(fullViewportX + outerPhysicalX, fullViewportY,
+                    outerPhysicalWidth, fullViewportHeight);
+            shader.setScreenDimensions((float) outerPhysicalWidth, (float) fullViewportHeight);
+            shader.setActiveDisplayWidth((float) SCREEN_WIDTH);
+            shader.setBGTextureDimensions(FBO_WIDTH, FBO_HEIGHT);
+            shader.setVScrollBG(vScroll);
+            shader.setViewportOffset((float) (fullViewportX + outerPhysicalX), (float) fullViewportY);
+            shader.setBackdropColor(backdropR, backdropG, backdropB);
+            shader.setFillTransparentWithBackdrop(fillTransparentWithBackdrop);
 
-        shader.setScreenDimensions((float) fullViewportWidth, (float) fullViewportHeight);
-        shader.setActiveDisplayWidth((float) SCREEN_WIDTH);
-        shader.setBGTextureDimensions(FBO_WIDTH, FBO_HEIGHT);
-        shader.setVScrollBG(vScroll);
-        shader.setViewportOffset((float) fullViewportX, (float) fullViewportY);
-        shader.setBackdropColor(backdropR, backdropG, backdropB);
-        shader.setFillTransparentWithBackdrop(fillTransparentWithBackdrop);
-
-        boolean blendWasEnabled = glIsEnabled(GL_BLEND);
-        int prevBlendSrc = glGetInteger(GL_BLEND_SRC_ALPHA);
-        int prevBlendDst = glGetInteger(GL_BLEND_DST_ALPHA);
-        int prevBlendEquation = glGetInteger(GL_BLEND_EQUATION_RGB);
-        glDisable(GL_BLEND);
-        glBlendEquation(GL_FUNC_ADD);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, fboTextureId);
-
-        quadRenderer.draw(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-        shader.stop();
-        hScrollBuffer.unbind(1);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-        glBlendEquation(prevBlendEquation);
-        if (blendWasEnabled) {
-            glEnable(GL_BLEND);
-        } else {
             glDisable(GL_BLEND);
+            glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, fboTextureId);
+
+            quadRenderer.draw(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        } catch (RuntimeException | Error failure) {
+            primaryFailure = failure;
+            throw failure;
+        } finally {
+            Throwable cleanupFailure = null;
+            if (shaderInUse) {
+                cleanupFailure = attempt(cleanupFailure, shader::stop);
+            }
+            if (hScrollBound) {
+                cleanupFailure = attempt(cleanupFailure, () -> hScrollBuffer.unbind(1));
+            }
+            cleanupFailure = appendFailure(cleanupFailure, prior.restore());
+            if (cleanupFailure != null) {
+                if (primaryFailure != null) {
+                    primaryFailure.addSuppressed(cleanupFailure);
+                } else {
+                    throwFailure(cleanupFailure);
+                }
+            }
         }
-        glBlendFunc(prevBlendSrc, prevBlendDst);
-        glViewport(fullViewportX, fullViewportY, fullViewportWidth, fullViewportHeight);
+    }
+
+    private static Throwable appendFailure(Throwable failure, Throwable nextFailure) {
+        if (nextFailure == null) return failure;
+        if (failure == null) return nextFailure;
+        failure.addSuppressed(nextFailure);
+        return failure;
+    }
+
+    private record ShaderState(int[] viewport, int[] scissor, float[] clearColor,
+            boolean scissorEnabled, boolean blendEnabled,
+            int blendSrcRgb, int blendDstRgb, int blendSrcAlpha, int blendDstAlpha,
+            int blendEquationRgb, int blendEquationAlpha, int activeTexture,
+            int texture0, int texture1) {
+        private static ShaderState capture() {
+            int[] viewport = new int[4];
+            int[] scissor = new int[4];
+            float[] clearColor = new float[4];
+            glGetIntegerv(GL_VIEWPORT, viewport);
+            glGetIntegerv(GL_SCISSOR_BOX, scissor);
+            glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
+            boolean scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
+            boolean blendEnabled = glIsEnabled(GL_BLEND);
+            int activeTexture = glGetInteger(GL_ACTIVE_TEXTURE);
+            glActiveTexture(GL_TEXTURE0);
+            int texture0 = glGetInteger(GL_TEXTURE_BINDING_2D);
+            glActiveTexture(GL_TEXTURE1);
+            int texture1 = glGetInteger(GL_TEXTURE_BINDING_1D);
+            glActiveTexture(activeTexture);
+            return new ShaderState(viewport, scissor, clearColor, scissorEnabled, blendEnabled,
+                    glGetInteger(GL_BLEND_SRC_RGB), glGetInteger(GL_BLEND_DST_RGB),
+                    glGetInteger(GL_BLEND_SRC_ALPHA), glGetInteger(GL_BLEND_DST_ALPHA),
+                    glGetInteger(GL_BLEND_EQUATION_RGB), glGetInteger(GL_BLEND_EQUATION_ALPHA),
+                    activeTexture, texture0, texture1);
+        }
+
+        private Throwable restore() {
+            Throwable failure = null;
+            failure = attempt(failure, () -> glViewport(viewport[0], viewport[1], viewport[2], viewport[3]));
+            failure = attempt(failure, () -> glScissor(scissor[0], scissor[1], scissor[2], scissor[3]));
+            failure = attempt(failure, () -> {
+                if (scissorEnabled) glEnable(GL_SCISSOR_TEST);
+                else glDisable(GL_SCISSOR_TEST);
+            });
+            failure = attempt(failure, () -> glBlendEquationSeparate(blendEquationRgb, blendEquationAlpha));
+            failure = attempt(failure, () -> glBlendFuncSeparate(blendSrcRgb, blendDstRgb,
+                    blendSrcAlpha, blendDstAlpha));
+            failure = attempt(failure, () -> {
+                if (blendEnabled) glEnable(GL_BLEND);
+                else glDisable(GL_BLEND);
+            });
+            failure = attempt(failure, () -> glClearColor(clearColor[0], clearColor[1],
+                    clearColor[2], clearColor[3]));
+            failure = attempt(failure, () -> {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, texture0);
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_1D, texture1);
+                glActiveTexture(activeTexture);
+            });
+            return failure;
+        }
     }
 
     /**
@@ -350,21 +510,45 @@ public class Sonic1SpecialStageBackgroundRenderer {
      * Release GL resources.
      */
     public void cleanup() {
+        Throwable failure = null;
+        while (!tilePassStates.isEmpty()) {
+            TilePassState state = tilePassStates.peek();
+            try {
+                endTilePass();
+            } catch (RuntimeException | Error tilePassFailure) {
+                failure = attempt(failure, () -> { throw tilePassFailure; });
+                if (tilePassStates.peek() == state) break;
+            }
+        }
         if (hScrollBuffer != null) {
-            hScrollBuffer.cleanup();
-            hScrollBuffer = null;
+            HScrollBuffer resource = hScrollBuffer;
+            Throwable before = failure;
+            failure = attempt(failure, resource::cleanup);
+            if (failure == before) hScrollBuffer = null;
         }
         if (shader != null) {
-            shader.cleanup();
-            shader = null;
+            ParallaxShaderProgram resource = shader;
+            Throwable before = failure;
+            failure = attempt(failure, resource::cleanup);
+            if (failure == before) shader = null;
         }
-        quadRenderer.cleanup();
-        FboHelper.destroy(fboHandle);
-        fboHandle = null;
-        fboId = -1;
-        fboTextureId = -1;
-        fboDepthId = -1;
+        failure = attempt(failure, quadRenderer::cleanup);
+        if (fboHandle != null) {
+            FboHelper.FboHandle resource = fboHandle;
+            Throwable before = failure;
+            failure = attempt(failure, () -> FboHelper.destroy(resource));
+            if (failure == before) {
+                fboHandle = null;
+                fboId = -1;
+                fboTextureId = -1;
+                fboDepthId = -1;
+            }
+        }
         initialized = false;
-        LOGGER.info("Sonic1SpecialStageBackgroundRenderer cleaned up");
+        throwFailure(failure);
+    }
+
+    public boolean hasCleanupPendingOwnership() {
+        return !tilePassStates.isEmpty() || hScrollBuffer != null || shader != null || fboHandle != null;
     }
 }

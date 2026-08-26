@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.specialstage;
 
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
 import com.openggf.level.PatternDesc;
@@ -27,6 +28,7 @@ public class Sonic2SpecialStageRenderer {
     private static final int MAX_PALETTE_CONTENT_BYTES = PALETTE_ROW_COUNT * PALETTE_ROW_CONTENT_BYTES;
 
     private final GraphicsManager graphicsManager;
+    private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
 
     // Reusable PatternDesc to avoid per-tile allocations in tight render loops
     private final PatternDesc reusableDesc = new PatternDesc();
@@ -125,6 +127,14 @@ public class Sonic2SpecialStageRenderer {
 
     public Sonic2SpecialStageRenderer(GraphicsManager graphicsManager) {
         this.graphicsManager = graphicsManager;
+    }
+
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.specialStageViewport = java.util.Objects.requireNonNull(viewport, "viewport");
+    }
+
+    public SpecialStageViewport getSpecialStageViewport() {
+        return specialStageViewport;
     }
 
     public void setPatternBases(int backgroundBase, int trackBase) {
@@ -255,7 +265,7 @@ public class Sonic2SpecialStageRenderer {
 
         // Screen parameters for H32 mode emulation
         final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2; // Center 256px viewport on 320px screen
+        final int SCREEN_CENTER_OFFSET = specialStageViewport.innerH32OriginX();
 
         graphicsManager.beginPatternBatch();
 
@@ -550,7 +560,7 @@ public class Sonic2SpecialStageRenderer {
 
         // Screen parameters for H32 mode emulation
         final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2; // Center 256px image on 320px screen
+        final int SCREEN_CENTER_OFFSET = specialStageViewport.innerH32OriginX();
 
         // Track Data Structure:
         // Decoded frameTiles represents the VRAM Plane A (28 rows * 128 cells).
@@ -634,7 +644,7 @@ public class Sonic2SpecialStageRenderer {
         graphicsManager.beginPatternBatch();
 
         final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2;
+        final int SCREEN_CENTER_OFFSET = specialStageViewport.innerH32OriginX();
         final int NUM_ROWS = 28;
         final int CELLS_PER_ROW = 128;
         final int CELLS_PER_STRIP = 32;
@@ -791,7 +801,7 @@ public class Sonic2SpecialStageRenderer {
         // Add H32 centering offset to match track rendering
         // The player's xPos is in H32 viewport coordinates (0-255), but we render on a 320px screen
         final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2;
+        final int SCREEN_CENTER_OFFSET = specialStageViewport.innerH32OriginX();
 
         int screenX = SCREEN_CENTER_OFFSET + player.getXPos();
         // Y position is already in screen coordinates (Y=0 at top, increasing downward)
@@ -861,7 +871,7 @@ public class Sonic2SpecialStageRenderer {
     }
 
     private void renderTailsTails(Sonic2SpecialStagePlayer player) {
-        final int screenCenterOffset = (320 - 256) / 2;
+        final int screenCenterOffset = specialStageViewport.innerH32OriginX();
         int screenX = screenCenterOffset + player.getXPos();
         int screenY = player.getYPos();
         boolean playerXFlip = player.isRenderXFlip();
@@ -904,7 +914,7 @@ public class Sonic2SpecialStageRenderer {
     private void renderPlayerShadow(Sonic2SpecialStagePlayer player) {
         // Add H32 centering offset to match track rendering
         final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2;
+        final int SCREEN_CENTER_OFFSET = specialStageViewport.innerH32OriginX();
 
         int playerX = SCREEN_CENTER_OFFSET + player.getXPos();
         int playerY = player.getYPos();
@@ -1093,7 +1103,7 @@ public class Sonic2SpecialStageRenderer {
 
         // Screen parameters for H32 mode
         final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2;
+        final int SCREEN_CENTER_OFFSET = specialStageViewport.innerH32OriginX();
 
         // Render START banner if visible
         if (intro.isBannerVisible()) {
@@ -1486,7 +1496,7 @@ public class Sonic2SpecialStageRenderer {
     public void renderRingCounter(RingHudState state) {
         graphicsManager.beginPatternBatch();
 
-        final int viewportX = (320 - H32_TILES_X * TILE_SIZE) / 2;
+        final int viewportX = specialStageViewport.innerH32OriginX();
         boolean team = state.sonicActive() && state.tailsActive();
         if (team) {
             renderSonicHudFrame(viewportX + 0x80);
@@ -1616,7 +1626,7 @@ public class Sonic2SpecialStageRenderer {
         graphicsManager.beginPatternBatch();
 
         final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2;
+        final int SCREEN_CENTER_OFFSET = specialStageViewport.innerH32OriginX();
 
         // Position matches original: y=$38 (56)
         final int baseY = 0x38;
@@ -1732,7 +1742,7 @@ public class Sonic2SpecialStageRenderer {
         int objectCount = prepareObjectRenderOrder(objects);
 
         final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2;
+        final int SCREEN_CENTER_OFFSET = specialStageViewport.innerH32OriginX();
 
         // Render shadows first using shadow batch (VDP shadow/highlight mode)
         // Only render shadows if shadow art is loaded
@@ -2228,7 +2238,7 @@ public class Sonic2SpecialStageRenderer {
         graphicsManager.beginPatternBatch();
 
         final int H32_WIDTH = 256;
-        final int SCREEN_CENTER_OFFSET = (320 - H32_WIDTH) / 2;
+        final int SCREEN_CENTER_OFFSET = specialStageViewport.innerH32OriginX();
 
         if (checkpoint.isRainbowActive()) {
             renderCheckpointRainbow(SCREEN_CENTER_OFFSET);

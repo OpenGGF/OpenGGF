@@ -336,6 +336,7 @@ public final class Sonic2SpecialStageConstants {
 
     /** Results screen timing (in frames @ 60fps) */
     public static final int RESULTS_SLIDE_DURATION = 60;    // 1 second slide-in
+    public static final int RESULTS_TITLE_ARRIVAL_FRAMES = 18;
     public static final int RESULTS_WAIT_DURATION = 180;    // 3 seconds after tally
     public static final int RESULTS_TALLY_TICK_INTERVAL = 4; // Sound every 4 frames
 

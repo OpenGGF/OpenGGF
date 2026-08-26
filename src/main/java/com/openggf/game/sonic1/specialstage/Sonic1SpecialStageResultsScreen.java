@@ -39,6 +39,7 @@ import java.util.logging.Logger;
  * pattern as the S2 {@code SpecialStageResultsScreenObjectInstance}.
  */
 public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
+    private int viewportXOffset;
     private static final Logger LOGGER = Logger.getLogger(Sonic1SpecialStageResultsScreen.class.getName());
 
     private enum Scenario {
@@ -57,6 +58,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private static final int STATE_POST_TALLY_DELAY = 3;
     private static final int STATE_CONTINUE_JINGLE = 4;
     private static final int STATE_CONTINUE_DELAY = 5;
+    private static final int STATE_EXIT = 6;
     private static final int SLIDE_SPEED_PIXELS_PER_FRAME = 16;
     private static final int PRE_TALLY_DELAY_FRAMES = 180;
     private static final int POST_TALLY_DELAY_FRAMES = 180;
@@ -220,6 +222,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             case STATE_POST_TALLY_DELAY -> updatePostTallyDelay();
             case STATE_CONTINUE_JINGLE -> updateContinueJingle();
             case STATE_CONTINUE_DELAY -> updateContinueDelay();
+            case STATE_EXIT -> complete = true;
             default -> complete = true;
         }
     }
@@ -266,7 +269,8 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             return;
         }
         if (ringsCollected < CONTINUE_RINGS) {
-            complete = true;
+            state = STATE_EXIT;
+            stateTimer = 0;
             return;
         }
         state = STATE_CONTINUE_JINGLE;
@@ -297,7 +301,8 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     private void updateContinueDelay() {
         if (stateTimer >= POST_CONTINUE_DELAY_FRAMES) {
-            complete = true;
+            state = STATE_EXIT;
+            stateTimer = 0;
         }
     }
 
@@ -358,6 +363,11 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
         if (graphicsManager != null) {
             graphicsManager.flushPatternBatch();
         }
+    }
+
+    @Override
+    public void setViewportWidth(int width) {
+        viewportXOffset = (Math.max(320, width) - 320) / 2;
     }
 
     // ===== Self-contained art loading =====
@@ -781,7 +791,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     // ===== Coordinate / utility helpers =====
 
     private int toWorldX(int vdpX, Camera camera) {
-        return camera.getX() + (vdpX - 128);
+        return camera.getX() + (vdpX - 128) + viewportXOffset;
     }
 
     private int toWorldY(int vdpY, Camera camera) {

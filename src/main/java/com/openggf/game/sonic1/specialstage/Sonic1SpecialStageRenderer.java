@@ -2,6 +2,7 @@ package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.Objects;
 
 import static com.openggf.game.sonic1.constants.Sonic1Constants.*;
 
@@ -49,6 +51,7 @@ public class Sonic1SpecialStageRenderer {
     private final int[] screenPositions = new int[GRID_SIZE * GRID_SIZE * 2];
 
     private final GraphicsManager graphicsManager;
+    private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
 
     // Pattern base IDs in the atlas (set during art loading)
     private int wallPatternBase;
@@ -133,6 +136,15 @@ public class Sonic1SpecialStageRenderer {
         this.graphicsManager = graphicsManager;
     }
 
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.specialStageViewport = Objects.requireNonNull(viewport, "viewport");
+    }
+
+    private void renderNativePattern(int patternId, PatternDesc desc, int x, int y) {
+        graphicsManager.renderPatternWithId(patternId, desc,
+                x + specialStageViewport.outerOriginX(), y);
+    }
+
     public void setPatternBases(int wallBase, int bumperBase, int goalBase,
                                 int upDownBase, int rBlockBase, int oneUpBase,
                                 int emStarsBase, int redWhiteBase, int ghostBase,
@@ -214,7 +226,7 @@ public class Sonic1SpecialStageRenderer {
             GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
             bgR, bgG, bgB, 1.0f,
             0, 0,
-            H32_WIDTH, H32_HEIGHT
+            specialStageViewport.logicalWidth(), H32_HEIGHT
         ));
     }
 
@@ -459,7 +471,7 @@ public class Sonic1SpecialStageRenderer {
                     }
                     descIndex |= (paletteIndex & 0x3) << 13;
                     tempDesc.set(descIndex);
-                    graphicsManager.renderPatternWithId(patternId, tempDesc, drawX, drawY);
+                    renderNativePattern(patternId, tempDesc, drawX, drawY);
                 }
         );
     }

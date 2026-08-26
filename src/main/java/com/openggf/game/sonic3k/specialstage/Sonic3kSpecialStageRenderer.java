@@ -1,10 +1,12 @@
 package com.openggf.game.sonic3k.specialstage;
 
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import static com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageConstants.*;
@@ -27,6 +29,7 @@ public class Sonic3kSpecialStageRenderer {
 
     private final GraphicsManager graphicsManager;
     private final PatternDesc reusableDesc = new PatternDesc();
+    private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
 
     // Pattern base indices for each art type in the atlas
     private int floorPatternBase;
@@ -133,6 +136,15 @@ public class Sonic3kSpecialStageRenderer {
 
     public Sonic3kSpecialStageRenderer(GraphicsManager graphicsManager) {
         this.graphicsManager = graphicsManager;
+    }
+
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.specialStageViewport = Objects.requireNonNull(viewport, "viewport");
+    }
+
+    private void renderNativePattern(int patternId, PatternDesc desc, int x, int y) {
+        graphicsManager.renderPatternWithId(patternId, desc,
+                x + specialStageViewport.outerOriginX(), y);
     }
 
     public void loadArt(Sonic3kSpecialStageDataLoader dataLoader) {
@@ -336,7 +348,7 @@ public class Sonic3kSpecialStageRenderer {
                     reusableDesc.setPriority(true);
                     reusableDesc.setPaletteIndex(1); // Banner uses palette 1
                     reusableDesc.setHFlip(hFlip);
-                    graphicsManager.renderPatternWithId(patternId + tileOff,
+                    renderNativePattern(patternId + tileOff,
                             reusableDesc, drawX, drawY);
                 }
             }
@@ -371,7 +383,7 @@ public class Sonic3kSpecialStageRenderer {
                 reusableDesc.set(0);
                 reusableDesc.setPriority(true);
                 reusableDesc.setPaletteIndex(2);
-                graphicsManager.renderPatternWithId(iconsPatternBase + tileOff + tileIdx,
+                renderNativePattern(iconsPatternBase + tileOff + tileIdx,
                         reusableDesc, x + col * TILE_SIZE, y + row * TILE_SIZE);
             }
         }
@@ -403,7 +415,7 @@ public class Sonic3kSpecialStageRenderer {
                     reusableDesc.setPaletteIndex(palette);
                     reusableDesc.setHFlip(hFlip);
                     reusableDesc.setVFlip(vFlip);
-                    graphicsManager.renderPatternWithId(patternId, reusableDesc,
+                    renderNativePattern(patternId, reusableDesc,
                             x + col * TILE_SIZE, y + row * TILE_SIZE);
                 }
             }
@@ -448,7 +460,7 @@ public class Sonic3kSpecialStageRenderer {
                 reusableDesc.setPaletteIndex(palette);
                 reusableDesc.setHFlip(hFlip);
                 reusableDesc.setVFlip(vFlip);
-                graphicsManager.renderPatternWithId(patternId, reusableDesc,
+                renderNativePattern(patternId, reusableDesc,
                         x + col * TILE_SIZE, y + row * TILE_SIZE);
             }
         }
@@ -507,7 +519,7 @@ public class Sonic3kSpecialStageRenderer {
 
                 reusableDesc.set(word);
                 reusableDesc.setPriority(false); // BG behind everything
-                graphicsManager.renderPatternWithId(patternId, reusableDesc,
+                renderNativePattern(patternId, reusableDesc,
                         sx * TILE_SIZE - hScrollPx, sy * TILE_SIZE - vScrollPx);
             }
         }
@@ -719,7 +731,7 @@ public class Sonic3kSpecialStageRenderer {
                 int patternId = floorPatternBase + unpackPatternIndex(geometry);
 
                 reusableDesc.set(unpackDescriptorWord(geometry));
-                graphicsManager.renderPatternWithId(patternId, reusableDesc,
+                renderNativePattern(patternId, reusableDesc,
                         tx * TILE_SIZE, ty * TILE_SIZE);
             }
         }
@@ -1092,7 +1104,7 @@ public class Sonic3kSpecialStageRenderer {
                 reusableDesc.setPaletteIndex(paletteIndex);
                 reusableDesc.setHFlip(ringHFlip);
                 reusableDesc.setVFlip(sparkleVFlip);
-                graphicsManager.renderPatternWithId(patternId, reusableDesc,
+                renderNativePattern(patternId, reusableDesc,
                         screenX + centerOffX + drawCol * TILE_SIZE,
                         screenY + centerOffY + row * TILE_SIZE);
             }
@@ -1146,7 +1158,7 @@ public class Sonic3kSpecialStageRenderer {
                     reusableDesc.setPaletteIndex(paletteIndex);
                     reusableDesc.setHFlip(hFlip);
                     reusableDesc.setVFlip(vFlip);
-                    graphicsManager.renderPatternWithId(patternId, reusableDesc,
+                    renderNativePattern(patternId, reusableDesc,
                             screenX + xOff + col * TILE_SIZE,
                             screenY + yOff + row * TILE_SIZE);
                 }
@@ -1275,7 +1287,7 @@ public class Sonic3kSpecialStageRenderer {
                     reusableDesc.setPriority(true);
                     reusableDesc.setPaletteIndex(paletteIndex);
                     reusableDesc.setHFlip(hFlip);
-                    graphicsManager.renderPatternWithId(patternId, reusableDesc, drawX, drawY);
+                    renderNativePattern(patternId, reusableDesc, drawX, drawY);
                 }
             }
         }

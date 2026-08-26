@@ -10,6 +10,7 @@ import com.openggf.game.sonic1.Sonic1PlayerArt;
 import com.openggf.game.sonic1.Sonic1RingArt;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
+import com.openggf.game.SpecialStageViewport;
 import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
@@ -25,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.logging.Logger;
+import java.util.Objects;
 
 import static com.openggf.game.sonic1.constants.Sonic1Constants.*;
 import static com.openggf.sprites.playable.AbstractPlayableSprite.*;
@@ -222,6 +224,7 @@ public final class Sonic1SpecialStageManager {
     // Subsystems
     private Sonic1SpecialStageDataLoader dataLoader;
     private Sonic1SpecialStageRenderer renderer;
+    private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
     private GraphicsManager graphicsManager;
     private PlayerSpriteRenderer sonicSpriteRenderer;
     private int sonicSpriteFrame;
@@ -253,6 +256,7 @@ public final class Sonic1SpecialStageManager {
         this.graphicsManager.setUseUnderwaterPaletteForBackground(false);
         this.dataLoader = new Sonic1SpecialStageDataLoader(rom);
         this.renderer = new Sonic1SpecialStageRenderer(graphicsManager);
+        this.renderer.setSpecialStageViewport(specialStageViewport);
 
         // Load layout
         layout = dataLoader.getStageLayout(currentStage);
@@ -2020,8 +2024,12 @@ public final class Sonic1SpecialStageManager {
             LOGGER.fine("S1 SS background renderers initialized");
         } catch (Exception e) {
             LOGGER.warning("Failed to init S1 SS background renderer, using fallback: " + e.getMessage());
-            bgRenderer = null;
-            fgRenderer = null;
+            if (bgRenderer == null || !bgRenderer.hasCleanupPendingOwnership()) {
+                bgRenderer = null;
+            }
+            if (fgRenderer == null || !fgRenderer.hasCleanupPendingOwnership()) {
+                fgRenderer = null;
+            }
         }
     }
 
@@ -2070,6 +2078,24 @@ public final class Sonic1SpecialStageManager {
             int sonicScreenY = (int) (sonicPosY >> 16) - cameraY;
             sonicSpriteRenderer.drawFrame(sonicSpriteFrame, sonicScreenX, sonicScreenY, sonicFacingLeft, false);
         }
+    }
+
+    /** Supplies render-only geometry; S1 gameplay coordinates stay native. */
+    public void setSpecialStageViewport(SpecialStageViewport viewport) {
+        this.specialStageViewport = Objects.requireNonNull(viewport, "viewport");
+        if (renderer != null) {
+            renderer.setSpecialStageViewport(viewport);
+        }
+        if (bgRenderer != null) {
+            bgRenderer.setSpecialStageViewport(viewport);
+        }
+        if (fgRenderer != null) {
+            fgRenderer.setSpecialStageViewport(viewport);
+        }
+    }
+
+    public SpecialStageViewport getSpecialStageViewport() {
+        return specialStageViewport;
     }
 
     private void drawWithBgRenderers() {
@@ -2208,8 +2234,10 @@ public final class Sonic1SpecialStageManager {
 
         @Override
         public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+            boolean completed = false;
             try {
                 if (renderer == null) {
+                    completed = true;
                     return;
                 }
                 switch (kind) {
@@ -2224,17 +2252,18 @@ public final class Sonic1SpecialStageManager {
                     case BEGIN -> {
                         renderer.beginTilePass(Sonic1SpecialStageRenderer.H32_HEIGHT);
                         owner.armTilePass(renderer);
+                        completed = true;
                     }
                     case END -> {
-                        try {
-                            renderer.endTilePass();
-                        } finally {
-                            owner.disarmTilePass(renderer);
-                        }
+                        renderer.endTilePass();
+                        owner.disarmTilePass(renderer);
+                        completed = true;
                     }
                 }
             } finally {
-                discard();
+                if (completed || kind == Kind.SCROLL || kind == Kind.UNIFORM) {
+                    discard();
+                }
             }
         }
 
@@ -2512,12 +2541,15 @@ public final class Sonic1SpecialStageManager {
 
     public void reset() {
         GraphicsManager gm = graphicsManager;
-        if (bgRenderer != null) {
-            bgRenderer.cleanup();
+        Sonic1SpecialStageBackgroundRenderer background = bgRenderer;
+        Sonic1SpecialStageBackgroundRenderer foreground = fgRenderer;
+        Throwable cleanupFailure = null;
+        cleanupFailure = attemptBackgroundCleanup(cleanupFailure, background);
+        cleanupFailure = attemptBackgroundCleanup(cleanupFailure, foreground);
+        if (background == null || !background.hasCleanupPendingOwnership()) {
             bgRenderer = null;
         }
-        if (fgRenderer != null) {
-            fgRenderer.cleanup();
+        if (foreground == null || !foreground.hasCleanupPendingOwnership()) {
             fgRenderer = null;
         }
         initialized = false;
@@ -2580,6 +2612,28 @@ public final class Sonic1SpecialStageManager {
             gm.setUseUnderwaterPaletteForBackground(false);
         }
         graphicsManager = null;
+        if (cleanupFailure instanceof RuntimeException runtimeFailure) {
+            throw runtimeFailure;
+        }
+        if (cleanupFailure instanceof Error errorFailure) {
+            throw errorFailure;
+        }
+    }
+
+    private static Throwable attemptBackgroundCleanup(Throwable aggregate,
+            Sonic1SpecialStageBackgroundRenderer renderer) {
+        if (renderer == null) {
+            return aggregate;
+        }
+        try {
+            renderer.cleanup();
+        } catch (RuntimeException | Error failure) {
+            if (aggregate == null) {
+                return failure;
+            }
+            aggregate.addSuppressed(failure);
+        }
+        return aggregate;
     }
 
     public boolean isInitialized() {

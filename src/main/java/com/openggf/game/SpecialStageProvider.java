@@ -26,6 +26,21 @@ public interface SpecialStageProvider extends MiniGameProvider {
     String SPECIAL_STAGE_REWIND_KEY = "special-stage-runtime";
 
     /**
+     * Supplies immutable presentation geometry before the special stage is
+     * drawn. Gameplay remains native-width; this is a render-only contract.
+     */
+    default void setSpecialStageViewport(SpecialStageViewport viewport) {
+        Objects.requireNonNull(viewport, "viewport");
+    }
+
+    /**
+     * Returns the provider's current presentation geometry.
+     */
+    default SpecialStageViewport getSpecialStageViewport() {
+        return SpecialStageViewport.nativeViewport();
+    }
+
+    /**
      * Returns the optional developer controls owned by this special stage.
      *
      * <p>Providers opt in to each control explicitly. The game loop consults

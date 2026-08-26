@@ -150,6 +150,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private boolean paletteLoaded;
     private boolean artCached;
     private int lastScoreValue = Integer.MIN_VALUE;
+    private int viewportXOffset;
 
     public S3kSpecialStageResultsScreen(int ringsCollected, boolean gotEmerald,
                                          int stageIndex, int totalEmeraldCount,
@@ -395,6 +396,12 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     @Override
     public boolean isComplete() {
         return complete;
+    }
+
+    @Override
+    public void setViewportWidth(int width) {
+        viewportXOffset = (Math.max(Sonic3kSpecialStageRenderer.SCREEN_WIDTH, width)
+                - Sonic3kSpecialStageRenderer.SCREEN_WIDTH) / 2;
     }
 
     // ================================================================
@@ -698,7 +705,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             // ROM: btst #3,(Level_frame_counter+1).w — 8-frame-on, 8-frame-off blink
             if (((frameCounter >> 3) & 1) != 0) {
                 // Continue icon: no art_tile override, uses piece palette
-                renderMappingFrameWithTileOffset(continueFrame, continueX, continueY, 0, -1);
+                renderMappingFrameWithTileOffset(continueFrame, continueX + viewportXOffset,
+                        continueY, 0, -1);
             }
         }
     }
@@ -1066,7 +1074,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     /** Which post-tally reveal message the ROM spawns (ObjDat2_2E918 vs ObjDat2_2E960). */
     private enum RevealVariant { SUPER_FORM, HIDDEN_PALACE }
 
-    private static class ResultsElement {
+    private class ResultsElement {
         final ElemType type;
         final int targetX;
         final int startX;
@@ -1104,7 +1112,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             }
         }
 
-        int screenX() { return currentX - VDP_OFFSET; }
+        int screenX() { return currentX - VDP_OFFSET + viewportXOffset; }
         int screenY() { return y - VDP_OFFSET; }
     }
 
