@@ -115,7 +115,7 @@ public class SonicConfigurationService {
 			}
 		}
 
-		applySessionOutputOverrides();
+		applyMavenOutputOverrides();
 
 		publishBundledConfigExample();
 
@@ -597,7 +597,7 @@ public class SonicConfigurationService {
 		config = new HashMap<>();
 		defaults = new HashMap<>();
 		sessionOverrides.clear();
-		applySessionOutputOverrides();
+		applyMavenOutputOverrides();
 		invalidateResolvedCaches();
 		applyDefaults();
 		// Re-derive SCREEN_WIDTH_PIXELS (and related) from the freshly-set
@@ -827,11 +827,11 @@ public class SonicConfigurationService {
 	}
 
 	/**
-	 * A coordinator-launched run owns its capture directory. Keep the bundled
-	 * config and no-session default unchanged, but redirect the bundled default
-	 * into the session diagnostic namespace when the coordinator supplies one.
+	 * Maven may provide the worktree-local diagnostics directory. Keep an
+	 * explicitly configured capture path unchanged, but place the bundled
+	 * default beneath that target-derived directory when it is available.
 	 */
-	private void applySessionOutputOverrides() {
+	private void applyMavenOutputOverrides() {
 		String diagnostics = System.getProperty("openggf.test.diagnostics");
 		if (diagnostics == null || diagnostics.isBlank()) {
 			return;

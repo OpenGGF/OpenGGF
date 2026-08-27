@@ -87,10 +87,10 @@ public final class TraceCaptureTool {
             SonicConfigurationService config = GameServices.configuration();
             String trace = null;
             String outDir = config.getString(SonicConfiguration.CAPTURE_OUTPUT_DIR);
-            String diagnostics = System.getProperty("openggf.test.diagnostics");
-            if (diagnostics != null && !diagnostics.isBlank()
+            String diagnosticRoot = System.getProperty("openggf.test.diagnostics");
+            if (diagnosticRoot != null && !diagnosticRoot.isBlank()
                     && "target/trace-videos".equals(outDir)) {
-                outDir = Path.of(diagnostics, "trace-videos").toString();
+                outDir = Path.of(diagnosticRoot, "trace-videos").toString();
             }
             int scale = config.getInt(SonicConfiguration.CAPTURE_SCALE);
             int fps = config.getInt(SonicConfiguration.CAPTURE_FPS);

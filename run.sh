@@ -7,7 +7,7 @@ cd "$script_dir"
 
 # This is a normal, non-certifying local launcher. Keep the distributable in
 # target/ and leave certifying builds to the coordinator wrapper.
-mvn -Dmse=off -Dopenggf.session.guard.skip=true -DskipTests package -q
+mvn -Dmse=off -DskipTests package -q
 
 shopt -s nullglob
 jars=(target/*-jar-with-dependencies.jar)

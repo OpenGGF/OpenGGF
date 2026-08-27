@@ -24,10 +24,10 @@ import java.util.Set;
  * <p>Inputs (all under the configured {@code openggf.trace.reports} directory,
  * which defaults to {@code target/trace-reports}, unless overridden):
  * <ul>
- *   <li>a legacy {@code <game>_<zone>_report.json} or a unique session-owned
+ *   <li>a legacy {@code <game>_<zone>_report.json} or a unique nested
  *       report matching that logical key (required) — schema produced by
  *       {@link com.openggf.trace.DivergenceReport#toJson()}.</li>
- *   <li>the matching {@code <game>_<zone>_context.txt} (or session-owned
+ *   <li>the matching {@code <game>_<zone>_context.txt} (or nested
  *       sibling) (optional) — human-readable
  *       side-by-side frame table, scanned for nearby object/diagnostic lines.</li>
  *   <li>{@code aux_state.jsonl} (optional) — newline-delimited aux events,
@@ -688,15 +688,15 @@ public final class TraceTriageTool {
     static Path resolveDefaultReportPath(String reportDir, String game, String zone)
             throws IOException {
         Path legacy = defaultReportPath(reportDir, game, zone);
-        Path sessionReportRoot = Path.of(reportDir);
-        if (!Files.isDirectory(sessionReportRoot)) {
+        Path reportRoot = Path.of(reportDir);
+        if (!Files.isDirectory(reportRoot)) {
             return legacy;
         }
         String prefix = game + "_" + zone + "-";
         List<Path> candidates;
-        try (var paths = Files.walk(sessionReportRoot)) {
+        try (var paths = Files.walk(reportRoot)) {
             candidates = paths.filter(Files::isRegularFile)
-                    .filter(path -> !path.getParent().equals(sessionReportRoot))
+                    .filter(path -> !path.getParent().equals(reportRoot))
                     .filter(path -> !path.equals(legacy))
                     .filter(path -> path.getFileName().toString().startsWith(prefix)
                             || path.getFileName().toString().startsWith(
@@ -710,7 +710,7 @@ public final class TraceTriageTool {
             return candidates.getFirst();
         }
         if (candidates.size() > 1) {
-            throw new IOException("multiple session reports match " + game + " " + zone
+            throw new IOException("multiple nested reports match " + game + " " + zone
                     + "; rerun with --report <path>");
         }
         return legacy;

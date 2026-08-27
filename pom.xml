@@ -21,24 +21,13 @@
         <test.cds.argLine>-Xshare:off</test.cds.argLine>
         <test.logging.config.file>${project.basedir}/src/test/resources/quiet-logging.properties</test.logging.config.file>
         <test.slf4j.verbosity>ERROR</test.slf4j.verbosity>
-        <!-- Coordinator-launched runs replace these with absolute session paths;
-             the defaults retain the legacy target layout for IDE use. -->
-        <openggf.build.directory>${project.basedir}/target</openggf.build.directory>
-        <openggf.test.tmpdir>${openggf.build.directory}/test-tmp</openggf.test.tmpdir>
-        <openggf.surefire.reports>${openggf.build.directory}/surefire-reports</openggf.surefire.reports>
-        <openggf.trace.reports>${openggf.build.directory}/trace-reports</openggf.trace.reports>
-        <openggf.test.diagnostics>${openggf.build.directory}/diagnostics</openggf.test.diagnostics>
-        <openggf.artifact.root>${openggf.build.directory}</openggf.artifact.root>
-        <openggf.distribution.root>${openggf.build.directory}</openggf.distribution.root>
-        <openggf.session.manifest></openggf.session.manifest>
-        <openggf.session.capability></openggf.session.capability>
-        <openggf.session.run-id></openggf.session.run-id>
-        <openggf.session.command-hash></openggf.session.command-hash>
-        <openggf.session.worktree></openggf.session.worktree>
-        <openggf.session.lease-path></openggf.session.lease-path>
-        <openggf.session.allowed-phases></openggf.session.allowed-phases>
-        <!-- Explicitly enabled only by the non-certifying local launchers. -->
-        <openggf.session.guard.skip>false</openggf.session.guard.skip>
+        <!-- Every worktree owns one ordinary Maven target tree. -->
+        <openggf.test.tmpdir>${project.build.directory}/test-tmp</openggf.test.tmpdir>
+        <openggf.surefire.reports>${project.build.directory}/surefire-reports</openggf.surefire.reports>
+        <openggf.trace.reports>${project.build.directory}/trace-reports</openggf.trace.reports>
+        <openggf.test.diagnostics>${project.build.directory}/diagnostics</openggf.test.diagnostics>
+        <openggf.artifact.root>${project.build.directory}</openggf.artifact.root>
+        <openggf.distribution.root>${project.build.directory}</openggf.distribution.root>
         <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
         <surefire.forkCount>4</surefire.forkCount>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
@@ -190,6 +179,7 @@
                         <configuration combine.self="override">
                             <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <groups>performance-measurement</groups>
@@ -197,20 +187,12 @@
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
                                 <project.basedir>${project.basedir}</project.basedir>
-                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
                                 <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
                                 <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
                                 <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
                                 <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
                                 <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
                                 <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
-                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
-                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
-                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
-                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
-                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
-                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
-                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
@@ -268,26 +250,19 @@
                         <configuration combine.self="override">
                             <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
                                 <project.basedir>${project.basedir}</project.basedir>
-                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
                                 <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
                                 <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
                                 <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
                                 <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
                                 <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
                                 <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
-                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
-                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
-                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
-                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
-                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
-                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
-                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/tests/trace/**/*.java</include>
@@ -397,26 +372,19 @@
                         <configuration combine.self="override">
                             <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
                                 <project.basedir>${project.basedir}</project.basedir>
-                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
                                 <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
                                 <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
                                 <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
                                 <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
                                 <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
                                 <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
-                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
-                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
-                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
-                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
-                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
-                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
-                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/tests/trace/s3k/sonictails/*.java</include>
@@ -473,26 +441,19 @@
                         <configuration combine.self="override">
                             <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
                                 <project.basedir>${project.basedir}</project.basedir>
-                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
                                 <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
                                 <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
                                 <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
                                 <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
                                 <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
                                 <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
-                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
-                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
-                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
-                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
-                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
-                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
-                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/tests/trace/s3k/**/*Mhz*.java</include>
@@ -570,26 +531,19 @@
                         <configuration combine.self="override">
                             <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <systemPropertyVariables>
                                 <project.basedir>${project.basedir}</project.basedir>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
-                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
                                 <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
                                 <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
                                 <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
                                 <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
                                 <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
                                 <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
-                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
-                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
-                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
-                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
-                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
-                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
-                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/Test*Guard*.java</include>
@@ -626,26 +580,19 @@
                         <configuration combine.self="override">
                             <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                            <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
                                 <project.basedir>${project.basedir}</project.basedir>
-                                <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
                                 <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
                                 <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
                                 <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
                                 <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
                                 <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
                                 <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
-                                <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
-                                <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
-                                <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
-                                <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
-                                <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
-                                <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
-                                <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/tests/trace/**/Debug*.java</include>
@@ -1032,7 +979,6 @@
     </dependencyManagement>
 
     <build>
-        <directory>${openggf.build.directory}</directory>
         <sourceDirectory>src/main/java</sourceDirectory>
         <testSourceDirectory>src/test/java</testSourceDirectory>
         <resources>
@@ -1079,58 +1025,13 @@
                 </executions>
             </plugin>
 
-            <!-- Session guards run before Maven can clean, compile, or write reports.
-                 Hook installation is an explicit developer action, never a Maven side
-                 effect. -->
+            <!-- Hook installation is an explicit developer action, never a Maven
+                 lifecycle side effect. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>3.1.0</version>
                 <executions>
-                    <execution>
-                        <id>openggf-session-pre-clean-guard</id>
-                        <phase>pre-clean</phase>
-                        <goals><goal>run</goal></goals>
-                        <configuration>
-                            <skip>${openggf.session.guard.skip}</skip>
-                            <target>
-                                <exec executable="${java.home}/bin/java" failonerror="true">
-                                    <arg value="-Dopenggf.session.manifest=${openggf.session.manifest}"/>
-                                    <arg value="-Dopenggf.session.capability=${openggf.session.capability}"/>
-                                    <arg value="-Dopenggf.session.run-id=${openggf.session.run-id}"/>
-                                    <arg value="-Dopenggf.session.command-hash=${openggf.session.command-hash}"/>
-                                    <arg value="-Dopenggf.session.worktree=${openggf.session.worktree}"/>
-                                    <arg value="-Dopenggf.session.lease-path=${openggf.session.lease-path}"/>
-                                    <arg value="-Dopenggf.session.allowed-phases=${openggf.session.allowed-phases}"/>
-                                    <arg value="--source"/><arg value="21"/>
-                                    <arg value="${project.basedir}/tools/testing/TestSessionCoordinator.java"/>
-                                    <arg value="--guard"/><arg value="pre-clean"/>
-                                </exec>
-                            </target>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>openggf-session-validate-guard</id>
-                        <phase>validate</phase>
-                        <goals><goal>run</goal></goals>
-                        <configuration>
-                            <skip>${openggf.session.guard.skip}</skip>
-                            <target>
-                                <exec executable="${java.home}/bin/java" failonerror="true">
-                                    <arg value="-Dopenggf.session.manifest=${openggf.session.manifest}"/>
-                                    <arg value="-Dopenggf.session.capability=${openggf.session.capability}"/>
-                                    <arg value="-Dopenggf.session.run-id=${openggf.session.run-id}"/>
-                                    <arg value="-Dopenggf.session.command-hash=${openggf.session.command-hash}"/>
-                                    <arg value="-Dopenggf.session.worktree=${openggf.session.worktree}"/>
-                                    <arg value="-Dopenggf.session.lease-path=${openggf.session.lease-path}"/>
-                                    <arg value="-Dopenggf.session.allowed-phases=${openggf.session.allowed-phases}"/>
-                                    <arg value="--source"/><arg value="21"/>
-                                    <arg value="${project.basedir}/tools/testing/TestSessionCoordinator.java"/>
-                                    <arg value="--guard"/><arg value="validate"/>
-                                </exec>
-                            </target>
-                        </configuration>
-                    </execution>
                     <!-- Fail fast when the build JVM is not the JDK the project targets.
                          Surefire forks inherit Maven's JVM, not whatever `java` is on PATH,
                          so a newer JDK silently reaches the tests: Mockito/ByteBuddy then
@@ -1320,6 +1221,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                          this makes forgetting harmless rather than cumulative. -->
                     <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                     <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
+                    <tempDir>${project.build.directory}/surefire</tempDir>
                     <!-- Run test classes in parallel forked JVMs.
                          Thread-level parallelism is unsafe due to singleton state,
                          but process-level forks each get isolated singletons.
@@ -1333,20 +1235,12 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                         <project.basedir>${project.basedir}</project.basedir>
                         <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                         <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
-                        <openggf.build.directory>${openggf.build.directory}</openggf.build.directory>
                         <openggf.test.tmpdir>${openggf.test.tmpdir}</openggf.test.tmpdir>
                         <openggf.surefire.reports>${openggf.surefire.reports}</openggf.surefire.reports>
                         <openggf.trace.reports>${openggf.trace.reports}</openggf.trace.reports>
                         <openggf.test.diagnostics>${openggf.test.diagnostics}</openggf.test.diagnostics>
                         <openggf.artifact.root>${openggf.artifact.root}</openggf.artifact.root>
                         <openggf.distribution.root>${openggf.distribution.root}</openggf.distribution.root>
-                        <openggf.session.manifest>${openggf.session.manifest}</openggf.session.manifest>
-                        <openggf.session.capability>${openggf.session.capability}</openggf.session.capability>
-                        <openggf.session.run-id>${openggf.session.run-id}</openggf.session.run-id>
-                        <openggf.session.command-hash>${openggf.session.command-hash}</openggf.session.command-hash>
-                        <openggf.session.worktree>${openggf.session.worktree}</openggf.session.worktree>
-                        <openggf.session.lease-path>${openggf.session.lease-path}</openggf.session.lease-path>
-                        <openggf.session.allowed-phases>${openggf.session.allowed-phases}</openggf.session.allowed-phases>
                     </systemPropertyVariables>
                     <!-- Exclude tests that require a GL context/display -->
                     <excludes>

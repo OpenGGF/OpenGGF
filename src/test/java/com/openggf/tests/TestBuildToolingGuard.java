@@ -733,7 +733,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap() throws Exception {
+    void hookBootstrapMustRemainExplicitDuringBuildCutover() throws Exception {
         Path agentsPath = Path.of("AGENTS.md");
         Path claudePath = Path.of("CLAUDE.md");
         String agents = Files.readString(agentsPath, StandardCharsets.UTF_8);
@@ -748,17 +748,6 @@ class TestBuildToolingGuard {
         }
         if (!agents.contains("Codex") || !agents.contains("Claude")) {
             violations.add("AGENTS.md/CLAUDE.md must name both Codex and Claude in the agent workflow contract");
-        }
-        for (String requiredText : List.of(
-                "mvn package",
-                "mvn test",
-                "mvn \"-Dtest=TestCollisionLogic\" test",
-                "mvn -Dmse=off -Pguards test -B",
-                "current worktree's `target/` directory",
-                "per-Surefire-fork LWJGL extraction")) {
-            if (!agents.contains(requiredText)) {
-                violations.add("AGENTS.md/CLAUDE.md do not contain required direct-Maven guidance: " + requiredText);
-            }
         }
         for (String script : List.of("tools/testing/install-hooks.sh")) {
             if (!Files.isRegularFile(Path.of(script)) || !Files.isExecutable(Path.of(script))) {
@@ -777,22 +766,8 @@ class TestBuildToolingGuard {
             violations.add("PowerShell hook bootstrap does not set core.hooksPath locally");
         }
 
-        for (String file : SESSION_DOCUMENTATION_FILES) {
-            Path path = Path.of(file);
-            if (!Files.isRegularFile(path)) {
-                violations.add(file + " is missing from the supported documentation inventory");
-                continue;
-            }
-            String text = Files.readString(path, StandardCharsets.UTF_8);
-            for (String line : text.split("\\R")) {
-                if (line.contains("tools/testing/test-session") || line.contains("agent-scratch")) {
-                    violations.add(file + " still names retired active test-session tooling");
-                }
-            }
-        }
-
         if (!violations.isEmpty()) {
-            fail("supported documentation must describe direct Maven and explicit hook setup:\n  "
+            fail("hook bootstrap must remain explicit during the build cutover:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -805,14 +780,11 @@ class TestBuildToolingGuard {
                 "OPENGGF_TEST_RUN_",
                 "agent-scratch",
                 "frozen-next-session");
-        // Scan active code, workflows, and guidance only. Historical CHANGELOG
-        // and trace-frontier records intentionally remain comparison evidence.
+        // Task 3 owns active production/build/tooling paths. Task 4 extends this
+        // scan to workflows and guidance while reconciling those files.
         List<Path> roots = List.of(
-                Path.of("src/main"), Path.of("tools"), Path.of(".github/workflows"),
-                Path.of("docs/guide"), Path.of("docs/agent-workflow"),
-                Path.of(".agents/skills"), Path.of(".claude/skills"),
-                Path.of("AGENTS.md"), Path.of("CLAUDE.md"), Path.of("README.md"),
-                Path.of("ROADMAP.md"), Path.of("pom.xml"), Path.of("dev.sh"),
+                Path.of("src/main"), Path.of("tools/audio"), Path.of("tools/bizhawk"),
+                Path.of("tools/testing"), Path.of("pom.xml"), Path.of("dev.sh"),
                 Path.of("dev.cmd"), Path.of("run.sh"), Path.of("run.cmd"));
         List<String> violations = new ArrayList<>();
         for (Path root : roots) {

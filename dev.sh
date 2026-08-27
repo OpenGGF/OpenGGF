@@ -9,6 +9,6 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$script_dir"
 
-# This is a normal, non-certifying local launcher; certifying builds use the
-# test-session wrapper instead.
-mvn -q -o -Dmse=off -Dopenggf.session.guard.skip=true -Pdev-run compile exec:exec
+# This is the fast local launcher; use the ordinary package launcher when a
+# distributable JAR is required.
+mvn -q -o -Dmse=off -Pdev-run compile exec:exec
