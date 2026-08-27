@@ -673,6 +673,8 @@ class TestBuildToolingGuard {
             assertTrue(defaultExcludes.contains(pattern),
                     "default Surefire execution must exclude structural guards: " + pattern);
         }
+        assertTrue(defaultExcludes.contains("**/*$*"),
+                "default Surefire execution must exclude compiled nested test classes exactly: **/*$*");
 
         Element guards = profileById(pom, "guards");
         assertTrue(guards != null, "pom.xml must retain a separate guards profile");

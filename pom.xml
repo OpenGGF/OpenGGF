@@ -1272,6 +1272,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                         <exclude>**/TestNo*.java</exclude>
                         <exclude>**/TestArchUnit*.java</exclude>
                         <exclude>**/TestAudioPresentationBoundary.java</exclude>
+                        <exclude>**/*$*</exclude>
                         <exclude>**/TestGraphicsManagerHeadless.java</exclude>
                         <exclude>**/VisualRegressionTest.java</exclude>
                         <exclude>**/VisualReferenceGenerator.java</exclude>
