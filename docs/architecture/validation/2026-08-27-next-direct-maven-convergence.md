@@ -842,3 +842,28 @@ failure naming only the two legacy rows above, zero errors, and zero skips.
 Because the paired ordinary runs already used the explicit 3 GiB heap and
 alphabetical order, these profile/documentation corrections do not invalidate
 their byte-identical 18,201-outcome comparison.
+
+## Post-merge `next` certification on 2026-08-28
+
+The reviewed feature head `c16918ad734752e2ece9355277b6c9322a94b457`
+merged without conflicts into `next` as
+`f337f1f31ac383c416bc050772b4211f7a3a4ef7`. The merge tree was then tested
+again, rather than relying only on the feature-worktree result.
+
+The post-merge ordinary run used the same 2,317-class selector, ten-row
+cardinality contract, three verified ROM inputs, explicit alphabetical order,
+and one reused 3 GiB fork as the frozen-baseline run. It produced 2,318 XML
+reports, 18,201 testcases, and zero dump files. After the complete report tree
+remained byte-stable across repeated samples, only the owned Maven PTY was
+interrupted for the same known post-report nontermination. The authenticated
+export succeeded, and both baseline and merged inventories have SHA-256
+`eef420dff93bdfabc71b58ec3e6876c418a043ef418ee98525488fd41ecacdb9`.
+The comparator again classified all 18,201 identities `MATCH`; its TSV has
+SHA-256
+`116d50aeb3797e45022604bc279d19174f5edf3be6a2014bac2003d83d1f122b`.
+
+The separate post-merge `-Pguards` run completed naturally in 4:15 with 596
+tests: 595 passes, the same accepted Trace V5 positive-input failure naming
+only the two legacy rows above, zero errors, zero skips, and zero dumps. The
+merged `next` tree therefore introduces no ordinary or structural-guard
+regression relative to the frozen baseline.
