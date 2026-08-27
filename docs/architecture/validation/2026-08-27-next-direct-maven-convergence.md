@@ -52,9 +52,21 @@ belong to Task 5.
 ## Identity inspection
 
 The imported files were compared byte-for-byte with their `origin/develop`
-source refs and each identity was checked against the current test source by
-class and method name. Task 1 self-review records the exact commands and
-outcomes in `task-1-report.md`.
+source refs and each identity was checked against the upstream test source by
+class and JUnit engine member. Four ordinary identities are upstream-only in
+the frozen `next` source because their tests were renamed or reworked:
+
+| Upstream-only identity | Frozen-next counterpart | Classification |
+|---|---|---|
+| `com.openggf.game.rules.TestDynamicArtDmaServiceModel#sonic2ServicesOnlyProcessDmaQueueEquivalentClaims` | `#sonic2ServicesEveryProcessDmaQueueEquivalentClaim` | Renamed and semantically reworked (title-card claim changed); non-comparable |
+| `com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#collapsingPlatformFragmentFallKeepsVerticalOnlyOffscreenParentForCpuSlotRefresh` | `#collapsingPlatformFragmentFallDeletesOnFirstVerticallyOffscreenBuildResult` | Renamed and assertion timeline reworked; non-comparable |
+| `com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects#aizCapsuleResultsStartLocksSonicButDefersSidekickEndingPoseCheck` | `#aizCapsuleResultsActiveWaitRunsTailsEndingPoseBeforeResultsExit` | Renamed and fixture/phase reworked; non-comparable |
+| `com.openggf.level.objects.TestTouchResponseManager#testS3kInlineTouchUsesPreviousCollisionResponseListCapturedPosition` | `#testS3kInlineTouchUsesPreviousCollisionResponseListFrameStartPosition` | Renamed and position-phase assertion reworked; non-comparable |
+
+These four remain unmatched expected-red identities; their counterparts must be
+reported under their current exact identities. A renamed or reworked
+counterpart is never counted as resolving the upstream identity. Task 1
+self-review records the exact commands and outcomes in `task-1-report.md`.
 
 ## Focused verification
 
@@ -62,8 +74,10 @@ Result: not run in Task 1. Reserved for Task 5.
 
 ## Ordinary suite
 
-Result: not run in Task 1. Reserved for Task 5; compare against the 18,197
-identity snapshot and the 70 expected-red identities.
+Result: not run in Task 1. Reserved for Task 5; compare exact
+`class#JUnit-engine-member` identities against the 18,197-identity snapshot and
+the 70 expected-red identities. Keep unmatched upstream-only identities and
+renamed/reworked counterparts separate; neither is a resolved red.
 
 ## Guards suite
 

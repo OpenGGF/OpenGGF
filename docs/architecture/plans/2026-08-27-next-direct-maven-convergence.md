@@ -124,6 +124,9 @@ git commit -m "test: require worktree-local Maven output"
 
 **Files:**
 - Modify: `pom.xml`, `.mvn/jvm.config`, `dev.sh`, `dev.cmd`, `run.sh`, `run.cmd`
+- Modify: `src/main/java/com/openggf/tools/audio/parity/S1AudioParityTool.java`, `src/main/java/com/openggf/tools/audio/timeline/S1GameplayAudioTimelineTool.java`
+- Modify: `src/main/java/com/openggf/tools/TraceCaptureTool.java`, `src/main/java/com/openggf/tools/TraceTriageTool.java`, `src/main/java/com/openggf/configuration/SonicConfigurationService.java`
+- Modify: `tools/audio/run_complete_audio_parity.sh`, `tools/audio/run_s1_audio_parity.sh`
 - Delete: `tools/agent-scratch`, `tools/test_agent_scratch.py`
 - Delete: coordinator/self-test/process-harness/session-guard sources and fixtures under `tools/testing/`
 - Delete: POSIX/PowerShell `test-session` and process-harness launchers
@@ -133,12 +136,17 @@ git commit -m "test: require worktree-local Maven output"
 **Interfaces:**
 - Consumes: Task 2 RED contract.
 - Produces: direct Maven with every generated path derived from `${project.build.directory}`.
+- Removes obsolete session-output environment reads from active `src/main` and
+  tooling code while preserving target-derived diagnostic/report inputs.
 
 - [ ] **Step 1: Remove coordinator-only Maven executions**
 
 Delete executions that compile/run the coordinator, reject raw Maven, or
 validate wrapper leases/manifests. Preserve JDK enforcement, Surefire,
 packaging, guards, ROM inputs, Mod API, Net isolation, and trace profiles.
+Update the listed audio parity/timeline tools and trace/report tooling so they
+do not consume `openggf.session.*`, `openggf.build.directory`, managed-scratch
+environment variables, or wrapper-exported output roots.
 
 - [ ] **Step 2: Collapse output properties**
 
@@ -164,9 +172,13 @@ preserve and report content that is not solely session-protocol code.
 ```bash
 mvn -Dmse=off -Dtest=com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.TestSessionOutputPathsTest test -B
 git grep -n -E 'TestSessionCoordinator|test-session|agent-scratch|frozen-next-session' -- tools/testing pom.xml dev.sh dev.cmd run.sh run.cmd
+git grep -n -E 'openggf\.session\.|openggf\.build\.directory|AGENT_SCRATCH_ROOT|OGGF_SCRATCH_ROOT|OPENGGF_TEST_RUN_|TEST_SESSION_' -- src/main tools/audio tools/testing
 ```
 
-Expected: focused tests pass and the search is empty.
+Expected: focused tests pass and both searches are empty. The second search is
+the explicit prohibition against obsolete session-output environment use in
+active source/tooling; target-derived `openggf.test.diagnostics` and
+`openggf.trace.reports` remain valid only when Maven binds them below `target/`.
 
 - [ ] **Step 5: Commit the build cutover**
 
