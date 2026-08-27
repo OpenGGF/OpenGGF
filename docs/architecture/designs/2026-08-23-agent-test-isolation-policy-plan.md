@@ -1,14 +1,16 @@
 # Agent Test Isolation Policy Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+**Status:** Historical implementation record, completed under the retired managed-session workflow.
+
+Commands and paths below are historical evidence, not active guidance. The current
+workflow is defined by the
+[direct-Maven convergence design](2026-08-27-next-direct-maven-convergence.md).
 
 **Goal:** Make the session/LWJGL isolation contract explicit and mechanically guarded for both Codex and Claude agents.
 
 **Architecture:** Keep isolation in the existing `TestSessionCoordinator` and Maven Surefire configuration. Add machine-readable isolation metadata to the session manifest and start/end markers, then make the coordinator self-test and `TestBuildToolingGuard` verify the runtime and documentation contract. Update `AGENTS.md` and `CLAUDE.md` together so agent instructions remain byte-identical.
 
 **Tech Stack:** Java 21 source-launch coordinator, Maven Surefire, JUnit 5, POSIX/PowerShell wrappers, Markdown policy documentation.
-
-**Spec:** `docs/architecture/designs/2026-08-23-test-session-isolation-design.md`
 
 ## Global Constraints
 
@@ -45,7 +47,7 @@
 **Files:**
 - Modify: `AGENTS.md`
 - Modify: `CLAUDE.md`
-- Modify: `docs/architecture/designs/2026-08-23-test-session-isolation-design.md`
+- Historical input: the retired session-isolation design (removed during direct-Maven convergence)
 
 - [x] Add a mandatory Codex/Claude test-session contract covering wrapper use, session-owned temp roots, per-fork LWJGL extraction, parallel worktree behavior, and non-certifying raw Maven runs.
 - [x] Document the new marker/manifest fields as the evidence agents must report.

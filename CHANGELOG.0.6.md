@@ -10,9 +10,9 @@ This file contains the complete 0.6 development snapshot history carried forward
   the coordinator, wrappers, managed scratch helper, and active enforcement
   have been removed from OpenGGF. The preserved lifecycle research now lives
   separately in public `OpenGGF/Actworks` as a v0.8 ask. Repeated trace runs
-  atomically replace stale reports in that reusable tree, Maven and Surefire
-  temporary files remain target-local, and release jobs upload only finished
-  platform archives.
+  reuse deterministic owner-keyed paths and reject changed-content collisions;
+  build, test, report, plugin, and per-Surefire-fork temporary output remains
+  target-local, and release jobs upload only finished platform archives.
 
 - **The `develop`/`next` merge now retains the official runtime behavior on its
   expanded architecture:** results, special-stage, and trace-gap lifecycle

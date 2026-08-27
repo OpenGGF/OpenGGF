@@ -70,8 +70,8 @@ self-review records the exact commands and outcomes in `task-1-report.md`.
 
 ## Task 4 workflow and guidance convergence
 
-The broadened `TestBuildToolingGuard` was run before workflow or guidance
-changes with:
+The initial broadened `TestBuildToolingGuard` was run before workflow or
+guidance changes with:
 
 ```text
 mvn -Dmse=off -Dtest=com.openggf.tests.TestBuildToolingGuard test -B
@@ -90,13 +90,38 @@ only wrapper/session consumers in CI, release, root guidance, active guides,
 runbooks, and the two mirrored trace skills.
 
 After reconciling those files in place, the same command reported 94 tests,
-0 failures, 0 errors, and 0 skipped with `BUILD SUCCESS`. CI retains its branch
-policy, destination-aware Mod API checks, ordinary-test count gate, scheduled
-ROM-backed trace job, and trace warning/keep-green checks. Release retains its
-ROM arguments, optional-skip inventory, source-derived trace coverage checks,
-native matrix, universal profile, package smoke validation, and archive
-uploads; only the invocation and consumed output roots changed to direct Maven
-and static `target/` paths.
+0 failures, 0 errors, and 0 skipped with `BUILD SUCCESS`.
+
+Review then found that the trace-report consumers still assumed flat legacy
+names even though the publisher emits
+`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json`.
+Before correcting either workflow, the guard was extended again and the same
+focused command produced the intended corrective RED: 97 tests, 5 failures,
+0 errors, and 0 skipped. The failing methods were
+`releaseWorkflowShouldFailTraceReplayWarnings`,
+`retiredAgentIsolationPlanMustBeClearlyHistorical`,
+`scheduledDevelopTraceWorkflowMustConsumeOwnerKeyedReports`,
+`supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`, and
+`traceGuidesMustDescribeOwnerKeyedProfileReports`.
+
+The first correction candidate reduced the result to 97 tests, 1 failure,
+0 errors, and 0 skipped; that remaining failure proved the historical plan
+still contained one broken retired-design path. After removing that broken
+reference, the final focused GREEN reported 97 tests, 0 failures, 0 errors,
+and 0 skipped with `BUILD SUCCESS`.
+
+CI and release now recursively enumerate JSON reports, reject ownership
+sidecars from the payload set, require exactly one profile directory, validate
+the logical-key/lane/16-hex-owner filename shape, require matching owner
+metadata, and fail when the report set is empty or malformed. Scheduled CI
+also requires exactly one
+`special-stage/s2_special_stage_0-s2-0-<owner-hash>.json` keep-green report;
+its warning scan and release's warning scan consume that already-validated
+set. CI retains its branch policy, destination-aware Mod API checks,
+ordinary-test count gate, scheduled ROM-backed trace job, and keep-green gate.
+Release retains its ROM arguments, optional-skip inventory, source-derived
+trace coverage checks, native matrix, universal profile, package smoke
+validation, and finished-archive uploads.
 
 The dedicated lifecycle-record deletion was bounded before editing. Four of
 the five present records were byte-identical to `572a5cc36^`; the sole
@@ -104,18 +129,24 @@ divergent file, the test-session isolation design, differed only in superseded
 coordinator/root-selection contract prose and contained no `next` merge result.
 The deleted validation record described the earlier `develop` integration, not
 this `next` convergence. Its committed history remains available in Git;
-current convergence evidence remains in this ledger.
+current convergence evidence remains in this ledger. The separate
+`2026-08-23-agent-test-isolation-policy-plan.md` was retained as historical
+evidence, explicitly marked historical, linked to the current direct-Maven
+design, and stripped of its broken retired-design link. A dedicated guard
+assertion enforces that active/history boundary without treating its preserved
+commands as current guidance.
 
 All three required mirror comparisons were byte-identical. The exact active-
 reference grep from the implementation plan returned only the deliberate
 retired-marker literals inside `TestBuildToolingGuard`; no workflow, root
 guidance, guide, runbook, tool, or skill match remained. Bounded workflow
 inspection confirmed the direct ordinary/guards/trace/native/universal Maven
-commands, static report/archive paths, Mod API destination arguments, three ROM
-properties, default-test count, release optional-skip inventory, trace warning
-checks, native matrix, universal native-classifier checks, and both package
-smoke validations remain present. `git diff --check` was clean. Full ordinary
-and guards comparisons remain reserved for Task 5.
+commands, static report/archive paths, recursive owner-keyed trace consumers,
+non-empty/malformed/missing-owner failure paths, Mod API destination arguments,
+three ROM properties, default-test count, release optional-skip inventory,
+trace warning checks, native matrix, universal native-classifier checks, and
+both package smoke validations remain present. `git diff --check` was clean.
+Full ordinary and guards comparisons remain reserved for Task 5.
 
 ## Focused verification
 

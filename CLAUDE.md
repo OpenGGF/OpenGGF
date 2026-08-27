@@ -54,6 +54,8 @@ ordinary fork so whole-production graph imports receive a fresh JVM.
 
 ### Agent test isolation contract
 
+Codex and Claude agents both follow this contract.
+
 OpenGGF uses Maven directly. Build and test output belongs below the current
 worktree's `target/` directory. Do not redirect Maven build/report roots to a
 shared or durable session directory. Parallel agents use separate worktrees;

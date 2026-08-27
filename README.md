@@ -280,9 +280,9 @@ traces.
 - **Modern development and validation tools:** level-editor foundations,
   ROM offset and compression tools, headless gameplay tests, BizHawk trace
   replay, visual/audio regression checks, and release/architecture guards.
-  Maven runs directly in each worktree and keeps build, report, diagnostic,
-  temporary, and per-Surefire-fork LWJGL output below that worktree's `target/`
-  tree.
+  Maven runs directly in each worktree and keeps build, test-report,
+  diagnostic, plugin, and per-Surefire-fork temporary output below that
+  worktree's `target/` tree.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
   and worktree-local direct-Maven procedures.

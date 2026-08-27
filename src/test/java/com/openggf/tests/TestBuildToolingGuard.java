@@ -774,6 +774,9 @@ class TestBuildToolingGuard {
                 || !agents.contains("tools/testing/install-hooks.ps1")) {
             violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
         }
+        if (!agents.contains("Codex") || !agents.contains("Claude")) {
+            violations.add("AGENTS.md/CLAUDE.md must name both Codex and Claude in the agent workflow contract");
+        }
         for (String requiredText : List.of(
                 "mvn package",
                 "mvn test",
@@ -871,6 +874,60 @@ class TestBuildToolingGuard {
         }
         if (!violations.isEmpty()) {
             fail("active code, workflows, and guidance must not depend on retired session tooling:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void retiredAgentIsolationPlanMustBeClearlyHistorical() throws Exception {
+        Path plan = Path.of(
+                "docs/architecture/designs/2026-08-23-agent-test-isolation-policy-plan.md");
+        String text = Files.readString(plan, StandardCharsets.UTF_8);
+        List<String> violations = new ArrayList<>();
+
+        if (!text.contains("**Status:** Historical")) {
+            violations.add(plan + " is not explicitly classified as historical evidence");
+        }
+        if (!text.contains("2026-08-27-next-direct-maven-convergence.md")) {
+            violations.add(plan + " does not link to the current direct-Maven design");
+        }
+        if (text.contains("2026-08-23-test-session-isolation-design.md")) {
+            violations.add(plan + " still links to the retired test-session design");
+        }
+        if (!text.contains("Commands and paths below are historical evidence, not active guidance.")) {
+            violations.add(plan + " does not bound its retired commands as historical evidence");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("the retained isolation plan must not masquerade as active workflow guidance:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void traceGuidesMustDescribeOwnerKeyedProfileReports() throws Exception {
+        List<String> violations = new ArrayList<>();
+        for (Path guide : List.of(
+                Path.of("docs/guide/contributing/trace-replay.md"),
+                Path.of("docs/guide/contributing/trace-framework-reference.md"))) {
+            String text = Files.readString(guide, StandardCharsets.UTF_8);
+            if (!text.contains(
+                    "target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json")) {
+                violations.add(guide + " does not document the owner-keyed physical layout");
+            }
+            for (String stale : List.of(
+                    "<manifest.trace_reports>",
+                    "<game>_<zone><act>_report.json",
+                    "s3k_aiz1_report.json",
+                    "s3k_cnz1_report.json")) {
+                if (text.contains(stale)) {
+                    violations.add(guide + " still presents a flat report path: " + stale);
+                }
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("trace guidance must match profile-scoped owner-keyed report publication:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -1408,10 +1465,64 @@ class TestBuildToolingGuard {
         if (!workflow.contains("Trace replay warnings are release-blocking")) {
             violations.add(".github/workflows/release.yml does not fail release validation on trace warnings");
         }
+        assertOwnerKeyedTraceReportConsumer(
+                ".github/workflows/release.yml", workflow, violations);
+        if (!workflow.contains("for report in trace_reports:")) {
+            violations.add(".github/workflows/release.yml warning scan does not consume the validated owner-keyed reports");
+        }
 
         if (!violations.isEmpty()) {
             fail("release trace validation must not certify warning-only trace parity fields:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void scheduledDevelopTraceWorkflowMustConsumeOwnerKeyedReports() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/ci.yml"));
+        List<String> violations = new ArrayList<>();
+
+        assertOwnerKeyedTraceReportConsumer(
+                ".github/workflows/ci.yml", workflow, violations);
+        if (!workflow.contains("special-stage/s2_special_stage_0-s2-0-<owner-hash>.json")) {
+            violations.add(".github/workflows/ci.yml does not identify the owner-keyed S2 keep-green report");
+        }
+        if (!workflow.contains("if len(required_ss_reports) != 1:")) {
+            violations.add(".github/workflows/ci.yml does not fail closed for a missing or ambiguous S2 keep-green report");
+        }
+        if (!workflow.contains("for report in trace_reports:")) {
+            violations.add(".github/workflows/ci.yml warning scan does not consume the validated owner-keyed reports");
+        }
+        if (workflow.contains("s2_special_stage_0_report.json")
+                || workflow.contains("trace_dir.glob(\"*_report.json\")")) {
+            violations.add(".github/workflows/ci.yml still consumes flat legacy trace-report names");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("scheduled develop trace validation must consume exactly the reports Maven publishes:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    private static void assertOwnerKeyedTraceReportConsumer(
+            String sourceName, String workflow, List<String> violations) {
+        for (String required : List.of(
+                "OWNER_KEYED_REPORT = re.compile(",
+                "trace_dir.rglob(\"*.json\")",
+                "not path.name.endswith(\".owner.json\")",
+                "path.parent.parent == trace_dir",
+                "OWNER_KEYED_REPORT.fullmatch(path.name)",
+                "invalid_trace_reports",
+                "Unexpected non-owner-keyed trace reports below",
+                "if not trace_reports:",
+                "No owner-keyed trace reports found below")) {
+            if (!workflow.contains(required)) {
+                violations.add(sourceName + " does not prove owner-keyed recursive consumption: "
+                        + required);
+            }
+        }
+        if (workflow.contains("trace_dir.glob(\"*_report.json\")")) {
+            violations.add(sourceName + " still scans only flat legacy trace-report names");
         }
     }
 

@@ -123,9 +123,9 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
                                    │ emits
                                    ▼
                 ┌──────────────────────────────────────────┐
-                │  worktree: target/trace-reports         │
-                │   <game>_<zone><act>_report.json         │
-                │   <game>_<zone><act>_context.txt         │
+                │  target/trace-reports/<profile>/         │
+                │   <logical-key>-<lane>-<owner-hash>.json │
+                │   ...-<owner-hash>_context.txt           │
                 └──────────────────────────────────────────┘
                                    │ read by
                                    ▼
@@ -773,9 +773,11 @@ The base JUnit-5 test class. Subclasses override `game()`, `zone()`, `act()`,
      the drive cursor asymmetrically.
 9. **Build `DivergenceReport`.** S3K passes its `TraceData` in so the report can enrich
    itself with checkpoint metadata.
-10. **Write report.** Always writes `<manifest.trace_reports>/<game>_<zone><act>_report.json`.
-    If there are errors, also writes `<game>_<zone><act>_context.txt` — a side-by-side
-    context window around the first error, sized `radius=10` frames.
+10. **Write report.** Always writes
+    `target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json` plus its
+    `.json.owner.json` ownership sidecar. If there are errors, it also writes the same
+    owner-keyed stem with `_context.txt` — a side-by-side context window around the first
+    error, sized `radius=10` frames.
 11. **Fail the test** if `report.hasErrors()`. Print `report.toSummary()` and the context
     window to `System.err`.
 
@@ -886,7 +888,8 @@ quietly producing meaningless divergences.
 groups on the same field within the same error run are flagged `cascading=true` so humans
 can ignore them.
 
-**JSON output** (`<manifest.trace_reports>/<game>_<zone><act>_report.json`):
+**JSON output**
+(`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json`):
 
 ```json
 {
@@ -904,10 +907,11 @@ can ignore them.
 }
 ```
 
-**Context window** (`<manifest.trace_reports>/<game>_<zone><act>_context.txt`), written only if
-there are errors. Table of the `radius=10` frames on either side of the first error,
-showing every divergent field plus the one-line `romDiag` and `engineDiag` strings so the
-developer can see ROM state vs engine state at the moment the divergence opened.
+**Context window**
+(`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>_context.txt`), written
+only if there are errors. Table of the `radius=10` frames on either side of the first
+error, showing every divergent field plus the one-line `romDiag` and `engineDiag` strings
+so the developer can see ROM state vs engine state at the moment the divergence opened.
 
 Example text shape:
 
@@ -1062,8 +1066,8 @@ every nearby-object position every frame through a 20-minute run.
    or `n/a`, and cross-checks trailer ↔ file staging (e.g. `Changelog: updated` requires
    `CHANGELOG.md` to be in the diff). Runs via `bash .githooks/validate-policy.sh ci-pr ...`.
 2. **`test`** — sets up Java 21 (Temurin) with Maven cache, then runs
-   `mvn test -B` and reads `target/surefire-reports` and
-   `target/trace-reports`.
+   `mvn test -B` and reads `target/surefire-reports` plus owner-keyed reports recursively
+   below `target/trace-reports/<profile>/`.
 
 Trace replay tests run in the `test` job but **skip gracefully** (`Assumptions.assumeTrue`)
 whenever their `.bk2` or ROM is unavailable — so CI passes without committing ROMs. What CI
@@ -1106,9 +1110,10 @@ frames) and steps 2, 3 are LLM-friendly (read disassembly, read engine, edit Jav
 
 For any given trace divergence, the agent has:
 
-- **`<manifest.trace_reports>/<game>_<zone><act>_report.json`** — machine-readable error list.
-- **`<manifest.trace_reports>/<game>_<zone><act>_context.txt`** — human-readable first-error
-  window with side-by-side ROM vs engine diagnostics.
+- **`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json`** —
+  machine-readable error list.
+- **`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>_context.txt`** —
+  human-readable first-error window with side-by-side ROM vs engine diagnostics.
 - **`src/test/resources/traces/<game>/<name>/physics.csv`** — every ROM-state row.
 - **`src/test/resources/traces/<game>/<name>/aux_state.jsonl`** — every ROM event.
 - **`docs/s1disasm/` / `docs/s2disasm/` / `docs/skdisasm/`** — the original ROM source (not
@@ -1167,7 +1172,7 @@ a self-contained briefing. In the trace context, typical sub-agent roles are:
 - "Read the first error in the context file and identify the ROM routine implicated."
 - "Find the corresponding engine code and propose a minimal fix."
 - "Run `mvn test -Dtest=TestS1Mz1TraceReplay`, inspect
-  `target/trace-reports`, and report the new error count."
+  `target/trace-reports/trace/`, and report the new error count."
 - "Record a fresh trace in BizHawk and update the fixture."
 
 Results come back as short reports; the orchestrator decides what to do next.
