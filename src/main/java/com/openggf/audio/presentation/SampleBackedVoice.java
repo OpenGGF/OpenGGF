@@ -1,8 +1,6 @@
 package com.openggf.audio.presentation;
 
 import com.openggf.audio.rewind.AudioSourceDescriptor;
-import com.openggf.audio.smps.SmpsSequencer;
-import com.openggf.audio.synth.VirtualSynthesizer;
 
 import java.util.Objects;
 
@@ -24,27 +22,16 @@ public final class SampleBackedVoice implements PresentationVoice {
     private final long endPositionQ32;
     private long sourcePositionQ32;
     private boolean stopped;
-    private final PresentationVoiceSnapshot.SampleRenderMode renderMode;
-    private final VirtualSynthesizer ymDacSynth;
-    private final short[] ymDacFrame = new short[2];
-    private int lastDacSourceFrame;
 
     public SampleBackedVoice(long voiceId, int priority, DecodedPcm pcm, int outputSampleRate,
                              double pitch, int gainQ16, boolean looping) {
         this(voiceId, priority, pcm, null, null, 0L,
-                calculateSourceStepQ32(pcm, outputSampleRate, pitch), gainQ16,
-                looping, false,
-                PresentationVoiceSnapshot.SampleRenderMode.HOST_LINEAR,
-                null, -1);
+                calculateSourceStepQ32(pcm, outputSampleRate, pitch), gainQ16, looping, false);
     }
 
     private SampleBackedVoice(long voiceId, int priority, DecodedPcm pcm, Integer musicId,
                               AudioSourceDescriptor sourceDescriptor, long sourcePositionQ32,
-                              long sourceStepQ32, int gainQ16, boolean looping,
-                              boolean stopped,
-                              PresentationVoiceSnapshot.SampleRenderMode renderMode,
-                              VirtualSynthesizer ymDacSynth,
-                              int lastDacSourceFrame) {
+                              long sourceStepQ32, int gainQ16, boolean looping, boolean stopped) {
         this.voiceId = voiceId;
         this.priority = priority;
         this.pcm = Objects.requireNonNull(pcm, "pcm");
@@ -59,36 +46,12 @@ public final class SampleBackedVoice implements PresentationVoice {
         this.gainQ16 = gainQ16;
         this.looping = looping;
         this.stopped = stopped;
-        this.renderMode = Objects.requireNonNull(renderMode, "renderMode");
-        this.ymDacSynth = ymDacSynth;
-        this.lastDacSourceFrame = lastDacSourceFrame;
-        if ((renderMode == PresentationVoiceSnapshot.SampleRenderMode.YM2612_DAC)
-                != (ymDacSynth != null)) {
-            throw new IllegalArgumentException(
-                    "YM DAC mode and synthesizer must be paired");
-        }
     }
 
     public static SampleBackedVoice rawSegaPcm(long voiceId, int priority, DecodedPcm pcm,
                                                 int outputSampleRate) {
-        return rawSegaPcm(voiceId, priority, pcm, outputSampleRate,
-                SmpsSequencer.Region.NTSC);
-    }
-
-    public static SampleBackedVoice rawSegaPcm(
-            long voiceId, int priority, DecodedPcm pcm,
-            int outputSampleRate, SmpsSequencer.Region region) {
-        VirtualSynthesizer synth = new VirtualSynthesizer(outputSampleRate);
-        synth.setChipClockProfile(region == SmpsSequencer.Region.PAL
-                ? VirtualSynthesizer.ChipClockProfile.PAL
-                : VirtualSynthesizer.ChipClockProfile.NTSC);
-        synth.writeFm(null, 0, 0x2B, 0x80);
-        return new SampleBackedVoice(
-                voiceId, priority, pcm, null, null, 0L,
-                calculateSourceStepQ32(pcm, outputSampleRate, 1.0),
-                YM_DAC_GAIN_Q16, false, false,
-                PresentationVoiceSnapshot.SampleRenderMode.YM2612_DAC,
-                synth, -1);
+        return oneShot(voiceId, priority, pcm, outputSampleRate, 1.0f,
+                YM_DAC_GAIN_Q16 / (float) (1 << 16));
     }
 
     public static SampleBackedVoice oneShot(long id, int priority, DecodedPcm pcm, int outputRate,
@@ -115,21 +78,9 @@ public final class SampleBackedVoice implements PresentationVoice {
         if (!snapshot.assetId().equals(Objects.requireNonNull(pcm, "pcm").assetId())) {
             throw new IllegalArgumentException("snapshot assetId does not match PCM");
         }
-        VirtualSynthesizer synth = null;
-        if (snapshot.renderMode()
-                == PresentationVoiceSnapshot.SampleRenderMode.YM2612_DAC) {
-            if (snapshot.synthSnapshot() == null) {
-                throw new IllegalArgumentException(
-                        "YM DAC snapshot is missing synthesizer state");
-            }
-            synth = new VirtualSynthesizer(
-                    snapshot.synthSnapshot().outputSampleRate());
-            synth.restoreSynthSnapshot(snapshot.synthSnapshot());
-        }
         return new SampleBackedVoice(snapshot.voiceId(), snapshot.priority(), pcm, snapshot.musicId(),
                 snapshot.sourceDescriptor(), snapshot.sourcePositionQ32(), snapshot.sourceStepQ32(),
-                snapshot.gainQ16(), snapshot.looping(), snapshot.stopped(),
-                snapshot.renderMode(), synth, snapshot.lastDacSourceFrame());
+                snapshot.gainQ16(), snapshot.looping(), snapshot.stopped());
     }
 
     public static SampleBackedVoice restore(PresentationVoiceSnapshot.Sample snapshot, DecodedPcmCache cache) {
@@ -157,18 +108,6 @@ public final class SampleBackedVoice implements PresentationVoice {
         this.gainQ16 = snapshot.gainQ16();
         this.looping = snapshot.looping();
         this.stopped = snapshot.stopped();
-        if (snapshot.renderMode() != renderMode) {
-            throw new IllegalArgumentException(
-                    "snapshot render mode does not match voice");
-        }
-        if (ymDacSynth != null) {
-            if (snapshot.synthSnapshot() == null) {
-                throw new IllegalArgumentException(
-                        "YM DAC snapshot is missing synthesizer state");
-            }
-            ymDacSynth.restoreSynthSnapshot(snapshot.synthSnapshot());
-            lastDacSourceFrame = snapshot.lastDacSourceFrame();
-        }
     }
 
     public void setPitch(float pitch, int outputRate) {
@@ -194,10 +133,6 @@ public final class SampleBackedVoice implements PresentationVoice {
         Objects.requireNonNull(accumulation, "accumulation");
         if (stereoFrames < 0 || accumulation.length < (long) stereoFrames * 2) {
             throw new IllegalArgumentException("accumulation cannot hold requested stereo frames");
-        }
-        if (renderMode == PresentationVoiceSnapshot.SampleRenderMode.YM2612_DAC) {
-            mixYmDac(accumulation, stereoFrames);
-            return;
         }
         for (int frame = 0; frame < stereoFrames && !isComplete(); frame++) {
             int sourceFrame = (int) (sourcePositionQ32 >>> 32);
@@ -228,26 +163,7 @@ public final class SampleBackedVoice implements PresentationVoice {
     @Override
     public PresentationVoiceSnapshot snapshot() {
         return new PresentationVoiceSnapshot.Sample(voiceId, priority, pcm.assetId(), musicId, sourceDescriptor,
-                sourcePositionQ32, sourceStepQ32, gainQ16, looping, stopped,
-                renderMode,
-                ymDacSynth == null ? null : ymDacSynth.captureSynthSnapshot(),
-                lastDacSourceFrame);
-    }
-
-    private void mixYmDac(long[] accumulation, int stereoFrames) {
-        for (int frame = 0; frame < stereoFrames && !isComplete(); frame++) {
-            int sourceFrame = (int) (sourcePositionQ32 >>> 32);
-            if (sourceFrame != lastDacSourceFrame) {
-                int raw = ((pcm.sample(sourceFrame, 0) >> 8) + 128) & 0xFF;
-                ymDacSynth.writeFm(this, 0, 0x2A, raw);
-                lastDacSourceFrame = sourceFrame;
-            }
-            ymDacSynth.renderFrames(ymDacFrame, 0, 1);
-            int outputIndex = frame * 2;
-            accumulation[outputIndex] += ymDacFrame[0];
-            accumulation[outputIndex + 1] += ymDacFrame[1];
-            advance();
-        }
+                sourcePositionQ32, sourceStepQ32, gainQ16, looping, stopped);
     }
 
     private int interpolate(int sourceFrame, int nextFrame, int channel, long fraction) {

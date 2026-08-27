@@ -46,12 +46,6 @@ This file contains the complete 0.6 development snapshot history carried forward
   warnings; exact slot mismatches have been promoted from warning to error
   (`docs/s2disasm/s2.asm:5095-5098,15175,21511-21512,59320-59588`).
 
-- **Zone music resumes after temporary S3K music sequences:** the extra-life
-  jingle now latches its `E2 FF` fade-to-previous request at the presentation
-  boundary before completion can discard the saved track. The AIZ1 miniboss
-  escape and its non-transition fallback also request the current level track
-  directly instead of trying to unwind the jingle's saved-song slot.
-
 - **AIZ1 miniboss rewinds now restore the complete cutscene object graph:** the
   shared body, arm, and flame-barrel children relink to the Act 1 cutscene boss
   as well as the Act 2 fight boss, preventing a missing-object-reference crash
@@ -87,19 +81,6 @@ This file contains the complete 0.6 development snapshot history carried forward
   leader-wait/jump-countdown word. All recorded rows where the comparator can
   identify one Tornado now match without trace-fed state or fitted timing.
 
-- **S3K extra-life music now retains its retail priority:** if invincibility
-  expires while the 1-up jingle is playing, the level-music request waits for
-  the jingle's own restore instead of cutting it off. That restore also releases
-  the jingle-only sound-effect gate, so jump and other gameplay sounds remain
-  audible through later boss and miniboss music fades.
-
-- **Extra-life and music-fade edge cases now follow each retail sound driver:**
-  S1 and S3K ignore a repeated 1-up request while S2 restarts its jingle without
-  overwriting the saved song. S1 alone rejects new gameplay SFX during an
-  ordinary fade; S2 and S3K keep jump and other effects audible. A completed S1
-  or S2 fade can no longer leave the 1-up SFX gate latched, and S2's native
-  `$F9` fade and `$FD` stop commands now reach the shared presentation path.
-
 - **AIZ2's boss-exit bridges now survive and layer like the retail scene:**
   the settled drawbridge remains live through score counting until Knuckles
   triggers its collapse, while both arena bridges and their falling pieces
@@ -116,17 +97,6 @@ This file contains the complete 0.6 development snapshot history carried forward
   reverse animation while still reversing immediately when the animation queue
   is full. Special-stage debug movement now uses Shift for double speed and
   Control for half speed, with those inputs preserved across rewind snapshots.
-
-- **Repeated S3K boss explosions now retain the incumbent's final service:**
-  the locked-on driver services active SFX tracks before consuming its two
-  68K SFX request cells. OpenGGF previously admitted each request immediately,
-  so a new boss explosion retired FM5 before the incumbent received that
-  boundary's modulation update. The driver now models the two retail input
-  cells, their duplicate/overwrite rules, and their SFX-first consumption as
-  one rewind-safe transaction. Native AIZ evidence covers 134 physical
-  Explosion reloads and a complete 121-frame Collapse residence with later
-  SFX traffic. Sonic 1 and Sonic 2 retain immediate admission because their
-  shipped drivers consume requests before their SFX service loops.
 
 - **Normal local launchers retain their package-and-launch workflow:** `run.sh`,
   `run.cmd`, `dev.sh`, and `dev.cmd` explicitly select the non-certifying
@@ -151,91 +121,6 @@ This file contains the complete 0.6 development snapshot history carried forward
   survives the AIZ1-to-AIZ2 reload, and restores level music only when the ROM
   timer expires. The transition no longer starts AIZ1 music eagerly, so the
   visual fire outro and trace-synchronised progression remain intact.
-
-- **The standalone sound test once again reaches the speaker:** its interactive
-  window now creates, drives, and closes the OpenAL presentation host on one
-  audio thread, instead of creating the thread-bound device on Swing's caller
-  and silently falling back when the scheduled presenter first used it. A new
-  root `soundTest.sh` launcher incrementally compiles the app and forwards its
-  game, ROM, song, console, and null-audio arguments.
-
-- **S3K FM sound effects retain the shipped track-stop decay:** locked-on
-  `cfStopTrack` spends 181 Z80 T-states between entering the terminal path and
-  writing the YM2612 key-off. OpenGGF previously keyed each FM track off at the
-  driver-service boundary, shortening the final envelope release. Track stops
-  now preserve that source-derived delay for all eligible S3K FM effects while
-  keeping completion restoration in its own ordered scope. A real AIZ1
-  headless regression starts Tails at debug-HUD position `6517,933` in an air
-  roll, breaks the ROM-backed rock, verifies Collapse's three staggered
-  key-offs and presented-PCM tail, and then observes the later spring launch.
-
-- **Repeated PSG effects now overwrite the shared SFX track without exposing
-  music between requests:** a real AIZ native trace showed Collapse requested
-  three times about 61–62 frames apart while its five-burst PSG3 tail was still
-  active. OpenGGF removed each same-ID sequencer by releasing PSG3 to music,
-  producing a transient music-tone restore before the replacement took over.
-  The shared PSG3/noise lock now hands directly to the replacement, matching
-  the shipped track RAM; S3K's `fix_sndbugs=0` admission still emits its
-  authentic PSG3/noise silence pair. The final request consequently retains
-  the complete 121-frame decay instead of breaking the continuous crumble
-  texture.
-
-- **SMPS PSG output now uses the reference band-limited renderer:** BizHawk's
-  Genesis Plus GX core runs the console with `hq_psg=1`, while OpenGGF's SMPS
-  drivers had left the chip in its standalone fast mode. Native final-speaker
-  captures showed that S3K Collapse ends at the same semantic frame in both
-  engines but retains the PSG filter's decaying waveform after the final mute.
-  All three SMPS dialects now select the existing HQ path, restoring that
-  texture without extending Sound_59 or adding effect-specific reverb.
-
-- **Existing installs now receive the reference audio-chip defaults:** older
-  generated `config.yaml` files persisted DAC interpolation and MAME-style
-  every-toggle PSG noise as an all-true pair, which overrode later default
-  corrections forever. That exact legacy pair is migrated once to raw DAC
-  steps and GPGX/libvgm positive-edge PSG noise; asymmetric user choices remain
-  untouched. This corrects a separate installed-configuration mismatch for
-  noise effects such as S3K Collapse and Spindash Release without
-  sound-specific constants.
-
-- **S3K audio parity can now be localized through exact PCM boundaries:** a
-  diagnostic-only path records YM2612 stereo mix samples, held DAC codes, PSG
-  native stereo samples, and final presented PCM on their owning clocks. The
-  production fast path remains inert, while the pinned native core and Java
-  chips expose bounded, snapshot-stable evidence for distinguishing SMPS
-  interpreter errors from chip and presentation errors.
-
-- **S3K modulated PSG effects no longer chirp at note boundaries:** the
-  locked-on Z80 driver applies modulation before its single PSG frequency
-  upload. The engine was first publishing the unmodulated period and then the
-  modulated period, adding a short wrong pitch to Collapse's repeated noise
-  bursts and to the Dash/spindash-release attack. PSG3/noise writes also retain
-  their one logical track lock instead of injecting a second noise-channel
-  silence during the note. FM5 now keys off when its own track reaches
-  `cfStopTrack`, even when a longer PSG sibling keeps the overall effect alive;
-  the interrupted music voice is restored at that same boundary instead of at
-  whole-effect cleanup. This removes Collapse's left-only ringing tail and
-  Dash's prolonged FM ending. Collapse's three FM voices now retain their
-  one-service stagger and native four-step pitch wobble when the FM5 stream
-  begins with a rest. First-attack timing includes the source Z80 octave-loop
-  cost, correcting Spindash Release without changing Blue Sphere timing.
-  S2/S3K note fill now decrements its live timeout on each actual music service
-  independently of duration extension, so Invincibility's short FM1 tones key
-  off sharply after the shipped five services.
-
-
-- **Sonic 1 FM5 effects no longer inherit the previous instrument at onset:**
-  the first authenticated SetVoice-to-note path now preserves the shipped
-  68K driver's source costs and discrete-YM BUSY polling across voice upload,
-  optional pan, key-off, frequency, and key-on. Native GPGX replay over all 38
-  retained pre-effect YM states and every one of the 42 possible YM clock
-  phases reduces aggregate key-on attenuation error from 11,764 to
-  9,188-9,221 at every phase. Unsupported paths, completion, Sonic 2, and
-  Sonic 3&K retain their existing timing models.
-
-- **Sonic 1 restores DAC percussion after focus pause/resume:** the shipped
-  `PauseMusic` unpause loop restores panning for six FM tracks and the current
-  music DAC track. The engine now restores that DAC-owned FM6 pan as well,
-  instead of leaving it at zero until a music change reprograms the channel.
 
 - **CI and release jobs consume session manifests:** Maven test and packaging
   jobs now run through the test-session coordinator, while coverage checks and
@@ -448,99 +333,7 @@ This file contains the complete 0.6 development snapshot history carried forward
   object pass. The engine installs it during the player's touch scan and now
   consumes that dispatch instead of running the new handler on the frame that
   installed it. The killing frame ends with the wait at $7F, as in ROM.
-- **Sonic 3&K FM writes now reach the YM2612 on the source driver's measured
-  bus timeline instead of collapsing into one host-side instant:** the retained
-  Genesis Plus GX lab records the repeatable 34-write Blue Sphere FM5 upload,
-  and the engine schedules that sequence by source-relative master cycle while
-  retaining atomic service publication, rollback, rewind, pause, fade, and
-  cross-SFX ownership semantics. Sonic 1 and Sonic 2 remain on their audited
-  untimed profiles because their 68k/Z80 service paths do not justify inheriting
-  S3K's timing. The replacement playback oracle requires a closed-world drained
-  prefix: the exact 13-event committed Spring tail is followed immediately by
-  the exact Blue Sphere attack stream, with no intervening event. The pending
-  service remains an exact 34-write source/segment sequence that rejects every
-  music or completion-restore prefix, including pan/algorithm writes. The
-  rollback architecture guard structurally requires capture as the first
-  unconditional helper statement and admits only
-  the reviewed transaction setup plus timing-dominated callsites. Automated
-  native, oracle, ROM-backed, and presentation gates are complete against an
-  isolated feature-base comparison; integration remains blocked on the
-  listening check.
-
-- **Sonic 3&K FM SFX now publish the retail first-note bus sequence:** the
-  Z80-style sequencer applies the initial modulation step before its single
-  frequency write and no longer emits an extra pan/frequency pair ahead of
-  key-on. The bounded playback trace can now align selected-channel samples to
-  exact YM2612 key-ons, and its special-stage replay continues clocking audio
-  across lag frames so isolated Blue Sphere restarts are checked at the
-  boundary where the reported onset problem occurs. Sonic 1 and Sonic 2 retain
-  their existing 68k/Z80 voice-write profiles.
-
-- **YM2612 and PSG output now retain the retail mixer level in all three
-  games:** the shared synthesizer no longer halves the already-clipped chip
-  mix through a synthetic `-6 dB` headroom stage. A native Genesis Plus GX
-  capture exposed the exact loss during repeated Blue Sphere pickups; the
-  corrected OpenGGF segment is within 0.2 dB RMS of the native reference while
-  preserving the ROM's intentional two-note `$05` then `$0A` FM attenuation.
-
-- **Sonic 3&K special-stage audio now crosses the same driver boundaries as
-  the retail game:** entry clears the level's speed-shoes tempo before loading
-  special-stage music, ring pickups use the Z80 driver's alternating speaker
-  selection, and rapid Blue Sphere SFX replacements retain FM5 ownership
-  without transiently restoring the music voice when they replace another
-  FM5 SFX, or injecting a full-channel `RR=FF` / `TL=7F` silence between notes
-  or at the ordinary track-stop boundary. Newly admitted S3K SFX now wait for
-  the next driver update because retail queue processing follows that update's
-  SFX loop; S1 and S2 retain their same-update start because their queue logic
-  precedes their SFX loops. A new bounded playback trace exercises the real
-  presentation/cache path at several retrigger phases and records ordered
-  requests, YM2612/PSG writes, key-on envelope state, selected-channel samples,
-  and final stereo PCM fingerprints without expanding the complete-run trace
-  contract.
-- **SEGA PCM playback now follows the owning game's driver policy:** Sonic 3&K
-  retains its retail exclusive StopAll behaviour, while Sonic 1 and Sonic 2 no
-  longer inherit that destructive policy from shared presentation code. Direct
-  SMPS test playback and S1 parity capture also advance through real driver
-  service boundaries instead of relying on the removed synthetic priming tick.
-
-- **Pausing now executes each retail SMPS driver's chip protocol:** Sonic 1
-  pans and keys off all FM channels, Sonic 2 runs its destructive FM silencer
-  and reloads active voices on resume, and Sonic 3&K leaves FM6/DAC running
-  while muting FM1-5 and reproducing the shipped redundant PSG silence. Paused
-  frames continue clocking an already-started DAC sample without servicing
-  music, SFX, envelopes, or modulation.
-
-- **PAL playback now clocks the actual YM2612 and PSG cores from the PAL Mega
-  Drive master clock:** pitch and DAC timing no longer retain NTSC oscillator
-  rates while only the frame scheduler changes. Rewind snapshots preserve the
-  selected chip-clock domain exactly.
-
-- **Sonic 3&K's SEGA PCM command now owns playback exclusively:** starting
-  the boot chant atomically stops music, overrides, and every SFX owner before
-  the PCM voice begins, streams its unsigned bytes through the region-clocked
-  YM2612 DAC core instead of a host-linear PCM shortcut, and StopSEGA leaves
-  the driver silent instead of restoring voices the retail `fix_sndbugs=0`
-  path discarded. Save/load retains the exact DAC latch and resampler state.
-
-- **1-up jingles now use each retail driver's SFX gate and priority restore:**
-  all active effects stop when the jingle begins and new effects remain blocked
-  through the driver-owned restore boundary. Sonic 1 clears the saved priority;
-  Sonic 2 deliberately restores the stale latch from its shipped
-  `FixDriverBugs=0` backup; Sonic 3&K reopens SFX immediately on song restore.
-  Sonic 1 also leaves the jingle's DAC mode active on restore, preserving the
-  retail `FixBugs=0` bug that can keep the restored FM6 inaudible.
-
-- **Sonic 3&K 1-up jingles now use the retail speed lifecycle:** the jingle runs at normal driver speed while the displaced song keeps its saved speed-shoes state, which is restored when the jingle ends.
-
 - **Sonic 3&K modulation-envelope loops now preserve the shipped driver bug:** `$82`/`$84` operands are read from the retail Z80 driver's bogus low-memory `BC` address instead of silently using the bug-fixed envelope operand.
-
-- **SMPS fades now follow each retail driver's channel and terminal rules:** Sonic 1 stops active SFX when fading starts, Sonic 3&K halts DAC and PSG immediately while fading FM, Sonic 1/2 clear speed shoes, and all three stop on the shipped terminal count without an extra volume step.
-
-- **SMPS SFX release now matches each shipped driver:** Sonic 1 and Sonic 2 leave interrupted PSG music tracks resting until their next note and no longer inject a synthetic FM takeover reset; Sonic 3&K retains its same-VInt SFX-release/music-service path.
-
-- **SMPS ordinary music changes now retain SFX exactly where the shipped drivers do:** Sonic 1 atomically carries live normal/special SFX, channel locks, continuous state, and its priority latch into the replacement song, while Sonic 2 and Sonic 3&K continue to stop SFX before loading ordinary BGM.
-
-All notable changes to the OpenGGF project are documented in this file.
 
 ### Fixed
 - **The WFZ wall-turret shot now deletes on the ROM's render flag rather than an invented

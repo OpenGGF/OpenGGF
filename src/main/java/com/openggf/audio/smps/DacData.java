@@ -7,7 +7,7 @@ import java.util.Map;
 public final class DacData {
     private final Map<Integer, Sample> samples;
     private final Map<Integer, DacEntry> mapping; // NoteID -> Entry
-    private final int baseCycles; // Game-specific DAC base cycles (S1=301, S2=295, S3K=297)
+    private final int baseCycles; // Game-specific DAC base cycles (S1=301, S2=288, S3K=297)
 
     public DacData(Map<Integer, byte[]> samples, Map<Integer, DacEntry> mapping) {
         this(samples, mapping, 288); // Default to S2 value for backwards compatibility

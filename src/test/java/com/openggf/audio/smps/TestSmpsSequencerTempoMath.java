@@ -71,7 +71,7 @@ class TestSmpsSequencerTempoMath {
             sequencer.setRegion(region);
             shadowSamplesPerFrame = sampleRate / region.frameRate;
             shadowCounter = 0.0;
-            tempoPathActive = true;
+            tempoPathActive = tempo != 0 || mode == SmpsSequencerConfig.TempoMode.OVERFLOW;
         }
 
         /** Same floating-point operations, in the same order, as SmpsSequencer.advanceBatch. */
@@ -143,11 +143,12 @@ class TestSmpsSequencerTempoMath {
     }
 
     @Test
-    void zeroTempoOverflow2StillHasAServiceBoundaryEveryFrame() {
+    void zeroTempoOverflow2ReturnsMaxValue() {
         Harness h = new Harness(0, SmpsSequencerConfig.TempoMode.OVERFLOW2, 44100.0, SmpsSequencer.Region.NTSC);
         h.advance(100);
         for (int ticks : TICK_COUNTS) {
             h.assertMatchesReference(ticks);
+            assertEquals(Integer.MAX_VALUE, h.sequencer.samplesUntilTempoTicks(ticks));
         }
     }
 

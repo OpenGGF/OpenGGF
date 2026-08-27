@@ -53,10 +53,9 @@ input:
 audio:
   enabled: true   # Enable music and SFX
   region: "NTSC"   # Region for audio timing
-  dacInterpolate: false   # Raw DAC sample steps (hardware-authentic); true enables smoothing
+  dacInterpolate: true   # DAC interpolation (smoother sound)
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
-  psgNoiseShiftEveryToggle: false   # PSG noise LFSR clock mode: false=positive edges (GPGX/libvgm), true=every toggle (MAME)
-  referenceDefaultsVersion: 1   # Internal one-time migration marker for reference chip defaults
+  psgNoiseShiftEveryToggle: true   # PSG noise LFSR clock mode: true=shift on every toggle (MAME), false=positive edges (GPGX)
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 
 # ── Characters ──
@@ -130,7 +129,7 @@ discord:
 
 # ── Trace Capture ──
 capture:
-  outputDir: "target/trace-videos"   # No-session default; coordinator runs override this diagnostic path
+  outputDir: "target/trace-videos"   # Output directory for trace capture videos
   # TRACE CAPTURE ONLY. Live viewport recording (Shift+O) records the game
   # viewport at its current on-screen size instead, so the recording includes
   # menu and debug-overlay elements that scale outside the game's pixel space.
@@ -138,9 +137,9 @@ capture:
   # fixed for the life of an encode.
   scale: 4   # Integer nearest-neighbor upscale factor for trace capture output
   fps: 60   # Output frame rate for trace capture
-  codec: "ffv1"   # Video codec: ffv1, h264 or h265 (lossless), or dnxhr-sq (visually lossy Resolve editing codec)
-  audioCodec: "flac"   # Audio codec: flac / pcm-s24le (lossless), or aac / mp3 (LOSSY)
-  container: "mkv"   # Recording extension: mkv by default; use mov with dnxhr-sq + pcm-s24le for DaVinci Resolve
+  codec: "ffv1"   # Video codec: ffv1, h264 or h265 (all lossless)
+  audioCodec: "flac"   # Audio codec: flac (lossless), or aac / mp3 (LOSSY)
+  container: "mkv"   # Recording file extension; mp4 is portable only with h264/h265 + aac
   # ── ADVANCED: full ffmpeg argument lists ───────────────────────────────
   # "default" = the engine's own command. Empty = skip that pass (pass 2 only,
   # which publishes the video with no audio). Anything else is used literally.
@@ -163,11 +162,6 @@ capture:
   #   ffmpegPass2Args: >-
   #     -y -i {videoIn} -f s16le -ar {sampleRate} -ac 2 -i {audioIn}
   #     -c:v copy {audioCodecArgs} -movflags +faststart {output}
-  #
-  # Example - DaVinci Resolve on Linux:
-  #   codec: "dnxhr-sq"
-  #   audioCodec: "pcm-s24le"
-  #   container: "mov"
   #
   # Example - video only, no audio, no mux pass (fastest):
   #   ffmpegPass2Args: ""

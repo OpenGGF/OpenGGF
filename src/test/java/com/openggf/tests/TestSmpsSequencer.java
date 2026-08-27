@@ -102,10 +102,10 @@ public class TestSmpsSequencer {
     }
 
     @Test
-    public void testSonic2TempoZeroHoldsInitialTrackStream() {
+    public void testTempoZeroStallsPlayback() {
         byte[] data = new byte[32];
         data[2] = 2; // 2 FM Channels so channel 1 avoids DAC path
-        data[5] = 0; // TempoWait holds DurationTimeout at one forever
+        data[5] = 0; // Tempo zero should halt progression
 
         // Track 0 (DAC) stubbed with stop
         data[6] = 0x10;
@@ -126,14 +126,12 @@ public class TestSmpsSequencer {
         short[] buf = new short[4000];
         seq.read(buf);
 
-        // Track service still runs each VInt, but TempoWait extends the initial
-        // duration before it can enter the stream.
-        assertEquals(1, synth.log.size(),
-                "Tempo zero should hold the initial track stream");
+        // Only the DAC enable write should be present when tempo is zero
+        assertEquals(1, synth.log.size(), "Sequencer should not advance when tempo is zero");
     }
 
     @Test
-    public void testSonic2TempoChangePreservesAccumulator() {
+    public void testTempoChangeResetsAccumulator() {
         byte[] data = new byte[48];
         data[2] = 2; // 2 FM Channels so we can use channel 1 for FM note sequencing
         data[5] = (byte) 0xC0; // Initial fast tempo
@@ -163,8 +161,9 @@ public class TestSmpsSequencer {
         MockSynth synth = new MockSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        // Shipped FixDriverBugs=0 writes CurrentTempo but preserves
-        // TempoTimeout, so the live fast-tempo phase advances to note two.
+        // Enough samples for ~16 frames. Without resetting the accumulator, the leftover fast-tempo ticks
+        // would advance to the second note (takes ~10 frames), but with a reset the slow tempo (takes ~17 frames)
+        // keeps it out of range of this buffer.
         short[] buf = new short[12000];
         seq.read(buf);
 
@@ -174,10 +173,8 @@ public class TestSmpsSequencer {
         int secondNoteIdx = logStr.indexOf("RA4 V02", firstNoteIdx + 1);
         assertTrue(firstNoteIdx >= 0, "First note should play. Log: " + logStr);
         assertTrue(logStr.contains("R28 V00"), "Rest after tempo change should key off the channel");
-        assertEquals(2, keyOnCount,
-                "S2 tempo-set must preserve the live accumulator phase");
-        assertTrue(secondNoteIdx >= 0,
-                "Preserved accumulator phase should reach the second note");
+        assertEquals(1, keyOnCount, "Second note should not play within the buffer when the tempo accumulator resets");
+        assertEquals(-1, secondNoteIdx, "Accumulator reset should delay the second note past the buffer");
     }
 
     @Test
@@ -272,9 +269,7 @@ public class TestSmpsSequencer {
         MockSynth synth = new MockSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        // Direct rendering no longer performs a hidden pre-sample driver
-        // tick; render past the first NTSC VInt service boundary.
-        short[] buf = new short[1000];
+        short[] buf = new short[100];
         seq.read(buf);
 
         assertEquals(0xAA, seq.getCommData(), "Comm data should be 0xAA");
@@ -520,9 +515,6 @@ public class TestSmpsSequencer {
         assertTrue(sfx instanceof Sonic2SfxData, "Expected Sonic2SfxData for SFX 0xBC");
         assertNotNull(sfx.getVoice(0), "SFX 0xBC should have voice 0");
         Sonic2SfxData sfxData = (Sonic2SfxData) sfx;
-        assertEquals((byte) 0x90,
-                (byte) sfxData.getTrackEntries().getFirst().transpose(),
-                "shipped FixMusicAndSFXDataBugs=0 keeps the invalid FM5 transpose");
         int ptr = sfxData.getTrackEntries().get(0).pointer;
         assertTrue(ptr >= 0 && ptr < sfxData.getData().length, "Track pointer should be within data");
         assertEquals((byte) 0xEF, sfxData.getData()[ptr], "SFX 0xBC track should start with Set Voice");
@@ -556,3 +548,6 @@ public class TestSmpsSequencer {
         assertTrue(hasCenteredPan, "SFX 0xBC FM should center pan (not inherit music pan). FM log: " + synth.fmLog);
     }
 }
+
+
+

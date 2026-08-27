@@ -20,7 +20,6 @@ public record SmpsSequencerSnapshot(
         int psgLatchChannel,
         int speedMultiplier,
         int speedupTimeout,
-        int palUpdateCounter,
         FadeSnapshot fade,
         double sampleRate,
         double samplesPerFrame,
@@ -29,7 +28,6 @@ public record SmpsSequencerSnapshot(
         int tempoAccumulator,
         int dividingTiming,
         boolean primed,
-        boolean deferNextDriverService,
         List<SmpsTrackSnapshot> tracks) {
 
     public SmpsSequencerSnapshot {

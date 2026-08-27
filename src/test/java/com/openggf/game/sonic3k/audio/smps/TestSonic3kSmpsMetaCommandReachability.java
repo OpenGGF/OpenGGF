@@ -6,7 +6,6 @@ import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsConstants;
 import com.openggf.tools.KosinskiReader;
-import com.openggf.tools.audio.s3kparity.S3kSmpsReachabilityInventory;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -15,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -267,11 +268,6 @@ public class TestSonic3kSmpsMetaCommandReachability {
     private static Sonic3kSfxData syntheticSfx(byte[] stream) {
         byte[] bank = syntheticBank();
         System.arraycopy(stream, 0, bank, 0x20, stream.length);
-        if (stream.length > 0 && (stream[0] & 0xFF) == 0xF8) {
-            // A gosub reaches its fall-through only when the target returns.
-            bank[0x40] = (byte) 0xF9;
-            bank[0x50] = (byte) 0xF9;
-        }
         return new Sonic3kSfxData(bank, 0x8000, 0, 0x10);
     }
 
@@ -436,25 +432,180 @@ public class TestSonic3kSmpsMetaCommandReachability {
     }
 
     private static ControlFlowInventory inventory(AbstractSmpsData data, boolean strictFullBank) {
+        byte[] bytes = data.getData();
+        boolean bankSpace = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null;
+        if (bankSpace) bytes = ((Sonic3kSmpsData) data).getBankData();
         ControlFlowInventory result = new ControlFlowInventory();
-        S3kSmpsReachabilityInventory.InventoryResult shared =
-                S3kSmpsReachabilityInventory.inventoryAll(
-                        S3kSmpsReachabilityInventory.Dialect.LOCKED_ON_S3K_V4,
-                        strictFullBank ? "legacy.native-bank" : "legacy.loader-stream",
-                        data,
-                        S3kSmpsReachabilityInventory.ExternalEvent.SERVICE_ENTRY,
-                        S3kSmpsReachabilityInventory.FIRST_SLICE_LIMITS);
-        shared.states().stream().map(S3kSmpsReachabilityInventory.State::pc)
-                .forEach(result.reachable::add);
-        shared.frontiers().stream().map(S3kSmpsReachabilityInventory.Frontier::reason)
-                .forEach(result.frontier::add);
-        shared.behaviors().stream().map(S3kSmpsReachabilityInventory.Behavior::key)
-                .filter(key -> key.matches("coord\\.ff\\.[0-9a-f]{2}"))
-                .map(key -> Integer.parseInt(key.substring("coord.ff.".length()), 16))
-                .forEach(result.metaSubcommands::add);
-        result.reachableOffsets = result.reachable.size();
-        result.terminalOrCycle = result.frontier.isEmpty();
+        ArrayDeque<Integer> work = new ArrayDeque<>();
+        for (int start : trackStarts(data, bankSpace)) {
+            // Zero/foreign pointers are non-track header slots for loader-scoped
+            // blobs. A strict full-bank proof must surface them as malformed roots.
+            if (start >= 0) {
+                work.add(start);
+            } else if (strictFullBank) {
+                result.frontier.add("unresolved control-flow root");
+            }
+        }
+
+        while (!work.isEmpty()) {
+            int pos = work.removeFirst();
+            if (pos < 0 || pos >= bytes.length) {
+                result.frontier.add("offset 0x" + Integer.toHexString(pos)
+                        + " reaches or exceeds bank end");
+                continue;
+            }
+            if (!result.reachable.add(pos)) {
+                result.terminalOrCycle = true;
+                continue;
+            }
+            result.reachableOffsets++;
+
+            int command = bytes[pos] & 0xFF;
+            if (command < 0x80) {
+                enqueue(result, work, pos + 1, bytes.length, "duration");
+                continue;
+            }
+            if (command < 0xE0) {
+                int next = pos + 1;
+                if (next < bytes.length && (bytes[next] & 0xFF) < 0x80) {
+                    next++;
+                }
+                enqueue(result, work, next, bytes.length, "note");
+                continue;
+            }
+
+            switch (command) {
+                case 0xE3, 0xF2, 0xF9 -> result.terminalOrCycle = true;
+                case 0xF6 -> addPointerEdge(result, work, data, pos + 1, false, "goto", strictFullBank);
+                case 0xF7 -> addPointerEdge(result, work, data, pos + 3, true, "loop", strictFullBank);
+                case 0xF8 -> addPointerEdge(result, work, data, pos + 1, true, "call", strictFullBank);
+                case 0xEB -> addPointerEdge(result, work, data, pos + 2, true, "loop-exit", strictFullBank);
+                case 0xFC -> addPointerEdge(result, work, data, pos + 1, true, "continuous", strictFullBank);
+                case 0xFF -> {
+                    if (pos + 1 >= bytes.length) {
+                        result.frontier.add("FF at 0x" + Integer.toHexString(pos) + " lacks subcommand");
+                        continue;
+                    }
+                    int subcommand = bytes[pos + 1] & 0xFF;
+                    result.metaSubcommands.add(subcommand);
+                    int operands = switch (subcommand) {
+                        case 0x00, 0x01, 0x02, 0x04 -> 1;
+                        case 0x03 -> 3;
+                        case 0x05 -> 4;
+                        case 0x06 -> 2;
+                        case 0x07 -> 0;
+                        default -> -1;
+                    };
+                    if (operands < 0) {
+                        result.frontier.add("unknown FF subcommand 0x" + Integer.toHexString(subcommand)
+                                + " at 0x" + Integer.toHexString(pos));
+                    } else {
+                        enqueue(result, work, pos + 2 + operands, bytes.length, "meta");
+                    }
+                }
+                default -> {
+                    int length = parameterLength(command);
+                    if (length < 0) {
+                        result.frontier.add("unknown command 0x" + Integer.toHexString(command)
+                                + " at 0x" + Integer.toHexString(pos));
+                    } else {
+                        enqueue(result, work, pos + 1 + length, bytes.length, "command");
+                    }
+                }
+            }
+        }
         return result;
+    }
+
+    private static void addPointerEdge(ControlFlowInventory result, ArrayDeque<Integer> work,
+            AbstractSmpsData data, int pointerOffset, boolean fallThrough, String edgeName,
+            boolean strictFullBank) {
+        byte[] bytes = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null
+                ? s3.getBankData() : data.getData();
+        int afterPointer = pointerOffset + 2;
+        if (afterPointer > bytes.length) {
+            result.frontier.add(edgeName + " at 0x" + Integer.toHexString(pointerOffset - 1)
+                    + " has truncated pointer");
+            return;
+        }
+        int raw = (bytes[pointerOffset] & 0xFF) | ((bytes[pointerOffset + 1] & 0xFF) << 8);
+        int base = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null
+                ? s3.getBankZ80Base() : data.getZ80StartAddress();
+        int target;
+        if (strictFullBank) {
+            target = raw >= base && raw < base + bytes.length ? raw - base : -1;
+        } else {
+            target = raw - base;
+            if (target < 0 || target >= bytes.length) {
+                target = raw < bytes.length ? raw : -1;
+            }
+        }
+        if (target < 0) {
+            if ("call".equals(edgeName) && !strictFullBank) {
+                // S3 music can call a shared bank routine that is outside the
+                // loader's per-song blob. It is a closed external edge, not
+                // an unexplored in-stream frontier.
+                result.terminalOrCycle = true;
+            } else {
+                result.frontier.add(edgeName + " target 0x" + Integer.toHexString(raw)
+                        + " is outside stream");
+            }
+        } else {
+            enqueue(result, work, target, bytes.length, edgeName + " target");
+        }
+        if (fallThrough) {
+            enqueue(result, work, afterPointer, bytes.length, edgeName + " fallthrough");
+        }
+    }
+
+    private static void enqueue(ControlFlowInventory result, ArrayDeque<Integer> work,
+            int next, int length, String edgeName) {
+        if (next < 0 || next >= length) {
+            result.frontier.add(edgeName + " reaches 0x" + Integer.toHexString(next)
+                    + " at bank end");
+        } else {
+            work.add(next);
+        }
+    }
+
+    private static List<Integer> trackStarts(AbstractSmpsData data, boolean bankSpace) {
+        List<Integer> starts = new ArrayList<>();
+        if (data instanceof SmpsSfxData sfx) {
+            for (SmpsSfxData.SmpsSfxTrack track : sfx.getTrackEntries()) {
+                starts.add(track.pointer());
+            }
+            return starts;
+        }
+        for (int pointer : data.getFmPointers()) {
+            if (pointer > 0) starts.add(resolvePointer(pointer, data, bankSpace));
+        }
+        for (int pointer : data.getPsgPointers()) {
+            if (pointer > 0) starts.add(resolvePointer(pointer, data, bankSpace));
+        }
+        return starts;
+    }
+
+    private static int resolvePointer(int pointer, AbstractSmpsData data, boolean bankSpace) {
+        if (pointer <= 0) return -1;
+        if (bankSpace) {
+            Sonic3kSmpsData s3 = (Sonic3kSmpsData) data;
+            int relative = pointer - s3.getBankZ80Base();
+            return relative >= 0 && relative < s3.getBankData().length ? relative : -1;
+        }
+        if (pointer < data.getData().length) return pointer;
+        int relative = pointer - data.getZ80StartAddress();
+        return relative >= 0 && relative < data.getData().length ? relative : -1;
+    }
+
+    private static int parameterLength(int command) {
+        return switch (command) {
+            case 0xE0, 0xE1, 0xE2, 0xE4, 0xE6, 0xE8, 0xEA, 0xEC, 0xED, 0xEF,
+                    0xF3, 0xF4, 0xF5, 0xFB, 0xFD -> 1;
+            case 0xE7, 0xE9, 0xFA -> 0;
+            case 0xE5, 0xEE, 0xF1, 0xF6, 0xF8 -> 2;
+            case 0xEB, 0xF7, 0xF0, 0xFE -> 4;
+            default -> -1;
+        };
     }
 
     private static void assertNoMusicMetaPair(AbstractSmpsData data, int id, String table) {

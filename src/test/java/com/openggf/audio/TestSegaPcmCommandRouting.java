@@ -24,13 +24,10 @@ import org.junit.jupiter.api.Test;
 
 import com.openggf.audio.presentation.PresentationMode;
 
-import java.util.Arrays;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSegaPcmCommandRouting {
@@ -64,7 +61,7 @@ class TestSegaPcmCommandRouting {
     }
 
     @Test
-    void presentationFactorySegaPcmRendersThroughTheYm2612Dac() {
+    void presentationFactorySegaPcmMatchesLegacyYmDacOutputScale() {
         AudioPresentationSourceFactory factory =
                 new AudioPresentationSourceFactory(
                         () -> true,
@@ -79,14 +76,12 @@ class TestSegaPcmCommandRouting {
 
         voice.mixInto(accumulation, 3);
 
-        PresentationVoiceSnapshot.Sample snapshot =
-                (PresentationVoiceSnapshot.Sample) voice.snapshot();
-        assertEquals(PresentationVoiceSnapshot.SampleRenderMode.YM2612_DAC,
-                snapshot.renderMode());
-        assertEquals("sega/factory", snapshot.assetId());
-        assertNotNull(snapshot.synthSnapshot());
-        assertTrue(Arrays.stream(accumulation).anyMatch(value -> value != 0),
-                "the direct YM DAC path must produce chip output");
+        assertArrayEquals(
+                new long[] {-8192, -8192, 0, 0, 8128, 8128},
+                accumulation);
+        assertEquals("sega/factory",
+                ((PresentationVoiceSnapshot.Sample) voice.snapshot())
+                        .assetId());
     }
 
     @Test
@@ -104,27 +99,6 @@ class TestSegaPcmCommandRouting {
         restored.mixInto(accumulation, 2);
 
         assertArrayEquals(new long[] {0, 0, 8128, 8128}, accumulation);
-    }
-
-    @Test
-    void ymDacSegaVoiceRestoresBitExactChipAndSourceState() {
-        DecodedPcmCache cache = new DecodedPcmCache();
-        DecodedPcm pcm = cache.registerUnsigned8Mono("sega/ym-restore",
-                new byte[] {0, 17, 34, 68, (byte) 136, (byte) 204,
-                        (byte) 255}, 16_500);
-        SampleBackedVoice uninterrupted = SampleBackedVoice.rawSegaPcm(
-                1, 0, pcm, 48_000);
-        uninterrupted.mixInto(new long[74], 37);
-        PresentationVoiceSnapshot.Sample snapshot =
-                (PresentationVoiceSnapshot.Sample) uninterrupted.snapshot();
-        SampleBackedVoice restored = SampleBackedVoice.restore(snapshot, cache);
-        long[] expected = new long[128];
-        long[] actual = new long[128];
-
-        uninterrupted.mixInto(expected, expected.length / 2);
-        restored.mixInto(actual, actual.length / 2);
-
-        assertArrayEquals(expected, actual);
     }
 
     @Test

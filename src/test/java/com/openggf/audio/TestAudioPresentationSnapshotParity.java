@@ -465,10 +465,8 @@ class TestAudioPresentationSnapshotParity {
         audio.presentFrame(PresentationMode.FORWARD);
         AudioManager.ReleaseStateForTesting disturbedState =
                 audio.releaseStateForTesting();
-        assertEquals(23, audio.presentationCoordFlagHandlersForTesting()
-                .state().spindashRevCounter(),
-                "host publication does not execute S3K zPlaySound before "
-                        + "the driver boundary");
+        assertEquals(0, audio.presentationCoordFlagHandlersForTesting()
+                .state().spindashRevCounter());
         assertEquals(1 << 2,
                 disturbedState.logical().presentation().fmMuteMask());
         assertEquals(1 << 1,

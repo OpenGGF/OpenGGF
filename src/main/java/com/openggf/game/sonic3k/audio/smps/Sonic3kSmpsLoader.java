@@ -242,7 +242,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
 
         if (z80Driver == null) {
             LOGGER.warning("Z80 driver not loaded, cannot load DAC data.");
-            return null;
+            return new DacData(samples, mapping, 297);
         }
 
         try {
@@ -336,7 +336,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             return new DacData(samples, mapping, 297); // S3K baseCycles = 297
         } catch (IOException | RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Failed to load S3K DAC data", e);
-            return null;
+            return new DacData(samples, mapping, 297);
         }
     }
 
@@ -715,9 +715,8 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
         }
 
         // Read PSG envelope pointers (2 bytes each, LE)
-        for (int i = 1;
-                i <= Sonic3kSmpsConstants.Z80_PSG_ENVELOPE_COUNT;
-                i++) {
+        int maxEnvelopes = 40; // generous upper bound
+        for (int i = 1; i <= maxEnvelopes; i++) {
             int entryOffset = relOffset + ((i - 1) * 2);
             if (entryOffset + 1 >= z80AdditionalData.length) {
                 break;
@@ -762,9 +761,9 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             return;
         }
 
-        for (int i = 1;
-                i <= Sonic3kSmpsConstants.Z80_MOD_ENVELOPE_COUNT;
-                i++) {
+        // Pointers.txt: "Mod. Pointer List: 130E (W, 3C)" => 0x3C word entries.
+        int maxEnvelopes = 0x3C;
+        for (int i = 1; i <= maxEnvelopes; i++) {
             int entryOffset = relOffset + ((i - 1) * 2);
             if (entryOffset + 1 >= z80AdditionalData.length) {
                 break;
@@ -779,13 +778,13 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             if (envRelOffset < 0 || envRelOffset >= z80AdditionalData.length) {
                 // Fallback for pointers into the main driver blob.
                 if (z80Driver != null && ptr < z80Driver.length) {
-                    loadModEnvelopeFromData(i, z80Driver, ptr);
+                    loadEnvelopeFromData(i, z80Driver, ptr, modEnvelopes);
                     continue;
                 }
                 continue;
             }
 
-            loadModEnvelopeFromData(i, z80AdditionalData, envRelOffset);
+            loadEnvelopeFromData(i, z80AdditionalData, envRelOffset, modEnvelopes);
         }
 
         LOGGER.info("Loaded " + modEnvelopes.size() + " S3K modulation envelopes.");
@@ -816,43 +815,6 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             byte[] env = new byte[len];
             System.arraycopy(buffer, 0, env, 0, len);
             target.put(id, env);
-        }
-    }
-
-    private void loadModEnvelopeFromData(
-            int id, byte[] sourceData, int offset) {
-        // The shipped fix_sndbugs=0 interpreter leaves BC holding the envelope
-        // index, then handles $82/$84 with INC BC / LD A,(BC). Consequently
-        // the operand comes from low Z80 driver memory at index+1, not from the
-        // byte following the command. The fixed assembly branch preserves the
-        // actual envelope pointer; retail locked-on S3K does not take it.
-        byte[] buffer = new byte[256];
-        int len = 0;
-        for (int sourceIndex = 0;
-                sourceIndex < 256 && offset + sourceIndex < sourceData.length;
-                sourceIndex++) {
-            int value = sourceData[offset + sourceIndex] & 0xff;
-            buffer[len++] = (byte) value;
-            if (value == 0x80 || value == 0x81 || value == 0x83) {
-                break;
-            }
-            if (value == 0x82 || value == 0x84) {
-                sourceIndex++;
-                if (sourceIndex + offset >= sourceData.length
-                        || z80Driver == null || len >= z80Driver.length) {
-                    break;
-                }
-                int bogusBcAddress = len;
-                buffer[len++] = z80Driver[bogusBcAddress];
-                if (value == 0x82) {
-                    break;
-                }
-            }
-        }
-        if (len > 0) {
-            byte[] envelope = new byte[len];
-            System.arraycopy(buffer, 0, envelope, 0, len);
-            modEnvelopes.put(id, envelope);
         }
     }
 

@@ -82,13 +82,6 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
     }
 
     @Override
-    public OrdinaryMusicSfxPolicy getOrdinaryMusicSfxPolicy() {
-        // Shipped FixBugs=0 Sound_PlayBGM preserves both normal and special
-        // SFX tracks, then marks their channels as overrides on the new song.
-        return OrdinaryMusicSfxPolicy.PRESERVE_ACTIVE;
-    }
-
-    @Override
     public int getSpeedShoesOnCommandId() {
         return Sonic1SmpsConstants.CMD_SPEED_UP;
     }

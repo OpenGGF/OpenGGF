@@ -115,14 +115,11 @@ public final class ConfigCatalog {
         // audio
         put(AUDIO_ENABLED, of("audio", "enabled", BOOL, "Enable music and SFX"));
         put(REGION, ofEnum("audio", "region", "Region for audio timing", Set.of("NTSC", "PAL")));
-        put(DAC_INTERPOLATE, of("audio", "dacInterpolate", BOOL,
-                "DAC interpolation (optional smoothing; disabled for hardware parity)"));
+        put(DAC_INTERPOLATE, of("audio", "dacInterpolate", BOOL, "DAC interpolation (smoother sound)"));
         put(AUDIO_INTERNAL_RATE_OUTPUT, of("audio", "internalRateOutput", BOOL,
                 "Output audio at the internal YM2612 rate (~53kHz)"));
         put(PSG_NOISE_SHIFT_EVERY_TOGGLE, of("audio", "psgNoiseShiftEveryToggle", BOOL,
-                "PSG noise LFSR clock mode: false=positive edges (GPGX/libvgm), true=every toggle (MAME)"));
-        put(AUDIO_REFERENCE_DEFAULTS_VERSION, of("audio", "referenceDefaultsVersion", INT,
-                "Internal one-time migration version for reference chip defaults"));
+                "PSG noise LFSR clock mode: true=shift on every toggle (MAME), false=positive edges (GPGX)"));
         put(FM6_DAC_OFF, of("audio", "fm6DacOff", BOOL,
                 "Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)"));
 

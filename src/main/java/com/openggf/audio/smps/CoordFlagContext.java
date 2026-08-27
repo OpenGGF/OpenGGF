@@ -87,9 +87,6 @@ public interface CoordFlagContext {
     /** Trigger a fade-out effect. */
     void triggerFadeOut(int steps, int delay);
 
-    /** Request restoration of music saved beneath a finite override. */
-    void restoreMusic();
-
     // -----------------------------------------------------------------------
     // Communication byte
     // -----------------------------------------------------------------------

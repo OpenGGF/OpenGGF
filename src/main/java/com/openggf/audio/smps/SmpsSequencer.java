@@ -64,7 +64,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private int psgLatchChannel = -1; // Cached PSG latch channel for performance (set by SmpsDriver.writePsg)
     private int speedMultiplier = 1; // S3K: zTempoSpeedup value (0/1=off, 8=speed shoes)
     private int speedupTimeout = 0;  // S3K: zSpeedupTimeout countdown for double-update
-    private int palUpdateCounter = 5;
 
     public void setPitch(float pitch) {
         this.pitch = pitch;
@@ -98,16 +97,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * This cached flag eliminates HashSet lookups in the hot path.
      */
     public void setIsSfx(boolean isSfx) {
-        if (isSfx && !this.isSfx
-                && config.getYmServiceTimingProfile()
-                        != YmServiceTimingProfile.none()) {
-            for (Track track : tracks) {
-                if (track.type == TrackType.FM && track.channelId == 4) {
-                    track.firstFm5AdmissionVoicePending = true;
-                    track.firstFm5AdmissionAttackPending = false;
-                }
-            }
-        }
         this.isSfx = isSfx;
     }
 
@@ -231,7 +220,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private int tempoAccumulator;
     private int dividingTiming = 1;
     private boolean primed;
-    private boolean deferNextDriverService;
 
     // Scratch buffer for read() to avoid per-sample allocations
     private final short[] scratchSample = new short[1];
@@ -304,7 +292,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         public int rawDuration;
         public int scaledDuration;
         public int fill; // note-off shortening in ticks
-        public int fillCounter; // live per-driver NoteFillTimeout countdown
+        public int fillCounter; // live S1/S2 NoteTimeout countdown
         public boolean resting; // S1/S2 PlaybackControl bit 1
         public int keyOffset; // signed semitone displacement (E9)
         public int volumeOffset; // attenuation applied to TL (FM) or volume (PSG)
@@ -370,12 +358,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         public boolean fmVolEnvHold;
         public int fmVolEnvOpMask;
         public boolean forceRefresh;
-        // Locked-on zPlaySound -> cfSetVoice -> first note source path. This
-        // state is semantic track state, not a sound-id or frame predicate.
-        private boolean firstFm5AdmissionVoicePending;
-        private boolean firstFm5AdmissionAttackPending;
-        private YmSourceProgramTiming.FirstPathShape firstFmPathShape;
-        private boolean firstFmPathPanConsumed;
         // SSG-EG per-operator state (S3K FF 05), preserved across track restoration.
         public final int[] ssgEg = new int[4];
         // DAC mute state for fade-in
@@ -396,10 +378,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             this.pos = pos;
             this.type = type;
             this.channelId = channelId;
-            // All three shipped loaders initialize DurationTimeout to 1 so
-            // the first driver service enters the track stream. S2/S3K
-            // TempoWait may extend this value before that service.
-            this.duration = 1;
         }
     }
 
@@ -474,12 +452,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
         // Initialize Region and Tempo
         setRegion(Region.NTSC);
-        if (!sfxProgram) {
-            // Each shipped music loader seeds its live tempo timeout/
-            // accumulator from the selected header tempo. This phase is
-            // observable on the first carry decision.
-            tempoAccumulator = tempoWeight;
-        }
 
         int z80Start = smpsData.getZ80StartAddress();
 
@@ -517,7 +489,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 t.keyOffset = (byte) programView.fmKeyOffsetAt(i);
                 t.volumeOffset = programView.fmVolumeOffsetAt(i);
                 t.dividingTiming = dividingTiming;
-                loadInitialVoice(t, 0);
+                loadVoice(t, 0); // default instrument
                 tracks.add(t);
             }
         }
@@ -580,11 +552,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return audioManager;
     }
 
-    @Override
-    public void restoreMusic() {
-        audioManager.restoreMusic();
-    }
-
     /**
      * Optional: provide another SMPS data set (usually the currently playing music)
      * to supply instrument voices if this sequence has no local voice table.
@@ -603,13 +570,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * Used by the driver when releasing SFX locks so stray tones don't linger
      * if there is no music track to immediately rewrite the channel.
      * <p>
-     * For FM channels, this matches explicit ROM silence paths
-     * (zSetMaxRelRate + zFMSilenceChannel):
+     * For FM channels, this matches ROM behavior (zSetMaxRelRate + zFMSilenceChannel):
      * - Set D1L/RR to 0xFF for all operators (fastest release)
      * - Set TL to 0x7F for all operators (max attenuation)
      * - Key off
-     * Ordinary S3K {@code cfStopTrack} does not use this path; its config
-     * restores the overridden music voice directly after key-off.
+     * This ensures the envelope is fully silenced before music refreshes the channel,
+     * preventing corrupted first samples when music resumes.
      */
     public void forceSilence(TrackType type, int channelId) {
         if (type == TrackType.FM) {
@@ -655,25 +621,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     public void setSpeedShoes(boolean active) {
         this.speedShoes = active;
         calculateTempo();
-        if (config.getTempoPhasePolicy()
-                == SmpsSequencerConfig.TempoPhasePolicy.RESET_TO_EFFECTIVE_TEMPO) {
-            tempoAccumulator = tempoWeight;
-        }
-    }
-
-    /**
-     * Apply the speed-shoes state selected by the music loader. Unlike a live
-     * speed change, shipped BGM initialization seeds the tempo accumulator
-     * from the resulting normal or turbo tempo.
-     */
-    public void initializeSpeedShoes(boolean active) {
-        if (primed || sampleCounter != 0) {
-            throw new IllegalStateException(
-                    "initial speed-shoes state must precede driver service");
-        }
-        this.speedShoes = active;
-        calculateTempo();
-        tempoAccumulator = tempoWeight;
     }
 
     public void setFm6DacOff(boolean active) {
@@ -716,33 +663,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     if (!t.active)
                         continue;
 
-                    if (t.type == TrackType.PSG
-                            && config.getPsgSfxReleaseMode()
-                            == SmpsSequencerConfig.PsgSfxReleaseMode
-                                    .REST_UNTIL_NEXT_NOTE) {
-                        // Shipped S1/S2 stop the restored PSG music track. The
-                        // next note, not SFX cleanup, makes it audible again.
-                        t.resting = true;
-                        continue;
-                    }
-
                     // Channel released from SFX, restore instrument and volume
                     refreshInstrument(t);
-                    if (t.type == TrackType.FM
-                            && config.getFmSfxReleaseMode()
-                                    == SmpsSequencerConfig.FmSfxReleaseMode
-                                            .RESTORE_MUSIC_DIRECTLY) {
-                        // S3K fix_sndbugs=0 cfStopTrack keys off the retiring
-                        // SFX before zSendFMInstrument restores the music
-                        // voice. It does not key off again or rewrite the
-                        // interrupted music frequency after that upload.
-                        continue;
-                    }
                     if (t.type == TrackType.PSG) {
                         refreshVolume(t);
                     }
                     if (t.type == TrackType.FM) {
                         applyFmPanAmsFms(t);
+                        // Ensure channel is keyed-off after restore to prevent clicks/pops.
+                        // The music track's note was interrupted by SFX; it should remain
+                        // silent until the next note event naturally keys-on.
                         int hwCh = t.channelId;
                         int port = (hwCh < 3) ? 0 : 1;
                         int ch = hwCh % 3;
@@ -829,51 +759,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * Continuous extensions deliberately do not call this method.
      */
     public void beginSfxAdmission() {
-        deferNextDriverService = config.getSfxStartTiming()
-                == SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE;
-        if (!deferNextDriverService) {
-            publishSfxStart();
-        }
-    }
-
-    private void publishSfxStart() {
         CoordFlagHandler handler = config.getCoordFlagHandler();
         if (handler != null) {
             handler.onSfxStart(smpsData.getId());
         }
-    }
-
-    /**
-     * Transfers the S3K queue delay from this sequencer to the driver's
-     * source-authenticated input-cell boundary. The first service after the
-     * queued admission is therefore a real SFX service, not a second delay.
-     */
-    public final void consumeDeferredSfxAdmission() {
-        if (config.getSfxStartTiming()
-                != SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE
-                || !deferNextDriverService) {
-            throw new IllegalStateException(
-                    "sequencer has no deferred SFX admission to consume");
-        }
-        deferNextDriverService = false;
-        publishSfxStart();
-    }
-
-    /** Advances only the queue-resident driver's VInt phase. */
-    public final boolean advanceDeferredSfxAdmissionClock(int samples) {
-        if (config.getSfxStartTiming()
-                != SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE
-                || !deferNextDriverService) {
-            throw new IllegalStateException(
-                    "sequencer has no deferred SFX admission clock");
-        }
-        sampleCounter += samples;
-        boolean crossed = false;
-        while (sampleCounter >= samplesPerFrame) {
-            sampleCounter -= samplesPerFrame;
-            crossed = true;
-        }
-        return crossed;
     }
 
     /** Publishes the SFX DAC source only after admission has been validated. */
@@ -931,16 +820,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             base = config.getSpeedUpTempos().getOrDefault(smpsData.getId(), base);
         }
 
-        if (region == Region.PAL
-                && !smpsData.isPalSpeedupDisabled()
-                && config.getPalServicePolicy()
-                        == SmpsSequencerConfig.PalServicePolicy.LEGACY_TEMPO_SCALE) {
-            // Locked-on S&K repeats the full driver update every sixth VInt.
-            // Keep the pre-existing approximation until that shared-driver
-            // boundary is implemented; S1 and S2 no longer use this path.
-            base = Math.min(0xFF, (int) (base * 1.2));
+        double multiplier = 1.0;
+        if (region == Region.PAL && !smpsData.isPalSpeedupDisabled()) {
+            multiplier = 1.2; // Compensate 50Hz by speeding up music
         }
-        this.tempoWeight = base;
+
+        int weighted = (int) (base * multiplier);
+        if (weighted > 0xFF)
+            weighted = 0xFF;
+
+        this.tempoWeight = weighted;
 
         // For TIMEOUT mode, initialize the countdown accumulator to the tempo value
         if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.TIMEOUT && tempoAccumulator == 0) {
@@ -1052,6 +941,27 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public int read(short[] buffer, int length) {
+        if (!primed) {
+            if (config.isTempoOnFirstTick()) {
+                if (tempoWeight != 0) {
+                    processTempoFrame(); // S1/S3K: process tempo on first frame (DOTEMPO)
+                } else {
+                    // Tempo-0 songs (e.g. S3K Title Screen) need an unconditional first tick
+                    // so their FF 00 (TEMPO_SET) command can execute and set the real tempo.
+                    tick();
+                }
+            } else {
+                if (tempoWeight != 0) {
+                    tick(); // S2: skip tempo on first frame (PlayMusic)
+                }
+            }
+            primed = true;
+        }
+
+        if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
+            return length;
+        }
+
         for (int i = 0; i < length; i++) {
             advance(1.0);
             if (synth instanceof VirtualSynthesizer) {
@@ -1066,7 +976,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         sampleCounter += samples;
         while (sampleCounter >= samplesPerFrame) {
             sampleCounter -= samplesPerFrame;
-            processOrDeferDriverService();
+            processTempoFrame();
         }
     }
 
@@ -1077,46 +987,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * @param samples Number of samples to advance
      */
     public void advanceBatch(int samples) {
-        advanceBatchAndCountDriverFrames(samples);
-    }
-
-    /**
-     * Advance this sequencer and return the number of VInt service boundaries
-     * crossed. SmpsDriver uses this to keep game-wide scheduler state aligned.
-     */
-    public int advanceBatchAndCountDriverFrames(int samples) {
-        int driverFrames = 0;
         sampleCounter += samples;
         while (sampleCounter >= samplesPerFrame) {
             sampleCounter -= samplesPerFrame;
-            processOrDeferDriverService();
-            driverFrames++;
+            processTempoFrame();
         }
-        return driverFrames;
-    }
-
-    public double driverSamplePhase() {
-        return sampleCounter;
-    }
-
-    public void alignDriverSamplePhase(double samplePhase) {
-        if (samplePhase < 0 || samplePhase >= samplesPerFrame) {
-            throw new IllegalArgumentException(
-                    "driver sample phase is outside the VInt interval");
-        }
-        sampleCounter = samplePhase;
-    }
-
-    public void repeatDriverService() {
-        processOrDeferDriverService();
-    }
-
-    private void processOrDeferDriverService() {
-        if (deferNextDriverService) {
-            deferNextDriverService = false;
-            return;
-        }
-        processTempoFrame();
     }
 
     /**
@@ -1126,7 +1001,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * @return Number of samples until next tempo frame, or Integer.MAX_VALUE if no tempo
      */
     public int getSamplesUntilNextTempoFrame() {
-        if (samplesPerFrame <= 0) {
+        if ((tempoWeight == 0 && !ticksEveryFrameWithZeroTempo()) || samplesPerFrame <= 0) {
             return Integer.MAX_VALUE;
         }
         double remaining = samplesPerFrame - sampleCounter;
@@ -1134,19 +1009,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             return 0;
         }
         return (int) Math.ceil(remaining);
-    }
-
-    /**
-     * Returns the next ordinary driver service which can publish sequencer
-     * work. S3K admits a new SFX after {@code zUpdateSFXTracks}, so its first
-     * tempo boundary only consumes the admission defer and the real service is
-     * one boundary later. Driver-owned PAL full-update repeats are accounted
-     * for separately by {@code SmpsDriver}.
-     */
-    public int getSamplesUntilNextDriverService() {
-        return deferNextDriverService
-                ? samplesUntilTempoTicks(2)
-                : getSamplesUntilNextTempoFrame();
     }
 
     /**
@@ -1179,10 +1041,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
             nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(t.duration));
 
-            if (t.fillCounter > 0 && !t.tieNext
-                    && t.type != TrackType.DAC) {
-                nextEvent = Math.min(nextEvent,
-                        samplesUntilTempoTicks(t.fillCounter));
+            boolean fillPending = config.isDirect68kDriver() ? t.fillCounter > 0 : t.fill > 0;
+            if (fillPending && !t.tieNext && t.type != TrackType.DAC) {
+                int fillTicks = config.isDirect68kDriver()
+                        ? t.fillCounter : Math.max(0, t.fill + t.duration - t.scaledDuration);
+                nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(fillTicks));
             }
         }
 
@@ -1203,7 +1066,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (ticks <= 0) {
             return 0;
         }
-        if (samplesPerFrame <= 0) {
+        if ((tempoWeight == 0 && !ticksEveryFrameWithZeroTempo()) || samplesPerFrame <= 0) {
             return Integer.MAX_VALUE;
         }
 
@@ -1238,6 +1101,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return (int) Math.ceil(total);
     }
 
+    private boolean ticksEveryFrameWithZeroTempo() {
+        return config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW;
+    }
+
     private void tick() {
         tick(false);
     }
@@ -1245,39 +1112,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void tick(boolean finishSfxTempoFrame) {
         SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
                 ? smpsDriver : null;
-        int activeSfxTracksBefore = driver != null && isSfx
-                ? activeTrackCount() : 0;
         SmpsDriverServiceObserver.ServiceEvent service = driver == null
                 ? null : driver.beginSequencerService(this,
                         SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
-        try {
-            tickTracks();
-            if (finishSfxTempoFrame) {
-                finishSfxTempoFrame();
-            }
-            if (driver != null && isSfx
-                    && activeTrackCount() < activeSfxTracksBefore) {
-                driver.onSfxTrackStopped();
-            }
-            if (driver != null) {
-                driver.endSequencerService(service);
-            }
-        } catch (RuntimeException | Error failure) {
-            if (driver != null) {
-                driver.abortSequencerService(failure);
-            }
-            throw failure;
+        tickTracks();
+        if (finishSfxTempoFrame) {
+            finishSfxTempoFrame();
         }
-    }
-
-    private int activeTrackCount() {
-        int count = 0;
-        for (Track track : tracks) {
-            if (track.active) {
-                count++;
-            }
+        if (driver != null) {
+            driver.endSequencerService(service);
         }
-        return count;
     }
 
     private void finishSfxTempoFrame() {
@@ -1305,19 +1149,13 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 if (!t.tieNext && t.type != TrackType.DAC) {
                     if (config.isDirect68kDriver()) {
                         if (t.fillCounter > 0 && --t.fillCounter == 0) {
-                            // S1 NoteTimeoutUpdate tampers with the return address:
+                            // S1/S2 NoteTimeoutUpdate tampers with the return address:
                             // after note-off, the rest of this track update is skipped.
                             stopNote(t);
                             t.resting = true;
                             continue;
                         }
-                    } else if (t.fillCounter > 0
-                            && --t.fillCounter == 0) {
-                        // The S2/S3K Z80 drivers own an independent timeout
-                        // which advances on every music service, including a
-                        // TempoWait carry service that extends note duration.
-                        // Unlike direct-68K S1, key-off returns to the same
-                        // track update and frequency/modulation processing.
+                    } else if (t.fill > 0 && (t.scaledDuration - t.duration) >= t.fill) {
                         stopNote(t);
                     }
                 }
@@ -1420,9 +1258,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void processTempoFrame() {
-        primed = true;
         processObservedFadeStep();
 
+        if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
+            return;
+        }
         if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.TIMEOUT) {
             // S1 style: always tick, but periodically extend track durations
             // SFX bypass tempo extension entirely - they just tick every frame
@@ -1440,79 +1280,49 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
             tick(sfxMode);
         } else if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
-            if (!sfxMode && region == Region.PAL
-                    && !smpsData.isPalSpeedupDisabled()
-                    && config.getPalServicePolicy()
-                            == SmpsSequencerConfig.PalServicePolicy.EXTRA_MUSIC_EVERY_FIFTH) {
-                palUpdateCounter--;
-                if (palUpdateCounter == 0) {
-                    palUpdateCounter = 5;
-                    serviceS2TempoFrame(false);
+            // S2: tick when accumulator overflows. Higher tempo = more ticks = faster.
+            tempoAccumulator += tempoWeight;
+            if (tempoAccumulator >= tempoModBase) {
+                tempoAccumulator -= tempoModBase;
+                int tickCount = Math.max(1, speedMultiplier);
+                for (int tickIndex = 0; tickIndex < tickCount; tickIndex++) {
+                    tick(sfxMode && tickIndex == tickCount - 1);
                 }
             }
-            serviceS2TempoFrame(sfxMode);
         } else {
-            // SFX bypass: the S3K Z80 driver services SFX every VInt,
-            // independently of music tempo.
+            // S3K OVERFLOW: tick when accumulator does NOT overflow. Higher tempo = more skips = slower.
+            // SFX bypass: Z80 driver processes SFX every frame (zUpdateSFXTracks),
+            // independent of music tempo. Without this, tempoWeight=tempoModBase
+            // causes overflow every frame → SFX never ticks.
             if (sfxMode) {
                 tick(true);
             } else {
-                // zDoSpeedUp is the shared tail of zUpdateSFXTracks and every
-                // zUpdateMusic invocation. Model the SFX tail first.
-                serviceS3kSpeedTail();
-                serviceS3kMusicTempo();
-                serviceS3kSpeedTail();
+                tempoAccumulator += tempoWeight;
+                if (tempoAccumulator >= tempoModBase) {
+                    tempoAccumulator -= tempoModBase;
+                    // Overflow → skip this frame (delay)
+                } else {
+                    // No overflow → tick normally
+                    tick();
+                }
+                // S3K speed-up: timeout-based double update (ROM: zDoSpeedUp)
+                // zTempoSpeedup=N → one extra zUpdateMusic every (N+1) frames.
+                if (speedMultiplier > 1) {
+                    if (speedupTimeout <= 0) {
+                        speedupTimeout = speedMultiplier;
+                        // Re-run tempo processing for the extra update
+                        tempoAccumulator += tempoWeight;
+                        if (tempoAccumulator >= tempoModBase) {
+                            tempoAccumulator -= tempoModBase;
+                        } else {
+                            tick();
+                        }
+                    } else {
+                        speedupTimeout--;
+                    }
+                }
             }
         }
-    }
-
-    private void extendActiveTrackDurations() {
-        for (Track track : tracks) {
-            if (track.active && track.duration > 0) {
-                track.duration++;
-            }
-        }
-    }
-
-    private void serviceS2TempoFrame(boolean finishSfxTempoFrame) {
-        // Shipped REV01 selects FixDriverBugs=0: TempoWait runs before every
-        // music track service. The fixed assembly branch moves TempoWait
-        // after track service to avoid delaying a newly loaded first note.
-        // Here a non-carry extends DurationTimeout but never skips service.
-        int nextAccumulator = tempoAccumulator + tempoWeight;
-        boolean carried = nextAccumulator >= tempoModBase;
-        tempoAccumulator = nextAccumulator % tempoModBase;
-        if (!sfxMode && !carried) {
-            extendActiveTrackDurations();
-        }
-        tick(finishSfxTempoFrame);
-    }
-
-    private void serviceS3kMusicTempo() {
-        // Shipped fix_sndbugs=0 TempoWait runs before zTrackUpdLoop. A carry
-        // holds the current note by extending every duration, but envelopes,
-        // note fill, modulation, and the rest of track service still run.
-        int nextAccumulator = tempoAccumulator + tempoWeight;
-        boolean carried = nextAccumulator >= tempoModBase;
-        tempoAccumulator = nextAccumulator % tempoModBase;
-        if (carried) {
-            extendActiveTrackDurations();
-        }
-        tick();
-    }
-
-    private void serviceS3kSpeedTail() {
-        if (speedMultiplier <= 1) {
-            return;
-        }
-        if (speedupTimeout <= 0) {
-            speedupTimeout = speedMultiplier;
-            serviceS3kMusicTempo();
-            // The extra zUpdateMusic reaches zDoSpeedUp as well.
-            serviceS3kSpeedTail();
-            return;
-        }
-        speedupTimeout--;
     }
 
     private void processObservedFadeStep() {
@@ -1524,16 +1334,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         SmpsDriverServiceObserver.ServiceEvent service = driver == null
                 ? null : driver.beginSequencerService(this,
                         SmpsDriverServiceObserver.ServiceKind.FADE_STEP);
-        try {
-            processFade();
-            if (driver != null) {
-                driver.endFadeSequencerService(service);
-            }
-        } catch (RuntimeException | Error failure) {
-            if (driver != null) {
-                driver.abortSequencerService(failure);
-            }
-            throw failure;
+        processFade();
+        if (driver != null) {
+            driver.endSequencerService(service);
         }
     }
 
@@ -1570,20 +1373,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             return;
         }
 
-        // Shipped drivers decrement first and stop immediately when it reaches
-        // zero; the terminal count never applies one extra volume mutation.
+        // ROM: Decrement fade counter and apply volume change
         fadeState.steps--;
-        if (fadeState.steps == 0 && fadeState.fadeOut) {
-            for (Track t : tracks) {
-                t.active = false;
-                stopNote(t);
-            }
-            fadeState.active = false;
-            if (synth instanceof SmpsDriver driver) {
-                driver.requestFadeTerminalStopAll();
-            }
-            return;
-        }
         fadeState.delayCounter = fadeState.delayInit;
 
         int dir = fadeState.fadeOut ? 1 : -1;
@@ -1705,10 +1496,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 if (t.pos < programView.dataLength()) {
                     normalTempo = programView.dataByteAt(t.pos++) & 0xFF;
                     calculateTempo();
-                    if (config.getTempoPhasePolicy()
-                            == SmpsSequencerConfig.TempoPhasePolicy.RESET_TO_EFFECTIVE_TEMPO) {
-                        tempoAccumulator = tempoWeight;
-                    }
+                    // Parity: EA (Tempo Set) resets the tempo accumulator/counter to the new tempo value
+                    tempoAccumulator = tempoWeight;
                 }
                 break;
             case 0xEB:
@@ -1996,21 +1785,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.pan = ((val & 0x80) != 0 ? 0x80 : 0) | ((val & 0x40) != 0 ? 0x40 : 0);
             t.ams = (val >> 4) & 0x3;
             t.fms = val & 0x7;
-            if (t.firstFm5AdmissionAttackPending
-                    && t.firstFmPathShape
-                    == YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
-                    && !t.firstFmPathPanConsumed) {
-                try (Synthesizer.YmTimingScope ignored =
-                             synth.enterYmSourceProgramSection(
-                                     this,
-                                     YmServiceTimingProfile.SegmentKind
-                                             .TRACK_PAN_WRITE)) {
-                    applyFmPanAmsFms(t);
-                }
-                t.firstFmPathPanConsumed = true;
-            } else {
-                applyFmPanAmsFms(t);
-            }
+            applyFmPanAmsFms(t);
         }
     }
 
@@ -2024,11 +1799,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void setFill(Track t) {
         if (t.pos < programView.dataLength()) {
             t.fill = programView.dataByteAt(t.pos++) & 0xFF;
-            if (!config.isDirect68kDriver()) {
-                // cfNoteFill writes both NoteFillMaster and the live
-                // NoteFillTimeout immediately.
-                t.fillCounter = t.fill;
-            }
         }
     }
 
@@ -2135,191 +1905,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public void loadVoice(Track t, int voiceId) {
-        if (t.firstFm5AdmissionVoicePending) {
-            if (config.getFmVoiceWriteProfile()
-                    == SmpsSequencerConfig.FmVoiceWriteProfile.S1_68K) {
-                t.firstFmPathShape = classifyFirstFmPath(programView, t.pos);
-                t.firstFmPathPanConsumed = false;
-                if (t.firstFmPathShape == null) {
-                    t.firstFm5AdmissionVoicePending = false;
-                    t.firstFm5AdmissionAttackPending = false;
-                    prepareVoiceSelection(t);
-                    if (selectVoice(t, voiceId) && !t.tieNext) {
-                        refreshInstrument(t);
-                    }
-                    return;
-                }
-            }
-            boolean selected = selectVoice(t, voiceId);
-            if (!selected) {
-                prepareVoiceSelection(t);
-                t.firstFm5AdmissionVoicePending = false;
-                return;
-            }
-            if (t.firstFmPathShape != null) {
-                int carrierMask = ALGO_OUT_MASK[t.voiceData[0] & 0x07];
-                YmSourceProgramTiming.SourceProgram program;
-                try {
-                    program = config.getYmServiceTimingProfile()
-                            .requireSourceProgram(t.firstFmPathShape,
-                                    carrierMask);
-                } catch (IllegalArgumentException unsupportedVariant) {
-                    t.firstFmPathShape = null;
-                    t.firstFm5AdmissionVoicePending = false;
-                    t.firstFm5AdmissionAttackPending = false;
-                    if (!t.tieNext) {
-                        refreshInstrument(t);
-                    }
-                    return;
-                }
-                if (!t.tieNext) {
-                    try (Synthesizer.YmTimingScope ignored =
-                                 synth.beginYmSourceProgram(
-                                         this, program,
-                                         YmServiceTimingProfile.SegmentKind
-                                                 .FM_VOICE_UPLOAD)) {
-                        refreshInstrument(t);
-                    }
-                    t.firstFm5AdmissionAttackPending = true;
-                }
-                t.firstFm5AdmissionVoicePending = false;
-                return;
-            }
-            YmServiceTimingProfile.Variant variant = firstAttackVariant(t);
-            try (Synthesizer.YmTimingScope ignored = synth.beginYmTiming(
-                    this, YmServiceTimingProfile.SegmentKind.SFX_MAX_RELEASE,
-                    variant)) {
-                prepareVoiceSelection(t);
-            }
-            if (!t.tieNext) {
-                try (Synthesizer.YmTimingScope ignored = synth.beginYmTiming(
-                        this,
-                        YmServiceTimingProfile.SegmentKind.FM_VOICE_UPLOAD,
-                        variant)) {
-                    refreshInstrument(t);
-                }
-                t.firstFm5AdmissionAttackPending = true;
-            }
-            t.firstFm5AdmissionVoicePending = false;
-        } else {
-            prepareVoiceSelection(t);
-            if (selectVoice(t, voiceId) && !t.tieNext) {
-                // Continuous SFX (cfx_*) loop back through smpsSetvoice while tied.
-                // Preserve the existing Z80 HOLD behavior rather than refreshing the
-                // live channel mid-sustain.
-                refreshInstrument(t);
-            }
-        }
-    }
-
-    static YmSourceProgramTiming.FirstPathShape classifyFirstFmPath(
-            SmpsProgramView source, int position) {
-        Objects.requireNonNull(source, "source");
-        if (position < 0 || position >= source.dataLength()) {
-            return null;
-        }
-        int cursor = position;
-        int first = source.dataByteAt(cursor) & 0xff;
-        boolean pan = false;
-        if (first == 0xE0) {
-            if (cursor + 2 >= source.dataLength()) {
-                return null;
-            }
-            pan = true;
-            cursor += 2; // command plus its parameter
-            first = source.dataByteAt(cursor) & 0xff;
-        }
-        // The authenticated path reaches an actual note (80..DF), optionally
-        // followed by a duration. Duration-only reuse and every coordination
-        // or control-flow command remain on the immediate path.
-        if (first <= 0x80 || first >= 0xE0) {
-            return null;
-        }
-        return pan ? YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
-                : YmSourceProgramTiming.FirstPathShape.VOICE_NOTE;
-    }
-
-    /** Driver-owned predicate used only to reserve the exclusive timed FM5 horizon. */
-    public boolean hasReservableExclusiveYmSourceProgram() {
-        for (Track track : tracks) {
-            if (track.type == TrackType.FM && track.channelId == 4
-                    && (track.firstFm5AdmissionAttackPending
-                    && track.firstFmPathShape != null
-                    || track.firstFm5AdmissionVoicePending
-                    && (track.firstFmPathShape != null
-                    || eligibleFirstFmPath(track) != null))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private YmSourceProgramTiming.FirstPathShape eligibleFirstFmPath(Track track) {
-        int cursor = track.pos;
-        // S1 Break Item executes one non-writing smpsModSet before smpsSetvoice.
-        // Reservation may look through that exact fixed-width prefix, while the
-        // source-program classifier itself still begins after EF's voice byte.
-        if (cursor < programView.dataLength()
-                && (programView.dataByteAt(cursor) & 0xff) == 0xf0) {
-            cursor += 5;
-        }
-        if (cursor + 1 >= programView.dataLength()
-                || (programView.dataByteAt(cursor) & 0xff) != 0xef) {
-            return null;
-        }
-        int voiceId = programView.dataByteAt(cursor + 1) & 0xff;
-        if (programView.voiceLength(voiceId) <= 0) {
-            return null;
-        }
-        YmSourceProgramTiming.FirstPathShape shape =
-                classifyFirstFmPath(programView, cursor + 2);
-        if (shape == null) {
-            return null;
-        }
-        int carrierMask = ALGO_OUT_MASK[programView.voiceByteAt(voiceId, 0) & 0x07];
-        try {
-            config.getYmServiceTimingProfile().requireSourceProgram(shape, carrierMask);
-            return shape;
-        } catch (IllegalArgumentException unsupported) {
-            return null;
-        }
-    }
-
-    private void loadInitialVoice(Track t, int voiceId) {
         if (selectVoice(t, voiceId) && !t.tieNext) {
+            // Continuous SFX (cfx_*) loop back through smpsSetvoice while tied.
+            // Preserve the existing Z80 HOLD behavior rather than refreshing the
+            // live channel mid-sustain.
             refreshInstrument(t);
         }
-    }
-
-    private void prepareVoiceSelection(Track t) {
-        if (t.type != TrackType.FM
-                || config.getFmVoiceWriteProfile()
-                        != SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80) {
-            return;
-        }
-
-        // The shipped S3K driver (fix_sndbugs=0) runs zSetMaxRelRate at
-        // cfSetVoice before looking up and uploading the requested voice. S1
-        // and S2 do not have this pre-upload sequence. Preserve the native
-        // operator traversal (1, 2, 3, 4), which is observable on the YM bus.
-        int port = t.channelId < 3 ? 0 : 1;
-        int channel = t.channelId % 3;
-        for (int operator = 0; operator < 4; operator++) {
-            synth.writeFm(this, port,
-                    0x80 + operator * 4 + channel, 0xFF);
-        }
-    }
-
-    private YmServiceTimingProfile.Variant firstAttackVariant(Track track) {
-        return firstAttackVariant(track, 4);
-    }
-
-    private YmServiceTimingProfile.Variant firstAttackVariant(
-            Track track, int octaveLoopCount) {
-        return new YmServiceTimingProfile.Variant(
-                1, 4, true, false,
-                bit7CarrierMask(track.voiceData, 21), octaveLoopCount,
-                YmServiceTimingProfile.PathKind.FIRST_VOICE_ATTACK);
     }
 
     private boolean selectVoice(Track t, int voiceId) {
@@ -2400,16 +1991,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         t.resting = t.note == 0x80;
 
         if (t.note == 0x80) {
-            if (t.firstFm5AdmissionVoicePending) {
-                // The locked-on driver times the audited admission upload only
-                // when the first FM5 update reaches cfSetVoice.  A leading rest
-                // (Sound_59 Collapse) ends that admission path; its later voice
-                // upload belongs to an ordinary track service.
-                t.firstFm5AdmissionVoicePending = false;
-                t.firstFm5AdmissionAttackPending = false;
-                t.firstFmPathShape = null;
-                t.firstFmPathPanConsumed = false;
-            }
             if (t.type != TrackType.DAC) {
                 stopNote(t);
             }
@@ -2482,13 +2063,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             fnum = packed & 0x7FF;
 
             int chVal = (port == 0) ? ch : (ch + 4); // YM2612 0x28: bit2 selects upper port
-            boolean timedFirstAttack = t.firstFm5AdmissionAttackPending
-                    && !preventAttack && hwCh == 4;
-            boolean sourceTimedFirstAttack = timedFirstAttack
-                    && t.firstFmPathShape != null;
-            YmServiceTimingProfile.Variant firstAttack = timedFirstAttack
-                    && !sourceTimedFirstAttack
-                    ? firstAttackVariant(t, octave) : null;
 
             // SMPSPlay DoNoteOn: skip KEY_OFF and KEY_ON when tieNext (HOLD) is set.
             // This allows smpsNoAttack (E7) to work correctly for both music and SFX.
@@ -2498,77 +2072,29 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     synth.writeFm(this, 0, 0x2B, 0x00);
                 }
 
-                if (timedFirstAttack) {
-                    try (Synthesizer.YmTimingScope ignored =
-                                 sourceTimedFirstAttack
-                                         ? synth.enterYmSourceProgramSection(
-                                                 this,
-                                                 YmServiceTimingProfile
-                                                         .SegmentKind.KEY_OFF)
-                                         : synth.beginYmTiming(this,
-                                                 YmServiceTimingProfile
-                                                         .SegmentKind.KEY_OFF,
-                                                 firstAttack)) {
-                        synth.writeFm(this, 0, 0x28, chVal);
-                    }
-                } else {
-                    synth.writeFm(this, 0, 0x28, chVal);
-                }
+                synth.writeFm(this, 0, 0x28, chVal); // Key Off before frequency change
             }
 
-            try (Synthesizer.YmTimingScope ignored = timedFirstAttack
-                    ? sourceTimedFirstAttack
-                            ? synth.enterYmSourceProgramSection(this,
-                                    YmServiceTimingProfile.SegmentKind
-                                            .FREQUENCY_AND_KEY_ON)
-                            : synth.beginYmTiming(this,
-                                    YmServiceTimingProfile.SegmentKind
-                                            .FREQUENCY_AND_KEY_ON,
-                                    firstAttack)
-                    : Synthesizer.YmTimingScope.immediate()) {
-                boolean z80Modulation = config.getModAlgo()
-                        == SmpsSequencerConfig.ModAlgo.MOD_Z80
-                        && t.modEnabled && config.isApplyModOnNote();
-                if (z80Modulation) {
-                    // S3K zUpdateFMorPSGTrack prepares modulation in HL before its
-                    // sole zFMSendFreq call. Do not expose an unmodulated A4/A0
-                    // pair (or a second pan write) before the final frequency.
-                    t.forceModulationWrite = true;
-                    if (!applyModulation(t)) {
-                        writeFmFreq(port, ch, fnum, block);
-                    }
-                } else {
-                    writeFmFreq(port, ch, fnum, block);
-                    // S1/S2 FMPrepareNote writes only A4/A0; the historical Z80
-                    // compatibility path refreshes pan here. S3K uploads pan as
-                    // part of zSendFMInstrument instead.
-                    if (!config.isDirect68kDriver()
-                            && config.getModAlgo()
-                            != SmpsSequencerConfig.ModAlgo.MOD_Z80) {
-                        applyFmPanAmsFms(t);
-                    }
-                    // S2 (ModAlgo 68k_a) applies modulation before note-on; S1
-                    // (ModAlgo 68k) does not.
-                    if (t.modEnabled && config.isApplyModOnNote()) {
-                        t.forceModulationWrite = true;
-                        applyModulation(t);
-                    }
-                }
-
-                // S1/S2 smpsNoAttack suppresses FMNoteOff and the per-note state
-                // reset, but FMUpdateTrack still branches to FMNoteOn after the
-                // tied frequency has been prepared. Preserve the Z80-family HOLD
-                // behavior, which suppresses its key-on too.
-                if (config.isDirect68kDriver() || !preventAttack) {
-                    synth.writeFm(this, 0, 0x28, 0xF0 | chVal);
-                    LOGGER.fine("FM KEY ON: chVal=" + Integer.toHexString(chVal) + " port=" + port + " fnum="
-                            + Integer.toHexString(fnum) + " block=" + block + " note=" + Integer.toHexString(t.note));
-                }
+            writeFmFreq(port, ch, fnum, block);
+            // S1/S2 FMPrepareNote writes only A4/A0; pan is written by SetVoice
+            // or its coordination flag. Keep the existing Z80 refresh behavior.
+            if (!config.isDirect68kDriver()) {
+                applyFmPanAmsFms(t);
             }
-            if (timedFirstAttack) {
-                t.firstFm5AdmissionAttackPending = false;
-                t.firstFmPathShape = null;
-                t.firstFmPathPanConsumed = false;
+            // S2 (ModAlgo 68k_a) applies modulation before note-on; S1 (ModAlgo 68k) does not.
+            if (t.modEnabled && config.isApplyModOnNote()) {
+                t.forceModulationWrite = true;
+                applyModulation(t);
+            }
+
+            // S1/S2 smpsNoAttack suppresses FMNoteOff and the per-note state
+            // reset, but FMUpdateTrack still branches to FMNoteOn after the
+            // tied frequency has been prepared. Preserve the Z80-family HOLD
+            // behavior, which suppresses its key-on too.
+            if (config.isDirect68kDriver() || !preventAttack) {
+                synth.writeFm(this, 0, 0x28, 0xF0 | chVal); // Key On after latching frequency/pan
+                LOGGER.fine("FM KEY ON: chVal=" + Integer.toHexString(chVal) + " port=" + port + " fnum="
+                        + Integer.toHexString(fnum) + " block=" + block + " note=" + Integer.toHexString(t.note));
             }
 
         } else {
@@ -2591,27 +2117,19 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
             boolean noiseUsesTone2 = t.noiseMode && t.channelId == 2 && (t.psgNoiseParam & 0x03) == 0x03;
             boolean writeToneFreq = t.channelId < 3 && (!t.noiseMode || noiseUsesTone2);
-            boolean z80Modulation = config.getModAlgo()
-                    == SmpsSequencerConfig.ModAlgo.MOD_Z80
-                    && t.modEnabled && config.isApplyModOnNote();
-            if (z80Modulation) {
-                // zUpdatePSGTrack prepares and applies modulation before its
-                // single PSG frequency upload. Publishing the base period
-                // first creates a short, non-native pitch at every attack.
+
+            if (writeToneFreq) {
+                int data = reg & 0xF;
+                int ch = t.channelId;
+                synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
+                synth.writePsg(this, (reg >> 4) & 0x3F);
+                // baseFnum stores detune-free period; modulation applies detune dynamically.
+            }
+
+            // S2 (ModAlgo 68k_a) applies modulation before PSG volume write; S1 (ModAlgo 68k) does not.
+            if (t.modEnabled && config.isApplyModOnNote()) {
                 t.forceModulationWrite = true;
-                if (!applyModulation(t) && writeToneFreq) {
-                    writePsgFrequency(t, reg);
-                }
-            } else {
-                if (writeToneFreq) {
-                    writePsgFrequency(t, reg);
-                }
-                // S2 (ModAlgo 68k_a) applies modulation before PSG volume
-                // write; S1 (ModAlgo 68k) does not.
-                if (t.modEnabled && config.isApplyModOnNote()) {
-                    t.forceModulationWrite = true;
-                    applyModulation(t);
-                }
+                applyModulation(t);
             }
 
         }
@@ -2644,12 +2162,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
         }
         clearTransientNoAttack(t);
-    }
-
-    private void writePsgFrequency(Track t, int period) {
-        int ch = t.channelId;
-        synth.writePsg(this, 0x80 | (ch << 5) | (period & 0x0F));
-        synth.writePsg(this, (period >> 4) & 0x3F);
     }
 
     private void clearTransientNoAttack(Track t) {
@@ -2693,24 +2205,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             if (!preventAttack) {
                 synth.writeFm(this, 0, 0x28, chVal);
             }
-            boolean z80Modulation = config.getModAlgo()
-                    == SmpsSequencerConfig.ModAlgo.MOD_Z80
-                    && t.modEnabled && config.isApplyModOnNote();
-            if (z80Modulation) {
+            writeFmFreq(port, ch, fnum, block);
+            applyFmPanAmsFms(t);
+            if (t.modEnabled && config.isApplyModOnNote()) {
                 t.forceModulationWrite = true;
-                if (!applyModulation(t)) {
-                    writeFmFreq(port, ch, fnum, block);
-                }
-            } else {
-                writeFmFreq(port, ch, fnum, block);
-                if (config.getModAlgo()
-                        != SmpsSequencerConfig.ModAlgo.MOD_Z80) {
-                    applyFmPanAmsFms(t);
-                }
-                if (t.modEnabled && config.isApplyModOnNote()) {
-                    t.forceModulationWrite = true;
-                    applyModulation(t);
-                }
+                applyModulation(t);
             }
             if (!preventAttack) {
                 synth.writeFm(this, 0, 0x28, 0xF0 | chVal);
@@ -2767,13 +2266,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     @Override
     public void stopNote(Track t) {
         if (t.type == TrackType.FM) {
-            if (!t.active && isSfx && synth instanceof SmpsDriver driver
-                    && driver.releaseStoppedSfxFmTrackFromSequencer(
-                            this, t.channelId)) {
-                // Locked-on fix_sndbugs=0 cfStopTrack releases this individual
-                // hardware track and restores overridden music immediately.
-                return;
-            }
             int hwCh = t.channelId;
             int port = (hwCh < 3) ? 0 : 1;
             int ch = hwCh % 3;
@@ -3212,16 +2704,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void applyFmPanAmsFms(Track t) {
         if (t.type != TrackType.FM)
             return;
-        writePanAmsFms(t);
-    }
-
-    private void applyDacPanAmsFms(Track t) {
-        if (t.type != TrackType.DAC)
-            return;
-        writePanAmsFms(t);
-    }
-
-    private void writePanAmsFms(Track t) {
         int hwCh = t.channelId;
         int port = (hwCh < 3) ? 0 : 1;
         int ch = (hwCh % 3);
@@ -3240,26 +2722,26 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         // Adding Key On here caused re-keying during rests, breaking SFX like 0xAD.
     }
 
-    private boolean applyModulation(Track t) {
+    private void applyModulation(Track t) {
         if (!t.modEnabled)
-            return false;
+            return;
         // Z80-family drivers return before stepping modulation at rest. S1's
         // 68k DoModulation has no rest check and continues advancing its phase.
         if (!config.isDirect68kDriver() && t.resting)
-            return false;
+            return;
 
         stepCustomModulation(t);
         stepModEnvelope(t);
         if (!t.modStepInEffect && !t.modEnvStepInEffect) {
             t.modEnabled = false;
-            return false;
+            return;
         }
 
         int freqDelta = t.modStepDelta + t.modEnvStepDelta;
         boolean changed = t.modStepChanged || t.modEnvStepChanged || t.forceModulationWrite;
         t.forceModulationWrite = false;
         if (!changed) {
-            return false;
+            return;
         }
 
         if (t.type == TrackType.FM) {
@@ -3279,7 +2761,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 int fnum = packed & 0x7FF;
                 writeFmFreq(port, ch, fnum, block);
             }
-            return true;
         } else if (t.type == TrackType.PSG && t.channelId < 3 && !t.resting) {
             boolean noiseUsesTone2 = t.noiseMode && t.channelId == 2 && (t.psgNoiseParam & 0x03) == 0x03;
             if (!t.noiseMode || noiseUsesTone2) {
@@ -3293,10 +2774,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | data);
                 synth.writePsg(this, (reg >> 4) & 0x3F);
-                return true;
             }
         }
-        return false;
     }
 
     private void stepCustomModulation(Track t) {
@@ -3406,11 +2885,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             int value = t.modEnvData[t.modEnvPos] & 0xFF;
             t.modEnvPos++;
 
-            // Shipped S3K fix_sndbugs=0 reserves only $80-$84 as commands.
-            // Values $85-$FF take the signed branch (H=$FF) and are ordinary
-            // negative pitch deltas; treating every negative byte as HOLD
-            // freezes all retail modulation envelopes that cross below zero.
-            if (value < 0x80 || value >= 0x85) {
+            if (value < 0x80) {
                 int envVal = (byte) value;
                 int multiplier = t.modEnvMult + 1; // S3K DefDrv: EnvMult = Z80
                 t.modEnvCache = (short) (envVal * multiplier);
@@ -3516,8 +2991,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         fadeState.steps = steps;
         fadeState.delayInit = delay;
         fadeState.addFm = 1;
-        fadeState.addPsg = config.getFadeInChannelPolicy()
-                == SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY ? 0 : 1;
+        fadeState.addPsg = 1;
         // ROM: FadeInDelay is NOT initialized, so first step happens immediately
         fadeState.delayCounter = 0;
         fadeState.active = true;
@@ -3530,11 +3004,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             if (track.type == TrackType.DAC) {
                 track.dacMuted = true;
                 stopNote(track);
-                continue;
-            }
-            if (track.type == TrackType.PSG
-                    && config.getFadeInChannelPolicy()
-                            == SmpsSequencerConfig.FadeInChannelPolicy.FM_ONLY) {
                 continue;
             }
             track.volumeOffset += steps;
@@ -3562,30 +3031,13 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         fadeState.active = true;
         fadeState.fadeOut = true;
 
-        if (config.isFadeOutClearsSpeedShoes()) {
-            setSpeedShoes(false);
-        }
-        if (config.isFadeOutStopsSfxImmediately()
-                && synth instanceof SmpsDriver driver) {
-            driver.stopAllSfx();
-        }
-
         // Stop DAC track immediately (can't fade it) - matches ROM zFadeOutMusic
         for (Track track : tracks) {
-            if (track.type == TrackType.DAC
-                    || (track.type == TrackType.PSG
-                    && config.getFadeOutChannelPolicy()
-                    == SmpsSequencerConfig.FadeOutChannelPolicy
-                            .HALT_DAC_AND_PSG_FADE_FM)) {
+            if (track.type == TrackType.DAC) {
                 track.active = false;
                 stopNote(track);
             }
         }
-    }
-
-    /** Whether the retail driver is currently servicing a music fade-out. */
-    public boolean isFadingOut() {
-        return fadeState.active && fadeState.fadeOut;
     }
 
     /**
@@ -3601,30 +3053,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 applyFmPanAmsFms(t);
             } else if (t.type == TrackType.PSG) {
                 refreshVolume(t);
-            }
-        }
-    }
-
-    /** Restores active, non-overridden tracks after a driver pause. */
-    public void resumeAfterPause(SmpsSequencerConfig.PausePolicy policy) {
-        boolean reloadVoice = policy
-                == SmpsSequencerConfig.PausePolicy.S2_SILENCE_RELOAD;
-        boolean restoreDacPan = policy
-                == SmpsSequencerConfig.PausePolicy.S1_PAN_KEYOFF;
-        for (Track track : tracks) {
-            if (!track.active || track.overridden) {
-                continue;
-            }
-            if (track.type == TrackType.FM) {
-                if (reloadVoice) {
-                    refreshInstrument(track);
-                } else {
-                    applyFmPanAmsFms(track);
-                }
-            } else if (restoreDacPan && track.type == TrackType.DAC) {
-                // S1 FixBugs=0 PauseMusic deliberately includes all six FM
-                // tracks plus the DAC track in its unpause panning loop.
-                applyDacPanAmsFms(track);
             }
         }
     }
@@ -3721,14 +3149,13 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     public void setSpeedMultiplier(int multiplier) {
         this.speedMultiplier = Math.max(1, multiplier);
+        if (this.speedMultiplier <= 1) {
+            this.speedupTimeout = 0;
+        }
     }
 
     public int getSpeedMultiplier() {
         return speedMultiplier;
-    }
-
-    public boolean isSpeedShoes() {
-        return speedShoes;
     }
 
     public DebugState debugState() {
@@ -3783,7 +3210,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 psgLatchChannel,
                 speedMultiplier,
                 speedupTimeout,
-                palUpdateCounter,
                 new SmpsSequencerSnapshot.FadeSnapshot(
                         fadeState.steps,
                         fadeState.delayInit,
@@ -3799,7 +3225,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 tempoAccumulator,
                 dividingTiming,
                 primed,
-                deferNextDriverService,
                 trackSnapshots);
     }
 
@@ -3823,7 +3248,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         psgLatchChannel = snapshot.psgLatchChannel();
         speedMultiplier = snapshot.speedMultiplier();
         speedupTimeout = snapshot.speedupTimeout();
-        palUpdateCounter = snapshot.palUpdateCounter();
         fadeState.steps = snapshot.fade().steps();
         fadeState.delayInit = snapshot.fade().delayInit();
         fadeState.delayCounter = snapshot.fade().delayCounter();
@@ -3838,7 +3262,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         tempoAccumulator = snapshot.tempoAccumulator();
         dividingTiming = snapshot.dividingTiming();
         primed = snapshot.primed();
-        deferNextDriverService = snapshot.deferNextDriverService();
 
         tracks.clear();
         for (SmpsTrackSnapshot trackSnapshot : snapshot.tracks()) {
@@ -3918,13 +3341,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 track.fmVolEnvHold,
                 track.fmVolEnvOpMask,
                 track.forceRefresh,
-                (track.firstFm5AdmissionVoicePending ? 1 : 0)
-                        | (track.firstFm5AdmissionAttackPending ? 2 : 0)
-                        | (track.firstFmPathShape
-                                == YmSourceProgramTiming.FirstPathShape.VOICE_NOTE ? 4 : 0)
-                        | (track.firstFmPathShape
-                                == YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE ? 8 : 0)
-                        | (track.firstFmPathPanConsumed ? 16 : 0),
                 track.ssgEg,
                 track.dacMuted,
                 track.modStepInEffect,
@@ -4013,16 +3429,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         track.fmVolEnvHold = snapshot.fmVolEnvHold();
         track.fmVolEnvOpMask = snapshot.fmVolEnvOpMask();
         track.forceRefresh = snapshot.forceRefresh();
-        track.firstFm5AdmissionVoicePending =
-                (snapshot.internalStateFlags() & 1) != 0;
-        track.firstFm5AdmissionAttackPending =
-                (snapshot.internalStateFlags() & 2) != 0;
-        track.firstFmPathShape = (snapshot.internalStateFlags() & 8) != 0
-                ? YmSourceProgramTiming.FirstPathShape.VOICE_PAN_NOTE
-                : (snapshot.internalStateFlags() & 4) != 0
-                        ? YmSourceProgramTiming.FirstPathShape.VOICE_NOTE : null;
-        track.firstFmPathPanConsumed =
-                (snapshot.internalStateFlags() & 16) != 0;
         copyInto(snapshot.ssgEg(), track.ssgEg);
         track.dacMuted = snapshot.dacMuted();
         track.modStepInEffect = snapshot.modStepInEffect();

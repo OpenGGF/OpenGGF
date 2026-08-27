@@ -1240,9 +1240,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Add charge on jump press
 		if (inputJumpPress) {
 			setSpindashAnimation();
-			// The sound driver, not the physics charge counter, owns the rev
-			// transpose ladder (S2 zPlaySound_CheckSpindash; S3K E9).
-			audioManager.playSfx(GameSound.SPINDASH_CHARGE);
+			float pitch = 1.0f + (sprite.getSpindashCounter() / 2048.0f) / 3.0f;
+			audioManager.playSfx(GameSound.SPINDASH_CHARGE, pitch);
 			counter = (short) Math.min(sprite.getSpindashCounter() + 0x200, 0x800);
 			sprite.setSpindashCounter(counter);
 		}

@@ -75,7 +75,7 @@ class TestAudioPresentationSourceParity {
     }
 
     @Test
-    void segaPcmStopsSmpsMusicAndSfxBeforeItsFirstPacket()
+    void smpsMusicSmpsSfxWavSfxAndRawPcmAppearInOnePacket()
             throws Exception {
         FactoryFixture fixture = factoryFixture();
         AbstractSmpsData music = data("music", 0x81);
@@ -105,18 +105,14 @@ class TestAudioPresentationSourceParity {
         DecodedPcm rawPcm = fixture.factory.registerUnsigned8Mono(
                 "sega", new byte[] {(byte) 0xFF, 0}, SAMPLE_RATE);
         registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                fixture.factory.segaPcm(4, rawPcm),
-                com.openggf.audio.GameAudioProfile.SegaPcmPlaybackPolicy
-                        .EXCLUSIVE_STOP_ALL));
+                fixture.factory.segaPcm(4, rawPcm)));
 
-        assertEquals(0, composite.driver().captureSnapshot()
-                .sequencers().size(),
-                "SEGA PCM stops the SMPS driver before direct DAC playback");
+        assertEquals(2, composite.driver().captureSnapshot()
+                .sequencers().size());
         short[] packet =
                 new AudioPresentationMixer(2).mix(registry, 2).clone();
 
-        assertEquals(1, registry.orderedVoiceCount());
-        assertEquals(4, registry.orderedVoiceAt(0).voiceId());
+        assertEquals(3, registry.orderedVoiceCount());
         assertNotEquals(0, packet[0]);
         assertNotEquals(0, packet[1]);
         assertFalse(ArraysAreAllZero(packet));

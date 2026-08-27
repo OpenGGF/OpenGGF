@@ -261,18 +261,13 @@ traces.
   physical-object support, while the transition camera remains owned by MGZ2's
   native resize event.
 - **Audio and video hardware modeling:** YM2612 FM, PSG, DAC/PCM, SMPS
-  sequencing, pause/resume behavior, PAL clocks, priority rendering, tilemaps,
-  shaders, sprite batching, and staged art loading have received substantial
-  accuracy and stability work. Source-timed S3K FM/PSG services, repeated SFX
-  ownership, and the retail two-cell SFX request order preserve incumbent
-  services during repeated boss explosions. Reference chip defaults and HQ
-  PSG rendering improve Collapse, Spindash Release, Blue Sphere, and mixed
-  music/SFX playback. Extra-life retriggers, fade-time SFX admission, and
-  override cleanup now preserve the distinct retail S1, S2, and S3K rules;
-  S3K's 1-up jingle retains priority over an expiring invincibility theme and
-  releases its SFX gate before later boss fades. The standalone sound-test
-  launcher provides ROM-backed listening through the same unified presentation
-  pipeline.
+  sequencing, priority rendering, tilemaps, shaders, sprite batching, and staged
+  art loading have received substantial accuracy and stability work. Audio
+  output runs through the unified presentation pipeline, which live recording,
+  offline trace capture, and the standalone ROM-backed sound-test launcher all
+  share. A further SMPS and chip-level parity programme built during the 0.6
+  cycle is deferred to 0.7 and is not part of this release; see the release
+  summary for what was withdrawn and why.
 - **Resolve-ready capture:** live and trace recording can select DNxHR SQ video
   with lossless 24-bit PCM audio in a MOV container for DaVinci Resolve on Linux.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,

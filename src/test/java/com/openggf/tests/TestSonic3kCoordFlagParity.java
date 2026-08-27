@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -65,24 +64,6 @@ public class TestSonic3kCoordFlagParity {
             psgWrites.add(val & 0xFF);
             super.writePsg(source, val);
         }
-    }
-
-    @Test
-    public void e2FfRestoresThroughTheSequencerOwnedSink() {
-        byte[] fmTrack = {
-                (byte) 0xE2, (byte) 0xFF,
-                (byte) 0xE3
-        };
-        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
-        AtomicInteger restores = new AtomicInteger();
-        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC,
-                new CaptureSynth(), restores::incrementAndGet,
-                Sonic3kSmpsSequencerConfig.CONFIG);
-
-        seq.read(new short[20_000]);
-
-        assertEquals(1, restores.get(),
-                "E2 FF must latch restore on the presentation-owned sink");
     }
 
     @Test
@@ -306,9 +287,8 @@ public class TestSonic3kCoordFlagParity {
 
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.DASH.id, new byte[] {(byte) 0xF2}), 0);
-        fixture.mix();
         assertEquals(0, fixture.state.spindashRevCounter(),
-                "zPlaySound consumption of a normal SFX resets the counter");
+                "Ordered apply of a normal SFX resets the session counter");
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.SPINDASH.id,
                 new byte[] {(byte) 0xE9, (byte) 0xF2}), 0);
@@ -335,9 +315,8 @@ public class TestSonic3kCoordFlagParity {
         SmpsCompositeVoice voice =
                 (SmpsCompositeVoice) fixture.registry.orderedVoiceAt(0);
         assertEquals(1,
-                voice.driver().captureSnapshot().pendingSfxInputs().size(),
-                "same-frame duplicate stays in the first zSoundQueue cell");
-        fixture.mix();
+                voice.driver().captureSnapshot().sequencers().size());
+        assertTrue(voice.driver().isContinuousSfxFlagSet());
         assertEquals(2, fixture.state.spindashRevCounter(),
                 "Continuous retrigger does not construct a resetting handler");
     }
@@ -356,7 +335,6 @@ public class TestSonic3kCoordFlagParity {
 
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.DASH.id, new byte[] {(byte) 0xF2}), 0);
-        fixture.mix();
         assertEquals(0, fixture.state.spindashRevCounter());
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.SPINDASH.id,
@@ -510,7 +488,7 @@ public class TestSonic3kCoordFlagParity {
 
         int finalPacked = finalFmPackedFrequency(fmTrack);
 
-        assertEquals(0x2A84, finalPacked,
+        assertEquals(0x2A74, finalPacked,
                 "S3K zDoModulation decrements ModulationSteps every sustain tick, not only when speed elapses");
     }
 
@@ -524,7 +502,7 @@ public class TestSonic3kCoordFlagParity {
 
         int finalPacked = finalFmPackedFrequency(fmTrack);
 
-        assertEquals(0x2AD6, finalPacked,
+        assertEquals(0x2AAD, finalPacked,
                 "S3K zDoModulation applies the first delta on the tick that ModulationWait decrements to zero");
     }
 
@@ -638,32 +616,6 @@ public class TestSonic3kCoordFlagParity {
         SmpsSequencer.Track psg = findTrack(seq, SmpsSequencer.TrackType.PSG);
         assertEquals(3, psg.modEnvCache, "CHG_MULT should affect modulation delta via Z80 (mult+1)");
         assertTrue(synth.psgWrites.contains(0x83), "PSG frequency should reflect +3 modulation delta");
-    }
-
-    @Test
-    public void negativeModEnvelopeByteIsASignedPitchDelta() {
-        byte[] psgTrack = {
-                (byte) 0xF4, 0x01,
-                (byte) 0x92, 0x04,
-                (byte) 0xF2
-        };
-        Map<Integer, byte[]> modEnvs = new HashMap<>();
-        modEnvs.put(1, new byte[] { (byte) 0xFF, (byte) 0x81 });
-
-        CaptureSynth synth = new CaptureSynth();
-        Sonic3kSmpsData smps = createMusicData(
-                1, 1, null, psgTrack, null, modEnvs);
-        SmpsSequencer seq = new SmpsSequencer(
-                smps, EMPTY_DAC, synth,
-                Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[25000]);
-
-        SmpsSequencer.Track psg = findTrack(
-                seq, SmpsSequencer.TrackType.PSG);
-        assertEquals(-1, psg.modEnvCache,
-                "fix_sndbugs=0 applies $85-$FF as signed deltas");
-        assertTrue(synth.psgWrites.contains(0x8F),
-                "PSG frequency should include the negative envelope delta");
     }
 
     private static Sonic3kSmpsData createMusicData(int channels, int psgChannels, byte[] fmTrack, byte[] psgTrack,

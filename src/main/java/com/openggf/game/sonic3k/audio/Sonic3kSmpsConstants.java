@@ -42,14 +42,8 @@ public final class Sonic3kSmpsConstants {
     /** Modulation envelope pointer list in Z80 RAM. */
     public static final int Z80_MOD_PTR_LIST = 0x130E;
 
-    /** Retail modulation envelope pointer count ({@code ModEnv_00..07}). */
-    public static final int Z80_MOD_ENVELOPE_COUNT = 8;
-
     /** PSG envelope pointer list in Z80 RAM. */
     public static final int Z80_PSG_PTR_LIST = 0x1387;
-
-    /** Retail PSG/FM volume envelope pointer count ({@code VolEnv_00..26}). */
-    public static final int Z80_PSG_ENVELOPE_COUNT = 0x27;
 
     /** DAC bank list in Z80 RAM (starts with entry for note 0x80). */
     public static final int Z80_DAC_BANK_LIST = 0x00D6;

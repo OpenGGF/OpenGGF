@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.specialstage;
 
 import com.openggf.audio.GameMusic;
-import com.openggf.audio.GameSound;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
@@ -948,10 +947,11 @@ public class Sonic3kSpecialStageManager {
                 || ringsCollected == EXTRA_LIFE_THRESHOLD_2) {
             GameServices.audio().playSfx(Sonic3kSfx.RING_LOSS.id);
         } else {
-            // ROM: loc_9838 submits sfx_RingRight, then the locked-on Z80
-            // zPlaySound_CheckRing toggles zRingSpeaker and selects the left
-            // or right table entry before loading the SFX.
-            GameServices.audio().playSfx(GameSound.RING);
+            // ROM: loc_9838 seeds sfx_RingRight before the Blue_spheres_stage_flag
+            // threshold branch and always calls Play_SFX with that ID
+            // (skdisasm/sonic3k.asm:12212-12243). This special-stage path does
+            // not use the shared gameplay ring alternation.
+            GameServices.audio().playSfx(Sonic3kSfx.RING_RIGHT.id);
         }
     }
 

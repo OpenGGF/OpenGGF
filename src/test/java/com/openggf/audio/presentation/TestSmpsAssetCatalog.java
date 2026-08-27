@@ -306,25 +306,6 @@ class TestSmpsAssetCatalog {
                 dac(2), config());
     }
 
-    @Test
-    void frozenProgramPreservesFadeOutSfxAdmissionPolicy() {
-        AudioPresentationSourceFactory factory = factory();
-        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
-                .blocksSfxDuringFadeOut(true)
-                .build();
-        AudioPresentationCommand.MusicVoiceEntry entry = factory.musicSmps(
-                "s1", 0x81, 10, 1,
-                CountingMusicData.music(0x81, 1), dac(1), config,
-                AudioSourceDescriptor.baseMusic(0x81), 32);
-
-        SmpsCompositeVoice voice = factory.recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor)
-                        entry.voiceDescriptor());
-
-        assertTrue(voice.driver().firstMusicSequencer().getConfig()
-                .blocksSfxDuringFadeOut());
-    }
-
     private static void assertMusicSharing(
             AudioPresentationSourceFactory factory,
             String gameId,

@@ -135,17 +135,6 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
-    public MusicDuringOverridePolicy getMusicDuringOverridePolicy() {
-        return MusicDuringOverridePolicy.DEFER_UNTIL_RESTORE;
-    }
-
-    @Override
-    public SystemCommandDuringOverridePolicy
-            getSystemCommandDuringOverridePolicy() {
-        return SystemCommandDuringOverridePolicy.DISCARD;
-    }
-
-    @Override
     protected int getFadeOutCommandId() {
         return Sonic3kSmpsConstants.CMD_FADE_OUT;
     }
@@ -171,11 +160,6 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
                 Sonic3kSmpsConstants.SEGA_SOUND_ADDR,
                 Sonic3kSmpsConstants.SEGA_SOUND_SIZE,
                 Sonic3kSmpsConstants.SEGA_SOUND_SAMPLE_RATE);
-    }
-
-    @Override
-    public SegaPcmPlaybackPolicy getSegaPcmPlaybackPolicy() {
-        return SegaPcmPlaybackPolicy.EXCLUSIVE_STOP_ALL;
     }
 
     /** S3K fade-out uses delay 6 instead of the S1/S2 default delay 3. */

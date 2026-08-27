@@ -279,14 +279,11 @@ public class TestDonorAudioRouting {
         var shadowDriver =
                 audioManager.shadowSmpsDriverSnapshotForTesting();
         assertNotNull(shadowDriver);
-        assertEquals(1, shadowDriver.sequencers().size(),
-                "S3K zPlaySound has not consumed the queued donor SFX yet");
-        assertEquals(1, shadowDriver.pendingSfxInputs().size(),
-                "shadow donor SFX must queue on shadow donor music's driver");
+        assertEquals(2, shadowDriver.sequencers().size(),
+                "shadow donor SFX must join shadow donor music's driver");
         var shadowMusicHandler = shadowDriver.sequencers().get(0)
                 .config().getCoordFlagHandler();
-        var shadowSfxHandler = shadowDriver.pendingSfxInputs().getFirst()
-                .sequencer()
+        var shadowSfxHandler = shadowDriver.sequencers().get(1)
                 .config().getCoordFlagHandler();
         assertSame(presentationOwner.handlerFor("s3k"),
                 shadowMusicHandler);

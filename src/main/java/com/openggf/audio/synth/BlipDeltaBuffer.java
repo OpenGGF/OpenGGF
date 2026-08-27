@@ -362,19 +362,6 @@ public class BlipDeltaBuffer {
         this.integR = snapshot.integR();
     }
 
-    static void validateSnapshot(Snapshot snapshot) {
-        if (snapshot == null) {
-            throw new IllegalArgumentException(
-                    "blip delta snapshot cannot be null");
-        }
-        if (snapshot.factorFp() <= 0 || snapshot.size() < BUF_EXTRA
-                || snapshot.bufferLRef().length != snapshot.size()
-                || snapshot.bufferRRef().length != snapshot.size()) {
-            throw new IllegalArgumentException(
-                    "blip delta snapshot shape is invalid");
-        }
-    }
-
     public record Snapshot(
             long factorFp,
             long offsetFp,
@@ -403,33 +390,5 @@ public class BlipDeltaBuffer {
 
         /** Non-copying view for in-memory restore paths only. Do not mutate. */
         int[] bufferRRef() { return bufferR; }
-
-        @Override
-        public boolean equals(Object candidate) {
-            if (this == candidate) {
-                return true;
-            }
-            if (!(candidate instanceof Snapshot other)) {
-                return false;
-            }
-            return factorFp == other.factorFp
-                    && offsetFp == other.offsetFp
-                    && size == other.size
-                    && integL == other.integL
-                    && integR == other.integR
-                    && Arrays.equals(bufferL, other.bufferL)
-                    && Arrays.equals(bufferR, other.bufferR);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = Long.hashCode(factorFp);
-            result = 31 * result + Long.hashCode(offsetFp);
-            result = 31 * result + Arrays.hashCode(bufferL);
-            result = 31 * result + Arrays.hashCode(bufferR);
-            result = 31 * result + Integer.hashCode(size);
-            result = 31 * result + Integer.hashCode(integL);
-            return 31 * result + Integer.hashCode(integR);
-        }
     }
 }

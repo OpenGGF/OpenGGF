@@ -468,7 +468,7 @@ public final class AudioPresentationSourceFactory
             SmpsAssetCatalog.ProgramEntry source,
             SmpsDriver driver) {
         SmpsSequencer sequencer = newSequencer(source, driver);
-        sequencer.initializeSpeedShoes(settings.speedShoesEnabled());
+        sequencer.setSpeedShoes(settings.speedShoesEnabled());
         sequencer.setSpeedMultiplier(settings.speedMultiplier());
         sequencer.setFallbackVoiceData(source.program());
         driver.addSequencer(sequencer, false);
@@ -488,7 +488,7 @@ public final class AudioPresentationSourceFactory
         SmpsSequencer sequencer = newLegacySequencer(source, driver);
         sequencer.setSourceDescriptor(
                 describeLegacyMusic(descriptor, source.data()));
-        sequencer.initializeSpeedShoes(settings.speedShoesEnabled());
+        sequencer.setSpeedShoes(settings.speedShoesEnabled());
         sequencer.setSpeedMultiplier(settings.speedMultiplier());
         sequencer.setFallbackVoiceData(source.data());
         driver.addSequencer(sequencer, false);
@@ -738,15 +738,6 @@ public final class AudioPresentationSourceFactory
         AdmissionResult result = Objects.requireNonNull(
                 sfxAdmissionPolicy.evaluate(context),
                 "SFX admission policy returned no result");
-        if (result.accepted() && currentOwner != null
-                && currentOwner.usesGlobalSfxPriority()) {
-            result = currentOwner.evaluateSfxRequest(
-                    source.resolvedSoundId(), source.priority(),
-                    source.specialSfx(), false);
-            context = new SmpsAdmissionContext(
-                    requestedId, source.resolvedSoundId(), source.priority(),
-                    result.priorityBefore(), source.specialSfx(), false);
-        }
         return new Admission(context, result);
     }
 
@@ -883,7 +874,7 @@ public final class AudioPresentationSourceFactory
         return SampleBackedVoice.rawSegaPcm(
                 voiceId, 0,
                 Objects.requireNonNull(registeredPcm, "registeredPcm"),
-                roundedOutputSampleRate(), settings.region());
+                roundedOutputSampleRate());
     }
 
     @Override
@@ -1149,27 +1140,6 @@ public final class AudioPresentationSourceFactory
                 diagnostics.emit(() ->
                         AudioDiagnosticObserverException.invoke(() ->
                                 observer.onPsgWrite(value)));
-            }
-
-            @Override
-            public int ym2612ChannelSampleMask() {
-                return observer.ym2612ChannelSampleMask();
-            }
-
-            @Override
-            public void onYm2612ChannelSample(int channel, int output) {
-                diagnostics.emit(() ->
-                        AudioDiagnosticObserverException.invoke(() ->
-                                observer.onYm2612ChannelSample(channel, output)));
-            }
-
-            @Override
-            public void onYm2612KeyOn(
-                    int channel, int operator, int attenuation) {
-                diagnostics.emit(() ->
-                        AudioDiagnosticObserverException.invoke(() ->
-                                observer.onYm2612KeyOn(
-                                        channel, operator, attenuation)));
             }
         };
     }

@@ -358,12 +358,7 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
         // During the unwinnable AIZ1 cutscene transition, BG events own camera/music flow.
         // Only restore defaults when no transition handoff is active.
         if (!transitionInProgress) {
-            int levelMusicId = services().getCurrentLevelMusicId();
-            if (levelMusicId >= 0) {
-                // ROM restores the level track here; AudioManager.restoreMusic()
-                // only unwinds the 1-up driver's saved-song slot.
-                services().playMusic(levelMusicId);
-            }
+            services().audioManager().restoreMusic();
             var camera = services().camera();
             camera.setMinX((short) 0);
             camera.setMaxX((short) savedCameraMaxX);

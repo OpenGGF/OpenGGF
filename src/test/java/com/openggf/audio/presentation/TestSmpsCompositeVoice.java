@@ -133,30 +133,6 @@ class TestSmpsCompositeVoice {
     }
 
     @Test
-    void legacyOrdinaryMusicLoadPreservesSfxOnlyWhenProfileRequiresIt() {
-        NoDeviceBackend sonicOne = backend(false,
-                GameAudioProfile.OrdinaryMusicSfxPolicy.PRESERVE_ACTIVE);
-        sonicOne.playSmps(data("old", 0x81), dacData(), config(), false);
-        sonicOne.playSfxSmps(data("sfx", 0xB0), dacData(), 1.0f, config());
-        sonicOne.playSmps(data("new", 0x82), dacData(), config(), false);
-
-        SmpsDriverSnapshot preserved =
-                sonicOne.musicDriverForTesting().captureSnapshot();
-        assertEquals(2, preserved.sequencers().size());
-        assertEquals(0x82, preserved.sequencers().get(0).source().id());
-        assertTrue(preserved.sequencers().get(1).sfx());
-
-        NoDeviceBackend sonicTwo = backend(false,
-                GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
-        sonicTwo.playSmps(data("old", 0x81), dacData(), config(), false);
-        sonicTwo.playSfxSmps(data("sfx", 0xB0), dacData(), 1.0f, config());
-        sonicTwo.playSmps(data("new", 0x82), dacData(), config(), false);
-
-        assertEquals(1, sonicTwo.musicDriverForTesting()
-                .captureSnapshot().sequencers().size());
-    }
-
-    @Test
     void snapshotRestoreReproducesDriverStateAndNextPcm() {
         SmpsDriver driver = new SmpsDriver();
         SmpsCompositeVoice voice = composite(driver, 128);
@@ -238,13 +214,6 @@ class TestSmpsCompositeVoice {
     }
 
     private static NoDeviceBackend backend(boolean continuousSfx) {
-        return backend(continuousSfx,
-                GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
-    }
-
-    private static NoDeviceBackend backend(
-            boolean continuousSfx,
-            GameAudioProfile.OrdinaryMusicSfxPolicy ordinaryMusicSfxPolicy) {
         NoDeviceBackend backend = new NoDeviceBackend();
         backend.setAudioProfile(new AudioTestFixtures.StubAudioProfile(new AudioTestFixtures.StubSmpsLoader()) {
             @Override
@@ -260,11 +229,6 @@ class TestSmpsCompositeVoice {
             @Override
             public int getSfxPriority(int soundId) {
                 return soundId == 0xB0 ? 0x20 : soundId == 0xB1 ? 0x60 : 0x70;
-            }
-
-            @Override
-            public OrdinaryMusicSfxPolicy getOrdinaryMusicSfxPolicy() {
-                return ordinaryMusicSfxPolicy;
             }
         });
         backend.init();

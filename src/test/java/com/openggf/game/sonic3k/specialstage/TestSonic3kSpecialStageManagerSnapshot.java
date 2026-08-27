@@ -152,28 +152,25 @@ class TestSonic3kSpecialStageManagerSnapshot {
     }
 
     @Test
-    void specialStageRingCollectionAppliesTheZ80SpeakerAlternation() throws Exception {
+    void specialStageRingCollectionQueuesRomRingRightSound() throws Exception {
         AudioManager audio = AudioManager.getInstance();
         audio.setSoundMap(new Sonic3kAudioProfile().getSoundMap());
         audio.resetRingSound();
+        var requestedSounds = new java.util.ArrayList<Integer>();
+        audio.setRequestObserver((requestClass, rawSoundId) ->
+                requestedSounds.add(rawSoundId));
+
         Sonic3kSpecialStageManager manager = new Sonic3kSpecialStageManager();
-        set(manager, "ringsLeft", 3);
+        set(manager, "ringsLeft", 2);
         set(manager, "ringsCollected", 0);
 
         Method collectRing = Sonic3kSpecialStageManager.class
                 .getDeclaredMethod("collectRing", int.class);
         collectRing.setAccessible(true);
         collectRing.invoke(manager, 0x44);
-        collectRing.invoke(manager, 0x45);
 
-        var ringNames = audio.commandTimeline().entries().stream()
-                .map(entry -> entry.command())
-                .filter(AudioCommand.PlaySfx.class::isInstance)
-                .map(AudioCommand.PlaySfx.class::cast)
-                .map(AudioCommand.PlaySfx::sfxName)
-                .toList();
-        assertEquals(java.util.List.of("RING_LEFT", "RING_RIGHT"), ringNames,
-                "zPlaySound_CheckRing toggles the table index before each ring SFX load");
+        assertEquals(java.util.List.of(Sonic3kSfx.RING_RIGHT.id), requestedSounds,
+                "S3K's special-stage ring path always queues sfx_RingRight");
     }
 
     @Test

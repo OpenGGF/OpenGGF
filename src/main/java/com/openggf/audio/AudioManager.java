@@ -785,8 +785,7 @@ public class AudioManager implements MusicRestoreSink {
             byte[] pcm = sourceRom.readBytes(
                     spec.address(), spec.length());
             mirrorShadowCommand(() ->
-                    shadowResolver.submitRawPcm(pcm, spec.sampleRate(),
-                            source.profile().getSegaPcmPlaybackPolicy()));
+                    shadowResolver.submitRawPcm(pcm, spec.sampleRate()));
         } catch (Exception e) {
             AudioDiagnosticObserverException.rethrowIfPresent(e);
             LOGGER.log(Level.WARNING, "Failed to play SEGA PCM sample", e);
@@ -1578,15 +1577,6 @@ public class AudioManager implements MusicRestoreSink {
         // bring it back. Without this the interrupted song is destroyed and the
         // restore finds an empty stack, leaving the level silent.
         boolean override = profile != null && profile.isMusicOverride(musicId);
-        GameAudioProfile.MusicDuringOverridePolicy musicDuringOverridePolicy =
-                profile != null
-                        ? profile.getMusicDuringOverridePolicy()
-                        : GameAudioProfile.MusicDuringOverridePolicy
-                                .REPLACE_IMMEDIATELY;
-        GameAudioProfile.MusicOverrideRetriggerPolicy retriggerPolicy =
-                profile != null
-                        ? profile.getMusicOverrideRetriggerPolicy()
-                        : GameAudioProfile.MusicOverrideRetriggerPolicy.IGNORE;
 
         if (source.loader() != null) {
             ensureShadowPresentation();
@@ -1607,8 +1597,7 @@ public class AudioManager implements MusicRestoreSink {
             }
             if (registered) {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
-                        musicId, AudioCommand.MusicRoute.BASE_SMPS, override, null,
-                        musicDuringOverridePolicy, retriggerPolicy));
+                        musicId, AudioCommand.MusicRoute.BASE_SMPS, override, null));
                 if (sendLiveBackendCommands()) {
                     var playback = shadowFactory
                             .requireRegisteredSmpsMusicPlayback(
@@ -1620,8 +1609,7 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
         recordTimelineCommand(new AudioCommand.PlayMusic(
-                musicId, AudioCommand.MusicRoute.FALLBACK_WAV, override, null,
-                musicDuringOverridePolicy, retriggerPolicy));
+                musicId, AudioCommand.MusicRoute.FALLBACK_WAV, override, null));
         if (sendLiveBackendCommands()) {
             backend.prepareLogicalMusicSource(AudioSourceDescriptor.fallbackMusic(musicId));
             backend.playMusic(musicId);
@@ -2109,16 +2097,14 @@ public class AudioManager implements MusicRestoreSink {
             BaseAudioSource source) {
         return new AudioPresentationCommandResolver.SourceAccess(
                 baseGameId(source), source.generation(), source.loader(),
-                source.dac(), source.config(), sfxPolicyFor(source.profile()),
-                ordinaryMusicSfxPolicyFor(source.profile()));
+                source.dac(), source.config(), sfxPolicyFor(source.profile()));
     }
 
     private AudioPresentationCommandResolver.SourceAccess donorSfxSource(
             String gameId, DonorAudioSource source) {
         return new AudioPresentationCommandResolver.SourceAccess(
                 gameId, source.generation(), source.loader(), source.dac(),
-                source.config(), sfxPolicyFor(source.sfxPolicyProfile()),
-                ordinaryMusicSfxPolicyFor(source.profile()));
+                source.config(), sfxPolicyFor(source.sfxPolicyProfile()));
     }
 
     private synchronized DonorAudioSource completeLegacyDonorSource(
@@ -2229,13 +2215,7 @@ public class AudioManager implements MusicRestoreSink {
                 // music, none of which the ROM saves and restores — only the
                 // 1-up jingle does that, and it is never a donor track.
                 recordTimelineCommand(new AudioCommand.PlayMusic(
-                        musicId, AudioCommand.MusicRoute.DONOR_SMPS, false,
-                        donorGameId,
-                        baseAudioSource.profile() != null
-                                ? baseAudioSource.profile()
-                                        .getMusicDuringOverridePolicy()
-                                : GameAudioProfile.MusicDuringOverridePolicy
-                                        .REPLACE_IMMEDIATELY));
+                        musicId, AudioCommand.MusicRoute.DONOR_SMPS, false, donorGameId));
                 if (sendLiveBackendCommands()) {
                     var playback = shadowFactory
                             .requireRegisteredSmpsMusicPlayback(
@@ -2339,12 +2319,7 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        GameAudioProfile profile = baseAudioSource.profile();
-        recordTimelineCommand(new AudioCommand.StopMusic(
-                profile != null
-                        ? profile.getSystemCommandDuringOverridePolicy()
-                        : GameAudioProfile.SystemCommandDuringOverridePolicy
-                                .APPLY));
+        recordTimelineCommand(new AudioCommand.StopMusic());
         if (sendLiveBackendCommands()) {
             backend.stopPlayback();
         }
@@ -2353,7 +2328,7 @@ public class AudioManager implements MusicRestoreSink {
     /**
      * Fade out the currently playing music using ROM default timing.
      * ROM equivalent: MusID_FadeOut (0xF9) / zFadeOutMusic.
-     * SFX admission follows the active game's retail fade policy.
+     * Does not affect SFX - only music channels fade.
      *
      * <p>ROM uses fadeOutMusic() in these situations (for future implementation):
      * <ul>
@@ -2389,7 +2364,7 @@ public class AudioManager implements MusicRestoreSink {
     /**
      * Fade out the currently playing music over time.
      * ROM equivalent: MusID_FadeOut (0xF9) / zFadeOutMusic.
-     * SFX admission follows the active game's retail fade policy.
+     * Does not affect SFX - only music channels fade.
      *
      * @param steps total number of volume steps (ROM default: 0x28 = 40)
      * @param delay frames between each volume step (ROM default: 3)
@@ -2399,12 +2374,7 @@ public class AudioManager implements MusicRestoreSink {
             return;
         }
         fadeOutMusicCount++;
-        GameAudioProfile profile = baseAudioSource.profile();
-        recordTimelineCommand(new AudioCommand.FadeOutMusic(steps, delay,
-                profile != null
-                        ? profile.getSystemCommandDuringOverridePolicy()
-                        : GameAudioProfile.SystemCommandDuringOverridePolicy
-                                .APPLY));
+        recordTimelineCommand(new AudioCommand.FadeOutMusic(steps, delay));
         if (sendLiveBackendCommands()) {
             backend.fadeOutMusic(steps, delay);
         }
@@ -2734,7 +2704,6 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void restoreShadowMusic() {
-        shadowRegistry.requestMusicOverrideRestore();
         shadowRestoreRequested = true;
     }
 
@@ -2973,13 +2942,6 @@ public class AudioManager implements MusicRestoreSink {
         };
     }
 
-    private static GameAudioProfile.OrdinaryMusicSfxPolicy
-            ordinaryMusicSfxPolicyFor(GameAudioProfile profile) {
-        return profile != null
-                ? profile.getOrdinaryMusicSfxPolicy()
-                : GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL;
-    }
-
     private final class ShadowSources implements AudioPresentationCommandResolver.Sources {
         private final int maxFrames;
 
@@ -2997,8 +2959,7 @@ public class AudioManager implements MusicRestoreSink {
                     yield new AudioPresentationCommandResolver.SourceAccess(
                             baseGameId(source), source.generation(),
                             source.loader(), source.dac(), source.config(),
-                            policyFor(source.profile()),
-                            ordinaryMusicSfxPolicyFor(source.profile()));
+                            policyFor(source.profile()));
                 }
                 case DONOR_MUSIC, DONOR_ID -> {
                     String gameId = requireDonorGameId(donorGameId);
@@ -3014,10 +2975,7 @@ public class AudioManager implements MusicRestoreSink {
                             source != null ? source.dac() : null,
                             source != null ? source.config() : null,
                             policyFor(source != null
-                                    ? source.sfxPolicyProfile() : null),
-                            source != null && source.profile() != null
-                                    ? source.profile().getOrdinaryMusicSfxPolicy()
-                                    : GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL);
+                                    ? source.sfxPolicyProfile() : null));
                 }
                 case FALLBACK_NAME -> throw new IllegalArgumentException(
                         "fallback assets have no SMPS source");
@@ -3113,9 +3071,6 @@ public class AudioManager implements MusicRestoreSink {
      * Pauses audio playback. Called when the game window is minimized or loses focus.
      */
     public void pause() {
-        if (shadowRegistry != null) {
-            shadowRegistry.pauseSmpsDrivers();
-        }
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.pause();
         }
@@ -3129,9 +3084,6 @@ public class AudioManager implements MusicRestoreSink {
      * Resumes audio playback after being paused.
      */
     public void resume() {
-        if (shadowRegistry != null) {
-            shadowRegistry.resumeSmpsDrivers();
-        }
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.resume();
         }
