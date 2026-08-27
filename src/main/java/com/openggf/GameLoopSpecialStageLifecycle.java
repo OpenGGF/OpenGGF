@@ -96,6 +96,9 @@ final class GameLoopSpecialStageLifecycle {
             rewind.recordExternalFrame(currentMode, false, input);
         }
         if (provider.isFinished() && (session == null || !session.isSpecialStageSession())) {
+            if (TraceSessionLauncher.shouldDeferRunModeBoundaryCommit()) {
+                return;
+            }
             enterResults.accept(provider.isEmeraldCollected());
         }
     }

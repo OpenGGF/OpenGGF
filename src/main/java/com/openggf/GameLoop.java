@@ -84,6 +84,7 @@ import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
 import com.openggf.game.timeattack.mp.MultiplayerHudRenderer;
 import com.openggf.testmode.TraceCameraFocusController;
+import com.openggf.trace.replay.TraceSuppressedRowClosure;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -1399,6 +1400,30 @@ public class GameLoop {
 
         profiler.endSection("input");
 
+        // Evaluated before the suppression test, never inside it: the call
+        // consumes the gap's first row whatever mode that row is in, and a gap
+        // opened from a Special Stage results screen spends its first rows
+        // outside LEVEL.
+        boolean gapRowContinuesLevelMainLoop =
+                runGapRowContinuesSourceLevelMainLoop();
+        if (TraceSessionLauncher.suppressesRunNativeLevelBody(currentGameMode)
+                && !gapRowContinuesLevelMainLoop) {
+            // A shared transition gap's rows are owned by the game's blocking
+            // level-exit/entry routine once the level's own main loop has ended
+            // (see runGapRowContinuesSourceLevelMainLoop for the row that still
+            // belongs to the loop). That routine is not gameplay, but it does
+            // make mode transitions of its own -- the S1 results path raises the
+            // Special Stage request from a fade callback, a restart's load
+            // raises its locked title card, and a death's own f_restart starts
+            // the reload. Service those here or the run driver replays gap input
+            // forever against a scene that never moves.
+            consumeSpecialStageRequestDuringSuppressedRunRow();
+            presentPendingTitleCardDuringSuppressedRunRow();
+            startPendingRespawnDuringSuppressedRunRow();
+            inputHandler.update();
+            return;
+        }
+
         if (currentGameMode == GameMode.LEVEL) {
             if (!updateLevelMode(doFrameStep)) {
                 return;
@@ -1426,7 +1451,10 @@ public class GameLoop {
                 () -> titleReleaseResult, levelManager, gameplayMode,
                 inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress(),
-                userRecordingControls, this::startPendingInLevelTitleCard,
+                userRecordingControls,
+                request -> routeTimeAttackSeamlessTransitionBeforeApply(
+                        request, doFrameStep),
+                this::startPendingInLevelTitleCard,
                 () -> LevelIterationAdmissionController
                         .prepareTraceRunAdmissionAndHardwareTiming(
                                 currentGameMode, this::syncPlaybackInputBridge),
@@ -1620,12 +1648,10 @@ public class GameLoop {
         // (TEXT_WAIT and TEXT_EXIT phases where player can move but text is still
         // visible)
         TitleCardProvider tcp = getTitleCardProviderLazy();
-        if (tcp != null && tcp.isOverlayActive()) {
-            tcp.update();
-            if (tcp.ownsInLevelPlayerControlLock()) {
-                applyTitleCardControlLock(tcp.shouldLockPlayerControlForInLevelOverlay());
-            }
-        }
+        TraceSuppressedRowClosure.executeUnownedTitleCardWork(
+                playbackDebugManager.isCurrentGameplayTickSuppressed(),
+                tcp, this::startPendingInLevelTitleCard,
+                this::applyTitleCardControlLock);
 
         if (multiplayerRaceCoordinator != null) {
             multiplayerRaceCoordinator.pump();
@@ -1635,49 +1661,6 @@ public class GameLoop {
                 return true;
             }
         }
-
-        // Handle in-place seamless transitions before fade-based routes.
-        SeamlessLevelTransitionRequest seamlessRequest = levelManager.consumeSeamlessTransitionRequest();
-        if (seamlessRequest != null) {
-            userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-            // A cross-act seamless reload (e.g. AIZ1 -> AIZ2) ends the timed attempt so
-            // the HUD/ghost/retry do not bleed into the next act. Mid-act sequences
-            // (MUTATE_ONLY / RELOAD_SAME_LEVEL, and any RELOAD_TARGET_LEVEL that reloads
-            // the same zone/act) leave the attempt untouched.
-            if (TimeAttackLevelEndRouting.shouldSuppressSeamlessTransitionForTimeAttack(
-                    timeAttackRuntime.isActive(), seamlessRequest.type(), timeAttackRuntime.launch(),
-                    seamlessRequest.targetZone(), seamlessRequest.targetAct())) {
-                timeAttackRuntime.deactivate();
-                // Suppress the seamless cross-act reload entirely rather than half-applying
-                // it: return to the time attack menu instead of advancing into the next
-                // act's level data.
-                startTimeAttackReturnToMenuFade();
-                updateNonGameplayAudio(doFrameStep);
-                return false;
-            }
-            levelManager.applySeamlessTransition(seamlessRequest);
-            startPendingInLevelTitleCard();
-            updateNonGameplayAudio(doFrameStep);
-            // Trace playback still consumes one BK2/VBlank row on a
-            // transition-only frame. Headless replay advances its movie
-            // cursor after applySeamlessTransition(); keep the live
-            // comparator cursor aligned with the same ordering.
-            levelIterationAdmission.finishPlaybackBoundary(
-                        true, playbackDebugManager, userRecordingControls);
-            TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-            if (traceSession != null) {
-                traceSession.recordExternalRewindFrameAtBoundary();
-            } else {
-                GameplayModeContext context = resolveGameplayModeContext();
-                if (context != null) {
-                    context.markRewindBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
-                }
-            }
-            return false;
-        }
-
-        // Trigger transparent in-level title card overlays (no mode switch).
-        startPendingInLevelTitleCard();
 
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
@@ -1945,6 +1928,24 @@ public class GameLoop {
                 configService.getInt(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY))) {
             logCurrentPreviewCaptureOverride();
         }
+        return true;
+    }
+
+    /**
+     * Routes a cross-act time-attack request before the admission owner applies
+     * its destination. Mid-act seamless requests remain owned by the ordinary
+     * transition path.
+     */
+    private boolean routeTimeAttackSeamlessTransitionBeforeApply(
+            SeamlessLevelTransitionRequest request, boolean doFrameStep) {
+        if (!TimeAttackLevelEndRouting.shouldSuppressSeamlessTransitionForTimeAttack(
+                timeAttackRuntime.isActive(), request.type(), timeAttackRuntime.launch(),
+                request.targetZone(), request.targetAct())) {
+            return false;
+        }
+        timeAttackRuntime.deactivate();
+        startTimeAttackReturnToMenuFade();
+        updateNonGameplayAudio(doFrameStep);
         return true;
     }
 
@@ -3253,9 +3254,13 @@ public class GameLoop {
         // Play the special stage exit sound (same as entry sound)
         playSpecialStageTransitionSfx(getActiveSpecialStageProvider());
 
-        // Start fade-to-white, then show title card when complete
+        // Start fade-to-white, then show title card when complete. The
+        // completion only latches the exit: the fade update that completes it
+        // runs at the start of the results screen's last whiteout frame, and
+        // the exit body (the returning level's load) must not run until the
+        // iteration after that frame's V-int sample.
         GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
-            doExitResultsScreen();
+            resultsExitFadeCompleted = true;
         });
 
         LOGGER.info("Starting fade-to-white to exit Results Screen");

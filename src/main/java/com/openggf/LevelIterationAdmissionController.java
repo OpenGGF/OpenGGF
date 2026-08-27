@@ -15,6 +15,7 @@ import com.openggf.level.SeamlessLevelTransitionRequest;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /** Owns level/title admission and deferred seamless-boundary completion. */
@@ -30,6 +31,24 @@ final class LevelIterationAdmissionController {
             GameplayModeContext gameplayMode,
             boolean startEdge,
             UserRecordingRuntimeControls recordingControls,
+            Runnable startPendingTitleCard,
+            Runnable activateRepresentedHardwareTiming,
+            Runnable deactivateHardwareTimingGap) {
+        return admit(mode, updateTitleCard, titleReleaseResult, levelManager,
+                gameplayMode, startEdge, recordingControls, request -> false,
+                startPendingTitleCard, activateRepresentedHardwareTiming,
+                deactivateHardwareTimingGap);
+    }
+
+    LevelFrameResult admit(
+            GameMode mode,
+            BooleanSupplier updateTitleCard,
+            Supplier<LevelFrameResult> titleReleaseResult,
+            LevelManager levelManager,
+            GameplayModeContext gameplayMode,
+            boolean startEdge,
+            UserRecordingRuntimeControls recordingControls,
+            Predicate<SeamlessLevelTransitionRequest> routeSeamlessBeforeApply,
             Runnable startPendingTitleCard,
             Runnable activateRepresentedHardwareTiming,
             Runnable deactivateHardwareTimingGap) {
@@ -56,6 +75,9 @@ final class LevelIterationAdmissionController {
         if (request != null) {
             deactivateHardwareTimingGap.run();
             recordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+            if (routeSeamlessBeforeApply.test(request)) {
+                return LevelFrameResult.SETUP_ONLY;
+            }
             TraceSessionLauncher.markNextRunLevelLoadCause(
                     com.openggf.trace.replay.runs.RunLevelLoadCause.LEVEL_ADVANCE);
             levelManager.applySeamlessTransition(request);
