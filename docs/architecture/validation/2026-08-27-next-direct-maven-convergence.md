@@ -749,3 +749,74 @@ Final feature certification nevertheless remains `DONE_WITH_CONCERNS`: the
 ordinary candidate is not identical to baseline and contains two new reds plus
 six changed red signatures, so the no-new-or-worsened-red acceptance rule is
 not satisfied.
+
+## Superseding paired alphabetical certification on 2026-08-28
+
+The earlier `DONE_WITH_CONCERNS` result above is historical. Investigation
+showed that its two pass-to-red outcomes were reused-fork test-isolation leaks,
+and its six changed red signatures differed only in generated JUnit temporary
+directory ids, mod-snapshot ids, and Jansi extraction hashes. The corrective
+test/tooling commits are:
+
+- `7244330a05309c4acc283799437d48d9b4c3c88b`, which makes Surefire order
+  explicitly alphabetical, authenticates that order in direct-Maven evidence,
+  normalizes only the three proven volatile identifier shapes, resets the
+  Butterdroid registry test, and installs the opened S2 ROM before the sample
+  ROM-art resolver materializes ROM-backed art;
+- `94e8784850f174238793fff95039ee128d11d2b1`, which clears the process-global
+  `Engine` reference from the two remaining engine-constructing test classes.
+
+The second fix followed two identical baseline and feature fork aborts at
+`TestSpecialStageHardwareTimingLifecycle`: 47 reports / 363 testcases were
+published before a leaked real `GameLoop` reached `glCreateShader` without a
+GL context. The reduced producer/consumer selector reproduced exit 134 before
+the fix and passed 8/8 afterward. A repository scan then found no remaining
+test source that constructs `Engine` without clearing the global reference.
+
+The frozen production baseline remained detached at
+`5e0eb0b8baa59b005895cd485a11f508596d867c`. To hold the test harness constant,
+its worktree received an uncommitted validation overlay containing exactly the
+four affected test classes and no production, POM, tooling, or documentation
+change. The four files are byte-identical to the feature versions. The saved
+overlay diff SHA-256 is
+`da9dd0cbc36ce21924da72971f341117732b3be0945f2a38bfe9ba8be88a1d34`.
+
+Both ordinary runs used Maven 3.9.16 on JDK 21.0.11, verified all three ROM
+SHA-1 values, selected the same 2,317 parsed-package top-level classes, applied
+the same ten-row repeated-cardinality contract, and ran one reused 3 GiB fork
+with explicit `surefire.runOrder=alphabetical` and the canonical literal
+`argLine`. Each run produced 2,318 XML reports, 18,201 testcases, and zero dump
+files. The known post-report Maven nontermination recurred only after the
+complete trees were stable; each agent interrupted only its owned PTY after a
+bounded stability proof and immediately exported the untouched canonical
+reports.
+
+The baseline and feature inventories are byte-identical, 5,244,920 bytes each,
+with SHA-256
+`eef420dff93bdfabc71b58ec3e6876c418a043ef418ee98525488fd41ecacdb9`.
+Each contains 18,105 passes, 39 failures, 20 errors, and 37 skips. The formal
+comparator exited 0 with all 18,201 identities classified `MATCH` and no other
+classification. Its TSV SHA-256 is
+`116d50aeb3797e45022604bc279d19174f5edf3be6a2014bac2003d83d1f122b`.
+This supersedes the two apparent regressions and six apparent signature
+changes above: under the shared deterministic harness there are zero ordinary
+outcome or red-signature regressions.
+
+The feature guard command was:
+
+```text
+mvn -Dmse=off <three-absolute-verified-ROM-properties> -Pguards test -B
+```
+
+It completed naturally in 4:13 with 596 tests: 595 passes, the one unchanged
+`TestTraceV5PositiveInputGuard#repositoryPositiveTestsUseOnlyTemporaryV5Inputs`
+failure, zero errors, zero skips, and zero dumps. The failure still names only
+the same retired rows in `TestFbzMinibossArtShape.java` and
+`TestSonic3kPlcArtRegistry.java`; its normalized body is 1,198 bytes with
+SHA-256 `a4adbded2423ad810d17ddeeecc176567c884bcc80a22d1fb67f0471110f93e7`.
+The 596-row guard inventory SHA-256 is
+`baa3199e16ffcd4304c16d4793bad1a9d31bfdb34f8b06d8952f06c4a13fd709`.
+
+Final Task 5 status is therefore `PASS`: the paired ordinary inventories are
+exactly equal, the guard profile adds only passing coverage, and its sole red
+is the accepted unchanged Trace V5 baseline failure.
