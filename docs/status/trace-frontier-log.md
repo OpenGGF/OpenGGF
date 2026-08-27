@@ -108384,3 +108384,44 @@ The other three death arms remain coordinates only.
   866 tests and 8 failures. The two removed failures are exactly CNZ1 and
   CNZ2; the other six retain their baseline first-error signatures. Manifest:
   `<managed-scratch>/tasks/openggf-test-session-20260826T113532Z-84624-563ef71f/20260826T113532Z-p84507-05f1da/manifest.json`.
+
+## 2026-08-27 - FBZ donated-profile launcher recovery ownership
+
+- Worktree: `.worktrees/fbz-viewport-architecture-r4`, branch
+  `bugfix/ai-fbz-viewport-architecture-r4`, candidate over exact baseline
+  `93592ecf2602ac7ccd6c73ba5f8bc0fbffc37730`.
+- Root and fix: the post-launcher stage in
+  `TestFbzAct2TraversalPreboss` owns airborne LEFT recovery, but its prior
+  world-X-only completion could retain LEFT after a timing variant landed one
+  pixel short of `$08FD`. The stage now completes on landing as well as at the
+  existing `$08FD` edge. A focused truth-table invariant failed first in run
+  `20260827T023530Z-p2-b7b787`, then passed in
+  `20260827T023650Z-p2-8bc2ec`; the full focused controller class passed in
+  `20260827T023835Z-p2-e48de5`.
+- Donated-profile command:
+  `tools/testing/test-session.sh -- mvn
+  -Dtest=com.openggf.tests.TestFbzCompatibilityMatrix#donatedMovementProfileCanReachTheMandatoryBossEntryWithoutSpindash
+  test`. Candidate run `20260827T023930Z-p2-7d58f0` retained rows `[1]` and
+  `[2]` at their baseline failures and advanced row `[3]` from the baseline
+  flame contact at frame `27920`, player `$083E/$04EC`, to the later magnetic
+  ball cluster at frame `29706`, player `$18B0/$05D0`. The method reported 3
+  failures and 0 errors; row `[1]` remains the first failure at frame `30599`,
+  Obj28 terrain recovery timeout, player X `$1D6E`.
+- Viewport command:
+  `tools/testing/test-session.sh -- mvn
+  -Dtest=com.openggf.tests.TestFbzCompatibilityMatrix#viewportKeepsWorldThresholdsCullingAndBossContainment
+  test`. Candidate run `20260827T024041Z-p2-24e884` retained rows `[1]`,
+  `[2]`, `[4]`, and `[5]` at their baseline failures and advanced row `[3]`
+  from the baseline flame contact at frame `27526`, player `$081B/$04EC`, to
+  the later Blaster corridor contact at frame `29143`, player `$178F/$05EC`.
+  The method reported 5 failures and 0 errors; row `[1]` remains the first
+  failure at frame `30610`, Obj28 terrain recovery timeout, player X `$1D6E`.
+  The `$178F` viewport `[3]` corridor remains a known blocker; this partial
+  correction does not claim to solve it.
+- Containing-class command:
+  `tools/testing/test-session.sh -- mvn
+  -Dtest=com.openggf.tests.TestFbzCompatibilityMatrix test`. Run
+  `20260827T024214Z-p2-1ce538` reported 26 tests, 13 known frontier failures,
+  0 errors, and 0 skips; the donor and viewport signatures above were
+  unchanged and the other 13 identities passed. Manifests and logs are under
+  `.openggf/test-runs/<run-id>/manifest.json` and `maven.log` in this worktree.

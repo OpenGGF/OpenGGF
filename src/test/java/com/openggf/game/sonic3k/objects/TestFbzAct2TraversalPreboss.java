@@ -82,6 +82,21 @@ public class TestFbzAct2TraversalPreboss {
     private static final List<InputRun> LOWER_BACKTRACK_FINAL_CYCLE = List.of(
             new InputRun(30, 0x0), new InputRun(20, 0x14), new InputRun(20, 0x4));
 
+    private static boolean postLauncherRecoveryComplete(
+            boolean playerAirborne, int playerX, int clearX) {
+        return !playerAirborne || playerX >= clearX;
+    }
+
+    @Test
+    void postLauncherRecoveryRelinquishesLeftOwnershipWhenGrounded() {
+        assertTrue(postLauncherRecoveryComplete(false, 0x08FC, 0x08FD),
+                "grounded recovery cannot retain the airborne LEFT stage");
+        assertFalse(postLauncherRecoveryComplete(true, 0x08FC, 0x08FD),
+                "airborne recovery below the existing clear edge still owns LEFT");
+        assertTrue(postLauncherRecoveryComplete(true, 0x08FD, 0x08FD),
+                "the existing airborne world-X completion remains valid");
+    }
+
     @Test
     void a80Subtype16DownwardPathSwitchSelectsCollisionPathCD() throws IOException {
         ObjectSpawn switcher = TestFbzObjectInventory.load("2.bin").stream()
@@ -1959,7 +1974,8 @@ public class TestFbzAct2TraversalPreboss {
                         // BK2 changes back to RIGHT at $6B8C/$08FD, just before
                         // the landing. Do not extend LEFT to a donor-dependent
                         // grounded frame beside the live TechnoSqueek family.
-                        if (playerXBefore >= launcherRecoveryClearX) {
+                        if (postLauncherRecoveryComplete(
+                                player.getAir(), playerXBefore, launcherRecoveryClearX)) {
                             postLauncherRouteStage = 5;
                             mask = AbstractPlayableSprite.INPUT_RIGHT;
                         } else {
