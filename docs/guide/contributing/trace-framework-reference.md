@@ -1062,7 +1062,7 @@ every nearby-object position every frame through a 20-minute run.
    or `n/a`, and cross-checks trailer ↔ file staging (e.g. `Changelog: updated` requires
    `CHANGELOG.md` to be in the diff). Runs via `bash .githooks/validate-policy.sh ci-pr ...`.
 2. **`test`** — sets up Java 21 (Temurin) with Maven cache, then runs
-   `tools/testing/test-session.sh -- mvn test -B` and reads the resulting
+   `mvn test -B` and reads the resulting
    session manifest.
 
 Trace replay tests run in the `test` job but **skip gracefully** (`Assumptions.assumeTrue`)
@@ -1166,7 +1166,7 @@ a self-contained briefing. In the trace context, typical sub-agent roles are:
 
 - "Read the first error in the context file and identify the ROM routine implicated."
 - "Find the corresponding engine code and propose a minimal fix."
-- "Run `tools/testing/test-session.sh -- mvn test -Dtest=TestS1Mz1TraceReplay`,
+- "Run `mvn test -Dtest=TestS1Mz1TraceReplay`,
   read the session manifest, and report the new error count."
 - "Record a fresh trace in BizHawk and update the fixture."
 

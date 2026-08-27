@@ -87,19 +87,19 @@ Trace replay tests require:
 Run all trace tests:
 
 ```bash
-tools/testing/test-session.sh -- mvn test -Dtest='*TraceReplay'
+mvn test -Dtest='*TraceReplay'
 ```
 
 Run cross-game baseline set (the canonical "did I regress anything?" check):
 
 ```bash
-tools/testing/test-session.sh -- mvn test -Dtest='TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay'
+mvn test -Dtest='TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay'
 ```
 
 Run one trace:
 
 ```bash
-tools/testing/test-session.sh -- mvn test -Dtest=TestS1Mz1TraceReplay
+mvn test -Dtest=TestS1Mz1TraceReplay
 ```
 
 > **Note on `-Dtest=` filtering.** In some configurations the surefire `-Dtest=` filter does not
@@ -111,7 +111,7 @@ tools/testing/test-session.sh -- mvn test -Dtest=TestS1Mz1TraceReplay
 Useful optional override while tuning S1 oscillation alignment:
 
 ```bash
-tools/testing/test-session.sh -- mvn test -Dtest=TestS1Mz1TraceReplay -Dosc.override=0
+mvn test -Dtest=TestS1Mz1TraceReplay -Dosc.override=0
 ```
 
 Reports are written below the `trace_reports` path in the session manifest. On divergence you will typically see:

@@ -61,7 +61,7 @@ jobs:
           cache: maven
 
       - name: Run structural guards
-        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off -Pguards test -B
+        run: mvn -Dmse=off -Pguards test -B
 
   test:
     if: github.event_name != 'push'
@@ -80,12 +80,10 @@ jobs:
       - name: Run tests
         id: default-tests
         shell: bash
-        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B
+        run: mvn -Dmse=off test -B
 
       - name: Assert default test coverage
         shell: bash
-        env:
-          MANIFEST: ${{ steps.default-tests.outputs.manifest }}
         run: |
           python3 - <<'PY'
           import json
@@ -94,8 +92,7 @@ jobs:
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
-          reports = sorted(Path(session["surefire_reports"]).glob("TEST-*.xml"))
+          reports = sorted(Path("target/surefire-reports").glob("TEST-*.xml"))
           total = 0
           skipped = 0
           for report in reports:
@@ -155,15 +152,13 @@ jobs:
         id: develop-trace
         shell: bash
         run: |
-          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
+          mvn -Dmse=off test -Ptrace-replay -B \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Assert trace replay coverage
         shell: bash
-        env:
-          MANIFEST: ${{ steps.develop-trace.outputs.manifest }}
         run: |
           python3 - <<'PY'
           import fnmatch
@@ -174,9 +169,8 @@ jobs:
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
-          surefire_dir = Path(session["surefire_reports"])
-          trace_dir = Path(session["trace_reports"])
+          surefire_dir = Path("target/surefire-reports")
+          trace_dir = Path("target/trace-reports")
           source_root = Path("src/test/java/com/openggf/tests/trace")
           diagnostic_excludes = (
               "Debug*.java",

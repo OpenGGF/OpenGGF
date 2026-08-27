@@ -40,114 +40,25 @@ removes active duplication or risk — but don't let cleanup displace playable S
 
 ```bash
 tools/testing/install-hooks.sh
-tools/testing/test-session.sh -- mvn package                          # executable JAR with dependencies
-tools/testing/test-session.sh -- mvn test
-tools/testing/test-session.sh -- mvn "-Dtest=TestCollisionLogic" test # focused run
-tools/testing/test-session.sh -- mvn -Dmse=off -Pguards test -B   # structural guards in a fresh session
-java -jar <session-artifact-root>/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+mvn package                          # executable JAR with dependencies
+mvn test
+mvn "-Dtest=TestCollisionLogic" test # focused run
+mvn -Dmse=off -Pguards test -B       # structural guards in a fresh JVM
+java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
 
-PowerShell uses `tools/testing/install-hooks.ps1` and
-`tools/testing/test-session.ps1 -- ...` with the same Maven arguments. The
-coordinator owns temporary/output paths and prints the session manifest at the
-start and end of each run; raw Maven lifecycle commands are non-certifying.
+PowerShell uses `tools/testing/install-hooks.ps1` and the same Maven arguments.
 For release evidence, run both the ordinary suite and the separate `-Pguards`
-session; the structural guards are intentionally excluded from the long reused
+invocation; the structural guards are intentionally excluded from the long reused
 ordinary fork so whole-production graph imports receive a fresh JVM.
 
-### Agent test-session isolation contract
+### Agent test isolation contract
 
-Codex and Claude agents must use `tools/testing/test-session.sh` on POSIX systems
-and must use `tools/testing/test-session.ps1` in PowerShell for every certifying
-build, test, trace replay, or capture run. The wrapper is the sandbox boundary:
-it creates a unique session-owned temporary root, routes build/report/diagnostic
-output there, and gives every Surefire fork a per-Surefire-fork LWJGL extraction
-directory. Agents must not reuse another run's temporary directory, point
-LWJGL at a shared extraction directory, or treat a raw Maven lifecycle command
-as release evidence. Parallel agents must use separate worktrees and separate
-wrapper sessions, even when they are testing the same commit.
-
-The wrapper's `OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` markers, plus
-the referenced manifest, are part of the evidence. The wrapper is quiet by
-default: both markers print the session-owned `manifest=` and `log=` paths. The
-start marker names the live `maven.log`; terminal finalisation atomically publishes
-`maven.log.gz`, removes the original only after successful compression, and makes
-the terminal manifest/end marker name the gzip. Agent runs must keep this
-default; do not pass `--verbose`, pipe through `tee`, or print the complete log
-back into context. Diagnose with targeted `rg` searches and bounded `tail`/`sed`
-reads against the reported log. `--quiet` is accepted when an invocation needs
-to state the default explicitly; `--verbose` is reserved for interactive human
-troubleshooting that genuinely needs live output. Report the run ID, manifest
-path, and log path; if the start/end markers are absent, the result is
-non-certifying.
-
-#### Session storage lifecycle
-
-After `tools/agent-scratch` changes, run `tools/agent-scratch install` and
-`agent-scratch verify`. A configured managed root must verify and return a valid
-`agent-scratch reserve-test-session --json` allocation in the
-`MANAGED_CODEX_TEST_SESSIONS` tier; missing, stale, malformed, unsafe, timed-out,
-or failed managed allocation is a startup error and never project-falls back.
-Helper bytes, configuration, lane ownership, writable-root policy, and unit-file
-content must still verify statically when the sandbox cannot reach the user
-service bus; only runtime timer state becomes `UNAVAILABLE_IN_SANDBOX`. Unknown
-service-manager errors remain fatal.
-`OPENGGF_TEST_ROOT` remains the highest-priority explicit tier. Project-local
-fallback is visibly labelled and is allowed only when managed scratch is not
-configured; system temporary storage requires `--allow-system-tmp`.
-
-Before Maven starts, every storage tier must have usable bytes of at least
-`max(20 GiB, 5% of filesystem capacity)` and pass a live contained inode probe.
-`OPENGGF_TEST_MIN_FREE_BYTES` may only be an unsigned decimal that raises this
-floor; blank, whitespace-only, malformed, or lower values fail startup. Capacity
-and live inode availability are measured again at finalisation. Managed
-`inode_count_status=MEASURED` requires numeric `usable_inodes`, with zero
-refusing launch; `UNAVAILABLE_DYNAMIC` requires JSON-null `usable_inodes` and
-uses the live probe as authority instead of treating dynamic allocation as zero.
-
-Explicit `--lock-root`/`OPENGGF_TEST_LOCK_ROOT` has highest lock priority.
-Otherwise a managed reservation uses its verified `lease_root` under
-`$AGENT_SCRATCH_ROOT/codex/test-session-locks`; the exact default wrapper does
-not need writable Git metadata. Unmanaged tiers retain the per-worktree Git
-lock default, and coordinator lease ownership/recovery semantics are unchanged.
-
-Terminal compaction removes only `tmp` and `build/test-classes/traces`; manifests,
-command files, terminal `maven.log.gz`, reports, diagnostics, ordinary resources, other classes,
-JAR/native/package output, `artifacts/`, `distribution/`, and inventoried paths
-remain. Use `--retain-ephemeral` (PowerShell `-RetainEphemeral`) to retain the two
-reproducible trees for diagnosis without changing expiry. A compaction failure
-makes an otherwise green run `STORAGE_FINALIZATION_FAILED`; an existing child or
-identity failure remains primary. Log-compression failure follows the same verdict
-precedence and preserves the uncompressed `maven.log` as evidence.
-Forced JVM shutdown is also conservative: the shutdown owner stops the child tree,
-waits for output drain, retains `maven.log`, and records gzip as deferred. On normal
-completion, the gzip rename is directory-synced, the terminal manifest names it,
-and only then is the original removed and the directory synced again.
-If shutdown cannot prove drain completion within its bound, it leaves the `RUNNING`
-manifest and log untouched for stale-session recovery.
-Directory durability is reported as `SYNCED`, `UNSUPPORTED`, or `FAILED` for gzip
-publication, terminal-manifest publication, and source deletion. Native providers
-that cannot open directories for syncing remain certifying as `UNSUPPORTED`; a real
-I/O failure on a provider that supports directory sync is a storage-finalisation failure.
-Every terminal-manifest barrier contributes to the verdict, including startup-failure
-rewrites and the post-deletion evidence rewrite; one bounded best-effort rewrite records
-a late failure without retrying indefinitely.
-
-Automatic deletion requires secure descriptor-relative streams or a stable
-file-key tombstone strategy. Native Windows on OpenJDK 21 exposes neither and
-therefore remains certifying as `RETAINED_PLATFORM_UNSUPPORTED`, with no
-automatic compaction pending a future Actworks/Slipmat native file-ID bridge;
-capacity and retention still apply. Managed terminal sessions expire after seven
-days unless kept. Live `RUNNING` sessions are never pruned; expired stale
-`RUNNING` sessions move atomically to the fourteen-day quarantine lane.
-
-The start marker fields are exactly `run_id`, `isolation`, `lwjgl`, `manifest`,
-`lease`, `log`, `state`, `storage_tier`, `launch_usable_bytes`, and
-`capacity_floor_bytes`. The end fields are `run_id`, `isolation`, `lwjgl`,
-`exit_code`, `state`, `valid`, `manifest`, `log`, `compaction_status`,
-`reclaimed_bytes`, and `completion_usable_bytes`, plus `process_tree_stopped`
-when shutdown handling reports it. Run/identity verdict fields keep their prior
-meaning; compaction fields report storage finalisation only.
+OpenGGF uses Maven directly. Build and test output belongs below the current
+worktree's `target/` directory. Do not redirect Maven build/report roots to a
+shared or durable session directory. Parallel agents still use separate
+worktrees; repeated runs in one worktree reuse its target tree. The per-Surefire-fork LWJGL extraction
+uses a distinct directory below `target/test-tmp`.
 
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.
@@ -185,20 +96,12 @@ ROM is missing.
 Disassemblies live under `docs/s1disasm/`, `docs/s2disasm/`, `docs/skdisasm/` (untracked,
 available locally); SMPS audio reference under `docs/SMPS-rips/SMPSPlay/`.
 
-## Managed agent scratch storage
+## Temporary and durable artifacts
 
-Agent-owned captures, diagnostic output, downloads, reports, and other durable task
-artifacts belong in a helper-created directory under
-`$AGENT_SCRATCH_ROOT/tasks`, never in `/tmp`. `tools/agent-scratch` is the tracked
-bootstrap/source helper: run `tools/agent-scratch install` after source updates to install
-the stable user-wide `$HOME/.local/bin/agent-scratch`. Routine work in this and any other
-project uses `agent-scratch new <label>` (or `agent-scratch path tasks`) and passes the
-printed task path to the producing tool. The installed helper shares
-`$AGENT_SCRATCH_ROOT` across projects; labels and timestamped task directories isolate their
-artifacts. `/tmp` remains for short-lived operating-system files only. Before a large
-capture, run `agent-scratch status` to check capacity. Task output is retained for a limited
-time: use `agent-scratch keep <task-path> --until YYYY-MM-DD` for a bounded extension, or
-move material that must outlive retention into a normal archive outside the managed root.
+Maven-owned output stays below the current worktree's `target/` directory. Put durable
+captures or research outputs in an explicit task/archive directory outside the repository,
+and keep `/tmp` for short-lived operating-system files only. Do not invent a shared Maven
+output root or copy another worktree's build tree.
 
 ## Hard rules
 

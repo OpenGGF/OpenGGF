@@ -4,6 +4,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Builds and tests are back on direct Maven after managed sessions caused
+  unbounded storage growth:** each worktree now owns one reusable `target/`
+  tree, CI/release jobs use static target-local report and artifact paths, and
+  the coordinator, wrappers, managed scratch helper, and active enforcement
+  have been removed from OpenGGF. The preserved lifecycle research now lives
+  separately in public `OpenGGF/Actworks` as a v0.8 ask.
+
 - **Live and trace capture can target DaVinci Resolve on Linux:** the capture
   codec options now include DNxHR SQ video and lossless 24-bit PCM audio for
   use together in a QuickTime MOV container.

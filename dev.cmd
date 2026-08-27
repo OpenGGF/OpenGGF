@@ -15,5 +15,5 @@ REM or dependency isn't cached yet, run `run.cmd` once (or drop -o here) to
 REM populate the local ~/.m2 cache, then this launcher works offline again.
 
 setlocal
-call mvn -q -o -Dmse=off -Dopenggf.session.guard.skip=true -Pdev-run compile exec:exec
+call mvn -q -o -Dmse=off -Pdev-run compile exec:exec
 endlocal

@@ -20,7 +20,7 @@ includes IntelliJ project files. Any IDE with Maven support will work.
 git clone https://github.com/OpenGGF/OpenGGF.git
 cd OpenGGF
 tools/testing/install-hooks.sh
-tools/testing/test-session.sh -- mvn package
+mvn package
 ```
 
 The coordinator prints a session manifest at the start and end of the build.
@@ -48,7 +48,7 @@ absent, so you can build and run most tests without any ROMs.
 
 For S3K-specific tests, the ROM path can also be passed as a system property:
 ```bash
-tools/testing/test-session.sh -- mvn test -Ds3k.rom.path=s3k.gen
+mvn test -Ds3k.rom.path=s3k.gen
 ```
 
 ## Run the Engine
@@ -83,13 +83,13 @@ arrow keys and press Space. If a ROM file is missing, you will see an error mess
 
 ```bash
 # Run all tests
-tools/testing/test-session.sh -- mvn test
+mvn test
 
 # Run a single test class
-tools/testing/test-session.sh -- mvn test -Dtest=TestCollisionLogic
+mvn test -Dtest=TestCollisionLogic
 
 # Run a single test method
-tools/testing/test-session.sh -- mvn test -Dtest=TestCollisionLogic#testSlopeAngle
+mvn test -Dtest=TestCollisionLogic#testSlopeAngle
 ```
 
 Tests are configured for parallel execution across 8 JVM forks. ROM-dependent tests
@@ -125,7 +125,7 @@ To build a native image, you need GraalVM 21+ with the `native-image` tool insta
 The build is configured in `pom.xml` under the `native` profile:
 
 ```bash
-tools/testing/test-session.sh -- mvn package -Pnative
+mvn package -Pnative
 ```
 
 Native image metadata is maintained in `src/main/resources/META-INF/native-image/`.

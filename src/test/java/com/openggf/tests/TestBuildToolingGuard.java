@@ -27,6 +27,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -412,7 +413,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void generatedOutputInventoryMustRemainSessionOwned() throws Exception {
+    void generatedOutputInventoryMustRemainWorktreeTargetOwned() throws Exception {
         Set<String> migrated = new TreeSet<>(SESSION_OUTPUT_FILES);
         Set<String> explicit = new TreeSet<>(EXPLICIT_OUTPUT_FILES);
         Set<String> exclusions = new TreeSet<>(NO_SESSION_EXCLUSION_FILES);
@@ -459,13 +460,14 @@ class TestBuildToolingGuard {
                 continue;
             }
             String source = sourceForInventory(file);
-            boolean hasSessionResolver = source.contains("TestSessionOutputPaths.")
+            boolean hasTargetResolver = source.contains("TestSessionOutputPaths.")
                     || source.contains("openggf.test.diagnostics")
                     || source.contains("openggf.artifact.root")
                     || source.contains("OPENGGF_TEST_DIAGNOSTICS")
-                    || source.contains("${openggf.");
-            if (!hasSessionResolver) {
-                violations.add(relative + " does not resolve a default output beneath session properties");
+                    || source.contains("${openggf.")
+                    || source.contains("$REPO/target");
+            if (!hasTargetResolver) {
+                violations.add(relative + " does not resolve a default output beneath the worktree target tree");
             }
             if (LEGACY_OUTPUT_WRITE.matcher(source).find()) {
                 violations.add(relative + " writes generated output directly through a legacy target path");
@@ -508,14 +510,17 @@ class TestBuildToolingGuard {
         }
 
         if (!violations.isEmpty()) {
-            fail("generated diagnostic outputs must be classified and session-owned:\n  "
+            fail("generated diagnostic outputs must be classified and worktree-target-owned:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
 
     @Test
-    void mavenLifecycleMustNotMutateGitConfigurationOrUseSharedSessionPaths() throws Exception {
+    void mavenLifecycleMustUseWorktreeLocalTargetPathsWithoutSessionEnforcement() throws Exception {
         String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
+        String jvmConfig = Files.readString(Path.of(".mvn/jvm.config"), StandardCharsets.UTF_8);
+        assertTrue(jvmConfig.lines().anyMatch("-Djava.io.tmpdir=target/maven-tmp"::equals),
+                "Maven-side Surefire output spooling must remain in the worktree target tree");
         assertFalse(pomText.contains("core.hooksPath"),
                 "Maven lifecycle must not rewrite repository-local Git configuration");
         assertFalse(Pattern.compile("\\bgit\\s+config\\b").matcher(pomText).find(),
@@ -525,26 +530,50 @@ class TestBuildToolingGuard {
         assertFalse(pomText.contains("<argument>${basedir}/target</argument>"),
                 "native packaging must not publish into a shared target directory");
         assertTrue(pomText.contains("<argument>${project.build.directory}/OpenGGF</argument>"),
-                "native packaging must consume the session build binary");
+                "native packaging must consume the Maven build binary");
         assertTrue(pomText.contains("<argument>${openggf.distribution.root}</argument>"),
                 "native packaging must consume the session distribution root");
 
         Document pom = parsePom("pom.xml");
+        assertNull(property(pom, "openggf.build.directory"),
+                "Maven's build directory must not be externally redirected by the retired session coordinator");
         for (String property : List.of(
-                "openggf.build.directory", "openggf.test.tmpdir",
+                "openggf.test.tmpdir",
                 "openggf.surefire.reports", "openggf.trace.reports",
                 "openggf.test.diagnostics", "openggf.artifact.root",
                 "openggf.distribution.root")) {
             assertTrue(property(pom, property) != null,
-                    "pom.xml must define the session path property " + property);
+                    "pom.xml must define the target-local path property " + property);
         }
-        assertEquals("${openggf.build.directory}", property(pom, "openggf.distribution.root"),
-                "the no-session distribution default must remain in the target layout");
+        assertEquals("${project.build.directory}", property(pom, "openggf.distribution.root"),
+                "distribution output must remain in this worktree's Maven target tree");
         Element build = directChild(pom.getDocumentElement(), "build");
-        assertEquals("${openggf.build.directory}", directChildText(build, "directory"),
-                "Maven build output must be selected through the session property");
+        String buildDirectory = directChildText(build, "directory");
+        assertTrue(buildDirectory == null || "${project.basedir}/target".equals(buildDirectory),
+                "Maven build output must use the worktree-local target directory");
+        assertFalse(pomText.contains("openggf-session-validate-guard"),
+                "raw Maven must not require a coordinator session identity");
+        assertFalse(pomText.contains("openggf-session-pre-clean-guard"),
+                "raw Maven clean must not require a coordinator session identity");
+        assertTrue(pomText.contains("<id>prepare-worktree-test-directories</id>"),
+                "raw Maven must create target-local temporary and report roots before Surefire starts");
+        for (String path : List.of(
+                "${project.build.directory}/maven-tmp",
+                "${openggf.test.tmpdir}", "${openggf.surefire.reports}",
+                "${openggf.trace.reports}", "${openggf.test.diagnostics}")) {
+            assertTrue(pomText.contains("<mkdir dir=\"" + path + "\"/>"),
+                    "raw Maven must create target-local directory " + path);
+        }
         assertTrue(pom.getElementsByTagName("reportsDirectory").getLength() >= 1,
                 "every supported Surefire configuration must select a session report root");
+        NodeList reportDirectories = pom.getElementsByTagName("reportsDirectory");
+        NodeList tempDirectories = pom.getElementsByTagName("tempDir");
+        assertEquals(reportDirectories.getLength(), tempDirectories.getLength(),
+                "every supported Surefire configuration must keep its own control files out of system temp");
+        for (int i = 0; i < tempDirectories.getLength(); i++) {
+            assertEquals("${project.build.directory}/surefire", tempDirectories.item(i).getTextContent().trim(),
+                    "Surefire control files must remain in this worktree's target tree");
+        }
         NodeList argLines = pom.getElementsByTagName("argLine");
         for (int i = 0; i < argLines.getLength(); i++) {
             assertTrue(argLines.item(i).getTextContent().contains(
@@ -559,19 +588,17 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void normalLauncherUsesAnExplicitNonCertifyingSessionGuardBypass() throws Exception {
+    void normalLaunchersUseDirectMavenWithoutSessionGuardBypass() throws Exception {
         String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
 
-        assertTrue(pomText.contains("<openggf.session.guard.skip>false</openggf.session.guard.skip>"),
-                "the session-guard bypass must be opt-in and disabled by default");
-        assertTrue(pomText.contains("<skip>${openggf.session.guard.skip}</skip>"),
-                "the explicit bypass must skip only the session-guard executions");
+        assertFalse(pomText.contains("openggf.session.guard"),
+                "the retired session guard must not remain in the POM");
         for (String launcherName : List.of("run.sh", "run.cmd", "dev.sh", "dev.cmd")) {
             String launcher = Files.readString(Path.of(launcherName), StandardCharsets.UTF_8);
-            assertTrue(launcher.contains("-Dopenggf.session.guard.skip=true"),
-                    launcherName + " must declare its non-certifying launcher bypass explicitly");
+            assertFalse(launcher.contains("openggf.session.guard"),
+                    launcherName + " must not carry a retired session-guard bypass");
             assertFalse(launcher.contains("tools/testing/test-session.sh"),
-                    launcherName + " must not depend on the certifying test-session wrapper");
+                    launcherName + " must invoke Maven directly");
         }
         String runLauncher = Files.readString(Path.of("run.sh"), StandardCharsets.UTF_8);
         assertTrue(runLauncher.contains("-DskipTests package -q"),
@@ -688,7 +715,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void supportedDocumentationMustUseSessionsAndExplicitHookBootstrap() throws Exception {
+    void supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap() throws Exception {
         Path agentsPath = Path.of("AGENTS.md");
         Path claudePath = Path.of("CLAUDE.md");
         String agents = Files.readString(agentsPath, StandardCharsets.UTF_8);
@@ -701,72 +728,24 @@ class TestBuildToolingGuard {
                 || !agents.contains("tools/testing/install-hooks.ps1")) {
             violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
         }
-        if (!agents.contains("Codex") || !agents.contains("Claude")) {
-            violations.add("AGENTS.md/CLAUDE.md must name both Codex and Claude in the agent workflow contract");
-        }
         for (String requiredText : List.of(
-                "must use `tools/testing/test-session.sh`",
-                "must use `tools/testing/test-session.ps1`",
-                "session-owned temporary root",
-                "per-Surefire-fork LWJGL extraction",
-                "raw Maven lifecycle commands are non-certifying",
-                "OPENGGF_TEST_RUN_START",
-                "OPENGGF_TEST_RUN_END")) {
+                "mvn package",
+                "mvn test",
+                "mvn \"-Dtest=TestCollisionLogic\" test",
+                "mvn -Dmse=off -Pguards test -B",
+                "current worktree's `target/` directory",
+                "per-Surefire-fork LWJGL extraction")) {
             if (!agents.contains(requiredText)) {
-                violations.add("AGENTS.md/CLAUDE.md do not contain required isolation guidance: " + requiredText);
+                violations.add("AGENTS.md/CLAUDE.md do not contain required direct-Maven guidance: " + requiredText);
             }
         }
-        List<String> requiredStorageGuidance = List.of(
-                "MANAGED_CODEX_TEST_SESSIONS",
-                "OPENGGF_TEST_MIN_FREE_BYTES",
-                "--retain-ephemeral",
-                "STORAGE_FINALIZATION_FAILED",
-                "UNAVAILABLE_DYNAMIC",
-                "UNAVAILABLE_IN_SANDBOX",
-                "test-session-locks",
-                "lease_root",
-                "maven.log.gz");
-        Pattern dynamicInodeGuidance = Pattern.compile(
-                "UNAVAILABLE_DYNAMIC[^.]*JSON-null[^.]*usable_inodes[^.]*"
-                        + "live probe[^.]*(?:authoritative|authority)");
-        for (String file : List.of("AGENTS.md", "CLAUDE.md", "tools/testing/README.md",
-                "docs/agent-workflow/README.md")) {
-            String text = Files.readString(Path.of(file), StandardCharsets.UTF_8);
-            for (String requiredText : requiredStorageGuidance) {
-                if (!text.contains(requiredText)) {
-                    violations.add(file + " does not contain required storage guidance: " + requiredText);
-                }
-            }
-            if (!dynamicInodeGuidance.matcher(text).find()) {
-                violations.add(file + " must state in one semantic rule that UNAVAILABLE_DYNAMIC"
-                        + " uses JSON-null usable_inodes and the live probe is authoritative");
-            }
-        }
-        String isolationDesign = Files.readString(Path.of(
-                "docs/architecture/designs/2026-08-23-test-session-isolation-design.md"),
-                StandardCharsets.UTF_8);
-        if (!isolationDesign.contains("2026-08-26-session-storage-and-worktree-lifecycle-safety.md")) {
-            violations.add("the test-session isolation design does not reference the terminal-storage addendum");
-        }
-        for (String script : List.of("tools/testing/install-hooks.sh",
-                "tools/testing/test-session.sh", "tools/testing/run-session-process-harness.sh")) {
+        for (String script : List.of("tools/testing/install-hooks.sh")) {
             if (!Files.isRegularFile(Path.of(script)) || !Files.isExecutable(Path.of(script))) {
                 violations.add(script + " must exist and be executable");
             }
         }
         if (!Files.isRegularFile(Path.of("tools/testing/install-hooks.ps1"))) {
             violations.add("tools/testing/install-hooks.ps1 must exist");
-        }
-        String sessionScript = Files.readString(Path.of("tools/testing/test-session.sh"),
-                StandardCharsets.UTF_8);
-        String sessionPowerShell = Files.readString(Path.of("tools/testing/test-session.ps1"),
-                StandardCharsets.UTF_8);
-        if (!sessionScript.contains("\"$@\"")) {
-            violations.add("POSIX test-session wrapper must pass --retain-ephemeral through to the coordinator");
-        }
-        if (!sessionPowerShell.contains("-RetainEphemeral")
-                || !sessionPowerShell.contains("--retain-ephemeral")) {
-            violations.add("PowerShell test-session wrapper must translate -RetainEphemeral to --retain-ephemeral");
         }
         String hookScript = Files.readString(Path.of("tools/testing/install-hooks.sh"), StandardCharsets.UTF_8);
         String hookPowerShell = Files.readString(Path.of("tools/testing/install-hooks.ps1"), StandardCharsets.UTF_8);
@@ -786,22 +765,14 @@ class TestBuildToolingGuard {
             String text = Files.readString(path, StandardCharsets.UTF_8);
             for (String line : text.split("\\R")) {
                 String stripped = line.stripLeading();
-                if (RAW_SUPPORTED_MAVEN_COMMAND.matcher(line).find()
-                        && !stripped.startsWith("tools/testing/test-session.sh")
-                        && !stripped.startsWith("tools/testing/test-session.ps1")) {
-                    violations.add(file + " contains a raw supported Maven command; use the session wrapper");
-                }
-                String lower = line.toLowerCase();
-                if ((lower.contains("target/trace-reports") || lower.contains("target/surefire-reports"))
-                        && !lower.contains("legacy") && !lower.contains("historical")) {
-                    violations.add(file + " names a shared report root without a legacy/historical label");
-                    break;
+                if (line.contains("tools/testing/test-session") || line.contains("agent-scratch")) {
+                    violations.add(file + " still names retired active test-session tooling");
                 }
             }
         }
 
         if (!violations.isEmpty()) {
-            fail("supported documentation must describe coordinator-owned runs and explicit hook setup:\n  "
+            fail("supported documentation must describe direct Maven and explicit hook setup:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -933,8 +904,11 @@ class TestBuildToolingGuard {
             if (!guardJob.contains("-Pguards")) {
                 violations.add(".github/workflows/ci.yml guards job does not run mvn -Pguards");
             }
-            if (!guardJob.contains("tools/testing/test-session.sh --export-file \"$GITHUB_OUTPUT\" --")) {
-                violations.add(".github/workflows/ci.yml guards job bypasses the test-session coordinator");
+            if (!guardJob.contains("run: mvn -Dmse=off -Pguards test -B")) {
+                violations.add(".github/workflows/ci.yml guards job does not invoke Maven directly");
+            }
+            if (guardJob.contains("test-session.sh")) {
+                violations.add(".github/workflows/ci.yml guards job still invokes the retired wrapper");
             }
             if (!conditionPinsPushToIntegrationBranches(yamlJobCondition(guardJob))) {
                 violations.add(".github/workflows/ci.yml guards job is not reachable from a develop"
@@ -1128,19 +1102,19 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void releaseWorkflowShouldRunStructuralGuardsInTheirOwnSession() throws Exception {
+    void releaseWorkflowShouldRunStructuralGuardsInTheirOwnJvm() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("Run structural guards in a fresh session")) {
-            violations.add(".github/workflows/release.yml does not name the isolated structural-guard step");
+        if (!workflow.contains("Run structural guards in a fresh JVM")) {
+            violations.add(".github/workflows/release.yml does not name the fresh structural-guard JVM step");
         }
-        if (!workflow.contains("tools/testing/test-session.sh --export-file \"$GITHUB_OUTPUT\" -- mvn -Dmse=off -Pguards test -B")) {
-            violations.add(".github/workflows/release.yml does not run -Pguards through the session coordinator");
+        if (!workflow.contains("run: mvn -Dmse=off -Pguards test -B")) {
+            violations.add(".github/workflows/release.yml does not run -Pguards directly");
         }
 
         if (!violations.isEmpty()) {
-            fail("release validation must keep structural guards in a fresh coordinator session:\n  "
+            fail("release validation must keep structural guards in a fresh Maven JVM:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -1153,9 +1127,8 @@ class TestBuildToolingGuard {
         if (!workflow.contains("Assert trace replay coverage")) {
             violations.add(".github/workflows/release.yml does not assert trace replay coverage after running the profile");
         }
-        if (!workflow.contains("MANIFEST: ${{ steps.release-trace-tests.outputs.manifest }}")
-                || !workflow.contains("session[\"surefire_reports\"]")) {
-            violations.add(".github/workflows/release.yml does not inspect the coordinator-owned surefire report root");
+        if (!workflow.contains("surefire_dir = Path(\"target/surefire-reports\")")) {
+            violations.add(".github/workflows/release.yml does not inspect the target-local surefire report root");
         }
         if (!workflow.contains("com.openggf.tests.trace*TraceReplay.txt")) {
             violations.add(".github/workflows/release.yml does not narrow release coverage to TraceReplay reports");
@@ -1276,8 +1249,8 @@ class TestBuildToolingGuard {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("trace_dir = Path(session[\"trace_reports\"])")) {
-            violations.add(".github/workflows/release.yml does not inspect the coordinator-owned trace report root");
+        if (!workflow.contains("trace_dir = Path(\"target/trace-reports\")")) {
+            violations.add(".github/workflows/release.yml does not inspect the target-local trace report root");
         }
         if (!workflow.contains("warning_count")) {
             violations.add(".github/workflows/release.yml does not check trace replay warning counts");
@@ -1345,18 +1318,16 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void ciAndReleaseMavenJobsMustUseCoordinatorManifests() throws Exception {
+    void ciAndReleaseMavenJobsMustUseDirectMavenAndTargetPaths() throws Exception {
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
         String release = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
-        String wrapper = "tools/testing/test-session.sh --export-file \"$GITHUB_OUTPUT\" --";
-
         for (String command : List.of(
                 "mvn -Dmse=off -Pguards test -B",
                 "mvn -Dmse=off test -B",
                 "mvn -Dmse=off test -Ptrace-replay -B")) {
-            if (!ci.contains(wrapper + " " + command)) {
-                violations.add(".github/workflows/ci.yml does not coordinator-wrap " + command);
+            if (!ci.contains(command)) {
+                violations.add(".github/workflows/ci.yml does not run directly: " + command);
             }
         }
         for (String command : List.of(
@@ -1364,33 +1335,24 @@ class TestBuildToolingGuard {
                 "mvn -Dmse=off test -Ptrace-replay -B",
                 "mvn -Dmse=off package -Pnative -DskipTests -B",
                 "mvn -Dmse=off package -Puniversal-jar -DskipTests -B")) {
-            if (!release.contains(wrapper + " " + command)) {
-                violations.add(".github/workflows/release.yml does not coordinator-wrap " + command);
+            if (!release.contains(command)) {
+                violations.add(".github/workflows/release.yml does not run directly: " + command);
             }
         }
-        for (String output : List.of(
-                "steps.default-tests.outputs.manifest",
-                "steps.develop-trace.outputs.manifest",
-                "steps.release-trace-tests.outputs.manifest",
-                "steps.native-build.outputs.build_root",
-                "steps.native-build.outputs.artifact_root",
-                "steps.native-build.outputs.distribution_root",
-                "steps.universal-jar-build.outputs.artifact_root",
-                "steps.universal-jar-build.outputs.distribution_root")) {
-            if (!ci.contains(output) && !release.contains(output)) {
-                violations.add("CI/release workflows do not consume coordinator output " + output);
+        for (String retired : List.of("tools/testing/test-session.sh", "outputs.manifest",
+                "outputs.build_root", "outputs.artifact_root", "outputs.distribution_root",
+                "session[\"surefire_reports\"]", "session[\"trace_reports\"]")) {
+            if (ci.contains(retired) || release.contains(retired)) {
+                violations.add("CI/release workflows still contain retired session coupling: " + retired);
             }
         }
-        if (ci.contains("target/surefire-reports") || ci.contains("target/trace-reports")
-                || release.contains("target/surefire-reports") || release.contains("target/trace-reports")) {
-            violations.add("CI/release workflows still read shared target report roots");
-        }
-        if (release.contains("target/OpenGGF") || release.contains("dist/")) {
-            violations.add("release workflow still publishes generated artifacts through shared target/dist roots");
+        if (!ci.contains("target/surefire-reports") || !ci.contains("target/trace-reports")
+                || !release.contains("target/surefire-reports") || !release.contains("target/trace-reports")) {
+            violations.add("CI/release workflows do not read their worktree-local target report roots");
         }
 
         if (!violations.isEmpty()) {
-            fail("CI and release Maven jobs must publish and consume coordinator-owned session paths:\n  "
+            fail("CI and release Maven jobs must use direct Maven and worktree-local target paths:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

@@ -10,7 +10,7 @@ EXIT_TOOL_FAILURE=4
 usage() {
 	printf '%s\n' 'Usage: tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh --rom PATH [--bizhawk-home PATH]' '' \
 'Records two independent pinned BizHawk reference streams and two independent' \
-'OpenGGF streams beneath the session audio-parity/s1-ghz1-gameplay namespace' \
+'OpenGGF streams beneath target/audio-parity/s1-ghz1-gameplay' \
 'probe writes only to a fresh staging file; the trusted Java boundary validates' \
 'and atomically create-new publishes it. Existing captures and reports are never' \
 'replaced.' '' \
@@ -26,14 +26,6 @@ fail() {
 	exit "$EXIT_TOOL_FAILURE"
 }
 
-session_owned_option() {
-	local value=${1-}
-	[[ -n "${OPENGGF_TEST_MANIFEST:-}" \
-		&& -n "${OPENGGF_TEST_DIAGNOSTICS:-}" \
-		&& "$value" == *"$OPENGGF_TEST_MANIFEST"* \
-		&& "$value" == *"$OPENGGF_TEST_DIAGNOSTICS"* ]]
-}
-
 # A dynamically linked shell cannot sanitize its own pre-exec loader environment:
 # the trusted system loader has already acted before the first script instruction.
 # Detect every inherited loader control as soon as Bash starts, before parsing
@@ -46,13 +38,9 @@ SCRIPT_DIR=$(cd "${BASH_SOURCE[0]%/*}" && pwd -P)
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
 MOVIE="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2"
 RUN_PATH="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds"
-ARTIFACT_ROOT="${OPENGGF_ARTIFACT_ROOT:-$REPO/target}"
-BUILD_ROOT="${OPENGGF_BUILD_DIRECTORY:-$ARTIFACT_ROOT}"
-if [ -n "${OPENGGF_TEST_DIAGNOSTICS:-}" ]; then
-	OUTPUT_ROOT="$OPENGGF_TEST_DIAGNOSTICS/audio-parity/s1-ghz1-gameplay"
-else
-	OUTPUT_ROOT="$REPO/target/audio-parity/s1-ghz1-gameplay"
-fi
+ARTIFACT_ROOT="$REPO/target"
+BUILD_ROOT="$REPO/target"
+OUTPUT_ROOT="$REPO/target/audio-parity/s1-ghz1-gameplay"
 PROBE="$REPO/tools/bizhawk/probes/s1_ghz1_gameplay_audio_timeline_probe.lua"
 LAUNCHER="$REPO/tools/bizhawk/run_bizhawk_lua.sh"
 ROM_PATH=""
@@ -68,10 +56,6 @@ for replacement in OGGF_BIZHAWK_PROBE_RUNTIME OGGF_BIZHAWK_LIB OGGF_WORKDIR OGGF
 	OGGF_NO_LUACONSOLE OGGF_BIZHAWK_SOFTGL BIZHAWK_ALLOW_SLOW_LUA JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS \
 	_JAVA_OPTIONS MAVEN_OPTS MAVEN_ARGS BASH_ENV ENV MONO_ENV_OPTIONS MONO_PATH CLASSWORLDS_CONF; do
 	if [[ -v "$replacement" ]]; then
-		if [[ "$replacement" == JAVA_TOOL_OPTIONS || "$replacement" == MAVEN_OPTS ]] \
-			&& session_owned_option "${!replacement}"; then
-			continue
-		fi
 		fail "unsupported producer/tool replacement environment variable: $replacement"
 	fi
 done
@@ -79,24 +63,6 @@ unset JAVA_HOME
 PATH=/usr/bin:/bin
 SAFE_ENV=(/usr/bin/env -i PATH=/usr/bin:/bin HOME="${HOME:-}" USER="${USER:-}" DISPLAY="${DISPLAY:-}" \
 	XAUTHORITY="${XAUTHORITY:-}" XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-}")
-if [[ -n "${OPENGGF_TEST_MANIFEST:-}" ]]; then
-	SAFE_ENV+=(
-		OPENGGF_TEST_RUN_ID="${OPENGGF_TEST_RUN_ID:-}"
-		OPENGGF_TEST_MANIFEST="$OPENGGF_TEST_MANIFEST"
-		OPENGGF_TEST_CAPABILITY="${OPENGGF_TEST_CAPABILITY:-}"
-		OPENGGF_TEST_WORKTREE="${OPENGGF_TEST_WORKTREE:-}"
-		OPENGGF_TEST_LEASE="${OPENGGF_TEST_LEASE:-}"
-		OPENGGF_TEST_COMMAND_HASH="${OPENGGF_TEST_COMMAND_HASH:-}"
-		OPENGGF_TEST_ALLOWED_PHASES="${OPENGGF_TEST_ALLOWED_PHASES:-}"
-		OPENGGF_TEST_DIAGNOSTICS="$OPENGGF_TEST_DIAGNOSTICS"
-		OPENGGF_ARTIFACT_ROOT="${OPENGGF_ARTIFACT_ROOT:-}"
-		OPENGGF_DISTRIBUTION_ROOT="${OPENGGF_DISTRIBUTION_ROOT:-}"
-		OPENGGF_BUILD_DIRECTORY="${OPENGGF_BUILD_DIRECTORY:-}"
-		TMPDIR="${TMPDIR:-}" TMP="${TMP:-}" TEMP="${TEMP:-}"
-		JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-}"
-		MAVEN_OPTS="${MAVEN_OPTS:-}"
-	)
-fi
 
 while [ "$#" -gt 0 ]; do
 	case "$1" in
