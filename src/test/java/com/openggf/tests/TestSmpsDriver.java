@@ -275,5 +275,3 @@ public class TestSmpsDriver {
                 "Driver output should not depend on whether audio is read a frame at a time or in one block");
     }
 }
-
-

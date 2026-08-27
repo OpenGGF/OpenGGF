@@ -548,6 +548,3 @@ public class TestSmpsSequencer {
         assertTrue(hasCenteredPan, "SFX 0xBC FM should center pan (not inherit music pan). FM log: " + synth.fmLog);
     }
 }
-
-
-

@@ -282,4 +282,3 @@ public class TestRomAudioIntegration {
         assertEquals(0x87, game.getMusicId(19), "Death Egg Music ID");
     }
 }
-

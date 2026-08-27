@@ -202,5 +202,3 @@ public class TestPsgChipGpgxParity {
         return current;
     }
 }
-
-
