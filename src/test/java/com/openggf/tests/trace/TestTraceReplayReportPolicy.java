@@ -1,13 +1,16 @@
 package com.openggf.tests.trace;
 
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.TraceVerificationScope;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceReplayReportPolicy {
+
+    @TempDir
+    Path tempDir;
 
     @Test
     void traceReplayWarningsAreReleaseBlockingByDefault() {
@@ -127,6 +133,25 @@ class TestTraceReplayReportPolicy {
         assertTrue(report.hasErrors(TraceVerificationScope.ANIMATION));
         assertTrue(report.hasErrors(TraceVerificationScope.PHYSICS));
         assertTrue(report.toJson().contains("\"verification_groups\""));
+    }
+
+    @Test
+    void greenRerunRetiresContextFromPreviousRedRun() throws Exception {
+        SessionInvocation invocation = new SessionInvocation(
+                getClass().getName(), "greenRerunRetiresContextFromPreviousRedRun",
+                0, "0123456789abcdef", "green rerun");
+
+        TraceReportWriter.writeReport(tempDir, errorReport(), "trace", invocation,
+                "s1-ghz1", "s1_ghz1", TraceVerificationScope.ALL, 2);
+        Path context = tempDir.resolve("s1_ghz1_context.txt");
+        assertTrue(Files.isRegularFile(context));
+
+        TraceReportWriter.writeReport(tempDir, new DivergenceReport(List.of()),
+                "trace", invocation, "s1-ghz1", "s1_ghz1",
+                TraceVerificationScope.ALL, 2);
+
+        assertFalse(Files.exists(context),
+                "a green rerun must not leave obsolete divergence context in reusable target output");
     }
 
     private static DivergenceReport errorReport() {

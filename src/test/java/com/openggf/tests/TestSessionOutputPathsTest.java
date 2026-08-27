@@ -13,8 +13,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSessionOutputPathsTest {
 
@@ -97,7 +97,7 @@ class TestSessionOutputPathsTest {
     }
 
     @Test
-    void allocationPublishesOwnerMetadataAndRejectsDuplicateOwner() throws IOException {
+    void repeatedAllocationReplacesStaleReportAndPreservesOwnerMetadata() throws IOException {
         Path sessionRoot = Files.createTempDirectory(tempDir, "openggf report owner ");
         System.setProperty(TRACE_REPORTS, sessionRoot.toString());
 
@@ -117,8 +117,12 @@ class TestSessionOutputPathsTest {
                 TestSessionOutputPaths.allocateReport(
                         "trace", "com.openggf.tests.ExampleTest", "replay", 2,
                         "0123456789abcdef", "lane-a", "s2_mtz1", ".json");
-        assertThrows(IOException.class,
-                () -> TestSessionOutputPaths.publish(duplicate.physicalPath(), "replacement"));
+        TestSessionOutputPaths.publish(duplicate.physicalPath(), "replacement");
+        TestSessionOutputPaths.publishOwnerMetadata(duplicate);
+
+        assertEquals("replacement", Files.readString(duplicate.physicalPath()));
+        assertTrue(Files.readString(duplicate.metadataPath()).contains(
+                "\"owner_key\": \"" + duplicate.ownerKey() + "\""));
     }
 
     @Test

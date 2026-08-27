@@ -7,6 +7,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.physics.Direction;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
  * Hydration parity tests: confirm the new state-enum values are accepted by
@@ -320,6 +322,7 @@ class TestSidekickCpuControllerCarry {
         AbstractPlayableSprite sonic = pair[0];
         controller.update(1);  // INIT -> CARRY_INIT
         controller.update(2);  // CARRY_INIT -> CARRYING
+
         assertEquals(SidekickCpuController.State.CARRYING, controller.getState());
 
         sonic.setAir(false);  // simulate landing
@@ -340,6 +343,11 @@ class TestSidekickCpuControllerCarry {
         controller.setTransientCarrySidekick(true);
         controller.update(1);  // INIT -> CARRY_INIT
         controller.update(2);  // CARRY_INIT -> CARRYING
+
+        ObjectInstance staleSupport = mock(ObjectInstance.class);
+        GameServices.level().getObjectManager().forceRidingObjectForBootstrap(sonic, staleSupport);
+        assertTrue(GameServices.level().getObjectManager().isRidingObject(sonic),
+                "Precondition: carried Sonic retains a prior SolidObject riding relationship");
         assertEquals(SidekickCpuController.State.CARRYING, controller.getState());
 
         sonic.setAir(false);   // simulate landing
@@ -506,6 +514,8 @@ class TestSidekickCpuControllerCarry {
                 "Jump release imparts -0x380 y_vel");
         assertTrue(sonic.getAir(),
                 "Tails_Carry_Sonic jump release sets Status_InAir");
+        assertFalse(GameServices.level().getObjectManager().isRidingObject(sonic),
+                "Carry jump release must discard physical object support even though the ROM leaves Status_OnObj stale");
         assertTrue(sonic.isJumping(),
                 "Tails_Carry_Sonic jump release sets the jumping latch");
         assertTrue(sonic.getRolling(),

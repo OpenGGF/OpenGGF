@@ -522,8 +522,11 @@ class TestBuildToolingGuard {
     @Test
     void mavenLifecycleMustUseWorktreeLocalTargetPathsWithoutSessionEnforcement() throws Exception {
         String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
-        assertFalse(Files.exists(Path.of(".mvn/jvm.config")),
-                "Maven bootstrap JVM options must not write to a target path before the project is initialized");
+        String jvmConfig = Files.readString(Path.of(".mvn/jvm.config"), StandardCharsets.UTF_8);
+        assertTrue(jvmConfig.lines().anyMatch("-Djava.io.tmpdir=target/maven-tmp"::equals),
+                "Maven bootstrap temporary files must remain in the worktree target tree");
+        assertTrue(pomText.contains("<id>prepare-worktree-test-directories</id>"),
+                "validate must recreate target-local temporary directories after clean");
         assertFalse(pomText.contains("core.hooksPath"),
                 "Maven lifecycle must not rewrite repository-local Git configuration");
         assertFalse(Pattern.compile("\\bgit\\s+config\\b").matcher(pomText).find(),

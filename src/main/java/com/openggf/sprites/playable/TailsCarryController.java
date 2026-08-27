@@ -221,6 +221,10 @@ public final class TailsCarryController {
         if (right) main.setXSpeed((short) 0x0200);
         main.setYSpeed((short) -0x0380);
         main.setAir(true);
+        CollisionSystem collision = main.currentCollisionSystemOrNull();
+        if (collision != null) {
+            collision.clearRidingObjectForJump(main);
+        }
         main.setJumping(true);
         main.applyRollingRadii(false);
         main.setRollingFlagPreserveRadii(true);

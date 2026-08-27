@@ -1032,6 +1032,20 @@
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>3.1.0</version>
                 <executions>
+                    <execution>
+                        <id>prepare-worktree-test-directories</id>
+                        <phase>validate</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${project.build.directory}/maven-tmp"/>
+                                <mkdir dir="${openggf.test.tmpdir}"/>
+                                <mkdir dir="${openggf.surefire.reports}"/>
+                                <mkdir dir="${openggf.trace.reports}"/>
+                                <mkdir dir="${openggf.test.diagnostics}"/>
+                            </target>
+                        </configuration>
+                    </execution>
                     <!-- Fail fast when the build JVM is not the JDK the project targets.
                          Surefire forks inherit Maven's JVM, not whatever `java` is on PATH,
                          so a newer JDK silently reaches the tests: Mockito/ByteBuddy then

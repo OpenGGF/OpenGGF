@@ -6,6 +6,7 @@ import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.TraceVerificationScope;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,6 +75,14 @@ public final class TraceReportWriter {
             publish(allocation, contextPath,
                     report.getContextWindow(report.firstErrorFrame(scope), contextRadius),
                     "context");
+        } else {
+            Path contextPath = contextPath(allocation.physicalPath());
+            try {
+                Files.deleteIfExists(contextPath);
+            } catch (IOException failure) {
+                throw publicationFailure(allocation, contextPath,
+                        "stale context retirement", failure);
+            }
         }
         try {
             TestSessionOutputPaths.publishOwnerMetadata(allocation);
