@@ -204,7 +204,9 @@ git add -u \
   tools/testing/TestSessionCoordinatorSelfTest.java tools/testing/TestSessionGuardSelfTest.java \
   tools/testing/TestSessionProcessHarness.java tools/testing/fixtures/session-guard/pom.xml \
   tools/testing/run-session-process-harness.ps1 tools/testing/run-session-process-harness.sh \
-  tools/testing/test-session.ps1 tools/testing/test-session.sh
+  tools/testing/test-session.ps1 tools/testing/test-session.sh \
+  tools/testing/frozen-next-session-adapter.sh tools/testing/frozen-next-session-launch.sh \
+  tools/testing/frozen-next-session.exclude tools/testing/test-frozen-next-session-adapter.sh
 git diff --cached --check
 git commit -m "build: restore worktree-local direct Maven"
 ```
