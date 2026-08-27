@@ -108491,3 +108491,28 @@ The other three death arms remain coordinates only.
   repair until after the general merge. A no-code-landed prototype reached
   `$1B2C`; its durable point-in-time audit is
   [2026-08-27-fbz-blaster-corridor-follow-up.md](../architecture/audits/2026-08-27-fbz-blaster-corridor-follow-up.md).
+
+## 2026-08-26 - MGZ2 carry-release invisible support and camera ownership
+
+- Worktree: root `develop` at `c224c9fe2` with the uncommitted MGZ2 fix;
+  clean control: detached `c224c9fe2` at
+  `/private/tmp/openggf-trace-control-c224c9f`.
+- Full release-scope command used `tools/testing/test-session.sh -- mvn
+  -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical` with all three
+  local ROM properties. The first broad destroyed-object cleanup candidate
+  regressed `TestS3kMgzTraceReplay` at frame 32851 (`tails_air`, expected 0,
+  actual 1; 755 errors) in run `20260826T173349Z-p41159-88b9c7` and was
+  rejected. After narrowing the fix to Tails carry jump release, candidate run
+  `20260826T193650Z-p43582-bb524a` and clean control run
+  `20260826T174232Z-p42116-935db7` each reported 870 tests, 6 failures, 0
+  errors, and 18 skips. The six failing identities and normalized first-error
+  messages matched; `TestS3kMgzTraceReplay` passed on the corrected candidate.
+- Full future-scope command used the same properties and ordering with
+  `-Ptrace-replay-r7`. Candidate run `20260826T194218Z-p44106-6329a5` and
+  clean control run `20260826T194440Z-p44408-99fc38` each reported 108 tests,
+  85 failures, 10 errors, and no skips, with identical failing identities and
+  per-trace first-error summaries. `TestS3kTailsFullChainRunChain` selected a
+  different first hardware-queue exception between arms; solo-fork reruns
+  `20260826T194722Z-p44688-ce596b` (candidate) and
+  `20260826T194832Z-p44825-1dc3d7` (control) reproduced the same nondeterministic
+  module/decompression-queue choice, so it is not attributable to this change.

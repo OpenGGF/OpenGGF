@@ -522,6 +522,13 @@
              *Guard* test class on disk is actually selected here. -->
         <profile>
             <id>guards</id>
+            <properties>
+                <!-- ArchUnit and the reflection guards import the complete
+                     production graph. Keep that graph in one adequately sized
+                     fork instead of making four 1 GiB heaps compete. -->
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+                <surefire.forkCount>1</surefire.forkCount>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -1032,6 +1039,20 @@
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>3.1.0</version>
                 <executions>
+                    <execution>
+                        <id>prepare-worktree-test-directories</id>
+                        <phase>validate</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${project.build.directory}/maven-tmp"/>
+                                <mkdir dir="${openggf.test.tmpdir}"/>
+                                <mkdir dir="${openggf.surefire.reports}"/>
+                                <mkdir dir="${openggf.trace.reports}"/>
+                                <mkdir dir="${openggf.test.diagnostics}"/>
+                            </target>
+                        </configuration>
+                    </execution>
                     <!-- Fail fast when the build JVM is not the JDK the project targets.
                          Surefire forks inherit Maven's JVM, not whatever `java` is on PATH,
                          so a newer JDK silently reaches the tests: Mockito/ByteBuddy then

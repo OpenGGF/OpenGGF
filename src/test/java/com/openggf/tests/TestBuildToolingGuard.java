@@ -522,8 +522,11 @@ class TestBuildToolingGuard {
     @Test
     void mavenLifecycleMustUseWorktreeLocalTargetPathsWithoutSessionEnforcement() throws Exception {
         String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
-        assertFalse(Files.exists(Path.of(".mvn/jvm.config")),
-                "Maven bootstrap JVM options must not write to a target path before the project is initialized");
+        String jvmConfig = Files.readString(Path.of(".mvn/jvm.config"), StandardCharsets.UTF_8);
+        assertTrue(jvmConfig.lines().anyMatch("-Djava.io.tmpdir=target/maven-tmp"::equals),
+                "Maven bootstrap temporary files must remain in the worktree target tree");
+        assertTrue(pomText.contains("<id>prepare-worktree-test-directories</id>"),
+                "validate must recreate target-local temporary directories after clean");
         assertFalse(pomText.contains("core.hooksPath"),
                 "Maven lifecycle must not rewrite repository-local Git configuration");
         assertFalse(Pattern.compile("\\bgit\\s+config\\b").matcher(pomText).find(),
@@ -677,6 +680,20 @@ class TestBuildToolingGuard {
                 "guards profile must select the excluded structural guard suite");
         assertTrue(textValues(guards, "include").contains("**/TestAudioPresentationBoundary.java"),
                 "guards profile must select the heavyweight audio architecture boundary test");
+    }
+
+    @Test
+    void guardsProfileMustUseOneLargerForkForWholeGraphAnalysis() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element guards = profileById(pom, "guards");
+        assertTrue(guards != null, "pom.xml must retain a separate guards profile");
+
+        Element properties = directChild(guards, "properties");
+        assertTrue(properties != null, "guards profile must define capacity properties");
+        assertEquals("1", directChild(properties, "surefire.forkCount").getTextContent().trim(),
+                "whole-graph guards must run serially instead of competing across four heaps");
+        assertTrue(directChild(properties, "surefire.argLine").getTextContent().contains("-Xmx3g"),
+                "whole-graph guards must have enough heap for the merged production graph");
     }
 
     /**

@@ -1,5 +1,14 @@
 # SMPS Playback Authenticity Roadmap
 
+> **Status: resumed on `next` for 0.7 (2026-08-27).** The runtime changes remain
+> withdrawn from the 0.6 release line because they produced audible regressions
+> that the automated suite did not detect; the listening checklist that would
+> have caught them stood at 1 of 29 rows. The 0.7 development line retains the
+> implementation as active work, not release-certified audio. Before advancing
+> or publishing any phase, complete the listening evidence and revisit the
+> rollback notes distinguishing constants fitted to one capture from values
+> derived from the driver or chip source.
+
 ## Outcome
 
 OpenGGF should audibly reproduce the shipped Sonic 1 REV01, Sonic 2 REV01, and

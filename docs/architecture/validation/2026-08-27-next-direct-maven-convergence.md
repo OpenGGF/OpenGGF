@@ -2,9 +2,9 @@
 
 ## Boundary
 
-This ledger records the immutable validation boundary for the direct-Maven
-convergence work. It is a comparison record for Tasks 5 and 6; sections for
-future commands remain unrun until those tasks execute.
+This ledger records the immutable validation boundary and completed comparison
+for the direct-Maven convergence work, including the subsequent `develop` into
+`next` audio-retention merge.
 
 ## Immutable refs
 
@@ -239,7 +239,14 @@ inventory, trace warning checks, native matrix, universal native-classifier
 checks, and both package smoke validations remain present. `git diff --check`
 was clean. Full ordinary and guards comparisons remain reserved for Task 5.
 
-## Focused verification
+## Feature-branch Task 5 evidence
+
+This evidence was recorded on the feature branch before the latest
+`origin/next` reconciliation. It remains the authoritative result for that
+branch run; the independent `next` integration evidence below does not turn
+its incomplete ordinary suite or failed guards suite into a pass.
+
+### Focused verification
 
 Task 5 ran the required commands directly from
 `a0a3794f5f932c13e8b74f34ee14918ee86bbbb0`, with Maven's default output
@@ -259,7 +266,7 @@ and 0 skipped with `BUILD SUCCESS` in 2:00. This is fresh evidence for the
 target-local/direct-Maven contract only; it does not override either full-suite
 result below.
 
-## Ordinary suite
+### Ordinary suite
 
 Task 5 invoked the required command directly and without piping or report-root
 redirection:
@@ -335,7 +342,7 @@ Their SHA-256 values, in the same order, are
 `c026518c6ae539ca7bd23db40840b5e0d6353249aa5ebe317da8433150e58779`,
 and `38a1fe4dc10a1908a7d291e1a9e2e462f1b1697c50ef58a8b91e2dc89af5af71`.
 
-## Guards suite
+### Guards suite
 
 Task 5 next invoked the required fresh guards command directly:
 
@@ -392,7 +399,7 @@ snapshot, the ArchUnit error is a new/worsened outcome; the fork OOM is also a
 blocking infrastructure error. The guard result therefore fails the
 no-new-or-worsened-red acceptance criterion.
 
-## Static proof and hygiene
+### Static proof and hygiene
 
 The following checks all returned exit 0:
 
@@ -411,7 +418,7 @@ skill consumer was found. Before this ledger edit,
 `git status --short --branch` reported only the clean branch header
 `## feature/ai-next-direct-maven-convergence`.
 
-## Independent review
+### Independent review
 
 No fresh Task 5 reviewer was dispatched because the Task 5 execution handoff
 explicitly prohibited subagents. The independent Task 3 and Task 4 verdicts
@@ -420,12 +427,90 @@ is `DONE_WITH_CONCERNS`: the ordinary suite is infrastructure-incomplete, and
 the guards suite has a reopened ArchUnit red plus a fork OOM. Task 6 must not
 integrate or push this tip on this evidence.
 
+## Latest `origin/next` integration evidence
+
+This evidence records the later integration and capacity correction already
+present on `origin/next`. It explains the one-fork/3-GiB guard profile and the
+targeted frozen-location refresh imported by this reconciliation; it is kept
+separate from the feature branch's Task 5 result above.
+
+### Focused verification
+
+The post-merge focused run covered the direct-Maven tooling guards, output-path
+contract, representative S1/S2/S3K gameplay changes from `develop`, sidekick
+carry and rewind-adjacent behaviour, and the retained 0.7 YM2612/audio paths.
+It exited 0. The guard-capacity correction was then developed separately: the
+new `guardsProfileMustUseOneLargerForkForWholeGraphAnalysis` check failed with
+the missing profile properties, and passed after the guards profile was pinned
+to one 3 GiB fork. The combined `TestBuildToolingGuard,TestArchUnitRules` run
+also exited 0 with frozen-store updates disabled.
+
+### Ordinary suite
+
+The pre-merge direct-Maven baseline at `efa645adff390bfce39900cc235cca68bfce0331`
+produced all 2,316 XML reports: 18,200 tests, 35 failures, 20 errors, and 37
+skips, representing 55 exact red identities. The Maven parent did not terminate
+after every report was complete and was interrupted with exit 130; that
+nontermination is therefore part of the baseline.
+
+The post-merge run at `f759df1d9` produced all 2,318 XML reports: 18,201 tests,
+34 failures, 20 errors, and 37 skips, representing 54 exact red identities. Its
+Maven parent exhibited the same post-report nontermination and was likewise
+interrupted with exit 130. Exact identity comparison found no post-merge-only
+red. The sole removed baseline failure was
+`com.openggf.game.sonic3k.objects.TestLbzTriggerBridgeInstance#registryKeepsSklSlot14AsUpdraft`.
+The merge therefore introduced no ordinary-suite regression and improved the
+recorded baseline by one identity.
+
+### Guards suite
+
+The first merged full-guards attempt exposed two integration-environment gaps:
+the per-game frozen group contained obsolete line locations and four concurrent
+1 GiB forks exhausted a Surefire fork while importing the larger merged graph.
+The frozen entry was refreshed only for the affected per-game dependency group;
+all unrelated refreeze churn was discarded. The guards profile now runs one
+3 GiB fork and a tooling guard pins that capacity contract.
+
+The final direct command was:
+
+```text
+mvn -q -Dmse=off -Dsurefire.redirectTestOutputToFile=true \
+  -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> \
+  -Ds3k.rom.path=<s3k.gen> clean -Pguards test
+```
+
+Result: 592 tests, 1 failure, 0 errors, 0 skips. The sole red was the known
+`TestTraceV5PositiveInputGuard#repositoryPositiveTestsUseOnlyTemporaryV5Inputs`,
+which still identifies the same two legacy positive rows in
+`TestFbzMinibossArtShape` and `TestSonic3kPlcArtRegistry`. No ArchUnit error,
+fork crash, or heap exhaustion remained.
+
+### Static proof and hygiene
+
+The rollback-path audit compared every source and test path touched by
+`b4c8fbd8a` against the pre-merge `next` tree and found them byte-identical, so
+the 0.6 rollback does not survive on `next`. `CONFIGURATION.md` and
+`config.yaml` likewise retain the 0.7 audio programme. `git diff --check` is
+clean.
+
+### Independent review
+
+The merge resolution was reviewed path-by-path against the rollback commit,
+the pre-merge `next` tree, and the ordinary and guard identity sets. The audio
+roadmap now explicitly records that the programme is resumed on `next` for
+0.7, while remaining uncertified pending listening and fitted-constant review.
+
 ## Integration
 
-Result: not run in Task 1. Reserved for Task 6 after fast-forwarding local
-`next`.
+Local `next` fast-forwarded to the direct-Maven convergence tip
+`efa645adff390bfce39900cc235cca68bfce0331`, then merged `develop` as
+`f759df1d9` with the 0.7 audio implementation retained. The final capacity and
+validation-record correction is committed separately after that merge.
 
 ## Push
 
-Result: not run in Task 1. Reserved for Task 6 after final origin refresh and
-post-fast-forward verification.
+After a final fetch confirmed `origin/next` remained at the immutable starting
+ref, `next` was pushed from `33a799c014906bd75e99da329abc465ecf466487`
+through `822e3a4da36a58fb6d0bee29676e0e40d091f8d4`. A subsequent
+`git ls-remote origin refs/heads/next` returned that exact commit. This ledger
+update is the documentation-only follow-up to that verified integration push.

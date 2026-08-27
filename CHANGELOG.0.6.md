@@ -4,6 +4,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Sonic 1 swinging platforms no longer break live rewind when object RAM is
+  full:** chain construction now stops at the shipped ROM's first failed
+  `FindFreeObj`, retaining only managed, identity-bearing links instead of an
+  unregistered child reference that made rewind capture throw.
+
 - **Builds and tests are back on direct Maven after managed sessions caused
   unbounded storage growth:** each worktree now owns one reusable `target/`
   tree, CI/release jobs use static target-local report and artifact paths, and
@@ -16,6 +21,19 @@ This file contains the complete 0.6 development snapshot history carried forward
   build, test, report, plugin, and
   per-Surefire-fork temporary output remains target-local; and release jobs
   upload only finished platform archives.
+
+- **Live and trace capture can target DaVinci Resolve on Linux:** the capture
+  codec options now include DNxHR SQ video and lossless 24-bit PCM audio for
+  use together in a QuickTime MOV container.
+
+- **MGZ2's Robotnik handoff no longer leaves Sonic standing on invisible collapse
+  solids or snaps the camera to unrelated terrain:** jumping out of Tails's
+  carry now discards stale physical object support, while the boss-transition
+  object leaves camera bounds to MGZ2's native resize event.
+
+- **Aquatic Ruin's Robotnik hit flash no longer flashes Sonic:** the Act 2
+  boss now alternates color 1 on the ROM's second palette line, preserving the
+  ship and pillar effect without modifying Sonic's first-line palette.
 
 - **The `develop`/`next` merge now retains the official runtime behavior on its
   expanded architecture:** results, special-stage, and trace-gap lifecycle
