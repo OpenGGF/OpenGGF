@@ -651,3 +651,101 @@ unallowlisted anomalous duplicate, the authenticated exporter rejects it, and
 the latest-next exact identity comparison therefore cannot be certified.
 Post-reconciliation Task 5 remains `DONE_WITH_CONCERNS`; this evidence does not
 authorize integration or push.
+
+## Final feature certification on `99a8b3c7b95a961ad132fb60e032e853c0163f1a`
+
+This final run supplements the historical Task 5 attempts above; it does not
+overwrite or reinterpret them. Generated reports and effective-POM evidence
+that predated this run were moved intact to the ignored
+`.superpowers/sdd/2026-08-27-next-direct-maven-convergence/historical-final-pre-certification-99a8b3c/`
+directory before `mvn -Dmse=off clean -B` created a fresh target tree.
+
+`mvn -v` exited 0 with Maven 3.9.16 and Java 21.0.11. The feature and baseline
+test-source diff contains only `TestBuildToolingGuard`, which the ordinary POM
+excludes. The parsed-package top-level ordinary inventory is therefore the
+same 2,317 source classes and slash-path selectors as the certified baseline;
+both inventories contain no `$`. Their SHA-256 values are respectively
+`1a2dc6ec24a97db8dfaeed056d4b699af784e68906522f2b69d1b1400b6a5272`
+and `e1845141d5662781ecea5dfb50e401be55c6c4255ccbb815c49c6daaec62643c`.
+The ten-row source-authenticated repeated-cardinality contract has SHA-256
+`43605a32ac341af39433e7f9d8cb0d4488bc27daeaa0c0ede1171502c9f85f45`
+and does not allowlist the anomalous plain BonusStage test. All three absolute
+ROM inputs matched the documented SHA-1 identities.
+
+The ordinary command was direct and used these actual additional argv
+properties: absolute `surefire.includesFile`, `surefire.forkCount=1`,
+`surefire.reuseForks=true`, and literal
+`${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g`, together with
+`-Dmse=off`, all three absolute ROM properties, `test`, and `-B`. The runtime
+input contract contained the argument inventory, selector, cardinality file,
+and effective POM exactly once; the local repository was supplied separately
+to the exporter as `<MAVEN_LOCAL_REPOSITORY>` (the exact absolute path remains
+in the target-local argument evidence).
+
+The run published all 2,318 XML reports and 18,201 testcases with no dump or
+dumpstream. The XML manifest
+`50940a0ecf3496dcd87121c604755ef1d9a3772f0bba95afbe4574ad5bc59b3e`
+remained unchanged across 131 seconds, from 22:50:54 through 22:53:05 BST,
+while the Maven session remained live with no new output. Only that parent PTY
+session was then interrupted; the controller returned exit 1 for the explicit
+interrupt. The untouched report tree immediately passed the retained
+direct-Maven exporter preflight and produced 18,201 certified rows:
+18,111 pass, 31 failure, 22 error, and 37 skipped. The candidate TSV is
+`target/final-certification-evidence/final-feature-outcomes.tsv`, SHA-256
+`f372edbca1151dc7a746b69f1c3ae55939c4491785facb63841bcc7dfa645039`.
+
+The baseline TSV has SHA-256
+`ceee8174f71e825c6ddcb6897334f2839dfbfd71781b753ef334d9a762470cd2`
+and 18,106 pass, 37 failure, 21 error, and 37 skipped. Exact comparison was not
+equal. It records seven exact baseline-red resolutions, two new reds, and six
+red-signature changes requiring paired isolated reruns. The two pass-to-red
+regressions and first messages are:
+
+```text
+TestButterdroidBadnikInstance#registryCreatesButterdroidForSklSlot8fInMhz
+FAILURE: Unexpected type, expected ButterdroidBadnikInstance but was
+         CaterkillerJrHeadInstance
+
+TestSampleRomArtRemixIntegration#materializesRealTailsArtForDefaultSonicAndRewindsDisplayObject
+ERROR: No value present
+```
+
+The six changed red signatures belong to
+`TestPhase2SampleModIntegration`, `TestPhase3SampleCharacterIntegration`,
+`TestPhase3StandaloneSampleIntegration`, two methods in
+`TestSamplePlatformerIntegration`, and `TestProjectScaffolder`. Their outcomes
+remain failure, but their normalized messages/body hashes are not exact
+baseline matches. The comparison TSV is
+`target/final-certification-evidence/final-feature-comparison.tsv`, SHA-256
+`95057f96dd1c2ad6357832a76d0e9e2b73a39f0b6a70438ae71d9f8b9875f755`.
+The four immutable upstream-only ordinary identities remain non-comparable;
+none is called resolved.
+
+Exact comparison with the immutable 70-identity ordinary input found 4 still
+red, 62 passing, and the same 4 upstream-only identities absent. The feature
+has 49 red identities outside that upstream input; the certified baseline TSV,
+not that older identity-only input, supplies their required outcome/message
+comparison above. For guards, applying the Task 1 simple-name-to-qualified
+JUnit suite mapping shows all 19 immutable upstream guard identities passing;
+the sole current Trace V5 red is outside that rollback identity set.
+
+The current focused command, with the three verified ROM properties, exited
+0 in 1:56 with 109 tests, 0 failures, 0 errors, and 0 skips. After preserving
+the focused reports, the direct guards command with the same ROMs exited 1 in
+4:10 with 595 tests: 594 pass, the one known Trace V5 positive-input failure,
+0 errors, and 0 skips. Its message remains the two legacy rows in
+`TestFbzMinibossArtShape.java` and `TestSonic3kPlcArtRegistry.java`; there was
+no OOM, temp error, fork crash, or ArchUnit error. The immediate guards export
+is `target/final-certification-evidence/final-feature-guards-outcomes.tsv`,
+SHA-256
+`bd9626b878c8376325c39df4c3cdcde2c344ee0ea14b8084f0a935037ce42ef8`.
+Relative to the 592-row origin baseline, the additional guard outcomes are
+passing tooling/authority coverage; the sole red identity and message are
+unchanged.
+
+The exporter and infrastructure now complete their intended contracts, and
+the historical exporter/temp/OOM concerns are superseded by this evidence.
+Final feature certification nevertheless remains `DONE_WITH_CONCERNS`: the
+ordinary candidate is not identical to baseline and contains two new reds plus
+six changed red signatures, so the no-new-or-worsened-red acceptance rule is
+not satisfied.
