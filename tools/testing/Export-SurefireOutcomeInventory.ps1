@@ -238,7 +238,7 @@ function Assert-RuntimeInputExactlyOnce {
 
 function Assert-NoUnresolvedPlaceholder {
     param([AllowEmptyString()] [string] $Value, [string] $Description)
-    if ($Value -match '\$\{[^}]+\}|@\{[^}]+\}') {
+    if ($Value -match '\$\{[^}]*\}|@\{[^}]*\}') {
         throw "$Description contains an unresolved property placeholder: [$Value]"
     }
 }
@@ -433,7 +433,7 @@ function Assert-ExplicitSourceSelectorContract {
                 Assert-NoUnresolvedPlaceholder ([string]$property.Value) "authenticated Maven property $($property.Name)"
             }
         }
-        elseif (([string]$property.Value).Replace('${surefire.forkNumber}', '') -match '\$\{[^}]+\}|@\{[^}]+\}') {
+        elseif (([string]$property.Value).Replace('${surefire.forkNumber}', '') -match '\$\{[^}]*\}|@\{[^}]*\}') {
             throw "authenticated Maven property $($property.Name) contains an unresolved unsupported property placeholder"
         }
         if ([string]$property.Name -ceq 'surefire.includesFile') {
@@ -591,13 +591,13 @@ function Assert-EffectiveSurefireContract {
 
             $repositoryPlaceholder = '${settings.localRepository}'
             $mockitoTemplate = [string]$effective.'mockito.agent.argLine'
-            if ($mockitoTemplate -match '@\{[^}]+\}') {
+            if ($mockitoTemplate -match '@\{[^}]*\}') {
                 throw 'DirectMaven effective Mockito agent content contains an unresolved Surefire placeholder'
             }
             $placeholderCount = [System.Text.RegularExpressions.Regex]::Matches(
                 $mockitoTemplate, [System.Text.RegularExpressions.Regex]::Escape($repositoryPlaceholder)).Count
             $mockitoTemplateRemainder = $mockitoTemplate.Replace($repositoryPlaceholder, '')
-            if ($mockitoTemplateRemainder -match '\$\{[^}]+\}' -or $placeholderCount -gt 1) {
+            if ($mockitoTemplateRemainder -match '\$\{[^}]*\}' -or $placeholderCount -gt 1) {
                 throw 'DirectMaven effective Mockito agent content contains an unresolved unsupported property placeholder'
             }
             $mockitoTemplateTokens = @(ConvertFrom-JvmArgumentLine $mockitoTemplate 'effective Mockito agent argument')
@@ -718,8 +718,8 @@ function Assert-EffectiveSurefireContract {
             $executionTmp = $executionTokens[-2].Substring($tmpPrefix.Length)
             $executionLwjgl = $executionTokens[-1].Substring($lwjglPrefix.Length)
             Assert-NoUnresolvedPlaceholder $executionTmp 'DirectMaven effective java.io.tmpdir'
-            if ($executionLwjgl -match '@\{[^}]+\}' -or
-                $executionLwjgl.Replace('${surefire.forkNumber}', '') -match '\$\{[^}]+\}') {
+            if ($executionLwjgl -match '@\{[^}]*\}' -or
+                $executionLwjgl.Replace('${surefire.forkNumber}', '') -match '\$\{[^}]*\}') {
                 throw 'DirectMaven effective LWJGL path contains an unresolved property placeholder'
             }
             if ([System.Text.RegularExpressions.Regex]::Matches(

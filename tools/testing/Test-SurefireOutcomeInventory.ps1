@@ -618,6 +618,15 @@ test
             -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
             -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
             -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+
+        foreach ($emptyPlaceholderToken in @(
+                '-Dsonic1.rom.path=/roms/${}/sonic1.gen',
+                '-Dsonic1.rom.path=/roms/@{}/sonic1.gen')) {
+            Write-Utf8File $arguments "$emptyPlaceholderToken`n-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+            Assert-Failed (& $invokeDirect) 'unresolved|placeholder|Maven property' "empty placeholder in raw Maven token $emptyPlaceholderToken"
+        }
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+
         $runtimeInputs = $patterns + [IO.Path]::PathSeparator + $effectivePom
         Assert-Failed (& $invokeDirect) 'Maven argument inventory.*OPENGGF_RUNTIME_INPUTS|runtime input|exactly once' 'missing direct Maven argument-inventory runtime proof'
         $runtimeInputs = $patterns + [IO.Path]::PathSeparator + $canonicalArguments + [IO.Path]::PathSeparator + $effectivePom
@@ -705,6 +714,8 @@ test
                 "-Xshare:off -Xshare:on -javaagent:`"$linuxMockitoPath`" -Xmx3g",
                 "-Xshare:off -javaagent:`"$linuxMockitoPath`" -javaagent:/tmp/other-agent.jar -Xmx3g",
                 "-Xshare:off -javaagent:`"$linuxMockitoPath`" -Xmx1g -Xmx3g",
+                '-Xshare:off -javaagent:"/opt/mockito-cache/${}/repository/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar" -Xmx3g',
+                '-Xshare:off -javaagent:"/opt/mockito-cache/@{}/repository/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar" -Xmx3g',
                 '-Xshare:off -javaagent:"/home/test repo/.m2/repository/org/mockito/other-agent/5.14.2/other-agent-5.14.2.jar" -Xmx3g',
                 '-Xshare:off -javaagent:"relative/repository/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar" -Xmx3g')) {
             Write-Utf8File $arguments "-Dsurefire.argLine=$invalidArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"

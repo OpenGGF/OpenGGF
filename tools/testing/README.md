@@ -58,9 +58,9 @@ exporter authenticates its final tokens.
 The selected Surefire execution must prove the same resolved JVM arguments and
 then exactly the target-local `java.io.tmpdir` and fork-local LWJGL extraction
 properties. Any other raw `${...}` placeholder, every raw Surefire `@{...}`
-placeholder, or an unresolved placeholder in the final authenticated tokens or
-paths fails closed, as do duplicate or mismatched evidence, external temp
-paths, and shared LWJGL paths.
+placeholder, including the empty `${}` and `@{}` forms, or an unresolved
+placeholder in the final authenticated tokens or paths fails closed, as do
+duplicate or mismatched evidence, external temp paths, and shared LWJGL paths.
 The 3-GiB value is proven sufficient by the recorded capacity run; it is not a
 claim that 3 GiB is the minimum usable heap.
 Unlike historical managed-session evidence, direct mode neither supplies nor
