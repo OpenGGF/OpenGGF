@@ -170,16 +170,13 @@ jobs:
         run: |
           python3 - <<'PY'
           import fnmatch
-          import json
           import re
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
           surefire_dir = Path("target/surefire-reports")
-          trace_dir = Path("target/trace-reports")
           source_root = Path("src/test/java/com/openggf/tests/trace")
-          OWNER_KEYED_REPORT = re.compile(r".+-.+-[0-9a-f]{16}\.json")
           diagnostic_excludes = (
               "Debug*.java",
               "*Debug*.java",
@@ -276,80 +273,15 @@ jobs:
                   print(f"{report}: skipped={skipped_count}", file=sys.stderr)
               sys.exit(1)
 
-          report_candidates = sorted(
-              path for path in trace_dir.rglob("*.json")
-              if not path.name.endswith(".owner.json"))
-          invalid_trace_reports = [
-              path for path in report_candidates
-              if path.parent.parent != trace_dir
-              or not OWNER_KEYED_REPORT.fullmatch(path.name)
-          ]
-          if invalid_trace_reports:
-              print(f"Unexpected non-owner-keyed trace reports below {trace_dir}:",
-                    file=sys.stderr)
-              for report in invalid_trace_reports:
-                  print(report, file=sys.stderr)
-              sys.exit(1)
-          trace_reports = [
-              path for path in report_candidates
-              if path.parent.parent == trace_dir
-              and OWNER_KEYED_REPORT.fullmatch(path.name)
-          ]
-          if not trace_reports:
-              print(f"No owner-keyed trace reports found below {trace_dir}", file=sys.stderr)
-              sys.exit(1)
-          missing_owner_metadata = [
-              report for report in trace_reports
-              if not Path(f"{report}.owner.json").is_file()
-          ]
-          if missing_owner_metadata:
-              print("Owner-keyed trace reports are missing ownership metadata:",
-                    file=sys.stderr)
-              for report in missing_owner_metadata:
-                  print(report, file=sys.stderr)
-              sys.exit(1)
-
-          # target/trace-reports/special-stage/s2_special_stage_0-s2-0-<owner-hash>.json
-          required_ss_reports = [
-              report for report in trace_reports
-              if report.parent == trace_dir / "special-stage"
-              and re.fullmatch(
-                  r"s2_special_stage_0-s2-0-[0-9a-f]{16}\.json", report.name)
-          ]
-          if len(required_ss_reports) != 1:
-              print(
-                  "Expected exactly one owner-keyed S2 special-stage keep-green report; "
-                  f"found {len(required_ss_reports)}",
-                  file=sys.stderr)
-              for report in required_ss_reports:
-                  print(report, file=sys.stderr)
-              sys.exit(1)
-          required_ss_report = required_ss_reports[0]
-          required_ss_data = json.loads(required_ss_report.read_text(encoding="utf-8"))
-          required_ss_errors = int(required_ss_data.get("error_count", 0))
-          required_ss_warnings = int(required_ss_data.get("warning_count", 0))
-          if required_ss_errors > 0 or required_ss_warnings > 0:
-              print(
-                  f"Required S2 special-stage keep-green trace is red: "
-                  f"errors={required_ss_errors} warnings={required_ss_warnings}",
-                  file=sys.stderr)
-              sys.exit(1)
-
-          warning_reports = []
-          for report in trace_reports:
-              data = json.loads(report.read_text(encoding="utf-8"))
-              warning_count = int(data.get("warning_count", 0))
-              if warning_count > 0:
-                  warning_reports.append((report, warning_count))
-
-          if warning_reports:
-              print("Trace replay warnings are develop-blocking", file=sys.stderr)
-              for report, warning_count in warning_reports:
-                  print(f"{report}: warning_count={warning_count}", file=sys.stderr)
-              sys.exit(1)
-
           print(
               f"Develop trace replay coverage: executed={executed} total={total} "
               f"expected_trace_executed={expected_trace_executed} "
               f"expected_trace_reports={len(expected_trace_reports)}")
           PY
+          python3 tools/testing/validate-trace-reports.py \
+            --root target/trace-reports \
+            --fail-on-warnings \
+            --warning-context develop-blocking \
+            --require-clean-profile special-stage \
+            --require-clean-logical-key s2_special_stage_0 \
+            --require-clean-lane s2-0

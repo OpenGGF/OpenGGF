@@ -42,6 +42,8 @@ class TestBuildToolingGuard {
             Path.of(".githooks/machine-local-path-grandfather.sha256").toAbsolutePath();
     private static final Path POST_CHECKOUT_HOOK = Path.of(".githooks/post-checkout").toAbsolutePath();
     private static final Path PROJECT_GITIGNORE = Path.of(".gitignore").toAbsolutePath();
+    private static final Path TRACE_REPORT_VALIDATOR =
+            Path.of("tools/testing/validate-trace-reports.py").toAbsolutePath();
     private static final String ALL_ZERO_OID = "0000000000000000000000000000000000000000";
     private static final String RESOURCE_POLICY_CUTOVER = "ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0";
     // The commit this baseline is read from must be reachable from the
@@ -1456,20 +1458,11 @@ class TestBuildToolingGuard {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("trace_dir = Path(\"target/trace-reports\")")) {
-            violations.add(".github/workflows/release.yml does not inspect the target-local trace report root");
-        }
-        if (!workflow.contains("warning_count")) {
-            violations.add(".github/workflows/release.yml does not check trace replay warning counts");
-        }
-        if (!workflow.contains("Trace replay warnings are release-blocking")) {
+        if (!workflow.contains("--warning-context release-blocking")) {
             violations.add(".github/workflows/release.yml does not fail release validation on trace warnings");
         }
         assertOwnerKeyedTraceReportConsumer(
                 ".github/workflows/release.yml", workflow, violations);
-        if (!workflow.contains("for report in trace_reports:")) {
-            violations.add(".github/workflows/release.yml warning scan does not consume the validated owner-keyed reports");
-        }
 
         if (!violations.isEmpty()) {
             fail("release trace validation must not certify warning-only trace parity fields:\n  "
@@ -1484,14 +1477,15 @@ class TestBuildToolingGuard {
 
         assertOwnerKeyedTraceReportConsumer(
                 ".github/workflows/ci.yml", workflow, violations);
-        if (!workflow.contains("special-stage/s2_special_stage_0-s2-0-<owner-hash>.json")) {
-            violations.add(".github/workflows/ci.yml does not identify the owner-keyed S2 keep-green report");
-        }
-        if (!workflow.contains("if len(required_ss_reports) != 1:")) {
-            violations.add(".github/workflows/ci.yml does not fail closed for a missing or ambiguous S2 keep-green report");
-        }
-        if (!workflow.contains("for report in trace_reports:")) {
-            violations.add(".github/workflows/ci.yml warning scan does not consume the validated owner-keyed reports");
+        for (String required : List.of(
+                "--require-clean-profile special-stage",
+                "--require-clean-logical-key s2_special_stage_0",
+                "--require-clean-lane s2-0",
+                "--warning-context develop-blocking")) {
+            if (!workflow.contains(required)) {
+                violations.add(".github/workflows/ci.yml does not fail closed for the S2 keep-green report: "
+                        + required);
+            }
         }
         if (workflow.contains("s2_special_stage_0_report.json")
                 || workflow.contains("trace_dir.glob(\"*_report.json\")")) {
@@ -1504,25 +1498,221 @@ class TestBuildToolingGuard {
         }
     }
 
+    @Test
+    void traceReportValidatorMustEnforcePayloadAndOwnerEvidence(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String ownerA = "0123456789abcdef" + "0".repeat(48);
+        String ownerB = "fedcba9876543210" + "1".repeat(48);
+
+        Path validRoot = temporaryDirectory.resolve("valid");
+        writeTraceReport(validRoot, "special-stage", "s2_special_stage_0", "s2-0",
+                ownerA, "{\"error_count\":0,\"warning_count\":0}", null);
+        ProcessResult valid = runTraceReportValidator(validRoot, true);
+        assertEquals(0, valid.exitCode(), () ->
+                "validator rejected valid owner-keyed evidence:\n" + valid.output());
+
+        Path positiveErrorRoot = temporaryDirectory.resolve("positive-error-allowed");
+        writeTraceReport(positiveErrorRoot, "trace", "s2_mtz1", "single", ownerA,
+                "{\"error_count\":3,\"warning_count\":0}", null);
+        ProcessResult positiveError = runTraceReportValidator(positiveErrorRoot, false);
+        assertEquals(0, positiveError.exitCode(), () ->
+                "general validation must leave positive error certification to trace coverage:\n"
+                        + positiveError.output());
+
+        Path safeComponentRoot = temporaryDirectory.resolve("safe-component");
+        writeTraceReport(safeComponentRoot, "trace", "logical key/with spaces", "lane",
+                ownerA, "{\"error_count\":0,\"warning_count\":0}", null);
+        ProcessResult safeComponent = runTraceReportValidator(safeComponentRoot, false);
+        assertEquals(0, safeComponent.exitCode(), () ->
+                "validator rejected a filename derived with publisher safeComponent rules:\n"
+                        + safeComponent.output());
+
+        Path emptyRoot = temporaryDirectory.resolve("empty");
+        Files.createDirectories(emptyRoot);
+        assertTraceValidatorRejects(runTraceReportValidator(emptyRoot, false),
+                "empty", "No owner-keyed trace reports found below");
+
+        Map<String, List<String>> invalidPayloads = new LinkedHashMap<>();
+        invalidPayloads.put("malformed-payload", List.of("{", "malformed report JSON"));
+        invalidPayloads.put("payload-object", List.of("[]", "payload JSON must be an object"));
+        invalidPayloads.put("missing-error", List.of(
+                "{\"warning_count\":0}", "missing required error_count"));
+        invalidPayloads.put("missing-warning", List.of(
+                "{\"error_count\":0}", "missing required warning_count"));
+        invalidPayloads.put("negative-error", List.of(
+                "{\"error_count\":-1,\"warning_count\":0}", "error_count must be nonnegative"));
+        invalidPayloads.put("negative-warning", List.of(
+                "{\"error_count\":0,\"warning_count\":-1}", "warning_count must be nonnegative"));
+        invalidPayloads.put("string-count", List.of(
+                "{\"error_count\":\"0\",\"warning_count\":0}", "error_count must be a JSON integer"));
+        invalidPayloads.put("boolean-count", List.of(
+                "{\"error_count\":0,\"warning_count\":false}", "warning_count must be a JSON integer"));
+        invalidPayloads.put("float-count", List.of(
+                "{\"error_count\":0,\"warning_count\":0.0}", "warning_count must be a JSON integer"));
+        invalidPayloads.put("positive-warning", List.of(
+                "{\"error_count\":0,\"warning_count\":1}", "Trace replay warnings are test-blocking"));
+        for (Map.Entry<String, List<String>> invalid : invalidPayloads.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "trace", "s2_mtz1", "single", ownerA,
+                    invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path keepGreenErrorRoot = temporaryDirectory.resolve("keep-green-error");
+        writeTraceReport(keepGreenErrorRoot, "special-stage", "s2_special_stage_0", "s2-0",
+                ownerA, "{\"error_count\":1,\"warning_count\":0}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(keepGreenErrorRoot, true),
+                "keep-green-error", "required keep-green trace is red");
+
+        Path missingSidecarRoot = temporaryDirectory.resolve("missing-sidecar");
+        Path missingSidecarReport = writeTraceReport(missingSidecarRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        Files.delete(Path.of(missingSidecarReport + ".owner.json"));
+        assertTraceValidatorRejects(runTraceReportValidator(missingSidecarRoot, false),
+                "missing-sidecar", "missing owner sidecar");
+
+        Map<String, List<String>> invalidSidecars = new LinkedHashMap<>();
+        invalidSidecars.put("malformed-sidecar", List.of("{", "malformed owner JSON"));
+        invalidSidecars.put("sidecar-object", List.of("[]", "owner JSON must be an object"));
+        invalidSidecars.put("missing-owner-fields", List.of(
+                "{}", "owner JSON fields must be exactly"));
+        invalidSidecars.put("blank-logical-key", List.of(ownerMetadata(
+                "", ownerA, temporaryDirectory.resolve("unused.json")),
+                "logical_key must be a nonblank string"));
+        invalidSidecars.put("wrong-owner-type", List.of(
+                "{\"logical_key\":\"s2_mtz1\",\"owner_key\":false,"
+                        + "\"physical_path\":\"unused\"}",
+                "owner_key must be 64 lowercase hexadecimal characters"));
+        invalidSidecars.put("uppercase-owner", List.of(
+                "{\"logical_key\":\"s2_mtz1\",\"owner_key\":\""
+                        + ownerA.toUpperCase(Locale.ROOT)
+                        + "\",\"physical_path\":\"unused\"}",
+                "owner_key must be 64 lowercase hexadecimal characters"));
+        invalidSidecars.put("blank-physical-path", List.of(
+                "{\"logical_key\":\"s2_mtz1\",\"owner_key\":\"" + ownerA
+                        + "\",\"physical_path\":\" \"}",
+                "physical_path must be a nonblank string"));
+        invalidSidecars.put("extra-owner-field", List.of(
+                "{\"logical_key\":\"s2_mtz1\",\"owner_key\":\"" + ownerA
+                        + "\",\"physical_path\":\"unused\",\"extra\":true}",
+                "owner JSON fields must be exactly"));
+        for (Map.Entry<String, List<String>> invalid : invalidSidecars.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "trace", "s2_mtz1", "single", ownerA,
+                    "{\"error_count\":0,\"warning_count\":0}", invalid.getValue().get(0));
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path logicalMismatchRoot = temporaryDirectory.resolve("logical-mismatch");
+        Path logicalMismatchReport = writeTraceReport(logicalMismatchRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", "placeholder");
+        Files.writeString(Path.of(logicalMismatchReport + ".owner.json"),
+                ownerMetadata("s2_ehz1", ownerA, logicalMismatchReport),
+                StandardCharsets.UTF_8);
+        assertTraceValidatorRejects(runTraceReportValidator(logicalMismatchRoot, false),
+                "logical-mismatch", "filename logical key does not match");
+
+        Path hashMismatchRoot = temporaryDirectory.resolve("hash-mismatch");
+        Path hashMismatchReport = writeTraceReport(hashMismatchRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", "placeholder");
+        Files.writeString(Path.of(hashMismatchReport + ".owner.json"),
+                ownerMetadata("s2_mtz1", ownerB, hashMismatchReport),
+                StandardCharsets.UTF_8);
+        assertTraceValidatorRejects(runTraceReportValidator(hashMismatchRoot, false),
+                "hash-mismatch", "does not match owner_key prefix");
+
+        Path pathMismatchRoot = temporaryDirectory.resolve("path-mismatch");
+        Path mismatchedPath = temporaryDirectory.resolve("outside.json");
+        Files.writeString(mismatchedPath, "{}", StandardCharsets.UTF_8);
+        Path pathMismatchReport = writeTraceReport(pathMismatchRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", "placeholder");
+        Files.writeString(Path.of(pathMismatchReport + ".owner.json"),
+                ownerMetadata("s2_mtz1", ownerA, mismatchedPath),
+                StandardCharsets.UTF_8);
+        assertTraceValidatorRejects(runTraceReportValidator(pathMismatchRoot, false),
+                "path-mismatch", "physical_path escapes trace report root");
+
+        Path internalMismatchRoot = temporaryDirectory.resolve("internal-path-mismatch");
+        Path internalMismatchReport = writeTraceReport(internalMismatchRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", "placeholder");
+        Path otherInternalPath = internalMismatchRoot.resolve("other.txt");
+        Files.writeString(otherInternalPath, "not the report", StandardCharsets.UTF_8);
+        Files.writeString(Path.of(internalMismatchReport + ".owner.json"),
+                ownerMetadata("s2_mtz1", ownerA, otherInternalPath),
+                StandardCharsets.UTF_8);
+        assertTraceValidatorRejects(runTraceReportValidator(internalMismatchRoot, false),
+                "internal-path-mismatch", "physical_path does not resolve to report");
+
+        Path duplicateRoot = temporaryDirectory.resolve("duplicate");
+        writeTraceReport(duplicateRoot, "trace", "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        writeTraceReport(duplicateRoot, "trace", "s2_mtz1", "single", ownerB,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(duplicateRoot, false),
+                "duplicate", "duplicate report identity");
+
+        Path ambiguousRoot = temporaryDirectory.resolve("ambiguous-keep-green");
+        writeTraceReport(ambiguousRoot, "special-stage", "s2_special_stage_0", "s2-0",
+                ownerA, "{\"error_count\":0,\"warning_count\":0}", null);
+        writeTraceReport(ambiguousRoot, "special-stage", "s2_special_stage_0", "s2-0",
+                ownerB, "{\"error_count\":0,\"warning_count\":0}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(ambiguousRoot, true),
+                "ambiguous-keep-green", "must resolve exactly once; found 2");
+
+        Path duplicateOwnerRoot = temporaryDirectory.resolve("duplicate-owner");
+        writeTraceReport(duplicateOwnerRoot, "trace", "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        writeTraceReport(duplicateOwnerRoot, "trace", "s2_ehz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(duplicateOwnerRoot, false),
+                "duplicate-owner", "duplicate owner_key");
+
+        Path symlinkRoot = temporaryDirectory.resolve("symlink-escape");
+        Path symlinkReport = writeTraceReport(symlinkRoot, "trace", "s2_mtz1", "single",
+                ownerA, "{\"error_count\":0,\"warning_count\":0}", null);
+        Path outside = temporaryDirectory.resolve("outside-report.json");
+        Files.writeString(outside, "{\"error_count\":0,\"warning_count\":0}",
+                StandardCharsets.UTF_8);
+        Files.delete(symlinkReport);
+        Files.createSymbolicLink(symlinkReport, outside);
+        assertTraceValidatorRejects(runTraceReportValidator(symlinkRoot, false),
+                "symlink-escape", "must not be a symbolic link");
+    }
+
     private static void assertOwnerKeyedTraceReportConsumer(
             String sourceName, String workflow, List<String> violations) {
         for (String required : List.of(
-                "OWNER_KEYED_REPORT = re.compile(",
-                "trace_dir.rglob(\"*.json\")",
-                "not path.name.endswith(\".owner.json\")",
-                "path.parent.parent == trace_dir",
-                "OWNER_KEYED_REPORT.fullmatch(path.name)",
-                "invalid_trace_reports",
-                "Unexpected non-owner-keyed trace reports below",
-                "if not trace_reports:",
-                "No owner-keyed trace reports found below")) {
+                "python3 tools/testing/validate-trace-reports.py",
+                "--root target/trace-reports",
+                "--fail-on-warnings")) {
             if (!workflow.contains(required)) {
-                violations.add(sourceName + " does not prove owner-keyed recursive consumption: "
+                violations.add(sourceName + " does not invoke shared semantic validation: "
                         + required);
             }
         }
-        if (workflow.contains("trace_dir.glob(\"*_report.json\")")) {
-            violations.add(sourceName + " still scans only flat legacy trace-report names");
+        for (String bypass : List.of(
+                ".get(\"error_count\", 0)",
+                ".get(\"warning_count\", 0)",
+                "int(data.get(",
+                "trace_dir.glob(\"*_report.json\")",
+                "continue-on-error: true",
+                "set +e",
+                "if: false")) {
+            if (workflow.contains(bypass)) {
+                violations.add(sourceName + " contains a trace-validation bypass: " + bypass);
+            }
+        }
+        String joinedCommands = workflow.replaceAll("\\\\\\R\\s*", " ");
+        if (Pattern.compile("validate-trace-reports\\.py[^\\n]*(?:\\|\\|\\s*true|;\\s*true)")
+                .matcher(joinedCommands).find()) {
+            violations.add(sourceName + " ignores the shared validator exit status");
         }
     }
 
@@ -3601,6 +3791,72 @@ class TestBuildToolingGuard {
         process.getOutputStream().close();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         return new ProcessResult(process.waitFor(), output);
+    }
+
+    private static ProcessResult runTraceReportValidator(
+            Path reportRoot, boolean requireS2KeepGreen) throws Exception {
+        List<String> command = new ArrayList<>(List.of(
+                "python3", TRACE_REPORT_VALIDATOR.toString(),
+                "--root", reportRoot.toString(),
+                "--fail-on-warnings",
+                "--warning-context", "test-blocking"));
+        if (requireS2KeepGreen) {
+            command.addAll(List.of(
+                    "--require-clean-profile", "special-stage",
+                    "--require-clean-logical-key", "s2_special_stage_0",
+                    "--require-clean-lane", "s2-0"));
+        }
+        return run(Path.of("."), command, null);
+    }
+
+    private static Path writeTraceReport(
+            Path root,
+            String profile,
+            String logicalKey,
+            String lane,
+            String ownerKey,
+            String payload,
+            String metadataOverride) throws Exception {
+        String safeLogicalKey = safeTraceComponent(logicalKey);
+        Path report = root.resolve(safeTraceComponent(profile)).resolve(
+                safeLogicalKey + "-" + safeTraceComponent(lane) + "-"
+                        + ownerKey.substring(0, 16) + ".json");
+        Files.createDirectories(report.getParent());
+        Files.writeString(report, payload, StandardCharsets.UTF_8);
+        String metadata = metadataOverride == null
+                ? ownerMetadata(logicalKey, ownerKey, report)
+                : metadataOverride;
+        Files.writeString(Path.of(report + ".owner.json"), metadata, StandardCharsets.UTF_8);
+        return report;
+    }
+
+    private static String ownerMetadata(String logicalKey, String ownerKey, Path report) {
+        return "{\"logical_key\":\"" + traceJson(logicalKey)
+                + "\",\"owner_key\":\"" + traceJson(ownerKey)
+                + "\",\"physical_path\":\""
+                + traceJson(report.toAbsolutePath().normalize().toString()) + "\"}";
+    }
+
+    private static String safeTraceComponent(String value) {
+        String safe = value.replaceAll("[^A-Za-z0-9._-]", "_");
+        if (safe.isBlank()) {
+            return "unnamed";
+        }
+        return safe.equals(".") || safe.equals("..") ? "_" + safe : safe;
+    }
+
+    private static String traceJson(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "\\r");
+    }
+
+    private static void assertTraceValidatorRejects(
+            ProcessResult result, String fixture, String expectedDiagnostic) {
+        assertTrue(result.exitCode() != 0, () ->
+                "validator unexpectedly accepted " + fixture + ":\n" + result.output());
+        assertTrue(result.output().contains(expectedDiagnostic), () ->
+                "validator rejected " + fixture + " for the wrong reason; expected "
+                        + expectedDiagnostic + ":\n" + result.output());
     }
 
     private static void git(Path repository, String... arguments) throws Exception {

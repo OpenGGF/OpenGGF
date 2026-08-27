@@ -172,16 +172,13 @@ jobs:
         run: |
           python3 - <<'PY'
           import fnmatch
-          import json
           import re
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
           surefire_dir = Path("target/surefire-reports")
-          trace_dir = Path("target/trace-reports")
           source_root = Path("src/test/java/com/openggf/tests/trace")
-          OWNER_KEYED_REPORT = re.compile(r".+-.+-[0-9a-f]{16}\.json")
           TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = (
               "Debug*.java",
               "*Debug*.java",
@@ -318,53 +315,6 @@ jobs:
                   print(f"{report}: skipped={skipped_count}", file=sys.stderr)
               sys.exit(1)
 
-          report_candidates = sorted(
-              path for path in trace_dir.rglob("*.json")
-              if not path.name.endswith(".owner.json"))
-          invalid_trace_reports = [
-              path for path in report_candidates
-              if path.parent.parent != trace_dir
-              or not OWNER_KEYED_REPORT.fullmatch(path.name)
-          ]
-          if invalid_trace_reports:
-              print(f"Unexpected non-owner-keyed trace reports below {trace_dir}:",
-                    file=sys.stderr)
-              for report in invalid_trace_reports:
-                  print(report, file=sys.stderr)
-              sys.exit(1)
-          trace_reports = [
-              path for path in report_candidates
-              if path.parent.parent == trace_dir
-              and OWNER_KEYED_REPORT.fullmatch(path.name)
-          ]
-          if not trace_reports:
-              print(f"No owner-keyed trace reports found below {trace_dir}", file=sys.stderr)
-              sys.exit(1)
-          missing_owner_metadata = [
-              report for report in trace_reports
-              if not Path(f"{report}.owner.json").is_file()
-          ]
-          if missing_owner_metadata:
-              print("Owner-keyed trace reports are missing ownership metadata:",
-                    file=sys.stderr)
-              for report in missing_owner_metadata:
-                  print(report, file=sys.stderr)
-              sys.exit(1)
-
-          warning_reports = []
-          for report in trace_reports:
-              data = json.loads(report.read_text(encoding="utf-8"))
-              warning_count = int(data.get("warning_count", 0))
-              if warning_count > 0:
-                  warning_reports.append((report, warning_count))
-
-          if warning_reports:
-              print("Trace replay warnings are release-blocking; warning-only fields do not certify parity",
-                    file=sys.stderr)
-              for report, warning_count in warning_reports:
-                  print(f"{report}: warning_count={warning_count}", file=sys.stderr)
-              sys.exit(1)
-
           print(
               f"Trace replay coverage: executed={executed} total={total} skipped={skipped} "
               f"expected_trace_executed={expected_executed} "
@@ -372,6 +322,10 @@ jobs:
               f"expected_policy_executed={expected_policy_executed} "
               f"expected_policy_reports={len(expected_policy_reports)}")
           PY
+          python3 tools/testing/validate-trace-reports.py \
+            --root target/trace-reports \
+            --fail-on-warnings \
+            --warning-context release-blocking
 
   build:
     needs: test

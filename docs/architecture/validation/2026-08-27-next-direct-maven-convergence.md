@@ -110,18 +110,43 @@ still contained one broken retired-design path. After removing that broken
 reference, the final focused GREEN reported 97 tests, 0 failures, 0 errors,
 and 0 skipped with `BUILD SUCCESS`.
 
-CI and release now recursively enumerate JSON reports, reject ownership
-sidecars from the payload set, require exactly one profile directory, validate
-the logical-key/lane/16-hex-owner filename shape, require matching owner
-metadata, and fail when the report set is empty or malformed. Scheduled CI
-also requires exactly one
-`special-stage/s2_special_stage_0-s2-0-<owner-hash>.json` keep-green report;
-its warning scan and release's warning scan consume that already-validated
-set. CI retains its branch policy, destination-aware Mod API checks,
-ordinary-test count gate, scheduled ROM-backed trace job, and keep-green gate.
-Release retains its ROM arguments, optional-skip inventory, source-derived
-trace coverage checks, native matrix, universal profile, package smoke
-validation, and finished-archive uploads.
+That first correction recursively enumerated JSON reports, rejected flat and
+malformed physical names, required exactly one profile directory and a sidecar
+file, and failed on an empty report set. It did not parse owner metadata or
+validate the count field types: both workflows still converted
+`data.get(..., 0)` results with `int(...)`.
+
+A second review converted that semantic gap into executable coverage before
+changing the workflows. The same focused guard command produced the intended
+RED: 98 tests, 3 failures, 0 errors, and 0 skipped. The failing methods were
+`releaseWorkflowShouldFailTraceReplayWarnings`,
+`scheduledDevelopTraceWorkflowMustConsumeOwnerKeyedReports`, and
+`traceReportValidatorMustEnforcePayloadAndOwnerEvidence`. The first two exposed
+the inline defaulting/bypass and absence of the shared command; the third
+rejected the valid fixture because the shared validator did not yet exist.
+
+Both workflows now invoke
+`tools/testing/validate-trace-reports.py`. Its executable fixture verifies a
+valid owner-keyed report and publisher-safe logical-key normalization, while
+rejecting empty sets; malformed or non-object JSON; missing, negative, string,
+boolean, or floating counts; warning-bearing reports; a red required
+keep-green report; missing, malformed, non-object, incomplete, extra-field,
+blank, or wrongly typed sidecars; logical-key, owner-hash, physical-path, and
+duplicate-owner mismatches; duplicate/ambiguous logical ownership; and a
+symlink escape. It also proves a nonnegative positive `error_count` remains
+valid for the general release scan, where the separate trace coverage gate
+owns error certification.
+
+The focused validator method reported 1 test, 0 failures, 0 errors, and
+0 skipped. The complete focused guard then reported 98 tests, 0 failures,
+0 errors, and 0 skipped with `BUILD SUCCESS`. Scheduled CI passes the exact S2
+profile/logical-key/lane selector and requires both counts to be zero; CI and
+release both require zero warnings across every validated report. CI retains
+its branch policy, destination-aware Mod API checks, ordinary-test count gate,
+scheduled ROM-backed trace job, and keep-green gate. Release retains its ROM
+arguments, optional-skip inventory, source-derived trace coverage checks,
+native matrix, universal profile, package smoke validation, and
+finished-archive uploads.
 
 The dedicated lifecycle-record deletion was bounded before editing. Four of
 the five present records were byte-identical to `572a5cc36^`; the sole
@@ -142,11 +167,11 @@ retired-marker literals inside `TestBuildToolingGuard`; no workflow, root
 guidance, guide, runbook, tool, or skill match remained. Bounded workflow
 inspection confirmed the direct ordinary/guards/trace/native/universal Maven
 commands, static report/archive paths, recursive owner-keyed trace consumers,
-non-empty/malformed/missing-owner failure paths, Mod API destination arguments,
-three ROM properties, default-test count, release optional-skip inventory,
-trace warning checks, native matrix, universal native-classifier checks, and
-both package smoke validations remain present. `git diff --check` was clean.
-Full ordinary and guards comparisons remain reserved for Task 5.
+the executable semantic/ownership failure matrix above, Mod API destination
+arguments, three ROM properties, default-test count, release optional-skip
+inventory, trace warning checks, native matrix, universal native-classifier
+checks, and both package smoke validations remain present. `git diff --check`
+was clean. Full ordinary and guards comparisons remain reserved for Task 5.
 
 ## Focused verification
 
