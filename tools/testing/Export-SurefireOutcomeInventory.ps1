@@ -651,7 +651,13 @@ function Assert-EffectiveSurefireContract {
 
             $projectTemplate = [string]$effective.projectArgLine
             $permittedTemplate = '${test.cds.argLine} ${mockito.agent.argLine} '
-            if ($projectTemplate.StartsWith('-XstartOnFirstThread ', [System.StringComparison]::Ordinal)) {
+            $projectRequiresMacLauncher = $projectTemplate.StartsWith(
+                '-XstartOnFirstThread ', [System.StringComparison]::Ordinal)
+            $argumentHasMacLauncher = ($capacityOffset -eq 1)
+            if ($projectRequiresMacLauncher -ne $argumentHasMacLauncher) {
+                throw 'DirectMaven -XstartOnFirstThread presence must match the effective project argLine launcher contract'
+            }
+            if ($projectRequiresMacLauncher) {
                 $projectTemplate = $projectTemplate.Substring('-XstartOnFirstThread '.Length)
             }
             if ($projectTemplate.StartsWith($permittedTemplate, [System.StringComparison]::Ordinal)) {

@@ -554,6 +554,22 @@ test
             -ExecutionArgLine ($macCapacityArgLine + $executionSuffix))
         Assert-Succeeded (& $invokeDirect) 'direct Maven macOS capacity argLine'
 
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine '-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g' `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirect) 'XstartOnFirstThread|macOS|project argLine|launcher' 'direct Maven cannot drop macOS launcher token'
+
+        Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($macCapacityArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirect) 'XstartOnFirstThread|macOS|project argLine|launcher' 'direct Maven cannot inject macOS launcher token'
+
         Write-Utf8File $arguments "-Dsurefire.argLine=$windowsCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
