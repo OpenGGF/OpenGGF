@@ -83,17 +83,6 @@ public class TestFbzAct2TraversalPreboss {
             new InputRun(30, 0x0), new InputRun(20, 0x14), new InputRun(20, 0x4));
 
     @Test
-    void trigger7ProjectionSeedsTheLiveSubpixelHighByteAtOverlapBoundary() {
-        assertEquals(1, FixedInputRunner.projectedTrigger7ReleaseStepFixed(
-                0, 0x0100, 0, -0x80,
-                0, 0, 0));
-        assertEquals(-1, FixedInputRunner.projectedTrigger7ReleaseStepFixed(
-                0, 0x01FF, 0, -0x80,
-                0, 0, 0),
-                "discarding the live $FF fraction would qualify one frame early");
-    }
-
-    @Test
     void a80Subtype16DownwardPathSwitchSelectsCollisionPathCD() throws IOException {
         ObjectSpawn switcher = TestFbzObjectInventory.load("2.bin").stream()
                 .filter(spawn -> spawn.x() == 0x0A80 && spawn.y() == 0x0630)
@@ -787,12 +776,10 @@ public class TestFbzAct2TraversalPreboss {
             int trigger7DoorStage = 0;
             int trigger7LandingAttempts = 0;
             boolean trigger7EgressJumpStarted = false;
-            boolean trigger7EgressJumpReleased = false;
-            ObjectSpawn trigger7ReleaseSpawn = null;
-            int trigger7ReleasePlayerX = -1;
-            int trigger7ReleasePlayerY = -1;
-            int trigger7ReleaseXSpeed = 0;
-            int trigger7ReleaseProjectionStep = -1;
+            boolean trigger7RightHandoffCommitted = false;
+            int trigger7HandoffPlayerX = -1;
+            int trigger7HandoffPlayerY = -1;
+            int trigger7HandoffXSpeed = 0;
             boolean trigger7LandingReached = false;
             boolean trigger7TurnReached = false;
             boolean earlyFlamethrowerJumpActive = false;
@@ -2122,49 +2109,26 @@ public class TestFbzAct2TraversalPreboss {
                         } else if (postDoorPathSwitchReached && trigger7DoorStage == 3) {
                             maskOwner = "trigger-7-stage-3-egress";
                             // The door has latched and P1 has left the authored
-                            // activation surface. All three ordinary placements
-                            // may now cull independently; egress is owned by P1's
-                            // live position/air state, not retained instances.
-                            FbzMagneticSpikeBallObjectInstance exactReleasePairMember = null;
-                            int exactReleaseProjectionStep = -1;
-                            for (FbzMagneticSpikeBallObjectInstance ball
-                                    : objects.activeObjectsOfType(
-                                    FbzMagneticSpikeBallObjectInstance.class)) {
-                                ObjectSpawn ballSpawn = ball.getSpawn();
-                                if (ball.isDestroyed()
-                                        || ballSpawn == null || ballSpawn.x() != 0x19C0
-                                        || !((ballSpawn.y() == 0x0590
-                                        && ballSpawn.subtype() == 0x80)
-                                        || (ballSpawn.y() == 0x05AC
-                                        && ballSpawn.subtype() == 0x81))) {
-                                    continue;
-                                }
-                                int projectionStep = projectedTrigger7ReleaseStep(
-                                        player, ballSpawn);
-                                if (projectionStep >= 0
-                                        && (exactReleaseProjectionStep < 0
-                                        || projectionStep < exactReleaseProjectionStep)) {
-                                    exactReleasePairMember = ball;
-                                    exactReleaseProjectionStep = projectionStep;
-                                }
+                            // activation surface. loc_3CD4C gates each new pair
+                            // on the parent's previous-render bounds, and
+                            // loc_3CF90 keeps every child collision-enabled until
+                            // its own animation expires (sonic3k.asm:80714-80733,
+                            // 80915-80934). Commit the turn only after production
+                            // can no longer emit and the final live wave is gone.
+                            boolean sourceCanEmit = trigger7Flamethrower != null
+                                    && trigger7Flamethrower.isWithinSolidContactBounds();
+                            boolean liveCollisionFlames = objects.activeObjectsOfType(
+                                            FbzFlameObjectInstance.class).stream()
+                                    .filter(flame -> !flame.isDestroyed())
+                                    .anyMatch(flame -> flame.getCollisionFlags() != 0);
+                            if (!trigger7RightHandoffCommitted
+                                    && !sourceCanEmit && !liveCollisionFlames) {
+                                trigger7RightHandoffCommitted = true;
+                                trigger7HandoffPlayerX = playerXBefore;
+                                trigger7HandoffPlayerY = playerYBefore;
+                                trigger7HandoffXSpeed = player.getXSpeed();
                             }
-                            // Complete-run BK2 releases at $1AFA/$0594 inside
-                            // the exact $140 approach envelope of the immutable
-                            // $19C0/$0590,$05AC subtype-$80/$81 pair. Project
-                            // current signed 8.8 motion with native air gravity
-                            // so a faster profile releases before its future
-                            // vertical overlap; unrelated dynamic $73 balls can
-                            // never own this gate.
-                            if (!trigger7EgressJumpReleased
-                                    && exactReleasePairMember != null) {
-                                trigger7EgressJumpReleased = true;
-                                trigger7ReleaseSpawn = exactReleasePairMember.getSpawn();
-                                trigger7ReleasePlayerX = playerXBefore;
-                                trigger7ReleasePlayerY = playerYBefore;
-                                trigger7ReleaseXSpeed = player.getXSpeed();
-                                trigger7ReleaseProjectionStep = exactReleaseProjectionStep;
-                            }
-                            if (trigger7EgressJumpReleased && !player.getAir()
+                            if (trigger7RightHandoffCommitted && !player.getAir()
                                     && playerYBefore >= 0x0700) {
                                 trigger7LandingReached = true;
                                 int nativeTurnX = 0x1A90;
@@ -2203,25 +2167,17 @@ public class TestFbzAct2TraversalPreboss {
                                 mask = AbstractPlayableSprite.INPUT_LEFT
                                         | AbstractPlayableSprite.INPUT_JUMP;
                             } else if (player.getAir()) {
-                                if (!trigger7EgressJumpReleased) {
+                                if (!trigger7RightHandoffCommitted) {
                                     mask = AbstractPlayableSprite.INPUT_LEFT
                                             | (player.getYSpeed() < 0
                                             ? AbstractPlayableSprite.INPUT_JUMP : 0);
                                 } else {
-                                    int landingTargetX = trigger7ReleaseSpawn.x() + 0xE0;
-                                    int projectedLandingX = playerXBefore
-                                            + ((player.getXSpeed() * 0x20) >> 8);
-                                    // Native coasts neutral after release, then
-                                    // applies ordinary RIGHT only while the
-                                    // current 32-frame horizontal projection
-                                    // would undershoot the $1AA0 landing edge.
-                                    mask = player.getXSpeed() < 0
-                                            && projectedLandingX < landingTargetX
-                                            ? AbstractPlayableSprite.INPUT_RIGHT : 0;
+                                    mask = AbstractPlayableSprite.INPUT_RIGHT;
                                 }
                             } else {
-                                mask = trigger7EgressJumpReleased
-                                        ? 0 : AbstractPlayableSprite.INPUT_LEFT
+                                mask = trigger7RightHandoffCommitted
+                                        ? AbstractPlayableSprite.INPUT_RIGHT
+                                        : AbstractPlayableSprite.INPUT_LEFT
                                         | AbstractPlayableSprite.INPUT_JUMP;
                             }
                         } else if (postDoorPathSwitchReached
@@ -2261,26 +2217,28 @@ public class TestFbzAct2TraversalPreboss {
                             boolean liveCollisionFlames = objects.activeObjectsOfType(
                                             FbzFlameObjectInstance.class).stream()
                                     .filter(flame -> !flame.isDestroyed())
-                                    .filter(flame -> flame.getCollisionFlags() != 0)
-                                    .anyMatch(flame -> flame.getY() + FLAME_TOUCH_RADIUS
-                                            >= playerYBefore - player.getYRadius() - 0x20
-                                            && flame.getY() - FLAME_TOUCH_RADIUS
-                                            <= playerYBefore + player.getYRadius() + 0x20);
+                                    .anyMatch(flame -> flame.getCollisionFlags() != 0);
                             if (trigger7DoorStage == 2 && doorOpeningLatched) {
-                                // Complete-run BK2 $78D8-$78F5 remains on the
-                                // overlapping button/flamethrower top. Standing
-                                // suppresses new flames; wait for every already-
-                                // emitted collision-enabled child to expire,
-                                // then take the authored LEFT jump through the
-                                // now-latched $1AC0 door.
-                                if (liveCollisionFlames || player.getGSpeed() > 0x0100) {
-                                    mask = player.getGSpeed() > 0x0100
-                                            ? AbstractPlayableSprite.INPUT_LEFT : 0;
-                                } else {
+                                // On mapping_frame 2, the four-frame loc_3CD4C
+                                // cadence reaches the standing checkpoint but
+                                // emits no pair. Leave on that exact suppressed
+                                // slot only after the old children have expired,
+                                // buying the full ROM-owned interval before a
+                                // new pair can move.
+                                boolean suppressedCadencePhase =
+                                        ((GameServices.level().getFrameCounter() + 1) & 3) == 0;
+                                if (player.getGSpeed() > 0x0100) {
+                                    mask = AbstractPlayableSprite.INPUT_LEFT;
+                                } else if (exactSurfaceOwner
+                                        && trigger7Flamethrower.mappingFrame() == 2
+                                        && !liveCollisionFlames
+                                        && suppressedCadencePhase) {
                                     trigger7DoorStage = 3;
                                     trigger7EgressJumpStarted = true;
                                     mask = AbstractPlayableSprite.INPUT_LEFT
                                             | AbstractPlayableSprite.INPUT_JUMP;
+                                } else {
+                                    mask = 0;
                                 }
                             } else if (trigger7DoorStage == 2) {
                                 assertTrue(triggerHeld && withinButtonX
@@ -2696,15 +2654,12 @@ public class TestFbzAct2TraversalPreboss {
                             + ",lateButtonLive=" + (lateButton != null)
                             + ",lateDoorLive=" + (lateButtonDoor != null)
                             + ",trigger7Stage=" + trigger7DoorStage
-                            + ",trigger7JumpReleased=" + trigger7EgressJumpReleased
-                            + ",trigger7ReleaseSpawn=" + trigger7ReleaseSpawn
-                            + ",trigger7ReleasePlayer=($"
-                            + Integer.toHexString(trigger7ReleasePlayerX)
-                            + ",$" + Integer.toHexString(trigger7ReleasePlayerY) + ")"
-                            + ",trigger7ReleaseXSpeed=$"
-                            + Integer.toHexString(trigger7ReleaseXSpeed & 0xFFFF)
-                            + ",trigger7ReleaseProjectionStep="
-                            + trigger7ReleaseProjectionStep
+                            + ",trigger7RightHandoff=" + trigger7RightHandoffCommitted
+                            + ",trigger7HandoffPlayer=($"
+                            + Integer.toHexString(trigger7HandoffPlayerX)
+                            + ",$" + Integer.toHexString(trigger7HandoffPlayerY) + ")"
+                            + ",trigger7HandoffXSpeed=$"
+                            + Integer.toHexString(trigger7HandoffXSpeed & 0xFFFF)
                             + ",trigger7Landing=" + trigger7LandingReached
                             + ",trigger7Turn=" + trigger7TurnReached
                             + ",trigger7ButtonLive=" + (trigger7Button != null)
@@ -2776,12 +2731,12 @@ public class TestFbzAct2TraversalPreboss {
                                         lateButtonDoor == null
                                                 ? 0x1718 : lateButtonDoor.getX()));
                     }
-                    if (trigger7DoorStage == 3 && trigger7EgressJumpReleased) {
+                    if (trigger7DoorStage == 3 && trigger7RightHandoffCommitted) {
                         assertEquals(0, mask & AbstractPlayableSprite.INPUT_JUMP,
                                 waypointDiagnostic(
                                         "trigger-7-egress-rearmed-released-jump", 0x1AC0));
                     }
-                    if (trigger7DoorStage == 3 && trigger7EgressJumpReleased
+                    if (trigger7DoorStage == 3 && trigger7RightHandoffCommitted
                             && lateButtonDoor != null && !player.getAir()) {
                         int respawnedDoorRightEdge = lateButtonDoor.getX()
                                 + lateButtonDoor.getSolidParams().halfWidth();
@@ -2794,14 +2749,11 @@ public class TestFbzAct2TraversalPreboss {
                                 waypointDiagnostic(
                                         "trigger-7-overshot-authored-landing",
                                         respawnedDoorRightEdge)
-                                        + " releaseSpawn=" + trigger7ReleaseSpawn
-                                        + " releasePlayer=($"
-                                        + Integer.toHexString(trigger7ReleasePlayerX)
-                                        + ",$" + Integer.toHexString(trigger7ReleasePlayerY)
-                                        + ") releaseXSpeed=$"
-                                        + Integer.toHexString(trigger7ReleaseXSpeed & 0xFFFF)
-                                        + " releaseProjectionStep="
-                                        + trigger7ReleaseProjectionStep);
+                                        + " handoffPlayer=($"
+                                        + Integer.toHexString(trigger7HandoffPlayerX)
+                                        + ",$" + Integer.toHexString(trigger7HandoffPlayerY)
+                                        + ") handoffXSpeed=$"
+                                        + Integer.toHexString(trigger7HandoffXSpeed & 0xFFFF));
                     }
                     stepMask(fixture, mask);
                     frames++;
@@ -3048,13 +3000,8 @@ public class TestFbzAct2TraversalPreboss {
                         }
                     }
                     if (stopCondition.reached()) {
-                        assertTrue(trigger7EgressJumpReleased,
-                                "successful route never released trigger-7 egress jump");
-                        assertNotNull(trigger7ReleaseSpawn,
-                                "trigger-7 release did not belong to exact $19C0 field pair");
-                        assertTrue(trigger7ReleaseProjectionStep >= 0
-                                        && trigger7ReleaseProjectionStep < 0x20,
-                                "trigger-7 release lacked bounded projection evidence");
+                        assertTrue(trigger7RightHandoffCommitted,
+                                "successful route never retired trigger-7 flame emission");
                         assertEquals(4, trigger7DoorStage,
                                 "successful route did not complete trigger-7 egress");
                         assertTrue(trigger7LandingReached,
@@ -4009,43 +3956,6 @@ public class TestFbzAct2TraversalPreboss {
                 if (Math.abs(projectedX - playerX) <= combinedRadius) return true;
             }
             return false;
-        }
-
-        private static int projectedTrigger7ReleaseStep(
-                AbstractPlayableSprite player,
-                ObjectSpawn exactFieldPairMember) {
-            int xFixed = ((player.getCentreX() & 0xFFFF) << 8)
-                    | ((player.getXSubpixelRaw() >>> 8) & 0xFF);
-            int yFixed = ((player.getCentreY() & 0xFFFF) << 8)
-                    | ((player.getYSubpixelRaw() >>> 8) & 0xFF);
-            int xSpeed = player.getXSpeed();
-            int ySpeed = player.getYSpeed();
-            int ownerX = exactFieldPairMember.x();
-            int ownerY = exactFieldPairMember.y();
-            int combinedVerticalRadius = MAGNETIC_BALL_TOUCH_RADIUS
-                    + player.getYRadius();
-            return projectedTrigger7ReleaseStepFixed(
-                    xFixed, yFixed, xSpeed, ySpeed,
-                    ownerX, ownerY, combinedVerticalRadius);
-        }
-
-        private static int projectedTrigger7ReleaseStepFixed(
-                int xFixed, int yFixed, int xSpeed, int ySpeed,
-                int ownerX, int ownerY, int combinedVerticalRadius) {
-            for (int step = 0; step < 0x20; step++) {
-                int projectedX = xFixed >> 8;
-                int projectedY = yFixed >> 8;
-                boolean insideApproach = projectedX >= ownerX
-                        && projectedX - ownerX <= 0x140;
-                if (insideApproach
-                        && Math.abs(projectedY - ownerY) <= combinedVerticalRadius) {
-                    return step;
-                }
-                xFixed += xSpeed;
-                yFixed += ySpeed;
-                ySpeed += 0x38;
-            }
-            return -1;
         }
 
         private String waypointDiagnostic(String name, int targetX) {
