@@ -130,6 +130,7 @@ class TestBuildToolingGuard {
     private static final Set<String> TASK4_SUPPORT_FILES = Set.of(
             "src/main/resources/config.yaml",
             "tools/audio/README.md",
+            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
             "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java",
             "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch8Codecs.java",
             "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch9Codecs.java",
@@ -146,7 +147,6 @@ class TestBuildToolingGuard {
                     + "Path\\.of\\(\\s*\\\"target|Paths\\.get\\(\\s*\\\"target)");
 
     private static final Set<String> SESSION_OUTPUT_FILES = Set.of(
-            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
             "src/test/java/com/openggf/game/TestInstaShieldVisual.java",
             "src/test/java/com/openggf/game/rewind/RewindBenchmark.java",
             "src/test/java/com/openggf/game/rewind/RewindRoundTripHarness.java",
@@ -236,8 +236,7 @@ class TestBuildToolingGuard {
             "com.openggf.audio.AudioRegressionTest#testSfxJumpMatchesReference",
             "com.openggf.audio.AudioRegressionTest#testSfxSpringMatchesReference",
             "com.openggf.audio.AudioRegressionTest#testMixedMusicSfxMatchesReference",
-            "com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples",
-            "com.openggf.audio.synth.TestYm2612ChipGpgxParity#nativeEnvelopeHarnessReproducesTrackedVectorsWhenCoreIsPresent");
+            "com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples");
     private static final List<Pattern> TRACE_BOOTSTRAP_POLICY_SIGNALS = List.of(
             Pattern.compile("\\b(?:meta|metadata)\\s*\\.\\s*(?:zoneId|act|traceProfile)\\s*\\("),
             Pattern.compile("\\bhasPerFrameSlotMachineState\\s*\\("),
