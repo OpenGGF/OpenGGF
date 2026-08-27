@@ -241,28 +241,184 @@ was clean. Full ordinary and guards comparisons remain reserved for Task 5.
 
 ## Focused verification
 
-Result: not run in Task 1. Reserved for Task 5.
+Task 5 ran the required commands directly from
+`a0a3794f5f932c13e8b74f34ee14918ee86bbbb0`, with Maven's default output
+below this worktree's `target/`:
+
+```text
+mvn -v
+mvn -Dmse=off -Dtest=com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.TestSessionOutputPathsTest test -B
+```
+
+`mvn -v` exited 0 and reported Maven 3.9.16 on Java 21.0.11. The sandbox
+printed its known read-only `/tmp` Jansi lock diagnostic before the version;
+the command otherwise completed normally.
+
+The focused command exited 0 and reported 107 tests, 0 failures, 0 errors,
+and 0 skipped with `BUILD SUCCESS` in 2:00. This is fresh evidence for the
+target-local/direct-Maven contract only; it does not override either full-suite
+result below.
 
 ## Ordinary suite
 
-Result: not run in Task 1. Reserved for Task 5; compare exact
-`class#JUnit-engine-member` identities against the 18,197-identity snapshot and
-the 70 expected-red identities. Keep unmatched upstream-only identities and
-renamed/reworked counterparts separate; neither is a resolved red.
+Task 5 invoked the required command directly and without piping or report-root
+redirection:
+
+```text
+mvn -Dmse=off test -B
+```
+
+The run started at 2026-08-27 17:26 local time. Surefire repeatedly reported
+`ForkStarter IOException: java.io.IOException: Unable to create temporary
+directory /tmp/surefire-farrell`; report timestamps then stopped advancing for
+about 20 minutes while Maven remained live. The stalled process was interrupted
+after approximately 25 minutes and exited 130. This is an infrastructure-
+invalid partial run, not a full-suite result. It cannot be compared as passing
+or red-equivalent to the 18,197-identity snapshot.
+
+The retained exporter was invoked immediately against the unmodified partial
+`target/surefire-reports` tree in `-DirectMaven` mode. It first rejected the
+tree for the repeated identity
+`com.openggf.TestBonusStagePlaybackBridge$BonusStageModeCursorAdvance#updateBonusStageModeAdvancesCursorAndAppliesForcedInput`.
+After all 27 repeated identities and their observed cardinalities were recorded,
+the exporter correctly refused an ad-hoc allowlist because the interrupted
+wildcard run did not have the complete authenticated explicit-source preflight.
+No complete outcome TSV was therefore produced or claimed. The partial report
+tree was preserved before the guards invocation at:
+
+```text
+target/direct-maven-convergence-evidence/ordinary-partial-surefire-reports/
+```
+
+Read-only XML diagnosis of that preserved tree found 2,316 XML reports,
+18,316 testcase invocations, 18,217 unique identities, 27 repeated identities,
+18,201 passing invocations, 30 failures, 40 errors, 45 skips, and three
+Surefire dumpstreams. The partial unique-identity count is 20 above the frozen
+snapshot count, but branch-added tests and missing execution make that delta
+non-comparable; it is not a candidate suite count.
+
+The provisional red-set inspection found 70 red identities: 23 exact matches
+to the 70 upstream rollback identities, 47 candidate-only reds, and 47
+upstream identities not red in the partial reports. The upstream set's exact
+current outcomes were 43 pass, 4 failure, 19 error, and the four documented
+upstream-only identities absent. The first ordinal candidate-only difference
+was
+`com.openggf.data.TestRomManagerGameResolution#resolvesOnlyExplicitStockGameCodesAndFailsClosedOtherwise`,
+with message `Expected java.lang.IllegalArgumentException to be thrown, but
+nothing was thrown.` These are diagnostic observations only: the interrupted
+run cannot establish new, resolved, or worsened ordinary reds.
+
+All four renamed/reworked frozen-next counterparts were present and passed:
+
+```text
+TestDynamicArtDmaServiceModel#sonic2ServicesEveryProcessDmaQueueEquivalentClaim
+TestSonic2ObjectBugFixes#collapsingPlatformFragmentFallDeletesOnFirstVerticallyOffscreenBuildResult
+TestAiz2BossEndSequenceObjects#aizCapsuleResultsActiveWaitRunsTailsEndingPoseBeforeResultsExit
+TestTouchResponseManager#testS3kInlineTouchUsesPreviousCollisionResponseListFrameStartPosition
+```
+
+Their upstream identities remain unmatched and non-comparable. None is counted
+as resolved.
+
+Target-local diagnostic artifacts are:
+
+```text
+target/direct-maven-convergence-evidence/ordinary-partial-source-classes.txt
+target/direct-maven-convergence-evidence/ordinary-partial-repeated-identities.tsv
+target/direct-maven-convergence-evidence/ordinary-partial-summary.txt
+target/direct-maven-convergence-evidence/ordinary-partial-red-set-comparison.txt
+```
+
+Their SHA-256 values, in the same order, are
+`9fb5e8084cdfb89ea80b388edaf410ad23d2e79967cee5ca8ab3301b83b871a4`,
+`ae5de0d9a9e6cdf03cce3701160bbfe093bc0bb1cd56e80fa8dfd874c2b4a102`,
+`c026518c6ae539ca7bd23db40840b5e0d6353249aa5ebe317da8433150e58779`,
+and `38a1fe4dc10a1908a7d291e1a9e2e462f1b1697c50ef58a8b91e2dc89af5af71`.
 
 ## Guards suite
 
-Result: not run in Task 1. Reserved for Task 5; compare against the 520/521
-snapshot and the 19 expected-red identities, retaining only the known Trace V5
-positive-input red unless later evidence proves otherwise.
+Task 5 next invoked the required fresh guards command directly:
+
+```text
+mvn -Dmse=off -Pguards test -B
+```
+
+It exited 1 after 2:11. Maven reported 558 tests, 1 failure, 1 test error,
+0 skipped, and `BUILD FAILURE`, followed by a separate fork-process
+`Java heap space` execution error. A `/tmp/surefire-farrell` fork warning also
+recurred. The complete report tree exported successfully and immediately in
+`-DirectMaven` mode to:
+
+```text
+target/direct-maven-convergence-evidence/guards-outcomes.tsv
+```
+
+The exporter recorded 558 identities: 556 pass, 1 failure, 1 error, and
+0 skipped. The TSV SHA-256 is
+`209f120032a8d3b510453ffa2c201316391eceea1349e30fa28862c0b0f9a13e`.
+Its source-class inventory and comparison summary are respectively:
+
+```text
+target/direct-maven-convergence-evidence/guards-source-classes.txt
+target/direct-maven-convergence-evidence/guards-comparison.txt
+```
+
+Their SHA-256 values are
+`ad0f53afeaa914080089e44dcd0ce67cf8ac701042251ac34b1b1b98060c7887`
+and `25c5cf8195bd996497db2483154d1fcaa5789140437c8b7d2fc83b1fa61831a2`.
+
+The known frozen-snapshot failure remained:
+
+```text
+com.openggf.tests.trace.TestTraceV5PositiveInputGuard#repositoryPositiveTestsUseOnlyTemporaryV5Inputs
+FAILURE: Positive trace tests retain legacy inputs:
+  com/openggf/game/sonic3k/TestFbzMinibossArtShape.java: retired 18-column level row
+  com/openggf/game/sonic3k/TestSonic3kPlcArtRegistry.java: retired 11-column level row
+```
+
+One additional identity that passed in the frozen snapshot became red again:
+
+```text
+com.openggf.tests.TestArchUnitRules#per_game_packages_do_not_cross_depend
+ERROR: Updating frozen violations is disabled
+       (enable by configuration freeze.store.default.allowStoreUpdate=true)
+```
+
+That JUnit engine member corresponds to the upstream expected-red identity
+`TestArchUnitRules#per_game_packages_do_not_cross_depend`; the direct exporter
+normalizes its simple ArchUnit classname to the selected fully qualified suite.
+The other 18 upstream rollback red members passed. Against the frozen 520/521
+snapshot, the ArchUnit error is a new/worsened outcome; the fork OOM is also a
+blocking infrastructure error. The guard result therefore fails the
+no-new-or-worsened-red acceptance criterion.
 
 ## Static proof and hygiene
 
-Result: not run in Task 1. Reserved for Task 5.
+The following checks all returned exit 0:
+
+```text
+git diff --check 33a799c014906bd75e99da329abc465ecf466487..HEAD
+git diff --check
+git diff --cached --check
+cmp AGENTS.md CLAUDE.md
+cmp .agents/skills/s1-trace-replay/SKILL.md .claude/skills/s1-trace-replay/SKILL.md
+cmp .agents/skills/trace-replay-bug-fixing/SKILL.md .claude/skills/trace-replay-bug-fixing/SKILL.md
+```
+
+The active retired-marker grep returned only the deliberate marker literals
+inside `TestBuildToolingGuard`; no active wrapper, workflow, guide, runbook, or
+skill consumer was found. Before this ledger edit,
+`git status --short --branch` reported only the clean branch header
+`## feature/ai-next-direct-maven-convergence`.
 
 ## Independent review
 
-Result: not run in Task 1. Reserved for Task 5.
+No fresh Task 5 reviewer was dispatched because the Task 5 execution handoff
+explicitly prohibited subagents. The independent Task 3 and Task 4 verdicts
+were read as inputs, not relabelled as fresh Task 5 review. Verification status
+is `DONE_WITH_CONCERNS`: the ordinary suite is infrastructure-incomplete, and
+the guards suite has a reopened ArchUnit red plus a fork OOM. Task 6 must not
+integrate or push this tip on this evidence.
 
 ## Integration
 
