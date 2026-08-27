@@ -23,11 +23,10 @@ tools/testing/install-hooks.sh
 mvn package
 ```
 
-The coordinator prints a session manifest at the start and end of the build.
-Read its `artifact_root` entry for the executable OpenGGF JAR with all
-dependencies; raw Maven lifecycle commands are non-certifying.
+The executable OpenGGF JAR with all dependencies is written to the current
+worktree's Maven output tree:
 ```
-<session>/artifacts/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
 
 Maven Silent Extension (MSE) is configured via `.mvn/extensions.xml`. By default, Maven
@@ -63,10 +62,9 @@ Build and run a distributable jar with the launcher for your platform:
 run.cmd
 ```
 
-The normal launchers are intentionally non-certifying: they explicitly bypass
-the session guard so they can keep writing the distributable to `target/` and
-launching it in the usual way. Use the test-session commands above whenever
-you need certifying build, test, trace, or release evidence.
+The normal launchers build into the current worktree's `target/` directory and
+launch from there. Run Maven from the worktree root so its repository-local JVM
+configuration also keeps Maven-side temporary files inside `target/`.
 
 For faster iteration, `dev.sh` (Linux) and `dev.cmd` (Windows) compile only
 changed sources and run directly from `target/classes`. The first offline

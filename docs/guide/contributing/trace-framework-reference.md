@@ -123,7 +123,7 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
                                    │ emits
                                    ▼
                 ┌──────────────────────────────────────────┐
-                │  session manifest: trace_reports        │
+                │  worktree: target/trace-reports         │
                 │   <game>_<zone><act>_report.json         │
                 │   <game>_<zone><act>_context.txt         │
                 └──────────────────────────────────────────┘
@@ -1062,8 +1062,8 @@ every nearby-object position every frame through a 20-minute run.
    or `n/a`, and cross-checks trailer ↔ file staging (e.g. `Changelog: updated` requires
    `CHANGELOG.md` to be in the diff). Runs via `bash .githooks/validate-policy.sh ci-pr ...`.
 2. **`test`** — sets up Java 21 (Temurin) with Maven cache, then runs
-   `mvn test -B` and reads the resulting
-   session manifest.
+   `mvn test -B` and reads `target/surefire-reports` and
+   `target/trace-reports`.
 
 Trace replay tests run in the `test` job but **skip gracefully** (`Assumptions.assumeTrue`)
 whenever their `.bk2` or ROM is unavailable — so CI passes without committing ROMs. What CI
@@ -1166,8 +1166,8 @@ a self-contained briefing. In the trace context, typical sub-agent roles are:
 
 - "Read the first error in the context file and identify the ROM routine implicated."
 - "Find the corresponding engine code and propose a minimal fix."
-- "Run `mvn test -Dtest=TestS1Mz1TraceReplay`,
-  read the session manifest, and report the new error count."
+- "Run `mvn test -Dtest=TestS1Mz1TraceReplay`, inspect
+  `target/trace-reports`, and report the new error count."
 - "Record a fresh trace in BizHawk and update the fixture."
 
 Results come back as short reports; the orchestrator decides what to do next.

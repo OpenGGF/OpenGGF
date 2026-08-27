@@ -63,16 +63,10 @@ public final class S1AudioParityTool {
             throw new IllegalArgumentException("audio parity output must not be under src/test/resources");
         }
         Path canonical = canonicalCandidate(normalized);
-        List<Path> allowedRoots = new ArrayList<>();
-        allowedRoots.add(repo.resolve("target/audio-parity").normalize());
-        String diagnostics = sessionDiagnostics();
-        if (diagnostics != null && !diagnostics.isBlank()) {
-            allowedRoots.add(Path.of(diagnostics).toAbsolutePath().normalize()
-                    .resolve("audio-parity"));
-        }
-        if (allowedRoots.stream().noneMatch(root -> canonical.startsWith(canonicalCandidate(root)))) {
+        Path allowedRoot = repo.resolve("target/audio-parity").normalize();
+        if (!canonical.startsWith(canonicalCandidate(allowedRoot))) {
             throw new IllegalArgumentException(
-                    "audio parity output is outside repository target/audio-parity or the approved session diagnostic root");
+                    "audio parity output is outside repository target/audio-parity");
         }
         if (canonical.startsWith(resources)) {
             throw new IllegalArgumentException("audio parity output must not be under src/test/resources");
@@ -215,20 +209,7 @@ public final class S1AudioParityTool {
     }
 
     private static Path defaultOutputRoot(Path repository) {
-        String diagnostics = sessionDiagnostics();
-        if (diagnostics == null || diagnostics.isBlank()) {
-            return repository.resolve("target/audio-parity/s1-ghz");
-        }
-        return Path.of(diagnostics).toAbsolutePath().normalize()
-                .resolve("audio-parity/s1-ghz");
-    }
-
-    private static String sessionDiagnostics() {
-        String diagnostics = System.getProperty("openggf.test.diagnostics");
-        if (diagnostics == null || diagnostics.isBlank()) {
-            diagnostics = System.getenv("OPENGGF_TEST_DIAGNOSTICS");
-        }
-        return diagnostics;
+        return repository.resolve("target/audio-parity/s1-ghz");
     }
 
     private static Path discoverRom(Path repo) {

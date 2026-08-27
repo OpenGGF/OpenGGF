@@ -167,25 +167,23 @@ public final class S1GameplayAudioTimelineTool {
     }
 
     static Path resolveSafeOutputRoot(Path repository, Path requested) {
-        Path legacyExpected = repository.resolve("target/audio-parity/s1-ghz1-gameplay").normalize();
-        Path sessionExpected = sessionOutputRoot(repository);
+        Path expected = repository.resolve("target/audio-parity/s1-ghz1-gameplay").normalize();
         if (containsSymlink(requested)) {
             throw new UsageException("output root must not traverse a symbolic link");
         }
         Path candidate = canonicalCandidate(requested);
-        if (!candidate.equals(canonicalCandidate(legacyExpected))
-                && !candidate.equals(canonicalCandidate(sessionExpected))) {
+        if (!candidate.equals(canonicalCandidate(expected))) {
             throw new UsageException("output root must be the approved S1 gameplay-audio diagnostic root");
         }
         return candidate;
     }
 
     private static Path safeRunRoot(Path repository, Path requested) {
-        Path legacyRoot = repository.resolve("target/audio-parity/s1-ghz1-gameplay");
-        Path sessionRoot = sessionOutputRoot(repository);
+        Path root = repository.resolve("target/audio-parity/s1-ghz1-gameplay");
         Path requestedCandidate = canonicalCandidate(requested);
-        Path root = requestedCandidate.startsWith(canonicalCandidate(sessionRoot))
-                ? sessionRoot : legacyRoot;
+        if (!requestedCandidate.startsWith(canonicalCandidate(root))) {
+            throw new UsageException("run root is outside the approved S1 gameplay-audio diagnostic root");
+        }
         root = resolveSafeOutputRoot(repository, root);
         if (containsSymlink(requested) || !Files.isDirectory(requested, LinkOption.NOFOLLOW_LINKS)) {
             throw new UsageException("run root must be an existing non-symlink directory");
@@ -202,27 +200,7 @@ public final class S1GameplayAudioTimelineTool {
     }
 
     private static Path defaultOutputRoot(Path repository) {
-        String diagnostics = sessionDiagnostics();
-        return diagnostics == null || diagnostics.isBlank()
-                ? repository.resolve("target/audio-parity/s1-ghz1-gameplay")
-                : sessionOutputRoot(repository);
-    }
-
-    private static Path sessionOutputRoot(Path repository) {
-        String diagnostics = sessionDiagnostics();
-        if (diagnostics == null || diagnostics.isBlank()) {
-            return repository.resolve("target/audio-parity/s1-ghz1-gameplay");
-        }
-        return Path.of(diagnostics).toAbsolutePath().normalize()
-                .resolve("audio-parity/s1-ghz1-gameplay");
-    }
-
-    private static String sessionDiagnostics() {
-        String diagnostics = System.getProperty("openggf.test.diagnostics");
-        if (diagnostics == null || diagnostics.isBlank()) {
-            diagnostics = System.getenv("OPENGGF_TEST_DIAGNOSTICS");
-        }
-        return diagnostics;
+        return repository.resolve("target/audio-parity/s1-ghz1-gameplay");
     }
 
     private static Path stagingChild(Path runRoot, Path requested) {

@@ -3,16 +3,15 @@ package com.openggf.tests;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Objects;
 
-/** Resolves test-owned diagnostic output without changing no-session defaults. */
+/** Resolves test-owned diagnostic output below the current worktree's target tree. */
 public final class TestSessionOutputPaths {
 
     private static final String TRACE_REPORTS_PROPERTY = "openggf.trace.reports";
@@ -40,9 +39,8 @@ public final class TestSessionOutputPaths {
     }
 
     /**
-     * Reserves a logical report owner. The metadata sidecar is published with
-     * CREATE_NEW semantics, so a repeated invocation cannot silently replace
-     * an earlier report with the same owner key.
+     * Reserves a logical report owner. Repeating the same invocation resolves
+     * the same path so a later raw-Maven run replaces stale evidence.
      */
     public static ReportAllocation allocateReport(
             String profile,
@@ -62,8 +60,7 @@ public final class TestSessionOutputPaths {
      * Allocates a report below an explicitly selected directory. This is used
      * by diagnostic fixtures that override their report directory (often a
      * per-test temporary directory) and therefore must retain that override.
-     * The legacy report basename is retained for those callers; the owner
-     * sidecar still makes a duplicate publication fail closed.
+     * The legacy report basename is retained for those callers.
      */
     public static ReportAllocation allocateReport(
             Path outputDirectory,
@@ -125,18 +122,17 @@ public final class TestSessionOutputPaths {
                 + "  \"owner_key\": \"" + allocation.ownerKey() + "\",\n"
                 + "  \"physical_path\": \"" + json(allocation.physicalPath().toString()) + "\"\n"
                 + "}\n";
-        publishCreateNew(allocation.metadataPath(), metadata);
+        publishAtomically(allocation.metadataPath(), metadata);
     }
 
     /**
-     * Publishes one report or context file without replacing an existing file.
-     * A repeated publication of byte-identical content is idempotent; a
-     * different publication remains a hard collision.
+     * Atomically publishes one report or context file, replacing stale output
+     * from a previous raw-Maven invocation of the same test.
      */
     public static void publish(Path destination, String content) throws IOException {
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(content, "content");
-        publishCreateNew(destination, content);
+        publishAtomically(destination, content);
     }
 
     public record ReportAllocation(
@@ -161,7 +157,7 @@ public final class TestSessionOutputPaths {
         return safe.equals(".") || safe.equals("..") ? "_" + safe : safe;
     }
 
-    private static void publishCreateNew(Path destination, String content) throws IOException {
+    private static void publishAtomically(Path destination, String content) throws IOException {
         Path parent = destination.toAbsolutePath().normalize().getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -172,23 +168,12 @@ public final class TestSessionOutputPaths {
             Files.writeString(temporary, content, StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
             try {
-                // A hard link publishes the complete temporary file atomically
-                // and has CREATE_NEW destination semantics: unlike an atomic
-                // move with ATOMIC_MOVE alone, it cannot replace a prior owner.
-                Files.createLink(destination, temporary);
-                Files.delete(temporary);
-            } catch (FileAlreadyExistsException e) {
-                // The replay finally block may publish the same logical report
-                // after the normal divergence path already wrote it. Accept
-                // that exact repeat, but never let a changed report replace
-                // evidence from the first publication.
-                if (!Files.isRegularFile(destination, LinkOption.NOFOLLOW_LINKS)
-                        || Files.mismatch(destination, temporary) != -1L) {
-                    throw e;
-                }
+                Files.move(temporary, destination,
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
             } catch (UnsupportedOperationException e) {
                 throw new IOException(
-                        "exclusive atomic report publication is unsupported for " + destination,
+                        "atomic report publication is unsupported for " + destination,
                         e);
             }
         } finally {

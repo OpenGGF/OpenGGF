@@ -241,8 +241,6 @@ This release should focus on reducing obvious gaps rather than introducing new s
   S3K donation alone.
 - Documentation cleanup around what is complete, partial, or intentionally deferred.
 
-## 1.0 Criteria
-
 ## v0.8 Tooling Ask: Actworks
 
 Agent worktree and scratch-lifecycle research continues in the public
@@ -251,6 +249,8 @@ the lifecycle tools live there; [cowtree](https://github.com/raiscan/cowtree)
 remains its own repository. OpenGGF has no runtime, build, test, or contributor
 workflow dependency on Actworks. Any future reintroduction must prove bounded
 storage, explicit lifecycle closure, and material benefit before adoption.
+
+## 1.0 Criteria
 
 Version `1.0` should not mean "every object from every game has been implemented."
 

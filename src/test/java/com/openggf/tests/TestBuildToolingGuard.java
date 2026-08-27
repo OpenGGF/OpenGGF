@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -463,9 +464,10 @@ class TestBuildToolingGuard {
             boolean hasTargetResolver = source.contains("TestSessionOutputPaths.")
                     || source.contains("openggf.test.diagnostics")
                     || source.contains("openggf.artifact.root")
-                    || source.contains("OPENGGF_TEST_DIAGNOSTICS")
                     || source.contains("${openggf.")
-                    || source.contains("$REPO/target");
+                    || source.contains("$REPO/target")
+                    || source.contains("$repo_root/target")
+                    || source.contains("repository.resolve(\"target/");
             if (!hasTargetResolver) {
                 violations.add(relative + " does not resolve a default output beneath the worktree target tree");
             }
@@ -1355,6 +1357,53 @@ class TestBuildToolingGuard {
             fail("CI and release Maven jobs must use direct Maven and worktree-local target paths:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
+    }
+
+    @Test
+    void retiredSessionRelocationMustNotSurviveInSupportedWorkflows() throws Exception {
+        String release = Files.readString(Path.of(".github/workflows/release.yml"));
+        assertFalse(release.contains("path: target/*"),
+                "release jobs must upload only finished archives, not the complete Maven target tree");
+        for (String archive : List.of(
+                "target/OpenGGF-windows.zip",
+                "target/OpenGGF-macos.zip",
+                "target/OpenGGF-linux.tar.gz")) {
+            assertTrue(release.contains(archive), "release workflow must upload " + archive);
+        }
+
+        String parity = Files.readString(Path.of("tools/audio/run_s1_audio_parity.sh"));
+        assertTrue(parity.contains("cd \"$REPO\""),
+                "audio parity Maven must run from the worktree root so .mvn/jvm.config applies");
+        assertFalse(parity.contains("-f \"$REPO/pom.xml\""),
+                "supported tooling must not launch Maven outside the worktree root");
+
+        for (String file : List.of(
+                "tools/audio/run_s1_audio_parity.sh",
+                "tools/audio/run_complete_audio_parity.sh",
+                "src/main/java/com/openggf/tools/audio/parity/S1AudioParityTool.java",
+                "src/main/java/com/openggf/tools/audio/timeline/S1GameplayAudioTimelineTool.java")) {
+            String source = Files.readString(Path.of(file));
+            for (String retired : List.of(
+                    "OPENGGF_ARTIFACT_ROOT", "OPENGGF_BUILD_DIRECTORY",
+                    "OPENGGF_TEST_DIAGNOSTICS", "OPENGGF_TEST_MANIFEST")) {
+                assertFalse(source.contains(retired), file + " still accepts retired relocation: " + retired);
+            }
+        }
+
+        for (String file : List.of(
+                "docs/guide/contributing/dev-setup.md",
+                "docs/guide/PLAN.md",
+                "docs/guide/contributing/trace-replay.md",
+                "docs/guide/contributing/trace-framework-reference.md")) {
+            String guidance = Files.readString(Path.of(file)).toLowerCase(Locale.ROOT);
+            assertFalse(guidance.contains("session manifest"), file + " still directs contributors to session manifests");
+            assertFalse(guidance.contains("session guard"), file + " still describes the retired session guard");
+        }
+
+        String roadmap = Files.readString(Path.of("ROADMAP.md"));
+        assertTrue(roadmap.indexOf("## v0.8 Tooling Ask: Actworks")
+                        < roadmap.indexOf("## 1.0 Criteria"),
+                "the Actworks v0.8 ask must not capture the 1.0 criteria body");
     }
 
     @Test

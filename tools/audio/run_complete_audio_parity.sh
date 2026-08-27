@@ -6,7 +6,7 @@ readonly script_dir="$(CDPATH= cd -- "$(/usr/bin/dirname -- "$0")" && /bin/pwd -
 readonly repo_root="$(CDPATH= cd -- "$script_dir/../.." && /bin/pwd -P)"
 readonly tool_class='com.openggf.tools.audio.completerun.CompleteRunAudioTool'
 readonly java_bin='/usr/bin/java'
-readonly artifact_root="${OPENGGF_ARTIFACT_ROOT:-$repo_root/target}"
+readonly artifact_root="$repo_root/target"
 readonly jar="$artifact_root/OpenGGF-0.6.prerelease-jar-with-dependencies.jar"
 
 usage() {
@@ -15,20 +15,8 @@ usage() {
 
 if [[ ${1-} == --help ]]; then usage; exit 0; fi
 
-session_owned_option() {
-  local value=${1-}
-  [[ -n "${OPENGGF_TEST_MANIFEST:-}" \
-     && -n "${OPENGGF_TEST_DIAGNOSTICS:-}" \
-     && "$value" == *"$OPENGGF_TEST_MANIFEST"* \
-     && "$value" == *"$OPENGGF_TEST_DIAGNOSTICS"* ]]
-}
-
 for name in BASH_ENV ENV JAVA_TOOL_OPTIONS MAVEN_OPTS JAVA_HOME CLASSPATH LD_PRELOAD LD_LIBRARY_PATH LD_AUDIT GIT_CONFIG GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM SSH_ASKPASS; do
   if [[ -v $name ]]; then
-    if [[ $name == JAVA_TOOL_OPTIONS || $name == MAVEN_OPTS ]] \
-       && session_owned_option "${!name}"; then
-      continue
-    fi
     /usr/bin/printf 'rejected ambient variable: %s\n' "$name" >&2; exit 2
   fi
 done
@@ -71,11 +59,7 @@ if [[ -n $(/usr/bin/find "$reference_home" \( -type l -o -type f -links +1 -o \!
 fi
 [[ -f $jar && ! -L $jar ]] || { /usr/bin/printf '%s\n' 'fixed OpenGGF tool jar is missing' >&2; exit 4; }
 
-if [[ -n "${OPENGGF_TEST_DIAGNOSTICS:-}" ]]; then
-  readonly allowed_root="$OPENGGF_TEST_DIAGNOSTICS/audio-parity/runs"
-else
-  readonly allowed_root="$repo_root/target/audio-parity/runs"
-fi
+readonly allowed_root="$repo_root/target/audio-parity/runs"
 ensure_plain_child_dir() {
   local parent=$1 name=$2 child="$1/$2"
   [[ -d $parent && ! -L $parent && $(CDPATH= cd -- "$parent" && /bin/pwd -P) == "$parent" ]] || {
@@ -92,13 +76,9 @@ ensure_plain_child_dir() {
     /usr/bin/printf '%s\n' 'canonical target has a redirected ancestor' >&2; exit 2;
   }
 }
-if [[ -n "${OPENGGF_TEST_DIAGNOSTICS:-}" ]]; then
-  /usr/bin/mkdir -p -- "$allowed_root"
-else
-  ensure_plain_child_dir "$repo_root" target
-  ensure_plain_child_dir "$repo_root/target" audio-parity
-  ensure_plain_child_dir "$repo_root/target/audio-parity" runs
-fi
+ensure_plain_child_dir "$repo_root" target
+ensure_plain_child_dir "$repo_root/target" audio-parity
+ensure_plain_child_dir "$repo_root/target/audio-parity" runs
 readonly allowed_real="$(CDPATH= cd -- "$allowed_root" && /bin/pwd -P)"
 [[ $allowed_real == "$allowed_root" ]] || {
   /usr/bin/printf '%s\n' 'canonical target has a redirected ancestor' >&2; exit 2;

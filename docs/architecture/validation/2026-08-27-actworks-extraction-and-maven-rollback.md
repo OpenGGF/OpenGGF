@@ -68,3 +68,20 @@ sandbox-compatibility gap before integration.
 
 Merged-suite, host-cutover, and cleanup evidence are recorded only after those
 operations complete.
+
+## Independent pre-merge review
+
+The first independent review rejected the branch for six concrete gaps: stale
+trace reports could not be replaced in a reused target tree, release jobs
+uploaded all of `target`, one supported audio script invoked Maven from outside
+the worktree root, audio tools still accepted session-era relocation variables,
+three active guides retained coordinator language, and the Actworks heading
+captured the 1.0 roadmap body.
+
+The follow-up closes each gap. Report and owner-sidecar publication now uses an
+atomic replacing move; release upload paths name only the three platform
+archives; supported audio Maven changes directory to the worktree root; audio
+outputs are fixed beneath that worktree's `target/audio-parity`; active guide
+references and the roadmap heading are corrected. The new boundary guard
+asserts these conditions. Its release-upload assertion and the repeated-report
+test were each observed red before the fixes and green afterward.
