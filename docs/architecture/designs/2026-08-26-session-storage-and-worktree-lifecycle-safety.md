@@ -55,8 +55,7 @@ The delivery will:
 - It does not rename `agent-scratch` inside OpenGGF. The eventual extraction
   will carry the new product name; the containment change preserves the
   installed command for compatibility.
-- It does not change gameplay, trace comparison, PLC readiness, or hardware
-  timing authority. `Cuepoint` remains reserved for that engine domain.
+- It does not change gameplay, trace comparison, or hardware timing authority.
 - It does not automatically delete dirty worktrees, unknown filesystem
   directories, unmerged branches, or user-created artifacts.
 - It does not make age-based retention the only protection against a full
