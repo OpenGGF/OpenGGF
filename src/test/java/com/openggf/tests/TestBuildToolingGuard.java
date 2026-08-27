@@ -705,15 +705,14 @@ class TestBuildToolingGuard {
         assertTrue(projectProperties != null, "pom.xml must define ordinary capacity properties");
         assertEquals("1", directChild(projectProperties, "surefire.forkCount").getTextContent().trim(),
                 "the ordinary suite must reuse one fork instead of splitting capacity across four heaps");
-
-        String ordinaryArgLine = directChild(projectProperties, "surefire.argLine")
-                .getTextContent().trim();
-        assertTrue(ordinaryArgLine.contains("${test.cds.argLine}"),
-                "the ordinary suite must retain its CDS setting");
-        assertTrue(ordinaryArgLine.contains("${mockito.agent.argLine}"),
-                "the ordinary suite must retain the Mockito agent");
-        assertTrue(ordinaryArgLine.endsWith("-Xmx3g"),
-                "the ordinary suite must use the proven 3 GiB heap");
+        Element ordinaryReuseForks = directChild(projectProperties, "surefire.reuseForks");
+        assertTrue(ordinaryReuseForks != null,
+                "pom.xml must expose the ordinary fork-reuse property");
+        assertEquals("true", ordinaryReuseForks.getTextContent().trim(),
+                "the ordinary suite must reuse its single fork");
+        assertEquals("${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g",
+                directChild(projectProperties, "surefire.argLine").getTextContent().trim(),
+                "the ordinary suite must retain exact CDS/Mockito semantics and the proven-sufficient 3 GiB heap");
 
         Element build = directChild(pom.getDocumentElement(), "build");
         Element plugins = directChild(build, "plugins");
@@ -723,13 +722,23 @@ class TestBuildToolingGuard {
         assertEquals("${surefire.forkCount}", directChild(configuration, "forkCount")
                         .getTextContent().trim(),
                 "the ordinary execution must consume the shared capacity property");
-        assertEquals("true", directChild(configuration, "reuseForks").getTextContent().trim(),
-                "the ordinary execution must reuse its single fork");
+        assertEquals("${surefire.reuseForks}", directChild(configuration, "reuseForks")
+                        .getTextContent().trim(),
+                "the ordinary execution must consume the shared fork-reuse property");
         assertEquals("${surefire.argLine} -Djava.io.tmpdir=\"${openggf.test.tmpdir}\" "
                         + "-Dorg.lwjgl.system.SharedLibraryExtractPath=\"${openggf.test.tmpdir}"
                         + "/lwjgl-${surefire.forkNumber}\"",
                 directChild(configuration, "argLine").getTextContent().trim(),
                 "the ordinary execution must retain the fork-local temp and LWJGL paths");
+
+        NodeList reuseForks = pom.getElementsByTagName("reuseForks");
+        for (int i = 0; i < reuseForks.getLength(); i++) {
+            if (reuseForks.item(i).getParentNode() == projectProperties) {
+                continue;
+            }
+            assertEquals("${surefire.reuseForks}", reuseForks.item(i).getTextContent().trim(),
+                    "every Surefire execution must consume the shared fork-reuse property");
+        }
     }
 
     /**
@@ -740,8 +749,8 @@ class TestBuildToolingGuard {
      * <p>This exists because {@code -DforkCount=1} silently does nothing:
      * {@code pom.xml} binds {@code <forkCount>} to {@code ${surefire.forkCount}}
      * (default 1, with profile-specific overrides), so a user-supplied
-     * {@code forkCount} property is never consulted and the run stays on four
-     * forks. Trace measurements were taken under that misapprehension and had to
+     * {@code forkCount} property is never consulted. Trace measurements were
+     * previously taken under that misapprehension and had to
      * be redone; the correction is recorded in
      * {@code docs/status/trace-frontier-log.md}. The failure mode is the same
      * one the fixture alignment guard targets — a knob that reads as set but is

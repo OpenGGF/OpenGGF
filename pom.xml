@@ -28,8 +28,14 @@
         <openggf.test.diagnostics>${project.build.directory}/diagnostics</openggf.test.diagnostics>
         <openggf.artifact.root>${project.build.directory}</openggf.artifact.root>
         <openggf.distribution.root>${project.build.directory}</openggf.distribution.root>
+        <!-- Detached-baseline capacity evidence completed 2,318 reports / 18,201
+             tests in one reused 3 GiB fork, with 12 stable samples and no dump,
+             temp-space, or OOM evidence. This proves 3 GiB sufficient; it does
+             not establish a minimum. The former four 1 GiB forks OOMed before
+             TestSampleRomArtRemixIntegration reported. -->
         <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
         <surefire.forkCount>1</surefire.forkCount>
+        <surefire.reuseForks>true</surefire.reuseForks>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
@@ -181,7 +187,7 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
                             <groups>performance-measurement</groups>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
@@ -252,7 +258,7 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -374,7 +380,7 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -443,7 +449,7 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -540,7 +546,7 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
                             <systemPropertyVariables>
                                 <project.basedir>${project.basedir}</project.basedir>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
@@ -589,7 +595,7 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -1246,7 +1252,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                          parallelism is unsafe due to singleton state, and the
                          ordinary suite needs the full shared 3 GiB capacity. -->
                     <forkCount>${surefire.forkCount}</forkCount>
-                    <reuseForks>true</reuseForks>
+                    <reuseForks>${surefire.reuseForks}</reuseForks>
                     <systemPropertyVariables>
                         <!-- Architectural guard tests resolve source paths from the project root,
                              which surefire-launched forks inherit; pass it explicitly so IDE

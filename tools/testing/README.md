@@ -40,18 +40,22 @@ artifacts from the run being exported:
 - the effective POM generated with the same profiles and property overrides;
   and
 - the exact `OPENGGF_RUNTIME_INPUTS` value used for the run. It contains the
-  canonical selector exactly once, the effective-POM path exactly once for a
-  direct capacity override, and the reviewed repeated-identity cardinality
-  file exactly once when that file is used.
+  canonical selector, Maven-argument inventory, and effective-POM paths exactly
+  once for a direct capacity override, plus the reviewed repeated-identity
+  cardinality file exactly once when that file is used.
 
 Direct Maven may use an explicit `surefire.argLine` only as a capacity
-override. The resolved value must preserve the effective POM's exact CDS and
-Mockito-agent arguments, followed only by one `-Xmx` argument. The effective
-project property must prove the same capacity and standard property wiring;
-the selected Surefire execution must prove the fully resolved exact value and
-then retain Maven's fork-local temp and LWJGL properties. Unresolved runtime
-arguments, unsupported property placeholders, or mismatched evidence fail
-closed.
+override. A certifying invocation must contain exactly one explicit value for
+each of `surefire.includesFile`, `surefire.argLine`, `surefire.forkCount`, and
+`surefire.reuseForks`; the last two must be `1` and `true`. The resolved arg line
+must preserve exact CDS and Mockito-agent semantics, may retain macOS
+`-XstartOnFirstThread`, and must end in the proven-sufficient `-Xmx3g` heap.
+The selected Surefire execution must prove the same resolved JVM arguments and
+then exactly the target-local `java.io.tmpdir` and fork-local LWJGL extraction
+properties. Unresolved `${...}` or Surefire `@{...}` placeholders, duplicate or
+mismatched evidence, external temp paths, and shared LWJGL paths fail closed.
+The 3-GiB value is proven sufficient by the recorded capacity run; it is not a
+claim that 3 GiB is the minimum usable heap.
 Unlike historical managed-session evidence, direct mode neither supplies nor
 accepts invented adapter-owned `user.home`, LWJGL, session-root, or run-id
 suffixes.
@@ -67,25 +71,31 @@ $classes = Join-Path $evidence 'ordinary-classes.txt'
 $selector = (Resolve-Path (Join-Path $evidence 'ordinary.includes')).Path
 $effectivePom = Join-Path $evidence 'ordinary-effective-pom.xml'
 $argumentInventory = Join-Path $evidence 'ordinary-maven-arguments.txt'
-$localRepository = (& mvn -Dmse=off help:evaluate `
-    -Dexpression=settings.localRepository -q -DforceStdout).Trim()
-$mockitoAgent = Join-Path $localRepository `
-    'org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar'
-$capacityArgLine = "-Xshare:off -javaagent:`"$mockitoAgent`" -Xmx3g"
-$mavenArguments = @(
+$projectArgLine = (& mvn -Dmse=off help:evaluate `
+    -Dexpression=surefire.argLine -q -DforceStdout).Trim()
+$heapMatches = [regex]::Matches($projectArgLine, '(?<!\S)-Xmx\S+(?!\S)')
+if ($heapMatches.Count -ne 1 -or
+    $heapMatches[0].Index + $heapMatches[0].Length -ne $projectArgLine.Length) {
+    throw "The effective project argLine must contain one terminal heap option: $projectArgLine"
+}
+$capacityArgLine = $projectArgLine.Substring(0, $heapMatches[0].Index) + '-Xmx3g'
+$capacityProperties = @(
     '-Dmse=off'
     "-Dsurefire.argLine=$capacityArgLine"
+    '-Dsurefire.forkCount=1'
+    '-Dsurefire.reuseForks=true'
     "-Dsurefire.includesFile=$selector"
-    'test'
 )
+$mavenArguments = @($capacityProperties) + 'test'
 
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
-& mvn -Dmse=off "-Dsurefire.argLine=$capacityArgLine" `
-    "-Dsurefire.includesFile=$selector" help:effective-pom `
-    "-Doutput=$effectivePom"
+& mvn @capacityProperties help:effective-pom "-Doutput=$effectivePom"
 [IO.File]::WriteAllLines($argumentInventory, $mavenArguments,
     [Text.UTF8Encoding]::new($false))
-$env:OPENGGF_RUNTIME_INPUTS = @($selector, $effectivePom) -join `
+$argumentInventory = (Resolve-Path $argumentInventory).Path
+$env:OPENGGF_RUNTIME_INPUTS = @(
+    $selector, $argumentInventory, $effectivePom
+) -join `
     [IO.Path]::PathSeparator
 & mvn @mavenArguments
 
