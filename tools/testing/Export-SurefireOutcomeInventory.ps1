@@ -11,6 +11,7 @@ param(
     [string] $RepeatedIdentityCardinalityPath = '',
     [string] $SelectorPatternInventory = '',
     [string] $MavenArgumentInventory = '',
+    [string] $MavenLocalRepositoryPath = '',
     [string] $RuntimeInputs = '',
     [string] $EffectivePomPath = '',
     [string] $SurefireExecutionId = 'default-test'
@@ -225,14 +226,182 @@ function Assert-RuntimeInputExactlyOnce {
     param([string] $CanonicalPath, [string] $AuthenticatedRuntimeInputs, [string] $Description)
     $matches = 0
     foreach ($runtimeInput in $AuthenticatedRuntimeInputs.Split([System.IO.Path]::PathSeparator, [System.StringSplitOptions]::RemoveEmptyEntries)) {
+        Assert-NoUnresolvedPlaceholder $runtimeInput "authenticated RuntimeInputs entry"
         if ([System.IO.Path]::IsPathFullyQualified($runtimeInput) -and
-            [System.IO.Path]::GetFullPath($runtimeInput) -ceq $CanonicalPath) {
+            (Test-PathsEqual $runtimeInput $CanonicalPath)) {
             $matches++
         }
     }
     if ($matches -ne 1) {
         throw "$Description must appear in OPENGGF_RUNTIME_INPUTS exactly once; found $matches"
     }
+}
+
+function Assert-RuntimeInputAbsent {
+    param([string] $CanonicalPath, [string] $AuthenticatedRuntimeInputs, [string] $Description)
+    foreach ($runtimeInput in $AuthenticatedRuntimeInputs.Split([System.IO.Path]::PathSeparator, [System.StringSplitOptions]::RemoveEmptyEntries)) {
+        Assert-NoUnresolvedPlaceholder $runtimeInput 'authenticated RuntimeInputs entry'
+        if ([System.IO.Path]::IsPathFullyQualified($runtimeInput) -and
+            (Test-PathsEqual $runtimeInput $CanonicalPath)) {
+            throw "$Description must not appear in OPENGGF_RUNTIME_INPUTS"
+        }
+    }
+}
+
+function Assert-NoUnresolvedPlaceholder {
+    param([AllowEmptyString()] [string] $Value, [string] $Description)
+    if ($Value -match '\$\{[^}]*\}|@\{[^}]*\}') {
+        throw "$Description contains an unresolved property placeholder: [$Value]"
+    }
+}
+
+function Test-CanonicalCapacityArgLineTemplate {
+    param([string] $Value)
+    return $Value -ceq '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' -or
+        $Value -ceq '-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g'
+}
+
+function ConvertFrom-JvmArgumentLine {
+    param([string] $Value, [string] $Description)
+    $tokens = [System.Collections.Generic.List[string]]::new()
+    $token = [System.Text.StringBuilder]::new()
+    $quoted = $false
+    $started = $false
+    foreach ($character in $Value.ToCharArray()) {
+        if ($character -eq '"') {
+            $quoted = -not $quoted
+            $started = $true
+            continue
+        }
+        if (-not $quoted -and [char]::IsWhiteSpace($character)) {
+            if ($started) {
+                $tokens.Add($token.ToString())
+                [void]$token.Clear()
+                $started = $false
+            }
+            continue
+        }
+        [void]$token.Append($character)
+        $started = $true
+    }
+    if ($quoted) {
+        throw "$Description contains an unmatched quote"
+    }
+    if ($started) {
+        $tokens.Add($token.ToString())
+    }
+    return $tokens.ToArray()
+}
+
+function ConvertTo-PortablePath {
+    param([string] $Value)
+    return $Value.Replace('\', '/')
+}
+
+function Test-PortableFullyQualifiedPath {
+    param([string] $Value)
+    $portable = ConvertTo-PortablePath $Value
+    return $portable.StartsWith('/', [System.StringComparison]::Ordinal) -or
+        $portable -match '^[A-Za-z]:/'
+}
+
+function Test-PathWithin {
+    param([string] $Child, [string] $Parent)
+    $comparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
+        [System.StringComparison]::OrdinalIgnoreCase
+    } else {
+        [System.StringComparison]::Ordinal
+    }
+    $parentFull = [System.IO.Path]::GetFullPath($Parent).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar)
+    $childFull = [System.IO.Path]::GetFullPath($Child)
+    return $childFull.Equals($parentFull, $comparison) -or
+        $childFull.StartsWith($parentFull + [System.IO.Path]::DirectorySeparatorChar, $comparison)
+}
+
+function Test-PathsEqual {
+    param([string] $Left, [string] $Right)
+    $comparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
+        [System.StringComparison]::OrdinalIgnoreCase
+    } else {
+        [System.StringComparison]::Ordinal
+    }
+    return [System.IO.Path]::GetFullPath($Left).Equals(
+        [System.IO.Path]::GetFullPath($Right), $comparison)
+}
+
+function Resolve-MavenLocalRepositoryEvidence {
+    param([string] $RepositoryPath, [string[]] $MockitoArtifactSegments)
+    if ([string]::IsNullOrWhiteSpace($RepositoryPath)) {
+        throw 'DirectMaven effective Mockito placeholder requires MavenLocalRepositoryPath evidence'
+    }
+    Assert-NoUnresolvedPlaceholder $RepositoryPath 'MavenLocalRepositoryPath'
+    if (-not [System.IO.Path]::IsPathFullyQualified($RepositoryPath)) {
+        throw 'MavenLocalRepositoryPath must be a canonical absolute directory'
+    }
+    $fullRepositoryPath = [System.IO.Path]::GetFullPath($RepositoryPath)
+    if (-not (Test-Path -LiteralPath $fullRepositoryPath -PathType Container)) {
+        throw "MavenLocalRepositoryPath directory does not exist: $fullRepositoryPath"
+    }
+    $resolvedRepositoryPath = (Resolve-Path -LiteralPath $fullRepositoryPath).Path
+    if (-not (Test-PathsEqual $fullRepositoryPath $resolvedRepositoryPath)) {
+        throw "MavenLocalRepositoryPath must be canonical: $resolvedRepositoryPath"
+    }
+    $trustedRepositoryPath = Assert-NoReparsePointInAncestry `
+        $fullRepositoryPath `
+        'Maven local repository'
+    $expectedMockitoJar = $trustedRepositoryPath
+    foreach ($segment in $MockitoArtifactSegments) {
+        $expectedMockitoJar = [System.IO.Path]::Combine($expectedMockitoJar, $segment)
+    }
+    if (-not (Test-Path -LiteralPath $expectedMockitoJar -PathType Leaf)) {
+        throw "MavenLocalRepositoryPath does not contain the exact effective Mockito jar: $expectedMockitoJar"
+    }
+    $trustedMockitoJar = Assert-NoReparsePointInAncestry `
+        $expectedMockitoJar `
+        'Mockito agent jar'
+    if (-not (Test-PathWithin $trustedMockitoJar $trustedRepositoryPath)) {
+        throw 'Effective Mockito jar must remain beneath MavenLocalRepositoryPath'
+    }
+    return [pscustomobject]@{
+        RepositoryPath = $trustedRepositoryPath
+        MockitoJarPath = $trustedMockitoJar
+    }
+}
+
+function Get-MavenRepositoryMockitoTokenIndex {
+    param([string[]] $Tokens, [string] $Description)
+    $repositoryPlaceholder = '${settings.localRepository}'
+    $placeholderCount = 0
+    foreach ($token in $Tokens) {
+        $placeholderCount += [System.Text.RegularExpressions.Regex]::Matches(
+            $token,
+            [System.Text.RegularExpressions.Regex]::Escape($repositoryPlaceholder)).Count
+    }
+    if ($placeholderCount -eq 0) {
+        return -1
+    }
+    if ($placeholderCount -ne 1) {
+        throw "$Description contains multiple Maven repository placeholders"
+    }
+    $javaAgentIndexes = @(
+        for ($index = 0; $index -lt $Tokens.Count; $index++) {
+            if ($Tokens[$index].StartsWith('-javaagent:', [System.StringComparison]::Ordinal)) {
+                $index
+            }
+        }
+    )
+    if ($javaAgentIndexes.Count -ne 1) {
+        throw "$Description Maven repository placeholder requires one expected Mockito javaagent token"
+    }
+    $javaAgentIndex = $javaAgentIndexes[0]
+    $mockitoTemplatePath = $Tokens[$javaAgentIndex].Substring('-javaagent:'.Length)
+    if (-not (ConvertTo-PortablePath $mockitoTemplatePath).StartsWith(
+            $repositoryPlaceholder + '/', [System.StringComparison]::Ordinal)) {
+        throw "$Description Maven repository placeholder is permitted only as the exact Mockito javaagent path prefix"
+    }
+    return $javaAgentIndex
 }
 
 function ConvertFrom-MavenPropertyDefinition {
@@ -281,7 +450,7 @@ function Get-ApprovedMavenPropertyName {
     $approvedNames = @(
         'mse',
         'sonic1.rom.path', 'sonic2.rom.path', 's3k.rom.path',
-        'surefire.argLine', 'surefire.forkCount'
+        'surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks', 'surefire.runOrder'
     )
     foreach ($approvedName in $approvedNames) {
         if ($Name.Equals($approvedName, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -296,7 +465,8 @@ function Assert-ExplicitSourceSelectorContract {
         [string[]] $SourceClasses,
         [string] $PatternPath,
         [string] $ArgumentPath,
-        [string] $AuthenticatedRuntimeInputs
+        [string] $AuthenticatedRuntimeInputs,
+        [bool] $IsDirectMaven
     )
 
     foreach ($path in @($PatternPath, $ArgumentPath)) {
@@ -306,8 +476,9 @@ function Assert-ExplicitSourceSelectorContract {
     }
 
     $canonicalPatternPath = (Resolve-Path -LiteralPath $PatternPath).Path
+    $canonicalArgumentPath = (Resolve-Path -LiteralPath $ArgumentPath).Path
     if (-not [System.IO.Path]::IsPathFullyQualified($PatternPath) -or
-        [System.IO.Path]::GetFullPath($PatternPath) -cne $canonicalPatternPath) {
+        -not (Test-PathsEqual $PatternPath $canonicalPatternPath)) {
         throw "surefire.includesFile must use the canonical absolute selector path: $canonicalPatternPath"
     }
 
@@ -339,6 +510,17 @@ function Assert-ExplicitSourceSelectorContract {
     $includesFileValues = [System.Collections.Generic.List[string]]::new()
     $approvedProperties = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($property in (Read-MavenPropertyArguments $ArgumentPath)) {
+        if ($IsDirectMaven) {
+            $isCapacityTemplate = ([string]$property.Name).Equals(
+                'surefire.argLine', [System.StringComparison]::OrdinalIgnoreCase) -and
+                (Test-CanonicalCapacityArgLineTemplate ([string]$property.Value))
+            if (-not $isCapacityTemplate) {
+                Assert-NoUnresolvedPlaceholder ([string]$property.Value) "authenticated Maven property $($property.Name)"
+            }
+        }
+        elseif (([string]$property.Value).Replace('${surefire.forkNumber}', '') -match '\$\{[^}]*\}|@\{[^}]*\}') {
+            throw "authenticated Maven property $($property.Name) contains an unresolved unsupported property placeholder"
+        }
         if ([string]$property.Name -ceq 'surefire.includesFile') {
             if (-not $property.HasValue -or ([string]$property.Value).Length -eq 0) {
                 throw "surefire.includesFile requires a canonical absolute value: $($property.Argument)"
@@ -365,22 +547,45 @@ function Assert-ExplicitSourceSelectorContract {
         throw "Explicit-source invocation requires exactly one -Dsurefire.includesFile property; found $($includesFileValues.Count)"
     }
     if (-not [System.IO.Path]::IsPathFullyQualified($includesFileValues[0]) -or
-        [System.IO.Path]::GetFullPath($includesFileValues[0]) -cne $canonicalPatternPath) {
+        -not (Test-PathsEqual $includesFileValues[0] $canonicalPatternPath)) {
         throw "surefire.includesFile must equal the canonical absolute selector path: $canonicalPatternPath"
     }
 
     $runtimeMatches = 0
     foreach ($runtimeInput in $AuthenticatedRuntimeInputs.Split([System.IO.Path]::PathSeparator, [System.StringSplitOptions]::RemoveEmptyEntries)) {
+        Assert-NoUnresolvedPlaceholder $runtimeInput 'authenticated RuntimeInputs entry'
         if ([System.IO.Path]::IsPathFullyQualified($runtimeInput) -and
-            [System.IO.Path]::GetFullPath($runtimeInput) -ceq $canonicalPatternPath) {
+            (Test-PathsEqual $runtimeInput $canonicalPatternPath)) {
             $runtimeMatches++
         }
     }
     if ($runtimeMatches -ne 1) {
         throw "OPENGGF_RUNTIME_INPUTS must contain the canonical selector exactly once; found $runtimeMatches"
     }
+    if ($IsDirectMaven) {
+        if (-not [System.IO.Path]::IsPathFullyQualified($ArgumentPath) -or
+            -not (Test-PathsEqual $ArgumentPath $canonicalArgumentPath)) {
+            throw "MavenArgumentInventory must use its canonical absolute path: $canonicalArgumentPath"
+        }
+        Assert-RuntimeInputExactlyOnce $canonicalArgumentPath $AuthenticatedRuntimeInputs 'Maven argument inventory'
+        foreach ($requiredName in @('surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks', 'surefire.runOrder')) {
+            if (-not $approvedProperties.ContainsKey($requiredName)) {
+                throw "DirectMaven capacity preflight requires exactly one explicit $requiredName property"
+            }
+        }
+        if ([string]$approvedProperties['surefire.forkCount'].Value -cne '1') {
+            throw 'DirectMaven capacity preflight requires surefire.forkCount=1'
+        }
+        if ([string]$approvedProperties['surefire.reuseForks'].Value -cne 'true') {
+            throw 'DirectMaven capacity preflight requires surefire.reuseForks=true'
+        }
+        if ([string]$approvedProperties['surefire.runOrder'].Value -cne 'alphabetical') {
+            throw 'DirectMaven capacity preflight requires surefire.runOrder=alphabetical'
+        }
+    }
     return [pscustomobject]@{
         SelectorPath = $canonicalPatternPath
+        ArgumentPath = $canonicalArgumentPath
         ApprovedProperties = $approvedProperties
     }
 }
@@ -430,11 +635,26 @@ function Read-EffectiveSurefireConfiguration {
 
     $values = [ordered]@{}
     $values.projectArgLine = $projectArgLineNodes[0].InnerText
+    foreach ($name in @('test.cds.argLine', 'mockito.agent.argLine', 'openggf.test.tmpdir')) {
+        $nodes = @($document.DocumentElement.SelectNodes("./*[local-name()='properties']/*[local-name()='$name']"))
+        if ($nodes.Count -ne 1 -or [string]::IsNullOrEmpty([string]$nodes[0].InnerText)) {
+            throw "Effective POM must contain exactly one non-empty project property $name; found $($nodes.Count)"
+        }
+        $values[$name] = $nodes[0].InnerText
+    }
+    $buildDirectoryNodes = @($document.DocumentElement.SelectNodes("./*[local-name()='build']/*[local-name()='directory']"))
+    if ($buildDirectoryNodes.Count -ne 1 -or [string]::IsNullOrEmpty([string]$buildDirectoryNodes[0].InnerText)) {
+        throw "Effective POM must contain exactly one non-empty project build directory; found $($buildDirectoryNodes.Count)"
+    }
+    $values.projectBuildDirectory = $buildDirectoryNodes[0].InnerText
     $values.excludes = [string[]]@($configuration.SelectNodes("./*[local-name()='excludes']/*[local-name()='exclude']") | ForEach-Object { $_.InnerText })
     foreach ($name in @('groups', 'excludedGroups', 'argLine', 'forkCount', 'reuseForks')) {
         $node = $configuration.SelectSingleNode("./*[local-name()='$name']")
         $values[$name] = if ($null -eq $node) { '' } else { $node.InnerText }
     }
+    $runOrderNodes = @($configuration.SelectNodes("./*[local-name()='runOrder']"))
+    $values.runOrderCount = $runOrderNodes.Count
+    $values.runOrder = if ($runOrderNodes.Count -eq 1) { $runOrderNodes[0].InnerText } else { '' }
     return [pscustomobject]$values
 }
 
@@ -442,26 +662,272 @@ function Assert-EffectiveSurefireContract {
     param(
         [string] $Path,
         [string] $ExecutionId,
-        [System.Collections.Generic.Dictionary[string, object]] $ApprovedProperties
+        [System.Collections.Generic.Dictionary[string, object]] $ApprovedProperties,
+        [bool] $IsDirectMaven,
+        [string] $Worktree,
+        [string] $LocalRepositoryPath
     )
     $effective = Read-EffectiveSurefireConfiguration $Path $ExecutionId
     if ($ApprovedProperties.ContainsKey('surefire.argLine')) {
         $argumentValue = [string]$ApprovedProperties['surefire.argLine'].Value
-        $expectedPrefix = [string]$effective.projectArgLine + ' -Duser.home='
-        if (-not $argumentValue.StartsWith($expectedPrefix, [System.StringComparison]::Ordinal)) {
-            throw 'Approved Maven property surefire.argLine must preserve the effective project property before adapter-owned session properties'
+        if ($IsDirectMaven) {
+            $usesCapacityTemplate = Test-CanonicalCapacityArgLineTemplate $argumentValue
+            if (-not $usesCapacityTemplate) {
+                Assert-NoUnresolvedPlaceholder $argumentValue 'DirectMaven surefire.argLine proof'
+            }
+            Assert-NoUnresolvedPlaceholder ([string]$effective.'test.cds.argLine') 'DirectMaven effective CDS argument'
+            $cdsTokens = @(ConvertFrom-JvmArgumentLine ([string]$effective.'test.cds.argLine') 'effective CDS argument')
+            if ($cdsTokens.Count -ne 1 -or $cdsTokens[0] -cne '-Xshare:off') {
+                throw 'DirectMaven effective CDS content must be exactly -Xshare:off'
+            }
+
+            $repositoryPlaceholder = '${settings.localRepository}'
+            $mockitoTemplate = [string]$effective.'mockito.agent.argLine'
+            if ($mockitoTemplate -match '@\{[^}]*\}') {
+                throw 'DirectMaven effective Mockito agent content contains an unresolved Surefire placeholder'
+            }
+            $placeholderCount = [System.Text.RegularExpressions.Regex]::Matches(
+                $mockitoTemplate, [System.Text.RegularExpressions.Regex]::Escape($repositoryPlaceholder)).Count
+            $mockitoTemplateRemainder = $mockitoTemplate.Replace($repositoryPlaceholder, '')
+            if ($mockitoTemplateRemainder -match '\$\{[^}]*\}' -or $placeholderCount -gt 1) {
+                throw 'DirectMaven effective Mockito agent content contains an unresolved unsupported property placeholder'
+            }
+            $sourceMockitoTemplateTokens = @(ConvertFrom-JvmArgumentLine $mockitoTemplate 'effective Mockito agent argument')
+            if ($sourceMockitoTemplateTokens.Count -ne 1 -or
+                -not $sourceMockitoTemplateTokens[0].StartsWith('-javaagent:', [System.StringComparison]::Ordinal)) {
+                throw 'DirectMaven effective Mockito agent content must contain exactly one javaagent option'
+            }
+            $templateMockitoPath = $sourceMockitoTemplateTokens[0].Substring('-javaagent:'.Length)
+            $portableTemplate = ConvertTo-PortablePath $templateMockitoPath
+            if ($placeholderCount -eq 1) {
+                if (-not $portableTemplate.StartsWith(
+                        $repositoryPlaceholder + '/', [System.StringComparison]::Ordinal)) {
+                    throw 'DirectMaven effective Mockito agent must resolve directly below settings.localRepository'
+                }
+                $artifactPath = $portableTemplate.Substring($repositoryPlaceholder.Length).TrimStart('/')
+            }
+            else {
+                if (-not (Test-PortableFullyQualifiedPath $portableTemplate)) {
+                    throw 'DirectMaven effective Mockito javaagent path must be absolute'
+                }
+                $artifactMarker = '/org/mockito/mockito-core/'
+                $artifactOffset = $portableTemplate.LastIndexOf(
+                    $artifactMarker, [System.StringComparison]::Ordinal)
+                if ($artifactOffset -lt 0) {
+                    throw 'DirectMaven effective Mockito agent must name the exact mockito-core repository artifact'
+                }
+                $artifactPath = $portableTemplate.Substring($artifactOffset + 1)
+            }
+            $artifactSegments = @($artifactPath.Split('/'))
+            if ($artifactSegments.Count -ne 5 -or
+                $artifactSegments[0] -cne 'org' -or
+                $artifactSegments[1] -cne 'mockito' -or
+                $artifactSegments[2] -cne 'mockito-core' -or
+                $artifactSegments[3].Length -eq 0 -or
+                $artifactSegments[4] -cne "mockito-core-$($artifactSegments[3]).jar") {
+                throw 'DirectMaven effective Mockito agent must name the exact mockito-core repository artifact'
+            }
+
+            $effectiveProjectArgLine = [string]$effective.projectArgLine
+            $projectTokens = @(ConvertFrom-JvmArgumentLine $effectiveProjectArgLine 'effective project argLine')
+            $projectRepositoryTokenIndex = Get-MavenRepositoryMockitoTokenIndex `
+                $projectTokens `
+                'DirectMaven effective project argLine'
+            $effectiveExecutionArgLine = [string]$effective.argLine
+            $executionTokens = @(ConvertFrom-JvmArgumentLine $effectiveExecutionArgLine 'effective Surefire execution argLine')
+            $executionRepositoryTokenIndex = Get-MavenRepositoryMockitoTokenIndex `
+                $executionTokens `
+                'DirectMaven effective Surefire execution argLine'
+            $unsupportedExecutionRemainder = $effectiveExecutionArgLine.Replace(
+                $repositoryPlaceholder, '').Replace('${surefire.forkNumber}', '')
+            if ($unsupportedExecutionRemainder -match '\$\{[^}]*\}|@\{[^}]*\}') {
+                throw 'DirectMaven effective Surefire execution argLine contains an unresolved unsupported property placeholder'
+            }
+            $localRepositoryEvidence = $null
+            if ($placeholderCount -eq 1 -or
+                $projectRepositoryTokenIndex -ge 0 -or
+                $executionRepositoryTokenIndex -ge 0) {
+                $localRepositoryEvidence = Resolve-MavenLocalRepositoryEvidence `
+                    $LocalRepositoryPath `
+                    $artifactSegments
+                $mockitoTemplate = $mockitoTemplate.Replace(
+                    $repositoryPlaceholder, [string]$localRepositoryEvidence.RepositoryPath)
+                if ($executionRepositoryTokenIndex -ge 0) {
+                    $executionTokens[$executionRepositoryTokenIndex] =
+                        $executionTokens[$executionRepositoryTokenIndex].Replace(
+                            $repositoryPlaceholder,
+                            [string]$localRepositoryEvidence.RepositoryPath)
+                }
+                if ($projectRepositoryTokenIndex -ge 0) {
+                    $projectTokens[$projectRepositoryTokenIndex] =
+                        $projectTokens[$projectRepositoryTokenIndex].Replace(
+                            $repositoryPlaceholder,
+                            [string]$localRepositoryEvidence.RepositoryPath)
+                }
+            }
+            elseif (-not [string]::IsNullOrWhiteSpace($LocalRepositoryPath)) {
+                throw 'MavenLocalRepositoryPath is inconsistent because all effective Mockito paths are already absolute'
+            }
+
+            $mockitoTemplateTokens = @(ConvertFrom-JvmArgumentLine $mockitoTemplate 'resolved effective Mockito agent argument')
+            $templateMockitoPath = $mockitoTemplateTokens[0].Substring('-javaagent:'.Length)
+            $rawTemplateRequiresMacLauncher = $usesCapacityTemplate -and
+                $argumentValue.StartsWith('-XstartOnFirstThread ', [System.StringComparison]::Ordinal)
+            if ($usesCapacityTemplate) {
+                $capacityTokenCount = if ($rawTemplateRequiresMacLauncher) { 4 } else { 3 }
+                if ($executionTokens.Count -ne ($capacityTokenCount + 2)) {
+                    throw 'DirectMaven canonical capacity template did not resolve to the expected effective execution shape'
+                }
+                $argumentTokens = @($executionTokens[0..($capacityTokenCount - 1)])
+            }
+            else {
+                $argumentTokens = @(ConvertFrom-JvmArgumentLine $argumentValue 'DirectMaven surefire.argLine')
+            }
+            $capacityOffset = 0
+            if ($argumentTokens.Count -eq 4 -and $argumentTokens[0] -ceq '-XstartOnFirstThread') {
+                $capacityOffset = 1
+            }
+            if ($argumentTokens.Count -ne (3 + $capacityOffset) -or
+                $argumentTokens[$capacityOffset] -cne '-Xshare:off' -or
+                -not $argumentTokens[$capacityOffset + 1].StartsWith('-javaagent:', [System.StringComparison]::Ordinal) -or
+                $argumentTokens[$capacityOffset + 2] -cne '-Xmx3g') {
+                throw 'DirectMaven capacity argLine must contain only optional -XstartOnFirstThread, exact CDS, one Mockito agent, and the proven-sufficient -Xmx3g heap'
+            }
+
+            $actualMockitoPath = $argumentTokens[$capacityOffset + 1].Substring('-javaagent:'.Length)
+            if (-not (Test-PortableFullyQualifiedPath $actualMockitoPath)) {
+                throw 'DirectMaven Mockito javaagent path must be absolute'
+            }
+            $portableActual = ConvertTo-PortablePath $actualMockitoPath
+            $portableTemplate = ConvertTo-PortablePath $templateMockitoPath
+            $pathComparison = if ($portableActual -match '^[A-Za-z]:/') {
+                [System.StringComparison]::OrdinalIgnoreCase
+            }
+            else {
+                [System.StringComparison]::Ordinal
+            }
+            if (-not $portableActual.Equals($portableTemplate, $pathComparison)) {
+                throw 'DirectMaven Mockito javaagent path does not equal the resolved effective Mockito agent path'
+            }
+            if ($null -ne $localRepositoryEvidence -and
+                -not (Test-PathsEqual $actualMockitoPath ([string]$localRepositoryEvidence.MockitoJarPath))) {
+                throw 'DirectMaven resolved Mockito javaagent path does not equal the evidenced Maven repository jar'
+            }
+
+            $projectTemplate = $effectiveProjectArgLine
+            $permittedTemplate = '${test.cds.argLine} ${mockito.agent.argLine} '
+            $projectRequiresMacLauncher = $projectTemplate.StartsWith(
+                '-XstartOnFirstThread ', [System.StringComparison]::Ordinal)
+            $argumentHasMacLauncher = ($capacityOffset -eq 1)
+            if ($usesCapacityTemplate -and
+                $rawTemplateRequiresMacLauncher -ne $argumentHasMacLauncher) {
+                throw 'DirectMaven canonical capacity template macOS launcher presence must match its resolved execution'
+            }
+            if ($projectRequiresMacLauncher -ne $argumentHasMacLauncher) {
+                throw 'DirectMaven -XstartOnFirstThread presence must match the effective project argLine launcher contract'
+            }
+            if ($projectRequiresMacLauncher) {
+                $projectTemplate = $projectTemplate.Substring('-XstartOnFirstThread '.Length)
+            }
+            if ($projectTemplate.StartsWith($permittedTemplate, [System.StringComparison]::Ordinal)) {
+                $projectHeap = $projectTemplate.Substring($permittedTemplate.Length)
+                if ($projectHeap -notmatch '^-Xmx[1-9][0-9]*[kKmMgG]$') {
+                    throw 'DirectMaven effective project argLine contains unsupported or unresolved JVM content'
+                }
+            }
+            else {
+                foreach ($projectToken in $projectTokens) {
+                    Assert-NoUnresolvedPlaceholder $projectToken 'DirectMaven resolved effective project argLine token'
+                }
+                $projectCapacityOffset = 0
+                if ($projectTokens.Count -eq 4 -and $projectTokens[0] -ceq '-XstartOnFirstThread') {
+                    $projectCapacityOffset = 1
+                }
+                if ($projectTokens.Count -ne (3 + $projectCapacityOffset) -or
+                    $projectTokens[$projectCapacityOffset] -cne '-Xshare:off' -or
+                    -not $projectTokens[$projectCapacityOffset + 1].StartsWith('-javaagent:', [System.StringComparison]::Ordinal) -or
+                    $projectTokens[$projectCapacityOffset + 2] -notmatch '^-Xmx[1-9][0-9]*[kKmMgG]$') {
+                    throw 'DirectMaven effective project argLine must preserve exact CDS, Mockito agent, and heap content'
+                }
+                $projectMockitoPath = $projectTokens[$projectCapacityOffset + 1].Substring('-javaagent:'.Length)
+                if (-not (Test-PortableFullyQualifiedPath $projectMockitoPath)) {
+                    throw 'DirectMaven effective project Mockito javaagent path must resolve absolute'
+                }
+                $portableProjectMockito = ConvertTo-PortablePath $projectMockitoPath
+                if (-not $portableProjectMockito.Equals($portableTemplate, $pathComparison) -or
+                    -not $portableProjectMockito.Equals($portableActual, $pathComparison)) {
+                    throw 'DirectMaven effective project and execution Mockito javaagent paths must match'
+                }
+            }
+
+            if ($executionTokens.Count -ne ($argumentTokens.Count + 2)) {
+                throw 'DirectMaven same-invocation effective Surefire execution argLine has unexpected options'
+            }
+            for ($index = 0; $index -lt $argumentTokens.Count; $index++) {
+                if ($executionTokens[$index] -cne $argumentTokens[$index]) {
+                    throw 'DirectMaven surefire.argLine does not match the same-invocation effective Surefire execution argLine'
+                }
+            }
+            $tmpPrefix = '-Djava.io.tmpdir='
+            $lwjglPrefix = '-Dorg.lwjgl.system.SharedLibraryExtractPath='
+            if (-not $executionTokens[-2].StartsWith($tmpPrefix, [System.StringComparison]::Ordinal) -or
+                -not $executionTokens[-1].StartsWith($lwjglPrefix, [System.StringComparison]::Ordinal)) {
+                throw 'DirectMaven effective execution must retain only java.io.tmpdir and LWJGL fork-local properties after capacity arguments'
+            }
+            $executionTmp = $executionTokens[-2].Substring($tmpPrefix.Length)
+            $executionLwjgl = $executionTokens[-1].Substring($lwjglPrefix.Length)
+            Assert-NoUnresolvedPlaceholder $executionTmp 'DirectMaven effective java.io.tmpdir'
+            if ($executionLwjgl -match '@\{[^}]*\}' -or
+                $executionLwjgl.Replace('${surefire.forkNumber}', '') -match '\$\{[^}]*\}') {
+                throw 'DirectMaven effective LWJGL path contains an unresolved property placeholder'
+            }
+            if ([System.Text.RegularExpressions.Regex]::Matches(
+                    $executionLwjgl, '\$\{surefire\.forkNumber\}').Count -ne 1) {
+                throw 'DirectMaven effective LWJGL path must contain exactly one fork-number placeholder'
+            }
+
+            foreach ($pathProof in @(
+                    [pscustomobject]@{ Value = [string]$effective.projectBuildDirectory; Name = 'project.build.directory' },
+                    [pscustomobject]@{ Value = [string]$effective.'openggf.test.tmpdir'; Name = 'openggf.test.tmpdir' },
+                    [pscustomobject]@{ Value = $Worktree; Name = 'CanonicalWorktree' })) {
+                Assert-NoUnresolvedPlaceholder $pathProof.Value "DirectMaven effective $($pathProof.Name)"
+                if (-not [System.IO.Path]::IsPathFullyQualified($pathProof.Value)) {
+                    throw "DirectMaven $($pathProof.Name) must be an absolute path"
+                }
+            }
+            $worktreePath = [System.IO.Path]::GetFullPath($Worktree)
+            $buildPath = [System.IO.Path]::GetFullPath([string]$effective.projectBuildDirectory)
+            $tmpPath = [System.IO.Path]::GetFullPath([string]$effective.'openggf.test.tmpdir')
+            if (-not (Test-PathWithin $buildPath $worktreePath)) {
+                throw 'DirectMaven project.build.directory must be contained by CanonicalWorktree'
+            }
+            $expectedTmp = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($buildPath, 'test-tmp'))
+            if (-not (Test-PathsEqual $tmpPath $expectedTmp) -or
+                -not (Test-PathsEqual $executionTmp $expectedTmp)) {
+                throw 'DirectMaven effective java.io.tmpdir must equal resolved openggf.test.tmpdir below project.build.directory'
+            }
+            $expectedLwjgl = [System.IO.Path]::Combine($expectedTmp, 'lwjgl-${surefire.forkNumber}')
+            if (-not (Test-PathsEqual $executionLwjgl $expectedLwjgl)) {
+                throw 'DirectMaven effective LWJGL path must be fork-local below resolved openggf.test.tmpdir'
+            }
         }
-        $adapterSuffix = $argumentValue.Substring($expectedPrefix.Length)
-        $lwjglMarker = ' -Dorg.lwjgl.system.SharedLibraryExtractPath='
-        $lwjglOffset = $adapterSuffix.IndexOf($lwjglMarker, [System.StringComparison]::Ordinal)
-        if ($lwjglOffset -le 0) {
-            throw 'Approved Maven property surefire.argLine must contain the adapter-owned user.home and LWJGL extraction properties'
-        }
-        $userHomeValue = $adapterSuffix.Substring(0, $lwjglOffset)
-        $lwjglValue = $adapterSuffix.Substring($lwjglOffset + $lwjglMarker.Length)
-        if ($userHomeValue -match '\s' -or $lwjglValue -match '\s' -or
-            $lwjglValue -notmatch '[/\\]lwjgl-\$\{surefire\.forkNumber\}$') {
-            throw 'Approved Maven property surefire.argLine has invalid adapter-owned session property values'
+        else {
+            $expectedPrefix = [string]$effective.projectArgLine + ' -Duser.home='
+            if (-not $argumentValue.StartsWith($expectedPrefix, [System.StringComparison]::Ordinal)) {
+                throw 'Approved Maven property surefire.argLine must preserve the effective project property before adapter-owned session properties'
+            }
+            $adapterSuffix = $argumentValue.Substring($expectedPrefix.Length)
+            $lwjglMarker = ' -Dorg.lwjgl.system.SharedLibraryExtractPath='
+            $lwjglOffset = $adapterSuffix.IndexOf($lwjglMarker, [System.StringComparison]::Ordinal)
+            if ($lwjglOffset -le 0) {
+                throw 'Approved Maven property surefire.argLine must contain the adapter-owned user.home and LWJGL extraction properties'
+            }
+            $userHomeValue = $adapterSuffix.Substring(0, $lwjglOffset)
+            $lwjglValue = $adapterSuffix.Substring($lwjglOffset + $lwjglMarker.Length)
+            if ($userHomeValue -match '\s' -or $lwjglValue -match '\s' -or
+                $lwjglValue -notmatch '[/\\]lwjgl-\$\{surefire\.forkNumber\}$') {
+                throw 'Approved Maven property surefire.argLine has invalid adapter-owned session property values'
+            }
         }
     }
     if ($ApprovedProperties.ContainsKey('surefire.forkCount')) {
@@ -470,7 +936,33 @@ function Assert-EffectiveSurefireContract {
             throw "Approved Maven property surefire.forkCount does not equal the effective forkCount: argv=[$argumentValue] effective=[$($effective.forkCount)]"
         }
     }
-    Write-Host "Effective Surefire configuration: excludes=$(@($effective.excludes) -join ',') groups=$($effective.groups) excludedGroups=$($effective.excludedGroups) projectArgLine=$($effective.projectArgLine) executionArgLine=$($effective.argLine) forkCount=$($effective.forkCount) reuseForks=$($effective.reuseForks)"
+    if ($ApprovedProperties.ContainsKey('surefire.reuseForks')) {
+        $argumentValue = [string]$ApprovedProperties['surefire.reuseForks'].Value
+        if ($argumentValue -cne [string]$effective.reuseForks) {
+            throw "Approved Maven property surefire.reuseForks does not equal the effective reuseForks: argv=[$argumentValue] effective=[$($effective.reuseForks)]"
+        }
+    }
+    $authenticatedRunOrder = ''
+    $effectiveRunOrderEvidence = if ([int]$effective.runOrderCount -eq 0) { '<absent>' } else { [string]$effective.runOrder }
+    if ($ApprovedProperties.ContainsKey('surefire.runOrder')) {
+        if ([int]$effective.runOrderCount -gt 1) {
+            throw "Effective Surefire configuration may contain at most one runOrder; found $($effective.runOrderCount)"
+        }
+        $argumentValue = [string]$ApprovedProperties['surefire.runOrder'].Value
+        $authenticatedRunOrder = $argumentValue
+        if ([int]$effective.runOrderCount -eq 1) {
+            if ([string]::IsNullOrEmpty([string]$effective.runOrder)) {
+                throw 'Effective Surefire runOrder must be non-empty when present'
+            }
+            if ($argumentValue -cne [string]$effective.runOrder) {
+                throw "Approved Maven property surefire.runOrder does not equal the effective runOrder: argv=[$argumentValue] effective=[$($effective.runOrder)]"
+            }
+            if ([string]$effective.runOrder -cne 'alphabetical') {
+                throw "Effective Surefire runOrder must be exactly alphabetical: [$($effective.runOrder)]"
+            }
+        }
+    }
+    Write-Host "Effective Surefire configuration: excludes=$(@($effective.excludes) -join ',') groups=$($effective.groups) excludedGroups=$($effective.excludedGroups) projectArgLine=$($effective.projectArgLine) executionArgLine=$($effective.argLine) forkCount=$($effective.forkCount) reuseForks=$($effective.reuseForks) runOrder=$authenticatedRunOrder effectiveRunOrder=$effectiveRunOrderEvidence"
 }
 
 function Normalize-TokenizedText {
@@ -489,6 +981,27 @@ function Normalize-TokenizedText {
     foreach ($replacement in ($replacements | Sort-Object { $_.Token.Length } -Descending)) {
         $normalized = $normalized.Replace($replacement.Token, $replacement.Replacement)
     }
+    $junitWorktreeTemp = '(?<=<WORKTREE>[\\/]target[\\/]test-tmp[\\/])junit\d+(?=[\\/])'
+    $normalized = [System.Text.RegularExpressions.Regex]::Replace(
+        $normalized,
+        $junitWorktreeTemp,
+        '<JUNIT_TEMP>',
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    $modSnapshotTemp = '(?<=[\\/])openggf-mod-snapshot-\d+(?=[:\\/]|$)'
+    $normalized = [System.Text.RegularExpressions.Regex]::Replace(
+        $normalized,
+        $modSnapshotTemp,
+        'openggf-mod-snapshot-<TEMP_ID>',
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    $jansiExtraction = '(?<![0-9A-Za-z])jansi-(\d+(?:\.\d+)*)-[0-9a-fA-F]+-(?=libjansi(?:\.|$))'
+    $normalized = [System.Text.RegularExpressions.Regex]::Replace(
+        $normalized,
+        $jansiExtraction,
+        'jansi-$1-<EXTRACTION_ID>-',
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
     $iso8601 = '(?<![0-9A-Za-z])\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:?\d{2})?(?![0-9A-Za-z:+-])'
     return [System.Text.RegularExpressions.Regex]::Replace(
         $normalized,
@@ -673,12 +1186,35 @@ if ($suppliedPreflight -ne 0 -and $suppliedPreflight -ne $preflightValues.Count)
 if ($repeatedIdentityContract.Path.Length -ne 0 -and $suppliedPreflight -ne $preflightValues.Count) {
     throw 'RepeatedIdentityCardinalityPath requires the complete atomic explicit-source preflight'
 }
+if (-not [string]::IsNullOrWhiteSpace($MavenLocalRepositoryPath) -and
+    (-not $DirectMaven -or $suppliedPreflight -ne $preflightValues.Count)) {
+    throw 'MavenLocalRepositoryPath is used only by complete DirectMaven effective-POM preflight'
+}
 if ($suppliedPreflight -eq $preflightValues.Count) {
-    $selectorContract = Assert-ExplicitSourceSelectorContract $sourceClasses $SelectorPatternInventory $MavenArgumentInventory $RuntimeInputs
+    $selectorContract = Assert-ExplicitSourceSelectorContract `
+        $sourceClasses `
+        $SelectorPatternInventory `
+        $MavenArgumentInventory `
+        $RuntimeInputs `
+        $DirectMaven.IsPresent
     Assert-EffectiveSurefireContract `
         $EffectivePomPath `
         $SurefireExecutionId `
-        $selectorContract.ApprovedProperties
+        $selectorContract.ApprovedProperties `
+        $DirectMaven.IsPresent `
+        $CanonicalWorktree `
+        $MavenLocalRepositoryPath
+    if ($DirectMaven) {
+        $canonicalEffectivePom = (Resolve-Path -LiteralPath $EffectivePomPath).Path
+        Assert-RuntimeInputExactlyOnce $canonicalEffectivePom $RuntimeInputs 'Effective POM capacity proof'
+        if (-not [string]::IsNullOrWhiteSpace($MavenLocalRepositoryPath)) {
+            $canonicalMavenLocalRepository = (Resolve-Path -LiteralPath $MavenLocalRepositoryPath).Path
+            Assert-RuntimeInputAbsent `
+                $canonicalMavenLocalRepository `
+                $RuntimeInputs `
+                'MavenLocalRepositoryPath'
+        }
+    }
     if ($repeatedIdentityContract.Path.Length -ne 0) {
         Assert-RuntimeInputExactlyOnce $repeatedIdentityContract.Path $RuntimeInputs 'Repeated-identity cardinality allowlist'
     }

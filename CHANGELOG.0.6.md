@@ -16,8 +16,9 @@ This file contains the complete 0.6 development snapshot history carried forward
   have been removed from OpenGGF. The preserved lifecycle research now lives
   separately in public `OpenGGF/Actworks` as a v0.8 ask. Repeated trace runs
   reuse deterministic owner-keyed paths and reject changed-content collisions;
-  CI/release certification validates each report's integer counts and exact
-  owner sidecar before accepting it; build, test, report, plugin, and
+  CI/release certification validates each report's producer-specific schema,
+  nonnegative integer counts, and exact owner sidecar before accepting it;
+  build, test, report, plugin, and
   per-Surefire-fork temporary output remains target-local; and release jobs
   upload only finished platform archives.
 

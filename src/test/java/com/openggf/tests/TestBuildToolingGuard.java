@@ -673,6 +673,8 @@ class TestBuildToolingGuard {
             assertTrue(defaultExcludes.contains(pattern),
                     "default Surefire execution must exclude structural guards: " + pattern);
         }
+        assertTrue(defaultExcludes.contains("**/*$*"),
+                "default Surefire execution must exclude compiled nested test classes exactly: **/*$*");
 
         Element guards = profileById(pom, "guards");
         assertTrue(guards != null, "pom.xml must retain a separate guards profile");
@@ -696,6 +698,110 @@ class TestBuildToolingGuard {
                 "whole-graph guards must have enough heap for the merged production graph");
     }
 
+    @Test
+    void ordinarySuiteMustUseOneReusedThreeGibForkWithIsolatedRuntimePaths() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element projectProperties = directChild(pom.getDocumentElement(), "properties");
+        assertTrue(projectProperties != null, "pom.xml must define ordinary capacity properties");
+        assertEquals("1", directChild(projectProperties, "surefire.forkCount").getTextContent().trim(),
+                "the ordinary suite must reuse one fork instead of splitting capacity across four heaps");
+        Element ordinaryReuseForks = directChild(projectProperties, "surefire.reuseForks");
+        assertTrue(ordinaryReuseForks != null,
+                "pom.xml must expose the ordinary fork-reuse property");
+        assertEquals("true", ordinaryReuseForks.getTextContent().trim(),
+                "the ordinary suite must reuse its single fork");
+        assertEquals("${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g",
+                directChild(projectProperties, "surefire.argLine").getTextContent().trim(),
+                "the ordinary suite must retain exact CDS/Mockito semantics and the proven-sufficient 3 GiB heap");
+
+        for (String profileId : List.of("lwjgl-natives-macos", "lwjgl-natives-macos-arm64", "ci")) {
+            Element profile = profileById(pom, profileId);
+            assertTrue(profile != null, "pom.xml must retain the " + profileId + " profile");
+            Element profileProperties = directChild(profile, "properties");
+            assertTrue(profileProperties != null,
+                    profileId + " must retain its explicit Surefire capacity properties");
+            String profileArgLine = directChild(profileProperties, "surefire.argLine")
+                    .getTextContent().trim();
+            assertTrue(profileArgLine.endsWith("-Xmx3g"),
+                    profileId + " must not reduce the ordinary suite below the proven-sufficient 3 GiB heap");
+        }
+
+        Element build = directChild(pom.getDocumentElement(), "build");
+        Element plugins = directChild(build, "plugins");
+        Element surefire = directChildWithText(plugins, "plugin", "artifactId",
+                "maven-surefire-plugin");
+        Element configuration = directChild(surefire, "configuration");
+        assertEquals("${surefire.forkCount}", directChild(configuration, "forkCount")
+                        .getTextContent().trim(),
+                "the ordinary execution must consume the shared capacity property");
+        assertEquals("${surefire.reuseForks}", directChild(configuration, "reuseForks")
+                        .getTextContent().trim(),
+                "the ordinary execution must consume the shared fork-reuse property");
+        assertEquals("${surefire.argLine} -Djava.io.tmpdir=\"${openggf.test.tmpdir}\" "
+                        + "-Dorg.lwjgl.system.SharedLibraryExtractPath=\"${openggf.test.tmpdir}"
+                        + "/lwjgl-${surefire.forkNumber}\"",
+                directChild(configuration, "argLine").getTextContent().trim(),
+                "the ordinary execution must retain the fork-local temp and LWJGL paths");
+
+        NodeList reuseForks = pom.getElementsByTagName("reuseForks");
+        for (int i = 0; i < reuseForks.getLength(); i++) {
+            if (reuseForks.item(i).getParentNode() == projectProperties) {
+                continue;
+            }
+            assertEquals("${surefire.reuseForks}", reuseForks.item(i).getTextContent().trim(),
+                    "every Surefire execution must consume the shared fork-reuse property");
+        }
+    }
+
+    @Test
+    void ordinarySurefireShouldUseSharedAlphabeticalRunOrder() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element projectProperties = directChild(pom.getDocumentElement(), "properties");
+        Element sharedRunOrder = directChild(projectProperties, "surefire.runOrder");
+        assertTrue(sharedRunOrder != null,
+                "pom.xml must expose the shared Surefire run-order property");
+        assertEquals("alphabetical", sharedRunOrder.getTextContent().trim(),
+                "ordinary test order must be reproducible across worktrees");
+
+        Element build = directChild(pom.getDocumentElement(), "build");
+        Element plugins = directChild(build, "plugins");
+        Element surefire = directChildWithText(plugins, "plugin", "artifactId",
+                "maven-surefire-plugin");
+        Element configuration = directChild(surefire, "configuration");
+        Element configuredRunOrder = directChild(configuration, "runOrder");
+        assertTrue(configuredRunOrder != null,
+                "default Surefire execution must configure a deterministic run order");
+        assertEquals("${surefire.runOrder}", configuredRunOrder.getTextContent().trim(),
+                "default Surefire execution must consume the shared run-order property");
+
+        NodeList pluginsInPom = pom.getElementsByTagName("plugin");
+        for (int i = 0; i < pluginsInPom.getLength(); i++) {
+            Element plugin = (Element) pluginsInPom.item(i);
+            Element artifactId = directChild(plugin, "artifactId");
+            if (artifactId == null
+                    || !"maven-surefire-plugin".equals(artifactId.getTextContent().trim())) {
+                continue;
+            }
+            Element pluginConfiguration = directChild(plugin, "configuration");
+            assertTrue(pluginConfiguration != null,
+                    "every Surefire declaration must have an explicit configuration");
+            Element pluginRunOrder = directChild(pluginConfiguration, "runOrder");
+            assertTrue(pluginRunOrder != null,
+                    "every Surefire execution must configure the shared run order");
+            assertEquals("${surefire.runOrder}", pluginRunOrder.getTextContent().trim(),
+                    "every Surefire execution must consume the shared run-order property");
+        }
+
+        String inventoryGuide = Files.readString(Path.of("tools/testing/README.md"), StandardCharsets.UTF_8);
+        String normalizedInventoryGuide = inventoryGuide.replaceAll("\\s+", " ");
+        assertTrue(normalizedInventoryGuide.contains(
+                        "`surefire.includesFile`, `surefire.argLine`, `surefire.forkCount`, "
+                                + "`surefire.reuseForks`, and `surefire.runOrder`"),
+                "the inventory guide must list the complete authenticated Surefire property set");
+        assertTrue(inventoryGuide.contains("'-Dsurefire.runOrder=alphabetical'"),
+                "the copy/paste inventory example must authenticate alphabetical Surefire order");
+    }
+
     /**
      * Every Surefire {@code <forkCount>} in the POM must read the same
      * {@code ${surefire.forkCount}} property, and the name of that property is
@@ -703,9 +809,9 @@ class TestBuildToolingGuard {
      *
      * <p>This exists because {@code -DforkCount=1} silently does nothing:
      * {@code pom.xml} binds {@code <forkCount>} to {@code ${surefire.forkCount}}
-     * (default 4, set to 1 only by the {@code ci} profile), so a user-supplied
-     * {@code forkCount} property is never consulted and the run stays on four
-     * forks. Trace measurements were taken under that misapprehension and had to
+     * (default 1, with profile-specific overrides), so a user-supplied
+     * {@code forkCount} property is never consulted. Trace measurements were
+     * previously taken under that misapprehension and had to
      * be redone; the correction is recorded in
      * {@code docs/status/trace-frontier-log.md}. The failure mode is the same
      * one the fixture alignment guard targets — a knob that reads as set but is
@@ -1667,13 +1773,15 @@ class TestBuildToolingGuard {
         assertTraceValidatorRejects(runTraceReportValidator(internalMismatchRoot, false),
                 "internal-path-mismatch", "physical_path does not resolve to report");
 
-        Path duplicateRoot = temporaryDirectory.resolve("duplicate");
-        writeTraceReport(duplicateRoot, "trace", "s2_mtz1", "single", ownerA,
+        Path sharedIdentityRoot = temporaryDirectory.resolve("shared-identity");
+        writeTraceReport(sharedIdentityRoot, "trace", "s2_mtz1", "single", ownerA,
                 "{\"error_count\":0,\"warning_count\":0}", null);
-        writeTraceReport(duplicateRoot, "trace", "s2_mtz1", "single", ownerB,
+        writeTraceReport(sharedIdentityRoot, "trace", "s2_mtz1", "single", ownerB,
                 "{\"error_count\":0,\"warning_count\":0}", null);
-        assertTraceValidatorRejects(runTraceReportValidator(duplicateRoot, false),
-                "duplicate", "duplicate report identity");
+        ProcessResult sharedIdentity = runTraceReportValidator(sharedIdentityRoot, false);
+        assertEquals(0, sharedIdentity.exitCode(), () ->
+                "distinct owners may publish the same profile/logical/lane identity:\n"
+                        + sharedIdentity.output());
 
         Path ambiguousRoot = temporaryDirectory.resolve("ambiguous-keep-green");
         writeTraceReport(ambiguousRoot, "special-stage", "s2_special_stage_0", "s2-0",
@@ -1701,6 +1809,274 @@ class TestBuildToolingGuard {
         Files.createSymbolicLink(symlinkReport, outside);
         assertTraceValidatorRejects(runTraceReportValidator(symlinkRoot, false),
                 "symlink-escape", "must not be a symbolic link");
+    }
+
+    @Test
+    void traceReportValidatorMustDispatchEveryOwnerKeyedProducerSchema(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String owner = "0123456789abcdef" + "0".repeat(48);
+
+        Path segmentRoot = temporaryDirectory.resolve("run-chain-segment");
+        writeTraceReport(segmentRoot, "run-chain", "s2_run_seg0", "segment-0", owner,
+                """
+                {
+                  "errorCount": 0,
+                  "warningCount": 0,
+                  "laggedFrames": 0,
+                  "complete": true,
+                  "recentMismatches": [{
+                    "frame": 4,
+                    "field": "x_pos",
+                    "romValue": "10",
+                    "engineValue": "11",
+                    "delta": "1",
+                    "severity": "ERROR",
+                    "repeatCount": 1
+                  }],
+                  "verification_groups": {
+                    "physics": {"error_count": 0},
+                    "animation": {"error_count": 0}
+                  },
+                  "bootstrapErrorCount": 0
+                }
+                """, null);
+        ProcessResult segment = runTraceReportValidator(segmentRoot, false);
+        assertEquals(0, segment.exitCode(), () ->
+                "validator rejected an AbstractRunChainTest segment report:\n" + segment.output());
+
+        Path segmentWarningRoot = temporaryDirectory.resolve("run-chain-segment-warning");
+        writeTraceReport(segmentWarningRoot, "run-chain", "s2_run_seg0", "segment-0", owner,
+                """
+                {
+                  "errorCount": 0,
+                  "warningCount": 1,
+                  "laggedFrames": 0,
+                  "complete": true,
+                  "recentMismatches": [],
+                  "verification_groups": {
+                    "physics": {"error_count": 0},
+                    "animation": {"error_count": 0}
+                  },
+                  "bootstrapErrorCount": 0
+                }
+                """, null);
+        assertTraceValidatorRejects(runTraceReportValidator(segmentWarningRoot, false),
+                "run-chain-segment-warning", "Trace replay warnings are test-blocking");
+
+        Map<String, List<String>> invalidSegments = new LinkedHashMap<>();
+        invalidSegments.put("run-chain-missing-count", List.of(
+                """
+                {"warningCount":0,"laggedFrames":0,"complete":true,
+                 "recentMismatches":[],"verification_groups":{},"bootstrapErrorCount":0}
+                """, "missing required errorCount"));
+        invalidSegments.put("run-chain-negative-count", List.of(
+                """
+                {"errorCount":0,"warningCount":-1,"laggedFrames":0,"complete":true,
+                 "recentMismatches":[],"verification_groups":{},"bootstrapErrorCount":0}
+                """, "warningCount must be nonnegative"));
+        invalidSegments.put("run-chain-wrong-count-type", List.of(
+                """
+                {"errorCount":false,"warningCount":0,"laggedFrames":0,"complete":true,
+                 "recentMismatches":[],"verification_groups":{},"bootstrapErrorCount":0}
+                """, "errorCount must be a JSON integer"));
+        for (Map.Entry<String, List<String>> invalid : invalidSegments.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_seg0", "segment-0", owner,
+                    invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Map<String, List<String>> invalidVerificationGroups = new LinkedHashMap<>();
+        invalidVerificationGroups.put("run-chain-missing-group", List.of(
+                "{\"physics\":{\"error_count\":0}}",
+                "verification_groups must contain exactly"));
+        invalidVerificationGroups.put("run-chain-group-not-object", List.of(
+                "{\"physics\":[],\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics must be a JSON object"));
+        invalidVerificationGroups.put("run-chain-group-missing-count", List.of(
+                "{\"physics\":{},\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics is missing required error_count"));
+        invalidVerificationGroups.put("run-chain-group-wrong-count-type", List.of(
+                "{\"physics\":{\"error_count\":false},"
+                        + "\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics.error_count must be a JSON integer"));
+        invalidVerificationGroups.put("run-chain-group-negative-count", List.of(
+                "{\"physics\":{\"error_count\":-1},"
+                        + "\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics.error_count must be nonnegative"));
+        for (Map.Entry<String, List<String>> invalid : invalidVerificationGroups.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_seg0", "segment-0", owner,
+                    runChainSegmentPayload(invalid.getValue().get(0)), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path gapRoot = temporaryDirectory.resolve("dynamic-art-gap");
+        writeTraceReport(gapRoot, "run-chain", "s2_run_dynamic_art_gap", "dynamic-art-gap", owner,
+                """
+                {
+                  "runId": "s2_run",
+                  "gapCount": 1,
+                  "failureCount": 0,
+                  "failures": [],
+                  "gaps": [{
+                    "representedSegmentDir": "segment-0",
+                    "nextSegmentDir": "segment-1",
+                    "gapStartMovieLogicalFrame": 10,
+                    "nextSegmentArmMovieLogicalFrame": 11,
+                    "transitionCountAtGapStart": 1,
+                    "transitionCountAfterNextArm": 2,
+                    "transitionsAddedAcrossBoundary": ["AIZ1 -> AIZ2"]
+                  }]
+                }
+                """, null);
+        ProcessResult gap = runTraceReportValidator(gapRoot, false);
+        assertEquals(0, gap.exitCode(), () ->
+                "validator rejected an AbstractRunChainTest dynamic-art gap report:\n"
+                        + gap.output());
+
+        Map<String, List<String>> invalidGaps = new LinkedHashMap<>();
+        invalidGaps.put("dynamic-art-gap-missing-count", List.of(
+                "{\"runId\":\"s2_run\",\"failureCount\":0,\"failures\":[],\"gaps\":[]}",
+                "payload is missing required gapCount"));
+        invalidGaps.put("dynamic-art-gap-missing", List.of(
+                "{\"runId\":\"s2_run\",\"gapCount\":0,\"failureCount\":0,\"failures\":[]}",
+                "payload is missing required gaps"));
+        invalidGaps.put("dynamic-art-gap-negative", List.of(
+                """
+                {"runId":"s2_run","gapCount":-1,"failureCount":0,
+                 "failures":[],"gaps":[]}
+                """, "gapCount must be nonnegative"));
+        invalidGaps.put("dynamic-art-gap-wrong-type", List.of(
+                """
+                {"runId":"s2_run","gapCount":0,"failureCount":"0",
+                 "failures":[],"gaps":[]}
+                """, "failureCount must be a JSON integer"));
+        for (Map.Entry<String, List<String>> invalid : invalidGaps.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_dynamic_art_gap",
+                    "dynamic-art-gap", owner, invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path interiorRoot = temporaryDirectory.resolve("dynamic-art-interior");
+        writeTraceReport(interiorRoot, "run-chain", "s2_run_seg0_dynamic_art",
+                "segment-0-dynamic-art", owner,
+                """
+                {
+                  "comparisonCount": 1,
+                  "errorCount": 1,
+                  "mismatches": [{
+                    "frame": 10,
+                    "field": "dynamic_art.transitions",
+                    "expected": "expected",
+                    "actual": "actual",
+                    "severity": "ERROR"
+                  }]
+                }
+                """, null);
+        ProcessResult interior = runTraceReportValidator(interiorRoot, false);
+        assertEquals(0, interior.exitCode(), () ->
+                "validator rejected an AbstractRunChainTest dynamic-art interior report:\n"
+                        + interior.output());
+
+        Map<String, List<String>> invalidInteriors = new LinkedHashMap<>();
+        invalidInteriors.put("dynamic-art-interior-missing-count", List.of(
+                "{\"comparisonCount\":0,\"mismatches\":[]}",
+                "payload is missing required errorCount"));
+        invalidInteriors.put("dynamic-art-interior-missing", List.of(
+                "{\"comparisonCount\":0,\"errorCount\":0}",
+                "payload is missing required mismatches"));
+        invalidInteriors.put("dynamic-art-interior-negative", List.of(
+                "{\"comparisonCount\":-1,\"errorCount\":0,\"mismatches\":[]}",
+                "comparisonCount must be nonnegative"));
+        invalidInteriors.put("dynamic-art-interior-type", List.of(
+                "{\"comparisonCount\":0,\"errorCount\":\"0\",\"mismatches\":[]}",
+                "errorCount must be a JSON integer"));
+        for (Map.Entry<String, List<String>> invalid : invalidInteriors.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_seg0_dynamic_art",
+                    "segment-0-dynamic-art", owner, invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path unknownRoot = temporaryDirectory.resolve("unknown-run-chain-schema");
+        writeTraceReport(unknownRoot, "run-chain", "s2_run_unknown", "unknown", owner,
+                "{}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(unknownRoot, false),
+                "unknown-run-chain-schema", "unknown owner-keyed report schema");
+    }
+
+    @Test
+    void traceReportValidatorMustTrackOwnerKeyedProducerKeys() throws Exception {
+        String producer = Files.readString(Path.of(
+                "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java"));
+        String divergenceProducer = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/DivergenceReport.java"));
+        String verificationGroupProducer = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/VerificationGroup.java"));
+        String validator = Files.readString(Path.of(
+                "tools/testing/validate-trace-reports.py"));
+
+        assertEquals(3,
+                producer.split(Pattern.quote(
+                        "TestSessionOutputPaths.allocateReport(\"run-chain\""), -1).length - 1,
+                "every run-chain owner-keyed publisher must be inventoried here");
+        for (String key : List.of("error_count", "warning_count")) {
+            assertTrue(divergenceProducer.contains("root.put(\"" + key + "\""),
+                    () -> "DivergenceReport no longer publishes guarded key " + key);
+            assertTrue(validator.contains("\"" + key + "\""),
+                    () -> "trace report validator does not validate divergence key " + key);
+        }
+
+        for (String key : List.of(
+                "errorCount", "warningCount", "laggedFrames", "complete",
+                "recentMismatches", "verification_groups", "bootstrapErrorCount",
+                "runId", "gapCount", "failureCount", "failures", "gaps",
+                "representedSegmentDir", "nextSegmentDir", "gapStartMovieLogicalFrame",
+                "nextSegmentArmMovieLogicalFrame", "transitionCountAtGapStart",
+                "transitionCountAfterNextArm", "transitionsAddedAcrossBoundary",
+                "comparisonCount", "mismatches", "frame", "field", "expected",
+                "actual", "severity")) {
+            assertTrue(producer.contains("put(\"" + key + "\""),
+                    () -> "AbstractRunChainTest no longer publishes guarded key " + key);
+            assertTrue(validator.contains("\"" + key + "\""),
+                    () -> "trace report validator does not validate producer key " + key);
+        }
+        assertTrue(producer.contains(
+                        "groups.put(group.id(), Map.of(\"error_count\", count))"),
+                "run-chain group publisher no longer emits one integer error_count per group");
+        assertTrue(verificationGroupProducer.contains("""
+                public enum VerificationGroup {
+                    PHYSICS("physics"),
+                    ANIMATION("animation");
+                """),
+                "run-chain validator inventory must track the complete VerificationGroup enum");
+        for (String group : List.of("physics", "animation")) {
+            assertTrue(verificationGroupProducer.contains("(\"" + group + "\")"),
+                    () -> "VerificationGroup no longer publishes required group " + group);
+        }
+        for (String validatorContract : List.of(
+                "REQUIRED_VERIFICATION_GROUPS = {\"physics\", \"animation\"}",
+                "def validate_verification_groups(",
+                "verification_groups.{group_name}.error_count")) {
+            assertTrue(validator.contains(validatorContract),
+                    () -> "trace report validator lacks nested group contract "
+                            + validatorContract);
+        }
+        for (String discriminator : List.of(
+                "dynamic-art-gap", "segment-", "-dynamic-art")) {
+            assertTrue(producer.contains(discriminator),
+                    () -> "AbstractRunChainTest no longer publishes lane " + discriminator);
+            assertTrue(validator.contains(discriminator),
+                    () -> "trace report validator does not dispatch lane " + discriminator);
+        }
+        assertFalse(validator.contains("duplicate report identity"),
+                "distinct owners must not be collapsed by profile/logical/lane identity");
     }
 
     private static void assertOwnerKeyedTraceReportConsumer(
@@ -3808,6 +4184,20 @@ class TestBuildToolingGuard {
         process.getOutputStream().close();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         return new ProcessResult(process.waitFor(), output);
+    }
+
+    private static String runChainSegmentPayload(String verificationGroupsJson) {
+        return """
+                {
+                  "errorCount": 0,
+                  "warningCount": 0,
+                  "laggedFrames": 0,
+                  "complete": true,
+                  "recentMismatches": [],
+                  "verification_groups": %s,
+                  "bootstrapErrorCount": 0
+                }
+                """.formatted(verificationGroupsJson);
     }
 
     private static ProcessResult runTraceReportValidator(

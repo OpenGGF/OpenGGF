@@ -28,8 +28,15 @@
         <openggf.test.diagnostics>${project.build.directory}/diagnostics</openggf.test.diagnostics>
         <openggf.artifact.root>${project.build.directory}</openggf.artifact.root>
         <openggf.distribution.root>${project.build.directory}</openggf.distribution.root>
-        <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
-        <surefire.forkCount>4</surefire.forkCount>
+        <!-- Detached-baseline capacity evidence completed 2,318 reports / 18,201
+             tests in one reused 3 GiB fork, with 12 stable samples and no dump,
+             temp-space, or OOM evidence. This proves 3 GiB sufficient; it does
+             not establish a minimum. The former four 1 GiB forks OOMed before
+             TestSampleRomArtRemixIntegration reported. -->
+        <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+        <surefire.forkCount>1</surefire.forkCount>
+        <surefire.reuseForks>true</surefire.reuseForks>
+        <surefire.runOrder>alphabetical</surefire.runOrder>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
@@ -54,7 +61,7 @@
             </activation>
             <properties>
                 <lwjgl.natives>natives-macos</lwjgl.natives>
-                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
+                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <native.macos.package.skip>false</native.macos.package.skip>
             </properties>
         </profile>
@@ -65,7 +72,7 @@
             </activation>
             <properties>
                 <lwjgl.natives>natives-macos-arm64</lwjgl.natives>
-                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
+                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <native.macos.package.skip>false</native.macos.package.skip>
             </properties>
         </profile>
@@ -117,11 +124,11 @@
             </build>
         </profile>
 
-        <!-- CI/CD profile: low-memory, single-fork execution.
+        <!-- CI/CD profile: bounded, single-fork execution.
              Activated automatically when CI=true (GitHub Actions, GitLab CI, etc.)
              or manually via: mvn test -Pci
 
-             The ordinary suite uses a single 1GB fork in CI. Structural guards
+             The ordinary suite uses the same proven-sufficient single 3 GiB fork in CI. Structural guards
              run separately through -Pguards, so broad source-graph imports do
              not accumulate behind the ordinary suite's reused fork.
              Keeping one fork also avoids native-library races between test JVMs.
@@ -135,7 +142,7 @@
                 </property>
             </activation>
             <properties>
-                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <surefire.forkCount>1</surefire.forkCount>
             </properties>
         </profile>
@@ -181,7 +188,8 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <groups>performance-measurement</groups>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
@@ -228,8 +236,8 @@
               a truncated 401 tests that looked healthier than the real run.
               The same profile completes all 834 tests at both 3g and 4g with
               an identical red set, so 3g is the landed value: ~48% headroom
-              over the 2069 MB measured live set, and forkCount still defaults
-              to 4 here (4 x 3g = 12g worst case).
+              over the 2069 MB measured live set. The shared fork count now
+              defaults to 1, so this profile reuses that same 3 GiB fork.
 
               The cost is aux events, not physics rows: across the Knuckles run,
               aux_state.jsonl is 1476 MB uncompressed against 56 MB of
@@ -252,7 +260,8 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -374,7 +383,8 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -443,7 +453,8 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -540,7 +551,8 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <project.basedir>${project.basedir}</project.basedir>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
@@ -589,7 +601,8 @@
                             <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -1242,12 +1255,12 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                     <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                     <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                     <tempDir>${project.build.directory}/surefire</tempDir>
-                    <!-- Run test classes in parallel forked JVMs.
-                         Thread-level parallelism is unsafe due to singleton state,
-                         but process-level forks each get isolated singletons.
-                         Default: 4 forks locally, 1 in CI (see ci profile). -->
+                    <!-- Run test classes in one reused forked JVM. Thread-level
+                         parallelism is unsafe due to singleton state, and the
+                         ordinary suite needs the full shared 3 GiB capacity. -->
                     <forkCount>${surefire.forkCount}</forkCount>
-                    <reuseForks>true</reuseForks>
+                    <reuseForks>${surefire.reuseForks}</reuseForks>
+                    <runOrder>${surefire.runOrder}</runOrder>
                     <systemPropertyVariables>
                         <!-- Architectural guard tests resolve source paths from the project root,
                              which surefire-launched forks inherit; pass it explicitly so IDE
@@ -1272,6 +1285,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                         <exclude>**/TestNo*.java</exclude>
                         <exclude>**/TestArchUnit*.java</exclude>
                         <exclude>**/TestAudioPresentationBoundary.java</exclude>
+                        <exclude>**/*$*</exclude>
                         <exclude>**/TestGraphicsManagerHeadless.java</exclude>
                         <exclude>**/VisualRegressionTest.java</exclude>
                         <exclude>**/VisualReferenceGenerator.java</exclude>
