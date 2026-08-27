@@ -588,6 +588,53 @@ test
             -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
             -ExecutionArgLine ($placeholderCapacityArgLine + $executionSuffix))
         Assert-Succeeded (& $invokeDirectWithRepository $mavenLocalRepository) 'direct Maven resolves effective Mockito local-repository placeholder'
+
+        $placeholderProjectArgLine = '-Xshare:off -javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar" -Xmx1g'
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine $placeholderProjectArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($placeholderCapacityArgLine + $executionSuffix))
+        Assert-Succeeded (& $invokeDirectWithRepository $mavenLocalRepository) 'direct Maven resolves real effective project and execution Mockito placeholders'
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine ('-Xshare:off -javaagent:"' + $linuxMockitoPath + '" -Dunexpected=${settings.localRepository} -Xmx1g') `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($placeholderCapacityArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'project argLine|settings.localRepository|javaagent|Mockito|placeholder' 'Maven repository placeholder in another project argLine token'
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine ($placeholderProjectArgLine + ' -Dunexpected=${settings.localRepository}') `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($placeholderCapacityArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'project argLine|multiple|settings.localRepository|placeholder' 'multiple Maven repository placeholders in project argLine'
+
+        $differentRepository = Join-Path $case 'different-maven-repository'
+        $differentMockitoPath = Join-Path $differentRepository 'org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $differentMockitoPath) -Force | Out-Null
+        Write-Utf8File $differentMockitoPath 'different repository Mockito agent jar'
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine $placeholderProjectArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ("-Xshare:off -javaagent:`"$differentMockitoPath`" -Xmx3g" + $executionSuffix))
+        Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'project|execution|Mockito|path|match|equal|repository' 'project and execution Mockito repository paths differ'
+
+        $differentVersionExecutionArgLine = '-Xshare:off -javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.1/mockito-core-5.14.1.jar" -Xmx3g'
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine $placeholderProjectArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($differentVersionExecutionArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'project|execution|Mockito|version|path|match|equal|5\.14' 'project and execution Mockito versions differ'
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine $placeholderProjectArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($placeholderCapacityArgLine + $executionSuffix))
         Assert-Failed (& $invokeDirectWithoutRepository) 'MavenLocalRepositoryPath|local repository|missing' 'missing Maven local-repository evidence'
         Assert-Failed (& $invokeDirectWithRepository 'relative-repository') 'MavenLocalRepositoryPath|absolute|canonical' 'relative Maven local-repository evidence'
 
