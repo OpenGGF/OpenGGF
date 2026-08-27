@@ -516,12 +516,17 @@ test
         $output = Join-Path $case 'outcomes.tsv'
         $buildDirectory = Join-Path $worktree 'target'
         $testTmpdir = Join-Path $buildDirectory 'test-tmp'
-        $linuxMockitoPath = '/home/test repo/.m2/repository/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar'
+        $mavenLocalRepository = Join-Path $case 'maven repository'
+        $linuxMockitoPath = Join-Path $mavenLocalRepository 'org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $linuxMockitoPath) -Force | Out-Null
+        Write-Utf8File $linuxMockitoPath 'fixture Mockito agent jar'
         $capacityArgLine = "-Xshare:off -javaagent:`"$linuxMockitoPath`" -Xmx3g"
         $macCapacityArgLine = "-XstartOnFirstThread $capacityArgLine"
         $capacityTemplateArgLine = '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g'
         $macCapacityTemplateArgLine = "-XstartOnFirstThread $capacityTemplateArgLine"
-        $windowsCapacityArgLine = '-Xshare:off -javaagent:"C:\Users\Test User\.m2\repository\org\mockito\mockito-core\5.14.2\mockito-core-5.14.2.jar" -Xmx3g'
+        $placeholderCapacityArgLine = '-Xshare:off -javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar" -Xmx3g'
+        $windowsMockitoArgLine = '-javaagent:"C:\Users\Test User\.m2\repository\org\mockito\mockito-core\5.14.2\mockito-core-5.14.2.jar"'
+        $windowsCapacityArgLine = "-Xshare:off $windowsMockitoArgLine -Xmx3g"
         $executionSuffix = " -Djava.io.tmpdir=`"$testTmpdir`" -Dorg.lwjgl.system.SharedLibraryExtractPath=`"$testTmpdir/lwjgl-`${surefire.forkNumber}`""
         Write-Utf8File $classes "example.DirectCapacityTest`n"
         Write-Utf8File $patterns "example/DirectCapacityTest.java`n"
@@ -536,6 +541,27 @@ test
                 '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
                 '-MavenArgumentInventory', $canonicalArguments, '-RuntimeInputs', $runtimeInputs,
                 '-EffectivePomPath', $effectivePom,
+                '-MavenLocalRepositoryPath', $mavenLocalRepository,
+                '-DirectMaven', '-CanonicalWorktree', $worktree,
+                '-OutputPath', $output, '-ReportRoot', $reports
+            )
+        }
+        $invokeDirectWithoutRepository = {
+            Invoke-Tool $exportScript @(
+                '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+                '-MavenArgumentInventory', $canonicalArguments, '-RuntimeInputs', $runtimeInputs,
+                '-EffectivePomPath', $effectivePom,
+                '-DirectMaven', '-CanonicalWorktree', $worktree,
+                '-OutputPath', $output, '-ReportRoot', $reports
+            )
+        }
+        $invokeDirectWithRepository = {
+            param([string] $RepositoryPath)
+            Invoke-Tool $exportScript @(
+                '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+                '-MavenArgumentInventory', $canonicalArguments, '-RuntimeInputs', $runtimeInputs,
+                '-EffectivePomPath', $effectivePom,
+                '-MavenLocalRepositoryPath', $RepositoryPath,
                 '-DirectMaven', '-CanonicalWorktree', $worktree,
                 '-OutputPath', $output, '-ReportRoot', $reports
             )
@@ -555,6 +581,54 @@ test
             -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
             -ExecutionArgLine ($capacityArgLine + $executionSuffix))
         Assert-Succeeded (& $invokeDirect) 'direct Maven canonical capacity-template argLine'
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine $capacityTemplateArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($placeholderCapacityArgLine + $executionSuffix))
+        Assert-Succeeded (& $invokeDirectWithRepository $mavenLocalRepository) 'direct Maven resolves effective Mockito local-repository placeholder'
+        Assert-Failed (& $invokeDirectWithoutRepository) 'MavenLocalRepositoryPath|local repository|missing' 'missing Maven local-repository evidence'
+        Assert-Failed (& $invokeDirectWithRepository 'relative-repository') 'MavenLocalRepositoryPath|absolute|canonical' 'relative Maven local-repository evidence'
+
+        $emptyRepository = Join-Path $case 'empty-maven-repository'
+        New-Item -ItemType Directory -Path $emptyRepository -Force | Out-Null
+        Assert-Failed (& $invokeDirectWithRepository $emptyRepository) 'Mockito|jar|exist|5\.14\.2' 'missing expected Mockito jar in Maven repository'
+
+        $wrongVersionRepository = Join-Path $case 'wrong-version-maven-repository'
+        $wrongVersionJar = Join-Path $wrongVersionRepository 'org/mockito/mockito-core/5.14.1/mockito-core-5.14.1.jar'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $wrongVersionJar) -Force | Out-Null
+        Write-Utf8File $wrongVersionJar 'wrong fixture Mockito agent jar'
+        Assert-Failed (& $invokeDirectWithRepository $wrongVersionRepository) 'Mockito|jar|exist|5\.14\.2' 'wrong-version Mockito jar in Maven repository'
+
+        $repositoryLink = Join-Path $case 'linked-maven-repository'
+        $linkCreated = $false
+        try {
+            New-Item -ItemType SymbolicLink -Path $repositoryLink -Target $mavenLocalRepository -ErrorAction Stop | Out-Null
+            $linkCreated = $true
+        }
+        catch {
+            Write-Host "SKIP Maven local-repository symlink fixture: $($_.Exception.Message)"
+        }
+        if ($linkCreated) {
+            Assert-Failed (& $invokeDirectWithRepository $repositoryLink) 'symbolic link|reparse|canonical|MavenLocalRepositoryPath' 'linked Maven local-repository evidence'
+        }
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine "-javaagent:`"$linuxMockitoPath`"" `
+            -ProjectArgLine $capacityTemplateArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        Assert-Succeeded (& $invokeDirectWithoutRepository) 'direct Maven effective absolute Mockito path needs no repository evidence'
+        Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'MavenLocalRepositoryPath|already absolute|inconsistent|unexpected' 'repository evidence with effective absolute Mockito path'
+
+        $unknownRepositoryArgLine = '-Xshare:off -javaagent:"${unknownRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar" -Xmx3g'
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine $capacityTemplateArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($unknownRepositoryArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'unknownRepository|unresolved|placeholder' 'unknown effective Mockito repository placeholder'
 
         Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
@@ -599,11 +673,11 @@ test
 
         Write-Utf8File $arguments "-Dsurefire.argLine=$windowsCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
-            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -MockitoAgentArgLine $windowsMockitoArgLine `
             -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
             -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
             -ExecutionArgLine ($windowsCapacityArgLine + $executionSuffix))
-        Assert-Succeeded (& $invokeDirect) 'direct Maven Windows Mockito path normalization'
+        Assert-Succeeded (& $invokeDirectWithoutRepository) 'direct Maven Windows Mockito path normalization'
 
         Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `

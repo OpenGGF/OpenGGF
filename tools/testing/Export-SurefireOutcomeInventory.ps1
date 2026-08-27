@@ -11,6 +11,7 @@ param(
     [string] $RepeatedIdentityCardinalityPath = '',
     [string] $SelectorPatternInventory = '',
     [string] $MavenArgumentInventory = '',
+    [string] $MavenLocalRepositoryPath = '',
     [string] $RuntimeInputs = '',
     [string] $EffectivePomPath = '',
     [string] $SurefireExecutionId = 'default-test'
@@ -319,6 +320,45 @@ function Test-PathsEqual {
         [System.IO.Path]::GetFullPath($Right), $comparison)
 }
 
+function Resolve-MavenLocalRepositoryEvidence {
+    param([string] $RepositoryPath, [string[]] $MockitoArtifactSegments)
+    if ([string]::IsNullOrWhiteSpace($RepositoryPath)) {
+        throw 'DirectMaven effective Mockito placeholder requires MavenLocalRepositoryPath evidence'
+    }
+    Assert-NoUnresolvedPlaceholder $RepositoryPath 'MavenLocalRepositoryPath'
+    if (-not [System.IO.Path]::IsPathFullyQualified($RepositoryPath)) {
+        throw 'MavenLocalRepositoryPath must be a canonical absolute directory'
+    }
+    $fullRepositoryPath = [System.IO.Path]::GetFullPath($RepositoryPath)
+    if (-not (Test-Path -LiteralPath $fullRepositoryPath -PathType Container)) {
+        throw "MavenLocalRepositoryPath directory does not exist: $fullRepositoryPath"
+    }
+    $resolvedRepositoryPath = (Resolve-Path -LiteralPath $fullRepositoryPath).Path
+    if (-not (Test-PathsEqual $fullRepositoryPath $resolvedRepositoryPath)) {
+        throw "MavenLocalRepositoryPath must be canonical: $resolvedRepositoryPath"
+    }
+    $trustedRepositoryPath = Assert-NoReparsePointInAncestry `
+        $fullRepositoryPath `
+        'Maven local repository'
+    $expectedMockitoJar = $trustedRepositoryPath
+    foreach ($segment in $MockitoArtifactSegments) {
+        $expectedMockitoJar = [System.IO.Path]::Combine($expectedMockitoJar, $segment)
+    }
+    if (-not (Test-Path -LiteralPath $expectedMockitoJar -PathType Leaf)) {
+        throw "MavenLocalRepositoryPath does not contain the exact effective Mockito jar: $expectedMockitoJar"
+    }
+    $trustedMockitoJar = Assert-NoReparsePointInAncestry `
+        $expectedMockitoJar `
+        'Mockito agent jar'
+    if (-not (Test-PathWithin $trustedMockitoJar $trustedRepositoryPath)) {
+        throw 'Effective Mockito jar must remain beneath MavenLocalRepositoryPath'
+    }
+    return [pscustomobject]@{
+        RepositoryPath = $trustedRepositoryPath
+        MockitoJarPath = $trustedMockitoJar
+    }
+}
+
 function ConvertFrom-MavenPropertyDefinition {
     param([string] $Definition, [string] $Argument)
     if ($Definition.Length -eq 0) {
@@ -573,7 +613,8 @@ function Assert-EffectiveSurefireContract {
         [string] $ExecutionId,
         [System.Collections.Generic.Dictionary[string, object]] $ApprovedProperties,
         [bool] $IsDirectMaven,
-        [string] $Worktree
+        [string] $Worktree,
+        [string] $LocalRepositoryPath
     )
     $effective = Read-EffectiveSurefireConfiguration $Path $ExecutionId
     if ($ApprovedProperties.ContainsKey('surefire.argLine')) {
@@ -600,12 +641,69 @@ function Assert-EffectiveSurefireContract {
             if ($mockitoTemplateRemainder -match '\$\{[^}]*\}' -or $placeholderCount -gt 1) {
                 throw 'DirectMaven effective Mockito agent content contains an unresolved unsupported property placeholder'
             }
-            $mockitoTemplateTokens = @(ConvertFrom-JvmArgumentLine $mockitoTemplate 'effective Mockito agent argument')
-            if ($mockitoTemplateTokens.Count -ne 1 -or
-                -not $mockitoTemplateTokens[0].StartsWith('-javaagent:', [System.StringComparison]::Ordinal)) {
+            $sourceMockitoTemplateTokens = @(ConvertFrom-JvmArgumentLine $mockitoTemplate 'effective Mockito agent argument')
+            if ($sourceMockitoTemplateTokens.Count -ne 1 -or
+                -not $sourceMockitoTemplateTokens[0].StartsWith('-javaagent:', [System.StringComparison]::Ordinal)) {
                 throw 'DirectMaven effective Mockito agent content must contain exactly one javaagent option'
             }
-            $executionTokens = @(ConvertFrom-JvmArgumentLine ([string]$effective.argLine) 'effective Surefire execution argLine')
+            $templateMockitoPath = $sourceMockitoTemplateTokens[0].Substring('-javaagent:'.Length)
+            $portableTemplate = ConvertTo-PortablePath $templateMockitoPath
+            if ($placeholderCount -eq 1) {
+                if (-not $portableTemplate.StartsWith(
+                        $repositoryPlaceholder + '/', [System.StringComparison]::Ordinal)) {
+                    throw 'DirectMaven effective Mockito agent must resolve directly below settings.localRepository'
+                }
+                $artifactPath = $portableTemplate.Substring($repositoryPlaceholder.Length).TrimStart('/')
+            }
+            else {
+                if (-not (Test-PortableFullyQualifiedPath $portableTemplate)) {
+                    throw 'DirectMaven effective Mockito javaagent path must be absolute'
+                }
+                $artifactMarker = '/org/mockito/mockito-core/'
+                $artifactOffset = $portableTemplate.LastIndexOf(
+                    $artifactMarker, [System.StringComparison]::Ordinal)
+                if ($artifactOffset -lt 0) {
+                    throw 'DirectMaven effective Mockito agent must name the exact mockito-core repository artifact'
+                }
+                $artifactPath = $portableTemplate.Substring($artifactOffset + 1)
+            }
+            $artifactSegments = @($artifactPath.Split('/'))
+            if ($artifactSegments.Count -ne 5 -or
+                $artifactSegments[0] -cne 'org' -or
+                $artifactSegments[1] -cne 'mockito' -or
+                $artifactSegments[2] -cne 'mockito-core' -or
+                $artifactSegments[3].Length -eq 0 -or
+                $artifactSegments[4] -cne "mockito-core-$($artifactSegments[3]).jar") {
+                throw 'DirectMaven effective Mockito agent must name the exact mockito-core repository artifact'
+            }
+
+            $effectiveExecutionArgLine = [string]$effective.argLine
+            $executionRepositoryPlaceholderCount = [System.Text.RegularExpressions.Regex]::Matches(
+                $effectiveExecutionArgLine,
+                [System.Text.RegularExpressions.Regex]::Escape($repositoryPlaceholder)).Count
+            $unsupportedExecutionRemainder = $effectiveExecutionArgLine.Replace(
+                $repositoryPlaceholder, '').Replace('${surefire.forkNumber}', '')
+            if ($unsupportedExecutionRemainder -match '\$\{[^}]*\}|@\{[^}]*\}' -or
+                $executionRepositoryPlaceholderCount -gt 1) {
+                throw 'DirectMaven effective Surefire execution argLine contains an unresolved unsupported property placeholder'
+            }
+            $localRepositoryEvidence = $null
+            if ($placeholderCount -eq 1 -or $executionRepositoryPlaceholderCount -eq 1) {
+                $localRepositoryEvidence = Resolve-MavenLocalRepositoryEvidence `
+                    $LocalRepositoryPath `
+                    $artifactSegments
+                $mockitoTemplate = $mockitoTemplate.Replace(
+                    $repositoryPlaceholder, [string]$localRepositoryEvidence.RepositoryPath)
+                $effectiveExecutionArgLine = $effectiveExecutionArgLine.Replace(
+                    $repositoryPlaceholder, [string]$localRepositoryEvidence.RepositoryPath)
+            }
+            elseif (-not [string]::IsNullOrWhiteSpace($LocalRepositoryPath)) {
+                throw 'MavenLocalRepositoryPath is inconsistent because the effective Mockito execution path is already absolute'
+            }
+
+            $mockitoTemplateTokens = @(ConvertFrom-JvmArgumentLine $mockitoTemplate 'resolved effective Mockito agent argument')
+            $templateMockitoPath = $mockitoTemplateTokens[0].Substring('-javaagent:'.Length)
+            $executionTokens = @(ConvertFrom-JvmArgumentLine $effectiveExecutionArgLine 'effective Surefire execution argLine')
             $rawTemplateRequiresMacLauncher = $usesCapacityTemplate -and
                 $argumentValue.StartsWith('-XstartOnFirstThread ', [System.StringComparison]::Ordinal)
             if ($usesCapacityTemplate) {
@@ -633,46 +731,20 @@ function Assert-EffectiveSurefireContract {
             if (-not (Test-PortableFullyQualifiedPath $actualMockitoPath)) {
                 throw 'DirectMaven Mockito javaagent path must be absolute'
             }
-            $templateMockitoPath = $mockitoTemplateTokens[0].Substring('-javaagent:'.Length)
             $portableActual = ConvertTo-PortablePath $actualMockitoPath
             $portableTemplate = ConvertTo-PortablePath $templateMockitoPath
-            if ($placeholderCount -eq 1) {
-                if (-not $portableTemplate.StartsWith(
-                        $repositoryPlaceholder + '/', [System.StringComparison]::Ordinal)) {
-                    throw 'DirectMaven effective Mockito agent must resolve directly below settings.localRepository'
-                }
-                $placeholderOffset = $portableTemplate.IndexOf($repositoryPlaceholder, [System.StringComparison]::Ordinal)
-                $templateSuffix = $portableTemplate.Substring($placeholderOffset + $repositoryPlaceholder.Length)
-                $artifactSegments = @($templateSuffix.TrimStart('/').Split('/'))
-                if ($artifactSegments.Count -ne 5 -or
-                    $artifactSegments[0] -cne 'org' -or
-                    $artifactSegments[1] -cne 'mockito' -or
-                    $artifactSegments[2] -cne 'mockito-core' -or
-                    $artifactSegments[3].Length -eq 0 -or
-                    $artifactSegments[4] -cne "mockito-core-$($artifactSegments[3]).jar") {
-                    throw 'DirectMaven effective Mockito agent must name the exact mockito-core repository artifact'
-                }
-                $actualPrefixLength = $portableActual.Length - $templateSuffix.Length
-                $pathComparison = if ($portableActual -match '^[A-Za-z]:/') {
-                    [System.StringComparison]::OrdinalIgnoreCase
-                } else {
-                    [System.StringComparison]::Ordinal
-                }
-                if ($actualPrefixLength -le 0 -or
-                    -not $portableActual.EndsWith($templateSuffix, $pathComparison) -or
-                    -not (Test-PortableFullyQualifiedPath $portableActual.Substring(0, $actualPrefixLength))) {
-                    throw 'DirectMaven Mockito javaagent path does not match the effective local-repository artifact path'
-                }
+            $pathComparison = if ($portableActual -match '^[A-Za-z]:/') {
+                [System.StringComparison]::OrdinalIgnoreCase
             }
             else {
-                $pathComparison = if ($portableActual -match '^[A-Za-z]:/') {
-                    [System.StringComparison]::OrdinalIgnoreCase
-                } else {
-                    [System.StringComparison]::Ordinal
-                }
-                if (-not $portableActual.Equals($portableTemplate, $pathComparison)) {
-                    throw 'DirectMaven Mockito javaagent path does not equal the effective Mockito agent path'
-                }
+                [System.StringComparison]::Ordinal
+            }
+            if (-not $portableActual.Equals($portableTemplate, $pathComparison)) {
+                throw 'DirectMaven Mockito javaagent path does not equal the resolved effective Mockito agent path'
+            }
+            if ($null -ne $localRepositoryEvidence -and
+                -not (Test-PathsEqual $actualMockitoPath ([string]$localRepositoryEvidence.MockitoJarPath))) {
+                throw 'DirectMaven resolved Mockito javaagent path does not equal the evidenced Maven repository jar'
             }
 
             $projectTemplate = [string]$effective.projectArgLine
@@ -986,6 +1058,10 @@ if ($suppliedPreflight -ne 0 -and $suppliedPreflight -ne $preflightValues.Count)
 if ($repeatedIdentityContract.Path.Length -ne 0 -and $suppliedPreflight -ne $preflightValues.Count) {
     throw 'RepeatedIdentityCardinalityPath requires the complete atomic explicit-source preflight'
 }
+if (-not [string]::IsNullOrWhiteSpace($MavenLocalRepositoryPath) -and
+    (-not $DirectMaven -or $suppliedPreflight -ne $preflightValues.Count)) {
+    throw 'MavenLocalRepositoryPath is used only by complete DirectMaven effective-POM preflight'
+}
 if ($suppliedPreflight -eq $preflightValues.Count) {
     $selectorContract = Assert-ExplicitSourceSelectorContract `
         $sourceClasses `
@@ -998,7 +1074,8 @@ if ($suppliedPreflight -eq $preflightValues.Count) {
         $SurefireExecutionId `
         $selectorContract.ApprovedProperties `
         $DirectMaven.IsPresent `
-        $CanonicalWorktree
+        $CanonicalWorktree `
+        $MavenLocalRepositoryPath
     if ($DirectMaven) {
         $canonicalEffectivePom = (Resolve-Path -LiteralPath $EffectivePomPath).Path
         Assert-RuntimeInputExactlyOnce $canonicalEffectivePom $RuntimeInputs 'Effective POM capacity proof'

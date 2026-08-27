@@ -55,6 +55,16 @@ The raw Maven vector may instead carry exactly
 `-XstartOnFirstThread` only when the effective project profile has that same
 prefix. The effective execution must expand this canonical template before the
 exporter authenticates its final tokens.
+Maven may leave the exact `${settings.localRepository}` prefix unresolved in
+the effective project or execution Mockito javaagent path. In that case, pass
+the canonical physical repository directory separately as
+`-MavenLocalRepositoryPath`. The exporter accepts that evidence only for the
+exact `org/mockito/mockito-core/<version>/mockito-core-<version>.jar` suffix,
+requires that exact jar to exist below the non-reparse repository path, and
+substitutes only the exact Maven prefix before authenticating the resolved JVM
+arguments. Omit this parameter when both effective Mockito paths are already
+absolute. This is Maven-environment resolution evidence, not runtime input
+selection, so it must not be added to `OPENGGF_RUNTIME_INPUTS`.
 The selected Surefire execution must prove the same resolved JVM arguments and
 then exactly the target-local `java.io.tmpdir` and fork-local LWJGL extraction
 properties. Any other raw `${...}` placeholder, every raw Surefire `@{...}`
@@ -80,6 +90,9 @@ $effectivePom = Join-Path $evidence 'ordinary-effective-pom.xml'
 $argumentInventory = Join-Path $evidence 'ordinary-maven-arguments.txt'
 $effectiveProjectArgLine = (& mvn -Dmse=off help:evaluate `
     -Dexpression=surefire.argLine -q -DforceStdout).Trim()
+$mavenLocalRepository = (& mvn -Dmse=off help:evaluate `
+    -Dexpression=settings.localRepository -q -DforceStdout).Trim()
+$mavenLocalRepository = (Resolve-Path -LiteralPath $mavenLocalRepository).Path
 $macLauncher = if ($effectiveProjectArgLine.StartsWith(
         '-XstartOnFirstThread ', [StringComparison]::Ordinal)) {
     '-XstartOnFirstThread '
@@ -114,6 +127,7 @@ $env:OPENGGF_RUNTIME_INPUTS = @(
     -MavenArgumentInventory $argumentInventory `
     -RuntimeInputs $env:OPENGGF_RUNTIME_INPUTS `
     -EffectivePomPath $effectivePom `
+    -MavenLocalRepositoryPath $mavenLocalRepository `
     -ReportRoot (Join-Path $worktree 'target/surefire-reports') `
     -DirectMaven `
     -CanonicalWorktree $worktree `
