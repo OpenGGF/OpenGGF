@@ -284,7 +284,9 @@ jobs:
               sys.exit(1)
 
           warning_reports = []
-          for report in sorted(trace_dir.glob("*_report.json")):
+          for report in sorted(trace_dir.rglob("*.json")):
+              if report.name.endswith(".owner.json"):
+                  continue
               data = json.loads(report.read_text(encoding="utf-8"))
               warning_count = int(data.get("warning_count", 0))
               if warning_count > 0:

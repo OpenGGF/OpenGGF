@@ -85,3 +85,10 @@ outputs are fixed beneath that worktree's `target/audio-parity`; active guide
 references and the roadmap heading are corrected. The new boundary guard
 asserts these conditions. Its release-upload assertion and the repeated-report
 test were each observed red before the fixes and green afterward.
+
+The re-review then found that CI/release still consumed the pre-owner report
+layout and that a red-to-green rerun retained stale context text. The workflow
+consumers now recurse through profile directories, ignore owner sidecars, and
+select the required S2 special-stage report by its owner-aware pattern. A green
+publication explicitly retires its prior context file. Both follow-up guards
+were observed red before these fixes.

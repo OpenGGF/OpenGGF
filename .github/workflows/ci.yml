@@ -268,11 +268,19 @@ jobs:
                   print(f"{report}: skipped={skipped_count}", file=sys.stderr)
               sys.exit(1)
 
-          required_ss_report = trace_dir / "s2_special_stage_0_report.json"
-          if not required_ss_report.exists():
-              print(f"Missing required keep-green divergence report: {required_ss_report}",
+          required_ss_reports = sorted(
+              trace_dir.glob("special-stage/s2_special_stage_0-*.json"))
+          required_ss_reports = [
+              report for report in required_ss_reports
+              if not report.name.endswith(".owner.json")
+          ]
+          if len(required_ss_reports) != 1:
+              print(
+                  "Expected exactly one owner-aware S2 special-stage keep-green report; "
+                  f"found={len(required_ss_reports)} paths={required_ss_reports}",
                     file=sys.stderr)
               sys.exit(1)
+          required_ss_report = required_ss_reports[0]
           required_ss_data = json.loads(required_ss_report.read_text(encoding="utf-8"))
           required_ss_errors = int(required_ss_data.get("error_count", 0))
           required_ss_warnings = int(required_ss_data.get("warning_count", 0))
@@ -284,7 +292,9 @@ jobs:
               sys.exit(1)
 
           warning_reports = []
-          for report in sorted(trace_dir.glob("*_report.json")):
+          for report in sorted(trace_dir.rglob("*.json")):
+              if report.name.endswith(".owner.json"):
+                  continue
               data = json.loads(report.read_text(encoding="utf-8"))
               warning_count = int(data.get("warning_count", 0))
               if warning_count > 0:

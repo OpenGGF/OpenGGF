@@ -1370,6 +1370,15 @@ class TestBuildToolingGuard {
                 "target/OpenGGF-linux.tar.gz")) {
             assertTrue(release.contains(archive), "release workflow must upload " + archive);
         }
+        String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
+        assertTrue(ci.contains("trace_dir.glob(\"special-stage/s2_special_stage_0-*.json\")"),
+                "develop CI must locate the owner-aware S2 special-stage report");
+        for (String workflow : List.of(ci, release)) {
+            assertTrue(workflow.contains("trace_dir.rglob(\"*.json\")"),
+                    "trace warning scans must recurse through profile-scoped reports");
+            assertFalse(workflow.contains("trace_dir.glob(\"*_report.json\")"),
+                    "trace warning scans must not assume retired root-level report names");
+        }
 
         String parity = Files.readString(Path.of("tools/audio/run_s1_audio_parity.sh"));
         assertTrue(parity.contains("cd \"$REPO\""),
@@ -1404,6 +1413,10 @@ class TestBuildToolingGuard {
         assertTrue(roadmap.indexOf("## v0.8 Tooling Ask: Actworks")
                         < roadmap.indexOf("## 1.0 Criteria"),
                 "the Actworks v0.8 ask must not capture the 1.0 criteria body");
+
+        String traceGuide = Files.readString(Path.of("docs/guide/contributing/trace-replay.md"));
+        assertTrue(traceGuide.contains("<profile>/<logical-key>-<lane>-<owner-hash>.json"),
+                "trace guidance must document the owner-aware report layout");
     }
 
     @Test

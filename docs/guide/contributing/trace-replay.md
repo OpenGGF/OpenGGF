@@ -113,10 +113,11 @@ Useful optional override while tuning S1 oscillation alignment:
 mvn test -Dtest=TestS1Mz1TraceReplay -Dosc.override=0
 ```
 
-Reports are written below `target/trace-reports`. On divergence you will typically see:
+Reports are written below `target/trace-reports` using an owner-aware layout:
 
-- `<game>_<zone>_report.json` (e.g. `s3k_aiz1_report.json`, `s3k_cnz1_report.json`)
-- `<game>_<zone>_context.txt` (e.g. `s3k_aiz1_context.txt`)
+- `<profile>/<logical-key>-<lane>-<owner-hash>.json`
+- `<profile>/<logical-key>-<lane>-<owner-hash>_context.txt` when the run diverges
+- a sibling `.json.owner.json` ownership sidecar
 
 The JSON groups divergences by field and frame range. The context file is the fastest way to find
 the first non-cascading failure — open it, scroll to the first error, look at the side-by-side
