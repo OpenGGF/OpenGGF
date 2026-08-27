@@ -543,6 +543,10 @@ class TestBuildToolingGuard {
                 property(pom, "openggf.surefire.reports"));
         assertEquals("${project.build.directory}/trace-reports",
                 property(pom, "openggf.trace.reports"));
+        assertEquals("${project.build.directory}/diagnostics",
+                property(pom, "openggf.test.diagnostics"));
+        assertEquals("${project.build.directory}", property(pom, "openggf.artifact.root"));
+        assertEquals("${project.build.directory}", property(pom, "openggf.distribution.root"));
         for (String property : List.of(
                 "openggf.test.tmpdir",
                 "openggf.surefire.reports", "openggf.trace.reports",
@@ -567,6 +571,11 @@ class TestBuildToolingGuard {
         NodeList tempDirectories = pom.getElementsByTagName("tempDir");
         assertEquals(reportDirectories.getLength(), tempDirectories.getLength(),
                 "every supported Surefire configuration must keep its own control files out of system temp");
+        for (int i = 0; i < reportDirectories.getLength(); i++) {
+            assertEquals("${openggf.surefire.reports}",
+                    reportDirectories.item(i).getTextContent().trim(),
+                    "Surefire reports must consume the target-local reports property");
+        }
         for (int i = 0; i < tempDirectories.getLength(); i++) {
             assertEquals("${project.build.directory}/surefire",
                     tempDirectories.item(i).getTextContent().trim(),
@@ -593,10 +602,21 @@ class TestBuildToolingGuard {
                 "the retired session guard must not remain in the POM");
         for (String launcherName : List.of("run.sh", "run.cmd", "dev.sh", "dev.cmd")) {
             String launcher = Files.readString(Path.of(launcherName), StandardCharsets.UTF_8);
-            assertFalse(launcher.contains("openggf.session.guard"),
-                    launcherName + " must not carry a retired session-guard bypass");
-            assertFalse(launcher.contains("tools/testing/test-session.sh"),
+            Pattern directMaven = launcherName.endsWith(".cmd")
+                    ? Pattern.compile("(?im)^\\s*(?:call\\s+)?mvn(?:\\s|$)")
+                    : Pattern.compile("(?m)^\\s*mvn(?:\\s|$)");
+            assertTrue(directMaven.matcher(launcher).find(),
                     launcherName + " must invoke Maven directly");
+            Pattern scriptDelegate = Pattern.compile(
+                    "(?im)^\\s*(?:exec\\s+)?(?:bash|sh|pwsh|powershell|cmd(?:\\.exe)?)\\s+[^\\r\\n]*\\.(?:sh|ps1|cmd|bat)\\b");
+            assertFalse(scriptDelegate.matcher(launcher).find(),
+                    launcherName + " must not delegate Maven through a replacement script wrapper");
+            for (String retired : List.of(
+                    "tools/testing/test-session", "TestSessionCoordinator", "OPENGGF_TEST_RUN_",
+                    "agent-scratch", "frozen-next-session")) {
+                assertFalse(launcher.contains(retired),
+                        launcherName + " must not delegate through retired tooling: " + retired);
+            }
         }
         String runLauncher = Files.readString(Path.of("run.sh"), StandardCharsets.UTF_8);
         assertTrue(runLauncher.contains("-DskipTests package -q"),

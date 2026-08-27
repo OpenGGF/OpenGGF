@@ -67,13 +67,33 @@ class TestSessionOutputPathsTest {
         System.setProperty(DIAGNOSTICS, diagnostics.toString());
         System.setProperty(ARTIFACT_ROOT, artifacts.toString());
 
-        assertEquals(traceReports, TestSessionOutputPaths.traceReports());
+        assertEquals(traceReports.normalize(), TestSessionOutputPaths.traceReports(buildDirectory));
         assertEquals(diagnostics.resolve("physics"),
-                TestSessionOutputPaths.diagnostics("physics"));
-        assertEquals(artifacts, TestSessionOutputPaths.artifactRoot());
-        assertTrue(TestSessionOutputPaths.traceReports().normalize().startsWith(buildDirectory));
-        assertTrue(TestSessionOutputPaths.diagnostics("physics").normalize().startsWith(buildDirectory));
-        assertTrue(TestSessionOutputPaths.artifactRoot().normalize().startsWith(buildDirectory));
+                TestSessionOutputPaths.diagnostics(buildDirectory, "physics"));
+        assertEquals(artifacts.normalize(), TestSessionOutputPaths.artifactRoot(buildDirectory));
+        assertTrue(TestSessionOutputPaths.traceReports(buildDirectory).startsWith(buildDirectory.toAbsolutePath()));
+        assertTrue(TestSessionOutputPaths.diagnostics(buildDirectory, "physics")
+                .startsWith(buildDirectory.toAbsolutePath()));
+        assertTrue(TestSessionOutputPaths.artifactRoot(buildDirectory)
+                .startsWith(buildDirectory.toAbsolutePath()));
+    }
+
+    @Test
+    void configuredRootsCannotEscapeSuppliedBuildDirectory() throws IOException {
+        Path buildDirectory = Files.createTempDirectory(tempDir, "openggf build containment ");
+        String outside = "../outside";
+
+        System.setProperty(TRACE_REPORTS, outside);
+        assertThrows(IllegalArgumentException.class,
+                () -> TestSessionOutputPaths.traceReports(buildDirectory));
+
+        System.setProperty(DIAGNOSTICS, buildDirectory.getParent().resolve("outside").toString());
+        assertThrows(IllegalArgumentException.class,
+                () -> TestSessionOutputPaths.diagnostics(buildDirectory, "physics"));
+
+        System.setProperty(ARTIFACT_ROOT, outside);
+        assertThrows(IllegalArgumentException.class,
+                () -> TestSessionOutputPaths.artifactRoot(buildDirectory));
     }
 
     @Test

@@ -29,14 +29,31 @@ public final class TestSessionOutputPaths {
         return configuredPath(TRACE_REPORTS_PROPERTY, LEGACY_TRACE_REPORTS);
     }
 
+    /** Resolves the configured reports root and requires it to stay below the supplied build directory. */
+    public static Path traceReports(Path buildDirectory) {
+        return configuredPathWithin(buildDirectory, TRACE_REPORTS_PROPERTY, "trace-reports");
+    }
+
     public static Path diagnostics(String namespace) {
         Objects.requireNonNull(namespace, "namespace");
         return configuredPath(DIAGNOSTICS_PROPERTY, LEGACY_DIAGNOSTICS)
                 .resolve(safeComponent(namespace));
     }
 
+    /** Resolves diagnostics below a supplied build directory, rejecting escaping configured roots. */
+    public static Path diagnostics(Path buildDirectory, String namespace) {
+        Objects.requireNonNull(namespace, "namespace");
+        return configuredPathWithin(buildDirectory, DIAGNOSTICS_PROPERTY, "diagnostics")
+                .resolve(safeComponent(namespace));
+    }
+
     public static Path artifactRoot() {
         return configuredPath(ARTIFACT_ROOT_PROPERTY, LEGACY_ARTIFACT_ROOT);
+    }
+
+    /** Resolves the configured artifact root and requires it to stay below the supplied build directory. */
+    public static Path artifactRoot(Path buildDirectory) {
+        return configuredPathWithin(buildDirectory, ARTIFACT_ROOT_PROPERTY, "");
     }
 
     /** Resolves Maven's compiled production classes below this worktree's target. */
@@ -161,6 +178,24 @@ public final class TestSessionOutputPaths {
         return configured == null || configured.isBlank()
                 ? legacyDefault
                 : Path.of(configured);
+    }
+
+    private static Path configuredPathWithin(Path buildDirectory, String property,
+                                             String defaultRelativePath) {
+        Objects.requireNonNull(buildDirectory, "buildDirectory");
+        Path normalizedBuildDirectory = buildDirectory.toAbsolutePath().normalize();
+        String configured = System.getProperty(property);
+        Path candidate = configured == null || configured.isBlank()
+                ? normalizedBuildDirectory.resolve(defaultRelativePath)
+                : Path.of(configured).isAbsolute()
+                        ? Path.of(configured)
+                        : normalizedBuildDirectory.resolve(configured);
+        Path normalizedCandidate = candidate.toAbsolutePath().normalize();
+        if (!normalizedCandidate.startsWith(normalizedBuildDirectory)) {
+            throw new IllegalArgumentException(property + " escapes build directory "
+                    + normalizedBuildDirectory + ": " + configured);
+        }
+        return normalizedCandidate;
     }
 
     private static String safeComponent(String value) {
