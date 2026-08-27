@@ -11,13 +11,15 @@ Task 2 modifies the three requested test files only:
 The tests define the direct-Maven contract without changing the production
 POM, workflows, launchers, or retired tooling. The output utility no longer
 reads `openggf.build.directory`; its compiled-class convenience methods remain
-target-local for existing test callers. Output-path tests use a supplied build
-directory and assert that sanitized components cannot escape it. The tooling
-guard now requires the three exact `${project.build.directory}` properties,
-rejects `<openggf.build.directory>`, checks per-fork LWJGL extraction, and
-rejects retired session markers in active code, workflows, and guidance. The
-active scan deliberately does not include historical changelogs or the trace
-frontier record.
+target-local for existing test callers. Supplied-build-directory overloads
+normalize configured roots and reject parent traversal and absolute paths
+outside that directory while preserving legitimate descendants. The tooling
+guard now requires exact `${project.build.directory}` values for temporary,
+reports, diagnostics, artifact, and distribution roots, verifies Surefire
+report-directory consumers and per-fork LWJGL extraction, and rejects retired
+session markers in active code, workflows, and guidance. The active scan
+deliberately does not include historical changelogs or the trace frontier
+record.
 
 ## Commands and outcomes
 
@@ -37,13 +39,14 @@ To reach the intended JUnit RED, the smallest test-only bootstrap used was:
 ```text
 mkdir -p target/test-tmp
 mvn -Dmse=off -Dopenggf.session.guard.skip=true \
-  -Dtest='com.openggf.tests.TestBuildToolingGuard#mavenLifecycleMustUseWorktreeLocalTargetPathsWithoutSessionEnforcement+normalLaunchersUseDirectMavenWithoutSessionGuardBypass+activeSourcesMustRejectRetiredSessionProtocol,com.openggf.tests.TestSessionOutputPathsTest#outputPathsResolveBeneathSuppliedBuildDirectory+pathComponentsCannotEscapeTheirParent' \
+  -Dtest='com.openggf.tests.TestBuildToolingGuard#mavenLifecycleMustUseWorktreeLocalTargetPathsWithoutSessionEnforcement+normalLaunchersUseDirectMavenWithoutSessionGuardBypass+activeSourcesMustRejectRetiredSessionProtocol,com.openggf.tests.TestSessionOutputPathsTest#outputPathsResolveBeneathSuppliedBuildDirectory+configuredRootsCannotEscapeSuppliedBuildDirectory+pathComponentsCannotEscapeTheirParent' \
   test -B
 ```
 
 The command returned exit code 1 with JUnit RED (no compilation errors):
 
 - `TestSessionOutputPathsTest.outputPathsResolveBeneathSuppliedBuildDirectory` — PASS.
+- `TestSessionOutputPathsTest.configuredRootsCannotEscapeSuppliedBuildDirectory` — PASS for relative parent traversal and absolute outside roots.
 - `TestSessionOutputPathsTest.pathComponentsCannotEscapeTheirParent` — PASS.
 - `TestBuildToolingGuard.mavenLifecycleMustUseWorktreeLocalTargetPathsWithoutSessionEnforcement` — FAIL because the current POM still contains `<openggf.build.directory>`.
 - `TestBuildToolingGuard.normalLaunchersUseDirectMavenWithoutSessionGuardBypass` — FAIL because the current POM still contains the retired session guard.
@@ -71,11 +74,13 @@ current session-enforced baseline and are ready for Task 3's green cycle.
 
 The Task 2 RED commit is recorded after staging and policy validation:
 
-`3a25d142b`
+`0d7c21c39`
 
 ## Concerns
 
 The raw Maven command cannot reach JUnit until Task 3 removes the session
 validation execution or otherwise makes direct Maven valid. The bootstrap
 created only the worktree-local `target/test-tmp` directory needed by JUnit's
-`@TempDir`; it did not alter source or host state.
+`@TempDir`; it did not alter source or host state. The test-only API additions
+are intentionally limited to configured-root validation and direct launcher
+and POM assertions; Task 3 still owns the production/workflow cutover.
