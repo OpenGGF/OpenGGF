@@ -1650,13 +1650,15 @@ class TestBuildToolingGuard {
         assertTraceValidatorRejects(runTraceReportValidator(internalMismatchRoot, false),
                 "internal-path-mismatch", "physical_path does not resolve to report");
 
-        Path duplicateRoot = temporaryDirectory.resolve("duplicate");
-        writeTraceReport(duplicateRoot, "trace", "s2_mtz1", "single", ownerA,
+        Path sharedIdentityRoot = temporaryDirectory.resolve("shared-identity");
+        writeTraceReport(sharedIdentityRoot, "trace", "s2_mtz1", "single", ownerA,
                 "{\"error_count\":0,\"warning_count\":0}", null);
-        writeTraceReport(duplicateRoot, "trace", "s2_mtz1", "single", ownerB,
+        writeTraceReport(sharedIdentityRoot, "trace", "s2_mtz1", "single", ownerB,
                 "{\"error_count\":0,\"warning_count\":0}", null);
-        assertTraceValidatorRejects(runTraceReportValidator(duplicateRoot, false),
-                "duplicate", "duplicate report identity");
+        ProcessResult sharedIdentity = runTraceReportValidator(sharedIdentityRoot, false);
+        assertEquals(0, sharedIdentity.exitCode(), () ->
+                "distinct owners may publish the same profile/logical/lane identity:\n"
+                        + sharedIdentity.output());
 
         Path ambiguousRoot = temporaryDirectory.resolve("ambiguous-keep-green");
         writeTraceReport(ambiguousRoot, "special-stage", "s2_special_stage_0", "s2-0",
@@ -1684,6 +1686,219 @@ class TestBuildToolingGuard {
         Files.createSymbolicLink(symlinkReport, outside);
         assertTraceValidatorRejects(runTraceReportValidator(symlinkRoot, false),
                 "symlink-escape", "must not be a symbolic link");
+    }
+
+    @Test
+    void traceReportValidatorMustDispatchEveryOwnerKeyedProducerSchema(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String owner = "0123456789abcdef" + "0".repeat(48);
+
+        Path segmentRoot = temporaryDirectory.resolve("run-chain-segment");
+        writeTraceReport(segmentRoot, "run-chain", "s2_run_seg0", "segment-0", owner,
+                """
+                {
+                  "errorCount": 0,
+                  "warningCount": 0,
+                  "laggedFrames": 0,
+                  "complete": true,
+                  "recentMismatches": [{
+                    "frame": 4,
+                    "field": "x_pos",
+                    "romValue": "10",
+                    "engineValue": "11",
+                    "delta": "1",
+                    "severity": "ERROR",
+                    "repeatCount": 1
+                  }],
+                  "verification_groups": {},
+                  "bootstrapErrorCount": 0
+                }
+                """, null);
+        ProcessResult segment = runTraceReportValidator(segmentRoot, false);
+        assertEquals(0, segment.exitCode(), () ->
+                "validator rejected an AbstractRunChainTest segment report:\n" + segment.output());
+
+        Path segmentWarningRoot = temporaryDirectory.resolve("run-chain-segment-warning");
+        writeTraceReport(segmentWarningRoot, "run-chain", "s2_run_seg0", "segment-0", owner,
+                """
+                {
+                  "errorCount": 0,
+                  "warningCount": 1,
+                  "laggedFrames": 0,
+                  "complete": true,
+                  "recentMismatches": [],
+                  "verification_groups": {},
+                  "bootstrapErrorCount": 0
+                }
+                """, null);
+        assertTraceValidatorRejects(runTraceReportValidator(segmentWarningRoot, false),
+                "run-chain-segment-warning", "Trace replay warnings are test-blocking");
+
+        Map<String, List<String>> invalidSegments = new LinkedHashMap<>();
+        invalidSegments.put("run-chain-missing-count", List.of(
+                """
+                {"warningCount":0,"laggedFrames":0,"complete":true,
+                 "recentMismatches":[],"verification_groups":{},"bootstrapErrorCount":0}
+                """, "missing required errorCount"));
+        invalidSegments.put("run-chain-negative-count", List.of(
+                """
+                {"errorCount":0,"warningCount":-1,"laggedFrames":0,"complete":true,
+                 "recentMismatches":[],"verification_groups":{},"bootstrapErrorCount":0}
+                """, "warningCount must be nonnegative"));
+        invalidSegments.put("run-chain-wrong-count-type", List.of(
+                """
+                {"errorCount":false,"warningCount":0,"laggedFrames":0,"complete":true,
+                 "recentMismatches":[],"verification_groups":{},"bootstrapErrorCount":0}
+                """, "errorCount must be a JSON integer"));
+        for (Map.Entry<String, List<String>> invalid : invalidSegments.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_seg0", "segment-0", owner,
+                    invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path gapRoot = temporaryDirectory.resolve("dynamic-art-gap");
+        writeTraceReport(gapRoot, "run-chain", "s2_run_dynamic_art_gap", "dynamic-art-gap", owner,
+                """
+                {
+                  "runId": "s2_run",
+                  "gapCount": 1,
+                  "failureCount": 0,
+                  "failures": [],
+                  "gaps": [{
+                    "representedSegmentDir": "segment-0",
+                    "nextSegmentDir": "segment-1",
+                    "gapStartMovieLogicalFrame": 10,
+                    "nextSegmentArmMovieLogicalFrame": 11,
+                    "transitionCountAtGapStart": 1,
+                    "transitionCountAfterNextArm": 2,
+                    "transitionsAddedAcrossBoundary": ["AIZ1 -> AIZ2"]
+                  }]
+                }
+                """, null);
+        ProcessResult gap = runTraceReportValidator(gapRoot, false);
+        assertEquals(0, gap.exitCode(), () ->
+                "validator rejected an AbstractRunChainTest dynamic-art gap report:\n"
+                        + gap.output());
+
+        Map<String, List<String>> invalidGaps = new LinkedHashMap<>();
+        invalidGaps.put("dynamic-art-gap-missing-count", List.of(
+                "{\"runId\":\"s2_run\",\"failureCount\":0,\"failures\":[],\"gaps\":[]}",
+                "payload is missing required gapCount"));
+        invalidGaps.put("dynamic-art-gap-missing", List.of(
+                "{\"runId\":\"s2_run\",\"gapCount\":0,\"failureCount\":0,\"failures\":[]}",
+                "payload is missing required gaps"));
+        invalidGaps.put("dynamic-art-gap-negative", List.of(
+                """
+                {"runId":"s2_run","gapCount":-1,"failureCount":0,
+                 "failures":[],"gaps":[]}
+                """, "gapCount must be nonnegative"));
+        invalidGaps.put("dynamic-art-gap-wrong-type", List.of(
+                """
+                {"runId":"s2_run","gapCount":0,"failureCount":"0",
+                 "failures":[],"gaps":[]}
+                """, "failureCount must be a JSON integer"));
+        for (Map.Entry<String, List<String>> invalid : invalidGaps.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_dynamic_art_gap",
+                    "dynamic-art-gap", owner, invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path interiorRoot = temporaryDirectory.resolve("dynamic-art-interior");
+        writeTraceReport(interiorRoot, "run-chain", "s2_run_seg0_dynamic_art",
+                "segment-0-dynamic-art", owner,
+                """
+                {
+                  "comparisonCount": 1,
+                  "errorCount": 1,
+                  "mismatches": [{
+                    "frame": 10,
+                    "field": "dynamic_art.transitions",
+                    "expected": "expected",
+                    "actual": "actual",
+                    "severity": "ERROR"
+                  }]
+                }
+                """, null);
+        ProcessResult interior = runTraceReportValidator(interiorRoot, false);
+        assertEquals(0, interior.exitCode(), () ->
+                "validator rejected an AbstractRunChainTest dynamic-art interior report:\n"
+                        + interior.output());
+
+        Map<String, List<String>> invalidInteriors = new LinkedHashMap<>();
+        invalidInteriors.put("dynamic-art-interior-missing-count", List.of(
+                "{\"comparisonCount\":0,\"mismatches\":[]}",
+                "payload is missing required errorCount"));
+        invalidInteriors.put("dynamic-art-interior-missing", List.of(
+                "{\"comparisonCount\":0,\"errorCount\":0}",
+                "payload is missing required mismatches"));
+        invalidInteriors.put("dynamic-art-interior-negative", List.of(
+                "{\"comparisonCount\":-1,\"errorCount\":0,\"mismatches\":[]}",
+                "comparisonCount must be nonnegative"));
+        invalidInteriors.put("dynamic-art-interior-type", List.of(
+                "{\"comparisonCount\":0,\"errorCount\":\"0\",\"mismatches\":[]}",
+                "errorCount must be a JSON integer"));
+        for (Map.Entry<String, List<String>> invalid : invalidInteriors.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_seg0_dynamic_art",
+                    "segment-0-dynamic-art", owner, invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path unknownRoot = temporaryDirectory.resolve("unknown-run-chain-schema");
+        writeTraceReport(unknownRoot, "run-chain", "s2_run_unknown", "unknown", owner,
+                "{}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(unknownRoot, false),
+                "unknown-run-chain-schema", "unknown owner-keyed report schema");
+    }
+
+    @Test
+    void traceReportValidatorMustTrackOwnerKeyedProducerKeys() throws Exception {
+        String producer = Files.readString(Path.of(
+                "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java"));
+        String divergenceProducer = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/DivergenceReport.java"));
+        String validator = Files.readString(Path.of(
+                "tools/testing/validate-trace-reports.py"));
+
+        assertEquals(3,
+                producer.split(Pattern.quote(
+                        "TestSessionOutputPaths.allocateReport(\"run-chain\""), -1).length - 1,
+                "every run-chain owner-keyed publisher must be inventoried here");
+        for (String key : List.of("error_count", "warning_count")) {
+            assertTrue(divergenceProducer.contains("root.put(\"" + key + "\""),
+                    () -> "DivergenceReport no longer publishes guarded key " + key);
+            assertTrue(validator.contains("\"" + key + "\""),
+                    () -> "trace report validator does not validate divergence key " + key);
+        }
+
+        for (String key : List.of(
+                "errorCount", "warningCount", "laggedFrames", "complete",
+                "recentMismatches", "verification_groups", "bootstrapErrorCount",
+                "runId", "gapCount", "failureCount", "failures", "gaps",
+                "representedSegmentDir", "nextSegmentDir", "gapStartMovieLogicalFrame",
+                "nextSegmentArmMovieLogicalFrame", "transitionCountAtGapStart",
+                "transitionCountAfterNextArm", "transitionsAddedAcrossBoundary",
+                "comparisonCount", "mismatches", "frame", "field", "expected",
+                "actual", "severity")) {
+            assertTrue(producer.contains("put(\"" + key + "\""),
+                    () -> "AbstractRunChainTest no longer publishes guarded key " + key);
+            assertTrue(validator.contains("\"" + key + "\""),
+                    () -> "trace report validator does not validate producer key " + key);
+        }
+        for (String discriminator : List.of(
+                "dynamic-art-gap", "segment-", "-dynamic-art")) {
+            assertTrue(producer.contains(discriminator),
+                    () -> "AbstractRunChainTest no longer publishes lane " + discriminator);
+            assertTrue(validator.contains(discriminator),
+                    () -> "trace report validator does not dispatch lane " + discriminator);
+        }
+        assertFalse(validator.contains("duplicate report identity"),
+                "distinct owners must not be collapsed by profile/logical/lane identity");
     }
 
     private static void assertOwnerKeyedTraceReportConsumer(

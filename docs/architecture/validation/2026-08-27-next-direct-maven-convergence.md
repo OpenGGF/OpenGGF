@@ -127,15 +127,15 @@ rejected the valid fixture because the shared validator did not yet exist.
 
 Both workflows now invoke
 `tools/testing/validate-trace-reports.py`. Its executable fixture verifies a
-valid owner-keyed report and publisher-safe logical-key normalization, while
+valid divergence report and publisher-safe logical-key normalization, while
 rejecting empty sets; malformed or non-object JSON; missing, negative, string,
-boolean, or floating counts; warning-bearing reports; a red required
-keep-green report; missing, malformed, non-object, incomplete, extra-field,
-blank, or wrongly typed sidecars; logical-key, owner-hash, physical-path, and
-duplicate-owner mismatches; duplicate/ambiguous logical ownership; and a
-symlink escape. It also proves a nonnegative positive `error_count` remains
-valid for the general release scan, where the separate trace coverage gate
-owns error certification.
+boolean, or floating divergence counts; warning-bearing reports; a red
+required keep-green report; missing, malformed, non-object, incomplete,
+extra-field, blank, or wrongly typed sidecars; logical-key, owner-hash,
+physical-path, and duplicate-owner mismatches; ambiguous required-selector
+ownership; and a symlink escape. It also proves a nonnegative positive
+`error_count` remains valid for the general release scan, where the separate
+trace coverage gate owns error certification.
 
 The focused validator method reported 1 test, 0 failures, 0 errors, and
 0 skipped. The complete focused guard then reported 98 tests, 0 failures,
@@ -147,6 +147,49 @@ scheduled ROM-backed trace job, and keep-green gate. Release retains its ROM
 arguments, optional-skip inventory, source-derived trace coverage checks,
 native matrix, universal profile, package smoke validation, and
 finished-archive uploads.
+
+A third review found that owner-keyed publication is not one payload schema.
+The exhaustive bounded publisher search under `src/test` found these four live
+shapes and no others:
+
+| Publisher | Profile / lane | Required payload shape | Warning certification |
+|---|---|---|---|
+| `TraceReportWriter` / `DivergenceReport.toJson()` | `trace` or `special-stage` / caller lane | snake-case nonnegative integer `error_count` and `warning_count` | `warning_count` |
+| `AbstractRunChainTest.buildComparatorSummaryJson` | `run-chain` / `segment-<N>` | camel-case nonnegative integer `errorCount`, `warningCount`, `laggedFrames`, `bootstrapErrorCount`; boolean `complete`; `recentMismatches` array; `verification_groups` object | `warningCount` |
+| `AbstractRunChainTest.writeChainGapReport` | `run-chain` / `dynamic-art-gap` | nonblank `runId`; nonnegative integer `gapCount` and `failureCount`; typed `failures` and structured `gaps` arrays | none published |
+| `AbstractRunChainTest.writeDynamicArtInteriorReport` | `run-chain` / `segment-<N>-dynamic-art` | nonnegative integer `comparisonCount` and `errorCount`; structured `mismatches` array | none published |
+
+The search used `allocateReport`, `publish`, `publishOwnerMetadata`, and
+`TraceReportWriter.write` references and excluded only the output-path unit
+test's synthetic publisher fixtures. Before changing the validator, executable
+fixtures copied each `AbstractRunChainTest` shape and changed the former
+duplicate-logical assertion to require acceptance for distinct owners. The
+focused guard produced the intended RED: 100 tests, 3 failures, 0 errors, and
+0 skipped. The failures were
+`traceReportValidatorMustDispatchEveryOwnerKeyedProducerSchema`,
+`traceReportValidatorMustEnforcePayloadAndOwnerEvidence`, and
+`traceReportValidatorMustTrackOwnerKeyedProducerKeys`: the old validator
+required snake-case divergence counts from run-chain payloads, rejected two
+legitimate owners sharing a logical identity, and did not validate the
+producer keys.
+
+The shared validator now authenticates sidecar/hash/logical/physical-path
+binding for every schema, then dispatches by the real profile/lane contract.
+It fails closed for unknown shapes, validates each schema's required content
+and nonnegative exact JSON-integer counts, aggregates both owned warning field
+spellings, and permits distinct owner keys to share a profile/logical/lane.
+Only the required S2 selector retains exact-one cardinality, requires the
+divergence schema, and requires both divergence counts to be zero. Duplicate
+full owner keys remain invalid. Executable negatives cover unknown empty
+payloads plus missing, wrong-type, and negative fields in every count-bearing
+schema; populated fixtures exercise the real segment mismatch, structural-gap,
+and dynamic-art-interior row shapes. A source/validator guard pins the producer
+keys and lane discriminators so drift cannot silently reopen fail-open
+certification.
+
+The three validator behavior methods reported 3 tests, 0 failures, 0 errors,
+and 0 skipped. The complete focused guard reported 100 tests, 0 failures,
+0 errors, and 0 skipped with `BUILD SUCCESS`.
 
 The dedicated lifecycle-record deletion was bounded before editing. Four of
 the five present records were byte-identical to `572a5cc36^`; the sole
