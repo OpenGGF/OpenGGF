@@ -34,7 +34,7 @@ that will hold the durable Actworks clone. Use the configured
 
 ---
 
-### Task 1: Record the raw-Maven integration baseline
+### Task 1: Record the pre-rollback integration baseline
 
 **Files:**
 - Create: `docs/architecture/validation/2026-08-27-actworks-maven-rollback-baseline.md`
@@ -42,8 +42,10 @@ that will hold the durable Actworks clone. Use the configured
 - Create: `docs/architecture/validation/2026-08-27-actworks-maven-guards-red-set.txt`
 
 **Interfaces:**
-- Consumes: clean `develop` at the current remote head; Java 21; ordinary Maven defaults.
-- Produces: exact ordinary and guards red sets plus commands/counts for Task 9 comparison.
+- Consumes: clean `develop` at the current remote head; Java 21; the current
+  enforced session workflow.
+- Produces: the exact raw-Maven rejection plus ordinary and guards red sets for
+  Task 9 comparison.
 
 - [ ] **Step 1: Verify the baseline worktree and JVM**
 
@@ -58,15 +60,16 @@ mvn -v
 
 Expected: main workspace is clean and Maven reports Java 21.
 
-- [ ] **Step 2: Run the ordinary suite directly**
+- [ ] **Step 2: Prove and record the current raw-Maven rejection**
 
 ```bash
 mvn -Dmse=off test -B
 ```
 
-Expected: Maven may exit non-zero because the current baseline is red, but
-`target/surefire-reports/TEST-*.xml` exists and no `.openggf` or managed
-test-session directory is created by this command.
+Expected before rollback: Maven exits during
+`openggf-session-validate-guard` with `missing session identity properties`.
+Record the exit and bounded error text; this establishes the active behavior
+being removed and is not a test-suite baseline.
 
 The main workspace is the read-only execution baseline. Write the comparison
 files into the migration worktree with these exact destinations:
@@ -76,27 +79,30 @@ MIGRATION_VALIDATION="$MIGRATION_WORKTREE/docs/architecture/validation"
 mkdir -p "$MIGRATION_VALIDATION"
 ```
 
-- [ ] **Step 3: Record the ordinary red set**
+- [ ] **Step 3: Run one final ordinary baseline through the old wrapper**
 
 ```bash
+tools/testing/test-session.sh -- mvn -Dmse=off test -B
 pwsh -NoProfile -File tools/testing/Compare-SurefireRedSet.ps1 \
-  -ReportsPath target/surefire-reports \
+  -ReportsPath "$BASELINE_ARTIFACT_ROOT/surefire-reports" \
   -WriteActualPath "$MIGRATION_VALIDATION/2026-08-27-actworks-maven-ordinary-red-set.txt"
 ```
 
-Expected: the command prints exact failure/error totals and writes sorted
-`Class#method` identities.
+Set `BASELINE_ARTIFACT_ROOT` from the wrapper's terminal manifest. Expected:
+valid start/end markers, the command's exact exit, and a sorted red set. This
+is the final ordinary wrapper allocation; do not rerun it merely for logging.
 
-- [ ] **Step 4: Run fresh-JVM guards directly and record their red set**
+- [ ] **Step 4: Run one final guards baseline through the old wrapper**
 
 ```bash
-mvn -Dmse=off -Pguards test -B
+tools/testing/test-session.sh -- mvn -Dmse=off -Pguards test -B
 pwsh -NoProfile -File tools/testing/Compare-SurefireRedSet.ps1 \
-  -ReportsPath target/surefire-reports \
+  -ReportsPath "$BASELINE_GUARDS_ARTIFACT_ROOT/surefire-reports" \
   -WriteActualPath "$MIGRATION_VALIDATION/2026-08-27-actworks-maven-guards-red-set.txt"
 ```
 
-Expected: guard reports exist even if the known baseline is red.
+Set `BASELINE_GUARDS_ARTIFACT_ROOT` from that run's terminal manifest.
+Expected: guard reports and exact red set even if the known baseline is red.
 
 - [ ] **Step 5: Write the baseline validation record**
 
@@ -109,15 +115,16 @@ fields; do not stage the record until every field contains observed evidence:
 
 - Commit: the exact `develop` commit printed by `git rev-parse HEAD`
 - JVM: the exact Java line printed by `mvn -v`
-- Ordinary command: `mvn -Dmse=off test -B`
+- Raw pre-rollback command: `mvn -Dmse=off test -B`
+- Raw pre-rollback result: the observed session-guard rejection and exit status
+- Ordinary command: `tools/testing/test-session.sh -- mvn -Dmse=off test -B`
 - Ordinary result: the observed tests, failures, errors, skipped, and exit status
 - Ordinary red set: `2026-08-27-actworks-maven-ordinary-red-set.txt`
-- Guards command: `mvn -Dmse=off -Pguards test -B`
+- Guards command: `tools/testing/test-session.sh -- mvn -Dmse=off -Pguards test -B`
 - Guards result: the observed tests, failures, errors, skipped, and exit status
 - Guards red set: `2026-08-27-actworks-maven-guards-red-set.txt`
-- Output root: the absolute main-workspace `target` path
-- `.openggf` created by commands: `no`
-- Managed session created by commands: `no`
+- Ordinary run id, manifest, log, and artifact root: the exact marker values
+- Guards run id, manifest, log, and artifact root: the exact marker values
 ```
 
 - [ ] **Step 6: Commit the baseline evidence on the migration branch**
