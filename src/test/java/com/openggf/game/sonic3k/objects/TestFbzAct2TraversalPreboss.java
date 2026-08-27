@@ -2131,37 +2131,27 @@ public class TestFbzAct2TraversalPreboss {
                             if (trigger7RightHandoffCommitted && !player.getAir()
                                     && playerYBefore >= 0x0700) {
                                 trigger7LandingReached = true;
-                                int nativeTurnX = 0x1A90;
-                                if (playerXBefore > nativeTurnX) {
-                                    // Native lands at $1A9E, coasts to the
-                                    // authored $1A90 clearance point outside
-                                    // the closed trigger-6 lower door, then
-                                    // reverses RIGHT. Donated approach speeds
-                                    // use ordinary LEFT to reach the same point.
-                                    mask = AbstractPlayableSprite.INPUT_LEFT;
-                                } else {
-                                    FbzScrewDoorObjectInstance lowerDoor =
-                                            objects.activeObjectsOfType(
-                                                            FbzScrewDoorObjectInstance.class)
-                                                    .stream()
-                                                    .filter(door -> !door.isDestroyed())
-                                                    .filter(door -> door.getSpawn().x() == 0x1A68)
-                                                    .filter(door -> door.getSpawn().y() == 0x071E)
-                                                    .filter(door -> door.getSpawn().subtype() == 0x16)
-                                                    .findFirst().orElse(null);
-                                    assertNotNull(lowerDoor,
-                                            "native $1A90 turn lost live trigger-6 lower door");
-                                    int lowerDoorRightContact = lowerDoor.getX()
-                                            + lowerDoor.getSolidParams().halfWidth()
-                                            + player.getXRadius();
-                                    assertTrue(playerXBefore >= lowerDoorRightContact,
-                                            () -> waypointDiagnostic(
-                                                    "trigger-7-turn-crossed-lower-door",
-                                                    lowerDoorRightContact));
-                                    trigger7TurnReached = true;
-                                    trigger7DoorStage = 4;
-                                    mask = AbstractPlayableSprite.INPUT_RIGHT;
-                                }
+                                FbzScrewDoorObjectInstance lowerDoor =
+                                        objects.activeObjectsOfType(
+                                                        FbzScrewDoorObjectInstance.class)
+                                                .stream()
+                                                .filter(door -> !door.isDestroyed())
+                                                .filter(door -> door.getSpawn().x() == 0x1A68)
+                                                .filter(door -> door.getSpawn().y() == 0x071E)
+                                                .filter(door -> door.getSpawn().subtype() == 0x16)
+                                                .findFirst().orElse(null);
+                                assertNotNull(lowerDoor,
+                                        "trigger-7 turn lost live trigger-6 lower door");
+                                int lowerDoorRightContact = lowerDoor.getX()
+                                        + lowerDoor.getSolidParams().halfWidth()
+                                        + player.getXRadius();
+                                assertTrue(playerXBefore >= lowerDoorRightContact,
+                                        () -> waypointDiagnostic(
+                                                "trigger-7-turn-crossed-lower-door",
+                                                lowerDoorRightContact));
+                                trigger7TurnReached = true;
+                                trigger7DoorStage = 4;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT;
                             } else if (!trigger7EgressJumpStarted && !player.getAir()) {
                                 trigger7EgressJumpStarted = true;
                                 mask = AbstractPlayableSprite.INPUT_LEFT
@@ -2736,6 +2726,13 @@ public class TestFbzAct2TraversalPreboss {
                                 waypointDiagnostic(
                                         "trigger-7-egress-rearmed-released-jump", 0x1AC0));
                     }
+                    if ("trigger-7-stage-3-egress".equals(maskOwner)
+                            && trigger7RightHandoffCommitted) {
+                        assertEquals(0, mask & AbstractPlayableSprite.INPUT_LEFT,
+                                waypointDiagnostic(
+                                        "trigger-7-egress-reversed-after-right",
+                                        trigger7HandoffPlayerX));
+                    }
                     if (trigger7DoorStage == 3 && trigger7RightHandoffCommitted
                             && lateButtonDoor != null && !player.getAir()) {
                         int respawnedDoorRightEdge = lateButtonDoor.getX()
@@ -3007,7 +3004,7 @@ public class TestFbzAct2TraversalPreboss {
                         assertTrue(trigger7LandingReached,
                                 "successful route lacked trigger-7 landing evidence");
                         assertTrue(trigger7TurnReached,
-                                "successful route lacked native $1A90 turn evidence");
+                                "successful route lacked one-way trigger-7 turn evidence");
                         assertTrue(magneticPlatformHazardArmed,
                                 "successful route never armed the live Obj74 hazard response");
                         assertTrue(magneticPlatformVerticalClearanceObserved,
