@@ -4,6 +4,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Sonic 1 swinging platforms no longer break live rewind when object RAM is
+  full:** chain construction now stops at the shipped ROM's first failed
+  `FindFreeObj`, retaining only managed, identity-bearing links instead of an
+  unregistered child reference that made rewind capture throw.
+
 - **Builds and tests are back on direct Maven after managed sessions caused
   unbounded storage growth:** each worktree now owns one reusable `target/`
   tree, CI/release jobs use static target-local report and artifact paths, and
