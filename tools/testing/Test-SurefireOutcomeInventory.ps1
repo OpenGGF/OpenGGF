@@ -137,13 +137,16 @@ function New-EffectivePomText {
         [string] $ProjectBuildDirectory = '/project/target',
         [string] $TestTmpdir = '/project/target/test-tmp',
         [string] $ReuseForks = 'true',
+        [string] $RunOrder = 'alphabetical',
         [switch] $OmitProjectArgLine,
+        [switch] $OmitRunOrder,
         [string] $AdditionalProjectProperties = '',
         [string[]] $Excludes = @('**/*Guard.java', '**/ExcludedTest.java')
     )
     $includesFileElement = if ($IncludesFile.Length -eq 0) { '' } else { "<includesFile>$IncludesFile</includesFile>" }
     $excludeElements = ($Excludes | ForEach-Object { "<exclude>$([System.Security.SecurityElement]::Escape($_))</exclude>" }) -join ''
     $projectArgLineElement = if ($OmitProjectArgLine) { '' } else { "<surefire.argLine>$([System.Security.SecurityElement]::Escape($ProjectArgLine))</surefire.argLine>" }
+    $runOrderElement = if ($OmitRunOrder) { '' } else { "<runOrder>$([System.Security.SecurityElement]::Escape($RunOrder))</runOrder>" }
     $resolvedExecutionArgLine = if ($ExecutionArgLine.Length -eq 0) { "$ProjectArgLine -Djava.io.tmpdir=/session/effective-pom/tmp" } else { $ExecutionArgLine }
     $escapedExecutionArgLine = [System.Security.SecurityElement]::Escape($resolvedExecutionArgLine)
     return @"
@@ -151,7 +154,7 @@ function New-EffectivePomText {
   <artifactId>maven-surefire-plugin</artifactId><executions><execution><id>default-test</id><configuration>
     $includesFileElement$AdditionalSelection
     <excludes>$excludeElements</excludes>
-    <groups>ordinary</groups><excludedGroups>quarantined</excludedGroups><argLine>$escapedExecutionArgLine</argLine><forkCount>$ForkCount</forkCount><reuseForks>$ReuseForks</reuseForks>
+    <groups>ordinary</groups><excludedGroups>quarantined</excludedGroups><argLine>$escapedExecutionArgLine</argLine><forkCount>$ForkCount</forkCount><reuseForks>$ReuseForks</reuseForks>$runOrderElement
   </configuration></execution></executions>
 </plugin></plugins></build></project>
 "@
@@ -572,9 +575,42 @@ test
             -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
             -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
             -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirect) 'runOrder|alphabetical' 'missing direct Maven run order'
+
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=random`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Assert-Failed (& $invokeDirect) 'runOrder.*alphabetical' 'non-alphabetical direct Maven run order'
+
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir -OmitRunOrder `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        Assert-Succeeded (& $invokeDirect) 'frozen baseline accepts authenticated CLI run order without effective-POM binding'
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -AdditionalSelection '<runOrder>alphabetical</runOrder>' `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirect) 'runOrder|found 2|exactly one' 'duplicate effective Maven run order'
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir -RunOrder 'random' `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirect) 'runOrder.*effective|runOrder.*equal' 'direct Maven run order argv and effective mismatch'
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
         Assert-Succeeded (& $invokeDirect) 'direct Maven capacity argLine'
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityTemplateArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityTemplateArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
             -ProjectArgLine $capacityTemplateArgLine `
@@ -688,7 +724,7 @@ test
         New-Item -ItemType Directory -Path (Split-Path -Parent $tmpRepositoryMockitoPath) -Force | Out-Null
         Write-Utf8File $tmpRepositoryMockitoPath 'tmpdir repository fixture Mockito agent jar'
         $tmpRepositoryCapacityArgLine = "-Xshare:off -javaagent:`"$tmpRepositoryMockitoPath`" -Xmx3g"
-        Write-Utf8File $arguments "-Dsurefire.argLine=$tmpRepositoryCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$tmpRepositoryCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine "-javaagent:`"$tmpRepositoryMockitoPath`"" `
             -ProjectArgLine $capacityTemplateArgLine `
@@ -701,7 +737,7 @@ test
         New-Item -ItemType Directory -Path (Split-Path -Parent $lwjglRepositoryMockitoPath) -Force | Out-Null
         Write-Utf8File $lwjglRepositoryMockitoPath 'LWJGL repository fixture Mockito agent jar'
         $lwjglRepositoryCapacityArgLine = "-Xshare:off -javaagent:`"$lwjglRepositoryMockitoPath`" -Xmx3g"
-        Write-Utf8File $arguments "-Dsurefire.argLine=$lwjglRepositoryCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$lwjglRepositoryCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine "-javaagent:`"$lwjglRepositoryMockitoPath`"" `
             -ProjectArgLine $capacityTemplateArgLine `
@@ -709,7 +745,7 @@ test
             -ExecutionArgLine ($lwjglRepositoryCapacityArgLine + " -Djava.io.tmpdir=`"$testTmpdir`" -Dorg.lwjgl.system.SharedLibraryExtractPath=`"`${settings.localRepository}/../test-tmp/lwjgl-`${surefire.forkNumber}`""))
         Assert-Failed (& $invokeDirectWithRepository $lwjglRepository) 'settings.localRepository|javaagent|Mockito|placeholder|LWJGL' 'Maven repository placeholder in execution LWJGL path'
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
             -ProjectArgLine $capacityTemplateArgLine `
@@ -724,7 +760,7 @@ test
             -ExecutionArgLine ($placeholderCapacityArgLine + " -Dunexpected=`"`${settings.localRepository}`"" + $executionSuffix))
         Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'settings.localRepository|multiple|placeholder|javaagent|unexpected' 'Maven repository placeholder in another execution token'
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
             -ProjectArgLine '-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g' `
@@ -732,7 +768,7 @@ test
             -ExecutionArgLine ($macCapacityArgLine + $executionSuffix))
         Assert-Succeeded (& $invokeDirect) 'direct Maven macOS capacity argLine'
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityTemplateArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityTemplateArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
             -ProjectArgLine '-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g' `
@@ -745,11 +781,11 @@ test
                 '${test.cds.argLine} ${mockito.agent.argLine} ${unknown} -Xmx3g',
                 '${mockito.agent.argLine} ${test.cds.argLine} -Xmx3g',
                 '@{test.cds.argLine} ${mockito.agent.argLine} -Xmx3g')) {
-            Write-Utf8File $arguments "-Dsurefire.argLine=$invalidTemplateArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+            Write-Utf8File $arguments "-Dsurefire.argLine=$invalidTemplateArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
             Assert-Failed (& $invokeDirect) 'canonical|unresolved|placeholder|argLine' "invalid raw capacity template $invalidTemplateArgLine"
         }
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
             -ProjectArgLine '-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g' `
@@ -757,7 +793,7 @@ test
             -ExecutionArgLine ($capacityArgLine + $executionSuffix))
         Assert-Failed (& $invokeDirect) 'XstartOnFirstThread|macOS|project argLine|launcher' 'direct Maven cannot drop macOS launcher token'
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
             -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
@@ -765,7 +801,7 @@ test
             -ExecutionArgLine ($macCapacityArgLine + $executionSuffix))
         Assert-Failed (& $invokeDirect) 'XstartOnFirstThread|macOS|project argLine|launcher' 'direct Maven cannot inject macOS launcher token'
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$windowsCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$windowsCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine $windowsMockitoArgLine `
             -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
@@ -773,7 +809,7 @@ test
             -ExecutionArgLine ($windowsCapacityArgLine + $executionSuffix))
         Assert-Succeeded (& $invokeDirectWithoutRepository) 'direct Maven Windows Mockito path normalization'
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
             -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
@@ -790,10 +826,10 @@ test
         foreach ($emptyPlaceholderToken in @(
                 '-Dsonic1.rom.path=/roms/${}/sonic1.gen',
                 '-Dsonic1.rom.path=/roms/@{}/sonic1.gen')) {
-            Write-Utf8File $arguments "$emptyPlaceholderToken`n-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+            Write-Utf8File $arguments "$emptyPlaceholderToken`n-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
             Assert-Failed (& $invokeDirect) 'unresolved|placeholder|Maven property' "empty placeholder in raw Maven token $emptyPlaceholderToken"
         }
-        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
 
         $runtimeInputs = $patterns + [IO.Path]::PathSeparator + $effectivePom
         Assert-Failed (& $invokeDirect) 'Maven argument inventory.*OPENGGF_RUNTIME_INPUTS|runtime input|exactly once' 'missing direct Maven argument-inventory runtime proof'
@@ -818,11 +854,12 @@ test
             '-OutputPath', $output, '-ReportRoot', $reports
         )) 'atomic|EffectivePomPath|preflight' 'missing direct Maven effective-POM artifact'
 
-        foreach ($missingProperty in @('surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks', 'surefire.includesFile')) {
+        foreach ($missingProperty in @('surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks', 'surefire.runOrder', 'surefire.includesFile')) {
             $lines = @(
                 "-Dsurefire.argLine=$capacityArgLine",
                 '-Dsurefire.forkCount=1',
                 '-Dsurefire.reuseForks=true',
+                '-Dsurefire.runOrder=alphabetical',
                 "-Dsurefire.includesFile=$patterns",
                 'test') | Where-Object { -not $_.StartsWith("-D$missingProperty=", [StringComparison]::Ordinal) }
             Write-Utf8File $arguments (($lines -join "`n") + "`n")
@@ -833,22 +870,23 @@ test
                 "-Dsurefire.argLine=$capacityArgLine",
                 '-Dsurefire.forkCount=1',
                 '-Dsurefire.reuseForks=true',
+                '-Dsurefire.runOrder=alphabetical',
                 "-Dsurefire.includesFile=$patterns")) {
-            Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`n$duplicateProperty`ntest`n"
+            Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`n$duplicateProperty`ntest`n"
             Assert-Failed (& $invokeDirect) 'exactly one|more than once|duplicate' "duplicate direct Maven property $duplicateProperty"
         }
 
         foreach ($fixture in @(
-            [pscustomobject]@{ Name = 'fork mismatch'; Arguments = "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=2`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"; Pattern = 'forkCount|effective|mismatch' },
-            [pscustomobject]@{ Name = 'reuse mismatch'; Arguments = "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=false`n-Dsurefire.includesFile=$patterns`ntest`n"; Pattern = 'reuseForks|effective|mismatch' },
-            [pscustomobject]@{ Name = 'dollar placeholder'; Arguments = "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=`${capacity.forks}`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"; Pattern = 'unresolved|placeholder' },
-            [pscustomobject]@{ Name = 'Surefire placeholder'; Arguments = "-Dsurefire.argLine=@{capacity.argLine}`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"; Pattern = 'unresolved|placeholder' }
+            [pscustomobject]@{ Name = 'fork mismatch'; Arguments = "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=2`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"; Pattern = 'forkCount|effective|mismatch' },
+            [pscustomobject]@{ Name = 'reuse mismatch'; Arguments = "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=false`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"; Pattern = 'reuseForks|effective|mismatch' },
+            [pscustomobject]@{ Name = 'dollar placeholder'; Arguments = "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=`${capacity.forks}`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"; Pattern = 'unresolved|placeholder' },
+            [pscustomobject]@{ Name = 'Surefire placeholder'; Arguments = "-Dsurefire.argLine=@{capacity.argLine}`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"; Pattern = 'unresolved|placeholder' }
         )) {
             Write-Utf8File $arguments $fixture.Arguments
             Assert-Failed (& $invokeDirect) $fixture.Pattern $fixture.Name
         }
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         foreach ($fixture in @(
             [pscustomobject]@{ Name = 'effective fork mismatch'; Pom = (New-EffectivePomText `
                     -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
@@ -870,7 +908,7 @@ test
             -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
             -ExecutionArgLine ($capacityArgLine + $executionSuffix))
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         foreach ($placeholderInput in @('@{ignored.input}', '${ignored.input}')) {
             $runtimeInputs = $patterns + [IO.Path]::PathSeparator + $canonicalArguments + [IO.Path]::PathSeparator + $effectivePom + [IO.Path]::PathSeparator + $placeholderInput
             Assert-Failed (& $invokeDirect) 'unresolved|placeholder|RuntimeInputs' "placeholder in authenticated runtime inputs $placeholderInput"
@@ -886,7 +924,7 @@ test
                 '-Xshare:off -javaagent:"/opt/mockito-cache/@{}/repository/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar" -Xmx3g',
                 '-Xshare:off -javaagent:"/home/test repo/.m2/repository/org/mockito/other-agent/5.14.2/other-agent-5.14.2.jar" -Xmx3g',
                 '-Xshare:off -javaagent:"relative/repository/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar" -Xmx3g')) {
-            Write-Utf8File $arguments "-Dsurefire.argLine=$invalidArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+            Write-Utf8File $arguments "-Dsurefire.argLine=$invalidArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
             Write-Utf8File $effectivePom (New-EffectivePomText `
                 -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
                 -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
@@ -894,7 +932,7 @@ test
             Assert-Failed (& $invokeDirect) 'CDS|Mockito|heap|capacity|argument|option|absolute' "extra or altered JVM option $invalidArgLine"
         }
 
-        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.runOrder=alphabetical`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
             -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
@@ -1025,7 +1063,7 @@ test
         )
         Assert-Succeeded $result 'selector-invocation effective POM contract'
         Assert-True ($result.Output -match 'excludes=.*Guard.*ExcludedTest') 'effective POM evidence records excludes'
-        Assert-True ($result.Output -match 'groups=ordinary.*excludedGroups=quarantined.*projectArgLine=.*mockito-agent.*executionArgLine=.*java.io.tmpdir.*forkCount=1.*reuseForks=true') 'effective POM evidence records groups, project and execution argLine, and fork settings'
+        Assert-True ($result.Output -match 'groups=ordinary.*excludedGroups=quarantined.*projectArgLine=.*mockito-agent.*executionArgLine=.*java.io.tmpdir.*forkCount=1.*reuseForks=true.*runOrder=alphabetical') 'effective POM evidence records groups, project and execution argLine, fork settings, and run order'
 
         foreach ($fixture in @(
             [pscustomobject]@{ Name = 'missing project argLine property'; Pom = (New-EffectivePomText -OmitProjectArgLine) },
@@ -1463,6 +1501,30 @@ test
         Assert-Equal $candidateRow.red_body_sha256 $parentRow.red_body_sha256 'normalized red body hash equivalence'
         Assert-Succeeded (Invoke-Tool $compareScript @('-CandidateInventoryPath', $candidateOutput, '-OutputPath', $compareOutput, '-ParentInventoryPath', $parentOutput)) 'normalized false-change comparison'
         Assert-Equal @(Import-Csv -Delimiter "`t" -LiteralPath $compareOutput)[0].classification 'MATCH' 'normalized volatile tokens do not create false signature change'
+    }
+
+    Invoke-Case 'export normalizes generated JUnit temp mod snapshot and Jansi extraction identifiers' {
+        $case = Join-Path $scratch 'export-generated-identifier-equivalence'
+        $parentReports = Join-Path $case 'parent-reports'
+        $candidateReports = Join-Path $case 'candidate-reports'
+        New-Item -ItemType Directory -Path $parentReports, $candidateReports -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $parentOutput = Join-Path $case 'parent.tsv'
+        $candidateOutput = Join-Path $case 'candidate.tsv'
+        $compareOutput = Join-Path $case 'comparison.tsv'
+        Write-Utf8File $classes "example.GeneratedIdentifierTest`n"
+        Write-Utf8File (Join-Path $parentReports 'TEST-generated.xml') '<testsuite><testcase classname="example.GeneratedIdentifierTest" name="generated"><failure type="example.Generated" message="/parent/tree/target/test-tmp/junit123456/sample/target/maven-tmp/jansi-2.4.3-deadbeef-libjansi.so.lck /tmp/openggf-mod-snapshot-111222333: failed">at /parent/tree/target/test-tmp/junit123456/sample/target/maven-tmp/jansi-2.4.3-deadbeef-libjansi.so.lck in /tmp/openggf-mod-snapshot-111222333: failed</failure></testcase></testsuite>'
+        Write-Utf8File (Join-Path $candidateReports 'TEST-generated.xml') '<testsuite><testcase classname="example.GeneratedIdentifierTest" name="generated"><failure type="example.Generated" message="/candidate/tree/target/test-tmp/junit987654/sample/target/maven-tmp/jansi-2.4.3-cafebabe-libjansi.so.lck /tmp/openggf-mod-snapshot-999888777: failed">at /candidate/tree/target/test-tmp/junit987654/sample/target/maven-tmp/jansi-2.4.3-cafebabe-libjansi.so.lck in /tmp/openggf-mod-snapshot-999888777: failed</failure></testcase></testsuite>'
+        Assert-Succeeded (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $parentOutput, '-CanonicalWorktree', '/parent/tree', '-SessionRoot', '/parent/session', '-RunId', 'parent-run-12345678', '-ReportRoot', $parentReports)) 'parent generated identifier export'
+        Assert-Succeeded (Invoke-Tool $exportScript @('-SourceClassInventory', $classes, '-OutputPath', $candidateOutput, '-CanonicalWorktree', '/candidate/tree', '-SessionRoot', '/candidate/session', '-RunId', 'candidate-run-87654321', '-ReportRoot', $candidateReports)) 'candidate generated identifier export'
+        $parentRow = @(Import-Csv -Delimiter "`t" -LiteralPath $parentOutput)[0]
+        $candidateRow = @(Import-Csv -Delimiter "`t" -LiteralPath $candidateOutput)[0]
+        Assert-Equal $parentRow.normalized_message '<WORKTREE>/target/test-tmp/<JUNIT_TEMP>/sample/target/maven-tmp/jansi-2.4.3-<EXTRACTION_ID>-libjansi.so.lck /tmp/openggf-mod-snapshot-<TEMP_ID>: failed' 'generated identifier normalization is narrow and explicit'
+        Assert-Equal $candidateRow.normalized_message $parentRow.normalized_message 'generated identifier message equivalence'
+        Assert-Equal $candidateRow.red_body_bytes $parentRow.red_body_bytes 'generated identifier red body byte equivalence'
+        Assert-Equal $candidateRow.red_body_sha256 $parentRow.red_body_sha256 'generated identifier red body hash equivalence'
+        Assert-Succeeded (Invoke-Tool $compareScript @('-CandidateInventoryPath', $candidateOutput, '-OutputPath', $compareOutput, '-ParentInventoryPath', $parentOutput)) 'generated identifier false-change comparison'
+        Assert-Equal @(Import-Csv -Delimiter "`t" -LiteralPath $compareOutput)[0].classification 'MATCH' 'generated identifiers do not create false signature changes'
     }
 
     Invoke-Case 'comparison emits deterministic union classifications including false ABSENT and approved removal' {

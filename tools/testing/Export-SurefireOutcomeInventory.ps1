@@ -450,7 +450,7 @@ function Get-ApprovedMavenPropertyName {
     $approvedNames = @(
         'mse',
         'sonic1.rom.path', 'sonic2.rom.path', 's3k.rom.path',
-        'surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks'
+        'surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks', 'surefire.runOrder'
     )
     foreach ($approvedName in $approvedNames) {
         if ($Name.Equals($approvedName, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -568,7 +568,7 @@ function Assert-ExplicitSourceSelectorContract {
             throw "MavenArgumentInventory must use its canonical absolute path: $canonicalArgumentPath"
         }
         Assert-RuntimeInputExactlyOnce $canonicalArgumentPath $AuthenticatedRuntimeInputs 'Maven argument inventory'
-        foreach ($requiredName in @('surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks')) {
+        foreach ($requiredName in @('surefire.argLine', 'surefire.forkCount', 'surefire.reuseForks', 'surefire.runOrder')) {
             if (-not $approvedProperties.ContainsKey($requiredName)) {
                 throw "DirectMaven capacity preflight requires exactly one explicit $requiredName property"
             }
@@ -578,6 +578,9 @@ function Assert-ExplicitSourceSelectorContract {
         }
         if ([string]$approvedProperties['surefire.reuseForks'].Value -cne 'true') {
             throw 'DirectMaven capacity preflight requires surefire.reuseForks=true'
+        }
+        if ([string]$approvedProperties['surefire.runOrder'].Value -cne 'alphabetical') {
+            throw 'DirectMaven capacity preflight requires surefire.runOrder=alphabetical'
         }
     }
     return [pscustomobject]@{
@@ -649,6 +652,9 @@ function Read-EffectiveSurefireConfiguration {
         $node = $configuration.SelectSingleNode("./*[local-name()='$name']")
         $values[$name] = if ($null -eq $node) { '' } else { $node.InnerText }
     }
+    $runOrderNodes = @($configuration.SelectNodes("./*[local-name()='runOrder']"))
+    $values.runOrderCount = $runOrderNodes.Count
+    $values.runOrder = if ($runOrderNodes.Count -eq 1) { $runOrderNodes[0].InnerText } else { '' }
     return [pscustomobject]$values
 }
 
@@ -936,7 +942,27 @@ function Assert-EffectiveSurefireContract {
             throw "Approved Maven property surefire.reuseForks does not equal the effective reuseForks: argv=[$argumentValue] effective=[$($effective.reuseForks)]"
         }
     }
-    Write-Host "Effective Surefire configuration: excludes=$(@($effective.excludes) -join ',') groups=$($effective.groups) excludedGroups=$($effective.excludedGroups) projectArgLine=$($effective.projectArgLine) executionArgLine=$($effective.argLine) forkCount=$($effective.forkCount) reuseForks=$($effective.reuseForks)"
+    $authenticatedRunOrder = ''
+    $effectiveRunOrderEvidence = if ([int]$effective.runOrderCount -eq 0) { '<absent>' } else { [string]$effective.runOrder }
+    if ($ApprovedProperties.ContainsKey('surefire.runOrder')) {
+        if ([int]$effective.runOrderCount -gt 1) {
+            throw "Effective Surefire configuration may contain at most one runOrder; found $($effective.runOrderCount)"
+        }
+        $argumentValue = [string]$ApprovedProperties['surefire.runOrder'].Value
+        $authenticatedRunOrder = $argumentValue
+        if ([int]$effective.runOrderCount -eq 1) {
+            if ([string]::IsNullOrEmpty([string]$effective.runOrder)) {
+                throw 'Effective Surefire runOrder must be non-empty when present'
+            }
+            if ($argumentValue -cne [string]$effective.runOrder) {
+                throw "Approved Maven property surefire.runOrder does not equal the effective runOrder: argv=[$argumentValue] effective=[$($effective.runOrder)]"
+            }
+            if ([string]$effective.runOrder -cne 'alphabetical') {
+                throw "Effective Surefire runOrder must be exactly alphabetical: [$($effective.runOrder)]"
+            }
+        }
+    }
+    Write-Host "Effective Surefire configuration: excludes=$(@($effective.excludes) -join ',') groups=$($effective.groups) excludedGroups=$($effective.excludedGroups) projectArgLine=$($effective.projectArgLine) executionArgLine=$($effective.argLine) forkCount=$($effective.forkCount) reuseForks=$($effective.reuseForks) runOrder=$authenticatedRunOrder effectiveRunOrder=$effectiveRunOrderEvidence"
 }
 
 function Normalize-TokenizedText {
@@ -955,6 +981,27 @@ function Normalize-TokenizedText {
     foreach ($replacement in ($replacements | Sort-Object { $_.Token.Length } -Descending)) {
         $normalized = $normalized.Replace($replacement.Token, $replacement.Replacement)
     }
+    $junitWorktreeTemp = '(?<=<WORKTREE>[\\/]target[\\/]test-tmp[\\/])junit\d+(?=[\\/])'
+    $normalized = [System.Text.RegularExpressions.Regex]::Replace(
+        $normalized,
+        $junitWorktreeTemp,
+        '<JUNIT_TEMP>',
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    $modSnapshotTemp = '(?<=[\\/])openggf-mod-snapshot-\d+(?=[:\\/]|$)'
+    $normalized = [System.Text.RegularExpressions.Regex]::Replace(
+        $normalized,
+        $modSnapshotTemp,
+        'openggf-mod-snapshot-<TEMP_ID>',
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    $jansiExtraction = '(?<![0-9A-Za-z])jansi-(\d+(?:\.\d+)*)-[0-9a-fA-F]+-(?=libjansi(?:\.|$))'
+    $normalized = [System.Text.RegularExpressions.Regex]::Replace(
+        $normalized,
+        $jansiExtraction,
+        'jansi-$1-<EXTRACTION_ID>-',
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
     $iso8601 = '(?<![0-9A-Za-z])\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:?\d{2})?(?![0-9A-Za-z:+-])'
     return [System.Text.RegularExpressions.Regex]::Replace(
         $normalized,

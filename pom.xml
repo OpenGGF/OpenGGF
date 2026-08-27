@@ -36,6 +36,7 @@
         <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
         <surefire.forkCount>1</surefire.forkCount>
         <surefire.reuseForks>true</surefire.reuseForks>
+        <surefire.runOrder>alphabetical</surefire.runOrder>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
@@ -188,6 +189,7 @@
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <groups>performance-measurement</groups>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
@@ -259,6 +261,7 @@
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -381,6 +384,7 @@
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -450,6 +454,7 @@
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -547,6 +552,7 @@
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <project.basedir>${project.basedir}</project.basedir>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
@@ -596,6 +602,7 @@
                             <tempDir>${project.build.directory}/surefire</tempDir>
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>${surefire.reuseForks}</reuseForks>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <systemPropertyVariables>
                                 <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
                                 <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
@@ -1253,6 +1260,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                          ordinary suite needs the full shared 3 GiB capacity. -->
                     <forkCount>${surefire.forkCount}</forkCount>
                     <reuseForks>${surefire.reuseForks}</reuseForks>
+                    <runOrder>${surefire.runOrder}</runOrder>
                     <systemPropertyVariables>
                         <!-- Architectural guard tests resolve source paths from the project root,
                              which surefire-launched forks inherit; pass it explicitly so IDE

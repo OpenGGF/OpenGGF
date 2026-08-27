@@ -741,6 +741,46 @@ class TestBuildToolingGuard {
         }
     }
 
+    @Test
+    void ordinarySurefireShouldUseSharedAlphabeticalRunOrder() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element projectProperties = directChild(pom.getDocumentElement(), "properties");
+        Element sharedRunOrder = directChild(projectProperties, "surefire.runOrder");
+        assertTrue(sharedRunOrder != null,
+                "pom.xml must expose the shared Surefire run-order property");
+        assertEquals("alphabetical", sharedRunOrder.getTextContent().trim(),
+                "ordinary test order must be reproducible across worktrees");
+
+        Element build = directChild(pom.getDocumentElement(), "build");
+        Element plugins = directChild(build, "plugins");
+        Element surefire = directChildWithText(plugins, "plugin", "artifactId",
+                "maven-surefire-plugin");
+        Element configuration = directChild(surefire, "configuration");
+        Element configuredRunOrder = directChild(configuration, "runOrder");
+        assertTrue(configuredRunOrder != null,
+                "default Surefire execution must configure a deterministic run order");
+        assertEquals("${surefire.runOrder}", configuredRunOrder.getTextContent().trim(),
+                "default Surefire execution must consume the shared run-order property");
+
+        NodeList pluginsInPom = pom.getElementsByTagName("plugin");
+        for (int i = 0; i < pluginsInPom.getLength(); i++) {
+            Element plugin = (Element) pluginsInPom.item(i);
+            Element artifactId = directChild(plugin, "artifactId");
+            if (artifactId == null
+                    || !"maven-surefire-plugin".equals(artifactId.getTextContent().trim())) {
+                continue;
+            }
+            Element pluginConfiguration = directChild(plugin, "configuration");
+            assertTrue(pluginConfiguration != null,
+                    "every Surefire declaration must have an explicit configuration");
+            Element pluginRunOrder = directChild(pluginConfiguration, "runOrder");
+            assertTrue(pluginRunOrder != null,
+                    "every Surefire execution must configure the shared run order");
+            assertEquals("${surefire.runOrder}", pluginRunOrder.getTextContent().trim(),
+                    "every Surefire execution must consume the shared run-order property");
+        }
+    }
+
     /**
      * Every Surefire {@code <forkCount>} in the POM must read the same
      * {@code ${surefire.forkCount}} property, and the name of that property is
