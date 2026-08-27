@@ -20,6 +20,7 @@ import com.openggf.game.ShieldType;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.physics.TrigLookupTable;
@@ -267,9 +268,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int playerYRadius = Math.max(1, player.getYRadius() - 3);
         int playerTop = player.getCentreY() - playerYRadius;
         int playerHeight = playerYRadius * 2;
-        if (player.getCrouching()) {
-            playerTop += 12;
-            playerHeight = 20;
+        // ASSEMBLY FLAG: fixBugs (docs/s2disasm/s2.asm:27) / FixBugs
+        // (docs/s1disasm/sonic.asm:20), both 0 in the shipped ROMs. THE ENGINE
+        // IMPLEMENTS THE SHIPPED (UN-FIXED) BRANCH: Touch_Rings tests the mapping
+        // frame (`cmpi.b #$4D,mapping_frame(a0)`, s2.asm:31956; `cmpi.b
+        // #fr_Duck,obFrame(a0)` with fr_Duck = $39, S1 ReactToItem.asm:34), so the
+        // 12px-down / 20px-tall box applies on exactly one frame of the duck
+        // animation and never to Tails. With fixBugs = 1 the test would be the
+        // animation id (AniIDSonAni_Duck), applying for the whole duck and to both
+        // characters. S3K dropped the adjustment entirely
+        // (Test_Ring_Collisions_NoAttraction, sonic3k.asm:18465-18476), which is
+        // NO_DUCK_TOUCH_BOX. See ObjectInteractionRules#duckTouchBoxMappingFrame.
+        ObjectInteractionRules interactionRules = playerObjectInteractionRules(player);
+        if (interactionRules != null
+                && interactionRules.isDuckTouchBoxMappingFrame(player.getMappingFrame())) {
+            playerTop += ObjectInteractionRules.DUCK_TOUCH_BOX_TOP_SHIFT;
+            playerHeight = ObjectInteractionRules.DUCK_TOUCH_BOX_HEIGHT;
         }
         int ringWidth = ringRules != null ? ringRules.ringCollisionWidth() : RING_COLLISION_HALF;
         int ringHeight = ringRules != null ? ringRules.ringCollisionHeight() : RING_COLLISION_HALF;
@@ -327,6 +341,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             return rules.ring();
         }
         return moduleRingRules(GameServices.currentOrBootstrapGameModule());
+    }
+
+    private static ObjectInteractionRules playerObjectInteractionRules(AbstractPlayableSprite player) {
+        GameRules rules = player != null ? player.getGameRules() : null;
+        if (rules == null && player != null) {
+            rules = moduleGameRules(player.currentGameModule());
+        }
+        return rules != null ? rules.objectInteraction() : null;
     }
 
     private static boolean lightningShieldEnabled(AbstractPlayableSprite player) {

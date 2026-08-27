@@ -176,6 +176,38 @@ class TestPlayableSpriteRollSpeed {
                 "S1 unrolls once inertia reaches zero");
     }
 
+    @Test
+    void s2TailsUnderwaterControlledRollUsesEffectiveDecelerationQuarter() throws Exception {
+        Tails tails = new Tails("tails", (short) 0, (short) 0);
+        setGameRulesForTest(tails, GameRules.SONIC_2);
+        tails.setGroundMode(GroundMode.GROUND);
+        tails.setDirection(Direction.RIGHT);
+        tails.setAir(false);
+        tails.setRolling(true);
+        tails.setInWater(true);
+        tails.setGSpeed((short) 0x0200);
+        tails.setXSpeed((short) 0x0200);
+        tails.setYSpeed((short) 0);
+
+        PlayableSpriteMovement tailsMovement = new PlayableSpriteMovement(
+                tails, new NoWallCollisionSystem(), null);
+        setInputs(tailsMovement, true, false);
+        invokeDoRollSpeed(tailsMovement);
+
+        assertEquals(0x01ED, tails.getGSpeed() & 0xFFFF,
+                "S2 FixBugs=0 Tails_RollSpeed uses underwater decel $40>>2=$10, then natural friction $03");
+
+        TestablePlayableSprite sonic = s2Sonic((short) 0x0200);
+        sonic.setInWater(true);
+        PlayableSpriteMovement sonicMovement = new PlayableSpriteMovement(
+                sonic, new NoWallCollisionSystem(), null);
+        setInputs(sonicMovement, true, false);
+        invokeDoRollSpeed(sonicMovement);
+
+        assertEquals(0x01DD, sonic.getGSpeed() & 0xFFFF,
+                "S2 Sonic_RollSpeed remains the flat-$20 routine; only Tails owns the retail decel>>2 bug");
+    }
+
     private static void setInputs(PlayableSpriteMovement movement,
             boolean inputLeft, boolean inputRight) throws Exception {
         Field left = PlayableSpriteMovement.class.getDeclaredField("inputLeft");

@@ -30,6 +30,7 @@ import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.rules.SonicGame;
 
 import java.lang.reflect.Field;
@@ -142,6 +143,94 @@ public class TestRingManager {
 
         assertTrue(ringManager.isCollected(spawn));
         assertEquals(1, player.getRingCount());
+    }
+
+    @Test
+    public void testS2StageRingDuckBoxUsesMappingFrameInsteadOfCrouchingState() {
+        RingSpawn upperRing = new RingSpawn(100, 78);
+        RingManager nonDuckFrameManager = buildRingManager(List.of(upperRing));
+        nonDuckFrameManager.reset(0);
+
+        TestPlayableSprite crouchingPlayer = new TestPlayableSprite((short) 100, (short) 100);
+        crouchingPlayer.useGameRules(GameRules.SONIC_2);
+        crouchingPlayer.setCrouching(true);
+        crouchingPlayer.setMappingFrame(0x4C);
+
+        nonDuckFrameManager.collectStageRings(crouchingPlayer, 0);
+
+        assertTrue(nonDuckFrameManager.isCollected(upperRing),
+                "S2 FixBugs=0 ignores the semantic crouching flag outside mapping_frame $4D");
+
+        RingSpawn matchingFrameRing = new RingSpawn(100, 78);
+        RingManager duckFrameManager = buildRingManager(List.of(matchingFrameRing));
+        duckFrameManager.reset(0);
+
+        TestPlayableSprite standingPlayer = new TestPlayableSprite((short) 100, (short) 100);
+        standingPlayer.useGameRules(GameRules.SONIC_2);
+        standingPlayer.setCrouching(false);
+        standingPlayer.setMappingFrame(0x4D);
+
+        duckFrameManager.collectStageRings(standingPlayer, 0);
+
+        assertFalse(duckFrameManager.isCollected(matchingFrameRing),
+                "S2 Touch_Rings applies the 12px-down/20px-high box on mapping_frame $4D itself");
+    }
+
+    @Test
+    public void testS1StageRingDuckBoxUsesFrDuckMappingFrame() {
+        RingSpawn upperRing = new RingSpawn(100, 78);
+        RingManager ringManager = buildRingManager(List.of(upperRing));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setCrouching(false);
+        player.setMappingFrame(0x39);
+
+        ringManager.collectStageRings(player, 0);
+
+        assertFalse(ringManager.isCollected(upperRing),
+                "S1 FixBugs=0 ReactToItem applies the duck box on fr_Duck=$39, independent of animation state");
+    }
+
+    @Test
+    public void testS3kStageRingsNeverUseLegacyDuckTouchBox() {
+        RingSpawn upperRing = new RingSpawn(100, 78);
+        RingManager ringManager = buildRingManager(List.of(upperRing));
+        ringManager.reset(0);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setCrouching(true);
+        player.setMappingFrame(0x4D);
+
+        ringManager.collectStageRings(player, 0);
+
+        assertTrue(ringManager.isCollected(upperRing),
+                "S3K Test_Ring_Collisions_NoAttraction removed the S1/S2 duck-box adjustment");
+    }
+
+    @Test
+    public void testS2TailsCrouchingFlagDoesNotSubstituteForSonicDuckMappingFrame() throws Exception {
+        Tails tails = new Tails("tails", (short) 100, (short) 100);
+        Field rules = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        rules.setAccessible(true);
+        rules.set(tails, GameRules.SONIC_2);
+        tails.setCentreX((short) 100);
+        tails.setCentreY((short) 100);
+        tails.setCrouching(true);
+        tails.setMappingFrame(0);
+
+        int normalPlayerTop = tails.getCentreY() - Math.max(1, tails.getYRadius() - 3);
+        RingSpawn upperRing = new RingSpawn(100,
+                normalPlayerTop + GameRules.SONIC_2.ring().ringCollisionHeight());
+        RingManager ringManager = buildRingManager(List.of(upperRing));
+        ringManager.reset(0);
+
+        ringManager.collectStageRings(tails, 0);
+
+        assertTrue(ringManager.isCollected(upperRing),
+                "Tails' semantic crouch must not trigger Sonic's mapping_frame $4D retail bug");
     }
 
     @Test
