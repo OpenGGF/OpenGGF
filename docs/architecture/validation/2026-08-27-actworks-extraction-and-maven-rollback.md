@@ -92,3 +92,8 @@ consumers now recurse through profile directories, ignore owner sidecars, and
 select the required S2 special-stage report by its owner-aware pattern. A green
 publication explicitly retires its prior context file. Both follow-up guards
 were observed red before these fixes.
+
+The final review identified two legitimate owner-distinct S2 special-stage
+index-0 producers. The develop gate now requires at least one matching report
+and validates every matching owner report instead of incorrectly requiring a
+single file. Its multiplicity guard was observed red before the correction.

@@ -1373,6 +1373,12 @@ class TestBuildToolingGuard {
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
         assertTrue(ci.contains("trace_dir.glob(\"special-stage/s2_special_stage_0-*.json\")"),
                 "develop CI must locate the owner-aware S2 special-stage report");
+        assertTrue(ci.contains("if not required_ss_reports:"),
+                "develop CI must require at least one S2 special-stage owner report");
+        assertTrue(ci.contains("for required_ss_report in required_ss_reports:"),
+                "develop CI must validate every legitimate S2 special-stage owner report");
+        assertFalse(ci.contains("len(required_ss_reports) != 1"),
+                "multiple owner-distinct S2 special-stage reports are legitimate");
         for (String workflow : List.of(ci, release)) {
             assertTrue(workflow.contains("trace_dir.rglob(\"*.json\")"),
                     "trace warning scans must recurse through profile-scoped reports");

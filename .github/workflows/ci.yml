@@ -274,22 +274,22 @@ jobs:
               report for report in required_ss_reports
               if not report.name.endswith(".owner.json")
           ]
-          if len(required_ss_reports) != 1:
+          if not required_ss_reports:
               print(
-                  "Expected exactly one owner-aware S2 special-stage keep-green report; "
-                  f"found={len(required_ss_reports)} paths={required_ss_reports}",
+                  "Missing owner-aware S2 special-stage keep-green report",
                     file=sys.stderr)
               sys.exit(1)
-          required_ss_report = required_ss_reports[0]
-          required_ss_data = json.loads(required_ss_report.read_text(encoding="utf-8"))
-          required_ss_errors = int(required_ss_data.get("error_count", 0))
-          required_ss_warnings = int(required_ss_data.get("warning_count", 0))
-          if required_ss_errors > 0 or required_ss_warnings > 0:
-              print(
-                  f"Required S2 special-stage keep-green trace is red: "
-                  f"errors={required_ss_errors} warnings={required_ss_warnings}",
-                  file=sys.stderr)
-              sys.exit(1)
+          for required_ss_report in required_ss_reports:
+              required_ss_data = json.loads(required_ss_report.read_text(encoding="utf-8"))
+              required_ss_errors = int(required_ss_data.get("error_count", 0))
+              required_ss_warnings = int(required_ss_data.get("warning_count", 0))
+              if required_ss_errors > 0 or required_ss_warnings > 0:
+                  print(
+                      f"Required S2 special-stage keep-green trace is red: "
+                      f"report={required_ss_report} errors={required_ss_errors} "
+                      f"warnings={required_ss_warnings}",
+                      file=sys.stderr)
+                  sys.exit(1)
 
           warning_reports = []
           for report in sorted(trace_dir.rglob("*.json")):
