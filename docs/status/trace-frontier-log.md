@@ -108425,3 +108425,69 @@ The other three death arms remain coordinates only.
   0 errors, and 0 skips; the donor and viewport signatures above were
   unchanged and the other 13 identities passed. Manifests and logs are under
   `.openggf/test-runs/<run-id>/manifest.json` and `maven.log` in this worktree.
+
+## 2026-08-27 - Develop/next official-freeze restoration review
+
+- Context: the broad post-synthesis audit found official-freeze call-site
+  losses after the initial 77-conflict review. GameLoop repair
+  `52b861fe517ce571878caf68c4e5f824da70cedc` was reviewed and integrated as
+  `9c2698321a8f33262f7dffc1381af4f21c088d1c`; movement/ring repair
+  `338e47723892bac976951692b96399aa6bb71dfc` was reviewed and integrated as
+  `8d8902bafaca00e7d5ce7ca16d22a7b6618541ec`.
+- GameLoop caller-level red/green: run
+  `20260827T051655Z-p3716148-3c21c9` failed the six intended wiring
+  regressions. Run `20260827T053529Z-p2-aaf19e` passed all 6 after repair.
+  The exact final command was
+  `tools/testing/test-session.sh -- mvn
+  -Dtest=TestGameLoopFreezeContractWiring test`.
+- GameLoop core command:
+  `tools/testing/test-session.sh -- mvn
+  -Dtest=TestGameLoop,TestGameLoopSpecialStageResultsHandoff,TestGameLoopSpecialStageEntryPresentation,TestGameLoopFreezeContractWiring,TestLevelIterationAdmissionController,TestPlaybackAdvanceOnlyInputBridge,TestTimeAttackLevelEndRouting,TestTimeAttackRuntime
+  test`. Run `20260827T052504Z-p2-6337b1` passed 132/132.
+- GameLoop trace-infrastructure command:
+  `tools/testing/test-session.sh -- mvn
+  -Dsonic1.rom.path=s1.gen
+  -Dtest=TestTraceSessionSpecialStageTerminalExit,TestVisualTraceRunTerminalTail,TestTraceRunFrameDriver,TestTraceRunPlaybackCoordinator,TestTraceSuppressedRowClosure
+  test`. Run `20260827T052612Z-p2-406708` ran 47 tests and retained two
+  exact baseline closure-order failures. The ROM-chain candidate command was
+  `tools/testing/test-session.sh -- mvn
+  -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun,TestS1GhzMazeRoundTripChain,TestS1CompleteEmeraldRunPrefix
+  test`; candidate run `20260827T052720Z-p2-7ca48b` and exact-`e13114ad`
+  baseline `20260827T053012Z-p2-eb23f0` had identical four-failure/one-error
+  signatures. These are accepted unchanged-failure comparisons, not green
+  results.
+- GameLoop guard command:
+  `tools/testing/test-session.sh -- mvn -Dmse=off -Pguards
+  -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestProductionSingletonClosureGuard,TestSingletonLifecycleGuard
+  test -B`. Run `20260827T053151Z-p2-56d7d8` passed 144/144.
+- Movement/ring red evidence was
+  `20260827T051747Z-p2-35e8f7`, followed by corrected HurtStop red run
+  `20260827T051918Z-p2-02872f`. The final focused command was
+  `tools/testing/test-session.sh -- mvn -Dmse=off
+  -Dtest=TestPlayableSpriteMovement,TestPlayableSpriteRollSpeed,TestStageRingsTouchCollectionRule,TestRingManager
+  test -B`; run `20260827T055511Z-p2-7dad96` passed 220/220. The focused
+  bootstrap guard run `20260827T055605Z-p2-bdfdfa` passed 7/7, and S3K canary
+  run `20260827T055145Z-p2-346c32` passed 57/57.
+- Requested movement trace command:
+  `tools/testing/test-session.sh -- mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.runOrder=alphabetical -Dsurefire.forkCount=1
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  -Dtest=TestS3kKnucklesSuperEmeraldRunChain,TestS3kSonicTailsAizSegmentTraceReplay,TestS3kSonicTailsCompleteEmeraldRunChain,TestS2SczLevelSelectTraceReplay
+  test -B`. Run `20260827T054949Z-p2-4950f3` retained two passes and two
+  existing frontiers. Cross-game run `20260827T055259Z-p2-076df9` kept S1
+  green and retained the existing S2/S3K red signatures.
+- Final-integration focused command at `8d8902baf`:
+  `tools/testing/test-session.sh -- mvn -Dmse=off
+  -Dtest=TestGameLoopFreezeContractWiring,TestPlayableSpriteMovement,TestPlayableSpriteRollSpeed,TestStageRingsTouchCollectionRule,TestRingManager
+  test -B`. Run `20260827T060203Z-p3795260-ea65a0` passed 226/226.
+  The final full ordinary suite and separate fresh `-Pguards` suite remain
+  pending; this entry does not claim the final candidate is green.
+- Accepted deferred FBZ regression: frozen-next evidence at
+  `d3771e5d2344c7c917dac67f3c90c2072febd519` reached viewport `[3]` frame
+  29532 and world X `$1B02`; final pre-restoration candidate
+  `e13114ad9013d9c15e10c9995a24769bb291b97d` was hurt by the Blaster body at
+  frame 29143 and world X `$178F`. The user deferred the corridor-controller
+  repair until after the general merge. A no-code-landed prototype reached
+  `$1B2C`; its durable point-in-time audit is
+  [2026-08-27-fbz-blaster-corridor-follow-up.md](../architecture/audits/2026-08-27-fbz-blaster-corridor-follow-up.md).

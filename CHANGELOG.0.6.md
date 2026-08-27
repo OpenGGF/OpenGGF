@@ -4,6 +4,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **The `develop`/`next` merge now retains the official runtime behavior on its
+  expanded architecture:** results, special-stage, and trace-gap lifecycle
+  ordering is restored; Time Attack cross-act seamless routes return to the
+  menu before applying the destination; Knuckles regains retail slide and wall
+  climb behavior; Sonic 2 Tails regains his underwater controlled-roll
+  deceleration; and hurt-stop kills, jump press edges, and stage-ring touch
+  boxes again follow their shipped per-game semantics.
+
 - **Water palettes now meet the water surface on sprites as well as terrain:**
   sprite-priority shaders resolve their logical scanline after removing the
   viewport's letterbox offset, and Sonic 2 no longer moves only the sprite
