@@ -192,10 +192,9 @@ wrong" is almost never the answer.
 These are not style preferences; each one has silently invalidated a day of work.
 
 - **`-Dsurefire.forkCount=1` — the bare `forkCount` property does nothing.** `pom.xml` binds
-  `<forkCount>` to `${surefire.forkCount}` (default 4; only the `ci` profile sets
-  1), so the bare property is *silently ignored* and the run stays on four reused
-  parallel forks. `TestBuildToolingGuard` now fails any prescriptive doc teaching
-  the ignored flag.
+  `<forkCount>` to `${surefire.forkCount}` (default 1, including the `ci` profile),
+  so the bare property is *silently ignored*. `TestBuildToolingGuard` now fails
+  any prescriptive doc teaching the ignored flag.
 - **Always `-Dsurefire.runOrder=alphabetical`.** Surefire's default is
   `filesystem` — inode order — which differs between checkouts of the same commit.
   Without pinning it, red sets are not comparable between runs, machines, or

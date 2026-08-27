@@ -46,8 +46,9 @@ artifacts from the run being exported:
 
 Direct Maven may use an explicit `surefire.argLine` only as a capacity
 override. A certifying invocation must contain exactly one explicit value for
-each of `surefire.includesFile`, `surefire.argLine`, `surefire.forkCount`, and
-`surefire.reuseForks`; the last two must be `1` and `true`. The resolved arg line
+each of `surefire.includesFile`, `surefire.argLine`, `surefire.forkCount`,
+`surefire.reuseForks`, and `surefire.runOrder`; fork count and reuse must be `1`
+and `true`, while run order must be `alphabetical`. The resolved arg line
 must preserve exact CDS and Mockito-agent semantics, may retain macOS
 `-XstartOnFirstThread`, and must end in the proven-sufficient `-Xmx3g` heap.
 The raw Maven vector may instead carry exactly
@@ -111,6 +112,7 @@ $capacityProperties = @(
     "-Dsurefire.argLine=$capacityArgLine"
     '-Dsurefire.forkCount=1'
     '-Dsurefire.reuseForks=true'
+    '-Dsurefire.runOrder=alphabetical'
     "-Dsurefire.includesFile=$selector"
 )
 $mavenArguments = @($capacityProperties) + 'test'

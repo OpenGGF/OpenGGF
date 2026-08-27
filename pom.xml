@@ -61,7 +61,7 @@
             </activation>
             <properties>
                 <lwjgl.natives>natives-macos</lwjgl.natives>
-                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
+                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <native.macos.package.skip>false</native.macos.package.skip>
             </properties>
         </profile>
@@ -72,7 +72,7 @@
             </activation>
             <properties>
                 <lwjgl.natives>natives-macos-arm64</lwjgl.natives>
-                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
+                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <native.macos.package.skip>false</native.macos.package.skip>
             </properties>
         </profile>
@@ -124,11 +124,11 @@
             </build>
         </profile>
 
-        <!-- CI/CD profile: low-memory, single-fork execution.
+        <!-- CI/CD profile: bounded, single-fork execution.
              Activated automatically when CI=true (GitHub Actions, GitLab CI, etc.)
              or manually via: mvn test -Pci
 
-             The ordinary suite uses a single 1GB fork in CI. Structural guards
+             The ordinary suite uses the same proven-sufficient single 3 GiB fork in CI. Structural guards
              run separately through -Pguards, so broad source-graph imports do
              not accumulate behind the ordinary suite's reused fork.
              Keeping one fork also avoids native-library races between test JVMs.
@@ -142,7 +142,7 @@
                 </property>
             </activation>
             <properties>
-                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <surefire.forkCount>1</surefire.forkCount>
             </properties>
         </profile>

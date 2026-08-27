@@ -820,3 +820,25 @@ The 596-row guard inventory SHA-256 is
 Final Task 5 status is therefore `PASS`: the paired ordinary inventories are
 exactly equal, the guard profile adds only passing coverage, and its sole red
 is the accepted unchanged Trace V5 baseline failure.
+
+## Final review remediation on 2026-08-28
+
+Two independent pre-integration reviews found three stale capacity and
+documentation paths after the paired certification: the CI and macOS profiles
+still reduced the ordinary heap to 1 GiB, the authenticated exporter example
+omitted the required alphabetical run-order property, and both mirrored trace
+debugging skills still described the retired four-fork default. The profiles
+now retain the certified 3 GiB heap, the example supplies
+`-Dsurefire.runOrder=alphabetical`, and both skill mirrors describe the actual
+single-fork default. `TestBuildToolingGuard` now pins the profile heap and the
+complete documented exporter property set.
+
+The new focused guard assertions failed 2/2 before remediation and passed 3/3
+after it. The complete direct guard profile was then rerun with the three
+absolute verified ROM properties. It completed naturally in 4:15 with 596
+tests: 595 passes, the same accepted
+`TestTraceV5PositiveInputGuard#repositoryPositiveTestsUseOnlyTemporaryV5Inputs`
+failure naming only the two legacy rows above, zero errors, and zero skips.
+Because the paired ordinary runs already used the explicit 3 GiB heap and
+alphabetical order, these profile/documentation corrections do not invalidate
+their byte-identical 18,201-outcome comparison.

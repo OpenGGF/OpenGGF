@@ -714,6 +714,18 @@ class TestBuildToolingGuard {
                 directChild(projectProperties, "surefire.argLine").getTextContent().trim(),
                 "the ordinary suite must retain exact CDS/Mockito semantics and the proven-sufficient 3 GiB heap");
 
+        for (String profileId : List.of("lwjgl-natives-macos", "lwjgl-natives-macos-arm64", "ci")) {
+            Element profile = profileById(pom, profileId);
+            assertTrue(profile != null, "pom.xml must retain the " + profileId + " profile");
+            Element profileProperties = directChild(profile, "properties");
+            assertTrue(profileProperties != null,
+                    profileId + " must retain its explicit Surefire capacity properties");
+            String profileArgLine = directChild(profileProperties, "surefire.argLine")
+                    .getTextContent().trim();
+            assertTrue(profileArgLine.endsWith("-Xmx3g"),
+                    profileId + " must not reduce the ordinary suite below the proven-sufficient 3 GiB heap");
+        }
+
         Element build = directChild(pom.getDocumentElement(), "build");
         Element plugins = directChild(build, "plugins");
         Element surefire = directChildWithText(plugins, "plugin", "artifactId",
@@ -779,6 +791,15 @@ class TestBuildToolingGuard {
             assertEquals("${surefire.runOrder}", pluginRunOrder.getTextContent().trim(),
                     "every Surefire execution must consume the shared run-order property");
         }
+
+        String inventoryGuide = Files.readString(Path.of("tools/testing/README.md"), StandardCharsets.UTF_8);
+        String normalizedInventoryGuide = inventoryGuide.replaceAll("\\s+", " ");
+        assertTrue(normalizedInventoryGuide.contains(
+                        "`surefire.includesFile`, `surefire.argLine`, `surefire.forkCount`, "
+                                + "`surefire.reuseForks`, and `surefire.runOrder`"),
+                "the inventory guide must list the complete authenticated Surefire property set");
+        assertTrue(inventoryGuide.contains("'-Dsurefire.runOrder=alphabetical'"),
+                "the copy/paste inventory example must authenticate alphabetical Surefire order");
     }
 
     /**
