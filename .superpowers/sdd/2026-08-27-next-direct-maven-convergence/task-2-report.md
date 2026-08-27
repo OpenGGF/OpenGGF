@@ -71,7 +71,7 @@ current session-enforced baseline and are ready for Task 3's green cycle.
 
 The Task 2 RED commit is recorded after staging and policy validation:
 
-`COMMIT_SHA_PENDING`
+`3a25d142b`
 
 ## Concerns
 
