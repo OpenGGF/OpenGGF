@@ -519,6 +519,8 @@ test
         $linuxMockitoPath = '/home/test repo/.m2/repository/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar'
         $capacityArgLine = "-Xshare:off -javaagent:`"$linuxMockitoPath`" -Xmx3g"
         $macCapacityArgLine = "-XstartOnFirstThread $capacityArgLine"
+        $capacityTemplateArgLine = '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g'
+        $macCapacityTemplateArgLine = "-XstartOnFirstThread $capacityTemplateArgLine"
         $windowsCapacityArgLine = '-Xshare:off -javaagent:"C:\Users\Test User\.m2\repository\org\mockito\mockito-core\5.14.2\mockito-core-5.14.2.jar" -Xmx3g'
         $executionSuffix = " -Djava.io.tmpdir=`"$testTmpdir`" -Dorg.lwjgl.system.SharedLibraryExtractPath=`"$testTmpdir/lwjgl-`${surefire.forkNumber}`""
         Write-Utf8File $classes "example.DirectCapacityTest`n"
@@ -546,6 +548,14 @@ test
             -ExecutionArgLine ($capacityArgLine + $executionSuffix))
         Assert-Succeeded (& $invokeDirect) 'direct Maven capacity argLine'
 
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityTemplateArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine $capacityTemplateArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        Assert-Succeeded (& $invokeDirect) 'direct Maven canonical capacity-template argLine'
+
         Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `
             -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
@@ -553,6 +563,23 @@ test
             -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
             -ExecutionArgLine ($macCapacityArgLine + $executionSuffix))
         Assert-Succeeded (& $invokeDirect) 'direct Maven macOS capacity argLine'
+
+        Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityTemplateArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine '-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g' `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($macCapacityArgLine + $executionSuffix))
+        Assert-Succeeded (& $invokeDirect) 'direct Maven canonical macOS capacity-template argLine'
+
+        foreach ($invalidTemplateArgLine in @(
+                '${unknown} ${mockito.agent.argLine} -Xmx3g',
+                '${test.cds.argLine} ${mockito.agent.argLine} ${unknown} -Xmx3g',
+                '${mockito.agent.argLine} ${test.cds.argLine} -Xmx3g',
+                '@{test.cds.argLine} ${mockito.agent.argLine} -Xmx3g')) {
+            Write-Utf8File $arguments "-Dsurefire.argLine=$invalidTemplateArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+            Assert-Failed (& $invokeDirect) 'canonical|unresolved|placeholder|argLine' "invalid raw capacity template $invalidTemplateArgLine"
+        }
 
         Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `

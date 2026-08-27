@@ -243,6 +243,12 @@ function Assert-NoUnresolvedPlaceholder {
     }
 }
 
+function Test-CanonicalCapacityArgLineTemplate {
+    param([string] $Value)
+    return $Value -ceq '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' -or
+        $Value -ceq '-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g'
+}
+
 function ConvertFrom-JvmArgumentLine {
     param([string] $Value, [string] $Description)
     $tokens = [System.Collections.Generic.List[string]]::new()
@@ -420,7 +426,12 @@ function Assert-ExplicitSourceSelectorContract {
     $approvedProperties = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($property in (Read-MavenPropertyArguments $ArgumentPath)) {
         if ($IsDirectMaven) {
-            Assert-NoUnresolvedPlaceholder ([string]$property.Value) "authenticated Maven property $($property.Name)"
+            $isCapacityTemplate = ([string]$property.Name).Equals(
+                'surefire.argLine', [System.StringComparison]::OrdinalIgnoreCase) -and
+                (Test-CanonicalCapacityArgLineTemplate ([string]$property.Value))
+            if (-not $isCapacityTemplate) {
+                Assert-NoUnresolvedPlaceholder ([string]$property.Value) "authenticated Maven property $($property.Name)"
+            }
         }
         elseif (([string]$property.Value).Replace('${surefire.forkNumber}', '') -match '\$\{[^}]+\}|@\{[^}]+\}') {
             throw "authenticated Maven property $($property.Name) contains an unresolved unsupported property placeholder"
@@ -568,7 +579,10 @@ function Assert-EffectiveSurefireContract {
     if ($ApprovedProperties.ContainsKey('surefire.argLine')) {
         $argumentValue = [string]$ApprovedProperties['surefire.argLine'].Value
         if ($IsDirectMaven) {
-            Assert-NoUnresolvedPlaceholder $argumentValue 'DirectMaven surefire.argLine proof'
+            $usesCapacityTemplate = Test-CanonicalCapacityArgLineTemplate $argumentValue
+            if (-not $usesCapacityTemplate) {
+                Assert-NoUnresolvedPlaceholder $argumentValue 'DirectMaven surefire.argLine proof'
+            }
             Assert-NoUnresolvedPlaceholder ([string]$effective.'test.cds.argLine') 'DirectMaven effective CDS argument'
             $cdsTokens = @(ConvertFrom-JvmArgumentLine ([string]$effective.'test.cds.argLine') 'effective CDS argument')
             if ($cdsTokens.Count -ne 1 -or $cdsTokens[0] -cne '-Xshare:off') {
@@ -591,7 +605,19 @@ function Assert-EffectiveSurefireContract {
                 -not $mockitoTemplateTokens[0].StartsWith('-javaagent:', [System.StringComparison]::Ordinal)) {
                 throw 'DirectMaven effective Mockito agent content must contain exactly one javaagent option'
             }
-            $argumentTokens = @(ConvertFrom-JvmArgumentLine $argumentValue 'DirectMaven surefire.argLine')
+            $executionTokens = @(ConvertFrom-JvmArgumentLine ([string]$effective.argLine) 'effective Surefire execution argLine')
+            $rawTemplateRequiresMacLauncher = $usesCapacityTemplate -and
+                $argumentValue.StartsWith('-XstartOnFirstThread ', [System.StringComparison]::Ordinal)
+            if ($usesCapacityTemplate) {
+                $capacityTokenCount = if ($rawTemplateRequiresMacLauncher) { 4 } else { 3 }
+                if ($executionTokens.Count -ne ($capacityTokenCount + 2)) {
+                    throw 'DirectMaven canonical capacity template did not resolve to the expected effective execution shape'
+                }
+                $argumentTokens = @($executionTokens[0..($capacityTokenCount - 1)])
+            }
+            else {
+                $argumentTokens = @(ConvertFrom-JvmArgumentLine $argumentValue 'DirectMaven surefire.argLine')
+            }
             $capacityOffset = 0
             if ($argumentTokens.Count -eq 4 -and $argumentTokens[0] -ceq '-XstartOnFirstThread') {
                 $capacityOffset = 1
@@ -654,6 +680,10 @@ function Assert-EffectiveSurefireContract {
             $projectRequiresMacLauncher = $projectTemplate.StartsWith(
                 '-XstartOnFirstThread ', [System.StringComparison]::Ordinal)
             $argumentHasMacLauncher = ($capacityOffset -eq 1)
+            if ($usesCapacityTemplate -and
+                $rawTemplateRequiresMacLauncher -ne $argumentHasMacLauncher) {
+                throw 'DirectMaven canonical capacity template macOS launcher presence must match its resolved execution'
+            }
             if ($projectRequiresMacLauncher -ne $argumentHasMacLauncher) {
                 throw 'DirectMaven -XstartOnFirstThread presence must match the effective project argLine launcher contract'
             }
@@ -671,7 +701,6 @@ function Assert-EffectiveSurefireContract {
                 throw 'DirectMaven effective project argLine must preserve the exact CDS and Mockito property wiring'
             }
 
-            $executionTokens = @(ConvertFrom-JvmArgumentLine ([string]$effective.argLine) 'effective Surefire execution argLine')
             if ($executionTokens.Count -ne ($argumentTokens.Count + 2)) {
                 throw 'DirectMaven same-invocation effective Surefire execution argLine has unexpected options'
             }

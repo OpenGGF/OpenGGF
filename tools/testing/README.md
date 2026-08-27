@@ -50,10 +50,17 @@ each of `surefire.includesFile`, `surefire.argLine`, `surefire.forkCount`, and
 `surefire.reuseForks`; the last two must be `1` and `true`. The resolved arg line
 must preserve exact CDS and Mockito-agent semantics, may retain macOS
 `-XstartOnFirstThread`, and must end in the proven-sufficient `-Xmx3g` heap.
+The raw Maven vector may instead carry exactly
+`${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g`, with the leading
+`-XstartOnFirstThread` only when the effective project profile has that same
+prefix. The effective execution must expand this canonical template before the
+exporter authenticates its final tokens.
 The selected Surefire execution must prove the same resolved JVM arguments and
 then exactly the target-local `java.io.tmpdir` and fork-local LWJGL extraction
-properties. Unresolved `${...}` or Surefire `@{...}` placeholders, duplicate or
-mismatched evidence, external temp paths, and shared LWJGL paths fail closed.
+properties. Any other raw `${...}` placeholder, every raw Surefire `@{...}`
+placeholder, or an unresolved placeholder in the final authenticated tokens or
+paths fails closed, as do duplicate or mismatched evidence, external temp
+paths, and shared LWJGL paths.
 The 3-GiB value is proven sufficient by the recorded capacity run; it is not a
 claim that 3 GiB is the minimum usable heap.
 Unlike historical managed-session evidence, direct mode neither supplies nor
@@ -71,14 +78,16 @@ $classes = Join-Path $evidence 'ordinary-classes.txt'
 $selector = (Resolve-Path (Join-Path $evidence 'ordinary.includes')).Path
 $effectivePom = Join-Path $evidence 'ordinary-effective-pom.xml'
 $argumentInventory = Join-Path $evidence 'ordinary-maven-arguments.txt'
-$projectArgLine = (& mvn -Dmse=off help:evaluate `
+$effectiveProjectArgLine = (& mvn -Dmse=off help:evaluate `
     -Dexpression=surefire.argLine -q -DforceStdout).Trim()
-$heapMatches = [regex]::Matches($projectArgLine, '(?<!\S)-Xmx\S+(?!\S)')
-if ($heapMatches.Count -ne 1 -or
-    $heapMatches[0].Index + $heapMatches[0].Length -ne $projectArgLine.Length) {
-    throw "The effective project argLine must contain one terminal heap option: $projectArgLine"
+$macLauncher = if ($effectiveProjectArgLine.StartsWith(
+        '-XstartOnFirstThread ', [StringComparison]::Ordinal)) {
+    '-XstartOnFirstThread '
+} else {
+    ''
 }
-$capacityArgLine = $projectArgLine.Substring(0, $heapMatches[0].Index) + '-Xmx3g'
+$capacityArgLine = $macLauncher +
+    '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g'
 $capacityProperties = @(
     '-Dmse=off'
     "-Dsurefire.argLine=$capacityArgLine"
