@@ -2,9 +2,9 @@
 
 ## Boundary
 
-This ledger records the immutable validation boundary for the direct-Maven
-convergence work. It is a comparison record for Tasks 5 and 6; sections for
-future commands remain unrun until those tasks execute.
+This ledger records the immutable validation boundary and completed comparison
+for the direct-Maven convergence work, including the subsequent `develop` into
+`next` audio-retention merge.
 
 ## Immutable refs
 
@@ -175,35 +175,77 @@ was clean. Full ordinary and guards comparisons remain reserved for Task 5.
 
 ## Focused verification
 
-Result: not run in Task 1. Reserved for Task 5.
+The post-merge focused run covered the direct-Maven tooling guards, output-path
+contract, representative S1/S2/S3K gameplay changes from `develop`, sidekick
+carry and rewind-adjacent behaviour, and the retained 0.7 YM2612/audio paths.
+It exited 0. The guard-capacity correction was then developed separately: the
+new `guardsProfileMustUseOneLargerForkForWholeGraphAnalysis` check failed with
+the missing profile properties, and passed after the guards profile was pinned
+to one 3 GiB fork. The combined `TestBuildToolingGuard,TestArchUnitRules` run
+also exited 0 with frozen-store updates disabled.
 
 ## Ordinary suite
 
-Result: not run in Task 1. Reserved for Task 5; compare exact
-`class#JUnit-engine-member` identities against the 18,197-identity snapshot and
-the 70 expected-red identities. Keep unmatched upstream-only identities and
-renamed/reworked counterparts separate; neither is a resolved red.
+The pre-merge direct-Maven baseline at `efa645adff390bfce39900cc235cca68bfce0331`
+produced all 2,316 XML reports: 18,200 tests, 35 failures, 20 errors, and 37
+skips, representing 55 exact red identities. The Maven parent did not terminate
+after every report was complete and was interrupted with exit 130; that
+nontermination is therefore part of the baseline.
+
+The post-merge run at `f759df1d9` produced all 2,318 XML reports: 18,201 tests,
+34 failures, 20 errors, and 37 skips, representing 54 exact red identities. Its
+Maven parent exhibited the same post-report nontermination and was likewise
+interrupted with exit 130. Exact identity comparison found no post-merge-only
+red. The sole removed baseline failure was
+`com.openggf.game.sonic3k.objects.TestLbzTriggerBridgeInstance#registryKeepsSklSlot14AsUpdraft`.
+The merge therefore introduced no ordinary-suite regression and improved the
+recorded baseline by one identity.
 
 ## Guards suite
 
-Result: not run in Task 1. Reserved for Task 5; compare against the 520/521
-snapshot and the 19 expected-red identities, retaining only the known Trace V5
-positive-input red unless later evidence proves otherwise.
+The first merged full-guards attempt exposed two integration-environment gaps:
+the per-game frozen group contained obsolete line locations and four concurrent
+1 GiB forks exhausted a Surefire fork while importing the larger merged graph.
+The frozen entry was refreshed only for the affected per-game dependency group;
+all unrelated refreeze churn was discarded. The guards profile now runs one
+3 GiB fork and a tooling guard pins that capacity contract.
+
+The final direct command was:
+
+```text
+mvn -q -Dmse=off -Dsurefire.redirectTestOutputToFile=true \
+  -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> \
+  -Ds3k.rom.path=<s3k.gen> clean -Pguards test
+```
+
+Result: 592 tests, 1 failure, 0 errors, 0 skips. The sole red was the known
+`TestTraceV5PositiveInputGuard#repositoryPositiveTestsUseOnlyTemporaryV5Inputs`,
+which still identifies the same two legacy positive rows in
+`TestFbzMinibossArtShape` and `TestSonic3kPlcArtRegistry`. No ArchUnit error,
+fork crash, or heap exhaustion remained.
 
 ## Static proof and hygiene
 
-Result: not run in Task 1. Reserved for Task 5.
+The rollback-path audit compared every source and test path touched by
+`b4c8fbd8a` against the pre-merge `next` tree and found them byte-identical, so
+the 0.6 rollback does not survive on `next`. `CONFIGURATION.md` and
+`config.yaml` likewise retain the 0.7 audio programme. `git diff --check` is
+clean.
 
 ## Independent review
 
-Result: not run in Task 1. Reserved for Task 5.
+The merge resolution was reviewed path-by-path against the rollback commit,
+the pre-merge `next` tree, and the ordinary and guard identity sets. The audio
+roadmap now explicitly records that the programme is resumed on `next` for
+0.7, while remaining uncertified pending listening and fitted-constant review.
 
 ## Integration
 
-Result: not run in Task 1. Reserved for Task 6 after fast-forwarding local
-`next`.
+Local `next` fast-forwarded to the direct-Maven convergence tip
+`efa645adff390bfce39900cc235cca68bfce0331`, then merged `develop` as
+`f759df1d9` with the 0.7 audio implementation retained. The final capacity and
+validation-record correction is committed separately after that merge.
 
 ## Push
 
-Result: not run in Task 1. Reserved for Task 6 after final origin refresh and
-post-fast-forward verification.
+Result: pending final origin refresh and push.

@@ -522,6 +522,13 @@
              *Guard* test class on disk is actually selected here. -->
         <profile>
             <id>guards</id>
+            <properties>
+                <!-- ArchUnit and the reflection guards import the complete
+                     production graph. Keep that graph in one adequately sized
+                     fork instead of making four 1 GiB heaps compete. -->
+                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+                <surefire.forkCount>1</surefire.forkCount>
+            </properties>
             <build>
                 <plugins>
                     <plugin>

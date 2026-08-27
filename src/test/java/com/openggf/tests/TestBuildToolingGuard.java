@@ -682,6 +682,20 @@ class TestBuildToolingGuard {
                 "guards profile must select the heavyweight audio architecture boundary test");
     }
 
+    @Test
+    void guardsProfileMustUseOneLargerForkForWholeGraphAnalysis() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element guards = profileById(pom, "guards");
+        assertTrue(guards != null, "pom.xml must retain a separate guards profile");
+
+        Element properties = directChild(guards, "properties");
+        assertTrue(properties != null, "guards profile must define capacity properties");
+        assertEquals("1", directChild(properties, "surefire.forkCount").getTextContent().trim(),
+                "whole-graph guards must run serially instead of competing across four heaps");
+        assertTrue(directChild(properties, "surefire.argLine").getTextContent().contains("-Xmx3g"),
+                "whole-graph guards must have enough heap for the merged production graph");
+    }
+
     /**
      * Every Surefire {@code <forkCount>} in the POM must read the same
      * {@code ${surefire.forkCount}} property, and the name of that property is
