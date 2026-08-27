@@ -908,6 +908,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.renderCopyX = x;
 	}
 
+	/**
+	 * Updates the physical X position after the render copy has been published.
+	 * This models ROM event routines that move {@code Camera_X_pos} while
+	 * retaining the already-published {@code Camera_X_pos_copy}.
+	 */
+	public void setXAfterRenderCopy(short x) {
+		this.x = x;
+	}
+
 	public short getY() {
 		return y;
 	}

@@ -3946,8 +3946,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 objectManager.forceAirOnStaleObjectSupportLoss(sidekick);
             }
         }
-        cam.setX((short) (cam.getX() + request.cameraOffsetX()));
-        cam.setY((short) (cam.getY() + request.cameraOffsetY()));
+        // The transition owns both the live and copied camera words. Use the
+        // explicit post-render path so ordinary setters keep publishing their
+        // copies without applying this transition delta twice.
+        cam.setXAfterRenderCopy((short) (cam.getX() + request.cameraOffsetX()));
+        cam.setYAfterRenderCopy((short) (cam.getY() + request.cameraOffsetY()));
         cam.setXCopy((short) (cam.getXCopy() + request.cameraOffsetX()));
         cam.setYCopy((short) (cam.getYCopy() + request.cameraOffsetY()));
     }
