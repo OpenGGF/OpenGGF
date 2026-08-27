@@ -36,7 +36,7 @@ done
 
 SCRIPT_DIR=$(cd "${BASH_SOURCE[0]%/*}" && pwd -P)
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
-cd "$REPO"
+CALLER_DIR=$(pwd -P)
 MOVIE="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2"
 RUN_PATH="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds"
 ARTIFACT_ROOT="$REPO/target"
@@ -46,6 +46,18 @@ PROBE="$REPO/tools/bizhawk/probes/s1_ghz1_gameplay_audio_timeline_probe.lua"
 LAUNCHER="$REPO/tools/bizhawk/run_bizhawk_lua.sh"
 ROM_PATH=""
 BIZHAWK_DIR="${BIZHAWK_HOME:-}"
+
+canonicalize_caller_input() {
+	local label=$1 raw=$2 candidate resolved
+	case "$raw" in
+		/*) candidate=$raw ;;
+		*) candidate="$CALLER_DIR/$raw" ;;
+	esac
+	if ! resolved=$(/usr/bin/realpath -e -- "$candidate" 2>/dev/null); then
+		fail "$label does not exist: $candidate"
+	fi
+	printf '%s\n' "$resolved"
+}
 
 for replacement in OGGF_AUDIO_TIMELINE_JAVA_BIN OGGF_AUDIO_TIMELINE_MONO_BIN \
 	OGGF_AUDIO_PARITY_JAVA_BIN MONO_BIN BIZHAWK_EXTRA_ARGS; do
@@ -80,12 +92,17 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$ROM_PATH" ] || { echo "Argument error: --rom is required" >&2; usage >&2; exit "$EXIT_USAGE"; }
+ROM_PATH=$(canonicalize_caller_input "ROM path" "$ROM_PATH")
+if [ -n "$BIZHAWK_DIR" ]; then
+	BIZHAWK_DIR=$(canonicalize_caller_input "BizHawk home" "$BIZHAWK_DIR")
+fi
 if [ -z "$BIZHAWK_DIR" ]; then
 	for candidate in "$REPO/docs/BizHawk-2.11-linux-x64" "${REPO%/*}/OpenGGF/docs/BizHawk-2.11-linux-x64"; do
 		if [ -f "$candidate/EmuHawk.exe" ]; then BIZHAWK_DIR=$candidate; break; fi
 	done
 fi
 [ -n "$BIZHAWK_DIR" ] || fail "BizHawk 2.11 home was not found; pass --bizhawk-home"
+cd "$REPO"
 MAVEN_BIN=/usr/bin/mvn
 JAVA_BIN=/usr/bin/java
 CMP_BIN=/usr/bin/cmp

@@ -817,9 +817,11 @@ class TestBuildToolingGuard {
                 "OPENGGF_SUREFIRE_ROOT",
                 "OPENGGF_SUREFIRE_REPORTS",
                 "OPENGGF_TEST_SUREFIRE_ROOT",
+                "OPENGGF_TEST_SUREFIRE_REPORTS",
                 "OPENGGF_TRACE_ROOT",
                 "OPENGGF_TRACE_REPORTS",
                 "OPENGGF_TEST_TRACE_ROOT",
+                "OPENGGF_TEST_TRACE_REPORTS",
                 "agent-scratch",
                 "frozen-next-session");
         // Task 3 owns active production/build/tooling paths. Task 4 extends this

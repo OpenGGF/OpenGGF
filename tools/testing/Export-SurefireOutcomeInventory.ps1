@@ -498,6 +498,80 @@ function Normalize-TokenizedText {
     )
 }
 
+function Assert-NoReparsePointInAncestry {
+    param(
+        [Parameter(Mandatory)] [string] $Path,
+        [Parameter(Mandatory)] [string] $Context
+    )
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $root = [System.IO.Path]::GetPathRoot($fullPath)
+    if ([string]::IsNullOrEmpty($root)) {
+        throw "DirectMaven cannot determine the physical root for ${Context}: $fullPath"
+    }
+    $current = $root
+    $segments = [System.Text.RegularExpressions.Regex]::Split(
+        $fullPath.Substring($root.Length),
+        '[/\\]+')
+    $paths = [System.Collections.Generic.List[string]]::new()
+    $paths.Add($root)
+    foreach ($segment in $segments) {
+        if ($segment.Length -eq 0) {
+            continue
+        }
+        $current = [System.IO.Path]::Combine($current, $segment)
+        $paths.Add($current)
+    }
+    foreach ($candidate in $paths) {
+        try {
+            $attributes = [System.IO.File]::GetAttributes($candidate)
+        }
+        catch {
+            throw "DirectMaven cannot inspect trusted ${Context} ancestry at ${candidate}: $($_.Exception.Message)"
+        }
+        if (($attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw "DirectMaven trusted ${Context} ancestry contains a symbolic link or reparse point: $candidate"
+        }
+    }
+    return $fullPath
+}
+
+function Get-TrustedSurefireXmlFiles {
+    param([Parameter(Mandatory)] [string] $Root)
+
+    $files = [System.Collections.Generic.List[string]]::new()
+    $directories = [System.Collections.Generic.Stack[string]]::new()
+    $directories.Push($Root)
+    $extensionComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
+        [System.StringComparison]::OrdinalIgnoreCase
+    } else {
+        [System.StringComparison]::Ordinal
+    }
+    while ($directories.Count -gt 0) {
+        $directory = $directories.Pop()
+        foreach ($entry in [System.IO.Directory]::EnumerateFileSystemEntries(
+                $directory, '*', [System.IO.SearchOption]::TopDirectoryOnly)) {
+            $fullEntry = [System.IO.Path]::GetFullPath($entry)
+            try {
+                $attributes = [System.IO.File]::GetAttributes($fullEntry)
+            }
+            catch {
+                throw "DirectMaven cannot inspect trusted report entry ${fullEntry}: $($_.Exception.Message)"
+            }
+            if (($attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw "DirectMaven trusted report tree contains a symbolic link or reparse point: $fullEntry"
+            }
+            if (($attributes -band [System.IO.FileAttributes]::Directory) -ne 0) {
+                $directories.Push($fullEntry)
+            }
+            elseif ([System.IO.Path]::GetExtension($fullEntry).Equals('.xml', $extensionComparison)) {
+                $files.Add($fullEntry)
+            }
+        }
+    }
+    return $files.ToArray()
+}
+
 function Get-BodySignature {
     param([string] $NormalizedBody)
     $encoding = [System.Text.UTF8Encoding]::new($false)
@@ -628,18 +702,24 @@ if ($DirectMaven) {
         -not [string]::IsNullOrWhiteSpace($RunId)) {
         throw 'DirectMaven provenance rejects SessionRoot and RunId; no coordinator session exists'
     }
-    if (-not (Test-Path -LiteralPath $CanonicalWorktree -PathType Container)) {
+    $canonicalWorktreeInput = [System.IO.Path]::GetFullPath($CanonicalWorktree)
+    if (-not (Test-Path -LiteralPath $canonicalWorktreeInput -PathType Container)) {
         throw "DirectMaven CanonicalWorktree does not exist: $CanonicalWorktree"
     }
-    $CanonicalWorktree = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $CanonicalWorktree).Path)
+    $CanonicalWorktree = Assert-NoReparsePointInAncestry $canonicalWorktreeInput 'canonical worktree'
     $directMavenReportRoot = [System.IO.Path]::GetFullPath(
         [System.IO.Path]::Combine($CanonicalWorktree, 'target', 'surefire-reports'))
 }
 foreach ($root in $expandedReportRoots) {
-    if (-not (Test-Path -LiteralPath $root -PathType Container)) {
+    $reportRootInput = [System.IO.Path]::GetFullPath($root)
+    if (-not (Test-Path -LiteralPath $reportRootInput -PathType Container)) {
         throw "Surefire report root does not exist: $root"
     }
-    $resolvedRoot = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $root).Path)
+    $resolvedRoot = if ($DirectMaven) {
+        Assert-NoReparsePointInAncestry $reportRootInput 'report root'
+    } else {
+        [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $root).Path)
+    }
     if ($DirectMaven) {
         $rootPrefix = $directMavenReportRoot + [System.IO.Path]::DirectorySeparatorChar
         if (-not $resolvedRoot.Equals($directMavenReportRoot, $pathComparison) -and
@@ -647,7 +727,12 @@ foreach ($root in $expandedReportRoots) {
             throw "DirectMaven report root must be target/surefire-reports inside CanonicalWorktree: $resolvedRoot"
         }
     }
-    foreach ($file in [System.IO.Directory]::EnumerateFiles($resolvedRoot, '*.xml', [System.IO.SearchOption]::AllDirectories)) {
+    $enumeratedFiles = if ($DirectMaven) {
+        @(Get-TrustedSurefireXmlFiles $resolvedRoot)
+    } else {
+        @([System.IO.Directory]::EnumerateFiles($resolvedRoot, '*.xml', [System.IO.SearchOption]::AllDirectories))
+    }
+    foreach ($file in $enumeratedFiles) {
         $canonical = [System.IO.Path]::GetFullPath($file)
         if ($reportPathsSeen.Add($canonical)) {
             $reportFiles.Add($canonical)

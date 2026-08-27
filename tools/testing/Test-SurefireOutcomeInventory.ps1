@@ -76,6 +76,23 @@ function Invoke-Tool {
     }
 }
 
+function Try-NewSymbolicLink {
+    param(
+        [Parameter(Mandatory)] [string] $Path,
+        [Parameter(Mandatory)] [string] $Target,
+        [Parameter(Mandatory)] [string] $Context
+    )
+
+    try {
+        New-Item -ItemType SymbolicLink -Path $Path -Target $Target -ErrorAction Stop | Out-Null
+        return $true
+    }
+    catch {
+        Write-Host "SKIP $Context because symbolic-link creation is unavailable: $($_.Exception.Message)"
+        return $false
+    }
+}
+
 function Assert-Succeeded {
     param($Result, [string] $Context)
     if ($Result.ExitCode -ne 0) {
@@ -927,6 +944,72 @@ test
             '-DirectMaven', '-CanonicalWorktree', $worktree,
             '-ReportRoot', $outsideReports
         )) 'target.*surefire-reports|outside.*worktree|report root' 'caller-external direct Maven reports'
+    }
+
+    Invoke-Case 'direct Maven export rejects a report-root symbolic-link escape' {
+        $case = Join-Path $scratch 'export-direct-maven-root-link'
+        $worktree = Join-Path $case 'worktree'
+        $target = Join-Path $worktree 'target'
+        $outsideReports = Join-Path $case 'outside-reports'
+        New-Item -ItemType Directory -Path $target, $outsideReports -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.LinkedRootTest`n"
+        Write-Utf8File (Join-Path $outsideReports 'TEST-link.xml') '<testsuite><testcase classname="example.LinkedRootTest" name="linked"/></testsuite>'
+        $reports = Join-Path $target 'surefire-reports'
+        if (-not (Try-NewSymbolicLink $reports $outsideReports 'report-root symbolic-link escape')) {
+            return
+        }
+
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-OutputPath', $output,
+            '-DirectMaven', '-CanonicalWorktree', $worktree,
+            '-ReportRoot', $reports
+        )) 'symbolic link|reparse point|trusted report' 'report-root symbolic-link escape'
+    }
+
+    Invoke-Case 'direct Maven export rejects a nested symbolic-link directory escape' {
+        $case = Join-Path $scratch 'export-direct-maven-directory-link'
+        $worktree = Join-Path $case 'worktree'
+        $reports = Join-Path $worktree 'target/surefire-reports'
+        $outsideReports = Join-Path $case 'outside-reports'
+        New-Item -ItemType Directory -Path $reports, $outsideReports -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.LinkedDirectoryTest`n"
+        Write-Utf8File (Join-Path $outsideReports 'TEST-link.xml') '<testsuite><testcase classname="example.LinkedDirectoryTest" name="linked"/></testsuite>'
+        if (-not (Try-NewSymbolicLink (Join-Path $reports 'linked-directory') $outsideReports 'nested directory symbolic-link escape')) {
+            return
+        }
+
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-OutputPath', $output,
+            '-DirectMaven', '-CanonicalWorktree', $worktree,
+            '-ReportRoot', $reports
+        )) 'symbolic link|reparse point|trusted report' 'nested directory symbolic-link escape'
+    }
+
+    Invoke-Case 'direct Maven export rejects a nested symbolic-link report file escape' {
+        $case = Join-Path $scratch 'export-direct-maven-file-link'
+        $worktree = Join-Path $case 'worktree'
+        $reports = Join-Path $worktree 'target/surefire-reports'
+        $nested = Join-Path $reports 'nested'
+        $outsideReports = Join-Path $case 'outside-reports'
+        New-Item -ItemType Directory -Path $nested, $outsideReports -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        $outsideReport = Join-Path $outsideReports 'TEST-link.xml'
+        Write-Utf8File $classes "example.LinkedFileTest`n"
+        Write-Utf8File $outsideReport '<testsuite><testcase classname="example.LinkedFileTest" name="linked"/></testsuite>'
+        if (-not (Try-NewSymbolicLink (Join-Path $nested 'TEST-link.xml') $outsideReport 'nested file symbolic-link escape')) {
+            return
+        }
+
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-OutputPath', $output,
+            '-DirectMaven', '-CanonicalWorktree', $worktree,
+            '-ReportRoot', $reports
+        )) 'symbolic link|reparse point|trusted report' 'nested file symbolic-link escape'
     }
 
     Invoke-Case 'export normalizes zoned offset and unzoned ISO timestamps to prevent false red changes' {

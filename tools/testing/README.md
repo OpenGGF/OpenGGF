@@ -46,7 +46,10 @@ Run the exporter from PowerShell so multiple report roots remain an array:
 `-DirectMaven` makes expected-red reports usable without inventing coordinator
 session values. It requires the explicit canonical worktree and accepts report
 roots only at or below that worktree's `target/surefire-reports`; volatile
-worktree paths are normalized to `<WORKTREE>`. Historical managed-session
+worktree paths are normalized to `<WORKTREE>`. Direct mode rejects symbolic
+links and reparse points in the worktree/report ancestry and anywhere below a
+report root before reading XML, so lexical containment cannot hide an external
+report tree. Historical managed-session
 evidence remains supported without `-DirectMaven`, where any red outcome still
 requires the complete `CanonicalWorktree`, `SessionRoot`, and `RunId` provenance
 set.
