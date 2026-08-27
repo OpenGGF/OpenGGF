@@ -40,44 +40,29 @@ removes active duplication or risk — but don't let cleanup displace playable S
 
 ```bash
 tools/testing/install-hooks.sh
-tools/testing/test-session.sh -- mvn package                          # executable JAR with dependencies
-tools/testing/test-session.sh -- mvn test
-tools/testing/test-session.sh -- mvn "-Dtest=TestCollisionLogic" test # focused run
-tools/testing/test-session.sh -- mvn -Dmse=off -Pguards test -B   # structural guards in a fresh session
-java -jar <session-artifact-root>/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+mvn package                          # executable JAR with dependencies
+mvn test
+mvn "-Dtest=TestCollisionLogic" test # focused run
+mvn -Dmse=off -Pguards test -B       # structural guards in a fresh JVM
+java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
 
-PowerShell uses `tools/testing/install-hooks.ps1` and
-`tools/testing/test-session.ps1 -- ...` with the same Maven arguments. The
-coordinator owns temporary/output paths and prints the session manifest at the
-start and end of each run; raw Maven lifecycle commands are non-certifying.
+PowerShell uses `tools/testing/install-hooks.ps1` and the same Maven arguments.
 For release evidence, run both the ordinary suite and the separate `-Pguards`
-session; the structural guards are intentionally excluded from the long reused
+invocation; the structural guards are intentionally excluded from the long reused
 ordinary fork so whole-production graph imports receive a fresh JVM.
 
-### Agent test-session isolation contract
+### Agent test isolation contract
 
-Codex and Claude agents must use `tools/testing/test-session.sh` on POSIX systems
-and must use `tools/testing/test-session.ps1` in PowerShell for every certifying
-build, test, trace replay, or capture run. The wrapper is the sandbox boundary:
-it creates a unique session-owned temporary root, routes build/report/diagnostic
-output there, and gives every Surefire fork a per-Surefire-fork LWJGL extraction
-directory. Agents must not reuse another run's temporary directory, point
-LWJGL at a shared extraction directory, or treat a raw Maven lifecycle command
-as release evidence. Parallel agents must use separate worktrees and separate
-wrapper sessions, even when they are testing the same commit.
+OpenGGF uses Maven directly. Build and test output belongs below the current
+worktree's `target/` directory. Do not redirect Maven build/report roots to a
+shared or durable session directory. Parallel agents use separate worktrees;
+repeated runs in one worktree reuse its target tree.
 
-The wrapper's `OPENGGF_TEST_RUN_START` and `OPENGGF_TEST_RUN_END` markers, plus
-the referenced manifest, are part of the evidence. The wrapper is quiet by
-default: both markers print the session-owned `manifest=` and `log=` paths while
-the full child output is retained only in `maven.log`. Agent runs must keep this
-default; do not pass `--verbose`, pipe through `tee`, or print the complete log
-back into context. Diagnose with targeted `rg` searches and bounded `tail`/`sed`
-reads against the reported log. `--quiet` is accepted when an invocation needs
-to state the default explicitly; `--verbose` is reserved for interactive human
-troubleshooting that genuinely needs live output. Report the run ID, manifest
-path, and log path; if the start/end markers are absent, the result is
-non-certifying.
+The per-Surefire-fork LWJGL extraction uses a distinct directory below
+`target/test-tmp`. Keep command output bounded when diagnosing long runs: use
+targeted `rg` searches and bounded `tail`/`sed` reads rather than replaying a
+complete Maven log into context.
 
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.
@@ -115,20 +100,12 @@ ROM is missing.
 Disassemblies live under `docs/s1disasm/`, `docs/s2disasm/`, `docs/skdisasm/` (untracked,
 available locally); SMPS audio reference under `docs/SMPS-rips/SMPSPlay/`.
 
-## Managed agent scratch storage
+## Temporary and durable artifacts
 
-Agent-owned captures, diagnostic output, downloads, reports, and other durable task
-artifacts belong in a helper-created directory under
-`$AGENT_SCRATCH_ROOT/tasks`, never in `/tmp`. `tools/agent-scratch` is the tracked
-bootstrap/source helper: run `tools/agent-scratch install` after source updates to install
-the stable user-wide `$HOME/.local/bin/agent-scratch`. Routine work in this and any other
-project uses `agent-scratch new <label>` (or `agent-scratch path tasks`) and passes the
-printed task path to the producing tool. The installed helper shares
-`$AGENT_SCRATCH_ROOT` across projects; labels and timestamped task directories isolate their
-artifacts. `/tmp` remains for short-lived operating-system files only. Before a large
-capture, run `agent-scratch status` to check capacity. Task output is retained for a limited
-time: use `agent-scratch keep <task-path> --until YYYY-MM-DD` for a bounded extension, or
-move material that must outlive retention into a normal archive outside the managed root.
+Maven-owned output stays below the current worktree's `target/` directory. Put durable
+captures or research outputs in an explicit task/archive directory outside the repository,
+and keep `/tmp` for short-lived operating-system files only. Do not invent a shared Maven
+output root or copy another worktree's build tree.
 
 ## Hard rules
 

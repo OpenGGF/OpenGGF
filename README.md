@@ -280,16 +280,15 @@ traces.
 - **Modern development and validation tools:** level-editor foundations,
   ROM offset and compression tools, headless gameplay tests, BizHawk trace
   replay, visual/audio regression checks, and release/architecture guards.
-  Automated test sessions use timestamped session-owned roots and isolate
-  LWJGL extraction per Surefire fork so concurrent agent runs cannot corrupt
-  one another. Their full build output stays in a searchable session log by
-  default, while compact start/end markers expose the manifest and log paths.
+  Maven runs directly in each worktree and keeps build, report, diagnostic,
+  temporary, and per-Surefire-fork LWJGL output below that worktree's `target/`
+  tree.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
-  and isolated test-session procedures.
+  and worktree-local direct-Maven procedures.
 - **Normal local launchers:** `run.sh`, `run.cmd`, `dev.sh`, and `dev.cmd` keep
-  the direct package-and-launch workflow for interactive development, while
-  certifying builds, tests, and trace evidence remain session-wrapped.
+  the direct package-and-launch workflow for interactive development; builds,
+  tests, guards, and trace evidence use the same direct Maven boundary.
 
 #### Current release status
 

@@ -761,7 +761,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void hookBootstrapMustRemainExplicitDuringBuildCutover() throws Exception {
+    void supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap() throws Exception {
         Path agentsPath = Path.of("AGENTS.md");
         Path claudePath = Path.of("CLAUDE.md");
         String agents = Files.readString(agentsPath, StandardCharsets.UTF_8);
@@ -774,8 +774,19 @@ class TestBuildToolingGuard {
                 || !agents.contains("tools/testing/install-hooks.ps1")) {
             violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
         }
-        if (!agents.contains("Codex") || !agents.contains("Claude")) {
-            violations.add("AGENTS.md/CLAUDE.md must name both Codex and Claude in the agent workflow contract");
+        for (String requiredText : List.of(
+                "mvn package",
+                "mvn test",
+                "mvn \"-Dtest=TestCollisionLogic\" test",
+                "mvn -Dmse=off -Pguards test -B",
+                "OpenGGF uses Maven directly. Build and test output belongs below the current\n"
+                        + "worktree's `target/` directory. Do not redirect Maven build/report roots to a\n"
+                        + "shared or durable session directory. Parallel agents use separate worktrees;\n"
+                        + "repeated runs in one worktree reuse its target tree.")) {
+            if (!agents.contains(requiredText)) {
+                violations.add("AGENTS.md/CLAUDE.md do not contain required direct-Maven guidance: "
+                        + requiredText);
+            }
         }
         for (String script : List.of("tools/testing/install-hooks.sh")) {
             if (!Files.isRegularFile(Path.of(script)) || !Files.isExecutable(Path.of(script))) {
@@ -795,7 +806,7 @@ class TestBuildToolingGuard {
         }
 
         if (!violations.isEmpty()) {
-            fail("hook bootstrap must remain explicit during the build cutover:\n  "
+            fail("supported documentation must describe direct Maven and explicit hook setup:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -824,12 +835,14 @@ class TestBuildToolingGuard {
                 "OPENGGF_TEST_TRACE_REPORTS",
                 "agent-scratch",
                 "frozen-next-session");
-        // Task 3 owns active production/build/tooling paths. Task 4 extends this
-        // scan to workflows and guidance while reconciling those files.
         List<Path> roots = List.of(
                 Path.of("src/main"), Path.of("tools/audio"), Path.of("tools/bizhawk"),
                 Path.of("tools/testing"), Path.of("pom.xml"), Path.of("dev.sh"),
-                Path.of("dev.cmd"), Path.of("run.sh"), Path.of("run.cmd"));
+                Path.of("dev.cmd"), Path.of("run.sh"), Path.of("run.cmd"),
+                Path.of(".github/workflows"), Path.of("AGENTS.md"), Path.of("CLAUDE.md"),
+                Path.of("README.md"), Path.of("ROADMAP.md"), Path.of("docs/guide"),
+                Path.of("docs/agent-workflow"), Path.of(".agents/skills"),
+                Path.of(".claude/skills"));
         List<String> violations = new ArrayList<>();
         for (Path root : roots) {
             if (!Files.exists(root)) {
@@ -996,8 +1009,11 @@ class TestBuildToolingGuard {
             if (!guardJob.contains("-Pguards")) {
                 violations.add(".github/workflows/ci.yml guards job does not run mvn -Pguards");
             }
-            if (!guardJob.contains("tools/testing/test-session.sh --export-file \"$GITHUB_OUTPUT\" --")) {
-                violations.add(".github/workflows/ci.yml guards job bypasses the test-session coordinator");
+            if (!guardJob.contains("run: mvn -Dmse=off -Pguards test -B")) {
+                violations.add(".github/workflows/ci.yml guards job does not invoke Maven directly");
+            }
+            if (guardJob.contains("test-session.sh")) {
+                violations.add(".github/workflows/ci.yml guards job still invokes the retired wrapper");
             }
             if (!conditionPinsPushToIntegrationBranches(yamlJobCondition(guardJob))) {
                 violations.add(".github/workflows/ci.yml guards job is not reachable from a develop"
@@ -1236,19 +1252,19 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void releaseWorkflowShouldRunStructuralGuardsInTheirOwnSession() throws Exception {
+    void releaseWorkflowShouldRunStructuralGuardsInTheirOwnJvm() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("Run structural guards in a fresh session")) {
-            violations.add(".github/workflows/release.yml does not name the isolated structural-guard step");
+        if (!workflow.contains("Run structural guards in a fresh JVM")) {
+            violations.add(".github/workflows/release.yml does not name the fresh structural-guard JVM step");
         }
-        if (!workflow.contains("tools/testing/test-session.sh --export-file \"$GITHUB_OUTPUT\" -- mvn -Dmse=off -Pguards test -B")) {
-            violations.add(".github/workflows/release.yml does not run -Pguards through the session coordinator");
+        if (!workflow.contains("run: mvn -Dmse=off -Pguards test -B")) {
+            violations.add(".github/workflows/release.yml does not run -Pguards directly");
         }
 
         if (!violations.isEmpty()) {
-            fail("release validation must keep structural guards in a fresh coordinator session:\n  "
+            fail("release validation must keep structural guards in a fresh Maven JVM:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -1261,9 +1277,8 @@ class TestBuildToolingGuard {
         if (!workflow.contains("Assert trace replay coverage")) {
             violations.add(".github/workflows/release.yml does not assert trace replay coverage after running the profile");
         }
-        if (!workflow.contains("MANIFEST: ${{ steps.release-trace-tests-pr.outputs.manifest || steps.release-trace-tests-push.outputs.manifest || steps.release-trace-tests-manual.outputs.manifest }}")
-                || !workflow.contains("session[\"surefire_reports\"]")) {
-            violations.add(".github/workflows/release.yml does not inspect the coordinator-owned surefire report root");
+        if (!workflow.contains("surefire_dir = Path(\"target/surefire-reports\")")) {
+            violations.add(".github/workflows/release.yml does not inspect the target-local surefire report root");
         }
         if (!workflow.contains("com.openggf.tests.trace*TraceReplay.txt")) {
             violations.add(".github/workflows/release.yml does not narrow release coverage to TraceReplay reports");
@@ -1384,8 +1399,8 @@ class TestBuildToolingGuard {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("trace_dir = Path(session[\"trace_reports\"])")) {
-            violations.add(".github/workflows/release.yml does not inspect the coordinator-owned trace report root");
+        if (!workflow.contains("trace_dir = Path(\"target/trace-reports\")")) {
+            violations.add(".github/workflows/release.yml does not inspect the target-local trace report root");
         }
         if (!workflow.contains("warning_count")) {
             violations.add(".github/workflows/release.yml does not check trace replay warning counts");
@@ -1453,18 +1468,16 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void ciAndReleaseMavenJobsMustUseCoordinatorManifests() throws Exception {
+    void ciAndReleaseMavenJobsMustUseDirectMavenAndTargetPaths() throws Exception {
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
         String release = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
-        String wrapper = "tools/testing/test-session.sh --export-file \"$GITHUB_OUTPUT\" --";
-
         for (String command : List.of(
                 "mvn -Dmse=off -Pguards test -B",
                 "mvn -Dmse=off test -B",
                 "mvn -Dmse=off test -Ptrace-replay -B")) {
-            if (!ci.contains(wrapper + " " + command)) {
-                violations.add(".github/workflows/ci.yml does not coordinator-wrap " + command);
+            if (!ci.contains(command)) {
+                violations.add(".github/workflows/ci.yml does not run directly: " + command);
             }
         }
         for (String command : List.of(
@@ -1472,40 +1485,31 @@ class TestBuildToolingGuard {
                 "mvn -Dmse=off test -Ptrace-replay -B",
                 "mvn -Dmse=off package -Pnative -DskipTests -B",
                 "mvn -Dmse=off package -Puniversal-jar -DskipTests -B")) {
-            if (!release.contains(wrapper + " " + command)) {
-                violations.add(".github/workflows/release.yml does not coordinator-wrap " + command);
+            if (!release.contains(command)) {
+                violations.add(".github/workflows/release.yml does not run directly: " + command);
             }
         }
-        for (String output : List.of(
-                "steps.default-tests-pr.outputs.manifest",
-                "steps.default-tests-push.outputs.manifest",
-                "steps.default-tests-manual.outputs.manifest",
-                "steps.develop-trace.outputs.manifest",
-                "steps.release-default-tests-pr.outputs.manifest",
-                "steps.release-default-tests-push.outputs.manifest",
-                "steps.release-default-tests-manual.outputs.manifest",
-                "steps.release-trace-tests-pr.outputs.manifest",
-                "steps.release-trace-tests-push.outputs.manifest",
-                "steps.release-trace-tests-manual.outputs.manifest",
-                "steps.native-build.outputs.build_root",
-                "steps.native-build.outputs.artifact_root",
-                "steps.native-build.outputs.distribution_root",
-                "steps.universal-jar-build.outputs.artifact_root",
-                "steps.universal-jar-build.outputs.distribution_root")) {
-            if (!ci.contains(output) && !release.contains(output)) {
-                violations.add("CI/release workflows do not consume coordinator output " + output);
+        for (String retired : List.of("tools/testing/test-session.sh", "outputs.manifest",
+                "outputs.build_root", "outputs.artifact_root", "outputs.distribution_root",
+                "session[\"surefire_reports\"]", "session[\"trace_reports\"]")) {
+            if (ci.contains(retired) || release.contains(retired)) {
+                violations.add("CI/release workflows still contain retired session coupling: " + retired);
             }
         }
-        if (ci.contains("target/surefire-reports") || ci.contains("target/trace-reports")
-                || release.contains("target/surefire-reports") || release.contains("target/trace-reports")) {
-            violations.add("CI/release workflows still read shared target report roots");
+        if (!ci.contains("target/surefire-reports") || !ci.contains("target/trace-reports")
+                || !release.contains("target/surefire-reports") || !release.contains("target/trace-reports")) {
+            violations.add("CI/release workflows do not read their worktree-local target report roots");
         }
-        if (release.contains("target/OpenGGF") || release.contains("dist/")) {
-            violations.add("release workflow still publishes generated artifacts through shared target/dist roots");
+        for (String archive : List.of(
+                "target/OpenGGF-windows.zip", "target/OpenGGF-macos.zip",
+                "target/OpenGGF-linux.tar.gz", "target/OpenGGF-universal.jar")) {
+            if (!release.contains(archive)) {
+                violations.add(".github/workflows/release.yml does not publish target-local artifact " + archive);
+            }
         }
 
         if (!violations.isEmpty()) {
-            fail("CI and release Maven jobs must publish and consume coordinator-owned session paths:\n  "
+            fail("CI and release Maven jobs must use direct Maven and worktree-local target paths:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }

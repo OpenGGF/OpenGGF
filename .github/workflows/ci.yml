@@ -62,7 +62,7 @@ jobs:
           cache: maven
 
       - name: Run structural guards
-        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off -Pguards test -B
+        run: mvn -Dmse=off -Pguards test -B
 
   test:
     if: github.event_name != 'push' || github.ref == 'refs/heads/next'
@@ -79,37 +79,29 @@ jobs:
           cache: maven
 
       - name: Run tests (pull request)
-        id: default-tests-pr
         if: github.event_name == 'pull_request'
         shell: bash
-        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.base_ref }}"
+        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.base_ref }}"
 
       - name: Run tests (push)
-        id: default-tests-push
         if: github.event_name == 'push'
         shell: bash
-        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
+        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
 
       - name: Run tests (manual or scheduled)
-        id: default-tests-manual
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
         shell: bash
-        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B
+        run: mvn -Dmse=off test -B
 
       - name: Assert default test coverage
         shell: bash
-        env:
-          MANIFEST: ${{ steps.default-tests-pr.outputs.manifest || steps.default-tests-push.outputs.manifest || steps.default-tests-manual.outputs.manifest }}
         run: |
           python3 - <<'PY'
-          import json
-          import os
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
-          reports = sorted(Path(session["surefire_reports"]).glob("TEST-*.xml"))
+          reports = sorted(Path("target/surefire-reports").glob("TEST-*.xml"))
           total = 0
           skipped = 0
           for report in reports:
@@ -166,31 +158,26 @@ jobs:
           exit "$missing"
 
       - name: Run trace replay profile
-        id: develop-trace
         shell: bash
         run: |
-          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
+          mvn -Dmse=off test -Ptrace-replay -B \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Assert trace replay coverage
         shell: bash
-        env:
-          MANIFEST: ${{ steps.develop-trace.outputs.manifest }}
         run: |
           python3 - <<'PY'
           import fnmatch
           import json
           import re
-          import os
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
-          surefire_dir = Path(session["surefire_reports"])
-          trace_dir = Path(session["trace_reports"])
+          surefire_dir = Path("target/surefire-reports")
+          trace_dir = Path("target/trace-reports")
           source_root = Path("src/test/java/com/openggf/tests/trace")
           diagnostic_excludes = (
               "Debug*.java",

@@ -4,6 +4,16 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Builds and tests are back on direct Maven after managed sessions caused
+  unbounded storage growth:** each worktree now owns one reusable `target/`
+  tree, CI/release jobs use static target-local report and artifact paths, and
+  the coordinator, wrappers, managed scratch helper, and active enforcement
+  have been removed from OpenGGF. The preserved lifecycle research now lives
+  separately in public `OpenGGF/Actworks` as a v0.8 ask. Repeated trace runs
+  atomically replace stale reports in that reusable tree, Maven and Surefire
+  temporary files remain target-local, and release jobs upload only finished
+  platform archives.
+
 - **The `develop`/`next` merge now retains the official runtime behavior on its
   expanded architecture:** results, special-stage, and trace-gap lifecycle
   ordering is restored; Time Attack cross-act seamless routes return to the

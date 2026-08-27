@@ -59,51 +59,43 @@ jobs:
           exit "$missing"
 
       - name: Run tests (pull request)
-        id: release-default-tests-pr
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
-          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B \
+          mvn -Dmse=off test -B \
             -DmodApi.destinationBranch="${{ github.base_ref }}" \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Run tests (push)
-        id: release-default-tests-push
         if: github.event_name == 'push'
         shell: bash
         run: |
-          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B \
+          mvn -Dmse=off test -B \
             -DmodApi.destinationBranch="${{ github.ref_name }}" \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Run tests (manual)
-        id: release-default-tests-manual
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
-          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -B \
+          mvn -Dmse=off test -B \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Assert default test skip classification
         shell: bash
-        env:
-          MANIFEST: ${{ steps.release-default-tests-pr.outputs.manifest || steps.release-default-tests-push.outputs.manifest || steps.release-default-tests-manual.outputs.manifest }}
         run: |
           python3 - <<'PY'
-          import json
-          import os
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
-          surefire_dir = Path(session["surefire_reports"])
+          surefire_dir = Path("target/surefire-reports")
           RELEASE_OPTIONAL_TEST_SKIPS = {
               "com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds",
               "com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance#measureMixedRouteDispatchAllocationAndTime",
@@ -142,60 +134,52 @@ jobs:
           print(f"Default test skip classification: skipped={len(skipped)} allowed={len(RELEASE_OPTIONAL_TEST_SKIPS)}")
           PY
 
-      - name: Run structural guards in a fresh session
-        id: release-guard-tests
+      - name: Run structural guards in a fresh JVM
         shell: bash
-        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off -Pguards test -B
+        run: mvn -Dmse=off -Pguards test -B
 
       - name: Run trace replay policy tests (pull request)
-        id: release-trace-tests-pr
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
-          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
+          mvn -Dmse=off test -Ptrace-replay -B \
             -DmodApi.destinationBranch="${{ github.base_ref }}" \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Run trace replay policy tests (push)
-        id: release-trace-tests-push
         if: github.event_name == 'push'
         shell: bash
         run: |
-          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
+          mvn -Dmse=off test -Ptrace-replay -B \
             -DmodApi.destinationBranch="${{ github.ref_name }}" \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Run trace replay policy tests (manual)
-        id: release-trace-tests-manual
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
-          tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off test -Ptrace-replay -B \
+          mvn -Dmse=off test -Ptrace-replay -B \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \
             -Ds3k.rom.path="${S3K_ROM_PATH}"
 
       - name: Assert trace replay coverage
         shell: bash
-        env:
-          MANIFEST: ${{ steps.release-trace-tests-pr.outputs.manifest || steps.release-trace-tests-push.outputs.manifest || steps.release-trace-tests-manual.outputs.manifest }}
         run: |
           python3 - <<'PY'
           import fnmatch
           import json
-          import os
           import re
           import sys
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          session = json.loads(Path(os.environ["MANIFEST"]).read_text(encoding="utf-8"))
-          surefire_dir = Path(session["surefire_reports"])
-          trace_dir = Path(session["trace_reports"])
+          surefire_dir = Path("target/surefire-reports")
+          trace_dir = Path("target/trace-reports")
           source_root = Path("src/test/java/com/openggf/tests/trace")
           TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = (
               "Debug*.java",
@@ -382,16 +366,15 @@ jobs:
           cache: maven
 
       - name: Build native image
-        id: native-build
         shell: bash
-        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off package -Pnative -DskipTests -B
+        run: mvn -Dmse=off package -Pnative -DskipTests -B
 
       - name: Package (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         env:
-          BUILD_ROOT: ${{ steps.native-build.outputs.build_root }}
-          DISTRIBUTION_ROOT: ${{ steps.native-build.outputs.distribution_root }}
+          BUILD_ROOT: target
+          DISTRIBUTION_ROOT: target
         run: |
           New-Item -ItemType Directory -Force -Path "$env:DISTRIBUTION_ROOT/OpenGGF"
           Copy-Item "$env:BUILD_ROOT/OpenGGF.exe" "$env:DISTRIBUTION_ROOT/OpenGGF/"
@@ -403,8 +386,8 @@ jobs:
       - name: Package (macOS)
         if: matrix.platform == 'macos'
         env:
-          BUILD_ROOT: ${{ steps.native-build.outputs.build_root }}
-          DISTRIBUTION_ROOT: ${{ steps.native-build.outputs.distribution_root }}
+          BUILD_ROOT: target
+          DISTRIBUTION_ROOT: target
         run: |
           mkdir -p "$DISTRIBUTION_ROOT"
           bash src/packaging/assemble-macos-app.sh "$BUILD_ROOT/OpenGGF" "$DISTRIBUTION_ROOT"
@@ -415,8 +398,8 @@ jobs:
       - name: Package (Linux)
         if: matrix.platform == 'linux'
         env:
-          BUILD_ROOT: ${{ steps.native-build.outputs.build_root }}
-          DISTRIBUTION_ROOT: ${{ steps.native-build.outputs.distribution_root }}
+          BUILD_ROOT: target
+          DISTRIBUTION_ROOT: target
         run: |
           mkdir -p "$DISTRIBUTION_ROOT/OpenGGF"
           cp "$BUILD_ROOT/OpenGGF" "$DISTRIBUTION_ROOT/OpenGGF/"
@@ -429,9 +412,9 @@ jobs:
         shell: bash
         env:
           PLATFORM: ${{ matrix.platform }}
-          BUILD_ROOT: ${{ steps.native-build.outputs.build_root }}
-          ARTIFACT_ROOT: ${{ steps.native-build.outputs.artifact_root }}
-          DISTRIBUTION_ROOT: ${{ steps.native-build.outputs.distribution_root }}
+          BUILD_ROOT: target
+          ARTIFACT_ROOT: target
+          DISTRIBUTION_ROOT: target
         run: |
           if command -v python3 >/dev/null 2>&1; then
             PYTHON=python3
@@ -539,7 +522,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openggf-${{ matrix.platform }}
-          path: ${{ steps.native-build.outputs.distribution_root }}/*
+          path: |
+            target/OpenGGF-windows.zip
+            target/OpenGGF-macos.zip
+            target/OpenGGF-linux.tar.gz
           retention-days: 30
 
   universal-jar:
@@ -558,15 +544,14 @@ jobs:
           cache: maven
 
       - name: Build universal JVM jar
-        id: universal-jar-build
         shell: bash
-        run: tools/testing/test-session.sh --export-file "$GITHUB_OUTPUT" -- mvn -Dmse=off package -Puniversal-jar -DskipTests -B
+        run: mvn -Dmse=off package -Puniversal-jar -DskipTests -B
 
       - name: Smoke validate universal JVM jar
         shell: bash
         env:
-          ARTIFACT_ROOT: ${{ steps.universal-jar-build.outputs.artifact_root }}
-          DISTRIBUTION_ROOT: ${{ steps.universal-jar-build.outputs.distribution_root }}
+          ARTIFACT_ROOT: target
+          DISTRIBUTION_ROOT: target
         run: |
           python3 - <<'PY'
           import re
@@ -623,7 +608,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openggf-universal-jar
-          path: ${{ steps.universal-jar-build.outputs.distribution_root }}/OpenGGF-universal.jar
+          path: target/OpenGGF-universal.jar
           retention-days: 30
 
   release:

@@ -8,16 +8,16 @@ All new or updated tests must use JUnit 5 / Jupiter. Do not add JUnit 4 tests, r
 
 ```bash
 # Run all tests
-tools/testing/test-session.sh -- mvn test
+mvn test
 
 # Run a single test class
-tools/testing/test-session.sh -- mvn test -Dtest=TestCollisionLogic
+mvn test -Dtest=TestCollisionLogic
 
 # Run a single test method
-tools/testing/test-session.sh -- mvn test -Dtest=TestCollisionLogic#testSlopeAngle
+mvn test -Dtest=TestCollisionLogic#testSlopeAngle
 
 # Run with full Maven output (disable silent extension)
-tools/testing/test-session.sh -- mvn test -Dmse=off
+mvn test -Dmse=off
 ```
 
 Tests are configured for parallel execution across 4 JVM forks locally (`1` fork in CI).
@@ -32,21 +32,21 @@ The rewind system has both ordinary regression tests and an opt-in benchmark. Se
 Run the regular rewind suite:
 
 ```bash
-tools/testing/test-session.sh -- mvn -Dmse=off "-Dtest=*Rewind*" test
+mvn -Dmse=off "-Dtest=*Rewind*" test
 ```
 
 Run the compact schema foundation tests when changing automatic rewind capture,
 field policy classification, or value codecs:
 
 ```bash
-tools/testing/test-session.sh -- mvn -Dmse=off "-Dtest=TestRewindStateBuffer,TestRewindSchemaRegistry,TestCompactFieldCapturer,TestCompactFieldCapturerPolicy,TestRewindRecordCodecs,TestRewindHelperCodecs,TestRewindCollectionCodecs,TestRewindPolicyRegistry,TestRewindPlayerReferenceCodecs,TestRewindObjectReferenceCodecs,TestRewindIdentityTable" test
+mvn -Dmse=off "-Dtest=TestRewindStateBuffer,TestRewindSchemaRegistry,TestCompactFieldCapturer,TestCompactFieldCapturerPolicy,TestRewindRecordCodecs,TestRewindHelperCodecs,TestRewindCollectionCodecs,TestRewindPolicyRegistry,TestRewindPlayerReferenceCodecs,TestRewindObjectReferenceCodecs,TestRewindIdentityTable" test
 ```
 
 Generate the runtime-owner field inventory when planning object/player rewind
 coverage work:
 
 ```bash
-tools/testing/test-session.sh -- mvn -Dmse=off -DskipTests test-compile exec:java \
+mvn -Dmse=off -DskipTests test-compile exec:java \
   "-Dexec.mainClass=com.openggf.tools.rewind.RewindFieldInventoryTool"
 ```
 
@@ -69,27 +69,27 @@ entries when a migration closes them.
 Run the child/spawn graph audit when planning object family coverage:
 
 ```bash
-tools/testing/test-session.sh -- mvn -Dmse=off -DskipTests test-compile exec:java \
+mvn -Dmse=off -DskipTests test-compile exec:java \
   "-Dexec.mainClass=com.openggf.tools.rewind.ChildGraphPolicyInventoryTool"
 ```
 
 Run the focused encounter validation foundation:
 
 ```bash
-tools/testing/test-session.sh -- mvn -Dmse=off "-Dtest=TestRewindEncounterValidation" test
+mvn -Dmse=off "-Dtest=TestRewindEncounterValidation" test
 ```
 
 Run the focused presentation checks after changing reverse audio, trace rewind,
 or fade behaviour:
 
 ```bash
-tools/testing/test-session.sh -- mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerRewindSuppression" test
+mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerRewindSuppression" test
 ```
 
 Run the benchmark only when you need timing, footprint, or long-tail determinism data:
 
 ```bash
-tools/testing/test-session.sh -- mvn -Dmse=off "-Dtest=RewindBenchmark" \
+mvn -Dmse=off "-Dtest=RewindBenchmark" \
   "-Dopenggf.rewind.benchmark.run=true" test
 ```
 
@@ -200,9 +200,9 @@ specify paths via system properties or environment variables:
 
 ```bash
 # System properties
-tools/testing/test-session.sh -- mvn test -Dsonic1.rom.path="path/to/sonic1.gen"
-tools/testing/test-session.sh -- mvn test -Dsonic2.rom.path="path/to/sonic2.gen"
-tools/testing/test-session.sh -- mvn test -Ds3k.rom.path=s3k.gen
+mvn test -Dsonic1.rom.path="path/to/sonic1.gen"
+mvn test -Dsonic2.rom.path="path/to/sonic2.gen"
+mvn test -Ds3k.rom.path=s3k.gen
 
 # Environment variables
 export SONIC_1_ROM_PATH="path/to/sonic1.gen"
@@ -351,7 +351,7 @@ Current examples:
 Run them with:
 
 ```bash
-tools/testing/test-session.sh -- mvn test -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay
+mvn test -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay
 ```
 
 For the full workflow, including recording traces and reading divergence reports, see

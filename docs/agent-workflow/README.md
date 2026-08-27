@@ -62,79 +62,13 @@ newly published violation acceptable; remove the bad commit from unpublished
 history, then run the hook again. CI applies the same commit-range and
 delivered-tree checks on every branch push.
 
-## Managed agent scratch storage
+## Direct Maven output
 
-Bootstrap durable agent scratch storage from a source checkout, then verify the
-user-wide installed command:
-
-```bash
-tools/agent-scratch install
-agent-scratch verify
-```
-
-The tracked `tools/agent-scratch` is bootstrap/source only. `install` copies it to the stable
-user-wide `$HOME/.local/bin/agent-scratch`, selects the disk-backed
-`$AGENT_SCRATCH_ROOT`, configures Claude and Codex to use managed children, and installs a
-daily user cleanup timer whose `ExecStart` invokes that installed copy. Ensure
-`$HOME/.local/bin` is on `PATH`, and re-run `tools/agent-scratch install` after helper-source
-updates. Neither routine commands nor the cleanup service may depend on a checkout or
-worktree; installation also retires legacy OpenGGF-named generated units. New configuration
-uses `AGENT_SCRATCH_ROOT`; a matching legacy `OGGF_SCRATCH_ROOT` is accepted only as a
-compatibility alias. `verify` checks the managed
-configuration and systemd units; it reports the Claude runtime check as `unverified` when
-Claude is unavailable or cannot run in the current session, which is not a successful Claude
-verification.
-
-Create durable task output with the helper, rather than a repository-local scratch folder
-or `/tmp`. The final output line from `new` is the unique task directory under
-`$AGENT_SCRATCH_ROOT/tasks`:
-
-```bash
-agent-scratch status
-TASK_DIR="$(agent-scratch new trace-investigation | tail -n 1)"
-```
-
-Run `status` before large captures or downloads: it reports free bytes, inodes, current
-area usage, process protection, and pending keep-marker expiry. `/tmp` is reserved for
-short-lived operating-system files, never agent-owned captures, diagnostics, reports, or
-downloads.
-
-The daily cleanup timer prunes task directories after seven days, quarantine after fourteen
-days, and Claude/Codex support trees after thirty days. It skips a live Claude or Codex
-tree and any task with an unexpired keep marker. Keep a task only for a bounded period
-(at most 30 days from the command date), then archive evidence that must outlive that
-window outside the managed root:
-
-```bash
-agent-scratch keep "$TASK_DIR" --until YYYY-MM-DD
-```
-
-Existing Claude/Codex sessions and old output are audited rather than migrated in place.
-Inspect and explicitly archive or quarantine them; a newly installed root affects new
-sessions after the relevant client restarts.
-
-### `/tmp` output audit
-
-The scoped audit must include POSIX and Windows temporary-root forms, ignored files, and
-the ignored scratch-location rules:
-
-```bash
-rg --no-ignore -n -i '/tmp|c:\\tmp|%temp%|%tmp%' AGENTS.md CLAUDE.md .agents/skills .claude/skills docs/agent-workflow docs/architecture/designs/2026-08-14-agent-scratch-storage-design.md docs/architecture/plans/2026-08-14-agent-scratch-storage-plan.md tools .gitignore
-rg -n -i 'trace_output|tmp' .gitignore
-```
-
-Classify each match before accepting it. Agent-workflow and headless-tool documentation are
-policy/safety text; the mirrored trace skills and multi-agent runbook retain only
-Windows-JVM warnings that `/tmp` is unsafe; the bootstrap/source helper
-`tools/agent-scratch` and its tests intentionally reject or exercise `/tmp`/tmpfs roots; and
-the BizHawk headless test/build recipes use a private `/tmp` only as an OS-level sandbox
-mount. The `.gitignore` `/tmp_*.asm` entry is an ignored assembler-artifact glob, not an
-output destination. The ignored `tools/bizhawk/trace_output*` location is a legacy
-Lua-recorder fallback, also not a `/tmp` destination. `%TEMP%`/`%TMP%` matches are
-acceptable only for launcher-created, short-lived wrapper/config files. New regeneration and
-probe recipes use an installed `agent-scratch` task directory (or an explicit managed output
-environment variable); no copyable durable-output command may target `/tmp`, `C:\tmp`,
-`%TEMP%`, or `%TMP%`.
+OpenGGF build and test commands invoke Maven directly. Each worktree owns its
+`target/` tree, including Surefire reports, trace reports, diagnostics,
+temporary files, and per-fork LWJGL extraction. Do not redirect these outputs
+into shared session storage. Put durable captures in an explicit external task
+or archive directory and retain only the evidence the task requires.
 
 ## Start here
 

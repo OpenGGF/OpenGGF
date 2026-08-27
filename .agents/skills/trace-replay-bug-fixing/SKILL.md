@@ -1042,7 +1042,9 @@ No display, no EmuHawk process to babysit, and it fails loudly instead of silent
 writing nothing:
 
 ```bash
-TASK_DIR="$(agent-scratch new "regen-<zone>" | tail -n 1)"
+: "${OGGF_TASK_DIR:?set OGGF_TASK_DIR to a fresh disk-backed task directory}"
+mkdir -p "$OGGF_TASK_DIR"
+TASK_DIR="$OGGF_TASK_DIR"
 TRACE_DIR="$TASK_DIR/capture"
 tools/bizhawk-headless/run.sh \
     --rom "$S1_ROM_PATH" \
@@ -1052,9 +1054,8 @@ tools/bizhawk-headless/run.sh \
     --trace-profile <profile>
 ```
 
-`agent-scratch new` creates the fresh task parent beneath
-`$AGENT_SCRATCH_ROOT/tasks`; its second output line is the task path captured
-above. `capture` is a new child beneath that parent, so the native harness receives the
+`OGGF_TASK_DIR` names an explicit task parent outside the repository. `capture`
+is a new child beneath that parent, so the native harness receives the
 required non-existent `--output` path. Use `--run-id <id>` instead of `--trace-profile` for
 run-mode/complete-run captures, and add `--gameplay-segment <n>` for S2 segment captures.
 ROM paths come from `S1_ROM_PATH` / `S2_ROM_PATH` / `S3K_ROM_PATH`, following the
@@ -1085,7 +1086,8 @@ is stale. Allocate a fresh scratch directory because the recorder appends into i
 `s3k_complete_run_recorder.lua` for complete-run captures):
 
 ```bash
-TASK_DIR="$(agent-scratch new "s3k-lua-<zone>" | tail -n 1)"
+TASK_DIR="${OGGF_TASK_DIR:?set OGGF_TASK_DIR to a fresh disk-backed task directory}"
+mkdir -p "$TASK_DIR"
 LUA_TRACE_DIR="$TASK_DIR/lua"
 OGGF_TRACE_OUTPUT_DIR="$LUA_TRACE_DIR" OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=:0 \
     tools/bizhawk/run_bizhawk_lua.sh \
@@ -1094,8 +1096,8 @@ OGGF_TRACE_OUTPUT_DIR="$LUA_TRACE_DIR" OGGF_S3K_TRACE_PROFILE=<profile> DISPLAY=
         "$S3K_ROM_PATH"
 ```
 
-The helper creates the task parent and the recorder creates/appends inside its new `lua`
-child. Output stays scratch-only diagnostic/corroborative evidence. Never copy Lua output into
+The caller creates the task parent and the recorder creates/appends inside its new `lua`
+child. Output stays external diagnostic/corroborative evidence. Never copy Lua output into
 `src/test/resources/traces/`. If a canonical fixture needs a hook-driven or legacy
 capability the native harness lacks, implement and independently review that native
 capability first, or obtain an explicit policy redesign before publication. Do not
@@ -1221,7 +1223,8 @@ observes a write and never authorizes emulated-memory, input, register, or
 savestate mutation.
 
 ```bash
-PROBE_DIR="$(agent-scratch new "probe-<name>" | tail -n 1)"
+PROBE_DIR="${OGGF_TASK_DIR:?set OGGF_TASK_DIR to a fresh disk-backed task directory}"
+mkdir -p "$PROBE_DIR"
 OGGF_START=<firstFrame> OGGF_STOP=<lastFrame> OGGF_OUT="$PROBE_DIR/<name>.txt" DISPLAY=:0 \
     tools/bizhawk/run_bizhawk_lua.sh tools/bizhawk/<your_copy>.lua <bk2> "$ROM_PATH"
 ```

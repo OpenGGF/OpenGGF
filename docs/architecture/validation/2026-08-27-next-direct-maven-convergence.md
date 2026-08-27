@@ -68,6 +68,55 @@ reported under their current exact identities. A renamed or reworked
 counterpart is never counted as resolving the upstream identity. Task 1
 self-review records the exact commands and outcomes in `task-1-report.md`.
 
+## Task 4 workflow and guidance convergence
+
+The broadened `TestBuildToolingGuard` was run before workflow or guidance
+changes with:
+
+```text
+mvn -Dmse=off -Dtest=com.openggf.tests.TestBuildToolingGuard test -B
+```
+
+RED result: 94 tests, 7 failures, 0 errors, 0 skipped. The failures were the
+intended Task 4 boundary:
+`activeSourcesMustRejectRetiredSessionProtocol`,
+`ciAndReleaseMavenJobsMustUseDirectMavenAndTargetPaths`,
+`ciShouldRunTheGuardsProfileOnPushes`,
+`releaseWorkflowShouldAssertTraceReplayCoverageWasNotSkipped`,
+`releaseWorkflowShouldFailTraceReplayWarnings`,
+`releaseWorkflowShouldRunStructuralGuardsInTheirOwnJvm`, and
+`supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`. They named
+only wrapper/session consumers in CI, release, root guidance, active guides,
+runbooks, and the two mirrored trace skills.
+
+After reconciling those files in place, the same command reported 94 tests,
+0 failures, 0 errors, and 0 skipped with `BUILD SUCCESS`. CI retains its branch
+policy, destination-aware Mod API checks, ordinary-test count gate, scheduled
+ROM-backed trace job, and trace warning/keep-green checks. Release retains its
+ROM arguments, optional-skip inventory, source-derived trace coverage checks,
+native matrix, universal profile, package smoke validation, and archive
+uploads; only the invocation and consumed output roots changed to direct Maven
+and static `target/` paths.
+
+The dedicated lifecycle-record deletion was bounded before editing. Four of
+the five present records were byte-identical to `572a5cc36^`; the sole
+divergent file, the test-session isolation design, differed only in superseded
+coordinator/root-selection contract prose and contained no `next` merge result.
+The deleted validation record described the earlier `develop` integration, not
+this `next` convergence. Its committed history remains available in Git;
+current convergence evidence remains in this ledger.
+
+All three required mirror comparisons were byte-identical. The exact active-
+reference grep from the implementation plan returned only the deliberate
+retired-marker literals inside `TestBuildToolingGuard`; no workflow, root
+guidance, guide, runbook, tool, or skill match remained. Bounded workflow
+inspection confirmed the direct ordinary/guards/trace/native/universal Maven
+commands, static report/archive paths, Mod API destination arguments, three ROM
+properties, default-test count, release optional-skip inventory, trace warning
+checks, native matrix, universal native-classifier checks, and both package
+smoke validations remain present. `git diff --check` was clean. Full ordinary
+and guards comparisons remain reserved for Task 5.
+
 ## Focused verification
 
 Result: not run in Task 1. Reserved for Task 5.

@@ -87,34 +87,33 @@ Trace replay tests require:
 Run all trace tests:
 
 ```bash
-tools/testing/test-session.sh -- mvn test -Dtest='*TraceReplay'
+mvn test -Dtest='*TraceReplay'
 ```
 
 Run cross-game baseline set (the canonical "did I regress anything?" check):
 
 ```bash
-tools/testing/test-session.sh -- mvn test -Dtest='TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay'
+mvn test -Dtest='TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay'
 ```
 
 Run one trace:
 
 ```bash
-tools/testing/test-session.sh -- mvn test -Dtest=TestS1Mz1TraceReplay
+mvn test -Dtest=TestS1Mz1TraceReplay
 ```
 
 > **Note on `-Dtest=` filtering.** In some configurations the surefire `-Dtest=` filter does not
 > restrict the run (the full test suite executes regardless). If you observe `passed=N` where
 > `N > 100` for a focused selection, that's the signal. Currently a known followup; track via
-> the `surefire_reports/TEST-*.xml` files below the `surefire_reports` path in
-> the session manifest for actual focused results.
+> `target/surefire-reports/TEST-*.xml` for actual focused results.
 
 Useful optional override while tuning S1 oscillation alignment:
 
 ```bash
-tools/testing/test-session.sh -- mvn test -Dtest=TestS1Mz1TraceReplay -Dosc.override=0
+mvn test -Dtest=TestS1Mz1TraceReplay -Dosc.override=0
 ```
 
-Reports are written below the `trace_reports` path in the session manifest. On divergence you will typically see:
+Reports are written below `target/trace-reports`. On divergence you will typically see:
 
 - `<game>_<zone>_report.json` (e.g. `s3k_aiz1_report.json`, `s3k_cnz1_report.json`)
 - `<game>_<zone>_context.txt` (e.g. `s3k_aiz1_context.txt`)
@@ -406,7 +405,7 @@ Notes:
 3. Add a test class under `src/test/java/com/openggf/tests/trace/<game>/` extending
    `AbstractTraceReplayTest`.
 4. Return the correct engine zone index, act index, and trace directory path.
-5. Run the new test once and inspect the session manifest's `trace_reports` directory before treating the baseline as
+5. Run the new test once and inspect `target/trace-reports` before treating the baseline as
    valid.
 
 Minimal example (S3K):
