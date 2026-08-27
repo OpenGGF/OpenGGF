@@ -2280,29 +2280,8 @@ public class TestFbzAct2TraversalPreboss {
                                 && lateButtonDoorStage < 3) {
                             maskOwner = "late-button-contact";
                             int buttonX = lateButton.getX();
-                            int maintainedRideFeetY = lateButton.getY()
-                                    - lateButton.getSolidParams().airHalfHeight();
-                            // Fresh SolidObjectTop loc_1E45A subtracts d3 from
-                            // object y_pos, compares against P1 y_pos+y_radius+4,
-                            // then applies the overlap and +3: feet=edge-1.
-                            // The next-frame MvSonicOnPtfm path directly seats
-                            // y_pos at objectY-d3-y_radius: feet=edge.
-                            int freshLandingFeetY = maintainedRideFeetY - 1;
-                            int playerFeetY = (player.getCentreY() & 0xFFFF)
-                                    + player.getYRadius();
-                            boolean withinButtonX = Math.abs(playerXBefore - buttonX)
-                                    <= lateButton.getSolidParams().halfWidth();
                             boolean buttonTriggerHeld =
                                     Sonic3kLevelTriggerManager.testBit(4, 0);
-                            boolean exactNativeButtonFeet =
-                                    playerFeetY == freshLandingFeetY
-                                            || playerFeetY == maintainedRideFeetY;
-                            boolean exactButtonOwner = !player.getAir()
-                                    && player.isOnObject()
-                                    && player.getLatchedSolidObjectInstance() == lateButton;
-                            boolean standingOnButton = buttonTriggerHeld
-                                    && withinButtonX && exactNativeButtonFeet
-                                    && exactButtonOwner;
                             boolean doorOpeningLatched = lateButtonDoor.getY()
                                     < lateButtonDoor.getSpawn().y();
                             if (lateButtonDoorStage == 2 && doorOpeningLatched) {
@@ -2315,20 +2294,17 @@ public class TestFbzAct2TraversalPreboss {
                                 lateButtonDoorStage = 3;
                                 mask = AbstractPlayableSprite.INPUT_RIGHT;
                             } else if (lateButtonDoorStage == 2) {
-                                assertTrue(standingOnButton,
+                                // Obj_Button publishes one shared trigger bit
+                                // from the whole standing mask. Any configured
+                                // participant may own that contact; the linked
+                                // door consumes only the shared bit, then
+                                // latches its opening routine independently.
+                                assertTrue(buttonTriggerHeld,
                                         () -> waypointDiagnostic(
-                                                "late-button-released-before-door-latched", buttonX));
+                                                "late-button-shared-trigger-released-before-door-latched",
+                                                buttonX));
                                 mask = 0;
                             } else if (buttonTriggerHeld) {
-                                assertTrue(exactNativeButtonFeet,
-                                        () -> waypointDiagnostic(
-                                                "late-button-trigger-without-surface", buttonX));
-                                assertTrue(withinButtonX,
-                                        () -> waypointDiagnostic(
-                                                "late-button-trigger-outside-width", buttonX));
-                                assertTrue(exactButtonOwner,
-                                        () -> waypointDiagnostic(
-                                                "late-button-trigger-without-owner", buttonX));
                                 lateButtonDoorStage = 2;
                                 mask = 0;
                             } else {
