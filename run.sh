@@ -6,7 +6,7 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$script_dir"
 
 # This is a normal, non-certifying local launcher. Keep the distributable in
-# target/ and leave certifying builds to the coordinator wrapper.
+# this worktree's target/ directory.
 mvn -Dmse=off -DskipTests package -q
 
 shopt -s nullglob

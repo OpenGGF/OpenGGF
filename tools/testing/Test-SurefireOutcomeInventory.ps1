@@ -893,6 +893,42 @@ test
         Assert-Equal $row.red_body_sha256 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' 'empty normalized body SHA-256'
     }
 
+    Invoke-Case 'direct Maven red export derives truthful provenance from worktree and report root' {
+        $case = Join-Path $scratch 'export-direct-maven-red'
+        $worktree = Join-Path $case 'worktree'
+        $reports = Join-Path $worktree 'target/surefire-reports'
+        $outsideReports = Join-Path $case 'outside-reports'
+        New-Item -ItemType Directory -Path $reports, $outsideReports -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $output = Join-Path $case 'outcomes.tsv'
+        Write-Utf8File $classes "example.DirectRedTest`n"
+        $xml = '<testsuite><testcase classname="example.DirectRedTest" name="red"><failure type="example.Direct" message="failed in {0}">body from {0}</failure></testcase></testsuite>' -f $worktree
+        Write-Utf8File (Join-Path $reports 'TEST-direct.xml') $xml
+        Write-Utf8File (Join-Path $outsideReports 'TEST-direct.xml') $xml
+
+        $result = Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes,
+            '-OutputPath', $output,
+            '-DirectMaven',
+            '-CanonicalWorktree', $worktree,
+            '-ReportRoot', $reports
+        )
+        Assert-Succeeded $result 'direct Maven red export'
+        $row = @(Import-Csv -Delimiter "`t" -LiteralPath $output)[0]
+        Assert-Equal $row.normalized_message 'failed in <WORKTREE>' 'direct Maven worktree normalization'
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-OutputPath', $output,
+            '-DirectMaven', '-CanonicalWorktree', $worktree,
+            '-SessionRoot', '/fake/session', '-RunId', 'fake-run-12345678',
+            '-ReportRoot', $reports
+        )) 'DirectMaven.*SessionRoot|DirectMaven.*RunId|session provenance' 'fake direct Maven session provenance'
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-OutputPath', $output,
+            '-DirectMaven', '-CanonicalWorktree', $worktree,
+            '-ReportRoot', $outsideReports
+        )) 'target.*surefire-reports|outside.*worktree|report root' 'caller-external direct Maven reports'
+    }
+
     Invoke-Case 'export normalizes zoned offset and unzoned ISO timestamps to prevent false red changes' {
         $case = Join-Path $scratch 'export-timestamp-equivalence'
         $parentReports = Join-Path $case 'parent-reports'

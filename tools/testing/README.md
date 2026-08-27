@@ -38,8 +38,18 @@ Run the exporter from PowerShell so multiple report roots remain an array:
     -ReportRoot @(
         ./target/surefire-reports
     ) `
+    -DirectMaven `
+    -CanonicalWorktree (Resolve-Path .).Path `
     -OutputPath ./evidence/candidate-outcomes.tsv
 ```
+
+`-DirectMaven` makes expected-red reports usable without inventing coordinator
+session values. It requires the explicit canonical worktree and accepts report
+roots only at or below that worktree's `target/surefire-reports`; volatile
+worktree paths are normalized to `<WORKTREE>`. Historical managed-session
+evidence remains supported without `-DirectMaven`, where any red outcome still
+requires the complete `CanonicalWorktree`, `SessionRoot`, and `RunId` provenance
+set.
 
 The export schema is:
 

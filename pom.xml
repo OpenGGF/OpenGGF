@@ -1200,10 +1200,10 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                     <!--
                          LWJGL otherwise derives one native extraction directory from
                          java.io.tmpdir. Give every Surefire fork its own extraction root:
-                         two forks, or two coordinator sessions in different worktrees,
+                         two forks, or two Maven runs in different worktrees,
                          must never replace or unlink one another's libglfw/liblwjgl files.
                          Surefire expands its fork number in argLine after Maven resolves
-                         the shared session properties.
+                         the target-local test properties.
                     -->
                     <!-- java.io.tmpdir must be set on the command line, not via
                          systemPropertyVariables: java.nio.file.TempFileHelper caches it
@@ -1216,9 +1216,8 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                          RAM-backed tmpfs, eventually filled it and broke unrelated
                          features that legitimately need temporary space. Here the mess
                          is bounded, invisible to the rest of the machine, and removed by
-                         a coordinator-launched clean. Raw lifecycle clean is rejected by
-                         the session guard. Tests should still clean up after themselves;
-                         this makes forgetting harmless rather than cumulative. -->
+                         Maven clean. Tests should still clean up after themselves; this
+                         makes forgetting harmless rather than cumulative. -->
                     <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                     <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                     <tempDir>${project.build.directory}/surefire</tempDir>
@@ -1245,7 +1244,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                     <!-- Exclude tests that require a GL context/display -->
                     <excludes>
                         <!-- Structural guards, especially whole-production ArchUnit
-                             imports, run in the separate -Pguards session. Keeping
+                             imports, run in the separate -Pguards invocation. Keeping
                              them out of the long ordinary suite gives that graph a
                              fresh JVM and prevents the known late-suite heap failure. -->
                         <exclude>**/Test*Guard*.java</exclude>

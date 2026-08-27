@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -519,6 +520,8 @@ class TestBuildToolingGuard {
     @Test
     void mavenLifecycleMustUseWorktreeLocalTargetPathsWithoutSessionEnforcement() throws Exception {
         String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
+        assertFalse(Files.exists(Path.of(".mvn/jvm.config")),
+                "Maven bootstrap JVM options must not write to a target path before the project is initialized");
         assertFalse(pomText.contains("core.hooksPath"),
                 "Maven lifecycle must not rewrite repository-local Git configuration");
         assertFalse(Pattern.compile("\\bgit\\s+config\\b").matcher(pomText).find(),
@@ -528,9 +531,9 @@ class TestBuildToolingGuard {
         assertFalse(pomText.contains("<argument>${basedir}/target</argument>"),
                 "native packaging must not publish into a shared target directory");
         assertTrue(pomText.contains("<argument>${project.build.directory}/OpenGGF</argument>"),
-                "native packaging must consume the session build binary");
+                "native packaging must consume the worktree-local build binary");
         assertTrue(pomText.contains("<argument>${openggf.distribution.root}</argument>"),
-                "native packaging must consume the session distribution root");
+                "native packaging must consume the worktree-local distribution root");
 
         Document pom = parsePom("pom.xml");
         assertFalse(pomText.contains("<openggf.build.directory>"),
@@ -566,7 +569,7 @@ class TestBuildToolingGuard {
         assertFalse(pomText.contains("openggf-session-pre-clean-guard"),
                 "raw Maven clean must not require a coordinator session identity");
         assertTrue(pom.getElementsByTagName("reportsDirectory").getLength() >= 1,
-                "every supported Surefire configuration must select a session report root");
+                "every supported Surefire configuration must select a target-local report root");
         NodeList reportDirectories = pom.getElementsByTagName("reportsDirectory");
         NodeList tempDirectories = pom.getElementsByTagName("tempDir");
         assertEquals(reportDirectories.getLength(), tempDirectories.getLength(),
@@ -585,7 +588,7 @@ class TestBuildToolingGuard {
         for (int i = 0; i < argLines.getLength(); i++) {
             assertTrue(argLines.item(i).getTextContent().contains(
                             "-Djava.io.tmpdir=\"${openggf.test.tmpdir}\""),
-                    "Surefire argLine must quote the session temp path: "
+                    "Surefire argLine must quote the target-local test temp path: "
                             + argLines.item(i).getTextContent().trim());
             assertTrue(argLines.item(i).getTextContent().contains(
                             "-Dorg.lwjgl.system.SharedLibraryExtractPath=\"${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}\""),
@@ -617,10 +620,35 @@ class TestBuildToolingGuard {
                 assertFalse(launcher.contains(retired),
                         launcherName + " must not delegate through retired tooling: " + retired);
             }
+            if (launcherName.endsWith(".cmd")) {
+                assertWindowsLauncherAnchorsRepositoryBeforeBuildAccess(launcherName, launcher);
+            }
         }
         String runLauncher = Files.readString(Path.of("run.sh"), StandardCharsets.UTF_8);
         assertTrue(runLauncher.contains("-DskipTests package -q"),
                 "run.sh must retain its package-and-launch fat-JAR workflow");
+
+        String timeline = Files.readString(
+                Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh"),
+                StandardCharsets.UTF_8);
+        int repoAssignment = timeline.indexOf("REPO=$(cd \"$SCRIPT_DIR/../..\" && pwd)");
+        int repoChange = timeline.indexOf("cd \"$REPO\"");
+        int firstMaven = timeline.indexOf("\"$MAVEN_BIN\"");
+        assertTrue(repoAssignment >= 0 && repoChange > repoAssignment && firstMaven > repoChange,
+                "the gameplay-audio timeline launcher must enter its repository before Maven access");
+    }
+
+    private static void assertWindowsLauncherAnchorsRepositoryBeforeBuildAccess(
+            String launcherName, String launcher) {
+        Pattern repositoryChange = Pattern.compile("(?im)^\\s*cd\\s+/d\\s+\"%~dp0\"\\s*$");
+        Matcher change = repositoryChange.matcher(launcher);
+        assertTrue(change.find(), launcherName + " must enter the repository containing the launcher");
+
+        Matcher buildAccess = Pattern.compile(
+                "(?im)^(?!\\s*REM\\b).*(?:\\bmvn(?:\\s|$)|\\btarget[\\\\/]).*$").matcher(launcher);
+        assertTrue(buildAccess.find(), launcherName + " must perform Maven or target access");
+        assertTrue(change.start() < buildAccess.start(),
+                launcherName + " must enter its repository before Maven or target access");
     }
 
     @Test
@@ -778,6 +806,20 @@ class TestBuildToolingGuard {
                 "tools/testing/test-session",
                 "TestSessionCoordinator",
                 "OPENGGF_TEST_RUN_",
+                "OPENGGF_BUILD_DIRECTORY",
+                "OPENGGF_TEST_DIAGNOSTICS",
+                "OPENGGF_ARTIFACT_ROOT",
+                "OPENGGF_DISTRIBUTION_ROOT",
+                "OPENGGF_TEST_TMP_ROOT",
+                "OPENGGF_TEST_ROOT",
+                "OPENGGF_TEST_LOCK_ROOT",
+                "OPENGGF_TEST_LWJGL_ROOT_TEMPLATE",
+                "OPENGGF_SUREFIRE_ROOT",
+                "OPENGGF_SUREFIRE_REPORTS",
+                "OPENGGF_TEST_SUREFIRE_ROOT",
+                "OPENGGF_TRACE_ROOT",
+                "OPENGGF_TRACE_REPORTS",
+                "OPENGGF_TEST_TRACE_ROOT",
                 "agent-scratch",
                 "frozen-next-session");
         // Task 3 owns active production/build/tooling paths. Task 4 extends this

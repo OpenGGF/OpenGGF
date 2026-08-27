@@ -36,6 +36,7 @@ done
 
 SCRIPT_DIR=$(cd "${BASH_SOURCE[0]%/*}" && pwd -P)
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
+cd "$REPO"
 MOVIE="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2"
 RUN_PATH="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds"
 ARTIFACT_ROOT="$REPO/target"

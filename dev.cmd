@@ -15,5 +15,14 @@ REM or dependency isn't cached yet, run `run.cmd` once (or drop -o here) to
 REM populate the local ~/.m2 cache, then this launcher works offline again.
 
 setlocal
+cd /d "%~dp0"
+if errorlevel 1 goto :failed
 call mvn -q -o -Dmse=off -Pdev-run compile exec:exec
-endlocal
+set "EXIT_CODE=%ERRORLEVEL%"
+goto :finished
+
+:failed
+set "EXIT_CODE=%ERRORLEVEL%"
+
+:finished
+endlocal & exit /b %EXIT_CODE%

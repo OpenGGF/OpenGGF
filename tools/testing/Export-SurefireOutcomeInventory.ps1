@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory)] [string] $SourceClassInventory,
     [Parameter(Mandatory, ValueFromRemainingArguments)] [string[]] $ReportRoot,
     [Parameter(Mandatory)] [string] $OutputPath,
+    [switch] $DirectMaven,
     [string] $CanonicalWorktree = '',
     [string] $SessionRoot = '',
     [string] $RunId = '',
@@ -613,11 +614,40 @@ $helpers = Read-HelperAllowlist $EmptyHelperAllowlist $selected
 $reportFiles = [System.Collections.Generic.List[string]]::new()
 $reportPathsSeen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 $expandedReportRoots = @($ReportRoot | ForEach-Object { $_.Split([System.IO.Path]::PathSeparator, [System.StringSplitOptions]::RemoveEmptyEntries) })
+$directMavenReportRoot = ''
+$pathComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
+    [System.StringComparison]::OrdinalIgnoreCase
+} else {
+    [System.StringComparison]::Ordinal
+}
+if ($DirectMaven) {
+    if ([string]::IsNullOrWhiteSpace($CanonicalWorktree)) {
+        throw 'DirectMaven provenance requires CanonicalWorktree'
+    }
+    if (-not [string]::IsNullOrWhiteSpace($SessionRoot) -or
+        -not [string]::IsNullOrWhiteSpace($RunId)) {
+        throw 'DirectMaven provenance rejects SessionRoot and RunId; no coordinator session exists'
+    }
+    if (-not (Test-Path -LiteralPath $CanonicalWorktree -PathType Container)) {
+        throw "DirectMaven CanonicalWorktree does not exist: $CanonicalWorktree"
+    }
+    $CanonicalWorktree = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $CanonicalWorktree).Path)
+    $directMavenReportRoot = [System.IO.Path]::GetFullPath(
+        [System.IO.Path]::Combine($CanonicalWorktree, 'target', 'surefire-reports'))
+}
 foreach ($root in $expandedReportRoots) {
     if (-not (Test-Path -LiteralPath $root -PathType Container)) {
         throw "Surefire report root does not exist: $root"
     }
-    foreach ($file in [System.IO.Directory]::EnumerateFiles((Resolve-Path -LiteralPath $root).Path, '*.xml', [System.IO.SearchOption]::AllDirectories)) {
+    $resolvedRoot = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $root).Path)
+    if ($DirectMaven) {
+        $rootPrefix = $directMavenReportRoot + [System.IO.Path]::DirectorySeparatorChar
+        if (-not $resolvedRoot.Equals($directMavenReportRoot, $pathComparison) -and
+            -not $resolvedRoot.StartsWith($rootPrefix, $pathComparison)) {
+            throw "DirectMaven report root must be target/surefire-reports inside CanonicalWorktree: $resolvedRoot"
+        }
+    }
+    foreach ($file in [System.IO.Directory]::EnumerateFiles($resolvedRoot, '*.xml', [System.IO.SearchOption]::AllDirectories)) {
         $canonical = [System.IO.Path]::GetFullPath($file)
         if ($reportPathsSeen.Add($canonical)) {
             $reportFiles.Add($canonical)
@@ -703,9 +733,10 @@ foreach ($reportPath in (Get-OrdinalSorted $reportFiles.ToArray())) {
         }
 
         if ($null -ne $redElement) {
-            if ([string]::IsNullOrWhiteSpace($CanonicalWorktree) -or
-                [string]::IsNullOrWhiteSpace($SessionRoot) -or
-                [string]::IsNullOrWhiteSpace($RunId)) {
+            if ((-not $DirectMaven) -and
+                ([string]::IsNullOrWhiteSpace($CanonicalWorktree) -or
+                 [string]::IsNullOrWhiteSpace($SessionRoot) -or
+                 [string]::IsNullOrWhiteSpace($RunId))) {
                 throw "Red outcome normalization requires CanonicalWorktree, SessionRoot, and RunId: $identity"
             }
             $exceptionType = [string]$redElement.GetAttribute('type')
