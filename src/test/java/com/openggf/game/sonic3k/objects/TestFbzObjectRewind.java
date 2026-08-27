@@ -6,6 +6,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.RewindSnapshotDiff;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -24,9 +25,11 @@ import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,9 +41,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /** Task-18 integration coverage for mutable FBZ traversal object state. */
+@ExtendWith(SingletonResetExtension.class)
 class TestFbzObjectRewind {
     @BeforeEach
     void initializeHeadlessObjectRuntime() {
+        // These owner-level rewind tests intentionally exercise FBZ event state
+        // without a live level transition target.
+        SessionManager.clear();
         GraphicsManager.getInstance().initHeadless();
         AbstractObjectInstance.updateCameraBounds(0, 0, 0x4000, 0x1000, 0);
     }

@@ -335,6 +335,13 @@ class TestLbzPipePlugObjectInstance {
     private static Sonic3kObjectRegistry registryForZone(int zoneId) {
         return new Sonic3kObjectRegistry() {
             @Override
+            protected com.openggf.level.Level currentLevel() {
+                // This fixture supplies its stock zone through currentRomZoneId();
+                // ambient singleton state from an earlier class must not override it.
+                return null;
+            }
+
+            @Override
             protected int currentRomZoneId() {
                 return zoneId;
             }
