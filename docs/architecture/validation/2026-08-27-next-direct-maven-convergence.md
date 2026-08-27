@@ -514,3 +514,140 @@ ref, `next` was pushed from `33a799c014906bd75e99da329abc465ecf466487`
 through `822e3a4da36a58fb6d0bee29676e0e40d091f8d4`. A subsequent
 `git ls-remote origin refs/heads/next` returned that exact commit. This ledger
 update is the documentation-only follow-up to that verified integration push.
+
+## Post-reconciliation Task 5 rerun
+
+This rerun was performed on reconciled commit
+`aa845bc7302c094d8e3ebb40cf8788d430f4f169`. It supplements, and does not
+overwrite or reinterpret, either the earlier feature-branch Task 5 result or
+the independent `origin/next` integration evidence above. Before running it,
+the earlier target-local Task 5 evidence and failed reports were moved intact
+below the ignored
+`.superpowers/sdd/2026-08-27-next-direct-maven-convergence/historical-task-5-failed-evidence-a0a3794f5/`
+directory.
+
+### JDK and focused verification
+
+`mvn -v` exited 0 and reported Maven 3.9.16 on Java 21.0.11. Because the
+freshly moved target tree did not yet contain `target/maven-tmp`, the JVM
+printed one startup warning before the validate-phase directory preparation
+could run; subsequent Maven commands used the target-local directory.
+
+The exact focused command was:
+
+```text
+mvn -Dmse=off -Dtest=com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.TestSessionOutputPathsTest test -B
+```
+
+It exited 0 in 2:28 with 108 tests, 0 failures, 0 errors, and 0 skips. The
+focused report tree was preserved with the first post-reconciliation attempt,
+which source/report inspection rejected because that attempt had inherited
+pre-reconciliation compiled test classes. That invalid attempt and its reports
+are retained separately below the ignored
+`.superpowers/sdd/2026-08-27-next-direct-maven-convergence/failed-post-reconcile-ordinary-stale-testclasses/`
+directory and are not comparison evidence.
+
+### Ordinary suite
+
+After `mvn clean -Dmse=off -B` removed the complete generated target tree, the
+required ordinary command was rerun exactly from a fresh build and report tree:
+
+```text
+mvn -Dmse=off test -B
+```
+
+All 2,318 expected XML reports were published. That matches the latest
+`origin/next` report cardinality. The newest report remained unchanged for a
+bounded five-minute interval after the last visible test completed. As in both
+recorded `origin/next` ordinary runs, the Maven parent then remained live after
+report completion and was interrupted; its process exit was 130. No temporary-
+directory failure, fork crash, heap exhaustion, or partial report tree
+occurred.
+
+The complete XML tree contains 18,218 testcase invocations. Collapsing only
+source-declared repeated invocations gives 18,119 unique identities: 17,995
+pass, 39 failure, 40 error, and 45 skipped. There are 27 repeated identities.
+Twenty-six have exact source-declared repeated/inherited-specialization
+cardinality; one plain `@Test` was emitted twice in a single XML report despite
+that report declaring `tests="1"`:
+
+```text
+com.openggf.TestBonusStagePlaybackBridge$BonusStageModeCursorAdvance#updateBonusStageModeAdvancesCursorAndAppliesForcedInput
+```
+
+The direct-Maven exporter was given the ordinal source roots, the exact slash-
+path selector bijection, the authenticated Maven-argument inventory, all
+runtime inputs, the effective `default-test` POM, and an intent-derived
+cardinality file containing only the 26 legitimate repeated identities. Its
+explicit-source and effective-POM preflight passed, after which it correctly
+rejected the anomalous BonusStage duplicate. That identity was not allowlisted.
+Consequently no certified ordinary outcome inventory exists and the ordinary
+suite cannot establish a no-regression decision.
+
+Read-only diagnostic comparison of the unchanged XML, explicitly not a
+replacement for the rejected exporter inventory, found 79 unique red
+identities. Against the immutable 70-identity ordinary expected-red input, 23
+are exact red matches, 56 are candidate-only reds, and 47 expected identities
+are not red: 43 pass and the four documented renamed/reworked upstream-only
+identities are absent. Their four current counterparts pass, but the upstream
+identities remain non-comparable and are not called resolved. The first
+ordinal candidate-only difference is:
+
+```text
+com.openggf.TestTraceSessionLauncherActivePayloadLifecycle#outOfBoundsAdmissionKeepsValidationPrimaryAndClosesActualLease(Path)
+ERROR: Cannot invoke "String.contains(java.lang.CharSequence)" because the
+       return value of "java.lang.IndexOutOfBoundsException.getMessage()" is null
+```
+
+The latest `origin/next` ledger records 54 exact red identities under its
+ROM-supplied invocation but does not retain a machine-readable identity
+inventory. This rerun has 79 diagnostic reds under the required no-ROM command,
+and its exporter rejected the evidence. An exact outcome/message comparison
+against those 54 reds therefore cannot be certified or used to claim no new or
+worsened red.
+
+The preserved target-local ordinary evidence is:
+
+```text
+target/direct-maven-convergence-evidence/ordinary-surefire-reports/
+target/direct-maven-convergence-evidence/ordinary-source-classes.txt
+target/direct-maven-convergence-evidence/ordinary-selector-patterns.txt
+target/direct-maven-convergence-evidence/ordinary-repeated-cardinality.tsv
+target/direct-maven-convergence-evidence/ordinary-effective-pom.xml
+target/direct-maven-convergence-evidence/ordinary-diagnostic-outcomes.tsv
+target/direct-maven-convergence-evidence/ordinary-red-identities.txt
+```
+
+The diagnostic outcome TSV SHA-256 is
+`7f920d5592d066ac81fe301561a6b60bf934f977f73f288984165d079d5f4fc7`.
+
+### Guards suite
+
+After preserving the ordinary reports, the exact guards command ran in its
+fresh report tree:
+
+```text
+mvn -Dmse=off -Pguards test -B
+```
+
+It exited 1 in 4:33 with 594 tests, 1 failure, 0 errors, and 0 skips. The sole
+red is the existing Trace V5 positive-input identity with the same two legacy
+row messages recorded above. The complete report tree exported immediately to
+`target/direct-maven-convergence-evidence/guards-outcomes.tsv`: 593 pass and 1
+failure. Its SHA-256 is
+`25a138af68ce8d63f7548fa897bec6a4340ed55f7bf26249fa17606fa47e5ac9`.
+All 19 immutable upstream guard expected-red identities pass, including
+`per_game_packages_do_not_cross_depend`; no ArchUnit store error, fork crash,
+heap exhaustion, or other infrastructure error recurred. Relative to the
+latest `origin/next` guards evidence, the red identity and first message are
+unchanged and the two additional passing tests reflect the reconciled feature
+tree.
+
+### Rerun decision
+
+The post-reconciliation guards evidence satisfies the red-baseline rule, but
+the ordinary suite does not: its otherwise complete report tree contains an
+unallowlisted anomalous duplicate, the authenticated exporter rejects it, and
+the latest-next exact identity comparison therefore cannot be certified.
+Post-reconciliation Task 5 remains `DONE_WITH_CONCERNS`; this evidence does not
+authorize integration or push.
