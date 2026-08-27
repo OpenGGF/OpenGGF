@@ -237,6 +237,17 @@ function Assert-RuntimeInputExactlyOnce {
     }
 }
 
+function Assert-RuntimeInputAbsent {
+    param([string] $CanonicalPath, [string] $AuthenticatedRuntimeInputs, [string] $Description)
+    foreach ($runtimeInput in $AuthenticatedRuntimeInputs.Split([System.IO.Path]::PathSeparator, [System.StringSplitOptions]::RemoveEmptyEntries)) {
+        Assert-NoUnresolvedPlaceholder $runtimeInput 'authenticated RuntimeInputs entry'
+        if ([System.IO.Path]::IsPathFullyQualified($runtimeInput) -and
+            (Test-PathsEqual $runtimeInput $CanonicalPath)) {
+            throw "$Description must not appear in OPENGGF_RUNTIME_INPUTS"
+        }
+    }
+}
+
 function Assert-NoUnresolvedPlaceholder {
     param([AllowEmptyString()] [string] $Value, [string] $Description)
     if ($Value -match '\$\{[^}]*\}|@\{[^}]*\}') {
@@ -678,13 +689,35 @@ function Assert-EffectiveSurefireContract {
             }
 
             $effectiveExecutionArgLine = [string]$effective.argLine
+            $executionTokens = @(ConvertFrom-JvmArgumentLine $effectiveExecutionArgLine 'effective Surefire execution argLine')
             $executionRepositoryPlaceholderCount = [System.Text.RegularExpressions.Regex]::Matches(
                 $effectiveExecutionArgLine,
                 [System.Text.RegularExpressions.Regex]::Escape($repositoryPlaceholder)).Count
+            $executionRepositoryTokenIndex = -1
+            if ($executionRepositoryPlaceholderCount -gt 0) {
+                if ($executionRepositoryPlaceholderCount -ne 1) {
+                    throw 'DirectMaven effective Surefire execution argLine contains multiple Maven repository placeholders'
+                }
+                $javaAgentIndexes = @(
+                    for ($index = 0; $index -lt $executionTokens.Count; $index++) {
+                        if ($executionTokens[$index].StartsWith('-javaagent:', [System.StringComparison]::Ordinal)) {
+                            $index
+                        }
+                    }
+                )
+                if ($javaAgentIndexes.Count -ne 1) {
+                    throw 'DirectMaven Maven repository placeholder requires one expected Mockito javaagent token'
+                }
+                $executionRepositoryTokenIndex = $javaAgentIndexes[0]
+                $executionMockitoTemplatePath = $executionTokens[$executionRepositoryTokenIndex].Substring('-javaagent:'.Length)
+                if (-not (ConvertTo-PortablePath $executionMockitoTemplatePath).StartsWith(
+                        $repositoryPlaceholder + '/', [System.StringComparison]::Ordinal)) {
+                    throw 'DirectMaven Maven repository placeholder is permitted only as the exact Mockito javaagent path prefix'
+                }
+            }
             $unsupportedExecutionRemainder = $effectiveExecutionArgLine.Replace(
                 $repositoryPlaceholder, '').Replace('${surefire.forkNumber}', '')
-            if ($unsupportedExecutionRemainder -match '\$\{[^}]*\}|@\{[^}]*\}' -or
-                $executionRepositoryPlaceholderCount -gt 1) {
+            if ($unsupportedExecutionRemainder -match '\$\{[^}]*\}|@\{[^}]*\}') {
                 throw 'DirectMaven effective Surefire execution argLine contains an unresolved unsupported property placeholder'
             }
             $localRepositoryEvidence = $null
@@ -694,8 +727,12 @@ function Assert-EffectiveSurefireContract {
                     $artifactSegments
                 $mockitoTemplate = $mockitoTemplate.Replace(
                     $repositoryPlaceholder, [string]$localRepositoryEvidence.RepositoryPath)
-                $effectiveExecutionArgLine = $effectiveExecutionArgLine.Replace(
-                    $repositoryPlaceholder, [string]$localRepositoryEvidence.RepositoryPath)
+                if ($executionRepositoryTokenIndex -ge 0) {
+                    $executionTokens[$executionRepositoryTokenIndex] =
+                        $executionTokens[$executionRepositoryTokenIndex].Replace(
+                            $repositoryPlaceholder,
+                            [string]$localRepositoryEvidence.RepositoryPath)
+                }
             }
             elseif (-not [string]::IsNullOrWhiteSpace($LocalRepositoryPath)) {
                 throw 'MavenLocalRepositoryPath is inconsistent because the effective Mockito execution path is already absolute'
@@ -703,7 +740,6 @@ function Assert-EffectiveSurefireContract {
 
             $mockitoTemplateTokens = @(ConvertFrom-JvmArgumentLine $mockitoTemplate 'resolved effective Mockito agent argument')
             $templateMockitoPath = $mockitoTemplateTokens[0].Substring('-javaagent:'.Length)
-            $executionTokens = @(ConvertFrom-JvmArgumentLine $effectiveExecutionArgLine 'effective Surefire execution argLine')
             $rawTemplateRequiresMacLauncher = $usesCapacityTemplate -and
                 $argumentValue.StartsWith('-XstartOnFirstThread ', [System.StringComparison]::Ordinal)
             if ($usesCapacityTemplate) {
@@ -1079,6 +1115,13 @@ if ($suppliedPreflight -eq $preflightValues.Count) {
     if ($DirectMaven) {
         $canonicalEffectivePom = (Resolve-Path -LiteralPath $EffectivePomPath).Path
         Assert-RuntimeInputExactlyOnce $canonicalEffectivePom $RuntimeInputs 'Effective POM capacity proof'
+        if (-not [string]::IsNullOrWhiteSpace($MavenLocalRepositoryPath)) {
+            $canonicalMavenLocalRepository = (Resolve-Path -LiteralPath $MavenLocalRepositoryPath).Path
+            Assert-RuntimeInputAbsent `
+                $canonicalMavenLocalRepository `
+                $RuntimeInputs `
+                'MavenLocalRepositoryPath'
+        }
     }
     if ($repeatedIdentityContract.Path.Length -ne 0) {
         Assert-RuntimeInputExactlyOnce $repeatedIdentityContract.Path $RuntimeInputs 'Repeated-identity cardinality allowlist'

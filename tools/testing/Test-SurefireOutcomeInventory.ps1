@@ -591,6 +591,12 @@ test
         Assert-Failed (& $invokeDirectWithoutRepository) 'MavenLocalRepositoryPath|local repository|missing' 'missing Maven local-repository evidence'
         Assert-Failed (& $invokeDirectWithRepository 'relative-repository') 'MavenLocalRepositoryPath|absolute|canonical' 'relative Maven local-repository evidence'
 
+        $runtimeInputsWithoutRepository = $runtimeInputs
+        $runtimeInputs = $runtimeInputsWithoutRepository + [IO.Path]::PathSeparator +
+            (Join-Path $mavenLocalRepository '.')
+        Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'MavenLocalRepositoryPath|RuntimeInputs|OPENGGF_RUNTIME_INPUTS|zero|must not' 'normalized-equivalent Maven repository in runtime inputs'
+        $runtimeInputs = $runtimeInputsWithoutRepository
+
         $emptyRepository = Join-Path $case 'empty-maven-repository'
         New-Item -ItemType Directory -Path $emptyRepository -Force | Out-Null
         Assert-Failed (& $invokeDirectWithRepository $emptyRepository) 'Mockito|jar|exist|5\.14\.2' 'missing expected Mockito jar in Maven repository'
@@ -629,6 +635,47 @@ test
             -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
             -ExecutionArgLine ($unknownRepositoryArgLine + $executionSuffix))
         Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'unknownRepository|unresolved|placeholder' 'unknown effective Mockito repository placeholder'
+
+        $tmpRepository = $testTmpdir
+        $tmpRepositoryMockitoPath = Join-Path $tmpRepository 'org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $tmpRepositoryMockitoPath) -Force | Out-Null
+        Write-Utf8File $tmpRepositoryMockitoPath 'tmpdir repository fixture Mockito agent jar'
+        $tmpRepositoryCapacityArgLine = "-Xshare:off -javaagent:`"$tmpRepositoryMockitoPath`" -Xmx3g"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$tmpRepositoryCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine "-javaagent:`"$tmpRepositoryMockitoPath`"" `
+            -ProjectArgLine $capacityTemplateArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($tmpRepositoryCapacityArgLine + " -Djava.io.tmpdir=`"`${settings.localRepository}`" -Dorg.lwjgl.system.SharedLibraryExtractPath=`"$testTmpdir/lwjgl-`${surefire.forkNumber}`""))
+        Assert-Failed (& $invokeDirectWithRepository $tmpRepository) 'settings.localRepository|javaagent|Mockito|placeholder|tmpdir' 'Maven repository placeholder in execution tmpdir'
+
+        $lwjglRepository = Join-Path $buildDirectory 'repository'
+        $lwjglRepositoryMockitoPath = Join-Path $lwjglRepository 'org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $lwjglRepositoryMockitoPath) -Force | Out-Null
+        Write-Utf8File $lwjglRepositoryMockitoPath 'LWJGL repository fixture Mockito agent jar'
+        $lwjglRepositoryCapacityArgLine = "-Xshare:off -javaagent:`"$lwjglRepositoryMockitoPath`" -Xmx3g"
+        Write-Utf8File $arguments "-Dsurefire.argLine=$lwjglRepositoryCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine "-javaagent:`"$lwjglRepositoryMockitoPath`"" `
+            -ProjectArgLine $capacityTemplateArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($lwjglRepositoryCapacityArgLine + " -Djava.io.tmpdir=`"$testTmpdir`" -Dorg.lwjgl.system.SharedLibraryExtractPath=`"`${settings.localRepository}/../test-tmp/lwjgl-`${surefire.forkNumber}`""))
+        Assert-Failed (& $invokeDirectWithRepository $lwjglRepository) 'settings.localRepository|javaagent|Mockito|placeholder|LWJGL' 'Maven repository placeholder in execution LWJGL path'
+
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine $capacityTemplateArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($placeholderCapacityArgLine + " -Djava.io.tmpdir=`"`${settings.localRepository}`" -Dorg.lwjgl.system.SharedLibraryExtractPath=`"$testTmpdir/lwjgl-`${surefire.forkNumber}`""))
+        Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'settings.localRepository|multiple|placeholder|javaagent' 'multiple Maven repository placeholders in execution argLine'
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine $capacityTemplateArgLine `
+            -ProjectBuildDirectory $buildDirectory -TestTmpdir $testTmpdir `
+            -ExecutionArgLine ($placeholderCapacityArgLine + " -Dunexpected=`"`${settings.localRepository}`"" + $executionSuffix))
+        Assert-Failed (& $invokeDirectWithRepository $mavenLocalRepository) 'settings.localRepository|multiple|placeholder|javaagent|unexpected' 'Maven repository placeholder in another execution token'
 
         Write-Utf8File $arguments "-Dsurefire.argLine=$macCapacityArgLine`n-Dsurefire.forkCount=1`n-Dsurefire.reuseForks=true`n-Dsurefire.includesFile=$patterns`ntest`n"
         Write-Utf8File $effectivePom (New-EffectivePomText `

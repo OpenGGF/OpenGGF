@@ -61,10 +61,13 @@ the canonical physical repository directory separately as
 `-MavenLocalRepositoryPath`. The exporter accepts that evidence only for the
 exact `org/mockito/mockito-core/<version>/mockito-core-<version>.jar` suffix,
 requires that exact jar to exist below the non-reparse repository path, and
-substitutes only the exact Maven prefix before authenticating the resolved JVM
-arguments. Omit this parameter when both effective Mockito paths are already
-absolute. This is Maven-environment resolution evidence, not runtime input
-selection, so it must not be added to `OPENGGF_RUNTIME_INPUTS`.
+substitutes only within the single expected Mockito `-javaagent:` token before
+authenticating the resolved JVM arguments. The placeholder is rejected in
+every other execution token, including temp and LWJGL paths, and multiple
+occurrences are rejected. Omit this parameter when both effective Mockito
+paths are already absolute. This is Maven-environment resolution evidence, not
+runtime input selection, so its canonical path must occur zero times in
+`OPENGGF_RUNTIME_INPUTS`, including normalized-equivalent forms.
 The selected Surefire execution must prove the same resolved JVM arguments and
 then exactly the target-local `java.io.tmpdir` and fork-local LWJGL extraction
 properties. Any other raw `${...}` placeholder, every raw Surefire `@{...}`
