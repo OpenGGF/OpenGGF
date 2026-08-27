@@ -14,6 +14,7 @@ from pathlib import Path
 OWNER_KEY = re.compile(r"[0-9a-f]{64}")
 OWNER_HASH = re.compile(r"[0-9a-f]{16}")
 OWNER_FIELDS = {"logical_key", "owner_key", "physical_path"}
+REQUIRED_VERIFICATION_GROUPS = {"physics", "animation"}
 RUN_CHAIN_SEGMENT_LANE = re.compile(r"segment-([0-9]+)")
 RUN_CHAIN_INTERIOR_LANE = re.compile(r"segment-([0-9]+)-dynamic-art")
 
@@ -149,6 +150,32 @@ def validate_run_chain_mismatch(item: object, field: str, report: Path,
     require_count(item, "repeatCount", report, errors)
 
 
+def validate_verification_groups(groups: dict[str, object], report: Path,
+                                 errors: list[str]) -> None:
+    if set(groups) != REQUIRED_VERIFICATION_GROUPS:
+        errors.append(
+            f"{report}: verification_groups must contain exactly "
+            f"{sorted(REQUIRED_VERIFICATION_GROUPS)}, got {sorted(groups)}")
+    for group_name in sorted(REQUIRED_VERIFICATION_GROUPS):
+        group = groups.get(group_name)
+        if not isinstance(group, dict):
+            errors.append(
+                f"{report}: verification_groups.{group_name} must be a JSON object")
+            continue
+        field_name = f"verification_groups.{group_name}.error_count"
+        if "error_count" not in group:
+            errors.append(
+                f"{report}: verification_groups.{group_name} is missing required error_count")
+            continue
+        value = group["error_count"]
+        if type(value) is not int:
+            errors.append(
+                f"{report}: {field_name} must be a JSON integer, "
+                f"got {type(value).__name__}")
+        elif value < 0:
+            errors.append(f"{report}: {field_name} must be nonnegative, got {value}")
+
+
 def validate_dynamic_art_gap(payload: dict[str, object], logical_key: str,
                              report: Path, errors: list[str]) -> tuple[str, int | None, None]:
     run_id = require_string(payload, "runId", report, errors)
@@ -225,7 +252,10 @@ def validate_run_chain_segment(
     if recent is not None:
         for item in recent:
             validate_run_chain_mismatch(item, "recentMismatches", report, errors)
-    require_object(payload, "verification_groups", report, errors)
+    verification_groups = require_object(
+        payload, "verification_groups", report, errors)
+    if verification_groups is not None:
+        validate_verification_groups(verification_groups, report, errors)
     require_count(payload, "bootstrapErrorCount", report, errors)
     first = payload.get("firstNonCameraPhysicsMismatch")
     if first is not None:

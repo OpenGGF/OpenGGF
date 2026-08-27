@@ -1710,7 +1710,10 @@ class TestBuildToolingGuard {
                     "severity": "ERROR",
                     "repeatCount": 1
                   }],
-                  "verification_groups": {},
+                  "verification_groups": {
+                    "physics": {"error_count": 0},
+                    "animation": {"error_count": 0}
+                  },
                   "bootstrapErrorCount": 0
                 }
                 """, null);
@@ -1727,7 +1730,10 @@ class TestBuildToolingGuard {
                   "laggedFrames": 0,
                   "complete": true,
                   "recentMismatches": [],
-                  "verification_groups": {},
+                  "verification_groups": {
+                    "physics": {"error_count": 0},
+                    "animation": {"error_count": 0}
+                  },
                   "bootstrapErrorCount": 0
                 }
                 """, null);
@@ -1754,6 +1760,32 @@ class TestBuildToolingGuard {
             Path root = temporaryDirectory.resolve(invalid.getKey());
             writeTraceReport(root, "run-chain", "s2_run_seg0", "segment-0", owner,
                     invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Map<String, List<String>> invalidVerificationGroups = new LinkedHashMap<>();
+        invalidVerificationGroups.put("run-chain-missing-group", List.of(
+                "{\"physics\":{\"error_count\":0}}",
+                "verification_groups must contain exactly"));
+        invalidVerificationGroups.put("run-chain-group-not-object", List.of(
+                "{\"physics\":[],\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics must be a JSON object"));
+        invalidVerificationGroups.put("run-chain-group-missing-count", List.of(
+                "{\"physics\":{},\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics is missing required error_count"));
+        invalidVerificationGroups.put("run-chain-group-wrong-count-type", List.of(
+                "{\"physics\":{\"error_count\":false},"
+                        + "\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics.error_count must be a JSON integer"));
+        invalidVerificationGroups.put("run-chain-group-negative-count", List.of(
+                "{\"physics\":{\"error_count\":-1},"
+                        + "\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics.error_count must be nonnegative"));
+        for (Map.Entry<String, List<String>> invalid : invalidVerificationGroups.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_seg0", "segment-0", owner,
+                    runChainSegmentPayload(invalid.getValue().get(0)), null);
             assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
                     invalid.getValue().get(1));
         }
@@ -1862,6 +1894,8 @@ class TestBuildToolingGuard {
                 "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java"));
         String divergenceProducer = Files.readString(Path.of(
                 "src/main/java/com/openggf/trace/DivergenceReport.java"));
+        String verificationGroupProducer = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/VerificationGroup.java"));
         String validator = Files.readString(Path.of(
                 "tools/testing/validate-trace-reports.py"));
 
@@ -1889,6 +1923,27 @@ class TestBuildToolingGuard {
                     () -> "AbstractRunChainTest no longer publishes guarded key " + key);
             assertTrue(validator.contains("\"" + key + "\""),
                     () -> "trace report validator does not validate producer key " + key);
+        }
+        assertTrue(producer.contains(
+                        "groups.put(group.id(), Map.of(\"error_count\", count))"),
+                "run-chain group publisher no longer emits one integer error_count per group");
+        assertTrue(verificationGroupProducer.contains("""
+                public enum VerificationGroup {
+                    PHYSICS("physics"),
+                    ANIMATION("animation");
+                """),
+                "run-chain validator inventory must track the complete VerificationGroup enum");
+        for (String group : List.of("physics", "animation")) {
+            assertTrue(verificationGroupProducer.contains("(\"" + group + "\")"),
+                    () -> "VerificationGroup no longer publishes required group " + group);
+        }
+        for (String validatorContract : List.of(
+                "REQUIRED_VERIFICATION_GROUPS = {\"physics\", \"animation\"}",
+                "def validate_verification_groups(",
+                "verification_groups.{group_name}.error_count")) {
+            assertTrue(validator.contains(validatorContract),
+                    () -> "trace report validator lacks nested group contract "
+                            + validatorContract);
         }
         for (String discriminator : List.of(
                 "dynamic-art-gap", "segment-", "-dynamic-art")) {
@@ -4006,6 +4061,20 @@ class TestBuildToolingGuard {
         process.getOutputStream().close();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         return new ProcessResult(process.waitFor(), output);
+    }
+
+    private static String runChainSegmentPayload(String verificationGroupsJson) {
+        return """
+                {
+                  "errorCount": 0,
+                  "warningCount": 0,
+                  "laggedFrames": 0,
+                  "complete": true,
+                  "recentMismatches": [],
+                  "verification_groups": %s,
+                  "bootstrapErrorCount": 0
+                }
+                """.formatted(verificationGroupsJson);
     }
 
     private static ProcessResult runTraceReportValidator(

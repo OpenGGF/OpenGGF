@@ -155,7 +155,7 @@ shapes and no others:
 | Publisher | Profile / lane | Required payload shape | Warning certification |
 |---|---|---|---|
 | `TraceReportWriter` / `DivergenceReport.toJson()` | `trace` or `special-stage` / caller lane | snake-case nonnegative integer `error_count` and `warning_count` | `warning_count` |
-| `AbstractRunChainTest.buildComparatorSummaryJson` | `run-chain` / `segment-<N>` | camel-case nonnegative integer `errorCount`, `warningCount`, `laggedFrames`, `bootstrapErrorCount`; boolean `complete`; `recentMismatches` array; `verification_groups` object | `warningCount` |
+| `AbstractRunChainTest.buildComparatorSummaryJson` | `run-chain` / `segment-<N>` | camel-case nonnegative integer `errorCount`, `warningCount`, `laggedFrames`, `bootstrapErrorCount`; boolean `complete`; `recentMismatches` array; exact `physics` and `animation` verification-group objects, each with a nonnegative integer `error_count` | `warningCount` |
 | `AbstractRunChainTest.writeChainGapReport` | `run-chain` / `dynamic-art-gap` | nonblank `runId`; nonnegative integer `gapCount` and `failureCount`; typed `failures` and structured `gaps` arrays | none published |
 | `AbstractRunChainTest.writeDynamicArtInteriorReport` | `run-chain` / `segment-<N>-dynamic-art` | nonnegative integer `comparisonCount` and `errorCount`; structured `mismatches` array | none published |
 
@@ -190,6 +190,29 @@ certification.
 The three validator behavior methods reported 3 tests, 0 failures, 0 errors,
 and 0 skipped. The complete focused guard reported 100 tests, 0 failures,
 0 errors, and 0 skipped with `BUILD SUCCESS`.
+
+A final narrow review checked the run-chain segment producer's nested group
+shape. `buildComparatorSummaryJson` iterates the complete `VerificationGroup`
+enum (`physics`, `animation`) and publishes each as
+`Map.of("error_count", count)`; there are no other nested group fields. Before
+changing the validator, the valid fixture was corrected to that real shape and
+negative fixtures covered a missing group, non-object group, missing nested
+count, boolean nested count, and negative nested count. The complete focused
+guard produced the intended RED: 100 tests, 2 failures, 0 errors, and 0 skipped.
+`traceReportValidatorMustDispatchEveryOwnerKeyedProducerSchema` showed that a
+missing `animation` group was accepted, while
+`traceReportValidatorMustTrackOwnerKeyedProducerKeys` showed the nested
+contract was absent.
+
+The validator now requires exactly the two publisher-owned group objects and
+validates each nested `error_count` as a nonnegative exact JSON integer. The
+guard binds that behavior to both the producer loop and enum ids, and asserts
+the validator's nested path-specific validation rather than relying on the
+generic `error_count` token. No additional nested fields or group-accounting
+relationship was imposed beyond the emitted schema. The three validator
+behavior methods then reported 3 tests, 0 failures, 0 errors, and 0 skipped.
+The complete focused guard reported 100 tests, 0 failures, 0 errors, and
+0 skipped with `BUILD SUCCESS`.
 
 The dedicated lifecycle-record deletion was bounded before editing. Four of
 the five present records were byte-identical to `572a5cc36^`; the sole
