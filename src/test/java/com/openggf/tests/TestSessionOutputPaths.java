@@ -18,11 +18,9 @@ public final class TestSessionOutputPaths {
     private static final String TRACE_REPORTS_PROPERTY = "openggf.trace.reports";
     private static final String DIAGNOSTICS_PROPERTY = "openggf.test.diagnostics";
     private static final String ARTIFACT_ROOT_PROPERTY = "openggf.artifact.root";
-    private static final String BUILD_DIRECTORY_PROPERTY = "openggf.build.directory";
     private static final Path LEGACY_TRACE_REPORTS = Path.of("target", "trace-reports");
     private static final Path LEGACY_DIAGNOSTICS = Path.of("target", "diagnostics");
     private static final Path LEGACY_ARTIFACT_ROOT = Path.of("target");
-    private static final Path LEGACY_BUILD_DIRECTORY = Path.of("target");
 
     private TestSessionOutputPaths() {
     }
@@ -41,16 +39,14 @@ public final class TestSessionOutputPaths {
         return configuredPath(ARTIFACT_ROOT_PROPERTY, LEGACY_ARTIFACT_ROOT);
     }
 
-    /** Resolves Maven's compiled production classes for this test session. */
+    /** Resolves Maven's compiled production classes below this worktree's target. */
     public static Path compiledClasses() {
-        return configuredPath(BUILD_DIRECTORY_PROPERTY, LEGACY_BUILD_DIRECTORY)
-                .resolve("classes");
+        return Path.of("target", "classes");
     }
 
-    /** Resolves Maven's compiled test classes for this test session. */
+    /** Resolves Maven's compiled test classes below this worktree's target. */
     public static Path compiledTestClasses() {
-        return configuredPath(BUILD_DIRECTORY_PROPERTY, LEGACY_BUILD_DIRECTORY)
-                .resolve("test-classes");
+        return Path.of("target", "test-classes");
     }
 
     /**

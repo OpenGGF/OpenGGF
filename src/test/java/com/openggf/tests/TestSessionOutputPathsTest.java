@@ -21,7 +21,6 @@ class TestSessionOutputPathsTest {
     private static final String TRACE_REPORTS = "openggf.trace.reports";
     private static final String DIAGNOSTICS = "openggf.test.diagnostics";
     private static final String ARTIFACT_ROOT = "openggf.artifact.root";
-    private static final String BUILD_DIRECTORY = "openggf.build.directory";
 
     private final Map<String, String> originalProperties = new HashMap<>();
 
@@ -30,8 +29,7 @@ class TestSessionOutputPathsTest {
 
     @BeforeEach
     void rememberSessionProperties() {
-        for (String name : new String[]{
-                TRACE_REPORTS, DIAGNOSTICS, ARTIFACT_ROOT, BUILD_DIRECTORY}) {
+        for (String name : new String[]{TRACE_REPORTS, DIAGNOSTICS, ARTIFACT_ROOT}) {
             originalProperties.put(name, System.getProperty(name));
             System.clearProperty(name);
         }
@@ -60,25 +58,22 @@ class TestSessionOutputPathsTest {
     }
 
     @Test
-    void sessionPropertiesResolveToSuppliedAbsolutePaths() throws IOException {
-        Path sessionRoot = Files.createTempDirectory(tempDir, "openggf output paths ");
-        Path traceReports = sessionRoot.resolve("trace reports");
-        Path diagnostics = sessionRoot.resolve("diagnostics");
-        Path artifacts = sessionRoot.resolve("artifacts");
-        Path buildDirectory = sessionRoot.resolve("build");
+    void outputPathsResolveBeneathSuppliedBuildDirectory() throws IOException {
+        Path buildDirectory = Files.createTempDirectory(tempDir, "openggf build output ");
+        Path traceReports = buildDirectory.resolve("trace reports");
+        Path diagnostics = buildDirectory.resolve("diagnostics");
+        Path artifacts = buildDirectory.resolve("artifacts");
         System.setProperty(TRACE_REPORTS, traceReports.toString());
         System.setProperty(DIAGNOSTICS, diagnostics.toString());
         System.setProperty(ARTIFACT_ROOT, artifacts.toString());
-        System.setProperty(BUILD_DIRECTORY, buildDirectory.toString());
 
         assertEquals(traceReports, TestSessionOutputPaths.traceReports());
         assertEquals(diagnostics.resolve("physics"),
                 TestSessionOutputPaths.diagnostics("physics"));
         assertEquals(artifacts, TestSessionOutputPaths.artifactRoot());
-        assertEquals(buildDirectory.resolve("classes"),
-                TestSessionOutputPaths.compiledClasses());
-        assertEquals(buildDirectory.resolve("test-classes"),
-                TestSessionOutputPaths.compiledTestClasses());
+        assertTrue(TestSessionOutputPaths.traceReports().normalize().startsWith(buildDirectory));
+        assertTrue(TestSessionOutputPaths.diagnostics("physics").normalize().startsWith(buildDirectory));
+        assertTrue(TestSessionOutputPaths.artifactRoot().normalize().startsWith(buildDirectory));
     }
 
     @Test
@@ -133,6 +128,7 @@ class TestSessionOutputPathsTest {
         System.setProperty(TRACE_REPORTS, sessionRoot.toString());
 
         assertEquals(sessionRoot.resolve("_.."), TestSessionOutputPaths.diagnostics(".."));
+        assertTrue(TestSessionOutputPaths.diagnostics("..").normalize().startsWith(sessionRoot));
         TestSessionOutputPaths.ReportAllocation allocation =
                 TestSessionOutputPaths.allocateReport(
                         "..", "com.openggf.tests.ExampleTest", "replay", 0,
