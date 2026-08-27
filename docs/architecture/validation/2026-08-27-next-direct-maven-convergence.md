@@ -248,4 +248,8 @@ validation-record correction is committed separately after that merge.
 
 ## Push
 
-Result: pending final origin refresh and push.
+After a final fetch confirmed `origin/next` remained at the immutable starting
+ref, `next` was pushed from `33a799c014906bd75e99da329abc465ecf466487`
+through `822e3a4da36a58fb6d0bee29676e0e40d091f8d4`. A subsequent
+`git ls-remote origin refs/heads/next` returned that exact commit. This ledger
+update is the documentation-only follow-up to that verified integration push.
