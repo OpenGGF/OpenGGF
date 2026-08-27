@@ -4134,6 +4134,7 @@ METHOD com.openggf.camera.Camera public  void setUpdateObserver(com.openggf.came
 METHOD com.openggf.camera.Camera public  void setVerticalWrapEnabled(boolean)
 METHOD com.openggf.camera.Camera public  void setVerticalWrapEnabled(boolean,int)
 METHOD com.openggf.camera.Camera public  void setX(short)
+METHOD com.openggf.camera.Camera public  void setXAfterRenderCopy(short)
 METHOD com.openggf.camera.Camera public  void setXCopy(short)
 METHOD com.openggf.camera.Camera public  void setY(short)
 METHOD com.openggf.camera.Camera public  void setYAfterRenderCopy(short)

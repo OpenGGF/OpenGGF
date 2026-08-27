@@ -4,6 +4,7 @@ import com.openggf.configuration.DeadzoneMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.ModApi;
 import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -11,7 +12,7 @@ import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-@com.openggf.game.ModApi
+@ModApi
 public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	/** Receives invocation-level camera lifecycle events without replacing camera state. */
 	public interface UpdateObserver {
@@ -909,9 +910,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
-	 * Updates the physical X position after the render copy has been published.
-	 * This models ROM event routines that move {@code Camera_X_pos} while
-	 * retaining the already-published {@code Camera_X_pos_copy}.
+	 * Updates the live physical X position without publishing the render-copy word.
+	 * This is intended only for post-render-copy ScreenEvents and seamless-offset
+	 * ordering that moves {@code Camera_X_pos} while retaining the already-published
+	 * {@code Camera_X_pos_copy} for the current frame.
+	 *
+	 * @param x new physical camera X coordinate
 	 */
 	public void setXAfterRenderCopy(short x) {
 		this.x = x;
