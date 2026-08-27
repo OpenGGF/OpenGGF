@@ -430,6 +430,13 @@ function Read-EffectiveSurefireConfiguration {
 
     $values = [ordered]@{}
     $values.projectArgLine = $projectArgLineNodes[0].InnerText
+    foreach ($name in @('test.cds.argLine', 'mockito.agent.argLine')) {
+        $nodes = @($document.DocumentElement.SelectNodes("./*[local-name()='properties']/*[local-name()='$name']"))
+        if ($nodes.Count -ne 1 -or [string]::IsNullOrEmpty([string]$nodes[0].InnerText)) {
+            throw "Effective POM must contain exactly one non-empty project property $name; found $($nodes.Count)"
+        }
+        $values[$name] = $nodes[0].InnerText
+    }
     $values.excludes = [string[]]@($configuration.SelectNodes("./*[local-name()='excludes']/*[local-name()='exclude']") | ForEach-Object { $_.InnerText })
     foreach ($name in @('groups', 'excludedGroups', 'argLine', 'forkCount', 'reuseForks')) {
         $node = $configuration.SelectSingleNode("./*[local-name()='$name']")
@@ -442,26 +449,86 @@ function Assert-EffectiveSurefireContract {
     param(
         [string] $Path,
         [string] $ExecutionId,
-        [System.Collections.Generic.Dictionary[string, object]] $ApprovedProperties
+        [System.Collections.Generic.Dictionary[string, object]] $ApprovedProperties,
+        [bool] $IsDirectMaven
     )
     $effective = Read-EffectiveSurefireConfiguration $Path $ExecutionId
     if ($ApprovedProperties.ContainsKey('surefire.argLine')) {
         $argumentValue = [string]$ApprovedProperties['surefire.argLine'].Value
-        $expectedPrefix = [string]$effective.projectArgLine + ' -Duser.home='
-        if (-not $argumentValue.StartsWith($expectedPrefix, [System.StringComparison]::Ordinal)) {
-            throw 'Approved Maven property surefire.argLine must preserve the effective project property before adapter-owned session properties'
+        if ($IsDirectMaven) {
+            foreach ($value in @(
+                    $argumentValue,
+                    [string]$effective.'test.cds.argLine')) {
+                if ($value -match '\$\{[^}]+\}') {
+                    throw 'DirectMaven surefire.argLine proof contains an unresolved property placeholder'
+                }
+            }
+            $repositoryPlaceholder = '${settings.localRepository}'
+            $mockitoTemplate = [string]$effective.'mockito.agent.argLine'
+            $mockitoTemplateRemainder = $mockitoTemplate.Replace($repositoryPlaceholder, '')
+            if ($mockitoTemplateRemainder -match '\$\{[^}]+\}' -or
+                [System.Text.RegularExpressions.Regex]::Matches(
+                    $mockitoTemplate, [System.Text.RegularExpressions.Regex]::Escape($repositoryPlaceholder)).Count -gt 1) {
+                throw 'DirectMaven effective Mockito agent content contains an unresolved unsupported property placeholder'
+            }
+            $repositoryPattern = if ($mockitoTemplate.IndexOf(
+                    $repositoryPlaceholder, [System.StringComparison]::Ordinal) -gt 0 -and
+                $mockitoTemplate[$mockitoTemplate.IndexOf(
+                    $repositoryPlaceholder, [System.StringComparison]::Ordinal) - 1] -eq '"') {
+                '[^"]+'
+            } else {
+                '[^"\s]+'
+            }
+            $mockitoPattern = [System.Text.RegularExpressions.Regex]::Escape($mockitoTemplate).Replace(
+                [System.Text.RegularExpressions.Regex]::Escape($repositoryPlaceholder),
+                $repositoryPattern)
+            $argumentPattern = '^' +
+                [System.Text.RegularExpressions.Regex]::Escape([string]$effective.'test.cds.argLine') +
+                ' ' + $mockitoPattern + ' (?<capacity>-Xmx[1-9][0-9]*[kKmMgG])$'
+            $argumentMatch = [System.Text.RegularExpressions.Regex]::Match(
+                $argumentValue,
+                $argumentPattern,
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
+            if (-not $argumentMatch.Success) {
+                throw 'DirectMaven surefire.argLine must preserve the effective CDS and Mockito agent content'
+            }
+            $capacityArgument = $argumentMatch.Groups['capacity'].Value
+            $expectedProjectTemplate = '${test.cds.argLine} ${mockito.agent.argLine} ' +
+                $capacityArgument
+            if ([string]$effective.projectArgLine -cne $argumentValue -and
+                [string]$effective.projectArgLine -cne $expectedProjectTemplate) {
+                throw "DirectMaven surefire.argLine does not agree with the effective project property: argv=[$argumentValue] effective=[$($effective.projectArgLine)]"
+            }
+            $executionPrefix = $argumentValue + ' '
+            if (-not ([string]$effective.argLine).StartsWith($executionPrefix, [System.StringComparison]::Ordinal)) {
+                throw 'DirectMaven surefire.argLine does not match the same-invocation effective Surefire execution argLine'
+            }
+            $executionSuffix = ([string]$effective.argLine).Substring($executionPrefix.Length)
+            if ($executionSuffix -notmatch '^-Djava\.io\.tmpdir=(?:"[^"]+"|\S+) -Dorg\.lwjgl\.system\.SharedLibraryExtractPath=(?:"[^"]+[/\\]lwjgl-\$\{surefire\.forkNumber\}"|\S+[/\\]lwjgl-\$\{surefire\.forkNumber\})$') {
+                throw 'DirectMaven effective Surefire execution argLine must retain only the fork-local temp and LWJGL extraction properties after the capacity override'
+            }
+            $resolvedExecution = $executionSuffix.Replace('${surefire.forkNumber}', '1')
+            if ($resolvedExecution -match '\$\{[^}]+\}') {
+                throw 'DirectMaven effective Surefire execution argLine contains an unresolved relevant property placeholder'
+            }
         }
-        $adapterSuffix = $argumentValue.Substring($expectedPrefix.Length)
-        $lwjglMarker = ' -Dorg.lwjgl.system.SharedLibraryExtractPath='
-        $lwjglOffset = $adapterSuffix.IndexOf($lwjglMarker, [System.StringComparison]::Ordinal)
-        if ($lwjglOffset -le 0) {
-            throw 'Approved Maven property surefire.argLine must contain the adapter-owned user.home and LWJGL extraction properties'
-        }
-        $userHomeValue = $adapterSuffix.Substring(0, $lwjglOffset)
-        $lwjglValue = $adapterSuffix.Substring($lwjglOffset + $lwjglMarker.Length)
-        if ($userHomeValue -match '\s' -or $lwjglValue -match '\s' -or
-            $lwjglValue -notmatch '[/\\]lwjgl-\$\{surefire\.forkNumber\}$') {
-            throw 'Approved Maven property surefire.argLine has invalid adapter-owned session property values'
+        else {
+            $expectedPrefix = [string]$effective.projectArgLine + ' -Duser.home='
+            if (-not $argumentValue.StartsWith($expectedPrefix, [System.StringComparison]::Ordinal)) {
+                throw 'Approved Maven property surefire.argLine must preserve the effective project property before adapter-owned session properties'
+            }
+            $adapterSuffix = $argumentValue.Substring($expectedPrefix.Length)
+            $lwjglMarker = ' -Dorg.lwjgl.system.SharedLibraryExtractPath='
+            $lwjglOffset = $adapterSuffix.IndexOf($lwjglMarker, [System.StringComparison]::Ordinal)
+            if ($lwjglOffset -le 0) {
+                throw 'Approved Maven property surefire.argLine must contain the adapter-owned user.home and LWJGL extraction properties'
+            }
+            $userHomeValue = $adapterSuffix.Substring(0, $lwjglOffset)
+            $lwjglValue = $adapterSuffix.Substring($lwjglOffset + $lwjglMarker.Length)
+            if ($userHomeValue -match '\s' -or $lwjglValue -match '\s' -or
+                $lwjglValue -notmatch '[/\\]lwjgl-\$\{surefire\.forkNumber\}$') {
+                throw 'Approved Maven property surefire.argLine has invalid adapter-owned session property values'
+            }
         }
     }
     if ($ApprovedProperties.ContainsKey('surefire.forkCount')) {
@@ -678,7 +745,12 @@ if ($suppliedPreflight -eq $preflightValues.Count) {
     Assert-EffectiveSurefireContract `
         $EffectivePomPath `
         $SurefireExecutionId `
-        $selectorContract.ApprovedProperties
+        $selectorContract.ApprovedProperties `
+        $DirectMaven.IsPresent
+    if ($DirectMaven -and $selectorContract.ApprovedProperties.ContainsKey('surefire.argLine')) {
+        $canonicalEffectivePom = (Resolve-Path -LiteralPath $EffectivePomPath).Path
+        Assert-RuntimeInputExactlyOnce $canonicalEffectivePom $RuntimeInputs 'Effective POM capacity proof'
+    }
     if ($repeatedIdentityContract.Path.Length -ne 0) {
         Assert-RuntimeInputExactlyOnce $repeatedIdentityContract.Path $RuntimeInputs 'Repeated-identity cardinality allowlist'
     }

@@ -30,6 +30,77 @@ the root or begins with the exact `root + '$'` boundary. Duplicate testcase
 identities are fatal unless a reviewed cardinality file declares the exact
 identity, count, and reason.
 
+An authenticated explicit-source export is atomic. Retain all of these
+artifacts from the run being exported:
+
+- the ordinal-sorted top-level source-class inventory;
+- its exact ordinal-bijective slash-path selector file, supplied to Maven by
+  one canonical absolute `surefire.includesFile` argument;
+- the exact Maven argument vector, one argument per line;
+- the effective POM generated with the same profiles and property overrides;
+  and
+- the exact `OPENGGF_RUNTIME_INPUTS` value used for the run. It contains the
+  canonical selector exactly once, the effective-POM path exactly once for a
+  direct capacity override, and the reviewed repeated-identity cardinality
+  file exactly once when that file is used.
+
+Direct Maven may use an explicit `surefire.argLine` only as a capacity
+override. The resolved value must preserve the effective POM's exact CDS and
+Mockito-agent arguments, followed only by one `-Xmx` argument. The effective
+project property must prove the same capacity and standard property wiring;
+the selected Surefire execution must prove the fully resolved exact value and
+then retain Maven's fork-local temp and LWJGL properties. Unresolved runtime
+arguments, unsupported property placeholders, or mismatched evidence fail
+closed.
+Unlike historical managed-session evidence, direct mode neither supplies nor
+accepts invented adapter-owned `user.home`, LWJGL, session-root, or run-id
+suffixes.
+
+For example, this records a truthful one-fork/3-GiB direct invocation. The
+class and selector inventories must already contain the complete selected
+suite described above:
+
+```powershell
+$worktree = (Resolve-Path .).Path
+$evidence = Join-Path $worktree 'target/surefire-inventory-evidence'
+$classes = Join-Path $evidence 'ordinary-classes.txt'
+$selector = (Resolve-Path (Join-Path $evidence 'ordinary.includes')).Path
+$effectivePom = Join-Path $evidence 'ordinary-effective-pom.xml'
+$argumentInventory = Join-Path $evidence 'ordinary-maven-arguments.txt'
+$localRepository = (& mvn -Dmse=off help:evaluate `
+    -Dexpression=settings.localRepository -q -DforceStdout).Trim()
+$mockitoAgent = Join-Path $localRepository `
+    'org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar'
+$capacityArgLine = "-Xshare:off -javaagent:`"$mockitoAgent`" -Xmx3g"
+$mavenArguments = @(
+    '-Dmse=off'
+    "-Dsurefire.argLine=$capacityArgLine"
+    "-Dsurefire.includesFile=$selector"
+    'test'
+)
+
+New-Item -ItemType Directory -Force -Path $evidence | Out-Null
+& mvn -Dmse=off "-Dsurefire.argLine=$capacityArgLine" `
+    "-Dsurefire.includesFile=$selector" help:effective-pom `
+    "-Doutput=$effectivePom"
+[IO.File]::WriteAllLines($argumentInventory, $mavenArguments,
+    [Text.UTF8Encoding]::new($false))
+$env:OPENGGF_RUNTIME_INPUTS = @($selector, $effectivePom) -join `
+    [IO.Path]::PathSeparator
+& mvn @mavenArguments
+
+& ./tools/testing/Export-SurefireOutcomeInventory.ps1 `
+    -SourceClassInventory $classes `
+    -SelectorPatternInventory $selector `
+    -MavenArgumentInventory $argumentInventory `
+    -RuntimeInputs $env:OPENGGF_RUNTIME_INPUTS `
+    -EffectivePomPath $effectivePom `
+    -ReportRoot (Join-Path $worktree 'target/surefire-reports') `
+    -DirectMaven `
+    -CanonicalWorktree $worktree `
+    -OutputPath (Join-Path $evidence 'ordinary-outcomes.tsv')
+```
+
 Run the exporter from PowerShell so multiple report roots remain an array:
 
 ```powershell

@@ -698,6 +698,40 @@ class TestBuildToolingGuard {
                 "whole-graph guards must have enough heap for the merged production graph");
     }
 
+    @Test
+    void ordinarySuiteMustUseOneReusedThreeGibForkWithIsolatedRuntimePaths() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element projectProperties = directChild(pom.getDocumentElement(), "properties");
+        assertTrue(projectProperties != null, "pom.xml must define ordinary capacity properties");
+        assertEquals("1", directChild(projectProperties, "surefire.forkCount").getTextContent().trim(),
+                "the ordinary suite must reuse one fork instead of splitting capacity across four heaps");
+
+        String ordinaryArgLine = directChild(projectProperties, "surefire.argLine")
+                .getTextContent().trim();
+        assertTrue(ordinaryArgLine.contains("${test.cds.argLine}"),
+                "the ordinary suite must retain its CDS setting");
+        assertTrue(ordinaryArgLine.contains("${mockito.agent.argLine}"),
+                "the ordinary suite must retain the Mockito agent");
+        assertTrue(ordinaryArgLine.endsWith("-Xmx3g"),
+                "the ordinary suite must use the proven 3 GiB heap");
+
+        Element build = directChild(pom.getDocumentElement(), "build");
+        Element plugins = directChild(build, "plugins");
+        Element surefire = directChildWithText(plugins, "plugin", "artifactId",
+                "maven-surefire-plugin");
+        Element configuration = directChild(surefire, "configuration");
+        assertEquals("${surefire.forkCount}", directChild(configuration, "forkCount")
+                        .getTextContent().trim(),
+                "the ordinary execution must consume the shared capacity property");
+        assertEquals("true", directChild(configuration, "reuseForks").getTextContent().trim(),
+                "the ordinary execution must reuse its single fork");
+        assertEquals("${surefire.argLine} -Djava.io.tmpdir=\"${openggf.test.tmpdir}\" "
+                        + "-Dorg.lwjgl.system.SharedLibraryExtractPath=\"${openggf.test.tmpdir}"
+                        + "/lwjgl-${surefire.forkNumber}\"",
+                directChild(configuration, "argLine").getTextContent().trim(),
+                "the ordinary execution must retain the fork-local temp and LWJGL paths");
+    }
+
     /**
      * Every Surefire {@code <forkCount>} in the POM must read the same
      * {@code ${surefire.forkCount}} property, and the name of that property is
@@ -705,7 +739,7 @@ class TestBuildToolingGuard {
      *
      * <p>This exists because {@code -DforkCount=1} silently does nothing:
      * {@code pom.xml} binds {@code <forkCount>} to {@code ${surefire.forkCount}}
-     * (default 4, set to 1 only by the {@code ci} profile), so a user-supplied
+     * (default 1, with profile-specific overrides), so a user-supplied
      * {@code forkCount} property is never consulted and the run stays on four
      * forks. Trace measurements were taken under that misapprehension and had to
      * be redone; the correction is recorded in

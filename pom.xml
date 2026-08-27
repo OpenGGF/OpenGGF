@@ -28,8 +28,8 @@
         <openggf.test.diagnostics>${project.build.directory}/diagnostics</openggf.test.diagnostics>
         <openggf.artifact.root>${project.build.directory}</openggf.artifact.root>
         <openggf.distribution.root>${project.build.directory}</openggf.distribution.root>
-        <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g</surefire.argLine>
-        <surefire.forkCount>4</surefire.forkCount>
+        <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+        <surefire.forkCount>1</surefire.forkCount>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
@@ -228,8 +228,8 @@
               a truncated 401 tests that looked healthier than the real run.
               The same profile completes all 834 tests at both 3g and 4g with
               an identical red set, so 3g is the landed value: ~48% headroom
-              over the 2069 MB measured live set, and forkCount still defaults
-              to 4 here (4 x 3g = 12g worst case).
+              over the 2069 MB measured live set. The shared fork count now
+              defaults to 1, so this profile reuses that same 3 GiB fork.
 
               The cost is aux events, not physics rows: across the Knuckles run,
               aux_state.jsonl is 1476 MB uncompressed against 56 MB of
@@ -1242,10 +1242,9 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                     <argLine>${surefire.argLine} -Djava.io.tmpdir="${openggf.test.tmpdir}" -Dorg.lwjgl.system.SharedLibraryExtractPath="${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}"</argLine>
                     <reportsDirectory>${openggf.surefire.reports}</reportsDirectory>
                     <tempDir>${project.build.directory}/surefire</tempDir>
-                    <!-- Run test classes in parallel forked JVMs.
-                         Thread-level parallelism is unsafe due to singleton state,
-                         but process-level forks each get isolated singletons.
-                         Default: 4 forks locally, 1 in CI (see ci profile). -->
+                    <!-- Run test classes in one reused forked JVM. Thread-level
+                         parallelism is unsafe due to singleton state, and the
+                         ordinary suite needs the full shared 3 GiB capacity. -->
                     <forkCount>${surefire.forkCount}</forkCount>
                     <reuseForks>true</reuseForks>
                     <systemPropertyVariables>

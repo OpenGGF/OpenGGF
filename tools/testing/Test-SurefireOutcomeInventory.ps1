@@ -132,6 +132,7 @@ function New-EffectivePomText {
         [string] $AdditionalSelection = '',
         [string] $ForkCount = '1',
         [string] $ProjectArgLine = '-Xshare:off -javaagent:/harness/mockito-agent.jar',
+        [string] $MockitoAgentArgLine = '-javaagent:/harness/mockito-agent.jar',
         [string] $ExecutionArgLine = '',
         [switch] $OmitProjectArgLine,
         [string] $AdditionalProjectProperties = '',
@@ -143,7 +144,7 @@ function New-EffectivePomText {
     $resolvedExecutionArgLine = if ($ExecutionArgLine.Length -eq 0) { "$ProjectArgLine -Djava.io.tmpdir=/session/effective-pom/tmp" } else { $ExecutionArgLine }
     $escapedExecutionArgLine = [System.Security.SecurityElement]::Escape($resolvedExecutionArgLine)
     return @"
-<project xmlns="http://maven.apache.org/POM/4.0.0"><properties>$projectArgLineElement$AdditionalProjectProperties</properties><build><plugins><plugin>
+<project xmlns="http://maven.apache.org/POM/4.0.0"><properties><test.cds.argLine>-Xshare:off</test.cds.argLine><mockito.agent.argLine>$([System.Security.SecurityElement]::Escape($MockitoAgentArgLine))</mockito.agent.argLine>$projectArgLineElement$AdditionalProjectProperties</properties><build><plugins><plugin>
   <artifactId>maven-surefire-plugin</artifactId><executions><execution><id>default-test</id><configuration>
     $includesFileElement$AdditionalSelection
     <excludes>$excludeElements</excludes>
@@ -498,6 +499,96 @@ test
             '-EffectivePomPath', $effectivePom,
             '-OutputPath', $output, '-ReportRoot', $case
         )) 'frozen-next adapter argv'
+    }
+
+    Invoke-Case 'authenticated direct Maven capacity argLine requires exact resolved effective-POM proof' {
+        $case = Join-Path $scratch 'export-direct-maven-capacity-argline'
+        $worktree = Join-Path $case 'worktree'
+        $reports = Join-Path $worktree 'target/surefire-reports'
+        New-Item -ItemType Directory -Path $reports -Force | Out-Null
+        $classes = Join-Path $case 'classes.txt'
+        $patterns = Join-Path $case 'ordinary.includes'
+        $arguments = Join-Path $case 'maven-arguments.txt'
+        $effectivePom = Join-Path $case 'selector-invocation-effective-pom.xml'
+        $output = Join-Path $case 'outcomes.tsv'
+        $capacityArgLine = '-Xshare:off -javaagent:/harness/mockito-agent.jar -Xmx3g'
+        $runtimeInputs = $patterns + [IO.Path]::PathSeparator + $effectivePom
+        $executionSuffix = " -Djava.io.tmpdir=$worktree/target/test-tmp -Dorg.lwjgl.system.SharedLibraryExtractPath=$worktree/target/test-tmp/lwjgl-`${surefire.forkNumber}"
+        Write-Utf8File $classes "example.DirectCapacityTest`n"
+        Write-Utf8File $patterns "example/DirectCapacityTest.java`n"
+        Write-Utf8File (Join-Path $reports 'TEST-fixture.xml') '<testsuite><testcase classname="example.DirectCapacityTest" name="test"/></testsuite>'
+
+        $invokeDirect = {
+            Invoke-Tool $exportScript @(
+                '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+                '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $runtimeInputs,
+                '-EffectivePomPath', $effectivePom,
+                '-DirectMaven', '-CanonicalWorktree', $worktree,
+                '-OutputPath', $output, '-ReportRoot', $reports
+            )
+        }
+
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -ProjectArgLine $capacityArgLine `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        Assert-Succeeded (& $invokeDirect) 'direct Maven capacity argLine'
+
+        $resolvedAgentArgLine = '-Xshare:off -javaagent:"/home/test repo/.m2/repository/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar" -Xmx3g'
+        Write-Utf8File $arguments "-Dsurefire.argLine=$resolvedAgentArgLine`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -MockitoAgentArgLine '-javaagent:"${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar"' `
+            -ProjectArgLine '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g' `
+            -ExecutionArgLine ($resolvedAgentArgLine + $executionSuffix))
+        Assert-Succeeded (& $invokeDirect) 'direct Maven resolved agent from effective-POM repository template'
+
+        Write-Utf8File $arguments "-Dsurefire.argLine=-Xshare:off -javaagent:/harness/mockito-agent.jar -Xmx2g`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Assert-Failed (& $invokeDirect) 'argLine.*effective|mismatch|equal' 'direct Maven argv/effective argLine mismatch'
+
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -ProjectArgLine $capacityArgLine `
+            -ExecutionArgLine ('-Xshare:off -javaagent:/harness/mockito-agent.jar -Xmx2g' + $executionSuffix))
+        Assert-Failed (& $invokeDirect) 'execution argLine|same-invocation|match' 'direct Maven execution argLine mismatch'
+
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -ProjectArgLine $capacityArgLine `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        $runtimeInputs = $patterns
+        Assert-Failed (& $invokeDirect) 'Effective POM.*OPENGGF_RUNTIME_INPUTS|runtime input|exactly once' 'missing direct Maven effective-POM runtime proof'
+        $runtimeInputs = $patterns + [IO.Path]::PathSeparator + $effectivePom
+
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $runtimeInputs,
+            '-DirectMaven', '-CanonicalWorktree', $worktree,
+            '-OutputPath', $output, '-ReportRoot', $reports
+        )) 'atomic|EffectivePomPath|preflight' 'missing direct Maven effective-POM artifact'
+
+        $unresolvedArgLine = '${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g'
+        Write-Utf8File $arguments "-Dsurefire.argLine=$unresolvedArgLine`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -ProjectArgLine $unresolvedArgLine `
+            -ExecutionArgLine ($unresolvedArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirect) 'unresolved|placeholder|argLine' 'unresolved direct Maven argLine placeholders'
+
+        $alteredArgLine = '-Xshare:on -javaagent:/harness/other-agent.jar -Xmx3g'
+        Write-Utf8File $arguments "-Dsurefire.argLine=$alteredArgLine`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -ProjectArgLine $alteredArgLine `
+            -ExecutionArgLine ($alteredArgLine + $executionSuffix))
+        Assert-Failed (& $invokeDirect) 'CDS|Mockito|argLine|preserve' 'altered direct Maven CDS and Mockito content'
+
+        Write-Utf8File $arguments "-Dsurefire.argLine=$capacityArgLine`n-Dsurefire.includesFile=$patterns`ntest`n"
+        Write-Utf8File $effectivePom (New-EffectivePomText `
+            -ProjectArgLine $capacityArgLine `
+            -ExecutionArgLine ($capacityArgLine + $executionSuffix))
+        Assert-Failed (Invoke-Tool $exportScript @(
+            '-SourceClassInventory', $classes, '-SelectorPatternInventory', $patterns,
+            '-MavenArgumentInventory', $arguments, '-RuntimeInputs', $runtimeInputs,
+            '-EffectivePomPath', $effectivePom,
+            '-OutputPath', $output, '-ReportRoot', $reports
+        )) 'adapter-owned|user.home|LWJGL' 'managed-session argLine without adapter-owned suffix'
     }
 
     Invoke-Case 'export rejects non-bijective unsafe or competing selector invocations' {
