@@ -172,8 +172,8 @@ public class SwScrlMgzTest {
         handler.update(hScroll, 0x1200, 0x0200, 1, 1);
 
         assertEquals(0, handler.getShakeOffsetY());
-        assertEquals(0x1200, handler.getBgCameraX(),
-                "MGZ handler init should clear event-owned BG camera overrides between level loads");
+        assertEquals(0, handler.getBgCameraX(),
+                "MGZ2 normal deformation clears Camera_X_pos_BG_copy after level re-entry");
         assertEquals(96, handler.getVscrollFactorBG(),
                 "MGZ handler init should clear BG rise overrides between level loads");
     }
@@ -216,6 +216,19 @@ public class SwScrlMgzTest {
 
         assertNotEquals(unpackBgScroll(initial[32]), unpackBgScroll(advanced[32]),
                 "ROM MGZ2SE_MoveBG substitutes Events_bg+$0C for Camera_X_pos_copy, so the BG should scroll even while the foreground camera is fixed");
+    }
+
+    @Test
+    public void bossBgScrollOffsetKeepsRomZeroBackgroundCameraCopy() {
+        SwScrlMgz handler = new SwScrlMgz();
+        int[] hScroll = new int[224];
+
+        handler.setBossBgScrollOffset(0x3D80);
+        handler.update(hScroll, 0x3C80, 0x0600, 1, 1);
+
+        assertEquals(0, handler.getBgCameraX(),
+                "ROM loc_23D24C substitutes Events_bg+$0C only for HScroll_table math; "
+                        + "loc_23D220 keeps Camera_X_pos_BG_copy cleared for the boss sky");
     }
 
     @Test

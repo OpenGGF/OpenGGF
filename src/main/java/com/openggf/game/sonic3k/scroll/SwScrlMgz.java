@@ -121,13 +121,13 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
 
     /**
      * ROM: MGZ2SE_MoveBG advances Events_bg+$0C after the boss floor collapse
-     * and uses it as the BG camera copy for DrawTilesAsYouMove.
+     * and MGZ2_BGDeform substitutes it for Camera_X_pos_copy only while
+     * building HScroll_table (loc_23D24C). Camera_X_pos_BG_copy remains owned
+     * by the normal BG deformation path, so this must not relocate the
+     * background tilemap or collision window.
      */
     public void setBossBgScrollOffset(int offset) {
         bossBgScrollOffset = offset & 0xFFFF;
-        if (bgRiseRoutine != BG_RISE_SONIC_STATE) {
-            lastBgCameraX = bossBgScrollOffset;
-        }
     }
 
     @Override
@@ -154,7 +154,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         bgRiseRoutine = BG_RISE_NORMAL_STATE;
         bgRiseOffset = 0;
         bossBgScrollOffset = Integer.MIN_VALUE;
-        lastBgCameraX = actId == 0 ? Integer.MIN_VALUE : cameraX;
+        lastBgCameraX = actId == 0 ? Integer.MIN_VALUE : 0;
         vscrollFactorBG = actId == 0 ? 0 : (short) computeMgz2BgY(cameraY);
         mgz1CloudAccumulator.reset();
         mgz2CloudAccumulator.reset();
@@ -172,10 +172,8 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
                 vscrollFactorBG = (short) (((short) cameraY) - MGZ2_SONIC_RISE_Y_BASE + bgRiseOffset);
             } else if (bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE) {
                 mgz2CloudsFrozen = true;
-                lastBgCameraX = bossBgScrollOffset == Integer.MIN_VALUE ? cameraX : bossBgScrollOffset;
+                lastBgCameraX = 0;
                 vscrollFactorBG = (short) computeMgz2BgY(cameraY - MGZ2_AFTER_MOVE_Y_BASE);
-            } else if (bossBgScrollOffset != Integer.MIN_VALUE) {
-                lastBgCameraX = bossBgScrollOffset;
             }
         }
     }
@@ -310,7 +308,10 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             int bgY = bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE
                     ? computeMgz2BgY(cameraY - MGZ2_AFTER_MOVE_Y_BASE)
                     : computeMgz2BgY(cameraY);
-            lastBgCameraX = getMgz2ParallaxCameraX(cameraX);
+            // loc_23D220 clears Camera_X_pos_BG_copy in both normal state 0
+            // and after-move state $C. The foreground/boss cursor still feeds
+            // HScroll_table separately through getMgz2ParallaxCameraX().
+            lastBgCameraX = 0;
             composer.setVscrollFactorBG((short) bgY);
             buildMgz2HScrollTable(getMgz2ParallaxCameraX(cameraX), shouldAutoMoveMgz2Clouds(),
                     frameCounter, mgz2HScrollTable, mgz2ScatterSource);
@@ -474,7 +475,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             vscrollFactorBG = (short) ((((short) camera.getY()) - MGZ2_SONIC_RISE_Y_BASE) + bgRiseOffset);
             return;
         }
-        lastBgCameraX = bossBgScrollOffset;
+        lastBgCameraX = 0;
         vscrollFactorBG = (short) (bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE
                 ? computeMgz2BgY(camera.getY() - MGZ2_AFTER_MOVE_Y_BASE)
                 : computeMgz2BgY(camera.getY()));

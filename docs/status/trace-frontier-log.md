@@ -114980,3 +114980,33 @@ The other three death arms remain coordinates only.
   `20260826T194722Z-p44688-ce596b` (candidate) and
   `20260826T194832Z-p44825-1dc3d7` (control) reproduced the same nondeterministic
   module/decompression-queue choice, so it is not attributable to this change.
+
+## 2026-08-27 - MGZ2 boss-collapse background tile-window snap removed
+
+- Worktree/branch: direct `develop` worktree at `b50a6edc4` with the uncommitted
+  MGZ2 scroll-handler candidate.
+- Root cause: retail `MGZ2_BGDeform` substitutes `Events_bg+$0C` for
+  `Camera_X_pos_copy` only when building `HScroll_table` at `loc_23D24C`.
+  The engine also published that accelerating cursor as its BG tilemap/collision
+  camera X and selected MGZ2's full-width rise-terrain strip for every Act 2
+  state with a BG camera. `SwScrlMgz` now retains the boss cursor only for
+  H-scroll math, publishes the ROM's zero `Camera_X_pos_BG_copy` in normal/boss
+  state, and gates the full-width strip on `Events_bg+$00 == 8`. A remaining
+  flash came from the BG-rise trigger re-entering state 8 as Sonic fell: retail
+  `MGZ2_LevelCollapse` sets `_unkEEA2`, and `MGZ2_BGEventTrigger` returns while
+  that special VScroll flag is set. The engine now preserves state C across the
+  collapse and air-boss sequence under the same condition.
+- Baseline command: `tools/testing/test-session.sh -- mvn -Dmse=off
+  "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... test`.
+  Run `20260827T073523Z-p52679-232779` at `b50a6edc4`: 171 methods,
+  106 failures, 0 errors, 65 passes.
+- Candidate command: the same full sweep. Final run
+  `20260828T085504Z-p68021-536c08`: 171 methods, 106 failures, 0 errors,
+  65 passes. All 105 emitted failure-summary fingerprints are byte-for-byte
+  identical to baseline after sorting; no frontier moved and no previously
+  green trace regressed.
+- Focused MGZ replay command selected `TestS3kMgzTraceReplay` and
+  `TestS3kMgzZoneSliceTraceReplay`. The short MGZ trace remains green; the zone
+  slice retains its baseline first error at frame 5255, `tails_g_speed`
+  (`expected=0x0000`, `actual=-0x01D5`), with 6,870 errors.

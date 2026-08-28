@@ -19,6 +19,14 @@ This file contains the complete 0.6 development snapshot history carried forward
   temporary files remain target-local, and release jobs upload only finished
   platform archives.
 
+- **MGZ2's post-collapse boss background no longer snaps through unrelated
+  tilemap windows:** the accelerating boss scroll now affects only the ROM's
+  H-scroll calculation, the normal boss sky keeps the retail 64-cell Plane B
+  window and zero BG camera copy, and the full-width terrain strip is selected
+  only during the state-8 background-rise sequence. The collapse's special
+  VScroll mode also suppresses the background-rise trigger, matching the ROM,
+  so falling into the boss pit cannot briefly reactivate the raised terrain.
+
 - **Live and trace capture can target DaVinci Resolve on Linux:** the capture
   codec options now include DNxHR SQ video and lossless 24-bit PCM audio for
   use together in a QuickTime MOV container.

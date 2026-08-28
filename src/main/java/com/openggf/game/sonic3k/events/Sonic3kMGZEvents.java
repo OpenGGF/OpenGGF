@@ -1183,6 +1183,15 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (bgRiseFinalShakeTimer > 0) {
             bgRiseFinalShakeTimer--;
         }
+        // ROM MGZ2_LevelCollapse sets _unkEEA2 to $FFFF when its special
+        // per-column VScroll mode starts (sonic3k.asm:106555). From then on,
+        // MGZ2_BGEventTrigger tests that word and returns immediately
+        // (sonic3k.asm:107164-107167). In particular, a falling player in the
+        // boss pit must not make the completed state-C terrain event re-enter
+        // state 8 and expose the raised-terrain Plane B for a frame.
+        if (collapseInitialized) {
+            return;
+        }
         int playerX = player.getCentreX();
         int playerY = player.getCentreY();
         if (bgRiseRoutine == BG_RISE_SONIC && bgRiseRefreshFramesRemaining > 0) {

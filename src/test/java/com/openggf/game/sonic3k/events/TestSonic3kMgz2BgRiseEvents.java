@@ -224,6 +224,21 @@ class TestSonic3kMgz2BgRiseEvents {
     }
 
     @Test
+    void collapseVScrollModeSuppressesBgRiseTriggerReentry() {
+        placePlayer(0x3CC0, 0x0850);
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setBgRiseLoadStateInitialised(true);
+        events.setBgRiseRoutine(BG_RISE_AFTER_MOVE);
+        events.setCollapseInitialized(true);
+
+        events.updatePrePhysics(1);
+
+        assertEquals(BG_RISE_AFTER_MOVE, events.getBgRiseRoutine(),
+                "MGZ2_LevelCollapse's _unkEEA2 VScroll mode makes MGZ2_BGEventTrigger return before state-C re-entry");
+    }
+
+    @Test
     void sonicRise_locksCameraMinXWhenMotionActuallyStarts() {
         AbstractPlayableSprite player = placePlayer(0x3500, 0x850);
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
