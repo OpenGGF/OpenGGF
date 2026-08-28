@@ -12,6 +12,9 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
     private final Object previousTestMode;
     private boolean closed;
 
+    record CallerState(Object aspect, Object testMode) {
+    }
+
     private TraceCapturePresentationSetup(SonicConfigurationService configuration,
             Object previousAspect, Object previousTestMode) {
         this.configuration = configuration;
@@ -21,10 +24,23 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
 
     static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
             TraceCaptureDimensions dimensions) {
+        return open(configuration, dimensions, snapshot(configuration));
+    }
+
+    static CallerState snapshot(SonicConfigurationService configuration) {
+        Objects.requireNonNull(configuration, "configuration");
+        return new CallerState(
+                configuration.getConfigValue(SonicConfiguration.DISPLAY_ASPECT),
+                configuration.getConfigValue(SonicConfiguration.TEST_MODE_ENABLED));
+    }
+
+    static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
+            TraceCaptureDimensions dimensions, CallerState callerState) {
         Objects.requireNonNull(configuration, "configuration");
         Objects.requireNonNull(dimensions, "dimensions");
-        Object previousAspect = configuration.getConfigValue(SonicConfiguration.DISPLAY_ASPECT);
-        Object previousTestMode = configuration.getConfigValue(SonicConfiguration.TEST_MODE_ENABLED);
+        Objects.requireNonNull(callerState, "callerState");
+        Object previousAspect = callerState.aspect();
+        Object previousTestMode = callerState.testMode();
         try {
             if (configuration.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
                 configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
@@ -43,33 +59,6 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
             catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
             throw rethrow(failure);
         }
-    }
-
-    /**
-     * Keeps replay-owned camera construction at the native trace width while
-     * the already-created GL presentation remains widescreen. The scope is
-     * intentionally narrow: it is used only around headless boot, before the
-     * gameplay camera is constructed.
-     */
-    AutoCloseable pinNativeTraceWidth() {
-        Object previousAspect = configuration.getConfigValue(
-                SonicConfiguration.DISPLAY_ASPECT);
-        configuration.setConfigValue(SonicConfiguration.DISPLAY_ASPECT,
-                "NATIVE_4_3");
-        configuration.resolveDisplayAspect();
-        return new AutoCloseable() {
-            private boolean closed;
-
-            @Override
-            public void close() {
-                if (!closed) {
-                    closed = true;
-                    configuration.setConfigValue(
-                            SonicConfiguration.DISPLAY_ASPECT, previousAspect);
-                    configuration.resolveDisplayAspect();
-                }
-            }
-        };
     }
 
     @Override

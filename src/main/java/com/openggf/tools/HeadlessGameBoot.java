@@ -5,6 +5,8 @@ import com.openggf.GameLoop;
 import com.openggf.ModSubsystem;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
 import com.openggf.game.GameMode;
@@ -114,6 +116,8 @@ public final class HeadlessGameBoot implements AutoCloseable {
     private final int height;
     private final int logicalWidth;
     private final int logicalHeight;
+    private final int gameplayWidth;
+    private final int gameplayHeight;
     private final EngineContext engineServices;
     private final NativeGlLifecycle nativeGlLifecycle;
     private final Backend backend;
@@ -133,32 +137,43 @@ public final class HeadlessGameBoot implements AutoCloseable {
      * graphics manager at the given framebuffer dimensions.
      */
     public HeadlessGameBoot(int width, int height) {
-        this(width, height, width, height,
+        this(width, height, width, height, width, height,
                 EngineContext.fromLegacySingletonsForBootstrap(), LWJGL_NATIVE_GL,
                 SessionManager::closeGameplaySession);
     }
 
     public HeadlessGameBoot(int width, int height, int logicalWidth, int logicalHeight) {
-        this(width, height, logicalWidth, logicalHeight,
+        this(width, height, logicalWidth, logicalHeight, logicalWidth, logicalHeight,
+                EngineContext.fromLegacySingletonsForBootstrap(), LWJGL_NATIVE_GL,
+                SessionManager::closeGameplaySession);
+    }
+
+    public HeadlessGameBoot(int width, int height, int logicalWidth, int logicalHeight,
+            int gameplayWidth, int gameplayHeight) {
+        this(width, height, logicalWidth, logicalHeight, gameplayWidth, gameplayHeight,
                 EngineContext.fromLegacySingletonsForBootstrap(), LWJGL_NATIVE_GL,
                 SessionManager::closeGameplaySession);
     }
 
     public HeadlessGameBoot(int width, int height, EngineContext engineServices) {
-        this(width, height, width, height, engineServices, LWJGL_NATIVE_GL,
+        this(width, height, width, height, width, height, engineServices, LWJGL_NATIVE_GL,
                 SessionManager::closeGameplaySession);
     }
 
     private HeadlessGameBoot(int width, int height, int logicalWidth, int logicalHeight,
+            int gameplayWidth, int gameplayHeight,
             EngineContext engineServices, NativeGlLifecycle nativeGlLifecycle,
             SessionCloser sessionCloser) {
-        if (width <= 0 || height <= 0 || logicalWidth <= 0 || logicalHeight <= 0) {
+        if (width <= 0 || height <= 0 || logicalWidth <= 0 || logicalHeight <= 0
+                || gameplayWidth <= 0 || gameplayHeight <= 0) {
             throw new IllegalArgumentException("headless display dimensions must be positive");
         }
         this.width = width;
         this.height = height;
         this.logicalWidth = logicalWidth;
         this.logicalHeight = logicalHeight;
+        this.gameplayWidth = gameplayWidth;
+        this.gameplayHeight = gameplayHeight;
         this.engineServices = java.util.Objects.requireNonNull(engineServices, "engineServices");
         this.nativeGlLifecycle = java.util.Objects.requireNonNull(nativeGlLifecycle,
                 "nativeGlLifecycle");
@@ -169,7 +184,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     HeadlessGameBoot(int width, int height, EngineContext engineServices,
                      NativeGlLifecycle nativeGlLifecycle) {
-        this(width, height, width, height, engineServices, nativeGlLifecycle,
+        this(width, height, width, height, width, height, engineServices, nativeGlLifecycle,
                 SessionManager::closeGameplaySession);
     }
 
@@ -188,6 +203,8 @@ public final class HeadlessGameBoot implements AutoCloseable {
         this.height = height;
         this.logicalWidth = logicalWidth;
         this.logicalHeight = logicalHeight;
+        this.gameplayWidth = logicalWidth;
+        this.gameplayHeight = logicalHeight;
         this.engineServices = null;
         this.nativeGlLifecycle = null;
         this.backend = java.util.Objects.requireNonNull(backendFactory, "backendFactory").create();
@@ -326,7 +343,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         SessionManager.armNextGameplayAdmissionPolicy(admissionPolicy);
         GameplayModeContext mode = openResolvedSessionForBoot(services, rootModule);
         GameModule module = mode.getWorldSession().resolvedGameModule();
-        GameplaySessionFactory.attachManagers(mode, services);
+        GameplaySessionFactory.attachManagers(mode, services, createGameplayCamera(services));
         if (!mode.isGameplayRuntimeReady()) {
             throw new IllegalStateException(
                     "Gameplay runtime not ready after attachManagers");
@@ -391,6 +408,24 @@ public final class HeadlessGameBoot implements AutoCloseable {
         GameServices.camera().updatePosition(true);
 
         return loop;
+    }
+
+    private Camera createGameplayCamera(EngineContext services) {
+        if (gameplayWidth == logicalWidth && gameplayHeight == logicalHeight) {
+            return new Camera(services.configuration());
+        }
+        Object previousAspect = services.configuration().getConfigValue(
+                SonicConfiguration.DISPLAY_ASPECT);
+        try {
+            services.configuration().setConfigValue(
+                    SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+            services.configuration().resolveDisplayAspect();
+            return new Camera(services.configuration());
+        } finally {
+            services.configuration().setConfigValue(
+                    SonicConfiguration.DISPLAY_ASPECT, previousAspect);
+            services.configuration().resolveDisplayAspect();
+        }
     }
 
     /**

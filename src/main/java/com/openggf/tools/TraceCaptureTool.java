@@ -18,8 +18,6 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.GameplayModeContext;
-import com.openggf.game.session.SessionManager;
-import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
@@ -163,13 +161,12 @@ public final class TraceCaptureTool {
         System.out.println(captureSetupSummary(entry, args, dimensions, verifyOnly));
     }
 
-    static void serviceHeadlessFastForwardHardware(
-            GameplayModeContext gameplayMode, TraceExecutionPhase phase) {
-        if (phase != TraceExecutionPhase.ADVANCE_ONLY) {
-            return;
-        }
-        gameplayMode.serviceHardwareTimingBoundary(HardwareServiceBoundary.POST_OBJECTS);
-        gameplayMode.serviceHardwareTimingBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
+    static TraceReplayDrive.DriveOutcome driveSemanticFastForwardRow(
+            TraceData trace, RecordingFrameDriver frameDriver,
+            TraceReplayBootstrap.ReplayStartState replayStart,
+            TraceExecutionPhase phase, int traceIndex) {
+        return TraceReplayDrive.driveOneFrame(
+                trace, frameDriver, replayStart, phase, traceIndex);
     }
 
     static boolean isFireTransitionClipStart(
@@ -259,6 +256,9 @@ public final class TraceCaptureTool {
         TraceMetadata meta = trace.metadata();
         Bk2Movie movie = new Bk2MovieLoader().load(entry.bk2Path());
 
+        TraceCapturePresentationSetup.CallerState callerPresentation =
+                TraceCapturePresentationSetup.snapshot(GameServices.configuration());
+
         // --- pre-load configuration (must run BEFORE loadZoneAndAct) -------
         // Mirrors AbstractTraceReplayTest step 3: recorded team, cross-game
         // off, S3K intro-skip off for fresh-level traces. HeadlessGameBoot
@@ -266,17 +266,17 @@ public final class TraceCaptureTool {
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
 
         TraceCapturePresentationSetup presentation = TraceCapturePresentationSetup.open(
-                GameServices.configuration(), dimensions);
-        try (presentation) {
+                GameServices.configuration(), dimensions, callerPresentation);
         // --- boot headless gameplay session -------------------------------
         Path romPath = TraceToolRomLocations.resolve(
                 entry.gameId(), GameServices.configuration(), Path.of(""));
-        HeadlessGameBoot boot;
-        try (AutoCloseable nativeTraceWidth = presentation.pinNativeTraceWidth()) {
-            boot = new HeadlessGameBoot(
-                    dimensions.physicalWidth(), dimensions.physicalHeight(),
-                    dimensions.logicalWidth(), dimensions.logicalHeight());
-            try (BootOwnership<HeadlessGameBoot> ownership = new BootOwnership<>(boot)) {
+        try (CaptureBootScope<HeadlessGameBoot> scope = CaptureBootScope.open(
+                presentation,
+                () -> new HeadlessGameBoot(
+                        dimensions.physicalWidth(), dimensions.physicalHeight(),
+                        dimensions.logicalWidth(), dimensions.logicalHeight(),
+                        SCREEN_WIDTH, SCREEN_HEIGHT))) {
+            HeadlessGameBoot boot = scope.boot();
             GameLoop loop = boot.boot(
                     romPath,
                     entry.zone(),
@@ -325,7 +325,7 @@ public final class TraceCaptureTool {
             if (maxRequested >= trace.getFrame(trace.frameCount() - 1).frame()) {
                 fixture.closeHardwareTimingReplayRun();
             }
-            return ownership.transfer();
+            return scope.transferAfterRestoration();
         }
 
         // --- capture pipeline ---------------------------------------------
@@ -416,9 +416,7 @@ public final class TraceCaptureTool {
                 }
             }
         }
-        return ownership.transfer();
-        }
-        }
+        return scope.transferAfterRestoration();
         }
     }
 
@@ -452,6 +450,76 @@ public final class TraceCaptureTool {
                 throw failure;
             } catch (Throwable failure) {
                 throw new IllegalStateException("capture teardown failed", failure);
+            }
+        }
+    }
+
+    @FunctionalInterface
+    interface CheckedBootFactory<T extends AutoCloseable> {
+        T create() throws Exception;
+    }
+
+    /** Restores capture presentation before allowing boot ownership to escape. */
+    static final class CaptureBootScope<T extends AutoCloseable>
+            implements AutoCloseable {
+        private final BootOwnership<T> ownership;
+        private final AutoCloseable restoration;
+        private boolean restorationAttempted;
+
+        CaptureBootScope(T boot, AutoCloseable restoration) {
+            this.ownership = new BootOwnership<>(boot);
+            this.restoration = java.util.Objects.requireNonNull(
+                    restoration, "restoration");
+        }
+
+        static <T extends AutoCloseable> CaptureBootScope<T> open(
+                AutoCloseable restoration, CheckedBootFactory<T> factory)
+                throws Exception {
+            try {
+                return new CaptureBootScope<>(factory.create(), restoration);
+            } catch (Throwable failure) {
+                try {
+                    restoration.close();
+                } catch (Throwable cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+                if (failure instanceof Error error) throw error;
+                if (failure instanceof Exception exception) throw exception;
+                throw new IllegalStateException("capture boot construction failed", failure);
+            }
+        }
+
+        T boot() {
+            return ownership.boot;
+        }
+
+        T transferAfterRestoration() throws Exception {
+            restorationAttempted = true;
+            restoration.close();
+            return ownership.transfer();
+        }
+
+        @Override
+        public void close() throws Exception {
+            Throwable failure = null;
+            if (!restorationAttempted) {
+                restorationAttempted = true;
+                try {
+                    restoration.close();
+                } catch (Throwable cleanup) {
+                    failure = cleanup;
+                }
+            }
+            try {
+                ownership.close();
+            } catch (Throwable cleanup) {
+                if (failure == null) failure = cleanup;
+                else failure.addSuppressed(cleanup);
+            }
+            if (failure instanceof Error error) throw error;
+            if (failure instanceof Exception exception) throw exception;
+            if (failure != null) {
+                throw new IllegalStateException("capture scope teardown failed", failure);
             }
         }
     }
@@ -635,15 +703,13 @@ public final class TraceCaptureTool {
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
             TraceReplayDrive.DriveOutcome outcome =
-                    TraceReplayDrive.driveOneFrame(trace, frameDriver, replayStart, phase,
+                    driveSemanticFastForwardRow(trace, frameDriver, replayStart, phase,
                             driveTraceIndex);
             if (!outcome.consumedRow()) {
                 continue;
             }
 
             if (!capturing) {
-                serviceHeadlessFastForwardHardware(
-                        SessionManager.getCurrentGameplayMode(), phase);
                 Sonic3kAIZEvents live = resolveAizEvents();
                 if (fireTransitionClip) {
                     fireTransitionStartPending = fireTransitionStartPending

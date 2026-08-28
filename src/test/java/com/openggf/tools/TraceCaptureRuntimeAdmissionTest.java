@@ -1,19 +1,12 @@
 package com.openggf.tools;
 
-import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
-import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.trace.TraceExecutionPhase;
 import org.junit.jupiter.api.Test;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 class TraceCaptureRuntimeAdmissionTest {
     @Test
@@ -35,42 +28,6 @@ class TraceCaptureRuntimeAdmissionTest {
                 outcome, TraceExecutionPhase.ADVANCE_ONLY));
         assertFalse(TraceCaptureTool.shouldPresentOuterFrame(
                 TraceReplayDrive.DriveOutcome.RETRY, TraceExecutionPhase.FULL_LEVEL_FRAME));
-    }
-
-    @Test
-    void inputLatchFastForwardRetiresOnlyRealRuntimeWorkAtOwnedBoundaries() {
-        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
-
-        TraceCaptureTool.serviceHeadlessFastForwardHardware(
-                gameplayMode, TraceExecutionPhase.ADVANCE_ONLY);
-
-        org.mockito.Mockito.inOrder(gameplayMode).verify(gameplayMode)
-                .serviceHardwareTimingBoundary(HardwareServiceBoundary.POST_OBJECTS);
-        verify(gameplayMode).serviceHardwareTimingBoundary(
-                HardwareServiceBoundary.PRE_MAIN_LOOP);
-    }
-
-    @Test
-    void ordinaryFastForwardRowsKeepTheirExistingBoundaryOwnership() {
-        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
-
-        TraceCaptureTool.serviceHeadlessFastForwardHardware(
-                gameplayMode, TraceExecutionPhase.FULL_LEVEL_FRAME);
-
-        verifyNoInteractions(gameplayMode);
-    }
-
-    @Test
-    void fastForwardServiceDoesNotCreateRuntimeWork() throws Exception {
-        String source = Files.readString(Path.of(
-                "src/main/java/com/openggf/tools/TraceCaptureTool.java"));
-        int service = source.indexOf("serviceHeadlessFastForwardHardware");
-
-        assertTrue(service >= 0);
-        assertTrue(source.substring(service, Math.min(source.length(), service + 700))
-                        .contains("TraceExecutionPhase.ADVANCE_ONLY"));
-        assertFalse(source.substring(service, Math.min(source.length(), service + 700))
-                        .contains("queue("));
     }
 
     @Test

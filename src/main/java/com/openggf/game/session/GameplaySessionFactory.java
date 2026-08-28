@@ -34,10 +34,15 @@ public final class GameplaySessionFactory {
 
     public static void attachManagers(GameplayModeContext gameplayMode,
                                       EngineContext services) {
+        attachManagers(gameplayMode, services, new Camera());
+    }
+
+    public static void attachManagers(GameplayModeContext gameplayMode,
+                                      EngineContext services,
+                                      Camera camera) {
         Objects.requireNonNull(gameplayMode, "gameplayMode");
         Objects.requireNonNull(services, "services");
-
-        Camera camera = new Camera();
+        Objects.requireNonNull(camera, "camera");
         TimerManager timers = new TimerManager();
         GameStateManager gameState = new GameStateManager();
         GameModule sessionModule = gameplayMode.getWorldSession() != null

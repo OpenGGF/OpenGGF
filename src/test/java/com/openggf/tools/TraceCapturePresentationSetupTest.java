@@ -6,6 +6,10 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.graphics.TilemapGpuRenderer;
 import com.openggf.level.ParallaxManager;
 import com.openggf.tests.SingletonResetExtension;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.trace.TraceFixtures;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +27,7 @@ class TraceCapturePresentationSetupTest {
 
     @BeforeEach
     void setUp() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         configuration = SonicConfigurationService.getInstance();
         configuration.resetToDefaults();
         configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
@@ -73,17 +78,28 @@ class TraceCapturePresentationSetupTest {
     }
 
     @org.junit.jupiter.api.Test
-    void nativeTraceWidthScopeDoesNotDiscardWidescreenPresentationWidth() throws Exception {
-        try (TraceCapturePresentationSetup setup = TraceCapturePresentationSetup.open(
-                configuration, TraceCaptureDimensions.resolve(400, 1))) {
-            assertEquals(400, configuration.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
-            try (AutoCloseable ignored = setup.pinNativeTraceWidth()) {
-                assertEquals(320, configuration.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
-            }
-            assertEquals(400, configuration.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+    void snapshotsCallerStateBeforeTracePreparationAndRestoresItAfterPresentation() {
+        configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
+        configuration.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "ULTRA_21_9");
+        configuration.resolveDisplayAspect();
+        TraceCapturePresentationSetup.CallerState callerState =
+                TraceCapturePresentationSetup.snapshot(configuration);
+
+        var metadata = TraceFixtures.metadata("s3k", 0, 0);
+        TraceReplaySessionBootstrap.prepareConfiguration(null, metadata);
+        assertEquals("NATIVE_4_3",
+                configuration.getString(SonicConfiguration.DISPLAY_ASPECT));
+
+        try (TraceCapturePresentationSetup ignored = TraceCapturePresentationSetup.open(
+                configuration, TraceCaptureDimensions.resolve(400, 1), callerState)) {
             assertEquals("WIDE_16_9",
                     configuration.getString(SonicConfiguration.DISPLAY_ASPECT));
+            assertTrue(!configuration.getBoolean(SonicConfiguration.TEST_MODE_ENABLED));
         }
+
+        assertEquals("ULTRA_21_9",
+                configuration.getString(SonicConfiguration.DISPLAY_ASPECT));
+        assertTrue(configuration.getBoolean(SonicConfiguration.TEST_MODE_ENABLED));
     }
 
     private static int privateInt(Object target, String fieldName) throws Exception {

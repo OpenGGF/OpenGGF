@@ -2,11 +2,8 @@ package com.openggf.tools;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TraceCaptureDimensionsTest {
 
@@ -31,11 +28,15 @@ class TraceCaptureDimensionsTest {
         assertEquals(supportTier, dimensions.supportTier());
     }
 
-    @Test
-    void rejectsNonpositiveScaleBeforeCreatingAFramebuffer() {
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> TraceCaptureDimensions.resolve(400, 0));
+    @ParameterizedTest
+    @CsvSource({"0,400,224", "-3,400,224"})
+    void normalizesNonpositiveRuntimeScaleToOne(
+            int requestedScale, int physicalWidth, int physicalHeight) {
+        TraceCaptureDimensions dimensions =
+                TraceCaptureDimensions.resolve(400, requestedScale);
 
-        assertTrue(failure.getMessage().contains("--scale"), failure.getMessage());
+        assertEquals(1, dimensions.scale());
+        assertEquals(physicalWidth, dimensions.physicalWidth());
+        assertEquals(physicalHeight, dimensions.physicalHeight());
     }
 }

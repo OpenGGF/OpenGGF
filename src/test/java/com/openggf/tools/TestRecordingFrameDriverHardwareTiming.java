@@ -271,6 +271,63 @@ class TestRecordingFrameDriverHardwareTiming {
     }
 
     @Test
+    void semanticFastForwardLeavesAdvanceOnlyWithoutBoundaryAndRetiresAtRecordedBoundary()
+            throws Exception {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        RecordedCompletionAuthority authority =
+                context.hardwareTiming().beginRecordedAdmission();
+        CountingPreparation preparation = new CountingPreparation(new byte[] {35});
+        HardwareWorkSubmission submission = new HardwareWorkSubmission(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                0x36800E, 0x100, 0x5000, 1, "KosM", 1, false, preparation);
+        HardwareCompletionEdge edge = new HardwareCompletionEdge(
+                0x18CB,
+                com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP,
+                submission.kind(), 0,
+                HardwareSubmissionFingerprint.compute(submission));
+        HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
+        port.install(new HardwareTimingSchedule(List.of(edge)));
+        HardwareWorkHandle handle = context.hardwareTiming().submit(submission);
+        context.hardwareTiming().service(
+                com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS);
+        int preparationSteps = preparation.steps();
+        TraceHardwareTimingBoundaryObserver observer =
+                new TraceHardwareTimingBoundaryObserver(port);
+        context.setHardwareTimingBoundaryObserver(observer);
+        RecordingFrameDriver driver =
+                new RecordingFrameDriver(mock(AbstractPlayableSprite.class));
+        LevelManager level = mock(LevelManager.class);
+        when(level.getObjectManager()).thenReturn(mock(ObjectManager.class));
+        setField(driver, "levelManager", level);
+        driver.installHardwareTimingReplayObserver(observer);
+        driver.setBk2Movie(twoFrameMovie(), 0);
+        TraceData trace = mock(TraceData.class);
+        when(trace.getFrame(0)).thenReturn(TraceFrame.of(0x18CA, 0,
+                (short) 0, (short) 0, (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0));
+        when(trace.getFrame(1)).thenReturn(TraceFrame.of(0x18CB, 0,
+                (short) 0, (short) 0, (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0));
+
+        TraceCaptureTool.driveSemanticFastForwardRow(trace, driver,
+                TraceReplayBootstrap.ReplayStartState.DEFAULT,
+                TraceExecutionPhase.ADVANCE_ONLY, 0);
+
+        assertFalse(context.hardwareTiming().isReady(handle));
+        assertEquals(preparationSteps, preparation.steps());
+        assertEquals(0, port.capture().consumedIdentities().size());
+
+        TraceCaptureTool.driveSemanticFastForwardRow(trace, driver,
+                TraceReplayBootstrap.ReplayStartState.DEFAULT,
+                TraceExecutionPhase.VBLANK_ONLY, 1);
+
+        assertTrue(context.hardwareTiming().isReady(handle));
+        assertEquals(preparationSteps, preparation.steps());
+        assertEquals(1, port.capture().consumedIdentities().size());
+    }
+
+    @Test
     void heldS3kTitleCardSkipSurroundsActualProviderScanWithBoundaries()
             throws Exception {
         TitleCardProvider provider = mock(TitleCardProvider.class);
@@ -315,6 +372,14 @@ class TestRecordingFrameDriverHardwareTiming {
                 Map.of(),
                 List.of(new Bk2FrameInput(0, 0, 0, false, "")),
                 1);
+    }
+
+    private static Bk2Movie twoFrameMovie() {
+        return new Bk2Movie(
+                Path.of("hardware-timing-fast-forward-test.bk2"),
+                "logkey", Map.of(), List.of(
+                        new Bk2FrameInput(0, 0, 0, false, ""),
+                        new Bk2FrameInput(1, 0, 0, false, "")), 2);
     }
 
     private static void setField(Object target, String name, Object value)

@@ -129,6 +129,25 @@ class TraceCaptureToolArgsTest {
     }
 
     @Test
+    void restorationFailureRetainsBootOwnershipForCleanup() {
+        AtomicBoolean bootClosed = new AtomicBoolean();
+        IllegalStateException restorationFailure =
+                new IllegalStateException("restore failed");
+
+        IllegalStateException actual = assertThrows(IllegalStateException.class, () -> {
+            try (TraceCaptureTool.CaptureBootScope<AutoCloseable> scope =
+                    new TraceCaptureTool.CaptureBootScope<>(
+                            () -> bootClosed.set(true),
+                            () -> { throw restorationFailure; })) {
+                scope.transferAfterRestoration();
+            }
+        });
+
+        assertSame(restorationFailure, actual);
+        assertTrue(bootClosed.get());
+    }
+
+    @Test
     void ordinarySingleSegmentTraceIsCapturable() {
         TraceEntry level = new TraceEntry(
                 Path.of("traces", "s3k", "aiz1"),

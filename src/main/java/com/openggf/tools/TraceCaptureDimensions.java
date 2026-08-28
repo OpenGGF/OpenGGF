@@ -32,15 +32,13 @@ public record TraceCaptureDimensions(
 
     public static TraceCaptureDimensions resolve(int logicalWidth, int scale) {
         validateLogicalWidth(logicalWidth);
+        int effectiveScale = scale <= 0 ? 1 : scale;
         WidescreenAspect aspect = Arrays.stream(WidescreenAspect.values())
                 .filter(candidate -> candidate.pixelWidth() == logicalWidth)
                 .findFirst().orElseThrow();
-        if (scale <= 0) {
-            throw new IllegalArgumentException("--scale must be positive: " + scale);
-        }
-        return new TraceCaptureDimensions(logicalWidth, LOGICAL_HEIGHT, scale,
-                Math.multiplyExact(logicalWidth, scale),
-                Math.multiplyExact(LOGICAL_HEIGHT, scale), aspect);
+        return new TraceCaptureDimensions(logicalWidth, LOGICAL_HEIGHT, effectiveScale,
+                Math.multiplyExact(logicalWidth, effectiveScale),
+                Math.multiplyExact(LOGICAL_HEIGHT, effectiveScale), aspect);
     }
 
     static void validateLogicalWidth(int logicalWidth) {
