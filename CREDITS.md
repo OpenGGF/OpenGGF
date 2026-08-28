@@ -21,14 +21,58 @@ This project uses documentation, tools, and reference implementations from many 
 | **Maxim**            | SN76489 PSG documentation (SMS Power!) <br/> <br/> https://www.smspower.org/Development/SN76489                                                                             |
 | **Stephan Dittrich** | Gens YM2612 Java port (YM2612.java.example)                                                                                     |
 | **Xeeynamo**         | SMPSPlay contributions (wave output, channel muting)                                                                            |
-| **Eke-Eke**          | Genesis Plus GX - YM2612 and PSG emulation cores <br/><br/> https://github.com/ekeeke/Genesis-Plus-GX                           |
+| **Eke-Eke**          | Genesis Plus GX - YM2612 and PSG emulation cores (see *Emulation cores* below) <br/><br/> https://github.com/ekeeke/Genesis-Plus-GX |
+| **Jarek Burczynski, Tatsuyuki Satoh (MAME)** | Original `fm.c` YM2612 software implementation that the Genesis Plus GX / libvgm `ym2612.c` core descends from |
+| **Nemesis, Sauraen** | YM2612 hardware tests and die-shot analysis credited in the `ym2612.c` core header <br/><br/> http://gendev.spritesmind.net/forum/viewtopic.php?t=386 |
+| **Shay Green (blargg)** | blip_buf band-limited synthesis library (LGPL 2.1+), the model for `BlipDeltaBuffer` <br/><br/> http://www.slack.net/~ant/ |
 | **MAME Team**        | Sound emulation cores used by SMPSPlay                                                                                          |
-| **libvgm**           | Audio output and emulation libraries                                                                                            |
+| **libvgm**           | Audio output and emulation libraries; carries the same GPGX-derived `ym2612.c` core that SMPSPlay uses <br/><br/> https://github.com/ValleyBell/libvgm |
 | **flamewing**        | S3K Z80 sound driver documentation and bugfixes                                                                                 |
 | **clownacy**         | SMPS sound driver disassembly work across S1, S2, and S3K                                                                       |
 | **MarkeyJester**     | Original S3K Z80 sound driver disassembly                                                                                       |
 | **Linncaki**         | S3K sound driver routines, pointers, and data identification                                                                    |
 | **Xenowhirl**        | Sonic 2 Z80 sound driver disassembly                                                                                            |
+
+### Emulation cores
+
+The chip emulators under `src/main/java/com/openggf/audio/synth/` are Java ports of
+C cores rather than original designs. Their provenance, as far as the repository
+history and the source headers establish it:
+
+| Engine class | Origin | Notes |
+|--------------|--------|-------|
+| `Ym2612Chip` | `ym2612.c` from Genesis Plus GX, as shipped in libvgm / SMPSPlay. That file is Jarek Burczynski and Tatsuyuki Satoh's MAME `fm.c` with Eke-Eke's Genesis Plus GX fixes. | Began as an original implementation (2025-11-27); the core tables and update logic were ported from the GPGX/libvgm `ym2612.c` on 2025-12-10 (commit `eae2da2ca`) and the class cites `ym2612.c` line numbers. Genesis Plus GX's own licence permits non-commercial use only. |
+| `PsgChip` | `psg.c` from Genesis Plus GX (Copyright 2016-2017 Eke-Eke). | Header states "Based on the Genesis Plus GX PSG core"; timing (`PSG_MCYCLES_RATIO`), noise and volume handling follow `psg.c`. `psg.c` carries Eke-Eke's non-commercial licence in its header. |
+| `BlipDeltaBuffer` | `blip_buf.c` by Shay Green, as modified for Genesis Plus GX. | Library is LGPL 2.1 or later. |
+| `BlipResampler` | Windowed-sinc resampler written for OpenGGF, "based on the same principles as" blip_buf. | Not a port. |
+
+## Libraries and tools
+
+### Runtime dependencies
+
+| Library | Licence | Use |
+|---------|---------|-----|
+| **LWJGL 3** (core, OpenGL, GLFW, OpenAL, stb) <br/> https://www.lwjgl.org | BSD 3-Clause | Window, input, rendering, and audio output |
+| **JOML** <br/> https://github.com/JOML-CI/JOML | MIT | Vector and matrix maths for the renderer |
+| **Jackson** (`jackson-databind`, `jackson-dataformat-yaml`) <br/> https://github.com/FasterXML/jackson | Apache License 2.0 | `config.yaml`, trace metadata, and manifest parsing |
+| **Apache Commons Lang** (`commons-lang3`) <br/> https://commons.apache.org/proper/commons-lang/ | Apache License 2.0 | General utilities |
+
+### Test-time dependencies
+
+| Library | Licence |
+|---------|---------|
+| **JUnit 5 (Jupiter)** <br/> https://junit.org/junit5/ | Eclipse Public License 2.0 |
+| **Mockito** <br/> https://site.mockito.org | MIT |
+| **ArchUnit** <br/> https://www.archunit.org | Apache License 2.0 |
+| **SLF4J** (`slf4j-nop`) <br/> https://www.slf4j.org | MIT |
+
+### Trace toolchain
+
+| Project | Contribution |
+|---------|--------------|
+| **BizHawk** <br/> https://tasvideos.org/BizHawk | Emulator and BK2 movie format behind the headless trace recorder in `tools/bizhawk-headless/`; its Genesis Plus GX core produces the reference physics, aux-state, and audio traces the `*TraceReplay` suites compare against |
+| **TASVideos** <br/> https://tasvideos.org | Hosts BizHawk and the movie-format documentation the recorder relies on |
+| **Genesis Plus GX** (Eke-Eke) | Emulation core inside BizHawk used for trace capture, in addition to the chip cores ported above |
 
 ## Physics & Collision
 
