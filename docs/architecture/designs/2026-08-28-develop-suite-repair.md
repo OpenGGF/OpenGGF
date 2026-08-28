@@ -2,9 +2,15 @@
 
 ## Context
 
-At commit `a29d5fd7a`, the ordinary JDK 21 Maven suite reports 14,867 tests with
-43 failures, 6 errors, and 36 skips when all three verified retail ROMs are
-provided. The failures span runtime scheduling, rewind, S2 and S3K objects,
+At commit `a29d5fd7a`, a preliminary ordinary JDK 21 Maven run reported 14,867
+tests with 43 failures, 6 errors, and 36 skips when all three verified retail
+ROMs were provided. That count was collected before the repair worktree existed
+and without first clearing prior Surefire reports or pinning run order, so it is
+orientation evidence, not the authoritative control. The first implementation
+step must reproduce and archive a clean, alphabetical baseline in the isolated
+worktree.
+
+The observed failures span runtime scheduling, rewind, S2 and S3K objects,
 collision, rendering, and configuration. They are largely inherited: the
 August 27 audio rollback records a method-matched baseline of 44 failures and
 16 errors. The repair therefore cannot be treated as one recent regression or
@@ -22,6 +28,9 @@ as an invitation to restore the rolled-back audio programme.
   output directory, intact.
 - Produce independently reviewable commits whose focused verification identifies
   exactly which failure cluster each commit changes.
+- Treat a failure as improved only when it becomes green or its independently
+  meaningful frontier advances without adding a new mismatch; a lower aggregate
+  count alone is insufficient.
 
 ## Non-goals
 
@@ -32,7 +41,23 @@ as an invitation to restore the rolled-back audio programme.
 - Hiding unresolved failures by changing coverage inventories, tolerances, or
   expected values without an independently established production contract.
 
-## Repair strategy
+## Programme decomposition
+
+This design is an umbrella for independently planned repair subprojects. Only
+the frame/resource-lifecycle subproject is planned initially. After each
+subproject, the ordinary suite is remeasured and the remaining red set is
+reclassified before the next plan is written. This prevents later plans from
+prescribing fixes for failures that disappear when an upstream contract is
+corrected.
+
+Each subproject must be independently acceptable: it has a named failing set,
+one or more verified root causes, focused regression tests, a full-suite delta,
+and a commit that can be retained even if a later subproject is stopped. Once
+the shared lifecycle subproject is green and remeasured, genuinely independent
+leaf subprojects may be investigated in separate worktrees, but they merge into
+this repair branch one at a time after focused and full-delta review.
+
+## Repair strategy and ordering
 
 Work proceeds in dependency order because an incorrect shared scheduling or
 ownership contract can produce many downstream object failures.
@@ -55,8 +80,10 @@ ownership contract can produce many downstream object failures.
    their existing object, event, scroll, or resource owners. No zone predicate
    may be added to shared code.
 5. **Rendering and configuration isolation.** Restore SAT priority propagation.
-   Make the capture-default test read packaged defaults independently of the
-   user's `config.yaml`; do not alter the user's preferred output directory.
+   Make the capture-default test exercise the packaged default through an
+   isolated configuration source rather than the repository-root user override.
+   Do not change the production default-loading precedence or the user's
+   preferred output directory merely to make the test pass.
 
 Each lane starts with the already-failing test as its red case. Investigation
 must establish a single root-cause hypothesis before production edits. One
@@ -76,18 +103,50 @@ with command, commit, result, error count, and first divergent field.
 
 ## Verification and regression control
 
-The immutable control is `a29d5fd7a`. Before implementation, the isolated
-repair worktree reproduces the ordinary red set with explicit ROM properties
-and alphabetical test order. Each commit records focused commands and compares
-failing test names, not just totals.
+The immutable source control is `a29d5fd7a`. Before implementation, the isolated
+repair worktree clears generated reports and reproduces the ordinary red set
+with explicit ROM properties, full Maven output, and alphabetical test order.
+The baseline record includes every failing test name, assertion or exception
+message, and skipped count, and is stored in
+`docs/architecture/audits/2026-08-28-develop-suite-repair-baseline.md`. Each
+commit records focused commands and compares those names and messages, not just
+totals. A regression is any newly failing test, any changed pre-existing failure
+attributable to the repair, or any previously failing test whose error becomes
+earlier, broader, or more severe.
 
-Before integration, run:
+The ordinary control and candidate command is:
 
-- the ordinary suite with all three ROMs;
+```bash
+rm -rf target/surefire-reports
+mvn -Dmse=off -Dsurefire.runOrder=alphabetical \
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen \
+  -Ds3k.rom.path=s3k.gen test -B
+```
+
+Before integration, also run:
+
 - `mvn -Dmse=off -Pguards test -B` in a fresh JVM;
-- the S3K keep-green classes after any shared runtime change;
-- the trace-replay profile with all required ROMs after any trace-reachable
-  change.
+- the S3K keep-green command after any shared runtime change:
+
+  ```bash
+  mvn -Dmse=off -Dsurefire.runOrder=alphabetical \
+    -Ds3k.rom.path=s3k.gen \
+    -Dtest='TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+    test -B
+  ```
+
+- the trace-replay command after any trace-reachable change:
+
+  ```bash
+  rm -rf target/surefire-reports target/trace-reports
+  mvn -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen \
+    -Ds3k.rom.path=s3k.gen test -B
+  ```
+
+Focused Maven invocations do not establish full-suite totals because unrelated
+XML may remain in the worktree. Their evidence is limited to the explicitly
+selected classes and the process exit code.
 
 Delivery follows the repository workflow: fetch and fast-forward `develop`,
 record its updated baseline, run the same full verification in the repair
