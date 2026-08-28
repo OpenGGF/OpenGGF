@@ -325,6 +325,10 @@ and trace policy statements match `docs/status/trace-scope-release-6.md`, and
 Contributor and player guides were corrected the same day (hook installation,
 config defaults, player-2 bindings, dead links), and the skill mirrors were
 resynchronised.
+Repository hygiene followed: IDE/scratch files and two native libraries were
+untracked, root plans and launcher scripts moved to `docs/architecture/` and
+`scripts/`, saved third-party web pages replaced with provenance stubs, and
+`CREDITS.md` now attributes every runtime library, test tool, and chip core.
 
 The current S3K release priority is the AIZ → HCZ playable route. Knuckles
 routes, later-zone completeness, and some bonus/special-stage paths remain

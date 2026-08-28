@@ -23,7 +23,7 @@
 __pycache__/
 
 # IDE temporary
-.idea/shelf/
+.idea/
 
 # Archives
 *.7z
@@ -57,6 +57,9 @@ tools/*
 !tools/traces/s1_credits_raw_evidence.py
 !tools/traces/build_s1_credits_raw_host_evidence.py
 !tools/traces/no_replace_output.py
+
+# Windows Explorer folder metadata
+desktop.ini
 
 # Screenshots (keep locally)
 docs/screenshots/
@@ -97,6 +100,9 @@ target/trace-reports/
 # Capture output and any sidecar/backup capture directory. Payloads here are
 # uncompressed and enormous; validate-policy rejects them at commit time.
 tools/bizhawk/trace_output*/
+
+# LWJGL native extraction directory accidentally staged once; never track it
+/.tmpdir/
 
 # Windows NUL redirect artifact created when a `> NUL` runs on a POSIX shell
 tools/bizhawk/NUL

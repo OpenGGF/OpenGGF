@@ -421,8 +421,9 @@ diagnose against a source of truth.
 
 Reference material: `docs/SMPS-rips/SMPSPlay/` (SMPSPlay source), `docs/SMPS-rips/` (ripped
 audio data and SMPSPlay configurations), `docs/YM2612.java.example` (a Gens YM2612 port,
-missing PCM functionality, possibly incorrect), and various saved `.htm` documents in
-`docs/`.
+missing PCM functionality, possibly incorrect), and the provenance stubs for external
+YM2612/SN76489/SMPS references under `docs/architecture/research/audio/` (each `.md` stub
+names the original URL; the pages themselves are not tracked).
 
 ## Configuration and startup
 
