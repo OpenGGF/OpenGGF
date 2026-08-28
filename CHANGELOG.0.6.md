@@ -4,6 +4,10 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **HCZ2 Turbo Spikers no longer crash live rewind during unload:** attached
+  shell and waterfall children now close their parent references immediately,
+  while launched shells retain their independent ROM lifetime.
+
 - **The release structural checks are green again:** object priority rendering
   now reuses one palette-mask transition path, preserving the AIZ2 bridge
   layering fix while keeping rendering responsibility out of the already-large
