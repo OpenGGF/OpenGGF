@@ -317,7 +317,7 @@ public class TestGameLoop {
         int classification = source.indexOf(
                 "playbackDebugManager.shouldSkipCurrentGameplayTick();");
         int timers = source.indexOf("timerManager.update();", classification);
-        String prefix = source.substring(Math.max(0, classification - 180), classification);
+        String prefix = source.substring(Math.max(0, classification - 280), classification);
 
         assertTrue(prefix.contains("currentGameMode == GameMode.LEVEL"));
         assertTrue(prefix.contains("currentGameMode == GameMode.BONUS_STAGE"),
@@ -328,13 +328,17 @@ public class TestGameLoop {
 
     @Test
     public void userRecordingPlaybackPolicyObservesAppliedMovieFrameBeforeCursorAdvance() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        String source = Files.readString(Path.of(
+                "src/main/java/com/openggf/LevelIterationAdmissionController.java"));
 
-        assertTrue(source.contains("int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();"),
-                "GameLoop must capture the BK2 frame before advancing the playback cursor");
-        assertTrue(source.contains("userRecordingControls.afterPlaybackFrame(\n" +
-                        "                    appliedPlaybackFrame,"),
-                "Target/completion policy must classify the frame that was just applied");
+        int capture = source.indexOf("appliedFrame = playback.getCursorFrame();");
+        int advance = source.indexOf("playback.onLevelFrameAdvanced();", capture);
+        int policy = source.indexOf("recordingControls.afterPlaybackFrame(\n" +
+                        "                appliedFrame,", advance);
+        assertTrue(capture >= 0 && advance > capture,
+                "the admission controller must capture the BK2 frame before advancing the cursor");
+        assertTrue(policy > advance,
+                "target/completion policy must classify the frame that was just applied");
     }
 
     @Test

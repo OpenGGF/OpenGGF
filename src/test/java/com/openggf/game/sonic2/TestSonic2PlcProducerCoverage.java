@@ -26,8 +26,6 @@ import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic2.objects.SignpostObjectInstance;
 import com.openggf.game.sonic2.titlecard.TitleCardManager;
-import com.openggf.game.sonic2.titlecard.TitleCardState;
-import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
@@ -181,16 +179,8 @@ class TestSonic2PlcProducerCoverage {
     @Test
     void titleCardOwnerPublishesWaterThenZoneAnimalAtTextExit() throws Exception {
         TitleCardManager card = new TitleCardManager();
-        card.initialize(0, 0);
-        for (String name : List.of("zoneNameElement", "zoneTextElement", "actNumberElement")) {
-            Field element = TitleCardManager.class.getDeclaredField(name);
-            element.setAccessible(true);
-            ((TitleCardElement) element.get(card)).startExit();
-        }
-        Field state = TitleCardManager.class.getDeclaredField("state");
-        state.setAccessible(true);
-        state.set(card, TitleCardState.TEXT_EXIT);
-        for (int frame = 0; frame < 20; frame++) {
+        card.beginOmittedPresentationExitTail(0, 0);
+        for (int frame = 0; frame < 100 && !card.isComplete(); frame++) {
             card.update();
         }
 

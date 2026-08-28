@@ -1215,7 +1215,9 @@ public class GameLoop {
             return;
         }
 
-        if (TraceSessionLauncher.admitsRunLogicalGameplayInput(currentGameMode)) {
+        if ((currentGameMode == GameMode.LEVEL
+                || currentGameMode == GameMode.BONUS_STAGE)
+                && TraceSessionLauncher.admitsRunLogicalGameplayInput(currentGameMode)) {
             playbackDebugManager.shouldSkipCurrentGameplayTick();
         }
 
@@ -1465,9 +1467,13 @@ public class GameLoop {
                 // and lag-row admission remain authoritative here.
                 ssProvider.setLagCompensation(0);
             }
+            // Normalize missing provider phases at the boundary instead of
+            // admitting an ambiguous lifecycle claim.
+            PlcLifecyclePhase specialStagePhase = PlcLifecyclePhase.orElse(
+                    ssProvider.specialStagePlcLifecyclePhase(), PlcLifecyclePhase.SPECIAL_STAGE);
             LevelFrameStep.executeHardwareTimedObjectScan(
                     LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
-                    ssProvider.specialStagePlcLifecyclePhase(), () -> {
+                    specialStagePhase, () -> {
                         if (pacing == null) {
                             updateSpecialStageInput();
                             ssProvider.update();

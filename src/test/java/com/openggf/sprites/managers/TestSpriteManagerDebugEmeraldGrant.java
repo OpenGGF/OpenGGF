@@ -2,6 +2,7 @@ package com.openggf.sprites.managers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.NullAudioBackend;
@@ -50,6 +51,11 @@ class TestSpriteManagerDebugEmeraldGrant {
         GameplayModeContext mode = TestEnvironment.activeGameplayMode();
         SpriteManager spriteManager = new SpriteManager();
         GameStateManager gameStateManager = new GameStateManager();
+        CollisionSystem collisionSystem = mock(CollisionSystem.class);
+        when(collisionSystem.key()).thenReturn("collision");
+        ZoneLayoutMutationPipeline mutationPipeline =
+                mock(ZoneLayoutMutationPipeline.class);
+        when(mutationPipeline.key()).thenReturn("mutation-pipeline");
         mode.attachGameplayManagers(
                 new Camera(),
                 new TimerManager(),
@@ -63,7 +69,7 @@ class TestSpriteManagerDebugEmeraldGrant {
                 new WaterSystem(),
                 new ParallaxManager(),
                 mock(TerrainCollisionManager.class),
-                mock(CollisionSystem.class),
+                collisionSystem,
                 spriteManager,
                 mock(LevelManager.class));
         mode.attachSharedRegistries(
@@ -72,7 +78,7 @@ class TestSpriteManagerDebugEmeraldGrant {
                 new AnimatedTileChannelGraph(),
                 new SpecialRenderEffectRegistry(),
                 new AdvancedRenderModeController(),
-                mock(ZoneLayoutMutationPipeline.class));
+                mutationPipeline);
     }
 
     @AfterEach
