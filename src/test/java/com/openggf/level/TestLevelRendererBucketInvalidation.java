@@ -140,6 +140,22 @@ class TestLevelRendererBucketInvalidation {
     }
 
     @Test
+    void priorityObjectPassAppliesPaletteMaskTransitionsInSlotDrawOrder() {
+        ObjectManager manager = newObjectManager();
+        TestObject rearBridge = observedObject(0x100, 2, 0b0011);
+        TestObject frontBridge = observedObject(0x120, 2, 0b0111);
+        manager.addDynamicObjectAtSlot(frontBridge, 40);
+        manager.addDynamicObjectAtSlot(rearBridge, 41);
+
+        manager.drawPriorityBucket(2, false);
+
+        assertEquals(List.of(0b0011), rearBridge.observedTileOcclusionMasks,
+                "higher SST slots draw first with their own tile-occlusion mask");
+        assertEquals(List.of(0b0111), frontBridge.observedTileOcclusionMasks,
+                "the next object must observe the mask selected at its draw boundary");
+    }
+
+    @Test
     void spriteManagerLazyRebuildMatchesEagerOrderAcrossMutations() throws Exception {
         SpriteManager manager = new SpriteManager();
         manager.clearAllSprites();
@@ -383,6 +399,13 @@ class TestLevelRendererBucketInvalidation {
         when(sprite.isHighPriority()).thenReturn(highPriority);
         when(sprite.isCpuControlled()).thenReturn(cpuControlled);
         return sprite;
+    }
+
+    private TestObject observedObject(int x, int priorityBucket, int tileOcclusionPaletteMask) {
+        TestObject object = new TestObject(x, priorityBucket, false);
+        object.tileOcclusionPaletteMask = tileOcclusionPaletteMask;
+        object.graphicsManager = graphicsManager;
+        return object;
     }
 
     private static boolean bucketsDirty(Object manager, Class<?> type) throws Exception {

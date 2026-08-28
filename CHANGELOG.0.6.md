@@ -4,6 +4,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **The release structural checks are green again:** object priority rendering
+  now reuses one palette-mask transition path, preserving the AIZ2 bridge
+  layering fix while keeping rendering responsibility out of the already-large
+  `ObjectManager` facade.
+
 - **Sonic 1 swinging platforms no longer break live rewind when object RAM is
   full:** chain construction now stops at the shipped ROM's first failed
   `FindFreeObj`, retaining only managed, identity-bearing links instead of an
