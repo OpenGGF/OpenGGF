@@ -36,6 +36,7 @@ import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.Sonic3kObjectProfile;
@@ -990,9 +991,9 @@ class TestS3kIczEndBossObject {
                 new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
         AbstractObjectInstance object = (AbstractObjectInstance) instance;
         RecordingServices services = new RecordingServices();
-        AbstractPlayableSprite main = mock(AbstractPlayableSprite.class);
-        AbstractPlayableSprite nativeP2 = mock(AbstractPlayableSprite.class);
-        AbstractPlayableSprite extension = mock(AbstractPlayableSprite.class);
+        AbstractPlayableSprite main = new Sonic("sonic", (short) 0, (short) 0);
+        AbstractPlayableSprite nativeP2 = new Sonic("sonic_p2", (short) 0, (short) 0);
+        AbstractPlayableSprite extension = new Sonic("sonic_p3", (short) 0, (short) 0);
         services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension)));
         services.camera.setX((short) 0x4390);
         services.camera.setY((short) 0x05F8);
@@ -1013,9 +1014,9 @@ class TestS3kIczEndBossObject {
             }
         }
         assertTrue(activePuff >= 0);
-        bindPlayerToFrostPuff(instance, main, activePuff);
-        bindPlayerToFrostPuff(instance, nativeP2, activePuff);
-        bindPlayerToFrostPuff(instance, extension, activePuff);
+        placePlayerAtFrostPuff(instance, main, activePuff);
+        placePlayerAtFrostPuff(instance, nativeP2, activePuff);
+        placePlayerAtFrostPuff(instance, extension, activePuff);
 
         instance.update(nextFrame++, main);
         instance.update(nextFrame, main);
@@ -1031,6 +1032,9 @@ class TestS3kIczEndBossObject {
         assertSame(main, blocks.get(0).capturedPlayerForTesting());
         assertSame(nativeP2, blocks.get(1).capturedPlayerForTesting());
         assertSame(extension, blocks.get(2).capturedPlayerForTesting());
+        assertTrue(main.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlled());
+        assertTrue(extension.isObjectControlled());
     }
 
     @Test
@@ -1092,8 +1096,13 @@ class TestS3kIczEndBossObject {
         sidekicks.remove(nativeP2);
         publishBossSolidContact(instance, extension, 1);
 
-        org.mockito.Mockito.verify(extension, org.mockito.Mockito.never()).setAir(true);
-        assertEquals(0, frozenPlayerBlockCount(services));
+        org.mockito.Mockito.verify(extension).setAir(true);
+        List<IczFreezerObjectInstance.FrozenPlayerBlock> blocks = services.spawnedChildren.stream()
+                .filter(IczFreezerObjectInstance.FrozenPlayerBlock.class::isInstance)
+                .map(IczFreezerObjectInstance.FrozenPlayerBlock.class::cast)
+                .toList();
+        assertEquals(1, blocks.size());
+        assertSame(extension, blocks.getFirst().capturedPlayerForTesting());
     }
 
     @Test
@@ -1122,7 +1131,7 @@ class TestS3kIczEndBossObject {
     }
 
     @Test
-    void frostPuffsDoNotControlLockExtendedSidekickWhenBlockAllocationFails() throws Exception {
+    void frostPuffsFreezeExtendedSidekickWithoutConsumingNativeObjectSlot() throws Exception {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
         AbstractObjectInstance object = (AbstractObjectInstance) instance;
@@ -1160,8 +1169,9 @@ class TestS3kIczEndBossObject {
         instance.update(nextFrame, main);
         publishBossSolidContact(instance, extension, nextFrame);
 
-        org.mockito.Mockito.verify(extension, org.mockito.Mockito.never()).setAir(true);
-        assertEquals(0, frozenPlayerBlockCount(services));
+        org.mockito.Mockito.verify(extension).setAir(true);
+        assertEquals(1, frozenPlayerBlockCount(services));
+        org.mockito.Mockito.verify(services.objectManager).addRewindableAuxiliaryDynamicObject(any());
     }
 
     @Test
@@ -1847,6 +1857,12 @@ class TestS3kIczEndBossObject {
                 frostPuffCoordinate(instance, "getFrostPuffYForTesting", puffIndex));
     }
 
+    private static void placePlayerAtFrostPuff(
+            ObjectInstance instance, AbstractPlayableSprite player, int puffIndex) {
+        player.setCentreX(frostPuffCoordinate(instance, "getFrostPuffXForTesting", puffIndex));
+        player.setCentreY(frostPuffCoordinate(instance, "getFrostPuffYForTesting", puffIndex));
+    }
+
     private static void publishBossSolidContact(ObjectInstance instance, PlayableEntity player, int frameCounter) {
         ((SolidObjectListener) instance).onSolidContactCleared(player, frameCounter);
     }
@@ -2001,6 +2017,8 @@ class TestS3kIczEndBossObject {
             doAnswer(this::recordSpawnedChild).when(objectManager).addDynamicObjectAfterCurrentNextFrame(any());
             doAnswer(this::recordSpawnedChild).when(objectManager).addDynamicObject(any());
             doAnswer(this::recordSpawnedChild).when(objectManager).addDynamicObjectNextFrame(any());
+            doAnswer(this::recordSpawnedChild).when(objectManager).addAuxiliaryDynamicObject(any());
+            doAnswer(this::recordSpawnedChild).when(objectManager).addRewindableAuxiliaryDynamicObject(any());
         }
 
         private Object recordSpawnedChild(org.mockito.invocation.InvocationOnMock invocation) {

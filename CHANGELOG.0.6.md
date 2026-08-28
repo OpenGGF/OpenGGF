@@ -12,8 +12,9 @@ This file contains the complete 0.6 development snapshot history carried forward
 - **ICZ ice attacks now freeze every configured sidekick:** both the ICZ2 boss
   frost puffs and placed freezer clouds preserve native Player 1/Player 2 order
   while extending capture, ice-block rescue, and rewind-safe pending state to
-  additional engine sidekicks. Failed extra-player block allocations no longer
-  leave a player control-locked without a block.
+  additional engine sidekicks. Extra-player blocks are rewind-owned engine
+  extensions that do not consume native object slots, so a busy arena cannot
+  silently prevent additional sidekicks from freezing.
 
 - **Sonic 1 swinging platforms no longer break live rewind when object RAM is
   full:** chain construction now stops at the shipped ROM's first failed

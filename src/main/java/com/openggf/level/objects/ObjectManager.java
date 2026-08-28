@@ -71,8 +71,7 @@ public class ObjectManager {
     private final Map<ObjectSpawn, ObjectInstance> activeObjects = new IdentityHashMap<>();
     private final Map<ObjectInstance, ObjectSpawn> instanceToSpawn = new IdentityHashMap<>();
     private final List<ObjectInstance> dynamicObjects = new ArrayList<>();
-    private final Set<ObjectInstance> auxiliaryDynamicObjects =
-            Collections.newSetFromMap(new IdentityHashMap<>());
+    private final DynamicObjectOwnership dynamicOwnership = new DynamicObjectOwnership();
     private final List<ObjectInstance> dynamicFallbackScratch = new ArrayList<>();
     private final List<ObjectInstance> activeFallbackScratch = new ArrayList<>();
     // Per-frame scratch collections reused to avoid steady-state allocation.
@@ -426,7 +425,7 @@ public class ObjectManager {
     public void reset(int cameraX, PersistentRespawnState persistentRespawnState) {
         clearActiveObjects();
         dynamicObjects.clear();
-        auxiliaryDynamicObjects.clear();
+        dynamicOwnership.clear();
         deferredDynamicExecThisFrame.clear();
         runtimeState.clearPostExecDynamicSpawns();
         reservedChildSlots.clear();
@@ -2081,7 +2080,8 @@ public class ObjectManager {
     private boolean removeDynamicObjectInstance(ObjectInstance object) {
         boolean removed = dynamicObjects.remove(object);
         if (removed) {
-            auxiliaryDynamicObjects.remove(object);
+            dynamicOwnership.remove(object);
+            rewindObjectIds.remove(object);
             notifyObjectManagerRemoval(object);
         }
         return removed;
@@ -2166,17 +2166,25 @@ public class ObjectManager {
      * stays faithful to the original game.
      */
     public void addAuxiliaryDynamicObject(ObjectInstance object) {
-        if (object == null) {
-            return;
+        if (dynamicOwnership.addNonRewindable(object, objectServices, dynamicObjects)) {
+            bucketsDirty = activeObjectsCacheDirty = true;
         }
-        if (object instanceof AbstractObjectInstance aoi) {
-            aoi.setServices(objectServices);
-            aoi.setSlotIndex(-1);
+    }
+
+    /**
+     * Adds a rewind-owned engine extension without consuming a ROM SST slot.
+     *
+     * <p>Unlike {@link #addAuxiliaryDynamicObject(ObjectInstance)}, this path is
+     * included in object rewind snapshots. Use it for extra-player gameplay
+     * objects whose lifetime must survive rewind but must not alter native slot
+     * pressure.
+     */
+    public void addRewindableAuxiliaryDynamicObject(ObjectInstance object) {
+        if (dynamicOwnership.addRewindable(object, objectServices, dynamicObjects,
+                deferredDynamicExecThisFrame, updating,
+                candidate -> assignRewindObjectId(candidate, candidate.getSpawn()))) {
+            bucketsDirty = activeObjectsCacheDirty = true;
         }
-        dynamicObjects.add(object);
-        auxiliaryDynamicObjects.add(object);
-        bucketsDirty = true;
-        activeObjectsCacheDirty = true;
     }
 
     private void addDynamicObjectInternal(ObjectInstance object,
@@ -2573,7 +2581,7 @@ public class ObjectManager {
     }
 
     private int getDynamicObjectCount() {
-        return dynamicObjects.size() - auxiliaryDynamicObjects.size();
+        return dynamicOwnership.nativeCount(dynamicObjects.size());
     }
 
     /**
@@ -3297,6 +3305,8 @@ public class ObjectManager {
                 }
                 inst.onUnload();
                 solidContacts.evictLatchForDestroyedInstance(inst);
+                dynamicOwnership.remove(inst);
+                rewindObjectIds.remove(inst);
                 notifyObjectManagerRemoval(inst);
                 iter.remove();
                 changed = true;
@@ -4069,7 +4079,7 @@ public class ObjectManager {
                 List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> dynamicEntries =
                         new ArrayList<>();
                 for (ObjectInstance inst : dynamicObjects) {
-                    if (auxiliaryDynamicObjects.contains(inst)) {
+                    if (dynamicOwnership.excludesFromRewind(inst)) {
                         continue;
                     }
                     if (inst instanceof AbstractObjectInstance aoi) {
@@ -4080,7 +4090,8 @@ public class ObjectManager {
                                         aoi.getSlotIndex(),
                                         ObjectRewindTypeSafety.capture(aoi, rewindContext),
                                         playerBoundOwner(inst),
-                                        rewindObjectIds.get(inst)));
+                                        rewindObjectIds.get(inst),
+                                        dynamicOwnership.isRewindableAuxiliary(inst)));
                     }
                 }
 
@@ -4157,7 +4168,7 @@ public class ObjectManager {
                 //    re-registered below.
                 clearActiveObjects();
                 dynamicObjects.clear();
-                auxiliaryDynamicObjects.clear();
+                dynamicOwnership.clear();
                 Arrays.fill(execOrder, null);
                 pendingPlayerBoundEntries.clear();
                 // Capture construction-spawned children produced while active objects are
@@ -4357,6 +4368,9 @@ public class ObjectManager {
                         assignRewindObjectId(aoi, aoi.getSpawn());
                     }
                     dynamicObjects.add(aoi);
+                    if (entry.rewindableAuxiliary()) {
+                        dynamicOwnership.markRestoredRewindable(aoi);
+                    }
                     activeObjectsCacheDirty = true;
                     int execIdx = execIndexForSlot(aoi.getSlotIndex());
                     if (execIdx >= 0 && execIdx < execOrder.length) {
@@ -4573,7 +4587,8 @@ public class ObjectManager {
      */
     public void validateRewindReferenceClosure() {
         ObjectRewindReferenceClosureValidator.validate(
-                activeObjects.values(), dynamicObjects, auxiliaryDynamicObjects, rewindCaptureContext());
+                activeObjects.values(), dynamicObjects,
+                dynamicOwnership.nonRewindableObjects(), rewindCaptureContext());
     }
 
     private com.openggf.game.rewind.schema.RewindCaptureContext rewindCaptureContext() {

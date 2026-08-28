@@ -455,14 +455,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             int capturedX = player.getCentreX();
             int capturedY = player.getCentreY();
             if (engineSidekickExtension) {
-                // Native sub_8A9E0 writes control before CreateChild1_Normal.
-                // Extra engine participants have no native SST, so require a
-                // successful real-slot allocation before taking their control.
-                FrozenPlayerBlock block = spawnChild(
-                        () -> new FrozenPlayerBlock(player, capturedX, capturedY, parent.x, hFlip));
-                if (block.isDestroyed()) {
-                    return false;
-                }
+                // Extra engine participants have no native player/SST pair.
+                // Their gameplay block must not compete with native objects,
+                // but it remains rewind-owned because it controls release.
+                FrozenPlayerBlock block = new FrozenPlayerBlock(
+                        player, capturedX, capturedY, parent.x, hFlip, false, true);
+                services().objectManager().addRewindableAuxiliaryDynamicObject(block);
                 applyCaptureState(player, capturedX, capturedY);
                 retainFirstFrozenBlock(block);
                 return true;
@@ -544,20 +542,28 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         private int breakTimer = BREAK_TIMER;
         private boolean landedOnTerrain;
         private boolean nativeInitPassPending;
+        private boolean engineSidekickExtension;
 
         public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
                 int parentX, boolean hFlip) {
-            this(capturedPlayer, capturedX, capturedY, parentX, hFlip, false);
+            this(capturedPlayer, capturedX, capturedY, parentX, hFlip, false, false);
         }
 
         public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
                 int parentX, boolean hFlip, boolean nativeInitPassPending) {
+            this(capturedPlayer, capturedX, capturedY, parentX, hFlip, nativeInitPassPending, false);
+        }
+
+        public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
+                int parentX, boolean hFlip, boolean nativeInitPassPending,
+                boolean engineSidekickExtension) {
             super(new ObjectSpawn(capturedX, capturedY, OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedY),
                     "ICZFreezerFrozenPlayer");
             this.capturedPlayer = capturedPlayer;
             int xSpeed = capturedX >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
             this.motion = new SubpixelMotion.State(capturedX, capturedY, 0, 0, xSpeed, INITIAL_Y_SPEED);
             this.nativeInitPassPending = nativeInitPassPending;
+            this.engineSidekickExtension = engineSidekickExtension;
         }
 
         private FrozenPlayerBlock(ObjectSpawn spawn) {
@@ -565,6 +571,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             this.capturedPlayer = null;
             this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, INITIAL_Y_SPEED);
             this.nativeInitPassPending = false;
+            this.engineSidekickExtension = false;
         }
 
         @Override
@@ -733,8 +740,15 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             for (int i = 0; i < DEBRIS_COUNT; i++) {
                 int[] velocity = VELOCITY_INDEX[i];
                 int debrisSubtype = i * 2;
-                IceDebris child = spawnChild(() -> new IceDebris(getX(), getY(), debrisSubtype,
-                        velocity[0], velocity[1]));
+                IceDebris child;
+                if (engineSidekickExtension) {
+                    child = new IceDebris(
+                            getX(), getY(), debrisSubtype, velocity[0], velocity[1]);
+                    services().objectManager().addRewindableAuxiliaryDynamicObject(child);
+                } else {
+                    child = spawnChild(() -> new IceDebris(
+                            getX(), getY(), debrisSubtype, velocity[0], velocity[1]));
+                }
                 debris.add(child);
             }
         }

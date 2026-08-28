@@ -1029,15 +1029,12 @@ public final class IczEndBossInstance extends AbstractBossInstance
         boolean flipped = player.getDirection() == Direction.LEFT;
         IczFreezerObjectInstance.FrozenPlayerBlock block =
                 new IczFreezerObjectInstance.FrozenPlayerBlock(player, capturedX, capturedY,
-                        sourceX, flipped, true);
+                        sourceX, flipped, true, engineSidekickExtension);
         if (engineSidekickExtension) {
-            // Preserve sub_8A9E0's native P1/P2 write-before-allocation order.
-            // Extra engine participants must first obtain a real SST slot or
-            // they would remain control-locked without a block to release them.
-            spawnFrostBlock(block, sourceSlot);
-            if (block.isDestroyed()) {
-                return;
-            }
+            // Extra engine participants have no native player/SST pair. Keep
+            // their gameplay block rewindable without changing the ROM's slot
+            // pressure or depending on a free slot after the frost-puff child.
+            services().objectManager().addRewindableAuxiliaryDynamicObject(block);
         }
 
         ObjectControlState.nativeBit7FullControl().applyTo(player);
