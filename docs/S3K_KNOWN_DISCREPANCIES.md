@@ -3,9 +3,9 @@
 This document tracks **intentional deviations** from the original Sonic 3 & Knuckles ROM. Entries here are architectural choices we've made (cleaner code, added features, deliberate corrections of known ROM bugs) that we accept and do not plan to revert. Runtime gameplay behavior is preserved unless a rationale explicitly justifies a visible change (e.g., the "Save System" entry adds JSON persistence that replaces SRAM).
 
 **What does NOT belong here:**
-- Bugs, incomplete implementations, and parity gaps that we *intend to fix* → [S3K_KNOWN_BUGS.md](S3K_KNOWN_BUGS.md)
-- General (cross-game) engine-level issues → [KNOWN_BUGS.md](KNOWN_BUGS.md)
-- General (cross-game) intentional discrepancies → [KNOWN_DISCREPANCIES.md](KNOWN_DISCREPANCIES.md)
+- Bugs, incomplete implementations, and parity gaps that we *intend to fix* → [s3k-known-bugs.md](status/s3k-known-bugs.md)
+- General (cross-game) engine-level issues → [known-bugs.md](status/known-bugs.md)
+- General (cross-game) intentional discrepancies → [known-discrepancies.md](status/known-discrepancies.md)
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
@@ -328,7 +328,7 @@ silently.
 Gameplay state follows the S&K disassembly: `AIZ2_DoShipLoop` writes
 `Level_repeat_offset=$200` and subtracts `$200` from camera/player state when
 the post-bombing ship loop reaches `$46C0`
-(`docs/skdisasm/skdisasm/sonic3k.asm:105200-105221`). Do not change
+(`docs/skdisasm/sonic3k.asm:105200-105221`). Do not change
 `BATTLESHIP_WRAP_DIST_POST_BOMBING` away from `$200`.
 
 **Display validated seamless (2026-06-16).** Once the AIZ trace frontier advanced

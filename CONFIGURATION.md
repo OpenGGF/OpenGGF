@@ -744,6 +744,10 @@ Square/Cross/Circle respectively.
 | `P1_B` | `input.player1.b` | `-1` | unbound | Player 1 action button B. |
 | `P1_C` | `input.player1.c` | `-1` | unbound | Player 1 action button C. |
 | `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. Keyboard-only: the gamepad Start button is instead wired to `PAUSE_KEY`'s pause (see below), since this one has no visible feedback. |
+| `P2_UP` | `input.player2.up` | `73` | I | Player 2 look up. |
+| `P2_DOWN` | `input.player2.down` | `75` | K | Player 2 crouch / roll. |
+| `P2_LEFT` | `input.player2.left` | `74` | J | Player 2 move left. |
+| `P2_RIGHT` | `input.player2.right` | `76` | L | Player 2 move right. |
 | `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. In S2 this feeds the configured sidekick/manual-input path; it does not enable native two-player/competition gameplay. |
 | `P2_B` | `input.player2.b` | `-1` | unbound | Player 2 action button B. |
 | `P2_C` | `input.player2.c` | `-1` | unbound | Player 2 action button C. |
@@ -817,7 +821,6 @@ diagnostic test runs only and must remain unset in CI.
 | Property | Type | Purpose |
 | --- | --- | --- |
 | `oggf.trace.hydrate` | Boolean (default `false`) | Diagnostic hydrate switch for trace replay tests. When `true` AND the trace's `metadata.json` declares a recorder version at or above `9.2-s2` (see `TraceMetadata.nativePreludeMode()`), the test harness snaps engine state to the recorded ROM frame-0 snapshot (player position-record buffer, sidekick CPU state, per-slot SST values) BEFORE the per-frame comparison loop begins. A run with this enabled is **NOT a valid green replay**: the switch masks the very divergences trace replay is designed to surface. Use only to isolate prelude bugs from gameplay-loop bugs. A `WARN`-level log line emits when the switch fires; `TestTraceHydrateSwitchDefault` is the CI guard that asserts the property is unset on master. |
-| `openggf.trace.s3k.probes` | Boolean (default `false`) | Enables verbose S3K-specific trace replay probes (cnz cylinder, aiz boundary, etc.). Diagnostic only. |
 
 ---
 

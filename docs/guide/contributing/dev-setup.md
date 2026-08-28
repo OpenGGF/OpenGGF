@@ -42,13 +42,22 @@ Place ROM files in the project root directory (next to `pom.xml`):
 | Sonic 2 | `s2.gen` | World, REV01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3&K | `s3k.gen` | World, lock-on; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-ROM files are gitignored. Tests that require ROM data skip gracefully when files are
-absent, so you can build and run most tests without any ROMs.
+ROM files are gitignored. Test classes annotated `@RequiresRom` are disabled (reported as
+skipped) when their ROM cannot be found, so you can build and run most tests without any
+ROMs. Two classes are stricter: `TestS2CompleteRunStateDecoder` and
+`TestS3kCompleteRunStateDecoder` throw unless the matching property is set explicitly.
 
-For S3K-specific tests, the ROM path can also be passed as a system property:
+ROM paths are passed per game as system properties -- note the S3K property is
+`s3k.rom.path`, not `sonic3k.rom.path`:
+
 ```bash
-mvn test -Ds3k.rom.path=s3k.gen
+mvn -Dmse=off test -Dsonic1.rom.path=/abs/path/s1.gen \
+    -Dsonic2.rom.path=/abs/path/s2.gen -Ds3k.rom.path=/abs/path/s3k.gen
 ```
+
+Use **absolute** paths. From a git worktree (or any directory that is not the repository
+root) a relative path resolves against the Surefire fork's working directory, the ROM is not
+found, and every ROM-gated class is silently skipped and reported green.
 
 ## Run the Engine
 
@@ -90,9 +99,9 @@ mvn test -Dtest=TestCollisionLogic
 mvn test -Dtest=TestCollisionLogic#testSlopeAngle
 ```
 
-Tests are configured for parallel execution across 8 JVM forks. ROM-dependent tests
-(marked with `@RequiresRom` or equivalent guards) skip automatically when ROMs are
-absent.
+Tests run across 4 JVM forks by default (`surefire.forkCount` in `pom.xml`; the CI profile
+drops to 1). Override with `-Dsurefire.forkCount=N`. ROM-dependent tests are gated as
+described under "ROM files" above.
 
 ## Project Structure
 

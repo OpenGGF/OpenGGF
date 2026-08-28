@@ -139,23 +139,23 @@ Key fields in each divergence group:
 
 ### Interpreting with auxiliary trace data
 
-The `aux_state.jsonl` file contains rich event data for debugging divergences. Key event types:
+The `aux_state.jsonl.gz` payload (gzipped; use `zgrep` / `zcat`) contains rich event data for debugging divergences. Key event types:
 
 **`slot_dump`** — Full snapshot of all occupied SST slots when any object appears:
 ```bash
-grep "slot_dump" src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | head -3
+zgrep "slot_dump" src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl.gz | head -3
 ```
 Use this to compare ROM slot allocation vs engine allocation at specific frames.
 
 **`routine_change`** — Player routine transitions with full Sonic state:
 ```bash
-grep "routine_change" src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl
+zgrep "routine_change" src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl.gz
 ```
 S1 routines: 0=init, 2=control, **4=hurt**, 6=death, 8=reset. NOT the same as S2.
 
 **`object_appeared` / `object_removed`** — Object lifecycle with slot number:
 ```bash
-grep '"slot":75' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | grep "appeared\|removed"
+zgrep '"slot":75' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl.gz | grep "appeared\|removed"
 ```
 
 Object positions in trace rows and aux events are ROM centre coordinates. Do not compare them directly to debug HUD `Pos:` values or `getX()` / `getY()` top-left bounds; use `getCentreX()` / `getCentreY()` when tracing engine state.
@@ -164,7 +164,7 @@ Object positions in trace rows and aux events are ROM centre coordinates. Do not
 
 **`object_near`** — Per-frame proximity log of objects within 160px of Sonic:
 ```bash
-grep '"frame":3193' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | grep "object_near"
+zgrep '"frame":3193' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl.gz | grep "object_near"
 ```
 
 ### Common divergence patterns
