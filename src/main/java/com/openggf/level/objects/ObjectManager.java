@@ -1506,34 +1506,7 @@ public class ObjectManager {
         int targetBucket = RenderPriority.clamp(bucket);
         int idx = targetBucket - RenderPriority.MIN;
         List<ObjectInstance>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
-        List<ObjectInstance> instances = buckets[idx];
-
-        if (instances.isEmpty()) {
-            return;
-        }
-
-        enableVerticalWrapIfNeeded();
-        try {
-            renderCommands.clear();
-            for (ObjectInstance instance : instances) {
-                int mask = instance.getTileOcclusionPaletteMask();
-                if (graphicsManager.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                    graphicsManager.flushPatternBatch();
-                    graphicsManager.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                    graphicsManager.beginPatternBatch();
-                }
-                instance.appendRenderCommands(renderCommands);
-            }
-
-            if (renderCommands.isEmpty()) {
-                return;
-            }
-            graphicsManager.enqueueDebugLineState();
-            graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, renderCommands));
-            graphicsManager.enqueueDefaultShaderState();
-        } finally {
-            graphicsManager.disableVerticalWrapAdjust();
-        }
+        drawBucketInstancesWithPriority(buckets[idx], graphicsManager);
     }
 
     /**
