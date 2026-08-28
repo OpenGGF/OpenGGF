@@ -291,8 +291,9 @@ traces.
   replay, visual/audio regression checks, and release/architecture guards.
   Maven runs directly in each worktree and keeps build, report, diagnostic,
   temporary, and per-Surefire-fork LWJGL output below that worktree's `target/`
-  tree. The current JDK 21 ordinary-suite repair removes 15 baseline failures
-  and 3 baseline errors while preserving the recorded trace frontier and every
+  tree. The completed JDK 21 ordinary-suite repair takes the current `develop`
+  control from 30 failures and 3 errors to all 14,868 tests passing (36
+  skipped), while preserving the recorded six-failure trace frontier and every
   previously passing test identity.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,

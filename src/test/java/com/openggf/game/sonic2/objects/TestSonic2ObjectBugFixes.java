@@ -1241,25 +1241,8 @@ class TestSonic2ObjectBugFixes {
                 "Obj1F lacks render_flags.explicit_height, so BuildSprites keeps it through the 32px approximate Y band");
     }
 
-    /**
-     * LEFT RED DELIBERATELY, 2026-08-21. This asserts the two-tick
-     * {@code verticalOnlyOffscreenTicks} grace that {@code 3f0fd4a70} removed on
-     * purpose, replacing it with the ROM's own rule: {@code Obj1F_FragmentFall}
-     * deletes on the {@code render_flags} bit the last {@code BuildSprites} pass
-     * wrote, judged at the pre-fall position (docs/s2disasm/s2.asm:23860-23864).
-     *
-     * <p>It is a correct test of behaviour that no longer exists -- green against
-     * the pre-conversion class, red against the current one -- so unlike its two
-     * siblings it cannot be repaired by supplying the frame-start snapshot the
-     * harness was missing. Rewriting it to pass would mean inventing the new
-     * expectation for this scenario rather than deriving it, and a first attempt
-     * at that failed on its own first tick, which is the tell. Deleting it would
-     * discard the only encoding of what the grace was for. It stays red until
-     * someone derives the ROM's answer for a vertically clipped, horizontally
-     * visible fragment parent and rewrites it to that.
-     */
     @Test
-    void collapsingPlatformFragmentFallKeepsVerticalOnlyOffscreenParentForCpuSlotRefresh() throws Exception {
+    void collapsingPlatformFragmentFallDeletesFromPreviousRenderFlagWithoutGrace() throws Exception {
         StubObjectServices services = new StubObjectServices();
         CollapsingPlatformObjectInstance platform = ObjectConstructionContext.construct(services,
                 () -> new CollapsingPlatformObjectInstance(
@@ -1272,16 +1255,8 @@ class TestSonic2ObjectBugFixes {
         AbstractObjectInstance.updateCameraBounds(0x0428, 0x0506, 0x0568, 0x05E6, 0);
 
         platform.update(324, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
-        assertFalse(platform.isDestroyed(),
-                "A vertically clipped but horizontally visible Obj1F parent must survive the first CPU refresh tick");
-
-        platform.update(325, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
-        assertFalse(platform.isDestroyed(),
-                "The second CPU refresh still observes the Obj1F id before the ROM slot clears");
-
-        platform.update(326, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
         assertTrue(platform.isDestroyed(),
-                "Once the vertical-only grace expires, Obj1F_FragmentFall deletes the parent slot");
+                "Obj1F_FragmentFall deletes immediately when the previous BuildSprites pass cleared on-screen");
     }
 
     @Test

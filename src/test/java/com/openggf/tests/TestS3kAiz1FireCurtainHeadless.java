@@ -264,9 +264,9 @@ public class TestS3kAiz1FireCurtainHeadless {
             throws Exception {
         drainStartupKosWork();
         Sonic3kAIZEvents events = getAizEvents();
+        stageFireOverlay(events);
         events.setFireSequencePhaseOrdinal(3);
         events.setFirePhaseFrames(63);
-        events.setFireOverlayTilesLoaded(true);
         queueAct2TransitionArt(events);
         GameServices.level().getObjectManager().initVblaCounter(2);
 
@@ -288,9 +288,9 @@ public class TestS3kAiz1FireCurtainHeadless {
     public void finishQueueWaitsForNextReadyVblankPhase() throws Exception {
         drainStartupKosWork();
         Sonic3kAIZEvents events = getAizEvents();
+        stageFireOverlay(events);
         events.setFireSequencePhaseOrdinal(3);
         events.setFirePhaseFrames(63);
-        events.setFireOverlayTilesLoaded(true);
         queueAct2TransitionArt(events);
         GameServices.level().getObjectManager().initVblaCounter(0);
 
@@ -330,6 +330,21 @@ public class TestS3kAiz1FireCurtainHeadless {
         var method = Sonic3kAIZEvents.class.getDeclaredMethod("queueAct2KosArt");
         method.setAccessible(true);
         method.invoke(events);
+    }
+
+    private void stageFireOverlay(Sonic3kAIZEvents events) throws Exception {
+        var method = Sonic3kAIZEvents.class.getDeclaredMethod(
+                "ensureFireOverlayTilesLoaded");
+        method.setAccessible(true);
+        for (int frame = 0;
+                frame < 100_000 && !events.isFireOverlayTilesLoaded();
+                frame++) {
+            method.invoke(events);
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(events.isFireOverlayTilesLoaded(),
+                "AIZ1 loc_1C5C6 must retain its prepared fire-overlay payload");
+        assertTrue(events.getFireOverlayTileCount() > 0);
     }
 
     private void drainStartupKosWork() {

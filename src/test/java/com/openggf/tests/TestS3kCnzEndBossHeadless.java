@@ -5,6 +5,7 @@ import com.openggf.game.GameRng;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -46,7 +47,7 @@ class TestS3kCnzEndBossHeadless {
 
         CnzEndBossInstance boss = createBoss();
         GameServices.level().getObjectManager().addDynamicObject(boss);
-        fixture.stepIdleFrames(1);
+        boss.update(0, fixture.sprite());
         assertEquals("CAMERA_LOCK", boss.getRoutineForTest());
         assertFalse(boss.isStartupCompleteForTest());
         Sonic3kObjectArtProvider artProvider = (Sonic3kObjectArtProvider)
@@ -55,10 +56,14 @@ class TestS3kCnzEndBossHeadless {
                 "Obj_CNZEndBoss must issue Load_PLC($6E) only after the camera gate");
         assertFalse(boss.isNativeBodyRenderableForTest(),
                 "loc_6E4B8 camera continuation runs before routine-0 sprite setup");
+        S3kPaletteWriteSupport.resolvePendingWritesNow(
+                GameServices.paletteOwnershipRegistry(),
+                GameServices.level().getCurrentLevel(),
+                GameServices.graphics());
         for (int color = 0; color < 16; color++) {
             assertEquals(S3kPaletteOwners.CNZ_END_BOSS,
                     GameServices.paletteOwnershipRegistry().ownerAt(PaletteSurface.NORMAL, 1, color),
-                    "Pal_CNZEndBoss is loaded immediately after sub_85D6A, before its wait completes");
+                    "Pal_CNZEndBoss resolves through the frame palette pipeline before the camera wait completes");
         }
         // loc_85D06 follows live Camera_X_pos; move the live camera through
         // the $4760 target instead of relying on the retired boundary easing.

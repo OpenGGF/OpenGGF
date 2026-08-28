@@ -34,6 +34,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAizEndBossInstance {
@@ -114,7 +115,10 @@ class TestAizEndBossInstance {
         bridge.update(0, null);
 
         assertTrue(readBoolean(bridge, "segmentsSpawned"));
-        assertTrue(bridge.isHighPriority());
+        assertFalse(bridge.isHighPriority(),
+                "the fire bridge is not above every terrain palette");
+        assertEquals(0b0111, bridge.getTileOcclusionPaletteMask(),
+                "the fire bridge draws above palette 3 water but below palettes 0-2 terrain");
     }
 
     @Test

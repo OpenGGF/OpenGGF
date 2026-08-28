@@ -1069,8 +1069,14 @@ class TestS3kBadnikChildGraphRewind {
         assertEquals(2, sourceParents.size(), "precondition: two Mantis parents must be captured");
         MantisBadnikInstance sourceParentA = sourceParents.get(0);
         MantisBadnikInstance sourceParentB = sourceParents.get(1);
+        // This graph test starts after the ROM's Obj_WaitOffscreen restore pass;
+        // Mantis_Init, not the hidden placeholder, allocates the visual child.
+        setBooleanField(sourceParentA, "waitPlaceholderRenderFlag", true);
+        setBooleanField(sourceParentB, "waitPlaceholderRenderFlag", true);
         sourceParentA.update(0, player);
         sourceParentB.update(0, player);
+        sourceParentA.update(1, player);
+        sourceParentB.update(1, player);
         List<ObjectInstance> sourceChildren = liveByClassName(objectManager, MANTIS_CHILD);
         assertEquals(2, sourceChildren.size(), "precondition: each Mantis must create one visual child");
         ObjectInstance sourceChildA = childWithParent(sourceChildren, sourceParentA);
@@ -1338,6 +1344,10 @@ class TestS3kBadnikChildGraphRewind {
         assertEquals(2, sourceHeads.size(), "precondition: two Caterkiller Jr heads must be captured");
         CaterkillerJrHeadInstance sourceHeadA = sourceHeads.get(0);
         CaterkillerJrHeadInstance sourceHeadB = sourceHeads.get(1);
+        // Represent the already-completed Obj_WaitOffscreen restore dispatch so
+        // this rewind fixture can exercise the routine-0 child allocation graph.
+        setBooleanField(sourceHeadA, "waitOffscreenReleased", true);
+        setBooleanField(sourceHeadB, "waitOffscreenReleased", true);
         sourceHeadA.update(0, player);
         sourceHeadB.update(0, player);
         List<ObjectInstance> sourceBodies = liveByClassName(objectManager, CATERKILLER_JR_BODY);

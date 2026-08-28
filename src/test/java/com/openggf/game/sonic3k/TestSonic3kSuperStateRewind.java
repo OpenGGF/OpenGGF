@@ -48,6 +48,7 @@ class TestSonic3kSuperStateRewind {
             controller.update();
         }
         PerObjectRewindSnapshot snapshot = sonic.captureRewindState();
+        int ringsAtSnapshot = sonic.getRingCount();
         SuperStateController.RewindState expected =
                 snapshot.playerExtra().controllerState().superStateState();
         assertNotNull(expected);
@@ -59,7 +60,8 @@ class TestSonic3kSuperStateRewind {
 
         assertEquals(expected, controller.captureRewindState());
         assertEquals(SuperState.TRANSFORMING, controller.getState());
-        assertEquals(50, sonic.getRingCount(), "restore must not replay ring drain");
+        assertEquals(ringsAtSnapshot, sonic.getRingCount(),
+                "restore must preserve the captured ring drain without replaying it");
     }
 
     @Test
@@ -70,6 +72,7 @@ class TestSonic3kSuperStateRewind {
         }
         assertEquals(SuperState.SUPER, controller.getState());
         PerObjectRewindSnapshot snapshot = sonic.captureRewindState();
+        int ringsAtSnapshot = sonic.getRingCount();
 
         controller.debugDeactivate();
         assertEquals(PhysicsProfile.SONIC_2_SONIC, sonic.getPhysicsProfile());
@@ -77,7 +80,7 @@ class TestSonic3kSuperStateRewind {
 
         assertEquals(SuperState.SUPER, controller.getState());
         assertEquals(PhysicsProfile.SONIC_3K_SUPER_SONIC, sonic.getPhysicsProfile());
-        assertEquals(50, sonic.getRingCount());
+        assertEquals(ringsAtSnapshot, sonic.getRingCount());
     }
 
     @Test

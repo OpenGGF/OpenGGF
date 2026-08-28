@@ -97,7 +97,7 @@ class TestS3kCnzTeleporterRouteHeadless {
         fixture.sprite().setCentreX((short) 0x4A40);
         fixture.sprite().setAir(false);
 
-        fixture.stepIdleFrames(1);
+        teleporter.update(0, fixture.sprite());
 
         assertFalse(isObjectPresent(CnzTeleporterBeamInstance.class),
                 "Obj_CNZTeleporter must return after Queue_Kos_Module and poll readiness next frame");
@@ -121,6 +121,10 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertFalse(artProvider.isCnzTeleporterArtPending());
         assertTrue(artProvider.isCnzTeleporterArtComplete(),
                 "the shared frame pipeline should consume the queued KosM workload");
+        assertFalse(isObjectPresent(CnzTeleporterBeamInstance.class),
+                "the object pass precedes the loop-tail art pump, so readiness is visible next frame");
+
+        fixture.stepIdleFrames(1);
         assertTrue(isObjectPresent(CnzTeleporterBeamInstance.class),
                 "Obj_CNZTeleporterMain should proceed once the teleporter renderer reports ready");
     }

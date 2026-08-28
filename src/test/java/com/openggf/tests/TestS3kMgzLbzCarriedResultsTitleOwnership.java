@@ -68,7 +68,7 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                         new KosParent(Sonic3kConstants.ART_KOSM_MGZ_MANTIS_ADDR,
                                 Sonic3kConstants.ARTTILE_MGZ_MANTIS)),
                 30,
-                5,
+                3,
                 true);
 
         verifyCarriedResultsLifecycle(route);

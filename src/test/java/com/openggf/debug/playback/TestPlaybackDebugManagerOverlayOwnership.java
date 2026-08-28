@@ -3,6 +3,7 @@ package com.openggf.debug.playback;
 import com.openggf.game.GameMode;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -22,6 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestPlaybackDebugManagerOverlayOwnership {
     private final PlaybackDebugManager playback =
             PlaybackDebugManager.getInstance();
+
+    @BeforeEach
+    void resetPlayback() {
+        playback.setOverlayOwnedExternally(false);
+        playback.endSession();
+    }
 
     @AfterEach
     void tearDown() {

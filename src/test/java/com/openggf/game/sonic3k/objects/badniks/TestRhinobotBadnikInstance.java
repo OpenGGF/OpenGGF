@@ -25,12 +25,25 @@ class TestRhinobotBadnikInstance {
             updateMovement(outside, sonic);
             assertTrue(stateName(outside).equals("PATROL"),
                     "One pixel beyond the $20 Obj_WaitOffscreen placeholder must remain dormant");
+            assertFalse(booleanField(outside, "waitOffscreenReleased"));
 
             AbstractObjectInstance.updateCameraBounds(0, 0, 0x03E0, 0x0400, 0);
             RhinobotBadnikInstance atPlaceholderEdge = rhinobotWithPlayers(sonic, null);
             updateMovement(atPlaceholderEdge, sonic);
+            assertTrue(booleanField(atPlaceholderEdge, "waitOffscreenReleased"),
+                    "the first visible pass must restore the saved Rhinobot operation");
+            assertTrue(booleanField(atPlaceholderEdge, "initPending"),
+                    "Obj_WaitOffscreen's restore path returns before Rhinobot_Init");
+
+            updateMovement(atPlaceholderEdge, sonic);
+            assertFalse(booleanField(atPlaceholderEdge, "initPending"),
+                    "the dispatch after release must consume routine 0 initialization");
+            assertTrue(stateName(atPlaceholderEdge).equals("PATROL"),
+                    "Rhinobot_Init returns before the patrol routine");
+
+            updateMovement(atPlaceholderEdge, sonic);
             assertTrue(stateName(atPlaceholderEdge).equals("CHARGE_PREP"),
-                    "Rhinobot routine must run when its $20 placeholder first reaches the render window");
+                    "Rhinobot patrol must run on the dispatch after initialization");
         } finally {
             AbstractObjectInstance.resetCameraBoundsForTests();
         }
@@ -83,6 +96,12 @@ class TestRhinobotBadnikInstance {
         var field = RhinobotBadnikInstance.class.getDeclaredField("state");
         field.setAccessible(true);
         return ((Enum<?>) field.get(rhinobot)).name();
+    }
+
+    private static boolean booleanField(RhinobotBadnikInstance rhinobot, String name) throws Exception {
+        var field = RhinobotBadnikInstance.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getBoolean(rhinobot);
     }
 
     private static TestPlayer player(int x, int y) {

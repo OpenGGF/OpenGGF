@@ -104,6 +104,7 @@ class TestSpringObjectInstance {
         player.setCentreY((short) 0x0100);
 
         manager.update(0, player, List.of(), 0, false, true, true);
+        manager.update(0, player, List.of(), 1, false, true, true);
 
         assertTrue(player.getPushing(),
                 "Obj41_Up uses SolidObject_cont's bhi right-edge gate, so relX == 2*d1 still pushes");
@@ -343,6 +344,7 @@ class TestSpringObjectInstance {
 
         int expectedLaunchY = solidObjectLandedCentreY(player, relY) + 6;
         manager.update(0, player, List.of(), 0, false, true, false);
+        manager.update(0, player, List.of(), 1, false, true, false);
 
         assertEquals(expectedLaunchY, player.getCentreY() & 0xFFFF,
                 "SlopedSolid_cont must run SolidObject_Landed's Y correction before Obj41_DiagonallyUp adds 6");
