@@ -80,10 +80,33 @@ public class TestScriptedVelocityAnimationProfile {
         sprite.setSliding(true);
         sprite.setAir(false);
         sprite.setHurt(true);
+        // HurtCharacter's common tail already performed its one-shot
+        // `move.b #$1A,anim(a0)` (docs/skdisasm/sonic3k.asm:21321), so the hurt
+        // byte is live when the profile runs.
+        sprite.setAnimationId(profile.getHurtAnimId());
 
         Integer animId = profile.resolveAnimationId(sprite, 0, 32);
 
         assertEquals(11, animId.intValue());
+    }
+
+    @Test
+    public void hurtDoesNotReclaimAnAnimationByteAnotherOwnerHasTaken() {
+        // The hurt animation is written once by HurtCharacter's tail; the hurt
+        // ROUTINE that runs afterwards -- S3K loc_1569C, S1 Sonic_Hurt, S2
+        // Obj01_Hurt -- never rewrites anim. So an owner that stores the byte
+        // during the hurt keeps it, and the solid push-release tail is exactly
+        // such an owner: it stores Walk and exempts only Roll (S1/S2) or Roll
+        // and Spindash (S3K), never Hurt.
+        ScriptedVelocityAnimationProfile profile = createProfile();
+        TestSprite sprite = new TestSprite();
+        sprite.setSliding(true);
+        sprite.setAir(false);
+        sprite.setHurt(true);
+        sprite.setAnimationId(profile.getWalkAnimId());
+
+        assertNull(profile.resolveAnimationId(sprite, 0, 32),
+                "a still-hurt player does not re-derive the hurt byte over a later owner's store");
     }
 
     @Test

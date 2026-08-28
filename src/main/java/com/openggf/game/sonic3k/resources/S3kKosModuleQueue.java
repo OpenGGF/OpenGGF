@@ -30,7 +30,7 @@ import java.util.Set;
  * complete physical FIFO becomes empty.
  */
 public final class S3kKosModuleQueue {
-    private static final int MAX_QUEUE_DEPTH = 4;
+    static final int MAX_QUEUE_DEPTH = 4;
     private static final int PATTERN_BYTES = 32;
     private static final int INSPECTION_LIMIT = 0x40000;
     private static final String COMPRESSION_VARIANT = "kosinski_moduled";

@@ -32,6 +32,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1RunCaptureRunner records a level-ss-level round trip",
                 RecordsLevelSsLevelRoundTrip));
             tests.Add(new TestMain.TestCase(
+                "S1RunCaptureRunner publishes per-segment PLC hardware timing",
+                RecordsPerSegmentHardwareTiming));
+            tests.Add(new TestMain.TestCase(
                 "S1RunCaptureRunner suffixes repeat detours and level"
                 + " re-entries",
                 SuffixesRepeatDetoursAndLevelReEntries));
@@ -101,6 +104,61 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         new RunSegmentCollector(),
                         null),
                     "requires native load audit");
+            });
+        }
+
+        /// <summary>
+        /// Run mode publishes the PLC readiness stream per segment: an arm
+        /// observed during a recorded frame lands in that segment's file at
+        /// that segment's row index, and a segment that observes no arm
+        /// never opens a file at all.
+        /// </summary>
+        private static void RecordsPerSegmentHardwareTiming()
+        {
+            byte[] rom = S1DynamicArtObserverTests.CreateRom();
+            // A Nemesis header declaring 0x2E patterns at 0x022670.
+            rom[0x022670] = 0x00;
+            rom[0x022671] = 0x2E;
+            WithMovie(Rows(12), movie =>
+            {
+                var host = new FakeS1Host((h, frame) =>
+                {
+                    if (frame == 1)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 3)
+                    {
+                        // RunPLC arms the head during the advance that
+                        // produces this segment's row 1.
+                        h.SetU32(S1Ram.PlcBuffer, 0x022670);
+                        h.SetU16(S1Ram.PlcBuffer + 4, 0xC800);
+                        h.SetU16(S1Ram.PlcPatternsLeft, 0);
+                        h.FireExecuteCallback(
+                            S1PlcHardwareTimingObserver.RunPlcEntryPc);
+                    }
+                    if (frame == 5)
+                    {
+                        h.Ram[0xF600] = 0x04;
+                    }
+                    if (frame == 6)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                });
+                IList<RunSegmentOutput> outputs;
+                Capture(movie, host, "hw-timing", 0, out outputs, rom);
+
+                AssertEx.Equal(2, outputs.Count);
+                AssertEx.Equal(
+                    "{\"event\":\"hardware_work_completed\","
+                    + "\"raw_frame\":1,\"boundary\":\"pre_main_loop\","
+                    + "\"kind\":\"nemesis_plc_queue\",\"ordinal\":0,"
+                    + "\"submission_fingerprint\":\"sha256:"
+                    + "ca21ba81e5cb7ab33a5f9875d15e37631662451562aff02529"
+                    + "bbaa7d845f1e5e\"}\n",
+                    outputs[0].HardwareTimingJsonl);
+                AssertEx.Equal(null, outputs[1].HardwareTimingJsonl);
             });
         }
 

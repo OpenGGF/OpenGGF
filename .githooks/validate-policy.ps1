@@ -457,7 +457,12 @@ function Get-GrandfatherPrefix([string]$Path) {
         return $null
     }
     foreach ($line in (Get-Content -LiteralPath $script:MachineLocalPathGrandfather)) {
-        $fields = $line -split "`t", -1
+        # PowerShell's Max-substrings is not .NET's: a NEGATIVE value returns that
+        # many substrings from the END, so ", -1" yielded the whole line as one
+        # field and every entry looked malformed. ", 0" is PowerShell's "return
+        # all", which is what the shell parser and the Java/.NET `split(s, -1)`
+        # idiom this was written from actually mean.
+        $fields = $line -split "`t", 0
         if ($fields.Count -eq 4 -and
                 $fields[0] -ceq "# baseline-prefix" -and
                 $fields[3] -ceq $Path) {
@@ -502,7 +507,12 @@ function Get-GrandfatherEntries() {
         if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
             continue
         }
-        $fields = $line -split "`t", -1
+        # PowerShell's Max-substrings is not .NET's: a NEGATIVE value returns that
+        # many substrings from the END, so ", -1" yielded the whole line as one
+        # field and every entry looked malformed. ", 0" is PowerShell's "return
+        # all", which is what the shell parser and the Java/.NET `split(s, -1)`
+        # idiom this was written from actually mean.
+        $fields = $line -split "`t", 0
         if ($fields.Count -ne 3 -or
                 $fields[0] -cnotmatch '^[0-9a-f]{64}$' -or
                 $fields[1] -cnotmatch '^[1-9][0-9]*$') {

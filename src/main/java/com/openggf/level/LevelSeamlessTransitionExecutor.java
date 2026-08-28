@@ -35,11 +35,13 @@ final class LevelSeamlessTransitionExecutor {
                             levelManager.currentAct));
                     advanceFrameCounterAcrossReload();
                     levelManager.consumeActTransitionExecutedDuringFrame();
+                    levelManager.consumeActTransitionRewindBoundaryDuringFrame();
                 }
                 case RELOAD_TARGET_LEVEL -> {
                     levelManager.executeActTransition(request);
                     advanceFrameCounterAcrossReload();
                     levelManager.consumeActTransitionExecutedDuringFrame();
+                    levelManager.consumeActTransitionRewindBoundaryDuringFrame();
                 }
             }
         } catch (IOException e) {

@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.io.ModInputLimits;
 import com.openggf.mods.DevelopmentModSource;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tools.modsdk.ProjectScaffolder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,7 +21,8 @@ class TestDevelopmentModBoot {
         java.util.List<String> sources;try(var paths=Files.walk(project.resolve("src/main/java"))){
             sources=paths.filter(p->p.toString().endsWith(".java")).map(Path::toString).toList();}
         var args=new java.util.ArrayList<>(java.util.List.of("--release","21","-cp",
-                Path.of("target/classes").toAbsolutePath().toString(),"-d",build.toString()));args.addAll(sources);
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
+                "-d",build.toString()));args.addAll(sources);
         assertEquals(0,javax.tools.ToolProvider.getSystemJavaCompiler().run(null,null,null,args.toArray(String[]::new)));
         Path manifest=build.resolve("META-INF/openggf-mod.yaml");Files.createDirectories(manifest.getParent());
         Files.copy(project.resolve("src/main/resources/META-INF/openggf-mod.yaml"),manifest);

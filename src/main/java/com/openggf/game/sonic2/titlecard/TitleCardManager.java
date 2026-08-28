@@ -7,6 +7,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.session.SessionManager;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
@@ -24,6 +26,7 @@ import com.openggf.util.PatternDecompressor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,24 +45,51 @@ import java.util.logging.Logger;
  * SLIDE_IN → DISPLAY → SLIDE_OUT → COMPLETE
  * </pre>
  */
-public class TitleCardManager implements TitleCardProvider {
+public class TitleCardManager implements TitleCardProvider,
+        RewindSnapshottable<TitleCardManager.Snapshot> {
     private static final Logger LOGGER = Logger.getLogger(TitleCardManager.class.getName());
+    public static final String REWIND_KEY = "s2-title-card";
 
     private static TitleCardManager instance;
 
-    /**
-     * Display hold duration in frames before starting the exit sequence.
+    /*
+     * The leave sequence's length is fixed by the Obj34 leave routines, not by
+     * how far this engine's overlay elements happen to have travelled. ROM
+     * order (docs/s2disasm/s2.asm:4913-5066):
      *
-     * On original hardware, the title card would remain visible while the console
-     * performed expensive operations: decompressing Nemesis/Kosinski art, loading
-     * level layout data, initializing objects, etc. This created a natural pause
-     * where the title card was fully visible before exiting.
+     *   Level_TtlCard's scroll-in wait loop (:4914-4925) runs before
+     *   InitPlayers (:4945), so the players do not exist for it at all.
+     *   :5003-5006 then run ObjectsManager / RingsManager /
+     *   SpecialCNZBumpers / RunObjects once -- one player object pass with no
+     *   WaitForVint of its own. :5056-5058 arm the leave flags
+     *   (TitleCard_ZoneName titlecard_leaveflag = -1, TitleCard_Left routine
+     *   $E, titlecard_location $A) and :5060-5066 loop WaitForVint /
+     *   RunObjects / BuildSprites / RunPLC_RAM until TitleCard_Background is
+     *   unloaded.
      *
-     * Our engine loads data much faster (often in a single frame), so we add an
-     * artificial hold period to simulate the original timing and give players
-     * time to read the zone name. 60 frames ≈ 1 second at 60fps.
+     * That loop is exactly 25 iterations:
+     *   Obj34_LeftPartOut (:27518-27540) steps titlecard_location
+     *   $A -> 6 -> 2 -> 0 (the -2 clamp) -> -4 and, on the pass that reads a
+     *   negative location, hands TitleCard_Bottom routine $10 and deletes
+     *   itself: 5 passes.
+     *   Obj34_BottomPartOut (:27542-27551) starts at location 0 and adds 4
+     *   per pass, deleting itself and handing TitleCard_Background routine
+     *   $12 on the pass that reads $28: 11 passes.
+     *   Obj34_BackgroundOutInit/Out (:27587-27604) sets location $F0 and
+     *   subtracts $20 per pass, deleting itself on the pass that computes
+     *   -$30: 9 passes.
+     *
+     * So the players run 1 + 25 = 26 object passes between InitPlayers and
+     * Level_MainLoop (:5087).
      */
-    private static final int DISPLAY_HOLD_DURATION = 60;
+    private static final int LEAVE_PRELOOP_PASSES = 1;
+    private static final int LEAVE_LEFT_PASSES = 5;
+    private static final int LEAVE_BOTTOM_PASSES = 11;
+    private static final int LEAVE_BACKGROUND_PASSES = 9;
+    private static final int LEAVE_LOOP_PASSES =
+            LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES + LEAVE_BACKGROUND_PASSES;
+    private static final int LEAVE_PLAYABLE_PASSES =
+            LEAVE_PRELOOP_PASSES + LEAVE_LOOP_PASSES;
 
     /**
      * Text wait duration in frames before sliding out.
@@ -229,6 +259,16 @@ public class TitleCardManager implements TitleCardProvider {
     private int frameCounter = 0;
 
     /**
+     * LoadZoneTiles DMA chunk size: the {@code $1000}-byte granule its
+     * {@code rol.w #4,d7 / andi.w #$F,d7} chunk-count extraction is defined against
+     * (docs/s2disasm/s2.asm:6485-6486).
+     */
+    private static final int ZONE_TILE_DMA_CHUNK_BYTES = 0x1000;
+
+    /** Remaining LoadZoneTiles {@code dbf} iterations, one VBlank each (s2.asm:6519). */
+    private int zoneTileUploadFramesLeft = 0;
+
+    /**
      * Flag to delay TEXT_EXIT -> COMPLETE transition by one frame.
      * This ensures elements are drawn at their final positions before
      * the state transitions, matching the original game's behavior where
@@ -264,12 +304,75 @@ public class TitleCardManager implements TitleCardProvider {
     private boolean exitPlcsQueued;
     private int lastLoadedZone = -1;  // Track which zone's letters we've loaded
 
+    /**
+     * Object passes dispatched since {@code Level:} armed the title-card leave
+     * flags, or {@code 0} while the card is still in its pre-{@code InitPlayers}
+     * phases. Pass 1 is the {@code jsr (RunObjects).l} at
+     * docs/s2disasm/s2.asm:5006; passes 2..26 are the 25 iterations of the
+     * leave loop at docs/s2disasm/s2.asm:5060-5066.
+     */
+    private int leavePass;
+
     /** Whether the gameplay-phase Obj34_WaitAndGoAway tail is running. */
     private boolean exitTailActive;
     /** anim_frame_duration of the zone-name piece during that tail. */
     private int exitTailWaitFrames;
     /** x_pixel of the zone-name piece during that tail. */
     private int exitTailZoneNameX;
+
+    /** Immutable live-title state used by the gameplay rewind registry. */
+    public record Snapshot(
+            TitleCardState state,
+            int stateTimer,
+            int frameCounter,
+            int currentZone,
+            int currentAct,
+            int zoneTileUploadFramesLeft,
+            boolean textExitTransitionPending,
+            boolean artLoaded,
+            boolean artCached,
+            boolean exitPlcsQueued,
+            int lastLoadedZone,
+            int leavePass,
+            boolean exitTailActive,
+            int exitTailWaitFrames,
+            int exitTailZoneNameX,
+            Pattern[] combinedPatterns,
+            Pattern[] titleCard2RawPatterns,
+            Pattern[] titleCardBasePatterns,
+            TitleCardElement.Snapshot[] elements) {
+        public Snapshot {
+            Objects.requireNonNull(state, "state");
+            combinedPatterns = copy(combinedPatterns);
+            titleCard2RawPatterns = copy(titleCard2RawPatterns);
+            titleCardBasePatterns = copy(titleCardBasePatterns);
+            elements = elements == null ? new TitleCardElement.Snapshot[0] : elements.clone();
+        }
+
+        @Override
+        public Pattern[] combinedPatterns() {
+            return copy(combinedPatterns);
+        }
+
+        @Override
+        public Pattern[] titleCard2RawPatterns() {
+            return copy(titleCard2RawPatterns);
+        }
+
+        @Override
+        public Pattern[] titleCardBasePatterns() {
+            return copy(titleCardBasePatterns);
+        }
+
+        @Override
+        public TitleCardElement.Snapshot[] elements() {
+            return elements.clone();
+        }
+
+        private static Pattern[] copy(Pattern[] source) {
+            return source == null ? null : source.clone();
+        }
+    }
 
     private final java.util.function.Supplier<ZoneRegistry> zoneRegistry;
     private final java.util.function.BooleanSupplier skipModCards;
@@ -281,8 +384,77 @@ public class TitleCardManager implements TitleCardProvider {
 
     TitleCardManager(java.util.function.Supplier<ZoneRegistry> zoneRegistry,
                      java.util.function.BooleanSupplier skipModCards) {
-        this.zoneRegistry = java.util.Objects.requireNonNull(zoneRegistry, "zoneRegistry");
-        this.skipModCards = java.util.Objects.requireNonNull(skipModCards, "skipModCards");
+        this.zoneRegistry = Objects.requireNonNull(zoneRegistry, "zoneRegistry");
+        this.skipModCards = Objects.requireNonNull(skipModCards, "skipModCards");
+    }
+
+    @Override
+    public String key() {
+        return REWIND_KEY;
+    }
+
+    @Override
+    public Snapshot capture() {
+        TitleCardElement.Snapshot[] elementSnapshots = elements.stream()
+                .map(TitleCardElement::capture)
+                .toArray(TitleCardElement.Snapshot[]::new);
+        return new Snapshot(
+                state, stateTimer, frameCounter, currentZone, currentAct,
+                zoneTileUploadFramesLeft, textExitTransitionPending,
+                artLoaded, artCached, exitPlcsQueued, lastLoadedZone,
+                leavePass, exitTailActive, exitTailWaitFrames, exitTailZoneNameX,
+                combinedPatterns, titleCard2RawPatterns, titleCardBasePatterns,
+                elementSnapshots);
+    }
+
+    @Override
+    public void restore(Snapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        state = snapshot.state();
+        stateTimer = snapshot.stateTimer();
+        frameCounter = snapshot.frameCounter();
+        currentZone = snapshot.currentZone();
+        currentAct = snapshot.currentAct();
+        zoneTileUploadFramesLeft = snapshot.zoneTileUploadFramesLeft();
+        textExitTransitionPending = snapshot.textExitTransitionPending();
+        artLoaded = snapshot.artLoaded();
+        artCached = snapshot.artCached();
+        exitPlcsQueued = snapshot.exitPlcsQueued();
+        lastLoadedZone = snapshot.lastLoadedZone();
+        leavePass = snapshot.leavePass();
+        exitTailActive = snapshot.exitTailActive();
+        exitTailWaitFrames = snapshot.exitTailWaitFrames();
+        exitTailZoneNameX = snapshot.exitTailZoneNameX();
+        combinedPatterns = snapshot.combinedPatterns();
+        titleCard2RawPatterns = snapshot.titleCard2RawPatterns();
+        titleCardBasePatterns = snapshot.titleCardBasePatterns();
+
+        TitleCardElement.Snapshot[] elementSnapshots = snapshot.elements();
+        if (elementSnapshots.length == 0) {
+            elements.clear();
+            zoneNameElement = null;
+            zoneTextElement = null;
+            actNumberElement = null;
+            bottomBarElement = null;
+            leftSwooshElement = null;
+            blueBackgroundElement = null;
+            return;
+        }
+
+        createElements();
+        if (elementSnapshots.length != elements.size()) {
+            throw new IllegalStateException(
+                    "S2 title-card rewind element count mismatch: expected "
+                            + elements.size() + ", actual " + elementSnapshots.length);
+        }
+        for (int i = 0; i < elementSnapshots.length; i++) {
+            elements.get(i).restore(elementSnapshots[i]);
+        }
+    }
+
+    @Override
+    public void resetForMissingSnapshot() {
+        reset();
     }
 
     public static synchronized TitleCardManager getInstance() {
@@ -303,9 +475,11 @@ public class TitleCardManager implements TitleCardProvider {
         this.currentAct = actIndex;
         this.exitPlcsQueued = false;
         this.exitTailActive = false;
+        this.leavePass = 0;
         this.state = TitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.frameCounter = 0;
+        this.zoneTileUploadFramesLeft = 0;
         this.textExitTransitionPending = false;
 
         if (isSkippedModZone(zoneIndex)) {
@@ -567,14 +741,37 @@ public class TitleCardManager implements TitleCardProvider {
             return;
         }
 
+        if (leavePass > 0) {
+            leavePass++;
+            if (leavePass > LEAVE_PLAYABLE_PASSES) {
+                // The leave loop's exit condition has been met, so Level:
+                // falls through to :5068-5080 and Level_StartGame.
+                enterTextWait();
+                return;
+            }
+        }
+
         switch (state) {
             case SLIDE_IN -> updateSlideIn();
             case DISPLAY -> updateDisplay();
+            case ZONE_TILE_UPLOAD -> updateZoneTileUpload();
             case EXIT_LEFT_SWOOSH -> updateExitLeftSwoosh();
             case EXIT_BOTTOM_BAR -> updateExitBottomBar();
             case EXIT_BACKGROUND -> updateExitBackground();
-            case TEXT_WAIT -> updateTextWait();
-            case TEXT_EXIT -> updateTextExit();
+            // The overlay states below animate the pieces for display; the ROM
+            // routine that owns when their art loads fire runs alongside them.
+            case TEXT_WAIT -> {
+                if (advanceZoneNamePieceTail()) {
+                    queueExitPlcs();
+                }
+                updateTextWait();
+            }
+            case TEXT_EXIT -> {
+                if (advanceZoneNamePieceTail()) {
+                    queueExitPlcs();
+                }
+                updateTextExit();
+            }
             case COMPLETE -> {}
         }
     }
@@ -585,36 +782,146 @@ public class TitleCardManager implements TitleCardProvider {
             element.updateSlideIn();
         }
 
-        // Check if all elements have reached their targets
-        boolean allAtTarget = elements.stream().allMatch(TitleCardElement::isAtTarget);
-        if (allAtTarget) {
+        // Level_TtlCard's re-loop test names one piece and one piece only:
+        // it reads (TitleCard_ZoneName+x_pos) and compares it against that
+        // object's titlecard_x_target (docs/s2disasm/s2.asm:4920-4921). The
+        // other pieces keep moving under RunObjects while the loop spins, and
+        // the loop never waits on them. Testing every element instead held the
+        // card for the LAST piece to arrive: "ZONE" and the act number carry
+        // anim_frame_duration $1C against the zone name's $1B
+        // (Obj34_TitleCardData, :27369-27371), so they land one iteration
+        // later than the piece the ROM actually watches.
+        //
+        // The zone name lands on the same iteration in both models, but by two
+        // offsetting routes worth naming. Obj34_Wait skips the move while the
+        // post-decrement duration is non-zero and moves on the pass that takes
+        // it to zero (:27380-27387), i.e. $1B gives 26 skips, not 27; against
+        // that, Obj34_Init writes the zone-name child over the parent's own
+        // slot (:27328-27346), so RunObjects has already passed it and it
+        // misses the creation pass. 26 skips from the second iteration and the
+        // engine's 27 from the first both put the eighteenth and last 16px
+        // step (Obj34_MoveTowardsTargetPosition, :27493-27499) on iteration 45.
+        if (zoneNameElement != null && zoneNameElement.isAtTarget()) {
+            // Both halves of the re-loop test live in the SAME iteration: the
+            // x_pos compare falls through to tst.l (Plc_Buffer).w and only a
+            // failure of either branches back to Level_TtlCard (:4919-4924).
+            // So an already-drained queue leaves the loop on the very
+            // iteration the zone name arrives -- entering DISPLAY to discover
+            // that on the next iteration spends a frame the ROM does not.
+            // DISPLAY still owns the case the ROM spends real iterations on:
+            // the piece is parked at its target while the cue drains.
+            if (!plcQueueBusy()) {
+                enterZoneTileUpload();
+                return;
+            }
             state = TitleCardState.DISPLAY;
             stateTimer = 0;
             LOGGER.fine("Title card entered DISPLAY state at frame " + frameCounter);
         }
     }
 
+    /**
+     * Second half of Level_TtlCard's re-loop test (docs/s2disasm/s2.asm:
+     * 4923-4924): {@code tst.l (Plc_Buffer).w / bne.s Level_TtlCard} keeps the
+     * card locked until the queued pattern load cue has fully drained. Each
+     * iteration of that loop runs one {@code VintID_TitleCard} VBlank, whose
+     * {@code Vint_TitleCard} tail is {@code bra.w ProcessDPLC}
+     * (docs/s2disasm/s2.asm:1071), and {@code ProcessDPLC} decompresses exactly
+     * six patterns per VBlank (docs/s2disasm/s2.asm:2202-2213,
+     * {@code move.w #6,(Plc_FramePatternsLeft).w}). The card's hold is
+     * therefore outstanding patterns divided by six per frame -- a quantity the
+     * PLC queue already tracks -- not a wall-clock constant. Asking the queue
+     * whether it is still busy models the ROM's own test directly and at the
+     * ROM's own rate; the prior {@code DISPLAY_HOLD_DURATION = 60} stand-in for
+     * "hardware decompression time" was a fitted number with no ROM source.
+     */
     private void updateDisplay() {
-        // Hold the title card visible for DISPLAY_HOLD_DURATION frames.
-        //
-        // On original hardware, the Mega Drive would spend significant time here
-        // decompressing art (Nemesis, Kosinski), loading level layouts, and
-        // initializing game objects. The title card naturally stayed visible
-        // during this loading period.
-        //
-        // Our engine completes these operations nearly instantly, so we add an
-        // artificial hold to match the original game's pacing and give players
-        // time to see which zone they're entering.
-        if (stateTimer >= DISPLAY_HOLD_DURATION) {
-            state = TitleCardState.EXIT_LEFT_SWOOSH;
-            stateTimer = 0;
-            // Initialize left swoosh exit - from disassembly line 5054:
-            // move.w #$A,(TitleCard_Left+titlecard_location).w
-            if (leftSwooshElement != null) {
-                leftSwooshElement.startExit();
-            }
-            LOGGER.fine("Title card entered EXIT_LEFT_SWOOSH state at frame " + frameCounter);
+        if (!plcQueueBusy()) {
+            enterZoneTileUpload();
         }
+    }
+
+    /**
+     * Leaves {@code Level_TtlCard} the way the ROM does: straight into
+     * {@code bsr.w LoadZoneTiles} (docs/s2disasm/s2.asm:4938), ahead of any of
+     * the leave sequence.
+     */
+    private void enterZoneTileUpload() {
+        state = TitleCardState.ZONE_TILE_UPLOAD;
+        stateTimer = 0;
+        zoneTileUploadFramesLeft = zoneTileUploadVBlanks();
+        LOGGER.fine("Title card entered ZONE_TILE_UPLOAD state at frame " + frameCounter
+                + " for " + zoneTileUploadFramesLeft + " VBlank(s)");
+        if (zoneTileUploadFramesLeft <= 0) {
+            enterLeftSwooshExit();
+        }
+    }
+
+    /**
+     * VBlanks LoadZoneTiles spends uploading the zone's 8x8 art
+     * (docs/s2disasm/s2.asm:6471-6524).
+     *
+     * <p>The routine Kosinski-decodes the {@code LevelArtPointers} 8x8 stream into
+     * Chunk_Table and takes the resulting write pointer as the byte size
+     * ({@code move.w a1,d3}, :6483). It then extracts the DMA chunk count with
+     * {@code rol.w #4,d7 / andi.w #$F,d7} (:6485-6486) -- bits 15-12 of that size, which
+     * is {@code size / $1000} -- and runs a {@code dbf d7,-} loop (:6506-6523) whose body
+     * contains {@code bsr.w WaitForVint} (:6519). {@code dbf} executes the body
+     * {@code d7 + 1} times, so the cost is {@code size / $1000 + 1} VBlanks: one per
+     * {@code $1000}-byte DMA chunk plus one for the leading partial chunk.
+     *
+     * <p>Every term here is the ROM's. The size is the engine's own decompressed art
+     * length ({@link Sonic2Level#getZoneTileArtByteSize()}), decoded from the same stream
+     * at the same address, so the resulting per-zone frame counts are a consequence of the
+     * zone's art rather than a table.
+     */
+    private int zoneTileUploadVBlanks() {
+        if (!(GameServices.levelOrNull() instanceof com.openggf.level.LevelManager lm)) {
+            return 0;
+        }
+        if (!(lm.getCurrentLevel() instanceof com.openggf.game.sonic2.Sonic2Level level)) {
+            return 0;
+        }
+        int byteSize = level.getZoneTileArtByteSize();
+        if (byteSize <= 0) {
+            return 0;
+        }
+        return (byteSize / ZONE_TILE_DMA_CHUNK_BYTES) + 1;
+    }
+
+    /** LoadZoneTiles' zone-art upload hold, one VBlank per DMA chunk. */
+    private void updateZoneTileUpload() {
+        if (zoneTileUploadFramesLeft > 0) {
+            zoneTileUploadFramesLeft--;
+        }
+        if (zoneTileUploadFramesLeft <= 0) {
+            enterLeftSwooshExit();
+        }
+    }
+
+    private void enterLeftSwooshExit() {
+        state = TitleCardState.EXIT_LEFT_SWOOSH;
+        stateTimer = 0;
+        // This frame is the s2.asm:5003-5006 pass: InitPlayers has run and
+        // RunObjects dispatches the players once, but the leave flags at
+        // :5056-5058 are only armed after it, so no leave piece moves yet.
+        leavePass = LEAVE_PRELOOP_PASSES;
+        // Initialize left swoosh exit - from disassembly line 5054:
+        // move.w #$A,(TitleCard_Left+titlecard_location).w
+        if (leftSwooshElement != null) {
+            leftSwooshElement.startExit();
+        }
+        LOGGER.fine("Title card entered EXIT_LEFT_SWOOSH state at frame " + frameCounter);
+    }
+
+    /** Models {@code tst.l (Plc_Buffer).w} (docs/s2disasm/s2.asm:4923). */
+    private boolean plcQueueBusy() {
+        if (SessionManager.getCurrentWorldSession() == null) {
+            return false;
+        }
+        Sonic2PlcService plcService =
+                GameServices.module().getGameService(Sonic2PlcService.class);
+        return plcService != null && plcService.isBusy();
     }
 
     /**
@@ -625,25 +932,38 @@ public class TitleCardManager implements TitleCardProvider {
     private void updateExitLeftSwoosh() {
         if (leftSwooshElement != null) {
             leftSwooshElement.updateSlideOut();
-
-            if (leftSwooshElement.hasExited()) {
-                // Trigger bottom bar exit - from disassembly line 27303:
-                // move.b #$10,TitleCard_Bottom-TitleCard_Left+routine(a0)
-                state = TitleCardState.EXIT_BOTTOM_BAR;
-                stateTimer = 0;
-                if (bottomBarElement != null) {
-                    bottomBarElement.startExit();
-                }
-                LOGGER.fine("Title card entered EXIT_BOTTOM_BAR state at frame " + frameCounter);
-            }
-        } else {
-            // No left swoosh, skip to bottom bar
+        }
+        // Obj34_LeftPartOut hands the bottom piece routine $10 on its fifth
+        // pass, whatever the overlay's own travel has reached
+        // (docs/s2disasm/s2.asm:27518-27540).
+        if (leaveLoopPass() >= LEAVE_LEFT_PASSES) {
             state = TitleCardState.EXIT_BOTTOM_BAR;
             stateTimer = 0;
             if (bottomBarElement != null) {
                 bottomBarElement.startExit();
             }
+            LOGGER.fine("Title card entered EXIT_BOTTOM_BAR state at frame " + frameCounter);
         }
+    }
+
+    /**
+     * Iterations of the s2.asm:5060-5066 leave loop completed so far, i.e. the
+     * leave-sequence pass count less the leading s2.asm:5006 pass.
+     */
+    private int leaveLoopPass() {
+        return leavePass - LEAVE_PRELOOP_PASSES;
+    }
+
+    private void enterTextWait() {
+        state = TitleCardState.TEXT_WAIT;
+        stateTimer = 0;
+        leavePass = 0;
+        // s2.asm:5066-5080 writes routine $16 and anim_frame_duration $2D to
+        // the surviving pieces here, after the leave loop and before
+        // Level_MainLoop, whether or not the card was displayed.
+        exitTailWaitFrames = TEXT_WAIT_DURATION;
+        exitTailZoneNameX = EXIT_TAIL_ZONE_NAME_X_TARGET;
+        LOGGER.fine("Title card entered TEXT_WAIT state at frame " + frameCounter);
     }
 
     /**
@@ -654,24 +974,17 @@ public class TitleCardManager implements TitleCardProvider {
     private void updateExitBottomBar() {
         if (bottomBarElement != null) {
             bottomBarElement.updateSlideOut();
-
-            if (bottomBarElement.hasExited()) {
-                // Trigger background exit - from disassembly line 27328:
-                // move.b #$12,TitleCard_Background-TitleCard_Bottom+routine(a0)
-                state = TitleCardState.EXIT_BACKGROUND;
-                stateTimer = 0;
-                if (blueBackgroundElement != null) {
-                    blueBackgroundElement.startExit();
-                }
-                LOGGER.fine("Title card entered EXIT_BACKGROUND state at frame " + frameCounter);
-            }
-        } else {
-            // No bottom bar, skip to background
+        }
+        // Obj34_BottomPartOut hands the background routine $12 on the pass that
+        // reads titlecard_location $28, its eleventh
+        // (docs/s2disasm/s2.asm:27542-27551).
+        if (leaveLoopPass() >= LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES) {
             state = TitleCardState.EXIT_BACKGROUND;
             stateTimer = 0;
             if (blueBackgroundElement != null) {
                 blueBackgroundElement.startExit();
             }
+            LOGGER.fine("Title card entered EXIT_BACKGROUND state at frame " + frameCounter);
         }
     }
 
@@ -681,9 +994,20 @@ public class TitleCardManager implements TitleCardProvider {
      * When complete, starts the text wait period.
      *
      * <p>In the original game, the background object is deleted when its internal
-     * location counter reaches -$30, and the main loop (lines 5061-5062) checks
-     * on the NEXT VBlank whether the object is gone. This creates a 1-frame delay
-     * between the background finishing and the text timer starting.
+     * location counter reaches -$30. There is <em>no</em> extra V-blank between
+     * that deletion and the loop falling through: the leave loop at
+     * docs/s2disasm/s2.asm:5060-5066 does
+     * {@code move.b #VintID_TitleCard,(Vint_routine).w} / {@code bsr.w WaitForVint}
+     * (:5060-5061), then {@code jsr (RunObjects).l} (:5062) -- which is the pass
+     * that deletes {@code TitleCard_Background} -- and then reads the cleared id
+     * three instructions later, {@code tst.b (TitleCard_Background+id).w} /
+     * {@code bne.s -} (:5065-5066), in the <em>same</em> iteration. The fall-through
+     * at :5068 runs on through {@code Level_StartGame} (:5084) into
+     * {@code Level_MainLoop}, whose own {@code bsr.w WaitForVint} (:5089-5091) is
+     * the next V-blank, so no V-blank is spent between the delete and the
+     * fall-through. The deleting iteration is therefore both the last leave-loop
+     * pass and the fall-through row -- a previous version of this javadoc claimed a
+     * 1-frame delay here, and the disassembly refutes it.
      *
      * <p>We also verify the background is completely off-screen (blueBottom <= 0)
      * before transitioning, to ensure no visual remnant remains.
@@ -691,25 +1015,14 @@ public class TitleCardManager implements TitleCardProvider {
     private void updateExitBackground() {
         if (blueBackgroundElement != null) {
             blueBackgroundElement.updateSlideOut();
-
-            if (blueBackgroundElement.hasExited()) {
-                // Verify background is completely off-screen (blueY + 152 <= 0)
-                int blueBottom = blueBackgroundElement.getCurrentY() + 152;
-                if (blueBottom <= 0) {
-                    // Background is fully gone - now text gets its wait timer
-                    // From disassembly lines 5065-5072:
-                    // move.w #$2D,TitleCard_ZoneName-TitleCard+anim_frame_duration(a1)
-                    state = TitleCardState.TEXT_WAIT;
-                    stateTimer = 0;
-                    LOGGER.fine("Title card entered TEXT_WAIT state at frame " + frameCounter);
-                }
-                // If blueBottom > 0, wait another frame for it to fully disappear
-            }
-        } else {
-            // No background element, skip to text wait
-            state = TitleCardState.TEXT_WAIT;
-            stateTimer = 0;
         }
+        // Obj34_BackgroundOut deletes itself on the pass that computes -$30,
+        // its ninth (docs/s2disasm/s2.asm:27587-27604). The loop's
+        // tst.b (TitleCard_Background+id).w (:5065) reads the cleared id in the
+        // SAME iteration as the RunObjects call that deleted it (:5062), so that
+        // iteration is both the last pass and the fall-through row -- it is the
+        // 26th and final pass counted by LEAVE_PLAYABLE_PASSES, not a pass
+        // followed by a separate fall-through frame.
     }
 
     /**
@@ -773,9 +1086,9 @@ public class TitleCardManager implements TitleCardProvider {
         boolean zoneTextExited = (zoneTextElement == null || zoneTextElement.hasExited());
         boolean actNumberExited = (actNumberElement == null || actNumberElement.hasExited());
 
-        if (zoneNameExited) {
-            queueExitPlcs();
-        }
+        // The two art loads are owned by advanceZoneNamePieceTail(), which
+        // models Obj34_WaitAndGoAway's own x_pixel test rather than this
+        // overlay element's viewport-relative exit.
 
         if (zoneNameExited && zoneTextExited && actNumberExited) {
             // Mark transition as pending - actual transition happens next frame
@@ -836,23 +1149,41 @@ public class TitleCardManager implements TitleCardProvider {
      * docs/s2disasm/s2.asm:27605-27637
      */
     private void updateOmittedPresentationExitTail() {
+        if (advanceZoneNamePieceTail()) {
+            finishOmittedPresentationExitTail();
+        }
+    }
+
+    /**
+     * One gameplay pass of {@code Obj34_WaitAndGoAway} for the zone-name piece,
+     * returning true on the pass that reaches {@code
+     * Obj34_LoadStandardWaterAndAnimalArt} (docs/s2disasm/s2.asm:27605-27637).
+     *
+     * <p>This is the single owner of that routine's timing. {@code Level}
+     * arms it identically whether or not the card was displayed: the routine
+     * byte and {@code anim_frame_duration = $2D} are written after the leave
+     * loop and immediately before {@code Level_MainLoop}
+     * (docs/s2disasm/s2.asm:5066-5080), so the count always starts on the
+     * first main-loop iteration. The presentation path previously decided the
+     * same event from its overlay elements' viewport-relative {@code
+     * hasExited()} plus a state-transition pass that consumed a frame without
+     * moving the piece, which fired the two art loads two frames late.
+     */
+    private boolean advanceZoneNamePieceTail() {
         // tst.w anim_frame_duration(a0) / subq.w #1 / bra DisplaySprite
         if (exitTailWaitFrames > 0) {
             exitTailWaitFrames--;
-            return;
+            return false;
         }
         // cmp.w titlecard_x_source(a0),d1 / beq Obj34_LoadStandardWaterAndAnimalArt
         if (exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE) {
-            finishOmittedPresentationExitTail();
-            return;
+            return true;
         }
         // sub.w d0,x_pixel(a0) with d0 negated while below the source position
         exitTailZoneNameX += EXIT_TAIL_SLIDE_SPEED;
         // cmpi.w #$200,x_pixel(a0) / bhi Obj34_LoadStandardWaterAndAnimalArt
-        if (exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE
-                || exitTailZoneNameX > EXIT_TAIL_OFFSCREEN_LIMIT) {
-            finishOmittedPresentationExitTail();
-        }
+        return exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE
+                || exitTailZoneNameX > EXIT_TAIL_OFFSCREEN_LIMIT;
     }
 
     private void finishOmittedPresentationExitTail() {
@@ -1119,9 +1450,77 @@ public class TitleCardManager implements TitleCardProvider {
         stateTimer = 0;
         frameCounter = 0;
         textExitTransitionPending = false;
+        zoneTileUploadFramesLeft = 0;
+        exitPlcsQueued = false;
         exitTailActive = false;
+        exitTailWaitFrames = 0;
+        exitTailZoneNameX = 0;
+        leavePass = 0;
         elements.clear();
+        zoneNameElement = null;
+        zoneTextElement = null;
+        actNumberElement = null;
+        bottomBarElement = null;
+        leftSwooshElement = null;
+        blueBackgroundElement = null;
     }
+
+    /**
+     * Player physics runs only for the object passes the ROM dispatches with
+     * the player objects created.
+     *
+     * <p>{@code InitPlayers} is at docs/s2disasm/s2.asm:4945, after the
+     * {@code Level_TtlCard} scroll-in wait loop at :4914-4925, so Sonic and
+     * Tails do not exist for the card's slide-in and hold at all. They exist
+     * for the single {@code RunObjects} at :5006 and for the 25 iterations of
+     * the leave loop at :5060-5066 -- 26 passes, tracked by {@link #leavePass}.
+     */
+    @Override
+    public boolean shouldRunPlayerPhysics() {
+        return leavePass > 0;
+    }
+
+    /**
+     * The level's placed objects have exactly the same ROM lifetime as the
+     * players, and for the same reason: {@code Level:} calls
+     * {@code ObjectsManager} at docs/s2disasm/s2.asm:5003 -- one instruction
+     * before the {@code InitPlayers} window cited above -- so the object RAM
+     * the {@code Level_TtlCard} scroll-in loop at :4914-4925 dispatches holds
+     * only the Obj34 title-card pieces, never a level object. The level
+     * objects therefore run for the single {@code RunObjects} at :5006 and the
+     * 25 leave-loop iterations at :5060-5066, and for nothing before them.
+     *
+     * <p>Without this the engine aged every placed object by the full length
+     * of the card's slide-in and hold. That is invisible on a fresh headless
+     * load, whose card is only the leave window, but a re-entry card (a star
+     * post restart, or a special-stage return inside a run) is far longer: the
+     * CPZ act 2 special-stage return ran 91 object passes where the ROM runs
+     * 26, drifting the ObjA7 Grabber cluster (x_vel {@code #-$40} per pass,
+     * s2.asm:76662-76668) about 17 pixels and putting a badnik in the player's
+     * path that the ROM never places there.
+     *
+     * @see #shouldRunPlayerPhysics()
+     */
+    @Override
+    public boolean shouldRunLevelObjectsDuringLockedPhase() {
+        return leavePass > 0;
+    }
+
+    /**
+     * ROM {@code RunObjects} extends its slot count to {@code LevelOnly_Object_RAM}
+     * only when {@code Game_Mode} is exactly {@code GameModeID_Level}
+     * (docs/s2disasm/s2.asm:29812-29818); {@code GameModeFlag_TitleCard} is set for
+     * the whole pre-{@code Level_MainLoop} window (set s2.asm:4758, cleared
+     * s2.asm:5087). So the 26 pre-main-loop passes above run Sonic and Tails --
+     * both inside {@code Object_RAM} -- but never Obj05 Tails' tails or the
+     * dust/shield/bubble/star slots that follow {@code Object_RAM_End}
+     * (docs/s2disasm/s2.constants.asm:1145-1176).
+     */
+    @Override
+    public boolean shouldRunLevelOnlyFixedSlotsDuringLockedPhase() {
+        return false;
+    }
+
 
     /**
      * Gets the current zone index.

@@ -34,14 +34,53 @@ class TestTracePlaybackProfile {
     }
 
     @Test
+    void sonic2ProfilesItsMeasuredPerDestinationLevelEntryMask() {
+        var profile = new Sonic2GameModule().getTracePlaybackProfile();
+        assertTrue(profile.alignsInterLevelVblank());
+        // The one masked stretch between Level: (docs/s2disasm/s2.asm:4757) and
+        // Level_MainLoop (:5088) is line 4768's move #$2700,sr over ClearScreen
+        // + LoadTitleCard. Measured 10 at 20 of 21 level->level boundaries of
+        // the complete-emerald run, and 10 in every independently recorded
+        // s2-lvl-select-*.bk2 act advance that has a second witness.
+        assertEquals(10, profile.interLevelNonAdvancingMovieRows());
+        assertEquals(10, profile.interLevelNonAdvancingMovieRows(0, 2), "EHZ2 entry");
+        assertEquals(10, profile.interLevelNonAdvancingMovieRows(6, 1), "OOZ1 entry");
+        assertEquals(10, profile.interLevelNonAdvancingMovieRows(7, 3), "MTZ3 entry");
+        // The single deviant destination: entering OOZ act 2 measures 9 in BOTH
+        // the complete-emerald run and s2-lvl-select-OOZ.bk2.
+        assertEquals(9, profile.interLevelNonAdvancingMovieRows(6, 2), "OOZ2 entry");
+    }
+
+    @Test
+    void sonic2SpecialStageRoundTripComposesTheLevelAndStageEntryMasks() {
+        var profile = new Sonic2GameModule().getTracePlaybackProfile();
+        // Measured on every level -> special stage -> level boundary of
+        // s2-sonic-tails-complete-emeralds: movieRows - vblankDelta == 11,
+        // against 10 for a plain act advance into the same destinations.
+        assertEquals(11, profile.specialStageReturnNonAdvancingMovieRows(0, 1), "EHZ1 return");
+        assertEquals(11, profile.specialStageReturnNonAdvancingMovieRows(0, 2), "EHZ2 return");
+        assertEquals(11, profile.specialStageReturnNonAdvancingMovieRows(1, 2), "CPZ2 return");
+        assertEquals(11, profile.specialStageReturnNonAdvancingMovieRows(2, 1), "ARZ1 return");
+        // The composition, not a flat 11: the deviant destination carries its
+        // own level-entry mask of 9, so its round trip must be 10.
+        assertEquals(10, profile.specialStageReturnNonAdvancingMovieRows(6, 2), "OOZ2 return");
+        // Sonic 1 models its return through the results presentation bridge.
+        assertEquals(0, new Sonic1GameModule().getTracePlaybackProfile()
+                .specialStageReturnNonAdvancingMovieRows(0, 1));
+    }
+
+    @Test
     void otherGamesLeaveMovieClockAlignmentDisabledUntilMeasured() {
         assertFalse(new Sonic2GameModule().getTracePlaybackProfile()
                 .alignsStageResultsPresentationVblank());
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile()
                 .alignsStageResultsPresentationVblank());
-        assertFalse(new Sonic2GameModule().getTracePlaybackProfile().alignsInterLevelVblank());
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile().alignsInterLevelVblank());
-        assertFalse(new Sonic2GameModule().getTracePlaybackProfile()
+        // Sonic 2 IS measured: the level -> special stage -> level composition
+        // lands the object clock on the recorded counter at every one of the
+        // complete-emerald run's stage returns, so it is switched on. Sonic 3&K
+        // is still unmeasured.
+        assertTrue(new Sonic2GameModule().getTracePlaybackProfile()
                 .alignUncomparedInteriorReturnVblank());
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile()
                 .alignUncomparedInteriorReturnVblank());

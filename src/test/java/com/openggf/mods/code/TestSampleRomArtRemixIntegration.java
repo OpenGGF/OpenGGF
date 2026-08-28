@@ -1,5 +1,6 @@
 package com.openggf.mods.code;
 
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
@@ -114,45 +115,46 @@ class TestSampleRomArtRemixIntegration {
             GameModule base = new Sonic2GameModule();
             base.createGame(rom);
             ModuleResolutionService resolver = resolver(fixture);
-            GameplayLaunchRequest launchRequest = new GameplayLaunchRequest("s2", "sonic", List.of());
-            GameModule resolved = resolver.resolveForLaunch(base, launchRequest,
-                    ModuleResolutionService.LaunchPolicy.STANDARD);
-            int zoneIndex = resolved.getZoneRegistry()
-                    .resolveZoneKey(ZoneKey.mod("sample-rom-art-remix", "rom-art-gallery"))
-                    .orElseThrow();
-
-            GameplayLaunchTeam launchTeam = resolved.getGameplayPolicyProvider().launchTeam(
-                    ZoneKey.mod("sample-rom-art-remix", "rom-art-gallery"))
-                    .orElseGet(() -> new GameplayLaunchTeam(
-                            CharacterKey.parsePersisted(launchRequest.mainCharacter()), List.of()));
-            assertEquals(CharacterKey.SONIC, launchTeam.main(),
-                    "the sample must work with S2's default Sonic-main team");
-
-            ObjectSpriteSheet sheet = resolved.getObjectArtProvider().getSheet(ART_KEY);
-            assertNotNull(sheet, "the resolver must materialize the borrowed ROM sheet");
-            assertTrue(sheet.getFrameCount() > 95,
-                    "borrowed sheet must include Tails flight frames 94 and 95");
-            assertFalse(sheet.getFrame(94).pieces().isEmpty(), "frame 94 must have mapping pieces");
-            assertFalse(sheet.getFrame(95).pieces().isEmpty(), "frame 95 must have mapping pieces");
-            SpriteMappingPiece frame94Piece = sheet.getFrame(94).pieces().getFirst();
-            assertEquals(0, frame94Piece.paletteIndex(),
-                    "Tails' frame 94 piece must address the shared Sonic/Tails palette line");
-            assertTrue(pieceReferencesNonzeroPixel(sheet, frame94Piece),
-                    "frame 94's first piece must reference visible ROM pattern data");
-            SpriteMappingPiece frame95Piece = sheet.getFrame(95).pieces().getFirst();
-            assertEquals(0, frame95Piece.paletteIndex(),
-                    "Tails' frame 95 piece must address the shared Sonic/Tails palette line");
-            assertTrue(pieceReferencesNonzeroPixel(sheet, frame95Piece),
-                    "frame 95's first piece must reference visible ROM pattern data");
-            assertDefaultPaletteLineMatchesRom(rom,
-                    resolved.getCrossGameDonorProvider().loadCharacterPalette(
-                            RomByteReader.fromRom(rom), launchTeam.main().persisted()));
-
             EngineContext previous = EngineServices.current();
             EngineContext injected = withResolver(previous, resolver, isolatedRomManager());
             try {
                 EngineServices.configure(injected);
                 injected.roms().setRom(rom);
+                GameplayLaunchRequest launchRequest = new GameplayLaunchRequest(
+                        "s2", "sonic", List.of());
+                GameModule resolved = resolver.resolveForLaunch(base, launchRequest,
+                        ModuleResolutionService.LaunchPolicy.STANDARD);
+                int zoneIndex = resolved.getZoneRegistry()
+                        .resolveZoneKey(ZoneKey.mod("sample-rom-art-remix", "rom-art-gallery"))
+                        .orElseThrow();
+
+                GameplayLaunchTeam launchTeam = resolved.getGameplayPolicyProvider().launchTeam(
+                        ZoneKey.mod("sample-rom-art-remix", "rom-art-gallery"))
+                        .orElseGet(() -> new GameplayLaunchTeam(
+                                CharacterKey.parsePersisted(launchRequest.mainCharacter()), List.of()));
+                assertEquals(CharacterKey.SONIC, launchTeam.main(),
+                        "the sample must work with S2's default Sonic-main team");
+
+                ObjectSpriteSheet sheet = resolved.getObjectArtProvider().getSheet(ART_KEY);
+                assertNotNull(sheet, "the resolver must materialize the borrowed ROM sheet");
+                assertTrue(sheet.getFrameCount() > 95,
+                        "borrowed sheet must include Tails flight frames 94 and 95");
+                assertFalse(sheet.getFrame(94).pieces().isEmpty(), "frame 94 must have mapping pieces");
+                assertFalse(sheet.getFrame(95).pieces().isEmpty(), "frame 95 must have mapping pieces");
+                SpriteMappingPiece frame94Piece = sheet.getFrame(94).pieces().getFirst();
+                assertEquals(0, frame94Piece.paletteIndex(),
+                        "Tails' frame 94 piece must address the shared Sonic/Tails palette line");
+                assertTrue(pieceReferencesNonzeroPixel(sheet, frame94Piece),
+                        "frame 94's first piece must reference visible ROM pattern data");
+                SpriteMappingPiece frame95Piece = sheet.getFrame(95).pieces().getFirst();
+                assertEquals(0, frame95Piece.paletteIndex(),
+                        "Tails' frame 95 piece must address the shared Sonic/Tails palette line");
+                assertTrue(pieceReferencesNonzeroPixel(sheet, frame95Piece),
+                        "frame 95's first piece must reference visible ROM pattern data");
+                assertDefaultPaletteLineMatchesRom(rom,
+                        resolved.getCrossGameDonorProvider().loadCharacterPalette(
+                                RomByteReader.fromRom(rom), launchTeam.main().persisted()));
+
                 GameplayModeContext gameplay = HeadlessGameBoot.openResolvedSessionForBoot(
                         injected, base, ModuleResolutionService.LaunchPolicy.STANDARD);
                 GameplaySessionFactory.attachManagers(gameplay, injected);
@@ -298,7 +300,7 @@ class TestSampleRomArtRemixIntegration {
     private static void compileJava(Path source, Path output) throws Exception {
         List<String> arguments = new ArrayList<>(List.of(
                 "--release", "21", "-classpath",
-                Path.of("target/classes").toAbsolutePath().toString(),
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
                 "-d", output.toString()));
         try (var files = Files.walk(source)) {
             files.filter(path -> path.toString().endsWith(".java")).sorted()
@@ -348,8 +350,12 @@ class TestSampleRomArtRemixIntegration {
                 .create(catalog.effective(), Set.of(descriptor.manifest().id()));
         runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
                 owners -> new ModStateSaveResult.Saved(), owners -> { }));
-        return new CatalogFixture(runtime, catalog.effective(), runtime.newRegistrationPlan(),
-                descriptor.sha256());
+        ModuleResolutionService.PatchPlan plan = runtime.newRegistrationPlan();
+        assertTrue(runtime.registrationFailures().isEmpty(),
+                () -> "sample registration failed: " + runtime.registrationFailures());
+        assertFalse(plan.registrations().isEmpty(),
+                "sample registration plan must contain its backing patch");
+        return new CatalogFixture(runtime, catalog.effective(), plan, descriptor.sha256());
     }
 
     private ModuleResolutionService resolver(CatalogFixture fixture) {

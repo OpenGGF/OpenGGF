@@ -433,6 +433,24 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         // Persist progression before the level transition
         services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
 
+        // ROM Got_NextLevel writes move.w #1,(f_restart).w from inside
+        // ExecuteObjects (docs/s1disasm/_incObj/3A Got Through Card.asm:207).
+        // Level_MainLoop tests f_restart in the instruction immediately after
+        // jsr (ExecuteObjects).l and branches straight to GM_Level
+        // (docs/s1disasm/sonic.asm:3006-3017, the Revision<>0 / FixBugs = 0
+        // arm this build takes), so that pass never reaches DeformLayers
+        // (:3025) and GM_Level's ClearPLC + PaletteFadeOut (:2711-2712) run
+        // with no further object pass at all. Raising the engine's equivalent
+        // here stops the post-act fade running as ordinary gameplay frames --
+        // without it Sonic keeps animating through the fade and publishes
+        // player DPLC transfers the ROM never performs. Same correction, same
+        // mechanism and same ROM shape as Sonic 2's Level_Inactive_flag
+        // (com.openggf.game.sonic2.objects.ResultsScreenObjectInstance).
+        var levelManager = services().levelManager();
+        if (levelManager != null) {
+            levelManager.setLevelInactiveForTransition(true);
+        }
+
         var fadeManager = services().fadeManager();
         var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();
         fadeManager.startFadeToBlack(marker.wrapCompletion(() -> {

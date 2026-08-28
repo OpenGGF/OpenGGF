@@ -266,7 +266,7 @@ public class Sonic3kConstants {
     public static final int MAP_FBZ_MAGNETIC_PENDULUM_ADDR = 0x03D9AE;
     public static final int ARTTILE_FBZ_OUTDOORS = 0x02E5;
     public static final int ARTTILE_FBZ_MISC2 = 0x02D2;
-    public static final int MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR = 0x03BA8A;
+    public static final int MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR = 0x03BA8A; // Map_FBZDEZPlayerLauncher (2 frames, sonic3k.asm:79510)
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====
     // Each zone has its own mapping table: even frames = intact, odd frames = broken fragments.
@@ -1443,6 +1443,10 @@ public class Sonic3kConstants {
 
     // Map_LRZBreakableRock - LRZ Act 1 breakable rock mappings (11 frames)
     // Referenced at sonic3k.asm:43871: move.l #Map_LRZBreakableRock,mappings(a0)
+    // Map_LRZCollapsingBridge (9 frames, sonic3k.asm:77581); the label sits
+    // immediately after word_39E20 ($39E20 + 2 + 22*4 = $39E7A), confirmed by the
+    // frame pointer table read from the ROM at that address (0012 001A 0022 ...).
+    public static final int MAP_LRZ_COLLAPSING_BRIDGE_ADDR = 0x039E7A;
     public static final int MAP_LRZ_BREAKABLE_ROCK_ADDR = 0x0203D8;
 
     // Map_LRZBreakableRock2 - LRZ Act 2 breakable rock mappings (12 frames)

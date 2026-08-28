@@ -41,6 +41,14 @@ public class Sonic3kSpecialStagePlayer {
     private boolean started;
     /** If true, player cannot advance (bumper lock). */
     private boolean bumperLock;
+    /**
+     * Whether the last {@link #update} call's ROM {@code sub_9580} reached the
+     * cell-check tail at {@code bsr.s sub_972E} (sonic3k.asm:12078), rather
+     * than leaving the routine through one of its earlier {@code rts} /
+     * {@code bra locret_972C} exits. Those exits skip the cell check for that
+     * frame -- see {@link #reachedCellCheck()}.
+     */
+    private boolean reachedCellCheck = true;
     /** Grid index of the bumper that locked the player. */
     private int bumperInteractIndex;
 
@@ -177,11 +185,18 @@ public class Sonic3kSpecialStagePlayer {
      * @param pressedButtons pressed button bitmask
      */
     private void updateMovement(int heldButtons, int pressedButtons) {
+        // sub_9580 reaches its cell-check tail unless one of the early exits
+        // below fires. See reachedCellCheck().
+        reachedCellCheck = true;
         // Handle fade exit
         if (fadeTimer > 0) {
             if (fadeTimer < 0x61) {
                 angle = (angle + 8) & 0xFF;
                 fadeTimer++;
+                // ROM: `addq.b #1,(Special_stage_fade_timer).w / rts`
+                // (sonic3k.asm:11921-11922) leaves sub_9580 before the cell
+                // check at sonic3k.asm:12078.
+                reachedCellCheck = false;
             } else {
                 // Wait for position alignment before completing fade
                 int pos = xPos | yPos;
@@ -214,7 +229,10 @@ public class Sonic3kSpecialStagePlayer {
             } else {
                 angle = (angle + turning) & 0xFF;
                 if ((angle & ANGLE_ALIGN_MASK) != 0) {
-                    // Turn not yet complete this frame - only rotate, return early
+                    // Turn not yet complete this frame - only rotate, return early.
+                    // ROM: `bne.w locret_972C` (sonic3k.asm:11949) leaves
+                    // sub_9580 before the cell check at sonic3k.asm:12078.
+                    reachedCellCheck = false;
                     return;
                 }
                 // Turn complete - aligned to cardinal direction; fall through
@@ -241,14 +259,25 @@ public class Sonic3kSpecialStagePlayer {
                     started = true;
                 }
 
-                if (advancing) {
-                    // Accelerate forward
+                // ROM loc_9628 (sonic3k.asm:11972-11985) dispatches on three
+                // tests, not two. `advancing` goes straight to loc_964A; if it
+                // is clear, an unstarted stage skips the whole block; and a
+                // started stage then runs `tst.w d2 / bpl.s loc_964A`, so a
+                // NON-NEGATIVE velocity also lands on the forward
+                // acceleration. Only a negative velocity reaches the backward
+                // deceleration below. Coasting therefore keeps clamping the
+                // velocity up to the current rate rather than freezing it,
+                // which is what lets the player track a mid-stage
+                // Special_stage_rate step without touching the D-pad.
+                if (advancing || (started && vel >= 0)) {
+                    // ROM loc_964A (sonic3k.asm:11988-11993).
                     vel += ACCELERATION;
                     if (vel >= rate) {
                         vel = rate;
                     }
-                } else if (started && vel < 0) {
-                    // Decelerate backward (when started but not pressing up)
+                } else if (started) {
+                    // ROM sonic3k.asm:11979-11984, reached only when d2 is
+                    // negative.
                     vel -= ACCELERATION;
                     if (vel <= -rate) {
                         vel = -rate;
@@ -336,6 +365,15 @@ public class Sonic3kSpecialStagePlayer {
                 newVel = -newVel;
             }
             velocity = newVel;
+            // ROM: `move.w d2,(Special_stage_velocity).w / rts` (loc_96CE,
+            // sonic3k.asm:12038-12039). Unlike the same-cell branches this
+            // is an `rts`, not a `bra loc_96FA`, so it leaves sub_9580
+            // before BOTH the position update and the cell check at
+            // `bsr.s sub_972E` (sonic3k.asm:12078). The frame therefore
+            // neither moves nor interacts with the cell it is standing on --
+            // which is what lets the ROM re-arm on the same bumper one frame
+            // later, from the far side of the sphere.
+            reachedCellCheck = false;
             return null;
         }
 
@@ -570,6 +608,16 @@ public class Sonic3kSpecialStagePlayer {
     public boolean isAdvancing() { return advancing; }
     public boolean isStarted() { return started; }
     public boolean isBumperLocked() { return bumperLock; }
+
+    /**
+     * Whether this frame's {@code sub_9580} fell through to its cell-check
+     * tail (`bsr.s sub_972E`, sonic3k.asm:12078) instead of leaving through one
+     * of the routine's earlier exits. The cell check is the LAST thing
+     * sub_9580 does, so every early exit suppresses it for that frame.
+     *
+     * @return true when the cell check should run for this frame
+     */
+    public boolean reachedCellCheck() { return reachedCellCheck; }
     public int getJumping() { return jumping; }
     public long getJumpHeight() { return jumpHeight; }
     public int getMappingFrame() { return mappingFrame; }

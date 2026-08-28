@@ -3,6 +3,8 @@ package com.openggf.audio.synth;
 import com.openggf.audio.smps.DacData;
 
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
@@ -12,12 +14,12 @@ import java.util.logging.Logger;
  */
 public class Ym2612Chip {
     private static final Logger LOG = Logger.getLogger(Ym2612Chip.class.getName());
-    private static final double CLOCK = 7670453.0;
+    private static final double NTSC_CLOCK = 7_670_453.0;
     private static final double DEFAULT_OUTPUT_RATE = 44100.0;
     // GPGX: Internal rate is CLOCK/144 (~53267 Hz)
-    private static final double INTERNAL_RATE = CLOCK / 144.0; // 53267.034...
+    private static final double DEFAULT_INTERNAL_RATE = NTSC_CLOCK / 144.0;
     // Resampling ratio for converting internal to output rate
-    private static final double DEFAULT_RESAMPLE_RATIO = INTERNAL_RATE / DEFAULT_OUTPUT_RATE; // ~1.208
+    private static final double DEFAULT_RESAMPLE_RATIO = DEFAULT_INTERNAL_RATE / DEFAULT_OUTPUT_RATE;
 
     // Constants from ym2612.c
     private static final int SIN_HBITS = 10;
@@ -280,11 +282,9 @@ public class Ym2612Chip {
     private static final double YM2612_FREQUENCY = 1.0;
     // Operator slot order matches ym2612.c (S0,S1,S2,S3) mapping to ops[0,2,1,3]
     private static final int[] OP_TO_SLOT = { 0, 2, 1, 3 };
-    // Inverse mapping: slot -> op index (S0,S1,S2,S3 -> ops[0,2,1,3])
-    private static final int[] SLOT_TO_OP = { 0, 2, 1, 3 };
-    // CH3 special mode: A8/A9/AA (and AC/AD/AE) map to ops in hardware order.
-    // A8/AC -> SLOT3 (op index 1), A9/AD -> SLOT1 (op index 0), AA/AE -> SLOT2 (op index 2).
-    private static final int[] CH3_SPECIAL_OP_MAP = { 1, 0, 2 };
+    // CH3 special mode: GPGX maps A8/A9/AA to SLOT3/SLOT1/SLOT2.
+    // ops[] is in logical SLOT1/SLOT2/SLOT3/SLOT4 order.
+    private static final int[] CH3_SPECIAL_OP_MAP = { 2, 0, 1 };
 
     // Debug tracing: set to true to log key on/off envelope state.
     private static final boolean TRACE_KEY_EVENTS = false;
@@ -405,7 +405,7 @@ public class Ym2612Chip {
 
     private DacData dacData;
     private int currentDacSampleId = -1;
-    private byte[] currentDacSampleData;
+    private DacData.Sample currentDacSampleData;
     private int dacLatchedValue;
     private double dacPos;
     private double dacStep = 1.0;
@@ -418,9 +418,9 @@ public class Ym2612Chip {
     private static final double DAC_BASE_CYCLES = 295.0;
     private static final double DAC_LOOP_CYCLES = 26.0;
     private static final double DAC_LOOP_SAMPLES = 2.0;
-    private static final double Z80_CLOCK = 3579545.0;
+    private static final double NTSC_Z80_CLOCK = 3_579_545.0;
     private static final double DAC_GAIN = 64.0;
-    private boolean dacInterpolate = true;
+    private boolean dacInterpolate = false;
     private boolean dacHighpassEnabled = false;
     private int dac_highpass;
     private static final int HIGHPASS_FRACT = 15;
@@ -432,7 +432,10 @@ public class Ym2612Chip {
     private int prevLeft = 0, prevRight = 0;
 
     // Band-limited resampler (replaces simple linear interpolation)
-    private BlipResampler blipResampler = new BlipResampler(INTERNAL_RATE, DEFAULT_OUTPUT_RATE);
+    private double chipClock = NTSC_CLOCK;
+    private double z80Clock = NTSC_Z80_CLOCK;
+    private double internalRate = DEFAULT_INTERNAL_RATE;
+    private BlipResampler blipResampler = new BlipResampler(DEFAULT_INTERNAL_RATE, DEFAULT_OUTPUT_RATE);
     private boolean useBlipResampler = true;  // Band-limited resampling via BlipResampler (GPGX-quality output)
     private double outputRate = DEFAULT_OUTPUT_RATE;
     private double resampleRatio = DEFAULT_RESAMPLE_RATIO;
@@ -452,7 +455,7 @@ public class Ym2612Chip {
     private static final int FM_STATUS_TIMERA_BIT_MASK = 0x01;
     private static final int FM_STATUS_TIMERB_BIT_MASK = 0x02;
     private static final int BUSY_CYCLES_DATA = 47;
-    private static final double YM_CYCLES_PER_SAMPLE = (CLOCK / 6.0) / INTERNAL_RATE;
+    private static final double YM_CYCLES_PER_SAMPLE = 24.0;
 
     private int timerACount;
     private int timerBCount;
@@ -571,6 +574,12 @@ public class Ym2612Chip {
     private int en0, en1, en2, en3;
     private int traceEvents;
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
+    private RuntimeException writeObserverFailure;
+    private YmWriteTimeline writeTimeline;
+    private final Consumer<YmWriteTimeline.Entry> scheduledWriteMutation =
+            this::applyScheduledWrite;
+    private long renderedMasterCycles;
+    private ChipPcmDiagnosticTap pcmDiagnosticTap = ChipPcmDiagnosticTap.NONE;
 
     public Ym2612Chip() {
         for (int i = 0; i < 6; i++) {
@@ -602,7 +611,7 @@ public class Ym2612Chip {
         lfoPm = 0;
 
         // Reset GPGX EG counter and timer
-        egCnt = 1;
+        egCnt = 0;
         egTimer = 0;
 
         dacEnabled = false;
@@ -610,6 +619,7 @@ public class Ym2612Chip {
 
         // Reset resampling state
         resampleAccum = 0.0;
+        renderedMasterCycles = 0;
         lastLeft = lastRight = 0;
         prevLeft = prevRight = 0;
         blipResampler.reset();
@@ -744,7 +754,7 @@ public class Ym2612Chip {
     }
 
     public static double getInternalRate() {
-        return INTERNAL_RATE;
+        return DEFAULT_INTERNAL_RATE;
     }
 
     public static double getDefaultOutputRate() {
@@ -760,12 +770,26 @@ public class Ym2612Chip {
             return;
         }
         outputRate = newOutputRate;
-        resampleRatio = INTERNAL_RATE / outputRate;
+        resampleRatio = internalRate / outputRate;
         inverseResampleRatio = 1.0 / resampleRatio;
-        blipResampler.reset(INTERNAL_RATE, outputRate);  // Reuse existing buffers instead of allocating new
+        blipResampler.reset(internalRate, outputRate);
         resampleAccum = 0.0;
         lastLeft = lastRight = 0;
         prevLeft = prevRight = 0;
+    }
+
+    void setClockRates(double newChipClock, double newZ80Clock) {
+        if (newChipClock <= 0.0 || newZ80Clock <= 0.0) {
+            throw new IllegalArgumentException("chip clocks must be positive");
+        }
+        chipClock = newChipClock;
+        z80Clock = newZ80Clock;
+        internalRate = chipClock / 144.0;
+        setOutputSampleRate(outputRate);
+    }
+
+    double chipClockForTesting() {
+        return chipClock;
     }
 
     public void setUseBlipResampler(boolean use) {
@@ -786,6 +810,9 @@ public class Ym2612Chip {
             channelSnapshots[i] = captureChannel(channels[i]);
         }
         return new Snapshot(
+                chipClock,
+                z80Clock,
+                internalRate,
                 currentDacSampleId,
                 dacLatchedValue,
                 dacPos,
@@ -830,10 +857,48 @@ public class Ym2612Chip {
                 mutes);
     }
 
+    SfxAdmissionState captureSfxAdmissionState(int affectedChannelMask) {
+        int mask = affectedChannelMask & 0x3F;
+        ChannelSnapshot[] selected = new ChannelSnapshot[channels.length];
+        for (int channel = 0; channel < selected.length; channel++) {
+            if ((mask & (1 << channel)) != 0) {
+                selected[channel] = captureChannel(channels[channel]);
+            }
+        }
+        return new SfxAdmissionState(
+                mask, selected, currentDacSampleId, dacLatchedValue,
+                dacPos, dacStep, dacEnabled, dacHasLatched, dac_highpass,
+                ssgEgActiveCount, addressLatch, busyCycles);
+    }
+
+    void restoreSfxAdmissionState(SfxAdmissionState state) {
+        ChannelSnapshot[] selected = state.channels();
+        for (int channel = 0; channel < channels.length; channel++) {
+            if ((state.affectedChannelMask() & (1 << channel)) != 0) {
+                restoreChannel(channels[channel], selected[channel]);
+            }
+        }
+        currentDacSampleId = state.currentDacSampleId();
+        currentDacSampleData = currentDacSampleId != -1 && dacData != null
+                ? dacData.sample(currentDacSampleId) : null;
+        dacLatchedValue = state.dacLatchedValue();
+        dacPos = state.dacPos();
+        dacStep = state.dacStep();
+        dacEnabled = state.dacEnabled();
+        dacHasLatched = state.dacHasLatched();
+        dac_highpass = state.dacHighpass();
+        ssgEgActiveCount = state.ssgEgActiveCount();
+        addressLatch = state.addressLatch();
+        busyCycles = state.busyCycles();
+    }
+
     public void restoreSnapshot(Snapshot snapshot) {
+        chipClock = snapshot.chipClock();
+        z80Clock = snapshot.z80Clock();
+        internalRate = snapshot.internalRate();
         currentDacSampleId = snapshot.currentDacSampleId();
         currentDacSampleData = currentDacSampleId != -1 && dacData != null
-                ? dacData.samples.get(currentDacSampleId)
+                ? dacData.sample(currentDacSampleId)
                 : null;
         dacLatchedValue = snapshot.dacLatchedValue();
         dacPos = snapshot.dacPos();
@@ -912,7 +977,120 @@ public class Ym2612Chip {
         writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
     }
 
+    void setWriteTimeline(YmWriteTimeline timeline) {
+        writeTimeline = Objects.requireNonNull(timeline, "timeline");
+    }
+
+    long renderedMasterCycleFrontier() {
+        return renderedMasterCycles;
+    }
+
+    void restoreRenderedMasterCycles(long renderedMasterCycles) {
+        if (renderedMasterCycles < 0) {
+            throw new IllegalArgumentException(
+                    "rendered master cycles cannot be negative");
+        }
+        this.renderedMasterCycles = renderedMasterCycles;
+    }
+
+    void installPcmDiagnosticTap(ChipPcmDiagnosticTap tap) {
+        pcmDiagnosticTap = tap == null ? ChipPcmDiagnosticTap.NONE : tap;
+    }
+
+    static void validateSnapshot(Snapshot snapshot) {
+        if (snapshot == null) {
+            throw new IllegalArgumentException(
+                    "YM snapshot cannot be null");
+        }
+        requireFinitePositive(snapshot.chipClock(), "YM chip clock");
+        requireFinitePositive(snapshot.z80Clock(), "YM Z80 clock");
+        requireFinitePositive(snapshot.internalRate(), "YM internal rate");
+        requireFinitePositive(snapshot.outputRate(), "YM output rate");
+        requireFinitePositive(snapshot.resampleRatio(),
+                "YM resample ratio");
+        requireFinitePositive(snapshot.inverseResampleRatio(),
+                "YM inverse resample ratio");
+        requireFinite(snapshot.dacPos(), "YM DAC position");
+        requireFinite(snapshot.dacStep(), "YM DAC step");
+        requireFinite(snapshot.resampleAccum(), "YM resample accumulator");
+        requireFinite(snapshot.busyCycles(), "YM busy cycles");
+        if (Double.compare(snapshot.internalRate(),
+                snapshot.chipClock() / 144.0) != 0
+                || Double.compare(snapshot.resampleRatio(),
+                snapshot.internalRate() / snapshot.outputRate()) != 0
+                || Double.compare(snapshot.inverseResampleRatio(),
+                1.0 / snapshot.resampleRatio()) != 0) {
+            throw new IllegalArgumentException(
+                    "YM snapshot rates are inconsistent");
+        }
+        BlipResampler.validateSnapshot(snapshot.blipResampler());
+        if (Double.compare(snapshot.blipResampler().ratio(),
+                snapshot.resampleRatio()) != 0) {
+            throw new IllegalArgumentException(
+                    "YM resampler ratio does not match chip rates");
+        }
+        ChannelSnapshot[] channels = snapshot.channels();
+        if (channels.length != 6 || snapshot.mutes().length != 6) {
+            throw new IllegalArgumentException(
+                    "YM snapshot channel arrays have invalid lengths");
+        }
+        for (ChannelSnapshot channel : channels) {
+            validateChannelSnapshot(channel);
+        }
+        if (snapshot.chipType() < YM2612_DISCRETE
+                || snapshot.chipType() > YM2612_ENHANCED
+                || snapshot.currentDacSampleId() < -1
+                || snapshot.ssgEgActiveCount() < 0
+                || snapshot.ssgEgActiveCount() > 24
+                || snapshot.egTimer() < 0 || snapshot.egTimer() >= 3) {
+            throw new IllegalArgumentException(
+                    "YM snapshot scalar state is invalid");
+        }
+    }
+
+    private static void validateChannelSnapshot(ChannelSnapshot channel) {
+        if (channel == null
+                || channel.slotFnum().length != 4
+                || channel.slotBlock().length != 4
+                || channel.slotKCode().length != 4
+                || channel.slotFc().length != 4
+                || channel.slotBlockFnum().length != 4
+                || channel.opOut().length != 4
+                || channel.ops().length != 4) {
+            throw new IllegalArgumentException(
+                    "YM channel snapshot shape is invalid");
+        }
+        for (OperatorSnapshot operator : channel.ops()) {
+            if (operator == null || operator.curEnv() == null) {
+                throw new IllegalArgumentException(
+                        "YM operator snapshot is invalid");
+            }
+        }
+    }
+
+    private static void requireFinitePositive(double value, String name) {
+        requireFinite(value, name);
+        if (value <= 0.0) {
+            throw new IllegalArgumentException(name + " must be positive");
+        }
+    }
+
+    private static void requireFinite(double value, String name) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException(name + " must be finite");
+        }
+    }
+
     public void write(int port, int reg, int val) {
+        writeImmediate(port, reg, val);
+        throwPendingWriteObserverFailure();
+    }
+
+    private void applyScheduledWrite(YmWriteTimeline.Entry entry) {
+        writeImmediate(entry.port(), entry.register(), entry.value());
+    }
+
+    private void writeImmediate(int port, int reg, int val) {
         int resolvedPort = port & 1;
         int resolvedReg = reg & 0x1FF;
         if ((resolvedReg & 0x100) != 0) {
@@ -921,7 +1099,48 @@ public class Ym2612Chip {
         }
         writeAddress(resolvedPort, resolvedReg);
         writeData(resolvedPort, val);
-        writeObserver.onYm2612Write(resolvedPort, resolvedReg, val & 0xFF);
+        int observedPort = resolvedPort;
+        int observedRegister = resolvedReg;
+        observeWrite(() -> writeObserver.onYm2612Write(
+                observedPort, observedRegister, val & 0xFF));
+    }
+
+    private void observeWrite(Runnable callback) {
+        try {
+            callback.run();
+        } catch (RuntimeException failure) {
+            recordWriteObserverFailure(failure);
+        }
+    }
+
+    private void recordWriteObserverFailure(RuntimeException failure) {
+        if (writeObserverFailure == null) {
+            writeObserverFailure = failure;
+        } else if (failure != writeObserverFailure) {
+            writeObserverFailure.addSuppressed(failure);
+        }
+    }
+
+    private int observedChannelMask() {
+        try {
+            return writeObserver.ym2612ChannelSampleMask() & 0x3F;
+        } catch (RuntimeException failure) {
+            recordWriteObserverFailure(failure);
+            return 0;
+        }
+    }
+
+    RuntimeException takePendingWriteObserverFailure() {
+        RuntimeException failure = writeObserverFailure;
+        writeObserverFailure = null;
+        return failure;
+    }
+
+    private void throwPendingWriteObserverFailure() {
+        RuntimeException failure = takePendingWriteObserverFailure();
+        if (failure != null) {
+            throw failure;
+        }
     }
 
     public void writeAddress(int port, int reg) {
@@ -976,8 +1195,7 @@ public class Ym2612Chip {
     }
 
     private void setOpMaskSlot(int algo, int slot) {
-        int op = SLOT_TO_OP[slot & 3];
-        opMask[algo][op] = -32;
+        opMask[algo][slot & 3] = -32;
     }
 
     private void writeYm(int addr, int val) {
@@ -1020,13 +1238,13 @@ public class Ym2612Chip {
                 else
                     keyOff(ch, 0);
                 if ((mask & 2) != 0)
-                    keyOn(ch, 2);
-                else
-                    keyOff(ch, 2);
-                if ((mask & 4) != 0)
                     keyOn(ch, 1);
                 else
                     keyOff(ch, 1);
+                if ((mask & 4) != 0)
+                    keyOn(ch, 2);
+                else
+                    keyOff(ch, 2);
                 if ((mask & 8) != 0)
                     keyOn(ch, 3);
                 else
@@ -1178,30 +1396,36 @@ public class Ym2612Chip {
                 ch.ops[0].fInc = -1;
                 break;
             case 0xA8:
-                if (nch == 2) {
+                if ((addr & 0x100) == 0) {
                     int regIdx = addr & 3;
                     if (regIdx < 3) {
+                        Channel special = channels[2];
                         int opIdx = CH3_SPECIAL_OP_MAP[regIdx];
-                        ch.slotFnum[opIdx] = (ch.slotFnum[opIdx] & 0x700) | (val & 0xFF);
-                        ch.slotKCode[opIdx] = (ch.slotBlock[opIdx] << 2) | FKEY_TAB[ch.slotFnum[opIdx] >> 7];
-                        ch.slotFc[opIdx] = (ch.slotFnum[opIdx] << ch.slotBlock[opIdx]) >> 1;
-                        ch.slotBlockFnum[opIdx] = (ch.slotBlock[opIdx] << 11) | ch.slotFnum[opIdx];
+                        special.slotFnum[opIdx] = (special.slotFnum[opIdx] & 0x700) | (val & 0xFF);
+                        special.slotKCode[opIdx] = (special.slotBlock[opIdx] << 2)
+                                | FKEY_TAB[special.slotFnum[opIdx] >> 7];
+                        special.slotFc[opIdx] = (special.slotFnum[opIdx] << special.slotBlock[opIdx]) >> 1;
+                        special.slotBlockFnum[opIdx] = (special.slotBlock[opIdx] << 11)
+                                | special.slotFnum[opIdx];
                     }
-                    ch.ops[0].fInc = -1;
+                    channels[2].ops[0].fInc = -1;
                 }
                 break;
             case 0xAC:
-                if (nch == 2) {
+                if ((addr & 0x100) == 0) {
                     int regIdx = addr & 3;
                     if (regIdx < 3) {
+                        Channel special = channels[2];
                         int opIdx = CH3_SPECIAL_OP_MAP[regIdx];
-                        ch.slotFnum[opIdx] = (ch.slotFnum[opIdx] & 0xFF) | ((val & 0x07) << 8);
-                        ch.slotBlock[opIdx] = (val >> 3) & 7;
-                        ch.slotKCode[opIdx] = (ch.slotBlock[opIdx] << 2) | FKEY_TAB[ch.slotFnum[opIdx] >> 7];
-                        ch.slotFc[opIdx] = (ch.slotFnum[opIdx] << ch.slotBlock[opIdx]) >> 1;
-                        ch.slotBlockFnum[opIdx] = (ch.slotBlock[opIdx] << 11) | ch.slotFnum[opIdx];
+                        special.slotFnum[opIdx] = (special.slotFnum[opIdx] & 0xFF) | ((val & 0x07) << 8);
+                        special.slotBlock[opIdx] = (val >> 3) & 7;
+                        special.slotKCode[opIdx] = (special.slotBlock[opIdx] << 2)
+                                | FKEY_TAB[special.slotFnum[opIdx] >> 7];
+                        special.slotFc[opIdx] = (special.slotFnum[opIdx] << special.slotBlock[opIdx]) >> 1;
+                        special.slotBlockFnum[opIdx] = (special.slotBlock[opIdx] << 11)
+                                | special.slotFnum[opIdx];
                     }
-                    ch.ops[0].fInc = -1;
+                    channels[2].ops[0].fInc = -1;
                 }
                 break;
             case 0xB0:
@@ -1307,6 +1531,8 @@ public class Ym2612Chip {
             calcFIncChannel(ch);
         }
         Operator sl = ch.ops[idx];
+        observeWrite(() -> writeObserver.onYm2612KeyOn(
+                channelIndex(ch), idx, sl.volume));
         // GPGX-style: use separate key flag instead of checking envelope state.
         // This properly gates key-on to only trigger on 0->1 transitions.
         if (!sl.key && csmKeyFlag == 0) {
@@ -1410,10 +1636,8 @@ public class Ym2612Chip {
                     }
                     int sustainLevel = SL_VOL_TAB[sl.slReg];
                     if (sl.volume >= sustainLevel) {
-                        sl.volume = sustainLevel;
                         sl.curEnv = EnvState.DECAY2;
                         sl.eCnt = sl.d1l; // Keep legacy eCnt in sync
-                        updateVolOut(sl);
                     }
                 }
                 break;
@@ -1531,6 +1755,11 @@ public class Ym2612Chip {
      * Generate one internal sample at ~53kHz. Updates lastLeft/lastRight.
      */
     private void renderOneSample() {
+        if (writeTimeline != null) {
+            writeTimeline.drainDue(
+                    renderedMasterCycles, scheduledWriteMutation);
+        }
+
         // GPGX: LFO values are read BEFORE update (for use in channel calc)
         // and then updated AFTER channel calculation
         int pmLfo = lfoPm;
@@ -1551,6 +1780,7 @@ public class Ym2612Chip {
 
         int leftSum = 0;
         int rightSum = 0;
+        int observedChannelMask = observedChannelMask();
         for (int ch = 0; ch < 6; ch++) {
             Channel chan = channels[ch];
             int out = 0;
@@ -1558,6 +1788,13 @@ public class Ym2612Chip {
                 out = dacMixedOut;
             } else if (!mutes[ch]) {
                 out = renderChannel(ch, envLfo, pmLfo);
+            }
+
+            if ((observedChannelMask & (1 << ch)) != 0) {
+                int observedChannel = ch;
+                int observedOutput = out;
+                observeWrite(() -> writeObserver.onYm2612ChannelSample(
+                        observedChannel, observedOutput));
             }
 
             if (chan.leftMask != 0)
@@ -1578,6 +1815,11 @@ public class Ym2612Chip {
 
         lastLeft = leftSum;
         lastRight = rightSum;
+        if (pcmDiagnosticTap != ChipPcmDiagnosticTap.NONE) {
+            pcmDiagnosticTap.onSample(new YmMixStereo(renderedMasterCycles,
+                    renderedMasterCycles / YmWriteTimeline.MASTER_CYCLES_PER_INTERNAL_SAMPLE,
+                    lastLeft, lastRight));
+        }
 
         // GPGX: LFO updated AFTER channel calculation
         advanceLfo();
@@ -1602,6 +1844,8 @@ public class Ym2612Chip {
         }
 
         tickTimers();
+        renderedMasterCycles = Math.addExact(renderedMasterCycles,
+                YmWriteTimeline.MASTER_CYCLES_PER_INTERNAL_SAMPLE);
     }
 
     // DEBUG: Set to true to mute FM4 (channel 3) for Signpost SFX debugging
@@ -1624,10 +1868,11 @@ public class Ym2612Chip {
             calcFIncChannel(ch);
 
         // GET_CURRENT_PHASE - capture fCnt BEFORE incrementing (like libvgm)
-        // Slot order matches ym2612.c: S0=op0, S1=op2, S2=op1, S3=op3
+        // Algorithm order matches ym2612.c: SLOT1, SLOT2, SLOT3, SLOT4.
+        // Register order is SLOT1, SLOT3, SLOT2, SLOT4, hence ops[1]/ops[2].
         in0 = ch.ops[0].fCnt;
-        in1 = ch.ops[2].fCnt;
-        in2 = ch.ops[1].fCnt;
+        in1 = ch.ops[1].fCnt;
+        in2 = ch.ops[2].fCnt;
         in3 = ch.ops[3].fCnt;
 
         // UPDATE_PHASE - increment fCnt AFTER capturing
@@ -1769,12 +2014,12 @@ public class Ym2612Chip {
     private void doAlgo(Channel ch) {
         // Phase values (in0..in3) are already set by renderChannel's GET_CURRENT_PHASE
         // step.
-        // in0..in3 are in slot order S0,S1,S2,S3. Our GET_CURRENT_ENV stores:
-        // en0=S0, en1=S2, en2=S1, en3=S3 (because ops[] is [S0,S2,S1,S3]).
-        // Reorder here to match libvgm's S0,S1,S2,S3 expectations.
+        // in0..in3 and env0..env3 are in algorithm order SLOT1..SLOT4.
+        // ops[] uses that same logical order; writeSlot() handles the YM register-order
+        // permutation (SLOT1, SLOT3, SLOT2, SLOT4) at the bus boundary.
         final int env0 = en0;
-        final int env1 = en2;
-        final int env2 = en1;
+        final int env1 = en1;
+        final int env2 = en2;
         final int env3 = en3;
 
         // GPGX-style: Modulation is now passed separately to opCalc() instead of
@@ -1784,12 +2029,11 @@ public class Ym2612Chip {
         // This causes feedback buffer to naturally decay when notes fade out.
         boolean s0Quiet = env0 >= ENV_QUIET;
 
-        // GPGX mask indices follow SLOT numbers: SLOT1=mask[0], SLOT2=mask[1], SLOT3=mask[2], SLOT4=mask[3]
-        // Our operators: M1=SLOT1 (in0), C1=SLOT2 (in1), M2=SLOT3 (in2), C2=SLOT4 (in3)
+        // GPGX mask indices follow algorithm slot order.
         int[] mask = opMask[ch.algo];
         int maskM1 = mask[0];  // SLOT1
-        int maskC1 = mask[2];  // SLOT3 - for in1/env1
-        int maskM2 = mask[1];  // SLOT2 - for in2/env2
+        int maskC1 = mask[1];  // SLOT2
+        int maskM2 = mask[2];  // SLOT3
         int maskC2 = mask[3];  // SLOT4
 
         // GPGX: feedback uses opCalc1() which applies pm directly (no >> 1 shift)
@@ -1982,22 +2226,22 @@ public class Ym2612Chip {
     public void playDac(int note) {
         if (dacData == null)
             return;
-        DacData.DacEntry entry = dacData.mapping.get(note);
+        DacData.DacEntry entry = dacData.mappingForNote(note);
         if (entry != null) {
-            this.currentDacSampleId = entry.sampleId;
-            this.currentDacSampleData = dacData.samples.get(entry.sampleId);
+            this.currentDacSampleId = entry.sampleId();
+            this.currentDacSampleData = dacData.sample(entry.sampleId());
             this.dacPos = 0;
-            int rateByte = entry.rate & 0xFF;
+            int rateByte = entry.rate() & 0xFF;
             // Z80 djnz loops (N-1) times; first iteration is in BaseCycles.
             // SMPSPlay dac.c:107: Divisor = BaseCycles + LoopCycles * (Rate - 1)
             int effectiveRate = Math.max(1, rateByte);
-            double dacBaseCycles = dacData.baseCycles;
+            double dacBaseCycles = dacData.baseCycles();
             double cyclesPerBlock = dacBaseCycles + (DAC_LOOP_CYCLES * (effectiveRate - 1));
             double cyclesPerSample = cyclesPerBlock / DAC_LOOP_SAMPLES;
-            double rateHz = Z80_CLOCK / cyclesPerSample;
+            double rateHz = z80Clock / cyclesPerSample;
             // DAC step is now relative to internal rate since renderDac() is called at
             // ~53kHz
-            this.dacStep = Math.max(0.0001, rateHz / INTERNAL_RATE);
+            this.dacStep = Math.max(0.0001, rateHz / internalRate);
         }
     }
 
@@ -2014,20 +2258,21 @@ public class Ym2612Chip {
         }
         int sample = 0;
         if (currentDacSampleId != -1 && dacData != null) {
-            byte[] data = currentDacSampleData;
-            if (data != null && dacPos < data.length) {
+            DacData.Sample data = currentDacSampleData;
+            if (data != null && dacPos < data.length()) {
                 int idx = (int) dacPos;
                 double frac = dacPos - idx;
-                int s1 = (data[idx] & 0xFF) - 128;
+                int s1 = (data.byteAt(idx) & 0xFF) - 128;
                 if (dacInterpolate) {
-                    int s2 = (idx + 1 < data.length) ? ((data[idx + 1] & 0xFF) - 128) : s1;
+                    int s2 = (idx + 1 < data.length())
+                            ? ((data.byteAt(idx + 1) & 0xFF) - 128) : s1;
                     double lerp = s1 * (1.0 - frac) + s2 * frac;
                     sample = lerp >= 0 ? (int)(lerp + 0.5) : (int)(lerp - 0.5);
                 } else {
                     sample = s1;
                 }
                 dacPos += dacStep;
-                if (dacPos >= data.length) {
+                if (dacPos >= data.length()) {
                     currentDacSampleId = -1;
                     currentDacSampleData = null;
                     dacPos = 0;
@@ -2037,6 +2282,12 @@ public class Ym2612Chip {
             sample = dacLatchedValue;
         } else {
             return 0;
+        }
+
+        if (pcmDiagnosticTap != ChipPcmDiagnosticTap.NONE) {
+            pcmDiagnosticTap.onSample(new DacLatch(renderedMasterCycles,
+                    renderedMasterCycles / YmWriteTimeline.MASTER_CYCLES_PER_INTERNAL_SAMPLE,
+                    sample));
         }
 
         sample = (int) (sample * DAC_GAIN);
@@ -2408,6 +2659,9 @@ public class Ym2612Chip {
     }
 
     public record Snapshot(
+            double chipClock,
+            double z80Clock,
+            double internalRate,
             int currentDacSampleId,
             int dacLatchedValue,
             double dacPos,
@@ -2460,6 +2714,57 @@ public class Ym2612Chip {
 
         @Override
         public boolean[] mutes() { return Arrays.copyOf(mutes, mutes.length); }
+
+        @Override
+        public boolean equals(Object candidate) {
+            if (this == candidate) {
+                return true;
+            }
+            if (!(candidate instanceof Snapshot other)) {
+                return false;
+            }
+            return Arrays.deepEquals(equalityFields(), other.equalityFields());
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.deepHashCode(equalityFields());
+        }
+
+        private Object[] equalityFields() {
+            return new Object[] {
+                    chipClock, z80Clock, internalRate, currentDacSampleId, dacLatchedValue, dacPos, dacStep,
+                    dacEnabled, dacHasLatched, dacInterpolate, dacHighpassEnabled, dacHighpass, resampleAccum,
+                    lastLeft, lastRight, prevLeft, prevRight, blipResampler, useBlipResampler, outputRate,
+                    resampleRatio, inverseResampleRatio, ssgEgActiveCount, status, mode, csmKeyFlag, addressLatch,
+                    chipType, busyCycles, timerACount, timerBCount, timerALoad, timerBLoad, timerAPeriod,
+                    timerBPeriod, lfoCnt, lfoTimer, lfoTimerOverflow, lfoAm, lfoPm, egCnt, egTimer,
+                    channel3SpecialMode, channels, mutes
+            };
+        }
+    }
+
+    record SfxAdmissionState(
+            int affectedChannelMask,
+            ChannelSnapshot[] channels,
+            int currentDacSampleId,
+            int dacLatchedValue,
+            double dacPos,
+            double dacStep,
+            boolean dacEnabled,
+            boolean dacHasLatched,
+            int dacHighpass,
+            int ssgEgActiveCount,
+            int addressLatch,
+            double busyCycles) {
+        SfxAdmissionState {
+            channels = Arrays.copyOf(channels, channels.length);
+        }
+
+        @Override
+        public ChannelSnapshot[] channels() {
+            return Arrays.copyOf(channels, channels.length);
+        }
     }
 
     public record ChannelSnapshot(
@@ -2513,6 +2818,29 @@ public class Ym2612Chip {
 
         @Override
         public OperatorSnapshot[] ops() { return Arrays.copyOf(ops, ops.length); }
+
+        @Override
+        public boolean equals(Object candidate) {
+            if (this == candidate) {
+                return true;
+            }
+            if (!(candidate instanceof ChannelSnapshot other)) {
+                return false;
+            }
+            return Arrays.deepEquals(equalityFields(), other.equalityFields());
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.deepHashCode(equalityFields());
+        }
+
+        private Object[] equalityFields() {
+            return new Object[] {
+                    fNum, block, kCode, slotFnum, slotBlock, slotKCode, fc, slotFc, blockFnum,
+                    slotBlockFnum, feedback, algo, ams, pms, pan, leftMask, rightMask, opOut, memValue, ops
+            };
+        }
     }
 
     public record OperatorSnapshot(

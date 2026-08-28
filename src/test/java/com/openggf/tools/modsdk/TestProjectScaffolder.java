@@ -1,5 +1,6 @@
 package com.openggf.tools.modsdk;
 
+import com.openggf.tests.TestSessionOutputPaths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -71,7 +72,8 @@ class TestProjectScaffolder {
                     .map(Path::toString).toList();
         }
         var args = new java.util.ArrayList<>(List.of("--release", "21", "-cp",
-                Path.of("target/classes").toAbsolutePath().toString(), "-d", classes.toString()));
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
+                "-d", classes.toString()));
         args.addAll(sources);
         assertEquals(0, compiler.run(null, null, null, args.toArray(String[]::new)));
         Path convertedArt = classes.resolve("art/sample.ggfs"); Files.createDirectories(convertedArt.getParent());
@@ -87,7 +89,8 @@ class TestProjectScaffolder {
         assertTrue(Files.isRegularFile(jar));
         assertTrue(new ModJarValidator().validate(jar).valid());
 
-        Path localEngine=temp.resolve("local-engine.jar"); createJar(Path.of("target/classes"),localEngine);
+        Path localEngine=temp.resolve("local-engine.jar");
+        createJar(TestSessionOutputPaths.compiledClasses(),localEngine);
         String mavenExecutable=System.getProperty("os.name","").startsWith("Windows")?"mvn.cmd":"mvn";
         Process maven=new ProcessBuilder(mavenExecutable,"-q","package",
                 "-Dopenggf.engine.jar="+localEngine.toAbsolutePath(),

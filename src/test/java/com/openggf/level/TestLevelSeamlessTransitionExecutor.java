@@ -155,6 +155,7 @@ class TestLevelSeamlessTransitionExecutor {
         ArgumentCaptor<SeamlessLevelTransitionRequest> capture =
                 ArgumentCaptor.forClass(SeamlessLevelTransitionRequest.class);
         verify(levelManager).executeActTransition(capture.capture());
+        verify(levelManager).consumeActTransitionRewindBoundaryDuringFrame();
         assertEquals(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL,
                 capture.getValue().type());
         assertEquals(5, capture.getValue().targetZone());
@@ -177,6 +178,7 @@ class TestLevelSeamlessTransitionExecutor {
         executor.execute(request);
 
         verify(levelManager).executeActTransition(request);
+        verify(levelManager).consumeActTransitionRewindBoundaryDuringFrame();
         verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
         verify(transitions).setLevelInactiveForTransition(false);
     }

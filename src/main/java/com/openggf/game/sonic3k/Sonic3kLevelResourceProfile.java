@@ -90,8 +90,6 @@ public record Sonic3kLevelResourceProfile(
             if (canonicalAct == 1) {
                 return HPZ_SANCTUARY;
             }
-            throw new IllegalArgumentException(
-                    "canonical HPZ exposes only sanctuary act 1");
         }
         return new Sonic3kLevelResourceProfile(
                 canonicalZone, canonicalAct, S3kZoneSet.forZone(canonicalZone),

@@ -62,6 +62,13 @@ public record TraceMetadata(
             "lua_script_version", "csv_version", "ss_csv_version",
             "hardware_timing_schema", "run_schema");
 
+    public TraceMetadata {
+        auxSchemaExtras = auxSchemaExtras == null
+                ? null : List.copyOf(auxSchemaExtras);
+        characters = characters == null ? null : List.copyOf(characters);
+        sidekicks = sidekicks == null ? null : List.copyOf(sidekicks);
+    }
+
     /**
      * Number of Level_MainLoop frames the ROM executed between OscillateNumInit
      * and the first trace frame. The engine must pre-advance OscillationManager

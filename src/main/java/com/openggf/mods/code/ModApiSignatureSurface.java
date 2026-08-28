@@ -87,6 +87,7 @@ public final class ModApiSignatureSurface {
             "com.openggf.game.profiles.trace.TracePlaybackProfile$RecordedLevelIdentityProfile",
             // Audio presentation ownership: the producer/sink pipeline behind
             // AudioManager. Creator audio goes through StreamedMusicPort instead.
+            "com.openggf.audio.AudioBackend",
             "com.openggf.audio.MusicRestoreSink",
             "com.openggf.audio.LiveCaptureAudioHandle",
             "com.openggf.audio.output.AudioPresentationSink",
@@ -95,7 +96,16 @@ public final class ModApiSignatureSurface {
             "com.openggf.audio.presentation.PresentationMode",
             "com.openggf.audio.smps.SmpsCoordFlagHandlerOwner",
             "com.openggf.audio.smps.SmpsCoordFlagRuntimeState",
+            // Driver-source YM write timing is engine accuracy metadata. Treat the
+            // outer interface as the terminal so its implicitly public Holder/Key/
+            // ImmutableProfile implementation graph cannot become creator API.
+            "com.openggf.audio.smps.YmServiceTimingProfile",
             // Host-side observers and input chords.
+            "com.openggf.audio.AudioAdmissionObserver",
+            "com.openggf.audio.AudioRequestObserver",
+            "com.openggf.audio.driver.SfxContentionObserver",
+            "com.openggf.audio.driver.SmpsDriverServiceObserver",
+            "com.openggf.audio.synth.ChipWriteObserver",
             "com.openggf.camera.Camera$UpdateObserver",
             "com.openggf.configuration.KeyChord",
             "com.openggf.configuration.KeyChord$Modifier",

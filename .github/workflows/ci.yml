@@ -30,8 +30,42 @@ jobs:
         if: github.event_name == 'push' && github.event.deleted == false
         run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
 
+  # Structural guards are source-only and ROM-free, so unlike the default
+  # `test` job below they can run on every push - which is how work actually
+  # lands on develop. TestS1S2PlcComparisonOnlyGuard sat red on develop for
+  # weeks because the only profile selecting it was one no push ever ran.
+  #
+  # Pinned to the integration branches so all-branch pushes stay policy-only
+  # and free of Maven, which is what allBranchPushPolicyShouldRemainLightweight
+  # in TestBuildToolingGuard requires.
+  guards:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # TestBuildToolingGuard replays real history against the policy script
+          # -- `git show 53de63da2:...` for the machine-local-path grandfather
+          # baseline, and `git switch -c <branch> ccdd33edf4...` to rebuild the
+          # cutover repositories its branch-policy cases need. actions/checkout
+          # defaults to a depth-1 clone, so those commits are absent and eight
+          # cases fail in CI while passing on any developer clone. The policy
+          # job above already takes full history for the same reason.
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run structural guards
+        run: mvn -Dmse=off -Pguards test -B
+
   test:
-    if: github.event_name != 'push'
+    if: github.event_name != 'push' || github.ref == 'refs/heads/next'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -46,14 +80,17 @@ jobs:
 
       - name: Run tests (pull request)
         if: github.event_name == 'pull_request'
+        shell: bash
         run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.base_ref }}"
 
       - name: Run tests (push)
         if: github.event_name == 'push'
+        shell: bash
         run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
 
       - name: Run tests (manual or scheduled)
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        shell: bash
         run: mvn -Dmse=off test -B
 
       - name: Assert default test coverage
@@ -133,7 +170,6 @@ jobs:
         run: |
           python3 - <<'PY'
           import fnmatch
-          import json
           import re
           import sys
           import xml.etree.ElementTree as ET
@@ -237,36 +273,15 @@ jobs:
                   print(f"{report}: skipped={skipped_count}", file=sys.stderr)
               sys.exit(1)
 
-          required_ss_report = Path("target/trace-reports/s2_special_stage_0_report.json")
-          if not required_ss_report.exists():
-              print(f"Missing required keep-green divergence report: {required_ss_report}",
-                    file=sys.stderr)
-              sys.exit(1)
-          required_ss_data = json.loads(required_ss_report.read_text(encoding="utf-8"))
-          required_ss_errors = int(required_ss_data.get("error_count", 0))
-          required_ss_warnings = int(required_ss_data.get("warning_count", 0))
-          if required_ss_errors > 0 or required_ss_warnings > 0:
-              print(
-                  f"Required S2 special-stage keep-green trace is red: "
-                  f"errors={required_ss_errors} warnings={required_ss_warnings}",
-                  file=sys.stderr)
-              sys.exit(1)
-
-          warning_reports = []
-          for report in sorted(Path("target/trace-reports").glob("*_report.json")):
-              data = json.loads(report.read_text(encoding="utf-8"))
-              warning_count = int(data.get("warning_count", 0))
-              if warning_count > 0:
-                  warning_reports.append((report, warning_count))
-
-          if warning_reports:
-              print("Trace replay warnings are develop-blocking", file=sys.stderr)
-              for report, warning_count in warning_reports:
-                  print(f"{report}: warning_count={warning_count}", file=sys.stderr)
-              sys.exit(1)
-
           print(
               f"Develop trace replay coverage: executed={executed} total={total} "
               f"expected_trace_executed={expected_trace_executed} "
               f"expected_trace_reports={len(expected_trace_reports)}")
           PY
+          python3 tools/testing/validate-trace-reports.py \
+            --root target/trace-reports \
+            --fail-on-warnings \
+            --warning-context develop-blocking \
+            --require-clean-profile special-stage \
+            --require-clean-logical-key s2_special_stage_0 \
+            --require-clean-lane s2-0

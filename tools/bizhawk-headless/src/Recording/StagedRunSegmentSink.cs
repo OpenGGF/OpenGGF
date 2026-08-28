@@ -47,12 +47,15 @@ namespace OpenGGF.BizHawk.Headless
         internal const string PhysicsFileName = "physics.csv";
         internal const string AuxStateFileName = "aux_state.jsonl";
         internal const string MetadataFileName = "metadata.json";
+        internal const string HardwareTimingFileName =
+            "hardware_timing.jsonl";
 
         private readonly NoReplacePublisher.IncrementalStagingSession session;
         private readonly bool expandNewlines;
 
         private NoReplacePublisher.StagedStream physics;
         private NoReplacePublisher.StagedStream aux;
+        private NoReplacePublisher.StagedStream hardwareTiming;
         private TextWriter physicsWriter;
         private TextWriter auxWriter;
         private string dirToken;
@@ -99,6 +102,31 @@ namespace OpenGGF.BizHawk.Headless
             return new RunSegmentStreams(physicsWriter, auxWriter);
         }
 
+        /// <summary>
+        /// The segment's hardware-timing readiness stream, opened lazily by
+        /// the runner on its first edge. Deliberately NOT newline-expanded:
+        /// the canonical run fixtures' CRLF policy belongs to the files the
+        /// Windows Lua wrote, and this stream is LF-only by its own
+        /// contract (the Java loader rejects a CR outright).
+        /// </summary>
+        public TextWriter OpenHardwareTimingStream()
+        {
+            if (dirToken == null)
+            {
+                throw new InvalidOperationException(
+                    "No segment is open for a hardware-timing stream.");
+            }
+            if (hardwareTiming != null)
+            {
+                throw new InvalidOperationException(
+                    "Segment " + dirToken + " already opened its"
+                    + " hardware-timing stream.");
+            }
+            hardwareTiming = session.OpenFile(
+                dirToken + "/" + HardwareTimingFileName);
+            return hardwareTiming.Writer;
+        }
+
         public void EndSegment(RunManifestSegment entry, string metadataJson)
         {
             if (entry == null)
@@ -120,6 +148,11 @@ namespace OpenGGF.BizHawk.Headless
             auxWriter = null;
             aux.Complete();
             aux = null;
+            if (hardwareTiming != null)
+            {
+                hardwareTiming.Complete();
+                hardwareTiming = null;
+            }
             session.StageFile(
                 entry.Dir + "/" + MetadataFileName,
                 expandNewlines
@@ -146,6 +179,11 @@ namespace OpenGGF.BizHawk.Headless
             {
                 aux.Dispose();
                 aux = null;
+            }
+            if (hardwareTiming != null)
+            {
+                hardwareTiming.Dispose();
+                hardwareTiming = null;
             }
         }
 

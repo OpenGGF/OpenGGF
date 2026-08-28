@@ -207,7 +207,8 @@ class TestHardwareTimingRewind {
         HardwareTimingService service = new HardwareTimingService();
         service.beginRecordedAdmission(Map.of(
                 HardwareWorkKind.KOS_MODULE_QUEUE, HardwareReadinessAdmissionPolicy.RECORDED,
-                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, HardwareReadinessAdmissionPolicy.LIVE));
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, HardwareReadinessAdmissionPolicy.LIVE,
+                HardwareWorkKind.NEMESIS_PLC_QUEUE, HardwareReadinessAdmissionPolicy.LIVE));
         HardwareWorkHandle direct = service.submit(submission(
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 1, 19));
         HardwareTimingSnapshot snapshot = service.capture();

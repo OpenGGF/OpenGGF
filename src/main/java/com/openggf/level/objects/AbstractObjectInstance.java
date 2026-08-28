@@ -971,6 +971,35 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * can use this when their solid helper observes the render flag produced
      * before the current object routine changes x_pos/y_pos.
      */
+    /**
+     * Whether a frame-start position snapshot exists for this object yet.
+     *
+     * <p><b>This is not a "has never executed" predicate, and must not be used
+     * as one.</b> It said so until 2026-08-21 and the claim was never true:
+     * {@link ObjectManager} calls {@link #snapshotPreUpdatePosition()} on a
+     * mid-update child the moment it is registered into a slot the frame has
+     * not reached yet, precisely so the touch and solid helpers have a
+     * frame-start position for the pass the child is about to run. Measured on
+     * the {@code arz2} level-select fixture, it is already {@code true} on the
+     * first {@code update()} of all 54 bubbles that segment creates.
+     *
+     * <p>Callers modelling the ROM's {@code render_flags} bit 7 want a
+     * different fact. {@code BuildSprites} only rewrites that bit for objects
+     * that queued themselves through {@code DisplaySprite} during the frame, so
+     * an object that has not executed keeps whatever its setup data seeded --
+     * and several setup rows seed it SET. That is a per-object execution fact,
+     * not a snapshot fact. Model it with an object-local flag set where the
+     * object's own routine reaches its {@code DisplaySprite} equivalent and
+     * consumed by {@link ObjectInstance#refreshPostCameraRenderState()}; see
+     * {@code BubbleGeneratorObjectInstance.romDisplayedLastPass} and
+     * {@code BubbleObjectInstance.romDisplayedLastPass} for the shape, and
+     * docs/architecture/audits/trace/2026-08-21-carried-render-flag-family.md
+     * for why the flag phase and that guard are only correct together.
+     */
+    protected boolean hasPreUpdateSnapshot() {
+        return preUpdateValid;
+    }
+
     protected boolean isPreUpdateWithinRenderSpriteBounds(int xMargin, int yMargin) {
         return preUpdateValid && cameraBounds.containsRenderSpriteBounds(
                 preUpdateX, preUpdateY, xMargin, yMargin);
@@ -1093,6 +1122,33 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Signed-compare variant of {@link #isInRangeAt(int)}.
+     * <p>
+     * The shared {@code out_of_range} macro ends in {@code bhi} — an UNSIGNED
+     * compare, so an object left of the window wraps to a huge distance and is
+     * deleted (docs/s1disasm/Macros.asm:278-295). A handful of objects carry
+     * their own inlined copy of {@code RememberState} that ends in {@code bgt}
+     * instead, a SIGNED compare: a negative distance is never greater than
+     * {@code $280}, so those objects cannot despawn off the LEFT edge at all.
+     * <p>
+     * Both S1 disassemblies are built with {@code FixBugs = 0}
+     * (docs/s1disasm/sonic.asm:20), which is the branch that keeps the
+     * copy-pasted {@code bgt}; the {@code FixBugs} branch replaces the whole
+     * block with a plain {@code bra.w RememberState} and would despawn on the
+     * left like every other object. The shipped ROM — and therefore every
+     * trace — takes the {@code bgt} path, so that is what the engine models.
+     *
+     * @param objectX the chunk-aligned reference X to test
+     * @return true if in range under the signed window (should NOT be deleted)
+     */
+    protected boolean isInRangeAtSigned(int objectX) {
+        int objAligned = objectX & 0xFF80;
+        int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
+        short dist = (short) (objAligned - screenAligned);
+        return dist <= (128 + viewportWidth() + 192);
+    }
+
+    /**
      * Adds an already-constructed object using FindNextFreeObj semantics.
      * <p>
      * <b>Does NOT set {@link #CONSTRUCTION_CONTEXT}.</b> If the object's constructor
@@ -1129,6 +1185,44 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 LevelManager lm = staticLevelManager();
                 if (lm != null && lm.getObjectManager() != null) {
                     lm.getObjectManager().addDynamicObjectAfterCurrent(object);
+                }
+            } catch (Exception ex) {
+                LOG.fine("Could not spawn dynamic object (test env?): " + ex.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Adds an already-constructed object using the ROM's plain {@code AllocateObject}
+     * semantics -- a rescan from the base of the dynamic SST array that returns the
+     * LOWEST free slot, which may sit below the spawning object's own slot.
+     * <p>
+     * Use this where the disassembly calls {@code AllocateObject} / {@code FindFreeObj}
+     * rather than {@code AllocateObjectAfterCurrent}: because the object-execution walk
+     * runs slots in ascending order, a child placed below the parent does not run until
+     * the next frame, and that one-frame difference is visible to any routine the child
+     * drives. Same probe/rewind-restore guards as {@link #spawnDynamicObject}.
+     *
+     * @param object the already-constructed object instance to spawn
+     */
+    protected void spawnDynamicObjectLowestFreeSlot(AbstractObjectInstance object) {
+        try {
+            ObjectManager om = services().objectManager();
+            if (om != null) {
+                if (ObjectConstructionContext.isProbeConstruction()) {
+                    return;
+                }
+                if (ObjectConstructionContext.isRewindActiveRestore()) {
+                    om.registerRewindReconstructionChild(object);
+                } else {
+                    om.addDynamicObject(object);
+                }
+            }
+        } catch (IllegalStateException e) {
+            try {
+                LevelManager lm = staticLevelManager();
+                if (lm != null && lm.getObjectManager() != null) {
+                    lm.getObjectManager().addDynamicObject(object);
                 }
             } catch (Exception ex) {
                 LOG.fine("Could not spawn dynamic object (test env?): " + ex.getMessage());

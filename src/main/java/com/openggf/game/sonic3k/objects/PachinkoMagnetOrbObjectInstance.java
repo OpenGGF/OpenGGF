@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -118,11 +117,18 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
             releasePlayer(player, state, vIntRunCount, false);
             return;
         }
-        if (shouldReleaseCapturedSidekick(player)) {
-            releasePlayer(player, state, vIntRunCount, false);
-            return;
-        }
-
+        // ROM sub_4A428 (sonic3k.asm:96955-96967) runs the captured branch with no
+        // on-screen, camera-distance or render-flag test of any kind: once `(a2)` is
+        // non-zero, the only exits are Debug_placement_mode, `routine(a1) >= 4`,
+        // `object_control` bit 7, and an A/B/C press in that player's own
+        // Ctrl_N_logical pressed byte (`andi.b #button_A_mask|button_B_mask|
+        // button_C_mask,d1 / bne.w loc_4A4B4`). Player 2 goes through exactly the
+        // same subroutine from loc_4A408 (sonic3k.asm:96943-96949), so there is no
+        // CPU-sidekick-specific release at all. An extra "release a CPU sidekick
+        // that has left the screen" gate ejects Tails as soon as the camera follows
+        // Sonic away from the orb, and the loc_4A4F6 tail it then runs sets
+        // Status_Roll, anim 2 and the ball radii -- observed as tails_status_byte
+        // 0x07 where the ROM holds 0x03, with a 1px tails_y from the shrunken box.
         if (player.isJumpJustPressed()) {
             releasePlayer(player, state, vIntRunCount, true);
             return;
@@ -156,14 +162,6 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         }
     }
 
-    private boolean shouldReleaseCapturedSidekick(AbstractPlayableSprite player) {
-        if (!player.isCpuControlled()) {
-            return false;
-        }
-        Camera camera = services().camera();
-        return camera != null && !camera.isOnScreen(player);
-    }
-
     private void capturePlayer(AbstractPlayableSprite player, PlayerState state) {
         int angle = TrigLookupTable.calcAngle((short) (player.getCentreX() - spawn.x()),
                 (short) (player.getCentreY() - spawn.y()));
@@ -178,7 +176,16 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0x0800);
-        player.setControlLocked(true);
+        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97086-97097) writes ground_vel,
+        // render_flags, anim and `move.b #1,object_control(a1)` -- it never
+        // touches Ctrl_1_locked/Ctrl_2_locked. Setting the engine's control lock
+        // here latched logicalInputState (Obj01_Control's Ctrl_1_locked
+        // short-circuit, sonic3k.asm:21968-21971), so the frozen word was what
+        // Sonic_RecordPos (sonic3k.asm:22132) stored into Stat_table. ROM copies
+        // Ctrl_1 -> Ctrl_1_logical BEFORE the `btst #0,object_control(a0)` test at
+        // sonic3k.asm:21973, so a captured player still records live pad state and
+        // the sidekick's $44-back Stat_table read (loc_13DA6/loc_13DD0,
+        // sonic3k.asm:26682-26700) sees the release press on the correct frame.
         // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97091): `move.b #1,object_control(a1)`
         // sets ONLY bit 0 (movement-suppress) of object_control, not bit 7. The
         // Sonic_Control dispatcher's own TouchResponse gate (sonic3k.asm:22019-22022:
@@ -241,8 +248,9 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
             player.setYSpeed((short) yVelocity);
         }
 
+        // ROM loc_4A4F0/loc_4A4F6 (sonic3k.asm:97024-97042) clears object_control
+        // bits 0-1 only; there is no Ctrl_1_locked write to undo here either.
         player.releaseFromObjectControl(frameCounter);
-        player.setControlLocked(false);
         player.setAir(true);
         player.setOnObject(false);
         if (!player.getRolling()) {

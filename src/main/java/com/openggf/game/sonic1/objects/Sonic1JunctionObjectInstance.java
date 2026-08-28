@@ -70,6 +70,11 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     private static final int SOLID_HALF_WIDTH = 0x30;
     private static final int SOLID_AIR_HALF_HEIGHT = 0x30;
     private static final int SOLID_GROUND_HALF_HEIGHT = 0x31;
+    // Jun_Main: move.b #96/2,obActWid(a0) for the parent
+    // (66 SBZ Rotating Junction.asm:47-48). The #112/2 at :43 is the
+    // display-only cover-up child, which is never solid.
+    private static final int ACT_WIDTH = 0x30;
+
     private static final SolidObjectParams SOLID_PARAMS =
             SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
 
@@ -442,6 +447,29 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
         return SOLID_PARAMS;
     }
 
+    /**
+     * The junction parent's ROM {@code obActWid}.
+     *
+     * <p>{@code Jun_Main} writes {@code move.b #96/2,obActWid(a0)} = 48 for the
+     * parent (docs/s1disasm/_incObj/66 SBZ Rotating Junction.asm:47-48). The
+     * {@code #112/2} = 56 at {@code :43} belongs to the circular cover-up
+     * children, which are put straight into routine 4 ({@code Jun_Display},
+     * "do nothing but display") at {@code :32} and never made solid — so the
+     * parent is the only slot the player can be standing on, and 48 is the only
+     * value the balance test can read.
+     *
+     * <p>Supplied here rather than at {@link #getBalanceWidthPixels()} because
+     * both ROM consumers want the byte: {@code BuildSprites}' horizontal cull
+     * (docs/s1disasm/_inc/BuildSprites.asm:49-58) and {@code Sonic_Balance}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:422-431). The class is full-solid, so
+     * the balance accessor inherits this one. {@code Jun_Action}'s separately
+     * authored {@code d1 = #74/2+sonic_solid_width} at {@code :60} is unchanged.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return ACT_WIDTH;
+    }
+
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
         // ROM SolidObject uses `bhi` for the right edge (docs/s1disasm/_incObj/sub
@@ -495,6 +523,9 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) GRAB_INERTIA);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
+        // ROM Jun_Move's grab clears the junction's OWN pushed flag before the
+        // player's (docs/s1disasm/_incObj/66 SBZ Rotating Junction.asm:87-88).
+        services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
         player.setAir(true);
 

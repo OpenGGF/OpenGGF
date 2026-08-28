@@ -43,6 +43,10 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
     // SolidObject params: d1=$13, d2=8, d3=$11
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x13, 8, 0x11);
 
+    // BossPlasma_Main writes obWidth, never obActWid, and nothing else does, so
+    // the slot keeps the zero DeleteObject left in it. See getOnScreenHalfWidth().
+    private static final int ACT_WIDTH = 0;
+
 
     // State: 0 = idle (Generator), 1 = spawning balls, 2 = waiting for balls
     private int launcherState;
@@ -239,6 +243,43 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    /**
+     * The launcher's ROM {@code obActWid}, which is zero.
+     *
+     * <p>Not an omission here — an omission in the ROM.
+     * {@code BossPlasma_Main} sets the object up with
+     * {@code move.b #16/2,obWidth(a0)} and {@code move.b #16/2,obHeight(a0)}
+     * (docs/s1disasm/_incObj/85,84,86 Boss - FZ Main, Cylinders, and Plasma
+     * Balls.asm:990-1001). That is {@code obWidth}, not {@code obActWid} — the
+     * same fumble the listing flags for the cylinders at {@code :776-778}, except
+     * that one was repaired in REV01 by the added {@code obActWid} write at
+     * {@code :781} and this one was never repaired in either revision. No other
+     * site writes the byte for this object.
+     *
+     * <p>The slot therefore holds zero for the object's whole life:
+     * {@code BossFinal_Skip} hands it a slot from {@code FindFreeObj}
+     * ({@code :108-115}), and {@code DeleteObject} zeroes all {@code $40} bytes
+     * of a slot before it can be handed out again
+     * (docs/s1disasm/_incObj/sub DeleteObject.asm:10-19).
+     *
+     * <p>Zero is not inert. {@code Sonic_Balance} forms
+     * {@code d1 = obActWid + sonic_x - obj_x} and
+     * {@code d2 = 2*obActWid - 4}, balancing when {@code d1 < 4} or
+     * {@code d1 >= d2} (docs/s1disasm/_incObj/01 Sonic.asm:422-431). At
+     * {@code obActWid = 0} that is {@code dx < 4} or {@code dx >= -4}, which
+     * between them cover every position — so the ROM balances on the launcher
+     * the entire time the player stands on it, left-facing inboard of
+     * {@code dx = 4} and right-facing beyond it. The inherited 16 balanced only
+     * outside {@code |dx| >= 12}. {@code BossPlasma_Collision}'s separately
+     * authored {@code d1 = #16/2+sonic_solid_width} = {@code $13} with a
+     * stood-on {@code d3 = #34/2} ({@code :1022-1027}) is what makes it a
+     * standable surface, and is unchanged.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return ACT_WIDTH;
     }
 
     @Override

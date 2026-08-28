@@ -154,6 +154,13 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     // Bonus values
     private int displayedRingCount;
+    /**
+     * The ROM's second bonus countdown, {@code Bonus_Countdown_2}
+     * (docs/s2disasm/s2.asm:6785). {@code Obj6F_TallyScore} drains it in the
+     * same pass as the first, by its own {@code subq.w #1}
+     * (docs/s2disasm/s2.asm:28385-28388), so the tally's length is the LONGER
+     * of the two players' ring totals -- never their sum.
+     */
     private int displayedRingCountP2;
     private int emeraldBonus;
     private int totalBonus;
@@ -199,9 +206,17 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         this(ringsCollected, 0, gotEmerald, stageIndex, totalEmeraldCount, services);
     }
 
+    /**
+     * @param ringsCollected   rings belonging to player 1 -- the ROM's
+     *                         {@code Ring_count} -> {@code Bonus_Countdown_1}
+     * @param ringsCollectedP2 rings belonging to player 2 -- the ROM's
+     *                         {@code Ring_count_2P} -> {@code Bonus_Countdown_2}
+     *                         (docs/s2disasm/s2.asm:6784-6785)
+     */
     public SpecialStageResultsScreenObjectInstance(int ringsCollected, int ringsCollectedP2,
-                                                    boolean gotEmerald, int stageIndex,
-                                                    int totalEmeraldCount, ObjectServices services) {
+                                                    boolean gotEmerald,
+                                                    int stageIndex, int totalEmeraldCount,
+                                                    ObjectServices services) {
         this.ringsCollected = ringsCollected;
         this.ringsCollectedP2 = ringsCollectedP2;
         this.gotEmerald = gotEmerald;
@@ -694,6 +709,12 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     // ── State machine (inlined from AbstractResultsScreen) ─────────────
 
     private void updateSlideIn() {
+        // ROM: the routine chain is owned by the "Special Stage" title object,
+        // which arrives after 288/16 = 18 move frames and latches its $B4 wait
+        // on the frame after that (Obj6F_InitEmeraldText, s2.asm:28243-28248).
+        // The remaining rows are still sliding in at that point -- their offsets
+        // are driven independently by getSlideOffset()'s 16 px/frame ramp -- so
+        // this state must not wait for them.
         if (stateTimer >= Sonic2SpecialStageConstants.RESULTS_TITLE_ARRIVAL_FRAMES) {
             state = STATE_PRE_TALLY_DELAY;
             stateTimer = 0;
@@ -720,6 +741,9 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             anyRemaining = true;
         }
 
+        // ROM Obj6F_TallyScore tests and decrements Bonus_Countdown_2 in the
+        // same pass as Bonus_Countdown_1 (docs/s2disasm/s2.asm:28385-28388), so
+        // the two players' rings drain side by side rather than end to end.
         if (displayedRingCountP2 > 0) {
             displayedRingCountP2--;
             totalIncrement += Sonic2SpecialStageConstants.RESULTS_RING_MULTIPLIER;
@@ -782,6 +806,8 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         }
         stateTimer++;
         totalFrames++;
+        // Render-only fade ramp for the sliding rows; runs off the object's own
+        // lifetime so it is unaffected by when the title object latches.
         slideProgress = Math.min(totalFrames, Sonic2SpecialStageConstants.RESULTS_SLIDE_DURATION);
 
         if (state == STATE_SUPER_SONIC_DISPLAY) {
@@ -1331,6 +1357,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     // Getters for testing
     public int getDisplayedRingCount() { return displayedRingCount; }
+    /** The ROM's {@code Bonus_Countdown_2} (docs/s2disasm/s2.asm:6785). */
     public int getDisplayedRingCountP2() { return displayedRingCountP2; }
     public int getEmeraldBonus() { return emeraldBonus; }
     public int getTotalBonus() { return totalBonus; }

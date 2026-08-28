@@ -8,9 +8,11 @@ import com.openggf.game.ZoneRegistry;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.NoOpDataSelectProvider;
 import com.openggf.game.dataselect.DataSelectDestination;
+import com.openggf.game.dataselect.DataSelectExitTransition;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -62,6 +64,12 @@ class TestS3kDataSelectProfile {
     void gameCode_returnsS3k() {
         S3kDataSelectProfile profile = new S3kDataSelectProfile();
         assertEquals("s3k", profile.gameCode());
+    }
+
+    @Test
+    void exitTransition_usesNativeS3kEntryCueAndFadeCadence() {
+        assertEquals(new DataSelectExitTransition(Sonic3kSfx.ENTER_SS.id, 0x28, 6, 1),
+                new S3kDataSelectProfile().exitTransition());
     }
 
     @Test

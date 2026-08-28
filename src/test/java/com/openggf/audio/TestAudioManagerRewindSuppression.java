@@ -6,6 +6,7 @@ import com.openggf.audio.rewind.AudioReplayScope;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,7 @@ class TestAudioManagerRewindSuppression {
         loader.namedSfxResults.put("JUMP", new AudioTestFixtures.StubSmpsData("jump"));
         audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(
                 loader, 0xF0, 0xF1, GameAudioProfile.SpeedMode.FRAME_MULTIPLY));
-        audio.setRom(null);
+        audio.setRom(new Rom());
         audio.setSoundMap(new EnumMap<>(GameSound.class));
 
         try (AudioReplayScope ignored = audio.beginRewindReplay(10, 4, AudioReplayReason.SEEK)) {
@@ -116,7 +117,7 @@ class TestAudioManagerRewindSuppression {
 
         try (AudioReplayScope ignored = audio.beginRewindReplay(3, 1, AudioReplayReason.SEEK)) {
             audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader));
-            audio.setRom(null);
+            audio.setRom(new Rom());
             EnumMap<GameSound, Integer> map = new EnumMap<>(GameSound.class);
             map.put(GameSound.JUMP, 0x90);
             audio.setSoundMap(map);

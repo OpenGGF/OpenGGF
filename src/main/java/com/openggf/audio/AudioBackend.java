@@ -1,11 +1,14 @@
 package com.openggf.audio;
 
+import com.openggf.audio.driver.SfxContentionObserver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.synth.ChipWriteObserver;
 
 import java.util.function.Consumer;
 
@@ -16,7 +19,6 @@ import java.util.function.Consumer;
  * PCM, history, reverse cursor, and every capture lease, and
  * {@code OpenAlPcmSink} is the only writer of a real audio device.
  */
-@com.openggf.game.ModApi
 public interface AudioBackend {
 
     void init();
@@ -60,6 +62,19 @@ public interface AudioBackend {
     /** Clears active and queued streamed-music ownership during session reset. */
     default void resetStreamedMusicPort() { }
 
+    default void setAdmissionObserver(AudioAdmissionObserver observer) {
+    }
+
+    default void setDriverServiceObserver(
+            SmpsDriverServiceObserver observer) {
+    }
+
+    default void setChipWriteObserver(ChipWriteObserver observer) {
+    }
+
+    default void setSfxContentionObserver(
+            SfxContentionObserver observer) {
+    }
     default void registerAudioProfileCoordHandlers(GameAudioProfile profile) {
     }
 
@@ -102,6 +117,20 @@ public interface AudioBackend {
     default void playSfxSmps(AbstractSmpsData data, DacData dacData, float pitch,
                              SmpsSequencerConfig config) {
         playSfxSmps(data, dacData, pitch);
+    }
+
+    /**
+     * Plays an SFX with a fully captured sequencer and classification tuple.
+     * Existing backends retain source compatibility through the explicit-config
+     * overload; SMPS-aware backends override this to consume {@code policy}.
+     */
+    default void playSfxSmps(
+            AbstractSmpsData data,
+            DacData dacData,
+            float pitch,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy policy) {
+        playSfxSmps(data, dacData, pitch, config);
     }
 
     /**

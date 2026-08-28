@@ -17,6 +17,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -534,7 +535,23 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
      * Uses Map_HCZWaterRushBlock mappings, ArtTile_HCZMisc+$A.
      */
     static class FanPlatformChild extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, RomObjectCodePointerProvider {
+
+        /**
+         * Word 0 of this object's S3K SST holds its live ROM code pointer.
+         * ROM {@code Obj_HCZCGZFan} is installed from the S3K object pointer table at
+         * {@code $00030580} (table read from the user-supplied ROM; the
+         * label is defined at docs/skdisasm/sonic3k.asm:65314).
+         * Its whole code block lies in one bank, so the HIGH word that
+         * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+         * on the next off-screen on-object frame is {@code $0003}
+         * (docs/skdisasm/sonic3k.asm:26816-26843).
+         */
+        @Override
+        public int romObjectCodePointerHighWord() {
+            return 0x0003;
+        }
+
 
         // ROM: move.b #$10,width_pixels(a0) / move.b #$10,height_pixels(a0)
         private static final int HALF_WIDTH = 0x10;

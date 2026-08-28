@@ -1,5 +1,6 @@
 package com.openggf.tests;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
+import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -115,14 +116,23 @@ public class TestSmpsDriver {
     public void testSfxFighting() {
         SpyDriver driver = new SpyDriver();
         AbstractSmpsData dummyData = new Sonic2SmpsData(new byte[100]);
+        dummyData.setId(1);
+        AbstractSmpsData secondData = new Sonic2SmpsData(new byte[100]);
+        secondData.setId(2);
         DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
 
         // Create two sequencers (SFX)
-        SmpsSequencer sfx1 = new SmpsSequencer(dummyData, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
-        SmpsSequencer sfx2 = new SmpsSequencer(dummyData, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        // S3K has no global priority latch, so its channel-local arbitration
+        // is the correct owner for this test. S1/S2 arbitrate the complete
+        // request before any channel write.
+        SmpsSequencer sfx1 = new SmpsSequencer(dummyData, dummyDac, driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer sfx2 = new SmpsSequencer(secondData, dummyDac, driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
 
         driver.addSequencer(sfx1, true);
         driver.addSequencer(sfx2, true);
+        driver.read(new short[735 * 2]);
 
         // sfx1 writes to FM channel 0 (Reg 0xA4, 0xA0 -> Channel 0)
         // Reg mapping: 0xA0..0xA2 -> Ch 0..2.
@@ -220,8 +230,10 @@ public class TestSmpsDriver {
 
         // SFX-A's track should be deactivated
         assertFalse(sfxA.getTracks().get(0).active, "SFX-A's PSG2 track should be deactivated");
-        // SFX-A's lock should be released (SFX-B hasn't written yet)
-        assertNull(driver.getPsgLock(2), "PSG2 lock should be released after conflict resolution");
+        // Admission itself owns the shipped takeover boundary: SFX-B claims
+        // the channel before its first bytecode-driven chip write.
+        assertEquals(sfxB, driver.getPsgLock(2),
+                "PSG2 lock should transfer atomically during admission");
         // SFX-A should be removed entirely (all tracks inactive)
         assertEquals(1, driver.getSequencerCount(), "SFX-A should be removed (all tracks dead)");
         assertEquals(1, driver.getSfxSequencerCount(), "Only SFX-B in sfxSequencers");
@@ -275,5 +287,3 @@ public class TestSmpsDriver {
                 "Driver output should not depend on whether audio is read a frame at a time or in one block");
     }
 }
-
-

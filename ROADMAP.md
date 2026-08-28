@@ -241,6 +241,15 @@ This release should focus on reducing obvious gaps rather than introducing new s
   S3K donation alone.
 - Documentation cleanup around what is complete, partial, or intentionally deferred.
 
+## v0.8 Tooling Ask: Actworks
+
+Agent worktree and scratch-lifecycle research continues in the public
+[`OpenGGF/Actworks`](https://github.com/OpenGGF/Actworks) project. Slipmat and
+the lifecycle tools live there; [cowtree](https://github.com/raiscan/cowtree)
+remains its own repository. OpenGGF has no runtime, build, test, or contributor
+workflow dependency on Actworks. Any future reintroduction must prove bounded
+storage, explicit lifecycle closure, and material benefit before adoption.
+
 ## 1.0 Criteria
 
 Version `1.0` should not mean "every object from every game has been implemented."
@@ -268,4 +277,5 @@ These are all valid ideas, but they should not outrank the current roadmap theme
 `v0.6` turns that baseline into release-hardened playable S3K route slices, with complete-run trace
 frontiers as the main parity ledger. Data select/save is functionally in place, the editor and live
 rewind are real prototypes, and the remaining work is to stabilize opened routes without hiding
-known failures. `v0.7` focuses on completion and parity closure.
+known failures. `v0.7` focuses on completion and parity closure; reusable agent
+lifecycle research is a separate v0.8 Actworks ask.

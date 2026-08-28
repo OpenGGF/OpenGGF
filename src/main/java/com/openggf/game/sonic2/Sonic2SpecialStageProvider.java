@@ -16,7 +16,10 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageIntro;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayer;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectConstructionContext;
@@ -40,13 +43,21 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     private final Sonic2SpecialStageManager manager;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
     private boolean resultsPlcSubmitted;
+    /**
+     * The two per-player ring totals latched at the ROM's own copy point, the
+     * {@code move.w (Ring_count).w,(Bonus_Countdown_1).w} /
+     * {@code move.w (Ring_count_2P).w,(Bonus_Countdown_2).w} pair that runs
+     * immediately before {@code Obj6F} is created (docs/s2disasm/s2.asm:6784-6785,
+     * :6797). They must be read before {@link #resetForResults()} clears the
+     * stage's players.
+     */
     private int bonusCountdown1;
     private int bonusCountdown2;
     private boolean ringsLatched;
 
     @Override
     public SpecialStageDebugCapabilities debugCapabilities() {
-        return new SpecialStageDebugCapabilities(false, false, false, true, true, true, true);
+        return new SpecialStageDebugCapabilities(false, false, false, true, true, true, false);
     }
 
     public Sonic2SpecialStageProvider() {
@@ -67,6 +78,31 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     @Override
     public SpecialStageViewport getSpecialStageViewport() {
         return viewport;
+    }
+
+    /**
+     * Sonic 2's special-stage entry opens with {@code Pal_FadeToWhite}, which
+     * sets {@code VintID_Fade} and waits for a V-int on each of its 22 {@code dbf}
+     * iterations (docs/s2disasm/s2.asm:3571-3581, called from {@code SpecialStage}
+     * at s2.asm:6547). Those rows run {@code Vint_Fade}
+     * (docs/s2disasm/s2.asm:1068-1070 -- {@code Do_ControllerPal}, the H-int
+     * counter reload and {@code ProcessDPLC}), which never reaches
+     * {@code ProcessDMAQueue}; the stage's own {@code VintID_S2SS} is not
+     * installed until after the entry load, at s2.asm:6642. So the fade rows are
+     * palette-fade rows, not special-stage rows, and a transfer still queued on
+     * entry survives them.
+     *
+     * <p>{@code Pal_FadeFromWhite} (s2.asm:3477, called at s2.asm:6672) uses the
+     * same handler, but the engine already routes that window through the shared
+     * fade lifecycle, which claims the phase itself.</p>
+     */
+    @Override
+    public PlcLifecyclePhase specialStagePlcLifecyclePhase() {
+        Sonic2SpecialStageIntro intro = manager != null ? manager.getIntro() : null;
+        return intro != null
+                && intro.getCurrentPhase() == Sonic2SpecialStageIntro.Phase.PRE_ROLL
+                ? PlcLifecyclePhase.PALETTE_FADE
+                : PlcLifecyclePhase.SPECIAL_STAGE;
     }
 
     @Override
@@ -144,9 +180,9 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     @Override
     public void resetForResults() {
         bonusCountdown1 = manager.getRingsCollected(
-                com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayer.PlayerType.SONIC);
+                Sonic2SpecialStagePlayer.PlayerType.SONIC);
         bonusCountdown2 = manager.getRingsCollected(
-                com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayer.PlayerType.TAILS);
+                Sonic2SpecialStagePlayer.PlayerType.TAILS);
         ringsLatched = true;
         reset();
         resultsPlcSubmitted = false;
@@ -260,17 +296,17 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) {
-        manager.renderLagCompensationOverlay(viewportWidth, viewportHeight);
+        // Compatibility no-op: S2 exposes no live pacing diagnostic.
     }
 
     @Override
     public boolean isLagCompensationDisplayEnabled() {
-        return manager.isLagCompensationDisplayEnabled();
+        return false;
     }
 
     @Override
     public void toggleLagCompensationDisplay() {
-        manager.toggleLagCompensationDisplay();
+        // Compatibility no-op: the capability is not advertised.
     }
 
     @Override
@@ -289,6 +325,13 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
         }
         DefaultObjectServices services = new DefaultObjectServices(
                 gameplayMode, EngineServices.current());
+        // The ROM's two bonus countdowns drain in parallel, one ring each per
+        // frame (Obj6F_TallyScore, docs/s2disasm/s2.asm:28376-28396), so the
+        // tally lasts as long as the LONGER of them -- never their sum. Use the
+        // split latched at the ROM's copy point; a caller that never ran
+        // resetForResults() has no split to offer, which is the ROM's
+        // single-player shape (one countdown loaded, the other left at zero,
+        // s2.asm:6773-6785).
         int countdown1 = ringsLatched ? bonusCountdown1 : ringsCollected;
         int countdown2 = ringsLatched ? bonusCountdown2 : 0;
         return ResultsScreen.withBeforeUpdate(ObjectConstructionContext.construct(services,

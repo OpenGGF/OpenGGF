@@ -17,8 +17,8 @@ public class PsgChip {
         DISCRETE
     }
 
-    private static final double INPUT_CLOCK = 3579545.0; // NTSC PSG input clock (Hz)
-    private static final double INTERNAL_RATE = INPUT_CLOCK / 16.0;
+    private static final double NTSC_INPUT_CLOCK = 3_579_545.0;
+    private static final double DEFAULT_INTERNAL_RATE = NTSC_INPUT_CLOCK / 16.0;
     private static final double DEFAULT_SAMPLE_RATE = 44100.0;
 
     // Clock ratio for integer timing precision (matches GPGX PSG_MCYCLES_RATIO = 15*16)
@@ -75,13 +75,17 @@ public class PsgChip {
     private int noiseBitMask;
 
     private double outputRate = DEFAULT_SAMPLE_RATE;
-    private final BlipDeltaBuffer blip = new BlipDeltaBuffer(INTERNAL_RATE * CLOCK_RATIO, DEFAULT_SAMPLE_RATE);
+    private double inputClock = NTSC_INPUT_CLOCK;
+    private double internalRate = DEFAULT_INTERNAL_RATE;
+    private final BlipDeltaBuffer blip = new BlipDeltaBuffer(DEFAULT_INTERNAL_RATE * CLOCK_RATIO, DEFAULT_SAMPLE_RATE);
     private int clocks = 0;  // Integer for drift-free timing
     private long clockFrac = 0;
     private long clocksPerSampleFixed = 0;
-    private boolean hqPsg = false;  // false = fast mode (rawer/brighter, GPGX default), true = HQ sinc filter
-    private boolean noiseShiftOnEveryToggle = true; // true=MAME-style, false=GPGX/libvgm positive-edge only
+    private boolean hqPsg = false;  // Standalone default; SMPS selects GPGX's HQ band-limited path.
+    private boolean noiseShiftOnEveryToggle = false; // GPGX/libvgm positive-edge reference default
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
+    private ChipPcmDiagnosticTap pcmDiagnosticTap = ChipPcmDiagnosticTap.NONE;
+    private long renderedMasterCycles;
 
     public PsgChip() {
         this(DEFAULT_SAMPLE_RATE, ChipType.INTEGRATED);
@@ -100,10 +104,23 @@ public class PsgChip {
     public void setSampleRate(double sampleRate) {
         if (sampleRate > 0.0) {
             this.outputRate = sampleRate;
-            blip.reset(INTERNAL_RATE * CLOCK_RATIO, outputRate);
-            double clocksPerSample = (INTERNAL_RATE * CLOCK_RATIO) / outputRate;
+            blip.reset(internalRate * CLOCK_RATIO, outputRate);
+            double clocksPerSample = (internalRate * CLOCK_RATIO) / outputRate;
             clocksPerSampleFixed = (long) (clocksPerSample * CLOCK_FRAC_UNIT + 0.5);
         }
+    }
+
+    void setInputClock(double newInputClock) {
+        if (newInputClock <= 0.0) {
+            throw new IllegalArgumentException("PSG input clock must be positive");
+        }
+        inputClock = newInputClock;
+        internalRate = inputClock / 16.0;
+        setSampleRate(outputRate);
+    }
+
+    double inputClockForTesting() {
+        return inputClock;
     }
 
     public void setChipType(ChipType type) {
@@ -141,6 +158,8 @@ public class PsgChip {
 
     public Snapshot captureSnapshot() {
         return new Snapshot(
+                inputClock,
+                internalRate,
                 regs,
                 freqInc,
                 freqCounter,
@@ -160,10 +179,62 @@ public class PsgChip {
                 clocksPerSampleFixed,
                 hqPsg,
                 noiseShiftOnEveryToggle,
+                renderedMasterCycles,
                 blip.captureSnapshot());
     }
 
+    SfxAdmissionState captureSfxAdmissionState(int affectedChannelMask) {
+        int mask = affectedChannelMask & 0x0F;
+        if ((mask & (1 << 2)) != 0) {
+            mask |= 1 << 3;
+        }
+        int[] selectedRegs = new int[8];
+        int[] selectedFreqInc = new int[4];
+        int[] selectedFreqCounter = new int[4];
+        int[] selectedPolarity = new int[4];
+        int[][] selectedOut = new int[4][];
+        int[][] selectedDelta = new int[4][];
+        for (int channel = 0; channel < 4; channel++) {
+            if ((mask & (1 << channel)) == 0) {
+                continue;
+            }
+            int register = channel << 1;
+            selectedRegs[register] = regs[register];
+            selectedRegs[register + 1] = regs[register + 1];
+            selectedFreqInc[channel] = freqInc[channel];
+            selectedFreqCounter[channel] = freqCounter[channel];
+            selectedPolarity[channel] = polarity[channel];
+            selectedOut[channel] = Arrays.copyOf(chanOut[channel], 2);
+            selectedDelta[channel] = Arrays.copyOf(chanDelta[channel], 2);
+        }
+        return new SfxAdmissionState(
+                mask, selectedRegs, selectedFreqInc, selectedFreqCounter,
+                selectedPolarity, selectedOut, selectedDelta, latch, clocks,
+                noiseShiftValue);
+    }
+
+    void restoreSfxAdmissionState(SfxAdmissionState state) {
+        for (int channel = 0; channel < 4; channel++) {
+            if ((state.affectedChannelMask() & (1 << channel)) == 0) {
+                continue;
+            }
+            int register = channel << 1;
+            regs[register] = state.regs()[register];
+            regs[register + 1] = state.regs()[register + 1];
+            freqInc[channel] = state.freqInc()[channel];
+            freqCounter[channel] = state.freqCounter()[channel];
+            polarity[channel] = state.polarity()[channel];
+            copyInto(state.chanOut()[channel], chanOut[channel]);
+            copyInto(state.chanDelta()[channel], chanDelta[channel]);
+        }
+        latch = state.latch();
+        clocks = state.clocks();
+        noiseShiftValue = state.noiseShiftValue();
+    }
+
     public void restoreSnapshot(Snapshot snapshot) {
+        inputClock = snapshot.inputClock();
+        internalRate = snapshot.internalRate();
         copyInto(snapshot.regs(), regs);
         copyInto(snapshot.freqInc(), freqInc);
         copyInto(snapshot.freqCounter(), freqCounter);
@@ -183,7 +254,78 @@ public class PsgChip {
         clocksPerSampleFixed = snapshot.clocksPerSampleFixed();
         hqPsg = snapshot.hqPsg();
         noiseShiftOnEveryToggle = snapshot.noiseShiftOnEveryToggle();
+        renderedMasterCycles = snapshot.renderedMasterCycles();
         blip.restoreSnapshot(snapshot.blip());
+    }
+
+    static void validateSnapshot(Snapshot snapshot) {
+        if (snapshot == null) {
+            throw new IllegalArgumentException(
+                    "PSG snapshot cannot be null");
+        }
+        requireFinitePositive(snapshot.inputClock(), "PSG input clock");
+        requireFinitePositive(snapshot.internalRate(), "PSG internal rate");
+        requireFinitePositive(snapshot.outputRate(), "PSG output rate");
+        if (Double.compare(snapshot.internalRate(),
+                snapshot.inputClock() / 16.0) != 0) {
+            throw new IllegalArgumentException(
+                    "PSG snapshot rates are inconsistent");
+        }
+        requireLength(snapshot.regs(), 8, "PSG registers");
+        requireLength(snapshot.freqInc(), 4, "PSG frequency increments");
+        requireLength(snapshot.freqCounter(), 4,
+                "PSG frequency counters");
+        requireLength(snapshot.polarity(), 4, "PSG polarities");
+        requireLength(snapshot.mutes(), 4, "PSG mutes");
+        requireMatrix(snapshot.chanOut(), "PSG channel output");
+        requireMatrix(snapshot.chanAmp(), "PSG channel amplitude");
+        requireMatrix(snapshot.chanDelta(), "PSG channel deltas");
+        if (snapshot.latch() < 0 || snapshot.latch() >= 8
+                || snapshot.clocksPerSampleFixed() <= 0
+                || snapshot.clockFrac() < 0
+                || snapshot.clockFrac() >= CLOCK_FRAC_UNIT
+                || (snapshot.noiseShiftWidth() != 14
+                && snapshot.noiseShiftWidth() != 15)) {
+            throw new IllegalArgumentException(
+                    "PSG snapshot scalar state is invalid");
+        }
+        BlipDeltaBuffer.validateSnapshot(snapshot.blip());
+    }
+
+    private static void requireLength(
+            int[] values, int length, String name) {
+        if (values.length != length) {
+            throw new IllegalArgumentException(
+                    name + " has invalid length");
+        }
+    }
+
+    private static void requireLength(
+            boolean[] values, int length, String name) {
+        if (values.length != length) {
+            throw new IllegalArgumentException(
+                    name + " has invalid length");
+        }
+    }
+
+    private static void requireMatrix(int[][] values, String name) {
+        if (values.length != 4) {
+            throw new IllegalArgumentException(
+                    name + " has invalid channel count");
+        }
+        for (int[] row : values) {
+            if (row == null || row.length != 2) {
+                throw new IllegalArgumentException(
+                        name + " has invalid channel width");
+            }
+        }
+    }
+
+    private static void requireFinitePositive(double value, String name) {
+        if (!Double.isFinite(value) || value <= 0.0) {
+            throw new IllegalArgumentException(
+                    name + " must be finite and positive");
+        }
     }
 
     public void setMute(int ch, boolean mute) {
@@ -242,9 +384,10 @@ public class PsgChip {
         latch = 3;
         noiseShiftValue = 1 << noiseShiftWidth;
         configure(DEFAULT_PREAMP, 0xFF);
-        blip.reset(INTERNAL_RATE * CLOCK_RATIO, outputRate);
+        blip.reset(internalRate * CLOCK_RATIO, outputRate);
         clocks = 0;
         clockFrac = 0;
+        renderedMasterCycles = 0;
     }
 
     /**
@@ -260,6 +403,10 @@ public class PsgChip {
 
     void setWriteObserver(ChipWriteObserver observer) {
         writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
+    }
+
+    void installPcmDiagnosticTap(ChipPcmDiagnosticTap tap) {
+        pcmDiagnosticTap = tap == null ? ChipPcmDiagnosticTap.NONE : tap;
     }
 
     /**
@@ -349,9 +496,64 @@ public class PsgChip {
         long total = clockFrac + clocksPerSampleFixed * len;
         int target = (int) (total >> CLOCK_FRAC_BITS);
         clockFrac = total & (CLOCK_FRAC_UNIT - 1);
+        if (pcmDiagnosticTap != ChipPcmDiagnosticTap.NONE) {
+            emitNativeDiagnosticSamples(target);
+        }
         psgUpdate(target);
         endFrame(target);
         blip.readSamples(left, right, len);
+        renderedMasterCycles = Math.addExact(renderedMasterCycles, target);
+    }
+
+    private void emitNativeDiagnosticSamples(int targetClocks) {
+        int[] simulatedCounter = freqCounter.clone();
+        int[] simulatedPolarity = polarity.clone();
+        int simulatedNoise = noiseShiftValue;
+        long endCycle = Math.addExact(renderedMasterCycles, targetClocks);
+        long cycle = Math.multiplyExact(
+                Math.floorDiv(Math.addExact(renderedMasterCycles, CLOCK_RATIO - 1L),
+                        CLOCK_RATIO), CLOCK_RATIO);
+        while (cycle < endCycle) {
+            int localCycle = Math.toIntExact(cycle - renderedMasterCycles);
+            for (int channel = 0; channel < 3; channel++) {
+                while (simulatedCounter[channel] <= localCycle) {
+                    simulatedPolarity[channel] = -simulatedPolarity[channel];
+                    simulatedCounter[channel] = Math.addExact(
+                            simulatedCounter[channel], freqInc[channel]);
+                }
+            }
+            while (simulatedCounter[3] <= localCycle) {
+                simulatedPolarity[3] = -simulatedPolarity[3];
+                if (noiseShiftOnEveryToggle || simulatedPolarity[3] > 0) {
+                    int output = simulatedNoise & 1;
+                    if ((regs[6] & 0x04) != 0) {
+                        int feedback = NOISE_FEEDBACK[simulatedNoise & noiseBitMask];
+                        simulatedNoise = (simulatedNoise >> 1)
+                                | (feedback << noiseShiftWidth);
+                    } else {
+                        simulatedNoise = (simulatedNoise >> 1)
+                                | (output << noiseShiftWidth);
+                    }
+                }
+                simulatedCounter[3] = Math.addExact(
+                        simulatedCounter[3], freqInc[3]);
+            }
+            int left = 0;
+            int right = 0;
+            for (int channel = 0; channel < 3; channel++) {
+                if (!mutes[channel] && simulatedPolarity[channel] > 0) {
+                    left += chanOut[channel][0];
+                    right += chanOut[channel][1];
+                }
+            }
+            if (!mutes[3] && (simulatedNoise & 1) != 0) {
+                left += chanOut[3][0];
+                right += chanOut[3][1];
+            }
+            pcmDiagnosticTap.onSample(new PsgNativeStereo(cycle,
+                    cycle / CLOCK_RATIO, left, right));
+            cycle = Math.addExact(cycle, CLOCK_RATIO);
+        }
     }
 
     private void psgUpdate(int targetClocks) {
@@ -474,6 +676,8 @@ public class PsgChip {
     }
 
     public record Snapshot(
+            double inputClock,
+            double internalRate,
             int[] regs,
             int[] freqInc,
             int[] freqCounter,
@@ -493,6 +697,7 @@ public class PsgChip {
             long clocksPerSampleFixed,
             boolean hqPsg,
             boolean noiseShiftOnEveryToggle,
+            long renderedMasterCycles,
             BlipDeltaBuffer.Snapshot blip) {
         public Snapshot {
             regs = copy(regs);
@@ -528,7 +733,43 @@ public class PsgChip {
 
         @Override
         public int[][] chanDelta() { return copy(chanDelta); }
+
+        @Override
+        public boolean equals(Object candidate) {
+            if (this == candidate) {
+                return true;
+            }
+            if (!(candidate instanceof Snapshot other)) {
+                return false;
+            }
+            return Arrays.deepEquals(equalityFields(), other.equalityFields());
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.deepHashCode(equalityFields());
+        }
+
+        private Object[] equalityFields() {
+            return new Object[] {
+                    inputClock, internalRate, regs, freqInc, freqCounter, polarity, chanOut, chanAmp, mutes,
+                    chanDelta, latch, zeroFreqInc, noiseShiftValue, noiseShiftWidth, noiseBitMask, outputRate,
+                    clocks, clockFrac, clocksPerSampleFixed, hqPsg, noiseShiftOnEveryToggle, blip
+            };
+        }
     }
+
+    record SfxAdmissionState(
+            int affectedChannelMask,
+            int[] regs,
+            int[] freqInc,
+            int[] freqCounter,
+            int[] polarity,
+            int[][] chanOut,
+            int[][] chanDelta,
+            int latch,
+            int clocks,
+            int noiseShiftValue) { }
 
     private static int[] copy(int[] values) {
         return Arrays.copyOf(values, values.length);

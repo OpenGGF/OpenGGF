@@ -113,10 +113,10 @@ class TestRemainingRewindTailInventory {
         assertEquals(0, buckets.get(Bucket.COUNT_MISMATCH).size(), "count-mismatch inventory count");
         assertEquals(0, buckets.get(Bucket.SCALAR_MISMATCH).size(), "scalar-mismatch inventory count");
 
-        // 2026-07-29 super-emerald remediation integration inventory: nine
-        // effect/controller classes have focused graph coverage, and every
-        // remaining concrete object class probes cleanly.
-        return new TailInventory(1002, 783, 219, 0, buckets);
+        // 2026-08-27 official-scope integration inventory: the three new
+        // standalone object classes probe cleanly, and the parent-dependent
+        // Sonic 2 Obj11 bridge segment has focused graph coverage.
+        return new TailInventory(1006, 786, 220, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

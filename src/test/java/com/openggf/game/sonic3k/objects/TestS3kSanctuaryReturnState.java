@@ -55,7 +55,8 @@ class TestS3kSanctuaryReturnState {
         state.restoreToPlayer(player, camera, levelState, water, 7, 1);
 
         assertEquals(42, levelState.getRings());
-        assertEquals(8_765L, levelState.getTimerFrames());
+        assertEquals(8_759L, levelState.getTimerFrames(),
+                "Load_Starpost_Settings2 resets Timer_frame to 59 and decrements Timer_second");
         assertEquals(0x06, levelState.getRingExtraLifeFlags());
         verify(player).removeShield();
         verify(player).giveShield(ShieldType.BUBBLE);

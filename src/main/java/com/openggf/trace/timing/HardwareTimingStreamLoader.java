@@ -80,7 +80,8 @@ public final class HardwareTimingStreamLoader {
                 throw rejected(timingPath, "line " + (index + 1) + " must be one compact JSON event");
             }
             HardwareCompletionEdge edge = parseEdge(timingPath, index + 1, line);
-            if (edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
+            if ((edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
+                    || edge.kind() == HardwareWorkKind.NEMESIS_PLC_QUEUE)
                     && edge.boundary() != HardwareServiceBoundary.PRE_MAIN_LOOP) {
                 throw rejected(timingPath, "line " + (index + 1)
                         + " direct completion kind requires pre_main_loop boundary");

@@ -42,6 +42,8 @@ public class ResourceLoader {
     private final Rom rom;
     private final boolean strictModAssetsOnly;
 
+    private int lastOpEndBytes;
+
     public ResourceLoader(Rom rom) {
         this.rom = rom;
         this.strictModAssetsOnly = false;
@@ -68,6 +70,21 @@ public class ResourceLoader {
             throw new IllegalArgumentException("Load operations are required");
         }
         requireSupportedSources(ops);
+    }
+
+    /**
+     * Destination offset one byte past the end of the <em>last</em> operation applied by the
+     * most recent {@link #loadWithOverlays} call.
+     *
+     * <p>This is the composing decompressor's final write pointer, as distinct from the
+     * composed buffer's total extent returned by {@code loadWithOverlays}: an overlay that
+     * lands inside a larger base leaves the write pointer short of the buffer end. Callers
+     * that need to reproduce a ROM routine which reads that pointer back (for example
+     * Sonic 2's LoadZoneTiles, {@code move.w a1,d3} after its last {@code bsr.w KosDec} --
+     * docs/s2disasm/s2.asm:6483-6494) must use this, not the buffer length.
+     */
+    public int lastOpEndBytes() {
+        return lastOpEndBytes;
     }
 
     /**
@@ -105,6 +122,7 @@ public class ResourceLoader {
 
         byte[] buffer = new byte[initialBufferSize];
         int usedLength = 0;
+        lastOpEndBytes = 0;
 
         for (int i = 0; i < ops.size(); i++) {
             LoadOp op = ops.get(i);
@@ -124,6 +142,8 @@ public class ResourceLoader {
 
             // Track the maximum extent of data
             usedLength = Math.max(usedLength, requiredSize);
+            // ...and, separately, where this decode's write pointer stopped.
+            lastOpEndBytes = requiredSize;
 
             if (op.appendsToPrevious()) {
                 LOG.fine(String.format("Applied append: %s -> offset 0x%04X (%d bytes)",

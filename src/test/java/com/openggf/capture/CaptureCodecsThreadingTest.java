@@ -72,6 +72,15 @@ class CaptureCodecsThreadingTest {
     }
 
     @Test
+    void dnxhrSqSelectsTheResolveCompatibleProfileAndPixelFormat() {
+        assertEquals(List.of("-c:v", "dnxhd", "-profile:v", "dnxhr_sq",
+                        "-pix_fmt", "yuv422p", "-threads", "4"),
+                CaptureCodecs.video("dnxhr-sq", 4, "veryfast").arguments(),
+                "DNxHR has no x26x speed preset, but should still honour the"
+                        + " configured ffmpeg thread count");
+    }
+
+    @Test
     void nonPositiveThreadsLeaveTheChoiceToFfmpeg() {
         assertFalse(CaptureCodecs.video("h265", 0, "").arguments().contains("-threads"));
         assertFalse(CaptureCodecs.video("h265", -1, "").arguments().contains("-threads"));

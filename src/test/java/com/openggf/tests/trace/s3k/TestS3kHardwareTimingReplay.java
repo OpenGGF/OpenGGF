@@ -20,6 +20,7 @@ import com.openggf.trace.timing.HardwareTimingReplayPort;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -99,11 +100,18 @@ class TestS3kHardwareTimingReplay {
                 previous = current;
                 index++;
             }
-            IllegalStateException remaining = org.junit.jupiter.api.Assertions.assertThrows(
-                    IllegalStateException.class,
-                    fixture::verifyHardwareTimingSegmentEdges);
-            assertTrue(remaining.getMessage().contains("raw_frame=70"),
-                    remaining::getMessage);
+            // The subject is unchanged: the first edge was consumed through the
+            // production frame driver, and the segment's next edge is still
+            // outstanding at raw_frame 70. Only how an outstanding edge is
+            // surfaced has moved -- it is reported as a comparison error
+            // rather than thrown, so a run past an edge the engine never
+            // submitted for cannot abort and hide every later axis.
+            fixture.verifyHardwareTimingSegmentEdges();
+            List<String> remaining =
+                    fixture.drainUnmatchedRecordedHardwareCompletions();
+            assertFalse(remaining.isEmpty(), "the outstanding edge must be reported");
+            assertTrue(remaining.getFirst().contains("raw_frame=70"),
+                    remaining::toString);
         } finally {
             fixture.abortHardwareTimingReplayRun();
             TestEnvironment.resetAll();

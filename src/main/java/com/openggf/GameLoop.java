@@ -55,6 +55,7 @@ import com.openggf.data.RomManager;
 import com.openggf.data.Rom;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
+import com.openggf.game.SpecialStageReturnSpawn;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -83,6 +84,7 @@ import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
 import com.openggf.game.timeattack.mp.MultiplayerHudRenderer;
 import com.openggf.testmode.TraceCameraFocusController;
+import com.openggf.trace.replay.TraceSuppressedRowClosure;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -161,7 +163,42 @@ public class GameLoop {
 
         void applyPassInput(int index, SpecialStageProvider provider);
 
-        default void afterPass(int index) { }
+        /**
+         * Executes pass {@code index}.
+         *
+         * <p>{@code SpecialStage_MainLoop} is two loops, not one
+         * (docs/s2disasm/s2.asm:6674-6721), and one observation can own a pass
+         * from each: the pre-start loop copies {@code Ctrl_1}/{@code Ctrl_2}
+         * <em>before</em> its {@code WaitForVint} (s2.asm:6675-6676), so its
+         * terminal pass owns no post-V-int controller sample for the recurring
+         * loop's binding path to consume. A driver that can tell the two apart
+         * overrides this to publish such a pass through the startup boundary
+         * instead, exactly as {@code S2SpecialStageReplayHarness.stepPasses}
+         * already does. The default treats every pass as a recurring-loop pass.
+         */
+        default void runPass(int index, SpecialStageProvider provider) {
+            applyPassInput(index, provider);
+            provider.update();
+        }
+
+        /**
+         * Runs after pass {@code index}'s object scan, for a pass the ROM
+         * finished BEFORE this observation's V-int.
+         *
+         * <p>{@code SS_MainLoop} waits for the V-int and only then runs
+         * {@code RunObjects} (docs/s2disasm/s2.asm:6694-6721), so a pass that
+         * returned during the preceding frame had its queued work carried
+         * through the V-blank that opened this observation, and that V-blank
+         * already ran {@code ProcessDMAQueue} (s2.asm:1769) over it. Work
+         * queued by a later pass in the same observation stays pending. The
+         * standalone harness models the same boundary
+         * ({@code S2SpecialStageReplayHarness.stepPasses}).
+         *
+         * <p>Default no-op: a driver that cannot distinguish the two cases
+         * leaves every pass's work pending until the next observation.
+         */
+        default void afterPass(int index) {
+        }
     }
 
     private SpecialStageObservationPacing specialStageObservationPacing;
@@ -222,6 +259,12 @@ public class GameLoop {
 
     // Bonus stage entry/exit state
     private boolean bonusStageTransitionPending;
+    /** The results-exit fade completed this iteration; the exit body waits one more. */
+    private boolean resultsExitFadeCompleted;
+    /** The results-exit body runs at the start of this iteration's mode update. */
+    private boolean resultsExitReady;
+    /** Remaining game-owned pre-level fade frames; -1 while no exit is in flight. */
+    private int resultsExitPreLevelFadeFramesRemaining = -1;
     private BonusStageProvider activeBonusStageProvider;
     // Star-post activation high-water captured at bonus entry (ROM: the star post's
     // respawn bit, kept across the reload by Respawn_table_keep). Restored on bonus
@@ -896,6 +939,118 @@ public class GameLoop {
     }
 
     /**
+     * Services a queued Special Stage request when the run frame driver owns
+     * the physical row and suppresses the native level body. The request is
+     * still an engine-owned transition; only the ordinary gameplay work is
+     * suppressed for the shared gap.
+     */
+    boolean consumeSpecialStageRequestDuringSuppressedRunRow() {
+        if (currentGameMode != GameMode.LEVEL || levelManager == null
+                || !levelManager.consumeSpecialStageRequest()) {
+            return false;
+        }
+        enterSpecialStage();
+        return true;
+    }
+
+    /**
+     * Presents a level restart's mandatory title card on a row whose ordinary
+     * level body is suppressed.
+     *
+     * <p>The card is not gameplay: the ROM's {@code Level_TtlCardLoop} runs
+     * {@code ExecuteObjects}/{@code BuildSprites} over freshly cleared object
+     * RAM holding only the card's own elements, plus {@code RunPLC}
+     * (docs/s1disasm/sonic.asm:2814-2842). A restart therefore reaches the card
+     * on the same rows a run's shared transition gap suppresses the level body
+     * on, exactly as the special-stage results exit already does from its own
+     * mode's update.
+     */
+    boolean presentPendingTitleCardDuringSuppressedRunRow() {
+        if (currentGameMode != GameMode.LEVEL || levelManager == null
+                || !levelManager.consumeTitleCardRequest()) {
+            return false;
+        }
+        enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+        return true;
+    }
+
+    /**
+     * Starts a level restart's fade on a row whose ordinary level body is
+     * suppressed.
+     *
+     * <p>{@code Sonic_ResetLevel}'s sixtieth decrement writes {@code f_restart}
+     * from inside the object pass of the first row a run's transition gap owns
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2062-2073); the level main loop's own
+     * test then falls into {@code GM_Level} without iterating again
+     * (docs/s1disasm/sonic.asm:3016-3018). The engine's respawn consumer runs a
+     * row later than that test, which lands on a gap row whose body is already
+     * suppressed, so the restart is started here for the same reason the
+     * results exit and the restart's title card are.
+     */
+    boolean startPendingRespawnDuringSuppressedRunRow() {
+        if (currentGameMode != GameMode.LEVEL || levelManager == null
+                || fadeManager == null || fadeManager.isActive()
+                || !levelManager.consumeRespawnRequest()) {
+            return false;
+        }
+        startRespawnFade();
+        return true;
+    }
+
+    /**
+     * Set when {@link #exitTitleCard()} releases into {@link GameMode#LEVEL}
+     * during the current iteration, and cleared at the top of every iteration.
+     * Read only by {@link #runGapRowContinuesSourceLevelMainLoop()}.
+     */
+    private boolean titleCardReleasedIntoLevelThisIteration;
+
+    /**
+     * True while a run's shared transition-gap row is still the source level's
+     * own main-loop iteration, so the ordinary level body must run on it.
+     *
+     * <p>See {@link TraceSessionLauncher#runGapRowContinuesSourceLevelMainLoop}
+     * for the recorder and ROM basis. The engine's form of the ROM writes that
+     * end a level loop is a pending level-exit request
+     * ({@link com.openggf.level.LevelTransitionCoordinator#hasPendingLevelExit()})
+     * or an in-flight blocking transition ({@link #isRewindBlocked()}, which
+     * covers a native blocking fade's pending completion and the
+     * bonus/ending/zone-act flags); either means the loop has already ended.
+     *
+     * <p>A title-card release into LEVEL on THIS iteration is a third such
+     * write, and it is the one a level-to-level gap actually lands on. Once the
+     * destination level has loaded and its card has been released, the source
+     * level's main loop is provably over: the release IS
+     * {@code Level_StartGame}, which the ROM reaches only after the title-card
+     * leave loop's last iteration (docs/s2disasm/s2.asm:5060-5066, :5081-5082).
+     * The destination's first object pass then comes from
+     * {@code Level_MainLoop}, which runs {@code PauseGame} and
+     * {@code WaitForVint} BEFORE its {@code jsr (RunObjects).l}
+     * (docs/s2disasm/s2.asm:5088-5095) -- so the release row itself dispatches
+     * no object pass at all, and the first one belongs to the destination's
+     * next V-blank, i.e. its recorded row 0. S1 orders the same two routines the
+     * same way ({@code Level_StartGame} at docs/s1disasm/sonic.asm:2990-2991,
+     * then {@code Level_MainLoop}'s {@code WaitForVBlank} at :2998-3001 ahead of
+     * {@code jsr (ExecuteObjects).l} at :3006), and so does S3K
+     * ({@code bclr #7,(Game_mode).w} at docs/skdisasm/sonic3k.asm:7882, then
+     * {@code Wait_VSync} at :7888 ahead of {@code Process_Sprites} at :7894).
+     *
+     * <p>Without this term the latch survived every locked title-card row (a
+     * title-card iteration never reaches the gap-body test) and was consumed by
+     * the release row instead, handing the freshly loaded destination one extra
+     * pre-row-0 object pass. That put its CPU sidekick exactly one
+     * {@code Tails_acceleration} step ahead for the rest of the segment
+     * (docs/s2disasm/s2.asm:38907).
+     */
+    private boolean runGapRowContinuesSourceLevelMainLoop() {
+        boolean levelExitWritten = levelManager == null
+                || levelManager.hasPendingLevelExit()
+                || titleCardReleasedIntoLevelThisIteration
+                || isRewindBlocked();
+        return TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop(
+                currentGameMode, levelExitWritten);
+    }
+
+    /**
      * True whenever rewind engagement must be rejected: either
      * {@link #isNonRewindableTransitionPending()} (the four transition flags,
      * which ALSO freeze gameplay), or a fade is in flight with a completion
@@ -1164,6 +1319,7 @@ public class GameLoop {
             return;
         }
 
+        titleCardReleasedIntoLevelThisIteration = false;
         if (!prepareAdmittedIteration(doFrameStep)) {
             return;
         }
@@ -1244,6 +1400,30 @@ public class GameLoop {
 
         profiler.endSection("input");
 
+        // Evaluated before the suppression test, never inside it: the call
+        // consumes the gap's first row whatever mode that row is in, and a gap
+        // opened from a Special Stage results screen spends its first rows
+        // outside LEVEL.
+        boolean gapRowContinuesLevelMainLoop =
+                runGapRowContinuesSourceLevelMainLoop();
+        if (TraceSessionLauncher.suppressesRunNativeLevelBody(currentGameMode)
+                && !gapRowContinuesLevelMainLoop) {
+            // A shared transition gap's rows are owned by the game's blocking
+            // level-exit/entry routine once the level's own main loop has ended
+            // (see runGapRowContinuesSourceLevelMainLoop for the row that still
+            // belongs to the loop). That routine is not gameplay, but it does
+            // make mode transitions of its own -- the S1 results path raises the
+            // Special Stage request from a fade callback, a restart's load
+            // raises its locked title card, and a death's own f_restart starts
+            // the reload. Service those here or the run driver replays gap input
+            // forever against a scene that never moves.
+            consumeSpecialStageRequestDuringSuppressedRunRow();
+            presentPendingTitleCardDuringSuppressedRunRow();
+            startPendingRespawnDuringSuppressedRunRow();
+            inputHandler.update();
+            return;
+        }
+
         if (currentGameMode == GameMode.LEVEL) {
             if (!updateLevelMode(doFrameStep)) {
                 return;
@@ -1271,7 +1451,10 @@ public class GameLoop {
                 () -> titleReleaseResult, levelManager, gameplayMode,
                 inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress(),
-                userRecordingControls, this::startPendingInLevelTitleCard,
+                userRecordingControls,
+                request -> routeTimeAttackSeamlessTransitionBeforeApply(
+                        request, doFrameStep),
+                this::startPendingInLevelTitleCard,
                 () -> LevelIterationAdmissionController
                         .prepareTraceRunAdmissionAndHardwareTiming(
                                 currentGameMode, this::syncPlaybackInputBridge),
@@ -1332,27 +1515,62 @@ public class GameLoop {
                 currentGameMode, getActiveSpecialStageProvider(), this::enterResultsScreen);
     }
 
-    boolean consumeSpecialStageRequestDuringSuppressedRunRow() {
-        if (currentGameMode != GameMode.LEVEL || levelManager == null
-                || !levelManager.consumeSpecialStageRequest()) {
-            return false;
-        }
-        enterSpecialStage();
-        return true;
+    private void updateSpecialStageResultsMode() {
+        // ROM SS_NormalExit is a full loop iteration: VintID_TitleCards, a
+        // V-int that runs ProcessPLC_9Tiles (docs/s1disasm/sonic.asm:946),
+        // ExecuteObjects, BuildSprites, then RunPLC at the tail
+        // (docs/s1disasm/sonic.asm:3402-3413). Claiming the lifecycle frame
+        // alone never reached the hardware timing boundaries, so the loop-tail
+        // arm was never submitted as hardware work.
+        LevelFrameStep.executeHardwareTimedObjectScan(
+                LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
+                PlcLifecyclePhase.SPECIAL_STAGE_RESULTS,
+                this::runSpecialStageResultsIteration);
     }
 
-    private void updateSpecialStageResultsMode() {
-        activePlcLifecycleFrame.claim(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
-        // Update results screen
-        resultsFrameCounter++;
-        if (resultsScreen != null) {
-            resultsScreen.update(resultsFrameCounter, null);
-            if (resultsScreen.isComplete()) {
-                exitResultsScreen();
+    /** One ROM SS_NormalExit iteration (docs/s1disasm/sonic.asm:3402-3413). */
+    private void runSpecialStageResultsIteration() {
+        if (resultsExitReady) {
+            // ROM: the GM loop only falls through to the next mode's dispatch
+            // on the frame after the whiteout's final WaitForVBla, so the
+            // returning level's load (and its ClearPLC/AddPLC submissions)
+            // belongs to the first frame past the results screen's last
+            // sampled row, never to that row itself.
+            if (resultsExitPreLevelFadeFramesRemaining < 0) {
+                resultsExitPreLevelFadeFramesRemaining = GameServices.module()
+                        .getLevelInitProfile().preLevelFadeOutFrames();
             }
+            if (resultsExitPreLevelFadeFramesRemaining > 0) {
+                // The next mode's own entry fades out the previous screen
+                // before it queues the returning level's PLCs (S1: GM_Level's
+                // ClearPLC + PaletteFadeOut, sonic.asm:2710-2716). Each fade
+                // frame is a WaitForVBlank row whose RunPLC only ever sees the
+                // cleared queue, so hold the exit body — and with it the
+                // reload's PLC submissions — for the fade's duration.
+                resultsExitPreLevelFadeFramesRemaining--;
+                return;
+            }
+            resultsExitPreLevelFadeFramesRemaining = -1;
+            resultsExitReady = false;
+            doExitResultsScreen();
+            return;
         }
-        if (activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS)) {
-            activePlcLifecycleFrame.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
+        if (resultsExitFadeCompleted) {
+            // The exit fade's completion fired during this iteration's fade
+            // update; hold the (already white) screen for the rest of the
+            // frame — the ROM CPU is still inside PaletteWhiteOut's final
+            // wait — and run the exit body on the next iteration.
+            resultsExitFadeCompleted = false;
+            resultsExitReady = true;
+        } else {
+            // Update results screen
+            resultsFrameCounter++;
+            if (resultsScreen != null) {
+                resultsScreen.update(resultsFrameCounter, null);
+                if (resultsScreen.isComplete()) {
+                    exitResultsScreen();
+                }
+            }
         }
     }
 
@@ -1430,12 +1648,10 @@ public class GameLoop {
         // (TEXT_WAIT and TEXT_EXIT phases where player can move but text is still
         // visible)
         TitleCardProvider tcp = getTitleCardProviderLazy();
-        if (tcp != null && tcp.isOverlayActive()) {
-            tcp.update();
-            if (tcp.ownsInLevelPlayerControlLock()) {
-                applyTitleCardControlLock(tcp.shouldLockPlayerControlForInLevelOverlay());
-            }
-        }
+        TraceSuppressedRowClosure.executeUnownedTitleCardWork(
+                playbackDebugManager.isCurrentGameplayTickSuppressed(),
+                tcp, this::startPendingInLevelTitleCard,
+                this::applyTitleCardControlLock);
 
         if (multiplayerRaceCoordinator != null) {
             multiplayerRaceCoordinator.pump();
@@ -1445,49 +1661,6 @@ public class GameLoop {
                 return true;
             }
         }
-
-        // Handle in-place seamless transitions before fade-based routes.
-        SeamlessLevelTransitionRequest seamlessRequest = levelManager.consumeSeamlessTransitionRequest();
-        if (seamlessRequest != null) {
-            userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-            // A cross-act seamless reload (e.g. AIZ1 -> AIZ2) ends the timed attempt so
-            // the HUD/ghost/retry do not bleed into the next act. Mid-act sequences
-            // (MUTATE_ONLY / RELOAD_SAME_LEVEL, and any RELOAD_TARGET_LEVEL that reloads
-            // the same zone/act) leave the attempt untouched.
-            if (TimeAttackLevelEndRouting.shouldSuppressSeamlessTransitionForTimeAttack(
-                    timeAttackRuntime.isActive(), seamlessRequest.type(), timeAttackRuntime.launch(),
-                    seamlessRequest.targetZone(), seamlessRequest.targetAct())) {
-                timeAttackRuntime.deactivate();
-                // Suppress the seamless cross-act reload entirely rather than half-applying
-                // it: return to the time attack menu instead of advancing into the next
-                // act's level data.
-                startTimeAttackReturnToMenuFade();
-                updateNonGameplayAudio(doFrameStep);
-                return false;
-            }
-            levelManager.applySeamlessTransition(seamlessRequest);
-            startPendingInLevelTitleCard();
-            updateNonGameplayAudio(doFrameStep);
-            // Trace playback still consumes one BK2/VBlank row on a
-            // transition-only frame. Headless replay advances its movie
-            // cursor after applySeamlessTransition(); keep the live
-            // comparator cursor aligned with the same ordering.
-            levelIterationAdmission.finishPlaybackBoundary(
-                        true, playbackDebugManager, userRecordingControls);
-            TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-            if (traceSession != null) {
-                traceSession.recordExternalRewindFrameAtBoundary();
-            } else {
-                GameplayModeContext context = resolveGameplayModeContext();
-                if (context != null) {
-                    context.markRewindBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
-                }
-            }
-            return false;
-        }
-
-        // Trigger transparent in-level title card overlays (no mode switch).
-        startPendingInLevelTitleCard();
 
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
@@ -1675,11 +1848,21 @@ public class GameLoop {
             if (!TraceSessionLauncher.isRunFrameDriverActive()) {
                 advanceTraceRunPhysicalRow();
             }
+            boolean seamlessTransitionCompleted =
+                    levelManager.consumeActTransitionRewindBoundaryDuringFrame();
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-            if (traceSession == null) {
+            if ((traceSession != null
+                    && !TraceSessionLauncher.isRunFrameDriverActive())
+                    || traceSession == null) {
                 // Reached only inside the !freezeForNonRewindableTransition branch,
                 // so the transition-pending predicate is guaranteed false here.
-                liveRewindManager.recordExternalFrame(currentGameMode, freezeForNonRewindableTransition, inputHandler);
+                LevelRewindFrameRecorder.record(
+                        traceSession,
+                        liveRewindManager,
+                        currentGameMode,
+                        freezeForNonRewindableTransition,
+                        inputHandler,
+                        seamlessTransitionCompleted);
             }
 
             // Check if a checkpoint star requested a special stage. The request is
@@ -1704,6 +1887,17 @@ public class GameLoop {
             }
         } else {
             updateNonGameplayAudio(doFrameStep);
+            // A level-to-level transition fade freezes gameplay but not V_int:
+            // the admission controller consumes the row when the compared span
+            // still owns it. See consumeTransitionFreezeRow for the ROM
+            // citations and why the ownership question is asked, not assumed.
+            if (freezeForNonRewindableTransition
+                    && !TraceSessionLauncher.isRunFrameDriverActive()) {
+                levelIterationAdmission.consumeTransitionFreezeRow(
+                        playbackDebugManager,
+                        levelManager != null ? levelManager.getObjectManager() : null,
+                        LevelFrameContext.from(gameplayMode));
+            }
         }
 
         // Debug keys for level transitions (use request system for fade)
@@ -1734,6 +1928,24 @@ public class GameLoop {
                 configService.getInt(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY))) {
             logCurrentPreviewCaptureOverride();
         }
+        return true;
+    }
+
+    /**
+     * Routes a cross-act time-attack request before the admission owner applies
+     * its destination. Mid-act seamless requests remain owned by the ordinary
+     * transition path.
+     */
+    private boolean routeTimeAttackSeamlessTransitionBeforeApply(
+            SeamlessLevelTransitionRequest request, boolean doFrameStep) {
+        if (!TimeAttackLevelEndRouting.shouldSuppressSeamlessTransitionForTimeAttack(
+                timeAttackRuntime.isActive(), request.type(), timeAttackRuntime.launch(),
+                request.targetZone(), request.targetAct())) {
+            return false;
+        }
+        timeAttackRuntime.deactivate();
+        startTimeAttackReturnToMenuFade();
+        updateNonGameplayAudio(doFrameStep);
         return true;
     }
 
@@ -2331,16 +2543,11 @@ public class GameLoop {
         doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy,
                 activeSpecialStageRewardKind);
         if (startupPolicy == SpecialStageStartupPolicy.TRACE_ACCURATE) {
-            // TraceSessionLauncher#enterSpecialStageTrace pairs its TRACE_ACCURATE
-            // entry with provider.setLagCompensation(0) -- "startup observations
-            // and external frame pacing are independent contracts". A BK2-driven
-            // caller reaching this organic entry path needs the same pairing: the
-            // provider's stateless lag model would insert ADDITIONAL synthetic
-            // skipped frames on top of the real cadence the caller drives,
-            // desyncing object timing from the recorded run. Disabling it here
-            // (before the provider's first post-entry tick; reset() does not
-            // touch this field) is the same force-off switch the standalone SS
-            // trace-replay harnesses already require.
+            // Startup policy and external scheduling admission are independent
+            // contracts. Retain the legacy provider notification for callers
+            // that implement live pacing; S2 disables its interactive
+            // approximation because recorded lag rows are admitted at the
+            // timing port.
             ssProvider.setLagCompensation(0);
         }
     }
@@ -2591,6 +2798,10 @@ public class GameLoop {
             levelManager.getLevelGamestate().setRings(savedState.savedRingCount());
         }
         levelManager.setBonusStageHudLayout(true);
+        if (savedState != null) {
+            applyBonusStageEntryShieldRestore(
+                    resolveMainPlayableSprite(), savedState.savedStatusSecondary());
+        }
         restorePlayableStateForBonusTitleCard();
         forcePlayerHighPriorityInBonusStage();
         refreshPlayableSpriteArtCaches();
@@ -2798,6 +3009,15 @@ public class GameLoop {
             return ShieldType.BASIC;
         }
 
+        return savedShieldType(savedStatusSecondary);
+    }
+
+    /**
+     * ROM {@code SpawnLevelMainSprites_SpawnPowerup} {@code loc_6A02}
+     * (docs/skdisasm/sonic3k.asm:8294-8323) tests the saved elemental bits in
+     * fire -> lightning -> bubble order and re-gives that shield.
+     */
+    static ShieldType savedShieldType(int savedStatusSecondary) {
         int savedShieldBits = savedStatusSecondary & SAVED_SHIELD_MASK;
         if ((savedShieldBits & (1 << STATUS_FIRE_SHIELD_BIT)) != 0) {
             return ShieldType.FIRE;
@@ -2809,6 +3029,34 @@ public class GameLoop {
             return ShieldType.BUBBLE;
         }
         return null;
+    }
+
+    /**
+     * ROM {@code SpawnLevelMainSprites_SpawnPowerup}
+     * (docs/skdisasm/sonic3k.asm:8264-8290) runs on every level spawn, and the
+     * bonus zones are explicitly routed into its restore arm --
+     * {@code cmpi.b #$13,(Current_zone).w / beq loc_69E0} and the same for
+     * {@code #$14} (:8270-8273). It re-gives Player 1 the shield saved in
+     * {@code Saved_status_secondary}, so the ROM's player keeps its elemental
+     * shield for the DURATION of the bonus stage, not only after returning to
+     * the level.
+     *
+     * <p>The engine captured the value at entry
+     * ({@link #encodeSavedShieldStatus}) but consumed it only on the way out
+     * ({@link #resolveShieldToRestore}), leaving the bonus-stage player
+     * shieldless. In Pachinko that removes {@code Test_Ring_Collisions}'
+     * {@code Status_LtngShield} arm (:18450-18453), which allocates
+     * {@code Obj_Attracted_Ring} and pulls a nearby ring into the player.
+     */
+    public static void applyBonusStageEntryShieldRestore(
+            AbstractPlayableSprite playable, int savedStatusSecondary) {
+        if (playable == null) {
+            return;
+        }
+        ShieldType shieldType = savedShieldType(savedStatusSecondary);
+        if (shieldType != null) {
+            playable.giveShield(shieldType);
+        }
     }
 
     AbstractPlayableSprite resolveMainPlayableSprite() {
@@ -2878,13 +3126,66 @@ public class GameLoop {
             // Go directly to results; doEnterResultsScreen() calls startFadeFromWhite().
             doEnterResultsScreen();
         } else {
-            // Normal path (S2): start fade-to-white, then callback to results
-            GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
-                doEnterResultsScreen();
-            });
+            // Normal path (S2): start fade-to-white, then callback to results.
+            // This boundary is raised from updateSpecialStageMode's tail, after
+            // specialStageEntryPresentation.update has already spent this
+            // iteration's FadeManager tick, so the ROM's first
+            // Pal_FadeToWhite WaitForVint is already the NEXT iteration's --
+            // deferring again would give the routine 23 V-ints instead of the
+            // 22 its dbf loop runs (docs/s2disasm/s2.asm:3571-3582) and push
+            // the results loop's first VintID_Level (s2.asm:6797-6803, 781,
+            // 1770) one row late.
+            //
+            // Note that V-int does NOT retire the stage's last player DPLC
+            // pair, as an earlier version of this comment claimed. The results
+            // setup block zeroes the queue head first -- unguarded, so the
+            // shipped ROM runs it -- at s2.asm:6759-6760, and ProcessDMAQueue
+            // stops on a zero first word (s2.asm:1772-1790). The ROM DISCARDS
+            // that pair; it never transfers. Vint_Fade (s2.asm:1068-1070) does
+            // not call ProcessDMAQueue either, so nothing drains between the
+            // mode change and the clear.
+            GameLoopPlcLifecycle.startToWhiteAfterFrameFadeTick(
+                    resolveGameplayModeContext(), fadeManager, () -> {
+                        doEnterResultsScreen();
+                    });
         }
 
         LOGGER.info("Starting fade-to-white to exit Special Stage");
+    }
+
+    /**
+     * The special-stage identity a recorded run segment is cut on: the value
+     * {@code Current_Special_Stage} held when the ROM entered
+     * {@code GameModeID_SpecialStage}, held constant for the whole recorded
+     * segment.
+     *
+     * <p>The ROM's byte is not constant across that segment. A won stage
+     * increments it inside the stage itself, in the same block that raises
+     * {@code SS_Check_Rings_flag} ({@code addi_.b #1,(Current_Special_Stage).w},
+     * docs/s2disasm/s2.asm:72467-72477), and it is zeroed only on a later entry
+     * once it reaches 7 (s2.asm:6538-6540). The run recorder samples it once, at
+     * the first {@code GameModeID_SpecialStage} frame
+     * ({@code S2RunCaptureRunner.StartSsSegment}), so a segment's recorded
+     * {@code special_stage_index} is that pre-increment number for the whole
+     * segment, results tail included.
+     *
+     * <p>The engine splits that one ROM mode into {@code SPECIAL_STAGE} plus
+     * {@code SPECIAL_STAGE_RESULTS}, and entering results deinitialises the
+     * stage manager ({@code SpecialStageProvider#resetForResults}), dropping its
+     * scratch stage index back to 0. Reading the live provider during the
+     * results tail therefore reports 0 for every stage -- which only happened to
+     * match the recorded identity for stage 0. The results phase belongs to the
+     * stage captured at the exit boundary, so report that instead.
+     */
+    public Integer recordedSpecialStageIdentity(GameMode observedMode) {
+        if (observedMode == GameMode.SPECIAL_STAGE_RESULTS) {
+            return ssStageIndex;
+        }
+        if (observedMode != GameMode.SPECIAL_STAGE) {
+            return null;
+        }
+        SpecialStageProvider provider = getActiveSpecialStageProvider();
+        return provider != null ? provider.getCurrentStage() : null;
     }
 
     /**
@@ -2915,8 +3216,19 @@ public class GameLoop {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
         }
 
-        // Both shipped ROMs publish the results palette immediately after the
-        // stage whiteout; the tally loop does not spend another fade revealing it.
+        // Neither game fades back in here. After the stage's whiteout both ROMs
+        // rebuild the screen and then write the results palette straight to the
+        // active palette in one go -- S2 `moveq #PalID_Result,d0 / bsr.w
+        // PalLoad_Now` (docs/s2disasm/s2.asm:6762-6763) and S1
+        // `moveq #palid_SSResult,d0 / bsr.w PalLoad` (docs/s1disasm/sonic.asm:3382-3383)
+        // -- so the results screen appears at full intensity on the very first
+        // V-blank of its tally loop (S2 `VintID_Level` at s2.asm:6797-6800, S1
+        // `SS_NormalExit` at sonic.asm:3403-3406). A fade-from-white here would
+        // instead hold PALETTE_FADE for its whole duration and push the first
+        // results-owned V-blank that many rows late. (That V-blank's
+        // ProcessDMAQueue retires nothing: s2.asm:6759-6760 zeroes the queue
+        // head first, unguarded, so the ROM discards the stage's last player
+        // DPLC pair rather than transferring it.)
         fadeManager.clearOverlayForImmediatePaletteLoad();
 
         LOGGER.info("Entered Special Stage Results Screen (rings=" + ssRingsCollected +
@@ -2942,9 +3254,13 @@ public class GameLoop {
         // Play the special stage exit sound (same as entry sound)
         playSpecialStageTransitionSfx(getActiveSpecialStageProvider());
 
-        // Start fade-to-white, then show title card when complete
+        // Start fade-to-white, then show title card when complete. The
+        // completion only latches the exit: the fade update that completes it
+        // runs at the start of the results screen's last whiteout frame, and
+        // the exit body (the returning level's load) must not run until the
+        // iteration after that frame's V-int sample.
         GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
-            doExitResultsScreen();
+            resultsExitFadeCompleted = true;
         });
 
         LOGGER.info("Starting fade-to-white to exit Results Screen");
@@ -2958,6 +3274,10 @@ public class GameLoop {
         resultsScreen = null;
         deregisterSpecialStageAdapter();
         activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
+
+        // S3K's special-stage clear sets bit 7 in Last_star_post_hit before
+        // the return reload, enabling Load_Starpost_Settings' Saved2 branch.
+        levelManager.setLastStarPostHit();
 
         if (levelManager.getCurrentLevel() == null) {
             // No level was loaded (special stage launched from level select).
@@ -2992,8 +3312,57 @@ public class GameLoop {
         // - S1: zone/act may have been advanced before SS entry
         // - S2: same zone/act, objects reset, rings cleared (Obj79_LoadData clr.w Ring_count)
         // - S3K: same zone/act, objects reset, rings restored from Saved2_ring_count
-        boolean sanctuaryReturn = SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
-                levelManager, activeSpecialStageRewardKind, ssStageIndex, ssEmeraldCollected);
+        boolean sanctuaryReturn;
+        // The star-post activation mark is the engine's model of the ROM's
+        // "last checkpoint reached" byte, and that byte is NOT part of what the
+        // return's level reload clears.
+        //
+        // S3K: Load_Starpost_Settings' giant-ring/bonus branch loc_2D2C2
+        // (docs/skdisasm/sonic3k.asm:61793-61819) restores the whole Saved2_*
+        // block but deliberately writes no Last_star_post_hit, so the value the
+        // special-stage exit left there survives -- the exit's
+        // "ori.b #$80,(Last_star_post_hit).w" (:12121, :12676) over the subtype
+        // sub_2D164 stored when the post was touched (:61704), with LevelSizeLoad's
+        // "andi.b #$7F,(Last_star_post_hit).w" (:7881) stripping the marker bit
+        // before LevelLoop. sub_2D028 then reads it as already-hit for every post
+        // whose subtype is at or below it ("cmp.b d2,d1 / bhs.w loc_2D0EA",
+        // :61606-61610), which is what stops the post the player entered from
+        // re-arming its 20-ring bonus stars (:61638-61641) on the return.
+        //
+        // S1 is the same shape: v_lastlamp is cleared only by the end-of-act card
+        // (docs/s1disasm/_incObj/3A Got Through Card.asm:198), a death
+        // (_incObj/01 Sonic.asm:1116) and a new game (sonic.asm:1968) -- never by a
+        // level reload -- and Lamp_Blue gates on the identical "last >= subtype"
+        // comparison (_incObj/79 Lamppost.asm:57-62).
+        //
+        // The bonus-stage return already carries this across its own reload
+        // (BonusStageTransitionCoordinator.restoreReturnState); the
+        // special-stage return is the second implementation of the same contract
+        // and was missing it.
+        int returnStarPostActivationMark = -1;
+        RespawnState checkpointBeforeReturnReload = levelManager.getCheckpointState();
+        if (checkpointBeforeReturnReload != null) {
+            returnStarPostActivationMark =
+                    checkpointBeforeReturnReload.getStarPostActivationMark();
+        }
+        // The reload's title card is presented below by this method, so the
+        // load must request it (keeping the queued initial PLCs live for the
+        // card's locked loop) rather than model an omitted presentation.
+        levelManager.setResultsReturnCardOwnedByCaller(true);
+        try {
+            sanctuaryReturn = SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
+                    levelManager, activeSpecialStageRewardKind, ssStageIndex,
+                    ssEmeraldCollected);
+        } finally {
+            levelManager.setResultsReturnCardOwnedByCaller(false);
+        }
+        if (returnStarPostActivationMark >= 0) {
+            RespawnState checkpointAfterReturnReload = levelManager.getCheckpointState();
+            if (checkpointAfterReturnReload != null) {
+                checkpointAfterReturnReload.restoreStarPostActivationMark(
+                        returnStarPostActivationMark);
+            }
+        }
 
         // Consume any pending title card request to prevent double title card
         // (we're manually entering the title card below)
@@ -3019,9 +3388,20 @@ public class GameLoop {
         // Set flag so exitTitleCard knows to restore checkpoint state
         returningFromSpecialStage = true;
 
-        // Enter title card mode for the current zone/act
+        // Enter title card mode for the APPARENT zone/act. Obj_TitleCardInit
+        // never reads Current_zone_and_act: the act-number art is chosen by
+        // "tst.b (Apparent_act).w / bne" -- Num2 when non-zero, Num1 when zero
+        // (sonic3k.asm:62131-62141) -- and the zone art by
+        // "move.b (Apparent_zone_and_act).w,d0" (sonic3k.asm:62155). The two
+        // acts diverge across an S3K seamless act transition, because
+        // Current_act advances inside the act-1 background-event dispatch while
+        // Apparent_act is only raised later, by the end-sign results object's
+        // "move.b #1,(Apparent_act).w" at loc_2DD06 (sonic3k.asm:62714). A
+        // giant-ring special stage entered in that window returns to a card the
+        // ROM still draws with the act-1 digit. The bonus-stage return already
+        // reads Saved_apparent_zone_and_act for the same reason.
         int zoneIndex = levelManager.getCurrentZone();
-        int actIndex = levelManager.getCurrentAct();
+        int actIndex = levelManager.getApparentAct();
         enterTitleCardFromResults(zoneIndex, actIndex);
 
         // Reveal the title card by fading from white (the screen is currently white
@@ -3078,27 +3458,11 @@ public class GameLoop {
             // Unfreeze camera (frozen by S3K big ring entry sequence)
             camera.setFrozen(false);
 
-            // ROM parity: both S2 (InitPlayers) and S3K (SpawnLevelMainSprites_SpawnPlayers)
-            // do a full level re-init on special stage return, which spawns Tails at
-            // Player_1 - $20, + 4. We don't reload the level, so replicate the spawn here.
-            for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-                sidekick.setX((short) (playable.getX() - 0x20));
-                sidekick.setY((short) (playable.getY() + 4));
-                sidekick.setXSpeed((short) 0);
-                sidekick.setYSpeed((short) 0);
-                sidekick.setGSpeed((short) 0);
-                sidekick.setAir(false);
-                sidekick.setDead(false);
-                sidekick.setDeathCountdown(0);
-                sidekick.setHurt(false);
-                sidekick.setHidden(false);
-                sidekick.setObjectControlled(false);
-                sidekick.setRolling(false);
-                sidekick.setDirection(playable.getDirection());
-                if (sidekick.getCpuController() != null) {
-                    sidekick.getCpuController().reset();
-                }
-            }
+            // ROM SpawnLevelMainSprites_SpawnPlayers, both arms
+            // (docs/skdisasm/sonic3k.asm:8367 sidekick, :8388 Tails-as-Player_1).
+            SpecialStageReturnSpawn.applyMainCharacterSpawnOffset(playable, configService);
+            SpecialStageReturnSpawn.respawnSidekicks(
+                    playable, spriteManager.getSidekicks(), levelManager);
         }
         InLevelTitleCardCoordinator.prepareResultsTransition(
                 sprite, this::applyTitleCardControlLock, GameServices::module, spriteManager, levelManager);
@@ -3278,6 +3642,10 @@ public class GameLoop {
         if (currentGameMode == GameMode.LEVEL) {
             TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(currentGameMode);
             syncPlaybackInputBridge();
+        }
+
+        if (currentGameMode == GameMode.LEVEL) {
+            titleCardReleasedIntoLevelThisIteration = true;
         }
 
         if (gameModeChangeListener != null) {
@@ -3845,7 +4213,12 @@ public class GameLoop {
         }
         if (isDataSelectGameplayAction(action.type())) {
             com.openggf.game.dataselect.DataSelectAction pendingAction = action;
-            audioManager.fadeOutMusic();
+            com.openggf.game.dataselect.DataSelectExitTransition transition =
+                    dataSelect.exitTransition();
+            if (transition.confirmationSfxId() >= 0) {
+                audioManager.playSfx(transition.confirmationSfxId());
+            }
+            audioManager.fadeOutMusic(transition.musicFadeSteps(), transition.musicFadeDelay());
             resolveFadeManager().startFadeToBlack(() -> {
                 try {
                     dataSelectActionHandler.accept(pendingAction);
@@ -3855,7 +4228,8 @@ public class GameLoop {
                 } catch (RuntimeException e) {
                     restoreDataSelectAfterLaunchFailure(dataSelect, pendingAction, e);
                 }
-                resolveFadeManager().startFadeFromBlack(null);
+                resolveFadeManager().startFadeFromBlack(
+                        null, transition.revealTerminalNoOpFrames());
             });
             return;
         }
@@ -4306,6 +4680,12 @@ public class GameLoop {
     }
 
     private void playSpecialStageStageMusic(SpecialStageProvider ssProvider) {
+        // Special-stage entry clears gameplay power-ups. Clear both audio
+        // speed mechanisms at the same boundary, immediately before the new
+        // song is constructed, so it cannot inherit the outgoing level's
+        // speed-shoes tempo. S3K's stage-local acceleration starts from here.
+        audioManager.setSpeedShoes(false);
+        audioManager.setSpeedMultiplier(1);
         int musicId = ssProvider.getStageMusicId();
         if (!audioManager.playMusic(ssProvider.getStageMusic()) && musicId >= 0) {
             audioManager.playMusic(musicId);
@@ -4363,7 +4743,8 @@ public class GameLoop {
 
         SpecialStageInputMapper.MappedInput mapped =
                 SpecialStageInputMapper.map(inputHandler.logical());
-        ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+        ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed(),
+                inputHandler.isShiftDown(), inputHandler.isControlDown());
         ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
     }
 

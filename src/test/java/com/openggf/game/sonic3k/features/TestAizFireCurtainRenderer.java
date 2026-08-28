@@ -1,10 +1,12 @@
 package com.openggf.game.sonic3k.features;
 
+import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.FireCurtainStage;
+import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 
@@ -211,6 +213,64 @@ public class TestAizFireCurtainRenderer {
     }
 
     @Test
+    public void act2ContinuationWrapsCachedCurtainBeforeWaitFireLatch() throws Exception {
+        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
+        markCachedFireDescriptors(renderer, 40);
+
+        for (int phaseOrdinal : new int[] {4, 5}) {
+            events.setFireSequencePhaseOrdinal(phaseOrdinal);
+            events.setAct2WaitFireDrawActive(false);
+            events.setFireBgCopyFixed(0x0400_0000);
+            events.setFireTransitionFrames(240);
+            events.setFireOverlayTileCount(121);
+
+            FireCurtainRenderState state = events.getFireCurtainRenderState(224);
+            assertTrue(state.active(), "AIZ2 continuation phase must keep the curtain active");
+            assertTrue(state.wrapFireTiles(),
+                    "AIZ2 fire continuation must wrap the cached curtain while FireRedraw/WaitFire is active");
+
+            AizFireCurtainRenderer.CurtainCompositionPlan plan =
+                    renderer.buildCompositionPlan(state, 320, 224);
+            assertFalse(plan.columns().isEmpty(),
+                    "AIZ2 continuation must render cached fire tiles after the rise crosses the fire-zone boundary");
+        }
+    }
+
+    @Test
+    public void latchedWaitFireReleasesCachedCurtainWithoutRefillingDenseBody() throws Exception {
+        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
+        markCachedFireDescriptors(renderer, 40);
+
+        events.setFireSequencePhaseOrdinal(5);
+        events.setAct2WaitFireDrawActive(true);
+        events.setFireBgCopyFixed(0x02F0_0000);
+        events.setFireTransitionFrames(0);
+        events.setFireOverlayTileCount(121);
+
+        FireCurtainRenderState state = events.getFireCurtainRenderState(224);
+        assertTrue(state.active(), "Latched WaitFire must keep the curtain active during its outro");
+        assertEquals(0x0200, state.sourceWorldX(),
+                "Latched WaitFire must retain the ROM's AIZ2 source strip");
+        assertFalse(state.wrapFireTiles(),
+                "Latched WaitFire must let the trailing fire rows scroll off instead of refilling the body");
+
+        AizFireCurtainRenderer.CurtainCompositionPlan plan =
+                renderer.buildCompositionPlan(state, 320, 224);
+        assertFalse(plan.columns().isEmpty(),
+                "Latched WaitFire must render the finite trailing fire tail");
+        for (AizFireCurtainRenderer.ColumnRenderPlan column : plan.columns()) {
+            for (AizFireCurtainRenderer.TileDraw draw : column.draws()) {
+                assertTrue(draw.renderPatternId() >= 0x500 + 60
+                                && draw.renderPatternId() < 0x500 + 66,
+                        "Latched WaitFire must not wrap a row back into the dense curtain body: "
+                                + Integer.toHexString(draw.renderPatternId()));
+            }
+        }
+    }
+
+    @Test
     public void act2ContinuationWithoutCachedDescriptorsFailsClosed() {
         AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
         FireCurtainRenderState redraw = new FireCurtainRenderState(
@@ -277,4 +337,3 @@ public class TestAizFireCurtainRenderer {
         cachedFlag.setBoolean(renderer, true);
     }
 }
-

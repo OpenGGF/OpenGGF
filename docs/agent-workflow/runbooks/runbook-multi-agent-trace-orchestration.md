@@ -148,12 +148,18 @@ switch the lead checkout. It snapshots both tracked and untracked baseline
 state before the worker starts. Hook-created disassembly links and foreign files
 are baseline state, never benchmark-owned files.
 
+Before starting, set `BENCH_ARCHIVE_ROOT` to an existing disk-backed directory outside the
+repository and verify its capacity. The recipe creates one uniquely named child there for
+benchmark evidence; it never writes durable evidence to `/tmp`.
+
 ```bash
 set -euo pipefail
 
 BENCH_ROOT=$(git rev-parse --show-toplevel)
 BENCH_POLICY=<policy>
 BENCH_CASE=<case>
+: "${BENCH_ARCHIVE_ROOT:?set BENCH_ARCHIVE_ROOT to a disk-backed external archive directory}"
+test -d "$BENCH_ARCHIVE_ROOT"
 BENCH_MANIFEST="$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-benchmark.json"
 # Fail closed before allocating retention, a branch, or a worktree. An enabled
 # policy may contain only routes supported by this runbook.
@@ -171,7 +177,8 @@ BENCH_RESULT="$BENCH_WORKTREE/target/trace-model-routing/${BENCH_POLICY}/${BENCH
 BENCH_PATCH="${BENCH_RESULT%.json}.patch"
 BENCH_RESULT_REL="target/trace-model-routing/${BENCH_POLICY}/${BENCH_CASE}.json"
 BENCH_PATCH_REL="${BENCH_RESULT_REL%.json}.patch"
-BENCH_RETAIN=$(mktemp -d "/tmp/trace-model-routing-retained-${BENCH_POLICY}-${BENCH_CASE}-${BENCH_RUN_ID}-XXXXXX")
+BENCH_RETAIN="$BENCH_ARCHIVE_ROOT/benchmark-${BENCH_POLICY}-${BENCH_CASE}-${BENCH_RUN_ID}"
+mkdir -m 700 "$BENCH_RETAIN"
 BENCH_OWNED="$BENCH_RETAIN/owned-files"
 BENCH_BASELINE_TRACKED="$BENCH_RETAIN/baseline-tracked"
 BENCH_BASELINE_UNTRACKED="$BENCH_RETAIN/baseline-untracked"
@@ -184,7 +191,6 @@ BENCH_TEMP_INDEX="$BENCH_RETAIN/result-tree.index"
 
 git cat-file -e "${BENCH_BASE}^{commit}"
 test ! -e "$BENCH_WORKTREE"
-mkdir -p "$BENCH_RETAIN"
 git worktree add -b "$BENCH_BRANCH" "$BENCH_WORKTREE" "$BENCH_BASE"
 git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no > "$BENCH_BASELINE_TRACKED"
 git -C "$BENCH_WORKTREE" ls-files --others --exclude-standard | sort > "$BENCH_BASELINE_UNTRACKED"

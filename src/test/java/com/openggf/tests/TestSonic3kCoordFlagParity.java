@@ -23,8 +23,10 @@ import com.openggf.game.sonic3k.audio.smps.Sonic3kSfxData;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -63,6 +65,24 @@ public class TestSonic3kCoordFlagParity {
             psgWrites.add(val & 0xFF);
             super.writePsg(source, val);
         }
+    }
+
+    @Test
+    public void e2FfRestoresThroughTheSequencerOwnedSink() {
+        byte[] fmTrack = {
+                (byte) 0xE2, (byte) 0xFF,
+                (byte) 0xE3
+        };
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        AtomicInteger restores = new AtomicInteger();
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC,
+                new CaptureSynth(), restores::incrementAndGet,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+
+        seq.read(new short[20_000]);
+
+        assertEquals(1, restores.get(),
+                "E2 FF must latch restore on the presentation-owned sink");
     }
 
     @Test
@@ -286,8 +306,9 @@ public class TestSonic3kCoordFlagParity {
 
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.DASH.id, new byte[] {(byte) 0xF2}), 0);
+        fixture.mix();
         assertEquals(0, fixture.state.spindashRevCounter(),
-                "Ordered apply of a normal SFX resets the session counter");
+                "zPlaySound consumption of a normal SFX resets the counter");
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.SPINDASH.id,
                 new byte[] {(byte) 0xE9, (byte) 0xF2}), 0);
@@ -314,8 +335,9 @@ public class TestSonic3kCoordFlagParity {
         SmpsCompositeVoice voice =
                 (SmpsCompositeVoice) fixture.registry.orderedVoiceAt(0);
         assertEquals(1,
-                voice.driver().captureSnapshot().sequencers().size());
-        assertTrue(voice.driver().isContinuousSfxFlagSet());
+                voice.driver().captureSnapshot().pendingSfxInputs().size(),
+                "same-frame duplicate stays in the first zSoundQueue cell");
+        fixture.mix();
         assertEquals(2, fixture.state.spindashRevCounter(),
                 "Continuous retrigger does not construct a resetting handler");
     }
@@ -334,6 +356,7 @@ public class TestSonic3kCoordFlagParity {
 
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.DASH.id, new byte[] {(byte) 0xF2}), 0);
+        fixture.mix();
         assertEquals(0, fixture.state.spindashRevCounter());
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.SPINDASH.id,
@@ -487,7 +510,7 @@ public class TestSonic3kCoordFlagParity {
 
         int finalPacked = finalFmPackedFrequency(fmTrack);
 
-        assertEquals(0x2A74, finalPacked,
+        assertEquals(0x2A84, finalPacked,
                 "S3K zDoModulation decrements ModulationSteps every sustain tick, not only when speed elapses");
     }
 
@@ -501,7 +524,7 @@ public class TestSonic3kCoordFlagParity {
 
         int finalPacked = finalFmPackedFrequency(fmTrack);
 
-        assertEquals(0x2AAD, finalPacked,
+        assertEquals(0x2AD6, finalPacked,
                 "S3K zDoModulation applies the first delta on the tick that ModulationWait decrements to zero");
     }
 
@@ -617,6 +640,32 @@ public class TestSonic3kCoordFlagParity {
         assertTrue(synth.psgWrites.contains(0x83), "PSG frequency should reflect +3 modulation delta");
     }
 
+    @Test
+    public void negativeModEnvelopeByteIsASignedPitchDelta() {
+        byte[] psgTrack = {
+                (byte) 0xF4, 0x01,
+                (byte) 0x92, 0x04,
+                (byte) 0xF2
+        };
+        Map<Integer, byte[]> modEnvs = new HashMap<>();
+        modEnvs.put(1, new byte[] { (byte) 0xFF, (byte) 0x81 });
+
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(
+                1, 1, null, psgTrack, null, modEnvs);
+        SmpsSequencer seq = new SmpsSequencer(
+                smps, EMPTY_DAC, synth,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[25000]);
+
+        SmpsSequencer.Track psg = findTrack(
+                seq, SmpsSequencer.TrackType.PSG);
+        assertEquals(-1, psg.modEnvCache,
+                "fix_sndbugs=0 applies $85-$FF as signed deltas");
+        assertTrue(synth.psgWrites.contains(0x8F),
+                "PSG frequency should include the negative envelope delta");
+    }
+
     private static Sonic3kSmpsData createMusicData(int channels, int psgChannels, byte[] fmTrack, byte[] psgTrack,
             Map<Integer, byte[]> psgEnvelopes) {
         return createMusicData(channels, psgChannels, fmTrack, psgTrack, psgEnvelopes, null);
@@ -705,7 +754,10 @@ public class TestSonic3kCoordFlagParity {
         final SmpsCoordFlagHandlerOwner handlers;
         final AudioPresentationSourceFactory factory;
         final AudioVoiceRegistry registry;
+        private final Map<Sonic3kSfxData, SmpsAssetKey> sfxAssetKeys =
+                new IdentityHashMap<>();
         private long nextVoiceId = 1;
+        private int nextSfxAssetId = 1;
 
         PresentationFixture(
                 SmpsCoordFlagRuntimeState state,
@@ -743,12 +795,13 @@ public class TestSonic3kCoordFlagParity {
         }
 
         void addSfx(Sonic3kSfxData data, int continuousSfxId) {
-            SmpsAssetKey key = new SmpsAssetKey(
-                    "s3k", SmpsAssetKey.Route.BASE_ID,
-                    data.getId(), null);
-            factory.warmSmpsSfxAsset(
-                    key, data, EMPTY_DAC,
-                    Sonic3kSmpsSequencerConfig.CONFIG);
+            SmpsAssetKey key = sfxAssetKeys.computeIfAbsent(data,
+                    ignored -> new SmpsAssetKey(
+                            "s3k", SmpsAssetKey.Route.BASE_NAME, -1,
+                            "coord-fixture-" + nextSfxAssetId++));
+            factory.registerSmpsSfxAsset(
+                    key, 0, data, EMPTY_DAC,
+                    Sonic3kSmpsSequencerConfig.CONFIG, false);
             registry.apply(new AudioPresentationCommand.AddSmpsSfx(
                     factory.resolveSmpsSfx(
                             nextVoiceId++, key, 1 << 16, 0x70,

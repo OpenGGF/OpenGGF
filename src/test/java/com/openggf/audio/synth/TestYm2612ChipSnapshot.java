@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestYm2612ChipSnapshot {
     @Test
@@ -29,6 +30,10 @@ class TestYm2612ChipSnapshot {
 
         perturb(restored);
         restored.restoreSnapshot(snapshot);
+        Ym2612Chip.Snapshot restoredState = restored.captureSnapshot();
+        assertEquals(snapshot.currentDacSampleId(),
+                restoredState.currentDacSampleId());
+        assertEquals(snapshot.dacPos(), restoredState.dacPos());
         perturb(restored);
         int[] actualLeft = new int[128];
         int[] actualRight = new int[128];

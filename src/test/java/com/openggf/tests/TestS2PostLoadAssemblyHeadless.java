@@ -195,10 +195,10 @@ public class TestS2PostLoadAssemblyHeadless {
 
         GameServices.level().spawnSidekicks(-32, 4);
 
-        assertEquals(0x5A00, tails.getXSubpixelRaw(),
-                "ROM move.w x_pos preserves the fractional x word");
-        assertEquals(0xA500, tails.getYSubpixelRaw(),
-                "ROM move.w y_pos preserves the fractional y word");
+        assertEquals(0, tails.getXSubpixelRaw(),
+                "the level-entry Object_RAM clear zeroes x_sub before the ROM move.w x_pos");
+        assertEquals(0, tails.getYSubpixelRaw(),
+                "the level-entry Object_RAM clear zeroes y_sub before the ROM move.w y_pos");
     }
 
     @Test
@@ -219,15 +219,55 @@ public class TestS2PostLoadAssemblyHeadless {
         assertFalse(tails.getAir(), "Sidekick should not be airborne after spawn");
     }
 
+    @Test
+    void firstCpuInitPreservesTheLevelLoadLeaderHistoryPrefill() {
+        sprite.setCentreX((short) 200);
+        sprite.setCentreY((short) 400);
+        Tails tails = createSidekick();
+
+        GameServices.level().spawnSidekicks(-40, 0);
+        tails.getCpuController().update(0);
+
+        assertHistoryFilled(sprite, 168, 404);
+        assertEquals(63, sprite.historyPos(),
+                "the first live Sonic_RecordPos write must still target slot 0");
+        assertFalse(capturedLevelStartLeaderHistoryPrefillPending(tails.getCpuController()),
+                "the level-start prefill ownership token is one-shot");
+    }
+
     // ========== Helpers ==========
+
+    private static void assertHistoryFilled(
+            AbstractPlayableSprite leader, int expectedX, int expectedY) {
+        short[] xHistory = leader.copyXHistory();
+        short[] yHistory = leader.copyYHistory();
+        assertEquals(64, xHistory.length);
+        assertEquals(64, yHistory.length);
+        for (int slot = 0; slot < 64; slot++) {
+            assertEquals(expectedX, xHistory[slot], "history X slot " + slot);
+            assertEquals(expectedY, yHistory[slot], "history Y slot " + slot);
+        }
+    }
+
+    private static boolean capturedLevelStartLeaderHistoryPrefillPending(
+            SidekickCpuController controller) {
+        try {
+            Object rewindState = controller.captureRewindState();
+            return (boolean) rewindState.getClass()
+                    .getMethod("levelStartLeaderHistoryPrefillPending")
+                    .invoke(rewindState);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(
+                    "Sidekick CPU rewind state must expose levelStartLeaderHistoryPrefillPending", e);
+        }
+    }
 
     private Tails createSidekick() {
         Tails tails = new Tails("tails", (short) 0, (short) 0);
         tails.setCpuControlled(true);
-        SidekickCpuController controller = new SidekickCpuController(tails);
+        SidekickCpuController controller = new SidekickCpuController(tails, sprite);
         tails.setCpuController(controller);
         GameServices.sprites().addSprite(tails);
         return tails;
     }
 }
-

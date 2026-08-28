@@ -17,6 +17,7 @@ import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.data.Rom;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameMode;
 import com.openggf.game.session.EngineContext;
@@ -251,15 +252,16 @@ class TestLiveRewindManagerAudioCleanup {
             loader.musicResults.put(zoneMusicId, persistentSource(zoneMusicId));
             loader.musicResults.put(
                     extraLifeMusicId, persistentSource(extraLifeMusicId));
+            SmpsSequencerConfig sourceConfig = smpsConfig();
             audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader) {
                 @Override public SmpsSequencerConfig getSequencerConfig() {
-                    return smpsConfig();
+                    return sourceConfig;
                 }
                 @Override public int getExtraLifeMusicId() {
                     return extraLifeMusicId;
                 }
             });
-            audio.setRom(null);
+            audio.setRom(new Rom());
             audio.playMusic(zoneMusicId);
             // The 1-up jingle is the only music that saves the song underneath
             // it, so it is the only way to hold a live save slot across a
@@ -451,15 +453,16 @@ class TestLiveRewindManagerAudioCleanup {
             loader.sfxResults.put(
                     sfxId, persistentSource(sfxId));
         }
+        SmpsSequencerConfig sourceConfig = smpsConfig();
         GameAudioProfile profile =
                 new AudioTestFixtures.StubAudioProfile(loader) {
                     @Override
                     public SmpsSequencerConfig getSequencerConfig() {
-                        return smpsConfig();
+                        return sourceConfig;
                     }
                 };
         audio.setAudioProfile(profile);
-        audio.setRom(null);
+        audio.setRom(new Rom());
         audio.setBackend(new HeadlessSmpsAudioBackend(config, null));
         applyAndPresentSourcePair(oldMusic, oldSfx);
 

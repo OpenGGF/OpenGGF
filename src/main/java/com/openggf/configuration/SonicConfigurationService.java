@@ -115,6 +115,8 @@ public class SonicConfigurationService {
 			}
 		}
 
+		applyMavenOutputOverrides();
+
 		publishBundledConfigExample();
 
 		// Migrate deprecated key encodings/defaults before applying defaults.
@@ -134,6 +136,9 @@ public class SonicConfigurationService {
 			configChanged = true;
 		}
 		if (migrationService.migrateDeprecatedCaptureToggleKey(config)) {
+			configChanged = true;
+		}
+		if (migrationService.migrateDeprecatedAudioChipDefaults(config)) {
 			configChanged = true;
 		}
 		if (normalizeDisplayShaderSelection(config)) {
@@ -592,6 +597,7 @@ public class SonicConfigurationService {
 		config = new HashMap<>();
 		defaults = new HashMap<>();
 		sessionOverrides.clear();
+		applyMavenOutputOverrides();
 		invalidateResolvedCaches();
 		applyDefaults();
 		// Re-derive SCREEN_WIDTH_PIXELS (and related) from the freshly-set
@@ -669,11 +675,12 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.DISPLAY_SHADER_PREVIOUS_KEY, GLFW_KEY_LEFT_BRACKET);
 		putDefaultKey(SonicConfiguration.DISPLAY_SHADER_PICKER_KEY, GLFW_KEY_BACKSLASH);
 		putDefault(SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE, "PRESENTATION");
-		putDefault(SonicConfiguration.DAC_INTERPOLATE, true);
+		putDefault(SonicConfiguration.DAC_INTERPOLATE, false);
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
 		putDefault(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, false);
-		putDefault(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE, true);
+		putDefault(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE, false);
+		putDefault(SonicConfiguration.AUDIO_REFERENCE_DEFAULTS_VERSION, 1);
 		putDefault(SonicConfiguration.REGION, "NTSC");
 		putDefaultKey(SonicConfiguration.UP, GLFW_KEY_UP);
 		putDefaultKey(SonicConfiguration.DOWN, GLFW_KEY_DOWN);
@@ -817,6 +824,25 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER, true);
 		putDefault(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_ZONE, true);
 		return defaultInsertedSinceLastApply;
+	}
+
+	/**
+	 * Maven may provide the worktree-local diagnostics directory. Keep an
+	 * explicitly configured capture path unchanged, but place the bundled
+	 * default beneath that target-derived directory when it is available.
+	 */
+	private void applyMavenOutputOverrides() {
+		String diagnostics = System.getProperty("openggf.test.diagnostics");
+		if (diagnostics == null || diagnostics.isBlank()) {
+			return;
+		}
+		Object configured = config == null
+				? null
+				: config.get(SonicConfiguration.CAPTURE_OUTPUT_DIR.name());
+		if (configured == null || "target/trace-videos".equals(configured.toString())) {
+			sessionOverrides.put(SonicConfiguration.CAPTURE_OUTPUT_DIR.name(),
+					Path.of(diagnostics, "trace-videos").toString());
+		}
 	}
 
 	private void putDefault(SonicConfiguration key, Object value) {

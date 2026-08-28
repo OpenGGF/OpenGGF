@@ -1016,8 +1016,8 @@ public class TestTouchResponseManager {
         objectManager.addDynamicObject(enemy);
 
         objectManager.update(0, player, List.of(), 541, false, true, true);
-        enemy.setPosition(180, 112);
         objectManager.snapshotTouchResponseState(true);
+        enemy.setPosition(180, 112);
         objectManager.runTouchResponsesForPlayer(player, 542, true);
 
         // Prior-list membership is read at frame-start x_pos/y_pos: the pointers
@@ -1044,8 +1044,8 @@ public class TestTouchResponseManager {
         objectManager.addDynamicObject(enemy);
 
         objectManager.update(0, player, List.of(), 5646, false, true, true);
-        enemy.setPosition(160, 0x0492);
         objectManager.snapshotTouchResponseState(true);
+        enemy.setPosition(160, 0x0492);
         objectManager.runTouchResponsesForPlayer(player, 5647, true);
 
         assertTrue(enemy.wasAttacked, "The previous collision-response-list position should overlap");
@@ -1112,13 +1112,14 @@ public class TestTouchResponseManager {
         when(player.getInvincibleFrames()).thenReturn(0);
         when(player.getYSpeed()).thenReturn((short) 0x0508);
 
-        MockMovingPreviousListAttackableEnemy enemy =
-                new MockMovingPreviousListAttackableEnemy(194, 120, 192, 120, 0x0B);
+        MockSnapshotAttackableEnemy enemy =
+                new MockSnapshotAttackableEnemy(194, 120, 0x0B);
         setupTableSize(0x0B, 8, 8);
         objectManager.addDynamicObject(enemy);
 
         objectManager.update(0, player, List.of(), 541, false, true, true);
         objectManager.snapshotTouchResponseState(true);
+        enemy.setPosition(192, 120);
         objectManager.runTouchResponsesForPlayer(player, 542, true);
 
         // Same rule as above: membership is prior-frame and so is the position the
@@ -1656,47 +1657,6 @@ public class TestTouchResponseManager {
         public boolean usesCurrentTouchResponseState() {
             return true;
         }
-
-        @Override
-        public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
-            wasAttacked = true;
-        }
-
-        @Override
-        public void appendRenderCommands(List<GLCommand> commands) {
-        }
-    }
-
-    private static final class MockMovingPreviousListAttackableEnemy extends AbstractObjectInstance
-            implements TouchResponseProvider, TouchResponseAttackable {
-        private int currentX;
-        private int currentY;
-        private final int movedX;
-        private final int movedY;
-        private final int collisionFlags;
-        boolean wasAttacked;
-
-        private MockMovingPreviousListAttackableEnemy(
-                int initialX, int initialY, int movedX, int movedY, int collisionFlags) {
-            super(new ObjectSpawn(initialX, initialY, 0, 0, 0, false, 0),
-                    "MockMovingPreviousListAttackableEnemy");
-            this.currentX = initialX;
-            this.currentY = initialY;
-            this.movedX = movedX;
-            this.movedY = movedY;
-            this.collisionFlags = collisionFlags;
-        }
-
-        @Override
-        public void update(int vIntRunCount, PlayableEntity player) {
-            currentX = movedX;
-            currentY = movedY;
-        }
-
-        @Override public int getX() { return currentX; }
-        @Override public int getY() { return currentY; }
-        @Override public int getCollisionFlags() { return collisionFlags; }
-        @Override public int getCollisionProperty() { return 0; }
 
         @Override
         public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {

@@ -26,6 +26,7 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import java.lang.reflect.Field;
 import java.time.Duration;
@@ -96,6 +97,23 @@ class TestAudioPresentationAllocationBudget {
      * retirement leak fails this test instead of saturating the array.
      */
     private static final int STEADY_STATE_ORDERED_VOICES = 4;
+
+    @Test
+    void historicalRepeatedPlaybackBenchmarkRemainsOptIn() {
+        assertTrue(repeatedPlaybackBenchmarkIsOptIn(),
+                "historical multi-repetition evidence must not become an "
+                        + "ordinary steady-state budget assertion");
+    }
+
+    private static boolean repeatedPlaybackBenchmarkIsOptIn() {
+        EnabledIfSystemProperty optIn =
+                TestSmpsRepeatedPlaybackBenchmark.class.getAnnotation(
+                        EnabledIfSystemProperty.class);
+        return optIn != null
+                && "openggf.audio.repeatedPlaybackBenchmark".equals(
+                        optIn.named())
+                && "true".equals(optIn.matches());
+    }
 
     // ---------------------------------------------------------------
     // 1. Warmed forward mixing allocates nothing per frame

@@ -3,11 +3,13 @@ package com.openggf.game.sonic3k.dataselect;
 import com.openggf.game.ZoneKey;
 import com.openggf.game.ZoneRegistry;
 import com.openggf.game.dataselect.DataSelectDestination;
+import com.openggf.game.dataselect.DataSelectExitTransition;
 import com.openggf.game.dataselect.DataSelectGameProfile;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic3k.Sonic3kZoneRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,7 +24,7 @@ import java.util.function.Supplier;
  * and custom team parsing from semicolon-separated strings.
  */
 public final class S3kDataSelectProfile implements DataSelectGameProfile {
-    private static final int STOCK_ZONE_COUNT = 22;
+    private static final int STOCK_ZONE_COUNT = Sonic3kZoneIds.TOTAL_ZONE_COUNT;
     private final Supplier<ZoneRegistry> zones;
 
     public S3kDataSelectProfile() {
@@ -41,6 +43,13 @@ public final class S3kDataSelectProfile implements DataSelectGameProfile {
     @Override
     public int slotCount() {
         return 8;
+    }
+
+    @Override
+    public DataSelectExitTransition exitTransition() {
+        // SaveScreen exits with sfx_EnterSS, then Level dispatches cmd_FadeOut.
+        // S3K's driver owns the 0x28-step, delay-6 cadence.
+        return new DataSelectExitTransition(Sonic3kSfx.ENTER_SS.id, 0x28, 6, 1);
     }
 
     @Override
@@ -107,14 +116,26 @@ public final class S3kDataSelectProfile implements DataSelectGameProfile {
             return false;
         }
         try {
-            S3kSavedZone.read(payload);
+            S3kSavedZone saved = S3kSavedZone.read(payload);
             Map<String, Object> normalized = payload;
             if (!(payload.get("zone") instanceof Number)) {
                 normalized = new java.util.LinkedHashMap<>(payload);
                 normalized.put("zone", Sonic3kZoneIds.ZONE_AIZ);
             }
-            return com.openggf.game.sonic1.dataselect.DataSelectPayloadValidators
-                    .validateCommonPayload(normalized, 21, 7);
+            boolean commonValid = com.openggf.game.sonic1.dataselect.DataSelectPayloadValidators
+                    .validateCommonPayload(normalized, STOCK_ZONE_COUNT - 1, 7);
+            if (!commonValid) {
+                return false;
+            }
+            if (saved.zoneKey() instanceof ZoneKey.Stock stock) {
+                int act = payload.get("act") instanceof Number number ? number.intValue() : -1;
+                ZoneRegistry registry = zones.get();
+                return stock.zoneIndex() >= 0
+                        && stock.zoneIndex() < STOCK_ZONE_COUNT
+                        && act >= 0
+                        && act < registry.getActCount(stock.zoneIndex());
+            }
+            return true;
         } catch (RuntimeException invalid) {
             return false;
         }
@@ -131,7 +152,10 @@ public final class S3kDataSelectProfile implements DataSelectGameProfile {
             return new DataSelectDestination(Sonic3kZoneIds.ZONE_AIZ, 0);
         }
         if (saved.zoneKey() instanceof ZoneKey.Stock stock) {
-            return stock.zoneIndex() >= 0 && stock.zoneIndex() < STOCK_ZONE_COUNT
+            ZoneRegistry registry = zones.get();
+            return stock.zoneIndex() >= 0
+                    && stock.zoneIndex() < STOCK_ZONE_COUNT
+                    && act < registry.getActCount(stock.zoneIndex())
                     ? new DataSelectDestination(stock.zoneIndex(), act)
                     : new DataSelectDestination(Sonic3kZoneIds.ZONE_AIZ, 0);
         }

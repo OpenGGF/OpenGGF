@@ -40,8 +40,16 @@ unmaintained Lua is fine; it is not the fixture publisher.
 
 ## Requirements
 
-- **Mono 6.12** with `xbuild` on `PATH`. The projects are non-SDK `.csproj` and
-  the source is **C# 7.x** — newer language features will not compile.
+- **Mono 6.12** with `xbuild` on `PATH`, plus Mono's Roslyn compiler at
+  `/usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe`. The build fails closed
+  unless that compiler is version `3.9.0-6.21124.20 (db94f4cc)` with SHA-256
+  `81e98ade50f3e4127237128211778bd6ebe0c3998c9cc2f5eb44f3196a0297f8`.
+  The projects are non-SDK `.csproj` and the source is **C# 7.x** — newer
+  language features will not compile. `build.sh` always uses this Roslyn path,
+  deterministic PE/MVID generation, and a canonical source path map; direct
+  ambient `mcs`/`xbuild` compilation is rejected by the project contract. Its
+  response file is created under `obj/` for one build and removed on exit.
+  `test.sh` and `run.sh` both rebuild through this contract before execution.
 - A **BizHawk 2.11 distribution**. `common-env.sh` defaults `BIZHAWK_HOME` to the
   repo-local `docs/BizHawk-2.11-linux-x64`, validates that it is an existing
   absolute path, and checks the required DLLs are present under `dll/`.
@@ -58,6 +66,21 @@ unmaintained Lua is fine; it is not the fixture publisher.
 ./test.sh --game s3k             # just the S3K gates
 ./test.sh --jobs 1               # sequential, the debugging path
 ```
+
+To prove the pinned production and test executables are independent of checkout
+location, run two clean builds under a new durable output root:
+
+```bash
+./verify-deterministic-build.sh \
+  --bizhawk-home /abs/path/to/BizHawk-2.11-linux-x64 \
+  --output /abs/path/to/repo/target/audio-parity/deterministic-headless-build
+```
+
+The output root must not already exist. One copied checkout includes spaces in
+its path and hostile ambient compiler properties. The verifier byte-compares
+both executables and PDBs, proves direct ambient `xbuild` is rejected, and runs
+the strict S2 capability binding against each production assembly. It retains
+the two build roots and direct-build failure log as durable evidence.
 
 `test.sh` skips cleanly when a ROM variable or the BizHawk distribution is
 absent, and fails loudly when one is present but wrong (it re-verifies the ROM
@@ -309,6 +332,41 @@ they do not let the recorder certify a newly proposed fixture. Treat a
 pre-publication gate failure as a defect in the recorder or its proposed
 contract, never as a reason to relax the comparison or silently replace a
 fixture.
+
+## S2/S3K native audio observer gates
+
+Task 8 uses a separately installed, exact-hash Task 7 GPGX core. Supply the
+reviewed ROMs and complete BK2s by absolute path; the capability fixture rejects
+the wrong movie name, SHA-256, or row count before opening the core.
+
+```bash
+export BIZHAWK_HOME=/absolute/task7-observer-install
+export OPENGGF_GPGX_Z80_CAPABILITY=1
+export S2_ROM_PATH=/absolute/sonic2-rev01.gen
+export S2_BK2_PATH=/absolute/sonic-2-sonic-tails-complete-emeralds.bk2
+export S3K_ROM_PATH=/absolute/sonic3k-locked-on.gen
+export S3K_BK2_PATH=/absolute/s3k-knuckles-complete-superemeralds.bk2
+tools/bizhawk-headless/test.sh --filter GpgxZ80AudioCapabilityTests --jobs 1
+```
+
+Add `OPENGGF_GPGX_Z80_PERFORMANCE=1` for the bounded three-lane performance
+gate, or `OPENGGF_GPGX_Z80_FULL_RUN=1` for duplicate complete-movie event
+digests. These gates stream aggregates only. They do not publish ROM, movie,
+core, or reconstructive event payloads.
+
+The streaming `CaptureFrame(..., consumer)` overload validates and projects the
+frame transactionally while reusing its exact-count drain buffer; it does not
+retain a `LastCapture`. Call `CaptureCanonicalFrame(...)` when the immutable raw
+events, begin-ordered services, snapshots, reset lifecycle, and projected chip
+writes must remain available after the synchronous consumer boundary.
+
+At a complete-movie cutoff, call `CaptureCutoffFrontier()` before cleanup. The
+immutable frontier preserves the outer-to-inner open stack, completed
+descendants withheld in global begin order, their exact owned chip/snapshot
+data, YM latches, and arm epoch. Record the normalized terminal Z80 state with
+it, then call the internal cutoff cleanup. Task 9 must serialize this as a
+canonical store/comparator record; `DiscardCutoffState()` is cleanup only and
+must never stand in for terminal semantic publication.
 
 ## Specs
 

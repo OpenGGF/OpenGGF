@@ -7,12 +7,27 @@ REM
 REM Example:
 REM   set OGGF_START=16300
 REM   set OGGF_STOP=16320
-REM   set OGGF_OUT=C:\tmp\htz2_diag.txt
+REM   set "OGGF_TASK_DIR=D:\captures\htz2-diag"
+REM   if not defined OGGF_TASK_DIR (
+REM     >&2 echo ERROR: set OGGF_TASK_DIR to a disk-backed external directory
+REM     exit /b 2
+REM   )
+REM   if /i not "%OGGF_TASK_DIR:~1,2%"==":\" (
+REM     >&2 echo ERROR: OGGF_TASK_DIR is not a Windows drive path
+REM     exit /b 2
+REM   )
+REM   if not exist "%OGGF_TASK_DIR%\NUL" (
+REM     >&2 echo ERROR: OGGF_TASK_DIR is not an accessible directory
+REM     exit /b 2
+REM   )
+REM   set "OGGF_OUT=%OGGF_TASK_DIR%\htz2_diag.txt"
 REM   tools\bizhawk\run_bizhawk_lua.bat ^
 REM     tools\bizhawk\diag_s2_htz2_obj30.lua ^
 REM     src\test\resources\traces\s2\htz2\s2-lvl-select-HTZ.bk2 ^
 REM     s2.gen
 REM
+REM OGGF_TASK_DIR must name a capacity-checked disk-backed directory outside the repository;
+REM do not use C:\tmp, %%TEMP%%, or %%TMP%% for durable output.
 REM BizHawk path can be overridden with BIZHAWK_EXE. The launcher writes a
 REM temporary no-audio diagnostic config by default; set BIZHAWK_USE_DIAG_CONFIG=0
 REM to use BizHawk's remembered config instead. It also wraps the Lua with the

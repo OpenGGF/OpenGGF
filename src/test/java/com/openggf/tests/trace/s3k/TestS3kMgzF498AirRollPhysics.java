@@ -1,5 +1,6 @@
 package com.openggf.tests.trace.s3k;
 
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -29,6 +30,15 @@ class TestS3kMgzF498AirRollPhysics {
                 .withRecording(BK2_PATH)
                 .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
                 .withZoneAndAct(0x02, 0x00)
+                // Same selection AbstractTraceReplayTest makes: when the trace
+                // carries recorded hardware timing input, the gameplay context
+                // must own recorded admission before the level load submits any
+                // hardware work, because applyBootstrap installs the timing
+                // replay port against that authority.
+                .withHardwareReadinessAdmissionPolicy(
+                        trace.hardwareTimingSchedule().hasRecordedInput()
+                                ? HardwareReadinessAdmissionPolicy.RECORDED
+                                : HardwareReadinessAdmissionPolicy.LIVE)
                 .startPosition(trace.metadata().startX(), trace.metadata().startY())
                 .startPositionIsCentre()
                 .build();
@@ -45,8 +55,16 @@ class TestS3kMgzF498AirRollPhysics {
                 previousDriveFrame,
                 driveTraceIndex < trace.frameCount() ? trace.getFrame(driveTraceIndex) : null);
 
+        int lastDrivenRawFrame = -1;
         while (driveTraceIndex <= TARGET_FRAME) {
             TraceFrame expected = trace.getFrame(driveTraceIndex);
+            // Same per-row announcement AbstractTraceReplayTest makes before it
+            // drives a row (AbstractTraceReplayTest.java:774). Without it the
+            // installed timing replay port never latches a raw frame, so every
+            // recorded completion edge this prefix drives over stays unconsumed
+            // and the run's close verification throws -- in whichever test class
+            // happens to tear this lazily-destroyed session down.
+            fixture.beginTraceRow(driveTraceIndex, expected.frame());
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, expected);
             if (phase == TraceExecutionPhase.VBLANK_ONLY) {
@@ -54,9 +72,16 @@ class TestS3kMgzF498AirRollPhysics {
             } else {
                 fixture.stepFrameFromRecording();
             }
+            lastDrivenRawFrame = expected.frame();
             previousDriveFrame = expected;
             driveTraceIndex++;
         }
+
+        // This fixture is a semantically complete trace prefix, not a whole
+        // run: close recorded timing at the last driven raw frame so this
+        // prefix's own edges and submissions are still verified while later,
+        // undriven schedule edges are left untouched.
+        fixture.closeHardwareTimingReplayPrefix(lastDrivenRawFrame);
 
         TraceFrame expected = trace.getFrame(TARGET_FRAME);
         var sprite = fixture.sprite();

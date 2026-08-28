@@ -109,7 +109,9 @@ class TestLbzTubeElevatorInstance {
         LbzTubeElevatorInstance elevator = (LbzTubeElevatorInstance) elevator(0x1200, 0x0600, 0);
         TestablePlayableSprite tails = playerAt(0x1200, 0x0600);
         tails.setAir(true);
-        elevator.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+        elevator.setServices(new TestObjectServices()
+                .withSidekicks(List.of(tails))
+                .withIsolatedObjectManager());
 
         elevator.update(0, playerAt(0x1200, 0x0600));
 
@@ -197,14 +199,16 @@ class TestLbzTubeElevatorInstance {
     void waitExitStaysOpenWhileReleasedPlayerIsStillStandingOnElevator() throws Exception {
         ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
         TestablePlayableSprite player = playerAt(0x1200, 0x0600);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        setServices(elevator, new ObjectManagerOnlyServices(objectManager));
 
         setField(elevator, "state", 8);
         Object p1State = field(elevator, "p1").get(elevator);
         setField(p1State, "phase", 2);
 
-        player.setOnObject(true);
+        when(objectManager.getRidingObject(player)).thenReturn(elevator);
         elevator.update(0, player);
-        elevator.update(0, player);
+        elevator.update(1, player);
 
         SolidObjectParams params = ((SolidObjectProvider) elevator).getSolidParams();
         assertEquals(8, params.airHalfHeight(),
@@ -471,7 +475,7 @@ class TestLbzTubeElevatorInstance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_LBZ);
         ObjectInstance elevator = registry.create(new ObjectSpawn(x, y, 0x10, subtype, 0, false, 0));
         if (elevator instanceof com.openggf.level.objects.AbstractObjectInstance object) {
-            object.setServices(new TestObjectServices());
+            object.setServices(new TestObjectServices().withIsolatedObjectManager());
         }
         return elevator;
     }
@@ -494,7 +498,7 @@ class TestLbzTubeElevatorInstance {
             public ObjectPlayerQuery playerQuery() {
                 return query;
             }
-        };
+        }.withIsolatedObjectManager();
     }
 
     private static RewindCaptureContext rewindContext(

@@ -3,6 +3,7 @@ package com.openggf.game;
 import static org.lwjgl.opengl.GL11.glClearColor;
 
 import com.openggf.audio.GameMusic;
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.rewind.RewindSnapshottable;
 
 import java.io.IOException;
@@ -33,9 +34,7 @@ public interface SpecialStageProvider extends MiniGameProvider {
         Objects.requireNonNull(viewport, "viewport");
     }
 
-    /**
-     * Returns the provider's current presentation geometry.
-     */
+    /** Returns the provider's current presentation geometry. */
     default SpecialStageViewport getSpecialStageViewport() {
         return SpecialStageViewport.nativeViewport();
     }
@@ -58,6 +57,21 @@ public interface SpecialStageProvider extends MiniGameProvider {
      */
     default int consumeStageIndexForEntry(GameStateManager gameState) {
         return gameState.consumeCurrentSpecialStageIndexAndAdvance();
+    }
+
+    /**
+     * The PLC/V-int lifecycle phase the special stage's current represented
+     * row belongs to.
+     *
+     * <p>A special stage is not one V-int handler for its whole duration: the
+     * ROM's entry sequence runs other handlers before it installs its own. The
+     * phase decides which owner services the row -- including whether the row
+     * is a DMA-queue service boundary -- so a provider whose entry sequence
+     * runs a different handler reports that handler's phase here. The default
+     * is the stage's own handler.</p>
+     */
+    default PlcLifecyclePhase specialStagePlcLifecyclePhase() {
+        return PlcLifecyclePhase.SPECIAL_STAGE;
     }
 
     /**
@@ -111,6 +125,16 @@ public interface SpecialStageProvider extends MiniGameProvider {
 
     default Optional<RewindSnapshottable<?>> rewindAdapter() {
         return Optional.empty();
+    }
+
+    /**
+     * Handles input plus the debug movement speed modifiers used by normal
+     * gameplay. Providers without gameplay debug movement retain the ordinary
+     * two-mask behavior.
+     */
+    default void handleInput(int heldButtons, int pressedButtons,
+                             boolean debugSpeedUp, boolean debugSlowDown) {
+        handleInput(heldButtons, pressedButtons);
     }
 
     /**
@@ -386,10 +410,12 @@ public interface SpecialStageProvider extends MiniGameProvider {
     }
 
     /**
-     * Configures the internal lag-pacing bypass used by trace sessions.
+     * External-pacing control for providers with an interactive lag or slowdown
+     * simulation. Zero disables that local simulation so recorded lag outcomes
+     * can be admitted only by the hardware-timing port; providers without a
+     * local simulation may ignore the value.
      *
-     * @param factor zero to disable native lag modeling for externally paced
-     *               replay; a positive value restores normal native pacing
+     * @param factor zero for external pacing; positive for normal live pacing
      */
     void setLagCompensation(double factor);
 

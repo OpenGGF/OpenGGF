@@ -29,7 +29,7 @@ class TestSonic3kNonlinearHpzProfile {
                 Sonic3kZoneIds.ZONE_HPZ).get(1);
 
         assertEquals(0xED, descriptor.levelIndex());
-        assertEquals("HIDDEN PALACE", registry.getZoneName(Sonic3kZoneIds.ZONE_HPZ));
+        assertEquals("LAVA REEF", registry.getZoneName(Sonic3kZoneIds.ZONE_HPZ));
         assertEquals(0x1640, descriptor.startX());
         assertEquals(0x03AC, descriptor.startY());
 
@@ -71,17 +71,24 @@ class TestSonic3kNonlinearHpzProfile {
     }
 
     @Test
-    void canonicalHpzActZeroIsUnavailableRatherThanAliasingSanctuary() {
+    void rawZoneTableRetainsLrzBossWithoutAliasingSanctuaryResources() {
         Sonic3kZoneRegistry registry = new Sonic3kZoneRegistry();
 
-        assertThrows(IllegalArgumentException.class,
-                () -> Sonic3kLevelResourceProfile.resolve(
-                        Sonic3kZoneIds.ZONE_HPZ, 0));
-        assertThrows(IllegalArgumentException.class,
-                () -> registry.getLevelDataForZone(
-                        Sonic3kZoneIds.ZONE_HPZ).get(0).levelIndex());
-        assertThrows(IllegalArgumentException.class,
-                () -> registry.getStartPosition(Sonic3kZoneIds.ZONE_HPZ, 0));
+        Sonic3kLevelResourceProfile profile =
+                Sonic3kLevelResourceProfile.resolve(Sonic3kZoneIds.ZONE_HPZ, 0);
+        assertEquals(Sonic3kZoneIds.ZONE_HPZ, profile.romZone());
+        assertEquals(0, profile.romAct());
+        assertEquals(S3kZoneSet.SKL, profile.objectZoneSet());
+        assertEquals(Sonic3kLevelResourceProfile.EventKind.STANDARD,
+                profile.eventKind());
+        assertTrue(profile.customResources().isEmpty());
+        LevelDescriptor descriptor = registry.getLevelDataForZone(
+                Sonic3kZoneIds.ZONE_HPZ).get(0);
+        assertEquals(0xEC, descriptor.levelIndex());
+        assertEquals(0x0040, descriptor.startX());
+        assertEquals(0x0070, descriptor.startY());
+        assertEquals(Sonic3kMusic.BOSS.id,
+                registry.getMusicId(Sonic3kZoneIds.ZONE_HPZ, 0));
     }
 
     @Test

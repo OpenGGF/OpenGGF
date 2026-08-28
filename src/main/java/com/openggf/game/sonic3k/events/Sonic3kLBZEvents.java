@@ -338,10 +338,9 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             boolean alreadyActive = postTitleAct2SizeChangeActive;
             prepareAct2SizeChange(0x6000, 0, 0x1000);
             if (!alreadyActive && postTitleAct2SizeChangeActive) {
-                // Child1_Act2LevelSize occupies later SST slots, so all three
-                // creation entries run after the settling floor in this pass.
-                // Their zero high words make these entries accumulator-only;
-                // the first visible integer deltas belong to later entries.
+                // The settling floor creates the gradual workers in later SST
+                // slots, so their creation entries run later in this same
+                // Process_Sprites pass (AllocateObjectAfterCurrent).
                 act2MaxXAccumulator += 0x4000;
                 act2MinYAccumulator += 0x4000;
                 act2MaxYAccumulator += 0x8000;
@@ -419,12 +418,13 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (postTitleAct2WorkersCreatedThisPass) {
             postTitleAct2WorkersCreatedThisPass = false;
             if (!postTitleAct2BigArmCreationEntriesSeeded) {
-                // Generic Change_Act2Sizes creates the later SST workers after
-                // ScreenEvents, so its next centralized call is marker-only.
+                // Generic title-card completion creates the retained workers
+                // outside their eligible object-loop pass. This centralized
+                // call consumes that creation marker without running an entry.
                 return;
             }
-            // Big Arm already ran those creation entries in its later object
-            // slots; this call must therefore execute their second entries.
+            // Big Arm's later-slot children already ran their creation entries;
+            // this centralized call is their following entry.
             postTitleAct2BigArmCreationEntriesSeeded = false;
         }
         updatePostTitleAct2WorkerEntries();

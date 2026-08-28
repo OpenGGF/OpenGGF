@@ -457,7 +457,21 @@ public class SpringObjectInstance extends BoxObjectInstance
             if (!player.getRolling()) {
                 player.setAnimationId(Sonic2AnimationIds.WALK);
             }
-            // ROM: loc_18BAA clears pushing flags after horizontal spring triggers
+            // ROM: loc_18BAA clears pushing flags after a horizontal spring
+            // triggers -- and it clears THREE bits, not one
+            // (docs/s2disasm/s2.asm:34074-34076):
+            //   bclr #p1_pushing_bit,status(a0)
+            //   bclr #p2_pushing_bit,status(a0)
+            //   bclr #status.player.pushing,status(a1)
+            // The two object-side bits matter on the following frame: with the
+            // spring's own pushing bit clear, the next pass's
+            // SolidObject_TestClearPush `btst d4,status(a0)`
+            // (docs/s2disasm/s2.asm:35462-35466) fails and the Walk/Run restart
+            // write is skipped. Clearing only the player flag leaves the engine
+            // restarting the launched character's run animation one frame after
+            // every horizontal-spring launch.
+            services().objectManager().solidContacts()
+                    .releaseObjectPushLatchForAllPlayers(this);
             player.setPushing(false);
         } else if (type == TYPE_UP || type == TYPE_DIAGONAL_UP) {
             // ROM: loc_189CA/loc_18E10 - Up springs set Spring animation first

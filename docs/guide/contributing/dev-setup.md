@@ -19,10 +19,12 @@ includes IntelliJ project files. Any IDE with Maven support will work.
 ```bash
 git clone https://github.com/OpenGGF/OpenGGF.git
 cd OpenGGF
+tools/testing/install-hooks.sh
 mvn package
 ```
 
-The build produces an executable OpenGGF JAR with all dependencies at:
+The executable OpenGGF JAR with all dependencies is written to the current
+worktree's Maven output tree:
 ```
 target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
@@ -59,6 +61,10 @@ Build and run a distributable jar with the launcher for your platform:
 # Windows
 run.cmd
 ```
+
+The normal launchers build into the current worktree's `target/` directory and
+launch from there. Run Maven from the worktree root so its repository-local
+configuration keeps Maven-side output inside `target/`.
 
 For faster iteration, `dev.sh` (Linux) and `dev.cmd` (Windows) compile only
 changed sources and run directly from `target/classes`. The first offline

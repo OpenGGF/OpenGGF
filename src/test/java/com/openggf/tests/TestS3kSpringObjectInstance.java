@@ -4,6 +4,7 @@ import com.openggf.game.GroundMode;
 import com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ class TestS3kSpringObjectInstance {
 
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0, 0, 0x07, 0x12, 0, false, 0));
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
 
         spring.onSolidContact(player, new SolidContact(false, true, false, false, true), 0);
 
@@ -52,6 +54,7 @@ class TestS3kSpringObjectInstance {
 
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0, 0, 0x07, 0x12, 0, false, 0));
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
 
         spring.onSolidContact(player, new SolidContact(false, true, false, false, true), 0);
 

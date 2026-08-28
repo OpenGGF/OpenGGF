@@ -408,6 +408,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private boolean suppressNextInvulnerabilityDecrement = false;
         private boolean invulnerabilityDisplayTimerTickedThisFrame = false;
         private boolean invulnerabilityDisplayTimerDecrementedThisFrame = false;
+        /** HurtStop's unconditional DisplaySprite ownership for this BuildSprites pass. */
+        private boolean hurtRoutineOwnedDisplayThisFrame = false;
 
         /**
          * Frames remaining for invincibility power-up.
@@ -815,6 +817,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.drowningDeath = false;
                 this.drownPreDeathTimer = 0;
                 this.hurt = false;
+                this.hurtRoutineOwnedDisplayThisFrame = false;
                 this.deathCountdown = 0;
                 this.deathRestartRoutineActive = false;
                 this.air = false;
@@ -854,6 +857,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.crouching = false;
                 this.lookingUp = false;
                 this.balanceState = 0;
+                // The ROM holds no balance state; Sonic_Balance re-derives it every
+                // grounded standing frame from tilt/next_tilt, which the player tail
+                // copies out of Primary_Angle/Secondary_Angle (sonic3k.asm:21999-22000
+                // Sonic, :26243-26244 Tails). A level load zeroes those SST bytes with
+                // the rest of Object_RAM, so the first Sonic_Balance of a new act can
+                // never see the empty-tile sentinel 3 left by the previous act.
+                controller.getMovement().resetGroundAngleLatches();
                 this.highPriority = false;
                 this.priorityBucket = RenderPriority.PLAYER_DEFAULT;
                 this.forceInputRight = false;
@@ -962,7 +972,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         dead, drowningDeath, drownPreDeathTimer,
                         hurt, deathCountdown, deathRestartRoutineActive,
                         invulnerableFrames, suppressNextInvulnerabilityDecrement,
-                        invulnerabilityDisplayTimerDecrementedThisFrame, invincibleFrames,
+                        invulnerabilityDisplayTimerDecrementedThisFrame,
+                        hurtRoutineOwnedDisplayThisFrame, invincibleFrames,
                         spindash, spindashCounter,
                         crouching, lookingUp, lookDelayCounter,
                         doubleJumpFlag, doubleJumpProperty,
@@ -1116,6 +1127,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.suppressNextInvulnerabilityDecrement = extra.suppressNextInvulnerabilityDecrement();
                 this.invulnerabilityDisplayTimerDecrementedThisFrame =
                                 extra.invulnerabilityDisplayTimerDecrementedThisFrame();
+                this.hurtRoutineOwnedDisplayThisFrame =
+                                extra.hurtRoutineOwnedDisplayThisFrame();
                 this.invincibleFrames = extra.invincibleFrames();
                 this.spindash = extra.spindash();
                 this.spindashCounter = extra.spindashCounter();
@@ -1733,8 +1746,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 int displayTimer = invulnerableFrames
                         + (invulnerabilityDisplayTimerDecrementedThisFrame ? 1 : 0);
                 return isHurt()
+                        || hurtRoutineOwnedDisplayThisFrame
                         || displayTimer <= 0
                         || (displayTimer & 0x04) != 0;
+        }
+
+        /** Clears HurtStop's one-frame direct-display ownership after BuildSprites. */
+        public void clearHurtRoutineOwnedDisplayLatch() {
+                hurtRoutineOwnedDisplayThisFrame = false;
         }
         public boolean hasRenderFlagOnScreenState() {
                 return renderFlagOnScreenValid;
@@ -1887,15 +1906,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setAir(boolean air) {
                 boolean landed = !air && this.air;
-                // If landing from hurt state, clear hurt flag and high-priority rendering
+                // HurtCharacter/HurtStop do not write art_tile. Preserve any priority bit
+                // owned by a path switcher or scripted sequence (notably AIZ2's waterfall
+                // arena) when the hurt routine lands.
                 // (invulnerableFrames already set in applyHurt() per ROM behavior)
                 if (!air && this.air && hurt) {
                         hurt = false;
                         forcedAnimationId = -1;
-                        setHighPriority(false);
                         // HurtStop's direct draw path delays decrementing the reset timer by one frame.
                         invulnerableFrames = 0x78;
                         suppressNextInvulnerabilityDecrement = true;
+                        hurtRoutineOwnedDisplayThisFrame = true;
                 }
                 // Reset rolling jump flag when landing
                 if (!air && this.air) {
@@ -1975,7 +1996,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 hurt = false;
                 forcedAnimationId = -1;
                 controller.markHurtRecoveryCompleted();
-                setHighPriority(false);
                 invulnerableFrames = 0x78;
                 suppressNextInvulnerabilityDecrement = true;
                 setXSpeed((short) 0);
@@ -4810,6 +4830,43 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * spawn-anchored ring even when the controller first ticks after the
          * leader has already moved.
          */
+        /**
+         * Mirrors ROM {@code Obj01_Init_Continued} (S2, s2.asm:36201-36217) and
+         * its S3K twin {@code Sonic_Init_Continued} -> {@code Reset_Player_Position_Array}
+         * (sonic3k.asm:21931-21941, 22166-22178): with the leader's position
+         * temporarily offset by {@code (-$20, +4)}, {@code Sonic_Pos_Record_Index}
+         * is zeroed and {@code Sonic_RecordPos} is called 64 times, each iteration
+         * immediately re-zeroing the {@code Sonic_Stat_Record_Buf} entry it just
+         * wrote ({@code subq.w #4,a1 / move.l #0,(a1)}). The result is a Pos_table
+         * entirely filled with the offset spawn coordinate and a completely zeroed
+         * Stat_table, with the record index wrapped back to 0.
+         *
+         * <p>This runs on EVERY level (re)init, including a star-post restart and
+         * a return from a special stage: the {@code tst.b (Last_star_pole_hit).w /
+         * bne.s Obj01_Init_Continued} branch above it skips only the art / saved-position
+         * block, never the refill itself.
+         *
+         * <p>Distinct from {@link #prefillPositionHistoryWithCentre}, which fills the
+         * Pos_table only; the ROM sequence also clears the Stat_table, so a delayed
+         * {@code Tails_CPU_Control} read cannot see the previous level's recorded
+         * leader input or status bits.
+         */
+        public void resetPositionAndStatTableHistoryAtCentre(short prefillX, short prefillY) {
+                for (int i = 0; i < xHistory.length; i++) {
+                        xHistory[i] = prefillX;
+                        yHistory[i] = prefillY;
+                        inputHistory[i] = 0;
+                        jumpPressHistory[i] = 0;
+                        statusHistory[i] = 0;
+                }
+                // ROM leaves Sonic_Pos_Record_Index at 0 after the 64-iteration wrap,
+                // so the next live Sonic_RecordPos writes slot 0. The engine's
+                // recordFollowerHistoryForTick() increments before writing, so park
+                // the cursor one slot earlier.
+                historyPos = 63;
+                followerHistoryRecordedThisTick = false;
+        }
+
         public void prefillPositionHistoryWithCentre(short prefillX, short prefillY) {
                 for (int i = 0; i < xHistory.length; i++) {
                         xHistory[i] = prefillX;

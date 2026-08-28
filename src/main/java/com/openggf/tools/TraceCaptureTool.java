@@ -90,6 +90,11 @@ public final class TraceCaptureTool {
             String trace = null;
             String outDir = config.getString(SonicConfiguration.CAPTURE_OUTPUT_DIR);
             int width = SCREEN_WIDTH;
+            String diagnosticRoot = System.getProperty("openggf.test.diagnostics");
+            if (diagnosticRoot != null && !diagnosticRoot.isBlank()
+                    && "target/trace-videos".equals(outDir)) {
+                outDir = Path.of(diagnosticRoot, "trace-videos").toString();
+            }
             int scale = config.getInt(SonicConfiguration.CAPTURE_SCALE);
             int fps = config.getInt(SonicConfiguration.CAPTURE_FPS);
             String codec = config.getString(SonicConfiguration.CAPTURE_CODEC);

@@ -23,6 +23,9 @@ Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote eac
 - [pitfall-catalogue-index.md](pitfall-catalogue-index.md) — known ROM pitfalls grouped by bug class
 - [documentation-obligation-checklist.md](documentation-obligation-checklist.md) — trailers / TRACE_FRONTIER_LOG / changelog
 - [delegation-prompt-templates.md](delegation-prompt-templates.md) — research/impl/triage/art/review prompt templates
+- [briefing-trace-rounds.md](briefing-trace-rounds.md) — how to hand a trace divergence to an agent: supply the symptom, not your hypothesis.
+  Also the accumulated round rules, with a scannable index: the evidence rules, the operational ones (the branch is the artifact; create worktrees copy-on-write; concurrent rounds are a budget), and a
+  **measurement-hazard table** listing each hazard's signature and what it looks like. Read that table before reporting any suite number — every entry in it produces output indistinguishable from a real result.
 
 ## Worktree resource-link policy
 
@@ -58,6 +61,14 @@ unique to that remote as well as its tip. A clean tip does not make an earlier,
 newly published violation acceptable; remove the bad commit from unpublished
 history, then run the hook again. CI applies the same commit-range and
 delivered-tree checks on every branch push.
+
+## Direct Maven output
+
+OpenGGF build and test commands invoke Maven directly. Each worktree owns its
+`target/` tree, including Surefire reports, trace reports, diagnostics,
+temporary files, and per-fork LWJGL extraction. Do not redirect these outputs
+into shared session storage. Put durable captures in an explicit external task
+or archive directory and retain only the evidence the task requires.
 
 ## Start here
 

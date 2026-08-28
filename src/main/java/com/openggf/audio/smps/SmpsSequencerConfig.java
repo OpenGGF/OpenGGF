@@ -12,12 +12,56 @@ public final class SmpsSequencerConfig {
 
     @com.openggf.game.ModApi
     public enum TempoMode {
-        /** S3K: accumulator overflow → skip (delay). Tick on non-overflow. Higher tempo = slower. */
+        /** S3K: carry extends music durations before the mandatory per-VInt track service. */
         OVERFLOW,
-        /** S2: accumulator overflow → tick. Skip on non-overflow. Higher tempo = faster. */
+        /** S2: no carry extends music durations before the mandatory per-VInt track service. */
         OVERFLOW2,
         /** S1: countdown from tempo; when 0, extend all track durations by 1. Always tick. */
         TIMEOUT
+    }
+
+    @com.openggf.game.ModApi
+    public enum PalServicePolicy {
+        /** No driver-side PAL compensation (Sonic 1). */
+        NONE,
+        /** Sonic 2: one extra music-only service every fifth PAL VInt. */
+        EXTRA_MUSIC_EVERY_FIFTH,
+        /** Locked-on S&K: repeat the complete driver update every sixth PAL VInt. */
+        FULL_DRIVER_REPEAT_EVERY_SIXTH,
+        /** Legacy generic 1.2 tempo scaling for non-production/custom profiles. */
+        LEGACY_TEMPO_SCALE
+    }
+
+    @com.openggf.game.ModApi
+    public enum TempoPhasePolicy {
+        /** S1: tempo and speed changes reload the live timeout. */
+        RESET_TO_EFFECTIVE_TEMPO,
+        /** S2/S3K: tempo and speed changes preserve accumulator phase. */
+        PRESERVE
+    }
+
+    /** Request-wide SFX priority behavior owned by the original sound driver. */
+    @com.openggf.game.ModApi
+    public enum SfxPriorityPolicy {
+        /** Sonic 1/2: one global stored priority gates the complete request. */
+        GLOBAL_LATCH,
+        /** Sonic 3 & Knuckles: no SFX priority table or global latch. */
+        NONE
+    }
+
+    /** Order of the shared driver's music and SFX track services per VInt. */
+    @com.openggf.game.ModApi
+    public enum DriverServiceOrder {
+        MUSIC_THEN_SFX,
+        SFX_THEN_MUSIC
+    }
+
+    @com.openggf.game.ModApi
+    public enum SfxStartTiming {
+        /** S1/S2: queue processing precedes the SFX track loop. */
+        SAME_DRIVER_UPDATE,
+        /** S3K: zUpdateSFXTracks precedes queue processing. */
+        NEXT_DRIVER_UPDATE
     }
 
     /** How carrier operators are determined for volume scaling. */
@@ -65,6 +109,120 @@ public final class SmpsSequencerConfig {
         MOD_Z80
     }
 
+    /** How an FM channel is prepared when an SFX first takes it from music. */
+    @com.openggf.game.ModApi
+    public enum FmSfxTakeoverMode {
+        /** Legacy engine behavior: clear internal chip state and inject a key-off. */
+        FORCE_RESET,
+        /** S3K fix_sndbugs=0: key off and clear all four SSG-EG registers. */
+        KEY_OFF_CLEAR_SSG_EG,
+        /** Shipped-driver behavior: let the SFX bytecode perform all visible writes. */
+        REGISTER_SEQUENCE
+    }
+
+    /** Hardware writes performed when an ordinary FM SFX track ends. */
+    @com.openggf.game.ModApi
+    public enum FmSfxReleaseMode {
+        /** Legacy behavior: force maximum release/TL before restoring music. */
+        FORCE_SILENCE_THEN_RESTORE,
+        /** S3K fix_sndbugs=0 cfStopTrack: key off, then restore music directly. */
+        RESTORE_MUSIC_DIRECTLY
+    }
+
+    @com.openggf.game.ModApi
+    public enum PsgSfxReleaseMode {
+        /** S1/S2: restored music track stays at rest until its next note. */
+        REST_UNTIL_NEXT_NOTE,
+        /** S3K/custom: restore the live music PSG state immediately. */
+        RESTORE_LIVE_STATE
+    }
+
+    @com.openggf.game.ModApi
+    public enum FadeOutChannelPolicy {
+        /** S1/S2: halt DAC immediately, then fade FM and PSG. */
+        FADE_FM_AND_PSG,
+        /** S3K: halt DAC and every PSG track immediately, then fade FM only. */
+        HALT_DAC_AND_PSG_FADE_FM
+    }
+
+    @com.openggf.game.ModApi
+    public enum MusicOverrideSpeedPolicy {
+        /** S1/S2: the 1-up load observes the live speed-tempo flag. */
+        INHERIT_CURRENT,
+        /** S3K: save the speed timeout and run the 1-up at normal speed. */
+        NORMAL_DURING_OVERRIDE
+    }
+
+    @com.openggf.game.ModApi
+    public enum MusicOverrideRestorePolicy {
+        IMMEDIATE,
+        /** Restore saved tracks through the driver's fade-in routine. */
+        DRIVER_FADE_IN
+    }
+
+    @com.openggf.game.ModApi
+    public enum MusicOverridePriorityPolicy {
+        /** S1 clears the global SFX priority before backing up music state. */
+        CLEAR_BEFORE_SAVE,
+        /** S2 FixDriverBugs=0 restores the stale priority saved before clear. */
+        PRESERVE_SAVED_LATCH
+    }
+
+    @com.openggf.game.ModApi
+    public enum MusicOverrideSfxReleasePolicy {
+        /** S1/S2 block new SFX until the restore fade completes. */
+        AFTER_FADE_IN,
+        /** S3K permits SFX on the driver cycle after restore begins. */
+        ON_RESTORE
+    }
+
+    @com.openggf.game.ModApi
+    public enum MusicOverrideDacRestorePolicy {
+        /** Restore the displaced driver's preserved YM2612 DAC mode. */
+        RESTORE_SAVED_CHIP,
+        /** S1 FixBugs=0 omits $2B and leaves the jingle's DAC mode active. */
+        PRESERVE_OVERRIDE_DAC_MODE
+    }
+
+    @com.openggf.game.ModApi
+    public enum FadeInChannelPolicy {
+        ALL_NON_DAC,
+        /** S3K zDoMusicFadeIn changes FM volume only. */
+        FM_ONLY
+    }
+
+    /** Hardware mute/restore sequence selected by the retail sound driver. */
+    @com.openggf.game.ModApi
+    public enum PausePolicy {
+        /** Compatibility default for custom data without a driver contract. */
+        NONE,
+        /** S1 68k PauseMusic: pan/key-off FM1-6 and restore pan only. */
+        S1_PAN_KEYOFF,
+        /** S2 zPauseMusic: destructive FM silence and voice reload. */
+        S2_SILENCE_RELOAD,
+        /** S3K zPauseAudio: preserve FM6/DAC and use the shipped resume loop. */
+        S3K_FM1_TO_5
+    }
+
+    /** Driver-owned request transform applied before an SFX starts. */
+    @com.openggf.game.ModApi
+    public enum SfxRequestTransformPolicy {
+        NONE,
+        /** Sonic 2's shipped E0 spindash-rev semitone ladder and timeout. */
+        SONIC2_SPINDASH_REV
+    }
+
+    /** Exact shipped-driver sequence used to upload a 25-byte FM voice. */
+    @com.openggf.game.ModApi
+    public enum FmVoiceWriteProfile {
+        /** Sonic 1's 68k SetVoice routine. */
+        S1_68K,
+        /** Sonic 2's Z80 zSetVoice routine. */
+        S2_Z80,
+        /** Sonic 3 & Knuckles' Z80 zSendFMInstrument routine. */
+        S3K_Z80
+    }
+
     // -----------------------------------------------------------------------
     // Default constants shared across all three games (S1, S2, S3K)
     // -----------------------------------------------------------------------
@@ -83,12 +241,34 @@ public final class SmpsSequencerConfig {
     private final int[] fmChannelOrder;
     private final int[] psgChannelOrder;
     private final TempoMode tempoMode;
+    private final PalServicePolicy palServicePolicy;
+    private final TempoPhasePolicy tempoPhasePolicy;
+    private final SfxPriorityPolicy sfxPriorityPolicy;
+    private final DriverServiceOrder driverServiceOrder;
+    private final SfxStartTiming sfxStartTiming;
     private final Map<Integer, Integer> coordFlagParamOverrides;
     private final boolean applyModOnNote;
     private final boolean halveModSteps;
     private final Set<Integer> extraTrkEndFlags;
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
-    private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
+    private final boolean direct68kDriver;
+    private final FmSfxTakeoverMode fmSfxTakeoverMode;
+    private final FmSfxReleaseMode fmSfxReleaseMode;
+    private final PsgSfxReleaseMode psgSfxReleaseMode;
+    private final FadeOutChannelPolicy fadeOutChannelPolicy;
+    private final MusicOverrideSpeedPolicy musicOverrideSpeedPolicy;
+    private final MusicOverrideRestorePolicy musicOverrideRestorePolicy;
+    private final MusicOverridePriorityPolicy musicOverridePriorityPolicy;
+    private final MusicOverrideSfxReleasePolicy musicOverrideSfxReleasePolicy;
+    private final MusicOverrideDacRestorePolicy musicOverrideDacRestorePolicy;
+    private final FadeInChannelPolicy fadeInChannelPolicy;
+    private final PausePolicy pausePolicy;
+    private final SfxRequestTransformPolicy sfxRequestTransformPolicy;
+    private final boolean fadeOutClearsSpeedShoes;
+    private final boolean fadeOutStopsSfxImmediately;
+    private final boolean blocksSfxDuringFadeOut;
+    private final FmVoiceWriteProfile fmVoiceWriteProfile;
+    private final YmServiceTimingProfile ymServiceTimingProfile;
 
     // --- S3K-specific config fields ---
     private final VolMode volMode;
@@ -111,6 +291,11 @@ public final class SmpsSequencerConfig {
         this.fmChannelOrder = Arrays.copyOf(b.fmChannelOrder, b.fmChannelOrder.length);
         this.psgChannelOrder = Arrays.copyOf(b.psgChannelOrder, b.psgChannelOrder.length);
         this.tempoMode = b.tempoMode;
+        this.palServicePolicy = b.palServicePolicy;
+        this.tempoPhasePolicy = b.tempoPhasePolicy;
+        this.sfxPriorityPolicy = b.sfxPriorityPolicy;
+        this.driverServiceOrder = b.driverServiceOrder;
+        this.sfxStartTiming = b.sfxStartTiming;
         this.coordFlagParamOverrides = (b.coordFlagParamOverrides != null)
                 ? Collections.unmodifiableMap(new HashMap<>(b.coordFlagParamOverrides))
                 : Collections.emptyMap();
@@ -120,7 +305,24 @@ public final class SmpsSequencerConfig {
                 ? Collections.unmodifiableSet(b.extraTrkEndFlags)
                 : Collections.emptySet();
         this.relativePointers = b.relativePointers;
-        this.tempoOnFirstTick = b.tempoOnFirstTick;
+        this.direct68kDriver = b.direct68kDriver;
+        this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
+        this.fmSfxReleaseMode = b.fmSfxReleaseMode;
+        this.psgSfxReleaseMode = b.psgSfxReleaseMode;
+        this.fadeOutChannelPolicy = b.fadeOutChannelPolicy;
+        this.musicOverrideSpeedPolicy = b.musicOverrideSpeedPolicy;
+        this.musicOverrideRestorePolicy = b.musicOverrideRestorePolicy;
+        this.musicOverridePriorityPolicy = b.musicOverridePriorityPolicy;
+        this.musicOverrideSfxReleasePolicy = b.musicOverrideSfxReleasePolicy;
+        this.musicOverrideDacRestorePolicy = b.musicOverrideDacRestorePolicy;
+        this.fadeInChannelPolicy = b.fadeInChannelPolicy;
+        this.pausePolicy = b.pausePolicy;
+        this.sfxRequestTransformPolicy = b.sfxRequestTransformPolicy;
+        this.fadeOutClearsSpeedShoes = b.fadeOutClearsSpeedShoes;
+        this.fadeOutStopsSfxImmediately = b.fadeOutStopsSfxImmediately;
+        this.blocksSfxDuringFadeOut = b.blocksSfxDuringFadeOut;
+        this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
+        this.ymServiceTimingProfile = b.ymServiceTimingProfile;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
         this.noteOnPrevent = b.noteOnPrevent;
@@ -149,8 +351,44 @@ public final class SmpsSequencerConfig {
         return Arrays.copyOf(psgChannelOrder, psgChannelOrder.length);
     }
 
+    int fmChannelCount() {
+        return fmChannelOrder.length;
+    }
+
+    int fmChannelAt(int index) {
+        return fmChannelOrder[index];
+    }
+
+    int psgChannelCount() {
+        return psgChannelOrder.length;
+    }
+
+    int psgChannelAt(int index) {
+        return psgChannelOrder[index];
+    }
+
     public TempoMode getTempoMode() {
         return tempoMode;
+    }
+
+    public PalServicePolicy getPalServicePolicy() {
+        return palServicePolicy;
+    }
+
+    public TempoPhasePolicy getTempoPhasePolicy() {
+        return tempoPhasePolicy;
+    }
+
+    public SfxPriorityPolicy getSfxPriorityPolicy() {
+        return sfxPriorityPolicy;
+    }
+
+    public DriverServiceOrder getDriverServiceOrder() {
+        return driverServiceOrder;
+    }
+
+    public SfxStartTiming getSfxStartTiming() {
+        return sfxStartTiming;
     }
 
     /**
@@ -172,7 +410,7 @@ public final class SmpsSequencerConfig {
 
     /**
      * Whether to halve the modulation step count on load.
-     * Z80 driver (S2): true (srl a). 68k driver (S1): false.
+     * Both the S1 68k and S2 Z80 drivers shift the raw count once.
      */
     public boolean isHalveModSteps() {
         return halveModSteps;
@@ -195,13 +433,45 @@ public final class SmpsSequencerConfig {
         return relativePointers;
     }
 
-    /**
-     * Whether to process tempo on the very first frame.
-     * S1 (DOTEMPO): true — first frame goes through processTempoFrame().
-     * S2 (PlayMusic): false — first frame calls tick() directly, bypassing tempo.
-     */
-    public boolean isTempoOnFirstTick() {
-        return tempoOnFirstTick;
+    /** Whether playback follows the direct 68k chip-write/update contract. */
+    public boolean isDirect68kDriver() {
+        return direct68kDriver;
+    }
+
+    public FmSfxTakeoverMode getFmSfxTakeoverMode() {
+        return fmSfxTakeoverMode;
+    }
+
+    public FmSfxReleaseMode getFmSfxReleaseMode() {
+        return fmSfxReleaseMode;
+    }
+
+    public PsgSfxReleaseMode getPsgSfxReleaseMode() {
+        return psgSfxReleaseMode;
+    }
+
+    public FadeOutChannelPolicy getFadeOutChannelPolicy() {
+        return fadeOutChannelPolicy;
+    }
+
+    public boolean isFadeOutClearsSpeedShoes() {
+        return fadeOutClearsSpeedShoes;
+    }
+
+    public boolean isFadeOutStopsSfxImmediately() {
+        return fadeOutStopsSfxImmediately;
+    }
+
+    public boolean blocksSfxDuringFadeOut() {
+        return blocksSfxDuringFadeOut;
+    }
+
+    public FmVoiceWriteProfile getFmVoiceWriteProfile() {
+        return fmVoiceWriteProfile;
+    }
+
+    public YmServiceTimingProfile getYmServiceTimingProfile() {
+        return ymServiceTimingProfile;
     }
 
     /** Volume mode: ALGO (S1/S2) or BIT7 (S3K). */
@@ -254,13 +524,45 @@ public final class SmpsSequencerConfig {
         return fadeInDelay;
     }
 
+    public MusicOverrideSpeedPolicy getMusicOverrideSpeedPolicy() {
+        return musicOverrideSpeedPolicy;
+    }
+
+    public MusicOverrideRestorePolicy getMusicOverrideRestorePolicy() {
+        return musicOverrideRestorePolicy;
+    }
+
+    public MusicOverridePriorityPolicy getMusicOverridePriorityPolicy() {
+        return musicOverridePriorityPolicy;
+    }
+
+    public MusicOverrideSfxReleasePolicy getMusicOverrideSfxReleasePolicy() {
+        return musicOverrideSfxReleasePolicy;
+    }
+
+    public MusicOverrideDacRestorePolicy getMusicOverrideDacRestorePolicy() {
+        return musicOverrideDacRestorePolicy;
+    }
+
+    public FadeInChannelPolicy getFadeInChannelPolicy() {
+        return fadeInChannelPolicy;
+    }
+
+    public PausePolicy getPausePolicy() {
+        return pausePolicy;
+    }
+
+    public SfxRequestTransformPolicy getSfxRequestTransformPolicy() {
+        return sfxRequestTransformPolicy;
+    }
+
     // -----------------------------------------------------------------------
     // Builder
     // -----------------------------------------------------------------------
 
     /**
-     * Builder for SmpsSequencerConfig with S2-compatible defaults.
-     * Use this for S3K and other configs that need the new fields.
+     * Builder with legacy-compatible defaults. Production game configs must
+     * select their explicit scheduler, PAL-service, and tempo-phase policies.
      */
     @com.openggf.game.ModApi
     public static final class Builder {
@@ -270,14 +572,49 @@ public final class SmpsSequencerConfig {
         private int[] fmChannelOrder = DEFAULT_FM_CHANNEL_ORDER;
         private int[] psgChannelOrder = DEFAULT_PSG_CHANNEL_ORDER;
 
-        // S2-compatible defaults
+        // Legacy-compatible defaults; production profiles override policies.
         private TempoMode tempoMode = TempoMode.OVERFLOW2;
+        private PalServicePolicy palServicePolicy = PalServicePolicy.LEGACY_TEMPO_SCALE;
+        private TempoPhasePolicy tempoPhasePolicy = TempoPhasePolicy.PRESERVE;
+        private SfxPriorityPolicy sfxPriorityPolicy = SfxPriorityPolicy.NONE;
+        private DriverServiceOrder driverServiceOrder =
+                DriverServiceOrder.MUSIC_THEN_SFX;
+        private SfxStartTiming sfxStartTiming =
+                SfxStartTiming.SAME_DRIVER_UPDATE;
         private Map<Integer, Integer> coordFlagParamOverrides = null;
         private boolean applyModOnNote = true;
         private boolean halveModSteps = true;
         private Set<Integer> extraTrkEndFlags = null;
         private boolean relativePointers = false;
-        private boolean tempoOnFirstTick = false;
+        private boolean direct68kDriver = false;
+        private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
+        private FmSfxReleaseMode fmSfxReleaseMode =
+                FmSfxReleaseMode.FORCE_SILENCE_THEN_RESTORE;
+        private PsgSfxReleaseMode psgSfxReleaseMode =
+                PsgSfxReleaseMode.RESTORE_LIVE_STATE;
+        private FadeOutChannelPolicy fadeOutChannelPolicy =
+                FadeOutChannelPolicy.FADE_FM_AND_PSG;
+        private MusicOverrideSpeedPolicy musicOverrideSpeedPolicy =
+                MusicOverrideSpeedPolicy.INHERIT_CURRENT;
+        private MusicOverrideRestorePolicy musicOverrideRestorePolicy =
+                MusicOverrideRestorePolicy.IMMEDIATE;
+        private MusicOverridePriorityPolicy musicOverridePriorityPolicy =
+                MusicOverridePriorityPolicy.CLEAR_BEFORE_SAVE;
+        private MusicOverrideSfxReleasePolicy musicOverrideSfxReleasePolicy =
+                MusicOverrideSfxReleasePolicy.AFTER_FADE_IN;
+        private MusicOverrideDacRestorePolicy musicOverrideDacRestorePolicy =
+                MusicOverrideDacRestorePolicy.RESTORE_SAVED_CHIP;
+        private FadeInChannelPolicy fadeInChannelPolicy =
+                FadeInChannelPolicy.ALL_NON_DAC;
+        private PausePolicy pausePolicy = PausePolicy.NONE;
+        private SfxRequestTransformPolicy sfxRequestTransformPolicy =
+                SfxRequestTransformPolicy.NONE;
+        private boolean fadeOutClearsSpeedShoes;
+        private boolean fadeOutStopsSfxImmediately;
+        private boolean blocksSfxDuringFadeOut;
+        private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
+        private YmServiceTimingProfile ymServiceTimingProfile =
+                YmServiceTimingProfile.none();
 
         // S3K-specific defaults (S2 compatible)
         private VolMode volMode = VolMode.ALGO;
@@ -296,12 +633,34 @@ public final class SmpsSequencerConfig {
         public Builder fmChannelOrder(int[] val) { fmChannelOrder = val; return this; }
         public Builder psgChannelOrder(int[] val) { psgChannelOrder = val; return this; }
         public Builder tempoMode(TempoMode val) { tempoMode = val; return this; }
+        public Builder palServicePolicy(PalServicePolicy val) { palServicePolicy = val; return this; }
+        public Builder tempoPhasePolicy(TempoPhasePolicy val) { tempoPhasePolicy = val; return this; }
+        public Builder sfxPriorityPolicy(SfxPriorityPolicy val) { sfxPriorityPolicy = val; return this; }
+        public Builder driverServiceOrder(DriverServiceOrder val) { driverServiceOrder = val; return this; }
+        public Builder sfxStartTiming(SfxStartTiming val) { sfxStartTiming = val; return this; }
         public Builder coordFlagParamOverrides(Map<Integer, Integer> val) { coordFlagParamOverrides = val; return this; }
         public Builder applyModOnNote(boolean val) { applyModOnNote = val; return this; }
         public Builder halveModSteps(boolean val) { halveModSteps = val; return this; }
         public Builder extraTrkEndFlags(Set<Integer> val) { extraTrkEndFlags = val; return this; }
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
-        public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
+        public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
+        public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
+        public Builder fmSfxReleaseMode(FmSfxReleaseMode val) { fmSfxReleaseMode = val; return this; }
+        public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }
+        public Builder fadeOutChannelPolicy(FadeOutChannelPolicy val) { fadeOutChannelPolicy = val; return this; }
+        public Builder musicOverrideSpeedPolicy(MusicOverrideSpeedPolicy val) { musicOverrideSpeedPolicy = val; return this; }
+        public Builder musicOverrideRestorePolicy(MusicOverrideRestorePolicy val) { musicOverrideRestorePolicy = val; return this; }
+        public Builder musicOverridePriorityPolicy(MusicOverridePriorityPolicy val) { musicOverridePriorityPolicy = val; return this; }
+        public Builder musicOverrideSfxReleasePolicy(MusicOverrideSfxReleasePolicy val) { musicOverrideSfxReleasePolicy = val; return this; }
+        public Builder musicOverrideDacRestorePolicy(MusicOverrideDacRestorePolicy val) { musicOverrideDacRestorePolicy = val; return this; }
+        public Builder fadeInChannelPolicy(FadeInChannelPolicy val) { fadeInChannelPolicy = val; return this; }
+        public Builder pausePolicy(PausePolicy val) { pausePolicy = val; return this; }
+        public Builder sfxRequestTransformPolicy(SfxRequestTransformPolicy val) { sfxRequestTransformPolicy = val; return this; }
+        public Builder fadeOutClearsSpeedShoes(boolean val) { fadeOutClearsSpeedShoes = val; return this; }
+        public Builder fadeOutStopsSfxImmediately(boolean val) { fadeOutStopsSfxImmediately = val; return this; }
+        public Builder blocksSfxDuringFadeOut(boolean val) { blocksSfxDuringFadeOut = val; return this; }
+        public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
+        public Builder ymServiceTimingProfile(YmServiceTimingProfile val) { ymServiceTimingProfile = Objects.requireNonNull(val, "val"); return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
         public Builder noteOnPrevent(NoteOnPrevent val) { noteOnPrevent = val; return this; }
@@ -318,6 +677,24 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(fmChannelOrder, "fmChannelOrder");
             Objects.requireNonNull(psgChannelOrder, "psgChannelOrder");
             Objects.requireNonNull(tempoMode, "tempoMode");
+            Objects.requireNonNull(palServicePolicy, "palServicePolicy");
+            Objects.requireNonNull(tempoPhasePolicy, "tempoPhasePolicy");
+            Objects.requireNonNull(sfxPriorityPolicy, "sfxPriorityPolicy");
+            Objects.requireNonNull(driverServiceOrder, "driverServiceOrder");
+            Objects.requireNonNull(sfxStartTiming, "sfxStartTiming");
+            Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
+            Objects.requireNonNull(fmSfxReleaseMode, "fmSfxReleaseMode");
+            Objects.requireNonNull(psgSfxReleaseMode, "psgSfxReleaseMode");
+            Objects.requireNonNull(fadeOutChannelPolicy, "fadeOutChannelPolicy");
+            Objects.requireNonNull(musicOverrideSpeedPolicy, "musicOverrideSpeedPolicy");
+            Objects.requireNonNull(musicOverrideRestorePolicy, "musicOverrideRestorePolicy");
+            Objects.requireNonNull(musicOverridePriorityPolicy, "musicOverridePriorityPolicy");
+            Objects.requireNonNull(musicOverrideSfxReleasePolicy, "musicOverrideSfxReleasePolicy");
+            Objects.requireNonNull(musicOverrideDacRestorePolicy, "musicOverrideDacRestorePolicy");
+            Objects.requireNonNull(fadeInChannelPolicy, "fadeInChannelPolicy");
+            Objects.requireNonNull(pausePolicy, "pausePolicy");
+            Objects.requireNonNull(sfxRequestTransformPolicy, "sfxRequestTransformPolicy");
+            Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);
         }
     }

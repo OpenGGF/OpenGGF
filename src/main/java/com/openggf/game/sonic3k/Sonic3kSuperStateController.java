@@ -70,6 +70,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
     /** Tails also advances the shared Super-Sonic/Flicky palette in parallel. */
     private int superTailsCompanionPaletteFrame;
     private int superTailsCompanionPaletteTimer;
+    private boolean transformationPaletteAdvancedThisFrame;
     private byte[] savedNormalPalette;
     private byte[] savedNormalUnderwaterPalette;
 
@@ -125,6 +126,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
         transformFramesRemaining = 0;
         superTailsCompanionPaletteFrame = 0;
         superTailsCompanionPaletteTimer = 0;
+        transformationPaletteAdvancedThisFrame = false;
         activeFormTier = S3kFormTier.NORMAL;
         if (wallQuake != null) {
             wallQuake.restore(new HyperKnucklesWallQuake.Snapshot(0));
@@ -191,6 +193,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
         superTailsCompanionPaletteFrame =
                 (companionState & 0xF) * BYTES_PER_FRAME;
         superTailsCompanionPaletteTimer = (companionState >>> 4) & 0xF;
+        transformationPaletteAdvancedThisFrame = false;
         configurePaletteForActiveTier();
         paletteFrame = rewindState.paletteFrame();
         reconcileRewindPresentation(rewindState.state());
@@ -249,6 +252,14 @@ public class Sonic3kSuperStateController extends SuperStateController {
     @Override
     protected int getRingDrainInterval() {
         return Sonic3kConstants.SUPER_SONIC_RING_DRAIN_INTERVAL;
+    }
+
+    @Override
+    protected int getInitialRingDrainCounter() {
+        // Sonic_Transform, Tails_Transform and Knux_Transform each write 60 to
+        // Super_frame_count before setting the powered-form flag
+        // (sonic3k.asm:23487-23498,28673-28680,32592-32603).
+        return getRingDrainInterval();
     }
 
     @Override
@@ -540,6 +551,11 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected boolean updateTransformationAnimation() {
+        // SuperHyper_PalCycle is a separate ROM routine from
+        // SonicKnux_SuperHyper. This method owns its one palette pass for the
+        // transformation tick; updateSuperPalette must not run it again after
+        // the base controller advances TRANSFORMING to SUPER.
+        transformationPaletteAdvancedThisFrame = true;
         if (!usesSonicFormPresentation()) {
             applyPaletteFrame(paletteFrame);
             advanceActivePaletteFrame();
@@ -589,6 +605,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected void updateSuperPalette() {
+        if (transformationPaletteAdvancedThisFrame) {
+            transformationPaletteAdvancedThisFrame = false;
+            return;
+        }
         var paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
         if (paletteRegistry != null && paletteRegistry.isPaletteRotationDisabled()) {
             return;

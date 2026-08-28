@@ -164,7 +164,7 @@ public class Sonic1SfxData extends AbstractSmpsData implements SmpsSfxData {
         }
 
         // S1 voice bytes per 4-byte group are in order Op4,Op3,Op2,Op1 (InsMode=DEFAULT).
-        // The engine expects S2 order: Op4,Op2,Op3,Op1.
+        // The S1 sequencer profile consumes normalized order: Op4,Op2,Op3,Op1.
         // Convert by swapping the middle two bytes in each group.
         byte[] voice = new byte[stride];
         System.arraycopy(data, offset, voice, 0, stride);

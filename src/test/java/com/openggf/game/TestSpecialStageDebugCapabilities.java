@@ -17,9 +17,9 @@ class TestSpecialStageDebugCapabilities {
     }
 
     @Test
-    void sonic2KeepsItsSpritePlaneAlignmentAndLagTools() {
+    void sonic2AdvertisesSpritePlaneAndAlignmentToolsWithoutALiveLagModel() {
         assertEquals(
-                new SpecialStageDebugCapabilities(false, false, false, true, true, true, true),
+                new SpecialStageDebugCapabilities(false, false, false, true, true, true, false),
                 new Sonic2SpecialStageProvider().debugCapabilities());
     }
 

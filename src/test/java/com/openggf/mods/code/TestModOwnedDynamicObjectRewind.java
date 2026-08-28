@@ -16,6 +16,7 @@ import com.openggf.mods.ModRepositoryScanner;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModState;
 import com.openggf.mods.ModStateSaveResult;
+import com.openggf.tests.TestSessionOutputPaths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -119,7 +120,8 @@ class TestModOwnedDynamicObjectRewind {
 
     private static void compileJava(Path source, Path output) {
         List<String> arguments = new ArrayList<>(List.of("--release", "21", "-classpath",
-                Path.of("target/classes").toAbsolutePath().toString(), "-d", output.toString(),
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
+                "-d", output.toString(),
                 source.toString()));
         int exit = ToolProvider.getSystemJavaCompiler().run(
                 null, null, null, arguments.toArray(String[]::new));

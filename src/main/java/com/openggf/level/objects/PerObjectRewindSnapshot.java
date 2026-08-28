@@ -335,6 +335,7 @@ public record PerObjectRewindSnapshot(
             boolean skipPhysicsThisFrame,
             boolean deadOnObjectReenteredVisibleWindow,
             boolean deferredDespawnDeadFallContinuingThisFrame,
+            boolean levelStartLeaderHistoryPrefillPending,
             boolean bootstrapPreludePlacementApplied,
             boolean cpuFrameCounterFromStoredLevelFrame,
             int nextCpuFrameCounterOverride,
@@ -355,7 +356,9 @@ public record PerObjectRewindSnapshot(
             short mgzReleasedChaseYAccel,
             int flightTimer,
             int catchUpTargetX,
-            int catchUpTargetY
+            int catchUpTargetY,
+            boolean initialPresentationSuppressed,
+            boolean initialPresentationWasHidden
     ) {}
 
     /**
@@ -408,7 +411,8 @@ public record PerObjectRewindSnapshot(
             boolean dead, boolean drowningDeath, int drownPreDeathTimer,
             boolean hurt, int deathCountdown, boolean deathRestartRoutineActive,
             int invulnerableFrames, boolean suppressNextInvulnerabilityDecrement,
-            boolean invulnerabilityDisplayTimerDecrementedThisFrame, int invincibleFrames,
+            boolean invulnerabilityDisplayTimerDecrementedThisFrame,
+            boolean hurtRoutineOwnedDisplayThisFrame, int invincibleFrames,
             // Player abilities
             boolean spindash, short spindashCounter,
             boolean crouching, boolean lookingUp, short lookDelayCounter,

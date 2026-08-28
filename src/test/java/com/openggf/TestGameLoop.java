@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.mockito.InOrder;
 import com.openggf.control.GamepadInputManager;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
@@ -16,6 +17,7 @@ import com.openggf.configuration.FrameRateResolver;
 import com.openggf.game.DataSelectProvider;
 import com.openggf.game.dataselect.DataSelectAction;
 import com.openggf.game.dataselect.DataSelectActionType;
+import com.openggf.game.dataselect.DataSelectExitTransition;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
@@ -1303,9 +1305,42 @@ public class TestGameLoop {
         assertNotNull(handled.get());
         assertEquals(DataSelectActionType.LOAD_SLOT, handled.get().type());
         assertEquals(2, handled.get().slot());
-        verify(fadeManager).startFadeFromBlack(any());
+        verify(fadeManager).startFadeFromBlack(isNull(), eq(0));
         assertEquals(com.openggf.game.DataSelectProvider.State.INACTIVE, provider.getState(),
                 "Data Select should reset only after the fade callback runs");
+    }
+
+    @Test
+    void testExitDataSelectRunsHostTransitionAudioBeforeTheRomVisualFade() throws Exception {
+        DataSelectExitTransition transition = new DataSelectExitTransition(0xAF, 0x28, 6, 1);
+        StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
+                DataSelectActionType.LOAD_SLOT, 2, 0, 0,
+                new SelectedTeam("sonic", List.of())), transition);
+        GameModule module = neutralGameModule();
+        when(module.getDataSelectProvider()).thenReturn(provider);
+        SessionManager.openGameplaySession(module);
+
+        AudioManager audio = mock(AudioManager.class);
+        FadeManager fade = mock(FadeManager.class);
+        setPrivateField(gameLoop, "audioManager", audio);
+        setPrivateField(gameLoop, "fadeManager", fade);
+        AtomicReference<Runnable> fadeCallback = new AtomicReference<>();
+        doAnswer(invocation -> {
+            fadeCallback.set(invocation.getArgument(0));
+            return null;
+        }).when(fade).startFadeToBlack(any());
+        gameLoop.setDataSelectActionHandler(action -> { });
+
+        invokePrivateMethod(gameLoop, "exitDataSelect");
+
+        InOrder order = inOrder(audio, fade);
+        order.verify(audio).playSfx(0xAF);
+        order.verify(audio).fadeOutMusic(0x28, 6);
+        order.verify(fade).startFadeToBlack(any());
+
+        assertNotNull(fadeCallback.get());
+        fadeCallback.get().run();
+        verify(fade).startFadeFromBlack(isNull(), eq(1));
     }
 
     @Test
@@ -1354,7 +1389,7 @@ public class TestGameLoop {
         assertEquals(com.openggf.game.DataSelectProvider.State.ACTIVE, provider.getState(),
                 "Data Select should remain active instead of resetting inactive on launch failure");
         assertEquals("Unable to load selected save.", provider.launchErrorMessage().orElseThrow());
-        verify(fadeManager).startFadeFromBlack(any());
+        verify(fadeManager).startFadeFromBlack(isNull(), eq(0));
     }
 
     @Test
@@ -2499,9 +2534,21 @@ public class TestGameLoop {
     }
 
     private static final class StubDataSelectProvider extends com.openggf.game.dataselect.AbstractDataSelectProvider {
+        private final DataSelectExitTransition exitTransition;
+
         private StubDataSelectProvider(DataSelectAction action) {
+            this(action, DataSelectExitTransition.defaultTransition());
+        }
+
+        private StubDataSelectProvider(DataSelectAction action, DataSelectExitTransition exitTransition) {
             this.pendingAction = action;
             this.state = State.EXITING;
+            this.exitTransition = exitTransition;
+        }
+
+        @Override
+        public DataSelectExitTransition exitTransition() {
+            return exitTransition;
         }
 
         @Override

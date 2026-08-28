@@ -1,5 +1,7 @@
 package com.openggf.game.rewind;
 
+import com.openggf.tests.TestSessionOutputPaths;
+
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
@@ -142,6 +144,9 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic2.objects.MCZBrickObjectInstance$MCZBrickDisplayChild",
                     "TestS2MczBrickDisplayChildGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic2.objects.BridgeSegmentObjectInstance",
+                    "TestS2BridgeSegmentGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance",
                     "TestS1BadnikChildGraphRewind"),
@@ -1285,7 +1290,8 @@ public final class RewindRoundTripHarness {
 
     private static SonicConfigurationService createDefaultConfiguration() {
         SonicConfigurationService config =
-                SonicConfigurationService.createStandalone(Path.of("target", "rewind-harness-config"));
+                SonicConfigurationService.createStandalone(
+                        TestSessionOutputPaths.diagnostics("rewind").resolve("rewind-harness-config"));
         config.resetToDefaults();
         return config;
     }

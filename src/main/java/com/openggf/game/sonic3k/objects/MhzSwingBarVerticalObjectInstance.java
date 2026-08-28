@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -31,7 +32,23 @@ import java.util.Map;
  * horizontal auto-release path.
  */
 public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_MHZSwingBarVertical} is installed from the S3K object pointer table at
+     * {@code $0003F05A} (table read from the user-supplied ROM; the
+     * label is defined at docs/skdisasm/sonic3k.asm:83549).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0003}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0003;
+    }
+
     private static final int PRIORITY_BUCKET = 1;
     private static final int HALF_WIDTH = 4;
     private static final int HALF_HEIGHT = 0x20;

@@ -55,6 +55,8 @@ public record GameRules(
                     false,
                     // waterVelocityChangeGatedByObjectControl: S1 Sonic_Water has no object_control test
                     false
+            ,
+                    false
             ),
             new PlayerCapabilityRules(
                     false,
@@ -159,9 +161,11 @@ public record GameRules(
                     true
             ),
             new PowerUpRules(
-                    0,
+                    1,
                     6,
                     8,
+                    12,
+                    -1,
                     1,
                     false,
                     false,
@@ -200,6 +204,8 @@ public record GameRules(
                     true,
                     // waterVelocityChangeGatedByObjectControl: S2 Obj01_InWater has no object_control test
                     false
+            ,
+                    true
             ),
             new PlayerCapabilityRules(
                     true,
@@ -240,7 +246,14 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    false,
+                    // Sonic_CheckFloor hands FindFloor the shared Primary_Angle /
+                    // Secondary_Angle bytes exactly as the grounded AnglePos path
+                    // does (s2.asm:44035-44068), and both character tails copy them
+                    // into next_tilt / tilt unconditionally every frame -- Obj01 at
+                    // s2.asm:36252-36253, Obj02 at s2.asm:38987-38988. A landing
+                    // frame therefore publishes fresh angles for either character,
+                    // the same shape S3K already models.
+                    true,
                     TailsTailPushDetection.STATUS_BIT_ONLY
             ),
             new CameraRules(
@@ -307,6 +320,8 @@ public record GameRules(
                     1,
                     134,
                     136,
+                    -1,
+                    129,
                     1,
                     true,
                     true,
@@ -344,6 +359,8 @@ public record GameRules(
                     // tailsRollSpeedUsesEffectiveDecelQuarter: S3K Tails_RollSpeed is flat $20
                     false,
                     // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22235, :27448
+                    true
+            ,
                     true
             ),
             new PlayerCapabilityRules(
@@ -453,6 +470,8 @@ public record GameRules(
                     0,
                     100,
                     102,
+                    -1,
+                    96,
                     8,
                     true,
                     true,

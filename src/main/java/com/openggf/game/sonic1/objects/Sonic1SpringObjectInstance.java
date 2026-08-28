@@ -43,6 +43,13 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
 
     private static final int TYPE_UP = 0;
     private static final int TYPE_HORIZONTAL = 1;
+
+    // Spring_Main: move.b #32/2,obActWid(a0) (41 Springs.asm:45), kept by the
+    // upright and downward springs.
+    private static final int DEFAULT_ACT_WIDTH = 0x10;
+
+    // Spring_Main sideways branch: move.b #16/2,obActWid(a0) (41 Springs.asm:56).
+    private static final int SIDEWAYS_ACT_WIDTH = 0x08;
     private static final int TYPE_DOWN = 2;
 
     // Spring_Powers: dc.w -$1000, -$A00
@@ -290,6 +297,11 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         }
 
         // ROM: bclr #5,obStatus(a0) / bclr #5,obStatus(a1) — clear pushing flags
+        // (docs/s1disasm/_incObj/41 Springs.asm:154-156). The first bclr is the
+        // SPRING's own pushed flag; clearing it is what stops the next frame's
+        // Solid_NoCollision `btst #5,obStatus(a0)` (sub SolidObject.asm:243-263)
+        // from passing.
+        services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
 
         triggerSpring();
@@ -322,6 +334,35 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         }
         // Spring_Up / Spring_Dwn: d1=$1B (27), d2=8, d3=$10 (16)
         return SolidObjectParams.of(27, 8, 16);
+    }
+
+    /**
+     * Obj41's ROM {@code obActWid}, which the sideways variant narrows.
+     *
+     * <p>{@code Spring_Main} writes {@code move.b #32/2,obActWid(a0)} = 16 for
+     * every spring and then, on the {@code btst #4,d0} sideways branch that also
+     * selects the {@code Spring_LR} routine, overwrites it with
+     * {@code move.b #16/2,obActWid(a0)} = 8
+     * (docs/s1disasm/_incObj/41 Springs.asm:45,49-56). The downward branch does
+     * not touch it, so only the left/right spring differs from the shared
+     * default. The discriminator is the same subtype bit the class already reads
+     * to pick {@link #TYPE_HORIZONTAL}.
+     *
+     * <p>Supplied here rather than at {@link #getBalanceWidthPixels()} because
+     * both ROM consumers want the byte: {@code BuildSprites}' horizontal cull
+     * (docs/s1disasm/_inc/BuildSprites.asm:49-58) and {@code Sonic_Balance}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:423). Springs are full-solid, so the
+     * balance accessor inherits this one. {@code Spring_LR}'s separately
+     * authored {@code d1 = #16/2+sonic_solid_width} = {@code $13} at
+     * {@code :117} is unchanged.
+     *
+     * <p>Without the override the inherited 16 balanced only beyond 12px from
+     * centre on a top surface reaching 19px, where the ROM balances beyond 4px
+     * -- almost all of it.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return springType == TYPE_HORIZONTAL ? SIDEWAYS_ACT_WIDTH : DEFAULT_ACT_WIDTH;
     }
 
     @Override

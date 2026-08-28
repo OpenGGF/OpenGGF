@@ -53,7 +53,7 @@ class TestSonic3kSmpsMetaCommandOperands {
         SmpsSequencer sequencer = sequencerWithSingleFm(
                 new byte[] {(byte) 0xFF, 0x01, (byte) 0xA4, (byte) 0xF2});
 
-        sequencer.read(new short[0]);
+        serviceNextDriverUpdate(sequencer);
         audio.presentFrame(PresentationMode.SILENT);
 
         SmpsSequencer.Track fm = fmTrack(sequencer, 0);
@@ -80,7 +80,7 @@ class TestSonic3kSmpsMetaCommandOperands {
         data[0x61] = 0x7F;
         SmpsSequencer sequencer = sequencer(data);
 
-        sequencer.read(new short[0]);
+        serviceNextDriverUpdate(sequencer);
 
         SmpsSequencer.Track commandTrack = fmTrack(sequencer, 0);
         assertFalse(commandTrack.active);
@@ -106,11 +106,12 @@ class TestSonic3kSmpsMetaCommandOperands {
         data[0x70] = (byte) 0x81;
         SmpsSequencer sequencer = sequencer(data);
 
-        sequencer.read(new short[0]);
+        serviceNextDriverUpdate(sequencer);
 
-        assertEquals(0xF2, sequencer.getData()[0x45] & 0xFF,
+        assertEquals(0xF2, sequencer.programView().dataByteAt(0x45) & 0xFF,
                 "syntax-only FF 03 must not copy into sequence memory");
-        assertNotEquals(sequencer.getData()[0x70], sequencer.getData()[0x45],
+        assertNotEquals(sequencer.programView().dataByteAt(0x70),
+                sequencer.programView().dataByteAt(0x45),
                 "the unchanged destination must remain distinct from the source byte");
         SmpsSequencer.Track fm = fmTrack(sequencer, 0);
         assertFalse(fm.active);
@@ -150,6 +151,10 @@ class TestSonic3kSmpsMetaCommandOperands {
                 .filter(track -> track.type == SmpsSequencer.TrackType.FM
                         && track.channelId == channelId)
                 .findFirst().orElseThrow();
+    }
+
+    private static void serviceNextDriverUpdate(SmpsSequencer sequencer) {
+        sequencer.advanceBatch(sequencer.getSamplesUntilNextDriverService());
     }
 
     private static void setLe16(byte[] data, int offset, int value) {

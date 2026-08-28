@@ -269,11 +269,16 @@ public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
         chainLinkChildren = new SwingChainLinkChild[count];
         for (int i = 0; i < count; i++) {
             final int idx = i;
-            chainLinkChildren[i] = spawnFreeChild(() -> new SwingChainLinkChild(
+            SwingChainLinkChild child = spawnFreeChild(() -> new SwingChainLinkChild(
                     baseX, baseY, artKey, linkFrame[idx], priority));
-            if (chainLinkChildren[i] != null) {
-                chainLinkChildren[i].setLinkPosition(linkX[i], linkY[i]);
+            if (child == null || child.isDestroyed()) {
+                // Shipped REV01 uses FixBugs=0, so Swing_CreateLinks calls
+                // FindFreeObj and aborts the loop when object RAM is full. The
+                // fixed branch would use FindNextFreeObj instead.
+                break;
             }
+            chainLinkChildren[i] = child;
+            child.setLinkPosition(linkX[i], linkY[i]);
         }
     }
 

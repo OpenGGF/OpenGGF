@@ -228,6 +228,11 @@ public enum SonicConfiguration {
 	PSG_NOISE_SHIFT_EVERY_TOGGLE,
 
 	/**
+	 * Persisted one-time migration marker for the reference audio defaults.
+	 */
+	AUDIO_REFERENCE_DEFAULTS_VERSION,
+
+	/**
 	 * Whether to mute FM6 when playing a note on it (if DAC is enabled).
 	 * Parity hack from SMPSPlay.
 	 */

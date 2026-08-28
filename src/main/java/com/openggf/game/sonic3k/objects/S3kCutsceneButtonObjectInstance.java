@@ -109,20 +109,17 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         Aiz2BossEndSequenceState.pressButton();
         if (playerEntity instanceof AbstractPlayableSprite player) {
             // loc_65C56 clears Ctrl_1_locked in the button's own SST slot.
-            // When this native button precedes Player_1, that later slot still
-            // consumes loc_69588's retained logical UP word. The controller
-            // releases the engine's representation on its following entry.
-            // The alternate established ordering has already consumed the
-            // player slot, so it can clear immediately.
+            // Player_1 is SST slot 0 and has already run this frame, so the
+            // logical UP word AIZEndBoss_WaitForCutsceneKnuckles wrote from
+            // slot 7 is still the word that pass consumed; the unlock only
+            // reaches the player on the following frame
+            // (sonic3k.asm:133968-133970, 138317-138323).
             player.setControlLocked(false);
-            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
-                player.clearForcedInputMask();
-            }
         }
-        if (cutsceneOverride || Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
-            services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
-                    .forEach(AizDrawBridgeObjectInstance::beginCollapseFromEarlierButtonSlot);
-        }
+        // loc_65C04 only publishes st (_unkFAA9).w; the draw bridge consumes it
+        // from its own, strictly later, SST slot in this same object scan
+        // (sonic3k.asm:59622-59628, 133943-133946). Nothing is pushed at the
+        // bridge from here.
         services().playSfx(Sonic3kSfx.SWITCH.id);
     }
 

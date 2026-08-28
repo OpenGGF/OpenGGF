@@ -72,6 +72,7 @@ class TestEngineDataSelectPatchResolution {
 
     @AfterEach
     void tearDown() {
+        Engine.clearGlobalInstance();
         SessionManager.clear();
         if (previousEngineContext != null) {
             EngineServices.configure(previousEngineContext);

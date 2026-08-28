@@ -167,6 +167,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         super();
     }
 
+    @Override
+    public void initLevel(int zone, int act) {
+        super.initLevel(zone, act);
+        // Shared-level fixtures may reinitialize the provider after the player
+        // roster already exists. Keep the setup presentation decision at the
+        // event-provider boundary so the next initial Process_Sprites pass
+        // cannot expose a dormant intro sidekick.
+        primeSidekickIntroPresentation();
+    }
+
     // =========================================================================
     // AbstractLevelEventManager contract
     // =========================================================================
@@ -847,6 +857,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // so the carrier survives. The handler self-gates on act 0 + SONIC_ALONE.
         if (currentZone == Sonic3kZoneIds.ZONE_CNZ && cnzEvents != null) {
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
+        }
+        primeSidekickIntroPresentation();
+    }
+
+    private void primeSidekickIntroPresentation() {
+        SpriteManager spriteManager = GameServices.spritesOrNull();
+        if (spriteManager == null) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            SidekickCpuController controller = sidekick.getCpuController();
+            if (controller != null) {
+                controller.suppressInitialLevelEventPresentationIfNeeded();
+            }
         }
     }
 
@@ -1705,12 +1729,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 return;
             }
             // Obj_EndSignControlDoStart observes End_of_level_flag and calls
-            // Change_Act2Sizes on that same dispatch
-            // (docs/skdisasm/sonic3k.asm:180420-180424); Change_Act2Sizes falls
-            // through into Make_LevelSizeObj (:180580-180604), which creates the
-            // gradual bound children immediately. The ROM delay between
-            // observing the flag and the size change is therefore zero
-            // dispatches -- do not reintroduce a countdown here.
+            // Change_Act2Sizes on that dispatch (sonic3k.asm:180419-180424).
+            // Change_Act2Sizes falls through into Make_LevelSizeObj, whose
+            // AllocateObjectAfterCurrent children run later in the same
+            // ascending Process_Sprites walk (:180575-180632,:37917-37930).
             GameServices.gameState().setEndOfLevelFlag(false);
             cnzPendingPostTransitionAct2SizeFrames = 0;
             cnzPostTransitionAct2SizeActive = true;

@@ -39,11 +39,32 @@ removes active duplication or risk — but don't let cleanup displace playable S
 ## Build, test, run
 
 ```bash
+tools/testing/install-hooks.sh
 mvn package                          # executable JAR with dependencies
 mvn test
 mvn "-Dtest=TestCollisionLogic" test # focused run
+mvn -Dmse=off -Pguards test -B       # structural guards in a fresh JVM
 java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
+
+PowerShell uses `tools/testing/install-hooks.ps1` and the same Maven arguments.
+For release evidence, run both the ordinary suite and the separate `-Pguards`
+invocation; the structural guards are intentionally excluded from the long reused
+ordinary fork so whole-production graph imports receive a fresh JVM.
+
+### Agent test isolation contract
+
+Codex and Claude agents both follow this contract.
+
+OpenGGF uses Maven directly. Build and test output belongs below the current
+worktree's `target/` directory. Do not redirect Maven build/report roots to a
+shared or durable session directory. Parallel agents use separate worktrees;
+repeated runs in one worktree reuse its target tree.
+
+The per-Surefire-fork LWJGL extraction uses a distinct directory below
+`target/test-tmp`. Keep command output bounded when diagnosing long runs: use
+targeted `rg` searches and bounded `tail`/`sed` reads rather than replaying a
+complete Maven log into context.
 
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.
@@ -58,8 +79,9 @@ java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 - In PowerShell, quote `-D...` properties (`mvn "-Dtest=com.openggf.pkg.TestClass" test`).
 - Tests are **JUnit 5 / Jupiter only** — no JUnit 4 tests, rules, runners, or `org.junit.*`
   imports.
-- Git hooks auto-install during any Maven build's `validate` phase. If you commit without
-  building first, run `git config core.hooksPath .githooks` once.
+- Git hooks are installed explicitly once per worktree with
+  `tools/testing/install-hooks.sh` (or `tools/testing/install-hooks.ps1` on
+  PowerShell). Maven never mutates Git configuration during `validate`.
 
 ## ROMs
 
@@ -79,6 +101,13 @@ ROM is missing.
 
 Disassemblies live under `docs/s1disasm/`, `docs/s2disasm/`, `docs/skdisasm/` (untracked,
 available locally); SMPS audio reference under `docs/SMPS-rips/SMPSPlay/`.
+
+## Temporary and durable artifacts
+
+Maven-owned output stays below the current worktree's `target/` directory. Put durable
+captures or research outputs in an explicit task/archive directory outside the repository,
+and keep `/tmp` for short-lived operating-system files only. Do not invent a shared Maven
+output root or copy another worktree's build tree.
 
 ## Hard rules
 
@@ -115,19 +144,37 @@ file is guidance you can weigh against the situation in front of you.
    hydrated or synced from a trace in committed test code. The sole exception is the
    dedicated hardware-timing input contract documented in
    [docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md](docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md).
-   That contract is **cross-game**: recorded hardware timing may drive a **delay** in the
+   That contract is **cross-game** and has **two permitted shapes**; both are scheduling
+   outcomes, and neither may decide *what* happens.
+   *Readiness release.* Recorded hardware timing may drive a **delay** in the
    art-loading pipelines of all three games — S1 PLC, S2 DPLC, and S3K Kosinski queues. It
    it may release only the readiness of a matching, prepared, production-submitted ROM-backed
    hardware job after kind, ordinal, stable submission fingerprint, and service boundary all
-   match. It must not use physics/aux comparison data, carry gameplay values, call gameplay
-   owners, or create work the engine did not submit, and it must not key on a frame index,
-   zone, route, or game name. The test is whether the change only affects *when* real,
-   engine-created work becomes ready; anything deciding *what* happens is outside the
-   exception however well the ROM behaviour is cited. Guard tests must keep this exception
+   match.
+   *Per-row scheduling admission.* A recorded per-row outcome may select which ROM loop a row
+   represents — the lag contract, where `lag_state.lagged` admits the `VBlank_Lag` branch that
+   services no PLC while the frame counter still advances. This shape carries no job, ordinal
+   or fingerprint, because it names no work: it selects between two ROM loops that both
+   already exist in the engine. It predates the readiness shape and already ships in
+   `TraceRunSpecialStageRows.syntheticLagPhase`. It may admit or suppress a loop; it may never
+   supply a *value*, and `lagcount` is comparison data like any other.
+
+   *Both shapes.* The exception must not use physics/aux comparison data, carry gameplay
+   values, call gameplay owners, or create work the engine did not submit, and it must not key
+   on a frame index, zone, route, or game name. The test is whether the change only affects
+   *when* real, engine-created work becomes ready, or *which* already-existing ROM loop a row
+   takes — never *what* work exists, and never what values it carries. Anything deciding
+   *what* happens is outside the exception however well the ROM behaviour is cited. Guard tests must keep this exception
    confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces parser/authority
    isolation and forbids physics/aux/gameplay and reflective mutation paths. A v5
-   `hardware_timing.jsonl` stream records module-queue and direct Kosinski readiness;
-   either still requires matching production-submitted ROM work. V5 is the sole live
+   `hardware_timing.jsonl` stream records S3K module-queue readiness, S3K direct Kosinski
+   readiness, and the S1 `RunPLC` arming edge (`NEMESIS_PLC_QUEUE`) — the three kinds
+   `HardwareWorkKind` admits, and no others; each still requires matching
+   production-submitted ROM work. Contract scope, implementation and fixture coverage are
+   three different things: S2 DPLC is in scope but unimplemented, and every committed
+   timing sidecar is S3K, so the S1 path is implemented but exercised by no trace fixture.
+   The design doc's coverage-status section is authoritative on which is which.
+   V5 is the sole live
    trace contract: `trace_schema: 5` owns metadata, rows, timing, and run manifests.
    `recorder` and `recorder_version` are opaque provenance only;
    `lua_script_version` was removed, not renamed, and no provenance field selects
@@ -164,6 +211,59 @@ rules on PRs into `develop`.
   `Changelog: n/a` is rejected.
 - Merging a non-`master` branch into `develop` requires a staged `README.md` update
   summarising the change in the release/change log section.
+
+### Documentation update map
+
+The active release is 0.6. Use this map before staging a change. The detailed
+trailer rules and exceptions remain authoritative in
+[docs/agent-workflow/documentation-obligation-checklist.md](docs/agent-workflow/documentation-obligation-checklist.md)
+and `.githooks/validate-policy.sh` / `.githooks/validate-policy.ps1`.
+
+- **Release notes:** put concise, user-facing entries for release-worthy 0.6
+  features, fixes, and performance work in `CHANGELOG.0.6.md`. Do not add new
+  0.6 release prose only to the root index. Historical
+  `CHANGELOG.0.x.md` files are immutable except for factual corrections.
+- **Release index:** update `CHANGELOG.md` when adding, renaming, or publishing
+  a release file, changing the current-release pointer, or changing the release
+  index itself. The commit hook currently maps the `Changelog` trailer to the
+  exact root file `CHANGELOG.md`; if a source `feat`/`fix`/`perf` note is recorded
+  only in `CHANGELOG.0.6.md`, use a justified
+  `Changelog: n/a: release note recorded in CHANGELOG.0.6.md`. If
+  `CHANGELOG.md` changes, stage it and use `Changelog: updated`.
+- **README release section:** update `README.md` when the current release
+  summary, release status, supported-scope statement, or release links change.
+  Keep the rest of the README as the stable user and contributor guide; do not
+  replace it with a release ledger.
+- **Public release copy:** update
+  `docs/changelog/v0.6-release-summary.md` when website/GitHub messaging,
+  validation results, or release blockers change. Update the detailed
+  `docs/changelog/v0.6-prerelease-detailed.md` ledger for substantial 0.6
+  investigations, workstreams, and gate decisions.
+- **Trace evidence:** update `docs/status/trace-frontier-log.md` whenever a
+  frontier moves, a trace fix lands, a passing trace regresses, or a full
+  `*TraceReplay` sweep selects the next target. Record the command,
+  commit/worktree context, pass/fail result, error count, and first-error
+  frame/field. This obligation has no trailer.
+- **Known discrepancies:** update `docs/status/known-discrepancies.md` for
+  cross-game or general intentional ROM divergences, and
+  `docs/S3K_KNOWN_DISCREPANCIES.md` for S3K-specific gaps. Set the matching
+  discrepancy trailer to `updated`.
+- **Configuration and guides:** update `CONFIGURATION.md` for config flags,
+  bindings, or toggles; update the relevant file under `docs/guide/` for player
+  or contributor instructions. Set `Configuration-Docs` or `Guide` to
+  `updated` respectively.
+- **Agent guidance:** update `AGENTS.md` and `CLAUDE.md` together whenever
+  top-level workflow or project guidance changes. Update `AGENTS_S3K.md` for
+  S3K-specific agent guidance. Set `Agent-Docs: updated` when the root pair
+  changes; keep the pair identical.
+- **Skills:** update matching files in both `.agents/skills/` and
+  `.claude/skills/` together. Set `Skills: updated`; never update one mirror
+  without the other.
+- **Architecture artifacts:** put designs, audits, validation reports, and
+  other engineering records under the matching `docs/architecture/`
+  subdirectory; put release material under `docs/changelog/`. Do not leave
+  task documentation loose or untracked.
+
 - Branch naming: `feature/ai-*`, `bugfix/ai-*`. Keep a session's PRs on one branch.
 - Trace frontier work keeps [docs/status/trace-frontier-log.md](docs/status/trace-frontier-log.md)
   current — when a frontier moves, a fix lands, a passing trace regresses, or a full
@@ -268,7 +368,11 @@ Full detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `s3k-*` skills. The expens
   equivalent that doesn't exist.
 - **Dual object pointer tables.** S3K remaps many object IDs by zone set: `S3kZoneSet.S3KL`
   (zones 0-6, AIZ-LBZ, 256 entries) and `SKL` (zones 7-13, MHZ-DDZ, 185 entries). Resolve
-  names via `Sonic3kObjectRegistry.getPrimaryName(id, zoneSet)`.
+  names via `Sonic3kObjectRegistry.getPrimaryName(id, zoneSet)`. **Zone ids 0-6 are seven
+  ids, not six: FBZ is 4** (`Sonic3kZoneIds.java`). It takes the S3KL *object table* while
+  being an S&K-half *level* — the ROM's own level predicate `SSEntry_CheckLevel`
+  (`sonic3k.asm:128433-128443`) is `Current_zone < 7 && Current_zone != 4`. "Which half" is
+  not one question; cite the routine that owns the question you are asking.
 - **Compression type is encoded in the label suffix** (e.g. `AIZ1_8x8_Primary_KosM`), since
   S3K files use a `.bin` extension. `RomOffsetFinder` auto-infers it.
 - **Known limitation:** some S3K acts log `maxChunkPatternIndex > patternCount` (dynamic
@@ -347,6 +451,7 @@ Deeper reference, loaded when the work needs it:
 | [docs/architecture/per-game-rule-placement.md](docs/architecture/per-game-rule-placement.md) | Where a per-game behavioural difference belongs |
 | [docs/guide/contributing/headless-testing.md](docs/guide/contributing/headless-testing.md) | `HeadlessTestRunner`, singleton reset, test infrastructure |
 | [docs/agent-workflow/README.md](docs/agent-workflow/README.md) | Workflow CLIs, per-task runbooks, CI guard-failure explainer, pitfall index, documentation-obligation checklist |
+| [docs/agent-workflow/briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md) | Accumulated trace-round rules, indexed: how to brief a round, the evidence rules, and the **measurement-hazard table** — read that before reporting any suite number, because every hazard in it produces output indistinguishable from a real result |
 | [docs/status/known-discrepancies.md](docs/status/known-discrepancies.md) | Intentional divergences from the ROM, virtual pattern ID ranges, trace bootstrap contracts |
 | [AGENTS_S3K.md](AGENTS_S3K.md) | Sonic 3&K specifics |
 | [CONFIGURATION.md](CONFIGURATION.md) | `config.yaml` keys, bindings, debug flags |

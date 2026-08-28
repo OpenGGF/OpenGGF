@@ -227,4 +227,29 @@ public class TestMultiSidekickSpawn {
                         + ", rootTargetX=" + (mainPlayer.getCentreX(16) & 0xFFFF)
                         + ", tailsX=" + (trailingTails.getCentreX() & 0xFFFF));
     }
+
+    @Test
+    void chainedFollowerStillInitializesItsOwnLeadersHistory() {
+        GameServices.level().spawnSidekicks(-40, 0);
+        AbstractPlayableSprite chainedLeader = sidekicks[0];
+        chainedLeader.setCentreX((short) 300);
+        chainedLeader.setCentreY((short) 400);
+        chainedLeader.prefillPositionHistoryWithCentre((short) 11, (short) 22);
+
+        controllers[1].update(0);
+
+        assertHistoryFilled(chainedLeader, 300, 400);
+    }
+
+    private static void assertHistoryFilled(
+            AbstractPlayableSprite leader, int expectedX, int expectedY) {
+        short[] xHistory = leader.copyXHistory();
+        short[] yHistory = leader.copyYHistory();
+        assertEquals(64, xHistory.length);
+        assertEquals(64, yHistory.length);
+        for (int slot = 0; slot < 64; slot++) {
+            assertEquals(expectedX, xHistory[slot], "history X slot " + slot);
+            assertEquals(expectedY, yHistory[slot], "history Y slot " + slot);
+        }
+    }
 }

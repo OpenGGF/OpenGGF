@@ -154,6 +154,8 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
     // Internal state
     private int actionTimer;
     private int defeatTimer;
+    /** ROM: the defeat install is latched to the tail of the dispatch that detected it. */
+    private boolean pendingDefeatInstall;
     private int currentFrame;
     private boolean facingLeft;
     private int spawnX; // Original spawn X position (for bounds calculation)
@@ -230,6 +232,11 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         // Apply velocity only for phases that call ObjectMove in the ROM.
         // ROM phases with ObjectMove: $06 (CaseDown), $0A (CaseBoundaryChk),
         // $16 (CaseBoundaryLaserChk). NOT $04 (CaseWaitDown - just waits).
+        if (pendingDefeatInstall) {
+            // ROM: bra.w ObjC5_HandleHits, after the case jsr returned.
+            installDefeat();
+        }
+
         if (applyVelocity) {
             state.applyVelocity();
         }
@@ -600,11 +607,22 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             services().playMusic(Sonic2Music.WING_FORTRESS.id);
             Camera camera = services().camera();
             if (camera != null) {
-                camera.setMaxYAfterNextUpdate((short) CAMERA_MAX_Y_DEFEAT);
+                // ROM ObjC5_End writes BOTH Camera_Max_Y_pos and
+                // Camera_Max_Y_pos_target, immediately, in the boss's own slot
+                // (docs/s2disasm/s2.asm:81519-81526).
+                camera.setMaxY((short) CAMERA_MAX_Y_DEFEAT);
+                camera.setMaxYTarget((short) CAMERA_MAX_Y_DEFEAT);
             }
-            if (services().gameState() != null) {
-                services().gameState().setCurrentBossId(0);
-            }
+            // ROM: Current_Boss_ID is NEVER cleared in Sonic 2. It is written only by
+            // the boss-arena setup routines (`move.b #N,(Current_Boss_ID).w`, ids 1-9)
+            // and read by `tst.b`; docs/s2disasm/s2.asm contains no `clr.b` or
+            // `move.b #0` for it, so it resets only via the level-load RAM clear and
+            // persists to the end of the act. Sonic_Boundary's right-hand test widens
+            // the side boundary by $40 only when it is zero (s2.asm:37243-37251), so
+            // clearing it here let the character run 64px past the ROM's clamp.
+            // Contrast S1, which DOES clear at the Egg Prison
+            // (s1disasm/_incObj/3E Prison Capsule.asm:97), and S3K, which clears
+            // Boss_flag at 31 sites. S2 is the exception.
             ObjectLifetimeOps.markSpawnRemembered(services().objectManager(), spawn);
             setDestroyed(true);
             return;
@@ -683,8 +701,34 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         return false; // Custom defeat logic in routine $1E
     }
 
+    /**
+     * {@code ObjC5_LaserCase} reads {@code routine_secondary(a0)} <em>once</em> at the head of
+     * the object's update and {@code jsr}s the selected case
+     * (docs/s2disasm/s2.asm:81246-81251); only after that case returns does it
+     * {@code bra.w ObjC5_HandleHits}, whose {@code ObjC5_NoHitPointsLeft} arm writes
+     * {@code objoff_30 = $EF} and {@code routine_secondary = $1E}
+     * (docs/s2disasm/s2.asm:82045-82053).
+     *
+     * <p>The engine's touch scan runs before this object's {@code update()}, exactly as
+     * {@code TouchResponse} runs from the player's own object code
+     * (docs/s2disasm/s2.asm:38998) before the boss's slot. Two things follow from the ROM's
+     * ordering: the previously selected case still runs on the killing frame, and the
+     * {@code $1E} case does not run until the next object pass. Latch the install here and
+     * apply it at the tail of {@link #updateBossLogic}, which is where
+     * {@code ObjC5_HandleHits} sits.
+     *
+     * <p>{@code ObjC5_CaseDefeated} is {@code subq.w #1,objoff_30(a0) / bmi.s ObjC5_End}
+     * (docs/s2disasm/s2.asm:81509-81515), so from $EF the end fires 240 dispatches after the
+     * install, not 239.
+     */
     @Override
     protected void onDefeatStarted() {
+        pendingDefeatInstall = true;
+    }
+
+    /** ROM {@code ObjC5_NoHitPointsLeft} - runs after this frame's case, not before it. */
+    private void installDefeat() {
+        pendingDefeatInstall = false;
         state.routine = ROUTINE_DEFEAT;
         defeatTimer = DEFEAT_EXPLOSION_TIMER;
         state.xVel = 0;

@@ -29,21 +29,48 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 15. [Legacy Pre-Level Intro Prefix Trace Bootstrap Contract](#legacy-pre-level-intro-prefix-trace-bootstrap-contract)
 16. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
 17. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
-18. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling)
-19. [Hardware-Timing Replay Input Exception](#hardware-timing-replay-input-exception)
-20. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
-21. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
-22. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
-23. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
-24. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps)
-25. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary)
-26. [S2 Native Competition and Human-P2 Capability Unavailable](#s2-native-competition-and-human-p2-capability-unavailable)
+18. [Whole-Run Level-Restart Admission Row](#whole-run-level-restart-admission-row)
+19. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling)
+20. [Hardware-Timing Replay Input Exception](#hardware-timing-replay-input-exception)
+21. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
+22. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
+23. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
+24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+25. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps)
+26. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary)
+27. [S2 Native Competition and Human-P2 Capability Unavailable](#s2-native-competition-and-human-p2-capability-unavailable)
+28. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
+29. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
+30. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
+31. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated)
 
 ---
 
 ## Special-stage Live Rewind Scope
 
 Held live rewind is supported only inside rewind-capable special-stage providers. It does not rewind across the LEVEL -> SPECIAL_STAGE or SPECIAL_STAGE -> results/LEVEL boundaries; those transitions intentionally start fresh rewind timelines.
+
+---
+
+## S2 Interactive Special-Stage Hardware Lag Is Approximated
+
+**Location:** `Sonic2SpecialStageProvider.java`, `GameLoop.java`
+**ROM Reference:** `docs/s2disasm/s2.asm` `V_Int`, `Vint_Lag`, `Vint_S2SS`, and `SS_MainLoop`
+
+The shipped game takes `Vint_Lag` when the 68K main loop has not re-armed
+`Vint_routine` before the next VBlank. In a Sonic 2 special stage, that result
+depends on the variable cost of the complete `SS_MainLoop`, the substantial
+`Vint_S2SS` service path, DMA/DPLC work, and hardware contention. OpenGGF does
+not yet model those costs at cycle granularity. Ordinary interactive play
+therefore uses the existing stateless segment/speed approximation to retain the
+special stage's expected slowdown and speed simulation. Its ratios were fitted
+from one Stage 1 recording, not derived from the ROM routine, so it is an interim
+playability model rather than accuracy evidence for arbitrary movies.
+
+Trace replay does not use that approximation. Externally paced sessions disable
+it, and a recorded `lag_state.lagged` outcome admits the already-existing
+`VBlank_Lag` loop through the separate scheduling-only contract. That outcome
+supplies no gameplay value or work.
 
 ---
 
@@ -805,10 +832,26 @@ trace, captured on REV01 hardware, contains those occasional `+2` bumps.
 `Sonic1LZWaterEvents` now emulates the REV01 non-FixBugs path by preserving
 the high byte of the player X check while replacing the low byte with
 `v_vblank_byte & 0x3F`, and by using the waterfall SFX id on sound-gate
-frames. `Sonic1CreditsDemoBootstrap` also seeds the LZ credits-demo vblank
-phase when applying the lamppost state, so the first ROM y-bump occurs at the
-same trace frame instead of drifting by the engine's default object-manager
-counter phase.
+frames.
+
+**Corrected 2026-08-21.** This paragraph previously said that
+`Sonic1CreditsDemoBootstrap` "also seeds the LZ credits-demo vblank phase when
+applying the lamppost state". **It does not, and no longer should.** The
+bootstrap carries an explicit note in its place: the ROM's `v_vblank_count` is
+incremented once per V-blank at `VBlank_Exit` (`sonic.asm:685`) and written
+nowhere else in the entire ROM, so nothing resets it on level load and
+`EndDemo_LampVar` (`sonic.asm:3879`) carries no vblank field. Its value entering
+a credits demo is a free-running count since console reset, not level-derived
+state, and cannot be reconstructed from the lamppost table -- **seeding a
+measured phase there would be a fitted model**. The counter is instead
+established once at frame 0 by the replay entry path, as every other
+trace-replay entry does.
+
+The resolution above survives that removal: `TestS1Credits03Lz3TraceReplay` was
+re-run on 2026-08-21 and passes green, so the fix is carried by the
+`d0`-clobber emulation and the frame-0 establishment alone. The stale sentence
+had been read as describing a live mechanism by two people in one session, one
+of whom spent part of a round looking for code that had been deleted.
 
 The `Sonic1LZWaterEvents` X-push and Y-input nudges have been migrated from
 `setCentreX`/`setCentreY` (which zero sub-pixels) to
@@ -981,7 +1024,9 @@ S2 CNZ replay fixtures that advertise per-frame slot-machine state need a short
 native slot-machine init prelude before comparison begins. The bootstrap now
 consumes this through generic `TraceMetadata.hasPerFrameSlotMachineState()`
 capability metadata; the old CNZ-named metadata helper remains only as a
-deprecated alias for the current recorder schema string.
+deprecated alias for the current recorder schema string. The prelude executes
+only ROM `SlotMachine_Routine1`; recorded row 0 owns the following Routine2
+reel draw (`s2.asm:59320-59355`).
 
 ### Rationale
 
@@ -1059,12 +1104,74 @@ ROM-header secondary cue. A trace may select the ordinary production
 presentation-omitted transition, but it cannot submit, mutate, service, or
 release either queue.
 
-The hardware-timing replay exception below does not apply to S1/S2 PLCs.
-Physics and auxiliary trace data remain comparison-only, and no S1/S2
-recorded completion edge is accepted. Remove or amend this entry only if a
-future cycle-accuracy finding proves the modeled native service budget
-insufficient and the hardware-timing contract is deliberately expanded with
-its own guarded schema.
+The hardware-timing replay exception below does not apply to S2 DPLCs at
+all, and applies to S1 PLCs only at the `RunPLC` FIFO-head arming edge
+(`NEMESIS_PLC_QUEUE`). Physics and auxiliary trace data remain
+comparison-only for both games, no recorded edge may carry decoded art or any
+other payload, and no S2 capture can supply an edge of any kind. Everything
+this entry describes — the native service queue, its cadence, and every
+pattern it produces — stays natively owned in both games; the S1 exception
+moves only *when* an engine-submitted arm becomes visible. No committed S1 or
+S2 fixture carries a timing stream today, so in practice no recorded edge
+reaches either game's PLC service: see "Coverage" under that exception.
+Remove or amend this entry only if a future cycle-accuracy finding proves the
+modeled native service budget insufficient and the hardware-timing contract is
+deliberately expanded further.
+
+---
+
+## Dynamic-Art Row Stamps Are Not Compared In Unrepresented, Unclosed Spans
+
+**Location:** `TraceRunDynamicArtGapComparator` —
+`recordedCoverageLeavesSpanUnrepresentedAndUnclosed` and `putRowStamp`.
+**Scope:** the `movie_logical_frame` field of `run_gap.edge[N]` /
+`run_tail.edge[N]`, and nothing else.
+
+A run fixture's recorded coverage is the union of its segments'
+`[bk2_frame_offset, bk2_frame_offset + trace_frame_count)` ranges. Where a
+comparison span contains no recorded row **and** no recorded coverage follows
+it, the fixture itself declares that span unrepresented and leaves the movie
+clock unanchored at its far end. In such a span a dynamic-art edge's movie row
+stamp is downgraded from `ERROR` to `WARNING`; it is still reported, and every
+other property of the edge — presence, count, ordinal, transfer id, phase,
+owner, submission origin, mapping frame, gap edge index, requests, forwarded
+completion, and the before/after ledger fingerprints — remains a hard error.
+Outside such a span, including every ordinary segment-to-segment gap, the row
+stamp is a hard error exactly as before.
+
+**Why the row stamp is not engine evidence there.** Finding 1 of
+`docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md`
+("Why the current green is not yet proof") establishes that
+`TraceRunPlaybackCoordinator.destinationReady` gates on
+`sharedBk2Cursor() >= destination.bk2FrameOffset()`, and that while the
+coordinator sits in `TRANSITION_GAP`, `GameLoop.suppressesRunNativeLevelBody()`
+stops the level body running at all: *"The engine's real load duration is never
+observed, in either direction."* How many movie rows the engine spends inside
+such a span is therefore harness choreography, not engine behaviour. Closing a
+row-stamp divergence by inserting harness delays, or by importing a recorded
+span duration, would fit the measurement instrument to its own reference —
+worse than a fitted constant, because a fitted constant at least models
+something.
+
+**What this costs, stated plainly.** After this change the S1 GHZ round-trip
+chain verifies load-window **work** and **order** — which transfers exist, for
+which owner and mapping frame, in which order, with which requests and which
+resulting ledger — but **not** load-window **timing**. Load-window timing
+remains unobserved, and cannot be observed, until `destinationReady` /
+`suppressesRunNativeLevelBody()` are reworked by the roadmap's level-load-span
+strand (section 4 of the same document).
+
+**Guards.** `TestTraceRunDynamicArtGapComparator` pins both halves of the
+asymmetry:
+`excusesOnlyTheRowStampInsideAnUnrepresentedUnclosedSpan`,
+`stillFailsOnEdgeIdentityInsideAnUnrepresentedUnclosedSpan`, and
+`comparesTheRowStampByRowWhereRecordedCoverageFollowsTheSpan`. Both mutations
+were run and observed red: widening the coverage predicate to accept any span
+fails the third; extending the excusal to an identity field fails the second.
+
+**Removal condition.** When the level-load-span strand makes the engine's own
+load duration observable, delete the excusal and restore the row stamp to a
+hard error in every span.
 
 ---
 
@@ -1084,9 +1191,13 @@ readiness of a job only when the engine independently submitted and prepared
 the same job and its kind, ordinal, stable submission fingerprint, and service
 boundary match the recording.
 
-S3K hardware-timing schema 1 grants this authority only to
-`KOS_MODULE_QUEUE`; direct Kosinski jobs remain live production work. Schema
-2 grants it to both `KOS_MODULE_QUEUE` and `KOS_DECOMPRESSION_QUEUE`.
+The live v5 contract grants this authority to `KOS_MODULE_QUEUE`,
+`KOS_DECOMPRESSION_QUEUE` and `NEMESIS_PLC_QUEUE` whenever the dedicated
+`hardware_timing.jsonl` stream is present. `NEMESIS_PLC_QUEUE` carries only
+S1's `RunPLC` FIFO-head *arming* edge; every pattern the armed entry
+decompresses is still produced natively by the production PLC pipeline. The stream has one complete registry; policy is never
+inferred from which kinds happen to have rows. Direct Kosinski edges can
+release only a prepared FIFO head at `pre_main_loop`.
 Schema-2 direct edges can release only a prepared head that the shared
 four-entry production FIFO submitted, and only at `pre_main_loop`. KosM child
 streams are real direct submissions with their own direct ordinals; the trace
@@ -1107,12 +1218,58 @@ completion timing, while a fully cycle-accurate machine is outside the engine's
 scope. The dedicated stream supplies only that otherwise-external completion
 edge; the ROM-modeled consumer still owns every downstream mutation.
 
-Committed schema-1 AIZ intro and ICZ act-transition fixtures remain loadable,
-but they do not certify their direct queue-count boundary because those jobs
-use live timing in schema 1. Their exact inventory is checked by
-`TestCommittedHardwareTimingFixtures`. Replacing them with native schema-2
-output requires separate explicit publication approval; implementation work
-must not mutate their payloads.
+An absent timing file means no recorded timing port and leaves the production
+scheduler live. A present empty file is an explicit v5 recorded stream with
+the complete registry and no edges. Legacy schema-1/schema-2 fixtures and
+their metadata selectors are not supported runtime inputs.
+
+### Coverage: implemented for S1 and S3K, fixtures S3K-only
+
+Three separate questions; do not collapse them.
+
+**Contract scope is cross-game.** Recorded timing *may* delay S1 Nemesis PLC,
+S2 DPLC, and S3K Kosinski readiness.
+
+**Implementation covers S1 and S3K.** The live registry is
+`KOS_MODULE_QUEUE`, `KOS_DECOMPRESSION_QUEUE`, and `NEMESIS_PLC_QUEUE`
+(`HardwareWorkKind`), pinned by
+`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryIsClosedToUndeclaredWork`.
+On the engine side `Sonic1PlcArmTiming` submits the S1 `RunPLC` arming edge and
+`Sonic1PlcService.ownsTimedLoopTailArm()` gates on `isRecordedAuthority()`. On
+the recorder side `HardwareTimingEventEngine` is constructed by
+`S3KCompleteRunCaptureRunner`, `S3KTraceCaptureRunner`, `S1TraceCaptureRunner`
+and `S1RunCaptureRunner`; `S1PlcHardwareTimingObserver` supplies the S1 edges,
+`StagedRunSegmentSink` defines the run-mode sink, and
+`CommandLineOptions.S1ConditionalTraceOutputFileNames` publishes the S1 stream
+only when the capture observed an edge. **S2 is not implemented at either end**
+— no source under `game/sonic2/` references `HardwareWorkKind`, and no S2
+recorder constructs `HardwareTimingEventEngine`.
+
+**Fixture coverage is S3K-only.** Every committed `hardware_timing.jsonl` under
+`src/test/resources/traces` is beneath `s3k/` (272, plus 2
+`hardware_timing_interstitial.jsonl`). No committed S1 or S2 fixture carries
+one.
+
+So the S1 path is **implemented but dormant**, which is not the same as absent.
+Recorded admission is installed only by
+`GameplayModeContext.activateRecordedHardwareAdmission()`; with no stream every
+kind stays at `HardwareReadinessAdmissionPolicy.LIVE`,
+`isRecordedAuthority()` is false, and the arm is released by the boundary that
+prepared it — the pre-timing-port behaviour. An S1 trace divergence today must
+be reasoned about against the native service model, because no committed
+fixture can supply an edge.
+
+"Re-record it with the hardware-timing stream" is now available for S1 and
+still unavailable for S2. It is not the first resort for S1 in any case: a
+divergence that looks like elapsed hardware cost is usually a counted ROM wait
+loop in the wrong place (see the `plc-system` skill's S1 `segment_start - 26`
+load-pair invariant).
+
+### Historical pre-v5 evidence (not live)
+
+Earlier schema-1/module-only and schema-2/direct-queue descriptions below this
+point document the migration evidence that led to v5. They are retained for
+audit provenance only and must not be implemented as compatibility branches.
 
 ### Guard and Removal Conditions
 
@@ -1148,6 +1305,60 @@ position for the segment. That is accepted frame-zero bootstrap debt, not
 per-frame trace hydration, and it must not expand into copying recorded trace
 rows or sidekick/camera state back into the engine.
 
+### Known Consequence: Run-Level Progression Is Absent
+
+Position is not the only run-level state a mid-run segment lacks. Chaos and
+Super Emerald counts also start at zero, because the segment did not replay the
+special stages that earned them. This is deliberate -- seeding them from the run
+manifest's `emeralds_before` would be trace hydration under hard rule 4 -- but it
+makes some ROM branches unreachable in a standalone segment replay.
+
+`loc_6170A` (skdisasm/sonic3k.asm:128276-128293) sends a special-stage entry ring
+to the 50-ring award at `loc_61794` (:128325-128333) when `Chaos_emerald_count`
+is 7 **and** either `SK_alone_flag` is set, or `SSEntry_CheckLevel` says the
+level is an S3-half one (:128433-128443), or the Super Emeralds are also
+complete. Otherwise it runs the capture sequence at `loc_6173A` (:128295-128301),
+which writes `move.b #$1C,anim(a1)`, `move.b #0,mapping_frame(a1)` and
+`move.b #$53,object_control(a1)` -- the player is locked and frozen. The engine's
+own branch (`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture`)
+is ROM-correct; only the emerald count differs.
+
+**Measured instances, re-stamped at the ICZ segment-column balance-width fix.**
+The earlier Tails-animation frontier that masked ICZ at 1983 (`tails_animation_id`
+`0x0005` vs `0x0006`) is closed, so ICZ reports this boundary directly at 2336
+again -- the citation that was stale at `2bab075aa` is accurate once more:
+
+| class | errors | first error |
+|---|---:|---|
+| `TestS3kSonicTailsLbzSegmentTraceReplay` | 7174 | 958, `player_animation_id` `0x0002` vs `0x001C` |
+| `TestS3kSonicTailsCnzSegmentTraceReplay` | 6300 | 5754, `player_animation_id` `0x0000` vs `0x001C` |
+| `TestS3kSonicTailsIczSegmentTraceReplay` | 2860 | 2336, `player_animation_id` `0x000D` vs `0x001C` |
+
+These are the three largest release-6 S3K reds and they are **one cause**, not three.
+At each frontier exactly two fields differ -- `player_animation_id` and
+`player_mapping_frame` -- with position, speed, sub-pixels, rings and camera all
+matching, and no error group starts before it. On the *next* frame the ROM's
+`rings` steps by exactly +50 (16 -> 66 in LBZ, 94 -> 144 in CNZ, 30 -> 80 in ICZ).
+The recorded run held 7 emeralds from segment 15 onward, and CNZ (zone 3),
+LBZ (zone 6) and ICZ (zone 5) are all S3-half, so the ROM awards while the replay
+captures.
+
+A temporary probe seeding 7 emeralds at bootstrap -- **not landed, and not
+landable: seeding from the manifest is trace hydration under hard rule 4** --
+moved LBZ to 5028 errors with every field at frame 958 matching except `rings`,
+confirming the diagnosis positively rather than by elimination.
+
+Behind this sits a **second, independent and still-open defect**: with emeralds
+present, the 50-ring award publishes exactly one frame early (one-frame,
+self-correcting `rings` spans at LBZ 958 and CNZ 5754). Whether that is an engine
+phase error or the recorder sampling `rings` before the object pass is not
+established; ordinary ring pickups show no such skew, which argues it is real. It
+is only observable with emeralds seeded, so no committed test can pin it today.
+Nothing was fitted to close it.
+
+Such frontiers are closed by the ordered run chain, not by the standalone segment
+harness.
+
 ### Verification
 
 `TestTraceReplayStartPositionPolicy.s3kCompleteRunSegmentsDoNotSeedFrameZeroTraceState`
@@ -1155,6 +1366,43 @@ checks current complete-run fixtures use metadata start position only, keep an
 unseeded replay start, and do not receive the S3K sidekick seed-row prelude.
 `TestBuildToolingGuard.traceReplayLegacyExceptionsShouldBeDocumentedAndBounded`
 keeps this release-debt entry present.
+
+### Measured Scope: Every Continuation Segment, Not Only Emerald Counts
+
+The consequence above is written for Chaos and Super Emerald counts, but it
+applies to every quantity a mid-run segment inherits rather than earns. Measured
+across the whole `-Ptrace-segments` profile (70 tests: 52 physics failures, 7
+`unmatched recorded hardware completions`, 1 FIFO-full):
+
+| group | first error at trace frame 0 | first error later |
+|---|---:|---:|
+| continuation segments | **29** | **0** |
+| first-of-zone / other | 5 | 18 |
+
+**Every continuation segment in the profile diverges at its first compared row,
+and none diverges later.** The correlation is total, and the fields are the
+carried run state a standalone segment cannot reconstruct:
+
+| field | classes | | field | classes |
+|---|---:|---|---|---:|
+| `rings` | 12 | | `y_speed` | 2 |
+| `tails_x` | 4 | | `x_sub` | 2 |
+| `camera_y` | 4 | | `x_speed` | 1 |
+| `tails_y` | 3 | | `tails_y_speed` | 1 |
+
+The twelve `rings` cases are identical in shape — trace frame 0, engine `0`, ROM
+carrying an accumulated count (8, 75, 77, 85, 96, 117, 126, 150, 156, 177, 180,
+201). Ring count is the same class of state as the emerald counts named above:
+run-level progression the segment never played. Seeding it — or the sidekick
+position, camera, or player sub-pixel and speed columns — from `physics.csv` row
+0 or from run-manifest metadata would be per-frame trace hydration under hard
+rule 4, which this debt exists to refuse. The fixtures carry no such fields:
+`aiz_3/metadata.json` supplies `start_x`/`start_y` and nothing else.
+
+**So these 29 red classes are this debt showing up as failures, not defects.**
+They must not be driven green by seeding entry state, and a report that counts
+them as regressions is overstating. A mid-run segment's frame-0 divergence on a
+carried field is expected until the Removal Condition below is met.
 
 ### Removal Condition
 
@@ -1509,3 +1757,889 @@ into tempo effects. Rewind restores logical stream state from keyframes, but
 streamed PCM is excluded from deterministic audio capture and command replay.
 This divergence applies only to external mod music; with no effective override,
 the stock ROM-backed SMPS path remains unchanged.
+
+---
+
+## V-Int Run Counter Does Not Tick On Pause Or Seamless-Boundary Lag Rows
+
+The engine's `ObjectManager.vblaCounter` models the ROM V-int run counter --
+`Vint_runcount` (`docs/s2disasm/s2.asm:508`), `v_vblank_count`
+(`docs/s1disasm/sonic.asm:682`) and `V_int_run_count`
+(`docs/skdisasm/sonic3k.asm:543`) -- which the ROM increments once at V-int
+exit regardless of which V-int routine the mode jump table dispatched.
+
+The engine holds the invariant **exactly one tick per serviced V-blank**: the
+gameplay row ticks inside `ObjectManager.update(...)`, and every row where the
+level loop did not run but the V-int was still serviced (lag skip, bonus-stage
+lag, bonus-exit fade hold, title-card overlay, seamless-reload transition,
+trace `VBLANK_ONLY` / `PLAYABLE_ANIMATION_ONLY`) calls
+`ObjectManager.advanceVblaCounter()` exactly once. **No guard test enforces this.**
+Earlier revisions of this note cited a `TestVblaCounterVBlankInvariant` pinning the
+single mutation statement and the per-row tick counts; no such class exists anywhere
+in `src/`, and the invariant is carried by the field javadoc alone. Anyone changing
+tick ownership should write the guard rather than assume it caught a missed site.
+
+Three row kinds diverge:
+
+- **PAUSE rows** (deliberate). The ROM's pause loop still runs the V-int, so the
+  ROM counter advances while paused; the engine's does not.
+- **Seamless-boundary LAG rows** (deliberate). These service
+  `LevelFrameStep.serviceVBlankOnly` without ticking the counter.
+- **S1 and S2 title-card locked-phase rows** (deliberate, cross-game work
+  pending). `Level_TtlCard` runs its scroll-in loop with a `WaitForVint` on
+  every pass (`docs/s2disasm/s2.asm:4914-4916`; Sonic 1 has the identical
+  property), so each of those passes is a real serviced V-blank and the ROM
+  counter advances through the card. `Sonic2TitleCardManager` and
+  `Sonic1TitleCardManager` both leave
+  `shouldAdvanceVblankClockDuringLockedPhase()` at the `TitleCardProvider`
+  default of `false`, so the engine takes the camera-only branch and does not
+  tick. **`Sonic3kTitleCardManager` already returns `true`
+  (`Sonic3kTitleCardManager.java:827`), so S3K models this correctly and S1/S2
+  are the outliers** -- the correct end state is for all three to return `true`.
+  This was surfaced, not introduced, by `bugfix/ai-s2-seg15-r1`: before that
+  change S2 dispatched objects during the locked phase, which incidentally
+  advanced the clock, and freezing the objects to match `ObjectsManager`'s ROM
+  position at `s2.asm:5003` left the clock behaviour visible on its own. It is
+  not fixed there because S1 has the identical gap, making this a cross-game
+  change whose trace movement would be unattributable if folded into an
+  object-lifetime fix. It is a plausible cause of the current
+  `TestS2CompleteEmeraldRunChain` frontier at segment 15 frame 409.
+
+- **Special-stage results-screen presentation rows** (modelled around, not
+  fixed). A trace run's stage-exit presentation bridge plays every recorded row
+  of `SS_Finish`'s fade-out and the results screen, but no level loop runs on
+  any of them, so the production counter is frozen for the whole segment while
+  the ROM's keeps ticking. This one is **not** unobservable: measured on the
+  `s1-sonic-complete-withemeralds` route, the engine reached GHZ3 act 2 with a
+  1,587-tick deficit, which is 3 mod 8 and 19 mod 32 and so de-phased both the
+  prison capsule's `Pri_Animals` spawn gate and `Anml_ChkFloor`'s `btst #4`
+  escape-direction flip. `TraceRunVblankClock` now seeds the bridge from the
+  level that entered the stage and derives the bridge's own tail from
+  `TracePlaybackProfile.stageResultsEntryNonAdvancingMovieRows` (S1: the seven
+  V-ints `SS_Finish` builds the results screen through with interrupts
+  disabled, docs/s1disasm/sonic.asm:3369-3383), so every gameplay segment after
+  a bridge is back on the recorded clock. The bridge's own rows remain frozen;
+  nothing observes the counter there.
+
+The first two are unobservable against the currently recorded traces.
+Closing either divergence is a phase change, not a refactor: the counter is the
+`vblaCounter` argument handed to every object instance each frame, so a one-tick
+shift moves spilled-ring floor-probe cadence in all three games, the S3K slot
+bonus-stage RNG seed, LBZ/MGZ/ICZ object phasing, and every rewind snapshot's
+stored scalar. Any such change needs a full S1/S2/S3K trace fleet plus rewind
+determinism measurement of its own.
+
+---
+
+## S2 Whole-Run V-int Clock Cannot Be Made Exact
+
+`TestS2CompleteEmeraldRunChain`'s final physics axis is blocked on this, after eleven
+rounds of investigation. Recording it so the next attempt starts from the evidence
+rather than repeating the sequence.
+
+### Original Implementation
+
+`Vint_runcount` is free-running and absolute: `VintRet: addq.l #1,(Vint_runcount).w`
+(docs/s2disasm/s2.asm:508) is unconditional and every mode path reaches it. ROM objects
+gate on its parity and modulo — `Obj4B_ChkPlayers` `btst #0` (s2.asm:60989-60998,
+period 2, "target Sidekick on uneven frames"), `Obj2C_Leaf` `& $1F`
+(s2.asm:52200-52208, period 32), and `Obj28_Main` `btst #4` for animal bounce
+direction (s2.asm:24660-24665, verified against the recording on all 31 floor-contact
+events).
+
+A tick is lost only inside an interrupts-off window, and only when that window spans
+**two or more** V-blanks: `disable_ints` masks the CPU but not the VDP, which holds its
+interrupt asserted until acknowledged, so a single V-int raised inside a window is
+still taken the moment `enable_ints` runs.
+
+### Our Implementation
+
+**S2 applies no clock alignment at all.** `TracePlaybackProfile` defines exactly two
+constants (`TracePlaybackProfile.java:18-21`): `DISABLED` and `SONIC_1`. There is no
+`SONIC_2`, `Sonic2GameModule` does not override `getTracePlaybackProfile()`
+(`Sonic2GameModule.java:81`), and the `GameModule` default returns `DISABLED`
+(`GameModule.java:334-335`). The whole S2 package contains zero references to the type.
+S3K is in the same position.
+
+Every alignment path is gated on that profile and therefore never runs for S2:
+`alignsInterLevelVblank()` is `interLevelNonAdvancingMovieRows >= 0` → false, so
+`TraceRunVblankClock.levelDestinationTarget` returns empty and
+`AbstractRunChainTest.completeInterLevelVblankBudget` returns immediately;
+`alignsStageResultsPresentationVblank()` and `alignUncomparedInteriorReturnVblank` are
+likewise false; every `ifPresent(objects::initVblaCounter)` in `TraceSessionLauncher`
+receives an empty Optional. The S2 object clock is seeded once at bootstrap and
+free-runs — **no seam mask, no 9, no 11, no interior alignment.**
+
+The chain never drives uncompared special-stage interiors, so the engine advances its
+object-visible counter by a uniform **78 ticks** (measured live, all five interiors
+reached before the walk stops: `ss`, `ss_2`, `ss_3`, `ss_4`, `ss_5` — each exactly 78)
+across an interior the ROM spends 5,800–8,500 V-blanks in. S2 special-stage rows never
+tick the clock: `TraceRunSpecialStageRows.S2Rows.admission` hardcodes
+`advancePreservedVblankIfUnchanged = false` (`TraceRunSpecialStageRows.java:205-211`) and
+no level loop runs on those rows, so `advanceVblaCounter()` is never called. The 78 is
+entirely boundary choreography, and it is uniform because the choreography is. The deficit
+accumulates to roughly 33,500 by the run's final segment.
+
+### Rationale
+
+Two of the three inputs are derivable and were derived. The S2 special-stage return
+masks 11 rows (10 for the level-entry block at s2.asm:4766-4770, whose two Nemesis
+streams are 94 and 92 tiles by their 0x805E/0x805C headers; 1 for the results block at
+s2.asm:6751-6761, which carries no Nemesis stream). S1's interior return masks **0** —
+`GM_Special` has one interrupts-off block (s1disasm/sonic.asm:3231-3239) that runs
+`disable_display` before `ClearScreen`, about a quarter of a frame.
+
+Two are not.
+
+- **The ordinary level seam is not derivable, and the obvious alternative is refuted.**
+  Measured across the **19** `level_advance` boundaries of the complete-emerald run, it
+  masks 9 rows at 18 of them and 8 at **OOZ1→OOZ2**. (The halfpipe chain contributes no
+  `level_advance` boundaries at all — its four transitions are starpost_special and
+  stage_exit — so an earlier "21 of 22" in this entry was wrong.)
+
+  The tempting hypothesis was that an act advance within a zone takes a structurally
+  different ROM path from a full zone load, making "act-advance masks 8, full-load masks
+  9" a derivable code-path predicate rather than phase variance. **Measured and refuted:**
+  the run has 9 act advances and 10 full loads, and 8 of the 9 act advances mask 9 exactly
+  like every full load. The classes do not separate; the single deviation is *inside* the
+  act-advance class. Do not re-run this hypothesis.
+
+  Positive evidence for the phase reading: the recorded `vblank_counter` is not
+  one-per-row even *inside* segments — seg15_cnz2 and seg27_wfz1 both contain internal
+  row-to-row deltas of 0 and 2. The OOZ outlier is the counter gaining one extra tick
+  across a gap, the same shape as those mid-segment slips. A fixed ROM window whose
+  whole-V-blank count varies with its sub-frame opening phase cannot be modelled at
+  frame granularity.
+- **A 32-tick loss was recorded here against `ss_3`. It is not in the recording.**
+  Re-measured directly from the fixture, **all seven special-stage crossings reconcile at
+  exactly 11** — the derived value (10 for the level-entry block at `s2.asm:4766-4770`
+  plus 1 for the results block at `s2.asm:6751-6761`). There is no `ss_3` outlier and no
+  unattributed internal loss:
+
+  | interior | crossing | ss rows | movie rows | vbl delta | deficit |
+  |---|---|---|---|---|---|
+  | `ss`   | seg1_ehz1 → seg2_ehz1   | 5681 | 5856 | 5845 | 11 |
+  | `ss_2` | seg2_ehz1 → seg3_ehz1   | 6361 | 6536 | 6525 | 11 |
+  | `ss_3` | seg3_ehz1 → seg4_ehz1   | 7092 | 7267 | 7256 | 11 |
+  | `ss_4` | seg5_ehz2 → seg6_ehz2   | 7224 | 7398 | 7387 | 11 |
+  | `ss_5` | seg6_ehz2 → seg7_ehz2   | 6690 | 6864 | 6853 | 11 |
+  | `ss_6` | seg9_cpz2 → seg10_cpz2  | 8310 | 8510 | 8499 | 11 |
+  | `ss_7` | seg11_arz1 → seg12_arz1 | 8498 | 8672 | 8661 | 11 |
+
+  The interiors differ wildly on every event axis available — 5681 to 8498 rows, 41 to 60
+  segment changes, 55 to 140 rings-to-go transitions, 6 to 14 orientation changes — while
+  the deficit stays pinned at 11. The deficit is therefore **independent of every
+  measurable event axis**, which also disposes of the "does 32 factor as a per-event
+  constant times an event delta" hypothesis: there is no per-interior variation for an
+  event count to be proportional to. Do not re-run that test either.
+
+  If a 32-tick discrepancy is real it is **engine-side**, not a property of the ROM or the
+  recording, and this entry previously mis-attributed it. No prior note recording how the
+  32 was measured exists anywhere in `docs/` or `src/`. Whoever picks this up should start
+  by re-deriving it against the engine rather than trusting the number.
+
+### Retracted: there is no cancellation mechanism
+
+Earlier revisions of this entry described the baseline as surviving by "cancellation, not
+correctness" — an odd deficit at one special-stage crossing cancelling an odd deficit at
+an act seam, leaving whole-run parity correct by luck. **That mechanism is wrong and is
+retracted.** Three independent reasons, any one sufficient:
+
+1. It reasons about deficits relative to a uniform-9 *engine* seam model. S2 has no such
+   model — the profile is `DISABLED` and no seam-alignment code runs. The 9/8 split is a
+   property of the **recording only**; nothing in the S2 engine path consumes it.
+2. Its per-interior constant was 79. Measured, it is **78** — and the parity of that
+   constant was the entire argument. 78 is even, which inverts the odd/even split the
+   section described.
+3. Its prediction is empirically false. Engine clock at segment start against that
+   segment's recorded first-row `vblank_counter`:
+
+   | segment | engine | recorded | delta | parity |
+   |---|---|---|---|---|
+   | seg1_ehz1 | 553 | 554 | −1 | in phase |
+   | seg2_ehz1 | 4342 | 10108 | −5766 | **inverted** |
+   | seg3_ehz1 | 7797 | 20009 | −12212 | **inverted** |
+   | seg4_ehz1 | 11835 | 31224 | −19389 | in phase |
+   | seg5_ehz2 | 13200 | 32673 | −19473 | in phase |
+   | seg6_ehz2 | 19325 | 46105 | −26780 | **inverted** |
+   | seg7_ehz2 | 23197 | 56751 | −33554 | **inverted** |
+
+   Parity is inverted in **four of the seven** level segments reached, and it flips back
+   and forth rather than inverting once and cancelling once. Segments 2 and 3 are
+   parity-inverted **and compare clean**.
+
+**Parity inversion does not by itself produce compared divergence.** `Obj4B` is
+implemented and genuinely parity-gated — `BuzzerBadnikInstance.selectTargetPlayer`
+(`BuzzerBadnikInstance.java:166-172`) is a faithful port of the ROM's
+`btst #0,(Vint_runcount+3).w` (`s2.asm:60989-60998`; `+3` is the low byte of the
+longword, so this is the parity of the full counter). But `Obj4B` is the Buzzer, an EHZ
+badnik (`s2.asm:29991`, body at `:60850`), and its parity branch sits behind
+`Obj4B_shooting_flag` and a subsequent narrow x-window test. The gate is reached rarely
+and usually picks a player on the same side, so it is not a sensitive detector of clock
+phase.
+
+### Decision: `DISABLED` is retained deliberately
+
+Nobody chose `DISABLED` for S2 — it is an inherited default. It is retained, but the
+justification below is **narrower than an earlier revision of this entry claimed**:
+
+- **Parity (mod 2) phase is invisible.** Engine-vs-recorded parity inverts four times
+  across the seven level segments reached, and those segments compare clean. The only
+  implemented parity-gated object, `Obj4B`, is ported faithfully but is a poor detector
+  (shooting flag plus a narrow x-window).
+- **Mod-8 phase is NOT invisible — the tripwire below has fired.** An earlier revision
+  said "the comparison set does not consume clock phase." That is **wrong**. The Egg
+  Prison random-animal spawn gate (`loc_3F3A8`, `s2.asm:84935-84942`,
+  `move.b (Vint_runcount+3).w,d0 / andi.b #7,d0 / bne`) consumes mod-8 phase directly.
+  The engine's counter is 6 rows (−2 mod 8) early at segment entry, which fires one extra
+  random spawn, consumes an extra RNG draw pair, and shifts every later animal's position,
+  type and travel direction. That is the entire 287-error segment-11 divergence.
+
+**The fix is not a `SONIC_2` profile.** The mis-phase is *inherited at segment entry* from
+an under-replayed transition gap, with no drift within the segment. The engine is faithful
+everywhere it was checked — the deletion predicate already models the ROM BuildSprites box
+(commit `f9da6563e`), and per-animal lifetimes match the recording (engine 96–144 rows mean
+~119; ROM 95–144 mean ~119). What is wrong is how many movie rows the harness consumes
+crossing the gap; see the gap-accounting note below.
+
+Building a `SONIC_2` profile now would be speculative machinery validated against nothing
+— the shape of work the fitted-constant rule exists to prevent. S1's profile is
+legitimate because its alignment is derived from the ROM's own frame accounting.
+
+**Tripwire status: FIRED, and it resolved to gap accounting, not to a clock model.** The
+end-of-act PLC divergence turned out to be exactly the modulo-gated case this tripwire was
+written for — but the owner is the harness, not the engine. The engine's object clock is
+correct *given* the rows it was advanced; it was advanced too few.
+
+### Gap accounting — the actual defect
+
+The harness under-replays uncompared transition gaps, and this is now the dominant
+remaining cause across multiple independent axes:
+
+| boundary | recorded rows | engine rows |
+|---|---|---|
+| EHZ1→EHZ2 act seam | 172 | **78** |
+| special-stage interior | 5,845–8,661 | **78** |
+
+At the act seam every transfer id, edge ordinal, owner, submission origin, request set,
+`gap_edge_index` and **both** ledger fingerprints match the recording — only
+`movie_logical_frame` diverges. The art pipeline is faithful and emits correct edges
+stamped from a short cursor.
+
+**Seam length is data-driven and cannot be a constant.** Recorded `level_advance` seam
+lengths range 158–200 rows, with within-zone spread ≤3 across acts but between-zone spread
+up to 42, correlating with the destination zone's PLC1 entry count at Spearman 0.886. The
+ROM predicts exactly that act-independence: `LevelArtPointers` gives both acts of a zone
+the same PLC1 (`s2.asm:89135-89151`) and `Level:` selects it by `Current_Zone`, not by act
+(`s2.asm:4783-4795`). A single global constant would be off by up to 42 rows.
+
+Note the engine's *decompression* is correct — a live probe shows `remain` decrementing by
+exactly 6 per frame, matching `move.w #6,(Plc_FramePatternsLeft).w` (`s2.asm:2203`), and it
+processes the ROM's own `PlrList_Ehz1`+`PlrList_Std2` payload in 52 rows. `Level_TtlCard`
+(`s2.asm:4914-4924`) exits only when the slide has finished **and** `tst.l (Plc_Buffer).w`
+is empty, so seam length is `max(slide, backlog)`; for EHZ the backlog is 52 and the slide
+dominates. The missing rows are in slide/leave choreography, not the queue.
+
+**The defect is seam ORDER, not gap length.** Measured directly: the gap length is already
+correct — for the level→level `level_advance` gap the recording spans 171 rows and the
+engine drives 170, because `destinationReady`
+(`TraceRunPlaybackCoordinator.java:396-399`) refuses admission until the shared cursor
+reaches the destination's `bk2_frame_offset`. What differs is the composition:
+
+| | order inside the gap |
+|---|---|
+| **engine** | `TITLE_CARD` for 78 rows, then 92 rows idling in `LEVEL` |
+| **ROM** | fade → interrupts-off `ClearScreen`/`LoadTitleCard` → `Level_ClrRam` → level art decompression (**~93 rows of pre-card work**) → *then* `Level_TtlCard` |
+
+So the engine's title-card art edges land **93 rows early** — exactly the `delta=93` seen on
+every failing `run_gap.edge[N].movie_logical_frame`.
+
+**The 78 is not invented and must not be "fixed".** Both halves are already ROM-derived and
+cited in place: 52 rows of genuine PLC drain at `move.w #6,(Plc_FramePatternsLeft).w`
+(`s2.asm:2202-2213`) over `PlrList_Ehz1` + `PlrList_Std2` with the ROM's per-entry
+`ceil(patterns/6)` quantisation, and 26 rows of `LEAVE_*_PASSES` in
+`TitleCardManager.java:78-84`, each cited to the leave loop at `s2.asm:5060-5066`.
+
+**A retracted theory, recorded so it is not retried.** An earlier revision claimed the
+169–199 variance came from the results bonus tally counting down at a fixed rate. It cannot:
+the tally runs inside `Level_MainLoop` while `Game_Mode` is still `$0C`, and the capture
+finalises a segment at the first `$8C` frame (set by `Level:`'s first instruction) and
+re-arms at the first `$0C` (cleared at `Level_StartGame`, `s2.asm:5084`). The variance is
+payload-dependent **un-timed load cost** — the same class already documented for S1 at
+`TraceRunPlaybackCoordinator.java:382-395` (34–40 rows there).
+
+**Fixing it needs a frame-costed level load, which does not exist.** The engine runs all 20
+level-init steps synchronously in one loop (`LevelManager.java:385-394`) and `InitStep` is
+`record(String, String, Runnable)` with no frame-cost concept, so the title card necessarily
+begins at gap row 0. ROM ordering requires a suspendable cross-frame level load shared by all
+three games, every test, the editor and level select.
+
+That is deliberately **not built**. Full diagnosis, the ruled-out shortcuts, a smaller
+sidecar-based variant worth one feasibility pass, and the priority argument are in
+[docs/architecture/designs/2026-08-13-level-entry-seam-frame-costing.md](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
+Do not attempt a 22-row pre-card hold: the remaining ~70 rows are payload-dependent, so any
+fixed boundary offset is a fitted constant, and it would disturb S1's currently-green gap
+edges, which absorb 34–40 un-timed rows as padding
+(`TraceRunPlaybackCoordinator.java:382-395`).
+
+### The fingerprint is real; its explanation was not
+
+> **122,139 errors at segment 7, frame 524, field `sidekick_y` (rom=0x0271
+> engine=0x0272).**
+
+This has been produced **five times under four different descriptions** — boolean-only
+alignment, a `-1`-only budget, a `-1-11` budget, and the no-`-1` masked form. The "fix
+both seams or neither" advice attached to it in earlier revisions followed from the
+retracted mechanism and should be ignored.
+
+**Explained: it is the signature of a correct number applied by the wrong mechanism.**
+Every one of the five attempts ultimately bumped the V-int counter by the gap's true
+movie-row count. That makes the counter say ~190 frames passed while every other piece of
+engine state says 78 — ring timers, animation phases, and critically the sidekick's
+position-record buffer. The Tails CPU has counter-gated logic sitting immediately next to
+that buffer, so the object runs on **two different clocks at once**, which is a
+deterministic wreck rather than a random one. Same number, same mechanism, same failure —
+which is exactly why five differently-described attempts produced an identical error count
+and first-error location. The fingerprint was never mysterious; it is the machinery's
+signature.
+
+This also dissolves the apparent contradiction with the parity finding above. The counter
+value is inert **to what the clean segments happen to contain** — it was never a general
+claim. Segment 7's sidekick is counter-sensitive.
+
+**Do not "fix" this by enabling the budget machinery.**
+`TraceRunReplayWalker.interLevelVblankBudget` (`:731-746`) already computes the correct
+movie-row count, and every call site is gated on the profile that returns `DISABLED` for
+S2. Enabling it is a one-line change whose arithmetic is right and whose mechanism is the
+one described above. Being one already-tested line makes it more dangerous, not less.
+
+Consequences visible today: leaf particles are mis-phased in every S2 run (period 32
+against a deficit of 6 mod 32), and the emerald run's end-of-act PLC submission lands 28
+rows early because a differently-chosen animal survives last.
+
+**What the next agent should actually know:** S2 has no clock model, not a delicate one.
+Before treating any of this as a constraint, decide whether S2 *should* carry a
+`TracePlaybackProfile` at all — the S1 machinery exists and is inert here, which is a
+very different starting position from "the model is fitted and fragile".
+
+### Routes considered and rejected, so the wall is not re-derived
+
+- **Write down the measured deficit.** Excluded: a fitted model. It would go green here
+  and desync the first differently-timed recording — the failure this project's rule 3
+  exists to prevent.
+- **Model the level-entry window at 68000 cycle level** to predict the 9-or-8 split.
+  Rule-compliant and would also predict the art-volume spread seen elsewhere, but
+  frame-exactness needs plane draws, VDP wait states and V-blank interleaving — a
+  partial cycle emulator. Impractical, not forbidden.
+- **The rule-4 hardware-timing sidecar.** Does not apply: it may only delay readiness of
+  engine-submitted art jobs, and nothing here polls a queue.
+
+What would actually close it: per-row lag data for the undriven interiors, which is a
+recorder and fixture change rather than a trace fix.
+
+### Verification
+
+`TestS2EhzHalfpipeRoundTripChain` is fully green and unaffected. Emerald segments 0–10
+report zero errors and player physics matches the recording on every row of the run.
+Segment 11 carries 287 errors, all of them the Nemesis PLC queue, downstream of this.
+
+## 28. S2 Run-Gap Art Submission Rows Are Sub-Frame CPU Position
+
+**Status:** intentional limitation. Not closable at frame granularity by any rule-compliant
+route, including fixture regeneration.
+
+### Symptom
+
+`TestS2CompleteEmeraldRunChain` axis 4: `ss_4 -> seg6_ehz2` reports
+`run_gap.edge[0]`/`[1]`.`movie_logical_frame` expected 46347, actual 46348 — the engine one
+row late. Aligned by transfer id these are tids 28084/28085, the *submitted* pair; the
+matching *completed* pair at 46349 matches.
+
+### Original Implementation
+
+The ROM submits the returning level's player art at the leading `jsr (RunObjects)`
+(`s2.asm:5007`), where Obj01/Obj02 display runs the DPLC. Between that call and the leave
+loop's first `bsr.w WaitForVint` (`:5060-5061`) it executes **only straight-line 68000 code**
+— `BuildSprites` (`:5008`), `AniArt_Load` (`:5009`), `SetLevelEndType` (`:5010`), demo-script
+setup (`:5011-5048`), `PalLoad_Water_ForFade` (`:5049-5054`), the leave-flag writes
+(`:5056-5058`) — with no `WaitForVint` and no polled readiness gate.
+
+**Re-verified 2026-08-14 against the recorder-fiction hypothesis, and it holds.** After a
+sibling frontier turned out to be recorder fiction — the ROM discarding queued work via an
+unguarded `clr.w (VDP_Command_Buffer).w` while the recorder's ledger reported it completed
+— this span was re-examined for the same pattern, since it was the model that framing came
+from. It is not the same:
+
+- **No ledger-invalidating write lies inside the span.** Every write that can zero
+  `VDP_Command_Buffer` is upstream of the submission: `:4857-4858` sits in Level init's VDP
+  setup ~150 lines *before* `:5007`; the annotated `SS_Shared_RAM` overshoot (`:6599`) and
+  the results-tail pair (`:6759-6760`) are both thousands of rows earlier; `:10766` and
+  `:11737` are not on this path. (`:6609` and `:10342` are inside `if fixBugs` and so never
+  execute at all — see the manifest's guard table.)
+- **The transfer is performed, not discarded.** In the fixture's own ledger, transfers
+  28084/28085 submit at row 46347 and complete at 46349, and the *next* two transfers
+  (28086, 28087) submit and complete on consecutive rows. A queue that drains next-row on
+  the following transfers is live, not stranded — the opposite of the results-tail
+  signature, where one transfer stayed outstanding across all 22 fade rows and was then
+  discarded. The recorded completion at `ProcessDMAQueue` is explained by the ROM's own
+  control flow: `Vint_TitleCard` calls it at `:1046`, raised by the very `WaitForVint` at
+  `:5061` that terminates this span.
+
+So the ±1 row is genuine elapsed 68000 time — how far before the span's end the submission
+falls is a pure cycle count with no frame-granularity observable. This entry stands as
+written. **Caveat recorded for whoever regenerates fixtures:** the recorder's
+`OnProcessDmaQueue` drains its ledger unconditionally and never reads `VDP_Command_Buffer`,
+so it *is* capable of manufacturing lifecycles at the four live reset sites. It simply is
+not doing so here, because the precondition — a zeroing write between submission and drain
+— is absent.
+
+The number of masked V-int frames between the DPLC write and the leave loop's first V-int is
+therefore a **pure 68000 cycle count**, dominated by `BuildSprites`/`AniArt_Load`, whose cost
+depends on the object set `ObjectsManager` loaded at the entry position (`:5000`).
+
+### Our Implementation
+
+The harness releases held player art on `lastNonAdmittedRow(census)` — the end of the masked
+load-span run. Measured across **all 27 censused transitions** of the complete-emerald run,
+that anchor coincides with the ROM on 20, is one row late on 4 (`ss_4`, `ss_5`,
+`seg15_cnz2→seg16_htz1`, `seg27_wfz1→seg28_dez1`), and is 8–47 rows out on 6 more.
+
+**Nothing zone-, act-, route- or path-dependent distinguishes them.**
+`seg4_ehz1 → seg5_ehz2` and `ss_4 → seg6_ehz2` share a destination act and have opposite
+tails; so do `seg15_cnz2 → seg16_htz1` and `seg16_htz1 → seg17_htz2`.
+
+### Why it cannot be closed
+
+- **A tuned offset** is a fitted constant, forbidden by rule 3, and would be wrong on the
+  20 seams the anchor currently gets right.
+- **Recording the submission row** and consuming it round-trips the answer: the recorded
+  quantity would determine the very field the comparison checks, so the test would prove
+  nothing. This is why the authorised fixture regeneration cannot close it.
+- **Cycle-level modelling** of `BuildSprites`/`AniArt_Load` would close it and is
+  rule-compliant, but needs a partial 68000 cycle emulator — assessed as impractical.
+
+### Verification
+
+Axis 4 is left reported rather than excused. Excusing `movie_logical_frame` here would
+suppress the evidence that located the cause, and would mirror the S1 precedent
+(`TestS1GhzMazeRoundTripChain`:29-70) that this session found is probably papering over the
+same class of defect.
+
+### Related, and latent
+
+`ss_6` and `ss_7` are **not passing — they are unreached**: the chain aborts around segment 11
+and never compares them, hiding anchor errors of 8–47 rows.
+
+A ROM-derived anchor improvement exists and is **not landed**: the leave loop performs exactly
+one `WaitForVint` per pass (`:5060-5061`), so a lag run of length ≥ 2 cannot be inside it,
+making *"the last lag run of length ≥ 2"* a derived anchor rather than a fitted threshold. It
+would correct the 8–47-row cases but changes nothing at `ss_4` and nothing on any seam the
+test currently reaches, so it is unverifiable today. See
+[the design note](../architecture/designs/2026-08-13-level-entry-seam-frame-costing.md).
+
+## Object-slot occupancy is not compared, and diverges from ROM in all three games
+
+**Retitled 2026-08-21.** This entry was headed *"S3K object-slot occupancy…"*. Arming
+`SlotOccupancyProbe` across the full `-Ptrace-replay` sweep shows the defect is **not
+S3K-specific**: on presence/absence alone, S1 diverges on 45 of 48 fixtures and S2 on 33 of
+36, alongside S3K's 10 of 10 — 88 of 94 fixtures and 40.1% of 29,832 compared frames. The
+S3K-specific material below stands; its scope does not. Measurements and the divergence
+breakdown: the 2026-08-21 occupancy entry in
+[trace-frontier-log.md](trace-frontier-log.md).
+
+**Do not wire occupancy in as a comparison yet** — it would red 88 fixtures across three games
+to report an already-known fact. Fix the dominant "engine has fewer occupants" bucket (39% of
+divergent frames) first, re-measure with the probe, and land the comparison when the red set is
+reviewable.
+
+
+**Measured 2026-08-15.** `AbstractTraceReplayTest.compareObjectNearEvents()` defaults to `false`
+and `TestS3kHczCompleteRunTraceReplay` does not override it; `SlotOccupancyProbe` is
+`OGGF_SLOT_PROBE`-gated off. **So that test compares no object identity, slot or position at
+all** — despite its fixture carrying 394,205 `object_state`, 342,381 `object_near` and 2,388
+`slot_dump` events.
+
+With the probe armed, engine-vs-ROM occupancy diverges on **2387 of 2387 sampled frames**.
+
+**Corrected 2026-08-15 (same day): the magnitude first published here overstated by ~3x.** The
+60,274 figure counted a comparison artefact. S3K keeps a **32-bit ROM code pointer** in the first
+SST long, not an id byte — `Process_Sprites` does `move.l (a0),d0 / movea.l d0,a1 / jsr (a1)`
+(`sonic3k.asm:35985-35988`) — so the recorder's `slot_dump` carries values like `"0x0002D95C"`.
+Both `SlotOccupancyProbe.parseId` and the **committed** `TraceBinder.compareObjectNear`
+(via `parseHexByte`) truncate that to its low byte and compare it against the engine's *layout*
+object id. Different number spaces; the tell is that every "ROM id" printed is even, because
+addresses are. That accounts for **40,755 of the 60,274 entries (67.6%)**. The genuine
+presence/absence divergence is **19,519 entries across 2025 frames**. The 2387/2387 frame headline
+survives; the magnitude does not.
+
+**Consequence: enabling `compareObjectNearEvents()` for an S3K class today would not measure
+occupancy at all** — it would compare an engine object id against the low byte of a ROM code
+address. S1's `object_near` carries a real one-byte `"type":"0x25"`, which is why the S1
+complete-run classes legitimately enable it. Fixing the identity mapping is the prerequisite for
+any occupancy comparison work.
+
+**Amended 2026-08-15: there is no identity mapping to fix, and truncation is not the real
+defect.** The follow-up audit
+[*S3K trace object identity: the object pointer tables cannot supply it*](../architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md)
+read both S3K object pointer tables out of the ROM — `Sprite_Listing3 = 0x00094EA2` (256 entries)
+and `Sprite_ListingK = 0x000952A2` (185), both taken from the `203C` immediates the object loader
+itself uses at ROM `0x01B6A8` / `0x01B6C4` (`sonic3k.asm:37411-37430`) — and inverted them.
+**Only 7 of the 189 distinct code pointers in the HCZ `slot_dump` stream are table entries at
+all: 2,428 of 56,993 entries, 4.26%** (2.6% across the full event stream). The S3K SST has no id
+field at any offset (`sonic3k.constants.asm:9,20`), and objects overwrite their own dispatch
+pointer with internal sub-routine addresses to advance state — **1,758 `move.l #<label>,(a0)`
+sites in `sonic3k.asm`** — so the recorded value is a live program counter, not a type at any
+width. Containment (nearest preceding table entry) is not a sound repair: it maps `0x00085AD2`
+into `Obj_HiddenMonitor`'s `0x2BCE` gap when the previous audit's co-occurrence map called it
+`Obj_Poindexter` (`$98 → 0x0008827C`), and it produces `+0x2520`-and-larger offsets that no
+single object body spans.
+
+**Consequences.** The 19,519 genuine presence/absence divergence and the 2387/2387 frame headline
+stand, unchanged — they never consulted `type`. The **41.3/23.3/23.8/11.6
+permutation-vs-population mixture is withdrawn**, not refined: it rested on the inferred map, and
+the ROM supplies a sound replacement for 4.26% of entries and nothing for the rest, so that split
+is **not currently measurable**. `compareObjectNearEvents()` must stay off for S3K for a firmer
+reason than before — the field carries no object identity at any width. The comparison S3K could
+support is *occupancy alone* (presence/absence and slot index over `Dynamic_object_RAM`, slots
+4-90, no identity), which is already sound today; identity would instead require annotating every
+ported S3K object with its current ROM routine address.
+
+**The complete-run has been green for its entire life while its object graph disagreed with the
+ROM everywhere.** Its green is evidence about player physics, not about object layout.
+
+**Why this is not cosmetic.** Several ROM behaviours are keyed on an object's own SST slot index.
+`Obj_Bouncing_Ring` gates its floor probe on it —
+`move.b (V_int_run_count+3).w,d0 / add.b d7,d0 / andi.b #7,d0 / bne`
+(`docs/skdisasm/sonic3k.asm:35629-35632`), where `d7` is `Process_Sprites`' live slot countdown.
+A ring occupying a different slot therefore bounces on different frames. A measured instance:
+after the HCZ boss hurt both trees scatter 32 rings at pixel-identical positions, but ring 0 lands
+in slot 38 on one tree and slot 4 on the other (34 apart, two apart in the `&7` cycle), so it is
+collected four frames early and prints as a `rings` mismatch 27,600 frames after the change that
+moved the layout.
+
+**Consequence for reading results.** A green S3K complete-run does not imply the object graph
+matches. It implies the compared fields match. Occupancy should be brought into the compared
+surface before slot-sensitive behaviour is judged by these tests.
+
+**Corrected 2026-08-15 by
+[the occupancy scoping audit](../architecture/audits/2026-08-15-s3k-object-slot-occupancy-scoping.md).**
+The 2387/2387 frame figure holds, but **60,274 overstates the real divergence about threefold**.
+S3K stores a 32-bit code pointer in the first long of an SST slot, not an id byte
+(`docs/skdisasm/sonic3k.asm:35985-35988`), so the recorder's `slot_dump` and `object_near` carry
+addresses such as `"0x0001365C"`. Both `SlotOccupancyProbe.parseId` and `TraceBinder`'s
+`parseHexByte` truncate that to its low byte and compare it against the engine's layout object id.
+**40,755 of the 60,274 entries (67.6%) are that artefact**, not a divergence; the genuine
+presence/absence divergence is 19,519 entries on 2025 frames. S1's `object_near` `type` is a real
+one-byte id, which is why the three S1 classes can enable the comparison — **an S3K class must not
+enable `compareObjectNearEvents()` until the identity key is fixed**, or the resulting red is
+uninterpretable. With identity resolved the divergence is a near-even mixture of permutation
+(23.3% of sampled instances) and population difference (23.8% short, 11.6% excess); the ROM's
+`AllocateObject` search order is modelled correctly and is **not** the cause.
+
+## HCZ complete-run is deliberately red: a slot-phase consequence of a ROM-correct fix
+
+**Since 2026-08-15.** `TestS3kHczCompleteRunTraceReplay` fails with exactly two errors —
+`rings` 1 vs 2 at frame 29095 and 0 vs 1 at 29262. This is **expected and documented**, not an
+unhandled regression, and the class carries the same marker in its own javadoc.
+
+Commit `b31069c3f` corrected two ROM-cited MegaChopper defects (the `Obj_WaitOffscreen` gate and
+the `EnemyDefeated` bounce the `Touch_Special` path owes the player). At frame 1481 the badnik
+then sits at x=**3840** where it previously sat at 3839 — and this run's own aux records
+`object_x 0x0F00` = 3840, so **the fix is the ROM-correct side and the previous behaviour was
+wrong.**
+
+That one pixel changes object-slot occupancy on 16,289 of 31,482 rows. 27,600 frames later the
+boss-hurt ring scatter places ring 0 in slot 4 rather than 38, and `Obj_Bouncing_Ring` gates its
+floor probe on its own SST slot (`move.b (V_int_run_count+3).w,d0 / add.b d7,d0 / andi.b #7,d0 /
+bne`, `sonic3k.asm:35629-35632`, `d7` being `Process_Sprites`' live slot countdown). Those slots
+are two apart in the `&7` cycle, so the ring bounces on different frames and is collected four
+frames early.
+
+**The previous green was accidental.** Occupancy diverges from ROM on 2387 of 2387 sampled frames
+on *both* trees, and this test compares no object identity, slot or position — so the old green
+was a slot-phase lottery that happened to land compatible phases, not a baseline that the fix
+broke.
+
+**Removal condition:** slot-occupancy parity. That is currently unmeasurable from the recorded
+stream — see the SST no-identity finding above — so it needs a different recording surface before
+it can be worked. **Do not close this by adjusting ring timing, slot allocation or the bounce.**
+
+## 30. S3K standalone Super-Emerald special stages cannot choose their layout set
+
+Seven Sonic+Tails special-stage segments (`ss_8`..`ss_14`) diverge at frame ~135 with
+large positional error (e.g. expected `x=5376`, actual `512`). The engine loads the
+**Chaos** layout set for stages the ROM ran with the **Super** set.
+
+### The ROM
+
+`sub_85B0` masks the index -- `andi.w #7,d0` / `move.b d0,(Current_special_stage).w`
+(`docs/skdisasm/sonic3k.asm:10858`) -- so **the stage index is 0-7 in both halves**. The
+layout set is chosen entirely by `SK_special_stage_flag` at `loc_85E4` (`:10824-10830`):
+set means `a2 = SSLayoutOffs_RAM` with `d3 = Super_emerald_count`, clear means
+`SStageLayoutPtrs` with `d3 = Chaos_emerald_count`, and the `adda.l #LockOnROM_Start,a2`
+S3-half rebase (`:10863-10868`) applies only when it is clear.
+
+Consequence: **`special_stage_index` is not a segment identity.** Index 0 names both `ss`
+(Chaos) and `ss_8` (Super). Seven test-class javadocs claimed the directory ordinal as the
+index (`ss_8` = "index 7" and so on); all seven were wrong and have been corrected.
+
+### The engine's invented index space
+
+`Sonic3kSpecialStageManager` branches on `currentStage < 8` for layouts and
+`superEmeraldMode || currentStage >= 8` for palettes (`:511-514`), an **0-15 index space
+the ROM does not have**. It is reachable only from `debugToggleLayoutSet()` (`:1444`),
+which initializes stage 8 and lets `debugNextStage()` cycle 8-15. Only the emerald-art
+archive site (`:1035`) consumes the flag cleanly.
+
+### Why the obvious predicate is also wrong
+
+`superEmeraldMode` = `hasAllEmeralds() && !hasAllSuperEmeralds()` is a proxy for the normal
+route and is **not ROM-equivalent**:
+
+- the special-stage demo path sets `move.b #1,(SK_special_stage_flag).w` and then
+  `clr.w (Emerald_counts).w` (`sonic3k.asm:5702-5706`) -- flag set, counts zero;
+- level select picks the flag independently (`:10102`).
+
+So an unseen demo or level-select recording defeats the inference. Replacing the invented
+index space with this proxy would swap one non-ROM predicate for another.
+
+### What is blocked, and the decision required
+
+No committed fixture records the flag. The recorder samples only `$FFB0` (Chaos count,
+`tools/bizhawk-headless/src/Recording/S3KRam.cs:247`); SS `aux_state.jsonl.gz` is
+byte-empty by design (`S3KCompleteRunSegmenter.cs:24`). Note `run_manifest.json` **does**
+carry `emeralds_before`/`emeralds_after` -- an earlier claim here that it did not was
+wrong -- but that is the Chaos count, not the flag.
+
+Deriving the set from frame-0 position/spheres/rings, or by trying both layouts and keeping
+the match, is a trace oracle. Treating `ss_8`+ or the segment ordinal as "Super" is a route
+predicate that fails the any-BK2 bar.
+
+**Escalation, awaiting a decision that is not the engine's to make:**
+
+1. Recorder exports `sk_special_stage_flag` (`u8`, 0 or 1, ROM RAM `$FFBB`, sampled at the
+   special-stage arm beside `Current_special_stage` `$FE16`) into every S3K special-stage
+   `metadata.json` and the matching `run_manifest.json` entry. This makes the fixture
+   self-describing. **It does not by itself authorise feeding the value into gameplay.**
+2. Then one of:
+   - **bless** `{special_stage_index, sk_special_stage_flag}` as immutable segment-entry
+     identity -- analogous to choosing which test case to initialise, not to hydrating
+     state; or
+   - keep it **comparison-only**, accept that standalone Super-stage segments stay red, and
+     close them through continuous run-chain or predecessor replay instead.
+
+Reconstructing the selector natively instead would need `chaos_emerald_count` (`$FFB0`),
+`super_emerald_count` (`$FFB1`), the seven-byte `collected_emeralds_array`
+(`$FFB2..$FFB8`) -- necessary because the selector inspects individual entries when
+skipping collected stages (`sonic3k.asm:10841`) -- and optionally `emeralds_converted_flag`
+(`$FFBA`).
+
+### Landable today, independently
+
+Removing the 0-15 index space is verifiable **without any fixture**: keep `currentStage`
+strictly 0-7, represent the layout set as an explicit flag on the production stage-entry
+request, consume it at every site (layout, palette, emerald art, award inventory, rewind,
+debug), make `debugToggleLayoutSet()` toggle the flag rather than the stage number, and
+test `(stage 0, flag 0)` against `(stage 0, flag 1)` for distinct ROM-backed layout data.
+The ROM-faithful owner of the flag is the entry object -- `Obj_HPZSuperEmerald` writes it
+at `sonic3k.asm:197730` -- which is not implemented (registry name only).
+
+---
+
+## S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame
+
+**Status:** open, deliberately not fixed. **Cost:** 58 comparator errors in the
+CPZ2 standalone segment, and one red class if the push-gate pair is landed.
+
+### Original Implementation
+
+`SolidObject_TestClearPush` gates its `move.w #(Walk<<8)|Run,anim(a1)` restart
+write on `btst d4,status(a0)` -- the object's own pushing bit
+(`docs/s2disasm/s2.asm:35462-35466`). `SolidObject_LeftRight` branches to
+`SolidObject_SideAir` **before** the `bset d4,status(a0)` (`:35413-35461`), so an
+object's pushing bit is only ever set for a grounded character, and the airborne
+side path returns through `Solid_NotPushing` without reaching the write.
+
+### Our Implementation
+
+The engine licenses that write on `sprite.getPushing()` -- the player's global
+flag -- and gates its player-side clear on a per-instance latch. Landing the
+ROM-faithful pair (ungated player clear plus object-bit gate) plus the MGZ
+spiked-platform site leaves exactly **one** extra Walk/Run write over the S2
+prefix chain, 10 against the ROM's 9, and `TestS2CompleteEmeraldRunPrefix` red on
+a shifted `dynamic_art` edge ordinal.
+
+### Rationale
+
+The cause has been **excluded from three places and localised to none**:
+
+- **Entry classification.** The engine reaches the same entries the ROM does:
+  all 224 object-bit sets fire grounded, and six monitors take the airborne
+  `SideAir` clear as the ROM does.
+- **The write-site predicate.** The ROM itself performs the write while airborne
+  (f377, f3408 in `seg5_ehz2`, out of box with the bit set), so an
+  airborne-at-the-write-site suppression would suppress the case the ROM
+  performs. Verified by reconstructing `SolidObject_cont`'s box arithmetic
+  (`:35344-35369`) from the object's own `d1`/`d2` and the recorded positions --
+  a reconstruction that validates itself, since `d0` is exactly `0` on every
+  pushing frame, which is `SolidObject_AtEdge`'s `sub.w d0,x_pos(a1)`.
+- **Object population.** The engine pushes exactly the same seven monitor
+  placements the ROM does, coordinate for coordinate, across the nine segments
+  the prefix chain replays. An earlier "three ROM slots against eleven engine
+  instances" was a counting error -- different denominator (one segment against
+  the chain) and different unit (ROM slots against Java identities, which the
+  chain re-creates per segment reload).
+
+What remains is a single contact-end frame where the engine reports no contact
+and the ROM reports a side collision. Every candidate fix lives in collision code
+shared by all three games, so the blast radius is every solid contact in Sonic 1,
+2 and 3&K -- against a 58-error win in one segment. Excluding is not localising,
+and acting on three exclusions rather than one localisation is how a narrow
+symptom acquires a wide fix.
+
+The push-gate pair is therefore **not landed**, and this entry exists so the next
+attempt starts from the three exclusions rather than repeating them.
+
+### Verification
+
+`(1)+(2)+MGZ site` measures 790/5 against a 790/4 control at the same base with
+`TestS2CompleteEmeraldRunPrefix` the only new red; the CPZ2 standalone segment
+improves 2491 -> 2433 and every `player_mapping_frame` divergence in it closes;
+the three complete-emerald chains are red in control and candidate alike with
+identical failure modes; and none of the ten regressions retired by the
+object-side port audit have returned.
+
+---
+
+## S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)
+
+**Status:** open, deliberately not reproduced. **Cost:** part of a 2422-error
+`dynamic_art` cluster in the CPZ2 standalone segment; the mechanism accounts for
+under half of it.
+
+### Original Implementation
+
+`Obj5D_Pipe_Retract_ChkID`, on the shipped `fixBugs = 0` path, carries the
+disassembly authors' own warning:
+
+```
+; 'd7' should not be used here. This causes the 'RunObjects' routine to
+; either run too few objects or too many objects, causing all sorts of errors.
+    moveq   #0,d7
+    move.b  #ObjID_CPZBoss,d7
+    cmp.b   id(a1),d7
+```
+
+`ObjID_CPZBoss` is `$5D`, so the boss **writes `$5D` into `RunObjects`' live loop
+counter**. The iteration's `dbf` takes it to `$5C`, giving 92 further iterations
+from slot 30 and ending the pass at slot 122 — six slots short of
+`LevelOnly_Object_RAM` at `$FFD000`. `Tails_Tails`, `SuperSonicStars` and
+`Sonic_BreathingBubbles` are therefore all skipped for as long as the boss holds
+routine `$08`. Measured: `d7` goes `0072` -> `005C` after slot 29 on every
+affected row, 123 iterations instead of 144.
+
+The `fixBugs = 1` path uses `cmpi.b #ObjID_CPZBoss,id(a1)` and leaves `d7` alone.
+**The engine models `fixBugs = 0`**, so the truncation is the accurate behaviour.
+
+### Our Implementation
+
+`ObjectManager.runExecLoop` iterates `for (currentExecSlot = 0; currentExecSlot <
+execOrder.length; currentExecSlot++)`. The bound is a fixed array length: there is
+no remaining-count an executing object could write, and no path by which an object
+shortens the pass. The engine runs all three `LevelOnly` objects on frames where
+the ROM skips them, and is therefore **more correct than the ROM and wrong**.
+
+### Rationale
+
+Not reproduced, on three grounds measured rather than assumed:
+
+- **It is necessary but not sufficient.** `Obj5D` holds routine `$08` on two runs
+  in the recording, 5112-5123 and 5553-5564. Only the second produces any
+  divergence, because the skipped frames must land where `Obj05`'s animation would
+  otherwise have advanced.
+- **It explains under half the cluster.** `Obj5D` does not exist after row 6084,
+  yet 1247 of the 2422 errors — 51% — lie beyond 6600, in two ramps it cannot
+  influence.
+- **The change is disproportionate.** Reproducing it requires introducing a
+  mutable pass budget into the object dispatch loop *shared by all three games*
+  and exposing it to object code — a structural change to dispatch, not an
+  object-local port.
+
+Recorded here rather than ported because the standing rule that a `fixBugs`
+site must be commented where it is ported cannot apply when nothing is ported.
+This entry is the substitute: the flag, the routine and the citation, so the site
+is findable without the ported comment.
+
+### Verification
+
+Probe `tools/bizhawk/probes/s2_cpz2_d7_clobber_probe.lua` over rows 5535-5600
+logs `d7` per `RunObject` iteration; rows 5554-5564 show 123 iterations ending at
+`$FFCE80`, their neighbours 144 ending at `$FFD3C0`.
+
+## S2 tornado (ObjB2): recorded single-instance SST rows are exact
+
+**Status:** all five divergence spans in rows where the comparator identifies one
+Tornado are resolved. Comparison landed at WARNING on 2026-08-21, the two SCZ
+spans resolved on 2026-08-23, and the three WFZ spans resolved on the 2026-08-25
+candidate over `bad36d0b2`.
+
+`aux_state.jsonl` carries ObjB2's SST (`s2_tornado_state`) on every row of the SCZ and WFZ
+fixtures. It was parsed as an untyped generic event and never compared. Comparing it exposed
+five pre-existing divergence spans across 24,056 rows. The three formerly open WFZ spans were:
+
+| fixture | field | rows | ROM | engine |
+|---|---|---|---|---|
+| `wfz` | `tornado.status_byte` | 0–196 | `0x08` | `0x00` |
+| `wfz` | `tornado.routine` | 10419 only | `0x00` | `0x06` |
+| `wfz` | `tornado.objoff_2f` | 13378–13440 | `0x01` | `0x00` |
+
+Unlike the CNZ slot block these were discrete and individually nameable rather than a cascade.
+The SCZ targets were resolved by
+initialising the native expired vertical timer sentinel and by preserving the ROM's
+stationary airborne release path through `Move_below_player`; the focused SCZ replay now
+reports zero errors and zero warnings.
+
+- **`objoff_31` at level start.** The ROM's vertical-move countdown is decremented with
+  `subq.b #1` / `bpl` (`s2.asm:79388`), so its expired resting value is `-1` = `0xFF`. The
+  engine now exposes that sentinel from the native ride-start prelude. This closes the
+  SCZ 0–198 span.
+- **`status_byte` at WFZ level start.** ObjB2's inline `SolidObject` call now retains the
+  returned standing state in the object-owned status latch. This follows
+  `RideObject_SetRide` setting `p1_standing` and `SolidObject` clearing it on release
+  (`s2.asm:35014-35044, 35986-36045`).
+- **`routine` at WFZ row 10419.** A newly allocated ObjB2 snapshot now exposes routine 0
+  until its pending `ObjB2_Init` update installs the subtype-derived routine
+  (`s2.asm:78777-78813`).
+- **`objoff_2f` at WFZ rows 13378-13440.** The WFZ-end snapshot now encodes the low byte of
+  the word incremented by `ObjB2_Wait_Leader_position`, then the jump countdown installed
+  by `ObjB2_Prepare_to_jump` (`s2.asm:78972-78979, 79042-79052`). The Java model already
+  owned those values as `leaderWaitCounter` and `jumpTimer`; no trace value supplies them.
+
+The resolved SCZ `x` span at row 7103 was caused by the engine treating an airborne,
+stationary player as still riding a different solid while ObjB2 performed its pre-contact
+`Move_with_player` read. The fix is state-based: non-zero horizontal launch velocity keeps
+the live-object path, while the stationary airborne release seeds and consumes ObjB2's
+decaying horizontal relation. It does not inspect trace rows, frame numbers, or zone names.
+
+**The routine-aware encoding.** The SCZ scratch bytes are re-encoded from the engine's
+semantic fields using ROM idioms read off the **SCZ** arm:
+`objoff_2E` is the `p1_standing` transition (`status(a0)` saved, then
+`(saved ^ current) & p1_standing`, `s2.asm:78827, 78834-78839`), and `objoff_2F`/`objoff_30`
+are `st.b`/`clr.b` flags, hence `0xFF`/`0x00` (`s2.asm:79382-79383, 79390`). The WFZ-end arm
+instead owns `objoff_2E` as a word, so `objoff_2F` is its low byte. The mapping is therefore
+per routine, matching the ROM's reuse of the SST scratch region.
+
+**Coverage boundary.** `TraceBinder` compares `s2_tornado_state` only while exactly one live
+Tornado instance can be identified by content. Once WFZ-end creates its Tornado children,
+the comparison stops instead of inventing a ROM-slot-to-engine-slot mapping. The committed
+WFZ fixture therefore proves the recorded single-instance rows through the `$0040` leader
+wait, but does not prove the parent plane's state-8-and-later `$38`/`$28` decrement and
+landing-reset tail. Focused ObjB2 tests cover those ROM-owned transitions directly; the
+trace comparator remains deliberately unchanged in this patch.
+
+`y_sub` is exact rather than truncating: the ROM's sub-pixel word has a zero low byte on all
+7629 SCZ rows, so the engine's 8-bit sub-pixel is a faithful model of it.
+
+**Removal condition.** Give the parent Tornado an exact identity through the child-presence
+tail without slot fitting, compare and close the state-8-and-later rows, then promote the
+Tornado-only warning helper to `Severity.ERROR`.

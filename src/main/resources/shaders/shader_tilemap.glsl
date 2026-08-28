@@ -255,10 +255,10 @@ void main()
         color = texture(Palette, vec2(paletteX, paletteY));
     }
 
-    // When MaskOutput is set, output white as a binary priority mask
-    // Otherwise output the actual tile color
+    // Preserve the palette line in the priority buffer. Some ROM scenes use
+    // palette priority to place a sprite between two high-priority tile groups.
     if (MaskOutput == 1) {
-        FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        FragColor = vec4(1.0, paletteIndex / 3.0, 0.0, 1.0);
     } else {
         FragColor = color;
     }

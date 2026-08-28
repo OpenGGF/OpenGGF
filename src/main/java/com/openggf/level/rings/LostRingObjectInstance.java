@@ -7,6 +7,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -696,6 +697,18 @@ public class LostRingObjectInstance extends AbstractObjectInstance
                 : ringManager.getSpillAnimationState();
         int spinFrame = (animation != null ? animation.frame() : 0) + phaseOffset;
         ringManager.drawRingFrameAt(getX(), getY(), spinFrame);
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ROM loc_1A6B6: make_art_tile(ArtTile_Ring,1,1).
+        return true;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        // ROM loc_1A6B6: priority $180, one $80-wide display-list bucket per step.
+        return RenderPriority.clamp(3);
     }
 
     private void drawSparkle(RingManager ringManager) {

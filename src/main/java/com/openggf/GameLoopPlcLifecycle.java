@@ -46,6 +46,33 @@ final class GameLoopPlcLifecycle {
 
     static void startToWhite(GameplayModeContext context, FadeManager fade, Runnable completion) {
         fade.startFadeToWhite(wrap(context, completion));
+        // Pal_FadeToWhite's first act is a V-int wait, before any colour update
+        // (docs/s2disasm/s2.asm:3571-3582). The frame that decided to fade has
+        // already spent its V-int on the loop iteration that raised the
+        // decision -- for the special stage exit that is the RunObjects pass
+        // which set SS_Check_Rings_flag (s2.asm:6714-6725) -- so the first fade
+        // step belongs to the next V-int, not to this one.
+        fade.deferFirstStepToNextVint();
+    }
+
+    /**
+     * Starts the same {@code Pal_FadeToWhite} window for a caller whose
+     * iteration has already run its {@link FadeManager#update()} tick.
+     *
+     * <p>The deferral in {@link #startToWhite} models the fact that the
+     * deciding iteration's V-int belongs to the loop the fade is leaving, not
+     * to {@code Pal_FadeToWhite}'s first {@code WaitForVint}
+     * (docs/s2disasm/s2.asm:3571-3582). It does that by swallowing the fade
+     * tick of the iteration the fade is started in -- which is only the
+     * deciding iteration's tick when the caller runs <em>before</em> that tick.
+     * A caller that runs after it has already forgone the deciding iteration's
+     * colour step by construction, so deferring again would swallow the first
+     * real one too and stretch a 22-V-int routine
+     * ({@code move.w #$15,d4} + {@code dbf}, s2.asm:3573-3581) over 23 rows.
+     */
+    static void startToWhiteAfterFrameFadeTick(
+            GameplayModeContext context, FadeManager fade, Runnable completion) {
+        fade.startFadeToWhite(wrap(context, completion));
     }
 
     static void startFromWhite(GameplayModeContext context, FadeManager fade, Runnable completion) {

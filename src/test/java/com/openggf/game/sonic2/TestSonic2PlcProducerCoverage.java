@@ -26,8 +26,6 @@ import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic2.objects.SignpostObjectInstance;
 import com.openggf.game.sonic2.titlecard.TitleCardManager;
-import com.openggf.game.sonic2.titlecard.TitleCardState;
-import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
@@ -181,20 +179,22 @@ class TestSonic2PlcProducerCoverage {
     @Test
     void titleCardOwnerPublishesWaterThenZoneAnimalAtTextExit() throws Exception {
         TitleCardManager card = new TitleCardManager();
-        card.initialize(0, 0);
-        for (String name : List.of("zoneNameElement", "zoneTextElement", "actNumberElement")) {
-            Field element = TitleCardManager.class.getDeclaredField(name);
-            element.setAccessible(true);
-            ((TitleCardElement) element.get(card)).startExit();
-        }
-        Field state = TitleCardManager.class.getDeclaredField("state");
-        state.setAccessible(true);
-        state.set(card, TitleCardState.TEXT_EXIT);
-        for (int frame = 0; frame < 20; frame++) {
+        card.beginOmittedPresentationExitTail(0, 0);
+
+        // Obj34_WaitAndGoAway holds for $2D entries, then advances from
+        // $120 by $20 until the first value above $200. The 52nd update lands
+        // exactly on $200 and still displays; the 53rd reaches $220 and owns
+        // Obj34_LoadStandardWaterAndAnimalArt (s2.asm:27605-27637).
+        for (int frame = 0; frame < 52; frame++) {
             card.update();
         }
 
         Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        assertEquals(List.of(), queue.capture().queuedEntries(),
+                "the last on-screen zone-name entry must not publish exit PLCs early");
+
+        card.update();
+
         assertEquals(expectedDescriptors(Sonic2Constants.PLC_STD_WATER,
                 Sonic2Constants.PLC_ANIMALS_EHZ), queue.capture().queuedEntries(),
                 "Obj34 must publish standard-water then the zone animal PLC at its text-exit edge");

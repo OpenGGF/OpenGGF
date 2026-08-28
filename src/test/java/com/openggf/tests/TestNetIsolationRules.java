@@ -1,21 +1,41 @@
 package com.openggf.tests;
 
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.core.importer.Location;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
+import java.nio.file.Path;
+
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /** Engine-free dependency fence for the standalone multiplayer network stack. */
-@AnalyzeClasses(packages = "com.openggf", importOptions = ImportOption.DoNotIncludeTests.class)
+@AnalyzeClasses(
+        packages = {"com.openggf.net", "com.openggf.tools.net"},
+        importOptions = TestNetIsolationRules.ProductionClassesOnly.class)
 public class TestNetIsolationRules {
+
+    /**
+     * ArchUnit's Maven test filter only recognizes {@code target/test-classes};
+     * test sessions use a session-owned build root, so fence the import by its
+     * authoritative production output path instead.
+     */
+    public static final class ProductionClassesOnly implements ImportOption {
+        private final Path productionClasses = TestSessionOutputPaths.compiledClasses()
+                .toAbsolutePath().normalize();
+
+        @Override
+        public boolean includes(Location location) {
+            return "file".equalsIgnoreCase(location.asURI().getScheme())
+                    && Path.of(location.asURI()).toAbsolutePath().normalize()
+                    .startsWith(productionClasses);
+        }
+    }
+
     @ArchTest
     static final ArchRule NET_STACK_IS_ENGINE_FREE =
-            noClasses().that().resideInAnyPackage(
-                            "com.openggf.net.protocol..", "com.openggf.net.hub..",
-                            "com.openggf.net.host..", "com.openggf.net.client..",
-                            "com.openggf.net.identity..", "com.openggf.net.master..")
+            noClasses().that().resideInAPackage("com.openggf.net..")
                     .should().dependOnClassesThat(
                             com.tngtech.archunit.base.DescribedPredicate.describe(
                                     "are engine classes outside net and the ghost frame codec",

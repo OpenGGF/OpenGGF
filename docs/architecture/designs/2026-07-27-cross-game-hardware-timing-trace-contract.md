@@ -17,10 +17,32 @@ this document remains the cross-game authority boundary.
 The trace-v5 consolidation supersedes the schema-selection mechanics below,
 without changing this document's authority boundary. Current metadata declares
 only `trace_schema: 5`; `hardware_timing_schema` is removed. Presence of
-`hardware_timing.jsonl` enables the one current registry, covering both
-`kos_module_queue` and `kos_decompression_queue`. Every event still admits only
-matching, prepared, production-submitted ROM work after kind, ordinal, stable
-submission fingerprint, and service-boundary checks succeed.
+`hardware_timing.jsonl` enables the one current registry. Every event still
+admits only matching, prepared, production-submitted ROM work after kind,
+ordinal, stable submission fingerprint, and service-boundary checks succeed.
+
+The registry covers three kinds, and is closed to any kind not listed here:
+
+| Wire name | `HardwareWorkKind` | Owning pipeline |
+|---|---|---|
+| `kos_module_queue` | `KOS_MODULE_QUEUE` | S3K resumable Kosinski/KosinskiM module queue |
+| `kos_decompression_queue` | `KOS_DECOMPRESSION_QUEUE` | S3K direct Kosinski queue |
+| `nemesis_plc_queue` | `NEMESIS_PLC_QUEUE` | Sonic 1 `RunPLC` arming edge (`docs/s1disasm/sonic.asm:1379`) |
+
+`nemesis_plc_queue` records the moment the ROM accepts the Nemesis PLC FIFO
+head for decompression -- the *arming* edge, not the delivery of any decoded
+art. Every pattern the entry later decompresses is still produced natively by
+the production PLC pipeline, so this kind stays inside the authority boundary
+this document already defines: it moves only *when* an engine-submitted arm
+becomes visible, never *what* the arm loads. `S1ConditionalTraceOutputFileNames`
+(`tools/bizhawk-headless/src/Program.cs`) publishes the S1 stream only when the
+capture actually observed an edge, so an S1 fixture that records none keeps its
+historical three-file inventory rather than gaining an empty stream.
+
+`HardwareWorkKind` is the normative list;
+`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryIsClosedToUndeclaredWork`
+pins the enum to exactly these three, so adding a fourth is a deliberate,
+reviewed contract change rather than an implementation detail.
 
 Historical schema-1/schema-2 names and recorder stamps later in this document
 describe the evidence and decisions that led to v5. They are not live parser
@@ -37,6 +59,218 @@ its only gameplay-visible consequence is that the 68K main loop missed a
 frame, the existing lag-row contract is sufficient. A new completion event is
 reserved for work that remains pending while the main loop continues and the
 ROM explicitly polls a hardware-owned readiness gate.
+
+### 2026-08-20 coverage status: contract, implementation, fixtures
+
+Three questions have three different answers, and conflating them has already
+mis-briefed at least one round. Keep them apart.
+
+**Contract scope -- cross-game.** Unchanged since this document was approved.
+Recorded timing *may* delay readiness in the S1 Nemesis PLC, S2 DPLC, and S3K
+Kosinski pipelines, under the single authority boundary defined here.
+
+**Implementation -- S1 and S3K.** Both ends are live for two of the three:
+
+- S3K: `S3kKosModuleQueue` and `S3kKosDecompressionQueue` submit
+  `KOS_MODULE_QUEUE` / `KOS_DECOMPRESSION_QUEUE`; recorded by
+  `S3KTraceCaptureRunner` and `S3KCompleteRunCaptureRunner`.
+- S1: `Sonic1PlcArmTiming` submits `NEMESIS_PLC_QUEUE` and
+  `Sonic1PlcService.ownsTimedLoopTailArm()` gates the loop-tail arm on
+  `isRecordedAuthority()`; recorded by `S1PlcHardwareTimingObserver`, wired
+  into both `S1TraceCaptureRunner` and `S1RunCaptureRunner`.
+- S2: **not implemented.** No source under `game/sonic2/` references
+  `HardwareWorkKind` at all, and no S2 recorder constructs
+  `HardwareTimingEventEngine`. The S2 DPLC pipeline is inside the contract's
+  permitted scope and outside its built scope. Do not describe it as available.
+
+**Fixture coverage -- S3K only.** Every committed `hardware_timing.jsonl` in
+`src/test/resources/traces` is under `s3k/` (272 of them, plus 2
+`hardware_timing_interstitial.jsonl`). No committed S1 or S2 fixture carries
+one.
+
+The consequence for S1 is specific, and is not the same thing as the mechanism
+being absent. Recorded admission is installed only by
+`GameplayModeContext.activateRecordedHardwareAdmission()`; with no stream, every
+kind stays at `HardwareReadinessAdmissionPolicy.LIVE`,
+`Sonic1PlcArmTiming.isRecordedAuthority()` returns false, and the arm is
+released by the same boundary that prepared it -- exactly the behaviour that
+predates the timing port. So the S1 path today is **implemented but dormant**:
+it is exercised by unit and guard tests, and by no committed trace fixture.
+A round debugging an S1 PLC divergence should reason about the native service
+model, not about a recorded edge, until an S1 fixture carrying a stream lands.
+
+Recorded timing is not the first resort for S1 in any case: a divergence that
+looks like elapsed hardware cost is usually a counted ROM wait loop in the
+wrong place (see the `plc-system` skill's S1 `segment_start - 26` load-pair
+invariant).
+
+### 2026-08-21 unrepresented spans: readiness falls back to the native budget
+
+The readiness shape has a boundary the original text did not state, and both S1
+and S3K deadlocked on it before it was written down.
+
+`HardwareTimingReplayPort.enterUnrepresentedGap` contracts that production
+hardware work may continue while row authority is deactivated, but that no
+recorded completion edge may be applied until the next `beginRawFrame`. The
+recorder discards anything observed outside a segment's rows, so **no completion
+edge can ever exist for work submitted in such a span**. A recorded-admission
+kind that waits for one there waits forever. Measured twice, in two games:
+
+- S1: 214 consecutive blocks deadlocked the title card, which loops until the
+  PLC buffer empties (`docs/s1disasm/sonic.asm:2840-2841`). Fixed at the
+  consumer gate by `51ef66b30`.
+- S3K: 38400 consecutive blocks deadlocked the AIZ special-stage-return title
+  card, waiting on `KOS_MODULE_QUEUE#11` with `recordedAuthorityRepresentsRow()`
+  false on every one of them. The ROM's own art wait drains through
+  `Process_Kos_Module_Queue`, one module per call
+  (`docs/skdisasm/sonic3k.asm:2726-2790`).
+
+Two games reaching the same wall through two different kinds made this a
+property of the port rather than of either consumer, so the rule now lives in
+`HardwareTimingService` and applies to **every** recorded kind:
+
+1. **Membership is fixed at submission.** The service records which handles were
+   submitted while row authority was deactivated. It is not a property of the
+   moment of release, so work submitted inside coverage still blocks on its
+   recorded edge even if the run later leaves coverage, and leaving coverage can
+   never release work the recorder did count.
+2. **Release still costs ROM service frames.** Unrepresented work is serviced on
+   the native work budget -- the load-time profile is activated and advanced and
+   the job is released in FIFO order, exactly as a live run would do it. It is
+   *not* admitted instantly. This is load-bearing rather than tidy: an
+   implementation that admitted readiness directly at the consumer's gate raised
+   `IllegalStateException: hardware work is not prepared: KOS_MODULE_QUEUE#11`,
+   because a KosM parent is only prepared once its modules have decompressed
+   across frames. An edge still cannot force preparation or decoder progress.
+3. **Inside coverage nothing changes.** An unmatched job still blocks and still
+   raises, so a genuine kind/ordinal/fingerprint/boundary mismatch remains a
+   hard failure.
+
+This stays inside the readiness-release shape hard rule 4 permits: it changes
+only *when* real, engine-created work becomes ready. It creates no work, carries
+no value, calls no gameplay owner, and keys on no frame index, zone, route or
+game name. `TestHardwareTimingAuthorityGuard` covers it.
+
+#### Open gap: identity return is single-ordinal, and the S3K case is a batch
+
+An unrepresented submission still allocates an ordinal, and ordinals are the only
+counter the engine and the recording share. `releaseUnrepresentedIdentity` returns
+that borrowed ordinal after production claims the result, and
+`Sonic1PlcArmTiming.releaseArm` calls it whenever its job was submitted
+unrepresented -- whichever path admitted readiness.
+
+**It does not generalise to a batch.** The method accepts only the most recently
+allocated ordinal of its kind, and only when no other job of that kind is pending;
+both guards exist so that no handle is left numbered on a stale axis. The S3K
+title card submits four KosM modules and claims them **11, 12, 13, 14 ascending**,
+so none of them can use it as written. Those four therefore keep the ordinals they
+borrowed.
+
+Nothing is being papered over on the fixture that surfaced this: after the release,
+`s3k-tails-full-chain-all-emeralds` shows no ordinal or fingerprint mismatch and no
+pending submissions at end of run. But that is evidence from one recording, and the
+bar is any BK2. A batch-shaped identity return -- returning a contiguous run of
+ordinals in reverse once all of them are claimed -- is an open design question, not
+a settled one, and it is the first thing to examine if a later fixture shows an
+S3K KosM ordinal one ahead of the recording.
+
+#### 2026-08-21 measured: the predicted tell fired, and it is a different defect
+
+`s3k-tails-full-chain-all-emeralds` now fails at the first special-stage return
+with
+
+```
+IllegalStateException: recorded ordinal span does not begin at the production
+cursor for KOS_DECOMPRESSION_QUEUE: production next=20, recorded span=16..31
+```
+
+This is **not** the batch identity-return gap above. It was established by
+fingerprint, not by ordinal arithmetic, and the two hypotheses give opposite
+answers.
+
+The engine's four unrepresented KosM submissions across this interstitial are
+`KOS_MODULE_QUEUE#11..14` with `KOS_DECOMPRESSION_QUEUE#16..19` as their module
+children -- the shape the open gap predicts. But their submission fingerprints
+are `fbfc78d4 / 513a9a90 / d24be135 / 5dc423fa`, and the recording carries that
+exact batch twice: at `bk2_frame` 630-637 as the run's opening level load
+(interstitial ordinals `0..3`), and again at `bk2_frame` 6093-6100 as
+`kos_decompression_queue 21..24` / `kos_module_queue 15..18`. So the recorder
+*did* count this work. Nothing was borrowed and left unreturned, and returning
+these ordinals would move the cursor away from the numbers the recording gives
+them, not toward them.
+
+What the engine never submits is the batch the recording places *first* in the
+same interstitial, at `bk2_frame` 5562-5573: `kos_decompression_queue 16..20`
+(`589a478d / 41b5f251 / 7e6020e6 / dc855aca / f88214ef`) with
+`kos_module_queue 11..14`. Those nine fingerprints occur fifteen times each in
+`hardware_timing_interstitial.jsonl` -- once per special stage -- and zero times
+in any engine submission. They are the special-stage exit/results art load, which
+the engine does not model; segment `ss` ends at the special stage's own rows and
+segment `aiz_2` opens at `bk2_frame` 6221, so both batches fall in the gap
+between them.
+
+The defect is therefore structural to the interstitial index rather than to
+identity return. `HardwareTimingInterstitialSpans` states its premise in its own
+class comment -- *"Production replaying the run does not reproduce those
+submissions"* -- and a single `RecordedOrdinalSpan(first, last)` per boundary per
+kind can only express *skip this contiguous run*. At the pre-run interstitial the
+premise holds exactly and the mechanism works: production submits nothing there,
+and its ledger opens at `kos_decompression_queue#11` / `kos_module_queue#6`
+where the recording resumes. At a special-stage return the premise fails:
+production submits the level reload *inside* the recorded span, interleaved
+between recorded work it does not submit (`16..20` skipped, `21..24` submitted,
+`25..31` skipped). The assertion is correct and is reporting this honestly.
+
+Two ways out, and they are not equivalent:
+
+1. **Implement the missing loads.** If the engine submitted the special-stage
+   exit art, its ledger would reach `21..24` on its own and no contract change
+   would be needed for that block. This is ordinary engine work under rule 1,
+   with no new authority. It does not by itself prove the boundary is then
+   clean -- the trailing `25..31` block would still have to be either submitted
+   or expressible as a span -- but it removes the interleaving that makes the
+   current shape inexpressible.
+2. **Generalise the span to a set.** Permitting production submissions inside a
+   recorded interstitial requires deciding *which* recorded ordinals production's
+   own submissions correspond to, and the only available discriminator is the
+   recorded submission fingerprint. That is recorded data selecting production
+   numbering, which is a widening of what this contract permits, not a change of
+   how it is implemented. **It is a design decision for the user and is not taken
+   here.**
+
+The open gap in the preceding section remains open and unobserved: no fixture has
+yet shown an S3K KosM ordinal one ahead of the recording for the reason that
+section describes.
+
+Two further facts, measured by bypassing the span check locally so the run could
+continue past the handoff (diagnostic only, never committed; the physics
+divergence such a run reports is an artefact of the bypass and is not a frontier):
+
+- **Both S3K Kosinski kinds are skewed, not just the reported one.** With the
+  check relaxed, the handoff reports `KOS_MODULE_QUEUE cursor=15 span=11..20` as
+  well as `KOS_DECOMPRESSION_QUEUE cursor=20 span=16..31` -- 4 short and 5 short
+  respectively, the exit-art batch in each kind. `KOS_DECOMPRESSION_QUEUE` is
+  merely the kind the `values()` iteration reaches first.
+- **Implementing the exit art alone would not close the boundary.** Past the
+  handoff the engine's next submissions are `kos_decompression_queue 32,33,34`
+  (`c3e8ddd3 / 2bed3f7b / 055a7ca7`) and `kos_module_queue 21,22,23`
+  (`65c8c371 / 5c387ee7 / 4728f00c`) -- the same fingerprints it submits at
+  `decomp#11..13` / `module#6..8` at the start of the run, i.e. the segment's own
+  in-segment art. The engine therefore never submits the recording's trailing
+  interstitial block, `kos_decompression_queue 25..31` / `kos_module_queue 19..20`
+  (`149e63bc / 912aa214 / ae73908a / 77708e82 / 78b85320 / 4c509876 / 7b1b550d`
+  and `925beedb / d713465c`). That block is the same one the recording places at
+  `decomp 4..10` / `module 4..5` in the pre-run interstitial, which the engine
+  also does not submit -- there it is absorbed by the initial ordinal base
+  instead. So the interstitial contains *two* unmodelled blocks with the engine's
+  level reload between them, and the skip/submit/skip shape survives implementing
+  only the first. Option 1 closes this boundary only if both blocks are modelled.
+
+Two tests in `TestHardwareTimingService` are red on `189acc824` independently of
+this: `anIdentityIsNeverReturnedWhileRowAuthorityRepresentsARow` and
+`recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty`. Both sit
+on `releaseUnrepresentedIdentity`, so they are worth clearing before anyone
+builds on that method.
 
 ### Historical pre-v5 wire format (not live)
 
@@ -208,7 +442,7 @@ the eligibility gate above before receiving trace authority.
 | Activity | Sonic 1 | Sonic 2 | Sonic 3 & Knuckles | Replay contract | Current disposition |
 |---|---|---|---|---|---|
 | Long synchronous decompression or level initialization | Physical VInts occur while the main loop is unavailable | Explicitly visible in special-stage and level-start lag rows | Present during black-screen level loads and other initialization | Lag | S1/S2 substantially covered; audit S3K lag capture parity |
-| Normal PLC processing | `RunPLC` services a persistent queue while ordinary loops and some objects poll it | Normal/fade/special handlers service a persistent queue; ordinary gameplay can poll it | PLC/AniPLC coexist with later Kos queues | Native deterministic service queue; external completion candidate only if lag/phase is insufficient | Do not record individual PLC entries; audit service cadence and polled gates |
+| Normal PLC processing | `RunPLC` services a persistent queue while ordinary loops and some objects poll it | Normal/fade/special handlers service a persistent queue; ordinary gameplay can poll it | PLC/AniPLC coexist with later Kos queues | Native deterministic service queue; the S1 *arming* edge is an approved external completion | S1: `NEMESIS_PLC_QUEUE` records only the FIFO-head arming edge -- still do not record individual PLC entries or decoded art. S2: unbuilt; audit service cadence and polled gates |
 | Direct Kosinski decompression queue | Not used as the S3K-style owner | Not used as the S3K-style owner | `Kos_decomp_queue_count` independently gates AIZ intro and ICZ act-transition progression | External completion in S3K schema 2 | `KOS_DECOMPRESSION_QUEUE` is authoritative only under the reviewed schema-2 registry |
 | Kosinski/KosinskiM module queue | Not used as the S3K-style owner | Not used as the S3K-style owner | Resumable module queue remains pending while results/title/event code continues polling | External completion | `KOS_MODULE_QUEUE` is the first approved authoritative kind |
 | Nemesis, Enigma, Saxman, raw map decompression | Normally synchronous from gameplay's point of view | Normally synchronous; special-stage work produces lag rows | Normally synchronous unless wrapped in an explicit deferred queue | Lag | No codec-specific trace authority |
@@ -289,7 +523,12 @@ Authoritative edges live in a dedicated hardware-timing stream, not
   completion.
 - There is no payload containing gameplay state or work progress.
 
-The container contract is exact:
+The container contract below is **pre-v5 and not live** -- its schema
+selector and `trace_schema` value are both superseded by the v5 grammar
+section above, which is the authority: metadata declares only
+`trace_schema: 5`, `hardware_timing_schema` is removed, and presence of the
+file alone enables the single registry. The list is retained unedited as
+migration evidence.
 
 - filename: `hardware_timing.jsonl`;
 - metadata discovery key: `"hardware_timing_schema": 1` or
@@ -404,6 +643,14 @@ is authoritative over final readiness:
 - release makes the engine readiness owner change naturally;
 - the ROM-modeled consumer performs every downstream mutation.
 
+One exception, and only one: a job **submitted while row authority was
+deactivated** has no edge to wait for, because the recorder discards anything
+observed outside a segment's rows. Such a job is serviced on the native work
+budget instead -- profile activated and advanced, released in FIFO order, still
+requiring preparation. Membership is fixed at submission, so this never releases
+work the recording does describe. See the 2026-08-21 status entry above for the
+two deadlocks that established it and for the open ordinal-return gap.
+
 The timing adapter is a dedicated input port. It cannot read physics or aux
 comparison data and never calls a title-card, results, level-load, ring,
 object, or event mutation API.
@@ -483,6 +730,16 @@ For the S3K Kos queues:
 - keep stage gating ahead of any optional diagnostic hook;
 - retain invisible, sound-disabled, maximum-speed operation; and
 - terminate within a bounded window.
+
+For the S1 Nemesis PLC queue, `S1PlcHardwareTimingObserver` follows the same
+rules against the ROM's own `v_plc_buffer` FIFO. Two of its properties are
+load-bearing for the engine side and must not drift: it observes the head
+before the shift that destroys head identity, and it discards anything seen
+before a segment's first recorded row. The latter is why
+`Sonic1PlcArmTiming.releaseArm()` falls back to native readiness in an
+unrepresented span -- a level load's own `RunPLC` arming reaches no trace file,
+so no edge for it can ever exist, and holding it against recorded readiness
+would deadlock the ROM title-card wait.
 
 The native harness is the fixture-publication authority. Before publication, its
 implementation must be established against the audited ROM/disassembly

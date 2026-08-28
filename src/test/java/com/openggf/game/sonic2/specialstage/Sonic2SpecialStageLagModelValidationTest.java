@@ -42,13 +42,17 @@ class Sonic2SpecialStageLagModelValidationTest {
 
         assertFalse(derivation.buckets().isEmpty());
         for (Map.Entry<Bucket, BucketStats> entry : derivation.buckets().entrySet()) {
-            Sonic2SpecialStageLagModel.BucketRatio checkedIn =
-                    Sonic2SpecialStageLagModel.ratioForBucket(
-                            entry.getKey().segmentType(), entry.getKey().speedFactor());
-            assertEquals(entry.getValue().lagFrames, checkedIn.numerator(),
+            Bucket bucket = entry.getKey();
+            BucketStats stats = entry.getValue();
+            int checkedInLagFrames = 0;
+            for (int frame = 1; frame <= stats.frames; frame++) {
+                if (Sonic2SpecialStageLagModel.shouldSkipLiveUpdate(
+                        frame, bucket.speedFactor(), bucket.segmentType())) {
+                    checkedInLagFrames++;
+                }
+            }
+            assertEquals(stats.lagFrames, checkedInLagFrames,
                     () -> "lag numerator drifted for " + entry.getKey());
-            assertEquals(entry.getValue().frames, checkedIn.denominator(),
-                    () -> "lag denominator drifted for " + entry.getKey());
             assertFalse(entry.getValue().lagBurstHistogram.isEmpty(),
                     () -> "lag burst histogram was not derived for " + entry.getKey());
         }
@@ -70,12 +74,10 @@ class Sonic2SpecialStageLagModelValidationTest {
             BucketStats stats = entry.getValue();
             int modeledBucketLag = 0;
             for (Sample sample : stats.samples) {
-                if (Sonic2SpecialStageLagModel.shouldLagThisFrame(
+                if (Sonic2SpecialStageLagModel.shouldSkipLiveUpdate(
                         sample.frameCounter(),
                         bucket.speedFactor(),
-                        bucket.segmentType(),
-                        sample.drawingIndex(),
-                        0)) {
+                        bucket.segmentType())) {
                     modeledBucketLag++;
                 }
             }
@@ -103,24 +105,13 @@ class Sonic2SpecialStageLagModelValidationTest {
                     () -> "lag model field must be final: " + field.getName());
         }
 
-        boolean first = Sonic2SpecialStageLagModel.shouldLagThisFrame(731, 12, 4, 2, 7);
+        boolean first = Sonic2SpecialStageLagModel.shouldSkipLiveUpdate(731, 12, 4);
         for (int i = 0; i < 100; i++) {
             assertEquals(first,
-                    Sonic2SpecialStageLagModel.shouldLagThisFrame(731, 12, 4, 2, 7));
+                    Sonic2SpecialStageLagModel.shouldSkipLiveUpdate(731, 12, 4));
         }
     }
 
-    @Test
-    void unavailableDrawingAndLiveObjectInputsDoNotSecretlyRetuneTheTraceFit() {
-        for (int frame = 1; frame <= 1_000; frame++) {
-            boolean derived = Sonic2SpecialStageLagModel.shouldLagThisFrame(frame, 12, 2, 0, 0);
-            for (int drawingIndex = 0; drawingIndex < 10; drawingIndex++) {
-                assertEquals(derived,
-                        Sonic2SpecialStageLagModel.shouldLagThisFrame(
-                                frame, 12, 2, drawingIndex, drawingIndex * 7));
-            }
-        }
-    }
 
     private static Derivation deriveArtifactStats() throws IOException {
         byte[] stageLayout = loadStageOneLayout();

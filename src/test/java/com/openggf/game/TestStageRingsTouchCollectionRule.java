@@ -4,6 +4,7 @@ import com.openggf.game.rules.GameRules;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -35,5 +36,26 @@ public class TestStageRingsTouchCollectionRule {
     public void sonic3kDisablesStageRingObjectTouchCollection() {
         assertFalse(GameRules.SONIC_3K.ring().stageRingsUseObjectTouchCollection(),
                 "S3K stage rings must use the bounding-box sweep (ROM: Touch_Rings_Test)");
+    }
+
+    @Test
+    public void shippedDuckTouchBoxesAreSelectedByGameMappingFrame() {
+        assertTrue(GameRules.SONIC_1.objectInteraction().isDuckTouchBoxMappingFrame(0x39),
+                "S1 FixBugs=0 ReactToItem tests fr_Duck=$39");
+        assertFalse(GameRules.SONIC_1.objectInteraction().isDuckTouchBoxMappingFrame(0x4D));
+
+        assertTrue(GameRules.SONIC_2.objectInteraction().isDuckTouchBoxMappingFrame(0x4D),
+                "S2 fixBugs=0 Touch_Rings tests mapping_frame=$4D");
+        assertFalse(GameRules.SONIC_2.objectInteraction().isDuckTouchBoxMappingFrame(0x39));
+
+        assertFalse(GameRules.SONIC_3K.objectInteraction().isDuckTouchBoxMappingFrame(0x39));
+        assertFalse(GameRules.SONIC_3K.objectInteraction().isDuckTouchBoxMappingFrame(0x4D),
+                "S3K removed the duck touch-box adjustment");
+    }
+
+    @Test
+    public void shippedDuckTouchBoxUsesNamedRomDimensions() {
+        assertEquals(12, com.openggf.game.rules.ObjectInteractionRules.DUCK_TOUCH_BOX_TOP_SHIFT);
+        assertEquals(20, com.openggf.game.rules.ObjectInteractionRules.DUCK_TOUCH_BOX_HEIGHT);
     }
 }

@@ -19,6 +19,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -47,7 +48,23 @@ import java.util.logging.Logger;
  * Button detection: SolidObjectFull with small hitbox d1=$1B, d2=4, d3=6.
  */
 public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnCoordinateRewindRecreatable {
+        implements SolidObjectProvider, SpawnCoordinateRewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_EggCapsule} is installed from the S3K object pointer table at
+     * {@code $00086540} (table read from the user-supplied ROM; the
+     * label is defined at docs/skdisasm/sonic3k.asm:181501).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0008}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0008;
+    }
+
     private static final Logger LOG = Logger.getLogger(HczEndBossEggCapsuleInstance.class.getName());
 
     private static final int OBJECT_ID = Sonic3kObjectIds.EGG_CAPSULE;

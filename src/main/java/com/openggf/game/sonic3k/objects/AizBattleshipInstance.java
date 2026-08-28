@@ -62,6 +62,8 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
 
     // 16:16 fixed-point ship position (integer part = upper 16 bits)
     private int shipXFixed;
+    /** False until the object pass that created the ship has gone by unused. */
+    private boolean creationPassConsumed;
     // Non-final so the generic rewind field capturer reapplies it after
     // Phase-2 generic recreate.
     private int baseSecondaryY;
@@ -87,6 +89,26 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed() || finished) return;
+
+        if (!creationPassConsumed) {
+            // ROM: AIZ2SE_ShipRefresh sets the secondary camera X and then takes
+            // a slot with plain AllocateObject (sonic3k.asm:104917-104928), NOT
+            // AllocateObjectAfterCurrent -- so the slot is not guaranteed to sit
+            // ahead of the object pass that created it, and for this run it does
+            // not: the recording shows slot 4 still holding Obj_AIZBattleship
+            // (the init) at the end of its creation frame and Obj_AIZBattleshipMain
+            // only on the frame after. The init writes the Main pointer before
+            // falling through, so a pointer still reading init means the slot was
+            // allocated without being executed.
+            //
+            // The ship's first real pass -- init falling through into
+            // Obj_AIZBattleshipMain and its opening `subi.l #$8800,(_unkEE98).w`
+            // (:105261-105286) -- therefore happens one frame after creation.
+            // Advancing on the creation frame left the secondary camera one step
+            // ahead in its fraction for the rest of the act.
+            creationPassConsumed = true;
+            return;
+        }
 
         this.frameCounter++;
 

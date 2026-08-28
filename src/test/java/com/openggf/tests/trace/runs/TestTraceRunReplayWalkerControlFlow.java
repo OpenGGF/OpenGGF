@@ -170,18 +170,18 @@ class TestTraceRunReplayWalkerControlFlow {
             throws Exception {
         Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
         TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
-        List<TraceRunReplayWalker.SegmentPlan> plans = TraceRunReplayWalker.plan(run, runDir);
-        assertEquals(3, plans.size());
-        assertNull(plans.get(0).entryBoundary());
-        assertEquals("starpost_bonus", plans.get(0).exitBoundary().entryKind());
-        assertEquals("starpost_bonus", plans.get(1).entryBoundary().entryKind());
-        assertEquals("stage_exit", plans.get(1).exitBoundary().entryKind());
-        assertEquals("stage_exit", plans.get(2).entryBoundary().entryKind());
+        var descriptors = TraceRunReplayWalker.planDescriptors(run, runDir);
+        assertEquals(3, descriptors.size());
+        assertNull(descriptors.get(0).entryBoundary());
+        assertEquals("starpost_bonus", descriptors.get(0).exitBoundary().entryKind());
+        assertEquals("starpost_bonus", descriptors.get(1).entryBoundary().entryKind());
+        assertEquals("stage_exit", descriptors.get(1).exitBoundary().entryKind());
+        assertEquals("stage_exit", descriptors.get(2).entryBoundary().entryKind());
         assertEquals(SegmentExecutionPolicy.GAMEPLAY,
-                plans.get(2).executionPolicy(),
+                descriptors.get(2).executionPolicy(),
                 "a generated S3K stage-exit destination with an advancing "
                         + "gameplay clock remains ordinary gameplay");
-        assertNull(plans.get(2).exitBoundary());
+        assertNull(descriptors.get(2).exitBoundary());
     }
 
     @Test
@@ -210,7 +210,7 @@ class TestTraceRunReplayWalkerControlFlow {
                 runDir.resolve("run_manifest.json"));
         IOException error = assertThrows(
                 IOException.class,
-                () -> TraceRunReplayWalker.plan(manifest, runDir));
+                () -> TraceRunReplayWalker.planDescriptors(manifest, runDir));
         assertTrue(error.getMessage().contains("contiguous"), error.getMessage());
     }
 
@@ -694,7 +694,43 @@ class TestTraceRunReplayWalkerControlFlow {
                 "mz2", "level", "profile", 42308, 542, 2, 1, null, null);
 
         assertEquals(2539, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                mz1Tail, mz2));
+                mz1Tail, mz2, 1, 0));
+        // The profile-owned masked-row term is subtracted, as it is on the
+        // inter-level budget: Sonic 2's level+special-stage entry composition.
+        assertEquals(2528, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 1, 11));
+    }
+
+    @Test
+    void uncomparedInteriorReturnVblankBudgetRunsToTheLastConsumedDestinationRow() {
+        var mz1Tail = new TraceRunManifest.Segment(
+                "mz1_2", "level", "profile", 31086, 8684, 2, 0, null, null);
+        var mz2 = new TraceRunManifest.Segment(
+                "mz2", "level", "profile", 42308, 542, 2, 1, null, null);
+
+        // One consumed row is the shape every committed uncompared return has,
+        // and is what the budget previously hardcoded -- so this value is the
+        // pre-existing one and the term changes nothing for those runs.
+        assertEquals(2539, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 1, 0));
+        // Each further consumed destination row carries its own tick, exactly as
+        // nextFramesConsumed does on interLevelVblankBudget.
+        assertEquals(2540, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 2, 0));
+        assertEquals(2542, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 4, 0));
+        // A return that consumed no destination row anchors on the row BEFORE
+        // the destination's frame 0 -- the value entering the first row its
+        // comparator will compare. That is the same value, from the same
+        // expression, that the inter-level budget gives at a consumed count of
+        // zero, which is what every level_advance admission passes.
+        assertEquals(2538, TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                mz1Tail, mz2, 0, 0));
+        assertEquals(2538, TraceRunReplayWalker.interLevelVblankBudget(
+                mz1Tail, mz2, 0, 0));
+        assertThrows(IllegalArgumentException.class,
+                () -> TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                        mz1Tail, mz2, -1, 0));
     }
 
     @Test

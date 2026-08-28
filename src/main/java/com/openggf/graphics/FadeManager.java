@@ -180,6 +180,24 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.holdFrameCount = 0;
     }
 
+    /**
+     * Skips the next {@link #update()} step of the fade that was just started.
+     *
+     * <p>The ROM fade routines are synchronous wait loops whose first action is a
+     * V-int wait, not a colour step: {@code Pal_FadeToWhite} does
+     * {@code move.b #VintID_Fade,(Vint_routine).w / bsr.w WaitForVint /
+     * bsr.s .UpdateAllColours} (docs/s2disasm/s2.asm:3571-3582; the S1 and S3K
+     * equivalents have the same shape). The V-int on which the caller decided to
+     * fade has therefore already been consumed by the loop iteration that made the
+     * decision, so the first colour step belongs to the following V-int. Engine
+     * callers that start a fade from inside a frame's logic — where
+     * {@code FadeManager.update()} still runs later in that same frame — use this
+     * to keep the fade window the same length as the ROM's.
+     */
+    public void deferFirstStepToNextVint() {
+        this.holdRestoredFrameForNextUpdate = true;
+    }
+
     /** Holds a fully opaque white overlay until another fade is started or cancelled. */
     public void holdWhite() {
         holdOpaque(FadeState.HOLD_WHITE, FadeType.WHITE);
@@ -273,6 +291,18 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      * @param onComplete Callback to execute when fade completes (can be null)
      */
     public void startFadeFromBlack(Runnable onComplete) {
+        startFadeFromBlack(onComplete, 0);
+    }
+
+    /**
+     * Starts a fade from black with optional fully revealed terminal VBlanks.
+     * The S3K level reveal services 22 VBlanks: 21 change color and the last is
+     * a no-op (Palette_fade_timer=$16 at sonic3k.asm:7875-7892).
+     */
+    public void startFadeFromBlack(Runnable onComplete, int terminalNoOpFrames) {
+        if (terminalNoOpFrames < 0) {
+            throw new IllegalArgumentException("terminalNoOpFrames must not be negative");
+        }
         this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_FROM_BLACK;
         this.fadeType = FadeType.BLACK;
@@ -282,7 +312,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.fadeG = 1f;
         this.fadeB = 1f;
         this.onFadeComplete = onComplete;
-        this.holdDuration = 0;
+        this.holdDuration = terminalNoOpFrames;
         this.holdFrameCount = 0;
     }
 
@@ -484,6 +514,10 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
             fadeR = 0f;
             fadeG = 0f;
             fadeB = 0f;
+            if (holdFrameCount < holdDuration) {
+                holdFrameCount++;
+                return;
+            }
             completeFade();
         }
     }

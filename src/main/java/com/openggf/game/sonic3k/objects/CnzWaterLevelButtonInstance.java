@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -35,7 +36,23 @@ import java.util.List;
  * stays solid. The one-shot is enforced by clearing the arm flag.
  */
 public final class CnzWaterLevelButtonInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_CNZWaterLevelButton} is installed from the S3K object pointer table at
+     * {@code $00065D6E} (table read from the user-supplied ROM; the
+     * label is defined at docs/skdisasm/sonic3k.asm:134058).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0006}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0006;
+    }
+
 
     /** ROM: {@code move.w #$A58,(Target_water_level).w}. */
     private static final int SECOND_WATER_TARGET_Y = 0x0A58;

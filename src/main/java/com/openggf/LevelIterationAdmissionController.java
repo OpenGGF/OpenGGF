@@ -9,11 +9,13 @@ import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /** Owns level/title admission and deferred seamless-boundary completion. */
@@ -29,6 +31,24 @@ final class LevelIterationAdmissionController {
             GameplayModeContext gameplayMode,
             boolean startEdge,
             UserRecordingRuntimeControls recordingControls,
+            Runnable startPendingTitleCard,
+            Runnable activateRepresentedHardwareTiming,
+            Runnable deactivateHardwareTimingGap) {
+        return admit(mode, updateTitleCard, titleReleaseResult, levelManager,
+                gameplayMode, startEdge, recordingControls, request -> false,
+                startPendingTitleCard, activateRepresentedHardwareTiming,
+                deactivateHardwareTimingGap);
+    }
+
+    LevelFrameResult admit(
+            GameMode mode,
+            BooleanSupplier updateTitleCard,
+            Supplier<LevelFrameResult> titleReleaseResult,
+            LevelManager levelManager,
+            GameplayModeContext gameplayMode,
+            boolean startEdge,
+            UserRecordingRuntimeControls recordingControls,
+            Predicate<SeamlessLevelTransitionRequest> routeSeamlessBeforeApply,
             Runnable startPendingTitleCard,
             Runnable activateRepresentedHardwareTiming,
             Runnable deactivateHardwareTimingGap) {
@@ -55,6 +75,9 @@ final class LevelIterationAdmissionController {
         if (request != null) {
             deactivateHardwareTimingGap.run();
             recordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+            if (routeSeamlessBeforeApply.test(request)) {
+                return LevelFrameResult.SETUP_ONLY;
+            }
             TraceSessionLauncher.markNextRunLevelLoadCause(
                     com.openggf.trace.replay.runs.RunLevelLoadCause.LEVEL_ADVANCE);
             levelManager.applySeamlessTransition(request);
@@ -120,6 +143,41 @@ final class LevelIterationAdmissionController {
                         appliedFrame,
                         playback.getMovieFrameCount(),
                         playback.isSessionPlaying()));
+    }
+
+    /**
+     * Consumes one recorded row for a frame frozen by a level-to-level
+     * transition fade. Every game's fade-out is {@code move.w #$15,d4} over a
+     * {@code dbf} around a V-blank wait -- S3K {@code Pal_FadeToBlack}
+     * (docs/skdisasm/sonic3k.asm:5042-5052), S2 {@code Pal_FadeToBlack}
+     * (docs/s2disasm/s2.asm:3370-3382), S1 {@code PaletteFadeOut}
+     * (docs/s1disasm/_inc/Palette Fading.asm:134-145, which spells the count
+     * {@code 22-1}) -- so V_int, the recorder's row source, keeps ticking for
+     * all 22 while gameplay is frozen, exactly as the bonus-exit hold in
+     * {@code GameLoop.updateBonusStageMode} already models.
+     *
+     * <p>The rows are only ours to consume while the span being compared still
+     * holds rows the cursor has not reached. Where a recorder cut the segment
+     * on its last live gameplay row, the fade rows fall in the driver-owned gap
+     * between segments and consuming them would double-count. That question is
+     * answered from each run's own recorded data by the row observer, never
+     * from a game name, zone, route, or frame index -- and no fade length is
+     * written down anywhere here.
+     */
+    void consumeTransitionFreezeRow(
+            PlaybackDebugManager playback,
+            ObjectManager objects,
+            LevelFrameContext context) {
+        if (!playback.observerHasUnconsumedRecordedRows()) {
+            return;
+        }
+        if (objects != null) {
+            LevelFrameStep.serviceHardwareVBlankOnly(context);
+            // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank
+            // invariant on ObjectManager.vblaCounter.
+            objects.advanceVblaCounter();
+        }
+        playback.onLevelFrameAdvanced();
     }
 
     void advanceTraceRunPhysicalRow(

@@ -7,7 +7,9 @@ import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState.Pl
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageIntro;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.SessionInvocationExtension;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.trace.TraceFixtureRoot;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
@@ -26,6 +28,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.SpecialStageTraceFrame.CharacterState;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,7 +55,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * production {@link com.openggf.game.sonic2.Sonic2SpecialStageProvider} through
  * {@link S2SpecialStageReplayHarness}, comparing each stepped frame against the
  * recorded ROM trace and emitting a divergence report to
- * {@code target/trace-reports/s2_special_stage_&lt;index&gt;_report.json}.
+ * the session-owned {@code special-stage} report directory (or the legacy
+ * {@code target/trace-reports} default when run without a session).
  *
  * <h2>Replay semantics</h2>
  * <ul>
@@ -111,6 +115,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>The pipeline writes a complete report and
  * {@link #assertNoReleaseBlockingDivergences} rejects any comparator divergence.
  */
+@ExtendWith(SessionInvocationExtension.class)
 public abstract class AbstractS2SpecialStageTraceReplayTest {
 
     /** Location of the committed MVP trace (also used by the determinism test). */
@@ -174,11 +179,11 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         DivergenceReport report = compareReplay(trace, harness);
 
         int ssIndex = specialStageIndex(trace);
-        writeReport(report, ssIndex);
+        TestSessionOutputPaths.ReportAllocation allocation = writeReport(report, ssIndex);
 
         // Pipeline assertion: the report file was written where consumers expect.
-        Path jsonPath = reportDir().resolve("s2_special_stage_" + ssIndex + "_report.json");
-        assertTrue(Files.exists(jsonPath), "report JSON should be written to " + jsonPath);
+        assertTrue(Files.exists(allocation.physicalPath()),
+                "report JSON should be written to " + allocation.physicalPath());
 
         assertNoReleaseBlockingDivergences(report);
     }
@@ -1110,13 +1115,15 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
 
     // ==================== Report output ====================
 
-    static void writeReport(DivergenceReport report, int ssIndex) throws IOException {
-        TraceReportWriter.writeSpecialStageReport(
-                report, reportDir(), "s2_special_stage_" + ssIndex, CONTEXT_RADIUS);
+    static TestSessionOutputPaths.ReportAllocation writeReport(
+            DivergenceReport report, int ssIndex) throws IOException {
+        return TraceReportWriter.writeSpecialStageReport(
+                report, "special-stage", SessionInvocationExtension.SessionInvocation.current(),
+                "s2-" + ssIndex, "s2_special_stage_" + ssIndex, CONTEXT_RADIUS);
     }
 
     static Path reportDir() {
-        return Path.of("target", "trace-reports");
+        return TestSessionOutputPaths.traceReports();
     }
 
     static int specialStageIndex(SpecialStageTraceData trace) {

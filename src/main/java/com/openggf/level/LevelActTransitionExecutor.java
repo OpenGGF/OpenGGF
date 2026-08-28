@@ -23,6 +23,9 @@ import java.util.List;
  */
 final class LevelActTransitionExecutor {
     private final LevelManager levelManager;
+    private boolean executedDuringFrame;
+    private boolean rewindBoundaryDuringFrame;
+    private boolean oscillationAdvancedDuringFrame;
 
     LevelActTransitionExecutor(LevelManager levelManager) {
         this.levelManager = levelManager;
@@ -47,6 +50,17 @@ final class LevelActTransitionExecutor {
                         : null);
         try {
             executeClaimed(request, claimed);
+            // The ROM's own seamless advance -- AIZ1BGE_Finish writes
+            // Current_zone_and_act and calls Load_Level from inside the
+            // level's background-event dispatch
+            // (docs/skdisasm/sonic3k.asm:104733-104746), leaving neither the
+            // level mode nor the recorded run segment. This routine is the
+            // single owner of that identity change, so it is where a run
+            // replay observes the identity reached; a no-op outside a run.
+            com.openggf.TraceSessionLauncher.observeRunSeamlessLevelAdvance(
+                    levelManager);
+            executedDuringFrame = true;
+            rewindBoundaryDuringFrame = true;
         } catch (IOException | RuntimeException failure) {
             if (claimed.handoff != null
                     && !claimed.transferComplete
@@ -56,6 +70,34 @@ final class LevelActTransitionExecutor {
             }
             throw failure;
         }
+    }
+
+    void markOscillationAdvancedDuringFrame() {
+        oscillationAdvancedDuringFrame = true;
+    }
+
+    boolean consumeExecutedDuringFrame() {
+        boolean executed = executedDuringFrame;
+        executedDuringFrame = false;
+        return executed;
+    }
+
+    boolean consumeRewindBoundaryDuringFrame() {
+        boolean boundary = rewindBoundaryDuringFrame;
+        rewindBoundaryDuringFrame = false;
+        return boundary;
+    }
+
+    boolean consumeOscillationAdvancedDuringFrame() {
+        boolean advanced = oscillationAdvancedDuringFrame;
+        oscillationAdvancedDuringFrame = false;
+        return advanced;
+    }
+
+    void resetFrameMarkers() {
+        executedDuringFrame = false;
+        rewindBoundaryDuringFrame = false;
+        oscillationAdvancedDuringFrame = false;
     }
 
     private void executeClaimed(

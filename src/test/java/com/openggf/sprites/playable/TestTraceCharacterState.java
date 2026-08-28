@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceCharacterState {
 
@@ -74,6 +75,31 @@ class TestTraceCharacterState {
 
         assertEquals(0x02, state.routine(),
                 "Tails_HurtStop writes routine 2 in the sampled frame once recovery completes");
+    }
+
+    @Test
+    void hurtLandingPreservesPathSwitcherArtPriority() {
+        Sonic sonic = new Sonic("sonic", (short) 0x48A0, (short) 0x02B4);
+        sonic.setHighPriority(true);
+        sonic.setHurt(true);
+        sonic.setAir(true);
+
+        sonic.setAir(false);
+
+        assertTrue(sonic.isHighPriority(),
+                "HurtCharacter/HurtStop never changes art_tile bit 7, so the AIZ2 path-switch priority must survive landing");
+    }
+
+    @Test
+    void explicitHurtRecoveryPreservesPathSwitcherArtPriority() {
+        Sonic sonic = new Sonic("sonic", (short) 0x48A0, (short) 0x02B4);
+        sonic.setHighPriority(true);
+        sonic.setHurt(true);
+
+        sonic.completeHurtLandingRecovery();
+
+        assertTrue(sonic.isHighPriority(),
+                "The explicit HurtStop path must preserve the art_tile priority inherited from Obj_PathSwap");
     }
 
     @Test

@@ -170,8 +170,14 @@ class TestDynamicArtTransferTrace {
         Files.writeString(dir.resolve("aux_state.jsonl"), aux);
 
         TraceData trace = assertDoesNotThrow(() -> TraceData.load(dir));
-        assertEquals(5, trace.getEventsForFrame(0).stream()
+        assertEquals(3, trace.getEventsForFrame(0).stream()
                 .filter(TraceEvent.StateSnapshot.class::isInstance).count());
+        assertEquals(1, trace.getEventsForFrame(0).stream()
+                .filter(TraceEvent.S2TornadoState.class::isInstance).count(),
+                "known Tornado diagnostics retain their typed comparison contract");
+        assertEquals(1, trace.getEventsForFrame(0).stream()
+                .filter(TraceEvent.CnzSlotMachineState.class::isInstance).count(),
+                "known CNZ diagnostics retain their typed comparison contract");
     }
 
     @Test

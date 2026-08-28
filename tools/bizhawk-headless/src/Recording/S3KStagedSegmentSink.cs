@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace OpenGGF.BizHawk.Headless
 {
@@ -27,11 +28,14 @@ namespace OpenGGF.BizHawk.Headless
         private const string HardwareTimingFileName =
             "hardware_timing.jsonl";
         private const string MetadataFileName = "metadata.json";
+        internal const string InterstitialHardwareTimingFileName =
+            "hardware_timing_interstitial.jsonl";
 
         private readonly NoReplacePublisher.IncrementalStagingSession session;
         private NoReplacePublisher.StagedStream physics;
         private NoReplacePublisher.StagedStream aux;
         private NoReplacePublisher.StagedStream hardwareTiming;
+        private NoReplacePublisher.StagedStream interstitial;
         private string dirToken;
 
         internal S3KStagedSegmentSink(
@@ -104,6 +108,39 @@ namespace OpenGGF.BizHawk.Headless
         }
 
         /// <summary>
+        /// The run-level interstitial hardware-timing stream, at the run
+        /// root rather than inside a segment directory precisely because it
+        /// describes work that belongs to no segment. The runner opens it
+        /// lazily, so a capture with no interstitial completion never
+        /// reaches here and publishes no such file.
+        /// </summary>
+        public TextWriter OpenInterstitialHardwareTimingStream()
+        {
+            if (interstitial != null)
+            {
+                throw new InvalidOperationException(
+                    "The interstitial hardware-timing stream is already"
+                    + " open; it is a single run-level file.");
+            }
+            interstitial = session.OpenFile(
+                InterstitialHardwareTimingFileName);
+            return interstitial.Writer;
+        }
+
+        /// <summary>
+        /// Completes the run-level stream, after the last segment and
+        /// before the session is published. A no-op when nothing opened it.
+        /// </summary>
+        public void CompleteRunFiles()
+        {
+            if (interstitial != null)
+            {
+                interstitial.Complete();
+                interstitial = null;
+            }
+        }
+
+        /// <summary>
         /// Discards a half-written segment (a capture that threw
         /// mid-segment). The session itself owns everything already
         /// completed and revokes it on its own Dispose.
@@ -129,6 +166,11 @@ namespace OpenGGF.BizHawk.Headless
             {
                 hardwareTiming.Dispose();
                 hardwareTiming = null;
+            }
+            if (interstitial != null)
+            {
+                interstitial.Dispose();
+                interstitial = null;
             }
             dirToken = null;
         }

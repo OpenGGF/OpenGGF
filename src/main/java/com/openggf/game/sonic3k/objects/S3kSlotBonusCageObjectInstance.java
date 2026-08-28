@@ -27,7 +27,8 @@ import static com.openggf.physics.TrigLookupTable.sinHex;
  */
 public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
-    private static final int CAPTURE_RADIUS = 0x18;
+    private static final int CAPTURE_HALF_SPAN = 0x18;
+    private static final int CAPTURE_SPAN = 0x30;
     private static final int MAX_ACTIVE_REWARDS = 0x10;
     private static final int SPIKE_PENALTY_BUDGET = 0x64;
     private static final int RING_ANGLE_INCREMENT = 0x89;
@@ -74,6 +75,30 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
             return;
         }
         tickSlotRuntime(vIntRunCount, playerEntity);
+    }
+
+    /**
+     * {@code Obj_SlotBonus} owns its whole lifetime: the live routine
+     * {@code loc_4BF9A} (sonic3k.asm:99324-99560) contains no {@code out_of_range}
+     * macro, no {@code MarkObjGone} and no {@code Delete_Current_Sprite} on any
+     * path, so the cage can never unload while the bonus stage is running -- it is
+     * torn down only when the stage itself ends. Taking the shared camera-relative
+     * unload instead frees the cage's SST slot, and because the cage sits in the
+     * lowest dynamic slot the ROM keeps occupied, the next {@code AllocateObject}
+     * (sonic3k.asm:37911-37914, forward scan from the first slot) hands that slot
+     * to a freshly spawned {@code Obj_SlotRing}. A ring landing at or below the
+     * cage's slot has already been passed by the ascending object walk, so it
+     * loses the routine-0 tick it should have run on its own spawn frame and its
+     * {@code $40} countdown reaches zero one frame late.
+     */
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        return false;
     }
 
     public void tickSlotRuntime(int frameCounter, PlayableEntity playerEntity) {
@@ -151,9 +176,20 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isWithinCaptureRange(AbstractPlayableSprite player) {
-        int dx = Math.abs(player.getCentreX() - currentX);
-        int dy = Math.abs(player.getCentreY() - currentY);
-        return dx < CAPTURE_RADIUS && dy < CAPTURE_RADIUS;
+        return isWithinCaptureSpan(player.getCentreX() - currentX)
+                && isWithinCaptureSpan(player.getCentreY() - currentY);
+    }
+
+    /**
+     * ROM {@code loc_4C026} (sonic3k.asm:99385-99394) tests each axis with
+     * {@code sub.w x_pos(a0),d0 / addi.w #$18,d0 / cmpi.w #$30,d0 / bhs skip} --
+     * a biased *unsigned* window, so the accepted range is the half-open
+     * {@code [-$18, +$18)}, not the symmetric {@code |d| < $18} an abs()
+     * comparison gives. The two differ on exactly one value, {@code d == -$18},
+     * which the ROM captures and abs() rejects.
+     */
+    private static boolean isWithinCaptureSpan(int delta) {
+        return Integer.compareUnsigned((delta + CAPTURE_HALF_SPAN) & 0xFFFF, CAPTURE_SPAN) < 0;
     }
 
     private void updateSpawnRewards(AbstractPlayableSprite player, int frameCounter) {

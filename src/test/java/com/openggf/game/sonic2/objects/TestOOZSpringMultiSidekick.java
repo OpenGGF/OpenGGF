@@ -182,6 +182,7 @@ class TestOOZSpringMultiSidekick {
             this.main = main;
             this.sidekicks = sidekicks;
             this.registry = registry;
+            withIsolatedObjectManager();
         }
 
         @Override public ObjectPlayerQuery playerQuery() {
@@ -200,6 +201,7 @@ class TestOOZSpringMultiSidekick {
         private MutableServices(PlayableEntity main, List<? extends PlayableEntity> sidekicks,
                                 SolidExecutionRegistry registry) {
             this.main = main; this.sidekicks = sidekicks; this.registry = registry;
+            withIsolatedObjectManager();
         }
         @Override public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(() -> main, () -> sidekicks); }
         @Override public SolidExecutionRegistry solidExecutionRegistry() { return registry; }

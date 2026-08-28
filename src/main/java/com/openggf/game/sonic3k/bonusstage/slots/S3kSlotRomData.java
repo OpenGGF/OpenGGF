@@ -65,6 +65,18 @@ public final class S3kSlotRomData {
     };
 
     public static final byte[] SLOT_BONUS_LAYOUT = decodeLayoutRows();
+    // Transient layout-cell animations (ROM sub_4B592's four handlers,
+    // sonic3k.asm:98397-98513). Each *_DELAY below is the literal byte the matching
+    // handler reloads its countdown with (`move.b #N,2(a0)`), consumed by the shared
+    // `subq.b #1,2(a0) / bpl` idiom -- see TransientAnimationSlot.tick, which models
+    // that idiom directly, so these stay the ROM's own numbers rather than a
+    // period converted for a different countdown convention.
+    //   loc_4B5C2 ring sparkle  : #5, byte_4B5EC = $10,$11,$12,$13,0 (terminator
+    //                             leaves the cell empty)
+    //   loc_4B5F2 bumper bounce : #1, byte_4B622 = $A,$B,0 -> restores #5
+    //   loc_4B626 spike         : #7, byte_4B656 = $C,6,$C,0 -> restores #6
+    //   loc_4B65A reel flash    : #1, byte_4B688 = ($D,$E,$F) x8, 0 -> restores the
+    //                             advanced reel id stashed in the slot's spare byte
     public static final byte[] RING_SPARKLE_FRAMES = {0x10, 0x11, 0x12, 0x13};
     public static final int RING_SPARKLE_DELAY = 5;
     public static final byte[] BUMPER_BOUNCE_FRAMES = {0x0A, 0x0B};
@@ -81,16 +93,12 @@ public final class S3kSlotRomData {
             0x0D, 0x0E, 0x0F,
             0x0D, 0x0E, 0x0F
     };
-    // ROM slot-wall flash animation (sonic3k.asm loc_4B65A, 98499-98515) advances one
-    // colour frame every 2 game-frames: the timer idiom `subq.b #1,2(a0) / bpl (wait) /
-    // move.b #1,2(a0)` reloads the countdown with 1, giving a period of reset+1 = 2 ticks
-    // per frame (not 1). With 24 colour frames (byte_4B688) that is a ~48-frame flash. The
-    // flash keeps the hit reel cell a plain-solid (0x0D-0x0F, non-special) until it restores
-    // the advanced tile, which gates how fast a reel wall re-advances 1->2->3->4 on repeated
-    // hits (tile 4 is the goal, loc_4BED0/loc_4BF30). A period of 1 flashed twice as fast,
-    // turning a repeatedly-hit reel cell into a goal ~72 frames early and firing a spurious
-    // goal-exit (slots trace frame 809: cell 188 became tile 4 at ~666 vs ROM ~738).
-    public static final int SLOT_WALL_COLOR_DELAY = 2;
+    // loc_4B65A reloads with #1 (sonic3k.asm:98502), like the bumper handler. The
+    // previous value of 2 was a period-2 compensation for the old countdown
+    // convention (`--timer > 0` with an eager first publish); the ROM idiom is now
+    // modelled directly in TransientAnimationSlot.tick, so the literal reload is
+    // correct on its own and the flash still advances one colour every 2 frames.
+    public static final int SLOT_WALL_COLOR_DELAY = 1;
 
     private S3kSlotRomData() {
     }

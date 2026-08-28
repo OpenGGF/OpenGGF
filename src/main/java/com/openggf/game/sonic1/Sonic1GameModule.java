@@ -34,6 +34,9 @@ import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
+import com.openggf.game.sonic1.resources.Sonic1RuntimeArtCoordinator;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.credits.Sonic1EndingProvider;
@@ -275,6 +278,12 @@ public class Sonic1GameModule implements GameModule {
     @Override
     public void applyPlaneSwitching(AbstractPlayableSprite player) {
         levelEventManager.getLoopManager().update(player);
+    }
+
+    @Override
+    public RuntimeArtCoordinator createRuntimeArtCoordinator(
+            HardwareTimingService timing) {
+        return new Sonic1RuntimeArtCoordinator(timing, () -> plcService);
     }
 
     @SuppressWarnings("unchecked")

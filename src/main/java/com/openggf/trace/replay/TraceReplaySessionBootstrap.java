@@ -104,6 +104,16 @@ public final class TraceReplaySessionBootstrap {
             if (rng != null) {
                 rng.setSeed(0L);
             }
+            // Same leakage, dynamic-art side: whatever level the host had
+            // loaded before the replay booted (master title screen live, the
+            // engine-init level load headless) primed the playables' DPLCs
+            // through the dynamic-art lifecycle, and the ids it minted
+            // displace every id the replay mints afterwards. The recorder's
+            // ledger starts at the movie, so the replay's starts at the
+            // replay's own load. The session owns that reset - replay code
+            // asks for it and never holds the lifecycle service itself, so it
+            // has no way to write recorded values into dynamic art.
+            GameServices.restartDynamicArtRunForFreshSession();
         }
     }
 
@@ -308,6 +318,8 @@ public final class TraceReplaySessionBootstrap {
                     objectManager.advanceVblaCounter();
                     levelManager.getZoneFeatureProvider().updatePrePhysics(
                             null, cameraX, levelManager.getFeatureZoneId());
+                    levelManager.getZoneFeatureProvider().updateAfterObjectExecution(
+                            null, cameraX, levelManager.getFeatureZoneId());
                 }
             }
             objectManager.initVblaCounter(
@@ -504,6 +516,99 @@ public final class TraceReplaySessionBootstrap {
      * once before any frame is driven. It is not per-frame hydration: nothing
      * reads the trace again after this point.
      */
+
+    /**
+     * Seeds each playable's {@code top_solid_bit} / {@code lrb_solid_bit} from
+     * the segment's recorded entry snapshot.
+     *
+     * <p>ROM: {@code AnglePos} points {@code Collision_addr} at
+     * {@code Secondary_Collision} and passes {@code d5 = top_solid_bit}
+     * whenever {@code top_solid_bit != $C} (s2.asm:43002-43008), so the pair
+     * selects which of a zone's two 16x16 collision index arrays every floor
+     * and wall probe reads. It is not level-start state: {@code Obj01_Init}
+     * writes the {@code $C}/{@code $D} default only when
+     * {@code Last_star_pole_hit} is zero (s2.asm:36192-36199), and
+     * {@code Obj79_SaveData} / {@code Obj79_LoadData} save and restore
+     * {@code MainCharacter+top_solid_bit} across a star post and the
+     * special-stage return (s2.asm:44740, :44787). A segment that resumes a
+     * level mid-run therefore inherits the pair from the star post, not from
+     * the zone default, and no metadata field carries it.
+     *
+     * <p>Initial state only, and only for a metadata-start segment: this runs
+     * once, before the first row is driven, alongside the metadata start
+     * centre it belongs to. The engine's own path selection
+     * ({@code GroundSensor} / {@code LevelManager.getSolidTileForChunkDesc})
+     * stays engine-derived for every subsequent frame; nothing re-reads the
+     * trace. Only the ROM's two legal pairs are accepted, so a snapshot that
+     * carries anything else leaves the engine on its own default rather than
+     * importing a recorded byte blindly.
+     */
+    private static void seedSegmentEntrySolidBits(TraceData trace, AbstractPlayableSprite sprite) {
+        if (trace == null || trace.frameCount() == 0) {
+            return;
+        }
+        applyRecordedSolidBits(trace, sprite, trace.metadata().mainCharacter());
+        var sprites = GameServices.spritesOrNull();
+        if (sprites == null) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : sprites.getRegisteredSidekicks()) {
+            applyRecordedSolidBits(trace, sidekick, sprites.getSidekickCharacterName(sidekick));
+        }
+    }
+
+    private static void applyRecordedSolidBits(TraceData trace,
+                                               AbstractPlayableSprite playable,
+                                               String characterLabel) {
+        if (playable == null || characterLabel == null || characterLabel.isBlank()) {
+            return;
+        }
+        TraceEvent.StateSnapshot snapshot = null;
+        for (TraceEvent event : trace.getEventsForFrame(0)) {
+            if (event instanceof TraceEvent.StateSnapshot candidate
+                    && characterLabel.equalsIgnoreCase(
+                            String.valueOf(candidate.fields().get("character")))
+                    && candidate.fields().containsKey("top_solid_bit")) {
+                snapshot = candidate;
+                break;
+            }
+        }
+        if (snapshot == null) {
+            return;
+        }
+        int top = unsignedByteField(snapshot, "top_solid_bit");
+        int lrb = unsignedByteField(snapshot, "lrb_solid_bit");
+        // The ROM only ever holds one of two pairs here: the primary path
+        // ($C/$D) or the secondary path ($E/$F) -- s2.constants.asm:70-71
+        // documents the field domains, and Obj01_Init and the plane switchers
+        // write them as a pair.
+        boolean primary = top == 0x0C && lrb == 0x0D;
+        boolean secondary = top == 0x0E && lrb == 0x0F;
+        if (!primary && !secondary) {
+            return;
+        }
+        playable.setTopSolidBit((byte) top);
+        playable.setLrbSolidBit((byte) lrb);
+    }
+
+    private static int unsignedByteField(TraceEvent.StateSnapshot snapshot, String field) {
+        Object raw = snapshot.fields().get(field);
+        if (raw instanceof Number number) {
+            return number.intValue() & 0xFF;
+        }
+        if (raw == null) {
+            return -1;
+        }
+        String text = raw.toString().trim();
+        try {
+            return (text.startsWith("0x") || text.startsWith("0X")
+                    ? Integer.parseInt(text.substring(2), 16)
+                    : Integer.parseInt(text)) & 0xFF;
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
     private static void seedSegmentEntryVelocity(
             TraceData trace, AbstractPlayableSprite sprite) {
         if (trace == null || sprite == null
@@ -722,8 +827,32 @@ public final class TraceReplaySessionBootstrap {
             boolean present = objectManager.getActiveObjects().stream()
                     .anyMatch(PachinkoEnergyTrapObjectInstance.class::isInstance);
             if (!present) {
-                objectManager.addDynamicObject(
-                        new PachinkoEnergyTrapObjectInstance(bootstrapSpawn));
+                PachinkoEnergyTrapObjectInstance trap =
+                        new PachinkoEnergyTrapObjectInstance(bootstrapSpawn);
+                objectManager.addDynamicObject(trap);
+                // The ROM places this object in Dynamic_object_RAM slot 2 from
+                // SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8090-8096), and
+                // loc_6468 then runs Load_Sprites/Process_Sprites ONCE before
+                // LevelLoop (sonic3k.asm:7849-7853 vs :7885-7894). So the trap's
+                // init body -- which falls straight through `move.l #loc_49F5C,(a0)`
+                // into loc_49F5C with no rts (sonic3k.asm:96602-96612) -- executes
+                // at Level_frame_counter == 0, one pass BEFORE the first recorded
+                // row, and consumes the first of the `move.b #4*60,$25(a0)`
+                // countdown ticks (ROM bytes 0x49F4C: 117C 00F0 0025).
+                //
+                // Creating the object here reconstructs only the placement, not
+                // that pass. Without it the trap's `subq.b #1,$25(a0) ... else
+                // subq.w #1,y_pos(a0)` rise (sonic3k.asm:96594-96601) begins one
+                // gameplay pass late for the object's whole life, and because
+                // sub_49FE4 writes `move.w y_pos(a0),y_pos(a1)` into every held
+                // player (:96660), a held sidekick reads one pixel low forever.
+                // Run the represented pass for the object this bootstrap created,
+                // the same "the discarded pass also left state nobody rebuilt"
+                // correction as the Collision_response_list publication below.
+                // The V-int the represented pass ran under is the one before the
+                // first recorded row.
+                trap.update(trace.initialVblankCounter() - 1,
+                        GameServices.sprites().getMainPlayable());
             }
         }
         provider.onDeferredSetupComplete();
@@ -733,6 +862,23 @@ public final class TraceReplaySessionBootstrap {
         // authority execute that represented pass again when the shared
         // LevelFrameStep begins the bonus-stage interior.
         GameServices.level().discardPendingInitialProcessSpritesForStateRestoration();
+        // ...but the discarded pass also published Collision_response_list, and
+        // that half was NOT reconstructed above. Every object Process_Sprites
+        // ran at loc_6468 tail-calls Add_SpriteToCollisionResponseList
+        // (sonic3k.asm:21199-21207), so the ROM's first LevelLoop pass reads a
+        // populated list in Touch_Response (sonic3k.asm:20656). S3K's touch pass
+        // consumes the PREVIOUS pass's list, so leaving it empty made every
+        // object touch-ineligible for the whole first pass: the Pachinko round
+        // bumper overlapping Player_2's SpawnLevelMainSprites offset
+        // (leader -$20/+4, sonic3k.asm:8205-8216) could not set
+        // collision_property, so sub_32F34's bounce fired one pass late and the
+        // sidekick's whole state ran a pass behind the recording from row 0 on.
+        // Publish the list the represented pass would have left, without
+        // re-dispatching any object.
+        if (GameServices.level().getObjectManager() != null) {
+            GameServices.level().getObjectManager()
+                    .publishRepresentedInitialCollisionResponseList();
+        }
         // Comparison-bootstrap seam (same pattern as applyInitialRngSeedForReplay
         // / metadata.rng_seed above): when the trace recorded the ROM's
         // free-running V_int_run_count at bonus-stage entry (recorder
@@ -1258,6 +1404,7 @@ public final class TraceReplaySessionBootstrap {
         sprite.setCentreX(meta.startX());
         sprite.setCentreY(meta.startY());
         seedSegmentEntryVelocity(trace, sprite);
+        seedSegmentEntrySolidBits(trace, sprite);
         var level = GameServices.levelOrNull();
         if (level != null) {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(

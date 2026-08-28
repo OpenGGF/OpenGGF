@@ -154,7 +154,8 @@ class TestTraceSessionLauncherFailureCleanup {
                         candidate.dir().getFileName().toString()))
                 .findFirst()
                 .orElseThrow();
-        return new TraceSessionLauncher(entry, null, List.of(), configSnapshot);
+        return new TraceSessionLauncher(
+                entry, null, List.of(), null, configSnapshot);
     }
 
     private static TraceSessionLauncher.TitleCardPresentation noopPresentation() {

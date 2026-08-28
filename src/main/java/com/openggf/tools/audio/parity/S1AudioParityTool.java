@@ -62,10 +62,11 @@ public final class S1AudioParityTool {
         if (normalized.startsWith(resources)) {
             throw new IllegalArgumentException("audio parity output must not be under src/test/resources");
         }
-        Path allowed = repo.resolve("target/audio-parity").normalize();
         Path canonical = canonicalCandidate(normalized);
-        if (!canonical.startsWith(allowed)) {
-            throw new IllegalArgumentException("audio parity output is outside repository target/audio-parity");
+        Path allowedRoot = repo.resolve("target/audio-parity").normalize();
+        if (!canonical.startsWith(canonicalCandidate(allowedRoot))) {
+            throw new IllegalArgumentException(
+                    "audio parity output is outside repository target/audio-parity");
         }
         if (canonical.startsWith(resources)) {
             throw new IllegalArgumentException("audio parity output must not be under src/test/resources");
@@ -113,7 +114,9 @@ public final class S1AudioParityTool {
         verifyDigest(emuHawk, "SHA-256", EMUHAWK_SHA256,
                 "BizHawk home is not the pinned 2.11 Linux x64 distribution");
 
-        Path output = resolveSafeOutputRoot(repo, normalizedRequired(options, "output-root"));
+        Path output = resolveSafeOutputRoot(repo, options.containsKey("output-root")
+                ? normalizedRequired(options, "output-root")
+                : defaultOutputRoot(repo));
         out.println("ROM_PATH=" + machinePathValue(rom, "ROM_PATH"));
         out.println("MOVIE_PATH=" + machinePathValue(movie, "MOVIE_PATH"));
         out.println("BIZHAWK_HOME=" + machinePathValue(bizhawk, "BIZHAWK_HOME"));
@@ -203,6 +206,10 @@ public final class S1AudioParityTool {
 
     private static Path normalizedRequired(Map<String, String> values, String name) {
         return Path.of(required(values, name)).toAbsolutePath().normalize();
+    }
+
+    private static Path defaultOutputRoot(Path repository) {
+        return repository.resolve("target/audio-parity/s1-ghz");
     }
 
     private static Path discoverRom(Path repo) {

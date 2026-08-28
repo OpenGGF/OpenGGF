@@ -9,4 +9,6 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$script_dir"
 
+# This is the fast local launcher; use the ordinary package launcher when a
+# distributable JAR is required.
 mvn -q -o -Dmse=off -Pdev-run compile exec:exec

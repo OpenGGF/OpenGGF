@@ -2,6 +2,7 @@ package com.openggf.level;
 
 import com.openggf.game.BonusStageType;
 import com.openggf.game.SpecialStageEntryRequest;
+import com.openggf.level.objects.PersistentRespawnState;
 
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -20,18 +21,23 @@ public class LevelTransitionCoordinator {
     // ── Special stage ──────────────────────────────────────────────────
     private SpecialStageEntryRequest specialStageEntryRequest;
     private boolean specialStageEntryRoutineArmed;
+    private boolean specialStageEntryAdvancesLevel;
     private boolean levelRoutineReentry;
     private boolean specialStageReturnLevelReloadRequested;
     private boolean resultsReturnCardOwnedByCaller;
 
     // ── S3K big ring return (ROM: Saved2_* variables) ──────────
     private BigRingReturnState bigRingReturn;
+    /** Engine snapshot of Object_respawn_table kept by Respawn_table_keep. */
+    private PersistentRespawnState bigRingReturnRespawnState;
     private SanctuaryReturnContext sanctuaryReturnContext;
     private boolean sanctuaryReturnContextExplicit;
     private boolean sanctuaryOriginRestorePending;
 
     record SanctuaryRewindState(
             BigRingReturnState bigRingReturn,
+            PersistentRespawnState bigRingReturnRespawnState,
+            boolean lastStarPostHitSet,
             SanctuaryReturnContext sanctuaryReturnContext,
             boolean sanctuaryReturnContextExplicit,
             boolean sanctuaryOriginRestorePending,
@@ -122,7 +128,8 @@ public class LevelTransitionCoordinator {
         specialStageEntryRequest = null;
         if (request == null && specialStageEntryRoutineArmed) {
             specialStageEntryRoutineArmed = false;
-            specialStageEntryRequest = SpecialStageEntryRequest.ordinary();
+            request = SpecialStageEntryRequest.ordinary();
+            specialStageEntryAdvancesLevel = true;
         }
         return request;
     }
@@ -163,7 +170,14 @@ public class LevelTransitionCoordinator {
      * transition without swallowing it (spec 2026-07-18, addition #1).
      */
     public boolean isSpecialStageRequested() {
-        return specialStageEntryRequest != null;
+        return specialStageEntryRequest != null || specialStageEntryRoutineArmed;
+    }
+
+    /** Consumes the Got_NextLevel zone/act write attached to an armed entry. */
+    public boolean consumeSpecialStageEntryLevelAdvance() {
+        boolean advance = specialStageEntryAdvancesLevel;
+        specialStageEntryAdvancesLevel = false;
+        return advance;
     }
 
     /**
@@ -195,7 +209,32 @@ public class LevelTransitionCoordinator {
      * Saves the big ring return state (ROM: Save_Level_Data2 -> Saved2_*).
      */
     public void saveBigRingReturn(BigRingReturnState state) {
+        saveBigRingReturn(state, null);
+    }
+
+    /**
+     * Saves the big-ring return state together with the persistent object table
+     * that S3K keeps across the special-stage reload.
+     */
+    public void saveBigRingReturn(BigRingReturnState state,
+                                  PersistentRespawnState respawnState) {
         this.bigRingReturn = state;
+        this.bigRingReturnRespawnState = respawnState;
+    }
+
+    /**
+     * Saves the big-ring return state, folding the ring manager's
+     * {@code Ring_status_table} into the same snapshot as the object table.
+     * One ROM byte preserves both, so they travel together.
+     *
+     * @see #bigRingReturnRingStatusTable()
+     */
+    public void saveBigRingReturn(BigRingReturnState state,
+                                  PersistentRespawnState respawnState,
+                                  com.openggf.level.rings.RingManager ringManager) {
+        saveBigRingReturn(state, respawnState == null || ringManager == null
+                ? respawnState
+                : respawnState.withRingStatusBits(ringManager.captureRingStatusTable()));
     }
 
     /** Returns true if a big ring return state is saved. */
@@ -208,9 +247,80 @@ public class LevelTransitionCoordinator {
         return bigRingReturn;
     }
 
+    /** Returns the Object_respawn_table snapshot captured at big-ring entry. */
+    public PersistentRespawnState getBigRingReturnRespawnState() {
+        return bigRingReturnRespawnState;
+    }
+
+    /**
+     * Returns the {@code Ring_status_table} snapshot to re-establish on the
+     * next level load, or {@code null} when the load must start with a clean
+     * table.
+     *
+     * <p>ROM {@code sub_EB1A} -- the rings-manager init reached from
+     * {@code loc_E8BE} (docs/skdisasm/sonic3k.asm:18232-18238) -- wipes
+     * {@code Ring_status_table} only while {@code Respawn_table_keep} is clear:
+     * {@code tst.b (Respawn_table_keep).w} then {@code bne.s loc_EB30} skips
+     * the entire {@code $400}-byte clear (:18561-18570). That is the same byte
+     * which preserves {@code Object_respawn_table}, so the ring status rides in
+     * the same snapshot rather than forming a second notion of "keep".
+     *
+     * <p>The predicate is the presence of that snapshot, and deliberately not
+     * {@link #isLastStarPostHitSet()}: the star-post flag gates the ROM's saved
+     * <em>position</em> restore ({@code Load_Starpost_Settings}, :61763-61836)
+     * and has no bearing on the table wipe. {@code loc_618AC} clears
+     * {@code Last_star_post_hit} while still setting {@code Respawn_table_keep}
+     * (:128411-128421), so the two must not share a predicate. Nor is it keyed
+     * on which entry path ran: {@code loc_61892} sets the flag for the
+     * giant-ring entry (:128407-128412) and :128421 for the Super-Emerald
+     * entry.
+     */
+    public long[] bigRingReturnRingStatusTable() {
+        if (bigRingReturnRespawnState == null) {
+            return null;
+        }
+        long[] bits = bigRingReturnRespawnState.ringStatusBits();
+        return bits.length == 0 ? null : bits;
+    }
+
     /** Clears the big ring return state. */
     public void clearBigRingReturn() {
         this.bigRingReturn = null;
+        this.bigRingReturnRespawnState = null;
+    }
+
+    /**
+     * Models the ROM's {@code Last_star_post_hit} gate on the saved-position
+     * restore. A level load restores a saved position only while that flag is
+     * non-zero: {@code loc_1BE46} (skdisasm/sonic3k.asm:38148-38151) tests it
+     * and, when it is zero, falls through to {@code loc_1BE5E}
+     * (sonic3k.asm:38157-38168) which reads {@code Sonic_Start_Locations}
+     * instead. Only when it is non-zero does {@code Load_Starpost_Settings}
+     * (sonic3k.asm:61763-61836) restore {@code Saved_} or, for
+     * {@code Special_bonus_entry_flag}, {@code Saved2_}.
+     * <p>
+     * {@code Save_Level_Data2} (sonic3k.asm:61735) leaves the flag alone, so it
+     * stays set here; {@code loc_618AC} (sonic3k.asm:128411-128417) writes
+     * {@code move.b #0,(Last_star_post_hit).w} at sonic3k.asm:128414 when it
+     * requests the Super Emerald arena restart, and the special-stage clear
+     * re-sets bit 7 with {@code ori.b #$80,(Last_star_post_hit).w}
+     * (sonic3k.asm:12119-12120 and 12673-12674) for the return leg.
+     */
+    private boolean lastStarPostHitSet = true;
+
+    /** ROM {@code move.b #0,(Last_star_post_hit).w} (sonic3k.asm:128414). */
+    public void clearLastStarPostHit() {
+        this.lastStarPostHitSet = false;
+    }
+
+    /** ROM {@code ori.b #$80,(Last_star_post_hit).w} (sonic3k.asm:12673-12674). */
+    public void setLastStarPostHit() {
+        this.lastStarPostHitSet = true;
+    }
+
+    /** @see #clearLastStarPostHit() */
+    public boolean isLastStarPostHitSet() {
+        return lastStarPostHitSet;
     }
 
     /** Records the ROM HPZ_special_stage_completed re-entry context. */
@@ -264,11 +374,13 @@ public class LevelTransitionCoordinator {
         sanctuaryReturnContext = null;
         sanctuaryReturnContextExplicit = false;
         bigRingReturn = null;
+        bigRingReturnRespawnState = null;
     }
 
     SanctuaryRewindState captureSanctuaryRewindState() {
         return new SanctuaryRewindState(
-                bigRingReturn, sanctuaryReturnContext, sanctuaryReturnContextExplicit,
+                bigRingReturn, bigRingReturnRespawnState, lastStarPostHitSet,
+                sanctuaryReturnContext, sanctuaryReturnContextExplicit,
                 sanctuaryOriginRestorePending,
                 specificZoneActRequested, requestedZone, requestedAct, requestedMusicId,
                 levelInactiveForTransition, suppressNextMusicChange);
@@ -277,6 +389,8 @@ public class LevelTransitionCoordinator {
     void restoreSanctuaryRewindState(SanctuaryRewindState state) {
         java.util.Objects.requireNonNull(state, "state");
         bigRingReturn = state.bigRingReturn();
+        bigRingReturnRespawnState = state.bigRingReturnRespawnState();
+        lastStarPostHitSet = state.lastStarPostHitSet();
         sanctuaryReturnContext = state.sanctuaryReturnContext();
         sanctuaryReturnContextExplicit = state.sanctuaryReturnContextExplicit();
         sanctuaryOriginRestorePending = state.sanctuaryOriginRestorePending();
@@ -519,6 +633,19 @@ public class LevelTransitionCoordinator {
     // ================================================================
     //  Transition requests (fade-coordinated)
     // ================================================================
+
+    /** True once any engine-owned level-exit request has ended the main loop. */
+    public boolean hasPendingLevelExit() {
+        return titleCardRequested
+                || respawnRequested
+                || nextActRequested
+                || nextZoneRequested
+                || specificZoneActRequested
+                || creditsRequested
+                || specialStageEntryRequest != null
+                || specialStageEntryRoutineArmed
+                || bonusStageRequested != null;
+    }
 
     /**
      * Request a respawn (death). GameLoop will handle the fade transition.
@@ -844,6 +971,7 @@ public class LevelTransitionCoordinator {
     public void resetState() {
         specialStageEntryRequest = null;
         specialStageEntryRoutineArmed = false;
+        specialStageEntryAdvancesLevel = false;
         levelRoutineReentry = false;
         specialStageReturnLevelReloadRequested = false;
         resultsReturnCardOwnedByCaller = false;
@@ -851,6 +979,8 @@ public class LevelTransitionCoordinator {
         sanctuaryReturnContext = null;
         sanctuaryReturnContextExplicit = false;
         sanctuaryOriginRestorePending = false;
+        bigRingReturnRespawnState = null;
+        lastStarPostHitSet = true;
         bonusStageRequested = null;
         bonusStageReturnCheckpointIndex = -1;
         titleCardRequested = false;

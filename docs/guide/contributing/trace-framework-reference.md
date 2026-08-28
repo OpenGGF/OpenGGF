@@ -123,9 +123,9 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
                                    │ emits
                                    ▼
                 ┌──────────────────────────────────────────┐
-                │  target/trace-reports/                   │
-                │   <game>_<zone><act>_report.json         │
-                │   <game>_<zone><act>_context.txt         │
+                │  target/trace-reports/<profile>/         │
+                │   <logical-key>-<lane>-<owner-hash>.json │
+                │   ...-<owner-hash>_context.txt           │
                 └──────────────────────────────────────────┘
                                    │ read by
                                    ▼
@@ -656,10 +656,24 @@ Optional `pre_trace_oscillation_frames` field, consumed by
 ### 5.2 `physics.csv` — v5
 
 Ordinary level traces have one fixed 42-column symmetric
-primary-character/sidekick row. There is no width autodetection and no
-`csv_version`. Dedicated special-stage readers are selected by `game` plus
+primary-character/sidekick row, or 43 columns when the recording carries the
+trailing `life_count` column (see below). There is no other width autodetection
+and no `csv_version`. Dedicated special-stage readers are selected by `game` plus
 `trace_profile`: S1 uses 14 columns, S2 uses 48, and S3K uses 20. All other
 widths are rejected.
+
+**Life counter (`life_count`, trailing 43rd column).** ROM `Life_count`
+(`$FFFFFE12` in Sonic 1, 2, and 3&K alike). Recorded per-frame so a death or a
+1UP is attributable to the exact frame it happened on. Recordings made before
+the column existed omit it and `TraceFrame.lives()` reports
+`TraceFrame.LIVES_ABSENT`; that is the only path on which no life comparison
+runs, and it is keyed on the recording, never on the engine. When the column is
+present `TraceBinder` emits three fields: `lives_present` (ERROR if the engine
+snapshot carries no life count, so the comparison cannot silently vanish),
+`lives` (the level — a missed death stays divergent from the transition on), and
+`lives_delta` (the per-frame change — the field that names the exact frame a
+life was gained or lost). The recorded value is comparison-only and is never
+hydrated into engine state.
 
 **Compared when both sides record them:** `x_sub`, `y_sub`, `routine`, `status_byte`,
 `rings`, `camera_x`, and `camera_y`. These fields are strict frontier fields when the
@@ -759,9 +773,11 @@ The base JUnit-5 test class. Subclasses override `game()`, `zone()`, `act()`,
      the drive cursor asymmetrically.
 9. **Build `DivergenceReport`.** S3K passes its `TraceData` in so the report can enrich
    itself with checkpoint metadata.
-10. **Write report.** Always writes `target/trace-reports/<game>_<zone><act>_report.json`.
-    If there are errors, also writes `<game>_<zone><act>_context.txt` — a side-by-side
-    context window around the first error, sized `radius=10` frames.
+10. **Write report.** Always writes
+    `target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json` plus its
+    `.json.owner.json` ownership sidecar. If there are errors, it also writes the same
+    owner-keyed stem with `_context.txt` — a side-by-side context window around the first
+    error, sized `radius=10` frames.
 11. **Fail the test** if `report.hasErrors()`. Print `report.toSummary()` and the context
     window to `System.err`.
 
@@ -872,7 +888,8 @@ quietly producing meaningless divergences.
 groups on the same field within the same error run are flagged `cascading=true` so humans
 can ignore them.
 
-**JSON output** (`target/trace-reports/<game>_<zone><act>_report.json`):
+**JSON output**
+(`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json`):
 
 ```json
 {
@@ -890,10 +907,11 @@ can ignore them.
 }
 ```
 
-**Context window** (`target/trace-reports/<game>_<zone><act>_context.txt`), written only if
-there are errors. Table of the `radius=10` frames on either side of the first error,
-showing every divergent field plus the one-line `romDiag` and `engineDiag` strings so the
-developer can see ROM state vs engine state at the moment the divergence opened.
+**Context window**
+(`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>_context.txt`), written
+only if there are errors. Table of the `radius=10` frames on either side of the first
+error, showing every divergent field plus the one-line `romDiag` and `engineDiag` strings
+so the developer can see ROM state vs engine state at the moment the divergence opened.
 
 Example text shape:
 
@@ -1047,7 +1065,9 @@ every nearby-object position every frame through a 20-minute run.
    `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`) with `updated`
    or `n/a`, and cross-checks trailer ↔ file staging (e.g. `Changelog: updated` requires
    `CHANGELOG.md` to be in the diff). Runs via `bash .githooks/validate-policy.sh ci-pr ...`.
-2. **`test`** — sets up Java 21 (Temurin) with Maven cache, then runs `mvn test -B`.
+2. **`test`** — sets up Java 21 (Temurin) with Maven cache, then runs
+   `mvn test -B` and reads `target/surefire-reports` plus owner-keyed reports recursively
+   below `target/trace-reports/<profile>/`.
 
 Trace replay tests run in the `test` job but **skip gracefully** (`Assumptions.assumeTrue`)
 whenever their `.bk2` or ROM is unavailable — so CI passes without committing ROMs. What CI
@@ -1090,9 +1110,10 @@ frames) and steps 2, 3 are LLM-friendly (read disassembly, read engine, edit Jav
 
 For any given trace divergence, the agent has:
 
-- **`target/trace-reports/<game>_<zone><act>_report.json`** — machine-readable error list.
-- **`target/trace-reports/<game>_<zone><act>_context.txt`** — human-readable first-error
-  window with side-by-side ROM vs engine diagnostics.
+- **`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json`** —
+  machine-readable error list.
+- **`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>_context.txt`** —
+  human-readable first-error window with side-by-side ROM vs engine diagnostics.
 - **`src/test/resources/traces/<game>/<name>/physics.csv`** — every ROM-state row.
 - **`src/test/resources/traces/<game>/<name>/aux_state.jsonl`** — every ROM event.
 - **`docs/s1disasm/` / `docs/s2disasm/` / `docs/skdisasm/`** — the original ROM source (not
@@ -1150,7 +1171,8 @@ a self-contained briefing. In the trace context, typical sub-agent roles are:
 
 - "Read the first error in the context file and identify the ROM routine implicated."
 - "Find the corresponding engine code and propose a minimal fix."
-- "Run `mvn test -Dtest=TestS1Mz1TraceReplay` and report the new error count."
+- "Run `mvn test -Dtest=TestS1Mz1TraceReplay`, inspect
+  `target/trace-reports/trace/`, and report the new error count."
 - "Record a fresh trace in BizHawk and update the fixture."
 
 Results come back as short reports; the orchestrator decides what to do next.

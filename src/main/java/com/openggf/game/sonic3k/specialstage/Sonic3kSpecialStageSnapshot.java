@@ -44,6 +44,7 @@ record Sonic3kSpecialStageSnapshot(
         boolean spriteDebugMode,
         boolean useSkLayouts,
         boolean firstUpdateCall,
+        int preBootFadeHoldFrames,
         int postBootFadeHoldFrames,
         GameStateSnapshot gameState,
         GridSnapshot grid,
@@ -67,7 +68,7 @@ record Sonic3kSpecialStageSnapshot(
                 0, 0, 0, 1, 0, 0L, 0L,
                 true,
                 PlayerCharacter.SONIC_AND_TAILS,
-                false, false, false, 0, null,
+                false, false, false, 0, 0, null,
                 null, null, null, null, null, null, null, null, null, null);
     }
 

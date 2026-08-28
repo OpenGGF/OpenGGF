@@ -61,10 +61,49 @@ public final class DynamicArtLifecycleService
     private final List<DynamicArtGapTransition> gapTransitions = new ArrayList<>();
     private Preparation s1Preparation;
     /**
+     * A player staging taken while an earlier one is still held for the
+     * level's pre-main-loop tail.
+     *
+     * <p>{@code Sonic_LoadGfx} decodes at most one frame per call and hands it
+     * to the V-blank DMA via {@code f_sonframechg}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2394-2409), so a staging is always
+     * separated from the next one by a V-int. Around a level load the ROM
+     * makes two such calls with the whole {@code Level_Delay} /
+     * {@code PalFadeIn_Alt} tail between them: the {@code Level_LoadObj}
+     * {@code ExecuteObjects} pass (docs/s1disasm/sonic.asm:2895-2897), served
+     * by the tail's first V-int (docs/s1disasm/sonic.asm:2956-2961), and then
+     * the first {@code Level_MainLoop} pass (docs/s1disasm/sonic.asm:2998),
+     * served by the V-int after it. The engine does not spend the tail's rows,
+     * so both stagings arrive on one engine row; letting the second replace
+     * the first would drop a DMA the ROM performs. Holding it here keeps both
+     * transfers, each on its own row.
+     */
+    private Preparation s1PreparationAfterPreMainLoopTail;
+    /**
      * Level-load player bank staged by a fresh playable's priming, held
      * until a run whose movie spans the load publishes it.
      */
     private Preparation initialLoadPreparation;
+    /**
+     * Whether the level-entry load that creates the playables is still
+     * running, so a playable art decision taken now belongs to the row that
+     * load finishes on rather than to the row the engine happened to take it.
+     *
+     * <p>The ROM does not own playables during its level-entry load at all:
+     * {@code Level:} reaches {@code InitPlayers} only after
+     * {@code LoadZoneTiles}, {@code loadZoneBlockMaps},
+     * {@code LoadAnimatedBlocks}, {@code DrawInitialBG},
+     * {@code ConvertCollisionArray}, {@code LoadCollisionIndexes} and
+     * {@code WaterEffects} (docs/s2disasm/s2.asm:4938-4946), so the players'
+     * art is submitted at the END of that load, not at its start. The engine
+     * performs the same load with no frame cost, so its playables exist -- and
+     * take their first art decision -- while the ROM was still loading. Held
+     * decisions stage here and are released by whoever knows the load has
+     * finished; nothing arms this in production, where the hold is never set
+     * and the path below is exactly as it was.
+     */
+    private boolean levelEntryPlayerArtHeld;
+    private final List<Preparation> heldLevelEntryPlayerArt = new ArrayList<>();
     private List<Long> publishedOutstanding = List.of();
     private DynamicArtDiagnosticsSnapshot latest =
             DynamicArtDiagnosticsSnapshot.empty();
@@ -80,6 +119,62 @@ public final class DynamicArtLifecycleService
     private int nextPublicationFrame;
     private int movieLogicalFrame;
     private boolean movieLogicalFrameSuppliedExternally;
+    /**
+     * Rows the movie advanced without anyone announcing them.
+     *
+     * <p>A run advances the movie one row per driven frame, and a driver that
+     * knows the row announces it ({@link #setMovieLogicalFrame}). Some spans
+     * are driven with no announcement at all: a harness that pre-seeks the
+     * shared cursor for an uncompared interior keeps re-announcing the same
+     * frozen row for the whole interior and the transition gap after it, so
+     * every gap edge is stamped with one stale row however many rows apart
+     * they were emitted. Across such a span the engine's own production
+     * iterations are the only evidence rows are passing, and one iteration is
+     * one row.
+     *
+     * <p>Counting them makes a stale stamp recoverable: an edge whose stamp
+     * was followed by {@code n} unannounced iterations is {@code n} rows
+     * earlier than it says. Where rows are announced this count never moves
+     * and the stamp is already right.
+     */
+    private int unannouncedRows;
+    /** Last row announced, so a re-announced row is not a row advance. */
+    private int lastAnnouncedMovieRow = -1;
+    /** Whether a NEW row was announced since the last iteration closed. */
+    private boolean newMovieRowAnnouncedSinceIteration;
+    /**
+     * Gap-ledger length, movie row and outstanding ledger as they stood the
+     * instant the comparison segment closed — the state a transition gap
+     * opens on.
+     *
+     * <p>A close can itself emit gap edges: the ROM mode-change boundary
+     * re-stamps the iteration's whole buffered batch {@code run_gap} and emits
+     * it here, because that iteration is no longer a row of the level. A
+     * comparator that snapshots when the harness later announces the close
+     * therefore starts counting past those edges and never compares them, and
+     * their transfers have already left the ledger that resolves an edge's
+     * submission origin. Recording the state at the close itself makes the
+     * boundary batch the first edges of the gap it belongs to.
+     *
+     * <p>Recorded at both ends of a comparison segment, so a source that never
+     * opened one — an uncompared interior segment — inherits the state of the
+     * boundary that armed it rather than a stale earlier gap's.
+     */
+    private int gapOpeningTransitionCount;
+    private int gapOpeningMovieLogicalFrame;
+    private List<Descriptor> gapOpeningLedger = List.of();
+    /**
+     * Outstanding ledger as it stood before the currently buffered edge batch
+     * began — the state the batch's own {@code before} membership was taken
+     * against.
+     *
+     * <p>A batch accumulates across one production iteration and is flushed
+     * whole, either onto a published row or, at the ROM mode-change boundary,
+     * into the transition gap. In the boundary case the batch's edges are the
+     * gap's first edges, so the ledger a comparator replays them onto has to
+     * precede them; the live ledger at that moment already has them applied.
+     */
+    private List<Descriptor> ledgerBeforeBufferedBatch = List.of();
     /**
      * Counted V-int rows separating a staged pre-main-loop player transfer
      * from the level's first main-loop row, or {@code -1} when no staged
@@ -97,6 +192,17 @@ public final class DynamicArtLifecycleService
      */
     private final Map<Integer, Integer> nextGapEdgeIndexByFrame =
             new HashMap<>();
+    /**
+     * Gap-ledger size observed at the start of the last COMPLETED production
+     * iteration, and at the start of the one now running. Together they name
+     * the gap edges a single completed iteration emitted, which is what
+     * {@link #adoptGapResidentOpeningRow()} needs: admission is polled between
+     * host steps, so the iteration that satisfied the destination's readiness
+     * has already finished by the time the destination's comparison window
+     * opens.
+     */
+    private int gapEdgesBeforeLastIteration;
+    private int gapEdgesBeforeCurrentIteration;
 
     private record ProductionArtProfile(
             int romArtBase,
@@ -153,11 +259,15 @@ public final class DynamicArtLifecycleService
             int logicalFrame,
             int logicalEdgeIndex,
             List<DynamicArtDiagnosticsSnapshot.Request> requests,
-            String submissionOrigin) {
+            String submissionOrigin,
+            List<Long> beforeOutstanding,
+            List<Long> afterOutstanding) {
         public BufferedEdge {
             requests = List.copyOf(requests);
             submissionOrigin = submissionOrigin == null
                     ? "segment" : submissionOrigin;
+            beforeOutstanding = List.copyOf(beforeOutstanding);
+            afterOutstanding = List.copyOf(afterOutstanding);
         }
     }
 
@@ -173,7 +283,10 @@ public final class DynamicArtLifecycleService
             List<Long> latestOutstandingTransferIds,
             boolean latestPublished,
             Preparation s1Preparation,
+            Preparation s1PreparationAfterPreMainLoopTail,
             Preparation initialLoadPreparation,
+            boolean levelEntryPlayerArtHeld,
+            List<Preparation> heldLevelEntryPlayerArt,
             boolean runActive,
             boolean comparisonSegmentOpen,
             boolean comparisonSegmentReserved,
@@ -184,7 +297,16 @@ public final class DynamicArtLifecycleService
             int nextPublicationFrame,
             int movieLogicalFrame,
             int preMainLoopTailRows,
-            int nextGapEdgeIndex) {
+            int nextGapEdgeIndex,
+            int gapOpeningTransitionCount,
+            int gapOpeningMovieLogicalFrame,
+            int gapEdgesBeforeLastIteration,
+            int gapEdgesBeforeCurrentIteration,
+            int unannouncedRows,
+            int lastAnnouncedMovieRow,
+            boolean newMovieRowAnnouncedSinceIteration,
+            List<Descriptor> gapOpeningLedger,
+            List<Descriptor> ledgerBeforeBufferedBatch) {
         public RewindState {
             lastMappingFrames = Map.copyOf(lastMappingFrames);
             ledger = List.copyOf(ledger);
@@ -195,13 +317,51 @@ public final class DynamicArtLifecycleService
             latestEdges = List.copyOf(latestEdges);
             latestOutstandingTransferIds =
                     List.copyOf(latestOutstandingTransferIds);
+            heldLevelEntryPlayerArt = List.copyOf(heldLevelEntryPlayerArt);
+            gapOpeningLedger = List.copyOf(gapOpeningLedger);
+            ledgerBeforeBufferedBatch =
+                    List.copyOf(ledgerBeforeBufferedBatch);
         }
+    }
+
+    /** Starts a fresh buffered edge batch from the live ledger. */
+    private void beginBufferedEdgeBatch() {
+        bufferedEdges.clear();
+        ledgerBeforeBufferedBatch = List.copyOf(ledger.values());
+    }
+
+    /** Records the state a transition gap opens on, at the segment's close. */
+    private void recordGapOpeningState() {
+        gapOpeningTransitionCount = gapTransitions.size();
+        gapOpeningMovieLogicalFrame = movieLogicalFrame;
+        gapOpeningLedger = bufferedEdges.isEmpty()
+                ? List.copyOf(ledger.values())
+                : ledgerBeforeBufferedBatch;
+    }
+
+    @Override
+    public DynamicArtGapDiagnosticsSnapshot gapOpeningSnapshot() {
+        return new DynamicArtGapDiagnosticsSnapshot(
+                gapOpeningMovieLogicalFrame,
+                unannouncedRows,
+                gapTransitions.subList(0, Math.min(
+                        gapOpeningTransitionCount, gapTransitions.size())),
+                gapOpeningLedger.stream()
+                        .map(descriptor ->
+                                new DynamicArtGapDiagnosticsSnapshot.Descriptor(
+                                        descriptor.transferId(),
+                                        descriptor.owner(),
+                                        descriptor.mappingFrame(),
+                                        descriptor.submissionOrigin(),
+                                        descriptor.requests()))
+                        .toList());
     }
 
     @Override
     public DynamicArtGapDiagnosticsSnapshot gapSnapshot() {
         return new DynamicArtGapDiagnosticsSnapshot(
                 movieLogicalFrame,
+                unannouncedRows,
                 gapTransitions,
                 ledger.values().stream()
                         .map(descriptor ->
@@ -222,6 +382,35 @@ public final class DynamicArtLifecycleService
         runActive = true;
     }
 
+    /**
+     * Restarts an already-active run so the ledger holds only work the
+     * session's own level load produced.
+     *
+     * <p>A replay session boots on top of whatever the host had already
+     * loaded — the master title screen live, a throwaway engine-init level
+     * load headless — and that load's player DPLC priming submits through the
+     * same service. Nothing resets it, because
+     * {@link com.openggf.game.session.GameplayModeContext#attachGameplayManagers}
+     * only calls {@link #beginRun()} when no run is active, so the pre-boot
+     * transfers keep their ids and every id the replay mints afterwards is
+     * displaced by that count. The recorder's ledger starts at the movie, so
+     * the replay's must start at the replay's own load: this is the
+     * dynamic-art half of the same leakage
+     * {@code TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay}
+     * already zeroes for the RNG seed and the level subsystems.
+     *
+     * <p>Reached only through
+     * {@link com.openggf.game.session.GameplayModeContext#restartDynamicArtRunForFreshSession()}:
+     * the session owns this lifecycle, so callers that must not hold
+     * mutation authority over it (trace and ghost code) never take a
+     * reference to this service. It takes no arguments and resets to
+     * compile-time constants, so no caller can steer it.
+     */
+    public void restartRunForFreshSession() {
+        resetState();
+        runActive = true;
+    }
+
     public void openComparisonSegment() {
         requireRunActive();
         if (comparisonSegmentOpen || comparisonSegmentReserved) {
@@ -229,6 +418,7 @@ public final class DynamicArtLifecycleService
                     "dynamic-art comparison segment is already open or reserved");
         }
         validateComparisonSegmentActivation();
+        recordGapOpeningState();
         comparisonSegmentOpen = true;
         initializeComparisonSegment();
     }
@@ -287,6 +477,88 @@ public final class DynamicArtLifecycleService
         nextLogicalEdgeIndex = 0;
     }
 
+    /**
+     * Adopts the one destination iteration that already ran while the run was
+     * structurally still in the preceding transition gap, publishing it as the
+     * opening segment's row zero.
+     *
+     * <p>This is the exact inverse of
+     * {@link #endComparisonSegmentAtRomModeChange()}. There the ROM's mode
+     * write happens inside {@code RunObjects}, so an iteration the engine had
+     * treated as a segment row turns out to belong to the gap and its whole
+     * edge batch is re-stamped {@code run_gap}. Here the destination's
+     * readiness is only observable after the row it belongs to has run —
+     * {@code TraceRunPlaybackCoordinator.destinationReady} requires
+     * {@code observation.mode() == LEVEL}, which cannot be true until the row
+     * executed, and production carries the same one-row drop through
+     * {@code DestinationAdmissionReceipt.rowsConsumed()} — so an iteration the
+     * engine had treated as a gap row turns out to be the segment's row zero
+     * and its whole edge batch is re-stamped {@code segment}.
+     *
+     * <p>The recorder agrees on the boundary objectively: the gap's edge
+     * ordinals end contiguously with the destination segment's row-zero
+     * ordinal. Measured on {@code s2-ehz-halfpipe-roundtrip}'s
+     * {@code ss_2 -> seg3_ehz1} gap, the sole edge this iteration emitted is
+     * ordinal 22634 / transfer 11317 / submitted / sonic / mapping frame 15,
+     * which is exactly and only what the fixture's {@code seg3_ehz1} row 0
+     * carries.
+     *
+     * <p>Adopting rather than skipping is what makes row zero COMPARED: the
+     * previous {@code advanceComparisonCursor(1)} left the row unpublished, so
+     * its edges stayed gap-resident and the transfer they opened completed on
+     * row 1 still carrying the {@code run_gap} stamp its gap-time submission
+     * gave it. An iteration that emitted no art adopts nothing and publishes
+     * an empty row zero, which is equally what the fixture records.
+     */
+    public void adoptGapResidentOpeningRow() {
+        requireComparisonSegmentOpen();
+        if (nextPublicationFrame != 0 || latest.published()
+                || !bufferedEdges.isEmpty()) {
+            throw new IllegalStateException(
+                    "an opening row can be adopted only before the first publication");
+        }
+        int watermark = gapEdgesBeforeLastIteration;
+        if (watermark < 0 || watermark > gapTransitions.size()) {
+            throw new IllegalStateException(
+                    "gap iteration watermark " + watermark
+                            + " is outside the gap ledger of size "
+                            + gapTransitions.size());
+        }
+        List<DynamicArtGapTransition> adopted = List.copyOf(
+                gapTransitions.subList(watermark, gapTransitions.size()));
+        gapTransitions.subList(watermark, gapTransitions.size()).clear();
+        Set<Long> adoptedSubmissions = new java.util.LinkedHashSet<>();
+        for (DynamicArtGapTransition transition : adopted) {
+            DynamicArtGapTransition.GapEdge edge = transition.edge();
+            nextGapEdgeIndexByFrame.computeIfPresent(
+                    edge.movieLogicalFrame(), (frame, count) -> count - 1);
+            if ("submitted".equals(edge.phase())) {
+                adoptedSubmissions.add(edge.transferId());
+                Descriptor descriptor = ledger.get(edge.transferId());
+                if (descriptor != null) {
+                    ledger.put(edge.transferId(), new Descriptor(
+                            descriptor.transferId(), descriptor.owner(),
+                            descriptor.mappingFrame(), "segment",
+                            descriptor.requests()));
+                }
+            }
+        }
+        for (DynamicArtGapTransition transition : adopted) {
+            DynamicArtGapTransition.GapEdge edge = transition.edge();
+            // A completion whose submission stayed in the gap keeps the gap's
+            // stamp: the origin follows where the transfer was SUBMITTED.
+            String origin = adoptedSubmissions.contains(edge.transferId())
+                    ? "segment" : "run_gap";
+            bufferedEdges.add(new BufferedEdge(
+                    edge.edgeOrdinal(), edge.transferId(), edge.phase(),
+                    edge.owner(), edge.mappingFrame(), 0,
+                    nextLogicalEdgeIndex++, edge.requests(), origin,
+                    transition.beforeOutstandingTransferIds(),
+                    transition.afterOutstandingTransferIds()));
+        }
+        publishRow(nextPublicationFrame++, false);
+    }
+
     /** Cancels an unpublished reservation without publishing a synthetic row. */
     public void cancelReservedComparisonSegment() {
         requireRunActive();
@@ -316,6 +588,10 @@ public final class DynamicArtLifecycleService
 
     private void initializeComparisonSegment() {
         segmentGeneration++;
+        // Gap edges mutate the ledger without buffering, so a window's first
+        // batch has to start from the ledger the window opens on rather than
+        // from whatever the previous window's last batch stood on.
+        ledgerBeforeBufferedBatch = List.copyOf(ledger.values());
         publishedOutstanding = List.copyOf(ledger.keySet());
         latest = new DynamicArtDiagnosticsSnapshot(
                 -1, List.of(), publishedOutstanding,
@@ -323,6 +599,53 @@ public final class DynamicArtLifecycleService
         logicalFrame = 0;
         nextLogicalEdgeIndex = 0;
         nextPublicationFrame = 0;
+    }
+
+    /**
+     * Ends the comparison window on the ROM iteration that writes the next
+     * game mode from inside {@code RunObjects}: S2 {@code Obj79_Star} does
+     * {@code move.b #GameModeID_SpecialStage,(Game_Mode).w}
+     * (docs/s2disasm/s2.asm:44877) and S3K {@code SSEntryFlash_GoSS} the same.
+     * That iteration still runs to completion -- the mode test that leaves
+     * {@code Level_MainLoop} is at its tail (docs/s2disasm/s2.asm:5122-5125),
+     * after {@code BuildSprites} (:5108) -- but it is no longer a row of the
+     * level: nothing samples it, so its whole edge batch belongs to the
+     * transition gap, whichever object produced it and in whatever order.
+     * Player art queued earlier in the same iteration (Sonic runs before the
+     * star post's higher slot) is therefore re-stamped {@code run_gap} too.
+     * No row is published for the iteration.
+     */
+    public void endComparisonSegmentAtRomModeChange() {
+        if (!runActive || !comparisonSegmentOpen) {
+            return;
+        }
+        List<BufferedEdge> boundaryEdges = List.copyOf(bufferedEdges);
+        // Recorded before the batch is discarded, so the gap opens on the
+        // ledger its own first edges were observed against.
+        recordGapOpeningState();
+        beginBufferedEdgeBatch();
+        comparisonSegmentOpen = false;
+        Set<Long> boundarySubmissions = new java.util.LinkedHashSet<>();
+        for (BufferedEdge edge : boundaryEdges) {
+            if ("submitted".equals(edge.phase())) {
+                boundarySubmissions.add(edge.transferId());
+            }
+        }
+        for (long transferId : boundarySubmissions) {
+            Descriptor descriptor = ledger.get(transferId);
+            if (descriptor != null) {
+                ledger.put(transferId, new Descriptor(
+                        descriptor.transferId(), descriptor.owner(),
+                        descriptor.mappingFrame(), "run_gap",
+                        descriptor.requests()));
+            }
+        }
+        for (BufferedEdge edge : boundaryEdges) {
+            emitGapEdge(edge.edgeOrdinal(), edge.transferId(), edge.phase(),
+                    edge.owner(), edge.mappingFrame(), edge.requests(),
+                    edge.beforeOutstanding(), edge.afterOutstanding());
+        }
+        publishedOutstanding = List.copyOf(ledger.keySet());
     }
 
     public void closeComparisonSegment() {
@@ -343,6 +666,7 @@ public final class DynamicArtLifecycleService
                             : List.of();
             latest = publishBuffered(terminalFrame, true, alreadyPublished);
         }
+        recordGapOpeningState();
         comparisonSegmentOpen = false;
     }
 
@@ -367,7 +691,8 @@ public final class DynamicArtLifecycleService
             throw new IllegalStateException(
                     "only an unpublished dynamic-art segment may be abandoned");
         }
-        bufferedEdges.clear();
+        beginBufferedEdgeBatch();
+        recordGapOpeningState();
         comparisonSegmentOpen = false;
         publishedOutstanding = List.copyOf(ledger.keySet());
         latest = DynamicArtDiagnosticsSnapshot.unpublished(
@@ -422,6 +747,10 @@ public final class DynamicArtLifecycleService
         if (gameId == GameId.S1) {
             return prepareS1(owner, mappingFrame, requests, profile);
         }
+        if (levelEntryPlayerArtHeld) {
+            return holdLevelEntryDecision(owner, mappingFrame, requests,
+                    profile);
+        }
         ArtUpdate update = observeRomDplc(owner, mappingFrame, requests,
                 profile.romArtBase(), profile.vramDestination());
         if (gameId == GameId.S2 && update.submitted()) {
@@ -456,7 +785,7 @@ public final class DynamicArtLifecycleService
         List<TileLoadRequest> requests = dplcFrame != null
                 && dplcFrame.requests() != null
                 ? List.copyOf(dplcFrame.requests()) : List.of();
-        Integer previous = lastMappingFrames.put(owner, mappingFrame);
+        Integer previous = lastMappingFrames.put(dedupRegister(owner), mappingFrame);
         if (previous != null && previous == mappingFrame) {
             return new ArtUpdate(false, -1, List.of());
         }
@@ -484,7 +813,7 @@ public final class DynamicArtLifecycleService
      * <p>The transfer's row is the level's first main-loop row minus the
      * game's counted pre-main-loop tail
      * ({@link com.openggf.game.LevelInitProfile#preLevelMainLoopDelayFrames()}),
-     * the same relation {@link #settlePendingPlayerPreparationBeforeLevelMainLoop()}
+     * the same relation {@link #settlePendingPlayerPreparationBeforeLevelMainLoop(int)}
      * settles a mid-run load on. Nothing is published when no priming staged a
      * bank, so a segment-scoped replay is unaffected.
      *
@@ -561,6 +890,58 @@ public final class DynamicArtLifecycleService
         return update;
     }
 
+    /**
+     * Seeds an owner's last-loaded-DPLC dedup baseline the way the owning ROM
+     * object's init routine writes its own dedup register, without publishing
+     * or staging any transfer.
+     *
+     * <p>The dedup register is object-owned state that the object's init
+     * rewrites, so a value left behind by an earlier visit to the same object
+     * never suppresses the new instance's first transfer.
+     *
+     * @param owner        dynamic-art owner whose baseline is being seeded
+     * @param mappingFrame value the ROM init routine writes to the register
+     */
+    public void primeDplcDedupBaseline(String owner, int mappingFrame) {
+        validateOwner(owner);
+        if (mappingFrame < 0) {
+            throw new IllegalArgumentException(
+                    "mappingFrame must be nonnegative");
+        }
+        lastMappingFrames.put(dedupRegister(owner), mappingFrame);
+    }
+
+    /**
+     * Zeroes every player last-loaded-DPLC register the way a level load does.
+     *
+     * <p>The registers are level-scoped RAM, not persistent state. Sonic 2's
+     * {@code Level_ClrRam} runs {@code clearRAM Misc_Variables,Misc_Variables_End}
+     * (docs/s2disasm/s2.asm, {@code Level_ClrRam}), and all three registers live
+     * inside that block — {@code Sonic_LastLoadedDPLC}
+     * (docs/s2disasm/s2.constants.asm:1556), {@code Tails_LastLoadedDPLC} and
+     * {@code TailsTails_LastLoadedDPLC} (:1625-1626), between
+     * {@code Misc_Variables} (:1484) and {@code Misc_Variables_End} (:1629).
+     * Sonic 1 is the same shape: {@code Level_ClrRam} runs
+     * {@code clearRAM v_levelvariables} (docs/s1disasm/sonic.asm:2742) and
+     * {@code v_sonframenum} sits inside it
+     * (docs/s1disasm/_Variables.asm:179, 230, 301).
+     *
+     * <p>Consequently a level entered after a special stage starts with the
+     * registers at zero, not at the values the stage left behind: the stage
+     * writes the very same bytes (docs/s2disasm/s2.asm:69095, 69205, 70378,
+     * 70403, 70504, 70586-70588), so without the clear the returned level
+     * suppresses the player's first mapping-frame transfer against a special
+     * stage's frame number.
+     *
+     * <p>Modelled as an absent register rather than a stored zero: the engine
+     * treats "no value yet" as the fresh-level state its own level-load
+     * priming path expects, and the ROM's cleared byte is only ever read
+     * again after that priming has rewritten it.
+     */
+    public void clearPlayerDplcDedupRegistersForLevelLoad() {
+        lastMappingFrames.clear();
+    }
+
     private ArtUpdate observeDplc(
             String owner,
             int mappingFrame,
@@ -575,7 +956,7 @@ public final class DynamicArtLifecycleService
         }
         List<TileLoadRequest> checked =
                 List.copyOf(Objects.requireNonNull(tileRequests, "tileRequests"));
-        Integer previous = lastMappingFrames.put(owner, mappingFrame);
+        Integer previous = lastMappingFrames.put(dedupRegister(owner), mappingFrame);
         if (previous != null && previous == mappingFrame) {
             return new ArtUpdate(false, -1, List.of());
         }
@@ -608,17 +989,106 @@ public final class DynamicArtLifecycleService
         }
         List<TileLoadRequest> checked =
                 List.copyOf(Objects.requireNonNull(tileRequests, "tileRequests"));
-        Integer previous = lastMappingFrames.put(owner, mappingFrame);
+        Integer previous = lastMappingFrames.put(dedupRegister(owner), mappingFrame);
         if (previous != null && previous == mappingFrame) {
             return new ArtUpdate(false, -1, List.of());
         }
         if (checked.isEmpty()) {
             return new ArtUpdate(true, -1, List.of());
         }
-        s1Preparation = new Preparation(owner, mappingFrame,
+        Preparation prepared = new Preparation(owner, mappingFrame,
                 toDiagnosticRequests(checked, profile.romArtBase(), -1,
                         profile.vramDestination()));
+        if (s1Preparation != null && preMainLoopTailRows >= 0) {
+            // The held staging belongs to the tail's first V-int; this one is
+            // the main loop's. Queue it rather than replacing the held one.
+            s1PreparationAfterPreMainLoopTail = prepared;
+        } else {
+            s1Preparation = prepared;
+        }
         return new ArtUpdate(true, -1, checked);
+    }
+
+    /**
+     * Holds playable art decisions taken while the level-entry load is still
+     * running, so they surface on the row that load finishes on.
+     *
+     * <p>Arming this is a scheduling decision about work the engine creates
+     * itself: it changes only WHEN a submission the engine already made
+     * becomes visible, never what is submitted, and it reads no gameplay
+     * value. Nothing arms it in production.
+     */
+    public void holdPlayerArtDuringLevelEntryLoad() {
+        requireRunActive();
+        levelEntryPlayerArtHeld = true;
+    }
+
+    /** Whether a level-entry hold is currently armed. */
+    public boolean isPlayerArtHeldDuringLevelEntryLoad() {
+        return levelEntryPlayerArtHeld;
+    }
+
+    /**
+     * Releases the level-entry hold, submitting every held decision in the
+     * order it was taken, on the row this is called from -- the ROM's
+     * {@code InitPlayers} (docs/s2disasm/s2.asm:4946).
+     *
+     * <p>Releasing is idempotent and safe when nothing was held: a level entry
+     * whose playables took no art decision publishes nothing.
+     */
+    public void releasePlayerArtHeldDuringLevelEntryLoad() {
+        levelEntryPlayerArtHeld = false;
+        if (heldLevelEntryPlayerArt.isEmpty()) {
+            return;
+        }
+        List<Preparation> held = List.copyOf(heldLevelEntryPlayerArt);
+        heldLevelEntryPlayerArt.clear();
+        for (Preparation preparation : held) {
+            submitPreparedTransfer(preparation);
+        }
+    }
+
+    private ArtUpdate holdLevelEntryDecision(
+            String owner,
+            int mappingFrame,
+            List<TileLoadRequest> tileRequests,
+            ProductionArtProfile profile) {
+        validateOwner(owner);
+        if (mappingFrame < 0) {
+            throw new IllegalArgumentException("mappingFrame must be nonnegative");
+        }
+        List<TileLoadRequest> checked =
+                List.copyOf(Objects.requireNonNull(tileRequests, "tileRequests"));
+        // The dedup register is the ROM's own per-owner last-frame byte and is
+        // maintained here exactly as the unheld path maintains it; only the
+        // edge's row changes.
+        Integer previous = lastMappingFrames.put(dedupRegister(owner), mappingFrame);
+        if (previous != null && previous == mappingFrame) {
+            return new ArtUpdate(false, -1, List.of());
+        }
+        if (checked.isEmpty()) {
+            return new ArtUpdate(true, -1, List.of());
+        }
+        heldLevelEntryPlayerArt.add(new Preparation(owner, mappingFrame,
+                toDiagnosticRequests(checked, profile.romArtBase(), -1,
+                        profile.vramDestination())));
+        // The tiles still reach the renderer, as a priming does; only the
+        // ledger edge waits for the load to finish.
+        return new ArtUpdate(true, -1, checked);
+    }
+
+    private void submitPreparedTransfer(Preparation preparation) {
+        long transferId = nextTransferId++;
+        List<Long> before = List.copyOf(ledger.keySet());
+        Descriptor descriptor = new Descriptor(
+                transferId, preparation.owner(), preparation.mappingFrame(),
+                comparisonSegmentOpen ? "segment" : "run_gap",
+                preparation.requests());
+        ledger.put(transferId, descriptor);
+        buffer(transferId, "submitted", descriptor.owner(),
+                descriptor.mappingFrame(), descriptor.requests(), before,
+                descriptor.submissionOrigin());
+        pendingS2TransferIds.add(transferId);
     }
 
     public void completeApplied(ArtUpdate update) {
@@ -665,6 +1135,10 @@ public final class DynamicArtLifecycleService
         }
         movieLogicalFrame = movieRow;
         movieLogicalFrameSuppliedExternally = true;
+        if (movieRow != lastAnnouncedMovieRow) {
+            lastAnnouncedMovieRow = movieRow;
+            newMovieRowAnnouncedSinceIteration = true;
+        }
     }
 
     public void serviceProductionVBlank() {
@@ -714,22 +1188,36 @@ public final class DynamicArtLifecycleService
     }
 
     /**
-     * Settles a held pre-main-loop player transfer from the row that precedes
-     * the level's first main-loop row, i.e. the tail's last row.
+     * Settles a held pre-main-loop player transfer from the tail that precedes
+     * the level's first main-loop row.
      *
-     * <p>A run admits a destination while the shared movie clock still reads
-     * the row the transition gap ended on; the level's first main-loop row is
-     * the next one, so the tail's first row — the transfer's — is
-     * {@code movieLogicalFrame + 1 - tailRows}.
+     * <p>The caller supplies the row the destination was admitted on, which is
+     * that level's first main-loop row: a level segment's recording begins at
+     * {@code Level_MainLoop} (docs/s1disasm/sonic.asm:2998), after the counted
+     * {@code Level_Delay} / {@code PalFadeIn_Alt} tail has already run. The
+     * transfer therefore belongs {@code tailRows} rows earlier.
+     *
+     * <p>This row must be observed, not projected from the movie clock. An
+     * admission that consumes no destination row leaves the shared clock on the
+     * gap's last row, but an admission that consumes one has already advanced
+     * it onto the destination's first row; a {@code movieLogicalFrame + 1}
+     * projection is right for the former and one row late for the latter.
+     *
+     * @param firstMainLoopRow movie row the destination was admitted on
      */
-    public void settlePendingPlayerPreparationBeforeLevelMainLoop() {
+    public void settlePendingPlayerPreparationBeforeLevelMainLoop(
+            int firstMainLoopRow) {
         requireRunActive();
+        if (firstMainLoopRow < 0) {
+            throw new IllegalArgumentException(
+                    "firstMainLoopRow must be nonnegative");
+        }
         if (preMainLoopTailRows < 0) {
             // Nothing was staged for a tail: an ordinary submission still
             // belongs to the V-blank that services it, not to this boundary.
             return;
         }
-        flushS1PreparationIfPending(Math.addExact(movieLogicalFrame, 1));
+        flushS1PreparationIfPending(firstMainLoopRow);
     }
 
     /**
@@ -765,7 +1253,8 @@ public final class DynamicArtLifecycleService
 
     private void flushS1Preparation() {
         Preparation preparation = s1Preparation;
-        s1Preparation = null;
+        s1Preparation = s1PreparationAfterPreMainLoopTail;
+        s1PreparationAfterPreMainLoopTail = null;
         long transferId = nextTransferId++;
         List<Long> before = List.copyOf(ledger.keySet());
         Descriptor descriptor = new Descriptor(
@@ -868,6 +1357,13 @@ public final class DynamicArtLifecycleService
         if (!movieLogicalFrameSuppliedExternally) {
             movieLogicalFrame++;
         }
+        gapEdgesBeforeLastIteration = gapEdgesBeforeCurrentIteration;
+        gapEdgesBeforeCurrentIteration = gapTransitions.size();
+        if (newMovieRowAnnouncedSinceIteration) {
+            newMovieRowAnnouncedSinceIteration = false;
+        } else {
+            unannouncedRows++;
+        }
     }
 
     private DynamicArtDiagnosticsSnapshot publishBuffered(
@@ -891,7 +1387,7 @@ public final class DynamicArtLifecycleService
                     terminalForwarded, edge.requests(),
                     edge.submissionOrigin()));
         }
-        bufferedEdges.clear();
+        beginBufferedEdgeBatch();
         publishedOutstanding = List.copyOf(ledger.keySet());
         return new DynamicArtDiagnosticsSnapshot(
                 publicationFrame, edges, publishedOutstanding,
@@ -925,13 +1421,21 @@ public final class DynamicArtLifecycleService
                 pendingS2TransferIds, gapTransitions,
                 publishedOutstanding, latest.frame(), latest.edges(),
                 latest.outstandingTransferIds(), latest.published(),
-                s1Preparation, initialLoadPreparation, runActive,
+                s1Preparation, s1PreparationAfterPreMainLoopTail,
+                initialLoadPreparation,
+                levelEntryPlayerArtHeld,
+                List.copyOf(heldLevelEntryPlayerArt), runActive,
                 comparisonSegmentOpen,
                 comparisonSegmentReserved,
                 nextTransferId, nextEdgeOrdinal,
                 logicalFrame, nextLogicalEdgeIndex, nextPublicationFrame,
                 movieLogicalFrame, preMainLoopTailRows,
-                nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0));
+                nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0),
+                gapOpeningTransitionCount, gapOpeningMovieLogicalFrame,
+                gapEdgesBeforeLastIteration, gapEdgesBeforeCurrentIteration,
+                unannouncedRows, lastAnnouncedMovieRow,
+                newMovieRowAnnouncedSinceIteration,
+                gapOpeningLedger, ledgerBeforeBufferedBatch);
     }
 
     @Override
@@ -955,7 +1459,12 @@ public final class DynamicArtLifecycleService
                 snapshot.latestOutstandingTransferIds(), deliverySerial,
                 segmentGeneration, snapshot.latestPublished());
         s1Preparation = snapshot.s1Preparation();
+        s1PreparationAfterPreMainLoopTail =
+                snapshot.s1PreparationAfterPreMainLoopTail();
         initialLoadPreparation = snapshot.initialLoadPreparation();
+        levelEntryPlayerArtHeld = snapshot.levelEntryPlayerArtHeld();
+        heldLevelEntryPlayerArt.clear();
+        heldLevelEntryPlayerArt.addAll(snapshot.heldLevelEntryPlayerArt());
         runActive = snapshot.runActive();
         comparisonSegmentOpen = snapshot.comparisonSegmentOpen();
         comparisonSegmentReserved = snapshot.comparisonSegmentReserved();
@@ -965,6 +1474,18 @@ public final class DynamicArtLifecycleService
         nextLogicalEdgeIndex = snapshot.nextLogicalEdgeIndex();
         nextPublicationFrame = snapshot.nextPublicationFrame();
         movieLogicalFrame = snapshot.movieLogicalFrame();
+        gapOpeningTransitionCount = snapshot.gapOpeningTransitionCount();
+        gapOpeningMovieLogicalFrame = snapshot.gapOpeningMovieLogicalFrame();
+        gapEdgesBeforeLastIteration = snapshot.gapEdgesBeforeLastIteration();
+        gapEdgesBeforeCurrentIteration =
+                snapshot.gapEdgesBeforeCurrentIteration();
+        unannouncedRows = snapshot.unannouncedRows();
+        lastAnnouncedMovieRow = snapshot.lastAnnouncedMovieRow();
+        newMovieRowAnnouncedSinceIteration =
+                snapshot.newMovieRowAnnouncedSinceIteration();
+        gapOpeningLedger = List.copyOf(snapshot.gapOpeningLedger());
+        ledgerBeforeBufferedBatch =
+                List.copyOf(snapshot.ledgerBeforeBufferedBatch());
         preMainLoopTailRows = snapshot.preMainLoopTailRows();
         // The snapshot carries the counter for the frame it was taken on,
         // which is the only one a restore inside a gap can continue.
@@ -987,7 +1508,10 @@ public final class DynamicArtLifecycleService
         pendingS2TransferIds.clear();
         gapTransitions.clear();
         s1Preparation = null;
+        s1PreparationAfterPreMainLoopTail = null;
         initialLoadPreparation = null;
+        levelEntryPlayerArtHeld = false;
+        heldLevelEntryPlayerArt.clear();
         publishedOutstanding = List.of();
         latest = DynamicArtDiagnosticsSnapshot.unpublished(
                 deliverySerial, segmentGeneration);
@@ -1001,6 +1525,15 @@ public final class DynamicArtLifecycleService
         nextPublicationFrame = 0;
         movieLogicalFrame = 0;
         movieLogicalFrameSuppliedExternally = false;
+        unannouncedRows = 0;
+        lastAnnouncedMovieRow = -1;
+        newMovieRowAnnouncedSinceIteration = false;
+        gapOpeningTransitionCount = 0;
+        gapOpeningMovieLogicalFrame = 0;
+        gapEdgesBeforeLastIteration = 0;
+        gapEdgesBeforeCurrentIteration = 0;
+        gapOpeningLedger = List.of();
+        ledgerBeforeBufferedBatch = List.of();
         preMainLoopTailRows = -1;
         nextGapEdgeIndexByFrame.clear();
     }
@@ -1031,19 +1564,40 @@ public final class DynamicArtLifecycleService
             String submissionOrigin) {
         long edgeOrdinal = nextEdgeOrdinal++;
         if (comparisonSegmentOpen) {
+            // The ledger snapshots ride along so an iteration later found to be
+            // the ROM's mode-change boundary can be re-emitted into the gap
+            // ledger with the same before/after membership it observed here.
             bufferedEdges.add(new BufferedEdge(edgeOrdinal, transferId,
                     phase, owner, mappingFrame, logicalFrame,
-                    nextLogicalEdgeIndex++, requests, submissionOrigin));
+                    nextLogicalEdgeIndex++, requests, submissionOrigin,
+                    beforeOutstanding, List.copyOf(ledger.keySet())));
             return;
         }
+        emitGapEdge(edgeOrdinal, transferId, phase, owner, mappingFrame,
+                requests, beforeOutstanding, List.copyOf(ledger.keySet()));
+    }
+
+    private void emitGapEdge(
+            long edgeOrdinal,
+            long transferId,
+            String phase,
+            String owner,
+            int mappingFrame,
+            List<DynamicArtDiagnosticsSnapshot.Request> requests,
+            List<Long> beforeOutstanding,
+            List<Long> afterOutstanding) {
         DynamicArtGapTransition.GapEdge edge =
                 new DynamicArtGapTransition.GapEdge(
                         edgeOrdinal, transferId, phase, owner,
                 mappingFrame, movieLogicalFrame,
                 nextGapEdgeIndexByFrame.merge(movieLogicalFrame, 1, Integer::sum) - 1,
+                // The edge's own iteration is itself an unannounced row
+                // when nothing announced one for it.
+                unannouncedRows
+                        + (newMovieRowAnnouncedSinceIteration ? 0 : 1),
                 requests);
         gapTransitions.add(new DynamicArtGapTransition(edge, beforeOutstanding,
-                List.copyOf(ledger.keySet())));
+                afterOutstanding));
     }
 
     private Descriptor requirePending(long transferId) {
@@ -1103,6 +1657,37 @@ public final class DynamicArtLifecycleService
             throw new IllegalStateException(
                     "dynamic-art comparison segment is not open");
         }
+    }
+
+    /**
+     * Resolves the ROM last-loaded-DPLC register an owner dedups against.
+     *
+     * <p>Sonic 2 has exactly three such registers — {@code Sonic_LastLoadedDPLC},
+     * {@code Tails_LastLoadedDPLC} and {@code TailsTails_LastLoadedDPLC}
+     * (docs/s2disasm/s2.constants.asm:1556, 1625-1626) — one per permanently
+     * allocated player art bank, and the special stage shares them with the
+     * level rather than owning private ones. {@code Obj09}'s init writes
+     * {@code #1} to {@code Sonic_LastLoadedDPLC} (docs/s2disasm/s2.asm:69095)
+     * and {@code LoadSSSonicDynPLC} keeps deduping against that same register
+     * (docs/s2disasm/s2.asm:69205); {@code Obj10} and the {@code Obj88} tail do
+     * the same to {@code Tails_LastLoadedDPLC} and
+     * {@code TailsTails_LastLoadedDPLC} (docs/s2disasm/s2.asm:70378, 70403,
+     * 70504, 70586-70588). The level's {@code LoadSonicDynPLC},
+     * {@code LoadTailsDynPLC} and {@code LoadTailsTailsDynPLC} read and write
+     * the very same bytes (docs/s2disasm/s2.asm:38834-38836, 41639-41641,
+     * 41663-41665), and only a character swap clears them
+     * (docs/s2disasm/s2.asm:26039-26041).
+     *
+     * <p>The engine keeps distinct comparison owners for the level and
+     * special-stage submitters because the recorder labels their edges apart,
+     * but the dedup state behind them is one ROM byte per bank. Keying it by
+     * the bank rather than by the submitter makes a special stage leave the
+     * level's register dirty exactly as the ROM does, so the returned level
+     * re-submits the player's first mapping frame instead of suppressing it
+     * against a value stale since before the stage.
+     */
+    private static String dedupRegister(String owner) {
+        return owner.startsWith("ss-") ? owner.substring(3) : owner;
     }
 
     private static void validateOwner(String owner) {

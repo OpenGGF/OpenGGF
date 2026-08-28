@@ -112,14 +112,15 @@ public final class TraceRunVblankClock {
         }
         int ticks = TraceRunReplayWalker.interLevelVblankBudget(
                 source, destination, rowsConsumed,
-                profile.interLevelNonAdvancingMovieRows());
+                maskedLevelEntryLoss(profile, destination));
         return OptionalInt.of(Math.addExact(sourceAnchor.tailVblank(), ticks));
     }
 
     public OptionalInt uncomparedInteriorReturnTarget(
             int sourceIndex,
             TraceRunManifest.Segment source,
-            TraceRunManifest.Segment destination) {
+            TraceRunManifest.Segment destination,
+            int destinationFramesConsumed) {
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(destination, "destination");
         if (!profile.alignUncomparedInteriorReturnVblank()
@@ -132,8 +133,42 @@ public final class TraceRunVblankClock {
             return OptionalInt.empty();
         }
         int ticks = TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
-                source, destination);
+                source, destination, destinationFramesConsumed,
+                specialStageReturnLoss(profile, destination));
         return OptionalInt.of(Math.addExact(sourceAnchor.tailVblank(), ticks));
+    }
+
+    /**
+     * The destination level entry's masked row count, taken from the game
+     * profile's owned table. The identity comes from the manifest segment the
+     * walker is already crossing into; no zone predicate lives here.
+     */
+    public static int maskedLevelEntryLoss(
+            TracePlaybackProfile profile,
+            TraceRunManifest.Segment destination) {
+        Integer zone = destination.zoneId();
+        Integer act = destination.act();
+        if (zone == null || act == null) {
+            return profile.interLevelNonAdvancingMovieRows();
+        }
+        return profile.interLevelNonAdvancingMovieRows(zone, act);
+    }
+
+    /**
+     * The masked row count for a whole level -> uncompared interior -> level
+     * round trip, taken from the game profile's owned table. Same identity
+     * source as {@link #maskedLevelEntryLoss}: the manifest segment the walker
+     * is already crossing into, never a zone predicate here.
+     */
+    public static int specialStageReturnLoss(
+            TracePlaybackProfile profile,
+            TraceRunManifest.Segment destination) {
+        Integer zone = destination.zoneId();
+        Integer act = destination.act();
+        if (zone == null || act == null) {
+            return profile.specialStageReturnNonAdvancingMovieRows(-1, -1);
+        }
+        return profile.specialStageReturnNonAdvancingMovieRows(zone, act);
     }
 
     private SourceAnchor sourceAnchor(

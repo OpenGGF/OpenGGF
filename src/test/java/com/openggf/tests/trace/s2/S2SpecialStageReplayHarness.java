@@ -52,8 +52,8 @@ import java.util.Objects;
  *   <li>{@code provider.initializeStage(index, TRACE_ACCURATE)} →
  *       {@code manager.reset()} + {@code manager.initialize(index)} (loads the
  *       SS data from ROM while retaining observable startup cadence).</li>
- *   <li>{@code provider.setLagCompensation(0)} — replay is trace-paced, so the
- *       runtime must not apply its own frame-drop compensation.</li>
+ *   <li>{@code provider.setLagCompensation(0)} — retained compatibility
+ *       notification; recorded lag rows are admitted by the replay scheduler.</li>
  * </ol>
  *
  * <h2>Input injection (modelled on {@code SpecialStageStepper.step})</h2>
@@ -98,7 +98,7 @@ final class S2SpecialStageReplayHarness {
         this.provider = new Sonic2SpecialStageProvider();
         this.provider.initializeStage(
                 specialStageIndex, SpecialStageStartupPolicy.TRACE_ACCURATE);
-        // Trace-paced replay: disable the runtime's own lag compensation.
+        // Disable the interactive approximation; recorded rows own replay pacing.
         this.provider.setLagCompensation(0);
     }
 
@@ -160,7 +160,7 @@ final class S2SpecialStageReplayHarness {
                 if (pass.sequence() == terminalPreStartPassSequence) {
                     // The pre-start loop's terminal pass is already pending
                     // engine-side, and the ROM copies Ctrl_1/Ctrl_2 *before*
-                    // that loop's WaitForVint (docs/s2disasm/s2.asm:6684-6685),
+                    // that loop's WaitForVint (docs/s2disasm/s2.asm:6675-6676),
                     // so it owns no post-V-int controller sample for the
                     // recurring loop's binding path to consume. Publish it
                     // through the startup boundary instead.

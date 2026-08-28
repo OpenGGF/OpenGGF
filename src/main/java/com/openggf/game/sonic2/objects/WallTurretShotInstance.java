@@ -48,6 +48,9 @@ public class WallTurretShotInstance extends AbstractObjectInstance
     private static final int COLLISION_FLAGS = 0x98;
 
     // Animation: Ani_WallTurretShot = delay 2, frames {3, 4, $FF (loop)}
+    /** ROM BuildSprites_ApproxYCheck's assumed Y radius (docs/s2disasm/s2.asm:30609),
+     *  reached because ObjB8's subObjData row leaves explicit_height clear. */
+    private static final int APPROX_RENDER_Y_MARGIN = 32;
     private static final int ANIM_DELAY = 2;
     private static final int[] ANIM_FRAMES = {3, 4};
 
@@ -118,9 +121,34 @@ public class WallTurretShotInstance extends AbstractObjectInstance
             animIndex = (animIndex + 1) % ANIM_FRAMES.length;
         }
 
-        // Obj98_Main: _btst #render_flags.on_screen / _beq.w JmpTo65_DeleteObject
-        // Delete when off screen
-        if (!isOnScreen(480)) {
+        // ROM Obj98_Main deletes on render_flags.on_screen being clear
+        // (docs/s2disasm/s2.asm:74678-74679). That bit is not a distance band:
+        // BuildSprites clears it for every object it visits (s2.asm:30560) and
+        // re-sets it only past its two culling tests (:30627), so the value this
+        // routine reads was written by the PREVIOUS frame's BuildSprites, from
+        // the object's position at the end of that frame -- which is this
+        // frame's start position. Sample the bounds pre-update accordingly.
+        //
+        // Obj98 is queued for BuildSprites on every surviving frame, so the bit
+        // can never be stale: Obj98_Main's tail is MarkObjGone (s2.asm:74681),
+        // which either reaches DisplaySprite or deletes the object outright.
+        //
+        // Both margins are BuildSprites' own. The X test uses width_pixels
+        // (s2.asm:30568-30578), which ObjB8's subObjData row sets to 4
+        // (s2.asm:74763). That same row leaves render_flags.explicit_height
+        // CLEAR, so the Y test takes BuildSprites_ApproxYCheck and its assumed
+        // radius of 32 (s2.asm:30580-30581 selects it, :30604-30610 computes
+        // it) rather than the accurate y_radius path.
+        //
+        // On the object's first frame there is no previous BuildSprites pass to
+        // have written the bit -- but the ROM does not read a cleared bit there
+        // either: ObjB8's subObjData row seeds render_flags with
+        // 1<<render_flags.on_screen (s2.asm:74763), applied by
+        // LoadSubObject_Part3's or.b d0,render_flags(a0) (s2.asm:72719-72720).
+        // So the shot survives its creation frame regardless of position, and a
+        // missing snapshot must not be read as "not drawn".
+        if (hasPreUpdateSnapshot()
+                && !isPreUpdateWithinRenderSpriteBounds(WIDTH_PIXELS, APPROX_RENDER_Y_MARGIN)) {
             setDestroyed(true);
         }
     }

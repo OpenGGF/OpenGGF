@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -181,7 +182,23 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
      * ROM references: loc_2FEB2 / loc_2FEBE (sonic3k.asm:64811-64832).
      */
     static class WaterRushBlockChild extends AbstractObjectInstance
-            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+            implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, RomObjectCodePointerProvider {
+
+        /**
+         * Word 0 of this object's S3K SST holds its live ROM code pointer.
+         * ROM {@code Obj_HCZWaterRush} is installed from the S3K object pointer table at
+         * {@code $0002FDA4} (table read from the user-supplied ROM; the
+         * label is defined at docs/skdisasm/sonic3k.asm:64748).
+         * Its whole code block lies in one bank, so the HIGH word that
+         * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+         * on the next off-screen on-object frame is {@code $0002}
+         * (docs/skdisasm/sonic3k.asm:26816-26843).
+         */
+        @Override
+        public int romObjectCodePointerHighWord() {
+            return 0x0002;
+        }
+
 
         private static final int PHASE_WAITING = 0;
         private static final int PHASE_RISING = 1;

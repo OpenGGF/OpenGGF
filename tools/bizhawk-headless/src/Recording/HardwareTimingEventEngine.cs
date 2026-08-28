@@ -83,6 +83,7 @@ namespace OpenGGF.BizHawk.Headless
         private bool moduleResetClearPending;
         private bool titleCardLoadLoopActive;
         private bool priorDirectBusy;
+        private int directEntryShift;
         private readonly List<DirectSubmission> stagedDirectRetirements =
             new List<DirectSubmission>();
         private readonly TextWriter measurementWriter;
@@ -92,6 +93,25 @@ namespace OpenGGF.BizHawk.Headless
         private int measurementEpoch;
         private int priorMeasurementRawFrame = int.MinValue;
         private int measurementSequenceInFrame;
+        private string interstitialContext;
+
+        /// <summary>
+        /// Names the run-level position of the observations that follow, for
+        /// the spans that belong to no segment (special-stage results, the
+        /// level reload, the locked level intro). Null — the default and the
+        /// only state any per-segment observation ever sees — keeps the
+        /// canonical v5 record shape.
+        ///
+        /// The queue/ordinal ledger itself is unaffected: it was already
+        /// run-wide and already advanced across these spans (the runner
+        /// observed them with a null writer). This only decides how an
+        /// event that does occur there is written down.
+        /// </summary>
+        public string InterstitialContext
+        {
+            get { return interstitialContext; }
+            set { interstitialContext = value; }
+        }
 
         public HardwareTimingEventEngine(byte[] rom)
             : this(rom, null, null, null, null)
@@ -528,6 +548,44 @@ namespace OpenGGF.BizHawk.Headless
             bool directServiceAdmitted,
             ref List<DeferredDirectCompletion> deferredCompletions)
         {
+            directEntryShift = 0;
+            if (HeadRetirementWriteInFlight(host, physicalCount))
+            {
+                // Read the sample as the post-retirement state the ROM has
+                // already committed everywhere except the count decrement
+                // and the entry shift-up. The sign bit is part of what the ROM
+                // is still committing, so it is read as retired too; leaving it
+                // set here would report a busy head that has already finished.
+                directEntryShift = 1;
+                physicalCount--;
+                busy = false;
+            }
+            try
+            {
+                ObserveDirectQueueCore(
+                    rawFrame,
+                    host,
+                    writer,
+                    physicalCount,
+                    busy,
+                    directServiceAdmitted,
+                    ref deferredCompletions);
+            }
+            finally
+            {
+                directEntryShift = 0;
+            }
+        }
+
+        private void ObserveDirectQueueCore(
+            int rawFrame,
+            IGpgxHost host,
+            TextWriter writer,
+            int physicalCount,
+            bool busy,
+            bool directServiceAdmitted,
+            ref List<DeferredDirectCompletion> deferredCompletions)
+        {
             if (physicalCount < 0
                 || physicalCount > S3KRam.KosDecompQueueCapacity)
             {
@@ -640,7 +698,7 @@ namespace OpenGGF.BizHawk.Headless
             });
         }
 
-        private static void WriteDeferredDirectCompletions(
+        private void WriteDeferredDirectCompletions(
             TextWriter writer,
             int rawFrame,
             List<DeferredDirectCompletion> completions)
@@ -716,13 +774,79 @@ namespace OpenGGF.BizHawk.Headless
             return 0;
         }
 
+        /// <summary>
+        /// Address of physical FIFO entry <paramref name="index"/> as seen
+        /// after the ROM finishes the retirement write sequence in
+        /// Process_Kos_Queue_EndReached. While that sequence is mid-flight
+        /// the entries have not been shifted up yet, so logical entry n
+        /// still lives in physical slot n+1.
+        /// </summary>
+        private int DirectEntryAddress(int index)
+        {
+            return S3KRam.KosDecompQueue
+                + (index + directEntryShift)
+                    * S3KRam.KosDecompQueueEntrySize;
+        }
+
+        /// <summary>
+        /// Process_Kos_Queue_EndReached (sonic3k.asm) writes the finished
+        /// stream's read cursor over the head entry
+        /// (<c>move.l a0,(Kos_decomp_queue).w</c> /
+        /// <c>move.l a1,(Kos_decomp_destination).w</c>), then clears the
+        /// busy bit, then decrements Kos_decomp_queue_count, and only then
+        /// shifts the remaining entries up. A frame-end RAM sample can land
+        /// on any instruction boundary inside that sequence — measured at
+        /// PC 0x001CE0, between the <c>andi.w #$7FFF</c> and the
+        /// <c>subq.w #1</c>, in
+        /// docs/BizHawk-2.11-linux-x64/Movies/s3k-sonic-tails-complete-emeralds.bk2.
+        /// There the count still claims the retired head is occupied while
+        /// slot zero already holds the decompressor's post-decode cursors,
+        /// which are not the start of any archive. Recognising that state
+        /// from the mirrored head's own ROM-derived shape lets the sample be
+        /// read as the stable state the ROM is two instructions away from
+        /// committing.
+        /// </summary>
+        // Process_Kos_Queue_EndReached (sonic3k.asm:2938-2943) commits the
+        // retirement in four separate instructions: it writes the decompressor's
+        // post-decode a0/a1 over slot zero's own source and destination fields
+        // (Kos_decomp_source/Kos_decomp_destination ARE Kos_decomp_queue and
+        // Kos_decomp_queue+4 -- sonic3k.constants.asm:901-903), then clears the
+        // in-progress sign bit, then decrements the count, then shifts entries up.
+        // A frame-end sample can land anywhere inside that span, and
+        // Set_Kos_Bookmark (sonic3k.asm:2818-2828) bookmarks V-ints throughout it.
+        //
+        // The span is therefore two samples wide, not one. The narrower case --
+        // sampled after the sign bit was cleared, count still 1 -- was fixed in
+        // 15b46e543. The wider one is sampled one instruction earlier, before
+        // "andi.w #$7FFF,(Kos_decomp_queue_count)", so the busy bit still reads
+        // set while slot zero already holds the post-decode cursors. Both are the
+        // same ROM state and are recognised the same way: by the mirrored head's
+        // own ROM-derived shape. Nothing else can produce those two values,
+        // because a genuinely new head can only reach slot zero through the count
+        // decrement and shift-up that have not run yet.
+        private bool HeadRetirementWriteInFlight(
+            IGpgxHost host, int physicalCount)
+        {
+            if (physicalCount < 1 || directQueue.Count < 1)
+            {
+                return false;
+            }
+            DirectSubmission head = directQueue[0];
+            uint retiredSource = head.Source
+                + (uint)head.Shape.CompressedLength;
+            uint retiredDestination = head.Destination
+                + (uint)head.Shape.DestinationLength;
+            return S3KRam.U32(host, S3KRam.KosDecompQueue) == retiredSource
+                && S3KRam.U32(host, S3KRam.KosDecompQueue + 4)
+                    == retiredDestination;
+        }
+
         private bool DirectEntryMatches(
             IGpgxHost host,
             int index,
             DirectSubmission submission)
         {
-            int entry = S3KRam.KosDecompQueue
-                + index * S3KRam.KosDecompQueueEntrySize;
+            int entry = DirectEntryAddress(index);
             return S3KRam.U32(host, entry) == submission.Source
                 && S3KRam.U32(host, entry + 4)
                     == submission.Destination;
@@ -734,8 +858,7 @@ namespace OpenGGF.BizHawk.Headless
             bool exactCallback,
             int submissionRawFrame)
         {
-            int entry = S3KRam.KosDecompQueue
-                + index * S3KRam.KosDecompQueueEntrySize;
+            int entry = DirectEntryAddress(index);
             uint source = S3KRam.U32(host, entry);
             uint destination = S3KRam.U32(host, entry + 4);
             StandardKosShape shape = InspectStandardKos(source);
@@ -1322,7 +1445,20 @@ namespace OpenGGF.BizHawk.Headless
             }
         }
 
-        private static void WriteCompletion(
+        /// <summary>
+        /// One completion record. With no interstitial context set — every
+        /// per-segment stream, i.e. every capture the v5 contract already
+        /// describes — the bytes are exactly what they always were, keyed
+        /// by the segment-relative <c>raw_frame</c>.
+        ///
+        /// With a context set, the observation belongs to no segment: there
+        /// is no row and therefore no <c>raw_frame</c> that could name one,
+        /// so the record carries the context's run-level provenance instead.
+        /// The two shapes are deliberately disjoint (distinct field sets,
+        /// distinct files) so a v5 per-segment reader can never be handed an
+        /// interstitial record and vice versa.
+        /// </summary>
+        private void WriteCompletion(
             TextWriter writer,
             int rawFrame,
             string boundary,
@@ -1331,8 +1467,16 @@ namespace OpenGGF.BizHawk.Headless
             string fingerprint)
         {
             writer.Write("{\"event\":\"hardware_work_completed\",");
-            writer.Write("\"raw_frame\":");
-            writer.Write(rawFrame);
+            if (interstitialContext != null)
+            {
+                writer.Write("\"origin\":\"interstitial\",");
+                writer.Write(interstitialContext);
+            }
+            else
+            {
+                writer.Write("\"raw_frame\":");
+                writer.Write(rawFrame);
+            }
             writer.Write(",\"boundary\":\"");
             writer.Write(boundary);
             writer.Write("\",");

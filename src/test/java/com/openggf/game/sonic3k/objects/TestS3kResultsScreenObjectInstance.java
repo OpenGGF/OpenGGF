@@ -15,13 +15,15 @@ import com.openggf.level.CarriedTitlePublicationTiming;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +37,70 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestS3kResultsScreenObjectInstance {
+
+    @Test
+    void resultsChildrenRetireFromPriorRenderFlagBeforeParentPublishes()
+            throws Exception {
+        ActTransitionRecordingServices services =
+                new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
+        results.setServices(services);
+        services.withIsolatedObjectManager();
+        services.objectManager().addDynamicObject(results);
+        invokeCreateElements(results);
+        placeElementsAtTargets(services);
+        setPrivate(results, "resultsChildrenCreated", true);
+        setPrivate(results, "exitRetireDispatchesInitialized", true);
+        setPrivate(results, "carriedResultsRenderRetireDispatches", 0);
+        Field state = com.openggf.level.objects.AbstractResultsScreen.class
+                .getDeclaredField("state");
+        state.setAccessible(true);
+        state.setInt(results, 4);
+
+        TestablePlayableSprite player =
+                new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        for (int dispatch = 0; dispatch < 18; dispatch++) {
+            updateResultsSlots(services, results, dispatch, player);
+        }
+
+        assertEquals(0, privateInt(results, "childrenRemaining"),
+                "LevelResults_MoveElement deletes a child when the prior "
+                        + "Render_Sprites pass cleared render_flags.on_screen; "
+                        + "the final queue-9 child retires on queue dispatch 18 "
+                        + "(docs/skdisasm/sonic3k.asm:62799-62824,36336-36402)");
+        verify(services.gameState, never()).setEndOfLevelActive(false);
+
+        updateResultsSlots(services, results, 18, player);
+
+        verify(services.gameState).setEndOfLevelActive(false);
+        assertTrue(services.titleCard.calls.isEmpty(),
+                "the parent publishes after observing child count zero but "
+                        + "does not initialize the mutated title owner yet");
+
+        updateResultsSlots(services, results, 19, player);
+
+        assertEquals(List.of("0:1"), services.titleCard.calls);
+    }
+
+    @Test
+    void timingCompensationDoesNotDelayReadinessGatedCreate() throws Exception {
+        // ROM Obj_LevelResultsCreate gates on Kos_modules_left alone
+        // (docs/skdisasm/sonic3k.asm:62596-62598); no dispatch countdown
+        // delays child creation once the queued results art is ready.
+        S3kResultsScreenObjectInstance none = resultsWithTimingAdjustment("NONE", true);
+        S3kResultsScreenObjectInstance compensation = resultsWithTimingAdjustment(
+                "UNSUPPORTED_GROUNDED_COMPENSATION", true);
+
+        assertThrows(NoSuchFieldException.class,
+                () -> none.getClass().getDeclaredField("createGateFrames"),
+                "readiness-gated create keeps no dispatch countdown");
+        assertThrows(NoSuchFieldException.class,
+                () -> compensation.getClass().getDeclaredField("createGateFrames"));
+        assertTrue(privateBoolean(none, "usesShortResultsChildRetireTail"));
+        assertTrue(privateBoolean(compensation, "usesShortResultsChildRetireTail"),
+                "short-tail retirement remains independent from create-gate timing compensation");
+    }
 
     @Test
     void retainedResultsPublishesRestorePlayerControlWaitAnimation() {
@@ -284,6 +350,77 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(0x0668, services.camera.getMinY() & 0xFFFF);
         assertEquals(0x0668, services.camera.getMaxY() & 0xFFFF);
     }
+
+    private static S3kResultsScreenObjectInstance resultsWithTimingAdjustment(
+            String adjustmentName, boolean usesShortResultsChildRetireTail) throws Exception {
+        Class<?> adjustmentClass = Class.forName(
+                S3kSignpostInstance.class.getName() + "$ResultsChildTimingAdjustment");
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        Object adjustment = Enum.valueOf((Class) adjustmentClass, adjustmentName);
+        Constructor<S3kResultsScreenObjectInstance> constructor =
+                S3kResultsScreenObjectInstance.class.getDeclaredConstructor(
+                        PlayerCharacter.class, int.class, int.class, int.class, int.class,
+                        adjustmentClass, boolean.class);
+        constructor.setAccessible(true);
+        TestObjectServices services = new TestObjectServices();
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.withRewindActiveRestore(
+                () -> ObjectConstructionContext.construct(services,
+                        () -> constructResults(constructor, adjustment, usesShortResultsChildRetireTail)));
+        results.setServices(services);
+        return results;
+    }
+
+    private static S3kResultsScreenObjectInstance constructResults(
+            Constructor<S3kResultsScreenObjectInstance> constructor,
+            Object adjustment, boolean usesShortResultsChildRetireTail) {
+        try {
+            return constructor.newInstance(PlayerCharacter.SONIC_AND_TAILS, 0,
+                    0, 0, 3, adjustment, usesShortResultsChildRetireTail);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Could not construct results child", e);
+        }
+    }
+
+    private static void invokeCreateElements(S3kResultsScreenObjectInstance results)
+            throws Exception {
+        Method createElements =
+                S3kResultsScreenObjectInstance.class.getDeclaredMethod("createResultChildSsts");
+        createElements.setAccessible(true);
+        assertTrue((Boolean) createElements.invoke(results));
+    }
+
+    private static void placeElementsAtTargets(TestObjectServices services) throws Exception {
+        for (Object element : services.objectManager().getActiveObjects()) {
+            if (!(element instanceof S3kResultsElementObjectInstance)) {
+                continue;
+            }
+            Field targetX = element.getClass().getDeclaredField("targetX");
+            Field currentX = element.getClass().getDeclaredField("currentX");
+            targetX.setAccessible(true);
+            currentX.setAccessible(true);
+            currentX.setInt(element, targetX.getInt(element));
+        }
+    }
+
+    private static void updateResultsSlots(
+            TestObjectServices services,
+            S3kResultsScreenObjectInstance results,
+            int dispatch,
+            TestablePlayableSprite player) {
+        results.update(dispatch, player);
+        for (ObjectInstance object : List.copyOf(services.objectManager().getActiveObjects())) {
+            if (object instanceof S3kResultsElementObjectInstance child) {
+                child.update(dispatch, player);
+            }
+        }
+    }
+
+    private static boolean privateBoolean(Object instance, String fieldName) throws Exception {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(instance);
+    }
+
 
     private static S3kResultsScreenObjectInstance transitionShell(
             TestObjectServices services, PlayerCharacter character, int act) {

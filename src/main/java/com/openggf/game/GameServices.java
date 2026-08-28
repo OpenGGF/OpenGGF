@@ -206,6 +206,19 @@ public final class GameServices {
         return mode != null ? mode.dynamicArtLifecycle() : null;
     }
 
+    /**
+     * Asks the gameplay session for a fresh dynamic-art ledger; no-op when
+     * there is no session or no active run. Exposed separately from
+     * {@link #dynamicArtLifecycleOrNull()} so callers that need only this
+     * reset never hold the mutation-capable service.
+     */
+    public static void restartDynamicArtRunForFreshSession() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        if (mode != null) {
+            mode.restartDynamicArtRunForFreshSession();
+        }
+    }
+
     public static PlcFrameLifecycleCoordinator plcFrameLifecycleOrNull() {
         GameplayModeContext mode = gameplayModeOrNull();
         return mode != null ? mode.plcFrameLifecycle() : null;

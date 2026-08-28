@@ -286,6 +286,12 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     }
 
     @Override
+    public void handleInput(int heldButtons, int pressedButtons,
+                            boolean debugSpeedUp, boolean debugSlowDown) {
+        manager.handleInput(heldButtons, pressedButtons, debugSpeedUp, debugSlowDown);
+    }
+
+    @Override
     public boolean isFinished() {
         return manager.isFinished();
     }

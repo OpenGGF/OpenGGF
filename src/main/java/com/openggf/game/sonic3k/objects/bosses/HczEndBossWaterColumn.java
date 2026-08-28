@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -86,7 +87,22 @@ import java.util.logging.Logger;
  * <p>Grab (sub_6B9E2): player within Y-zone table (word_6BAC2) and 32px H —
  * lock object_control, forced float animation.
  */
-public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable {
+public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code loc_6B26E} is the routine this object runs, i.e. address
+     * {@code $0006B26E} (docs/skdisasm/sonic3k.asm).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0006}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0006;
+    }
+
 
     private static final Logger LOG = Logger.getLogger(HczEndBossWaterColumn.class.getName());
 
@@ -232,6 +248,13 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     // -- Spray animation state (inline — replaces spray child loc_6B3DE) --
     private int sprayAnimIndex;
     private int sprayAnimTimer;
+    /**
+     * The separately allocated spray SST runs after its platform parent. When
+     * {@code HCZEndBossPlatform_StartFallAway} selects DESCEND, that later slot
+     * still completes its final suction dispatch before observing parent bit 3
+     * (docs/skdisasm/sonic3k.asm:141143-141176,141205-141229).
+     */
+    private boolean pendingSprayTailInteraction;
 
     /** Platform wait counter for ROUTINE_PLATFORM (ROM $2E). */
     private int platformWait;
@@ -435,8 +458,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * Used for both RISE (routine 4) and DESCEND (routine 8).
      */
     private void updateRiseDescend(PlayableEntity player) {
+        boolean risingAtEntry = routine == ROUTINE_RISE;
         // Track turbine X during rise
-        if (routine == ROUTINE_RISE) {
+        if (risingAtEntry) {
             currentX = turbine.getCurrentX();
             xFixed = currentX << 8;
         }
@@ -458,8 +482,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         solidActive = true;
 
         // Suction (replicated from spray child sub_6B9AC + sub_6B9E2)
-        if (routine == ROUTINE_RISE) {
+        if (risingAtEntry || pendingSprayTailInteraction) {
             applySuction(player);
+            pendingSprayTailInteraction = false;
         }
     }
 
@@ -561,6 +586,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         if (!boss.isPropellerActive()) {
             // loc_6B34A: transition to DESCEND
             routine = ROUTINE_DESCEND;
+            pendingSprayTailInteraction = true;
 
             // ROM: bset #3,$38(a0) — set own flag (not used elsewhere)
             // ROM: y_vel = $80

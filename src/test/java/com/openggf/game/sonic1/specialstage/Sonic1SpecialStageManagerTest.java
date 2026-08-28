@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static com.openggf.game.sonic1.constants.Sonic1Constants.SS_BLOCK_SIZE_PX;
 import static com.openggf.game.sonic1.constants.Sonic1Constants.SS_JUMP_FORCE;
 import static com.openggf.game.sonic1.constants.Sonic1Constants.SS_LAYOUT_STRIDE;
+import static com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT;
 
 @RequiresRom(SonicGame.SONIC_1)
 public class Sonic1SpecialStageManagerTest {
@@ -420,6 +421,91 @@ public class Sonic1SpecialStageManagerTest {
                 "A DOWN block should halve a fast stage's rotation speed");
         assertEquals(0x29, layout[index] & 0xFF,
                 "A DOWN block that acted becomes an UP block");
+    }
+
+    @Test
+    public void testRBlockPlaysTouchedAnimationWhileReversingRotation() throws Exception {
+        manager.initialize(0);
+
+        Field layoutField = field("layout");
+        Field blockIdField = field("lastCollisionBlockId");
+        Field rowField = field("lastCollisionRow");
+        Field colField = field("lastCollisionCol");
+        Field rotateField = field("ssRotate");
+        Field cooldownField = field("reverseCooldown");
+        Method processItemInteraction = Sonic1SpecialStageManager.class
+                .getDeclaredMethod("processItemInteraction");
+        Method updateItemAnimations = Sonic1SpecialStageManager.class
+                .getDeclaredMethod("updateItemAnimations");
+        processItemInteraction.setAccessible(true);
+        updateItemAnimations.setAccessible(true);
+
+        byte[] layout = (byte[]) layoutField.get(manager);
+        int row = 1;
+        int col = 1;
+        int layoutIndex = row * SS_LAYOUT_STRIDE + col;
+        layout[layoutIndex] = 0x2B;
+        blockIdField.setInt(manager, 0x2B);
+        rowField.setInt(manager, row);
+        colField.setInt(manager, col);
+        rotateField.setInt(manager, 0x40);
+        cooldownField.setInt(manager, 0);
+
+        processItemInteraction.invoke(manager);
+
+        assertEquals(-0x40, rotateField.getInt(manager),
+                "Touching an R block should reverse the stage rotation");
+        assertEquals(0x2B, layout[layoutIndex] & 0xFF,
+                "R block should remain on its idle frame until the animation queue runs");
+
+        updateItemAnimations.invoke(manager);
+        assertEquals(0x2B, layout[layoutIndex] & 0xFF,
+                "The first reverse-animation frame is the idle R mapping");
+
+        for (int i = 0; i < 8; i++) {
+            updateItemAnimations.invoke(manager);
+        }
+        assertEquals(0x31, layout[layoutIndex] & 0xFF,
+                "The touched R block should switch to its animated mapping");
+
+        for (int i = 0; i < 8; i++) {
+            updateItemAnimations.invoke(manager);
+        }
+        assertEquals(0x2B, layout[layoutIndex] & 0xFF,
+                "The reverse animation should return to the idle R mapping");
+
+        for (int i = 0; i < 8; i++) {
+            updateItemAnimations.invoke(manager);
+        }
+        assertEquals(0x31, layout[layoutIndex] & 0xFF,
+                "The reverse animation should flash the touched mapping again");
+
+        for (int i = 0; i < 8; i++) {
+            updateItemAnimations.invoke(manager);
+        }
+        assertEquals(0x2B, layout[layoutIndex] & 0xFF,
+                "The completed reverse animation should restore the idle R mapping");
+    }
+
+    @Test
+    public void testDebugMovementUsesShiftAndControlSpeedModifiers() throws Exception {
+        manager.initialize(0);
+        manager.advanceToEntryPresentation();
+        manager.toggleDebugMode();
+
+        Field sonicPosXField = field("sonicPosX");
+        sonicPosXField.setLong(manager, 0);
+
+        manager.handleInput(INPUT_RIGHT, 0, true, false);
+        manager.update();
+        assertEquals(6L << 16, sonicPosXField.getLong(manager),
+                "Shift should double S1 special-stage debug movement speed");
+
+        sonicPosXField.setLong(manager, 0);
+        manager.handleInput(INPUT_RIGHT, 0, false, true);
+        manager.update();
+        assertEquals(2L << 16, sonicPosXField.getLong(manager),
+                "Ctrl should halve S1 special-stage debug movement speed");
     }
 
     @Test

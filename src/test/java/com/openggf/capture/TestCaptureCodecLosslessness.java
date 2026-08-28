@@ -102,6 +102,9 @@ class TestCaptureCodecLosslessness {
     @Test
     void audioCodecsDeclareWhetherTheyPreserveTheSubmittedSamples() {
         assertTrue(CaptureCodecs.audio("flac").lossless());
+        assertEquals(List.of("-c:a", "pcm_s24le"),
+                CaptureCodecs.audio("pcm-s24le").arguments());
+        assertTrue(CaptureCodecs.audio("pcm-s24le").lossless());
         assertFalse(CaptureCodecs.audio("aac").lossless(),
                 "aac is lossy and must say so, so the UI can warn");
         assertFalse(CaptureCodecs.audio("mp3").lossless());

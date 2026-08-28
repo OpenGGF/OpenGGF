@@ -183,6 +183,11 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
     }
 
     @Override
+    public boolean hasUnconsumedRecordedRows() {
+        return cursor < trace.frameCount();
+    }
+
+    @Override
     public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
         lastActionMask = frame.p1ActionMask();
         lastInputMask = frame.p1InputMask();
@@ -272,7 +277,13 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                         diagnosticCameraX, diagnosticCameraY,
                         sprite.getAnimationId(), sprite.getMappingFrame(),
                         sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw(),
-                        sprite.getRingCount(), engineFrameClock);
+                        sprite.getRingCount(), engineFrameClock)
+                        // Life count for the recorded life_count column. Absent
+                        // outside a gameplay session, where -1 makes TraceBinder
+                        // raise lives_present instead of dropping the comparison.
+                        .withLives(GameServices.gameStateOrNull() != null
+                                ? GameServices.gameStateOrNull().getLives()
+                                : EngineDiagnostics.LIVES_ABSENT);
         TraceFrame comparisonExpected = "s3k".equals(trace.metadata().game())
                 ? TraceReplayBootstrap.s3kFrameForGameplayComparison(
                         trace, cursor, previous, expected, phase)
@@ -508,6 +519,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                     ? Severity.ERROR : Severity.WARNING;
             if (severity == Severity.ERROR) {
                 errorCount++;
+                bootstrapErrorCount++;
                 if (!firstErrorLogged) {
                     firstErrorLogged = true;
                     if (firstErrorCallback != null) {
@@ -527,6 +539,32 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                     1));
         }
         return bootstrapDivergences;
+    }
+
+    /**
+     * Compares an opening row this comparator will never reach live.
+     *
+     * <p>A destination admitted after its first row already ran attaches with
+     * that row consumed, so live comparison starts at row one and the adopted
+     * row zero would otherwise be published but never checked. The engine's
+     * state at attach time IS that row's end state, so comparing the row-zero
+     * publication against the fixture's row zero here is an ordinary
+     * comparison-only check, not a reconstruction.
+     */
+    public void compareAdoptedOpeningRow(
+            int row, DynamicArtDiagnosticsSnapshot published) {
+        Objects.requireNonNull(published, "published");
+        if (row < 0 || row >= trace.frameCount()) {
+            throw new IllegalArgumentException(
+                    "opening row out of range: " + row);
+        }
+        FrameComparison comparison = binder.compareDynamicArt(
+                trace.dynamicArtTransferStateForFrame(
+                        trace.getFrame(row).frame()),
+                published);
+        if (comparison != null) {
+            ingestExternalComparison(comparison);
+        }
     }
 
     /**
@@ -559,6 +597,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
             Severity sev = fc.severity();
             if (sev == Severity.ERROR) {
                 errorCount++;
+                errorCountByGroup[fc.verificationGroup().ordinal()]++;
             } else if (sev == Severity.WARNING) {
                 warningCount++;
             } else {
@@ -697,6 +736,35 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
         currentVisualFrame = trace.getFrame(visualCursor);
         complete = false;
     }
+
+    /**
+     * Per-{@link VerificationGroup} error tallies, incremented in lockstep with
+     * {@link #errorCount} so the two can never disagree.
+     *
+     * <p>Published so a chain report can be audited from its own output. Chain
+     * reports previously carried only a flat count, which left "are some groups
+     * uncounted?" unanswerable from the artefact -- a question that cost two
+     * lanes a round on 2026-08-21 even though the answer was benign. The totals
+     * themselves are untouched by this: these are additional readings of the
+     * same increments, never a second source of truth.
+     */
+    private final int[] errorCountByGroup = new int[VerificationGroup.values().length];
+
+    /**
+     * Errors from {@link #compareBootstrap}, which compares native-prelude
+     * frame-zero state and carries {@link BootstrapDivergence} rather than a
+     * {@link FieldComparison}, so it has no verification group to attribute to.
+     * Tracked separately so group + bootstrap accounts for the flat total
+     * exactly.
+     */
+    private int bootstrapErrorCount;
+
+    public int errorCount(VerificationGroup group) {
+        return errorCountByGroup[group.ordinal()];
+    }
+
+    /** Errors with no verification group -- see {@link #bootstrapErrorCount}. */
+    public int bootstrapErrorCount() { return bootstrapErrorCount; }
 
     public int errorCount() { return errorCount; }
     public int warningCount() { return warningCount; }

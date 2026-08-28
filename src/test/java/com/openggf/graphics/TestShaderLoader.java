@@ -35,6 +35,19 @@ public class TestShaderLoader {
     }
 
     @Test
+    public void priorityShadersMeasureWaterlineFromViewportTop() throws IOException {
+        for (String shader : new String[]{
+                "shaders/shader_sprite_priority.glsl",
+                "shaders/shader_instanced_priority.glsl"
+        }) {
+            String source = ShaderLoader.loadShaderSource(shader);
+
+            assertTrue(source.contains("gl_FragCoord.y - ViewportOffset.y"),
+                    shader + " must remove letterbox offset before resolving the waterline");
+        }
+    }
+
+    @Test
     public void shaderLoaderLoadsFromClasspathNotRepoFilesystem() throws IOException {
         // 1. A known classpath shader must load and return exactly the bytes of the
         //    packaged classpath resource (not some repo-filesystem variant).
@@ -62,5 +75,4 @@ public class TestShaderLoader {
                 "ShaderLoader must not fall back to reading repo filesystem paths");
     }
 }
-
 

@@ -272,9 +272,10 @@ Allowed launch profile enums:
 |-----|-----------|------|---------|-------------|
 | `AUDIO_ENABLED` | `audio.enabled` | bool | `true` | Master switch for all audio output (music and SFX). |
 | `REGION` | `audio.region` | string | `"NTSC"` | Hardware region: `"NTSC"` (60 Hz) or `"PAL"` (50 Hz). Affects SMPS tempo timing and DAC sample rates. |
-| `DAC_INTERPOLATE` | `audio.dacInterpolate` | bool | `true` | Apply linear interpolation to DAC (drum) samples. Reduces aliasing noise for a smoother sound. |
+| `DAC_INTERPOLATE` | `audio.dacInterpolate` | bool | `false` | Apply linear interpolation to DAC (drum) samples. Disabled by default to preserve the hardware's stepped output; enable for optional smoothing. |
 | `AUDIO_INTERNAL_RATE_OUTPUT` | `audio.internalRateOutput` | bool | `false` | Output audio at the YM2612 internal sample rate (~53 kHz) rather than the system rate. Useful for bit-accurate captures; may cause issues on some audio drivers. |
-| `PSG_NOISE_SHIFT_EVERY_TOGGLE` | `audio.psgNoiseShiftEveryToggle` | bool | `true` | PSG noise LFSR clock behaviour. `true` = shift on every polarity toggle (MAME-style, brighter noise); `false` = shift on positive edges only (Genesis Plus GX / libvgm style, darker noise). |
+| `PSG_NOISE_SHIFT_EVERY_TOGGLE` | `audio.psgNoiseShiftEveryToggle` | bool | `false` | PSG noise LFSR clock behaviour. `false` = shift on positive edges only (Genesis Plus GX / libvgm reference); `true` = shift on every polarity toggle (MAME-style, brighter noise). Installs carrying the old generated pair `dacInterpolate: true` plus `psgNoiseShiftEveryToggle: true` are migrated once to the two reference defaults; an asymmetric custom choice is preserved. |
+| `AUDIO_REFERENCE_DEFAULTS_VERSION` | `audio.referenceDefaultsVersion` | int | `1` | Internal one-time migration marker for the paired reference audio-chip defaults. Leave this at the generated value. |
 | `FM6_DAC_OFF` | `audio.fm6DacOff` | bool | `true` | Silence FM channel 6 whenever a DAC note is active. Matches the SMPSPlay parity hack used in Sonic 2; prevents FM bleed audible during percussion. |
 
 ## Capture
@@ -854,9 +855,10 @@ input:
 audio:
   enabled: true   # Enable music and SFX
   region: "NTSC"   # Region for audio timing
-  dacInterpolate: true   # DAC interpolation (smoother sound)
+  dacInterpolate: false   # Raw hardware DAC steps; true enables optional smoothing
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
-  psgNoiseShiftEveryToggle: true   # PSG noise LFSR clock mode: true=shift on every toggle (MAME), false=positive edges (GPGX)
+  psgNoiseShiftEveryToggle: false   # false=positive edges (GPGX/libvgm), true=every toggle (MAME)
+  referenceDefaultsVersion: 1   # Internal one-time migration marker; leave generated value unchanged
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 
 # ── Characters ──

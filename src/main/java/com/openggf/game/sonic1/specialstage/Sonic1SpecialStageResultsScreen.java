@@ -58,6 +58,15 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private static final int STATE_POST_TALLY_DELAY = 3;
     private static final int STATE_CONTINUE_JINGLE = 4;
     private static final int STATE_CONTINUE_DELAY = 5;
+    /**
+     * {@code SSR_Exit} (routine $A on the plain path, $12 after a continue --
+     * "_incObj/7E, 7F Special Stage Results and Chaos Emeralds.asm":156-158).
+     * The wait that precedes it only advances {@code obRoutine}; the exit body
+     * is a routine of its own, so the card runs one more whole
+     * {@code SS_NormalExit} iteration -- {@code ExecuteObjects} reaching
+     * {@code SSR_Exit}, which sets {@code f_restart} -- before that loop's
+     * {@code tst.w (f_restart).w} can see it (sonic.asm:3401-3412).
+     */
     private static final int STATE_EXIT = 6;
     private static final int SLIDE_SPEED_PIXELS_PER_FRAME = 16;
     private static final int PRE_TALLY_DELAY_FRAMES = 180;
@@ -269,6 +278,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             return;
         }
         if (ringsCollected < CONTINUE_RINGS) {
+            // SSR_Wait routine 8 advances to routine $A, SSR_Exit.
             state = STATE_EXIT;
             stateTimer = 0;
             return;
@@ -301,6 +311,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     private void updateContinueDelay() {
         if (stateTimer >= POST_CONTINUE_DELAY_FRAMES) {
+            // SSR_Wait routine $10 advances to routine $12, SSR_Exit.
             state = STATE_EXIT;
             stateTimer = 0;
         }

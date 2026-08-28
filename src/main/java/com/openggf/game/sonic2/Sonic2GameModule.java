@@ -68,6 +68,7 @@ import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.Palette;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.SuperStateController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -126,6 +127,11 @@ public class Sonic2GameModule implements GameModule {
     @Override
     public GameId getGameId() {
         return GameId.S2;
+    }
+
+    @Override
+    public com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile() {
+        return com.openggf.game.profiles.trace.TracePlaybackProfile.SONIC_2;
     }
 
     @Override
@@ -401,6 +407,18 @@ public class Sonic2GameModule implements GameModule {
     @Override
     public SuperStateController createSuperStateController(
             AbstractPlayableSprite player) {
+        // S2 grants a Super form to Sonic and to nobody else. The whole
+        // transformation path lives in Sonic's own object: Sonic_CheckGoSuper
+        // is reached from Sonic_JumpHeight inside Obj01_MdJump
+        // (docs/s2disasm/s2.asm:37432, :37455), and Sonic_Super is called from
+        // Obj01_Control (:36249). Obj02 (Tails) has no counterpart of either --
+        // Super Tails is an S3K feature and needs the super emeralds, which S2
+        // does not have. Level setup asks for a controller once per playable,
+        // sidekick included, so the decline belongs here: the module is the
+        // owner of "which characters this game lets transform".
+        if (!(player instanceof Sonic)) {
+            return null;
+        }
         if (CrossGameFeatureProvider.isActive()) {
             return GameServices.crossGameFeatures().createSuperStateController(player);
         }

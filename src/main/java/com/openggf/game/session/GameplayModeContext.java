@@ -104,6 +104,12 @@ public final class GameplayModeContext implements ModeContext {
     private final DynamicArtLifecycleService dynamicArtLifecycle;
     private final RunLevelLoadTracker runLevelLoads = new RunLevelLoadTracker();
     private TraceRunFrameDriver traceRunFrameDriver;
+    /**
+     * Latched once the source level's main loop has stopped owning the current
+     * run-chain transition gap's rows. Session-scoped so no earlier gap, test
+     * class, or replay run can decide it for a later one.
+     */
+    private boolean runGapSourceLevelMainLoopEnded;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -493,6 +499,18 @@ public final class GameplayModeContext implements ModeContext {
         return fadeManager;
     }
 
+    /**
+     * Advances the session-owned fade one step. Callers outside the session that
+     * only need the per-frame fade tick use this rather than holding the
+     * FadeManager itself, so their package does not gain a graphics edge
+     * (TestArchUnitRules#core_runtime_cycle_cluster_does_not_gain_top_level_edges).
+     */
+    public void updateFade() {
+        if (fadeManager != null) {
+            fadeManager.update();
+        }
+    }
+
     public PlcFrameLifecycleCoordinator plcFrameLifecycle() {
         return plcFrameLifecycle;
     }
@@ -600,6 +618,46 @@ public final class GameplayModeContext implements ModeContext {
         return Optional.ofNullable(traceRunFrameDriver);
     }
 
+    /**
+     * Restarts the dynamic-art run so its ledger holds only the transfers
+     * this session's own level load produced.
+     *
+     * <p>A session that boots on top of an already-loaded host (the master
+     * title screen live, a throwaway engine-init level load headless)
+     * inherits that load's player-DPLC priming, and every transfer id it
+     * mints afterwards is displaced by the inherited count. The session owns
+     * the dynamic-art lifecycle, so this reset is published from here rather
+     * than by handing the mutation-capable
+     * {@link DynamicArtLifecycleService} to the caller that needs it: callers
+     * barred from dynamic-art mutation authority (trace and ghost code, see
+     * {@code TestS1S2PlcComparisonOnlyGuard}) can ask for a fresh ledger
+     * without being able to write one. No-op when no run is active.
+     */
+    public void restartDynamicArtRunForFreshSession() {
+        if (dynamicArtLifecycle.isRunActive()) {
+            dynamicArtLifecycle.restartRunForFreshSession();
+        }
+    }
+
+    /**
+     * Re-arms the one-row latch that decides which rows of a run-chain
+     * transition gap are still owned by the source level's own main loop (see
+     * {@code TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop}).
+     */
+    public void beginRunTransitionGap() {
+        runGapSourceLevelMainLoopEnded = false;
+    }
+
+    /**
+     * Consumes that latch: true exactly once per armed gap, on the first row
+     * that asks.
+     */
+    public boolean consumeRunGapFirstRow() {
+        boolean first = !runGapSourceLevelMainLoopEnded;
+        runGapSourceLevelMainLoopEnded = true;
+        return first;
+    }
+
     public void installTraceRunFrameDriver(TraceRunFrameDriver driver) {
         traceRunFrameDriver = Objects.requireNonNull(driver, "driver");
     }
@@ -621,6 +679,16 @@ public final class GameplayModeContext implements ModeContext {
      * Closes an open dynamic-art comparison window at a structural replay
      * boundary. Expected trace values never cross this production-owned seam.
      */
+    /**
+     * Ends the level's comparison window on the ROM iteration whose object pass
+     * wrote the next game mode.
+     *
+     * @see com.openggf.game.resources.DynamicArtLifecycleService#endComparisonSegmentAtRomModeChange()
+     */
+    public void endDynamicArtComparisonSegmentAtRomModeChange() {
+        dynamicArtLifecycle.endComparisonSegmentAtRomModeChange();
+    }
+
     public void endDynamicArtComparisonSegment() {
         if (dynamicArtLifecycle.isComparisonSegmentOpen()) {
             dynamicArtLifecycle.closeComparisonSegment();
@@ -800,6 +868,8 @@ public final class GameplayModeContext implements ModeContext {
             }
             rewindRegistry.deregister(
                     com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager.REWIND_KEY);
+            rewindRegistry.deregister(
+                    com.openggf.game.sonic2.titlecard.TitleCardManager.REWIND_KEY);
             if (levelManager.getGameModule().getTitleCardProvider()
                     instanceof com.openggf.game.rewind.RewindSnapshottable<?> titleCard) {
                 rewindRegistry.deregister(titleCard.key());

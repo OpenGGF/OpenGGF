@@ -10,13 +10,16 @@ import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceExecutionPhase;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.TraceReplayFixture;
+import com.openggf.trace.timing.HardwareTimingInterstitialSpans;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -142,41 +145,24 @@ public final class TraceRunReplayWalker {
         }
     }
 
-    /** True when any segment has a recorded timing stream. */
-    public static boolean hasHardwareTimingStream(List<SegmentPlan> plans) {
-        Objects.requireNonNull(plans, "plans");
-        return plans.stream().anyMatch(
-                plan -> plan.trace().hardwareTimingSchedule().hasRecordedInput());
+    /** True when any compact run descriptor has a recorded timing stream. */
+    public static boolean hasDescriptorHardwareTimingStream(
+            List<TraceRunSegmentDescriptor> descriptors) {
+        Objects.requireNonNull(descriptors, "descriptors");
+        return descriptors.stream().anyMatch(descriptor ->
+                descriptor.hardwareTimingSchedule().hasRecordedInput());
     }
 
-    /**
-     * Builds the run timing view. Metadata-only special-stage segments use the
-     * recorder-audited mapping {@code raw_frame = segment-local trace index};
-     * their BK2 location remains {@code bk2_frame_offset + raw_frame}.
-     */
-    public static List<HardwareTimingSegment> hardwareTimingSegments(
-            List<SegmentPlan> plans) {
-        Objects.requireNonNull(plans, "plans");
-        List<HardwareTimingSegment> result = new ArrayList<>(plans.size());
-        for (SegmentPlan plan : plans) {
-            int parsedFrameCount = plan.trace().frameCount();
-            int representedFrameCount = parsedFrameCount > 0
-                    ? parsedFrameCount
-                    : plan.segment().traceFrameCount();
-            List<Integer> rawFrames = new ArrayList<>(representedFrameCount);
-            for (int traceIndex = 0;
-                    traceIndex < representedFrameCount;
-                    traceIndex++) {
-                rawFrames.add(parsedFrameCount > 0
-                        ? plan.trace().getFrame(traceIndex).frame()
-                        : traceIndex);
-            }
-            result.add(new HardwareTimingSegment(
-                    plan.segment().bk2FrameOffset(),
-                    rawFrames,
-                    plan.trace().hardwareTimingSchedule()));
-        }
-        return List.copyOf(result);
+    /** Descriptor-only timing view for production and visual run ownership. */
+    public static List<HardwareTimingSegment> descriptorHardwareTimingSegments(
+            List<TraceRunSegmentDescriptor> descriptors) {
+        Objects.requireNonNull(descriptors, "descriptors");
+        return descriptors.stream()
+                .map(descriptor -> new HardwareTimingSegment(
+                        descriptor.segment().bk2FrameOffset(),
+                        descriptor.rawFrames(),
+                        descriptor.hardwareTimingSchedule()))
+                .toList();
     }
 
     /**
@@ -188,12 +174,38 @@ public final class TraceRunReplayWalker {
     public static final class HardwareTimingCoordinator {
         private final TraceReplayFixture fixture;
         private final List<HardwareTimingSegment> segments;
+        private final HardwareTimingInterstitialSpans interstitialSpans;
         private int currentSegment;
         private boolean closed;
+        /**
+         * Whether the DRIVE currently owns a segment's rows. Membership is the
+         * drive's to declare, never the cursor's to infer: across a transition
+         * the drive detaches its row owner and the shared BK2 cursor keeps
+         * free-running through choreography frames the recording never covered,
+         * then gets re-seeked to the destination's true first row when the
+         * destination's load actually happens. Segment 0 starts owned because
+         * the run's initial attach is what constructs this coordinator.
+         */
+        private boolean insideSegment = true;
 
         public HardwareTimingCoordinator(
                 TraceReplayFixture fixture,
                 List<HardwareTimingSegment> segments) {
+            this(fixture, segments, HardwareTimingInterstitialSpans.empty());
+        }
+
+        /**
+         * Run-level form that also carries the recorded interstitial spans, so
+         * a handoff can cross the ordinals the recording consumed between two
+         * segments. A run with no interstitial sidecar supplies empty spans and
+         * behaves exactly as the two-argument form.
+         */
+        public HardwareTimingCoordinator(
+                TraceReplayFixture fixture,
+                List<HardwareTimingSegment> segments,
+                HardwareTimingInterstitialSpans interstitialSpans) {
+            this.interstitialSpans = Objects.requireNonNull(
+                    interstitialSpans, "interstitialSpans");
             this.fixture = Objects.requireNonNull(fixture, "fixture");
             this.segments = List.copyOf(
                     Objects.requireNonNull(segments, "segments"));
@@ -212,25 +224,51 @@ public final class TraceRunReplayWalker {
             }
         }
 
-        /** Called by {@link BoundaryProbe} before its comparison delegate. */
+        /**
+         * Called by {@link BoundaryProbe} before its comparison delegate.
+         *
+         * <p>The playback bridge keeps pumping frames after the run closes —
+         * {@code GameLoop.syncPlaybackInputBridge} runs from
+         * {@code exitTitleCard}, which can fire once the walk has finished. Once
+         * closed there is no row left to latch, so such a frame is outside the
+         * run by definition and takes the same gap path this method already
+         * uses for a frame that falls outside every segment. Only the pump is
+         * made tolerant: {@link #beginSegmentRow} still throws for a deliberate
+         * caller latching after close, which is a real ordering error rather
+         * than a frame arriving late.
+         */
         public void beginPlaybackFrame(Bk2FrameInput frame) {
             Objects.requireNonNull(frame, "frame");
-            for (int segmentIndex = segments.size() - 1;
-                    segmentIndex >= 0;
-                    segmentIndex--) {
-                HardwareTimingSegment segment = segments.get(segmentIndex);
-                int traceIndex = frame.frameIndex() - segment.bk2FrameOffset();
-                if (traceIndex < 0) {
-                    continue;
-                }
-                if (traceIndex < segment.rawFrames().size()) {
-                    beginSegmentRow(segmentIndex, traceIndex);
-                } else {
-                    fixture.enterHardwareTimingGap();
-                }
+            if (closed || !insideSegment) {
+                fixture.enterHardwareTimingGap();
                 return;
             }
-            fixture.enterHardwareTimingGap();
+            HardwareTimingSegment segment = segments.get(currentSegment);
+            int traceIndex = frame.frameIndex() - segment.bk2FrameOffset();
+            if (traceIndex >= 0 && traceIndex < segment.rawFrames().size()) {
+                beginSegmentRow(currentSegment, traceIndex);
+            } else {
+                fixture.enterHardwareTimingGap();
+            }
+        }
+
+        /**
+         * The drive has released its row owner: it is between segments. No
+         * frame belongs to any segment until {@link #enterSegment} declares the
+         * next one, however far the shared cursor runs meanwhile.
+         */
+        public void enterTransitionGap() {
+            insideSegment = false;
+        }
+
+        /**
+         * The drive has attached {@code segmentIndex}'s row owner, so its rows
+         * begin here. Performs the schedule handoff, which still enforces
+         * structural order.
+         */
+        public void enterSegment(int segmentIndex) {
+            handoffToSegment(segmentIndex);
+            insideSegment = true;
         }
 
         /**
@@ -255,6 +293,10 @@ public final class TraceRunReplayWalker {
                                 + segmentIndex);
             }
             handoffToSegment(segmentIndex);
+            // Latching a row IS the drive declaring it owns this segment: the
+            // special-stage row driver enters that way rather than through an
+            // attach.
+            insideSegment = true;
             fixture.beginTraceRow(
                     traceIndex, segment.rawFrames().get(traceIndex));
         }
@@ -276,8 +318,12 @@ public final class TraceRunReplayWalker {
             }
             if (segmentIndex == currentSegment + 1) {
                 fixture.handoffHardwareTimingReplay(
-                        segments.get(segmentIndex).schedule());
+                        segments.get(segmentIndex).schedule(),
+                        interstitialSpans.spansAfterSegment(currentSegment));
                 currentSegment = segmentIndex;
+                // A drive that latches the next segment's rows directly (the
+                // special-stage row driver) has declared its entry by doing so.
+                insideSegment = true;
             }
         }
 
@@ -687,6 +733,13 @@ public final class TraceRunReplayWalker {
     }
 
     /**
+     * @see com.openggf.trace.TraceReplayBootstrap#levelLoopRowCount(TraceData)
+     */
+    public static int levelLoopRowCount(TraceData trace) {
+        return com.openggf.trace.TraceReplayBootstrap.levelLoopRowCount(trace);
+    }
+
+    /**
      * Plans the unrecorded tail after a run's final comparison segment. Only a
      * recorder-declared endpoint opts in; an unspecified endpoint deliberately
      * leaves both tail replay and terminal assertion disabled.
@@ -743,20 +796,64 @@ public final class TraceRunReplayWalker {
      * return choreography. The anchor is the final recorded row of the source
      * level; Sonic 1's special-stage path advances its global counter once for
      * every subsequent BK2 row through the destination level's first row.
+     *
+     * <p>{@code returnFramesConsumed} is the number of leading destination rows
+     * the transition fall-through has already executed before the anchor is
+     * applied, exactly as {@code nextFramesConsumed} is on
+     * {@link #interLevelVblankBudget}. The target is the counter value in effect
+     * on the LAST of those consumed rows -- equivalently, the value entering the
+     * first row the comparator will compare -- so the budget runs to
+     * {@code returnOffset + returnFramesConsumed - 1}.
+     *
+     * <p>This term was previously hardcoded to a consumed count of one, which is
+     * what every uncompared return in the committed runs actually did, so the
+     * arithmetic is unchanged for all of them. Carrying it explicitly is what
+     * makes the anchor independent of the seam's row layout: with the count
+     * fixed, any change to the number of rows the seam consumes silently
+     * re-based the comparator against an anchor that had not moved, and the
+     * resulting off-by-one row read was indistinguishable from a physics
+     * divergence. Threading the real count is the precondition for judging such
+     * a change at all.
+     *
+     * <p>A consumed count of zero is a legitimate return shape and is admitted
+     * here, exactly as {@link #interLevelVblankBudget} admits
+     * {@code nextFramesConsumed == 0}. The two budgets are the SAME expression:
+     * {@code interLevelVblankBudget} counts from one past the source's final row
+     * to {@code destOffset + consumed}, this one counts from the source's final
+     * row to {@code destOffset + consumed - 1}, and both reduce to
+     * {@code destOffset + consumed - sourceFinalRow - 1}. So the target is
+     * always "the counter value entering the first row the comparator will
+     * compare", whether or not a fall-through row was consumed first: at one
+     * consumed row that is the value ON destination row 0, at zero consumed rows
+     * it is the value on the row BEFORE destination row 0. The old
+     * {@code >= 1} rejection asserted the observed shape of the committed runs,
+     * not a property of the arithmetic, and a return that hands its host
+     * iteration back rather than fusing the destination's first row into it is
+     * the same boundary shape every {@code level_advance} admission already has
+     * (all of which pass a consumed count of zero).
      */
     public static int uncomparedInteriorReturnVblankBudget(
             TraceRunManifest.Segment sourceLevel,
-            TraceRunManifest.Segment returnLevel) {
+            TraceRunManifest.Segment returnLevel,
+            int returnFramesConsumed,
+            int nonAdvancingMovieRows) {
         if (sourceLevel.traceFrameCount() <= 0) {
             throw new IllegalArgumentException("source level must contain recorded frames");
         }
+        if (nonAdvancingMovieRows < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
+        }
+        if (returnFramesConsumed < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
+        }
         int sourceFinalRow = sourceLevel.bk2FrameOffset()
                 + sourceLevel.traceFrameCount() - 1;
-        int movieRows = returnLevel.bk2FrameOffset() - sourceFinalRow;
+        int targetRow = returnLevel.bk2FrameOffset() + returnFramesConsumed - 1;
+        int movieRows = targetRow - sourceFinalRow;
         if (movieRows < 0) {
             throw new IllegalArgumentException("interior return precedes source level tail");
         }
-        return movieRows;
+        return Math.max(0, movieRows - nonAdvancingMovieRows);
     }
 
     /**
@@ -925,35 +1022,10 @@ public final class TraceRunReplayWalker {
         for (int i = 0; i < segmentCount; i++) {
             TraceRunManifest.Segment segment = segments.get(i);
             Path segmentDir = runDir.resolve(segment.dir());
-            // A special_stage interior is gameplay-uncompared under SS-interior
-            // policy v1 (see isUncomparedInterior): attachInteriorComparator never
-            // builds a gameplay comparator from its frames, so its physics.csv --
-            // which uses a per-game special-stage schema structurally distinct
-            // from TraceFrame's primary-level columns -- need not parse there.
-            // Metadata loading still exposes its optional DPLC heartbeat.
-            try {
-                if (isUncomparedInterior(segment)) {
-                    specialStageRows[i] = TraceRunSpecialStageRows.load(
-                            segment.traceProfile(), segmentDir,
-                            segment.dynamicArtInitialLedgerDescriptors());
-                    traces[i] = TraceData.loadMetadataOnly(
-                            segmentDir,
-                            com.openggf.trace.StoredPhysicsFrameDomain.FrameEncoding.DECIMAL,
-                            segment.dynamicArtInitialLedgerDescriptors());
-                } else {
-                    traces[i] = TraceData.load(
-                            segmentDir,
-                            segment.dynamicArtInitialLedgerDescriptors());
-                }
-            } catch (IOException | RuntimeException failure) {
-                throw new IOException(
-                        "Segment " + i + " parser failed for profile '"
-                                + segment.traceProfile() + "': "
-                                + (failure.getMessage() != null
-                                        ? failure.getMessage()
-                                        : failure.getClass().getSimpleName()),
-                        failure);
-            }
+            LoadedSegmentPayload payload = loadSegmentPayload(
+                    segment, segmentDir, i);
+            traces[i] = payload.trace();
+            specialStageRows[i] = payload.specialStageRows();
         }
         run.validateDynamicArtRun(java.util.Arrays.asList(traces));
 
@@ -969,6 +1041,175 @@ public final class TraceRunReplayWalker {
                         pairing.entryBoundaries()[i], traces[i])));
         }
         return plans;
+    }
+
+    /**
+     * Scans and validates run segments sequentially into payload-independent
+     * descriptors. The eager {@link #plan} path remains only as a benchmark
+     * reference; launch and replay owners use this compact boundary and open
+     * one segment payload at a time.
+     */
+    public static List<TraceRunSegmentDescriptor> planDescriptors(
+            TraceRunManifest run, Path runDir) throws IOException {
+        Objects.requireNonNull(run, "run");
+        Objects.requireNonNull(runDir, "runDir");
+        run.validate(runDir);
+        BoundaryPairing pairing = pairBoundaries(run);
+        TraceRunManifest.DynamicArtRunValidator dynamicArtValidator =
+                run.new DynamicArtRunValidator();
+        List<TraceRunSegmentDescriptor> descriptors =
+                new ArrayList<>(run.segments().size());
+
+        for (int segmentIndex = 0;
+                segmentIndex < run.segments().size();
+                segmentIndex++) {
+            TraceRunManifest.Segment segment =
+                    run.segments().get(segmentIndex);
+            Path segmentDirectory = runDir.resolve(segment.dir());
+            LoadedSegmentPayload payload = loadSegmentPayload(
+                    segment, segmentDirectory, segmentIndex);
+            TraceData trace = payload.trace();
+            TraceRunSpecialStageRows specialStageRows =
+                    payload.specialStageRows();
+
+            dynamicArtValidator.accept(segmentIndex, trace);
+            TraceMetadata metadata =
+                    specialStageRows != null
+                            ? specialStageRows.metadata()
+                            : trace.metadata();
+            int rowCount = specialStageRows != null
+                    ? specialStageRows.rowCount()
+                    : trace.frameCount();
+            int levelLoopRowCount = levelLoopRowCount(trace);
+            validateDescriptorManifestFields(
+                    segmentIndex, segment, metadata, rowCount);
+
+            List<Integer> rawFrames = new ArrayList<>(rowCount);
+            BitSet laggedRows = new BitSet(rowCount);
+            if (specialStageRows != null) {
+                for (int row = 0; row < rowCount; row++) {
+                    rawFrames.add(row);
+                    if (!specialStageRows.admission(row).executeGameplay()) {
+                        laggedRows.set(row);
+                    }
+                }
+            } else {
+                for (int row = 0; row < rowCount; row++) {
+                    int rawFrame = trace.getFrame(row).frame();
+                    rawFrames.add(rawFrame);
+                    TraceEvent.LagState lagState =
+                            trace.lagStateForFrame(rawFrame);
+                    if (lagState != null && lagState.lagged()) {
+                        laggedRows.set(row);
+                    }
+                }
+            }
+
+            descriptors.add(new TraceRunSegmentDescriptor(
+                    segment,
+                    segmentDirectory,
+                    metadata,
+                    rowCount,
+                    trace.frameCount() > 0 ? trace.getFrame(0) : null,
+                    rawFrames,
+                    laggedRows,
+                    trace.hardwareTimingSchedule(),
+                    trace.terminalDynamicArtLedger(),
+                    pairing.entryBoundaries()[segmentIndex],
+                    pairing.exitBoundaries()[segmentIndex],
+                    levelLoopRowCount,
+                    segmentExecutionPolicy(
+                            segment,
+                            pairing.entryBoundaries()[segmentIndex],
+                            trace)));
+        }
+        dynamicArtValidator.finish();
+        return List.copyOf(descriptors);
+    }
+
+    /**
+     * Opens the parsed comparison payload for one descriptor at the point a
+     * replay drive takes ownership of that segment. No lease is constructed
+     * until both halves of a special-stage composite load successfully.
+     */
+    public static ActiveSegmentPayload openActiveSegment(
+            TraceRunSegmentDescriptor descriptor, int segmentIndex)
+            throws IOException {
+        Objects.requireNonNull(descriptor, "descriptor");
+        LoadedSegmentPayload payload = loadSegmentPayload(
+                descriptor.segment(), descriptor.segmentDirectory(), segmentIndex);
+        return new ActiveSegmentPayload(
+                descriptor, payload.trace(), payload.specialStageRows());
+    }
+
+    private static LoadedSegmentPayload loadSegmentPayload(
+            TraceRunManifest.Segment segment,
+            Path segmentDirectory,
+            int segmentIndex) throws IOException {
+        // A special_stage interior is gameplay-uncompared under SS-interior
+        // policy v1 (see isUncomparedInterior): attachInteriorComparator never
+        // builds a gameplay comparator from its frames, so its physics.csv --
+        // which uses a per-game special-stage schema structurally distinct
+        // from TraceFrame's primary-level columns -- need not parse there.
+        // Metadata loading still exposes its optional DPLC heartbeat.
+        try {
+            if (isUncomparedInterior(segment)) {
+                TraceRunSpecialStageRows specialStageRows =
+                        TraceRunSpecialStageRows.load(
+                                segment.traceProfile(), segmentDirectory,
+                                segment.dynamicArtInitialLedgerDescriptors());
+                TraceData trace = TraceData.loadMetadataOnly(
+                        segmentDirectory,
+                        com.openggf.trace.StoredPhysicsFrameDomain
+                                .FrameEncoding.DECIMAL,
+                        segment.dynamicArtInitialLedgerDescriptors());
+                return new LoadedSegmentPayload(trace, specialStageRows);
+            }
+            return new LoadedSegmentPayload(
+                    TraceData.load(
+                            segmentDirectory,
+                            segment.dynamicArtInitialLedgerDescriptors()),
+                    null);
+        } catch (IOException | RuntimeException failure) {
+            throw new IOException(
+                    "Segment " + segmentIndex + " parser failed for profile '"
+                            + segment.traceProfile() + "': "
+                            + (failure.getMessage() != null
+                                    ? failure.getMessage()
+                                    : failure.getClass().getSimpleName()),
+                    failure);
+        }
+    }
+
+    private static void validateDescriptorManifestFields(
+            int segmentIndex,
+            TraceRunManifest.Segment segment,
+            TraceMetadata metadata,
+            int rowCount) {
+        boolean compatibleProfile = Objects.equals(
+                segment.traceProfile(), metadata.traceProfile())
+                || ("level".equals(segment.kind())
+                        && "complete_run".equals(segment.traceProfile())
+                        && metadata.traceProfile() == null);
+        if (!compatibleProfile) {
+            throw new IllegalArgumentException(
+                    "Segment " + segmentIndex
+                            + " profile mismatch: manifest='"
+                            + segment.traceProfile() + "', metadata='"
+                            + metadata.traceProfile() + "'");
+        }
+        if (rowCount != segment.traceFrameCount()) {
+            throw new IllegalArgumentException(
+                    "Segment " + segmentIndex
+                            + " row count mismatch: manifest="
+                            + segment.traceFrameCount() + ", parsed="
+                            + rowCount);
+        }
+    }
+
+    private record LoadedSegmentPayload(
+            TraceData trace,
+            TraceRunSpecialStageRows specialStageRows) {
     }
 
     /**
@@ -1040,7 +1281,36 @@ public final class TraceRunReplayWalker {
             if (!framePrepared) {
                 preparedFrame = null;
                 preparedDelegate = null;
+                return;
             }
+            // A row prepared while DETACHED has no preparer to pin to. Without
+            // this, the pin above hands that row to a null delegate: a segment
+            // boundary that settles mid-row (the special-stage return latches
+            // GameMode.LEVEL on a step that never reaches afterFrameAdvanced,
+            // leaving framePrepared set with preparedDelegate == null) would
+            // then run its FIRST gameplay frame unobserved. The engine executes
+            // that frame -- it reproduces the return segment's recorded frame 0
+            // exactly -- but the comparator never sees it, so recorded row 0 is
+            // compared against post-frame-1 state and every physics field is
+            // reported one frame ahead. Adopting the row keeps the comparator's
+            // cursor and the executed frame in lockstep; a row prepared by a
+            // real delegate still stays pinned to it.
+            if (preparedDelegate == null && delegate != null) {
+                preparedDelegate = delegate;
+                delegate.prepareFrame(preparedFrame);
+            }
+        }
+
+        /**
+         * Releases every observer alias when the represented segment lease
+         * closes. Unlike {@link #setDelegate}, no prepared row may remain
+         * pinned across this ownership boundary.
+         */
+        public void detachDelegate() {
+            delegate = null;
+            preparedDelegate = null;
+            preparedFrame = null;
+            framePrepared = false;
         }
 
         /**
@@ -1134,6 +1404,16 @@ public final class TraceRunReplayWalker {
             prepareFrame(frame);
             return preparedDelegate == null
                     ? 1 : preparedDelegate.vblankAdvanceCountOnSkippedTick(frame);
+        }
+
+        @Override
+        public boolean hasUnconsumedRecordedRows() {
+            // Row ownership is the row delegate's to answer; the probe adds
+            // only boundary latching. No prepareFrame() here -- this query is
+            // read on frozen frames that never prepared a row.
+            PlaybackDebugManager.PlaybackFrameObserver rowDelegate =
+                    framePrepared ? preparedDelegate : delegate;
+            return rowDelegate != null && rowDelegate.hasUnconsumedRecordedRows();
         }
 
         @Override

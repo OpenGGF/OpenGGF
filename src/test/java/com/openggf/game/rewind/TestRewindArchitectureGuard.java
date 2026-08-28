@@ -144,6 +144,11 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lbz1RobotnikEventController.java#@RewindTransient", 3),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java#@RewindTransient", 12),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java#@RewindTransient", 13),
+            // Obj11 bridge parent/child slot links are object-graph structure relinked
+            // by adoptSegmentForRewind on the segment's recreate path, exactly like the
+            // ARZRotPformsObjectInstance and EggPrisonObjectInstance slot children.
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/BridgeObjectInstance.java#@RewindTransient", 2),
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/BridgeSegmentObjectInstance.java#@RewindTransient", 1),
             // S2 trace-parity slot models keep parent/child graph links and
             // constructor-derived child roles outside scalar rewind capture.
             // Focused graph tests cover recreation and relinking.

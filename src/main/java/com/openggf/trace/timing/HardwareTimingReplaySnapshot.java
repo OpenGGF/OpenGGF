@@ -1,6 +1,7 @@
 package com.openggf.trace.timing;
 
 import com.openggf.game.timing.HardwareServiceBoundary;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -12,7 +13,9 @@ public record HardwareTimingReplaySnapshot(
         Integer rawFrameLatch,
         HardwareServiceBoundary lastAppliedBoundary,
         boolean installed,
-        boolean runComplete) {
+        boolean runComplete,
+        List<String> unmatchedCompletions,
+        List<String> pendingSubmissionsAtClose) {
 
     public HardwareTimingReplaySnapshot {
         Objects.requireNonNull(schedule, "schedule");
@@ -21,6 +24,11 @@ public record HardwareTimingReplaySnapshot(
             throw new IllegalArgumentException(
                     "edgeCursor is outside the installed schedule: " + edgeCursor);
         }
+        Objects.requireNonNull(unmatchedCompletions, "unmatchedCompletions");
+        Objects.requireNonNull(
+                pendingSubmissionsAtClose, "pendingSubmissionsAtClose");
         consumedIdentities = Set.copyOf(consumedIdentities);
+        unmatchedCompletions = List.copyOf(unmatchedCompletions);
+        pendingSubmissionsAtClose = List.copyOf(pendingSubmissionsAtClose);
     }
 }

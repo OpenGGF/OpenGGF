@@ -72,10 +72,20 @@ final class GameLoopSpecialStageLifecycle {
         if (session != null) session.applySpecialStageTraceInputIfActive(input);
         boolean skipTick = session != null && session.shouldSkipCurrentSpecialStageTick();
         if (!skipTick) {
+            GameLoop.SpecialStageObservationPacing installed = pacing;
+            if (installed == null && session != null) {
+                // Production replay owns the same recorded RunObjects pass stream
+                // that tests install explicitly through their package bridge.
+                installed = session.currentSpecialStagePassPacing().orElse(null);
+            }
+            if (installed != null) {
+                provider.setLagCompensation(0);
+            }
+            GameLoop.SpecialStageObservationPacing resolvedPacing = installed;
             LevelFrameStep.executeHardwareTimedObjectScan(
                     LevelFrameContext.from(gameplayMode), plcFrame,
                     PlcLifecyclePhase.SPECIAL_STAGE,
-                    () -> updateProvider(provider, pacing, updateInput));
+                    () -> updateProvider(provider, resolvedPacing, updateInput));
         } else if (session.skippedSpecialStagePlcPhase().isPresent()) {
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode), plcFrame,
                     session.skippedSpecialStagePlcPhase().orElseThrow());
@@ -86,6 +96,9 @@ final class GameLoopSpecialStageLifecycle {
             rewind.recordExternalFrame(currentMode, false, input);
         }
         if (provider.isFinished() && (session == null || !session.isSpecialStageSession())) {
+            if (TraceSessionLauncher.shouldDeferRunModeBoundaryCommit()) {
+                return;
+            }
             enterResults.accept(provider.isEmeraldCollected());
         }
     }
@@ -117,8 +130,7 @@ final class GameLoopSpecialStageLifecycle {
             return;
         }
         for (int pass = 0; pass < pacing.passCount(); pass++) {
-            pacing.applyPassInput(pass, provider);
-            provider.update();
+            pacing.runPass(pass, provider);
             pacing.afterPass(pass);
         }
     }

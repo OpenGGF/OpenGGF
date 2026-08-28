@@ -19,6 +19,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -58,32 +60,23 @@ class TestArchitecturalSourceGuard {
     // existing restore orchestration boundary; it does not move collaborator logic back here.
     // 2026-07-12: ratchet inherited develop growth to 2910, plus a four-line public
     // delegate into ObjectRewindReferenceClosureValidator. Traversal stays extracted.
-    // 2026-07-20: develop's trace-run and bonus-stage state integration combines
-    // with next's mod/runtime ownership surface at 3020 effective lines.
-    // 2026-07-28: develop's initial-ProcessSprites dispatch, managed dynamic slots,
-    // and staged collision-response build merge with next's callback-routed
-    // ownership. Participant checkpoints stayed in ObjectSolidContactController and
-    // the unused rewind wrappers were dropped; freeze the combined shape at 3045.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3045;
+    // 2026-08-26: the merged facade combines next's callback-routed ownership with
+    // develop's ObjectLoopSlotBudget entry points. Freeze the exact merged inventory;
+    // placement, touch-response and solid-contact logic remain in collaborators.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3086;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
             // refactor (d9b727925) settled the sprite at 3115 effective lines.
             // 2026-07-09: 3115 -> 3159 for drowning, speed-shoes, and fixed-skid
             // controller state captured by the playable rewind schema.
-            // 2026-07-20: merged super-state rewind capture with next's Mod API
-            // playable hooks; freeze the resulting combined surface.
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3239,
-            // 2026-07-20: merged develop's trace/bonus bootstrap dependencies with
-            // next's mod-zone and editor/session integration.
-            // 2026-07-28: adds develop's InitialProcessSprites base, title-card VBlank
-            // advance, and oscillation gating on top of next's seamless-transition and
-            // rewind-boundary ownership.
-            // 2026-07-31: merging next into the S3K super-emerald branch combines both
-            // sides' independent one-line growth; freeze the merged shape.
-            // 2026-08-10: the fresh-level title boundary was extracted to
-            // FreshLevelTransitionBoundaryController before freezing the merged surface.
-            "com/openggf/level/LevelManager.java", 3015,
+            // 2026-08-26: exact merged inventory for next's Mod API hooks and develop's
+            // native player-SST reset/restore ownership.
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3256,
+            // 2026-08-26: exact merged inventory for next's mod/editor/session and
+            // seamless-transition surface plus develop's bootstrap, VBlank and
+            // transient oscillation/respawn handoff wiring.
+            "com/openggf/level/LevelManager.java", 3145,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time
@@ -106,22 +99,10 @@ class TestArchitecturalSourceGuard {
             // without a budget bump; this raises the ratchet to the true current count
             // including the +12 SS-gate lines. The gate is a handful of guarded calls
             // to TraceSessionLauncher and does not form an extractable collaborator.
-            // 2026-07-09: the independent time-attack and special/bonus-stage rewind
-            // branches both added lifecycle hooks around existing mode boundaries.
-            // Their merge produces 3168 effective lines; freeze that exact combined
-            // shape so subsequent work must still extract before growing GameLoop.
-            // 2026-07-20: multi-stage trace-run dispatch adds its focused all-mode hook
-            // on top of that combined shape; the state machine remains launcher-owned.
-            // 2026-07-28: develop's LevelIterationAdmissionController boundary and
-            // vblank-hold gating merge with next's time-attack and multiplayer frame
-            // hooks. Both sides remain delegating calls, not inlined logic.
-            // 2026-07-29: exact special-stage reward requests and Saved2 restoration
-            // add boundary wiring while stage selection, reward publication, and
-            // Saved2 application move into SpecialStageTransitionSupport. Freeze the
-            // post-extraction facade size.
-            // 2026-07-31: merging next into the S3K super-emerald branch combines both
-            // sides' independent one-line growth; freeze the merged shape.
-            GAME_LOOP_PATH, 3277
+            // 2026-08-26: exact merged inventory for multi-segment dispatch,
+            // transition-freeze admission, time-attack/multiplayer hooks and the
+            // special-stage return boundary. State machines remain collaborator-owned.
+            GAME_LOOP_PATH, 3381
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -152,12 +133,10 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 142),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 105),
             new MethodBudget(GAME_LOOP_PATH, "loadEndingDemoZone", 95),
-            // 2026-07-20: merged multi-segment run handoff with next's title-card
-            // destination policy and time-attack lifecycle hooks.
-            new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 98),
-            // 2026-07-07: enterBonusStage 86 -> 93 in the develop->next merge (bonus-stage
-            // coordinator rewind-adapter register on bonus entry).
-            new MethodBudget(GAME_LOOP_PATH, "enterBonusStage", 93)
+            // 2026-08-26: exact merged spans after title-card destination/return
+            // synthesis and bonus-stage rewind-adapter handoff.
+            new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 66),
+            new MethodBudget(GAME_LOOP_PATH, "enterBonusStage", 45)
     );
     private static final List<String> LOW_LEVEL_SERVICE_SCAN_ROOTS = List.of(
             "com/openggf/graphics",
@@ -876,6 +855,85 @@ class TestArchitecturalSourceGuard {
         assertTrue(violations.isEmpty(),
                 "LevelManager.executeActTransition should delegate act-transition reload choreography "
                         + "to LevelActTransitionExecutor. Found: " + violations);
+    }
+
+    @Test
+    void everyS3kSeamlessTransitionBuilderDeclaresRuntimeArtAdmissionPolicy()
+            throws IOException {
+        Map<String, String> eventFiles = Map.of(
+                "Sonic3kAIZEvents.java", "PRESERVE_CURRENT",
+                "Sonic3kCNZEvents.java", "TITLE_OWNER",
+                "Sonic3kICZEvents.java", "RESOURCE_HANDOFF_OWNER",
+                "Sonic3kLBZEvents.java", "TITLE_OWNER",
+                "Sonic3kMGZEvents.java", "TITLE_OWNER",
+                "Sonic3kHCZEvents.java", "TITLE_OWNER",
+                "Sonic3kMHZEvents.java", "TITLE_OWNER");
+        for (var entry : eventFiles.entrySet()) {
+            String eventFile = entry.getKey();
+            String source = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(
+                    "com/openggf/game/sonic3k/events/" + eventFile)));
+            assertS3kBuilderPolicies(eventFile, source, entry.getValue());
+        }
+    }
+
+    @Test
+    void s3kPolicyGuardRejectsDuplicateAndMissingPoliciesOnSeparateBuilders() {
+        String duplicate = """
+                SeamlessLevelTransitionRequest.builder(TYPE)
+                    .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.IMMEDIATE)
+                    .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.IMMEDIATE)
+                    .build();
+                """;
+        String missing = """
+                SeamlessLevelTransitionRequest.builder(TYPE)
+                    .build();
+                """;
+
+        assertThrows(AssertionError.class, () ->
+                assertS3kBuilderPolicies(
+                        "DuplicatePolicyEvents.java", duplicate, "IMMEDIATE"));
+        assertThrows(AssertionError.class, () ->
+                assertS3kBuilderPolicies(
+                        "MissingPolicyEvents.java", missing, "IMMEDIATE"));
+    }
+
+    private static void assertS3kBuilderPolicies(
+            String eventFile, String source, String expectedPolicy) {
+        List<String> builderChains = seamlessTransitionBuilderChains(source);
+        assertFalse(builderChains.isEmpty(),
+                eventFile + " must retain its transition builder");
+        for (int index = 0; index < builderChains.size(); index++) {
+            String chain = builderChains.get(index);
+            int policies = chain.split(
+                    "\\.runtimeArtAdmissionPolicy\\(", -1).length - 1;
+            assertEquals(1, policies,
+                    eventFile + " builder " + index
+                            + " must declare exactly one admission policy");
+            assertTrue(chain.contains(
+                            "RuntimeArtAdmissionPolicy." + expectedPolicy),
+                    eventFile + " builder " + index
+                            + " must retain its reviewed admission policy");
+        }
+    }
+
+    private static List<String> seamlessTransitionBuilderChains(String source) {
+        String marker = "SeamlessLevelTransitionRequest.builder(";
+        String terminator = ".build()";
+        List<String> chains = new ArrayList<>();
+        int cursor = 0;
+        while (true) {
+            int start = source.indexOf(marker, cursor);
+            if (start < 0) {
+                return chains;
+            }
+            int end = source.indexOf(terminator, start + marker.length());
+            if (end < 0) {
+                throw new IllegalStateException(
+                        "unterminated seamless transition builder at offset " + start);
+            }
+            chains.add(source.substring(start, end + terminator.length()));
+            cursor = end + terminator.length();
+        }
     }
 
     @Test

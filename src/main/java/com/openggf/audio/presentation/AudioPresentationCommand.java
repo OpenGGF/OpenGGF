@@ -1,5 +1,7 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.GameAudioProfile.SegaPcmPlaybackPolicy;
+
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 
@@ -144,10 +146,14 @@ public sealed interface AudioPresentationCommand
                                 snapshot.assetId(), musicId, sourceDescriptor,
                                 snapshot.sourcePositionQ32(),
                                 snapshot.sourceStepQ32(), snapshot.gainQ16(),
-                                snapshot.looping(), snapshot.stopped()));
+                                snapshot.looping(), snapshot.stopped(),
+                                snapshot.renderMode(), snapshot.synthSnapshot(),
+                                snapshot.lastDacSourceFrame()));
             } else if (voice instanceof StreamedMusicVoice streamed) {
-                descriptor = new StreamedVoiceDescriptor(
-                        (PresentationVoiceSnapshot.Streamed) streamed.snapshot());
+                PresentationVoiceSnapshot.Streamed snapshot =
+                        (PresentationVoiceSnapshot.Streamed) streamed.snapshot();
+                descriptor = new StreamedVoiceDescriptor(snapshot);
+                streamed.retireUnpublished();
             } else if (voice instanceof SmpsCompositeVoice composite) {
                 PresentationVoiceSnapshot.Smps snapshot =
                         (PresentationVoiceSnapshot.Smps) composite.snapshot();
@@ -165,15 +171,48 @@ public sealed interface AudioPresentationCommand
         }
     }
 
-    record ReplaceMusic(MusicVoiceEntry music) implements AudioPresentationCommand {
+    record ReplaceMusic(
+            MusicVoiceEntry music,
+            com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy sfxPolicy,
+            com.openggf.audio.GameAudioProfile.MusicDuringOverridePolicy
+                    musicDuringOverridePolicy)
+            implements AudioPresentationCommand {
         public ReplaceMusic {
             Objects.requireNonNull(music, "music");
+            Objects.requireNonNull(sfxPolicy, "sfxPolicy");
+            Objects.requireNonNull(musicDuringOverridePolicy,
+                    "musicDuringOverridePolicy");
+        }
+
+        public ReplaceMusic(
+                MusicVoiceEntry music,
+                com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
+                        sfxPolicy) {
+            this(music, sfxPolicy,
+                    com.openggf.audio.GameAudioProfile
+                            .MusicDuringOverridePolicy.REPLACE_IMMEDIATELY);
+        }
+
+        public ReplaceMusic(MusicVoiceEntry music) {
+            this(music,
+                    com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL,
+                    com.openggf.audio.GameAudioProfile
+                            .MusicDuringOverridePolicy.REPLACE_IMMEDIATELY);
         }
     }
 
-    record PushMusicOverride(MusicVoiceEntry music) implements AudioPresentationCommand {
+    record PushMusicOverride(
+            MusicVoiceEntry music,
+            com.openggf.audio.GameAudioProfile.MusicOverrideRetriggerPolicy
+                    retriggerPolicy) implements AudioPresentationCommand {
         public PushMusicOverride {
             Objects.requireNonNull(music, "music");
+            Objects.requireNonNull(retriggerPolicy, "retriggerPolicy");
+        }
+
+        public PushMusicOverride(MusicVoiceEntry music) {
+            this(music, com.openggf.audio.GameAudioProfile
+                    .MusicOverrideRetriggerPolicy.IGNORE);
         }
     }
 
@@ -200,27 +239,64 @@ public sealed interface AudioPresentationCommand
         }
     }
 
-    record ReplaceRawPcm(SampleVoiceDescriptor voice)
+    record ReplaceRawPcm(
+            SampleVoiceDescriptor voice,
+            SegaPcmPlaybackPolicy policy)
             implements AudioPresentationCommand {
         public ReplaceRawPcm {
             Objects.requireNonNull(voice, "voice");
+            Objects.requireNonNull(policy, "policy");
         }
 
         public static ReplaceRawPcm fromVoice(SampleBackedVoice voice) {
-            return new ReplaceRawPcm(SampleVoiceDescriptor.fromVoice(voice));
+            return fromVoice(voice,
+                    SegaPcmPlaybackPolicy.MIX_WITH_ACTIVE);
+        }
+
+        public static ReplaceRawPcm fromVoice(
+                SampleBackedVoice voice,
+                SegaPcmPlaybackPolicy policy) {
+            return new ReplaceRawPcm(SampleVoiceDescriptor.fromVoice(voice),
+                    policy);
         }
     }
 
     record StopRawPcm() implements AudioPresentationCommand {
     }
 
-    record StopMusic() implements AudioPresentationCommand {
+    record StopMusic(
+            com.openggf.audio.GameAudioProfile.SystemCommandDuringOverridePolicy
+                    systemCommandDuringOverridePolicy)
+            implements AudioPresentationCommand {
+        public StopMusic {
+            Objects.requireNonNull(systemCommandDuringOverridePolicy,
+                    "systemCommandDuringOverridePolicy");
+        }
+
+        public StopMusic() {
+            this(com.openggf.audio.GameAudioProfile
+                    .SystemCommandDuringOverridePolicy.APPLY);
+        }
     }
 
     record StopAllSfx() implements AudioPresentationCommand {
     }
 
-    record FadeMusic(int steps, int delay) implements AudioPresentationCommand {
+    record FadeMusic(
+            int steps,
+            int delay,
+            com.openggf.audio.GameAudioProfile.SystemCommandDuringOverridePolicy
+                    systemCommandDuringOverridePolicy)
+            implements AudioPresentationCommand {
+        public FadeMusic {
+            Objects.requireNonNull(systemCommandDuringOverridePolicy,
+                    "systemCommandDuringOverridePolicy");
+        }
+
+        public FadeMusic(int steps, int delay) {
+            this(steps, delay, com.openggf.audio.GameAudioProfile
+                    .SystemCommandDuringOverridePolicy.APPLY);
+        }
     }
 
     record SetVoiceGain(long voiceId, int gainQ16) implements AudioPresentationCommand {
@@ -265,6 +341,8 @@ public sealed interface AudioPresentationCommand
                 sample.voiceId(), sample.priority(), sample.assetId(),
                 sample.musicId(), sample.sourceDescriptor(),
                 sample.sourcePositionQ32(), sample.sourceStepQ32(),
-                sample.gainQ16(), sample.looping(), sample.stopped());
+                sample.gainQ16(), sample.looping(), sample.stopped(),
+                sample.renderMode(), sample.synthSnapshot(),
+                sample.lastDacSourceFrame());
     }
 }

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -72,7 +74,9 @@ class TestGameLoopTraceRunPostIteration {
                 "private void installRunComparator(", method);
         String admission = source.substring(method, end);
 
-        int timing = admission.indexOf("runHardwareTiming.handoffToSegment(");
+        // enterSegment() performs the same source-schedule handoff and also
+        // declares the drive's membership of the destination.
+        int timing = admission.indexOf("runHardwareTiming.enterSegment(");
         int dynamicArt = admission.indexOf("runDynamicArtSegments.beginSegment()");
         int comparator = admission.indexOf("installRunComparator(");
         assertTrue(timing >= 0 && dynamicArt > timing && comparator > timing,
@@ -110,7 +114,9 @@ class TestGameLoopTraceRunPostIteration {
                         DynamicArtLifecycleService.class.getDeclaredFields())
                 .anyMatch(field -> field.getType().getName()
                         .startsWith("com.openggf.trace")));
-        assertEquals(3, DynamicArtDiagnosticsProvider.class
-                .getDeclaredMethods().length);
+        assertEquals(Set.of("latestSnapshot", "gapTransitions", "gapSnapshot", "gapOpeningSnapshot"),
+                Arrays.stream(DynamicArtDiagnosticsProvider.class.getDeclaredMethods())
+                        .map(method -> method.getName())
+                        .collect(Collectors.toSet()));
     }
 }

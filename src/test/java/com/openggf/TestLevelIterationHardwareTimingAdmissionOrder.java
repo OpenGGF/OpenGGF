@@ -140,7 +140,9 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
                         com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,
                         HardwareReadinessAdmissionPolicy.RECORDED,
                         com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
-                        HardwareReadinessAdmissionPolicy.LIVE));
+                        HardwareReadinessAdmissionPolicy.LIVE,
+                        com.openggf.game.timing.HardwareWorkKind.NEMESIS_PLC_QUEUE,
+                        HardwareReadinessAdmissionPolicy.RECORDED));
         context.attachGameplayManagers(
                 new Camera(),
                 new TimerManager(),
@@ -178,7 +180,9 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
                         com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,
                         HardwareReadinessAdmissionPolicy.RECORDED,
                         com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
-                        HardwareReadinessAdmissionPolicy.LIVE)));
+                        HardwareReadinessAdmissionPolicy.LIVE,
+                        com.openggf.game.timing.HardwareWorkKind.NEMESIS_PLC_QUEUE,
+                        HardwareReadinessAdmissionPolicy.RECORDED)));
         TraceHardwareTimingBoundaryObserver observer =
                 new TraceHardwareTimingBoundaryObserver(port);
         context.setHardwareTimingBoundaryObserver(observer);

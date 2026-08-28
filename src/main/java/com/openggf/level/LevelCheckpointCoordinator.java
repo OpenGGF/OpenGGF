@@ -15,6 +15,7 @@ final class LevelCheckpointCoordinator {
     private final LevelManager levelManager;
     private RespawnState checkpointState;
     private PersistentRespawnState pendingPersistentRespawn;
+    private PersistentRespawnState persistentRespawnForCameraSnap;
 
     LevelCheckpointCoordinator(LevelManager levelManager) {
         this.levelManager = levelManager;
@@ -40,6 +41,7 @@ final class LevelCheckpointCoordinator {
     void resetState() {
         checkpointState = null;
         pendingPersistentRespawn = null;
+        persistentRespawnForCameraSnap = null;
     }
 
     void queuePersistentRespawn(PersistentRespawnState state) {
@@ -49,11 +51,19 @@ final class LevelCheckpointCoordinator {
     PersistentRespawnState consumePersistentRespawn() {
         PersistentRespawnState state = pendingPersistentRespawn;
         pendingPersistentRespawn = null;
+        persistentRespawnForCameraSnap = state;
+        return state;
+    }
+
+    PersistentRespawnState consumePersistentRespawnForCameraSnap() {
+        PersistentRespawnState state = persistentRespawnForCameraSnap;
+        persistentRespawnForCameraSnap = null;
         return state;
     }
 
     void clearPendingPersistentRespawn() {
         pendingPersistentRespawn = null;
+        persistentRespawnForCameraSnap = null;
     }
 
     CheckpointState.RewindState captureRewindState() {
@@ -94,6 +104,9 @@ final class LevelCheckpointCoordinator {
             }
             if (ctx.hasCheckpointSolidBits()) {
                 cs.saveSolidBits(ctx.getCheckpointTopSolidBit(), ctx.getCheckpointLrbSolidBit());
+            }
+            if (ctx.hasCheckpointTimer()) {
+                cs.saveActTimer(ctx.getCheckpointTimerFrames());
             }
         }
         levelManager.waterCoordinator.restoreWaterFromCheckpoint(ctx);

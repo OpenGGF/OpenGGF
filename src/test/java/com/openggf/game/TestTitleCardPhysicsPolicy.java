@@ -20,7 +20,8 @@ public class TestTitleCardPhysicsPolicy {
 
     @Test
     public void sonic2RunsPlayerPhysicsDuringLockedTitleCardPhase() {
-        assertTrue(TitleCardManager.getInstance().shouldRunPlayerPhysics());
+        assertFalse(new TitleCardManager().shouldRunPlayerPhysics(),
+                "S2 creates the players only for the 26 locked leave passes; slide-in and hold have no players");
     }
 
     @Test
@@ -28,5 +29,4 @@ public class TestTitleCardPhysicsPolicy {
         assertFalse(new Sonic3kTitleCardManager().shouldRunPlayerPhysics());
     }
 }
-
 

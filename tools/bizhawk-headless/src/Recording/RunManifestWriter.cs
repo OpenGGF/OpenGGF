@@ -171,6 +171,30 @@ namespace OpenGGF.BizHawk.Headless
         public int? RingsAfter { get; set; }
         public int? EmeraldsBefore { get; set; }
         public int? EmeraldsAfter { get; set; }
+
+        /// <summary>
+        /// Contract-1 main-loop admission census for the movie rows strictly
+        /// between the source segment's last recorded row and the destination
+        /// segment's first recorded row — the rows a run capture arms no
+        /// segment over and therefore records nowhere else.
+        ///
+        /// <para>Run-length encoded, alternating, starting with a NON-lag run
+        /// (a leading 0 when the gap opens lagged), so the list sums to the
+        /// manifest-derivable gap length. Each entry counts physical emulator
+        /// frames on which the ROM's main loop did (even index) or did not
+        /// (odd index) run — BizHawk's <c>IInputPollable.IsLagFrame</c>,
+        /// which coincides with the ROM's own <c>Vint_Lag</c> classification
+        /// by construction: <c>Vint_Lag</c> never calls <c>ReadJoypads</c>
+        /// (s2.asm:481-484, 501, 529-583) while the routines <c>WaitForVint</c>
+        /// dispatches do (e.g. <c>Vint_TitleCard</c>, s2.asm:1005-1008).</para>
+        ///
+        /// <para>This carries one bit per physical frame — whether the main
+        /// loop ran — and no position, speed, object state, or any other
+        /// gameplay or comparison value. It is a scheduling outcome under
+        /// contract 1 of the cross-game hardware-timing contract, and it
+        /// stores run LENGTHS, never a movie frame index.</para>
+        /// </summary>
+        public IList<int> GapAdmissionRuns { get; set; }
     }
 
     /// <summary>
@@ -337,6 +361,21 @@ namespace OpenGGF.BizHawk.Headless
                 AppendOptional(json, "rings_after", tx.RingsAfter);
                 AppendOptional(json, "emeralds_before", tx.EmeraldsBefore);
                 AppendOptional(json, "emeralds_after", tx.EmeraldsAfter);
+                if (tx.GapAdmissionRuns != null)
+                {
+                    json.Append(", \"gap_admission_runs\": [");
+                    for (int runIndex = 0;
+                        runIndex < tx.GapAdmissionRuns.Count;
+                        runIndex++)
+                    {
+                        if (runIndex != 0)
+                        {
+                            json.Append(',');
+                        }
+                        json.Append(Dec(tx.GapAdmissionRuns[runIndex]));
+                    }
+                    json.Append(']');
+                }
                 json.Append('}');
                 if (index < transitions.Count - 1)
                 {

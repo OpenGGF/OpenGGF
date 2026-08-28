@@ -46,7 +46,14 @@ public record AudioParityTrackState(
                 throw new IllegalArgumentException("inactive role may contain only active, hardware, and role");
             }
         } else {
-            require(baseFrequency, "baseFrequency");
+            boolean dac = role.equals("DAC");
+            if (dac) {
+                if (baseFrequency != null) {
+                    throw new IllegalArgumentException("active DAC role cannot contain baseFrequency");
+                }
+            } else {
+                require(baseFrequency, "baseFrequency");
+            }
             require(detune, "detune");
             require(doNotAttack, "doNotAttack");
             require(duration, "duration");
@@ -59,7 +66,9 @@ public record AudioParityTrackState(
             require(transpose, "transpose");
             require(voiceOrEnvelope, "voiceOrEnvelope");
             require(volume, "volume");
-            wordRange(baseFrequency, "baseFrequency");
+            if (baseFrequency != null) {
+                wordRange(baseFrequency, "baseFrequency");
+            }
             signedByte(detune, "detune");
             AudioParityChipWrite.byteRange(duration, "duration");
             AudioParityChipWrite.byteRange(durationReload, "durationReload");

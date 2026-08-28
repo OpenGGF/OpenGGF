@@ -84,8 +84,15 @@ class TestModEngineWiringSeams {
     @Test
     void audioResetAndBackendReplacementReleaseStreamedSessionState() throws IOException {
         String source = source("audio/AudioManager.java");
-        assertMethodOrder(source, "public void resetState()",
-                "backend.resetStreamedMusicPort()", "this.smpsLoader = null");
+        assertMethodOrder(source, "public synchronized void resetState()",
+                "invalidateAndReleaseStreamedMusicSession()", "beginSourceMutation()");
+        assertMethodOrder(source, "private void invalidateAndReleaseStreamedMusicSession()",
+                "streamedMusicSessionInvalidator.run()", "releaseStreamedMusicPort()");
+        assertMethodOrder(source, "private synchronized void releaseStreamedMusicPort()",
+                "backend.resetStreamedMusicPort()", "previous.close()");
+        assertMethodOrder(source, "public void setBackend(AudioBackend backend)",
+                "invalidateAndReleaseStreamedMusicSession()",
+                "destroyBackendQuietly(this.backend");
         assertMethodOrder(source, "public void setBackend(AudioBackend backend)",
                 "destroyBackendQuietly(this.backend", "this.backend = backend");
     }
@@ -181,6 +188,7 @@ class TestModEngineWiringSeams {
     private static void assertMethodOrder(String source, String method,
             String first, String second) {
         int methodIndex = source.indexOf(method);
+        assertTrue(methodIndex >= 0, () -> "source is missing " + method);
         int nextMethod = source.indexOf("\n    public ", methodIndex + method.length());
         String body = source.substring(methodIndex,
                 nextMethod < 0 ? source.length() : nextMethod);

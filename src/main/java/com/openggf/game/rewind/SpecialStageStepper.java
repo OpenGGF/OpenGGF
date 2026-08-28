@@ -59,7 +59,8 @@ final class SpecialStageStepper implements RewindSeekAwareEngineStepper {
                     PlcLifecyclePhase.SPECIAL_STAGE, () -> {
                         SpecialStageInputMapper.MappedInput mapped =
                                 SpecialStageInputMapper.map(liveInput.logical());
-                        provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+                        provider.handleInput(mapped.p1Held(), mapped.p1Pressed(),
+                                liveInput.isShiftDown(), liveInput.isControlDown());
                         provider.handlePlayer2Input(
                                 mapped.p2Held(), mapped.p2Logical());
                         provider.update();

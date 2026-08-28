@@ -523,7 +523,9 @@ public final class AudioParityJsonl {
         if (!track.active()) {
             return node;
         }
-        node.put("baseFrequency", track.baseFrequency());
+        if (track.baseFrequency() != null) {
+            node.put("baseFrequency", track.baseFrequency());
+        }
         node.put("detune", track.detune());
         node.put("doNotAttack", track.doNotAttack());
         node.put("duration", track.duration());
@@ -586,10 +588,13 @@ public final class AudioParityJsonl {
             exactFields(node, INACTIVE_TRACK_FIELDS, INACTIVE_TRACK_FIELDS, "inactive track");
         } else {
             String role = text(node, "role");
-            Set<String> required = new HashSet<>(Set.of("active", "baseFrequency", "detune", "doNotAttack",
+            Set<String> required = new HashSet<>(Set.of("active", "detune", "doNotAttack",
                     "duration", "durationReload", "hardware", "loopCounters", "modulationEnabled",
                     "overridden", "returnStack", "role", "sequencePosition", "transpose",
                     "voiceOrEnvelope", "volume"));
+            if (!role.equals("DAC")) {
+                required.add("baseFrequency");
+            }
             if (role.startsWith("PSG")) {
                 required.add("envelopeCursor");
             } else {
@@ -604,7 +609,7 @@ public final class AudioParityJsonl {
                     null, null, null, null, null, null, null, null, null, null, null);
         }
         return new AudioParityTrackState(role, hardware, true,
-                integer(node, "baseFrequency"), integer(node, "detune"), bool(node, "doNotAttack"),
+                nullableInteger(node, "baseFrequency"), integer(node, "detune"), bool(node, "doNotAttack"),
                 integer(node, "duration"), integer(node, "durationReload"), nullableInteger(node, "envelopeCursor"),
                 integerList(node, "loopCounters"), bool(node, "modulationEnabled"), bool(node, "overridden"),
                 nullableInteger(node, "pan"), nullableInteger(node, "ams"), nullableInteger(node, "fms"),

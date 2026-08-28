@@ -47,7 +47,9 @@ public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
     // Detection range for door opening: move.w #$40,d1
     private static final int DETECTION_RANGE = 0x40;
 
-    // obActWid from ROM: move.b #8,obActWid(a0)
+    // obActWid from ROM: ADoor_Main writes move.b #16/2,obActWid(a0) = 8
+    // (docs/s1disasm/_incObj/2A SBZ Small Door.asm:20-21). Read by
+    // getOnScreenHalfWidth(), and through it by Sonic_Balance.
     private static final int ACT_WIDTH = 8;
 
     // SolidObject parameters when door is closed (frame 0):
@@ -186,6 +188,30 @@ public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    /**
+     * The door's ROM {@code obActWid}.
+     *
+     * <p>{@code ADoor_Main} writes {@code move.b #16/2,obActWid(a0)} = 8
+     * (docs/s1disasm/_incObj/2A SBZ Small Door.asm:20-21). That is half the
+     * shared default, so the inherited 16 made the balance window wider than the
+     * ROM's rather than narrower: {@code Sonic_Balance} forms
+     * {@code d1 = obActWid + dx} and {@code d2 = 2*obActWid - 4}, so at 8 the
+     * ROM balances outside {@code |dx| >= 4} while the engine balanced only
+     * outside {@code |dx| >= 12} (docs/s1disasm/_incObj/01 Sonic.asm:422-431) —
+     * a band the player crosses on a top surface that only reaches
+     * {@code $11} either side.
+     *
+     * <p>Supplied here rather than at {@link #getBalanceWidthPixels()} because
+     * both ROM consumers want the byte, and the class is full-solid so the
+     * balance accessor inherits this one. {@code ADoor_Animate}'s separately
+     * authored {@code d1 = #12/2+sonic_solid_width} = {@code $11} at
+     * {@code :62} is unchanged.
+     */
+    @Override
+    public int getOnScreenHalfWidth() {
+        return ACT_WIDTH;
     }
 
     @Override

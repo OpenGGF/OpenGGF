@@ -106,12 +106,46 @@ public class CNZSlotMachineManager {
     private int lastActivationFrame = -1;
     private int lastCompletionFrame = -1;
     private int lastFineTuneTimerSeed = -1;
+    private int lastDispatchedVint = -1;
 
     private final AudioManager audioManager;
     private int frameCounter;
 
     public CNZSlotMachineManager() {
         this.audioManager = GameServices.audio();
+    }
+
+    /**
+     * Read-only view of the ROM's {@code SlotMachineVariables} block, for
+     * comparison against a recorded {@code cnz_slot_machine_state} row.
+     * Comparison-only: nothing may write engine state back from this.
+     */
+    public record Snapshot(
+            boolean inUse,
+            int routine,
+            int timer,
+            int index,
+            int reward,
+            java.util.List<Integer> slotPos,
+            java.util.List<Integer> slotSpeed,
+            java.util.List<Integer> slotRoutine) {}
+
+    /**
+     * Captures the current slot variables in ROM layout. {@code slotPos} packs
+     * the reel index in the high byte and the sub-tile offset in the low byte,
+     * matching the ROM's 16-bit {@code (index, offset)} word.
+     */
+    public Snapshot snapshot() {
+        java.util.List<Integer> pos = new java.util.ArrayList<>(3);
+        java.util.List<Integer> speed = new java.util.ArrayList<>(3);
+        java.util.List<Integer> rout = new java.util.ArrayList<>(3);
+        for (int i = 0; i < 3; i++) {
+            pos.add((((slotIndices[i] & 0xFF) << 8) | (slotOffsets[i] & 0xFF)) & 0xFFFF);
+            speed.add(slotSpeeds[i] & 0xFF);
+            rout.add(slotSubroutines[i] & 0xFF);
+        }
+        return new Snapshot(inUse, routine & 0xFF, slotTimer & 0xFF, slotIndex & 0xFF,
+                reward & 0xFFFF, pos, speed, rout);
     }
 
     /**
@@ -161,6 +195,7 @@ public class CNZSlotMachineManager {
         inUse = false;
         slotTimer = 0;
         slotIndex = 0;
+        lastDispatchedVint = -1;
         for (int i = 0; i < 3; i++) {
             slotIndices[i] = 0;
             slotOffsets[i] = 0;
@@ -211,6 +246,11 @@ public class CNZSlotMachineManager {
                     ? objectManager.getVblaCounter()
                     : levelManager.getFrameCounter();
         }
+        int currentVint = currentFrame & 0xFFFF;
+        if (lastDispatchedVint == currentVint) {
+            return;
+        }
+        lastDispatchedVint = currentVint;
         update(currentFrame);
     }
 
@@ -435,8 +475,12 @@ public class CNZSlotMachineManager {
                     // (SlotMachine_ChangeTarget, s2.asm:59075-59085).
                     int alignedIdx = ((pos + 0x80) >> 8) & 0x07;
                     setTargetForSlot(slot, sequence[alignedIdx]);
-                    int newPos = (((pos + 0x80) & 0x700) - 0x10) & 0x7FF;
-                    slotIndices[slot] = (newPos >> 8) & 0x07;
+                    // The ROM masks the face boundary, then performs a 16-bit
+                    // subtraction. Boundary zero therefore underflows to
+                    // $FFF0; it is not re-masked to the eight-face window
+                    // (SlotMachine_Routine5_2, s2.asm:59550-59558).
+                    int newPos = (((pos + 0x80) & 0x700) - 0x10) & 0xFFFF;
+                    slotIndices[slot] = (newPos >> 8) & 0xFF;
                     slotOffsets[slot] = newPos & 0xFF;
                     // Negative speed to reverse slowly (-8 in original)
                     slotSpeeds[slot] = -8;
@@ -545,7 +589,10 @@ public class CNZSlotMachineManager {
     private void routineDetermineReward() {
         // Stop all slots
         for (int i = 0; i < 3; i++) {
+            // ROM Routine6 uses clr.w at slotN_speed, clearing both the speed
+            // byte and its adjacent slotN_rout byte (s2.asm:59579-59581).
             slotSpeeds[i] = 0;
+            slotSubroutines[i] = SLOT_SUB_WAIT;
         }
         slotTimer = 0;
 

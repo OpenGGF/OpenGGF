@@ -554,6 +554,8 @@ class TestGraphCoveredIsolatedProbeClassification {
     @Test
     void finalParentDependentTailRowsAreReportedAsGraphCovered() {
         Map<String, String> expected = Map.ofEntries(
+                Map.entry("com.openggf.game.sonic2.objects.BridgeSegmentObjectInstance",
+                        "TestS2BridgeSegmentGraphRewind"),
                 Map.entry("com.openggf.game.sonic2.objects.MTZLongPlatformCogInstance",
                         "com.openggf.game.sonic2.objects.TestS2MtzLongPlatformCogGraphRewind"),
                 Map.entry("com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance$CorkeyNozzleChild",

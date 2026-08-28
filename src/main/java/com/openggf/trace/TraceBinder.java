@@ -47,6 +47,20 @@ public class TraceBinder {
     // frames, and long complete-run segments would otherwise retain tens of
     // thousands of them.
     private int highestComparedFrame = Integer.MIN_VALUE;
+    // Life-count change tracking. A death or a 1UP is only visible as a
+    // *transition*, so alongside the level comparison the binder emits a
+    // per-frame delta comparison whose mismatch names the exact frame the ROM
+    // gained or lost a life. Updated strictly forwards so aux re-merges and
+    // re-comparisons of earlier frames recompute the same delta.
+    private int lastLivesFrame = Integer.MIN_VALUE;
+    private int lastExpectedLives = TraceFrame.LIVES_ABSENT;
+    private int lastActualLives = EngineDiagnostics.LIVES_ABSENT;
+    // Baseline the current frame's delta was measured against, retained so a
+    // re-put of the same frame reproduces the same lives_delta rather than
+    // dropping the field.
+    private int livesBaselineFrame = Integer.MIN_VALUE;
+    private int livesBaselineExpected = TraceFrame.LIVES_ABSENT;
+    private int livesBaselineActual = EngineDiagnostics.LIVES_ABSENT;
     private List<BootstrapDivergence> lastBootstrapDivergences = List.of();
     // One binder compares one replay segment, so it owns that segment's
     // dynamic-art delivery-id origin. See DynamicArtIdEpoch.
@@ -259,6 +273,8 @@ public class TraceBinder {
             fields.put("rings", compareRingCount(expected.rings(), engineDiag.rings()));
         }
 
+        appendLifeCountComparisons(fields, expected, engineDiag);
+
         // Camera coords: only compared when BOTH ROM trace and engine diagnostics
         // recorded them. Engine values are masked to 16 bits to align with ROM's
         // u16 Camera_X_pos / Camera_Y_pos representation across the sign boundary.
@@ -466,6 +482,56 @@ public class TraceBinder {
     }
 
     /**
+     * Merges dropped recorded hardware-completion edges into a row as an
+     * exact comparison error. The recorded stream expected a completion the
+     * engine never submitted; the edge released nothing, and this records
+     * that fact at its own row instead of aborting the comparison.
+     */
+    public void compareRecordedHardwareCompletions(
+            int frame, List<String> unmatched) {
+        if (unmatched == null || unmatched.isEmpty()) {
+            return;
+        }
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            existing = new FrameComparison(frame, Map.of());
+        }
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        String name = "hardware_timing.unmatched_completions";
+        fields.put(name, compareObjectField(name, "", String.join(" | ", unmatched)));
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields,
+                existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    /**
+     * Merges production submissions the recorded stream never completed into a
+     * row as an exact comparison error. The submissions were never admitted or
+     * released; this records that the run closed holding them instead of
+     * aborting the comparison.
+     */
+    public void comparePendingRecordedHardwareSubmissions(List<String> pending) {
+        if (pending == null || pending.isEmpty()) {
+            return;
+        }
+        // The complaint belongs to the closing row, which is the last row this
+        // comparison actually reached, so it can never displace an earlier
+        // divergence as the first reported error.
+        int frame = comparisonsByFrame.keySet().stream()
+                .mapToInt(Integer::intValue).max().orElse(0);
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            existing = new FrameComparison(frame, Map.of());
+        }
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        String name = "hardware_timing.pending_submissions";
+        fields.put(name, compareObjectField(name, "", String.join(" | ", pending)));
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields,
+                existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    /**
      * Merges exact player dynamic-art lifecycle fields into this row.
      *
      * <p>A DPLC heartbeat may be the only compared surface on lag and
@@ -597,6 +663,126 @@ public class TraceBinder {
         return frame.input() == bk2Input;
     }
 
+    /**
+     * Compares the ROM's recorded {@code SlotMachineVariables} against the
+     * engine's. Comparison-only: nothing here writes engine state.
+     *
+     * <p>Every field is an exact ROM byte, so any mismatch is a real
+     * divergence with no tolerance and is reported at ERROR. The reel speeds
+     * and the roll timer are the
+     * load-bearing ones:
+     * the ROM computes them from {@code V_int_run_count} by byte arithmetic
+     * (s2.asm:59360-59375), so they pin the exact counter {@code SlotMachine}
+     * consumed and make a clock or call-ordering error at this site visible on
+     * the frame it happens instead of thousands of rows later.
+     *
+     * <p>{@code reward} is deliberately not compared. The ROM's
+     * {@code SlotMachine_Reward} is decremented as prizes spawn
+     * (s2.asm:59190) while the engine's field holds the once-computed payout,
+     * so the two are different quantities despite the shared name.
+     */
+    /**
+     * Compares ObjB2's recorded SST against the engine's. Comparison-only.
+     *
+     * <p>Emitted at WARNING for the same reason as the CNZ slot block: brand-new
+     * coverage of a stream nothing has ever compared, so its frontier is
+     * untriaged. Promote to ERROR once the divergences are zero.
+     */
+    public void compareS2Tornado(
+            int frame,
+            TraceEvent.S2TornadoState expected,
+            com.openggf.game.sonic2.objects.TornadoObjectInstance.Snapshot actual) {
+        if (expected == null || actual == null) {
+            return;
+        }
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            existing = new FrameComparison(frame, Map.of());
+        }
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        putTornadoField(fields, "tornado.x", expected.x(), actual.x());
+        putTornadoField(fields, "tornado.y", expected.y(), actual.y());
+        putTornadoField(fields, "tornado.y_sub", expected.ySub(), actual.ySub());
+        putTornadoField(fields, "tornado.y_vel", expected.yVel(), actual.yVel());
+        putTornadoField(fields, "tornado.routine", expected.routine(), actual.routine());
+        putTornadoField(fields, "tornado.routine_secondary",
+                expected.routineSecondary(), actual.routineSecondary());
+        putTornadoField(fields, "tornado.status_byte", expected.statusByte(), actual.statusByte());
+        putTornadoField(fields, "tornado.objoff_2e", expected.objoff2E(), actual.objoff2E());
+        putTornadoField(fields, "tornado.objoff_2f", expected.objoff2F(), actual.objoff2F());
+        putTornadoField(fields, "tornado.objoff_30", expected.objoff30(), actual.objoff30());
+        putTornadoField(fields, "tornado.objoff_31", expected.objoff31(), actual.objoff31());
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    /**
+     * Emits one Tornado field at WARNING rather than ERROR.
+     *
+     * <p>Deliberate and temporary. This comparison is brand-new coverage of a
+     * block the recording has always carried and nothing ever read, so its
+     * frontier has never been triaged: turning it on at ERROR would take two
+     * currently-green release-scope classes red for divergences that predate
+     * the comparison and that no round has owned. Warnings keep every one of
+     * them visible in the report, which is the whole point of wiring it in,
+     * without converting an untriaged unknown into a release blocker.
+     *
+     * <p>The CNZ slot block is now exact and uses {@link #putSlotField}; keep
+     * this helper separate until ObjB2's child-presence identity boundary is
+     * closed.
+     */
+    private void putTornadoField(
+            Map<String, FieldComparison> fields, String name, int expected, int actual) {
+        boolean match = expected == actual;
+        fields.put(name, new FieldComparison(
+                name,
+                String.format("0x%04X", expected & 0xFFFF),
+                String.format("0x%04X", actual & 0xFFFF),
+                match ? Severity.MATCH : Severity.WARNING,
+                actual - expected));
+    }
+
+    private void putSlotField(
+            Map<String, FieldComparison> fields, String name, int expected, int actual) {
+        boolean match = expected == actual;
+        fields.put(name, new FieldComparison(
+                name,
+                String.format("0x%04X", expected & 0xFFFF),
+                String.format("0x%04X", actual & 0xFFFF),
+                match ? Severity.MATCH : Severity.ERROR,
+                actual - expected));
+    }
+
+    public void compareCnzSlotMachine(
+            int frame,
+            TraceEvent.CnzSlotMachineState expected,
+            com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager.Snapshot actual) {
+        if (expected == null || actual == null) {
+            return;
+        }
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            existing = new FrameComparison(frame, Map.of());
+        }
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        putSlotField(fields, "cnz_slot.in_use",
+                expected.inUse() ? 1 : 0, actual.inUse() ? 1 : 0);
+        putSlotField(fields, "cnz_slot.routine", expected.routine(), actual.routine());
+        putSlotField(fields, "cnz_slot.timer", expected.timer(), actual.timer());
+        putSlotField(fields, "cnz_slot.index", expected.index(), actual.index());
+        for (int i = 0; i < 3; i++) {
+            int slot = i + 1;
+            putSlotField(fields, "cnz_slot.slot" + slot + "_speed",
+                    expected.slotSpeed().get(i), actual.slotSpeed().get(i));
+            putSlotField(fields, "cnz_slot.slot" + slot + "_pos",
+                    expected.slotPos().get(i), actual.slotPos().get(i));
+            putSlotField(fields, "cnz_slot.slot" + slot + "_routine",
+                    expected.slotRoutine().get(i), actual.slotRoutine().get(i));
+        }
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
     private FieldComparison compareNumeric(String name, int expected, int actual,
             int warn, int error, boolean signChangeIsError) {
         int delta = Math.abs(expected - actual);
@@ -651,6 +837,76 @@ public class TraceBinder {
         return new FieldComparison(name,
             String.valueOf(expected), String.valueOf(actual),
             Severity.ERROR, Math.abs(expected - actual));
+    }
+
+
+    /**
+     * Compare the ROM life counter against the engine's.
+     *
+     * <p>Two fields are emitted, and deliberately not folded into one:
+     * <ul>
+     *   <li>{@code lives} -- the level. A missed or spurious death leaves the two
+     *       sides disagreeing from the transition onwards, so this catches the
+     *       condition even if the replay is only inspected later.</li>
+     *   <li>{@code lives_delta} -- the transition. This is the field that answers
+     *       "on which frame". It compares the per-frame change rather than the
+     *       running total, so exactly the frame where the ROM gained or lost a
+     *       life (and the engine did not, or vice versa) reports ERROR instead of
+     *       every frame after it.</li>
+     * </ul>
+     *
+     * <p>When the recording carries {@code life_count} but the engine snapshot has
+     * no life count, {@code lives_present} reports ERROR rather than the
+     * comparison silently disappearing. Recordings made before the column existed
+     * carry {@link TraceFrame#LIVES_ABSENT} and emit no fields at all -- that is
+     * the only path on which nothing is compared, and it is keyed on the recording,
+     * not on the engine.
+     *
+     * <p>Comparison-only: nothing here writes the recorded count anywhere.
+     */
+    private void appendLifeCountComparisons(Map<String, FieldComparison> fields,
+            TraceFrame expected, EngineDiagnostics engineDiag) {
+        int expectedLives = expected.lives();
+        if (expectedLives < 0) {
+            // Pre-life_count recording: no life data was recorded to compare against.
+            return;
+        }
+        int actualLives = engineDiag == null
+                ? EngineDiagnostics.LIVES_ABSENT
+                : engineDiag.lives();
+        boolean enginePresent = actualLives >= 0;
+        fields.put("lives_present", compareFlag("lives_present", true, enginePresent));
+        if (!enginePresent) {
+            return;
+        }
+
+        fields.put("lives", compareDecimal("lives", expectedLives, actualLives));
+
+        if (expected.frame() > lastLivesFrame) {
+            livesBaselineFrame = expected.frame();
+            livesBaselineExpected = lastExpectedLives;
+            livesBaselineActual = lastActualLives;
+            lastLivesFrame = expected.frame();
+            lastExpectedLives = expectedLives;
+            lastActualLives = actualLives;
+        }
+        if (expected.frame() == livesBaselineFrame
+                && livesBaselineExpected >= 0 && livesBaselineActual >= 0) {
+            fields.put("lives_delta", compareDecimal("lives_delta",
+                    expectedLives - livesBaselineExpected,
+                    actualLives - livesBaselineActual));
+        }
+    }
+
+    /**
+     * Exact comparison rendered in decimal. Life counts and their per-frame
+     * deltas are read by humans as counts, not as ROM words, and a delta of
+     * {@code -1} must not print as {@code -0001}.
+     */
+    private static FieldComparison compareDecimal(String name, int expected, int actual) {
+        Severity severity = expected == actual ? Severity.MATCH : Severity.ERROR;
+        return new FieldComparison(name, String.valueOf(expected), String.valueOf(actual),
+                severity, Math.abs(expected - actual));
     }
 
     private FieldComparison compareRingCount(int expected, int actual) {

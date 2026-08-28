@@ -90,7 +90,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, 0x41, 0x00, 0, false, 0),
                 "TestSpring");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
 
         ObjectManager manager = buildManager(spring);
         TestableSprite player = new TestableSprite("tails");
@@ -114,7 +114,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0x41, 0x00, 0, false, 0),
                 "TestSpring");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -133,7 +133,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0x41, 0x00, 0, false, 0),
                 "TestSpring");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -153,7 +153,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0x41, 0x20, 0, false, 0),
                 "DownSpring");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -173,7 +173,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, 0x41, 0x30, 0, false, 0),
                 "DiagSpring");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -219,7 +219,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, 0x41, 0x30, 0x01, false, 0),
                 "DiagSpringFlipped");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -262,7 +262,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, 0x41, 0x10, 0, false, 0),
                 "HorizontalSpring");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");
@@ -285,7 +285,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, 0x41, 0x30, 0x01, false, 0),
                 "DiagSpringFlipped");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
 
         ObjectManager manager = buildManager(spring);
 
@@ -325,7 +325,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, 0x41, 0x32, 0x01, false, 0),
                 "DiagSpringFlipped");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
 
         ObjectManager manager = buildManager(spring);
         TestableSprite player = new TestableSprite("sonic");
@@ -358,7 +358,7 @@ class TestSpringObjectInstance {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, 0x41, 0x38, 0x00, false, 0),
                 "DiagSpringUnflipped");
-        spring.setServices(new TestObjectServices());
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         invoke(spring, "ensureInitialized");
 
         TestableSprite player = new TestableSprite("sonic");

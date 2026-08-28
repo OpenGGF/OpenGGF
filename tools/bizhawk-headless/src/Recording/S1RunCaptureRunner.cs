@@ -187,9 +187,16 @@ namespace OpenGGF.BizHawk.Headless
                 : new S1DynamicArtObserver(
                     loadQueueRom, host,
                     () => state.DynamicArtLogicalFrame);
+            // RunPLC arming, observed at its entry PC because the routine
+            // destroys the head identity (S1PlcHardwareTimingObserver). It
+            // reads the Nemesis header out of the ROM image, so the
+            // scratch-only legacy capture records nothing.
+            S1PlcHardwareTimingObserver hardwareTiming = loadQueueRom == null
+                ? null
+                : new S1PlcHardwareTimingObserver(loadQueueRom, host);
             state = new RunState(
                 runId, sourceBk2, recordingDate, luaScriptVersion,
-                segmentSink, loadQueueRom, dynamicArt);
+                segmentSink, loadQueueRom, dynamicArt, hardwareTiming);
 
             try
             {
@@ -211,6 +218,13 @@ namespace OpenGGF.BizHawk.Headless
                     Bk2Frame frame = frames.Current;
                     state.PrepareDynamicArtCursor(rowsConsumed);
                     S1TraceCaptureRunner.ApplyFrame(frame, host);
+                    // Anything the previous advance observed has either
+                    // been committed by its row or belongs to no row at
+                    // all; either way this advance starts clean.
+                    if (hardwareTiming != null)
+                    {
+                        hardwareTiming.BeginFrame();
+                    }
                     host.Advance();
                     rowsConsumed++;
                     if (host.CompletedFrame != rowsConsumed)
@@ -305,6 +319,10 @@ namespace OpenGGF.BizHawk.Headless
             }
             finally
             {
+                if (hardwareTiming != null)
+                {
+                    hardwareTiming.Dispose();
+                }
                 if (dynamicArt != null)
                 {
                     dynamicArt.Dispose();
@@ -346,6 +364,7 @@ namespace OpenGGF.BizHawk.Headless
             private readonly IRunSegmentSink segmentSink;
             private readonly byte[] loadQueueRom;
             private readonly S1DynamicArtObserver dynamicArt;
+            private readonly S1PlcHardwareTimingObserver hardwareTiming;
 
             private readonly List<RunManifestSegment> segments =
                 new List<RunManifestSegment>();
@@ -402,7 +421,8 @@ namespace OpenGGF.BizHawk.Headless
                 string luaScriptVersion,
                 IRunSegmentSink segmentSink,
                 byte[] loadQueueRom,
-                S1DynamicArtObserver dynamicArt)
+                S1DynamicArtObserver dynamicArt,
+                S1PlcHardwareTimingObserver hardwareTiming)
             {
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
@@ -411,6 +431,7 @@ namespace OpenGGF.BizHawk.Headless
                 this.segmentSink = segmentSink;
                 this.loadQueueRom = loadQueueRom;
                 this.dynamicArt = dynamicArt;
+                this.hardwareTiming = hardwareTiming;
             }
 
             internal bool Started { get; private set; }
@@ -500,6 +521,7 @@ namespace OpenGGF.BizHawk.Headless
                         WriteLine(auxWriter, auxLines[index]);
                     }
                 }
+                CommitHardwareTimingRow();
                 traceFrame++;
             }
 
@@ -597,6 +619,7 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     WriteLine(physicsWriter, physicsLine);
                 }
+                CommitHardwareTimingRow();
                 traceFrame++;
             }
 
@@ -761,6 +784,13 @@ namespace OpenGGF.BizHawk.Headless
                     dirToken);
                 physicsWriter = streams.PhysicsCsv;
                 auxWriter = streams.AuxStateJsonl;
+                if (hardwareTiming != null)
+                {
+                    // Lazy: the sink is asked for the file only if this
+                    // segment actually records an edge.
+                    hardwareTiming.ArmSegment(new LazyOpenTextWriter(
+                        segmentSink.OpenHardwareTimingStream));
+                }
             }
 
             private void CloseSegmentStreams(
@@ -768,7 +798,25 @@ namespace OpenGGF.BizHawk.Headless
             {
                 physicsWriter = null;
                 auxWriter = null;
+                if (hardwareTiming != null)
+                {
+                    hardwareTiming.EndSegment();
+                }
                 segmentSink.EndSegment(entry, metadata);
+            }
+
+            /// <summary>
+            /// Attributes this frame's readiness edges to the row just
+            /// written. A frame that produces no row for this segment
+            /// (detours, boundaries, the pre-arm span) never reaches here,
+            /// and its edges are dropped at the next BeginFrame.
+            /// </summary>
+            private void CommitHardwareTimingRow()
+            {
+                if (hardwareTiming != null)
+                {
+                    hardwareTiming.CommitRow(traceFrame);
+                }
             }
 
             private static void WriteLine(TextWriter writer, string line)

@@ -554,9 +554,9 @@ final class ObjectTouchResponseController {
                     && instance instanceof LostRingObjectInstance);
             boolean useFrameStartSnapshot = usePreUpdateState && !useCurrentTouchState;
             int objX = objectCallbacks.call(instance,
-                    useFrameStartSnapshot ? instance::getPreUpdateX : instance::getX);
+                    useFrameStartSnapshot ? instance::getPreUpdateCollisionX : instance::getCollisionX);
             int objY = objectCallbacks.call(instance,
-                    useFrameStartSnapshot ? instance::getPreUpdateY : instance::getY);
+                    useFrameStartSnapshot ? instance::getPreUpdateCollisionY : instance::getCollisionY);
             if (category == TouchCategory.HURT
                     && tryShieldDeflect(player, instance, provider, touchProfile,
                             objX, objY, width, height)) {
@@ -908,28 +908,14 @@ final class ObjectTouchResponseController {
             TouchResponseResult result) {
         int sourceX = (result != null && result.hasRegionX())
                 ? result.regionX()
-                : instance != null ? objectCallbacks.call(instance, instance::getX) : sidekick.getCentreX();
-        int previousAnimationId = sidekick.getAnimationId();
-        boolean applied = sidekick.applyHurt(sourceX);
-        // Object-owned touch providers can preserve the prior raw animation
-        // when their ROM touch owner leaves anim untouched. Direct object-owned
-        // HurtCharacter calls still use applyHurt() and publish $1A; this
-        // provider rule therefore applies only to the generic touch dispatcher.
-        TouchResponseProvider provider = instance instanceof TouchResponseProvider
-                ? (TouchResponseProvider) instance
-                : null;
-        if (applied
-                && provider != null
-                && !provider.sidekickTouchHurtPublishesAnimation()
-                && sidekick instanceof AbstractPlayableSprite playable) {
-            playable.setAnimationId(previousAnimationId);
-            playable.setForcedAnimationId(previousAnimationId);
-            // The shared applyHurt path briefly published $1A and the ROM
-            // sidekick touch owner restarts the retained raw script on the
-            // following Animate_Tails pass. Reset the manager's private
-            // prev_anim/script cursor without changing the comparison state.
-            playable.forceAnimationRestart();
-        }
+                : instance != null
+                        ? objectCallbacks.call(instance, instance::getCollisionX)
+                        : sidekick.getCentreX();
+        // HurtCharacter's common tail always publishes $1A (sonic3k.asm:21321).
+        // Where the ROM appears to keep the prior byte it is the solid
+        // push-release tail erasing it later in the same frame, which
+        // ObjectSolidContactController owns; the touch path has no say in it.
+        sidekick.applyHurt(sourceX);
     }
 
     private boolean isOverlapping(int playerX, int playerY, int playerHeight,
@@ -1196,8 +1182,8 @@ final class ObjectTouchResponseController {
         if (target == null) {
             return false;
         }
-        int dx = (short) (player.getCentreX() - target.getX());
-        int dy = (short) (player.getCentreY() - target.getY());
+        int dx = (short) (player.getCentreX() - target.getCollisionX());
+        int dy = (short) (player.getCentreY() - target.getCollisionY());
         int angle = segaAngle(dx, dy);
         return ((angle - 0x20) & 0xFF) < 0x40;
     }
@@ -1215,22 +1201,9 @@ final class ObjectTouchResponseController {
         // ROM-accurate: React_Enemy (s1.asm) only modifies obVelY, it does NOT
         // set the air flag. Letting the collision system handle air state naturally
         // preserves rolling through enemy bounces (ground roll into badnik).
-        short ySpeed = player.getYSpeed();
-        if (ySpeed < 0) {
-            player.setYSpeed((short) (ySpeed + 0x100));
-            return;
-        }
-        // Use center coordinates to match ROM y_pos behavior
-        int playerY = player.getCentreY();
-        // The overlap and bounce both dereference the same object slot in all three
-        // ROMs; keep the already-resolved touch Y instead of re-reading a later
-        // engine projection (S1 ReactToItem.asm:163,301-304; S2 s2.asm:
-        // 85127,85414-85420; S3K sonic3k.asm:20697,20974-20989).
-        if (playerY < enemyY) {
-            player.setYSpeed((short) -ySpeed);
-        } else {
-            player.setYSpeed((short) (ySpeed - 0x100));
-        }
+        // Shared with the objects that call EnemyDefeated themselves off the
+        // Touch_Special route — see EnemyDefeatBounce for the ROM listing.
+        EnemyDefeatBounce.apply(player, enemyY);
     }
 
     /**
@@ -1297,7 +1270,9 @@ final class ObjectTouchResponseController {
         // for the hurt-direction comparison (docs/s1disasm/_incObj/Sonic ReactToItem.asm:402-405).
         int sourceX = (result != null && result.hasRegionX())
                 ? result.regionX()
-                : instance != null ? objectCallbacks.call(instance, instance::getX) : player.getCentreX();
+                : instance != null
+                        ? objectCallbacks.call(instance, instance::getCollisionX)
+                        : player.getCentreX();
         boolean spikeHit = instance != null
                 && objectCallbacks.call(instance, instance::getSpawn).objectId() == 0x36;
 

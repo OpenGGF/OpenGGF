@@ -8,6 +8,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,16 +17,19 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -38,10 +42,155 @@ class TestBuildToolingGuard {
             Path.of(".githooks/machine-local-path-grandfather.sha256").toAbsolutePath();
     private static final Path POST_CHECKOUT_HOOK = Path.of(".githooks/post-checkout").toAbsolutePath();
     private static final Path PROJECT_GITIGNORE = Path.of(".gitignore").toAbsolutePath();
+    private static final Path TRACE_REPORT_VALIDATOR =
+            Path.of("tools/testing/validate-trace-reports.py").toAbsolutePath();
     private static final String ALL_ZERO_OID = "0000000000000000000000000000000000000000";
     private static final String RESOURCE_POLICY_CUTOVER = "ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0";
-    private static final String FRONTIER_GRANDFATHER_BASELINE = "53de63da2";
+    // The commit this baseline is read from must be reachable from the
+    // integration branch, or the guard can only pass on a clone that happens to
+    // hold the other ref. 53de63da2 was such a commit: it lives only on
+    // feature/ai-trace-fleet-regeneration, was never pushed to origin, and so is
+    // absent from every CI checkout regardless of fetch depth -- the guard was
+    // green on the authoring machine and unrunnable everywhere else. 9fb9f4011
+    // is an ancestor of develop carrying the byte-identical blob
+    // (c9e3704624c03827fbd3521d1ff276eb60fd3b99), so the baseline content is
+    // unchanged and only its reachability differs.
+    private static final String FRONTIER_GRANDFATHER_BASELINE = "9fb9f4011";
     private static final String FRONTIER_LOG_PATH = "docs/status/trace-frontier-log.md";
+    private static final List<String> SESSION_DOCUMENTATION_FILES = List.of(
+            "AGENTS.md", "CLAUDE.md", "README.md",
+            "docs/guide/contributing/dev-setup.md",
+            "docs/guide/contributing/testing.md",
+            "docs/guide/contributing/trace-replay.md",
+            "docs/guide/contributing/trace-framework-reference.md",
+            "docs/guide/playing/getting-started.md",
+            "docs/guide/contributing/tutorial-implement-object.md",
+            "docs/guide/PLAN.md");
+    private static final List<String> TASK4_INVENTORY_FILES = List.of(
+            "src/test/java/com/openggf/audio/TestLiveCaptureSurvivesBackendSwap.java",
+            "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmark.java",
+            "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmarkComparator.java",
+            "src/test/java/com/openggf/audio/SmpsRepeatedPlaybackBenchmarkComparator.java",
+            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
+            "src/test/java/com/openggf/capture/CaptureRecorderTest.java",
+            "src/test/java/com/openggf/capture/LiveCaptureControllerTest.java",
+            "src/test/java/com/openggf/capture/LiveCaptureRecorderFactoryTest.java",
+            "src/test/java/com/openggf/game/TestInstaShieldVisual.java",
+            "src/test/java/com/openggf/game/rewind/RewindBenchmark.java",
+            "src/test/java/com/openggf/game/rewind/RewindRoundTripHarness.java",
+            "src/test/java/com/openggf/game/rewind/TestRewindManySidekickPerformanceTrace.java",
+            "src/test/java/com/openggf/game/rewind/schema/TestRewindFieldDispositionGuard.java",
+            "src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java",
+            "src/test/java/com/openggf/game/sonic3k/dataselect/S3kDataSelectVisualCapture.java",
+            "src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java",
+            "src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java",
+            "src/test/java/com/openggf/graphics/VisualRegressionTest.java",
+            "src/test/java/com/openggf/level/TestLevelRendererBackgroundSamplingPerformance.java",
+            "src/test/java/com/openggf/tests/TestAizFireCurtainGpuDiag.java",
+            "src/test/java/com/openggf/tests/trace/SlotOccupancyProbe.java",
+            "src/test/java/com/openggf/graphics/shaderlib/TestDisplayShaderPackDiagnostics.java",
+            "src/test/java/com/openggf/tools/TestTraceCaptureUnifiedAudio.java",
+            "src/test/java/com/openggf/tools/TraceCaptureSessionTest.java",
+            "src/test/java/com/openggf/tools/audio/parity/TestS1AudioParityCli.java",
+            "src/test/java/com/openggf/tools/audio/parity/TestS1OpenGgfAudioCapture.java",
+            "src/test/java/com/openggf/tools/audio/timeline/TestS1GameplayAudioTimelineCli.java",
+            "src/test/java/com/openggf/configuration/CaptureConfigDefaultsTest.java",
+            "src/test/java/com/openggf/tests/TestTempFiles.java",
+            "src/test/java/com/openggf/tests/TestNoLeakedTemporaryFiles.java",
+            "src/main/java/com/openggf/configuration/SonicConfigurationService.java",
+            "src/main/java/com/openggf/tools/BenchmarkCompareTool.java",
+            "src/main/java/com/openggf/tools/TraceBenchmarkTool.java",
+            "src/main/java/com/openggf/tools/TraceCaptureTool.java",
+            "src/main/java/com/openggf/tools/audio/parity/S1AudioParityTool.java",
+            "src/main/java/com/openggf/tools/audio/timeline/S1GameplayAudioTimelineTool.java",
+            "src/main/java/com/openggf/tools/timing/S3kLoadTimeProfileGenerator.java",
+            "src/main/resources/config.yaml",
+            "tools/audio/run_complete_audio_parity.sh",
+            "tools/audio/run_s1_audio_parity.sh",
+            "tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh",
+            "tools/audio/README.md",
+            "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch8Codecs.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch9Codecs.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch10Codecs.java",
+            "src/test/java/com/openggf/game/rewind/TestScalarOnlyCodecDeletion.java",
+            "src/test/java/com/openggf/game/rewind/TestS3kAizEndBossGraphRewind.java",
+            "src/test/java/com/openggf/game/rewind/TestS3kHczEndBossGraphRewind.java",
+            "src/packaging/assemble-macos-app.sh",
+            "pom.xml");
+
+    /*
+     * These files are part of the fixed-output inventory but are not writers
+     * owned by this migration: the run-chain base inherits TraceReportWriter,
+     * the rewind cases only exercise state, and the remaining files document or
+     * configure a producer. Keeping them in a named category makes a future
+     * direct writer addition fail the inventory test instead of silently
+     * becoming another shared target producer.
+     */
+    private static final Set<String> TASK4_SUPPORT_FILES = Set.of(
+            "src/main/resources/config.yaml",
+            "tools/audio/README.md",
+            "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch8Codecs.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch9Codecs.java",
+            "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch10Codecs.java",
+            "src/test/java/com/openggf/game/rewind/TestScalarOnlyCodecDeletion.java",
+            "src/test/java/com/openggf/game/rewind/TestS3kAizEndBossGraphRewind.java",
+            "src/test/java/com/openggf/game/rewind/TestS3kHczEndBossGraphRewind.java",
+            "src/packaging/assemble-macos-app.sh");
+
+    private static final Pattern LEGACY_OUTPUT_WRITE = Pattern.compile(
+            "(?s)(?:Files\\.(?:write|writeString|writeAllBytes|newBufferedWriter)"
+                    + "|new\\s+(?:FileOutputStream|FileWriter))[^;]*"
+                    + "(?:target/(?:trace-reports|audio-parity|trace-videos)|"
+                    + "Path\\.of\\(\\s*\\\"target|Paths\\.get\\(\\s*\\\"target)");
+
+    private static final Set<String> SESSION_OUTPUT_FILES = Set.of(
+            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
+            "src/test/java/com/openggf/game/TestInstaShieldVisual.java",
+            "src/test/java/com/openggf/game/rewind/RewindBenchmark.java",
+            "src/test/java/com/openggf/game/rewind/RewindRoundTripHarness.java",
+            "src/test/java/com/openggf/game/rewind/TestRewindManySidekickPerformanceTrace.java",
+            "src/test/java/com/openggf/game/rewind/schema/TestRewindFieldDispositionGuard.java",
+            "src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java",
+            "src/test/java/com/openggf/game/sonic3k/dataselect/S3kDataSelectVisualCapture.java",
+            "src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java",
+            "src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java",
+            "src/test/java/com/openggf/graphics/VisualRegressionTest.java",
+            "src/test/java/com/openggf/level/TestLevelRendererBackgroundSamplingPerformance.java",
+            "src/test/java/com/openggf/tests/TestAizFireCurtainGpuDiag.java",
+            "src/test/java/com/openggf/tests/trace/SlotOccupancyProbe.java",
+            "src/test/java/com/openggf/graphics/shaderlib/TestDisplayShaderPackDiagnostics.java",
+            "src/main/java/com/openggf/configuration/SonicConfigurationService.java",
+            "src/main/java/com/openggf/tools/TraceCaptureTool.java",
+            "src/main/java/com/openggf/tools/audio/parity/S1AudioParityTool.java",
+            "src/main/java/com/openggf/tools/audio/timeline/S1GameplayAudioTimelineTool.java",
+            "tools/audio/run_complete_audio_parity.sh",
+            "tools/audio/run_s1_audio_parity.sh",
+            "tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh",
+            "pom.xml");
+
+    private static final Set<String> EXPLICIT_OUTPUT_FILES = Set.of(
+            "src/main/java/com/openggf/tools/BenchmarkCompareTool.java",
+            "src/main/java/com/openggf/tools/TraceBenchmarkTool.java",
+            "src/main/java/com/openggf/tools/timing/S3kLoadTimeProfileGenerator.java",
+            "src/test/java/com/openggf/audio/TestLiveCaptureSurvivesBackendSwap.java",
+            "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmark.java",
+            "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmarkComparator.java",
+            "src/test/java/com/openggf/audio/SmpsRepeatedPlaybackBenchmarkComparator.java",
+            "src/test/java/com/openggf/capture/CaptureRecorderTest.java",
+            "src/test/java/com/openggf/capture/LiveCaptureControllerTest.java",
+            "src/test/java/com/openggf/capture/LiveCaptureRecorderFactoryTest.java",
+            "src/test/java/com/openggf/tools/TestTraceCaptureUnifiedAudio.java",
+            "src/test/java/com/openggf/tools/TraceCaptureSessionTest.java",
+            "src/test/java/com/openggf/tools/audio/parity/TestS1AudioParityCli.java",
+            "src/test/java/com/openggf/tools/audio/parity/TestS1OpenGgfAudioCapture.java",
+            "src/test/java/com/openggf/tools/audio/timeline/TestS1GameplayAudioTimelineCli.java");
+
+    private static final Set<String> NO_SESSION_EXCLUSION_FILES = Set.of(
+            "src/test/java/com/openggf/configuration/CaptureConfigDefaultsTest.java",
+            "src/test/java/com/openggf/tests/TestTempFiles.java",
+            "src/test/java/com/openggf/tests/TestNoLeakedTemporaryFiles.java");
 
     /** {@code -DforkCount=...} — the flag Maven ignores here. */
     private static final Pattern STALE_FORK_COUNT_FLAG =
@@ -52,6 +201,43 @@ class TestBuildToolingGuard {
             "**/*Debug*.java",
             "**/*Probe.java",
             "**/*Probe*.java");
+    private static final List<String> TRACE_REPLAY_RELEASE_PROFILE_EXCLUDES = List.of(
+            "**/tests/trace/s3k/**/*Mhz*.java",
+            "**/tests/trace/s3k/**/*Fbz*.java",
+            "**/tests/trace/s3k/**/*Ssz*.java",
+            "**/tests/trace/s3k/**/*Soz*.java",
+            "**/tests/trace/s3k/**/*Lrz*.java",
+            "**/tests/trace/s3k/**/*Hpz*.java",
+            "**/tests/trace/s3k/**/*Ddz*.java",
+            "**/tests/trace/s3k/**/*Dez*.java",
+            "**/tests/trace/s3k/**/*Zone0c*.java",
+            "**/tests/trace/s3k/TestS3kGumballBonusTraceReplay.java",
+            "**/tests/trace/s3k/TestS3kPachinkoBonusTraceReplay.java",
+            "**/tests/trace/s3k/TestS3kSpecialStageTraceReplay.java",
+            "**/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java",
+            "**/tests/trace/runs/TestS3kMegaRunChain.java",
+            "**/tests/trace/s3k/sonictails/*.java",
+            "**/tests/trace/s3k/*ZoneSliceTraceReplay.java");
+    private static final List<String> RELEASE_OPTIONAL_TEST_SKIPS = List.of(
+            "com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds",
+            "com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance#measureMixedRouteDispatchAllocationAndTime",
+            "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes",
+            "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#postWarmupRenderSamplingAllocationProbe",
+            "com.openggf.tests.TestCPZObjectBugs#testSpinTubeForcesRolling",
+            "com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval",
+            "com.openggf.tools.audio.completerun.s2.TestS2CompleteRunRealRow769DecodeGate#capturesAndDecodesTheExactRealRow769Boundary",
+            "com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics#writeCompatibilityReportForLocalShaderPack",
+            "com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput",
+            "com.openggf.tools.audio.completerun.s3k.TestS3kCompleteRunRealRow810DecodeGate#capturesAndDecodesTheExactRealRow810Boundary",
+            "com.openggf.audio.AudioRegressionTest#testMusicEhzMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testMusicCpzMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testMusicHtzMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testSfxRingMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testSfxJumpMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testSfxSpringMatchesReference",
+            "com.openggf.audio.AudioRegressionTest#testMixedMusicSfxMatchesReference",
+            "com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples",
+            "com.openggf.audio.synth.TestYm2612ChipGpgxParity#nativeEnvelopeHarnessReproducesTrackedVectorsWhenCoreIsPresent");
     private static final List<Pattern> TRACE_BOOTSTRAP_POLICY_SIGNALS = List.of(
             Pattern.compile("\\b(?:meta|metadata)\\s*\\.\\s*(?:zoneId|act|traceProfile)\\s*\\("),
             Pattern.compile("\\bhasPerFrameSlotMachineState\\s*\\("),
@@ -121,8 +307,7 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean buttonPressed;",
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean eggCapsuleReleased;",
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean cutsceneOverrideObjectsActive;",
-            // Both cross-act latches are captured by Aiz2BossEndSequenceStaticAdapter.
-            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean buttonBeforeBridgeDispatch;",
+            // This cross-act latch is captured by Aiz2BossEndSequenceStaticAdapter.
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile int tailsControlReleaseDelay = -1;",
             // This cross-act latch is explicitly captured by Aiz2BossEndSequenceStaticAdapter.
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile CutsceneKnucklesAiz2Instance activeKnuckles;",
@@ -229,6 +414,394 @@ class TestBuildToolingGuard {
         }
     }
 
+    @Test
+    void generatedOutputInventoryMustRemainWorktreeTargetOwned() throws Exception {
+        Set<String> migrated = new TreeSet<>(SESSION_OUTPUT_FILES);
+        Set<String> explicit = new TreeSet<>(EXPLICIT_OUTPUT_FILES);
+        Set<String> exclusions = new TreeSet<>(NO_SESSION_EXCLUSION_FILES);
+        Set<String> support = new TreeSet<>(TASK4_SUPPORT_FILES);
+        List<Set<String>> categories = List.of(migrated, explicit, exclusions, support);
+        List<String> violations = new ArrayList<>();
+
+        if (new TreeSet<>(TASK4_INVENTORY_FILES).size() != TASK4_INVENTORY_FILES.size()) {
+            violations.add("the Task 4 inventory contains duplicate paths");
+        }
+        for (int left = 0; left < categories.size(); left++) {
+            for (int right = left + 1; right < categories.size(); right++) {
+                Set<String> overlap = new TreeSet<>(categories.get(left));
+                overlap.retainAll(categories.get(right));
+                if (!overlap.isEmpty()) {
+                    violations.add("Task 4 inventory categories overlap: " + overlap);
+                }
+            }
+        }
+        Set<String> classified = new TreeSet<>();
+        categories.forEach(classified::addAll);
+        Set<String> inventory = new TreeSet<>(TASK4_INVENTORY_FILES);
+        Set<String> unclassified = new TreeSet<>(inventory);
+        unclassified.removeAll(classified);
+        Set<String> unexpected = new TreeSet<>(classified);
+        unexpected.removeAll(inventory);
+        if (!unclassified.isEmpty()) {
+            violations.add("Task 4 inventory has unclassified files: " + unclassified);
+        }
+        if (!unexpected.isEmpty()) {
+            violations.add("Task 4 categories contain files outside the inventory: " + unexpected);
+        }
+
+        for (String relative : inventory) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                violations.add(relative + " is missing from the fixed-output inventory");
+            }
+        }
+
+        for (String relative : migrated) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                continue;
+            }
+            String source = sourceForInventory(file);
+            boolean hasTargetResolver = source.contains("TestSessionOutputPaths.")
+                    || source.contains("openggf.test.diagnostics")
+                    || source.contains("openggf.artifact.root")
+                    || source.contains("OPENGGF_TEST_DIAGNOSTICS")
+                    || source.contains("${openggf.")
+                    || source.contains("$REPO/target")
+                    || source.contains("$repo_root/target")
+                    || source.contains("repository.resolve(\"target/");
+            if (!hasTargetResolver) {
+                violations.add(relative + " does not resolve a default output beneath the worktree target tree");
+            }
+            if (LEGACY_OUTPUT_WRITE.matcher(source).find()) {
+                violations.add(relative + " writes generated output directly through a legacy target path");
+            }
+        }
+
+        for (String relative : explicit) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                continue;
+            }
+            String source = sourceForInventory(file);
+            if (LEGACY_OUTPUT_WRITE.matcher(source).find()) {
+                violations.add(relative + " writes generated output directly through a legacy target path");
+            }
+        }
+
+        for (String relative : exclusions) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                continue;
+            }
+            String source = sourceForInventory(file);
+            if (LEGACY_OUTPUT_WRITE.matcher(source).find()
+                    || source.contains("new FileOutputStream")
+                    || source.contains("new FileWriter")) {
+                violations.add(relative + " is a no-session exclusion but contains a generated writer");
+            }
+        }
+
+        for (String relative : support) {
+            Path file = Path.of(relative);
+            if (!Files.isRegularFile(file)) {
+                continue;
+            }
+            String source = sourceForInventory(file);
+            if (LEGACY_OUTPUT_WRITE.matcher(source).find()) {
+                violations.add(relative + " is classified as support but contains a legacy generated writer");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("generated diagnostic outputs must be classified and worktree-target-owned:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void mavenLifecycleMustUseWorktreeLocalTargetPathsWithoutSessionEnforcement() throws Exception {
+        String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
+        String jvmConfig = Files.readString(Path.of(".mvn/jvm.config"), StandardCharsets.UTF_8);
+        assertTrue(jvmConfig.lines().anyMatch("-Djava.io.tmpdir=target/maven-tmp"::equals),
+                "Maven bootstrap temporary files must remain in the worktree target tree");
+        assertTrue(pomText.contains("<id>prepare-worktree-test-directories</id>"),
+                "validate must recreate target-local temporary directories after clean");
+        assertFalse(pomText.contains("core.hooksPath"),
+                "Maven lifecycle must not rewrite repository-local Git configuration");
+        assertFalse(Pattern.compile("\\bgit\\s+config\\b").matcher(pomText).find(),
+                "Maven lifecycle must not invoke git config");
+        assertFalse(pomText.contains("<argument>${basedir}/target/OpenGGF</argument>"),
+                "native packaging must not read a shared target binary");
+        assertFalse(pomText.contains("<argument>${basedir}/target</argument>"),
+                "native packaging must not publish into a shared target directory");
+        assertTrue(pomText.contains("<argument>${project.build.directory}/OpenGGF</argument>"),
+                "native packaging must consume the worktree-local build binary");
+        assertTrue(pomText.contains("<argument>${openggf.distribution.root}</argument>"),
+                "native packaging must consume the worktree-local distribution root");
+
+        Document pom = parsePom("pom.xml");
+        assertFalse(pomText.contains("<openggf.build.directory>"),
+                "Maven's build directory must not be externally redirected by the retired session coordinator");
+        assertNull(property(pom, "openggf.build.directory"),
+                "Maven's build directory must not be externally redirected by the retired session coordinator");
+        assertEquals("${project.build.directory}/test-tmp",
+                property(pom, "openggf.test.tmpdir"));
+        assertEquals("${project.build.directory}/surefire-reports",
+                property(pom, "openggf.surefire.reports"));
+        assertEquals("${project.build.directory}/trace-reports",
+                property(pom, "openggf.trace.reports"));
+        assertEquals("${project.build.directory}/diagnostics",
+                property(pom, "openggf.test.diagnostics"));
+        assertEquals("${project.build.directory}", property(pom, "openggf.artifact.root"));
+        assertEquals("${project.build.directory}", property(pom, "openggf.distribution.root"));
+        for (String property : List.of(
+                "openggf.test.tmpdir",
+                "openggf.surefire.reports", "openggf.trace.reports",
+                "openggf.test.diagnostics", "openggf.artifact.root",
+                "openggf.distribution.root")) {
+            assertTrue(property(pom, property) != null,
+                    "pom.xml must define the target-local path property " + property);
+        }
+        assertEquals("${project.build.directory}", property(pom, "openggf.distribution.root"),
+                "distribution output must remain in this worktree's Maven target tree");
+        Element build = directChild(pom.getDocumentElement(), "build");
+        String buildDirectory = directChildText(build, "directory");
+        assertTrue(buildDirectory == null || "${project.basedir}/target".equals(buildDirectory),
+                "Maven build output must use the worktree-local target directory");
+        assertFalse(pomText.contains("openggf-session-validate-guard"),
+                "raw Maven must not require a coordinator session identity");
+        assertFalse(pomText.contains("openggf-session-pre-clean-guard"),
+                "raw Maven clean must not require a coordinator session identity");
+        assertTrue(pom.getElementsByTagName("reportsDirectory").getLength() >= 1,
+                "every supported Surefire configuration must select a target-local report root");
+        NodeList reportDirectories = pom.getElementsByTagName("reportsDirectory");
+        NodeList tempDirectories = pom.getElementsByTagName("tempDir");
+        assertEquals(reportDirectories.getLength(), tempDirectories.getLength(),
+                "every supported Surefire configuration must keep its own control files out of system temp");
+        for (int i = 0; i < reportDirectories.getLength(); i++) {
+            assertEquals("${openggf.surefire.reports}",
+                    reportDirectories.item(i).getTextContent().trim(),
+                    "Surefire reports must consume the target-local reports property");
+        }
+        for (int i = 0; i < tempDirectories.getLength(); i++) {
+            assertEquals("${project.build.directory}/surefire",
+                    tempDirectories.item(i).getTextContent().trim(),
+                    "Surefire control files must remain in this worktree's target tree");
+        }
+        NodeList argLines = pom.getElementsByTagName("argLine");
+        for (int i = 0; i < argLines.getLength(); i++) {
+            assertTrue(argLines.item(i).getTextContent().contains(
+                            "-Djava.io.tmpdir=\"${openggf.test.tmpdir}\""),
+                    "Surefire argLine must quote the target-local test temp path: "
+                            + argLines.item(i).getTextContent().trim());
+            assertTrue(argLines.item(i).getTextContent().contains(
+                            "-Dorg.lwjgl.system.SharedLibraryExtractPath=\"${openggf.test.tmpdir}/lwjgl-${surefire.forkNumber}\""),
+                    "Surefire argLine must isolate LWJGL native extraction per fork: "
+                            + argLines.item(i).getTextContent().trim());
+        }
+    }
+
+    @Test
+    void normalLaunchersUseDirectMavenWithoutSessionGuardBypass() throws Exception {
+        String pomText = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
+
+        assertFalse(pomText.contains("openggf.session.guard"),
+                "the retired session guard must not remain in the POM");
+        for (String launcherName : List.of("run.sh", "run.cmd", "dev.sh", "dev.cmd")) {
+            String launcher = Files.readString(Path.of(launcherName), StandardCharsets.UTF_8);
+            Pattern directMaven = launcherName.endsWith(".cmd")
+                    ? Pattern.compile("(?im)^\\s*(?:call\\s+)?mvn(?:\\s|$)")
+                    : Pattern.compile("(?m)^\\s*mvn(?:\\s|$)");
+            assertTrue(directMaven.matcher(launcher).find(),
+                    launcherName + " must invoke Maven directly");
+            Pattern scriptDelegate = Pattern.compile(
+                    "(?im)^\\s*(?:exec\\s+)?(?:bash|sh|pwsh|powershell|cmd(?:\\.exe)?)\\s+[^\\r\\n]*\\.(?:sh|ps1|cmd|bat)\\b");
+            assertFalse(scriptDelegate.matcher(launcher).find(),
+                    launcherName + " must not delegate Maven through a replacement script wrapper");
+            for (String retired : List.of(
+                    "tools/testing/test-session", "TestSessionCoordinator", "OPENGGF_TEST_RUN_",
+                    "agent-scratch", "frozen-next-session")) {
+                assertFalse(launcher.contains(retired),
+                        launcherName + " must not delegate through retired tooling: " + retired);
+            }
+            if (launcherName.endsWith(".cmd")) {
+                assertWindowsLauncherAnchorsRepositoryBeforeBuildAccess(launcherName, launcher);
+            }
+        }
+        String runLauncher = Files.readString(Path.of("run.sh"), StandardCharsets.UTF_8);
+        assertTrue(runLauncher.contains("-DskipTests package -q"),
+                "run.sh must retain its package-and-launch fat-JAR workflow");
+
+        String timeline = Files.readString(
+                Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh"),
+                StandardCharsets.UTF_8);
+        int repoAssignment = timeline.indexOf("REPO=$(cd \"$SCRIPT_DIR/../..\" && pwd)");
+        int repoChange = timeline.indexOf("cd \"$REPO\"");
+        int firstMaven = timeline.indexOf("\"$MAVEN_BIN\"");
+        assertTrue(repoAssignment >= 0 && repoChange > repoAssignment && firstMaven > repoChange,
+                "the gameplay-audio timeline launcher must enter its repository before Maven access");
+    }
+
+    private static void assertWindowsLauncherAnchorsRepositoryBeforeBuildAccess(
+            String launcherName, String launcher) {
+        Pattern repositoryChange = Pattern.compile("(?im)^\\s*cd\\s+/d\\s+\"%~dp0\"\\s*$");
+        Matcher change = repositoryChange.matcher(launcher);
+        assertTrue(change.find(), launcherName + " must enter the repository containing the launcher");
+
+        Matcher buildAccess = Pattern.compile(
+                "(?im)^(?!\\s*REM\\b).*(?:\\bmvn(?:\\s|$)|\\btarget[\\\\/]).*$").matcher(launcher);
+        assertTrue(buildAccess.find(), launcherName + " must perform Maven or target access");
+        assertTrue(change.start() < buildAccess.start(),
+                launcherName + " must enter its repository before Maven or target access");
+    }
+
+    @Test
+    void defaultSuiteMustLeaveStructuralGuardsToTheFreshGuardsSession() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element build = directChild(pom.getDocumentElement(), "build");
+        Element plugins = directChild(build, "plugins");
+        Element surefire = directChildWithText(plugins, "plugin", "artifactId",
+                "maven-surefire-plugin");
+        Element configuration = directChild(surefire, "configuration");
+        Element excludes = directChild(configuration, "excludes");
+        assertTrue(excludes != null, "default Surefire execution must define exclusions");
+        List<String> defaultExcludes = textValues(excludes, "exclude");
+        for (String pattern : List.of(
+                "**/Test*Guard*.java", "**/TestNo*.java", "**/TestArchUnit*.java",
+                "**/TestAudioPresentationBoundary.java")) {
+            assertTrue(defaultExcludes.contains(pattern),
+                    "default Surefire execution must exclude structural guards: " + pattern);
+        }
+        assertTrue(defaultExcludes.contains("**/*$*"),
+                "default Surefire execution must exclude compiled nested test classes exactly: **/*$*");
+
+        Element guards = profileById(pom, "guards");
+        assertTrue(guards != null, "pom.xml must retain a separate guards profile");
+        assertTrue(guards.getElementsByTagName("includes").getLength() >= 1,
+                "guards profile must select the excluded structural guard suite");
+        assertTrue(textValues(guards, "include").contains("**/TestAudioPresentationBoundary.java"),
+                "guards profile must select the heavyweight audio architecture boundary test");
+    }
+
+    @Test
+    void guardsProfileMustUseOneLargerForkForWholeGraphAnalysis() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element guards = profileById(pom, "guards");
+        assertTrue(guards != null, "pom.xml must retain a separate guards profile");
+
+        Element properties = directChild(guards, "properties");
+        assertTrue(properties != null, "guards profile must define capacity properties");
+        assertEquals("1", directChild(properties, "surefire.forkCount").getTextContent().trim(),
+                "whole-graph guards must run serially instead of competing across four heaps");
+        assertTrue(directChild(properties, "surefire.argLine").getTextContent().contains("-Xmx3g"),
+                "whole-graph guards must have enough heap for the merged production graph");
+    }
+
+    @Test
+    void ordinarySuiteMustUseOneReusedThreeGibForkWithIsolatedRuntimePaths() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element projectProperties = directChild(pom.getDocumentElement(), "properties");
+        assertTrue(projectProperties != null, "pom.xml must define ordinary capacity properties");
+        assertEquals("1", directChild(projectProperties, "surefire.forkCount").getTextContent().trim(),
+                "the ordinary suite must reuse one fork instead of splitting capacity across four heaps");
+        Element ordinaryReuseForks = directChild(projectProperties, "surefire.reuseForks");
+        assertTrue(ordinaryReuseForks != null,
+                "pom.xml must expose the ordinary fork-reuse property");
+        assertEquals("true", ordinaryReuseForks.getTextContent().trim(),
+                "the ordinary suite must reuse its single fork");
+        assertEquals("${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g",
+                directChild(projectProperties, "surefire.argLine").getTextContent().trim(),
+                "the ordinary suite must retain exact CDS/Mockito semantics and the proven-sufficient 3 GiB heap");
+
+        for (String profileId : List.of("lwjgl-natives-macos", "lwjgl-natives-macos-arm64", "ci")) {
+            Element profile = profileById(pom, profileId);
+            assertTrue(profile != null, "pom.xml must retain the " + profileId + " profile");
+            Element profileProperties = directChild(profile, "properties");
+            assertTrue(profileProperties != null,
+                    profileId + " must retain its explicit Surefire capacity properties");
+            String profileArgLine = directChild(profileProperties, "surefire.argLine")
+                    .getTextContent().trim();
+            assertTrue(profileArgLine.endsWith("-Xmx3g"),
+                    profileId + " must not reduce the ordinary suite below the proven-sufficient 3 GiB heap");
+        }
+
+        Element build = directChild(pom.getDocumentElement(), "build");
+        Element plugins = directChild(build, "plugins");
+        Element surefire = directChildWithText(plugins, "plugin", "artifactId",
+                "maven-surefire-plugin");
+        Element configuration = directChild(surefire, "configuration");
+        assertEquals("${surefire.forkCount}", directChild(configuration, "forkCount")
+                        .getTextContent().trim(),
+                "the ordinary execution must consume the shared capacity property");
+        assertEquals("${surefire.reuseForks}", directChild(configuration, "reuseForks")
+                        .getTextContent().trim(),
+                "the ordinary execution must consume the shared fork-reuse property");
+        assertEquals("${surefire.argLine} -Djava.io.tmpdir=\"${openggf.test.tmpdir}\" "
+                        + "-Dorg.lwjgl.system.SharedLibraryExtractPath=\"${openggf.test.tmpdir}"
+                        + "/lwjgl-${surefire.forkNumber}\"",
+                directChild(configuration, "argLine").getTextContent().trim(),
+                "the ordinary execution must retain the fork-local temp and LWJGL paths");
+
+        NodeList reuseForks = pom.getElementsByTagName("reuseForks");
+        for (int i = 0; i < reuseForks.getLength(); i++) {
+            if (reuseForks.item(i).getParentNode() == projectProperties) {
+                continue;
+            }
+            assertEquals("${surefire.reuseForks}", reuseForks.item(i).getTextContent().trim(),
+                    "every Surefire execution must consume the shared fork-reuse property");
+        }
+    }
+
+    @Test
+    void ordinarySurefireShouldUseSharedAlphabeticalRunOrder() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element projectProperties = directChild(pom.getDocumentElement(), "properties");
+        Element sharedRunOrder = directChild(projectProperties, "surefire.runOrder");
+        assertTrue(sharedRunOrder != null,
+                "pom.xml must expose the shared Surefire run-order property");
+        assertEquals("alphabetical", sharedRunOrder.getTextContent().trim(),
+                "ordinary test order must be reproducible across worktrees");
+
+        Element build = directChild(pom.getDocumentElement(), "build");
+        Element plugins = directChild(build, "plugins");
+        Element surefire = directChildWithText(plugins, "plugin", "artifactId",
+                "maven-surefire-plugin");
+        Element configuration = directChild(surefire, "configuration");
+        Element configuredRunOrder = directChild(configuration, "runOrder");
+        assertTrue(configuredRunOrder != null,
+                "default Surefire execution must configure a deterministic run order");
+        assertEquals("${surefire.runOrder}", configuredRunOrder.getTextContent().trim(),
+                "default Surefire execution must consume the shared run-order property");
+
+        NodeList pluginsInPom = pom.getElementsByTagName("plugin");
+        for (int i = 0; i < pluginsInPom.getLength(); i++) {
+            Element plugin = (Element) pluginsInPom.item(i);
+            Element artifactId = directChild(plugin, "artifactId");
+            if (artifactId == null
+                    || !"maven-surefire-plugin".equals(artifactId.getTextContent().trim())) {
+                continue;
+            }
+            Element pluginConfiguration = directChild(plugin, "configuration");
+            assertTrue(pluginConfiguration != null,
+                    "every Surefire declaration must have an explicit configuration");
+            Element pluginRunOrder = directChild(pluginConfiguration, "runOrder");
+            assertTrue(pluginRunOrder != null,
+                    "every Surefire execution must configure the shared run order");
+            assertEquals("${surefire.runOrder}", pluginRunOrder.getTextContent().trim(),
+                    "every Surefire execution must consume the shared run-order property");
+        }
+
+        String inventoryGuide = Files.readString(Path.of("tools/testing/README.md"), StandardCharsets.UTF_8);
+        String normalizedInventoryGuide = inventoryGuide.replaceAll("\\s+", " ");
+        assertTrue(normalizedInventoryGuide.contains(
+                        "`surefire.includesFile`, `surefire.argLine`, `surefire.forkCount`, "
+                                + "`surefire.reuseForks`, and `surefire.runOrder`"),
+                "the inventory guide must list the complete authenticated Surefire property set");
+        assertTrue(inventoryGuide.contains("'-Dsurefire.runOrder=alphabetical'"),
+                "the copy/paste inventory example must authenticate alphabetical Surefire order");
+    }
+
     /**
      * Every Surefire {@code <forkCount>} in the POM must read the same
      * {@code ${surefire.forkCount}} property, and the name of that property is
@@ -236,9 +809,9 @@ class TestBuildToolingGuard {
      *
      * <p>This exists because {@code -DforkCount=1} silently does nothing:
      * {@code pom.xml} binds {@code <forkCount>} to {@code ${surefire.forkCount}}
-     * (default 4, set to 1 only by the {@code ci} profile), so a user-supplied
-     * {@code forkCount} property is never consulted and the run stays on four
-     * forks. Trace measurements were taken under that misapprehension and had to
+     * (default 1, with profile-specific overrides), so a user-supplied
+     * {@code forkCount} property is never consulted. Trace measurements were
+     * previously taken under that misapprehension and had to
      * be redone; the correction is recorded in
      * {@code docs/status/trace-frontier-log.md}. The failure mode is the same
      * one the fixture alignment guard targets — a knob that reads as set but is
@@ -313,6 +886,185 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap() throws Exception {
+        Path agentsPath = Path.of("AGENTS.md");
+        Path claudePath = Path.of("CLAUDE.md");
+        String agents = Files.readString(agentsPath, StandardCharsets.UTF_8);
+        List<String> violations = new ArrayList<>();
+
+        if (Files.mismatch(agentsPath, claudePath) != -1) {
+            violations.add("AGENTS.md and CLAUDE.md are no longer byte-identical");
+        }
+        if (!agents.contains("tools/testing/install-hooks.sh")
+                || !agents.contains("tools/testing/install-hooks.ps1")) {
+            violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
+        }
+        if (!agents.contains("Codex") || !agents.contains("Claude")) {
+            violations.add("AGENTS.md/CLAUDE.md must name both Codex and Claude in the agent workflow contract");
+        }
+        for (String requiredText : List.of(
+                "mvn package",
+                "mvn test",
+                "mvn \"-Dtest=TestCollisionLogic\" test",
+                "mvn -Dmse=off -Pguards test -B",
+                "OpenGGF uses Maven directly. Build and test output belongs below the current\n"
+                        + "worktree's `target/` directory. Do not redirect Maven build/report roots to a\n"
+                        + "shared or durable session directory. Parallel agents use separate worktrees;\n"
+                        + "repeated runs in one worktree reuse its target tree.")) {
+            if (!agents.contains(requiredText)) {
+                violations.add("AGENTS.md/CLAUDE.md do not contain required direct-Maven guidance: "
+                        + requiredText);
+            }
+        }
+        for (String script : List.of("tools/testing/install-hooks.sh")) {
+            if (!Files.isRegularFile(Path.of(script)) || !Files.isExecutable(Path.of(script))) {
+                violations.add(script + " must exist and be executable");
+            }
+        }
+        if (!Files.isRegularFile(Path.of("tools/testing/install-hooks.ps1"))) {
+            violations.add("tools/testing/install-hooks.ps1 must exist");
+        }
+        String hookScript = Files.readString(Path.of("tools/testing/install-hooks.sh"), StandardCharsets.UTF_8);
+        String hookPowerShell = Files.readString(Path.of("tools/testing/install-hooks.ps1"), StandardCharsets.UTF_8);
+        if (!hookScript.contains("config --local core.hooksPath .githooks")) {
+            violations.add("POSIX hook bootstrap does not set core.hooksPath locally");
+        }
+        if (!hookPowerShell.contains("config --local core.hooksPath .githooks")) {
+            violations.add("PowerShell hook bootstrap does not set core.hooksPath locally");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("supported documentation must describe direct Maven and explicit hook setup:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void activeSourcesMustRejectRetiredSessionProtocol() throws Exception {
+        List<String> forbidden = List.of(
+                "tools/testing/test-session",
+                "TestSessionCoordinator",
+                "OPENGGF_TEST_RUN_",
+                "OPENGGF_BUILD_DIRECTORY",
+                "OPENGGF_TEST_DIAGNOSTICS",
+                "OPENGGF_ARTIFACT_ROOT",
+                "OPENGGF_DISTRIBUTION_ROOT",
+                "OPENGGF_TEST_TMP_ROOT",
+                "OPENGGF_TEST_ROOT",
+                "OPENGGF_TEST_LOCK_ROOT",
+                "OPENGGF_TEST_LWJGL_ROOT_TEMPLATE",
+                "OPENGGF_SUREFIRE_ROOT",
+                "OPENGGF_SUREFIRE_REPORTS",
+                "OPENGGF_TEST_SUREFIRE_ROOT",
+                "OPENGGF_TEST_SUREFIRE_REPORTS",
+                "OPENGGF_TRACE_ROOT",
+                "OPENGGF_TRACE_REPORTS",
+                "OPENGGF_TEST_TRACE_ROOT",
+                "OPENGGF_TEST_TRACE_REPORTS",
+                "agent-scratch",
+                "frozen-next-session");
+        List<Path> roots = List.of(
+                Path.of("src/main"), Path.of("tools/audio"), Path.of("tools/bizhawk"),
+                Path.of("tools/testing"), Path.of("pom.xml"), Path.of("dev.sh"),
+                Path.of("dev.cmd"), Path.of("run.sh"), Path.of("run.cmd"),
+                Path.of(".github/workflows"), Path.of("AGENTS.md"), Path.of("CLAUDE.md"),
+                Path.of("README.md"), Path.of("ROADMAP.md"), Path.of("docs/guide"),
+                Path.of("docs/agent-workflow"), Path.of(".agents/skills"),
+                Path.of(".claude/skills"));
+        List<String> violations = new ArrayList<>();
+        for (Path root : roots) {
+            if (!Files.exists(root)) {
+                continue;
+            }
+            Stream<Path> files = Files.isRegularFile(root)
+                    ? Stream.of(root)
+                    : Files.walk(root).filter(Files::isRegularFile);
+            try (files) {
+                files.filter(path -> !path.toString().replace('\\', '/').contains("/worktrees/"))
+                        .filter(path -> isTextSource(path))
+                        .forEach(path -> {
+                            try {
+                                String source = Files.readString(path, StandardCharsets.UTF_8);
+                                for (String marker : forbidden) {
+                                    if (source.contains(marker)) {
+                                        violations.add(path.toString().replace('\\', '/')
+                                                + " contains retired session marker " + marker);
+                                    }
+                                }
+                            } catch (IOException e) {
+                                throw new IllegalStateException("cannot inspect active source " + path, e);
+                            }
+                        });
+            }
+        }
+        if (!violations.isEmpty()) {
+            fail("active code, workflows, and guidance must not depend on retired session tooling:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void retiredAgentIsolationPlanMustBeClearlyHistorical() throws Exception {
+        Path plan = Path.of(
+                "docs/architecture/designs/2026-08-23-agent-test-isolation-policy-plan.md");
+        String text = Files.readString(plan, StandardCharsets.UTF_8);
+        List<String> violations = new ArrayList<>();
+
+        if (!text.contains("**Status:** Historical")) {
+            violations.add(plan + " is not explicitly classified as historical evidence");
+        }
+        if (!text.contains("2026-08-27-next-direct-maven-convergence.md")) {
+            violations.add(plan + " does not link to the current direct-Maven design");
+        }
+        if (text.contains("2026-08-23-test-session-isolation-design.md")) {
+            violations.add(plan + " still links to the retired test-session design");
+        }
+        if (!text.contains("Commands and paths below are historical evidence, not active guidance.")) {
+            violations.add(plan + " does not bound its retired commands as historical evidence");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("the retained isolation plan must not masquerade as active workflow guidance:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void traceGuidesMustDescribeOwnerKeyedProfileReports() throws Exception {
+        List<String> violations = new ArrayList<>();
+        for (Path guide : List.of(
+                Path.of("docs/guide/contributing/trace-replay.md"),
+                Path.of("docs/guide/contributing/trace-framework-reference.md"))) {
+            String text = Files.readString(guide, StandardCharsets.UTF_8);
+            if (!text.contains(
+                    "target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json")) {
+                violations.add(guide + " does not document the owner-keyed physical layout");
+            }
+            for (String stale : List.of(
+                    "<manifest.trace_reports>",
+                    "<game>_<zone><act>_report.json",
+                    "s3k_aiz1_report.json",
+                    "s3k_cnz1_report.json")) {
+                if (text.contains(stale)) {
+                    violations.add(guide + " still presents a flat report path: " + stale);
+                }
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("trace guidance must match profile-scoped owner-keyed report publication:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    private static boolean isTextSource(Path path) {
+        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        return !List.of(".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".wav", ".mp3",
+                ".gen", ".bin", ".zip", ".jar", ".so", ".dll", ".dylib").stream()
+                .anyMatch(name::endsWith);
+    }
+
+    @Test
     void traceReplayProfileShouldExcludeDiagnosticTraceProbes() throws Exception {
         String file = "pom.xml";
         Document pom = parsePom(file);
@@ -359,6 +1111,165 @@ class TestBuildToolingGuard {
             fail("trace-replay broad includes must be paired with diagnostic test excludes:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
+    }
+
+    /**
+     * Structural guards are the invariants no trace fixture can prove, so a
+     * guard that stops being run stops being enforced without anything going
+     * red. That happened: {@code TestS1S2PlcComparisonOnlyGuard} lives in
+     * {@code com.openggf.trace}, not {@code com.openggf.tests.trace}, so the
+     * trace-replay profile's {@code **}{@code /tests/trace/**} include never
+     * selected it, and it sat red on develop while every gate reported green.
+     *
+     * <p>The guards profile selects by name convention rather than by path,
+     * and this checks that the convention actually covers what is on disk. It
+     * enumerates the guard sources from the filesystem and evaluates the
+     * profile's patterns from {@code pom.xml}; neither side is derived from
+     * the other, so adding a guard under a path or name the profile misses
+     * fails here.
+     */
+    @Test
+    void everyGuardTestClassIsSelectedByTheGuardsProfile() throws Exception {
+        Document pom = parsePom("pom.xml");
+        Element guards = profileById(pom, "guards");
+        assertTrue(guards != null, "pom.xml does not define the guards profile");
+
+        List<String> includes = textValues(guards, "include");
+        List<String> excludes = textValues(guards, "exclude");
+        assertFalse(includes.isEmpty(), "the guards profile declares no includes");
+        assertTrue(excludes.isEmpty(),
+                "the guards profile must not exclude anything - an exclude is how a "
+                        + "guard silently stops being run; excludes were " + excludes);
+
+        List<String> violations = new ArrayList<>();
+        for (String source : guardTestSources()) {
+            if (includes.stream().noneMatch(pattern -> antMatches(pattern, source))) {
+                violations.add(source + " is not selected by the guards profile");
+            }
+        }
+        if (!violations.isEmpty()) {
+            fail("every guard test class must be selected by -Pguards:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    /**
+     * Proves the pattern matcher above can actually reject, so the coverage
+     * check cannot pass by matching everything. A guard named outside the
+     * convention, or parked under a path the profile does not reach, must be
+     * reported rather than quietly admitted.
+     */
+    @Test
+    void guardSelectionMatcherRejectsClassesOutsideTheConvention() {
+        assertTrue(antMatches("**/Test*Guard*.java", "com/openggf/trace/TestS1S2PlcComparisonOnlyGuard.java"));
+        assertTrue(antMatches("**/Test*Guard.java", "com/openggf/tests/TestBuildToolingGuard.java"));
+        assertFalse(antMatches("**/Test*Guard*.java", "com/openggf/tests/GuardTest.java"));
+        assertFalse(antMatches("**/Test*Guard*.java", "com/openggf/tests/TestSomethingElse.java"));
+        assertTrue(isGuardTestClassName("TestNoServicesInObjectConstructors.java"));
+        assertTrue(isGuardTestClassName("TestArchUnitRules.java"));
+        assertFalse(isGuardTestClassName("TestSonic2Rng.java"));
+        assertFalse(isGuardTestClassName("ObjectGuardSourceScanner.java"));
+        assertFalse(antMatches("**/tests/trace/**/*.java", "com/openggf/trace/TestS1S2PlcComparisonOnlyGuard.java"));
+    }
+
+    /**
+     * The default {@code test} job is skipped on push, and work lands on
+     * develop by direct push, so a guard that only the default profile selects
+     * is effectively ungated. The guards profile is source-only and ROM-free,
+     * so it can and must run on every push.
+     */
+    @Test
+    void ciShouldRunTheGuardsProfileOnPushes() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/ci.yml"));
+        List<String> violations = new ArrayList<>();
+
+        Map<String, String> jobs = yamlJobBlocks(workflow);
+        String guardJob = jobs.get("guards");
+        if (guardJob == null) {
+            violations.add(".github/workflows/ci.yml does not define a guards job");
+        } else {
+            if (!guardJob.contains("-Pguards")) {
+                violations.add(".github/workflows/ci.yml guards job does not run mvn -Pguards");
+            }
+            if (!guardJob.contains("run: mvn -Dmse=off -Pguards test -B")) {
+                violations.add(".github/workflows/ci.yml guards job does not invoke Maven directly");
+            }
+            if (guardJob.contains("test-session.sh")) {
+                violations.add(".github/workflows/ci.yml guards job still invokes the retired wrapper");
+            }
+            if (!conditionPinsPushToIntegrationBranches(yamlJobCondition(guardJob))) {
+                violations.add(".github/workflows/ci.yml guards job is not reachable from a develop"
+                        + " push, which is how work lands");
+            }
+            if (guardJob.contains("continue-on-error: true")) {
+                violations.add(".github/workflows/ci.yml guards job is non-blocking, so a red guard"
+                        + " reports green");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("structural guards must be gated by CI on every push:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    private static List<String> guardTestSources() throws Exception {
+        Path root = Path.of("src", "test", "java");
+        try (Stream<Path> sources = Files.walk(root)) {
+            return sources
+                    .filter(Files::isRegularFile)
+                    .map(path -> root.relativize(path).toString().replace('\\', '/'))
+                    .filter(path -> path.endsWith(".java"))
+                    .filter(path -> isGuardTestClassName(
+                            path.substring(path.lastIndexOf('/') + 1)))
+                    .sorted()
+                    .toList();
+        }
+    }
+
+    /**
+     * The three naming conventions structural guards use. {@code Test*Guard*}
+     * is the current one; {@code TestNo*} is the older prohibition form that
+     * carries hard rules 5 and 6 ({@code TestNoServicesInObjectConstructors},
+     * {@code TestNoDirectMapMutationsInGameplay}); {@code TestArchUnit*} holds
+     * the ArchUnit rule sets. All three must be selected by the guards
+     * profile, so a new guard following any of them is picked up without
+     * anyone remembering to add it.
+     *
+     * <p>Only {@code Test}-prefixed classes: same-named helpers (source
+     * scanners, shared fixtures) carry no assertions and are not run directly.
+     */
+    private static boolean isGuardTestClassName(String name) {
+        if (!name.startsWith("Test")) {
+            return false;
+        }
+        return name.contains("Guard")
+                || name.startsWith("TestNo")
+                || name.startsWith("TestArchUnit");
+    }
+
+    /** Ant-style path matching for the surefire include patterns in {@code pom.xml}. */
+    private static boolean antMatches(String pattern, String path) {
+        StringBuilder regex = new StringBuilder();
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+            if (c == '*' && i + 1 < pattern.length() && pattern.charAt(i + 1) == '*') {
+                if (i + 2 < pattern.length() && pattern.charAt(i + 2) == '/') {
+                    regex.append("(?:[^/]+/)*");
+                    i += 2;
+                } else {
+                    regex.append(".*");
+                    i++;
+                }
+            } else if (c == '*') {
+                regex.append("[^/]*");
+            } else if (c == '?') {
+                regex.append("[^/]");
+            } else {
+                regex.append(Pattern.quote(String.valueOf(c)));
+            }
+        }
+        return path.matches(regex.toString());
     }
 
     @Test
@@ -523,6 +1434,24 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void releaseWorkflowShouldRunStructuralGuardsInTheirOwnJvm() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("Run structural guards in a fresh JVM")) {
+            violations.add(".github/workflows/release.yml does not name the fresh structural-guard JVM step");
+        }
+        if (!workflow.contains("run: mvn -Dmse=off -Pguards test -B")) {
+            violations.add(".github/workflows/release.yml does not run -Pguards directly");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release validation must keep structural guards in a fresh Maven JVM:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void releaseWorkflowShouldAssertTraceReplayCoverageWasNotSkipped() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
@@ -530,8 +1459,8 @@ class TestBuildToolingGuard {
         if (!workflow.contains("Assert trace replay coverage")) {
             violations.add(".github/workflows/release.yml does not assert trace replay coverage after running the profile");
         }
-        if (!workflow.contains("target/surefire-reports")) {
-            violations.add(".github/workflows/release.yml does not inspect trace replay surefire reports");
+        if (!workflow.contains("surefire_dir = Path(\"target/surefire-reports\")")) {
+            violations.add(".github/workflows/release.yml does not inspect the target-local surefire report root");
         }
         if (!workflow.contains("com.openggf.tests.trace*TraceReplay.txt")) {
             violations.add(".github/workflows/release.yml does not narrow release coverage to TraceReplay reports");
@@ -601,23 +1530,582 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void releaseWorkflowShouldMirrorTraceReplayProfileExclusions() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("TRACE_REPLAY_PROFILE_EXCLUDES")) {
+            violations.add(".github/workflows/release.yml does not name release trace profile exclusions");
+        }
+        for (String exclusion : TRACE_REPLAY_RELEASE_PROFILE_EXCLUDES) {
+            if (!workflow.contains("\"" + exclusion + "\"")) {
+                violations.add(".github/workflows/release.yml does not mirror trace-replay exclusion "
+                        + exclusion);
+            }
+        }
+        if (!workflow.contains("is_release_profile_excluded_source(source)")) {
+            violations.add(".github/workflows/release.yml expects reports for trace sources excluded by Maven");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release trace evidence must follow the Maven release scope:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void releaseWorkflowShouldClassifyEveryDefaultTestSkip() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+
+        if (!workflow.contains("RELEASE_OPTIONAL_TEST_SKIPS")) {
+            violations.add(".github/workflows/release.yml does not define the explicit optional-skip inventory");
+        }
+        for (String skip : RELEASE_OPTIONAL_TEST_SKIPS) {
+            if (!workflow.contains("\"" + skip + "\"")) {
+                violations.add(".github/workflows/release.yml optional-skip inventory is missing " + skip);
+            }
+        }
+        if (!workflow.contains("unexpected_skips")) {
+            violations.add(".github/workflows/release.yml does not reject unclassified default-suite skips");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("release default-suite skips must be explicit and reviewable:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void releaseWorkflowShouldFailTraceReplayWarnings() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("target/trace-reports")) {
-            violations.add(".github/workflows/release.yml does not inspect trace replay divergence reports");
-        }
-        if (!workflow.contains("warning_count")) {
-            violations.add(".github/workflows/release.yml does not check trace replay warning counts");
-        }
-        if (!workflow.contains("Trace replay warnings are release-blocking")) {
+        if (!workflow.contains("--warning-context release-blocking")) {
             violations.add(".github/workflows/release.yml does not fail release validation on trace warnings");
         }
+        assertOwnerKeyedTraceReportConsumer(
+                ".github/workflows/release.yml", workflow, violations);
 
         if (!violations.isEmpty()) {
             fail("release trace validation must not certify warning-only trace parity fields:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void scheduledDevelopTraceWorkflowMustConsumeOwnerKeyedReports() throws Exception {
+        String workflow = Files.readString(Path.of(".github/workflows/ci.yml"));
+        List<String> violations = new ArrayList<>();
+
+        assertOwnerKeyedTraceReportConsumer(
+                ".github/workflows/ci.yml", workflow, violations);
+        for (String required : List.of(
+                "--require-clean-profile special-stage",
+                "--require-clean-logical-key s2_special_stage_0",
+                "--require-clean-lane s2-0",
+                "--warning-context develop-blocking")) {
+            if (!workflow.contains(required)) {
+                violations.add(".github/workflows/ci.yml does not fail closed for the S2 keep-green report: "
+                        + required);
+            }
+        }
+        if (workflow.contains("s2_special_stage_0_report.json")
+                || workflow.contains("trace_dir.glob(\"*_report.json\")")) {
+            violations.add(".github/workflows/ci.yml still consumes flat legacy trace-report names");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("scheduled develop trace validation must consume exactly the reports Maven publishes:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void traceReportValidatorMustEnforcePayloadAndOwnerEvidence(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String ownerA = "0123456789abcdef" + "0".repeat(48);
+        String ownerB = "fedcba9876543210" + "1".repeat(48);
+
+        Path validRoot = temporaryDirectory.resolve("valid");
+        writeTraceReport(validRoot, "special-stage", "s2_special_stage_0", "s2-0",
+                ownerA, "{\"error_count\":0,\"warning_count\":0}", null);
+        ProcessResult valid = runTraceReportValidator(validRoot, true);
+        assertEquals(0, valid.exitCode(), () ->
+                "validator rejected valid owner-keyed evidence:\n" + valid.output());
+
+        Path positiveErrorRoot = temporaryDirectory.resolve("positive-error-allowed");
+        writeTraceReport(positiveErrorRoot, "trace", "s2_mtz1", "single", ownerA,
+                "{\"error_count\":3,\"warning_count\":0}", null);
+        ProcessResult positiveError = runTraceReportValidator(positiveErrorRoot, false);
+        assertEquals(0, positiveError.exitCode(), () ->
+                "general validation must leave positive error certification to trace coverage:\n"
+                        + positiveError.output());
+
+        Path safeComponentRoot = temporaryDirectory.resolve("safe-component");
+        writeTraceReport(safeComponentRoot, "trace", "logical key/with spaces", "lane",
+                ownerA, "{\"error_count\":0,\"warning_count\":0}", null);
+        ProcessResult safeComponent = runTraceReportValidator(safeComponentRoot, false);
+        assertEquals(0, safeComponent.exitCode(), () ->
+                "validator rejected a filename derived with publisher safeComponent rules:\n"
+                        + safeComponent.output());
+
+        Path emptyRoot = temporaryDirectory.resolve("empty");
+        Files.createDirectories(emptyRoot);
+        assertTraceValidatorRejects(runTraceReportValidator(emptyRoot, false),
+                "empty", "No owner-keyed trace reports found below");
+
+        Map<String, List<String>> invalidPayloads = new LinkedHashMap<>();
+        invalidPayloads.put("malformed-payload", List.of("{", "malformed report JSON"));
+        invalidPayloads.put("payload-object", List.of("[]", "payload JSON must be an object"));
+        invalidPayloads.put("missing-error", List.of(
+                "{\"warning_count\":0}", "missing required error_count"));
+        invalidPayloads.put("missing-warning", List.of(
+                "{\"error_count\":0}", "missing required warning_count"));
+        invalidPayloads.put("negative-error", List.of(
+                "{\"error_count\":-1,\"warning_count\":0}", "error_count must be nonnegative"));
+        invalidPayloads.put("negative-warning", List.of(
+                "{\"error_count\":0,\"warning_count\":-1}", "warning_count must be nonnegative"));
+        invalidPayloads.put("string-count", List.of(
+                "{\"error_count\":\"0\",\"warning_count\":0}", "error_count must be a JSON integer"));
+        invalidPayloads.put("boolean-count", List.of(
+                "{\"error_count\":0,\"warning_count\":false}", "warning_count must be a JSON integer"));
+        invalidPayloads.put("float-count", List.of(
+                "{\"error_count\":0,\"warning_count\":0.0}", "warning_count must be a JSON integer"));
+        invalidPayloads.put("positive-warning", List.of(
+                "{\"error_count\":0,\"warning_count\":1}", "Trace replay warnings are test-blocking"));
+        for (Map.Entry<String, List<String>> invalid : invalidPayloads.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "trace", "s2_mtz1", "single", ownerA,
+                    invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path keepGreenErrorRoot = temporaryDirectory.resolve("keep-green-error");
+        writeTraceReport(keepGreenErrorRoot, "special-stage", "s2_special_stage_0", "s2-0",
+                ownerA, "{\"error_count\":1,\"warning_count\":0}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(keepGreenErrorRoot, true),
+                "keep-green-error", "required keep-green trace is red");
+
+        Path missingSidecarRoot = temporaryDirectory.resolve("missing-sidecar");
+        Path missingSidecarReport = writeTraceReport(missingSidecarRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        Files.delete(Path.of(missingSidecarReport + ".owner.json"));
+        assertTraceValidatorRejects(runTraceReportValidator(missingSidecarRoot, false),
+                "missing-sidecar", "missing owner sidecar");
+
+        Map<String, List<String>> invalidSidecars = new LinkedHashMap<>();
+        invalidSidecars.put("malformed-sidecar", List.of("{", "malformed owner JSON"));
+        invalidSidecars.put("sidecar-object", List.of("[]", "owner JSON must be an object"));
+        invalidSidecars.put("missing-owner-fields", List.of(
+                "{}", "owner JSON fields must be exactly"));
+        invalidSidecars.put("blank-logical-key", List.of(ownerMetadata(
+                "", ownerA, temporaryDirectory.resolve("unused.json")),
+                "logical_key must be a nonblank string"));
+        invalidSidecars.put("wrong-owner-type", List.of(
+                "{\"logical_key\":\"s2_mtz1\",\"owner_key\":false,"
+                        + "\"physical_path\":\"unused\"}",
+                "owner_key must be 64 lowercase hexadecimal characters"));
+        invalidSidecars.put("uppercase-owner", List.of(
+                "{\"logical_key\":\"s2_mtz1\",\"owner_key\":\""
+                        + ownerA.toUpperCase(Locale.ROOT)
+                        + "\",\"physical_path\":\"unused\"}",
+                "owner_key must be 64 lowercase hexadecimal characters"));
+        invalidSidecars.put("blank-physical-path", List.of(
+                "{\"logical_key\":\"s2_mtz1\",\"owner_key\":\"" + ownerA
+                        + "\",\"physical_path\":\" \"}",
+                "physical_path must be a nonblank string"));
+        invalidSidecars.put("extra-owner-field", List.of(
+                "{\"logical_key\":\"s2_mtz1\",\"owner_key\":\"" + ownerA
+                        + "\",\"physical_path\":\"unused\",\"extra\":true}",
+                "owner JSON fields must be exactly"));
+        for (Map.Entry<String, List<String>> invalid : invalidSidecars.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "trace", "s2_mtz1", "single", ownerA,
+                    "{\"error_count\":0,\"warning_count\":0}", invalid.getValue().get(0));
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path logicalMismatchRoot = temporaryDirectory.resolve("logical-mismatch");
+        Path logicalMismatchReport = writeTraceReport(logicalMismatchRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", "placeholder");
+        Files.writeString(Path.of(logicalMismatchReport + ".owner.json"),
+                ownerMetadata("s2_ehz1", ownerA, logicalMismatchReport),
+                StandardCharsets.UTF_8);
+        assertTraceValidatorRejects(runTraceReportValidator(logicalMismatchRoot, false),
+                "logical-mismatch", "filename logical key does not match");
+
+        Path hashMismatchRoot = temporaryDirectory.resolve("hash-mismatch");
+        Path hashMismatchReport = writeTraceReport(hashMismatchRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", "placeholder");
+        Files.writeString(Path.of(hashMismatchReport + ".owner.json"),
+                ownerMetadata("s2_mtz1", ownerB, hashMismatchReport),
+                StandardCharsets.UTF_8);
+        assertTraceValidatorRejects(runTraceReportValidator(hashMismatchRoot, false),
+                "hash-mismatch", "does not match owner_key prefix");
+
+        Path pathMismatchRoot = temporaryDirectory.resolve("path-mismatch");
+        Path mismatchedPath = temporaryDirectory.resolve("outside.json");
+        Files.writeString(mismatchedPath, "{}", StandardCharsets.UTF_8);
+        Path pathMismatchReport = writeTraceReport(pathMismatchRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", "placeholder");
+        Files.writeString(Path.of(pathMismatchReport + ".owner.json"),
+                ownerMetadata("s2_mtz1", ownerA, mismatchedPath),
+                StandardCharsets.UTF_8);
+        assertTraceValidatorRejects(runTraceReportValidator(pathMismatchRoot, false),
+                "path-mismatch", "physical_path escapes trace report root");
+
+        Path internalMismatchRoot = temporaryDirectory.resolve("internal-path-mismatch");
+        Path internalMismatchReport = writeTraceReport(internalMismatchRoot, "trace",
+                "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", "placeholder");
+        Path otherInternalPath = internalMismatchRoot.resolve("other.txt");
+        Files.writeString(otherInternalPath, "not the report", StandardCharsets.UTF_8);
+        Files.writeString(Path.of(internalMismatchReport + ".owner.json"),
+                ownerMetadata("s2_mtz1", ownerA, otherInternalPath),
+                StandardCharsets.UTF_8);
+        assertTraceValidatorRejects(runTraceReportValidator(internalMismatchRoot, false),
+                "internal-path-mismatch", "physical_path does not resolve to report");
+
+        Path sharedIdentityRoot = temporaryDirectory.resolve("shared-identity");
+        writeTraceReport(sharedIdentityRoot, "trace", "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        writeTraceReport(sharedIdentityRoot, "trace", "s2_mtz1", "single", ownerB,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        ProcessResult sharedIdentity = runTraceReportValidator(sharedIdentityRoot, false);
+        assertEquals(0, sharedIdentity.exitCode(), () ->
+                "distinct owners may publish the same profile/logical/lane identity:\n"
+                        + sharedIdentity.output());
+
+        Path ambiguousRoot = temporaryDirectory.resolve("ambiguous-keep-green");
+        writeTraceReport(ambiguousRoot, "special-stage", "s2_special_stage_0", "s2-0",
+                ownerA, "{\"error_count\":0,\"warning_count\":0}", null);
+        writeTraceReport(ambiguousRoot, "special-stage", "s2_special_stage_0", "s2-0",
+                ownerB, "{\"error_count\":0,\"warning_count\":0}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(ambiguousRoot, true),
+                "ambiguous-keep-green", "must resolve exactly once; found 2");
+
+        Path duplicateOwnerRoot = temporaryDirectory.resolve("duplicate-owner");
+        writeTraceReport(duplicateOwnerRoot, "trace", "s2_mtz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        writeTraceReport(duplicateOwnerRoot, "trace", "s2_ehz1", "single", ownerA,
+                "{\"error_count\":0,\"warning_count\":0}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(duplicateOwnerRoot, false),
+                "duplicate-owner", "duplicate owner_key");
+
+        Path symlinkRoot = temporaryDirectory.resolve("symlink-escape");
+        Path symlinkReport = writeTraceReport(symlinkRoot, "trace", "s2_mtz1", "single",
+                ownerA, "{\"error_count\":0,\"warning_count\":0}", null);
+        Path outside = temporaryDirectory.resolve("outside-report.json");
+        Files.writeString(outside, "{\"error_count\":0,\"warning_count\":0}",
+                StandardCharsets.UTF_8);
+        Files.delete(symlinkReport);
+        Files.createSymbolicLink(symlinkReport, outside);
+        assertTraceValidatorRejects(runTraceReportValidator(symlinkRoot, false),
+                "symlink-escape", "must not be a symbolic link");
+    }
+
+    @Test
+    void traceReportValidatorMustDispatchEveryOwnerKeyedProducerSchema(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String owner = "0123456789abcdef" + "0".repeat(48);
+
+        Path segmentRoot = temporaryDirectory.resolve("run-chain-segment");
+        writeTraceReport(segmentRoot, "run-chain", "s2_run_seg0", "segment-0", owner,
+                """
+                {
+                  "errorCount": 0,
+                  "warningCount": 0,
+                  "laggedFrames": 0,
+                  "complete": true,
+                  "recentMismatches": [{
+                    "frame": 4,
+                    "field": "x_pos",
+                    "romValue": "10",
+                    "engineValue": "11",
+                    "delta": "1",
+                    "severity": "ERROR",
+                    "repeatCount": 1
+                  }],
+                  "verification_groups": {
+                    "physics": {"error_count": 0},
+                    "animation": {"error_count": 0}
+                  },
+                  "bootstrapErrorCount": 0
+                }
+                """, null);
+        ProcessResult segment = runTraceReportValidator(segmentRoot, false);
+        assertEquals(0, segment.exitCode(), () ->
+                "validator rejected an AbstractRunChainTest segment report:\n" + segment.output());
+
+        Path segmentWarningRoot = temporaryDirectory.resolve("run-chain-segment-warning");
+        writeTraceReport(segmentWarningRoot, "run-chain", "s2_run_seg0", "segment-0", owner,
+                """
+                {
+                  "errorCount": 0,
+                  "warningCount": 1,
+                  "laggedFrames": 0,
+                  "complete": true,
+                  "recentMismatches": [],
+                  "verification_groups": {
+                    "physics": {"error_count": 0},
+                    "animation": {"error_count": 0}
+                  },
+                  "bootstrapErrorCount": 0
+                }
+                """, null);
+        assertTraceValidatorRejects(runTraceReportValidator(segmentWarningRoot, false),
+                "run-chain-segment-warning", "Trace replay warnings are test-blocking");
+
+        Map<String, List<String>> invalidSegments = new LinkedHashMap<>();
+        invalidSegments.put("run-chain-missing-count", List.of(
+                """
+                {"warningCount":0,"laggedFrames":0,"complete":true,
+                 "recentMismatches":[],"verification_groups":{},"bootstrapErrorCount":0}
+                """, "missing required errorCount"));
+        invalidSegments.put("run-chain-negative-count", List.of(
+                """
+                {"errorCount":0,"warningCount":-1,"laggedFrames":0,"complete":true,
+                 "recentMismatches":[],"verification_groups":{},"bootstrapErrorCount":0}
+                """, "warningCount must be nonnegative"));
+        invalidSegments.put("run-chain-wrong-count-type", List.of(
+                """
+                {"errorCount":false,"warningCount":0,"laggedFrames":0,"complete":true,
+                 "recentMismatches":[],"verification_groups":{},"bootstrapErrorCount":0}
+                """, "errorCount must be a JSON integer"));
+        for (Map.Entry<String, List<String>> invalid : invalidSegments.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_seg0", "segment-0", owner,
+                    invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Map<String, List<String>> invalidVerificationGroups = new LinkedHashMap<>();
+        invalidVerificationGroups.put("run-chain-missing-group", List.of(
+                "{\"physics\":{\"error_count\":0}}",
+                "verification_groups must contain exactly"));
+        invalidVerificationGroups.put("run-chain-group-not-object", List.of(
+                "{\"physics\":[],\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics must be a JSON object"));
+        invalidVerificationGroups.put("run-chain-group-missing-count", List.of(
+                "{\"physics\":{},\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics is missing required error_count"));
+        invalidVerificationGroups.put("run-chain-group-wrong-count-type", List.of(
+                "{\"physics\":{\"error_count\":false},"
+                        + "\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics.error_count must be a JSON integer"));
+        invalidVerificationGroups.put("run-chain-group-negative-count", List.of(
+                "{\"physics\":{\"error_count\":-1},"
+                        + "\"animation\":{\"error_count\":0}}",
+                "verification_groups.physics.error_count must be nonnegative"));
+        for (Map.Entry<String, List<String>> invalid : invalidVerificationGroups.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_seg0", "segment-0", owner,
+                    runChainSegmentPayload(invalid.getValue().get(0)), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path gapRoot = temporaryDirectory.resolve("dynamic-art-gap");
+        writeTraceReport(gapRoot, "run-chain", "s2_run_dynamic_art_gap", "dynamic-art-gap", owner,
+                """
+                {
+                  "runId": "s2_run",
+                  "gapCount": 1,
+                  "failureCount": 0,
+                  "failures": [],
+                  "gaps": [{
+                    "representedSegmentDir": "segment-0",
+                    "nextSegmentDir": "segment-1",
+                    "gapStartMovieLogicalFrame": 10,
+                    "nextSegmentArmMovieLogicalFrame": 11,
+                    "transitionCountAtGapStart": 1,
+                    "transitionCountAfterNextArm": 2,
+                    "transitionsAddedAcrossBoundary": ["AIZ1 -> AIZ2"]
+                  }]
+                }
+                """, null);
+        ProcessResult gap = runTraceReportValidator(gapRoot, false);
+        assertEquals(0, gap.exitCode(), () ->
+                "validator rejected an AbstractRunChainTest dynamic-art gap report:\n"
+                        + gap.output());
+
+        Map<String, List<String>> invalidGaps = new LinkedHashMap<>();
+        invalidGaps.put("dynamic-art-gap-missing-count", List.of(
+                "{\"runId\":\"s2_run\",\"failureCount\":0,\"failures\":[],\"gaps\":[]}",
+                "payload is missing required gapCount"));
+        invalidGaps.put("dynamic-art-gap-missing", List.of(
+                "{\"runId\":\"s2_run\",\"gapCount\":0,\"failureCount\":0,\"failures\":[]}",
+                "payload is missing required gaps"));
+        invalidGaps.put("dynamic-art-gap-negative", List.of(
+                """
+                {"runId":"s2_run","gapCount":-1,"failureCount":0,
+                 "failures":[],"gaps":[]}
+                """, "gapCount must be nonnegative"));
+        invalidGaps.put("dynamic-art-gap-wrong-type", List.of(
+                """
+                {"runId":"s2_run","gapCount":0,"failureCount":"0",
+                 "failures":[],"gaps":[]}
+                """, "failureCount must be a JSON integer"));
+        for (Map.Entry<String, List<String>> invalid : invalidGaps.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_dynamic_art_gap",
+                    "dynamic-art-gap", owner, invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path interiorRoot = temporaryDirectory.resolve("dynamic-art-interior");
+        writeTraceReport(interiorRoot, "run-chain", "s2_run_seg0_dynamic_art",
+                "segment-0-dynamic-art", owner,
+                """
+                {
+                  "comparisonCount": 1,
+                  "errorCount": 1,
+                  "mismatches": [{
+                    "frame": 10,
+                    "field": "dynamic_art.transitions",
+                    "expected": "expected",
+                    "actual": "actual",
+                    "severity": "ERROR"
+                  }]
+                }
+                """, null);
+        ProcessResult interior = runTraceReportValidator(interiorRoot, false);
+        assertEquals(0, interior.exitCode(), () ->
+                "validator rejected an AbstractRunChainTest dynamic-art interior report:\n"
+                        + interior.output());
+
+        Map<String, List<String>> invalidInteriors = new LinkedHashMap<>();
+        invalidInteriors.put("dynamic-art-interior-missing-count", List.of(
+                "{\"comparisonCount\":0,\"mismatches\":[]}",
+                "payload is missing required errorCount"));
+        invalidInteriors.put("dynamic-art-interior-missing", List.of(
+                "{\"comparisonCount\":0,\"errorCount\":0}",
+                "payload is missing required mismatches"));
+        invalidInteriors.put("dynamic-art-interior-negative", List.of(
+                "{\"comparisonCount\":-1,\"errorCount\":0,\"mismatches\":[]}",
+                "comparisonCount must be nonnegative"));
+        invalidInteriors.put("dynamic-art-interior-type", List.of(
+                "{\"comparisonCount\":0,\"errorCount\":\"0\",\"mismatches\":[]}",
+                "errorCount must be a JSON integer"));
+        for (Map.Entry<String, List<String>> invalid : invalidInteriors.entrySet()) {
+            Path root = temporaryDirectory.resolve(invalid.getKey());
+            writeTraceReport(root, "run-chain", "s2_run_seg0_dynamic_art",
+                    "segment-0-dynamic-art", owner, invalid.getValue().get(0), null);
+            assertTraceValidatorRejects(runTraceReportValidator(root, false), invalid.getKey(),
+                    invalid.getValue().get(1));
+        }
+
+        Path unknownRoot = temporaryDirectory.resolve("unknown-run-chain-schema");
+        writeTraceReport(unknownRoot, "run-chain", "s2_run_unknown", "unknown", owner,
+                "{}", null);
+        assertTraceValidatorRejects(runTraceReportValidator(unknownRoot, false),
+                "unknown-run-chain-schema", "unknown owner-keyed report schema");
+    }
+
+    @Test
+    void traceReportValidatorMustTrackOwnerKeyedProducerKeys() throws Exception {
+        String producer = Files.readString(Path.of(
+                "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java"));
+        String divergenceProducer = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/DivergenceReport.java"));
+        String verificationGroupProducer = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/VerificationGroup.java"));
+        String validator = Files.readString(Path.of(
+                "tools/testing/validate-trace-reports.py"));
+
+        assertEquals(3,
+                producer.split(Pattern.quote(
+                        "TestSessionOutputPaths.allocateReport(\"run-chain\""), -1).length - 1,
+                "every run-chain owner-keyed publisher must be inventoried here");
+        for (String key : List.of("error_count", "warning_count")) {
+            assertTrue(divergenceProducer.contains("root.put(\"" + key + "\""),
+                    () -> "DivergenceReport no longer publishes guarded key " + key);
+            assertTrue(validator.contains("\"" + key + "\""),
+                    () -> "trace report validator does not validate divergence key " + key);
+        }
+
+        for (String key : List.of(
+                "errorCount", "warningCount", "laggedFrames", "complete",
+                "recentMismatches", "verification_groups", "bootstrapErrorCount",
+                "runId", "gapCount", "failureCount", "failures", "gaps",
+                "representedSegmentDir", "nextSegmentDir", "gapStartMovieLogicalFrame",
+                "nextSegmentArmMovieLogicalFrame", "transitionCountAtGapStart",
+                "transitionCountAfterNextArm", "transitionsAddedAcrossBoundary",
+                "comparisonCount", "mismatches", "frame", "field", "expected",
+                "actual", "severity")) {
+            assertTrue(producer.contains("put(\"" + key + "\""),
+                    () -> "AbstractRunChainTest no longer publishes guarded key " + key);
+            assertTrue(validator.contains("\"" + key + "\""),
+                    () -> "trace report validator does not validate producer key " + key);
+        }
+        assertTrue(producer.contains(
+                        "groups.put(group.id(), Map.of(\"error_count\", count))"),
+                "run-chain group publisher no longer emits one integer error_count per group");
+        assertTrue(verificationGroupProducer.contains("""
+                public enum VerificationGroup {
+                    PHYSICS("physics"),
+                    ANIMATION("animation");
+                """),
+                "run-chain validator inventory must track the complete VerificationGroup enum");
+        for (String group : List.of("physics", "animation")) {
+            assertTrue(verificationGroupProducer.contains("(\"" + group + "\")"),
+                    () -> "VerificationGroup no longer publishes required group " + group);
+        }
+        for (String validatorContract : List.of(
+                "REQUIRED_VERIFICATION_GROUPS = {\"physics\", \"animation\"}",
+                "def validate_verification_groups(",
+                "verification_groups.{group_name}.error_count")) {
+            assertTrue(validator.contains(validatorContract),
+                    () -> "trace report validator lacks nested group contract "
+                            + validatorContract);
+        }
+        for (String discriminator : List.of(
+                "dynamic-art-gap", "segment-", "-dynamic-art")) {
+            assertTrue(producer.contains(discriminator),
+                    () -> "AbstractRunChainTest no longer publishes lane " + discriminator);
+            assertTrue(validator.contains(discriminator),
+                    () -> "trace report validator does not dispatch lane " + discriminator);
+        }
+        assertFalse(validator.contains("duplicate report identity"),
+                "distinct owners must not be collapsed by profile/logical/lane identity");
+    }
+
+    private static void assertOwnerKeyedTraceReportConsumer(
+            String sourceName, String workflow, List<String> violations) {
+        for (String required : List.of(
+                "python3 tools/testing/validate-trace-reports.py",
+                "--root target/trace-reports",
+                "--fail-on-warnings")) {
+            if (!workflow.contains(required)) {
+                violations.add(sourceName + " does not invoke shared semantic validation: "
+                        + required);
+            }
+        }
+        for (String bypass : List.of(
+                ".get(\"error_count\", 0)",
+                ".get(\"warning_count\", 0)",
+                "int(data.get(",
+                "trace_dir.glob(\"*_report.json\")",
+                "continue-on-error: true",
+                "set +e",
+                "if: false")) {
+            if (workflow.contains(bypass)) {
+                violations.add(sourceName + " contains a trace-validation bypass: " + bypass);
+            }
+        }
+        String joinedCommands = workflow.replaceAll("\\\\\\R\\s*", " ");
+        if (Pattern.compile("validate-trace-reports\\.py[^\\n]*(?:\\|\\|\\s*true|;\\s*true)")
+                .matcher(joinedCommands).find()) {
+            violations.add(sourceName + " ignores the shared validator exit status");
         }
     }
 
@@ -674,6 +2162,53 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void ciAndReleaseMavenJobsMustUseDirectMavenAndTargetPaths() throws Exception {
+        String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
+        String release = Files.readString(Path.of(".github/workflows/release.yml"));
+        List<String> violations = new ArrayList<>();
+        for (String command : List.of(
+                "mvn -Dmse=off -Pguards test -B",
+                "mvn -Dmse=off test -B",
+                "mvn -Dmse=off test -Ptrace-replay -B")) {
+            if (!ci.contains(command)) {
+                violations.add(".github/workflows/ci.yml does not run directly: " + command);
+            }
+        }
+        for (String command : List.of(
+                "mvn -Dmse=off test -B",
+                "mvn -Dmse=off test -Ptrace-replay -B",
+                "mvn -Dmse=off package -Pnative -DskipTests -B",
+                "mvn -Dmse=off package -Puniversal-jar -DskipTests -B")) {
+            if (!release.contains(command)) {
+                violations.add(".github/workflows/release.yml does not run directly: " + command);
+            }
+        }
+        for (String retired : List.of("tools/testing/test-session.sh", "outputs.manifest",
+                "outputs.build_root", "outputs.artifact_root", "outputs.distribution_root",
+                "session[\"surefire_reports\"]", "session[\"trace_reports\"]")) {
+            if (ci.contains(retired) || release.contains(retired)) {
+                violations.add("CI/release workflows still contain retired session coupling: " + retired);
+            }
+        }
+        if (!ci.contains("target/surefire-reports") || !ci.contains("target/trace-reports")
+                || !release.contains("target/surefire-reports") || !release.contains("target/trace-reports")) {
+            violations.add("CI/release workflows do not read their worktree-local target report roots");
+        }
+        for (String archive : List.of(
+                "target/OpenGGF-windows.zip", "target/OpenGGF-macos.zip",
+                "target/OpenGGF-linux.tar.gz", "target/OpenGGF-universal.jar")) {
+            if (!release.contains(archive)) {
+                violations.add(".github/workflows/release.yml does not publish target-local artifact " + archive);
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("CI and release Maven jobs must use direct Maven and worktree-local target paths:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
     void candidateCiShouldProtectPullRequestsAndPushes() throws Exception {
         // 2026-07-02: the full Maven suite on direct develop pushes was
         // deliberately removed by f18d4d9be ("fix: stop develop push CI").
@@ -714,14 +2249,14 @@ class TestBuildToolingGuard {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("Copy-Item \"target/config.yaml\" \"dist/OpenGGF/\"")) {
-            violations.add(".github/workflows/release.yml Windows package does not include target/config.yaml");
+        if (!workflow.contains("Copy-Item \"$env:BUILD_ROOT/config.yaml\" \"$env:DISTRIBUTION_ROOT/OpenGGF/\"")) {
+            violations.add(".github/workflows/release.yml Windows package does not include the session config.yaml");
         }
         if (!workflow.contains("zip -r OpenGGF-macos.zip OpenGGF.app config.yaml")) {
             violations.add(".github/workflows/release.yml macOS package does not include exported config.yaml");
         }
-        if (!workflow.contains("cp target/config.yaml dist/OpenGGF/")) {
-            violations.add(".github/workflows/release.yml Linux package does not include target/config.yaml");
+        if (!workflow.contains("cp \"$BUILD_ROOT/config.yaml\" \"$DISTRIBUTION_ROOT/OpenGGF/\"")) {
+            violations.add(".github/workflows/release.yml Linux package does not include the session config.yaml");
         }
 
         if (!violations.isEmpty()) {
@@ -761,8 +2296,8 @@ class TestBuildToolingGuard {
         if (smokeIndex < 0 || uploadIndex < 0 || smokeIndex > uploadIndex) {
             violations.add(".github/workflows/release.yml must smoke validate artifacts before upload");
         }
-        if (!workflow.contains("target/OpenGGF-{version}-jar-with-dependencies.jar")) {
-            violations.add(".github/workflows/release.yml does not inspect the packaged JVM jar");
+        if (!workflow.contains("artifact_root / f\"OpenGGF-{version}-jar-with-dependencies.jar\"")) {
+            violations.add(".github/workflows/release.yml does not inspect the session packaged JVM jar");
         }
         if (!workflow.contains("META-INF/MANIFEST.MF") || !workflow.contains("Main-Class: com.openggf.Engine")) {
             violations.add(".github/workflows/release.yml does not validate manifest bootstrap metadata");
@@ -948,6 +2483,43 @@ class TestBuildToolingGuard {
         if (!violations.isEmpty()) {
             fail("develop -> master release PR policy must skip only pre-cutover historical commits while validating new work:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void ciPushSkipsTrailerValidationForMergeCommits(
+            @TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "merge-trailer-range");
+        createInitialCommit(repository);
+        String baseOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        String trailers = """
+
+                Changelog: n/a
+                Guide: n/a
+                Known-Discrepancies: n/a
+                S3K-Known-Discrepancies: n/a
+                Agent-Docs: n/a
+                Configuration-Docs: n/a
+                Skills: n/a
+                """;
+
+        git(repository, "switch", "-c", "topic");
+        writeAndStage(repository, "topic.txt", "topic\n");
+        commit(repository, "topic change" + trailers);
+
+        git(repository, "switch", "main");
+        writeAndStage(repository, "main.txt", "main\n");
+        commit(repository, "main change" + trailers);
+        git(repository, "merge", "--no-ff", "topic", "-m", "Merge topic");
+        String tipOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyAccepts(runPolicy(
+                repository, "ci-push", baseOid, tipOid, "develop"));
+        String powershell = availablePowerShell();
+        if (powershell != null) {
+            assertPolicyAccepts(runPowerShellPolicy(
+                    repository, powershell,
+                    "ci-push", baseOid, tipOid, "develop"));
         }
     }
 
@@ -1181,7 +2753,8 @@ class TestBuildToolingGuard {
                 continue;
             }
             String jobCondition = yamlJobCondition(job.getValue());
-            if (!conditionExcludesPush(jobCondition)) {
+            if (!conditionExcludesPush(jobCondition)
+                    && !conditionPinsPushToIntegrationBranches(jobCondition)) {
                 violations.add(".github/workflows/ci.yml Maven-bearing job " + job.getKey()
                         + " is reachable from a branch push");
             }
@@ -2613,6 +4186,86 @@ class TestBuildToolingGuard {
         return new ProcessResult(process.waitFor(), output);
     }
 
+    private static String runChainSegmentPayload(String verificationGroupsJson) {
+        return """
+                {
+                  "errorCount": 0,
+                  "warningCount": 0,
+                  "laggedFrames": 0,
+                  "complete": true,
+                  "recentMismatches": [],
+                  "verification_groups": %s,
+                  "bootstrapErrorCount": 0
+                }
+                """.formatted(verificationGroupsJson);
+    }
+
+    private static ProcessResult runTraceReportValidator(
+            Path reportRoot, boolean requireS2KeepGreen) throws Exception {
+        List<String> command = new ArrayList<>(List.of(
+                "python3", TRACE_REPORT_VALIDATOR.toString(),
+                "--root", reportRoot.toString(),
+                "--fail-on-warnings",
+                "--warning-context", "test-blocking"));
+        if (requireS2KeepGreen) {
+            command.addAll(List.of(
+                    "--require-clean-profile", "special-stage",
+                    "--require-clean-logical-key", "s2_special_stage_0",
+                    "--require-clean-lane", "s2-0"));
+        }
+        return run(Path.of("."), command, null);
+    }
+
+    private static Path writeTraceReport(
+            Path root,
+            String profile,
+            String logicalKey,
+            String lane,
+            String ownerKey,
+            String payload,
+            String metadataOverride) throws Exception {
+        String safeLogicalKey = safeTraceComponent(logicalKey);
+        Path report = root.resolve(safeTraceComponent(profile)).resolve(
+                safeLogicalKey + "-" + safeTraceComponent(lane) + "-"
+                        + ownerKey.substring(0, 16) + ".json");
+        Files.createDirectories(report.getParent());
+        Files.writeString(report, payload, StandardCharsets.UTF_8);
+        String metadata = metadataOverride == null
+                ? ownerMetadata(logicalKey, ownerKey, report)
+                : metadataOverride;
+        Files.writeString(Path.of(report + ".owner.json"), metadata, StandardCharsets.UTF_8);
+        return report;
+    }
+
+    private static String ownerMetadata(String logicalKey, String ownerKey, Path report) {
+        return "{\"logical_key\":\"" + traceJson(logicalKey)
+                + "\",\"owner_key\":\"" + traceJson(ownerKey)
+                + "\",\"physical_path\":\""
+                + traceJson(report.toAbsolutePath().normalize().toString()) + "\"}";
+    }
+
+    private static String safeTraceComponent(String value) {
+        String safe = value.replaceAll("[^A-Za-z0-9._-]", "_");
+        if (safe.isBlank()) {
+            return "unnamed";
+        }
+        return safe.equals(".") || safe.equals("..") ? "_" + safe : safe;
+    }
+
+    private static String traceJson(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "\\r");
+    }
+
+    private static void assertTraceValidatorRejects(
+            ProcessResult result, String fixture, String expectedDiagnostic) {
+        assertTrue(result.exitCode() != 0, () ->
+                "validator unexpectedly accepted " + fixture + ":\n" + result.output());
+        assertTrue(result.output().contains(expectedDiagnostic), () ->
+                "validator rejected " + fixture + " for the wrong reason; expected "
+                        + expectedDiagnostic + ":\n" + result.output());
+    }
+
     private static void git(Path repository, String... arguments) throws Exception {
         assertGitSucceeds(repository, arguments);
     }
@@ -2622,6 +4275,24 @@ class TestBuildToolingGuard {
         command.addAll(List.of(arguments));
         ProcessResult result = run(repository, command, null);
         assertEquals(0, result.exitCode(), () -> String.join(" ", command) + " failed:\n" + result.output());
+    }
+
+    /**
+     * True when a job runs on pushes, but only to the integration branches.
+     * Feature-branch pushes stay policy-only and Maven-free (see
+     * {@link #allBranchPushPolicyShouldRemainLightweight()}); develop and
+     * master are where work actually lands, so a source-only gate there costs
+     * one short job per merge and is the only thing standing between a red
+     * structural guard and nobody noticing.
+     */
+    private static boolean conditionPinsPushToIntegrationBranches(String condition) {
+        if (condition == null || condition.isBlank()) {
+            return false;
+        }
+        String normalized = condition.replace("\"", "'");
+        return normalized.contains("github.event_name != 'push'")
+                && normalized.contains("github.ref == 'refs/heads/develop'")
+                && !normalized.contains("github.ref != ");
     }
 
     private static String gitOutput(Path repository, String... arguments) throws Exception {
@@ -2810,7 +4481,9 @@ class TestBuildToolingGuard {
     private static boolean surefirePluginUsesSharedArgLine(Document pom) {
         NodeList argLines = pom.getElementsByTagName("argLine");
         for (int i = 0; i < argLines.getLength(); i++) {
-            if ("${surefire.argLine}".equals(argLines.item(i).getTextContent().trim())) {
+            String value = argLines.item(i).getTextContent().trim();
+            if (value.equals("${surefire.argLine}")
+                    || value.startsWith("${surefire.argLine} ")) {
                 return true;
             }
         }
@@ -3031,6 +4704,11 @@ class TestBuildToolingGuard {
         }
     }
 
+    private static String sourceForInventory(Path file) throws IOException {
+        String source = Files.readString(file, StandardCharsets.UTF_8);
+        return file.toString().endsWith(".java") ? stripComments(source) : source;
+    }
+
     private static Element profileById(Document pom, String id) {
         NodeList profiles = pom.getElementsByTagName("profile");
         for (int i = 0; i < profiles.getLength(); i++) {
@@ -3052,11 +4730,29 @@ class TestBuildToolingGuard {
     }
 
     private static String directChildText(Element root, String tagName) {
+        Element child = directChild(root, tagName);
+        return child == null ? null : child.getTextContent().trim();
+    }
+
+    private static Element directChild(Element root, String tagName) {
         NodeList children = root.getChildNodes();
         for (int i = 0; i < children.getLength(); i++) {
             Node child = children.item(i);
             if (child instanceof Element element && tagName.equals(element.getTagName())) {
-                return element.getTextContent().trim();
+                return element;
+            }
+        }
+        return null;
+    }
+
+    private static Element directChildWithText(Element root, String tagName,
+                                               String textTagName, String expectedText) {
+        NodeList children = root.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child instanceof Element element && tagName.equals(element.getTagName())
+                    && expectedText.equals(directChildText(element, textTagName))) {
+                return element;
             }
         }
         return null;

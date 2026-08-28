@@ -336,7 +336,6 @@ local function normalizedActiveTrack(track, role, hardware, activeIndices, retur
     end
     local normalized = {
         active = true,
-        baseFrequency = Contract.u16(track.baseFrequency),
         detune = Contract.s8(track.detune),
         doNotAttack = doNotAttack,
         duration = Contract.u8(track.duration),
@@ -352,6 +351,9 @@ local function normalizedActiveTrack(track, role, hardware, activeIndices, retur
         voiceOrEnvelope = voiceOrEnvelope,
         volume = Contract.s8(track.volume)
     }
+    if role ~= "DAC" then
+        normalized.baseFrequency = Contract.u16(track.baseFrequency)
+    end
     if not role:match("^PSG") then
         normalized.pan = pan
         normalized.ams = ams

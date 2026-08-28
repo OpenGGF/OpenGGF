@@ -26,8 +26,14 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
         orb.update(0, main);
 
-        verify(main).setControlLocked(true);
-        verify(sidekick).setControlLocked(true);
+        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97086-97097) captures with
+        // ground_vel/render_flags/anim writes plus `move.b #1,object_control(a1)`
+        // and NO Ctrl_1_locked/Ctrl_2_locked write. Setting the engine control lock
+        // here latched logicalInputState through Obj01_Control's Ctrl_1_locked
+        // short-circuit (sonic3k.asm:21968-21971), which froze the Stat_table word
+        // Sonic_RecordPos (:22132) records for the sidekick's delayed follow read.
+        verify(main, never()).setControlLocked(anyBoolean());
+        verify(sidekick, never()).setControlLocked(anyBoolean());
         verify(main).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
         verify(sidekick).applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed());
         verify(main).setAnimationId(Sonic3kAnimationIds.ROLL);
@@ -77,7 +83,9 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.update(0, main);
         orb.update(1, main);
 
-        verify(main).setControlLocked(false);
+        // ROM loc_4A4F0/loc_4A4F6 (sonic3k.asm:97024-97042) clears object_control
+        // bits 0-1 only; the release has no Ctrl_1_locked write either.
+        verify(main, never()).setControlLocked(anyBoolean());
         verify(main).setRolling(true);
         // ROM loc_4A4F6 (sonic3k.asm:97029-97042) sets y_radius/x_radius and the
         // Status_Roll bit with NO y_pos write, so the release must preserve the player's
@@ -140,8 +148,20 @@ public class TestPachinkoMagnetOrbObjectInstance {
         verify(main, times(1)).releaseFromObjectControl(3);
     }
 
+    /**
+     * ROM {@code sub_4A428} (sonic3k.asm:96955-96967) has no on-screen or
+     * camera-distance test in its captured branch, and Player 2 is driven through
+     * the very same subroutine from {@code loc_4A408} (sonic3k.asm:96943-96949).
+     * A CPU sidekick carried off-screen by the orbit therefore stays captured;
+     * only Debug_placement_mode, {@code routine(a1) >= 4}, {@code object_control}
+     * bit 7, or an A/B/C press in its own Ctrl_2_logical pressed byte release it.
+     *
+     * <p>This test previously asserted the opposite -- that an off-screen CPU
+     * sidekick is released -- pinning engine-invented behaviour with no ROM
+     * counterpart.
+     */
     @Test
-    public void offscreenCapturedSidekickReleasesWithoutHoverSfx() {
+    public void offscreenCapturedSidekickStaysCaptured() {
         PachinkoMagnetOrbObjectInstance orb = new PachinkoMagnetOrbObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0xEC, 0, 0, false, 0));
         AbstractPlayableSprite main = mockPlayerAt(0x400, 0x400);
@@ -159,8 +179,11 @@ public class TestPachinkoMagnetOrbObjectInstance {
         services.resetSfxCount();
         orb.update(16, main);
 
-        verify(sidekick).releaseFromObjectControl(16);
-        assertEquals(0, services.sfxCount);
+        verify(sidekick, never()).releaseFromObjectControl(anyInt());
+        // vIntRunCount 16 is a multiple of the ROM's `(Level_frame_counter+1) & $F`
+        // hover-SFX period, and sub_4A428 reaches Play_SFX on that frame for a
+        // still-captured player regardless of where the camera is.
+        assertEquals(1, services.sfxCount);
     }
 
     private static AbstractPlayableSprite mockPlayerAt(int x, int y) {

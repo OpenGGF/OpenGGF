@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
@@ -99,6 +100,7 @@ class TestWfzTornadoThrusterRendering {
         objectServices.withSpriteManager(GameServices.sprites());
         objectServices.withGraphicsManager(graphics);
         objectServices.withLevelManager(levelManager);
+        objectServices.withConfiguration(SonicConfigurationService.getInstance());
         objectManager = new ObjectManager(
                 List.of(),
                 module.createObjectRegistry(),
@@ -137,6 +139,10 @@ class TestWfzTornadoThrusterRendering {
                         ROM_PARENT_X, ROM_PARENT_Y, Sonic2ObjectIds.TORNADO,
                         SUBTYPE_WFZ_END, 0, false, 0)));
         assertNotNull(parent);
+        // ObjectManager faithfully gives a dynamic spawn its routine-0 frame.
+        // The fixture jumps directly to the final wait frame, so consume that
+        // init pass before priming the ROM's leader wait counter.
+        parent.consumePendingInitRoutine();
         TestPlayableSprite player = new TestPlayableSprite(
                 (short) ROM_PARENT_X, (short) 0x05EC);
         GameServices.camera().setFocusedSprite(player);

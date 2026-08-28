@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -37,7 +38,23 @@ import java.util.function.IntConsumer;
  * child rises/attacks/sinks, then waits 60 frames before arming again.
  */
 public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+
+    /**
+     * Word 0 of this object's S3K SST holds its live ROM code pointer.
+     * ROM {@code Obj_Madmole} is installed from the S3K object pointer table at
+     * {@code $0008D580} (table read from the user-supplied ROM; the
+     * label is defined at docs/skdisasm/sonic3k.asm:193075).
+     * Its whole code block lies in one bank, so the HIGH word that
+     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
+     * on the next off-screen on-object frame is {@code $0008}
+     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     */
+    @Override
+    public int romObjectCodePointerHighWord() {
+        return 0x0008;
+    }
+
 
     private static final int CAP_COLLISION_FLAGS = 0;
     private static final int CAP_MAPPING_FRAME = 0x0D;

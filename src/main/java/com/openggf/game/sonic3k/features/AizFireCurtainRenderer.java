@@ -237,8 +237,8 @@ final class AizFireCurtainRenderer {
 
     /**
      * Populates the fire descriptor cache by sampling the entire fire zone
-     * from the BG layout at a fixed X offset.  Called once during RISING
-     * before the mutation overwrites the BG data.
+     * from the BG layout at a fixed X offset. Called during RISING, before the
+     * mutation overwrites the BG data.
      */
     private void populateFireDescriptorCache(int sourceWorldX, int tileBase, int tileCount,
             int screenWidth) {

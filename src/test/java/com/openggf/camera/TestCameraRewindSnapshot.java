@@ -105,8 +105,17 @@ class TestCameraRewindSnapshot {
         camera.setXCopy((short) 0x1111);
         camera.setYCopy((short) 0x0222);
 
-        camera.setX((short) 0x2EA2);
-        camera.setY((short) 0x0542);
+        camera.setXAfterRenderCopy((short) 0x2EA2);
+        camera.setYAfterRenderCopy((short) 0x0542);
+        assertEquals(0x1111, camera.getXCopy() & 0xFFFF);
+        assertEquals(0x0222, camera.getYCopy() & 0xFFFF);
+
+        CameraSnapshot snapshot = camera.capture();
+        camera.setX((short) 0x3333);
+        camera.setY((short) 0x0444);
+        camera.restore(snapshot);
+        assertEquals(0x2EA2, camera.getX() & 0xFFFF);
+        assertEquals(0x0542, camera.getY() & 0xFFFF);
         assertEquals(0x1111, camera.getXCopy() & 0xFFFF);
         assertEquals(0x0222, camera.getYCopy() & 0xFFFF);
 

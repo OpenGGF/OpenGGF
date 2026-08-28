@@ -39,8 +39,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Isolated;
 import com.openggf.physics.Direction;
 import com.openggf.physics.GroundSensor;
+import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.SensorResult;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.GroundMode;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
@@ -435,6 +437,7 @@ public class TestPlayableSpriteMovement {
                 PlayableSpriteMovement movement = new PlayableSpriteMovement(
                                 sonic, collisionSystem, GameServices.gameState());
 
+                sonic.setJumpInputPressed(true, true);
                 movement.handleMovement(false, true, false, false, true, false, false, false);
 
                 assertTrue(sonic.getSpindash(), "Down plus a fresh jump press must enter the charge path");
@@ -445,6 +448,7 @@ public class TestPlayableSpriteMovement {
                                 "charge-frame AnglePos publishes the solid left angle");
 
                 sonic.setOnObject(true);
+                sonic.setJumpInputPressed(false, false);
                 movement.handleMovement(false, false, false, false, false, false, false, false);
 
                 assertFalse(sonic.getSpindash(), "releasing Down must take the spindash release path");
@@ -803,6 +807,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setJumping(true);
                 mockSprite.setYSpeed((short) 0);
 
+                mockSprite.getSuperStateController().checkTransformationBeforeMove();
                 mockSprite.getSuperStateController().update();
 
                 assertEquals(SuperState.TRANSFORMING, mockSprite.getSuperStateController().getState(),
@@ -823,6 +828,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setJumping(true);
                 mockSprite.setYSpeed((short) 0);
 
+                mockSprite.getSuperStateController().checkTransformationBeforeMove();
                 mockSprite.getSuperStateController().update();
 
                 assertEquals(SuperState.NORMAL, mockSprite.getSuperStateController().getState(),
@@ -947,6 +953,7 @@ public class TestPlayableSpriteMovement {
                 // ROM next frame Ctrl_1_logical=$1800: B remains held but its
                 // press bit is clear, so Sonic_ShieldMoves must not run.
                 mockSprite.setObjectControlled(false);
+                mockSprite.setJumpInputPressed(true, false);
                 Method storeInput = PlayableSpriteMovement.class.getDeclaredMethod("storeInputState",
                                 boolean.class, boolean.class, boolean.class, boolean.class, boolean.class);
                 storeInput.setAccessible(true);
@@ -4263,7 +4270,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void testS3kRollStopAnimationChangeClearsPushing() throws Exception {
+        public void testS3kRollStopAnimationChangeRetainsPushing() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
                                 .setIdleAnimId(5)
@@ -4282,8 +4289,14 @@ public class TestPlayableSpriteMovement {
                 assertFalse(mockSprite.getRolling(), "Tails_RollSpeed clears Status_Roll below the stop threshold");
                 assertEquals(5, mockSprite.getAnimationId(),
                                 "Tails_RollSpeed writes idle animation when rolling stops");
-                assertFalse(mockSprite.getPushing(),
-                                "S3K Animate_Tails clears Status_Push after the roll-stop anim change");
+                assertTrue(mockSprite.getPushing(),
+                                "Sonic_RollSpeed/Tails_RollSpeed's roll-stop block writes only the roll bit,"
+                                                + " the radii, anim and y_pos (sonic3k.asm:22979-22990,28216-28231;"
+                                                + " s2.asm:37051-37061). Animate_Sonic/Animate_Tails clears"
+                                                + " Status_Push on anim != prev_anim (sonic3k.asm:29359-29364,"
+                                                + " 29681-29686), and that runs AFTER Sonic_RecordPos"
+                                                + " (sonic3k.asm:21995-22022), so the movement path must leave"
+                                                + " Status_Push alone");
         }
 
         @Test
@@ -4909,5 +4922,205 @@ public class TestPlayableSpriteMovement {
                 // Threshold should be based on xSpeed (for GROUND mode)
                 int expectedThreshold = Math.abs(xSpeed >> 8);
                 assertEquals(expectedThreshold, threshold, "Threshold should be based on xSpeed");
+        }
+
+        @Test
+        public void knucklesSlideGetUpRunsKnuxTouchFloorGroundingTail() throws Exception {
+                mockSprite.setAir(true);
+                mockSprite.setPushing(true);
+                mockSprite.setJumping(true);
+                mockSprite.setFlipAngle(0x60);
+                mockSprite.setFlipType(0x81);
+                mockSprite.setFlipsRemaining(3);
+                mockSprite.setDoubleJumpFlag(3);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("slideGetUp");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertFalse(mockSprite.getAir(),
+                                "Knuckles_Sliding .getUp must tail through Knux_TouchFloor");
+                assertFalse(mockSprite.getPushing(), "Knux_TouchFloor clears Status_Push");
+                assertFalse(mockSprite.isJumping(), "Knux_TouchFloor clears jumping(a0)");
+                assertEquals(0, mockSprite.getFlipAngle());
+                assertEquals(0, mockSprite.getFlipType());
+                assertEquals(0, mockSprite.getFlipsRemaining());
+        }
+
+        @Test
+        public void knucklesWallClimbNoInputUsesFloorDistanceAsRetailAnimationDelta() throws Exception {
+                prepareWallClimbProbe(0x0100, 0xB7);
+
+                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                        terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x0100, 0x0109))
+                                        .thenReturn(new TerrainCheckResult(3, (byte) 0, 1));
+
+                        invokeWallClimbUpdate();
+                }
+
+                assertEquals(0xBA, mockSprite.getMappingFrame(),
+                                "FixBugs=0 leaves sub_F828's floor distance in d1, so B7 + 3 becomes BA");
+                assertEquals(3, mockSprite.getDoubleJumpProperty() & 0xFF);
+        }
+
+        @Test
+        public void knucklesWallClimbNoInputDetachesOnNegativeFloorDistance() throws Exception {
+                prepareWallClimbProbe(0x0100, 0xB9);
+                mockSprite.setAir(true);
+                mockSprite.setJumping(true);
+                int originalY = mockSprite.getY();
+
+                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                        terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x0100, 0x0109))
+                                        .thenReturn(new TerrainCheckResult(-3, (byte) 0, 1));
+
+                        invokeWallClimbUpdate();
+                }
+
+                assertEquals((short) (originalY - 3), mockSprite.getY());
+                assertEquals(0, mockSprite.getDoubleJumpFlag());
+                assertFalse(mockSprite.getAir());
+                assertFalse(mockSprite.isJumping());
+        }
+
+        @Test
+        public void knucklesWallClimbNoSurfaceUsesRomEmptyTileDistance() throws Exception {
+                // probeY=$114, so the ROM FindFloor empty-tile path returns
+                // $1F-($114&$F)=$1B. $A0+$1B lands inside the climb-frame range.
+                prepareWallClimbProbe(0x010B, 0xA0);
+
+                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                        terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x0100, 0x0114))
+                                        .thenReturn(TerrainCheckResult.noCollision());
+
+                        invokeWallClimbUpdate();
+                }
+
+                assertEquals(0xBB, mockSprite.getMappingFrame(),
+                                "the engine no-surface sentinel must map back to the ROM's positive d1 distance");
+        }
+
+        @Test
+        public void knucklesWallClimbMappingFrameAddWrapsAsByteBeforeClamp() throws Exception {
+                prepareWallClimbProbe(0x0100, 0xF0);
+
+                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                        terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x0100, 0x0109))
+                                        .thenReturn(new TerrainCheckResult(0x20, (byte) 0, 1));
+
+                        invokeWallClimbUpdate();
+                }
+
+                assertEquals(0xBC, mockSprite.getMappingFrame(),
+                                "$F0+$20 wraps to $10 before the unsigned B7..BC clamps");
+        }
+
+        @Test
+        public void ordinaryControlUnlockDoesNotRecreateConsumedRawJumpEdge() throws Exception {
+                Method storeInput = PlayableSpriteMovement.class.getDeclaredMethod("storeInputState",
+                                boolean.class, boolean.class, boolean.class, boolean.class, boolean.class);
+                storeInput.setAccessible(true);
+
+                // Poll_Controller sees the edge while Ctrl_1_locked keeps the logical
+                // held word out of Sonic_Control.
+                mockSprite.setJumpInputPressed(true, true);
+                storeInput.invoke(manager, false, false, false, false, false);
+                assertFalse(manager.captureRewindState().inputJumpPress());
+
+                // The lock lifts with A/B/C still held, but Poll_Controller's press
+                // byte is now clear. The logical copy must not manufacture a new edge.
+                mockSprite.setJumpInputPressed(true, false);
+                storeInput.invoke(manager, false, false, false, false, true);
+
+                assertFalse(manager.captureRewindState().inputJumpPress(),
+                                "Sonic_Control copies the raw pressed byte; it does not derive an edge from filtered held input");
+        }
+
+        @Test
+        public void hurtStopBottomKillReturnsBeforeTerrainCollision() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                boolean[] terrainCollisionRan = {false};
+                CollisionSystem collisionSystem = new LandingProbeCollisionSystem(
+                                (sprite, landingHandler, forceFloorCheck) -> terrainCollisionRan[0] = true);
+                manager = new PlayableSpriteMovement(mockSprite, collisionSystem, GameServices.gameState());
+                installRuntimeCollisionSystem(collisionSystem);
+
+                Camera camera = GameServices.camera();
+                camera.setMaxY((short) 0x0100);
+                camera.setMaxYTarget((short) 0x0100);
+                camera.setLevelStarted(true);
+                mockSprite.setCentreY((short) 0x01E1);
+                mockSprite.setAir(true);
+                mockSprite.setHurt(true);
+                mockSprite.setXSpeed((short) 0);
+                mockSprite.setYSpeed((short) 0);
+                mockSprite.setGroundSensors(new Sensor[] {
+                                fixedSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 16),
+                                fixedSensor(mockSprite, Direction.DOWN, (byte) 0, (byte) 16)
+                });
+                mockSprite.setCeilingSensors(new Sensor[] {
+                                fixedSensor(mockSprite, Direction.UP, (byte) 0, (byte) 16),
+                                fixedSensor(mockSprite, Direction.UP, (byte) 0, (byte) 16)
+                });
+                mockSprite.setPushSensors(new Sensor[] {
+                                fixedSensor(mockSprite, Direction.LEFT, (byte) 0, (byte) 16),
+                                fixedSensor(mockSprite, Direction.RIGHT, (byte) 0, (byte) 16)
+                });
+
+                Method modeAirborne = PlayableSpriteMovement.class.getDeclaredMethod("modeAirborne");
+                modeAirborne.setAccessible(true);
+                modeAirborne.invoke(manager);
+
+                assertTrue(mockSprite.getDead());
+                assertFalse(terrainCollisionRan[0],
+                                "Sonic_HurtStop kills and returns before Sonic_Floor/DoLevelCollision");
+        }
+
+        @Test
+        public void hurtStopBottomKillUsesUnsignedS1AndSignedS2WordComparisons() throws Exception {
+                Camera camera = GameServices.camera();
+                camera.setMaxY((short) 0x0100);
+                camera.setMaxYTarget((short) 0x0100);
+                camera.setLevelStarted(true);
+
+                com.openggf.tests.TestablePlayableSprite s1 =
+                                new com.openggf.tests.TestablePlayableSprite("s1", (short) 0, (short) 0);
+                s1.setGameRulesForTest(GameRules.SONIC_1);
+                s1.setCentreY((short) 0xFFFF);
+                PlayableSpriteMovement s1Movement = new PlayableSpriteMovement(s1);
+
+                Method hurtStopKill = PlayableSpriteMovement.class
+                                .getDeclaredMethod("applyHurtStopBottomKill");
+                hurtStopKill.setAccessible(true);
+                assertTrue((Boolean) hurtStopKill.invoke(s1Movement),
+                                "S1 FixBugs=0 uses unsigned blo, so wrapped $FFFF is beyond $01E0");
+                assertTrue(s1.getDead());
+
+                com.openggf.tests.TestablePlayableSprite s2 =
+                                new com.openggf.tests.TestablePlayableSprite("s2", (short) 0, (short) 0);
+                s2.setGameRulesForTest(GameRules.SONIC_2);
+                s2.setCentreY((short) 0xFFFF);
+                PlayableSpriteMovement s2Movement = new PlayableSpriteMovement(s2);
+
+                assertFalse((Boolean) hurtStopKill.invoke(s2Movement),
+                                "S2 uses signed blt, so y_pos=-1 is above rather than below the kill row");
+                assertFalse(s2.getDead());
+        }
+
+        private void prepareWallClimbProbe(int centreY, int mappingFrame) throws Exception {
+                mockSprite.setCentreX((short) 0x0100);
+                mockSprite.setCentreY((short) centreY);
+                mockSprite.setWallClimbX(mockSprite.getX());
+                mockSprite.setDoubleJumpFlag(4);
+                mockSprite.setDoubleJumpProperty((byte) 0);
+                mockSprite.setObjectMappingFrameControl(true);
+                mockSprite.setMappingFrame(mappingFrame);
+                setInputState(false, false, false, false, false);
+        }
+
+        private void invokeWallClimbUpdate() throws Exception {
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("updateWallClimb");
+                method.setAccessible(true);
+                method.invoke(manager);
         }
 }

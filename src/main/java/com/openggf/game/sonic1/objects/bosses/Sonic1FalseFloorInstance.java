@@ -293,6 +293,41 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         return true;
     }
 
+    /**
+     * The floor's SST {@code obActWid}, which {@code Sonic_Balance} reads off
+     * the stood-on object (docs/s1disasm/_incObj/01 Sonic.asm:423).
+     *
+     * <p>{@code FFloor_Solid} computes the remaining half-width in {@code d0},
+     * stores it with {@code move.b d0,obActWid(a0)}, and only then passes
+     * {@code d1 = sonic_solid_width + d0} to {@code SolidObject}
+     * (docs/s1disasm/_incObj/82, 83 SBZ Eggman Cutscene and Crumbling
+     * Floor.asm:265-280). So {@code obActWid} is {@link #currentHalfWidth}
+     * itself, and the collision width modelled by {@link #getSolidParams()} is
+     * that plus {@code $B} — the two differ by exactly Sonic's solid width.
+     *
+     * <p>Required rather than tidy: the base {@code getBalanceWidthPixels()}
+     * returns {@code getSolidParams().halfWidth()} for top-solid objects, so
+     * without this override the balance test received {@code d0 + $B} where the
+     * ROM uses {@code d0}.
+     *
+     * <p><b>This value is dynamic and must stay dynamic.</b> {@code d0} is
+     * {@code (8 - blocks_broken) << 4}, recomputed in
+     * {@link #updateSolidDimensions()} as the floor crumbles, so it walks from
+     * {@code 0x80} down to zero across the fight. A constant would match the
+     * ROM at exactly one width and be wrong at every other, while still looking
+     * like a fix.
+     *
+     * <p>Note, and deliberately not addressed here: this class declares
+     * {@link #isTopSolidOnly()} {@code true} while {@code FFloor_Solid} ends in
+     * {@code jmp (SolidObject).l}, a full solid. That is a separate question
+     * from the width, recorded in the trace frontier log, and changing it here
+     * would make this commit alter two decisions instead of one.
+     */
+    @Override
+    public int getBalanceWidthPixels() {
+        return currentHalfWidth;
+    }
+
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;

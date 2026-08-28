@@ -147,6 +147,65 @@ public interface TitleCardProvider {
         // No-op unless the game models a gameplay-phase title-card exit tail.
     }
 
+    /**
+     * Sequences everything an omitted title-card presentation still owes.
+     *
+     * <p>Omitting the presentation does not delete the owner, so both halves of
+     * its lifetime still run: {@link #beginOmittedPresentationExitTail} models
+     * the tail, and {@link #beginOmittedFreshLevelOwner} models the entry art
+     * {@code Obj_TitleCardInit} queues on the object's first dispatch
+     * (docs/skdisasm/sonic3k.asm:62108-62164). The entry half runs only for a
+     * load that owns the destination's fresh runtime art — a host-placed level
+     * entry never reached the game's own {@code Level:} routine and so
+     * installed no owner to queue it.
+     *
+     * @param ownsFreshLevelRuntimeArt whether this load owns the destination's
+     *        fresh runtime art ({@code LevelLoadContext#isQueueFreshLevelRuntimeArt})
+     */
+    default void beginOmittedPresentation(
+            int zoneIndex, int actIndex, boolean ownsFreshLevelRuntimeArt) {
+        beginOmittedPresentationExitTail(zoneIndex, actIndex);
+        if (ownsFreshLevelRuntimeArt) {
+            beginOmittedFreshLevelOwner(zoneIndex, actIndex);
+        }
+    }
+
+    /**
+     * Whether an omitted fresh-level presentation still owns a live title-card
+     * object whose per-iteration dispatch belongs to this row.
+     *
+     * <p>Omitting the presentation does not delete the owner. S3K installs
+     * {@code Obj_TitleCard} in slot 5 and runs the locked loop
+     * {@code loc_62CC} (docs/skdisasm/sonic3k.asm:7735-7748) until the object
+     * clears {@code objoff_48}; every iteration of that loop is one V-int, so
+     * the owner is dispatched once per recorded row whether or not anything is
+     * drawn.
+     */
+    default boolean ownsOmittedFreshLevelPresentation() {
+        return false;
+    }
+
+    /**
+     * Installs the owner an omitted fresh-level presentation still has, and
+     * runs the art work its first dispatch performs.
+     *
+     * <p>Called only for a load that owns the destination's fresh runtime art
+     * ({@code LevelLoadContext#isQueueFreshLevelRuntimeArt}). A host-placed
+     * level entry does not reach the game's own {@code Level:} routine and
+     * installs no owner, so it queues nothing.
+     */
+    default void beginOmittedFreshLevelOwner(int zoneIndex, int actIndex) {
+        // No-op unless the game models an omitted fresh-level title owner.
+    }
+
+    /**
+     * Runs one dispatch of an omitted fresh-level owner, in the object-scan
+     * position of its loop iteration. Renders nothing.
+     */
+    default void updateOmittedFreshLevelOwner() {
+        // No-op unless the game models an omitted fresh-level title owner.
+    }
+
     /** Publishes an armed fresh-level handoff when an omitted native owner reaches its exit. */
     default void completeOmittedPresentationFreshLevelRuntimeArtHandoff() {
         // No-op for games without a title-owned fresh-level hardware handoff.
@@ -249,6 +308,34 @@ public interface TitleCardProvider {
      */
     default boolean shouldAdvanceVblankClockDuringLockedPhase() {
         return false;
+    }
+
+    /**
+     * Whether the level-only fixed object slots (Tails' tails, spindash dust,
+     * shields, bubbles, invincibility stars) execute while the title card is up.
+     *
+     * <p>Sonic 2's {@code RunObjects} chooses its slot count from the game mode:
+     * it runs the first {@code $80} slots ({@code Object_RAM..Object_RAM_End})
+     * unless {@code Game_Mode} equals {@code GameModeID_Level} exactly, in which
+     * case it extends to {@code LevelOnly_Object_RAM_End}
+     * (docs/s2disasm/s2.asm:29805-29824). {@code Level} sets
+     * {@code GameModeFlag_TitleCard} on entry (s2.asm:4758) and only
+     * {@code Level_StartGame} clears it, immediately before {@code Level_MainLoop}
+     * (s2.asm:5087). Every pre-main-loop {@code RunObjects} call — the one at
+     * s2.asm:5006 and each title-card wait-loop iteration at s2.asm:5060-5066 —
+     * therefore runs with the flag set and never reaches
+     * {@code LevelOnly_Object_RAM}, which begins at {@code Tails_Tails}
+     * (docs/s2disasm/s2.constants.asm:1145-1176). Obj05's first execution is
+     * consequently the first {@code Level_MainLoop} pass,
+     * {@code Level_frame_counter == 1}.
+     *
+     * <p>Sonic 3 &amp; Knuckles has no such gate: {@code Process_Sprites} always
+     * walks the whole {@code Object_RAM}, including {@code Level_object_RAM}
+     * (docs/skdisasm/sonic3k.asm:35963-35976, sonic3k.constants.asm:309).
+     * Sonic 1 has no level-only fixed slot family at all.
+     */
+    default boolean shouldRunLevelOnlyFixedSlotsDuringLockedPhase() {
+        return true;
     }
 
     /**

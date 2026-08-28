@@ -124,7 +124,7 @@ public class Sonic2SpecialStageManager {
     private SpecialStageViewport specialStageViewport = SpecialStageViewport.nativeViewport();
     private long backgroundStageGeneration;
     private int frameCounter = 0;
-    /** Last executed logic/render phase; Vint_Lag intentionally leaves it latched. */
+    /** Last executed logic/render phase. */
     private int renderFrameCounter = 0;
 
     private enum PlaneDebugMode {
@@ -172,6 +172,7 @@ public class Sonic2SpecialStageManager {
     private int p2HeldButtons = 0;
     private int p2LogicalButtons = 0;
     private boolean recurringMainPassPending;
+    private boolean introFirstRecurringPassDeferred;
     private int pendingMainHeldButtons;
     private int pendingMainPressedButtons;
     private int pendingMainP2HeldButtons;
@@ -234,7 +235,6 @@ public class Sonic2SpecialStageManager {
     private double alignmentRainbowSpeedAccumulator = 0.0;
     private boolean alignmentStepByTrackFrame = false;
     private GlyphBatchRenderer alignmentTextRenderer;
-    private GlyphBatchRenderer lagCompensationTextRenderer;
 
     // Current ring requirement for the active checkpoint (for "rings to go"
     // display)
@@ -246,18 +246,14 @@ public class Sonic2SpecialStageManager {
     private long frameSampleSum = 0;
     private static final int FRAME_SAMPLE_SIZE = 60;
 
-    // Lag compensation diagnostics (wall-clock based)
+    // Fine timing diagnostics (wall-clock based)
     private long diagnosticWallStartTime = 0;
     private int diagnosticUpdateCount = 0;
     private int diagnosticTrackAdvances = 0;
     private DiagnosticClock diagnosticClock = DiagnosticClock.SYSTEM;
     private Boolean fineDiagnosticsOverride;
     private boolean diagnosticEpochActive;
-
-    /** Legacy zero/off control retained for trace launchers; not a pacing ratio. */
-    private static final double LAG_MODEL_ENABLED_VALUE = 0.35;
-    private double lagCompensation = LAG_MODEL_ENABLED_VALUE;
-    private boolean lagCompensationDisplayEnabled = false;
+    private boolean liveLagSimulationEnabled = true;
 
     // Skydome scroll state (accumulated horizontal scroll for background)
     private int skydomeScrollX = 0;
@@ -1070,6 +1066,38 @@ public class Sonic2SpecialStageManager {
         if (tailsPlayer != null) {
             tailsPlayer.initializeScalarStateFromRomObjectRoutine();
         }
+        primeDynamicArtDedupBaselines();
+    }
+
+    /**
+     * Reproduces the {@code LastLoadedDPLC} writes each special-stage player
+     * object's init routine performs.
+     *
+     * <p>Obj09's init writes {@code #1} to {@code Sonic_LastLoadedDPLC}
+     * (s2.asm:69095), Obj10's writes {@code #1} to {@code Tails_LastLoadedDPLC}
+     * (s2.asm:70378), and the Obj88 tail Obj10's init runs writes {@code #1} to
+     * {@code TailsTails_LastLoadedDPLC} (s2.asm:70403). Those registers are the
+     * ROM's own per-owner DPLC dedup: {@code LoadSSPlayerDynPLC} compares
+     * {@code mapping_frame} against the register and skips the transfer only on
+     * an exact match (s2.asm:69209-69213), and
+     * {@code LoadSSTailsTailsDynPLC} does the same against its own register
+     * (s2.asm:70586-70588). Because init rewrites them, a value a previous
+     * special-stage instance left behind can never suppress the first transfer
+     * of the next one.
+     */
+    private void primeDynamicArtDedupBaselines() {
+        DynamicArtLifecycleService lifecycle =
+                GameServices.dynamicArtLifecycleOrNull();
+        if (lifecycle == null || !lifecycle.isRunActive()) {
+            return;
+        }
+        if (sonicPlayer != null) {
+            lifecycle.primeDplcDedupBaseline("ss-sonic", 1);
+        }
+        if (tailsPlayer != null) {
+            lifecycle.primeDplcDedupBaseline("ss-tails", 1);
+            lifecycle.primeDplcDedupBaseline("ss-tails-tails", 1);
+        }
     }
 
     /**
@@ -1096,15 +1124,7 @@ public class Sonic2SpecialStageManager {
         playerBootstrapPhase = PlayerBootstrapPhase.INITIALIZED;
     }
 
-    /**
-     * Updates the Special Stage state for one frame.
-     *
-     * Lag compensation: The original Mega Drive experiences lag frames during
-     * the special stage due to heavy VBlank processing. When a lag frame occurs,
-     * the entire game update is skipped. We simulate this by skipping a
-     * proportional
-     * number of update calls entirely.
-     */
+    /** Updates the Special Stage state for one frame. */
     public void update() {
         if (!initialized) {
             return;
@@ -1115,36 +1135,21 @@ public class Sonic2SpecialStageManager {
             return;
         }
 
-        // frameCounter is the host-frame input to the stateless lag model. It
-        // must advance on skipped frames as well as executed logical frames so
-        // a lag decision cannot repeat forever after rewind or normal play.
         frameCounter++;
 
-        // A zero compatibility factor is the existing trace-replay force-off
-        // switch. Any positive value enables the trace-derived model; the
-        // numeric value no longer controls pacing.
-        int lagSpeedFactor = trackAnimator != null ? trackAnimator.getSpeedFactor() : 0;
-        int lagSegmentType = trackAnimator != null
+        int liveSpeedFactor = trackAnimator != null ? trackAnimator.getSpeedFactor() : 0;
+        int liveSegmentType = trackAnimator != null
                 ? trackAnimator.getCurrentSegmentType()
                 : Sonic2SpecialStageConstants.SEGMENT_STRAIGHT;
-        int liveObjectCount = objectManager != null ? objectManager.getActiveObjects().size() : 0;
-        if (lagCompensation > 0.0
-                && Sonic2SpecialStageLagModel.shouldLagThisFrame(
-                        frameCounter,
-                        lagSpeedFactor,
-                        lagSegmentType,
-                        drawingIndex,
-                        liveObjectCount)) {
-            // No VInt/control-copy occurred, so a physical press edge sampled
-            // only on this skipped update must not survive into the next one.
-            // P2's current mapper exposes logical held state (not a separate
-            // pressed edge), so preserve it alongside P1 held state for the next
-            // executed VInt. Keep previousPhysical* unchanged: it belongs to the
-            // last VInt that actually ran (s2.asm:6674-6680).
+        if (liveLagSimulationEnabled
+                && Sonic2SpecialStageLagModel.shouldSkipLiveUpdate(
+                        frameCounter, liveSpeedFactor, liveSegmentType)) {
+            // Approximate the retail Vint_Lag outcome for interactive play.
+            // Externally paced traces disable this branch and admit recorded
+            // lag rows at the scheduling boundary instead.
             pressedButtons = 0;
-            // Still update lastFrameTime to avoid FPS diagnostic skew
             updateTimingDiagnostics(false, false);
-            return; // Skip this entire frame (simulate lag)
+            return;
         }
 
         // Vint_runcount advances at VintRet even when intervening VInts took the
@@ -1155,7 +1160,6 @@ public class Sonic2SpecialStageManager {
         // The recorder can observe VInt/draw/stream/scroll state before the later
         // RunObjects phase completes. Publish only that prior RunObjects work at
         // the start of the next executed logical update (s2.asm:6674-6690).
-        executePendingRecurringMainPass();
 
         // Capture once after the pending pass: intro object execution may cross a
         // presentation phase, but current VInt gating stays fixed for this tick.
@@ -1264,13 +1268,40 @@ public class Sonic2SpecialStageManager {
                 plcFrameLifecycle.markNextVblankServicesDmaQueue();
             }
             executeActiveSpecialStageObjects();
+            introFirstRecurringPassDeferred = true;
             intro.beginFadeFromWhite();
         } else if (recurringVintTick) {
-            // The recurring loop completes current SSTrack_Draw, perspective,
-            // streaming, and scroll after WaitForVint. Only RunObjects-phase
-            // publication is deferred to the next observation
-            // (s2.asm:6679-6688,7026-7091).
+            // ROM order within one main-loop iteration is SSTrack_Draw ->
+            // SSSetGeometryOffsets -> SSLoadCurrentPerspective ->
+            // SSObjectsManager -> SS_ScrollBG -> RunObjects
+            // (docs/s2disasm/s2.asm:6679-6688). The pass therefore executes in
+            // the same iteration whose VInt advanced SSTrack_drawing_index and
+            // whose SSObjectsManager allocated this iteration's objects, so a
+            // freshly streamed object takes its first depth decrement here.
+            executePendingRecurringMainPass();
             scheduleRecurringMainPass(currentTrackFrameChanged);
+            if (introFirstRecurringPassDeferred) {
+                // The first post-fade wait-loop iteration is the slow one: its
+                // full track redraw overruns the frame (the recorder's first
+                // post-fade row is a lag row) and its results only become
+                // visible at the following observation, like the engine's
+                // scheduled-pass pipeline already models. Every later
+                // pre-start iteration completes within its own frame.
+                introFirstRecurringPassDeferred = false;
+            } else if (!intro.isSpecialStageStarted() && !intro.isTerminalPreStartPassPending()) {
+                // Before SpecialStage_Started, the wait loop's RunObjects pass
+                // completes within the same displayed frame as the WaitForVint
+                // return that started it (s2.asm:6674-6688): the recorder's
+                // end-of-frame rows show each pass's results on the row that
+                // scheduled it (stage-1 fixture rows 160-178, where only the
+                // slow first post-fade iteration lands a row later — invisible
+                // here because its mapping frame 0 art is already loaded).
+                // Deferring to the next observation ran every pre-start pass
+                // one non-lag row late and shifted all player DPLC edges. The
+                // Obj5F terminal pass stays deferred: its completion boundary
+                // is owned by completeTerminalPreStartPassWithoutVint.
+                executePendingRecurringMainPass();
+            }
         }
 
         if (!runtimeFrozen) {
@@ -1291,7 +1322,6 @@ public class Sonic2SpecialStageManager {
         if (!recurringMainPassPending) {
             return;
         }
-
         recurringMainPassPending = false;
         updatePlayers(
                 pendingMainHeldButtons,
@@ -1348,7 +1378,7 @@ public class Sonic2SpecialStageManager {
      * 9734-9746). Deterministic replay uses this semantic boundary; all state is
      * evolved natively from the pending pass and no trace state is copied in.
      */
-    void completeTerminalPreStartPassWithoutVint() {
+    public void completeTerminalPreStartPassWithoutVint() {
         if (!recurringMainPassPending
                 || intro == null
                 || !intro.isTerminalPreStartPassPending()) {
@@ -1543,63 +1573,18 @@ public class Sonic2SpecialStageManager {
             return;
         }
 
-        // Use the class field drawingIndex which cycles 0-4 every frame (like ROM's
-        // VBlank handler)
-        // Note: this.drawingIndex is incremented in update() before this method is
-        // called
-
-        // Process new segment when drawing_index reaches 4 and segment changed
+        // this.drawingIndex was advanced by this iteration's VInt above, exactly
+        // as SSObjectsManager reads SSTrack_drawing_index after WaitForVint. The
+        // objects allocated here take their first depth decrement in this same
+        // iteration's RunObjects pass, executed just below.
         if (this.drawingIndex == 4 && lastDrawingIndex != 4) {
             int segmentIndex = trackAnimator.getCurrentSegmentIndex();
             int segmentType = trackAnimator.getCurrentSegmentType();
-            List<Sonic2SpecialStageObject> streamedObjects =
-                    objectManager.processSegment(segmentIndex, segmentType);
-            if (playerBootstrapPhase == PlayerBootstrapPhase.INITIALIZED) {
-                executeStreamedObjectInitFallthrough(streamedObjects);
-            }
+            objectManager.processSegment(segmentIndex, segmentType);
             lastDrawingIndex = this.drawingIndex;
             return;
         }
         lastDrawingIndex = this.drawingIndex;
-    }
-
-    /**
-     * Runs routine-0 fallthrough for real objects allocated by the recurring
-     * {@code SSObjectsManager -> RunObjects} pass. Obj60 and Obj61 both set
-     * routine 2 and continue through depth, projection, animation, and collision
-     * in that allocation-associated execution (s2.asm:6679-6688, 6935-6967,
-     * 70645-70665, 70731-70752). Obj59 also runs routine zero in that same
-     * RunObjects pass, setting the pause-only control flag before counting its
-     * 60-pass delay (s2.asm:72279-72291). Message markers remain with their
-     * separate owner.
-     */
-    private void executeStreamedObjectInitFallthrough(List<Sonic2SpecialStageObject> streamedObjects) {
-        if (streamedObjects.isEmpty() || trackAnimator == null) {
-            return;
-        }
-
-        int currentFrame = trackAnimator.getCurrentTrackFrameIndex();
-        boolean flipped = trackAnimator.getEffectiveFlipState();
-        int speedFactor = trackAnimator.getSpeedFactor();
-        boolean drawingIndex4 = this.drawingIndex == 4;
-
-        for (Sonic2SpecialStageObject object : streamedObjects) {
-            if (object.isEmerald()) {
-                // Obj59 routine zero sets globals and advances its delay, but
-                // returns before projection/display until the delay expires.
-                object.update(currentFrame, flipped, speedFactor, drawingIndex4);
-                continue;
-            }
-            if (!object.isRing() && !object.isBomb()) {
-                continue;
-            }
-            object.update(currentFrame, flipped, speedFactor, drawingIndex4);
-            if (perspectiveData != null) {
-                object.updateScreenPosition(perspectiveData, currentFrame, flipped);
-            }
-        }
-
-        checkObjectCollisions(streamedObjects);
     }
 
     /** Later-slot RunObjects-equivalent active object execution. */
@@ -2663,60 +2648,6 @@ public class Sonic2SpecialStageManager {
     }
 
     /**
-     * Renders the lag compensation overlay showing current settings.
-     * Displayed when not in alignment test mode.
-     */
-    public void renderLagCompensationOverlay(int viewportWidth, int viewportHeight) {
-        if (alignmentTestMode || !lagCompensationDisplayEnabled) {
-            return;
-        }
-
-        if (lagCompensationTextRenderer == null) {
-            lagCompensationTextRenderer = new GlyphBatchRenderer();
-            lagCompensationTextRenderer.init(null);
-        }
-
-        lagCompensationTextRenderer.updateViewport(viewportWidth, viewportHeight);
-        lagCompensationTextRenderer.begin();
-
-        // Position at bottom-left of screen
-        int y = 14;
-
-        lagCompensationTextRenderer.drawTextOutlined(
-                formatLagCompensationOverlayText(),
-                8, y, DebugColor.YELLOW, FontSize.SMALL);
-
-        lagCompensationTextRenderer.end();
-    }
-
-    String formatLagCompensationOverlayText() {
-        int speedFactor = trackAnimator != null ? trackAnimator.getSpeedFactor() : 0;
-        int segmentType = trackAnimator != null
-                ? trackAnimator.getCurrentSegmentType()
-                : Sonic2SpecialStageConstants.SEGMENT_STRAIGHT;
-        Sonic2SpecialStageLagModel.BucketRatio bucket =
-                Sonic2SpecialStageLagModel.ratioForBucket(segmentType, speedFactor);
-        if (lagCompensation <= 0.0) {
-            return String.format(Locale.ROOT,
-                    "Lag model OFF (trace-paced): actual 0.0%% (~60 upd/s); target seg=%d speed=%d %.1f%% (%d/%d)",
-                    segmentType,
-                    speedFactor,
-                    bucket.fraction() * 100.0,
-                    bucket.numerator(),
-                    bucket.denominator());
-        }
-        double effectiveUpdates = 60.0 * (1.0 - bucket.fraction());
-        return String.format(Locale.ROOT,
-                "Lag model: seg=%d speed=%d %.1f%% (%d/%d, ~%.0f upd/s)",
-                segmentType,
-                speedFactor,
-                bucket.fraction() * 100.0,
-                bucket.numerator(),
-                bucket.denominator(),
-                effectiveUpdates);
-    }
-
-    /**
      * Gets the current track frame index (0-55).
      */
     public int getCurrentTrackFrameIndex() {
@@ -2773,21 +2704,9 @@ public class Sonic2SpecialStageManager {
         }
     }
 
-    public boolean isLagCompensationDisplayEnabled() {
-        return lagCompensationDisplayEnabled;
-    }
-
-    public void toggleLagCompensationDisplay() {
-        lagCompensationDisplayEnabled = !lagCompensationDisplayEnabled;
-        LOGGER.info("Lag compensation display: " + (lagCompensationDisplayEnabled ? "ON" : "OFF"));
-    }
-
-    /**
-     * Compatibility setter retained for trace launchers. Zero forces the lag
-     * model off; any positive value enables the trace-derived bucket model.
-     */
+    /** Enables live pacing for positive values and disables it for trace pacing. */
     public void setLagCompensation(double factor) {
-        this.lagCompensation = factor <= 0.0 ? 0.0 : LAG_MODEL_ENABLED_VALUE;
+        liveLagSimulationEnabled = factor > 0.0;
     }
 
     public int getCurrentStage() {
@@ -2834,14 +2753,13 @@ public class Sonic2SpecialStageManager {
         }
 
         initialized = false;
+        liveLagSimulationEnabled = true;
         backgroundStageGeneration++;
         if (renderer != null) {
             renderer.beginStaticBackgroundStage(backgroundStageGeneration);
         }
         Sonic2TrackFrameDecoder.invalidateDecodedFrameCache();
         currentStage = 0;
-        lagCompensationDisplayEnabled = false;
-
         trackAnimator = null;
         speedPromotionPending = false;
         pendingSpeedFactor = 0;
@@ -2876,6 +2794,7 @@ public class Sonic2SpecialStageManager {
         p2HeldButtons = 0;
         p2LogicalButtons = 0;
         recurringMainPassPending = false;
+        introFirstRecurringPassDeferred = false;
         pendingMainHeldButtons = 0;
         pendingMainPressedButtons = 0;
         pendingMainP2HeldButtons = 0;
@@ -3018,6 +2937,7 @@ public class Sonic2SpecialStageManager {
                 p2HeldButtons,
                 p2LogicalButtons,
                 recurringMainPassPending,
+                introFirstRecurringPassDeferred,
                 pendingMainHeldButtons,
                 pendingMainPressedButtons,
                 pendingMainP2HeldButtons,
@@ -3052,8 +2972,7 @@ public class Sonic2SpecialStageManager {
                 alignmentRainbowSpeedScale,
                 alignmentRainbowSpeedAccumulator,
                 alignmentStepByTrackFrame,
-                lagCompensation,
-                lagCompensationDisplayEnabled,
+                liveLagSimulationEnabled,
                 diagnosticWallStartTime,
                 diagnosticUpdateCount,
                 diagnosticTrackAdvances,
@@ -3095,6 +3014,7 @@ public class Sonic2SpecialStageManager {
         p2HeldButtons = snapshot.p2HeldButtons;
         p2LogicalButtons = snapshot.p2LogicalButtons;
         recurringMainPassPending = snapshot.recurringMainPassPending;
+        introFirstRecurringPassDeferred = snapshot.introFirstRecurringPassDeferred;
         pendingMainHeldButtons = snapshot.pendingMainHeldButtons;
         pendingMainPressedButtons = snapshot.pendingMainPressedButtons;
         pendingMainP2HeldButtons = snapshot.pendingMainP2HeldButtons;
@@ -3135,8 +3055,7 @@ public class Sonic2SpecialStageManager {
         alignmentRainbowSpeedScale = snapshot.alignmentRainbowSpeedScale;
         alignmentRainbowSpeedAccumulator = snapshot.alignmentRainbowSpeedAccumulator;
         alignmentStepByTrackFrame = snapshot.alignmentStepByTrackFrame;
-        lagCompensation = snapshot.lagCompensation;
-        lagCompensationDisplayEnabled = snapshot.lagCompensationDisplayEnabled;
+        liveLagSimulationEnabled = snapshot.liveLagSimulationEnabled;
         diagnosticWallStartTime = snapshot.diagnosticWallStartTime;
         diagnosticUpdateCount = snapshot.diagnosticUpdateCount;
         diagnosticTrackAdvances = snapshot.diagnosticTrackAdvances;
@@ -3364,9 +3283,22 @@ public class Sonic2SpecialStageManager {
         return objectManager != null ? objectManager.getRingsCollected() : 0;
     }
 
-    public int getRingsCollected(Sonic2SpecialStagePlayer.PlayerType playerType) {
+    /**
+     * Ring count belonging to a single playable — the engine's equivalent of the
+     * ROM's per-player {@code Ring_count} / {@code Ring_count_2P} words.
+     *
+     * <p>The special-stage exit copies those two words into two independent
+     * bonus countdowns, {@code move.w (Ring_count).w,(Bonus_Countdown_1).w} and
+     * {@code move.w (Ring_count_2P).w,(Bonus_Countdown_2).w}
+     * (docs/s2disasm/s2.asm:6784-6785), so the results tally needs the split and
+     * not the combined total {@link #getRingsCollected()} reports.
+     *
+     * @param type which playable's count to read
+     * @return that playable's rings, or 0 when it is not present in the stage
+     */
+    public int getRingsCollected(Sonic2SpecialStagePlayer.PlayerType type) {
         for (Sonic2SpecialStagePlayer player : players) {
-            if (player.getPlayerType() == playerType) {
+            if (player.getPlayerType() == type) {
                 return player.getRings();
             }
         }

@@ -124,6 +124,23 @@ public class AizEndBossBombChild extends AbstractObjectInstance
         this.frameCounter++;
         if (this.frameCounter == 1) {
             services().playSfx(Sonic3kSfx.PROJECTILE.id);
+            // ROM AIZEndBossBomb_Init (docs/skdisasm/sonic3k.asm:138624-138634)
+            // plays this same sfx_Projectile, installs AIZEndBossBomb_Main as the
+            // object's code pointer and then leaves via
+            // `bra.w AIZEndBossBomb_SetAngleData`, which applies the angle's
+            // position offset and velocities and ends in `rts` (:138876-138893).
+            // It does NOT fall through into AIZEndBossBomb_Main, so the bomb's
+            // MoveSprite2 (:138643) first runs on the pass AFTER the one that
+            // created it. The recording shows exactly that: the object already
+            // reads AIZEndBossBomb_Main on its creation frame -- init ran -- while
+            // its y is unchanged until the following frame.
+            //
+            // Moving here made the bomb one step further down at every frame-start
+            // touch snapshot, which landed its HURT on the sidekick a row early;
+            // the knockback sign then inverted as a consequence, because the ROM's
+            // `cmp.w x_pos(a2),d0 / blo` (:21102-21106) negates on the equal x a
+            // row-early hit produces.
+            return;
         }
         lifetime--;
         if (lifetime <= 0) {

@@ -1,5 +1,7 @@
 package com.openggf.game.rewind;
 
+import com.openggf.tests.TestSessionOutputPaths;
+
 import com.openggf.audio.AudioBenchmarkMemoryProbe;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.rewind.AudioKeyframeStore;
@@ -1251,7 +1253,7 @@ public class RewindBenchmark {
     // -------------------------------------------------------------------------
 
     private void dumpJson() throws IOException {
-        Path outputDir = Path.of("target");
+        Path outputDir = TestSessionOutputPaths.diagnostics("rewind");
         Files.createDirectories(outputDir);
         Path output = outputDir.resolve("rewind-benchmark-results.json");
 

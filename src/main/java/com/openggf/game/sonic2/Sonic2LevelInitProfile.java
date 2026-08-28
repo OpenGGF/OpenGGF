@@ -37,6 +37,20 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
     /** Fixed length of the s2.asm:5060-5066 title-card leave loop. */
     private static final int TITLE_CARD_LEAVE_LOOP_FRAMES = 25;
 
+    /**
+     * {@code Level:} dispatches {@code RunObjects} once at s2.asm:5006 -- after
+     * {@code InitPlayers} (s2.asm:4945) and after the {@code ObjectsManager} /
+     * {@code RingsManager} / {@code SpecialCNZBumpers} calls at s2.asm:5003-5005
+     * -- before it arms the leave flags at s2.asm:5056-5058 and enters the
+     * leave loop. That pass is not preceded by a {@code WaitForVint} of its
+     * own: the previous vertical interrupt is the one at s2.asm:4923-4924, back
+     * when the players did not yet exist. So the omitted presentation runs
+     * {@code 1 + 25} player object passes but only the leave loop's 25
+     * V-blanks, and the first of those V-blanks drains the queue built by this
+     * leading pass.
+     */
+    private static final int TITLE_CARD_LEADING_OBJECT_PASSES = 1;
+
     private final Sonic2LevelEventManager levelEventManager;
     private final Sonic2PlayerArtModeAuthority playerArtModeAuthority;
 
@@ -57,6 +71,24 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
         steps.add(3, new InitStep("QueueInitialPlcs",
                 "S2 Level: ClearPLC, level-header primary LoadPLC, LoadPLC Std2",
                 () -> queueInitialPlcs(ctx)));
+        // Level_ClrRam wipes MiscLevelVariables after the level's LoadPLC calls
+        // (s2disasm/s2.asm:4806-4809), and RNG_seed lives inside that block
+        // (s2disasm/s2.constants.asm:1412-1421,1467). Every act load therefore
+        // starts from a zero seed, which RandomNumber's zero-sanity check turns
+        // into $2A6D365A on the act's first draw (s2disasm/s2.asm:3975-3979).
+        // Without this the seed carried across acts and every S2 RandomNumber
+        // consumer downstream -- Obj28_InitRandom animal choice, the Egg Prison
+        // release offsets, boss explosion offsets -- read a stream shifted by
+        // the previous acts' draw count. Keep this S2-owned: S1 has the same
+        // rule in its own profile and S3K clears a different range.
+        steps.add(4, new InitStep("ResetRng",
+                "S2 Level_ClrRam: clear RNG_seed with MiscLevelVariables",
+                () -> {
+                    var rng = GameServices.rngOrNull();
+                    if (rng != null) {
+                        rng.setSeed(0L);
+                    }
+                }));
         if (ctx.isIncludePostLoadAssembly()) {
             steps.addAll(postLoadAssemblySteps(ctx));
         }
@@ -153,14 +185,36 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
                 TITLE_CARD_LEAVE_LOOP_FRAMES);
     }
 
+    @Override
+    public int preLevelFadeOutFrames() {
+        // Level: runs ClearPLC then Pal_FadeToBlack (s2.asm:4764-4765) before
+        // it clears the screen, decompresses the title-card art and creates
+        // Obj34 at s2.asm:4912. Pal_FadeToBlack is an unconditional
+        // "move.w #$15,d4" dbf loop with one "bsr.w WaitForVint" per pass
+        // (s2.asm:3370-3383), so it is 22 counted V-blank rows during which
+        // the title card does not yet exist. Same shape as S1's PaletteFadeOut
+        // (Sonic1LevelInitProfile.preLevelFadeOutFrames) -- the returning
+        // level's card and its art therefore start 22 rows after the
+        // results-screen handoff, not at it.
+        return 22;
+    }
+
     /**
      * The 25-frame title-card leave loop (s2.asm:5060-5066) runs after
      * InitPlayers (s2.asm:4945), so it is exactly the omitted presentation
-     * window in which the player objects animate and load their DPLCs.
+     * window in which the player objects animate and load their DPLCs -- and
+     * the leading s2.asm:5006 {@code RunObjects} pass, which runs with the
+     * players already created, belongs to that window too.
      */
     @Override
     public int skippedPresentationPlayableFrames() {
-        return TITLE_CARD_LEAVE_LOOP_FRAMES;
+        return TITLE_CARD_LEADING_OBJECT_PASSES + TITLE_CARD_LEAVE_LOOP_FRAMES;
+    }
+
+    /** {@inheritDoc} See {@link #TITLE_CARD_LEADING_OBJECT_PASSES}. */
+    @Override
+    public int skippedPresentationPlayableFramesBeforeFirstVBlank() {
+        return TITLE_CARD_LEADING_OBJECT_PASSES;
     }
 
     @Override

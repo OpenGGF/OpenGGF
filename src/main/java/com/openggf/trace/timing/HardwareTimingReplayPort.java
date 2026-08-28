@@ -5,8 +5,12 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.PendingRecordedSubmission;
+import com.openggf.game.timing.PendingRecordedSubmissionsException;
 import com.openggf.game.timing.RecordedCompletionAuthority;
+import com.openggf.game.timing.RecordedOrdinalSpan;
+import com.openggf.game.timing.UnmatchedRecordedCompletionException;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,6 +32,22 @@ public final class HardwareTimingReplayPort
 
     private final RecordedCompletionAuthority authority;
     private final Set<String> consumedIdentities = new LinkedHashSet<>();
+    /**
+     * Recorded edges that had no engine-pending counterpart. Such an edge is
+     * DROPPED, never admitted: nothing is released and no production work is
+     * created. It is retained here only so the driving comparison can record
+     * it as an error on its own row, and so a driver that never drains it
+     * still fails the run at {@link #verifyRunComplete()}.
+     */
+    private final List<String> unmatchedCompletions = new ArrayList<>();
+    /**
+     * Production submissions the engine still held when the recorded run
+     * closed. Recorded admission has already ended, so such a submission is
+     * never admitted, prepared, released or retired: the list exists only so
+     * an opted-in driver can record it as a comparison error, and so a driver
+     * that never drains it cannot open another run.
+     */
+    private final List<String> pendingSubmissionsAtClose = new ArrayList<>();
 
     private HardwareTimingSchedule schedule = HardwareTimingSchedule.empty();
     private int edgeCursor;
@@ -35,6 +55,7 @@ public final class HardwareTimingReplayPort
     private HardwareServiceBoundary lastAppliedBoundary;
     private boolean installed;
     private boolean runComplete;
+    private boolean reportsPendingSubmissions;
 
     public HardwareTimingReplayPort(RecordedCompletionAuthority authority) {
         this.authority = Objects.requireNonNull(authority, "authority");
@@ -60,6 +81,7 @@ public final class HardwareTimingReplayPort
             throw new IllegalStateException(
                     "hardware timing replay is already installed");
         }
+        requireNoUndrainedPendingSubmissions();
         this.schedule = checked;
         edgeCursor = 0;
         consumedIdentities.clear();
@@ -91,8 +113,9 @@ public final class HardwareTimingReplayPort
                 return;
             }
         }
-        rejectEdgeBefore(rawFrame);
+        dropEdgesBefore(rawFrame);
         rawFrameLatch = rawFrame;
+        authority.setRecordedRowRepresentation(true);
         lastAppliedBoundary = null;
     }
 
@@ -106,6 +129,7 @@ public final class HardwareTimingReplayPort
         requireActive();
         rawFrameLatch = null;
         lastAppliedBoundary = null;
+        authority.setRecordedRowRepresentation(false);
     }
 
     public void apply(HardwareServiceBoundary boundary) {
@@ -122,7 +146,7 @@ public final class HardwareTimingReplayPort
                             + ", current=" + boundary);
         }
 
-        rejectEdgeBefore(rawFrameLatch);
+        dropEdgesBefore(rawFrameLatch);
         HardwareCompletionEdge next = nextEdge();
         if (next != null
                 && next.rawFrame() == rawFrameLatch
@@ -145,7 +169,7 @@ public final class HardwareTimingReplayPort
         if (rawFrameLatch == null) {
             return false;
         }
-        rejectEdgeBefore(rawFrameLatch);
+        dropEdgesBefore(rawFrameLatch);
         HardwareCompletionEdge next = nextEdge();
         if (next == null || next.rawFrame() > rawFrameLatch) {
             return false;
@@ -192,6 +216,17 @@ public final class HardwareTimingReplayPort
                             next.ordinal(),
                             next.submissionFingerprint());
                 }
+            } catch (UnmatchedRecordedCompletionException failure) {
+                // Severity demotion only. An unmatched recorded completion is
+                // ambiguous: in a converged run it is a contract violation, in
+                // a diverged run it is a downstream symptom of the engine
+                // never reaching the ROM's submission point. It therefore
+                // cannot carry verdict authority, so the edge is dropped and
+                // reported instead of aborting the whole comparison. The
+                // release side is unchanged: admitReadiness() was not reached,
+                // so this edge releases nothing.
+                unmatchedCompletions.add(
+                        describe(next) + ": " + failure.getMessage());
             } catch (RuntimeException failure) {
                 consumedIdentities.remove(identity);
                 throw failure;
@@ -201,7 +236,30 @@ public final class HardwareTimingReplayPort
     }
 
     public void handoffTo(HardwareTimingSchedule nextSchedule) {
+        handoffTo(nextSchedule, Map.of());
+    }
+
+    /**
+     * Hands off to the next segment across a recorded interstitial span.
+     *
+     * <p>The span describes ordinals the recording consumed between the two
+     * segments — a special-stage results screen, a level reload, a locked
+     * intro — that production never submits, so production's identity cursor
+     * would otherwise stay behind and every later completion would miss by
+     * exactly the size of the gap.
+     *
+     * <p>Crossing one releases nothing and creates nothing; it only moves the
+     * cursor, and it is proved on both sides before it moves. The span must
+     * begin exactly where production's ledger stands (checked in the
+     * authority) and must end exactly where the next segment's recorded
+     * ordinals begin (checked here). Anything else throws, so a skew that is
+     * not the recorded span cannot be absorbed.
+     */
+    public void handoffTo(
+            HardwareTimingSchedule nextSchedule,
+            Map<HardwareWorkKind, RecordedOrdinalSpan> interstitialSpans) {
         requireActive();
+        Objects.requireNonNull(interstitialSpans, "interstitialSpans");
         verifySegmentEdges();
         HardwareTimingSchedule checkedNext = validateSchedule(nextSchedule);
         if (!checkedNext.admissionPolicies().equals(schedule.admissionPolicies())) {
@@ -242,6 +300,28 @@ public final class HardwareTimingReplayPort
             }
         }
 
+        if (!interstitialSpans.isEmpty()) {
+            Map<HardwareWorkKind, Long> nextFirstOrdinals = firstOrdinals(checkedNext);
+            for (Map.Entry<HardwareWorkKind, RecordedOrdinalSpan> entry
+                    : interstitialSpans.entrySet()) {
+                Long nextFirst = nextFirstOrdinals.get(entry.getKey());
+                if (nextFirst == null) {
+                    throw new IllegalStateException(
+                            "recorded interstitial span for " + entry.getKey()
+                                    + " has no matching next-segment edge to resume at: "
+                                    + entry.getValue());
+                }
+                if (nextFirst != entry.getValue().nextOrdinal()) {
+                    throw new IllegalStateException(
+                            "recorded interstitial span does not meet the next segment for "
+                                    + entry.getKey() + ": span ends at "
+                                    + entry.getValue().lastOrdinal()
+                                    + ", next segment resumes at " + nextFirst);
+                }
+            }
+            authority.advanceOrdinalCursorAcrossRecordedSpan(interstitialSpans);
+        }
+
         schedule = checkedNext;
         edgeCursor = 0;
         rawFrameLatch = null;
@@ -250,12 +330,52 @@ public final class HardwareTimingReplayPort
 
     public void verifySegmentEdges() {
         requireActive();
-        HardwareCompletionEdge edge = nextEdge();
-        if (edge != null) {
-            throw new IllegalStateException(
-                    "unconsumed hardware completion edge at segment end: "
-                            + describe(edge));
+        for (HardwareCompletionEdge edge = nextEdge(); edge != null;
+                edge = nextEdge()) {
+            reportUnconsumedEdge("at segment end", edge);
         }
+    }
+
+    /**
+     * Removes and returns the unmatched recorded completions observed since
+     * the last drain, so the caller can record them as comparison errors on
+     * the row that produced them. Draining reports them; it never admits
+     * them.
+     */
+    public List<String> drainUnmatchedRecordedCompletions() {
+        if (unmatchedCompletions.isEmpty()) {
+            return List.of();
+        }
+        List<String> drained = List.copyOf(unmatchedCompletions);
+        unmatchedCompletions.clear();
+        return drained;
+    }
+
+    /**
+     * Declares that this driver drains {@link #drainPendingRecordedSubmissions()}
+     * after the run closes and records the result as a comparison error.
+     *
+     * <p>Without this the close-time leftover-submission complaint keeps its
+     * original hard-failure behaviour, so a driver with nowhere to record it
+     * still fails the run. Enabling it changes severity and ordering only: a
+     * leftover submission is still never admitted, released or retired.
+     */
+    public void reportPendingRecordedSubmissionsAtClose() {
+        reportsPendingSubmissions = true;
+    }
+
+    /**
+     * Removes and returns the leftover production submissions the recorded
+     * stream never completed, so the caller can record them as a comparison
+     * error on the closing row. Draining reports them; it never admits them.
+     */
+    public List<String> drainPendingRecordedSubmissions() {
+        if (pendingSubmissionsAtClose.isEmpty()) {
+            return List.of();
+        }
+        List<String> drained = List.copyOf(pendingSubmissionsAtClose);
+        pendingSubmissionsAtClose.clear();
+        return drained;
     }
 
     public void verifyRunComplete() {
@@ -263,8 +383,31 @@ public final class HardwareTimingReplayPort
             return;
         }
         requireActive();
+        requireNoUndrainedUnmatchedCompletions();
+        requireNoUndrainedPendingSubmissions();
         verifySegmentEdges();
-        authority.endRecordedAdmission();
+        // Close is the last chance to report: no comparison row follows it, so
+        // an edge dropped here has nowhere to be counted. The demotion exists
+        // to stop a mid-run edge from hiding later axes, not to let the run end
+        // holding evidence, so leftovers at close still fail the run -- now
+        // listing every one of them rather than only the first.
+        requireNoUndrainedUnmatchedCompletions();
+        try {
+            authority.endRecordedAdmission();
+        } catch (PendingRecordedSubmissionsException failure) {
+            if (!reportsPendingSubmissions) {
+                throw failure;
+            }
+            // Severity demotion only, and for the same reason as the unmatched
+            // completion above: a leftover submission is a contract concern in
+            // a converged run and a downstream symptom in a diverged one, and
+            // this message cannot tell them apart. Recorded admission has
+            // already ended inside the authority, nothing was admitted or
+            // released, and the driver that opted in must still report it.
+            for (PendingRecordedSubmission submission : failure.pending()) {
+                pendingSubmissionsAtClose.add(describe(submission.handle()));
+            }
+        }
         runComplete = true;
     }
 
@@ -275,6 +418,8 @@ public final class HardwareTimingReplayPort
      */
     public void verifyPrefixComplete(int inclusiveRawFrame) {
         requireActive();
+        requireNoUndrainedUnmatchedCompletions();
+        requireNoUndrainedPendingSubmissions();
         HardwareCompletionEdge next = nextEdge();
         if (next != null && next.rawFrame() <= inclusiveRawFrame) {
             throw new IllegalStateException(
@@ -308,7 +453,9 @@ public final class HardwareTimingReplayPort
                 rawFrameLatch,
                 lastAppliedBoundary,
                 installed,
-                runComplete);
+                runComplete,
+                unmatchedCompletions,
+                pendingSubmissionsAtClose);
     }
 
     @Override
@@ -322,6 +469,10 @@ public final class HardwareTimingReplayPort
         lastAppliedBoundary = snapshot.lastAppliedBoundary();
         installed = snapshot.installed();
         runComplete = snapshot.runComplete();
+        unmatchedCompletions.clear();
+        unmatchedCompletions.addAll(snapshot.unmatchedCompletions());
+        pendingSubmissionsAtClose.clear();
+        pendingSubmissionsAtClose.addAll(snapshot.pendingSubmissionsAtClose());
     }
 
     @Override
@@ -333,6 +484,8 @@ public final class HardwareTimingReplayPort
         lastAppliedBoundary = null;
         installed = false;
         runComplete = false;
+        unmatchedCompletions.clear();
+        pendingSubmissionsAtClose.clear();
     }
 
     private HardwareCompletionEdge nextEdge() {
@@ -341,12 +494,99 @@ public final class HardwareTimingReplayPort
                 : null;
     }
 
-    private void rejectEdgeBefore(int rawFrame) {
-        HardwareCompletionEdge next = nextEdge();
-        if (next != null && next.rawFrame() < rawFrame) {
+    /**
+     * Drops the recorded edges the production run walked past without
+     * submitting anything for them, reporting each as a comparison error.
+     *
+     * <p>Severity demotion, on the same footing as the unmatched-completion
+     * demotion in {@link #apply(HardwareServiceBoundary)}. This port's
+     * authority is over <em>when</em> work the engine submitted becomes
+     * ready; it has no authority to require a submission the engine never
+     * made. An edge with no submission behind it is therefore a statement
+     * about engine accuracy -- the ROM reached an arm point the engine did
+     * not -- which the comparator owns and reports per field, not a contract
+     * violation that may abort the comparison and hide every later axis.
+     * The release side is unchanged: a dropped edge is never admitted, so it
+     * releases nothing.
+     */
+    private void dropEdgesBefore(int rawFrame) {
+        for (HardwareCompletionEdge next = nextEdge();
+                next != null && next.rawFrame() < rawFrame;
+                next = nextEdge()) {
+            reportUnconsumedEdge("before raw_frame=" + rawFrame, next);
+        }
+    }
+
+    /**
+     * Records one dropped edge and advances past it. Every dropped edge lands
+     * in the same drain the unmatched completions use, so it is counted by
+     * the comparator or, if the driver never drains it, fails the run through
+     * {@link #requireNoUndrainedUnmatchedCompletions()}. It cannot vanish.
+     */
+    private void reportUnconsumedEdge(String where, HardwareCompletionEdge edge) {
+        unmatchedCompletions.add(
+                describe(edge) + ": unconsumed hardware completion edge "
+                        + where + "; " + productionStateFor(edge));
+        edgeCursor++;
+    }
+
+    /**
+     * Describes what production actually holds for a dropped edge's identity,
+     * as observed now.
+     *
+     * <p>This exists because the previous wording asserted "the engine
+     * submitted no matching work", which the port never checks and which was
+     * measured false: on the S1 complete-emeralds run the engine submits the
+     * expected descriptors with exactly the recorded ordinals and
+     * fingerprints, and the edges go unconsumed anyway. A diagnostic that
+     * names the wrong subsystem is worse than a vague one, because it is
+     * acted on.
+     *
+     * <p>The wording is deliberately limited to what is observable at this
+     * point. An identity absent from the pending list may never have been
+     * submitted, or may have been submitted, admitted and already claimed --
+     * the port cannot distinguish those and so does not claim to.
+     */
+    private String productionStateFor(HardwareCompletionEdge edge) {
+        for (PendingRecordedSubmission submission : authority.pendingSubmissions()) {
+            HardwareWorkHandle handle = submission.handle();
+            if (handle.kind() != edge.kind() || handle.ordinal() != edge.ordinal()) {
+                continue;
+            }
+            if (handle.submissionFingerprint().equals(edge.submissionFingerprint())) {
+                return "production holds a matching unclaimed submission "
+                        + describe(handle)
+                        + ", so this is an admission failure rather than missing work";
+            }
+            return "production holds this identity with a different descriptor: "
+                    + describe(handle);
+        }
+        return "production holds no unclaimed submission for this identity"
+                + " (it was never submitted, or was already admitted and claimed)";
+    }
+
+    /**
+     * A driver that never drains the dropped edges has no comparison row
+     * carrying them, so the run still fails rather than passing silently.
+     */
+    private void requireNoUndrainedUnmatchedCompletions() {
+        if (!unmatchedCompletions.isEmpty()) {
             throw new IllegalStateException(
-                    "unconsumed hardware completion edge before raw_frame="
-                            + rawFrame + ": " + describe(next));
+                    "unmatched recorded hardware completions were never reported: "
+                            + unmatchedCompletions);
+        }
+    }
+
+    /**
+     * A driver that closed one run with leftover submissions and never
+     * reported them cannot open another one, so an opted-in driver that
+     * forgets to report cannot quietly carry on.
+     */
+    private void requireNoUndrainedPendingSubmissions() {
+        if (!pendingSubmissionsAtClose.isEmpty()) {
+            throw new IllegalStateException(
+                    "pending recorded hardware submissions were never reported: "
+                            + pendingSubmissionsAtClose);
         }
     }
 

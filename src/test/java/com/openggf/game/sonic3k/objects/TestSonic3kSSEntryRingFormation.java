@@ -17,7 +17,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.game.rewind.identity.ObjectRefId;
-import com.openggf.camera.Camera;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
@@ -69,6 +68,19 @@ public class TestSonic3kSSEntryRingFormation {
 
     /** Total formation duration in game frames: 8 advances Ã— 5 frames each = 40. */
     private static final int FORMATION_TOTAL_FRAMES = FORMATION_ADVANCE_COUNT * FRAMES_PER_ANIM_STEP; // 40
+
+    /**
+     * ROM {@code Obj_WaitOffscreen}'s release path {@code loc_85B02} is
+     * {@code move.l $34(a0),(a0) / rts} (docs/skdisasm/sonic3k.asm:180300-180302):
+     * it only writes the saved code pointer back and returns to the object
+     * loop, so {@code Obj_SSEntryRing} -- and therefore the first
+     * {@code Animate_Raw} -- is not entered until the following frame. The
+     * release costs exactly one update before formation timing starts.
+     */
+    private static final int RELEASE_FRAMES = 1;
+
+    /** First update on which {@code mapping_frame} reaches the collision gate's 8. */
+    private static final int FIRST_IDLE_FRAME = RELEASE_FRAMES + FORMATION_TOTAL_FRAMES + 1; // 42
 
     private GameStateManager gameState;
     private CapturingObjectServices services;
@@ -127,7 +139,7 @@ public class TestSonic3kSSEntryRingFormation {
 
         // Step through every frame of the formation animation.
         // The ring must remain in forming state (mapping_frame < 8) throughout.
-        for (int frame = 1; frame <= FORMATION_TOTAL_FRAMES; frame++) {
+        for (int frame = 1; frame <= RELEASE_FRAMES + FORMATION_TOTAL_FRAMES; frame++) {
             ring.update(frame, null);
             assertTrue(ring.isForming(), "Ring should be forming at frame " + frame
                             + " (mapping_frame=" + ring.getMappingFrame() + ")");
@@ -140,12 +152,12 @@ public class TestSonic3kSSEntryRingFormation {
         Sonic3kSSEntryRingObjectInstance ring = createRing(0);
 
         // Advance through entire formation
-        for (int frame = 1; frame <= FORMATION_TOTAL_FRAMES; frame++) {
+        for (int frame = 1; frame <= RELEASE_FRAMES + FORMATION_TOTAL_FRAMES; frame++) {
             ring.update(frame, null);
         }
 
         // One more frame should transition to idle (mapping_frame >= 8)
-        ring.update(FORMATION_TOTAL_FRAMES + 1, null);
+        ring.update(FIRST_IDLE_FRAME, null);
         assertFalse(ring.isForming(), "Ring should no longer be forming after formation completes");
         assertTrue(ring.getMappingFrame() >= 8, "mapping_frame should be >= 8 in idle");
     }
@@ -160,7 +172,28 @@ public class TestSonic3kSSEntryRingFormation {
         // Expected mapping frames after each 5-frame group:
         int[] expectedFrames = {0, 1, 2, 3, 4, 5, 6, 7};
 
+        // The first update is Obj_WaitOffscreen's loc_85B02 release, which does
+        // not reach Animate_Raw (see RELEASE_FRAMES).
         int gameFrame = 0;
+        for (int tick = 0; tick < RELEASE_FRAMES; tick++) {
+            gameFrame++;
+            ring.update(gameFrame, null);
+        }
+        // Discriminating check: five more updates (one full FRAMES_PER_ANIM_STEP
+        // group) must still leave mapping_frame on the animation's first byte.
+        // Drop the release frame and the sixth update has already advanced to 1.
+        for (int tick = 0; tick < FRAMES_PER_ANIM_STEP; tick++) {
+            ring.update(gameFrame + 1 + tick, null);
+        }
+        assertEquals(0, ring.getMappingFrame(),
+                "loc_85B02's release frame must not reach Animate_Raw");
+        ring = createRing(0);
+        gameFrame = 0;
+        for (int tick = 0; tick < RELEASE_FRAMES; tick++) {
+            gameFrame++;
+            ring.update(gameFrame, null);
+        }
+
         for (int step = 0; step < expectedFrames.length; step++) {
             for (int tick = 0; tick < FRAMES_PER_ANIM_STEP; tick++) {
                 gameFrame++;
@@ -168,8 +201,9 @@ public class TestSonic3kSSEntryRingFormation {
             }
             assertEquals(expectedFrames[step], ring.getMappingFrame(), "Mapping frame after step " + step + " (game frame " + gameFrame + ")");
         }
-        // Verify we've consumed exactly the formation duration
-        assertEquals(FORMATION_TOTAL_FRAMES, gameFrame, "Should have consumed exactly FORMATION_TOTAL_FRAMES");
+        // Verify we've consumed exactly the release frame plus the formation duration
+        assertEquals(RELEASE_FRAMES + FORMATION_TOTAL_FRAMES, gameFrame,
+                "Should have consumed exactly RELEASE_FRAMES + FORMATION_TOTAL_FRAMES");
     }
 
     @Test
@@ -191,7 +225,8 @@ public class TestSonic3kSSEntryRingFormation {
 
         // Now the formation should start advancing
         ring.update(21, null);
-        // After 1 frame on-screen, mapping_frame is still 0 (timer counting down)
+        // The first on-screen frame is loc_85B02's release, which does not run
+        // Animate_Raw at all, so mapping_frame is untouched.
         assertEquals(0, ring.getMappingFrame(), "First on-screen frame: still on initial mapping frame");
         assertTrue(ring.isForming(), "Ring should still be forming after 1 on-screen frame");
     }
@@ -210,7 +245,9 @@ public class TestSonic3kSSEntryRingFormation {
         // One pixel of overlap sets the render flag and starts Animate_Raw.
         AbstractObjectInstance.updateCameraBounds(
                 RING_X + 0x1F, RING_Y - 112, RING_X + 0x1F + 320, RING_Y + 112, 0);
-        for (int frame = 2; frame <= 7; frame++) {
+        // Frame 2 is the loc_85B02 release; frames 3-8 are the first six
+        // Animate_Raw calls (advance to mapping_frame 0, hold, then advance to 1).
+        for (int frame = 2; frame <= 2 + RELEASE_FRAMES + FRAMES_PER_ANIM_STEP; frame++) {
             ring.update(frame, null);
         }
         assertEquals(1, ring.getMappingFrame(),
@@ -231,7 +268,7 @@ public class TestSonic3kSSEntryRingFormation {
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
 
         // Step through every frame of formation with the player overlapping
-        for (int frame = 1; frame <= FORMATION_TOTAL_FRAMES; frame++) {
+        for (int frame = 1; frame <= RELEASE_FRAMES + FORMATION_TOTAL_FRAMES; frame++) {
             ring.update(frame, player);
             assertTrue(ring.isForming(), "Ring should still be forming at frame " + frame
                             + " (mapping_frame=" + ring.getMappingFrame() + ")");
@@ -258,13 +295,13 @@ public class TestSonic3kSSEntryRingFormation {
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
 
         // Advance through entire formation
-        for (int frame = 1; frame <= FORMATION_TOTAL_FRAMES; frame++) {
+        for (int frame = 1; frame <= RELEASE_FRAMES + FORMATION_TOTAL_FRAMES; frame++) {
             ring.update(frame, player);
         }
-        assertTrue(ring.isForming(), "Ring should still be forming after exactly FORMATION_TOTAL_FRAMES");
+        assertTrue(ring.isForming(), "Ring should still be forming after the release frame plus FORMATION_TOTAL_FRAMES");
 
         // One more frame transitions to idle (mapping_frame >= 8) â†’ collision fires
-        ring.update(FORMATION_TOTAL_FRAMES + 1, player);
+        ring.update(FIRST_IDLE_FRAME, player);
         assertFalse(ring.isForming(), "Ring should no longer be forming");
         // With all emeralds, onTouched awards 50 rings and destroys the ring
         assertTrue(ring.isDestroyed(), "Ring should be destroyed after player triggered it");
@@ -299,6 +336,35 @@ public class TestSonic3kSSEntryRingFormation {
         verify(player, never()).addRings(anyInt());
     }
 
+    /**
+     * ROM {@code SSEntryRing_Main}'s collision branch
+     * (docs/skdisasm/sonic3k.asm:128283-128291) never reads {@code subtype}:
+     * with fewer than 7 Chaos Emeralds the {@code bne.s loc_6173A} takes the
+     * capture sequence regardless of the ring's subtype bit 7. The
+     * negative-subtype test belongs to {@code SSEntryFlash_GoSS}
+     * (sonic3k.asm:128393) at the far end of the flash, so a bit-7 ring must
+     * lock the player here, not pay out 50 rings, and must not request a zone
+     * change on the touch frame.
+     */
+    @Test
+    public void subtypeBitSevenStillEntersTheCaptureSequenceOnTouch() {
+        Camera camera = mock(Camera.class);
+        services.withCamera(camera);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        Sonic3kSSEntryRingObjectInstance ring = createRing(0x80 | 3);
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+
+        advanceToIdleAndTouch(ring, player);
+
+        assertFalse(ring.isDestroyed(), "the capture sequence keeps the ring alive for the flash to retire");
+        assertEquals(-1, services.requestedZone, "the touch frame itself requests no zone change");
+        assertEquals(-1, services.requestedAct);
+        assertFalse(services.deactivateLevelNow, "the touch frame must not freeze level updates for a transition");
+        verify(player, never()).addRings(50);
+        verify(player).setHidden(true);
+    }
+
     @Test
     public void negativeSubtypeAlwaysUsesGlowingSuperEmeraldRingAndRoutesAfterFlash() {
         CapturingRing ring = createCapturingRing(0x80 | 3);
@@ -315,7 +381,7 @@ public class TestSonic3kSSEntryRingFormation {
 
         finishFlash(ring.flash, player);
 
-        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
+        assertEquals(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, services.requestedZone);
         assertEquals(1, services.requestedAct);
         assertTrue(services.deactivateLevelNow);
         assertNotNull(services.savedReturn);
@@ -344,7 +410,7 @@ public class TestSonic3kSSEntryRingFormation {
 
         finishFlash(ring.flash, player);
 
-        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
+        assertEquals(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, services.requestedZone);
         assertEquals(1, services.requestedAct);
         verify(player, never()).addRings(anyInt());
         assertEquals(1, services.enterSsSfxCount);
@@ -355,17 +421,21 @@ public class TestSonic3kSSEntryRingFormation {
         Sonic3kSSEntryRingObjectInstance ring = createRing(0x80);
 
         ring.update(1, null);
+        assertEquals(0, ring.getPaletteStepForTest(),
+                "Obj_WaitOffscreen release consumes the first update");
+
+        ring.update(2, null);
         assertEquals(1, ring.getPaletteStepForTest());
         assertArrayEquals(new int[] {0xECE, 0xA8A, 0x868},
                 ring.getLastAppliedPaletteWordsForTest());
 
-        for (int frame = 2; frame <= 3; frame++) {
+        for (int frame = 3; frame <= 4; frame++) {
             ring.update(frame, null);
         }
         assertEquals(1, ring.getPaletteStepForTest(),
                 "palscriptdata 3 holds the first color for three object updates");
 
-        ring.update(4, null);
+        ring.update(5, null);
         assertEquals(2, ring.getPaletteStepForTest());
         assertArrayEquals(new int[] {0xAEE, 0x6EE, 0x0AA},
                 ring.getLastAppliedPaletteWordsForTest());
@@ -393,7 +463,7 @@ public class TestSonic3kSSEntryRingFormation {
     }
 
     @Test
-    public void flashCompletionUsesLiveEmeraldAndSaved2StateRatherThanCollisionState() {
+    public void flashCompletionUsesLiveEmeraldAndFlashOwnedSaved2State() {
         services.currentZone = Sonic3kZoneIds.ZONE_MHZ;
         services.currentAct = 1;
         services.apparentAct = 0;
@@ -421,11 +491,13 @@ public class TestSonic3kSSEntryRingFormation {
 
         finishFlash(ring.flash, player);
 
-        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone,
+        assertEquals(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, services.requestedZone,
                 "GoSS must evaluate the live completion state, not collision-time emerald progress");
         assertNotNull(services.savedReturn);
-        assertEquals(0x222, services.savedReturn.playerX());
-        assertEquals(0x333, services.savedReturn.playerY());
+        assertEquals(RING_X, services.savedReturn.playerX(),
+                "Save_Level_Data2 reads the executing flash object's x_pos");
+        assertEquals(RING_Y, services.savedReturn.playerY(),
+                "Save_Level_Data2 reads the executing flash object's y_pos");
         assertEquals(77, services.savedReturn.rings());
         assertEquals(0x180, services.savedReturn.cameraX());
         assertEquals(0x90, services.savedReturn.cameraY());
@@ -434,7 +506,7 @@ public class TestSonic3kSSEntryRingFormation {
         assertEquals(1 << 5, services.savedReturn.statusSecondary());
         assertEquals((Sonic3kZoneIds.ZONE_MHZ << 8), services.savedReturn.apparentZoneAndAct());
         assertTrue(services.savedReturn.waterFullScreen());
-        verify(services.checkpoint).clear();
+        verify(services.checkpoint, never()).clear();
     }
 
     @Test
@@ -448,7 +520,7 @@ public class TestSonic3kSSEntryRingFormation {
         assertTrue(ring.isSuperEmeraldRing(), "FBZ is the ROM predicate's exceptional SK-side zone");
         finishFlash(ring.flash, player);
 
-        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
+        assertEquals(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, services.requestedZone);
     }
 
     @Test
@@ -488,7 +560,7 @@ public class TestSonic3kSSEntryRingFormation {
             restored.update(frame, player);
         }
 
-        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
+        assertEquals(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, services.requestedZone);
         assertNotNull(services.savedReturn);
         assertTrue(gameState.isSpecialRingCollected(3));
         assertEquals(1, services.enterSsSfxCount);
@@ -558,11 +630,11 @@ public class TestSonic3kSSEntryRingFormation {
 
         // Advance through formation (40 frames). On frame 41, the 9th advance
         // triggers the transition to idle: mapping_frame = 10, timer = 6.
-        for (int frame = 1; frame <= FORMATION_TOTAL_FRAMES; frame++) {
+        for (int frame = 1; frame <= RELEASE_FRAMES + FORMATION_TOTAL_FRAMES; frame++) {
             ring.update(frame, null);
         }
         // Frame FORMATION_TOTAL_FRAMES+1 triggers the transition advance
-        ring.update(FORMATION_TOTAL_FRAMES + 1, null);
+        ring.update(FIRST_IDLE_FRAME, null);
         assertEquals(10, ring.getMappingFrame(), "First idle frame should be 10");
 
         // Now in idle animation. Idle: delay=6, frames={10,9,8,11}, loop.
@@ -570,7 +642,7 @@ public class TestSonic3kSSEntryRingFormation {
         // The first idle frame (10) was set by the transition and is held for
         // 7 game frames (timer=6 + 1 underflow frame = ticks 41-47).
         // We're at tick 41 now, so 6 more frames to finish the first idle step.
-        int gameFrame = FORMATION_TOTAL_FRAMES + 1;
+        int gameFrame = FIRST_IDLE_FRAME;
         for (int tick = 0; tick < 6; tick++) {
             gameFrame++;
             ring.update(gameFrame, null);
@@ -634,13 +706,19 @@ public class TestSonic3kSSEntryRingFormation {
     private static void finishFlash(Sonic3kSSEntryFlashObjectInstance flash,
             AbstractPlayableSprite player) {
         assertNotNull(flash);
-        for (int frame = 1; frame <= 41; frame++) {
+        // ROM: one routine-0 init dispatch + nine SSEntryFlash_Main dispatches
+        // + 33 Obj_Wait dispatches ($20 decremented through -1) reaches GoSS
+        // on the flash object's 43rd execution, never on the 42nd.
+        for (int frame = 1; frame <= 42; frame++) {
             flash.update(frame, player);
         }
+        assertFalse(flash.isDestroyed(), "SSEntryFlash_GoSS must not run before update 43");
+        flash.update(43, player);
+        assertTrue(flash.isDestroyed(), "SSEntryFlash_GoSS must run on update 43");
     }
 
     private static void advanceToIdleAndTouch(Sonic3kSSEntryRingObjectInstance ring, AbstractPlayableSprite player) {
-        for (int frame = 1; frame <= FORMATION_TOTAL_FRAMES + 1; frame++) {
+        for (int frame = 1; frame <= FIRST_IDLE_FRAME; frame++) {
             ring.update(frame, player);
         }
     }
@@ -670,7 +748,7 @@ public class TestSonic3kSSEntryRingFormation {
         }
 
         @Override
-        protected void spawnDynamicObject(AbstractObjectInstance object) {
+        protected void spawnDynamicObjectLowestFreeSlot(AbstractObjectInstance object) {
             flash = (Sonic3kSSEntryFlashObjectInstance) object;
             flash.setServices(services());
         }

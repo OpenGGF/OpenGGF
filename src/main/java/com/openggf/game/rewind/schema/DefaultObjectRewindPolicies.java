@@ -225,6 +225,14 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpiralObjectInstance", "cylinderAngles"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SpiralObjectInstance", "ridingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.ARZBossArrow", "mainBoss"), RewindFieldPolicy.CAPTURED),
+            // Obj11 bridge subsprite children (s2.asm:21966-21988) are real SST
+            // occupants, but the parent/child links between them are rebuilt by
+            // the segment's own recreate path
+            // (BridgeSegmentObjectInstance#recreateForRewind ->
+            // BridgeObjectInstance#adoptSegmentForRewind), exactly like
+            // LbzTubeElevatorInstance#overlayChild and
+            // SnaleBlasterBadnikInstance#cover. The links are declared
+            // `transient` on the fields themselves; no policy entry belongs here.
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.PointPokeyObjectInstance", "slotMachineManager"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.ForcedSpinObjectInstance", "sonicStateOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.ForcedSpinObjectInstance", "tailsStateOwner"), RewindFieldPolicy.CAPTURED),
@@ -644,6 +652,10 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapBeamChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance$EnergyTrapColumnChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedPlayer"), RewindFieldPolicy.CAPTURED),
+            // Sibling of lockedPlayer: ROM Obj_PachinkoFlipper keeps one standing counter
+            // byte per rider ($36(a0) for Player_1, $37(a0) for Player_2,
+            // sonic3k.asm:96389-96397), so the engine carries one lock reference each.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedSidekick"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance", "rewardItem"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             // Results children capture parentSlot and relink this structural SST pointer in

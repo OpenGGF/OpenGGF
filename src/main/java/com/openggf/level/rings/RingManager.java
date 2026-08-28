@@ -20,6 +20,7 @@ import com.openggf.game.ShieldType;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.physics.TrigLookupTable;
@@ -267,9 +268,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int playerYRadius = Math.max(1, player.getYRadius() - 3);
         int playerTop = player.getCentreY() - playerYRadius;
         int playerHeight = playerYRadius * 2;
-        if (player.getCrouching()) {
-            playerTop += 12;
-            playerHeight = 20;
+        // ASSEMBLY FLAG: fixBugs (docs/s2disasm/s2.asm:27) / FixBugs
+        // (docs/s1disasm/sonic.asm:20), both 0 in the shipped ROMs. THE ENGINE
+        // IMPLEMENTS THE SHIPPED (UN-FIXED) BRANCH: Touch_Rings tests the mapping
+        // frame (`cmpi.b #$4D,mapping_frame(a0)`, s2.asm:31956; `cmpi.b
+        // #fr_Duck,obFrame(a0)` with fr_Duck = $39, S1 ReactToItem.asm:34), so the
+        // 12px-down / 20px-tall box applies on exactly one frame of the duck
+        // animation and never to Tails. With fixBugs = 1 the test would be the
+        // animation id (AniIDSonAni_Duck), applying for the whole duck and to both
+        // characters. S3K dropped the adjustment entirely
+        // (Test_Ring_Collisions_NoAttraction, sonic3k.asm:18465-18476), which is
+        // NO_DUCK_TOUCH_BOX. See ObjectInteractionRules#duckTouchBoxMappingFrame.
+        ObjectInteractionRules interactionRules = playerObjectInteractionRules(player);
+        if (interactionRules != null
+                && interactionRules.isDuckTouchBoxMappingFrame(player.getMappingFrame())) {
+            playerTop += ObjectInteractionRules.DUCK_TOUCH_BOX_TOP_SHIFT;
+            playerHeight = ObjectInteractionRules.DUCK_TOUCH_BOX_HEIGHT;
         }
         int ringWidth = ringRules != null ? ringRules.ringCollisionWidth() : RING_COLLISION_HALF;
         int ringHeight = ringRules != null ? ringRules.ringCollisionHeight() : RING_COLLISION_HALF;
@@ -329,6 +343,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         return moduleRingRules(GameServices.currentOrBootstrapGameModule());
     }
 
+    private static ObjectInteractionRules playerObjectInteractionRules(AbstractPlayableSprite player) {
+        GameRules rules = player != null ? player.getGameRules() : null;
+        if (rules == null && player != null) {
+            rules = moduleGameRules(player.currentGameModule());
+        }
+        return rules != null ? rules.objectInteraction() : null;
+    }
+
     private static boolean lightningShieldEnabled(AbstractPlayableSprite player) {
         PlayerCapabilityRules rules = playerCapabilityRules(player);
         return rules != null && rules.lightningShieldEnabled();
@@ -371,6 +393,37 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
         audioManager.playSfx(GameSound.RING);
         player.addRings(1);
+    }
+
+    /**
+     * Captures the engine's model of ROM {@code Ring_status_table}: which
+     * layout rings are already collected.
+     *
+     * <p>Used only to carry that state across a level reload the ROM performs
+     * with {@code Respawn_table_keep} set, where {@code sub_EB1A} skips its
+     * {@code Ring_status_table} wipe
+     * (docs/skdisasm/sonic3k.asm:18561-18570, reached from :18232-18238).
+     */
+    public long[] captureRingStatusTable() {
+        return placement.collected.toLongArray();
+    }
+
+    /**
+     * Re-establishes a captured {@code Ring_status_table} on a freshly built
+     * ring manager, for a reload the ROM performed without clearing it.
+     *
+     * <p>This only marks rings collected; it never un-collects one, because the
+     * ROM's skipped branch leaves the table exactly as it stood and the fresh
+     * table is all-zero. No window surgery is needed: both the touch scan and
+     * the draw pass already skip an active index whose collected bit is set.
+     *
+     * @see #captureRingStatusTable()
+     */
+    public void restoreRingStatusTable(long[] bits) {
+        if (bits == null || bits.length == 0) {
+            return;
+        }
+        placement.collected.or(BitSet.valueOf(bits));
     }
 
     private static boolean cannotCollectRings(AbstractPlayableSprite player) {
@@ -417,6 +470,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      */
     public void updateLostRingPhysics(int frameCounter) {
         lostRings.tickSpillAnimation();
+        lostRings.retireEntriesWhoseObjectTwinIsGone(
+                levelManager != null ? levelManager.getObjectManager() : null);
     }
 
     public void draw(int frameCounter) {
@@ -1560,6 +1615,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 ring.setSlotIndex(-1);
             }
             activeRingCount = 0;
+        }
+
+        /** Retires only the mirror after its object-owned SST twin has gone. */
+        private void retireEntriesWhoseObjectTwinIsGone(ObjectManager objectManager) {
+            if (objectManager == null || activeRingCount == 0) {
+                return;
+            }
+            for (int i = 0; i < activeRingCount; i++) {
+                LostRing ring = ringPool[i];
+                if (ring == null || !ring.isActive() || ring.getSlotIndex() < 0) {
+                    continue;
+                }
+                if (!objectManager.hasLiveLostRingAtSlot(ring.getSlotIndex())) {
+                    ring.deactivate();
+                }
+            }
         }
 
         private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,

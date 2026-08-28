@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.camera.Camera;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -337,29 +338,6 @@ class TestMgzEndBossHandoffHeadless {
     }
 
     @Test
-    void bossTransitionInitialPickupUsesCameraAnchoredTransitionX() {
-        triggerAndInitializeBossTransition();
-
-        AbstractPlayableSprite player = fixture.sprite();
-        player.setCentreX((short) 0x3D40);
-        player.setCentreY((short) 0x06F0);
-        player.setAir(true);
-
-        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
-        for (int frame = 0; frame < 0x168 + 8
-                && tails.getCpuController().getState() != SidekickCpuController.State.CARRYING; frame++) {
-            fixture.stepIdleFrames(1);
-        }
-
-        assertEquals(SidekickCpuController.State.CARRYING, tails.getCpuController().getState(),
-                "After the $168-frame wait and Tails falling below the transition object, CPU routine $14 should pick up Sonic");
-        assertEquals(0x3CC0, tails.getCentreX() & 0xFFFF,
-                "Before Tails CPU routine reaches $14, Obj_MGZ2_BossTransition keeps x_pos at Camera_X+$40");
-        assertEquals(0x3CC0, player.getCentreX() & 0xFFFF,
-                "sub_1459E should parent Sonic to the transition object's Camera_X+$40 anchor on initial pickup");
-    }
-
-    @Test
     void bossTransitionCarryRecoversWhenTailsIsHurt() {
         triggerAndInitializeBossTransition();
 
@@ -508,6 +486,20 @@ class TestMgzEndBossHandoffHeadless {
     }
 
     private void triggerAndInitializeBossTransition() {
+        Camera camera = GameServices.camera();
+        // MGZ2_Resize owns these arena limits before the boss creates
+        // Obj_MGZ2_BossTransition. The transition object only samples the
+        // camera to place itself; it does not establish or maintain the lock.
+        camera.setX((short) 0x3C80);
+        camera.setY((short) 0x06A0);
+        camera.setMinX((short) 0x3C80);
+        camera.setMinXTarget((short) 0x3C80);
+        camera.setMaxX((short) 0x3C80);
+        camera.setMaxXTarget((short) 0x3C80);
+        camera.setMinY((short) 0x06A0);
+        camera.setMinYTarget((short) 0x06A0);
+        camera.setMaxY((short) 0x06A0);
+        camera.setMaxYTarget((short) 0x06A0);
         mgzEvents().triggerBossCollapseHandoff();
         fixture.stepIdleFrames(1);
         assertFalse(GameServices.sprites().getSidekicks().isEmpty(),

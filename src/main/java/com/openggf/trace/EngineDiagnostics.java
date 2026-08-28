@@ -47,8 +47,33 @@ public record EngineDiagnostics(
     int ridingObject,
     int standingSnapshot,
     int animationId,
-    int mappingFrame
+    int mappingFrame,
+    int lives
 ) {
+    /** Sentinel for "this snapshot carries no life count". */
+    public static final int LIVES_ABSENT = -1;
+
+    /** Backward-compatible constructor for diagnostics without a life count. */
+    public EngineDiagnostics(
+            int routine, int standOnSlot, int standOnType, int rings, int statusByte,
+            int cameraX, int cameraY, int cursorIdx, int leftCursorIdx, int fwdCtr,
+            int bwdCtr, String solidEvent, int xSub, int ySub, int ridingObject,
+            int standingSnapshot, int animationId, int mappingFrame) {
+        this(routine, standOnSlot, standOnType, rings, statusByte, cameraX, cameraY,
+                cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
+                ridingObject, standingSnapshot, animationId, mappingFrame, LIVES_ABSENT);
+    }
+
+    /**
+     * Returns a copy carrying the engine's life count. Used by the trace-replay
+     * comparators, which read {@code GameStateManager.getLives()} at capture time.
+     * The value is only ever compared -- nothing reads it back into engine state.
+     */
+    public EngineDiagnostics withLives(int lives) {
+        return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
+                cameraX, cameraY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent,
+                xSub, ySub, ridingObject, standingSnapshot, animationId, mappingFrame, lives);
+    }
     /** Backward-compatible constructor for diagnostics without animation capture. */
     public EngineDiagnostics(
             int routine, int standOnSlot, int standOnType, int rings, int statusByte,
@@ -163,6 +188,10 @@ public record EngineDiagnostics(
         if (animationId >= 0) {
             if (!sb.isEmpty()) sb.append(' ');
             sb.append(String.format("anim=%02X map=%02X", animationId, mappingFrame));
+        }
+        if (lives >= 0) {
+            if (!sb.isEmpty()) sb.append(' ');
+            sb.append(String.format("lives=%d", lives));
         }
         if (solidEvent != null && !solidEvent.isEmpty()) {
             if (!sb.isEmpty()) sb.append(' ');

@@ -287,6 +287,24 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
             }
 
             updateOrbitPosition();
+
+            // ROM loc_8BEE6's tail is `jmp Child_DrawTouch_Sprite`
+            // (sonic3k.asm:190853-190858, :178053-178058), which runs
+            // `movea.w parent3(a0),a1 / btst #7,status(a1) / bne.w
+            // Go_Delete_Sprite` BEFORE Add_SpriteToCollisionResponseList.
+            // Touch_EnemyNormal sets that bit on the badnik it destroys
+            // (sonic3k.asm:20952-20953), so every still-orbiting point is
+            // deleted on the pass after the parent is destroyed and never
+            // publishes another touch-response entry. Only this routine ends in
+            // Child_DrawTouch_Sprite: once launched (loc_8BF4C) or breaking
+            // (loc_8BF74) the tail is Sprite_CheckDeleteTouchXY
+            // (sonic3k.asm:190860-190866, :190873-190876), which does not test
+            // the parent -- so the check stays inside the orbit branch. Same
+            // ROM contract as OrbinautBadnikInstance.OrbinautOrbInstance.
+            if (parent.isDestroyed()) {
+                touchListPublishedThisFrame = false;
+                setDestroyed(true);
+            }
         }
 
         @Override

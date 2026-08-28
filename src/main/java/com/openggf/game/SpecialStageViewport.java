@@ -10,6 +10,7 @@ import java.util.Objects;
  * Sonic 2 H32 region is centered inside that outer region. This value carries
  * presentation geometry only and deliberately has no game or gameplay state.</p>
  */
+@ModApi
 public final class SpecialStageViewport {
     public static final int NATIVE_WIDTH = 320;
     public static final int H32_WIDTH = 256;
@@ -82,6 +83,7 @@ public final class SpecialStageViewport {
     }
 
     /** An immutable rectangle in logical presentation coordinates. */
+    @ModApi
     public record Region(int x, int y, int width, int height) {
         public Region {
             if (width < 0 || height < 0) {

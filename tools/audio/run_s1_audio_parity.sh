@@ -35,6 +35,8 @@ REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
 ROM_PATH=""
 MOVIE_PATH="$REPO/src/test/resources/audio/parity/s1/s1-soundtest-ghz.bk2"
 BIZHAWK_DIR="${BIZHAWK_HOME:-}"
+ARTIFACT_ROOT="$REPO/target"
+BUILD_ROOT="$REPO/target"
 OUTPUT_ROOT="$REPO/target/audio-parity/s1-ghz"
 COMMON_GIT_DIR=$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
 MAIN_REPO=""
@@ -70,13 +72,14 @@ if [ -z "$BIZHAWK_DIR" ]; then
 fi
 [ -n "$BIZHAWK_DIR" ] || fail "BizHawk 2.11 home was not found; pass --bizhawk-home or set BIZHAWK_HOME"
 
-CLASSPATH_FILE="$REPO/target/s1-audio-parity.classpath"
+CLASSPATH_FILE="$ARTIFACT_ROOT/s1-audio-parity.classpath"
+cd "$REPO" || fail "cannot enter repository root"
 if ! mvn -q -Pci -DskipTests compile dependency:build-classpath \
-	-Dmdep.outputFile="$CLASSPATH_FILE" -f "$REPO/pom.xml"; then
+	-Dmdep.outputFile="$CLASSPATH_FILE"; then
 	fail "Maven could not compile the parity tool or resolve its runtime classpath"
 fi
 [ -s "$CLASSPATH_FILE" ] || fail "Maven did not produce the parity tool classpath"
-JAVA_CP="$REPO/target/classes:$(<"$CLASSPATH_FILE")"
+JAVA_CP="$BUILD_ROOT/classes:$(<"$CLASSPATH_FILE")"
 JAVA_TOOL=(java -cp "$JAVA_CP" com.openggf.tools.audio.parity.S1AudioParityTool)
 
 VALIDATE_ARGS=(validate --repo "$REPO" --movie "$MOVIE_PATH" --bizhawk-home "$BIZHAWK_DIR" \

@@ -17,6 +17,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -285,7 +286,7 @@ class TestRewindFixS1Batch9Codecs {
 
     private static SonicConfigurationService createDefaultConfiguration() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(
-                java.nio.file.Path.of("target", "rewind-s1-batch9-config"));
+                TestSessionOutputPaths.diagnostics("rewind").resolve("rewind-s1-batch9-config"));
         config.resetToDefaults();
         return config;
     }

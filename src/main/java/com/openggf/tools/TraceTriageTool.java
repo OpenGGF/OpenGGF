@@ -21,11 +21,14 @@ import java.util.Set;
  * and never mutates engine state; it is a read-only diagnostic over committed
  * report files.
  *
- * <p>Inputs (all under {@code target/trace-reports/} unless overridden):
+ * <p>Inputs (all under the configured {@code openggf.trace.reports} directory,
+ * which defaults to {@code target/trace-reports}, unless overridden):
  * <ul>
- *   <li>{@code <game>_<zone>_report.json} (required) — schema produced by
+ *   <li>a legacy {@code <game>_<zone>_report.json} or a unique nested
+ *       report matching that logical key (required) — schema produced by
  *       {@link com.openggf.trace.DivergenceReport#toJson()}.</li>
- *   <li>{@code <game>_<zone>_context.txt} (optional) — human-readable
+ *   <li>the matching {@code <game>_<zone>_context.txt} (or nested
+ *       sibling) (optional) — human-readable
  *       side-by-side frame table, scanned for nearby object/diagnostic lines.</li>
  *   <li>{@code aux_state.jsonl} (optional) — newline-delimited aux events,
  *       scanned for nearby object ids / routines / positions.</li>
@@ -256,7 +259,10 @@ public final class TraceTriageTool {
 
         // Touch-response (enemy bounce / hurt / collide).
         if (f.contains("touch") || f.contains("hurt") || f.contains("bounce")
-                || f.contains("invuln") || f.contains("rings")) {
+                || f.contains("invuln") || f.contains("rings")
+                || f.contains("lives")) {
+            // A life count that diverges is a death the engine did or did not
+            // take, which sits in the same causal family as ring loss.
             return Subsystem.TOUCH_RESPONSE;
         }
 
@@ -656,13 +662,74 @@ public final class TraceTriageTool {
     // CLI entry point (IO lives here; logic above is pure)
     // ------------------------------------------------------------------
 
+    static String configuredReportDirectory() {
+        return System.getProperty("openggf.trace.reports", DEFAULT_REPORT_DIR);
+    }
+
+    static Path defaultReportPath(String reportDir, String game, String zone) {
+        return Path.of(reportDir, game + "_" + zone + "_report.json");
+    }
+
+    static Path defaultContextPath(String reportDir, String game, String zone) {
+        return Path.of(reportDir, game + "_" + zone + "_context.txt");
+    }
+
+    static Path contextPathForReport(Path reportPath) {
+        String filename = reportPath.getFileName().toString();
+        String stem = filename.endsWith(".json")
+                ? filename.substring(0, filename.length() - ".json".length())
+                : filename;
+        if (stem.endsWith("_report")) {
+            stem = stem.substring(0, stem.length() - "_report".length());
+        }
+        return reportPath.resolveSibling(stem + "_context.txt");
+    }
+
+    static Path resolveDefaultReportPath(String reportDir, String game, String zone)
+            throws IOException {
+        Path legacy = defaultReportPath(reportDir, game, zone);
+        Path reportRoot = Path.of(reportDir);
+        if (!Files.isDirectory(reportRoot)) {
+            return legacy;
+        }
+        String prefix = game + "_" + zone + "-";
+        List<Path> candidates;
+        try (var paths = Files.walk(reportRoot)) {
+            candidates = paths.filter(Files::isRegularFile)
+                    .filter(path -> !path.getParent().equals(reportRoot))
+                    .filter(path -> !path.equals(legacy))
+                    .filter(path -> path.getFileName().toString().startsWith(prefix)
+                            || path.getFileName().toString().startsWith(
+                                    game + "_" + zone + "_"))
+                    .filter(path -> path.getFileName().toString().endsWith(".json"))
+                    .filter(path -> !path.getFileName().toString().endsWith(".owner.json"))
+                    .sorted()
+                    .toList();
+        }
+        if (candidates.size() == 1) {
+            return candidates.getFirst();
+        }
+        if (candidates.size() > 1) {
+            throw new IOException("multiple nested reports match " + game + " " + zone
+                    + "; rerun with --report <path>");
+        }
+        return legacy;
+    }
+
+    static Path resolveReportPath(String explicitPath, String reportDir,
+            String game, String zone) {
+        return explicitPath != null
+                ? Path.of(explicitPath)
+                : defaultReportPath(reportDir, game, zone);
+    }
+
     public static void main(String[] args) {
         String game = null;
         String zone = null;
         String reportPath = null;
         String contextPath = null;
         String auxPath = null;
-        String reportDir = DEFAULT_REPORT_DIR;
+        String reportDir = configuredReportDirectory();
 
         List<String> positionals = new ArrayList<>();
         for (int i = 0; i < args.length; i++) {
@@ -696,9 +763,15 @@ public final class TraceTriageTool {
                 System.exit(2);
                 return;
             }
-            reportPath = reportDir + "/" + game + "_" + zone + "_report.json";
+            try {
+                reportPath = resolveDefaultReportPath(reportDir, game, zone).toString();
+            } catch (IOException e) {
+                System.err.println(e.getMessage());
+                System.exit(2);
+                return;
+            }
             if (contextPath == null) {
-                contextPath = reportDir + "/" + game + "_" + zone + "_context.txt";
+                contextPath = contextPathForReport(Path.of(reportPath)).toString();
             }
         }
 

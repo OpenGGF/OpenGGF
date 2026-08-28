@@ -50,7 +50,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_DEATH_EGG_1, "DEZ", "Death Egg Zone", 1),
             new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_DEATH_EGG_2, "DEZ", "Death Egg Zone", 2),
             new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_DOOMSDAY, "DDZ", "The Doomsday Zone", 1),
-            new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_HIDDEN_PALACE_SANCTUARY,
+            new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_HIDDEN_PALACE,
                     "HPZ", "Hidden Palace Sanctuary", 1)
     );
 

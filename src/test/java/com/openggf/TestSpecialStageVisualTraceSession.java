@@ -203,18 +203,21 @@ class TestSpecialStageVisualTraceSession {
     }
 
     private static boolean fadeStarted(TraceSessionLauncher session) {
-        return (boolean) getField(session, "fadeStarted");
+        try {
+            Field field = TraceSessionLauncher.class
+                    .getDeclaredField("fadeStarted");
+            field.setAccessible(true);
+            return field.getBoolean(session);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static int ssCursor(TraceSessionLauncher session) {
-        return (int) getField(session, "ssCursor");
-    }
-
-    private static Object getField(Object target, String name) {
         try {
-            Field field = TraceSessionLauncher.class.getDeclaredField(name);
+            Field field = TraceSessionLauncher.class.getDeclaredField("ssCursor");
             field.setAccessible(true);
-            return field.get(target);
+            return field.getInt(session);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }

@@ -150,7 +150,6 @@ class TestS3kUtilityObjectRewind {
         Flybot767BadnikInstance source = objectManager.createDynamicObject(
                 () -> new Flybot767BadnikInstance(spawn));
         setBooleanField(source, "waitingForOnscreen", true);
-        setBooleanField(source, "layoutWaitUsesRetainedRenderFlag", true);
         setBooleanField(source, "placeholderRenderedOnscreen", true);
         ObjectRefId sourceId = objectId(objectManager, source);
         RewindRegistry registry = registryFor(objectManager);
@@ -163,7 +162,6 @@ class TestS3kUtilityObjectRewind {
                 objectById(objectManager, Flybot767BadnikInstance.class, sourceId);
         assertNotSame(source, restored);
         assertTrue(readBooleanField(restored, "waitingForOnscreen"));
-        assertTrue(readBooleanField(restored, "layoutWaitUsesRetainedRenderFlag"));
         assertTrue(readBooleanField(restored, "placeholderRenderedOnscreen"));
     }
 

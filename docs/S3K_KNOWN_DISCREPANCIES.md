@@ -32,6 +32,51 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 19. [MHZ Deferred Items: Out-of-Scope Divergences Confirmed During the Parity-Fix Wave](#mhz-deferred-items-out-of-scope-divergences-confirmed-during-the-parity-fix-wave)
 20. [Super Emerald Special Stage Results: Sanctuary Reveal Replaced by an Immediate Exit](#super-emerald-special-stage-results-sanctuary-reveal-replaced-by-an-immediate-exit)
 21. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
+22. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
+
+---
+
+## YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase
+
+**Location:** `YmServiceTimingProfile`, `YmWriteTimeline`, `SmpsDriver`, and
+`VirtualSynthesizer`.
+
+### Original implementation
+
+The retail Z80 sound driver runs asynchronously and writes the YM2612 through
+the hardware bus. The observed Blue Sphere FM5 upload has stable relative bus
+spacing, while its absolute placement within a VInt depends on scheduling state
+outside the retained bounded capture.
+
+### Our implementation
+
+OpenGGF starts the S3K sound service at its engine-owned service boundary and
+schedules every FM write by the native source-relative master-cycle vector.
+The YM2612 advances and drains the writes at internal-sample boundaries. The
+engine does not claim or synthesize an absolute native VInt phase, and Sonic 1
+and Sonic 2 retain untimed profiles under their separately audited drivers.
+
+### Rationale
+
+The relative vector is reproducible across twelve native upload groups and is
+enough to preserve chip evolution during the write sequence. Inventing an
+absolute phase from a bounded movie would fit the fixture rather than model the
+ROM. The retained evidence also contains no DMA-contended upload, so no special
+DMA timing is inferred. These limits are explicit in the validation report and
+do not introduce trace-fed runtime state.
+
+### Verification
+
+The native lab, compact oracle, transactional service tests, rewind/observer
+guards, bounded playback trace, and three-ROM audio suites are recorded in
+`docs/architecture/validation/audio/2026-08-22-s3k-blue-sphere-audio-validation.md`.
+The replacement trace requires a closed-world drained prefix: its exact
+13-event committed Spring tail is followed immediately by the exact Blue Sphere
+attack stream, with no intervening event. The pending service contains only the
+reviewed 34 source/segment-tagged writes and rejects every music or
+completion-restore prefix. The rollback guard structurally requires its capture as the first
+unconditional transaction-helper statement and rejects any additional work.
+Human listening remains required before integration.
 
 ---
 
@@ -1350,3 +1395,216 @@ it holds for any recording.
 in-code as coming from a fixture regen, i.e. fixture-measured rather than ROM-derived.
 That is a hard rule 3 exposure inherited with the branch and is what makes the admission
 frame fixture-relative in the first place.
+
+## `s3k_kos_direct.prepared`: a sub-frame ROM bit compared against a boundary-granular model
+
+**Status:** OPEN, bounded. One asymmetric comparison-side excusal, added 2026-08-10 in
+`LoadQueueComparisonProjection`. It fires exactly once across the current fixture set
+(AIZ complete run, frame 6349, direct job ordinal 36) and nowhere in CNZ or MHZ.
+
+### The compared field is not "prepared"
+
+The recorder projects this field from bit 15 of `Kos_decomp_queue_count`
+(`tools/bizhawk-headless/src/Recording/LoadQueueStateProjector.cs`:
+`bool prepared = (rawCount & 0x8000) != 0;`). In the ROM that bit means
+**decompression is in progress right now**, not "prepared":
+
+- `Process_Kos_Queue_Main` (`docs/skdisasm/sonic3k.asm:2845-2846`) sets it with
+  `ori.w #$8000,(Kos_decomp_queue_count).w` — commented in the disassembly as
+  "set sign bit to signify decompression in progress" — immediately before entering
+  `Process_Kos_Queue_Loop`.
+- `Process_Kos_Queue_EndReached` (`docs/skdisasm/sonic3k.asm:2938-2941`) clears it with
+  `andi.w #$7FFF,(Kos_decomp_queue_count).w` when the stream ends.
+- `Set_Kos_Bookmark` (`docs/skdisasm/sonic3k.asm:2819`) only **reads** the bit, to decide
+  whether to redirect a preempting V-int's `rte` to `Backup_Kos_Registers`. It is not a
+  work quantum and it neither sets nor clears the bit.
+
+A recorded row therefore reads the bit set only when that frame's V-int happened to land
+**inside** `Process_Kos_Queue_Loop` — a sub-frame 68000 cycle position. Frame-granularity
+state cannot reconstruct it, in this engine or in principle.
+
+### The engine's model, and why it can only err in one direction
+
+`S3kKosDecompressionQueue.afterTimingService` arms the serviced FIFO head at each
+`PRE_MAIN_LOOP` boundary and disarms it only when the recorded completion edge fires. The
+engine's flag therefore means "the head survived a service boundary before its recorded
+completion", which is a **boundary-granular over-approximation** of the ROM bit: it can
+read true one or more boundaries before the ROM's V-int first landed in the loop, but it
+cannot read false while the ROM is mid-loop. (The flag is comparison-only: `preparedEntries`
+is read solely by `QueueDiagnosticSnapshot` capture and by rewind `capture()`/`restore()`;
+no gameplay, art, or scheduling path consumes it.)
+
+The excusal mirrors that asymmetry exactly. Only `actual=true / expected=false` is excused,
+and only while the head's own recorded completion edge (matched by kind, ordinal and
+submission fingerprint) still lies strictly in the future. `actual=false / expected=true`
+stays a hard error forever — the engine claiming decompression was not in progress while
+the ROM was mid-loop means a completion landed early, which is a real timing defect.
+`busy`, `active_source`, `active_destination`, the waiting fingerprints, and the module
+queue's `prepared` are all still fully compared.
+
+The asymmetry is structural, not merely gated. The excusal's only effect is to raise the
+*expected* row's `prepared` to true, which by construction cannot conceal an actual value
+of false. Widening the polarity gate alone is therefore a semantic no-op — verified by
+mutation: forcing the branch to accept both polarities left all of
+`TestLoadQueueTraceComparison` green. The mutation that *would* be dangerous is changing
+the rewrite to mirror the actual value instead of forcing true, and
+`keepsReverseInProgressPolarityAsError` fails on exactly that.
+`keepsInProgressBitComparedWithoutFutureRecordedCompletion` likewise fails when the
+`rawFrame > frame` guard is removed. Both were confirmed by running the mutations.
+
+### Refuted alternatives — do not rerun these
+
+Measured against the 1-error baseline at `b5975c195` (frame 6349,
+`queue.s3k_kos_direct.prepared` expected=false actual=true):
+
+1. **Reordering the module and direct service passes** — breaks direct job ordinal 38 with
+   a hard `IllegalStateException`, not a comparison error.
+2. **Never setting the engine bit** — 37 errors, first at frame 64. 36 rows genuinely
+   require it TRUE.
+3. **A provenance rule** (distinguishing the false row by where the entry came from) — 29
+   errors, first at frame 64. The TRUE rows and the FALSE row share routine, size class
+   (`$800` words) and provenance, so no provenance predicate separates them.
+
+### Rejected: a recorded decompression-start edge
+
+Extending the v5 `hardware_timing.jsonl` stream with a decompression-**start** edge would
+reproduce the bit exactly, and was rejected as a hard-rule-4 violation. A start edge
+releases no engine work: nothing waits on it, no prepared ROM-backed job becomes ready
+because of it. Its only observable effect would be to set the value of a compared field,
+which makes the comparison a checksum of the sidecar against itself. Rule 4's test is
+whether a recorded input only changes *when* real engine work becomes ready; a start edge
+decides *what* a compared row says, so it is outside the exception however well the ROM
+behaviour is cited.
+
+## MGZ swinging platform endpoint: the inherited `d1` high word is not modelled
+
+`MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue` is a fitted
+angle/slot table and is knowingly incorrect. It is recorded here rather than removed
+because removing it trades one measured red for another.
+
+**Mechanism (ROM-derived).** `GetSineCosine` returns the cosine with
+`move.w SineTable(pc,d0.w),d1` (`sonic3k.asm:3025`), a word write, so the high word of
+`d1` on entry to `sub_34074` is inherited from whatever ran before. `sub_34074` then does
+`swap d1 / asr.l #4` (`sonic3k.asm:70487-70490`), which pushes that inherited word `H`
+into the low twelve bits of the per-link X step, and accumulates five steps. With `C` the
+cosine word:
+
+```
+platformX = pivotX + ((20480*C + 5*(H >> 4)) >> 16)
+```
+
+The engine computes the `H == 0` case. The extra term is at most `5*$FFF = $4FFB`, so it
+can carry at most one pixel, and only when both of
+
+```
+k = (5 * (C & $F)) & $F >= 11        (H >> 4) >= ($10000 - k*$1000) / 5
+```
+
+hold. The first condition is fully ROM-derived; measured against `Levels/Misc/sine.bin`,
+all thirteen angles in the fitted table satisfy it with `k` in 12..15, which is
+independent confirmation that the table is approximating this mechanism and not something
+else. The second condition needs `H`, and the engine has no model of inter-object register
+carry through `Process_Sprites`, so the table stands in for it.
+
+The sine (Y) side needs no term: `Process_Sprites`' `sub_1AAFC` does `move.l (a0),d0`
+before `jsr (a1)` (`sonic3k.asm:35983-35988`), so `d0`'s high word is the high word of
+`loc_3403A`'s own address, `$0003`, and `asr.l #4` of `$0003` is zero.
+
+**Measured consequence.** At `e9d5eb610`:
+
+| change | `TestS3kSonicTailsMgzSegmentTraceReplay` | `TestS3kMgzTraceReplay` |
+|---|---|---|
+| table kept (current) | 3950 errors, first frame 10709 (`x` $23DB/$23DC) | green |
+| table removed | 3921 errors, first frame 12932 | 14 errors, first frame 25770 (`x` $2A78/$2A77) |
+
+At MGZ segment frame 10709 the player is riding slot 6 at byte angle `$62`; the table adds
+the carry and the ROM does not, so the platform sits at `$23D5` instead of `$23D4` and the
+rider is carried one pixel too far right. At `TestS3kMgzTraceReplay` frame 25770 the ridden
+platform is slot 7 of a different pivot group and the ROM *does* take the carry.
+
+**Removal condition.** Model `d1`'s inherited high word across the object execution order
+(the value left by the previously executed SST slot), then compute the carry from the
+formula above and delete both the table and this entry. Do not extend the table with more
+angles: it cannot be right, because the carry is not a function of the angle alone.
+
+## Segment trace replays start with an empty save-game inventory
+
+**What diverges.** Any per-zone *segment* fixture cut from a complete run replays
+with zero Chaos Emeralds, zero Super Emeralds and an empty
+`Collected_special_ring_array`, regardless of what the recording's player had
+at that point in the movie. Object branches that read those globals therefore
+take the low-inventory arm in the engine and the high-inventory arm in the ROM.
+
+**Measured case.** `TestS3kSonicTailsMgzSegmentTraceReplay`, frame 17383 --
+3410 of the class's 3446 errors start there, and frames 13864-15531 and
+15562-17382 are clean. `Obj_SSEntryRing`'s collision arm `loc_6170A`
+(`docs/skdisasm/sonic3k.asm:128283-128291`) branches on
+`cmpi.b #7,(Chaos_emerald_count).w`. MGZ is `Current_zone` 2, so
+`SSEntry_CheckLevel` (`:128433-128443`) reports an S3 level and the ROM takes
+`loc_61794` (`:128318-128327`): `moveq #50,d0 / jmp (AddRings).l`, ring
+self-retires, player keeps rolling. The trace shows `rings` `0x28 -> 0x5A` on
+that single frame with `anim` still `$02`.
+
+The engine takes `loc_6173A` (`:128290-128295`) instead, which writes
+`mapping_frame = 0`, `anim = $1C`, `object_control = $53` -- and those are
+exactly the engine's compared values at 17383. The object is **not** at fault:
+`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture` already
+models the full ROM branch and `isSonic3HalfLevel()` already models
+`SSEntry_CheckLevel`. A probe at the touch reported
+`zone=2 hasAllEmeralds=false hasAllSuper=false isS3Half=true award=false`;
+only the inventory term is wrong.
+
+**Why it is not closed.** The fixture's own `metadata.json`, `physics.csv` and
+frame `-1` bootstrap aux events carry no inventory field, and
+`AbstractTraceReplayTest` does not read the parent run manifest. The value does
+exist in committed data -- `runs/s3k-sonic-tails-complete-emeralds/run_manifest.json`
+records `emeralds_after: 7` into segment 15 and `emeralds_before: 7` from
+segment 18, and MGZ is `segment_index: 16` -- but seeding an inventory counter
+from it is hydration of gameplay state into the engine, which hard rule 4
+permits only for the hardware-timing port. The pre-trace bootstrap carve-out
+covers position, RNG seed, oscillator pre-advance and frame counters, not
+save-game progress.
+
+**Removal condition.** Take an explicit decision on whether starting save-game
+inventory belongs in the frame-0 bootstrap contract. If it does, extend the
+segment bootstrap to derive it from the parent run manifest's recorded
+progression -- for every game, since S1 and S2 segment fixtures have the same
+shape -- and measure the blast radius across every segment class before
+landing. Do **not** close it by keying on the run id, the fixture name, the
+zone or a frame index. Delete this entry when the bootstrap carries the value.
+
+## SEGA Screen: an engine addition the ROM does not have
+
+**What the ROM does.** Nothing. There is no SEGA screen sequence in either half of the
+locked-on cartridge.
+
+- `Sega_Screen` — game mode 0's handler — is
+  `move.b #4,(Game_mode).w` and falls straight into `Title_Screen`
+  (`docs/skdisasm/sonic3k.asm:5387-5388`); the S3 half is the same with an explicit `rts`
+  (`docs/skdisasm/s3.asm:4768-4770`).
+- `JumpToSegaScreen`, the handler for game modes `$10` and `$18`, only sets game mode 0
+  (`sonic3k.asm:454-456`), which then advances the same way.
+- A case-insensitive search for "sega" across both disassemblies returns **only** the
+  cartridge header strings, the TMSS security write, those advancing routines, and one
+  `SegaScr_VInt` reference in `s3.asm:830` that is vestigial — game mode 0 advances on its
+  first main-loop pass, so that V-int handler can run at most once.
+
+There is no hold, no timer, and no SEGA sound command anywhere in either file.
+
+**What we do.** `Sonic3kTitleScreenManager` presents a SEGA screen: it plays the SEGA sound,
+holds for `SEGA_HOLD_DURATION = 180` frames, stops the sound and moves to the palette
+transition.
+
+**Why this is acceptable.** It is a presentation addition, not a parity gap — there is no ROM
+behaviour being approximated, so there is nothing for the 180 to be wrong against. It affects
+only the pre-title sequence and no gameplay state, and it is skippable by input like the rest of
+the intro.
+
+**Why it is written down.** Found during the 2026-08-21 timing-constant provenance sweep, where
+`SEGA_HOLD_DURATION` was the only constant of six checked with no ROM counterpart — the other
+five were ROM-exact. Without this entry the next sweep re-flags it as an uncited constant and
+someone goes looking for the ROM value that does not exist. **Whether to keep the screen at all
+is a product decision, not a parity one.**
+
+Full context:
+[docs/architecture/audits/2026-08-21-timing-constant-provenance-sweep.md](architecture/audits/2026-08-21-timing-constant-provenance-sweep.md).

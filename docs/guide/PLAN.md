@@ -129,7 +129,8 @@ Contents:
 
 2. **Download or build** — Two paths:
    - Release ZIP: download, extract, place ROMs alongside JAR, run.
-   - Build from source: clone, `mvn package`, same ROM placement, run.
+   - Build from source: clone, install hooks, run `mvn package`,
+     use the JAR under the worktree's `target/`, then run.
    Mention `run.cmd` for Windows.
 
 3. **First launch** — What to expect: master title screen, game selection, title screen,
@@ -748,7 +749,9 @@ Length: ~200-250 lines.
 
 Sections:
 
-1. **Running tests** — `mvn test`, single class, parallel execution (8 JVMs).
+1. **Running tests** — `mvn test`, single class,
+   parallel execution (8 JVMs); use `target/surefire-reports` and
+   `target/trace-reports` for reports.
    ROM-optional behavior.
 
 2. **HeadlessTestFixture** — Builder pattern for setting up a test level. Show a

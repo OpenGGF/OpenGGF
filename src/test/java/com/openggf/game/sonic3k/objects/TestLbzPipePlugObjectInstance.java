@@ -44,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestLbzPipePlugObjectInstance {
     private static final int PIPE_X = 0x1800;
@@ -334,6 +335,13 @@ class TestLbzPipePlugObjectInstance {
     private static Sonic3kObjectRegistry registryForZone(int zoneId) {
         return new Sonic3kObjectRegistry() {
             @Override
+            protected com.openggf.level.Level currentLevel() {
+                // This fixture supplies its stock zone through currentRomZoneId();
+                // ambient singleton state from an earlier class must not override it.
+                return null;
+            }
+
+            @Override
             protected int currentRomZoneId() {
                 return zoneId;
             }
@@ -401,6 +409,8 @@ class TestLbzPipePlugObjectInstance {
 
         private RecordingServices() {
             objectManager = mock(ObjectManager.class);
+            when(objectManager.solidContacts()).thenReturn(
+                    mock(com.openggf.level.objects.ObjectSolidContactController.class));
             doAnswer(invocation -> {
                 children.add(invocation.getArgument(0));
                 return null;

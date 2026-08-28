@@ -64,6 +64,17 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void spilledRingCarriesRomDisplayPriority() {
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                0x48A0, 0x02B4, 0, 0, 0, 0xFF);
+
+        assertTrue(ring.isHighPriority(),
+                "Obj_Bouncing_Ring uses make_art_tile(ArtTile_Ring,1,1)");
+        assertEquals(3, ring.getPriorityBucket(),
+                "Obj_Bouncing_Ring priority $180 maps to display bucket 3");
+    }
+
+    @Test
     void eagerRemainderCanWaitForDeferredOwnerInitializationPass() {
         LostRingObjectInstance ring = LostRingObjectInstance.forTest(
                 0x100, 0x100, 0x0200, -0x0400, 0, 0xFF);

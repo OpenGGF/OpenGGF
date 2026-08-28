@@ -218,6 +218,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	@Override
+	public void resetGroundAngleLatches() {
+		latchedNextTilt = 0;
+		latchedTilt = 0;
+	}
+
+	@Override
 	public void resetTransientState() {
 		jumpPressed = false;
 		jumpPrevious = false;
@@ -573,9 +579,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = right;
 
 		// ROM-accurate control lock behavior:
-		// - move_lock and springing only block input when GROUNDED (checked in Sonic_Move, not Sonic_ChgJumpDir)
+		// - move_lock only blocks input when GROUNDED (checked in Sonic_Move, not Sonic_ChgJumpDir)
 		// - obj_control and hurt block input in ALL states
-		boolean groundedControlLock = !sprite.getAir() && (moveLocked || sprite.getSpringing());
+		//
+		// move_lock is the ROM's ONLY grounded-input lock, and among the spring
+		// family only the HORIZONTAL spring writes it: S2 loc_18B1C
+		// `move.w #$F,move_lock(a1)` (docs/s2disasm/s2.asm:34031), S1
+		// `move.w #15,locktime(a1)` (docs/s1disasm/_incObj/41 Springs.asm:144),
+		// S3K loc_231BE `move.w #$F,$32(a1)` (docs/skdisasm/sonic3k.asm:47907).
+		// The up, down and diagonal launches (S2 loc_189CA :33924-33966,
+		// loc_18CC6 :34177-34196; S1 Spring_Up .bounceUp :88-101,
+		// Spring_Down .bounceDown :193-200; S3K sub_22F98 :47700-47772) write no
+		// lock of any kind, and neither do the S2 springboard Obj40 (:52262) or
+		// the CPZ pipe-exit spring Obj7B (:56341). The engine's `springing`
+		// timer is a marker those objects set for their own re-contact and carry
+		// tests; making it also gate horizontal input invented a 15-frame
+		// grounded control lock the ROM has nowhere. Each engine spring that
+		// models a real move_lock already calls setMoveLockTimer alongside it,
+		// so the horizontal case is unaffected.
+		boolean groundedControlLock = !sprite.getAir() && moveLocked;
 		if (groundedControlLock || objControlLocked || sprite.isHurt()) {
 			if (!sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT)) {
 				left = false;
@@ -700,6 +722,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
 			}
 			sprite.completeHurtLandingRecovery();
+			// Sonic_HurtStop's landing branch also writes the walk animation,
+			// between zeroing the three speeds and dropping the routine: S1
+			// `move.b #id_Walk,obAnim(a0)`
+			// (docs/s1disasm/_incObj/"01 Sonic.asm":1949) and S2
+			// `move.b #AniIDSonAni_Walk,anim(a0)` (docs/s2disasm/s2.asm:38223).
+			// Without it the player stays in the hurt animation after touching
+			// down and the hurt script keeps republishing fr_Injury, so any read
+			// before normal control re-selects an animation sees the wrong frame.
+			// It lives here rather than in completeHurtLandingRecovery because
+			// AbstractPlayableSprite is at its release-critical size budget.
+			int hurtLandingWalk = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+			if (hurtLandingWalk >= 0) {
+				sprite.setAnimationId(hurtLandingWalk);
+			}
 		} else if (sprite.getAir()) {
 			modeAirborne();
 		} else if (sprite.getRolling()) {
@@ -1092,6 +1128,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Hurt routine 4 owns its terrain pass even if a positive object_control
 		// bit remains set until a later object slot releases it. The normal
 		// control routine alone is suppressed by that byte.
+		// ROM Sonic_HurtStop runs its OWN bottom-boundary kill test before it
+		// hands off to Sonic_Floor/DoLevelCollision, and returns without any
+		// terrain pass when it fires (S1 01 Sonic.asm:1930-1941; S2
+		// s2.asm:38200-38215; S3K sub_12318 sonic3k.asm:24477-24491). This is a
+		// separate row from Sonic_LevelBound's kill plane below, which the hurt
+		// routine reaches afterwards.
+		if (hurt && applyHurtStopBottomKill()) {
+			return;
+		}
 		if ((!sprite.isObjectControlSuppressesMovement() || hurt)
 				&& !sprite.isSuppressAirCollision()) {
 			doLevelCollision(sprite.isForceFloorCheck());
@@ -1991,6 +2036,28 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setDoubleJumpFlag(0);
 		sprite.setDoubleJumpProperty((byte) 0);
 
+		// ROM: bsr.w Knux_TouchFloor (sonic3k.asm:30984). The slide itself runs
+		// with Status_InAir still set -- loc_1693E deliberately leaves it set when
+		// the glide first touches ground -- so .getUp is where Knuckles actually
+		// becomes grounded. Knux_TouchFloor's loc_17B6A tail
+		// (sonic3k.asm:32854-32864) clears Status_InAir, Status_Push and
+		// Status_RollJump, and zeroes jumping, Chain_bonus_counter, flip_angle,
+		// flip_type, flips_remaining, scroll_delay_counter and double_jump_flag.
+		// Without the InAir clear the get-up frame stays airborne and the
+		// following frames run the airborne control path, which move_lock does
+		// not gate: a held direction then accelerates x_vel away from the ROM's
+		// zero.
+		// (This build is FixBugs = 0; the site carries no bug-fix conditional.)
+		// double_jump_flag / double_jump_property are already zeroed above.
+		// Status_RollJump, Chain_bonus_counter and scroll_delay_counter have no
+		// modelled engine state at this site; flip_type and flips_remaining do.
+		sprite.setAir(false);
+		sprite.setPushing(false);
+		sprite.setJumping(false);
+		sprite.setFlipAngle(0);
+		sprite.setFlipType(0);
+		sprite.setFlipsRemaining(0);
+
 		// ROM: move.w #$F,move_lock — 15-frame input lock
 		sprite.setMoveLockTimer(0x0F);
 		// ROM: move.b #$22,anim — GLIDE_LAND animation (brief get-up/crouch pose)
@@ -2071,15 +2138,55 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			climbAnimDelta = -1;
 		}
 
-		// ROM: Animation frame cycling (sonic3k.asm:31384-31404)
+		// ROM: Knuckles_Wall_Climb .finishMoving (sonic3k.asm:31330-31377).
+		//
+		// FixBugs conditional (docs/skdisasm/sonic3k.asm:38 -- the shipped ROM
+		// assembles with FixBugs = 0, so THIS is the branch the engine implements).
+		//
+		//   Shipped (FixBugs = 0), implemented here: when neither up nor down is
+		//   held, a floor probe runs through sub_F828 and its return value lands
+		//   in d1 -- the same register that carries the climbing animation delta.
+		//   The delta is destroyed, and the cycling code below adds the FLOOR
+		//   DISTANCE to mapping_frame instead of +/-1. The distance is normally far
+		//   larger than the $B7..$BC climb loop, so the `bls #$BC -> $B7` clamp
+		//   fires and Knuckles snaps back to his first climbing frame every 4
+		//   frames. The disassembly names that exact symptom at
+		//   sonic3k.asm:31369-31373.
+		//
+		//   Fixed (FixBugs = 1), NOT implemented: `move.w d1,-(sp)` before the
+		//   `bsr.w sub_F828` and `move.w d1,d0 / move.w (sp)+,d1` after it, so the
+		//   floor distance is tested in d0 while d1 keeps its delta (0 in the
+		//   no-input case). Knuckles would simply hold his current climbing frame.
+		//
+		// Both branches share the rest of the block: the probe is skipped entirely
+		// while up or down is held (sonic3k.asm:31343-31346 -- similar code already
+		// ran in those branches), and a negative probe result means Knuckles has
+		// reached the floor and detaches (.reachedFloor).
+		if (!inputUp && !inputDown) {
+			// ROM probe point: x_pos, y_pos + 9, top_solid_bit (sonic3k.asm:31349-31352).
+			int probeY = sprite.getCentreY() + 9;
+			int floorDistance = romFloorProbeDistance(
+					ObjectTerrainUtils.checkFloorDist(sprite.getCentreX(), probeY), probeY);
+			if (floorDistance < 0) {
+				// ROM .reachedFloor: add.w d1,y_pos, then detach to the ground.
+				sprite.setY((short) (sprite.getY() + floorDistance));
+				exitWallClimbToGround();
+				return;
+			}
+			// The FixBugs = 0 clobber: d1 now holds the floor distance, not the delta.
+			climbAnimDelta = floorDistance;
+		}
+
+		// ROM: Animation frame cycling (sonic3k.asm:31378-31403)
 		// Animate every 4 frames when moving, using double_jump_property as timer
 		if (climbAnimDelta != 0) {
 			byte timer = (byte) (sprite.getDoubleJumpProperty() - 1);
 			if (timer < 0) {
 				timer = 3;
-				// Advance mapping frame
-				int frame = sprite.getMappingFrame() + climbAnimDelta;
-				// Wrap within range 0xB7-0xBC
+				// ROM: add.b mapping_frame(a0),d1 -- a BYTE add, so the sum wraps
+				// mod 256 before the two unsigned loop compares (sonic3k.asm:31391-31401).
+				int frame = (sprite.getMappingFrame() + climbAnimDelta) & 0xFF;
+				// Wrap within range 0xB7-0xBC (cmpi.b/bhs then cmpi.b/bls)
 				if (frame < 0xB7) frame = 0xBC;
 				if (frame > 0xBC) frame = 0xB7;
 				sprite.setMappingFrame(frame);
@@ -2110,6 +2217,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			audioManager.playSfx(GameSound.JUMP);
 			return;
 		}
+	}
+
+	/**
+	 * Maps an {@link ObjectTerrainUtils} floor probe onto the word the ROM's
+	 * {@code FindFloor} chain actually returns in {@code d1}.
+	 *
+	 * <p>The engine reports "nothing solid in either probed tile" with the
+	 * sentinel {@link TerrainCheckResult#NO_COLLISION}; the ROM has no such
+	 * sentinel. Its empty-tile path is {@code loc_F274}
+	 * ({@code add.w a3,d2 / bsr sub_F30C / addi.w #$10,d1}, sonic3k.asm:19273-19278)
+	 * into {@code loc_F31C} ({@code move.w #$F,d1 / move.w d2,d0 / andi.w #$F,d0 /
+	 * sub.w d0,d1}, sonic3k.asm:19306-19310), i.e. {@code $1F - (probeY & $F)} --
+	 * a positive distance in $10..$1F. The exact value matters here because the
+	 * FixBugs = 0 clobber feeds it straight into {@code add.b mapping_frame,d1}.
+	 */
+	private static int romFloorProbeDistance(TerrainCheckResult result, int probeY) {
+		if (result == null || !result.foundSurface()) {
+			return 0x1F - (probeY & 0x0F);
+		}
+		return result.distance();
 	}
 
 	/** Probes wall distance at a given Y position in the facing direction. */
@@ -2796,9 +2923,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		short rollDecel = (short) 0x20;
-		if (movementRules != null && movementRules.rollControlledDecelUsesEffectiveDecelQuarter()) {
+		// ASSEMBLY FLAG: fixBugs (docs/s2disasm/s2.asm:27), 0 in the shipped ROM.
+		// THE ENGINE IMPLEMENTS THE SHIPPED (UN-FIXED) BRANCH for Tails_RollSpeed:
+		// s2.asm:40037-40040 keeps the outdated Sonic-1 form
+		//   move.w (Tails_deceleration).w,d4 / asr.w #2,d4
+		// so Tails' controlled roll deceleration is decel>>2 -- $20 on land
+		// ($80>>2) but only $10 underwater ($40>>2), which is why the disassembly
+		// notes Tails is "much worse at this than Sonic when underwater". With
+		// fixBugs = 1 the two lines become move.w #$20,d4, matching
+		// Sonic_RollSpeed. Sonic 2's Sonic_RollSpeed and *both* S3K routines
+		// (sonic3k.asm:22934, :28178) are unconditionally flat $20; S1's single
+		// Sonic_RollSpeed uses the >>2 form for its only character.
+		boolean tailsOutdatedControlledRollDecel = movementRules != null
+				&& movementRules.tailsRollSpeedUsesEffectiveDecelQuarter()
+				&& sprite.usesTailsRollSpeedRoutine();
+		if (tailsOutdatedControlledRollDecel
+				|| movementRules != null && movementRules.rollControlledDecelUsesEffectiveDecelQuarter()) {
 			// S1 Sonic_RollSpeed derives d4 from v_sonspeeddec >> 2, so the
-			// underwater value is $40 >> 2 = $10. S2/S3K hardcode $20.
+			// underwater value is $40 >> 2 = $10. S2 Sonic / S3K hardcode $20.
 			rollDecel = (short) (sprite.getRunDecel() >> 2);
 		}
 		if (inputAllowed && inputLeft) {
@@ -2892,15 +3034,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.getAnimationId() == idleAnimId) {
 			return;
 		}
+		// No Status_Push write here. The ROM roll-stop block writes only the
+		// rolling bit, the radii, anim and y_pos -- S3K Sonic_RollSpeed
+		// (sonic3k.asm:22979-22990), Tails_RollSpeed (sonic3k.asm:28216-28231),
+		// S2 Sonic_CheckRollStop (s2.asm:37051-37061). Status_Push is cleared by
+		// Animate_Sonic/Animate_Tails on anim != prev_anim
+		// (sonic3k.asm:29359-29364,29681-29686; s2.asm:38033-38038,40879-40884),
+		// which run AFTER Sonic_RecordPos in Obj01_Control
+		// (sonic3k.asm:21995-22022). Clearing here would put a push-free byte
+		// into the follower history ring one routine early.
 		sprite.setAnimationId(idleAnimId);
-		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
-		if (animationRules != null && animationRules.animationChangeClearsPush()) {
-			// ROM Tails_RollSpeed/Sonic_RollSpeed writes anim=$05 on roll stop
-			// (sonic3k.asm:28198-28210) and the S2/S3K animation driver clears
-			// Status_Push when anim != prev_anim (sonic3k.asm:29359-29364,
-			// 29681-29686; s2.asm:38033-38038,40879-40884).
-			sprite.setPushing(false);
-		}
 	}
 
 	/**
@@ -3227,6 +3370,83 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				}
 			}
 		}
+	}
+
+	/**
+	 * {@code Sonic_HurtStop}'s own bottom-boundary kill test, run before the hurt
+	 * routine hands off to {@code Sonic_Floor} / {@code DoLevelCollision}.
+	 *
+	 * <p>ROM: S1 {@code Sonic_HurtStop} (docs/s1disasm/_incObj/01 Sonic.asm:1930-1941),
+	 * S2 {@code Sonic_HurtStop} (docs/s2disasm/s2.asm:38194-38215), S3K
+	 * {@code sub_12318} (docs/skdisasm/sonic3k.asm:24471-24491).
+	 *
+	 * <p>S1 assembles with {@code FixBugs = 0} (docs/s1disasm/sonic.asm:20) and the
+	 * engine implements that shipped branch, because the traces record shipped-ROM
+	 * behaviour. Two things follow from the conditional:
+	 * <ul>
+	 *   <li>the boundary word would be {@code v_limitbtm2}, the camera's TARGET
+	 *       bottom boundary, with no consideration of the eased real boundary
+	 *       {@code v_limitbtm1} (S2/S3K read the live boundary instead). The
+	 *       {@code FixBugs = 1} branch takes the lower of the two so that
+	 *       outrunning a still-lowering boundary (the GHZ1 S-tunnel) is not an
+	 *       unfair death. This site does NOT yet take the shipped branch: it runs
+	 *       the same {@code max(live, target)} expression as the sibling kill plane
+	 *       in {@link #doLevelBoundary}, which is deliberately held there because
+	 *       removing it regresses TestS2SczLevelSelectTraceReplay. The two kill
+	 *       planes are the same ROM conditional and must move together;</li>
+	 *   <li>the compare is the UNSIGNED {@code blo}, so a hurt Sonic who leaves the
+	 *       TOP of the level -- {@code y_pos} wrapped to {@code $Fxxx}, which reads
+	 *       as a huge unsigned word -- also dies. The {@code FixBugs = 1} branch uses
+	 *       a signed {@code blt} and kills only at the bottom.</li>
+	 * </ul>
+	 * The signed/unsigned divergence is carried by {@link PlayerLevelBoundaryRules},
+	 * not by a game name: S2 and S3K ship the signed compare, so this is a real
+	 * per-game difference in the ROMs.
+	 *
+	 * @return true when the player was killed and the hurt routine must return
+	 */
+	private boolean applyHurtStopBottomKill() {
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		if (movementRules == null) {
+			return false;
+		}
+		Camera camera = camera();
+		if (camera == null || !camera.isLevelStarted()) {
+			// Engine-side guard shared with doLevelBoundary: before Level_started_flag
+			// is set the camera boundaries do not yet describe the level.
+			return false;
+		}
+		// Held mask, shared with doLevelBoundary's kill plane -- see the javadoc above.
+		int boundary = Math.max(camera.getMaxY(), camera.getMaxYTarget());
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			boundary = sprite.getCpuController().getMaxYBound(boundary);
+		}
+		// ROM: addi.w #224,d0 / cmp.w y_pos(a0),d0 -- a 16-bit word compare, so both
+		// operands are masked to a word before the unsigned test.
+		int killRow = (boundary + 224) & 0xFFFF;
+		int playerY = sprite.getCentreY();
+		boolean past = movementRules.hurtStopBottomKillUnsigned()
+				? killRow < (playerY & 0xFFFF)
+				: (short) killRow < (short) playerY;
+		if (!past) {
+			return false;
+		}
+		GameModule module = sprite.currentGameModule();
+		LevelEventProvider levelEvents = module != null ? module.getLevelEventProvider() : null;
+		SidekickCpuController cpuController = sprite.getCpuController();
+		if (sprite.isCpuControlled() && cpuController != null) {
+			if (cpuController.usesFlyingCarryMovement()
+					|| (levelEvents != null && levelEvents.interceptPitDeath(sprite))) {
+				return false;
+			}
+			cpuController.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+			return true;
+		}
+		if (levelEvents != null && levelEvents.interceptPitDeath(sprite)) {
+			return false;
+		}
+		sprite.applyPitDeath();
+		return true;
 	}
 
 	private boolean isPastRightLevelBoundary(int predictedX, int rightBoundary) {
@@ -3608,14 +3828,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void setWalkAnimationAfterRollingLanding(AbstractPlayableSprite sprite) {
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		if (movementRules != null
-				&& movementRules.rollingJumpPinballGateRequiresSpindashFlag()
-				&& sprite.getSpindash()
-				&& sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile velocityProfile
-				&& sprite.getAnimationId() == velocityProfile.getSpindashAnimId()) {
-			// S2 aliases pinball_mode to spindash_flag. The engine keeps Obj84's
-			// forced-roll guard separate, but an actively charging Spindash animation
-			// still proves that the native byte is live, so ResetOnFloor skips Walk.
-			return;
+				&& movementRules.landingWalkWriteSkippedWhileSpindashing()
+				&& sprite.getSpindash()) {
+			if (movementRules.rollingJumpPinballGateRequiresSpindashFlag()) {
+				if (sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile velocityProfile
+						&& sprite.getAnimationId() == velocityProfile.getSpindashAnimId()) {
+					// S2 aliases pinball_mode to spindash_flag. The engine keeps Obj84's
+					// forced-roll guard separate, but an actively charging Spindash animation
+					// still proves that the native byte is live, so ResetOnFloor skips Walk.
+					return;
+				}
+			} else {
+				// S3K keeps a dedicated spin_dash_flag with no pinball aliasing, so
+				// Player_TouchFloor_Check_Spindash's `tst.b spin_dash_flag(a0)` is the
+				// whole predicate (sonic3k.asm:24325-24329; Tails :29123-29127). No
+				// animation condition: the ROM does not test anim here.
+				return;
+			}
 		}
 		int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
 		if (walkAnimationId >= 0) {
@@ -3909,7 +4138,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// byte, so consume the forced press signal directly.
 			inputJumpPress = sprite.isForcedJumpPress() && !suppressJumpPress;
 		} else {
-			inputJumpPress = ((jump && !jumpPrevious) && !suppressJumpPress) || sprite.isForcedJumpPress();
+			// The ROM never derives the press bit from the logical held bit. The
+			// pressed byte is produced once per frame by Poll_Controller, straight
+			// from the hardware pad and independently of any control lock:
+			//   move.b (a0),d1 / eor.b d0,d1 / move.b d0,(a0)+ / and.b d0,d1
+			//   / move.b d1,(a0)+            (docs/skdisasm/sonic3k.asm:1288-1305,
+			// mirrored by S1 ReadJoypads and S2 s2.asm ReadJoypads).
+			// Sonic_Control then copies the WHOLE word -- held byte and already
+			// computed pressed byte together -- into Ctrl_1_logical, and skips the
+			// copy entirely while Ctrl_1_locked is set
+			// (docs/skdisasm/sonic3k.asm:21968-21971 loc_10BF0, :21541-21545
+			// loc_10760). So a button that was already held when the lock lifted
+			// contributes NO press on the unlock frame: its edge was consumed by
+			// Poll_Controller several frames earlier, while control was locked.
+			inputJumpPress = ((jump && sprite.isJumpJustPressed()) && !suppressJumpPress)
+					|| sprite.isForcedJumpPress();
 		}
 		sprite.setForcedJumpPress(false); // consume one-shot signal
 		jumpPrevious = jump;

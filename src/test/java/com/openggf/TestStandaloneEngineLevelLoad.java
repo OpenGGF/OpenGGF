@@ -23,6 +23,7 @@ class TestStandaloneEngineLevelLoad {
     @BeforeEach void resetState() { TestEnvironment.resetAll(); }
 
     @AfterEach void restoreServices() {
+        Engine.clearGlobalInstance();
         SessionManager.clear();
         if (previous != null) EngineServices.configure(previous);
         TestEnvironment.resetAll();

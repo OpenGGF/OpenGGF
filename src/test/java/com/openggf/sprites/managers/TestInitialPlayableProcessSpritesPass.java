@@ -317,9 +317,12 @@ class TestInitialPlayableProcessSpritesPass {
                     SpriteManager.buildPlayableUpdateOrder(
                             manager.getAllSprites(), manager.getSidekicks(), false),
                     "Process_Sprites visits P1 slot 0 before P2 slot 1");
-            assertEquals(37, p1.historyPos());
-            assertEquals(0x6125, p1.copyXHistory()[37] & 0xFFFF);
-            assertEquals(0x7125, p1.copyYHistory()[37] & 0xFFFF);
+            // Reset_Player_Position_Array leaves the ROM's next-free byte index
+            // at zero. The engine stores the latest-written slot, so its
+            // equivalent pre-write cursor is 63; 37 writes therefore end at 36.
+            assertEquals(36, p1.historyPos());
+            assertEquals(0x6125, p1.copyXHistory()[36] & 0xFFFF);
+            assertEquals(0x7125, p1.copyYHistory()[36] & 0xFFFF);
 
             manager.processInitialPlayableSlots(
                     new ProcessSpritesEpoch(0, 1, false),
@@ -389,6 +392,7 @@ class TestInitialPlayableProcessSpritesPass {
                 source.skipPhysicsThisFrame(),
                 source.deadOnObjectReenteredVisibleWindow(),
                 source.deferredDespawnDeadFallContinuingThisFrame(),
+                source.levelStartLeaderHistoryPrefillPending(),
                 source.bootstrapPreludePlacementApplied(),
                 source.cpuFrameCounterFromStoredLevelFrame(),
                 0x78,
@@ -409,7 +413,9 @@ class TestInitialPlayableProcessSpritesPass {
                 (short) 0x5678,
                 0x7D,
                 0x1357,
-                0x2468);
+                0x2468,
+                source.initialPresentationSuppressed(),
+                source.initialPresentationWasHidden());
     }
 
     private static void assertSecondaryStatusAndPowerTimersZero(

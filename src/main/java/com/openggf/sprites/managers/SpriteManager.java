@@ -810,6 +810,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		playable.getDrowningController().reset();
 		playable.setFlipSpeed(4);
 		playable.getAnimationManager().publishPreviousAnimationId(0);
+		cpu.suppressInitialLevelEventPresentationIfNeeded();
 	}
 
 	private static void publishInitialAssemblyInput(
@@ -847,6 +848,57 @@ public class SpriteManager implements PlayableSstDispatcher {
 		return objects != null ? objects.getFrameCounter() : 0;
 	}
 
+	/**
+	 * Post-dynamic-object fixed-slot playable pass, in ROM SST order.
+	 *
+	 * <p>ROM places Tails' tails (Obj05) and the skid/spindash dust in the
+	 * fixed-in-level object RAM that begins AFTER the dynamic object RAM:
+	 * S2 {@code LevelOnly_Object_RAM: Tails_Tails} follows {@code Object_RAM_End}
+	 * / {@code Dynamic_Object_RAM_End} (docs/s2disasm/s2.constants.asm:1144-1152),
+	 * and S3K {@code Level_object_RAM: Tails_tails} then {@code Dust} follow
+	 * {@code Dynamic_object_RAM_end} (docs/skdisasm/sonic3k.constants.asm:307-317).
+	 * Both therefore execute after every dynamic level object, and Tails' tails
+	 * executes before the dust.
+	 */
+	public void advancePlayableFixedSlotsAfterObjectExecution() {
+		// These slots are the tail of the SAME ROM object walk that just ran, so
+		// they execute only if that walk reached them. A routine that rewrites
+		// the loop counter can end the walk inside the dynamic window, and then
+		// the ROM never dispatches Tails' tails or the fixed dust at all that
+		// frame -- see ObjectManager#objectLoopReachedFixedInLevelSlots.
+		if (!objectLoopReachedFixedInLevelSlots()) {
+			return;
+		}
+		advanceTailsTailsAfterObjectExecution();
+		advanceFixedSkidDustAfterObjectExecution();
+	}
+
+	private boolean objectLoopReachedFixedInLevelSlots() {
+		LevelManager levelManager = getLevelManager();
+		ObjectManager objects = levelManager != null ? levelManager.getObjectManager() : null;
+		return objects == null || objects.objectLoopReachedFixedInLevelSlots();
+	}
+
+	/**
+	 * ROM Obj05_Main: reads {@code anim(a2)} from its parent at ITS OWN (late)
+	 * execution point (docs/s2disasm/s2.asm:41735), then unconditionally runs
+	 * {@code Tails_Animate_Part2} and {@code LoadTailsTailsDynPLC}
+	 * (docs/s2disasm/s2.asm:41756-41763). S3K's Obj_Tails_Tail_Main is the same
+	 * shape (docs/skdisasm/sonic3k.asm:30055-30071). Running this inside the
+	 * sidekick's own animation pass read the parent anim one dispatch too early
+	 * and minted DPLC edges the ROM never queues.
+	 */
+	public void advanceTailsTailsAfterObjectExecution() {
+		AbstractPlayableSprite main = getMainPlayable();
+		if (main != null && main.getTailsTailsController() != null) {
+			main.getTailsTailsController().update();
+		}
+		for (AbstractPlayableSprite sidekick : sidekicks) {
+			if (sidekick != null && sidekick.getTailsTailsController() != null) {
+				sidekick.getTailsTailsController().update();
+			}
+		}
+	}
 	public void advanceFixedSkidDustAfterObjectExecution() {
 		Collection<Sprite> sprites = getAllSprites();
 		List<AbstractPlayableSprite> playables = buildPlayableUpdateOrderInto(
@@ -860,24 +912,17 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
-	/** Advances the playable fixed slots in native order after dynamic objects. */
-	public void advancePlayableFixedSlotsAfterObjectExecution() {
-		advanceTailsTailsAfterObjectExecution();
-		advanceFixedSkidDustAfterObjectExecution();
-	}
-
-	public void advanceTailsTailsAfterObjectExecution() {
-		for (AbstractPlayableSprite sidekick : sidekicks) {
-			if (sidekick != null && sidekick.getTailsTailsController() != null) {
-				sidekick.getTailsTailsController().update();
-			}
-		}
-	}
-
 	public void processInitialTailsFixedSlot() {
-		AbstractPlayableSprite player2 = sidekicks.isEmpty() ? null : sidekicks.getFirst();
-		if (player2 != null && player2.getTailsTailsController() != null) {
-			player2.getTailsTailsController().update();
+		// S3K's Level_object_RAM slot 97 is Tails_tails. In a solo Tails
+		// session its parent is the main playable; in a Sonic-and-Tails session
+		// it is the Tails sidekick. Select the parent that owns Obj05 rather than
+		// assuming that the slot always belongs to player two.
+		AbstractPlayableSprite owner = getMainPlayable();
+		if (owner == null || owner.getTailsTailsController() == null) {
+			owner = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+		}
+		if (owner != null && owner.getTailsTailsController() != null) {
+			owner.getTailsTailsController().update();
 		}
 	}
 
@@ -1247,7 +1292,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 		for (Sprite sprite : getAllSprites()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
-				if (!playable.shouldRefreshRenderFlagThisFrame()) {
+				boolean refresh = playable.shouldRefreshRenderFlagThisFrame();
+				// The hurt routine's unconditional DisplaySprite owns only the
+				// current BuildSprites pass.
+				playable.clearHurtRoutineOwnedDisplayLatch();
+				if (!refresh) {
 					continue;
 				}
 				playable.setRenderFlagOnScreen(camera.isVisibleForRenderFlag(playable));
@@ -1777,6 +1826,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// after movement, so the old pre-movement batched pass must be skipped.
 		if (!isUnified && !usesInlineSolidResolution) {
 			applySolidContacts(levelManager, playable, false, false);
+		}
+		// ROM Obj01_Modes dispatches the movement mode BEFORE the move itself
+		// runs, and the Super transformation gate is the first thing inside the
+		// jump mode: Obj01_MdJump calls Sonic_JumpHeight, which ends
+		// `tst.b y_vel(a0) / beq.s Sonic_CheckGoSuper`
+		// (docs/s2disasm/s2.asm:36241, :37432-37434). The gate therefore reads
+		// the y_vel left by the PREVIOUS frame. Driving it from tickStatus at
+		// the end of this tick read the value this frame's move had just
+		// produced, firing the same predicate one frame early.
+		var superStateBeforeMove = playable.getSuperStateController();
+		if (superStateBeforeMove != null) {
+			superStateBeforeMove.checkTransformationBeforeMove();
 		}
 		if (playable instanceof CustomPlayablePhysics customPhysics) {
 			customPhysics.tickCustomPhysics(up, down, left, right, jump, test, speedUp, slowDown,

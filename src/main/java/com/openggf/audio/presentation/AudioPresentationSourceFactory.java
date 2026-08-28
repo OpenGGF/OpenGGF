@@ -1,9 +1,18 @@
 package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioAdmissionObserver;
+import com.openggf.audio.AudioAdmissionObserver.AudioAdmissionDecision;
+import com.openggf.audio.AudioDiagnosticObserverException;
+import com.openggf.audio.SmpsSfxPlaybackPolicy;
 import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.StreamedMusicPort;
+import com.openggf.audio.driver.SfxContentionObserver;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.AdmissionResult;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.SmpsAdmissionContext;
 import com.openggf.audio.presentation.AudioPresentationCommand.MusicVoiceEntry;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
@@ -13,16 +22,15 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
-import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.synth.ChipWriteObserver;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 
@@ -81,7 +89,29 @@ public final class AudioPresentationSourceFactory
         }
     }
 
-    private record CachedSmpsSource(
+    /** Immutable catalog-owned values used only by the dormant live backend. */
+    public record RegisteredSmpsPlayback(
+            AbstractSmpsData program,
+            DacData dac,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy policy) {
+        public RegisteredSmpsPlayback {
+            Objects.requireNonNull(program, "program");
+            Objects.requireNonNull(dac, "dac");
+            Objects.requireNonNull(config, "config");
+            Objects.requireNonNull(policy, "policy");
+        }
+
+        public RegisteredSmpsPlayback(
+                AbstractSmpsData program,
+                DacData dac,
+                SmpsSequencerConfig config) {
+            this(program, dac, config,
+                    SmpsSfxPlaybackPolicy.defaults(false));
+        }
+    }
+
+    private record LegacySmpsSource(
             String gameId,
             AbstractSmpsData data,
             DacData dac,
@@ -90,18 +120,175 @@ public final class AudioPresentationSourceFactory
             boolean specialSfx) {
     }
 
+    private interface DiagnosticDispatcher {
+        DiagnosticDispatcher IMMEDIATE = Runnable::run;
+
+        void emit(Runnable callback);
+    }
+
+    private final class DeferredDiagnosticRoot
+            implements DiagnosticDispatcher {
+        private enum State {
+            PREPARING,
+            DEFERRED,
+            COMMITTED,
+            DISCARDED
+        }
+
+        private final List<Runnable> callbacks = new ArrayList<>();
+        private State state = State.PREPARING;
+        private long provisionalNextDriverOrdinal =
+                nextDriverInstanceOrdinal;
+
+        @Override
+        public void emit(Runnable callback) {
+            Objects.requireNonNull(callback, "callback");
+            switch (state) {
+                case PREPARING, DEFERRED -> callbacks.add(callback);
+                case COMMITTED -> callback.run();
+                case DISCARDED -> {
+                    // Provisional voices remain bound here while being stopped.
+                }
+            }
+        }
+
+        private long allocateDriverOrdinal() {
+            return provisionalNextDriverOrdinal++;
+        }
+
+        private void commitRoot() {
+            state = State.COMMITTED;
+            nextDriverInstanceOrdinal = provisionalNextDriverOrdinal;
+            List<Runnable> deferred = List.copyOf(callbacks);
+            callbacks.clear();
+            for (Runnable callback : deferred) {
+                callback.run();
+            }
+        }
+
+        private void discardRoot() {
+            state = State.DISCARDED;
+            callbacks.clear();
+        }
+
+        private void rollbackTo(int callbackCount, long driverOrdinal) {
+            callbacks.subList(callbackCount, callbacks.size()).clear();
+            provisionalNextDriverOrdinal = driverOrdinal;
+        }
+    }
+
+    private final class DeferredDiagnosticTransaction
+            implements DiagnosticTransaction {
+        private enum State {
+            PREPARING,
+            DEFERRED,
+            COMMITTED,
+            DISCARDED
+        }
+
+        private final DeferredDiagnosticRoot root;
+        private final boolean rootOwner;
+        private final int callbackStart;
+        private final long ordinalStart;
+        private State state = State.PREPARING;
+
+        private DeferredDiagnosticTransaction(
+                DeferredDiagnosticRoot root, boolean rootOwner) {
+            this.root = root;
+            this.rootOwner = rootOwner;
+            callbackStart = root.callbacks.size();
+            ordinalStart = root.provisionalNextDriverOrdinal;
+        }
+
+        @Override
+        public void endPreparation() {
+            if (state != State.PREPARING
+                    || activeDiagnosticTransactions.isEmpty()
+                    || activeDiagnosticTransactions.getLast() != this) {
+                throw new IllegalStateException(
+                        "diagnostic transaction is not preparing");
+            }
+            activeDiagnosticTransactions.removeLast();
+            state = State.DEFERRED;
+            if (activeDiagnosticTransactions.isEmpty()) {
+                activeDiagnosticRoot = null;
+                root.state = DeferredDiagnosticRoot.State.DEFERRED;
+            }
+        }
+
+        @Override
+        public void commit() {
+            if (state != State.DEFERRED) {
+                throw new IllegalStateException(
+                        "diagnostic transaction cannot be committed");
+            }
+            state = State.COMMITTED;
+            if (rootOwner) {
+                root.commitRoot();
+            }
+        }
+
+        @Override
+        public void discard() {
+            if (state == State.COMMITTED) {
+                throw new IllegalStateException(
+                        "committed diagnostic transaction cannot be discarded");
+            }
+            if (state == State.PREPARING) {
+                if (activeDiagnosticTransactions.isEmpty()
+                        || activeDiagnosticTransactions.getLast() != this) {
+                    throw new IllegalStateException(
+                            "diagnostic transaction is not current");
+                }
+                activeDiagnosticTransactions.removeLast();
+            }
+            state = State.DISCARDED;
+            if (rootOwner) {
+                activeDiagnosticTransactions.clear();
+                activeDiagnosticRoot = null;
+                root.discardRoot();
+            } else {
+                root.rollbackTo(callbackStart, ordinalStart);
+            }
+        }
+    }
+
+    private record CompatibilityDependencies(
+            DacData dac, SmpsSequencerConfig config) {
+    }
+
     private final BooleanSupplier ownerThreadBoundary;
     private final SmpsCoordFlagHandlerOwner coordFlagHandlers;
     private final Settings settings;
-    private final Map<SmpsAssetKey, CachedSmpsSource> sfxAssets =
+    private final SmpsAssetCatalog assetCatalog;
+    private final Map<SmpsSourceDescriptor, SmpsAssetCatalog.ProgramEntry>
+            sourcesByDescriptor =
             new HashMap<>();
-    private final Map<SmpsSourceDescriptor, CachedSmpsSource> sourcesByDescriptor =
+    private final Map<SmpsAssetCatalog.DependencyKey,
+            CompatibilityDependencies> compatibilityDependencies =
             new HashMap<>();
     private final Map<Long, PresentationVoiceSnapshot.Smps> musicBlueprints =
             new HashMap<>();
-    private StreamedMusicPort streamedMusicPort = StreamedMusicPort.EMPTY;
+    private final StreamedPresentationSession streamedSession =
+            new StreamedPresentationSession();
+    private StreamedMusicVoice.RestorePolicy streamedRestorePolicy =
+            StreamedMusicVoice.RestorePolicy.immediate();
     private final Map<Long, String> musicGameIds = new HashMap<>();
     private final AtomicInteger cacheLookupCount = new AtomicInteger();
+    private AudioAdmissionObserver admissionObserver =
+            AudioAdmissionObserver.NONE;
+    private SmpsDriverServiceObserver driverServiceObserver =
+            SmpsDriverServiceObserver.NONE;
+    private SmpsRequestAdmissionPolicy sfxAdmissionPolicy =
+            SmpsRequestAdmissionPolicy.PERMISSIVE;
+    private ChipWriteObserver chipWriteObserver = ChipWriteObserver.NONE;
+    private SfxContentionObserver sfxContentionObserver =
+            SfxContentionObserver.NONE;
+    private long nextServiceOrdinal;
+    private long nextDriverInstanceOrdinal;
+    private DeferredDiagnosticRoot activeDiagnosticRoot;
+    private final List<DeferredDiagnosticTransaction>
+            activeDiagnosticTransactions = new ArrayList<>();
 
     public AudioPresentationSourceFactory(
             BooleanSupplier ownerThreadBoundary,
@@ -119,6 +306,44 @@ public final class AudioPresentationSourceFactory
         this.coordFlagHandlers =
                 Objects.requireNonNull(coordFlagHandlers, "coordFlagHandlers");
         this.settings = Objects.requireNonNull(settings, "settings");
+        assetCatalog = new SmpsAssetCatalog(coordFlagHandlers);
+    }
+
+    public void setAdmissionObserver(AudioAdmissionObserver observer) {
+        admissionObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    public void setDriverServiceObserver(
+            SmpsDriverServiceObserver observer) {
+        driverServiceObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    public void setSfxAdmissionPolicy(
+            SmpsRequestAdmissionPolicy policy) {
+        sfxAdmissionPolicy = Objects.requireNonNull(policy, "policy");
+    }
+
+    public void setChipWriteObserver(ChipWriteObserver observer) {
+        chipWriteObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    public void setSfxContentionObserver(
+            SfxContentionObserver observer) {
+        sfxContentionObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    @Override
+    public DiagnosticTransaction beginDiagnosticTransaction() {
+        assertOwnerBoundary();
+        boolean rootOwner = activeDiagnosticRoot == null;
+        if (rootOwner) {
+            activeDiagnosticRoot = new DeferredDiagnosticRoot();
+        }
+        DeferredDiagnosticTransaction transaction =
+                new DeferredDiagnosticTransaction(
+                        activeDiagnosticRoot, rootOwner);
+        activeDiagnosticTransactions.add(transaction);
+        return transaction;
     }
 
     public MusicVoiceEntry musicSmps(
@@ -130,12 +355,73 @@ public final class AudioPresentationSourceFactory
             SmpsSequencerConfig config,
             AudioSourceDescriptor descriptor,
             int maxStereoFrames) {
+        return musicSmpsInternal(gameId, musicId, voiceId, 0,
+                data, dac, config, descriptor, maxStereoFrames, true);
+    }
+
+    public MusicVoiceEntry musicSmps(
+            String gameId,
+            int musicId,
+            long voiceId,
+            long dependencyGeneration,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            AudioSourceDescriptor descriptor,
+            int maxStereoFrames) {
+        return musicSmpsInternal(gameId, musicId, voiceId,
+                dependencyGeneration, data, dac, config, descriptor,
+                maxStereoFrames, false);
+    }
+
+    private MusicVoiceEntry musicSmpsInternal(
+            String gameId,
+            int musicId,
+            long voiceId,
+            long dependencyGeneration,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            AudioSourceDescriptor descriptor,
+            int maxStereoFrames,
+            boolean compatibilityGenerationZero) {
         String resolvedGameId = requireGameId(gameId);
         Objects.requireNonNull(descriptor, "descriptor");
-        CachedSmpsSource source = snapshotSource(
-                resolvedGameId, data, dac, config, false);
+        SmpsAssetKey key = musicAssetKey(
+                resolvedGameId, musicId, descriptor);
+        CompatibilityDependencies dependencies = compatibilityGenerationZero
+                ? compatibilityDependencies(key, dac, config)
+                : new CompatibilityDependencies(dac, config);
+        SmpsAssetCatalog.ProgramEntry source = compatibilityGenerationZero
+                ? registerCompatibilitySmpsMusicAsset(
+                key, data, dependencies.dac(), dependencies.config())
+                : registerSmpsMusicAsset(
+                key, dependencyGeneration, data,
+                dependencies.dac(), dependencies.config());
+        return musicSmpsFromRegistered(
+                resolvedGameId, musicId, voiceId, descriptor,
+                maxStereoFrames, source);
+    }
+
+    MusicVoiceEntry musicSmpsFromRegistered(
+            String gameId,
+            int musicId,
+            long voiceId,
+            AudioSourceDescriptor descriptor,
+            int maxStereoFrames,
+            SmpsAssetCatalog.ProgramEntry source) {
+        String resolvedGameId = requireGameId(gameId);
+        Objects.requireNonNull(descriptor, "descriptor");
+        Objects.requireNonNull(source, "source");
+        if (descriptor.route() == AudioSourceDescriptor.Route.BASE_MUSIC_ID
+                && streamedSession.hasStockOverride(musicId)) {
+            return streamedStockOverride(voiceId, musicId, descriptor,
+                    StreamedMusicVoice.RestorePolicy.from(
+                            source.staticConfig()));
+        }
         SmpsCompositeVoice voice = buildMusicVoice(
-                musicId, voiceId, descriptor, maxStereoFrames, source);
+                musicId, voiceId, descriptor, maxStereoFrames, source,
+                newConfiguredDriver(false, musicOrigin(voiceId, musicId)));
         PresentationVoiceSnapshot.Smps blueprint =
                 (PresentationVoiceSnapshot.Smps) voice.snapshot();
         musicBlueprints.put(voiceId, blueprint);
@@ -161,7 +447,7 @@ public final class AudioPresentationSourceFactory
         Objects.requireNonNull(dac, "dac");
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(descriptor, "descriptor");
-        CachedSmpsSource source = new CachedSmpsSource(
+        LegacySmpsSource source = new LegacySmpsSource(
                 resolvedGameId,
                 data,
                 dac,
@@ -169,7 +455,8 @@ public final class AudioPresentationSourceFactory
                 config.getCoordFlagHandler() != null,
                 false);
         return buildMusicVoice(
-                musicId, voiceId, descriptor, maxStereoFrames, source);
+                musicId, voiceId, descriptor, maxStereoFrames, source,
+                newConfiguredDriver(true, musicOrigin(voiceId, musicId)));
     }
 
     /**
@@ -189,41 +476,194 @@ public final class AudioPresentationSourceFactory
             long voiceId,
             AudioSourceDescriptor descriptor,
             int maxStereoFrames,
-            CachedSmpsSource source) {
-        SmpsDriver driver = newConfiguredDriver();
+            SmpsAssetCatalog.ProgramEntry source,
+            SmpsDriver driver) {
         SmpsSequencer sequencer = newSequencer(source, driver);
-        sequencer.setSourceDescriptor(
-                describeMusic(descriptor, source.data()));
-        sequencer.setSpeedShoes(settings.speedShoesEnabled());
+        sequencer.initializeSpeedShoes(settings.speedShoesEnabled());
         sequencer.setSpeedMultiplier(settings.speedMultiplier());
-        sequencer.setFallbackVoiceData(source.data());
+        sequencer.setFallbackVoiceData(source.program());
         driver.addSequencer(sequencer, false);
-        sourcesByDescriptor.put(sequencer.getSourceDescriptor(), source);
 
         SmpsCompositeVoice voice = new SmpsCompositeVoice(
                 voiceId, 0, musicId, descriptor, maxStereoFrames, driver);
         return voice;
     }
 
-    public void warmSmpsSfxAsset(
+    private SmpsCompositeVoice buildMusicVoice(
+            int musicId,
+            long voiceId,
+            AudioSourceDescriptor descriptor,
+            int maxStereoFrames,
+            LegacySmpsSource source,
+            SmpsDriver driver) {
+        SmpsSequencer sequencer = newLegacySequencer(source, driver);
+        sequencer.setSourceDescriptor(
+                describeLegacyMusic(descriptor, source.data()));
+        sequencer.initializeSpeedShoes(settings.speedShoesEnabled());
+        sequencer.setSpeedMultiplier(settings.speedMultiplier());
+        sequencer.setFallbackVoiceData(source.data());
+        driver.addSequencer(sequencer, false);
+        return new SmpsCompositeVoice(
+                voiceId, 0, musicId, descriptor, maxStereoFrames, driver);
+    }
+
+    public SmpsAssetCatalog.ProgramEntry registerSmpsSfxAsset(
             SmpsAssetKey key,
             AbstractSmpsData data,
             DacData dac,
             SmpsSequencerConfig config) {
-        warmSmpsSfxAsset(key, data, dac, config, false);
+        return registerCompatibilitySmpsSfxAsset(
+                key, data, dac, config, false);
     }
 
-    public void warmSmpsSfxAsset(
+    public SmpsAssetCatalog.ProgramEntry registerSmpsSfxAsset(
             SmpsAssetKey key,
             AbstractSmpsData data,
             DacData dac,
             SmpsSequencerConfig config,
             boolean specialSfx) {
-        SmpsAssetKey resolvedKey =
-                Objects.requireNonNull(key, "key");
-        validateKey(resolvedKey);
-        sfxAssets.put(resolvedKey, snapshotSource(
-                resolvedKey.gameId(), data, dac, config, specialSfx));
+        return registerCompatibilitySmpsSfxAsset(
+                key, data, dac, config, specialSfx);
+    }
+
+    public SmpsAssetCatalog.ProgramEntry registerSmpsSfxAsset(
+            SmpsAssetKey key,
+            long dependencyGeneration,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            boolean specialSfx) {
+        SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
+        validateSfxKey(resolvedKey);
+        return register(new SmpsAssetCatalog.ProgramKey(
+                resolvedKey, dependencyGeneration), data, dac, config,
+                SmpsSfxPlaybackPolicy.defaults(specialSfx));
+    }
+
+    public SmpsAssetCatalog.ProgramEntry registerSmpsSfxAsset(
+            SmpsAssetKey key,
+            long dependencyGeneration,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy policy) {
+        SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
+        validateSfxKey(resolvedKey);
+        return register(new SmpsAssetCatalog.ProgramKey(
+                resolvedKey, dependencyGeneration), data, dac, config,
+                policy);
+    }
+
+    public SmpsAssetCatalog.ProgramEntry findRegisteredSmpsSfxAsset(
+            SmpsAssetKey key, long dependencyGeneration) {
+        SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
+        validateSfxKey(resolvedKey);
+        return assetCatalog.find(new SmpsAssetCatalog.ProgramKey(
+                resolvedKey, dependencyGeneration));
+    }
+
+    public RegisteredSmpsPlayback requireRegisteredSmpsSfxPlayback(
+            SmpsAssetKey key, long dependencyGeneration) {
+        SmpsAssetCatalog.ProgramEntry entry = findRegisteredSmpsSfxAsset(
+                key, dependencyGeneration);
+        if (entry == null) {
+            throw new IllegalStateException(
+                    "no registered SMPS SFX for " + key);
+        }
+        return registeredPlayback(entry);
+    }
+
+    public SmpsAssetCatalog.ProgramEntry registerSmpsMusicAsset(
+            SmpsAssetKey key,
+            long dependencyGeneration,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config) {
+        SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
+        validateMusicKey(resolvedKey);
+        return register(new SmpsAssetCatalog.ProgramKey(
+                resolvedKey, dependencyGeneration), data, dac, config,
+                SmpsSfxPlaybackPolicy.defaults(false));
+    }
+
+    public SmpsAssetCatalog.ProgramEntry findRegisteredSmpsMusicAsset(
+            SmpsAssetKey key, long dependencyGeneration) {
+        SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
+        validateMusicKey(resolvedKey);
+        return assetCatalog.find(new SmpsAssetCatalog.ProgramKey(
+                resolvedKey, dependencyGeneration));
+    }
+
+    public RegisteredSmpsPlayback requireRegisteredSmpsMusicPlayback(
+            SmpsAssetKey key, long dependencyGeneration) {
+        SmpsAssetCatalog.ProgramEntry entry = findRegisteredSmpsMusicAsset(
+                key, dependencyGeneration);
+        if (entry == null) {
+            throw new IllegalStateException(
+                    "no registered SMPS music for " + key);
+        }
+        return registeredPlayback(entry);
+    }
+
+    private static RegisteredSmpsPlayback registeredPlayback(
+            SmpsAssetCatalog.ProgramEntry entry) {
+        return new RegisteredSmpsPlayback(
+                entry.program(), entry.dac(), entry.staticConfig(),
+                entry.sfxPolicy());
+    }
+
+    private SmpsAssetCatalog.ProgramEntry register(
+            SmpsAssetCatalog.ProgramKey key,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy policy) {
+        SmpsAssetCatalog.ProgramEntry entry = assetCatalog.register(
+                key, data, dac, config, policy);
+        SmpsAssetCatalog.ProgramEntry previous = sourcesByDescriptor.putIfAbsent(
+                entry.sourceDescriptor(), entry);
+        if (previous != null && previous != entry) {
+            throw new IllegalStateException(
+                    "SMPS source descriptor collision for "
+                            + entry.sourceDescriptor());
+        }
+        return entry;
+    }
+
+    private SmpsAssetCatalog.ProgramEntry registerCompatibilitySmpsSfxAsset(
+            SmpsAssetKey key,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            boolean specialSfx) {
+        SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
+        CompatibilityDependencies dependencies = compatibilityDependencies(
+                resolvedKey, dac, config);
+        return register(new SmpsAssetCatalog.ProgramKey(resolvedKey, 0),
+                data, dependencies.dac(), dependencies.config(),
+                SmpsSfxPlaybackPolicy.defaults(specialSfx));
+    }
+
+    private SmpsAssetCatalog.ProgramEntry registerCompatibilitySmpsMusicAsset(
+            SmpsAssetKey key,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config) {
+        return register(new SmpsAssetCatalog.ProgramKey(key, 0),
+                data, dac, config, SmpsSfxPlaybackPolicy.defaults(false));
+    }
+
+    private CompatibilityDependencies compatibilityDependencies(
+            SmpsAssetKey key,
+            DacData dac,
+            SmpsSequencerConfig config) {
+        SmpsAssetCatalog.DependencyKey dependencyKey =
+                new SmpsAssetCatalog.ProgramKey(key, 0).dependencyKey();
+        return compatibilityDependencies.computeIfAbsent(
+                dependencyKey,
+                ignored -> new CompatibilityDependencies(
+                        Objects.requireNonNull(dac, "dac"),
+                        Objects.requireNonNull(config, "config")));
     }
 
     public ResolvedSmpsSfxSource resolveSmpsSfx(
@@ -234,13 +674,33 @@ public final class AudioPresentationSourceFactory
             int continuousSfxId,
             int trackCount,
             int maxStereoFrames) {
+        return resolveSmpsSfx(standaloneVoiceId, assetKey, 0,
+                pitchQ16, priority, continuousSfxId, trackCount,
+                maxStereoFrames);
+    }
+
+    public ResolvedSmpsSfxSource resolveSmpsSfx(
+            long standaloneVoiceId,
+            SmpsAssetKey assetKey,
+            long dependencyGeneration,
+            int pitchQ16,
+            int priority,
+            int continuousSfxId,
+            int trackCount,
+            int maxStereoFrames) {
         if (pitchQ16 <= 0) {
             throw new IllegalArgumentException("pitchQ16 must be positive");
         }
-        validateKey(Objects.requireNonNull(assetKey, "assetKey"));
+        validateSfxKey(Objects.requireNonNull(assetKey, "assetKey"));
+        SmpsAssetCatalog.ProgramEntry cached =
+                findRegisteredSmpsSfxAsset(
+                        assetKey, dependencyGeneration);
         return new ResolvedSmpsSfxSource(
-                standaloneVoiceId, assetKey, pitchQ16, priority,
-                continuousSfxId, trackCount, maxStereoFrames);
+                standaloneVoiceId, assetKey, dependencyGeneration,
+                pitchQ16, priority,
+                continuousSfxId, trackCount, maxStereoFrames,
+                cached != null ? cached.assetId() : assetKey.sfxId(),
+                cached != null && cached.specialSfx());
     }
 
     @Override
@@ -249,13 +709,10 @@ public final class AudioPresentationSourceFactory
             SmpsDriver currentOwner) {
         assertOwnerBoundary();
         cacheLookupCount.incrementAndGet();
-        CachedSmpsSource cached = requireCached(source);
+        SmpsAssetCatalog.ProgramEntry cached = requireCached(source);
         SmpsDriver owner = Objects.requireNonNull(
                 currentOwner, "currentOwner");
-        SmpsSequencer sequencer = newSequencer(
-                freshSource(cached), owner);
-        sequencer.setSourceDescriptor(
-                describeSfx(source.assetKey(), cached.data()));
+        SmpsSequencer sequencer = newSequencer(cached, owner);
         sequencer.setSfxMode(true);
         sequencer.setPitch(source.pitchQ16() / 65_536.0f);
         sequencer.setSfxPriority(source.priority());
@@ -264,7 +721,6 @@ public final class AudioPresentationSourceFactory
         if (music != null) {
             sequencer.setFallbackVoiceData(music.getSmpsData());
         }
-        sourcesByDescriptor.put(sequencer.getSourceDescriptor(), cached);
         return sequencer;
     }
 
@@ -276,7 +732,81 @@ public final class AudioPresentationSourceFactory
         requireCached(source);
         return new SmpsCompositeVoice(
                 source.standaloneVoiceId(), source.priority(), null, null,
-                source.maxStereoFrames(), newConfiguredDriver());
+                source.maxStereoFrames(), newConfiguredDriver(true,
+                        sfxOrigin(source.standaloneVoiceId(),
+                                source.assetKey().sfxId())));
+    }
+
+    @Override
+    public Admission evaluateAdmission(
+            ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
+        Objects.requireNonNull(source, "source");
+        int requestedId = source.assetKey().sfxId();
+        SmpsAdmissionContext context = new SmpsAdmissionContext(
+                requestedId, source.resolvedSoundId(), source.priority(),
+                SmpsRequestAdmissionPolicy.NO_PRIORITY,
+                source.specialSfx(), false);
+        AdmissionResult result = Objects.requireNonNull(
+                sfxAdmissionPolicy.evaluate(context),
+                "SFX admission policy returned no result");
+        if (result.accepted() && currentOwner != null
+                && currentOwner.usesGlobalSfxPriority()) {
+            result = currentOwner.evaluateSfxRequest(
+                    source.resolvedSoundId(), source.priority(),
+                    source.specialSfx(), false);
+            context = new SmpsAdmissionContext(
+                    requestedId, source.resolvedSoundId(), source.priority(),
+                    result.priorityBefore(), source.specialSfx(), false);
+        }
+        return new Admission(context, result);
+    }
+
+    @Override
+    public Admission rejectedAdmission(
+            ResolvedSmpsSfxSource source,
+            SmpsRequestAdmissionPolicy.RejectionReason reason) {
+        Objects.requireNonNull(source, "source");
+        SmpsAdmissionContext context = new SmpsAdmissionContext(
+                source.assetKey().sfxId(), source.resolvedSoundId(),
+                source.priority(), SmpsRequestAdmissionPolicy.NO_PRIORITY,
+                source.specialSfx(), false);
+        return new Admission(context, new AdmissionResult(false, reason,
+                context.priorityBefore(), context.priorityBefore(),
+                context.resolvedSoundId()));
+    }
+
+    @Override
+    public void observeAdmission(Admission admission) {
+        if (admissionObserver == AudioAdmissionObserver.NONE) {
+            return;
+        }
+        DiagnosticDispatcher diagnostics = diagnosticDispatcher();
+        diagnostics.emit(() ->
+                AudioDiagnosticObserverException.invoke(() ->
+                        admissionObserver.onDecision(
+                                new AudioAdmissionDecision(
+                                        admission.context(),
+                                        admission.result()))));
+    }
+
+    @Override
+    public void observeLifecycle(
+            SmpsDriverServiceObserver.LifecycleEvent event) {
+        if (driverServiceObserver == SmpsDriverServiceObserver.NONE) {
+            return;
+        }
+        DiagnosticDispatcher diagnostics = diagnosticDispatcher();
+        diagnostics.emit(() ->
+                AudioDiagnosticObserverException.invoke(() ->
+                        driverServiceObserver.onLifecycle(event)));
+    }
+
+    @Override
+    public boolean hasPotentiallyThrowingObserver() {
+        return admissionObserver != AudioAdmissionObserver.NONE
+                || driverServiceObserver != SmpsDriverServiceObserver.NONE
+                || chipWriteObserver != ChipWriteObserver.NONE
+                || sfxContentionObserver != SfxContentionObserver.NONE;
     }
 
     public SmpsCompositeVoice recreateSmps(
@@ -284,7 +814,11 @@ public final class AudioPresentationSourceFactory
             SmpsDriverSnapshot.DependencyResolver dependencies) {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(dependencies, "dependencies");
-        SmpsDriver driver = newConfiguredDriver();
+        SmpsDriver driver = newConfiguredDriver(true,
+                snapshot.musicId() != null
+                        ? musicOrigin(snapshot.voiceId(), snapshot.musicId())
+                        : sfxOrigin(snapshot.voiceId(),
+                                restoredSfxSoundId(snapshot)));
         SmpsCompositeVoice voice = new SmpsCompositeVoice(
                 snapshot.voiceId(), snapshot.priority(),
                 snapshot.musicId(), snapshot.sourceDescriptor(),
@@ -327,6 +861,9 @@ public final class AudioPresentationSourceFactory
             int musicId,
             AudioSourceDescriptor descriptor) throws IOException {
         Objects.requireNonNull(descriptor, "descriptor");
+        if (streamedSession.hasStockOverride(musicId)) {
+            return streamedStockOverride(voiceId, musicId, descriptor);
+        }
         String assetId = "music/"
                 + Integer.toHexString(musicId).toUpperCase() + ".wav";
         DecodedPcm pcm = decode(assetId);
@@ -342,11 +879,31 @@ public final class AudioPresentationSourceFactory
      * is only referenced here; teardown stays the session's job.
      */
     public void installStreamedMusicPort(StreamedMusicPort port) {
-        streamedMusicPort = Objects.requireNonNull(port, "port");
+        StreamedMusicPort replacement = Objects.requireNonNull(port, "port");
+        if (replacement == StreamedMusicPort.EMPTY) {
+            streamedSession.detach();
+        } else {
+            streamedSession.attach(replacement);
+        }
+    }
+
+    public void setStreamedRestoreConfig(SmpsSequencerConfig config) {
+        streamedRestorePolicy = config == null
+                ? StreamedMusicVoice.RestorePolicy.immediate()
+                : StreamedMusicVoice.RestorePolicy.from(config);
+    }
+
+    /** Retires every logical streamed cursor before the manager closes the port. */
+    public void retireStreamedMusicPort() {
+        streamedSession.detach();
     }
 
     public StreamedMusicPort streamedMusicPort() {
-        return streamedMusicPort;
+        return streamedSession.port();
+    }
+
+    int streamedCursorCountForTesting() {
+        return streamedSession.trackedCursorCount();
     }
 
     /**
@@ -354,15 +911,28 @@ public final class AudioPresentationSourceFactory
      * a numeric stock music id.
      */
     public MusicVoiceEntry streamedStockOverride(long voiceId, int musicId) {
-        if (!streamedMusicPort.hasStockOverride(musicId)) {
-            throw new IllegalStateException(
-                    "no streamed override prepared for music " + musicId);
-        }
-        streamedMusicPort.playStockOverride(musicId);
-        AudioSourceDescriptor descriptor =
-                AudioSourceDescriptor.fallbackMusic(musicId);
+        return streamedStockOverride(voiceId, musicId,
+                AudioSourceDescriptor.fallbackMusic(musicId),
+                streamedRestorePolicy);
+    }
+
+    private MusicVoiceEntry streamedStockOverride(
+            long voiceId,
+            int musicId,
+            AudioSourceDescriptor descriptor) {
+        return streamedStockOverride(voiceId, musicId, descriptor,
+                streamedRestorePolicy);
+    }
+
+    private MusicVoiceEntry streamedStockOverride(
+            long voiceId,
+            int musicId,
+            AudioSourceDescriptor descriptor,
+            StreamedMusicVoice.RestorePolicy restorePolicy) {
         return MusicVoiceEntry.fromVoice(musicId, descriptor,
-                new StreamedMusicVoice(voiceId, streamedMusicPort, descriptor));
+                new StreamedMusicVoice(voiceId,
+                        streamedSession.materializeStockOverride(musicId),
+                        descriptor, restorePolicy));
     }
 
     /**
@@ -372,14 +942,12 @@ public final class AudioPresentationSourceFactory
     public MusicVoiceEntry streamedTrack(
             long voiceId, StreamedMusicPort.TrackRef track) {
         Objects.requireNonNull(track, "track");
-        if (!streamedMusicPort.hasTrack(track)) {
-            throw new IllegalStateException("no prepared streamed track " + track);
-        }
-        streamedMusicPort.playTrack(track);
         AudioSourceDescriptor descriptor = AudioSourceDescriptor.streamedTrack(
                 track.owner() + ":" + track.name());
         return MusicVoiceEntry.fromVoice(-1, descriptor,
-                new StreamedMusicVoice(voiceId, streamedMusicPort, descriptor));
+                new StreamedMusicVoice(voiceId,
+                        streamedSession.materializeTrack(track), descriptor,
+                        StreamedMusicVoice.RestorePolicy.immediate()));
     }
 
     /**
@@ -391,7 +959,7 @@ public final class AudioPresentationSourceFactory
     public SampleBackedVoice streamedSfx(
             long voiceId, StreamedMusicPort.SfxRef sfx, int priority) {
         Objects.requireNonNull(sfx, "sfx");
-        StreamedMusicPort.SfxPcm source = streamedMusicPort.sfxPcm(sfx)
+        StreamedMusicPort.SfxPcm source = streamedSession.sfxPcm(sfx)
                 .orElseThrow(() -> new IllegalStateException(
                         "no prepared streamed SFX " + sfx));
         String assetId = "mod-sfx:" + sfx.owner() + ":" + sfx.name();
@@ -405,11 +973,13 @@ public final class AudioPresentationSourceFactory
     public PresentationVoice recreateStreamed(
             PresentationVoiceSnapshot.Streamed snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
-        if (streamedMusicPort == StreamedMusicPort.EMPTY) {
+        if (streamedSession.port() == StreamedMusicPort.EMPTY) {
             throw new IllegalStateException(
                     "no streamed-music port for " + snapshot.sourceDescriptor());
         }
-        return StreamedMusicVoice.restore(snapshot, streamedMusicPort);
+        return StreamedMusicVoice.restore(snapshot,
+                streamedSession.restore(snapshot.playback(), snapshot.stopped()),
+                streamedRestorePolicy);
     }
 
     public SampleBackedVoice fallbackSfx(
@@ -436,7 +1006,7 @@ public final class AudioPresentationSourceFactory
         return SampleBackedVoice.rawSegaPcm(
                 voiceId, 0,
                 Objects.requireNonNull(registeredPcm, "registeredPcm"),
-                roundedOutputSampleRate());
+                roundedOutputSampleRate(), settings.region());
     }
 
     @Override
@@ -469,23 +1039,22 @@ public final class AudioPresentationSourceFactory
             @Override
             public AbstractSmpsData resolveSmpsData(
                     SmpsDriverSnapshot.SequencerEntry entry) {
-                CachedSmpsSource cached =
+                SmpsAssetCatalog.ProgramEntry cached =
                         sourcesByDescriptor.get(entry.source());
-                AbstractSmpsData data = cached != null
-                        ? cached.data()
-                        : delegate.resolveSmpsData(entry);
-                return copySmpsData(data);
+                return cached != null
+                        ? cached.program()
+                        : copySmpsData(delegate.resolveSmpsData(entry));
             }
 
             @Override
             public DacData resolveDacData(
                     SmpsDriverSnapshot.SequencerEntry entry) {
-                CachedSmpsSource cached =
+                SmpsAssetCatalog.ProgramEntry cached =
                         sourcesByDescriptor.get(entry.source());
                 DacData dac = cached != null
                         ? cached.dac()
                         : delegate.resolveDacData(entry);
-                return copyDac(dac);
+                return Objects.requireNonNull(dac, "dac");
             }
 
             @Override
@@ -498,28 +1067,28 @@ public final class AudioPresentationSourceFactory
             @Override
             public SmpsSequencerConfig resolveConfig(
                     SmpsDriverSnapshot.SequencerEntry entry) {
-                CachedSmpsSource cached =
+                SmpsAssetCatalog.ProgramEntry cached =
                         sourcesByDescriptor.get(entry.source());
                 SmpsSequencerConfig sourceConfig = cached != null
                         ? cached.staticConfig()
                         : delegate.resolveConfig(entry);
-                String gameId = cached != null
-                        ? cached.gameId()
-                        : gameIdFor(entry.source(), voiceGameId);
+                if (cached != null) {
+                    return sourceConfig;
+                }
                 return copyPresentationConfig(
-                        gameId,
+                        gameIdFor(entry.source(), voiceGameId),
                         sourceConfig,
-                        cached != null
-                                ? cached.coordFlagHandlerRequired()
-                                : sourceConfig.getCoordFlagHandler() != null);
+                        sourceConfig.getCoordFlagHandler() != null);
             }
         };
     }
 
-    private CachedSmpsSource requireCached(
+    private SmpsAssetCatalog.ProgramEntry requireCached(
             ResolvedSmpsSfxSource source) {
         Objects.requireNonNull(source, "source");
-        CachedSmpsSource cached = sfxAssets.get(source.assetKey());
+        SmpsAssetCatalog.ProgramEntry cached =
+                findRegisteredSmpsSfxAsset(
+                        source.assetKey(), source.dependencyGeneration());
         if (cached == null) {
             throw new IllegalStateException(
                     "SMPS SFX asset cache miss: " + source.assetKey());
@@ -527,53 +1096,20 @@ public final class AudioPresentationSourceFactory
         return cached;
     }
 
-    private CachedSmpsSource snapshotSource(
-            String gameId,
-            AbstractSmpsData data,
-            DacData dac,
-            SmpsSequencerConfig config,
-            boolean specialSfx) {
-        return new CachedSmpsSource(
-                requireGameId(gameId),
-                copySmpsData(Objects.requireNonNull(data, "data")),
-                copyDac(Objects.requireNonNull(dac, "dac")),
-                copyStaticConfig(Objects.requireNonNull(config, "config")),
-                config.getCoordFlagHandler() != null,
-                specialSfx);
-    }
-
-    /**
-     * Builds a per-instantiation view of a cached source.
-     *
-     * <p>The sequence data is <em>shared</em>, not re-copied. {@code cached.data()}
-     * is already a {@code Frozen*} snapshot — {@code snapshotSource} froze it on
-     * the way into the cache — and a frozen snapshot is immutable: its fields are
-     * assigned once in the constructor, the only two setters on
-     * {@code AbstractSmpsData} ({@code setId}, {@code setPalSpeedupDisabled}) are
-     * called by the SMPS loaders at load time and never during playback, and no
-     * code writes into the byte arrays handed out by {@code getData} /
-     * {@code getVoice} / {@code getPsgEnvelope}. Re-freezing it per SFX trigger
-     * therefore produced a byte-identical object at real cost: each copy clones
-     * the sequence bytes, three {@code byte[256][]} tables, an {@code int[]} word
-     * table, and 256 voices plus envelopes — and a zone like CNZ fires SFX
-     * constantly.
-     *
-     * <p>The DAC and static config are still copied per instantiation. They are
-     * not covered by the immutability argument above, and this change is
-     * deliberately scoped to the one object proven safe to share.
-     */
-    private CachedSmpsSource freshSource(CachedSmpsSource cached) {
-        return new CachedSmpsSource(
-                cached.gameId(),
-                cached.data(),
-                copyDac(cached.dac()),
-                copyStaticConfig(cached.staticConfig()),
-                cached.coordFlagHandlerRequired(),
-                cached.specialSfx());
-    }
-
     private SmpsSequencer newSequencer(
-            CachedSmpsSource source, SmpsDriver driver) {
+            SmpsAssetCatalog.ProgramEntry source, SmpsDriver driver) {
+        SmpsSequencer sequencer = new SmpsSequencer(
+                source.program(), source.dac(), driver,
+                settings.audioManager(),
+                source.staticConfig(), source.sourceDescriptor(),
+                SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE);
+        sequencer.setSampleRate(driver.getOutputSampleRate());
+        sequencer.setFm6DacOff(settings.fm6DacOff());
+        return sequencer;
+    }
+
+    private SmpsSequencer newLegacySequencer(
+            LegacySmpsSource source, SmpsDriver driver) {
         SmpsSequencer sequencer = new SmpsSequencer(
                 source.data(), source.dac(), driver,
                 settings.audioManager(),
@@ -585,65 +1121,194 @@ public final class AudioPresentationSourceFactory
         return sequencer;
     }
 
-    private SmpsDriver newConfiguredDriver() {
+    private SmpsDriver newConfiguredDriver(
+            boolean observed,
+            SmpsDriverServiceObserver.DriverAdmissionOrigin origin) {
+        DiagnosticDispatcher diagnostics = observed
+                ? diagnosticDispatcher()
+                : DiagnosticDispatcher.IMMEDIATE;
         SmpsDriver driver =
-                new SmpsDriver(settings.outputSampleRate());
+                new SmpsDriver(settings.outputSampleRate(), observed
+                        ? diagnosticChipWriteObserver(diagnostics)
+                        : ChipWriteObserver.NONE);
+        if (observed) {
+            driver.setDiagnosticIdentity(
+                    new SmpsDriverServiceObserver.DriverIdentity(
+                            allocateDriverOrdinal(), origin));
+            installDiagnosticObservers(driver, diagnostics);
+        }
         driver.setRegion(settings.region());
         driver.setDacInterpolate(settings.dacInterpolate());
         driver.setOutputSampleRate(settings.outputSampleRate());
         driver.setPsgNoiseShiftOnEveryToggle(
                 settings.psgNoiseShiftEveryToggle());
+        if (observed) {
+            driver.observeLifecycle(
+                    SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED);
+        }
         return driver;
+    }
+
+    private DiagnosticDispatcher diagnosticDispatcher() {
+        return activeDiagnosticRoot == null
+                ? DiagnosticDispatcher.IMMEDIATE
+                : activeDiagnosticRoot;
+    }
+
+    private long allocateDriverOrdinal() {
+        return activeDiagnosticRoot == null
+                ? nextDriverInstanceOrdinal++
+                : activeDiagnosticRoot.allocateDriverOrdinal();
+    }
+
+    private void installDiagnosticObservers(
+            SmpsDriver driver, DiagnosticDispatcher diagnostics) {
+        if (sfxContentionObserver != SfxContentionObserver.NONE) {
+            SfxContentionObserver observer = sfxContentionObserver;
+            driver.setSfxContentionObserver(new SfxContentionObserver() {
+                @Override
+                public void onSfxAdmitted(Admission admission) {
+                    diagnostics.emit(() ->
+                            AudioDiagnosticObserverException.invoke(() ->
+                                    observer.onSfxAdmitted(admission)));
+                }
+
+                @Override
+                public void onRoleArbitrated(Arbitration arbitration) {
+                    diagnostics.emit(() ->
+                            AudioDiagnosticObserverException.invoke(() ->
+                                    observer.onRoleArbitrated(arbitration)));
+                }
+            });
+        }
+        if (driverServiceObserver == SmpsDriverServiceObserver.NONE) {
+            return;
+        }
+        SmpsDriverServiceObserver observer = driverServiceObserver;
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            private ServiceEvent activeEvent;
+
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                if (activeEvent != null) {
+                    throw new IllegalStateException(
+                            "SMPS driver service observer was re-entered");
+                }
+                activeEvent = new ServiceEvent(nextServiceOrdinal++,
+                        event.driver(), event.sequencer(), event.kind());
+                ServiceEvent emitted = activeEvent;
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onServiceBegin(emitted)));
+            }
+
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event,
+                    SmpsDriverSnapshot snapshot) {
+                ServiceEvent completed = activeEvent;
+                if (completed == null) {
+                    throw new IllegalStateException(
+                            "SMPS driver service ended without a begin");
+                }
+                activeEvent = null;
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onServiceEnd(completed, snapshot)));
+            }
+
+            @Override
+            public void onLifecycle(LifecycleEvent event) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onLifecycle(event)));
+            }
+        });
+    }
+
+    private static SmpsDriverServiceObserver.DriverAdmissionOrigin musicOrigin(
+            long voiceId, int musicId) {
+        return new SmpsDriverServiceObserver.DriverAdmissionOrigin(
+                SmpsDriverServiceObserver.DriverOriginKind.MUSIC,
+                voiceId, musicId);
+    }
+
+    private static SmpsDriverServiceObserver.DriverAdmissionOrigin sfxOrigin(
+            long voiceId, int sfxId) {
+        return new SmpsDriverServiceObserver.DriverAdmissionOrigin(
+                SmpsDriverServiceObserver.DriverOriginKind.SFX,
+                voiceId, sfxId);
+    }
+
+    private static int restoredSfxSoundId(
+            PresentationVoiceSnapshot.Smps snapshot) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : snapshot.driver().sequencers()) {
+            if (entry.sfx()) {
+                return entry.source().id();
+            }
+        }
+        return -1;
+    }
+
+    private ChipWriteObserver diagnosticChipWriteObserver(
+            DiagnosticDispatcher diagnostics) {
+        if (chipWriteObserver == ChipWriteObserver.NONE) {
+            return ChipWriteObserver.NONE;
+        }
+        ChipWriteObserver observer = chipWriteObserver;
+        return new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(
+                    int port, int register, int value) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onYm2612Write(
+                                        port, register, value)));
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onPsgWrite(value)));
+            }
+
+            @Override
+            public int ym2612ChannelSampleMask() {
+                return observer.ym2612ChannelSampleMask();
+            }
+
+            @Override
+            public void onYm2612ChannelSample(int channel, int output) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onYm2612ChannelSample(channel, output)));
+            }
+
+            @Override
+            public void onYm2612KeyOn(
+                    int channel, int operator, int attenuation) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onYm2612KeyOn(
+                                        channel, operator, attenuation)));
+            }
+        };
     }
 
     private SmpsSequencerConfig copyPresentationConfig(
             String gameId,
             SmpsSequencerConfig sourceConfig,
             boolean coordFlagHandlerRequired) {
-        SmpsSequencerConfig.Builder copy =
-                copyBuilder(sourceConfig);
-        if (coordFlagHandlerRequired) {
-            copy.coordFlagHandler(
-                    coordFlagHandlers.handlerFor(requireGameId(gameId)));
-        } else {
-            copy.coordFlagHandler(null);
-        }
-        return copy.build();
+        return SmpsAssetCatalog.bindLegacyConfig(
+                requireGameId(gameId), sourceConfig,
+                coordFlagHandlerRequired, coordFlagHandlers);
     }
 
     private static SmpsSequencerConfig copyStaticConfig(
             SmpsSequencerConfig sourceConfig) {
-        return copyBuilder(sourceConfig)
-                .coordFlagHandler(null)
-                .build();
-    }
-
-    private static SmpsSequencerConfig.Builder copyBuilder(
-            SmpsSequencerConfig sourceConfig) {
-        Objects.requireNonNull(sourceConfig, "sourceConfig");
-        return new SmpsSequencerConfig.Builder()
-                .speedUpTempos(sourceConfig.getSpeedUpTempos())
-                .tempoModBase(sourceConfig.getTempoModBase())
-                .fmChannelOrder(sourceConfig.getFmChannelOrder())
-                .psgChannelOrder(sourceConfig.getPsgChannelOrder())
-                .tempoMode(sourceConfig.getTempoMode())
-                .coordFlagParamOverrides(
-                        sourceConfig.getCoordFlagParamOverrides())
-                .applyModOnNote(sourceConfig.isApplyModOnNote())
-                .halveModSteps(sourceConfig.isHalveModSteps())
-                .extraTrkEndFlags(Set.copyOf(
-                        sourceConfig.getExtraTrkEndFlags()))
-                .relativePointers(sourceConfig.isRelativePointers())
-                .tempoOnFirstTick(sourceConfig.isTempoOnFirstTick())
-                .volMode(sourceConfig.getVolMode())
-                .psgEnvCmd80(sourceConfig.getPsgEnvCmd80())
-                .noteOnPrevent(sourceConfig.getNoteOnPrevent())
-                .delayFreq(sourceConfig.getDelayFreq())
-                .modAlgo(sourceConfig.getModAlgo())
-                .fadeOutDelay(sourceConfig.getFadeOutDelay())
-                .fadeOutSteps(sourceConfig.getFadeOutSteps())
-                .fadeInSteps(sourceConfig.getFadeInSteps())
-                .fadeInDelay(sourceConfig.getFadeInDelay());
+        return SmpsAssetCatalog.copyConfigWithoutHandler(sourceConfig);
     }
 
     private DecodedPcm decode(String assetId) throws IOException {
@@ -683,7 +1348,7 @@ public final class AudioPresentationSourceFactory
                 "no game id cached for SMPS source " + source);
     }
 
-    private static SmpsSourceDescriptor describeMusic(
+    private static SmpsSourceDescriptor describeLegacyMusic(
             AudioSourceDescriptor descriptor, AbstractSmpsData data) {
         return switch (descriptor.route()) {
             case BASE_MUSIC_ID -> SmpsSourceDescriptor.baseMusic(data);
@@ -693,33 +1358,51 @@ public final class AudioPresentationSourceFactory
         };
     }
 
-    private static SmpsSourceDescriptor describeSfx(
-            SmpsAssetKey key, AbstractSmpsData data) {
-        return switch (key.route()) {
-            case BASE_ID -> SmpsSourceDescriptor.baseSfx(data);
-            case BASE_NAME -> SmpsSourceDescriptor.baseNamedSfx(
-                    key.sfxName(), data);
-            case DONOR_ID -> SmpsSourceDescriptor.donorSfx(
-                    key.gameId(), data);
-            case FALLBACK_NAME -> SmpsSourceDescriptor.from(data);
+    private static SmpsAssetKey musicAssetKey(
+            String gameId,
+            int musicId,
+            AudioSourceDescriptor descriptor) {
+        SmpsAssetKey.Route route = switch (descriptor.route()) {
+            case BASE_MUSIC_ID -> SmpsAssetKey.Route.BASE_MUSIC;
+            case DONOR_MUSIC_ID -> SmpsAssetKey.Route.DONOR_MUSIC;
+            default -> throw new IllegalArgumentException(
+                    "SMPS music requires a base or donor descriptor");
         };
+        return new SmpsAssetKey(gameId, route, musicId, null);
     }
 
-    private static void validateKey(SmpsAssetKey key) {
+    private static void validateSfxKey(SmpsAssetKey key) {
         switch (key.route()) {
             case BASE_ID, DONOR_ID -> {
-                if (key.sfxId() < 0 || key.sfxName() != null) {
+                if (key.assetId() < 0 || key.assetName() != null) {
                     throw new IllegalArgumentException(
                             "id SMPS route requires only a non-negative id");
                 }
             }
             case BASE_NAME, FALLBACK_NAME -> {
-                if (key.sfxName() == null
-                        || key.sfxName().isBlank()) {
+                if (key.assetName() == null
+                        || key.assetName().isBlank()) {
                     throw new IllegalArgumentException(
                             "named SMPS route requires a name");
                 }
             }
+            case BASE_MUSIC, DONOR_MUSIC ->
+                    throw new IllegalArgumentException(
+                            "music route cannot register an SFX asset");
+        }
+    }
+
+    private static void validateMusicKey(SmpsAssetKey key) {
+        switch (key.route()) {
+            case BASE_MUSIC, DONOR_MUSIC -> {
+                if (key.assetId() < 0 || key.assetName() != null) {
+                    throw new IllegalArgumentException(
+                            "music route requires only a non-negative id");
+                }
+            }
+            case BASE_ID, BASE_NAME, DONOR_ID, FALLBACK_NAME ->
+                    throw new IllegalArgumentException(
+                            "SFX route cannot register a music asset");
         }
     }
 
@@ -739,165 +1422,9 @@ public final class AudioPresentationSourceFactory
         return value;
     }
 
-    private static DacData copyDac(DacData source) {
-        Objects.requireNonNull(source, "source");
-        Map<Integer, byte[]> samples = new HashMap<>();
-        for (Map.Entry<Integer, byte[]> entry
-                : source.samples.entrySet()) {
-            samples.put(entry.getKey(), entry.getValue().clone());
-        }
-        Map<Integer, DacData.DacEntry> mapping = new HashMap<>();
-        for (Map.Entry<Integer, DacData.DacEntry> entry
-                : source.mapping.entrySet()) {
-            DacData.DacEntry value = entry.getValue();
-            mapping.put(entry.getKey(), new DacData.DacEntry(
-                    value.sampleId, value.rate));
-        }
-        return new DacData(samples, mapping, source.baseCycles);
-    }
-
     private static AbstractSmpsData copySmpsData(
             AbstractSmpsData source) {
-        return source instanceof SmpsSfxData sfx
-                ? new FrozenSfxData(source, sfx)
-                : new FrozenSmpsData(source);
-    }
-
-    private static class FrozenSmpsData extends AbstractSmpsData {
-        private final byte[][] voices = new byte[256][];
-        private final byte[][] psgEnvelopes = new byte[256][];
-        private final byte[][] modEnvelopes = new byte[256][];
-        private int[] words;
-        private int baseNoteOffset;
-        private int psgBaseNoteOffset;
-
-        FrozenSmpsData(AbstractSmpsData source) {
-            super(Objects.requireNonNull(source, "source")
-                    .getData().clone(), source.getZ80StartAddress());
-            voicePtr = source.getVoicePtr();
-            channels = source.getChannels();
-            psgChannels = source.getPsgChannels();
-            dividingTiming = source.getDividingTiming();
-            tempo = source.getTempo();
-            dacPointer = source.getDacPointer();
-            fmPointers = source.getFmPointers().clone();
-            fmKeyOffsets = source.getFmKeyOffsets().clone();
-            fmVolumeOffsets = source.getFmVolumeOffsets().clone();
-            psgPointers = source.getPsgPointers().clone();
-            psgKeyOffsets = source.getPsgKeyOffsets().clone();
-            psgVolumeOffsets = source.getPsgVolumeOffsets().clone();
-            psgModEnvs = source.getPsgModEnvs().clone();
-            psgInstruments = source.getPsgInstruments().clone();
-            id = source.getId();
-            palSpeedupDisabled = source.isPalSpeedupDisabled();
-            baseNoteOffset = source.getBaseNoteOffset();
-            psgBaseNoteOffset = source.getPsgBaseNoteOffset();
-            words = new int[Math.max(0, data.length - 1)];
-            for (int index = 0; index < words.length; index++) {
-                words[index] = source.read16(index);
-            }
-            for (int index = 0; index < 256; index++) {
-                int lookupId = index;
-                voices[index] = copyNullable(
-                        safely(() -> source.getVoice(lookupId)));
-                psgEnvelopes[index] = copyNullable(
-                        safely(() -> source.getPsgEnvelope(lookupId)));
-                modEnvelopes[index] = copyNullable(
-                        safely(() -> source.getModEnvelope(lookupId)));
-            }
-        }
-
-        @Override
-        protected void parseHeader() {
-            // Fields are copied from the already parsed source.
-        }
-
-        @Override
-        public byte[] getVoice(int voiceId) {
-            return copyAt(voices, voiceId);
-        }
-
-        @Override
-        public byte[] getPsgEnvelope(int id) {
-            return copyAt(psgEnvelopes, id);
-        }
-
-        @Override
-        public byte[] getModEnvelope(int id) {
-            return copyAt(modEnvelopes, id);
-        }
-
-        @Override
-        public int read16(int offset) {
-            if (offset < 0 || offset >= words.length) {
-                throw new IndexOutOfBoundsException(offset);
-            }
-            return words[offset];
-        }
-
-        @Override
-        public int getBaseNoteOffset() {
-            return baseNoteOffset;
-        }
-
-        @Override
-        public int getPsgBaseNoteOffset() {
-            return psgBaseNoteOffset;
-        }
-
-        private static byte[] copyAt(byte[][] values, int index) {
-            return index < 0 || index >= values.length
-                    ? null : copyNullable(values[index]);
-        }
-    }
-
-    private static final class FrozenSfxData extends FrozenSmpsData
-            implements SmpsSfxData {
-        private final int tickMultiplier;
-        private final List<FrozenTrack> tracks;
-
-        FrozenSfxData(AbstractSmpsData source, SmpsSfxData sfx) {
-            super(source);
-            tickMultiplier = sfx.getTickMultiplier();
-            tracks = sfx.getTrackEntries().stream()
-                    .map(track -> new FrozenTrack(
-                            track.channelMask(),
-                            track.pointer(),
-                            track.transpose(),
-                            track.volume()))
-                    .toList();
-        }
-
-        @Override
-        public int getTickMultiplier() {
-            return tickMultiplier;
-        }
-
-        @Override
-        public List<? extends SmpsSfxTrack> getTrackEntries() {
-            return tracks;
-        }
-    }
-
-    private record FrozenTrack(
-            int channelMask, int pointer, int transpose, int volume)
-            implements SmpsSfxData.SmpsSfxTrack {
-    }
-
-    @FunctionalInterface
-    private interface ByteArraySource {
-        byte[] get();
-    }
-
-    private static byte[] safely(ByteArraySource source) {
-        try {
-            return source.get();
-        } catch (RuntimeException ignored) {
-            return null;
-        }
-    }
-
-    private static byte[] copyNullable(byte[] source) {
-        return source == null ? null : Arrays.copyOf(source, source.length);
+        return SmpsAssetCatalog.freezeStandalone(
+                Objects.requireNonNull(source, "source"));
     }
 }

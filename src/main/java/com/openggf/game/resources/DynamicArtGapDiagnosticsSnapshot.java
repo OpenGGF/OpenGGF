@@ -5,6 +5,7 @@ import java.util.List;
 /** Immutable production evidence exposed to structural gap comparators. */
 public record DynamicArtGapDiagnosticsSnapshot(
         int movieLogicalFrame,
+        int unannouncedRows,
         List<DynamicArtGapTransition> transitions,
         List<Descriptor> ledger) {
 
