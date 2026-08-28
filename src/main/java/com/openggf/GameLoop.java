@@ -521,8 +521,12 @@ public class GameLoop {
         this.editorInputHandler = editorInputHandler;
     }
 
+    void renderLiveRewindHud(PixelFontTextRenderer textRenderer, int viewportWidth) {
+        liveRewindManager.renderHud(currentGameMode, textRenderer, viewportWidth);
+    }
+
     public void renderLiveRewindHud(PixelFontTextRenderer textRenderer) {
-        liveRewindManager.renderHud(currentGameMode, textRenderer);
+        renderLiveRewindHud(textRenderer, engineServices.graphics().getProjectionWidth());
     }
 
     public float liveRewindEffectIntensity() {

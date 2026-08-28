@@ -258,12 +258,16 @@ public final class LiveRewindManager {
         handleSeamlessLevelTransitionBoundary(context);
     }
 
-    public void renderHud(GameMode mode, PixelFontTextRenderer text) {
+    public void renderHud(GameMode mode, PixelFontTextRenderer text, int viewportWidth) {
         RewindContext context = rewindContextForPublicEntry(mode);
         if (!context.supported() || text == null || !enabled()) {
             return;
         }
-        hudOverlay.render(text);
+        hudOverlay.render(text, viewportWidth);
+    }
+
+    public void renderHud(GameMode mode, PixelFontTextRenderer text) {
+        renderHud(mode, text, 320);
     }
 
     /**

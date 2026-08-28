@@ -493,7 +493,8 @@ public class HudRenderManager {
     }
 
     private int nativeOrigin() {
-        return (viewportWidth - 320) / 2;
+        int liveWidth = Math.max(viewportWidth, graphicsManager.getProjectionWidth());
+        return (liveWidth - 320) / 2;
     }
 
     private void renderSafe(int patternId, PatternDesc desc, int x, int y) {

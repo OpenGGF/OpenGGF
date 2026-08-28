@@ -1,9 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.debug.DebugColor;
-import com.openggf.game.GameServices;
 import com.openggf.graphics.PixelFontTextRenderer;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -13,20 +11,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestLiveRewindHudOverlayWidescreen {
 
-    @AfterEach
-    void resetProjectionWidth() {
-        GameServices.graphics().setProjectionWidth(320);
-    }
-
     @Test
     void renderCentersNativeHudAtEveryLiveWidth() {
         RecordingTextRenderer text = new RecordingTextRenderer();
         LiveRewindHudOverlay overlay = new LiveRewindHudOverlay(() -> "REWIND 12");
 
         for (int width : new int[] {320, 352, 400}) {
-            GameServices.graphics().setProjectionWidth(width);
             text.draws.clear();
-            overlay.render(text);
+            overlay.render(text, width);
             int expectedX = (width - 320) / 2 + 4;
             assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("LIVE REWIND")
                     && draw.x == expectedX));

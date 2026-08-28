@@ -220,7 +220,7 @@ public class RenderOrderTest {
                 "traceSession.render(traceHudTextRenderer);");
         assertPostFadeExceptionRecordedBefore(source,
                 "recordPostFadeDiagnostic(\"LiveRewindHud\")",
-                "gameLoop.renderLiveRewindHud(traceHudTextRenderer);");
+                "gameLoop.renderLiveRewindHud(traceHudTextRenderer, (int) projectionWidth);");
         assertPostFadeExceptionRecordedBefore(source,
                 "recordPostFadeDiagnostic(\"CreditsDemoSprites\")",
                 "levelManager.renderSpriteObjectPass(spriteManager, true);");
@@ -272,4 +272,3 @@ public class RenderOrderTest {
         return count;
     }
 }
-

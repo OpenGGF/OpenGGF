@@ -2925,7 +2925,7 @@ public class Engine {
 			if (postFadeRecorder != null) {
 				postFadeRecorder.recordPostFadeDiagnostic("LiveRewindHud");
 			}
-			gameLoop.renderLiveRewindHud(traceHudTextRenderer);
+			gameLoop.renderLiveRewindHud(traceHudTextRenderer, (int) projectionWidth);
 		}
 		if (gameLoop != null) {
 			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());

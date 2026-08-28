@@ -17,7 +17,7 @@ class TestLiveRewindHudOverlay {
         RecordingTextRenderer text = new RecordingTextRenderer();
         LiveRewindHudOverlay overlay = new LiveRewindHudOverlay(() -> "");
 
-        overlay.render(text);
+        overlay.render(text, 320);
 
         assertTrue(text.draws.isEmpty(), "blank status should not render a live rewind HUD");
     }
@@ -27,7 +27,7 @@ class TestLiveRewindHudOverlay {
         RecordingTextRenderer text = new RecordingTextRenderer();
         LiveRewindHudOverlay overlay = new LiveRewindHudOverlay(() -> "REWIND 12");
 
-        overlay.render(text);
+        overlay.render(text, 320);
 
         assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("LIVE REWIND")));
         assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REWIND 12")
@@ -43,7 +43,7 @@ class TestLiveRewindHudOverlay {
         config.setConfigValue(com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
         LiveRewindManager manager = new LiveRewindManager(config);
 
-        manager.renderHud(com.openggf.game.GameMode.LEVEL, text);
+        manager.renderHud(com.openggf.game.GameMode.LEVEL, text, 320);
 
         assertTrue(text.draws.isEmpty(), "idle live rewind must not render HUD text");
     }

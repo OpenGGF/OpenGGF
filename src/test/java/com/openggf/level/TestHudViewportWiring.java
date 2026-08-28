@@ -16,7 +16,7 @@ import static org.mockito.Mockito.mock;
 class TestHudViewportWiring {
 
     @Test
-    void uiPipelineForwardsLiveProjectionWidthBeforeHudDraw() {
+    void uiPipelineLeavesViewportResolutionWithTheInjectedHudOwner() {
         GraphicsManager graphics = new GraphicsManager();
         graphics.setProjectionWidth(528);
         UiRenderPipeline pipeline = new UiRenderPipeline(graphics);
@@ -25,10 +25,8 @@ class TestHudViewportWiring {
 
         pipeline.renderOverlay(mock(LevelState.class), null);
 
-        assertEquals(528, hud.viewportWidth,
-                "the active UI pipeline must give the HUD the live projection width");
-        assertEquals(528, hud.viewportWidthAtDraw,
-                "the UI pipeline must forward the width before invoking the HUD");
+        assertEquals(0, hud.viewportWidth,
+                "the graphics pipeline must not reach into the level-owned HUD API");
         assertEquals(1, hud.drawCount);
     }
 
