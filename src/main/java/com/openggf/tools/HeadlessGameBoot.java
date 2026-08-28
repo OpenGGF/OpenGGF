@@ -268,6 +268,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
         GL.createCapabilities();
 
         GraphicsManager graphicsManager = EngineServices.current().graphics();
+        // Test and batch-tool JVMs can reuse this process after a logic-only
+        // session called initHeadless(). This boot owns a real GL context, so
+        // reclaim GL mode before init() rather than silently retaining a null
+        // GPU renderer from the previous session.
+        graphicsManager.setHeadlessMode(false);
         try {
             graphicsManager.init(Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
         } catch (IOException e) {

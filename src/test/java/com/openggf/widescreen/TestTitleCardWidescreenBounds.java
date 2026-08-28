@@ -20,12 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestTitleCardWidescreenBounds {
 
     @Test
-    void s2ExitTailsUseElementCompletionAtEveryViewportWidth() throws IOException {
+    void s2ExitTailsKeepRomPassTimingAtEveryViewportWidth() throws IOException {
         String source = Files.readString(Path.of(
                 "src/main/java/com/openggf/game/sonic2/titlecard/TitleCardManager.java"));
 
-        assertTrue(source.contains("if (leftSwooshElement.hasExited())"));
-        assertTrue(source.contains("if (bottomBarElement.hasExited())"));
+        assertTrue(source.contains("leaveLoopPass() >= LEAVE_LEFT_PASSES"));
+        assertTrue(source.contains(
+                "leaveLoopPass() >= LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES"));
     }
 
     @Test

@@ -2,8 +2,8 @@ package com.openggf.tools;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.RomTestUtils;
@@ -34,6 +34,7 @@ class TraceCaptureBootDimensionsTest {
         configuration.setConfigValue(
                 SonicConfiguration.DISPLAY_ASPECT, dimensions.aspect().name());
         configuration.resolveDisplayAspect();
+        EngineServices.current().graphics().initHeadless();
 
         try (HeadlessGameBoot boot = new HeadlessGameBoot(
                 dimensions.physicalWidth(), dimensions.physicalHeight(),
@@ -51,7 +52,7 @@ class TraceCaptureBootDimensionsTest {
                     privateInt(mode.getParallaxManager(), "BG_VSCROLL_COLUMN_COUNT"),
                     "parallax capacity must use presentation width");
             assertEquals((width + 15) / 16,
-                    GameServices.graphics().getTilemapGpuRenderer()
+                    EngineServices.current().graphics().getTilemapGpuRenderer()
                             .getVScrollColumnCapacity(),
                     "tilemap GPU capacity must use presentation width");
         }
