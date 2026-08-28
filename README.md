@@ -260,6 +260,9 @@ traces.
 - **MGZ2 boss handoff physics:** jumping out of Tails's carry clears stale
   physical-object support, while the transition camera remains owned by MGZ2's
   native resize event.
+- **ICZ multi-sidekick freezer support:** boss frost puffs and placed freezer
+  clouds preserve native Player 1/Player 2 ordering while freezing every
+  additional configured sidekick into a rescuable ice block.
 - **Audio and video hardware modeling:** YM2612 FM, PSG, DAC/PCM, SMPS
   sequencing, priority rendering, tilemaps, shaders, sprite batching, and staged
   art loading have received substantial accuracy and stability work. Audio

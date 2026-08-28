@@ -246,6 +246,69 @@ class TestS3kIczFreezerObject {
     }
 
     @Test
+    void captureCloudFreezesEveryConfiguredPlayerInRange() {
+        ObjectManager manager = mock(ObjectManager.class);
+        RecordingServices services = new RecordingServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        };
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0202, (short) 0x0134);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0204, (short) 0x0134);
+        TestablePlayableSprite extension = new TestablePlayableSprite("tails", (short) 0x0206, (short) 0x0134);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension)));
+
+        IczFreezerObjectInstance.CaptureCloud cloud =
+                freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
+        cloud.setServices(services);
+        cloud.update(0, main);
+        cloud.update(1, main);
+
+        assertTrue(main.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlled());
+        assertTrue(extension.isObjectControlled());
+        verify(manager, times(3)).addDynamicObjectAfterCurrentNextFrame(
+                org.mockito.ArgumentMatchers.any(IczFreezerObjectInstance.FrozenPlayerBlock.class));
+    }
+
+    @Test
+    void captureCloudDoesNotControlLockExtendedSidekickWhenBlockAllocationFails() {
+        ObjectManager manager = mock(ObjectManager.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            ((AbstractObjectInstance) invocation.getArgument(0)).setDestroyed(true);
+            return null;
+        }).when(manager).addDynamicObjectAfterCurrentNextFrame(
+                org.mockito.ArgumentMatchers.any(IczFreezerObjectInstance.FrozenPlayerBlock.class));
+        RecordingServices services = new RecordingServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        };
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0400, (short) 0x0134);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0400, (short) 0x0134);
+        TestablePlayableSprite extension = new TestablePlayableSprite("tails", (short) 0x0204, (short) 0x0134);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension)));
+
+        IczFreezerObjectInstance.CaptureCloud cloud =
+                freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
+        cloud.setServices(services);
+        cloud.update(0, main);
+        cloud.update(1, main);
+
+        assertFalse(extension.isObjectControlled(),
+                "an engine-extension capture must not strand its player when no SST slot exists");
+    }
+
+    @Test
     void parentUnloadLetsCaptureCloudEnterRomOffPhaseScanner() {
         RecordingServices services = new RecordingServices();
         IczFreezerObjectInstance freezer = createFreezer(services,
@@ -378,6 +441,28 @@ class TestS3kIczFreezerObject {
         assertEquals(120, tails.getInvulnerableFrames());
         assertEquals(12, block.debrisSpawnedForTesting());
         assertEquals(List.of(), services.lostRingSpawnFrames);
+    }
+
+    @Test
+    void fallingExtendedSidekickCanShatterFrozenBlock() {
+        installLevelGamestate();
+
+        RecordingServices services = new RecordingServices();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x43B0, (short) 0x06B3);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x4500, (short) 0x06B3);
+        TestablePlayableSprite extension = new TestablePlayableSprite("tails", (short) 0x43A6, (short) 0x069C);
+        extension.setAnimationId(2);
+        extension.setYSpeed((short) 0x03E0);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> sonic, () -> List.of(nativeP2, extension)));
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(sonic, 0x43B0, 0x06B3, 0x4360, false);
+        block.setServices(services);
+
+        block.update(23822, sonic);
+
+        assertTrue(block.isDestroyed());
+        assertEquals((short) -0x03E0, extension.getYSpeed());
+        assertFalse(sonic.isObjectControlled());
     }
 
     @Test

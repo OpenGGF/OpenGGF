@@ -64,8 +64,10 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     private static final int JET_PHASE_FRAMES = 0x40;
     private static final int FROST_PUFF_INTERVAL = 1;
     private static final int CAPTURE_CLOUD_OFFSET = 0x30;
+    // sub_8A9C6 scans the ROM's fixed P1/P2 pair; engine sidekicks extend the
+    // mechanically identical P2 interaction without disturbing that prefix.
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
-            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private int x;
     private int y;
@@ -421,12 +423,17 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
                     () -> playerEntity,
                     () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
 
-            for (PlayableEntity participant : query.playersFor(PLAYER_PARTICIPATION)) {
+            boolean capturedAny = false;
+            List<PlayableEntity> participants = query.playersFor(PLAYER_PARTICIPATION);
+            for (int index = 0; index < participants.size(); index++) {
+                PlayableEntity participant = participants.get(index);
                 AbstractPlayableSprite player = participant instanceof AbstractPlayableSprite sprite ? sprite : null;
                 if (canCapture(player)) {
-                    capture(player);
-                    return;
+                    capturedAny |= capture(player, index >= 2);
                 }
+            }
+            if (capturedAny) {
+                setDestroyed(true);
             }
         }
 
@@ -444,9 +451,31 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
                     && dy >= CAPTURE_MIN_Y && dy < CAPTURE_MAX_Y;
         }
 
-        private void capture(AbstractPlayableSprite player) {
+        private boolean capture(AbstractPlayableSprite player, boolean engineSidekickExtension) {
             int capturedX = player.getCentreX();
             int capturedY = player.getCentreY();
+            if (engineSidekickExtension) {
+                // Native sub_8A9E0 writes control before CreateChild1_Normal.
+                // Extra engine participants have no native SST, so require a
+                // successful real-slot allocation before taking their control.
+                FrozenPlayerBlock block = spawnChild(
+                        () -> new FrozenPlayerBlock(player, capturedX, capturedY, parent.x, hFlip));
+                if (block.isDestroyed()) {
+                    return false;
+                }
+                applyCaptureState(player, capturedX, capturedY);
+                retainFirstFrozenBlock(block);
+                return true;
+            }
+
+            applyCaptureState(player, capturedX, capturedY);
+            FrozenPlayerBlock block = spawnChild(
+                    () -> new FrozenPlayerBlock(player, capturedX, capturedY, parent.x, hFlip));
+            retainFirstFrozenBlock(block);
+            return true;
+        }
+
+        private void applyCaptureState(AbstractPlayableSprite player, int capturedX, int capturedY) {
             ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setAir(true);
             player.setXSpeed((short) 0);
@@ -455,9 +484,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             player.setAnimationId(0x1A);
             NativePositionOps.writeXPosPreserveSubpixel(player, capturedX);
             NativePositionOps.writeYPosPreserveSubpixel(player, capturedY);
+        }
 
-            frozenBlock = spawnChild(() -> new FrozenPlayerBlock(player, capturedX, capturedY, parent.x, hFlip));
-            setDestroyed(true);
+        private void retainFirstFrozenBlock(FrozenPlayerBlock block) {
+            if (!block.isDestroyed() && frozenBlock == null) {
+                frozenBlock = block;
+            }
         }
 
         @Override
@@ -584,12 +616,13 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
         /**
          * ROM {@code sub_8AA38}: the non-captured native player can shatter the
-         * block while falling in a roll or spin-dash animation. The successful
-         * contact reflects that player's vertical velocity before releasing the
-         * captured player without running the timer-expiry hurt path.
+         * block while falling in a roll or spin-dash animation. Engine sidekicks
+         * extend that mechanically identical P2 interaction. The successful contact
+         * reflects that player's vertical velocity before releasing the captured
+         * player without running the timer-expiry hurt path.
          */
         private boolean tryBreakFromOtherPlayer(PlayableEntity updatePlayer) {
-            for (PlayableEntity candidate : nativePlayers(updatePlayer)) {
+            for (PlayableEntity candidate : captureParticipants(updatePlayer)) {
                 if (!(candidate instanceof AbstractPlayableSprite attacker)
                         || attacker == capturedPlayer
                         || attacker.isObjectControlled()
@@ -611,13 +644,14 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             return false;
         }
 
-        private List<PlayableEntity> nativePlayers(PlayableEntity updatePlayer) {
+        private List<PlayableEntity> captureParticipants(PlayableEntity updatePlayer) {
             ObjectServices services = tryServices();
             if (services != null) {
                 try {
                     ObjectPlayerQuery query = services.playerQuery();
                     if (query != null) {
-                        return query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+                        return query.playersFor(
+                                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
                     }
                 } catch (RuntimeException ignored) {
                     // Lightweight object tests may not install a participation query.

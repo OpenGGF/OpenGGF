@@ -38,7 +38,9 @@ import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.physics.Direction;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Ice Cap Zone Act 2 end boss (object 0xBD).
@@ -135,6 +137,13 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private static final int FOLDED_MIDDLE_CHILD_INDEX = 2;
     private static final int BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX = 3;
     private static final int FOLDED_BOTTOM_HURT_CHILD_INDEX = 5;
+    private static final int EXTENDED_CAPTURE_PENDING = 1;
+    private static final int EXTENDED_CAPTURE_READY = 2;
+    private static final int EXTENDED_CAPTURE_PENDING_BEFORE_SOLID = 3;
+    private static final int EXTENDED_CAPTURE_READY_BEFORE_SOLID = 4;
+    private static final int EXTENDED_CAPTURE_PHASE = 0;
+    private static final int EXTENDED_CAPTURE_SOURCE_X = 1;
+    private static final int EXTENDED_CAPTURE_SOURCE_SLOT = 2;
     private static final int[][] FROST_OFFSETS_FRAME_0 = {
             {-0x50, 0x14}, {-0x40, 0x14}, {-0x48, 0x04}, {-0x40, 0x04},
             {-0x34, 0x0C}, {-0x24, 0x08}, {-0x1C, 0x04}
@@ -202,6 +211,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private int readyFrostCaptureMask;
     private int pendingBeforeSolidFrostCaptureMask;
     private int readyBeforeSolidFrostCaptureMask;
+    private AbstractPlayableSprite nativeP1FrostCaptureOwner;
+    private AbstractPlayableSprite nativeP2FrostCaptureOwner;
     private int pendingFrostCaptureP1SourceX;
     private int pendingFrostCaptureP2SourceX;
     private int readyFrostCaptureP1SourceX;
@@ -218,6 +229,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private int pendingBeforeSolidFrostCaptureP2SourceSlot;
     private int readyBeforeSolidFrostCaptureP1SourceSlot;
     private int readyBeforeSolidFrostCaptureP2SourceSlot;
+    private Map<AbstractPlayableSprite, int[]> extendedFrostCaptures;
     private int robotnikShipX;
     private int robotnikShipXFixed;
     private int robotnikShipY;
@@ -300,6 +312,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
         readyFrostCaptureMask = 0;
         pendingBeforeSolidFrostCaptureMask = 0;
         readyBeforeSolidFrostCaptureMask = 0;
+        nativeP1FrostCaptureOwner = null;
+        nativeP2FrostCaptureOwner = null;
         pendingFrostCaptureP1SourceX = 0;
         pendingFrostCaptureP2SourceX = 0;
         readyFrostCaptureP1SourceX = 0;
@@ -316,6 +330,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
         pendingBeforeSolidFrostCaptureP2SourceSlot = -1;
         readyBeforeSolidFrostCaptureP1SourceSlot = -1;
         readyBeforeSolidFrostCaptureP2SourceSlot = -1;
+        if (extendedFrostCaptures == null) {
+            extendedFrostCaptures = new IdentityHashMap<>();
+        } else {
+            extendedFrostCaptures.clear();
+        }
         robotnikShipX = state.x;
         robotnikShipXFixed = state.x << 8;
         robotnikShipY = state.y;
@@ -358,6 +377,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
             readyBeforeSolidFrostCaptureP2SourceSlot = pendingBeforeSolidFrostCaptureP2SourceSlot;
         }
         pendingBeforeSolidFrostCaptureMask = 0;
+        promoteExtendedFrostCaptures();
         applyReadyBeforeSolidFrostCaptures(player);
         updateHitFlash();
         if (!arenaGateComplete) {
@@ -750,7 +770,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
             return;
         }
         List<PlayableEntity> participants = frostCaptureParticipants(fallbackPlayer);
-        for (int index = 0; index < participants.size() && index < 2; index++) {
+        for (int index = 0; index < participants.size(); index++) {
             PlayableEntity candidate = participants.get(index);
             if (candidate instanceof AbstractPlayableSprite sprite && canFrostCapture(sprite, child)) {
                 boolean beforeBottomSolid = child.nativeSlot >= 0
@@ -766,17 +786,44 @@ public final class IczEndBossInstance extends AbstractBossInstance
                 boolean currentSolidCheckpoint = bottomStructuralChildSlot() < 0
                         ? !beforeBottomSolid
                         : child.captureWasActiveBeforeUpdate && !beforeBottomSolid;
-                queueFrostCapture(index, child.x, child.nativeSlot,
-                        beforeBottomSolid, currentSolidCheckpoint);
+                if (index < 2) {
+                    queueFrostCapture(index, sprite, child.x, child.nativeSlot,
+                            beforeBottomSolid, currentSolidCheckpoint);
+                } else {
+                    queueExtendedFrostCapture(sprite, child.x, child.nativeSlot,
+                            beforeBottomSolid, currentSolidCheckpoint);
+                }
             }
         }
+    }
+
+    private void promoteExtendedFrostCaptures() {
+        for (int[] capture : extendedFrostCaptures.values()) {
+            if (capture[EXTENDED_CAPTURE_PHASE] == EXTENDED_CAPTURE_PENDING) {
+                capture[EXTENDED_CAPTURE_PHASE] = EXTENDED_CAPTURE_READY;
+            } else if (capture[EXTENDED_CAPTURE_PHASE] == EXTENDED_CAPTURE_PENDING_BEFORE_SOLID) {
+                capture[EXTENDED_CAPTURE_PHASE] = EXTENDED_CAPTURE_READY_BEFORE_SOLID;
+            }
+        }
+    }
+
+    private void queueExtendedFrostCapture(AbstractPlayableSprite player, int sourceX, int sourceSlot,
+            boolean beforeBottomSolid, boolean currentSolidCheckpoint) {
+        if (extendedFrostCaptures.containsKey(player)) {
+            return;
+        }
+        int phase = beforeBottomSolid
+                ? EXTENDED_CAPTURE_PENDING_BEFORE_SOLID
+                : currentSolidCheckpoint ? EXTENDED_CAPTURE_READY : EXTENDED_CAPTURE_PENDING;
+        extendedFrostCaptures.put(player, new int[]{phase, sourceX, sourceSlot});
     }
 
     private int bottomStructuralChildSlot() {
         return structuralBottomChildSlot;
     }
 
-    private void queueFrostCapture(int participantIndex, int sourceX, int sourceSlot,
+    private void queueFrostCapture(int participantIndex, AbstractPlayableSprite player,
+            int sourceX, int sourceSlot,
             boolean beforeBottomSolid, boolean currentSolidCheckpoint) {
         int bit = 1 << participantIndex;
         int allCaptureMasks = pendingFrostCaptureMask | readyFrostCaptureMask
@@ -784,6 +831,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if ((allCaptureMasks & bit) != 0) {
             return;
         }
+        setNativeFrostCaptureOwner(participantIndex, player);
         if (beforeBottomSolid) {
             pendingBeforeSolidFrostCaptureMask |= bit;
             if (participantIndex == 0) {
@@ -817,15 +865,27 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     private void applyReadyBeforeSolidFrostCaptures(PlayableEntity fallbackPlayer) {
-        if (readyBeforeSolidFrostCaptureMask == 0) {
-            return;
-        }
         List<PlayableEntity> participants = frostCaptureParticipants(fallbackPlayer);
-        for (int index = 0; index < participants.size() && index < 2; index++) {
-            PlayableEntity candidate = participants.get(index);
+        Map<AbstractPlayableSprite, Boolean> nativeCaptures = new IdentityHashMap<>();
+        for (int index = 0; index < 2; index++) {
+            PlayableEntity candidate = index < participants.size() ? participants.get(index) : null;
             int bit = 1 << index;
-            if ((readyBeforeSolidFrostCaptureMask & bit) == 0
-                    || !(candidate instanceof AbstractPlayableSprite sprite)) {
+            if ((readyBeforeSolidFrostCaptureMask & bit) == 0) {
+                continue;
+            }
+            if (!(candidate instanceof AbstractPlayableSprite sprite)
+                    || sprite != nativeFrostCaptureOwner(index)) {
+                readyBeforeSolidFrostCaptureMask &= ~bit;
+                clearNativeFrostCaptureOwner(index);
+                continue;
+            }
+            int[] extendedCapture = extendedFrostCaptures.get(sprite);
+            if (extendedCapture != null
+                    && extendedCapture[EXTENDED_CAPTURE_PHASE] == EXTENDED_CAPTURE_READY_BEFORE_SOLID) {
+                // The native bit belonged to the player that occupied this
+                // ROM slot when it was queued. Do not reassign it if an
+                // identity-tracked extension player has since moved here.
+                readyBeforeSolidFrostCaptureMask &= ~bit;
                 continue;
             }
             readyBeforeSolidFrostCaptureMask &= ~bit;
@@ -835,7 +895,29 @@ public final class IczEndBossInstance extends AbstractBossInstance
             int sourceSlot = index == 0
                     ? readyBeforeSolidFrostCaptureP1SourceSlot
                     : readyBeforeSolidFrostCaptureP2SourceSlot;
-            frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY(), sourceX, sourceSlot);
+            frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY(), sourceX, sourceSlot, false);
+            nativeCaptures.put(sprite, Boolean.TRUE);
+            clearNativeFrostCaptureOwner(index);
+        }
+        applyReadyBeforeSolidExtendedFrostCaptures(participants, nativeCaptures);
+    }
+
+    private void applyReadyBeforeSolidExtendedFrostCaptures(List<PlayableEntity> participants,
+            Map<AbstractPlayableSprite, Boolean> nativeCaptures) {
+        for (PlayableEntity candidate : participants) {
+            if (!(candidate instanceof AbstractPlayableSprite sprite)) {
+                continue;
+            }
+            int[] capture = extendedFrostCaptures.get(sprite);
+            if (capture == null
+                    || capture[EXTENDED_CAPTURE_PHASE] != EXTENDED_CAPTURE_READY_BEFORE_SOLID) {
+                continue;
+            }
+            extendedFrostCaptures.remove(sprite);
+            if (!nativeCaptures.containsKey(sprite)) {
+                frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY(),
+                        capture[EXTENDED_CAPTURE_SOURCE_X], capture[EXTENDED_CAPTURE_SOURCE_SLOT], true);
+            }
         }
     }
 
@@ -844,6 +926,22 @@ public final class IczEndBossInstance extends AbstractBossInstance
             return;
         }
         List<PlayableEntity> participants = frostCaptureParticipants(player);
+        discardReadyNativeCapturesWithChangedOwners(participants);
+        int[] extendedCapture = extendedFrostCaptures.get(sprite);
+        if (extendedCapture != null && extendedCapture[EXTENDED_CAPTURE_PHASE] == EXTENDED_CAPTURE_READY) {
+            for (int index = 0; index < participants.size() && index < 2; index++) {
+                if (participants.get(index) == player) {
+                    // A vacated native slot must not replace this player's
+                    // identity-keyed source or allocation-safe extension path.
+                    readyFrostCaptureMask &= ~(1 << index);
+                    break;
+                }
+            }
+            extendedFrostCaptures.remove(sprite);
+            frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY(),
+                    extendedCapture[EXTENDED_CAPTURE_SOURCE_X], extendedCapture[EXTENDED_CAPTURE_SOURCE_SLOT], true);
+            return;
+        }
         for (int index = 0; index < participants.size() && index < 2; index++) {
             if (participants.get(index) == player) {
                 int bit = 1 << index;
@@ -855,11 +953,42 @@ public final class IczEndBossInstance extends AbstractBossInstance
                     int sourceSlot = index == 0
                             ? readyFrostCaptureP1SourceSlot
                             : readyFrostCaptureP2SourceSlot;
-                    frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY(), sourceX, sourceSlot);
+                    frostCapture(sprite, sprite.getCentreX(), sprite.getCentreY(), sourceX, sourceSlot, false);
+                    clearNativeFrostCaptureOwner(index);
                 }
                 return;
             }
         }
+    }
+
+    private void discardReadyNativeCapturesWithChangedOwners(List<PlayableEntity> participants) {
+        for (int index = 0; index < 2; index++) {
+            int bit = 1 << index;
+            if ((readyFrostCaptureMask & bit) == 0) {
+                continue;
+            }
+            PlayableEntity current = index < participants.size() ? participants.get(index) : null;
+            if (current != nativeFrostCaptureOwner(index)) {
+                readyFrostCaptureMask &= ~bit;
+                clearNativeFrostCaptureOwner(index);
+            }
+        }
+    }
+
+    private AbstractPlayableSprite nativeFrostCaptureOwner(int participantIndex) {
+        return participantIndex == 0 ? nativeP1FrostCaptureOwner : nativeP2FrostCaptureOwner;
+    }
+
+    private void setNativeFrostCaptureOwner(int participantIndex, AbstractPlayableSprite player) {
+        if (participantIndex == 0) {
+            nativeP1FrostCaptureOwner = player;
+        } else {
+            nativeP2FrostCaptureOwner = player;
+        }
+    }
+
+    private void clearNativeFrostCaptureOwner(int participantIndex) {
+        setNativeFrostCaptureOwner(participantIndex, null);
     }
 
     @Override
@@ -874,7 +1003,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
 
     private List<PlayableEntity> frostCaptureParticipants(PlayableEntity fallbackPlayer) {
         try {
-            return services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+            return services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
         } catch (RuntimeException ignored) {
             return fallbackPlayer == null ? List.of() : List.of(fallbackPlayer);
         }
@@ -895,17 +1025,33 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     private void frostCapture(AbstractPlayableSprite player, int capturedX, int capturedY,
-            int sourceX, int sourceSlot) {
+            int sourceX, int sourceSlot, boolean engineSidekickExtension) {
+        boolean flipped = player.getDirection() == Direction.LEFT;
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(player, capturedX, capturedY,
+                        sourceX, flipped, true);
+        if (engineSidekickExtension) {
+            // Preserve sub_8A9E0's native P1/P2 write-before-allocation order.
+            // Extra engine participants must first obtain a real SST slot or
+            // they would remain control-locked without a block to release them.
+            spawnFrostBlock(block, sourceSlot);
+            if (block.isDestroyed()) {
+                return;
+            }
+        }
+
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setAir(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         player.setAnimationId(0x1A);
-        boolean flipped = player.getDirection() == Direction.LEFT;
-        IczFreezerObjectInstance.FrozenPlayerBlock block =
-                new IczFreezerObjectInstance.FrozenPlayerBlock(player, capturedX, capturedY,
-                        sourceX, flipped, true);
+        if (!engineSidekickExtension) {
+            spawnFrostBlock(block, sourceSlot);
+        }
+    }
+
+    private void spawnFrostBlock(IczFreezerObjectInstance.FrozenPlayerBlock block, int sourceSlot) {
         if (services().objectManager() != null && sourceSlot >= 0) {
             services().objectManager().addDynamicObjectAfterSlot(block, sourceSlot);
         } else {
