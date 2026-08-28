@@ -4,6 +4,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Shared power-up spawning no longer names Sonic object classes:** the S3K
+  elemental shields and insta-shield and the Sonic 1 water splash are now
+  supplied by `GameModule` factories (`getShieldFactory`,
+  `getInstaShieldFactory`, `getWaterSplashFactory`), with the cross-game donor
+  provider contributing the S3K shields when an S1/S2 host borrows them. Five
+  frozen ArchUnit exceptions retired; behaviour unchanged.
+
 - **Runtime decompressors now live in `com.openggf.data.compression`:** the
   Kosinski, Nemesis, Enigma, Saxman, and DCM decoders (plus the resumable
   Kosinski decoder and its snapshot records) moved out of the CLI-oriented

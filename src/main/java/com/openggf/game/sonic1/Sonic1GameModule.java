@@ -323,6 +323,13 @@ public class Sonic1GameModule implements GameModule {
     }
 
     @Override
+    public java.util.function.BiFunction<Integer, Integer,
+            com.openggf.level.objects.AbstractObjectInstance> getWaterSplashFactory() {
+        // S1 LZ splash art from ObjectRenderManager (Object 0x08).
+        return com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance::new;
+    }
+
+    @Override
     public PhysicsProvider getPhysicsProvider() {
         if (physicsProvider == null) {
             physicsProvider = new Sonic1PhysicsProvider();
