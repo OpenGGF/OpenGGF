@@ -22,36 +22,44 @@ Entries should include:
 
 ## Game Over and Continue Flow Missing
 
-**Location:** `src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java`,
-`src/main/java/com/openggf/game/GameStateManager.java`, `src/main/java/com/openggf/GameLoop.java`
+**Location:** `src/main/java/com/openggf/GameLoop.java`,
+`src/main/java/com/openggf/level/objects/AbstractGameOverCardObjectInstance.java`,
+`src/main/java/com/openggf/game/sonic3k/objects/S3kGameOverCardObjectInstance.java`
 
 ### Symptom
 
-A death that produces a game over (the life subtraction reaches zero) or that follows a time over now stops the
-level, matching the ROM's `restartime = 0`, but nothing takes over from there. The ROMs load the GAME OVER /
-TIME OVER card object, play the game over music, queue the game over PLC, and then — after that object's own
-12-second wait or an A/B/C press — restart the level on a time over or enter the continue screen on a game over
-(`docs/s1disasm/_incObj/01 Sonic.asm:2019-2049`, `docs/s1disasm/_incObj/39 Game Over.asm:57-88`). OpenGGF has
-none of that, so the corpse is held off-screen indefinitely.
-
-This affects Sonic 1, Sonic 2, and Sonic 3&K; all three ROMs share the structure
-(`docs/s2disasm/s2.asm:38279-38316`, `docs/skdisasm/sonic3k.asm:24581-24616`). Continues are tracked in
-`GameStateManager`, but no gameplay flow consumes them.
+The GAME OVER / TIME OVER card now runs in all three games, but the screen the ROM enters after a game over with
+continues in hand — the continue screen (S1 `GM_Continue` `docs/s1disasm/sonic.asm:3449-3548`, S2 `ContinueScreen`
+`docs/s2disasm/s2.asm:10319-10420`, S3K `ContinueScreen` `docs/skdisasm/sonic3k.asm:122824`) — does not exist. The
+card's `GameMode_Continue` request is routed to the title screen, which is the ROM's own outcome when the continue
+countdown expires unused (`docs/s1disasm/sonic.asm:3525-3527`), minus the ten seconds in which Start would have
+consumed the continue and restarted the act with three lives (`Cont_GotoLevel`, `:3535-3543`). Continues are
+therefore counted and saved but never spent on S1/S2; S3K spends one when a slot with zero lives is reloaded from
+data select, as the ROM's slot load does (`docs/skdisasm/sonic3k.asm:16997-17012`).
 
 ### Current State
 
-The crossing-frame half is modelled: the life comes off on the frame the corpse falls past the death row, and the
-restart delay is armed with 60 frames only when the ROM would restart the level. What is missing is everything
-downstream of that decision — the card object, the music/PLC pair, the wait, the time-over restart, and the
-continue screen.
+Landed: the death routine's zero-life / time-over branch loads the two card objects at the ROM's fixed slots
+(`v_gameovertext1/2`, `GameOver_GameText/OverText`, `Reserved_object_3` + `Dynamic_object_RAM`), plays the game
+over music, queues the S1/S2 PLC and waits on it, slides the words in, waits 12 s (S1/S2) or 8 s (S3K) or A/B/C
+(S3K also Start; S2/S3K poll both controllers), then either restarts the level with the saved star-post time cleared
+(time over) or ends the level (game over). Zero-life gameplay is no longer pausable (`PauseGame` `Life_count` gate).
 
-Zero-life gameplay remains pausable, a deliberate release compromise made while the Game Over state was absent.
+Remaining gaps:
+
+- No continue screen in any game (above).
+- S3K `Obj_GameOver` holds on `tst.l (Nem_decomp_queue).w` until `Load_PLC_2 #3` has decompressed `ArtNem_GameOver`
+  (`docs/skdisasm/sonic3k.asm:62021-62023`). The engine has no per-frame S3K Nemesis drain (the same gap
+  `Sonic3kTitleCardManager` notes), so the S3K card starts sliding on its first frame rather than a few frames later.
+- S3K `loc_2D638` zeroes `Collision_response_list` on every wait frame (`:62065`); the engine's per-frame list is
+  rebuilt by later slots anyway and the clear is not modelled.
+- S1 `PlayLevel` also clears the emerald list and special-stage index when a game starts from the title
+  (`docs/s1disasm/sonic.asm:2278-2282`); only lives, continues and score are reset today.
 
 ### Removal Condition
 
-Remove this entry once a game over or time over branches into a ROM-appropriate GAME OVER / TIME OVER card and
-Continue flow for each supported game, a time over restarts the level from that flow rather than from
-`restartime`, and continues are consumed where applicable.
+Remove this entry once each game has a ROM-appropriate continue screen that consumes a continue and restarts the
+act, and the S3K art-queue hold above is modelled or its absence is recorded as an intentional discrepancy.
 
 ---
 

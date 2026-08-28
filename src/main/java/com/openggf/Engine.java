@@ -1259,6 +1259,15 @@ public class Engine {
 		}
 		int lives = readInt(payload, "lives", gameplayMode.getGameStateManager().getLives());
 		int continues = readInt(payload, "continues", gameplayMode.getGameStateManager().getContinues());
+		// S3K slot load (docs/skdisasm/sonic3k.asm:16997-17012): a slot whose
+		// saved lives are zero, or below three with no continues, restarts with
+		// three lives and spends a continue (clamped at zero). This is where a
+		// continue banked before a game over is consumed, since SaveGame_LivesContinues
+		// wrote the zero life count when the GAME OVER card appeared.
+		if (lives == 0 || (lives < 3 && continues == 0)) {
+			lives = 3;
+			continues = Math.max(0, continues - 1);
+		}
 		gameplayMode.getGameStateManager().restoreSaveProgress(
 				lives,
 				continues,

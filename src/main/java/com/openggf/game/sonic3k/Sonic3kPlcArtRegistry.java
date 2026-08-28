@@ -226,6 +226,19 @@ public final class Sonic3kPlcArtRegistry {
                     1,  // palette line 1 (ROM: make_art_tile(ArtTile_Player_1,1,0))
                     Sonic3kConstants.DPLC_SS_ENTRY_FLASH_ADDR
             ),
+            // Obj_GameOver: Load_PLC_2 #3 decompresses ArtNem_GameOver over the
+            // shield tiles when the death routine reaches zero lives; the engine keeps
+            // the sheet resident under its own key (mappings relative to ArtTile_Shield).
+            new StandaloneArtEntry(
+                    ObjectArtKeys.GAME_OVER,
+                    Sonic3kConstants.ART_NEM_GAME_OVER_ADDR,
+                    CompressionType.NEMESIS,
+                    0,
+                    Sonic3kConstants.MAP_GAME_OVER_ADDR,
+                    0,
+                    -1,
+                    Sonic3kConstants.MAP_GAME_OVER_FRAME_COUNT
+            ),
             new StandaloneArtEntry(
                     Sonic3kObjectArtKeys.BUBBLER,
                     Sonic3kConstants.ART_NEM_BUBBLES_ADDR,

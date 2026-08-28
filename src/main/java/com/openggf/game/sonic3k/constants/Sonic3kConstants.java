@@ -435,6 +435,19 @@ public class Sonic3kConstants {
     public static final int MAP_MONITOR_ADDR = 0x01DBA2; // Map_Monitor (12 frames, S&K side)
     public static final int MAP_EXPLOSION_ADDR = 0x01E758; // Map_Explosion (5 frames, S&K side)
     public static final int ART_NEM_BUBBLES_ADDR = 0x191B46;
+    // ArtNem_GameOver (General/Sprites/Game Over/GameOver.bin, 549 bytes; S&K half,
+    // docs/skdisasm/sonic3k.lst:313029; the S3 half copy is at 0x35E49A). Loaded by
+    // Load_PLC_2 #3 (PLC_03: plreq ArtTile_Shield, ArtNem_GameOver, sonic3k.asm:199633-199635).
+    public static final int ART_NEM_GAME_OVER_ADDR = 0x191DE4;
+    // Map_GameOver: GAME / OVER / TIME / OVER, tiles relative to ArtTile_Shield
+    // (docs/skdisasm/sonic3k.lst:76186-76191, General/Sprites/Game Over/Map - Game Over.asm).
+    public static final int MAP_GAME_OVER_ADDR = 0x02EDD0;
+    public static final int MAP_GAME_OVER_FRAME_COUNT = 4;
+    // Reserved_object_3 and the first Dynamic_object_RAM slot, the two slots the
+    // dead player's routine writes Obj_GameOver into (docs/skdisasm/sonic3k.asm:24596-24597;
+    // Object_RAM layout sonic3k.constants.asm:303-323).
+    public static final int SST_SLOT_GAME_OVER_WORD = 2;
+    public static final int SST_SLOT_GAME_OVER_OVER = 3;
     public static final int MAP_BUBBLER_ADDR = 0x02FCB2; // Map_Bubbler (23 frames, S&K side)
     // ArtUnc_AirCountdown (S&K side): the drowning countdown digits, 60 tiles.
     // Obj_AirCountdown DMAs six tiles per mapping frame $09-$12 into
