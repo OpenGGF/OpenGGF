@@ -17,7 +17,8 @@ readable and historical versions can be referenced directly.
 ## 0.6 release documentation
 
 - [Release Summary](docs/changelog/v0.6-release-summary.md) — polished copy for
-  the website and GitHub release page.
+  the website and GitHub release page, including the measured validation status
+  and known limitations. `RELEASE_NOTES_v0.6.prerelease.md` is a pointer to it.
 - [Detailed 0.6 development ledger](docs/changelog/v0.6-prerelease-detailed.md) —
   engineering notes and trace-frontier history.
 - [Trace frontier log](docs/status/trace-frontier-log.md) — current replay
@@ -25,4 +26,6 @@ readable and historical versions can be referenced directly.
 
 The 0.6 snapshot is not yet a final release: human end-to-end gameplay and
 audio QA remain outstanding, and the release summary records the remaining
-automated limitations.
+automated limitations. Trace replay is held to the no-regression policy in
+[docs/status/trace-scope-release-6.md](docs/status/trace-scope-release-6.md)
+rather than a hard all-green gate.

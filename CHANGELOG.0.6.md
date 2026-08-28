@@ -2,7 +2,17 @@
 
 This file contains the complete 0.6 development snapshot history carried forward from the project changelog. It is intentionally detailed; the public-facing overview is in [README.md](README.md), and the website/GitHub release copy is in [docs/changelog/v0.6-release-summary.md](docs/changelog/v0.6-release-summary.md).
 
-## 0.6 development history
+> **How this file is organised.** The 0.6 cycle accumulated three overlapping
+> ledgers that were never merged, so entries are not in one chronological
+> order. Read them as: **0.6 development history** (below) — the current
+> newest-first ledger, mid-July 2026 through the present; **Unreleased** — the
+> earlier `Fix(...)`-style ledger covering roughly June to mid-July 2026; and
+> **v0.6.prerelease (Current development snapshot)** — the original prerelease
+> ledger from the 0.5 release in April 2026 through June. Where a later entry
+> reverses an earlier one, the earlier entry is marked *Superseded* inline
+> rather than deleted.
+
+## 0.6 development history (mid-July 2026 – present, newest first)
 
 - **The release structural checks are green again:** object priority rendering
   now reuses one palette-mask transition path, preserving the AIZ2 bridge
@@ -43,7 +53,9 @@ This file contains the complete 0.6 development snapshot history carried forward
   codec options now include DNxHR SQ video and lossless 24-bit PCM audio for
   use together in a QuickTime MOV container.
 
-- **Test sessions now preserve headroom by default:** managed allocation fails closed,
+- *Superseded (see "Builds and tests are back on direct Maven" above): the
+  test-session coordinator this entry describes was removed.*
+  **Test sessions now preserve headroom by default:** managed allocation fails closed,
   launch/completion capacity is gated, reproducible terminal trees are compacted, and
   the live `maven.log` is atomically published as `maven.log.gz` after completion.
   Compression failure retains the original log and cannot turn a failed child green.
@@ -123,7 +135,10 @@ This file contains the complete 0.6 development snapshot history carried forward
   is full. Special-stage debug movement now uses Shift for double speed and
   Control for half speed, with those inputs preserved across rewind snapshots.
 
-- **Normal local launchers retain their package-and-launch workflow:** `run.sh`,
+- *Superseded in part: the "session-wrapped" certifying path was removed with
+  the test-session coordinator; builds, tests, guards, and trace evidence now
+  use direct Maven in the worktree.*
+  **Normal local launchers retain their package-and-launch workflow:** `run.sh`,
   `run.cmd`, `dev.sh`, and `dev.cmd` explicitly select the non-certifying
   runtime path, so the distributable remains in `target/` while certifying
   builds, tests, and trace evidence remain session-wrapped.
@@ -147,19 +162,25 @@ This file contains the complete 0.6 development snapshot history carried forward
   timer expires. The transition no longer starts AIZ1 music eagerly, so the
   visual fire outro and trace-synchronised progression remain intact.
 
-- **CI and release jobs consume session manifests:** Maven test and packaging
+- *Superseded: the coordinator and session manifests were removed; CI and
+  release jobs use static target-local report and artifact paths.*
+  **CI and release jobs consume session manifests:** Maven test and packaging
   jobs now run through the test-session coordinator, while coverage checks and
   platform packaging resolve their report, build, artifact, and distribution
   roots from the completed session. Native libraries are included in the
   manifest inventory alongside executables and JARs.
 
-- **Test sessions isolate LWJGL native extraction per fork:** generated test
+- *Superseded in part: session ownership was removed; the per-fork LWJGL
+  extraction directory survives below the worktree's `target/test-tmp`.*
+  **Test sessions isolate LWJGL native extraction per fork:** generated test
   outputs and temporary files remain session-owned, while every Surefire fork
   now gets its own LWJGL extraction directory so concurrent suites cannot
   replace one another's native libraries and turn the run into a false mass
   failure.
 
-- **Trace reports are isolated per test session and invocation:** replay
+- *Superseded: coordinator-owned report roots were removed; repeated trace
+  runs atomically replace stale reports in the worktree's `target/` tree.*
+  **Trace reports are isolated per test session and invocation:** replay
   diagnostics now publish into coordinator-owned roots with collision-resistant
   owner metadata, so parallel suites cannot overwrite one another's evidence;
   triage follows the same session report root while explicit report directories
@@ -1413,8 +1434,12 @@ This file contains the complete 0.6 development snapshot history carried forward
   (`:31`) is unchanged.
 - **The solid push-release tail is ported, and an object's pushing bit no longer
   outlives the object.** All three games write the Walk/Run animation word from the
-  solid tail gated on the OBJECT's per-player pushing bit, never on the player's own
-  `Status_Push` which the same tails clear one instruction later: S1
+  solid tail gated on the OBJECT's per-player pushing bit rather than requiring the
+  player's own `Status_Push` as an extra precondition (the same tails clear that
+  flag one instruction later). The engine still reads the player's pushing state
+  in this path (`ObjectSolidContactController` `currentPushingState` and the
+  multi-piece riding-push preservation) to model the ROM's `Status_Push` clear and
+  ride-preservation, not to gate the release: S1
   `Solid_NoCollision` (`docs/s1disasm/_incObj/sub SolidObject.asm:253-263`) exempts
   nothing on the shipped `FixBugs = 0` path, S2 `SolidObject_TestClearPush`
   (`docs/s2disasm/s2.asm:35462-35486`) exempts Roll only because its Spindash, Death
@@ -2484,7 +2509,7 @@ This file contains the complete 0.6 development snapshot history carried forward
 - Trace reports assert on both builders that their per-group error counts account for the
   published total, reading the published values rather than recomputing them.
 
-## Unreleased
+## Unreleased (roughly June – mid-July 2026)
 - Fix(test/runtime): gameplay playback suppression is classified before generic
   frame timers, mocked special-stage providers receive the normal PLC lifecycle
   fallback, and suppressed trace rows advance VBlank-only event state after
@@ -7881,7 +7906,7 @@ This file contains the complete 0.6 development snapshot history carried forward
 - **S3K AIZ rewind scalar cleanup:** AIZ bridge, floor, falling-log, flipping-bridge, and bomb-explosion constructor scalars now compact-restore without stale coverage-baseline keys.
 - **S2 launcher rewind cleanup:** Speed Launcher and Small Metal Platform child constructor scalars now compact-restore without stale final-scalar coverage-baseline keys.
 
-### v0.6.prerelease (Current development snapshot)
+### v0.6.prerelease (Current development snapshot — April – June 2026 ledger)
 
 The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability. Detailed per-frontier notes were moved out of this top-level changelog so it stays readable; see [docs/status/trace-frontier-log.md](docs/status/trace-frontier-log.md) for frame-by-frame trace evidence and [docs/changelog/v0.6-prerelease-detailed.md](docs/changelog/v0.6-prerelease-detailed.md) for the previous verbose merge ledger.
 

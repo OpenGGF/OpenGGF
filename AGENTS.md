@@ -10,8 +10,9 @@ preservation of classic Mega Drive / Genesis platform games — the mainline Son
 Hedgehog series. It is not affiliated with, sponsored by, approved by, or endorsed by Sega.
 It reimplements the original hardware's physics and rendering using data loaded from
 user-supplied ROM images (Sonic 1, 2, and 3&K). No copyrighted assets live in this repo.
-Alongside faithful emulation of behaviour it aims to provide modern tooling: an in-engine
-level editor and an open framework for modding.
+Alongside faithful emulation of behaviour it aspires to provide modern tooling — an in-engine
+level editor and an open framework for modding — but neither exists yet beyond an
+experimental editor overlay; do not describe them as shipped features.
 
 **Accuracy is the point.** The engine must replicate original physics pixel-for-pixel.
 The disassembly is the source of truth — verify against it rather than tuning values until
@@ -84,8 +85,12 @@ that's actually there. Identify the game from the filename and verify the hash w
 matters. Do not assume a fixed filename, and do not rename, copy, delete, or symlink a ROM
 just to satisfy an example command. For ROM-backed tests, pass the discovered path through
 that game's property — note S3K's is **not** `sonic3k.rom.path`. A sweep that touches all
-three games needs all three; ROM-backed classes error out (they do not skip) when their
-ROM is missing.
+three games needs all three. When a ROM is missing, `@RequiresRom` classes are **disabled
+silently** (`RequiresRomCondition` reports them as skipped, not failed); only the audio
+`*CompleteRunStateDecoder` classes throw. So a green run with a wrong path proves nothing —
+**pass absolute ROM paths**, especially from a worktree, because a relative path like
+`s3k.gen` resolves against the worktree and quietly skips every ROM-gated class. Check the
+skip count against the expected total before trusting a result.
 
 | ROM | Test property | CRC32 | SHA-1 |
 |---|---|---|---|

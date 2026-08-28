@@ -1,32 +1,13 @@
-OpenGGF `0.6.prerelease` is an alpha snapshot focused on release hardening, runtime ownership,
-trace replay visibility, and the playable Sonic 3 & Knuckles vertical slice. The engine remains a
-ROM-backed preservation project: no copyrighted assets are included, and users must provide their
-own supported Sonic 1, Sonic 2, and Sonic 3 & Knuckles ROMs.
+# OpenGGF 0.6 prerelease notes
 
-- **S3K vertical-slice progress:** S3K continues to expand beyond Angel Island into Hydrocity,
-  Carnival Night, Mushroom Hill, Marble Garden, and IceCap coverage. The current priority remains
-  AIZ -> HCZ route blockers first, then CNZ/MGZ/ICZ traversal, events, palette, animated tile,
-  object, and boss parity.
-- **Runtime-owned zone frameworks:** shared registries now carry more zone behavior through
-  `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`,
-  `ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and
-  `AdvancedRenderModeController`. New zone work should prefer these runtime-owned surfaces over
-  zone-local state and direct manager writes.
-- **Data select and save system:** S3K data select includes save slots, team selection, host-owned
-  progress, and cross-game donation for S1/S2. Save writes are now published through a temp-file
-  plus atomic move path to reduce the chance of corrupting a user slot on interruption.
-- **Configuration:** runtime configuration lives in `config.yaml`. A legacy `config.json` is
-  automatically migrated to YAML on first run, and current user-facing docs now point at the nested
-  YAML keys.
-- **Release hardening:** `@RequiresRom` is inherited by abstract trace bases, release CI runs the
-  trace-replay profile and asserts that at least one ROM-backed trace test executed, and publishing
-  the GitHub release is a manual `workflow_dispatch` action while the prerelease version tag is
-  static.
-- **Known release risks:** the architecture review tracker in
-  `docs/architecture/audits/release-architecture-review-issues.md` records remaining parity/framework issues. S3K AIZ
-  trace replay is a hard publish gate for this prerelease line; the June 9 follow-up fixes resolve
-  the known AIZ mismatch through ROM-visible object and sidekick state, and any remaining parity or
-  framework risks should be recorded as explicit deferrals before publishing.
+The release copy for `0.6.prerelease` lives in
+[docs/changelog/v0.6-release-summary.md](docs/changelog/v0.6-release-summary.md).
+It carries the highlights, the measured validation status (stamped with the
+commit and date it was taken), the known limitations, and the trace
+no-regression policy that replaced the earlier hard AIZ publish gate on
+2026-08-26 (`docs/status/trace-scope-release-6.md`).
 
-See `CHANGELOG.md` for the running list of branch-level changes and
-`docs/status/trace-frontier-log.md` for trace frontier movement.
+This file is kept only as a stable entry point; do not add release prose here.
+See [CHANGELOG.md](CHANGELOG.md) for the release index, [CHANGELOG.0.6.md](CHANGELOG.0.6.md)
+for the full 0.6 ledger, and [docs/status/trace-frontier-log.md](docs/status/trace-frontier-log.md)
+for trace frontier movement.
