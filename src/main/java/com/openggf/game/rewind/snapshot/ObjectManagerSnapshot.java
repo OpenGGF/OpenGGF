@@ -240,8 +240,21 @@ public record ObjectManagerSnapshot(
              * captured here so the restore path can register it in the identity table after
              * the object is reconstructed. {@code null} for legacy snapshot entries.
              */
-            ObjectRefId objectId
+            ObjectRefId objectId,
+            boolean rewindableAuxiliary
     ) {
+        /** Backward-compatible constructor from before auxiliary classification was captured. */
+        public DynamicObjectEntry(
+                String className,
+                ObjectSpawn spawn,
+                int slotIndex,
+                PerObjectRewindSnapshot state,
+                PlayableEntity playerOwner,
+                ObjectRefId objectId
+        ) {
+            this(className, spawn, slotIndex, state, playerOwner, objectId, false);
+        }
+
         /** Backward-compatible constructor that includes playerOwner but not objectId. */
         public DynamicObjectEntry(
                 String className,
@@ -250,7 +263,7 @@ public record ObjectManagerSnapshot(
                 PerObjectRewindSnapshot state,
                 PlayableEntity playerOwner
         ) {
-            this(className, spawn, slotIndex, state, playerOwner, null);
+            this(className, spawn, slotIndex, state, playerOwner, null, false);
         }
 
         /** Backward-compatible 4-arg constructor (no playerOwner, no objectId). */
@@ -260,7 +273,7 @@ public record ObjectManagerSnapshot(
                 int slotIndex,
                 PerObjectRewindSnapshot state
         ) {
-            this(className, spawn, slotIndex, state, null, null);
+            this(className, spawn, slotIndex, state, null, null, false);
         }
     }
 

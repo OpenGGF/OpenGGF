@@ -48,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -272,12 +273,14 @@ class TestS3kIczFreezerObject {
         assertTrue(main.isObjectControlled());
         assertTrue(nativeP2.isObjectControlled());
         assertTrue(extension.isObjectControlled());
-        verify(manager, times(3)).addDynamicObjectAfterCurrentNextFrame(
+        verify(manager, times(2)).addDynamicObjectAfterCurrentNextFrame(
+                org.mockito.ArgumentMatchers.any(IczFreezerObjectInstance.FrozenPlayerBlock.class));
+        verify(manager).addRewindableAuxiliaryDynamicObject(
                 org.mockito.ArgumentMatchers.any(IczFreezerObjectInstance.FrozenPlayerBlock.class));
     }
 
     @Test
-    void captureCloudDoesNotControlLockExtendedSidekickWhenBlockAllocationFails() {
+    void captureCloudFreezesExtendedSidekickWithoutNativeObjectSlot() {
         ObjectManager manager = mock(ObjectManager.class);
         org.mockito.Mockito.doAnswer(invocation -> {
             ((AbstractObjectInstance) invocation.getArgument(0)).setDestroyed(true);
@@ -304,8 +307,9 @@ class TestS3kIczFreezerObject {
         cloud.update(0, main);
         cloud.update(1, main);
 
-        assertFalse(extension.isObjectControlled(),
-                "an engine-extension capture must not strand its player when no SST slot exists");
+        assertTrue(extension.isObjectControlled());
+        verify(manager).addRewindableAuxiliaryDynamicObject(
+                org.mockito.ArgumentMatchers.any(IczFreezerObjectInstance.FrozenPlayerBlock.class));
     }
 
     @Test
@@ -463,6 +467,38 @@ class TestS3kIczFreezerObject {
         assertTrue(block.isDestroyed());
         assertEquals((short) -0x03E0, extension.getYSpeed());
         assertFalse(sonic.isObjectControlled());
+    }
+
+    @Test
+    void extendedCaptiveShatterKeepsDebrisOutOfNativeObjectPool() {
+        installLevelGamestate();
+
+        ObjectManager manager = mock(ObjectManager.class);
+        RecordingServices services = new RecordingServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        };
+        TestablePlayableSprite attacker =
+                new TestablePlayableSprite("sonic", (short) 0x43A6, (short) 0x069C);
+        attacker.setAnimationId(2);
+        attacker.setYSpeed((short) 0x03E0);
+        TestablePlayableSprite captive =
+                new TestablePlayableSprite("sonic_p3", (short) 0x43B0, (short) 0x06B3);
+        captive.setCpuControlled(true);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> attacker, () -> List.of(captive)));
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(
+                        captive, 0x43B0, 0x06B3, 0x4360, false, false, true);
+        block.setServices(services);
+
+        block.update(23822, attacker);
+
+        assertTrue(block.isDestroyed());
+        verify(manager, times(12)).addRewindableAuxiliaryDynamicObject(any());
+        verify(manager, org.mockito.Mockito.never()).addDynamicObjectAfterCurrent(any());
+        verify(manager, org.mockito.Mockito.never()).addDynamicObjectAfterCurrentNextFrame(any());
     }
 
     @Test

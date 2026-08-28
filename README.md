@@ -265,7 +265,8 @@ traces.
   native resize event.
 - **ICZ multi-sidekick freezer support:** boss frost puffs and placed freezer
   clouds preserve native Player 1/Player 2 ordering while freezing every
-  additional configured sidekick into a rescuable ice block.
+  additional configured sidekick into a rescuable ice block, even when the
+  native object pool is full.
 - **Audio and video hardware modeling:** YM2612 FM, PSG, DAC/PCM, SMPS
   sequencing, priority rendering, tilemaps, shaders, sprite batching, and staged
   art loading have received substantial accuracy and stability work. Audio

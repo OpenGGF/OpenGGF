@@ -16,7 +16,9 @@ import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
 import com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance;
+import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,9 +27,12 @@ import java.util.ArrayList;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestObjectManagerRewindDynamicClassification {
 
@@ -73,6 +78,80 @@ class TestObjectManagerRewindDynamicClassification {
         assertEquals(7, restored.phase);
         assertEquals(0x120, restored.getX());
         assertEquals(0x1A0, restored.getY());
+    }
+
+    @Test
+    void rewindPreservesExplicitAuxiliaryClassificationForSlotlessDynamics() {
+        GenericRewindEligibility.registerForTestOrMigration(TestDynamicObject.class);
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
+        TestDynamicObject auxiliary = new TestDynamicObject(
+                new ObjectSpawn(0x100, 0x180, 0x01, 0, 0, false, 0));
+        manager.addRewindableAuxiliaryDynamicObject(auxiliary);
+
+        ObjectManagerSnapshot snapshot = manager.rewindSnapshottable().capture();
+        assertTrue(snapshot.dynamicObjects().getFirst().rewindableAuxiliary());
+
+        manager.rewindSnapshottable().restore(snapshot);
+
+        ObjectManagerSnapshot restored = manager.rewindSnapshottable().capture();
+        assertTrue(restored.dynamicObjects().getFirst().rewindableAuxiliary());
+    }
+
+    @Test
+    void rewindDoesNotReclassifyLogicalSlotlessDynamicAsAuxiliary() {
+        GenericRewindEligibility.registerForTestOrMigration(TestDynamicObject.class);
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
+        manager.spawnLogicalLostRingOverflow(new TestDynamicObject(
+                new ObjectSpawn(0x100, 0x180, 0x01, 0, 0, false, 0)));
+
+        ObjectManagerSnapshot snapshot = manager.rewindSnapshottable().capture();
+        assertFalse(snapshot.dynamicObjects().getFirst().rewindableAuxiliary());
+
+        manager.rewindSnapshottable().restore(snapshot);
+
+        ObjectManagerSnapshot restored = manager.rewindSnapshottable().capture();
+        assertFalse(restored.dynamicObjects().getFirst().rewindableAuxiliary());
+    }
+
+    @Test
+    void destroyedAuxiliaryIsRemovedFromClassificationSet() {
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
+        TestDynamicObject auxiliary = new TestDynamicObject(
+                new ObjectSpawn(0x100, 0x180, 0x01, 0, 0, false, 0));
+        manager.addRewindableAuxiliaryDynamicObject(auxiliary);
+        auxiliary.setDestroyed(true);
+
+        manager.cleanupDestroyedDynamicObjects();
+
+        assertTrue(manager.getActiveObjects().isEmpty());
+        assertTrue(manager.rewindSnapshottable().capture().dynamicObjects().isEmpty());
+    }
+
+    @Test
+    void auxiliaryHonorsNextFrameSpawnContract() {
+        ObjectManager[] holder = new ObjectManager[1];
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        ObjectManager manager = new ObjectManager(
+                List.of(), null, 0, null, null, GraphicsManager.getInstance(), camera, services);
+        holder[0] = manager;
+        DeferredAuxiliarySpawner spawner = new DeferredAuxiliarySpawner(manager);
+        manager.addDynamicObject(spawner);
+
+        manager.update(0, null, List.of(), 1, false);
+        assertEquals(0, spawner.child.updates);
+
+        manager.update(0, null, List.of(), 2, false);
+        assertEquals(1, spawner.child.updates);
     }
 
     @Test
@@ -324,6 +403,50 @@ class TestObjectManagerRewindDynamicClassification {
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             // no-op
+        }
+    }
+
+    private static final class DeferredAuxiliarySpawner extends AbstractObjectInstance {
+        private final ObjectManager manager;
+        private DeferredAuxiliaryChild child;
+
+        private DeferredAuxiliarySpawner(ObjectManager manager) {
+            super(new ObjectSpawn(0x100, 0x180, 0x01, 0, 0, false, 0), "AuxiliarySpawner");
+            this.manager = manager;
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (child == null) {
+                child = new DeferredAuxiliaryChild();
+                manager.addRewindableAuxiliaryDynamicObject(child);
+            }
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static final class DeferredAuxiliaryChild extends AbstractObjectInstance {
+        private int updates;
+
+        private DeferredAuxiliaryChild() {
+            super(new ObjectSpawn(0x100, 0x180, 0x02, 0, 0, false, 0), "AuxiliaryChild");
+        }
+
+        @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            return true;
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            updates++;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
         }
     }
 
