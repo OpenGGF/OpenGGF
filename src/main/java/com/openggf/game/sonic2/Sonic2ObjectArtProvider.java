@@ -203,6 +203,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         // === Boss art (zone-conditional, Phase 3 would use boss PLCs) ===
         loadBossArt(zoneIndex);
 
+        // === GAME OVER / TIME OVER card (Obj39) ===
+        registerSheet(ObjectArtKeys.GAME_OVER, artLoader.loadGameOverSheet());
+
         // === Results screen (separate namespace) ===
         resultsSheet = artData.resultsSheet();
         resultsRenderer = new PatternSpriteRenderer(resultsSheet);

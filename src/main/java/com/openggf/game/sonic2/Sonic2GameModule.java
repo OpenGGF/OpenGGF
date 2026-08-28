@@ -4,6 +4,7 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectConstants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -195,6 +196,13 @@ public class Sonic2GameModule implements GameModule {
     @Override
     public TitleCardProvider getTitleCardProvider() {
         return titleCardProvider;
+    }
+
+    private final GameOverFlowProvider gameOverFlowProvider = new Sonic2GameOverFlowProvider();
+
+    @Override
+    public GameOverFlowProvider getGameOverFlowProvider() {
+        return gameOverFlowProvider;
     }
 
     @Override
