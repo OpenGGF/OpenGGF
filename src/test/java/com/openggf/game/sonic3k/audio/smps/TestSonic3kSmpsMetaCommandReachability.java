@@ -5,7 +5,7 @@ import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsConstants;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;

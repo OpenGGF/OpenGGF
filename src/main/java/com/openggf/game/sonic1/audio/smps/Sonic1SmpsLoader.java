@@ -9,8 +9,8 @@ import com.openggf.audio.smps.AbstractSmpsLoader;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.Sonic1SmpsData;
 import com.openggf.data.Rom;
-import com.openggf.tools.DcmDecoder;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.DcmDecoder;
+import com.openggf.data.compression.KosinskiReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

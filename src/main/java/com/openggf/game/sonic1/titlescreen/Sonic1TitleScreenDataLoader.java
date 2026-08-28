@@ -14,8 +14,8 @@ import com.openggf.level.LevelConstants;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
-import com.openggf.tools.EnigmaReader;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.EnigmaReader;
+import com.openggf.data.compression.KosinskiReader;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.ByteArrayInputStream;

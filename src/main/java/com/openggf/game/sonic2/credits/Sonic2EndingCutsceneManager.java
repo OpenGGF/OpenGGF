@@ -19,7 +19,7 @@ import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
-import com.openggf.tools.EnigmaReader;
+import com.openggf.data.compression.EnigmaReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

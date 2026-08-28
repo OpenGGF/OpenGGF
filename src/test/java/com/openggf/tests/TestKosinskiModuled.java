@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import com.openggf.data.Rom;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 
 import java.io.File;
 

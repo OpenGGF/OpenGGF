@@ -1,4 +1,4 @@
-package com.openggf.tools;
+package com.openggf.data.compression;
 
 public class DcmDecoder {
     private static final int[] DELTA_TABLE = {

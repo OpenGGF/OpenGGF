@@ -9,9 +9,9 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.PlcParser.PlcEntry;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
-import com.openggf.tools.EnigmaReader;
-import com.openggf.tools.KosinskiReader;
-import com.openggf.tools.NemesisReader;
+import com.openggf.data.compression.EnigmaReader;
+import com.openggf.data.compression.KosinskiReader;
+import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;

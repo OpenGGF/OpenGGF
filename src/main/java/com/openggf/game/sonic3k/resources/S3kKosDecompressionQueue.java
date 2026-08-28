@@ -12,8 +12,8 @@ import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
 import com.openggf.game.timing.HardwareWorkSubmission;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.resources.QueueServiceObservation;
-import com.openggf.tools.KosinskiReader;
-import com.openggf.tools.ResumableKosinskiDecoder;
+import com.openggf.data.compression.KosinskiReader;
+import com.openggf.data.compression.ResumableKosinskiDecoder;
 
 import java.io.IOException;
 import java.util.ArrayDeque;

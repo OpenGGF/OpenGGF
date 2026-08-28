@@ -9,7 +9,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
-import com.openggf.tools.EnigmaReader;
+import com.openggf.data.compression.EnigmaReader;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.ByteArrayInputStream;

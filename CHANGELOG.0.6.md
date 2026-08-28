@@ -4,6 +4,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Runtime decompressors now live in `com.openggf.data.compression`:** the
+  Kosinski, Nemesis, Enigma, Saxman, and DCM decoders (plus the resumable
+  Kosinski decoder and its snapshot records) moved out of the CLI-oriented
+  `com.openggf.tools` package so the ROM-loading pipeline no longer depends on
+  the tooling package for pure data decoding. No behaviour changed.
+
 - **The release structural checks are green again:** object priority rendering
   now reuses one palette-mask transition path, preserving the AIZ2 bridge
   layering fix while keeping rendering responsibility out of the already-large

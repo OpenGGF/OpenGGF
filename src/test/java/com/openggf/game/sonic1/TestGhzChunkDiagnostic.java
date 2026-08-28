@@ -5,8 +5,8 @@ import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import com.openggf.tools.EnigmaReader;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.EnigmaReader;
+import com.openggf.data.compression.KosinskiReader;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;

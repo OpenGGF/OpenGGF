@@ -19,7 +19,7 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.Sonic;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 

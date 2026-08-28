@@ -8,7 +8,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
 import com.openggf.level.animation.AnimatedPatternManager;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

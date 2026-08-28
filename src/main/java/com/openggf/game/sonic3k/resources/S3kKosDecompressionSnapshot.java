@@ -2,8 +2,8 @@ package com.openggf.game.sonic3k.resources;
 
 import com.openggf.game.timing.HardwareWorkPreparation;
 import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
-import com.openggf.tools.DecoderSnapshot;
-import com.openggf.tools.ResumableKosinskiDecoder;
+import com.openggf.data.compression.DecoderSnapshot;
+import com.openggf.data.compression.ResumableKosinskiDecoder;
 
 import java.util.Objects;
 

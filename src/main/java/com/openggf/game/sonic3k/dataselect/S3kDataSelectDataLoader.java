@@ -6,9 +6,9 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpriteMappingFrame;
-import com.openggf.tools.EnigmaReader;
-import com.openggf.tools.KosinskiReader;
-import com.openggf.tools.NemesisReader;
+import com.openggf.data.compression.EnigmaReader;
+import com.openggf.data.compression.KosinskiReader;
+import com.openggf.data.compression.NemesisReader;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.ByteArrayInputStream;

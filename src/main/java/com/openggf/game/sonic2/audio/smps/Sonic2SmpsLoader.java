@@ -8,8 +8,8 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.AbstractSmpsLoader;
 import com.openggf.audio.smps.DacData;
 import com.openggf.data.Rom;
-import com.openggf.tools.DcmDecoder;
-import com.openggf.tools.SaxmanDecompressor;
+import com.openggf.data.compression.DcmDecoder;
+import com.openggf.data.compression.SaxmanDecompressor;
 
 import java.io.IOException;
 import java.util.HashMap;
