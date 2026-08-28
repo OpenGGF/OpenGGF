@@ -240,6 +240,9 @@ traces.
 - **Sonic 2 water-palette alignment:** sprite-priority shaders now resolve
   logical scanlines after removing viewport letterboxing, keeping characters,
   objects, terrain, and backgrounds aligned at dynamic waterlines such as CPZ2.
+- **Stable object-priority layering:** priority buckets now share one
+  palette-mask transition path, preserving slot draw order and water/bridge
+  occlusion while keeping the rendering facade within its structural budget.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
