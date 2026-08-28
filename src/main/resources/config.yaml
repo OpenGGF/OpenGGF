@@ -185,7 +185,6 @@ debug:
   flags:
     debugView: false   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
     editor: false   # Allow entering the level editor from gameplay
-    collisionView: false   # Draw the collision overlay
   keys:
     test: T   # Debug-only test button
     nextAct: PAGE_UP   # Advance to the next act

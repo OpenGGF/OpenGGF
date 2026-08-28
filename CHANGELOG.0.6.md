@@ -4,6 +4,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Dead code removed:** the unreferenced `Sonic3kSpecialStageScalars`,
+  `CNZBossAnimations`, `DebugPrimitiveRenderer`, and `DebugColorShaderProgram`
+  classes are gone, along with the never-read
+  `DEBUG_COLLISION_VIEW_ENABLED` (`debug.flags.collisionView`) config key. An
+  existing `config.yaml` that still lists `collisionView` loads unchanged; the
+  key is simply reported as unknown.
+
 - **Shared power-up spawning no longer names Sonic object classes:** the S3K
   elemental shields and insta-shield and the Sonic 1 water splash are now
   supplied by `GameModule` factories (`getShieldFactory`,
