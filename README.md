@@ -14,7 +14,8 @@ disassemblies of titles in the Sonic the Hedgehog series. No copyrighted assets 
 this repository; a legally obtained ROM is required to run the engine.
 
 The engine also aims to provide modern tooling such as a level editor and an open framework for
-modding and customisation.
+modding and customisation. Neither is delivered yet: the editor is an experimental, config-gated
+prototype and the modding framework is planned but not implemented.
 
 > **Disclaimer:** OpenGGF is a community-made fan project. It is not affiliated with, sponsored by,
 > approved by, or endorsed by Sega. Sonic the Hedgehog and all related characters, names, and
@@ -121,8 +122,8 @@ sound driver.
 
 | Game | Status |
 |------|--------|
-| Sonic the Hedgehog (S1) | Most complete. Includes all zones, bosses, special stages, title screen, ending, and credits. |
-| Sonic the Hedgehog 2 (S2) | Broadly playable. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
+| Sonic the Hedgehog (S1) | Broadest end-to-end coverage: all zones, bosses, special stages, title screen, ending, credits, and demo playback. |
+| Sonic the Hedgehog 2 (S2) | Most complete module by object coverage (122/122 checklist objects) and trace parity. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
 | Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, but this is not full parity: the AIZ miniboss napalm FallingShot and AIZ2 end-boss splash children now have native implementations with route/trace validation still outstanding, while Knuckles' LBZ Big Arm handoff remains inert. |
 
 Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
@@ -198,7 +199,7 @@ object and boss implementation, debugging, validation, and unit tests; all with 
 against the original ROM disassemblies. Every commit is reviewed, tested, and corrected where
 needed.
 
-[You can't prompt your way to ROM accuracy (yet!)](docs/AI_JOURNEY.md). But we certainly prompted our way through object
+[You can't prompt your way to ROM accuracy (yet!)](docs/project/ai-journey.md). But we certainly prompted our way through object
 implementations, research and boilerplate code a lot faster than would have been possible by hand.
 
 For the visual version of that story, the [Development Timeline](docs/project/development-timeline.md) is a
@@ -291,10 +292,12 @@ traces.
   replay, visual/audio regression checks, and release/architecture guards.
   Maven runs directly in each worktree and keeps build, report, diagnostic,
   temporary, and per-Surefire-fork LWJGL output below that worktree's `target/`
-  tree. The completed JDK 21 ordinary-suite repair takes the current `develop`
-  control from 30 failures and 3 errors to all 14,868 tests passing (36
-  skipped), while preserving the recorded six-failure trace frontier and every
-  previously passing test identity.
+  tree. Measured at `develop` `2e06eb403` on 2026-08-28 with JDK 21 and
+  absolute ROM paths: ordinary suite 14,868 tests, 1 failure, 1 error, 18
+  skipped (`TestS3kCnzVisualCapture` and the order-dependent
+  `TestMhzMushroomParachuteObjectInstance`, both under repair); `-Pguards`
+  547 tests, all passing; `-Ptrace-replay` 870 tests with the six known-red
+  frontier failures, 0 errors, 7 skipped.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
   and worktree-local direct-Maven procedures.
@@ -306,11 +309,19 @@ traces.
 
 0.6 is not a final release yet. Automated build, test, guard, and trace
 no-regression gates remain active, and human end-to-end gameplay and audio QA
-are still required before release sign-off. Known-red Sonic 2 CPZ/WFZ and
+are still required before release sign-off. Known-red Sonic 2 CPZ2 and
 Sonic 3 & Knuckles trace/run-chain frontiers are documented 0.6 limitations;
 finishing those parity campaigns is deferred to the next release. A frontier
 still returns to the 0.6 fix queue when it exposes a confirmed release-impacting
 gameplay defect.
+
+Known limitations: the Game Over / Continue flow is missing in all three games
+(`docs/status/known-bugs.md`), there is no modding framework, the level editor
+is a dormant prototype, and the SMPS audio parity programme is deferred to 0.7.
+Release documentation was reconciled with these facts on 2026-08-28: the
+release summary now carries the commit-stamped validation numbers, the guard
+and trace policy statements match `docs/status/trace-scope-release-6.md`, and
+`RELEASE_NOTES_v0.6.prerelease.md` is a pointer to the summary.
 
 The current S3K release priority is the AIZ → HCZ playable route. Knuckles
 routes, later-zone completeness, and some bonus/special-stage paths remain
