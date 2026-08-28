@@ -1,10 +1,10 @@
 #!/bin/bash
-# post-checkout hook: auto-link ROMs, config, and disassemblies in git worktrees
+# post-checkout hook: auto-link machine-local resources in git worktrees
 #
 # When `git worktree add` creates a new worktree, gitignored files (ROMs,
-# config.yaml) and submodule directories (disassemblies) are missing. This hook
-# detects worktree context and creates symlinks back to the main
-# working tree so everything just works.
+# config.yaml, and optional local disassemblies) are missing. This hook detects
+# worktree context and creates symlinks back to the main working tree. Tracked
+# submodule gitlinks are left alone for `git submodule update --init`.
 #
 # Works on macOS (native bash) and Windows (Git Bash with Developer Mode).
 #
@@ -157,6 +157,10 @@ link_dir() {
     ln -s "$relative_main/$1" "$dst" && echo "  Linked: $1"
 }
 
+is_tracked_gitlink() {
+    git ls-files --stage -- "$1" | grep -q '^160000 '
+}
+
 # --- ROMs (gitignored *.gen in project root) ---
 for rom in "$MAIN_TREE"/*.gen; do
     [ -f "$rom" ] || continue
@@ -166,8 +170,9 @@ done
 # --- Config (gitignored) ---
 link_file "config.yaml" || exit 1
 
-# --- Disassemblies (submodule gitlinks without .gitmodules) ---
+# --- Optional local disassemblies (canonical tracked submodules are skipped) ---
 for disassembly in docs/s1disasm docs/s2disasm docs/kis2disasm docs/scddisasm docs/skdisasm; do
+    is_tracked_gitlink "$disassembly" && continue
     link_dir "$disassembly" || exit 1
 done
 

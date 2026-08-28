@@ -300,7 +300,9 @@ traces.
   frontier failures, 0 errors, 7 skipped.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
-  and worktree-local direct-Maven procedures.
+  and worktree-local direct-Maven procedures. The canonical Sonic 1, Sonic 2,
+  and Sonic 3 & Knuckles disassemblies are pinned as Sonic Retro Git submodules,
+  so GitHub and recursive clones preserve the exact reference revisions.
 - **Normal local launchers:** `run.sh`, `run.cmd`, `dev.sh`, and `dev.cmd` keep
   the direct package-and-launch workflow for interactive development; builds,
   tests, guards, and trace evidence use the same direct Maven boundary.

@@ -2891,10 +2891,20 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void everyDisassemblyPathIsIgnoredAsDirectoryAndSymlink(@TempDir Path temporaryDirectory) throws Exception {
+    void canonicalDisassemblySubmodulesAreTrackableWhileLocalReferencesStayIgnored(
+            @TempDir Path temporaryDirectory) throws Exception {
         Path repository = newRepository(temporaryDirectory, "disassembly-ignore");
         installProjectIgnoreRules(repository);
-        for (String disassembly : disassemblyPaths()) {
+        for (String disassembly : canonicalDisassemblyPaths()) {
+            Path directory = repository.resolve(disassembly);
+            Files.createDirectories(directory);
+            ProcessResult result = run(
+                    repository, List.of("git", "check-ignore", "-q", "--", disassembly), null);
+            assertTrue(result.exitCode() != 0,
+                    () -> "canonical submodule path must be trackable: " + disassembly);
+            Files.delete(directory);
+        }
+        for (String disassembly : localDisassemblyPaths()) {
             Path directory = repository.resolve(disassembly);
             Files.createDirectories(directory);
             assertGitSucceeds(repository, "check-ignore", "-q", "--", disassembly);
@@ -3114,6 +3124,27 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void postCheckoutLeavesTrackedDisassemblyGitlinkAvailableForSubmoduleInitialization(
+            @TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "checkout-submodule-main");
+        createInitialCommit(mainRepository);
+        stageGitlink(mainRepository, "docs/skdisasm", gitOutput(mainRepository, "rev-parse", "HEAD").trim());
+        commit(mainRepository, "track disassembly submodule");
+        Path localCheckout = mainRepository.resolve("docs/skdisasm");
+        Files.createDirectories(localCheckout);
+        Files.writeString(localCheckout.resolve("marker.txt"), "local checkout\n");
+        Path linkedWorktree = temporaryDirectory.resolve("checkout-submodule-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/submodule", linkedWorktree.toString());
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        assertFalse(Files.isSymbolicLink(linkedWorktree.resolve("docs/skdisasm")),
+                "tracked gitlink must remain available to git submodule update --init");
+    }
+
+    @Test
     void postCheckoutMigratesLegacyAbsoluteLinkToExpectedMainResource(@TempDir Path temporaryDirectory)
             throws Exception {
         Path mainRepository = newRepository(temporaryDirectory, "legacy-link-main");
@@ -3316,6 +3347,12 @@ class TestBuildToolingGuard {
         assertTrue(indexEntry.startsWith("120000 "), "staged symlink must retain mode 120000: " + indexEntry);
     }
 
+    private static void stageGitlink(Path repository, String relativePath, String commitOid) throws Exception {
+        git(repository, "update-index", "--add", "--cacheinfo", "160000," + commitOid + "," + relativePath);
+        String indexEntry = gitOutput(repository, "ls-files", "--stage", "--", relativePath);
+        assertTrue(indexEntry.startsWith("160000 "), "staged gitlink must retain mode 160000: " + indexEntry);
+    }
+
     private static void deleteAndStage(Path repository, String relativePath) throws Exception {
         Files.delete(repository.resolve(relativePath));
         git(repository, "add", "-u", "--", relativePath);
@@ -3462,8 +3499,12 @@ class TestBuildToolingGuard {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
     }
 
-    private static List<String> disassemblyPaths() {
-        return List.of("docs/s1disasm", "docs/s2disasm", "docs/kis2disasm", "docs/scddisasm", "docs/skdisasm");
+    private static List<String> canonicalDisassemblyPaths() {
+        return List.of("docs/s1disasm", "docs/s2disasm", "docs/skdisasm");
+    }
+
+    private static List<String> localDisassemblyPaths() {
+        return List.of("docs/kis2disasm", "docs/scddisasm");
     }
 
     private record ProcessResult(int exitCode, String output) {

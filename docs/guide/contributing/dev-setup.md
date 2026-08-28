@@ -17,11 +17,14 @@ includes IntelliJ project files. Any IDE with Maven support will work.
 ## Clone and Build
 
 ```bash
-git clone https://github.com/OpenGGF/OpenGGF.git
+git clone --recurse-submodules https://github.com/OpenGGF/OpenGGF.git
 cd OpenGGF
 tools/testing/install-hooks.sh
 mvn package
 ```
+
+For an existing checkout, initialize the pinned Sonic Retro disassembly references with
+`git submodule update --init`.
 
 The executable OpenGGF JAR with all dependencies is written to the current
 worktree's Maven output tree:
@@ -114,9 +117,9 @@ OpenGGF/
     main/resources/           -- Bundled default config, shaders
     test/java/com/openggf/   -- Test source code
   docs/
-    s1disasm/                -- Sonic 1 disassembly (untracked, local reference)
-    s2disasm/                -- Sonic 2 disassembly (untracked, local reference)
-    skdisasm/                -- Sonic 3&K disassembly (untracked, local reference)
+    s1disasm/                -- Sonic 1 disassembly (Sonic Retro submodule)
+    s2disasm/                -- Sonic 2 disassembly (Sonic Retro submodule)
+    skdisasm/                -- Sonic 3&K disassembly (Sonic Retro submodule)
     guide/                   -- This user guide
   tools/                     -- External reference tools
 ```

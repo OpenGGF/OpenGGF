@@ -98,8 +98,10 @@ skip count against the expected total before trusting a result.
 | Sonic 2 World REV01 | `-Dsonic2.rom.path=` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3&K locked-on | `-Ds3k.rom.path=` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-Disassemblies live under `docs/s1disasm/`, `docs/s2disasm/`, `docs/skdisasm/` (untracked,
-available locally); SMPS audio reference under `docs/SMPS-rips/SMPSPlay/`.
+Disassemblies live under `docs/s1disasm/`, `docs/s2disasm/`, and `docs/skdisasm/` as
+Git submodules pinned to the canonical Sonic Retro repositories. Clone with
+`--recurse-submodules` or run `git submodule update --init` after checkout. The SMPS audio
+reference under `docs/SMPS-rips/SMPSPlay/` remains untracked and available locally.
 
 ## Temporary and durable artifacts
 
