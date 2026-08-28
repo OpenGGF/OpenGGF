@@ -322,6 +322,9 @@ Release documentation was reconciled with these facts on 2026-08-28: the
 release summary now carries the commit-stamped validation numbers, the guard
 and trace policy statements match `docs/status/trace-scope-release-6.md`, and
 `RELEASE_NOTES_v0.6.prerelease.md` is a pointer to the summary.
+Contributor and player guides were corrected the same day (hook installation,
+config defaults, player-2 bindings, dead links), and the skill mirrors were
+resynchronised.
 
 The current S3K release priority is the AIZ → HCZ playable route. Knuckles
 routes, later-zone completeness, and some bonus/special-stage paths remain

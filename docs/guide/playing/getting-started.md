@@ -93,7 +93,7 @@ does not exist, defaults are used. A few settings you might want to change immed
 
 | Setting | What it does | Default |
 |---------|-------------|---------|
-| `roms.default` | Which game boots first (`"s1"`, `"s2"`, or `"s3k"`) | `"s3k"` |
+| `roms.default` | Which game boots first (`"s1"`, `"s2"`, or `"s3k"`) | `"s2"` |
 | `startup.masterTitleScreen` | Show game picker on launch | `true` |
 | `display.windowAutosize` | Derive the window size from the aspect preset | `true` |
 | `audio.enabled` | Enable or disable sound | `true` |

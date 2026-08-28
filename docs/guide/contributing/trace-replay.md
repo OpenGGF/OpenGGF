@@ -554,11 +554,10 @@ Recorders + launchers:
 - [`s1_trace_recorder.lua`](../../../tools/bizhawk/s1_trace_recorder.lua)
 - [`s2_trace_recorder.lua`](../../../tools/bizhawk/s2_trace_recorder.lua)
 - [`s3k_trace_recorder.lua`](../../../tools/bizhawk/s3k_trace_recorder.lua)
-- [`s1_credits_trace_recorder.lua`](../../../tools/bizhawk/s1_credits_trace_recorder.lua)
+- [`s1_credits_trace_recorder.py`](../../../tools/retro/s1_credits_trace_recorder.py) (stable-retro; the BizHawk Lua credits recorder was removed)
 - [`record_trace.bat`](../../../tools/bizhawk/record_trace.bat)
 - [`record_s2_trace.bat`](../../../tools/bizhawk/record_s2_trace.bat)
 - [`record_s3k_trace.bat`](../../../tools/bizhawk/record_s3k_trace.bat)
-- [`record_s1_credits_traces.bat`](../../../tools/bizhawk/record_s1_credits_traces.bat)
 
 Trace payload tooling:
 
@@ -566,7 +565,7 @@ Trace payload tooling:
 
 Skills:
 
-- [`trace-replay-bug-fixing`](../../../.claude/skills/trace-replay-bug-fixing/skill.md) — the
+- [`trace-replay-bug-fixing`](../../../.claude/skills/trace-replay-bug-fixing/SKILL.md) — the
   canonical workflow for any `*TraceReplay` test failure.
 - [`s1-trace-replay`](../../../.claude/skills/s1-trace-replay/) — Sonic 1 trace recording
   specifics.

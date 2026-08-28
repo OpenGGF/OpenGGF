@@ -77,7 +77,7 @@ relative to the repository root (e.g., `src/main/java/com/openggf/game/sonic2/ob
 
 ```
 docs/guide/
-  PLAN.md                               <-- this file
+  (this plan now lives at docs/architecture/plans/2026-03-25-user-guide-authoring-plan.md)
   index.md                              <-- landing page, audience signposting
   playing/
     getting-started.md                  <-- quick start: requirements to running

@@ -26,7 +26,7 @@ class MyTest {
 
 ## Manual setup (legacy)
 
-`TestHeadlessWallCollision.java` is a complete worked example.
+`HeadlessTestFixture.java` (`com.openggf.tests`) implements these steps and is the worked example to read.
 
 1. Reset test state: `TestEnvironment.resetAll()` (use `resetState()`, **not** the
    deprecated `resetInstance()`).
