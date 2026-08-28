@@ -162,7 +162,7 @@ class TestLevelSeamlessTransitionExecutor {
         assertEquals(1, capture.getValue().targetAct());
         assertEquals(9, capture.getValue().playerOffsetX());
         assertEquals(-12, capture.getValue().playerOffsetY());
-        verify(levelManager).advanceGlobalOscillation();
+        verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
         verify(levelManager.objectManager).advanceVblaCounter();
         verify(levelManager).markSidekickRomVisibleReloadFrameCounterBridge();
         verify(transitions).setLevelInactiveForTransition(false);
@@ -179,7 +179,7 @@ class TestLevelSeamlessTransitionExecutor {
 
         verify(levelManager).executeActTransition(request);
         verify(levelManager).consumeActTransitionRewindBoundaryDuringFrame();
-        verify(levelManager).advanceGlobalOscillation();
+        verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
         verify(transitions).setLevelInactiveForTransition(false);
     }
 

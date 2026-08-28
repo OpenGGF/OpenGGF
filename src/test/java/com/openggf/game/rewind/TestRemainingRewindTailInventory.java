@@ -113,10 +113,10 @@ class TestRemainingRewindTailInventory {
         assertEquals(0, buckets.get(Bucket.COUNT_MISMATCH).size(), "count-mismatch inventory count");
         assertEquals(0, buckets.get(Bucket.SCALAR_MISMATCH).size(), "scalar-mismatch inventory count");
 
-        // 880/685: Obj17's spikes became real SST-slot children
-        // (Sonic1SpikedPoleHelixObjectInstance.HelixSpikeChild), and the AIZ
-        // end-boss waterfall child is now graph-covered by its owner test.
-        return new TailInventory(880, 685, 195, 0, buckets);
+        // 886/690: the object inventory gained six concrete runtime classes;
+        // five pass the isolated round-trip probe, while Obj11's parent-owned
+        // bridge segment is covered by TestS2BridgeSegmentGraphRewind.
+        return new TailInventory(886, 690, 196, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

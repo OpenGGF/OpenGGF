@@ -2485,6 +2485,13 @@ This file contains the complete 0.6 development snapshot history carried forward
   published total, reading the published values rather than recomputing them.
 
 ## Unreleased
+- Fix(test/runtime): gameplay playback suppression is classified before generic
+  frame timers, mocked special-stage providers receive the normal PLC lifecycle
+  fallback, and suppressed trace rows advance VBlank-only event state after
+  represented completion and pending-title dispatch. The ordinary JDK 21 suite
+  drops from 45 failures / 6 errors to 30 failures / 3 errors without adding a
+  failing test identity; configuration and rewind graph coverage are isolated
+  from user-local state.
 - Fix(s3k): blue-sphere special-stage ring collection now submits the ROM's
   `sfx_RingRight` request through the driver-owned left/right alternation.
 - Fix(s2): the Egg Prison's break delay now runs the 30 passes the ROM runs, not

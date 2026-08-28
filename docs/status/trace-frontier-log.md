@@ -115010,3 +115010,16 @@ The other three death arms remain coordinates only.
   `TestS3kMgzZoneSliceTraceReplay`. The short MGZ trace remains green; the zone
   slice retains its baseline first error at frame 5255, `tails_g_speed`
   (`expected=0x0000`, `actual=-0x01D5`), with 6,870 errors.
+
+## 2026-08-28 - Develop ordinary-suite lifecycle repair verification
+
+- Worktree/branch: `.worktrees/develop-suite-repair`,
+  `bugfix/ai-develop-suite-repair`, candidate over `a29d5fd7a`.
+- Full release-scope command: `mvn -Dmse=off -Ptrace-replay
+  -Dsurefire.runOrder=alphabetical -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test -B`.
+- Result: 870 tests, 6 failures, 0 errors, and 7 skips. The six failures and
+  first-error signatures match the recorded 2026-08-26 frontier: S3K reference
+  closure frame 25589 / `player_animation_id`; S1 complete chain; S2 complete
+  chain; S3K complete chain; S2 CPZ2 segment 10 frame 2252 / `air`; and standard
+  AIZ frame 20713 / `air`. No frontier moved and no green trace regressed.

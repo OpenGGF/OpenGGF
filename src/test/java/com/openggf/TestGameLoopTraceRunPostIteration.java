@@ -112,7 +112,11 @@ class TestGameLoopTraceRunPostIteration {
                         DynamicArtLifecycleService.class.getDeclaredFields())
                 .anyMatch(field -> field.getType().getName()
                         .startsWith("com.openggf.trace")));
-        assertEquals(3, DynamicArtDiagnosticsProvider.class
+        assertEquals(4, DynamicArtDiagnosticsProvider.class
                 .getDeclaredMethods().length);
+        assertTrue(Arrays.stream(DynamicArtDiagnosticsProvider.class
+                        .getDeclaredMethods())
+                .anyMatch(method -> method.getName()
+                        .equals("gapOpeningSnapshot")));
     }
 }

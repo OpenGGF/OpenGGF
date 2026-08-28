@@ -19,8 +19,11 @@ public class TestTitleCardPhysicsPolicy {
     }
 
     @Test
-    public void sonic2RunsPlayerPhysicsDuringLockedTitleCardPhase() {
-        assertTrue(TitleCardManager.getInstance().shouldRunPlayerPhysics());
+    public void sonic2DefersPlayerPhysicsUntilTheRomCreatesPlayersForLeavePasses() {
+        TitleCardManager manager = TitleCardManager.getInstance();
+        manager.reset();
+
+        assertFalse(manager.shouldRunPlayerPhysics());
     }
 
     @Test
@@ -28,5 +31,4 @@ public class TestTitleCardPhysicsPolicy {
         assertFalse(new Sonic3kTitleCardManager().shouldRunPlayerPhysics());
     }
 }
-
 
