@@ -103,6 +103,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
     private int animIndex;
     private int animTimer;
     private TurboSpikerShellChild shellChild;
+    private TurboSpikerWaterfallOverlayChild waterfallOverlayChild;
 
     public TurboSpikerBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "TurboSpiker",
@@ -181,8 +182,14 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
     private void initialize(AbstractPlayableSprite player) {
         trackInitialFacing(player);
         shellChild = spawnChild(() -> new TurboSpikerShellChild(this));
+        if (shellChild.isDestroyed()) {
+            shellChild = null;
+        }
         if (hiddenVariant) {
-            spawnChild(() -> new TurboSpikerWaterfallOverlayChild(this));
+            waterfallOverlayChild = spawnChild(() -> new TurboSpikerWaterfallOverlayChild(this));
+            if (waterfallOverlayChild.isDestroyed()) {
+                waterfallOverlayChild = null;
+            }
         }
         initialized = true;
     }
@@ -190,6 +197,24 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
     private void detachShell(TurboSpikerShellChild shell) {
         if (shellChild == shell) {
             shellChild = null;
+        }
+    }
+
+    private void detachWaterfallOverlay(TurboSpikerWaterfallOverlayChild overlay) {
+        if (waterfallOverlayChild == overlay) {
+            waterfallOverlayChild = null;
+        }
+    }
+
+    @Override
+    public void onUnload() {
+        if (shellChild != null) {
+            shellChild.detachFromParentOnUnload(this);
+            shellChild = null;
+        }
+        if (waterfallOverlayChild != null) {
+            waterfallOverlayChild.detachFromParentOnUnload(this);
+            waterfallOverlayChild = null;
         }
     }
 
@@ -498,6 +523,13 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         boolean isAttached() {
             return attached;
+        }
+
+        private void detachFromParentOnUnload(TurboSpikerBadnikInstance owner) {
+            if (attached && parent == owner) {
+                parent = null;
+                setDestroyed(true);
+            }
         }
 
         @Override
@@ -879,10 +911,14 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
     private static final class TurboSpikerWaterfallOverlayChild extends AbstractObjectInstance
             implements RewindRecreatable {
         private TurboSpikerBadnikInstance parent;
+        private int currentX;
+        private int currentY;
 
         TurboSpikerWaterfallOverlayChild(TurboSpikerBadnikInstance parent) {
             super(parent.getSpawn(), "TurboSpikerWaterfallOverlay");
             this.parent = parent;
+            this.currentX = parent.getX();
+            this.currentY = parent.getY();
         }
 
         @Override
@@ -893,24 +929,47 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
+            if (parent == null || parent.isDestroyed()) {
+                setDestroyed(true);
+                return;
+            }
+            currentX = parent.getX();
+            currentY = parent.getY();
             if (!parent.shouldShowWaterfallOverlay()) {
                 setDestroyed(true);
             }
         }
 
+        private void detachFromParentOnUnload(TurboSpikerBadnikInstance owner) {
+            if (parent == owner) {
+                currentX = owner.getX();
+                currentY = owner.getY();
+                parent = null;
+                setDestroyed(true);
+            }
+        }
+
+        @Override
+        public void onUnload() {
+            if (parent != null) {
+                parent.detachWaterfallOverlay(this);
+                parent = null;
+            }
+        }
+
         @Override
         public ObjectSpawn getSpawn() {
-            return buildSpawnAt(parent.getX(), parent.getY());
+            return buildSpawnAt(currentX, currentY);
         }
 
         @Override
         public int getX() {
-            return parent.getX();
+            return currentX;
         }
 
         @Override
         public int getY() {
-            return parent.getY();
+            return currentY;
         }
 
         @Override
@@ -928,7 +987,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
             if (renderer == null || !renderer.isReady()) {
                 return;
             }
-            renderer.drawFrameIndex(0, parent.getX(), parent.getY(), false, false);
+            renderer.drawFrameIndex(0, currentX, currentY, false, false);
         }
     }
 }
