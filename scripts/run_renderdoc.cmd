@@ -1,5 +1,6 @@
 @echo off
 setlocal
+cd /d "%~dp0.."
 
 set "RENDERDOC_DIR=C:\Program Files\RenderDoc"
 set "RENDERDOC_CMD="

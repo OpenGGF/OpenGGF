@@ -71,7 +71,7 @@ changed sources and run directly from `target/classes`. The first offline
 development launch may require `run.sh` or `run.cmd` to populate Maven's local
 dependency cache.
 
-Linux developers can launch a RenderDoc capture with `./run_renderdoc.sh` when
+Linux developers can launch a RenderDoc capture with `scripts/run_renderdoc.sh` when
 `renderdoccmd` is installed and available on `PATH`.
 
 The engine will open a window showing the master title screen. Select a game with the
