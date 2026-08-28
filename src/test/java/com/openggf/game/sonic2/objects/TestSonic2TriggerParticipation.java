@@ -233,12 +233,16 @@ class TestSonic2TriggerParticipation {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, 0x41, 0x10, 0, false, 0),
                 "Spring");
-        spring.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
-                .withCheckpointBatch(new SolidCheckpointBatch(
-                        spring,
-                        Map.of(tails, pushingContact()))));
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(tails));
+        services.withObjectManager(new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services));
+        services.withCheckpointBatch(new SolidCheckpointBatch(
+                spring,
+                Map.of(tails, pushingContact())));
+        spring.setServices(services);
 
         spring.update(0, main);
+        spring.update(1, main);
 
         assertEquals(0x1000, tails.getXSpeed() & 0xFFFF,
                 "Spring should consume ObjectPlayerQuery participants for manual checkpoint contact");

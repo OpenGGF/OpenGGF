@@ -76,10 +76,12 @@ public class TestSatReplayBatching {
         assertEquals(10f, instanceBuffer.get(FLOATS_PER_INSTANCE), "second instance x");
         assertEquals(30f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE), "third instance x");
 
-        // Per-instance VDP priority survives batching (instance float 9).
-        assertEquals(1f, instanceBuffer.get(9), "bucket-4 piece carries high priority");
-        assertEquals(0f, instanceBuffer.get(FLOATS_PER_INSTANCE + 9));
-        assertEquals(0f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE + 9));
+        // Per-instance tile-occlusion mask survives batching (instance float 9):
+        // a high-priority tile bypasses every palette line, while ordinary tiles
+        // remain occludable by all four lines.
+        assertEquals(0f, instanceBuffer.get(9), "bucket-4 piece bypasses tile occlusion");
+        assertEquals(0xF, instanceBuffer.get(FLOATS_PER_INSTANCE + 9));
+        assertEquals(0xF, instanceBuffer.get(2 * FLOATS_PER_INSTANCE + 9));
 
         // Parity with the direct path: its commands resolve the shader at flush time,
         // after the sprite pass cleared the priority-shader flag, so the batch must

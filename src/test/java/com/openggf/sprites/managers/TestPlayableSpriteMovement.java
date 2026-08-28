@@ -352,7 +352,7 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setJumping(true);
                 mockSprite.setYSpeed((short) 0);
 
-                mockSprite.getSuperStateController().update();
+                mockSprite.getSuperStateController().checkTransformationBeforeMove();
 
                 assertEquals(SuperState.TRANSFORMING, mockSprite.getSuperStateController().getState(),
                                 "S2 should still start Super Sonic from the normal airborne jump trigger");

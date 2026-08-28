@@ -167,6 +167,7 @@ class TestTraceRunSpecialStageRows {
             int inputSampleSequence) {
         return String.format("""
                 {"frame":%d,"type":"run_objects_end","pass_sequence":%d,\
+                "started_at_input_sample":1,\
                 "first_eligible_frame":%d,"completion_cursor_frame":%d,\
                 "input_sample_frame":%d,"input_sample_bk2_frame":%d,\
                 "previous_input_sample_frame":%d,"previous_input_sample_bk2_frame":%d,\

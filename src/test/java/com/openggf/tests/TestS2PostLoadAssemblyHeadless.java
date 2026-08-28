@@ -187,7 +187,7 @@ public class TestS2PostLoadAssemblyHeadless {
     }
 
     @Test
-    public void sidekickSpawnPositionWritesPreserveFractionalWords() {
+    public void sidekickSpawnClearsFractionalWordsWithLevelObjectRam() {
         sprite.setCentreX((short) 200);
         sprite.setCentreY((short) 400);
         Tails tails = createSidekick();
@@ -195,10 +195,10 @@ public class TestS2PostLoadAssemblyHeadless {
 
         GameServices.level().spawnSidekicks(-32, 4);
 
-        assertEquals(0x5A00, tails.getXSubpixelRaw(),
-                "ROM move.w x_pos preserves the fractional x word");
-        assertEquals(0xA500, tails.getYSubpixelRaw(),
-                "ROM move.w y_pos preserves the fractional y word");
+        assertEquals(0, tails.getXSubpixelRaw(),
+                "Level entry clears object RAM before InitPlayers writes x_pos");
+        assertEquals(0, tails.getYSubpixelRaw(),
+                "Level entry clears object RAM before InitPlayers writes y_pos");
     }
 
     @Test

@@ -6,8 +6,10 @@ import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.camera.Camera;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
@@ -16,6 +18,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
@@ -262,6 +265,8 @@ class TestSonic3kLbzLaunchSignals {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1)
                 .build();
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
+        S3kRuntimeArtCoordinator.current().resetForMissingSnapshot();
+        GameServices.hardwareTiming().resetForMissingSnapshot();
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElseThrow();
         Level level = GameServices.level().getCurrentLevel();
         Camera camera = fixture.camera();
@@ -450,6 +455,17 @@ class TestSonic3kLbzLaunchSignals {
         events.update(1, 1);
         events.update(1, 2);
 
+        int serviceFrame = 3;
+        byte[] expectedDeathEgg2Pattern = expectedPattern(expectedDeathEgg2, 0);
+        while (serviceFrame < 10_000
+                && (!state.isDeathEggTerrainSwapApplied()
+                || !Arrays.equals(expectedDeathEgg2Pattern,
+                        snapshot(level.getPattern(Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_2))))) {
+            HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
+            events.update(1, serviceFrame++);
+        }
+
         assertTrue(state.isDeathEggTerrainSwapQueued());
         assertTrue(state.isDeathEggTerrainSwapApplied());
         assertArrayEquals(expectedChunkState(expected16x16, 0, originalChunkZero),
@@ -461,7 +477,7 @@ class TestSonic3kLbzLaunchSignals {
         assertArrayEquals(expectedPattern(expected8x8, 0),
                 snapshot(level.getPattern(0)),
                 "LBZ2 Death Egg terrain art must replace VRAM tile $000 from the ROM KosM stream");
-        assertArrayEquals(expectedPattern(expectedDeathEgg2, 0),
+        assertArrayEquals(expectedDeathEgg2Pattern,
                 snapshot(level.getPattern(Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_2)),
                 "Death Egg 2 art must land at tile $05A0 for launch pillars/explosion terrain");
     }

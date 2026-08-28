@@ -317,9 +317,12 @@ class TestInitialPlayableProcessSpritesPass {
                     SpriteManager.buildPlayableUpdateOrder(
                             manager.getAllSprites(), manager.getSidekicks(), false),
                     "Process_Sprites visits P1 slot 0 before P2 slot 1");
-            assertEquals(37, p1.historyPos());
-            assertEquals(0x6125, p1.copyXHistory()[37] & 0xFFFF);
-            assertEquals(0x7125, p1.copyYHistory()[37] & 0xFFFF);
+            // Level init leaves the engine cursor at slot 63 so the first live
+            // Sonic_RecordPos write lands in ROM slot 0. Thirty-seven writes
+            // therefore leave the latest entry in slot 36.
+            assertEquals(36, p1.historyPos());
+            assertEquals(0x6125, p1.copyXHistory()[36] & 0xFFFF);
+            assertEquals(0x7125, p1.copyYHistory()[36] & 0xFFFF);
 
             manager.processInitialPlayableSlots(
                     new ProcessSpritesEpoch(0, 1, false),

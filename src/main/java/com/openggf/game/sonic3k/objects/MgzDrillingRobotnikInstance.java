@@ -141,7 +141,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int END_DEFEAT_WAIT_FADE_TO_LEVEL_MUSIC = 0;
     private static final int END_DEFEAT_WAIT_CAPSULE_CALLBACK = 1;
     private static final int END_DEFEAT_WAIT_RESULTS_FLAG = 2;
-    /** ROM Wait_FadeToLevelMusic enters this handoff with $2E=$3F. */
+    /** ROM BossDefeated_StopTimer falls through to BossDefeated, which writes $2E=$3F. */
     private static final int END_DEFEAT_FADE_WAIT_FRAMES = 0x3F;
 
     /** ROM: move.w #-$800,y_vel — initial upward velocity into ceiling. */
@@ -1421,8 +1421,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         state.invulnerabilityTimer = 0;
         endBossDefeatHandoffComplete = false;
         endBossDefeatPhase = END_DEFEAT_WAIT_FADE_TO_LEVEL_MUSIC;
-        // ROM loc_6D60A jumps to Wait_FadeToLevelMusic, whose initial $2E
-        // value yields the 64-frame wait before loc_6C2BE publishes Obj_Wait.
+        // ROM loc_6D60A jumps to BossDefeated_StopTimer. That routine falls
+        // through to BossDefeated, which seeds Wait_FadeToLevelMusic's $2E.
         waitTimer = END_DEFEAT_FADE_WAIT_FRAMES;
         endBossBodyHiddenAfterFadeHandoff = false;
         endBossDefeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());

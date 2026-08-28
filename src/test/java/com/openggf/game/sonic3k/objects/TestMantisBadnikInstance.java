@@ -70,15 +70,11 @@ class TestMantisBadnikInstance {
         mantis.setServices(new StubObjectServices());
 
         mantis.update(0, null);
-        AbstractObjectInstance child = (AbstractObjectInstance) readField(mantis, "child");
         mantis.update(1, null);
 
         assertFalse((boolean) readField(mantis, "initialized"));
-        assertNotNull(child, "the wait-offscreen Mantis keeps its visual child managed");
-        assertSame(mantis, readField(child, "parent"),
-                "the managed visual child must keep its owning Mantis reference");
-        assertSame(child, readField(mantis, "child"),
-                "repeated wait-offscreen updates must not duplicate the visual child");
+        assertNull(readField(mantis, "child"),
+                "Obj_WaitOffscreen suppresses Mantis_Init and its child allocation while hidden");
         assertEquals(0x0490, mantis.getY());
         assertEquals(0, mantis.getCollisionFlags());
 
@@ -88,14 +84,18 @@ class TestMantisBadnikInstance {
 
         assertFalse((boolean) readField(mantis, "initialized"),
                 "Obj_WaitOffscreen only restores the saved Mantis operation on this pass");
-        assertSame(child, readField(mantis, "child"),
-                "the visible handoff must retain the existing managed visual child");
+        assertNull(readField(mantis, "child"),
+                "the restore pass returns before Mantis_Init can allocate its child");
 
         mantis.update(3, null);
 
+        AbstractObjectInstance child = (AbstractObjectInstance) readField(mantis, "child");
         assertTrue((boolean) readField(mantis, "initialized"));
+        assertNotNull(child, "Mantis_Init must allocate its visual child on the following dispatch");
+        assertSame(mantis, readField(child, "parent"),
+                "the managed visual child must keep its owning Mantis reference");
         assertSame(child, readField(mantis, "child"),
-                "activation must configure the existing child rather than spawning a second one");
+                "the initialized Mantis must retain the child it allocated");
         assertEquals(0x1A, mantis.getCollisionFlags());
     }
 

@@ -163,3 +163,59 @@ Additional validation:
   three effective lines. Phase fallback was extracted to `PlcLifecyclePhase`;
   the focused architectural guard then passed. The complete guard profile is
   rerun as final release evidence after integration.
+
+## Follow-up repair result at current develop
+
+The next repair round used clean `develop` commit `2f5265e3f` as its control
+and branch `bugfix/ai-suite-resource-errors` in
+`.worktrees/suite-resource-errors`. Maven ran on JDK 21 with all three verified
+local ROM properties.
+
+The untouched control command was:
+
+```bash
+mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen \
+  -Ds3k.rom.path=s3k.gen test -B
+```
+
+Control result: **14,868 tests; 30 failures; 3 errors; 36 skipped**. The
+candidate passed the same default-order command with **14,868 tests; 0
+failures; 0 errors; 36 skipped**. A fresh deterministic run using `clean` and
+`-Dsurefire.runOrder=alphabetical` also passed all **14,868 tests**, with 36
+skipped.
+
+A later clean confirmation exposed one additional order-dependent fixture:
+`TestCheckpointStarpostGraphRewind` reused a session camera and could omit its
+lamppost before the first assertion. Applying the standard
+`SingletonResetExtension` made its 8-test focused class green; the subsequent
+full alphabetical run again passed **14,868 tests with 36 skipped**.
+
+The remaining failures were stale assertions or incomplete test fixtures, not
+new production defects. Repairs fell into these categories:
+
+| Category | Repair shape |
+|---|---|
+| S3K object and event fixtures | Exercised real ROM-backed art queues and palettes, restored `Obj_WaitOffscreen` dispatch cadence, and isolated singleton object managers |
+| Sonic 2 object and player fixtures | Matched current object-load filters, spring dispatch order, immediate fragment deletion, transformation gates, and level-RAM clearing |
+| Rewind and collision fixtures | Restored complete child graphs and inventory, and captured collision-response history before object motion |
+| Rendering and scrolling assertions | Compared palette occlusion masks and the prior-frame shake publication used by the runtime |
+| Trace/title lifecycle isolation | Reset global overlay and launch-failure ownership before each test and supplied schema-v5 pass-cursor input metadata |
+
+During self-review, an attempted MGZ2 boss comment/test correction exposed a
+trace regression: `TestS3kMgzTraceReplay` first diverged at frame 35184 on
+`queue.s3k_kos_direct.busy`. Re-reading the contiguous assembly showed that
+`BossDefeated_StopTimer` falls through into `BossDefeated`, which writes
+`$2E=$3F`; restoring that ROM-authentic handoff returned the focused MGZ trace
+to green. This was a rejected intermediate candidate, not a delivered runtime
+change.
+
+Final supporting evidence before integration:
+
+- `mvn -Dmse=off -Pguards test -B`: **547 tests; 0 failures; 0 errors**.
+- Focused MGZ boss tests: **63 tests; 0 failures; 0 errors**.
+- Focused `TestS3kMgzTraceReplay`: **1 test; 0 failures; 0 errors**.
+- Alphabetical trace profile: **870 tests; 6 failures; 0 errors; 7 skipped**.
+  The failure identities and first-error signatures are exactly the documented
+  frontier: S3K reference closure frame 25589 / `player_animation_id`; S1,
+  S2, and S3K complete chains; S2 CPZ2 segment 10 frame 2252 / `air`; and S3K
+  AIZ frame 20713 / `air`. No previously green trace remains regressed.

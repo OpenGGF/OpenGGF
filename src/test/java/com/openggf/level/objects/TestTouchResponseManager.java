@@ -1016,8 +1016,8 @@ public class TestTouchResponseManager {
         objectManager.addDynamicObject(enemy);
 
         objectManager.update(0, player, List.of(), 541, false, true, true);
-        enemy.setPosition(180, 112);
         objectManager.snapshotTouchResponseState(true);
+        enemy.setPosition(180, 112);
         objectManager.runTouchResponsesForPlayer(player, 542, true);
 
         assertFalse(enemy.wasAttacked,
@@ -1039,8 +1039,8 @@ public class TestTouchResponseManager {
         objectManager.addDynamicObject(enemy);
 
         objectManager.update(0, player, List.of(), 5646, false, true, true);
-        enemy.setPosition(160, 0x0492);
         objectManager.snapshotTouchResponseState(true);
+        enemy.setPosition(160, 0x0492);
         objectManager.runTouchResponsesForPlayer(player, 5647, true);
 
         assertTrue(enemy.wasAttacked, "The previous collision-response-list position should overlap");

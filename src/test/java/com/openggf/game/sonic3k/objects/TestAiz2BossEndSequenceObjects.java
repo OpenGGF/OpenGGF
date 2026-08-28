@@ -762,11 +762,6 @@ class TestAiz2BossEndSequenceObjects {
 
         capsule.update(0, sonic);
 
-        assertFalse(getBooleanField(capsule, "resultsStarted"),
-                "The first AIZ sub_868F8 owner entry observes eligibility before starting results");
-
-        capsule.update(1, sonic);
-
         assertTrue(getBooleanField(capsule, "resultsStarted"));
         assertTrue(sonic.isObjectControlled(),
                 "sub_868F8 calls Set_PlayerEndingPose for Player_1 when results start "

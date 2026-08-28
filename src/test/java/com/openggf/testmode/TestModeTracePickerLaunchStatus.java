@@ -8,6 +8,7 @@ import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.catalog.TraceEntry;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -26,9 +27,16 @@ import static org.mockito.Mockito.when;
 
 class TestModeTracePickerLaunchStatus {
 
+    @BeforeEach
+    void resetStatus() {
+        TraceLaunchStatus.clear();
+        TraceRunFailureStatus.clear();
+    }
+
     @AfterEach
     void clearStatus() {
         TraceLaunchStatus.clear();
+        TraceRunFailureStatus.clear();
     }
 
     @Test
