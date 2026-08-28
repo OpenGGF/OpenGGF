@@ -226,10 +226,14 @@ public class RenderOrderTest {
                 "levelManager.renderSpriteObjectPass(spriteManager, true);");
         assertPostFadeExceptionRecordedBefore(source,
                 "recordPostFadeDiagnostic(\"SpecialStageDiagnosticOverlay\")",
-                "ssProvider.renderAlignmentOverlay(windowWidth, windowHeight);");
+                "ssProvider.renderAlignmentOverlay(\n"
+                        + "\t\t\t\t\t\tspecialStageViewport.logicalWidth(), "
+                        + "specialStageViewport.logicalHeight());");
         assertPostFadeExceptionRecordedBefore(source,
                 "recordPostFadeDiagnostic(\"SpecialStageDiagnosticOverlay\")",
-                "ssProvider.renderLagCompensationOverlay(windowWidth, windowHeight);");
+                "ssProvider.renderLagCompensationOverlay(\n"
+                        + "\t\t\t\t\t\tspecialStageViewport.logicalWidth(), "
+                        + "specialStageViewport.logicalHeight());");
         assertPostFadeExceptionRecordedBefore(source,
                 "recordPostFadeDiagnostic(\"DebugOverlay\")",
                 "getDebugRenderer().renderDebugInfo();");
@@ -268,5 +272,4 @@ public class RenderOrderTest {
         return count;
     }
 }
-
 
