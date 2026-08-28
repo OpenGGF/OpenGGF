@@ -4,6 +4,20 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Game Over and Time Over now run in all three games:** losing the last life
+  or reaching 9:59 loads the ROM's GAME/OVER or TIME/OVER object pair (S1/S2
+  `Obj39`, S3K `Obj_GameOver`) from ROM art and mappings at the ROM's fixed
+  object slots, plays the game over music, waits on the S1/S2 PLC queue, slides
+  the words in at 16 px/frame with the one-frame conjoin flicker of the shipped
+  `FixBugs = 0` build, and after A/B/C (or the 12 s / 8 s timer) restarts the
+  level on a time over with the star-post time cleared, or leaves the level on a
+  game over. Zero-life gameplay can no longer be paused, matching `PauseGame`,
+  and starting a game from the title screen resets lives and continues as the
+  ROM's `PlayLevel` does. S3K loading a slot after a game over consumes a
+  continue and restores three lives as the ROM's slot load does. The continue
+  screen itself is still absent, so a game over with continues in hand lands on
+  the title screen for now.
+
 - **The release structural checks are green again:** object priority rendering
   now reuses one palette-mask transition path, preserving the AIZ2 bridge
   layering fix while keeping rendering responsibility out of the already-large

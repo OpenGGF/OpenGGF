@@ -1,5 +1,9 @@
 package com.openggf.level;
 
+import com.openggf.game.GameOverExit;
+
+import com.openggf.game.GameOverExit;
+
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.*;
 import com.openggf.Engine;
@@ -4516,6 +4520,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** @see LevelTransitionCoordinator#consumeCreditsRequest() */
     public boolean consumeCreditsRequest() { return transitions.consumeCreditsRequest(); }
+
+    public void requestGameOverExit(GameOverExit exit) { transitions.requestGameOverExit(exit); }
+
+    public GameOverExit consumeGameOverExitRequest() { return transitions.consumeGameOverExitRequest(); }
+
+    public GameOverExit getGameOverExitRequested() { return transitions.getGameOverExitRequested(); }
 
     /** @see LevelTransitionCoordinator#setForceHudSuppressed(boolean) */
     public void setForceHudSuppressed(boolean suppressed) { transitions.setForceHudSuppressed(suppressed); }

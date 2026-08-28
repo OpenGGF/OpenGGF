@@ -4,6 +4,7 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
@@ -185,6 +186,13 @@ public class Sonic1GameModule implements GameModule {
     @Override
     public LevelState createLevelState() {
         return new LevelGamestate();
+    }
+
+    private final GameOverFlowProvider gameOverFlowProvider = new Sonic1GameOverFlowProvider();
+
+    @Override
+    public GameOverFlowProvider getGameOverFlowProvider() {
+        return gameOverFlowProvider;
     }
 
     @Override

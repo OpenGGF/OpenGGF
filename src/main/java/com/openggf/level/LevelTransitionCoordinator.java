@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.game.BonusStageType;
+import com.openggf.game.GameOverExit;
 import com.openggf.level.objects.PersistentRespawnState;
 
 /**
@@ -59,6 +60,7 @@ public class LevelTransitionCoordinator {
 
     // ── Credits ────────────────────────────────────────────────────────
     private boolean creditsRequested;
+    private GameOverExit gameOverExitRequested;
 
     // ── HUD / music suppression ────────────────────────────────────────
     private boolean forceHudSuppressed;
@@ -580,6 +582,7 @@ public class LevelTransitionCoordinator {
                 || nextZoneRequested
                 || specificZoneActRequested
                 || creditsRequested
+                || gameOverExitRequested != null
                 || specialStageRequestedFromCheckpoint
                 || bonusStageRequested != null;
     }
@@ -772,6 +775,34 @@ public class LevelTransitionCoordinator {
         boolean requested = creditsRequested;
         creditsRequested = false;
         return requested;
+    }
+
+    // ================================================================
+    //  Game over
+    // ================================================================
+
+    /**
+     * The GAME OVER card's {@code move.b #id_Continue,(v_gamemode).w} /
+     * {@code move.b #id_Sega,(v_gamemode).w}: ends the level main loop and
+     * names the mode that follows. Idempotent because the card keeps writing
+     * the mode on every frame after it has been dismissed.
+     */
+    public void requestGameOverExit(GameOverExit exit) {
+        if (exit == null) {
+            throw new IllegalArgumentException("exit must not be null");
+        }
+        this.gameOverExitRequested = exit;
+    }
+
+    /** @return the requested exit, or {@code null}; clears the request. */
+    public GameOverExit consumeGameOverExitRequest() {
+        GameOverExit exit = gameOverExitRequested;
+        gameOverExitRequested = null;
+        return exit;
+    }
+
+    public GameOverExit getGameOverExitRequested() {
+        return gameOverExitRequested;
     }
 
     // ================================================================

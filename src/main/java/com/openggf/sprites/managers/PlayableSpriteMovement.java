@@ -2,6 +2,7 @@ package com.openggf.sprites.managers;
 
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelState;
@@ -4534,6 +4535,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean timeOver = !gameOver && isTimeOverFlagged();
 		sprite.enterDeathRestartRoutine(
 				gameOver || timeOver ? 0 : DEATH_RESTART_DELAY_FRAMES);
+		if (gameOver || timeOver) {
+			// The same frame loads the GAME/OVER or TIME/OVER object pair, plays
+			// the game over music and queues the card's art (S1 01
+			// Sonic.asm:2019-2049, S2 s2.asm:38284-38316, S3K
+			// sonic3k.asm:24588-24616); the pair then owns everything downstream.
+			GameOverFlowProvider.begin(levelManager(), timeOver);
+		}
 	}
 
 	/**

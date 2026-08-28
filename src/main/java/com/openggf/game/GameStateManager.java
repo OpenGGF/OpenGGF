@@ -769,10 +769,12 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * {@code docs/s2disasm/s2.asm:1585-1633}; S3K {@code Pause_Game}
      * {@code docs/skdisasm/s3.asm:1690-1761}):
      * <ul>
-     *   <li>The ROM gates pause on {@code Life_count != 0} because a zero-life
-     *       death enters the Game Over flow. OpenGGF does not yet implement
-     *       that flow, so zero-life gameplay keeps the normal pause semantics
-     *       until the missing Game Over / Continue state is added.</li>
+     *   <li>{@code tst.b (v_lives).w; beq.s .unpauseGame}: with no lives left
+     *       the ROM clears the pause flag and returns without looking at Start,
+     *       so the GAME OVER card can never be paused and a pause held at the
+     *       moment the last life goes releases on the next frame
+     *       (docs/s1disasm/_inc/PauseGame.asm:8-9 and :47-52,
+     *       docs/s2disasm/s2.asm:1573-1574, docs/skdisasm/s3.asm:1692-1693).</li>
      *   <li>{@code Pause_Game} sits at the very top of {@code LevelLoop}
      *       ({@code docs/skdisasm/sonic3k.asm:7884-7894}). On the press frame it
      *       enters {@code Pause_Loop}, which runs only the V-int until Start is
@@ -792,10 +794,28 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      *         paused), false if it should run normally.
      */
     public boolean applyPauseToggle(boolean startEdgePressed) {
+        if (lives == 0) {
+            gamePaused = false;
+            return false;
+        }
         if (startEdgePressed) {
             gamePaused = !gamePaused;
         }
         return gamePaused;
+    }
+
+    /**
+     * The title screen's level start: S1 {@code PlayLevel} writes three lives,
+     * clears the score and the continue count (docs/s1disasm/sonic.asm:2273-2283);
+     * S2 {@code TitleScreen} does the same for both players before entering
+     * {@code GameModeID_Level} (docs/s2disasm/s2.asm:4513-4525). Without it a
+     * game that follows a game over would open with the zero lives the card
+     * left behind. S3K takes its counts from the data-select slot instead.
+     */
+    public void startNewGameFromTitle() {
+        this.lives = 3;
+        this.continues = 0;
+        this.score = 0;
     }
 
     @Override
