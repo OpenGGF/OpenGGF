@@ -51,7 +51,7 @@ non-obvious placements:
 | `game.rewind` | Keyframes, deterministic seek/replay, generic field capture, identity ids, policy registry, compact schema capture |
 | `level.scroll.compose` | Shared deform/parallax composition around `ScrollEffectComposer` |
 | `audio.*` | Split across `audio` (backend), `audio.synth` (chip emulation), `audio.smps` (sequencer/loader), `audio.driver`, `audio.runtime`, `audio.rewind`, `audio.debug` |
-| `audio.synth` | `PsgChip` is the sole PSG core (Genesis Plus GX-derived, formerly `PsgChipGPGX`); `Ym2612Chip` is a facade over the Nuked-OPN2 port in `audio.synth.nuked`, which is the sole FM core |
+| `audio.synth` | `PsgChip` is the sole PSG core (clean-room SN76489 written from `docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`; band-limited through the LGPL `BlipDeltaBuffer`); `Ym2612Chip` is a facade over the Nuked-OPN2 port in `audio.synth.nuked`, which is the sole FM core |
 | `physics` | Sensors, terrain collision, unified `CollisionSystem` |
 | `tools` | Compression utilities (Kosinski, Nemesis, Saxman), `ObjectDiscoveryTool`, disassembly tools incl. `RomOffsetFinder` |
 | `LevelFrameStep` | Lives at the `com.openggf` package **root**, not under `level` |

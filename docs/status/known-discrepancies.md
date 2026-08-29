@@ -43,6 +43,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 29. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
 30. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated)
 31. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation)
+32. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores)
 
 ---
 
@@ -2671,3 +2672,50 @@ shift is the single explicit adjustment the port contract permits.
 `TestYm2612ChipNukedParity` (68 scripts against the C harness under
 `tools/audio/nuked-opn2/harness/`), `TestYm2612ChipSnapshot`,
 `TestChipWriteObserver`, `TestSfxAdmissionMutationJournal`.
+
+---
+
+## PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores
+
+**Location:** `PsgChip.tickNoise()` / `PsgChip.linkedNoiseReload()`
+**Hardware Reference:** `docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md` §4.1, §10.5
+
+### Original Implementation
+
+On the Sega-integrated SN76489 a tone period of 0 or 1 holds the channel's output
+constantly high. The TI datasheet wires "tone generator #3 output" into the noise
+clock when the noise rate bits are `11`, and a constant output has no edges, so
+the clean-room specification's first revision concluded the LFSR stops in that
+state. No public hardware capture of the Sega part in this state is known.
+
+### Our Implementation
+
+The noise clock is driven by tone 2's *counter expiry*, not its held output
+latch: with `N₂ ≤ 1` the noise counter reloads with `max(N₂, 1)`, so it flips every
+tick and the LFSR shifts every second tick — the highest noise pitch the chip
+produces. Tone 2's own output stays constantly high as before.
+
+### Rationale
+
+The pinned Genesis Plus GX reference (and MAME, at twice the rate) both clock the
+noise in this state, and the SMPS drivers use it deliberately: writing the top
+note-table entry (`0x000`) into tone 2 under a linked noise track is their idiom
+for the fastest noise. Twenty-two SFX across the three games sit in that state —
+S1 `A2`, `AA` Splash, `AB`, `AE` Fireball, `B6` Spikes Move; S2 `A2`, `AA` Splash,
+`AB` Swish, `AE` Lava Ball, `B6`, `D4`; S3K `42`, `47`, `4E`, `66`, `70`, `7E`,
+`8D`, `97`, `A0`, `D1`, `DB` — the S1/S2 Splash for its whole 1.7 s body. A stopped
+LFSR silences them. Whether real silicon shifts once per tick (MAME) or once per
+two ticks (GPGX) remains unmeasured; the engine follows GPGX because the engine
+contract's tolerances are stated against it. Only the linked-noise clock changed;
+the tone channel's constant-high rule and every other noise rate are untouched.
+
+### Verification
+
+`TestPsgChipHardwareBehaviour.toneTwoLinkedNoiseFollowsToneTwoPeriodAndKeepsClockingAtTheTopOfTheTable`
+asserts one shift per two ticks at `N₂ = 1` and `N₂ = 0` with tone 2 held high.
+The capture re-run in
+`docs/architecture/validation/2026-08-29-psg-clean-room-capture-comparison.md` §9
+matches the reference on the S1 `B6` tail to within 0.02 dB per attenuation step,
+identical transition counts, and cross-correlation 0.990–0.9999 at a constant lag.
+
+---

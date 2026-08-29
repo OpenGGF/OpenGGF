@@ -37,17 +37,18 @@ This project uses documentation, tools, and reference implementations from many 
 
 ### Emulation cores
 
-The chip emulators under `src/main/java/com/openggf/audio/synth/` are Java ports of
-C cores rather than original designs. The FM core is the Nuked OPN2 port in the
-`nuked` sub-package; `Ym2612Chip` is the engine's facade over it and carries no
-emulation logic of its own. Their provenance, as far as the repository history
-and the source headers establish it:
+The chip emulators under `src/main/java/com/openggf/audio/synth/` are both clean of
+the non-commercial Genesis Plus GX provenance they once carried: `PsgChip` is a
+clean-room implementation written from the public SN76489 specification, and the
+FM core is the Nuked OPN2 port in the `nuked` sub-package with `Ym2612Chip` as the
+engine's facade over it, carrying no emulation logic of its own. Their provenance,
+as far as the repository history and the source headers establish it:
 
 | Engine class | Origin | Notes |
 |--------------|--------|-------|
 | `Ym2612Chip` | Facade over `nuked.NukedOpn2` (below); no other emulator source consulted. | Engine glue only: write queue and bus pacing, per-frame pin sum and output scale, internal-rate resampling, SMPS voice unpack, Z80-driver DAC streaming, output-stage mutes and the rewind snapshot, all written from `docs/architecture/designs/2026-08-29-nuked-opn2-port-contract.md`. From 2025-12-10 (commit `eae2da2ca`) until the Nuked switch-over it was a port of the Genesis Plus GX / libvgm `ym2612.c` (Jarek Burczynski and Tatsuyuki Satoh's MAME `fm.c` with Eke-Eke's fixes, non-commercial licence); that code is gone from the tree. |
 | `nuked.NukedOpn2` | `ym3438.c` / `ym3438.h` from Nuked OPN2 (Copyright 2017-2022 Alexey Khokholov), upstream commit `335747d7`, pinned in `tools/audio/nuked-opn2/PIN.md`. | A function-for-function port with `ym3438.c` line citations; every table and per-cycle stage is upstream's. LGPL 2.1 or later (`LICENSES/LGPL-2.1.txt`); the package NOTICE in `package-info.java` records how it combines with the GPL-3 engine. |
-| `PsgChip` | `psg.c` from Genesis Plus GX (Copyright 2016-2017 Eke-Eke). | Header states "Based on the Genesis Plus GX PSG core"; timing (`PSG_MCYCLES_RATIO`), noise and volume handling follow `psg.c`. `psg.c` carries Eke-Eke's non-commercial licence in its header. |
+| `PsgChip` | None. Clean-room implementation written from the public SN76489 specification in `docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md` (Maxim's SMS Power! notes, the TI datasheet, the Sega hardware manual). | No emulator source was consulted: not the previous Genesis Plus GX-derived body of this class, not `psg.c`, libvgm, MAME or BizHawk. Output is band-limited through `BlipDeltaBuffer` (below). |
 | `BlipDeltaBuffer` | `blip_buf.c` by Shay Green, as modified for Genesis Plus GX. | Library is LGPL 2.1 or later. |
 | `BlipResampler` | Windowed-sinc resampler written for OpenGGF, "based on the same principles as" blip_buf. | Not a port. |
 
