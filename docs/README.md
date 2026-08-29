@@ -25,6 +25,11 @@ Architecture artifacts are classified by the question they answer:
 - [Validation](architecture/validation/) — did an implementation meet its
   contract?
 
+External trace producers and analysis utilities are documented in the pinned
+[`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser) submodule under
+`tools/tracechaser/docs/`. OpenGGF's dated extraction design, plan, inventory,
+and validation records remain here as historical engineering evidence.
+
 Domain names such as audio, testing, trace, performance, or S3K zones may
 appear as subfolders inside one of those categories. They do not form a
 parallel top-level taxonomy.

@@ -104,6 +104,14 @@ tests, and runtime do not require them. Contributors doing disassembly-backed pa
 can opt in with `git submodule update --init`. The SMPS audio reference under
 `docs/SMPS-rips/SMPSPlay/` remains untracked and available locally.
 
+Trace producers, BizHawk integration, probes, and trace validation utilities live in the
+optional pinned `tools/tracechaser/` submodule. Ordinary builds and tests do not require it.
+For trace work, run `git submodule update --init --recursive tools/tracechaser`, then follow
+TraceChaser's own capture guide. OpenGGF keeps only 0.6 compatibility forwarders at selected
+old command paths; new guidance must use `tools/tracechaser/...`. BizHawk is not vendored:
+TraceChaser requires the verified official 2.11 release because later versions remove Lua
+functionality used by the supported recorders.
+
 ## Temporary and durable artifacts
 
 Maven-owned output stays below the current worktree's `target/` directory. Put durable

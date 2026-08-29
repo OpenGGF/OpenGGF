@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * vertical interrupt. Meanwhile the physics payload's {@code lag} column is
  * BizHawk's {@code IInputPollable.IsLagFrame}, which the GPGX host reports as
  * "no controller read happened during this frame"
- * (tools/bizhawk-headless/src/Core/GpgxHost.cs:82).
+ * (tools/tracechaser/bizhawk-headless/src/Core/GpgxHost.cs:94-97).
  *
  * <p>Those two statements cannot both be true of the same frame. A V-int that
  * ran {@code ReadJoypads} polled the pad, so the frame is by definition not a

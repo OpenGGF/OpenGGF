@@ -28,12 +28,15 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.LevelManager;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCpuController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -49,6 +52,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@FullReset
+@ExtendWith(SingletonResetExtension.class)
 class TestSonic2TriggerParticipation {
 
     @BeforeEach

@@ -7,9 +7,10 @@ Date: 2026-08-29
 Which parts of the OpenGGF repository have a strong enough ownership and dependency
 boundary to become separately released OpenGGF-org projects?
 
-This is a point-in-time audit. It recommends boundaries and migration order; it does not
-move code. A separate repository should reduce coupling or enable independent use, not
-merely make the OpenGGF tree smaller.
+This began as a point-in-time boundary audit. Its first recommendation was implemented on
+2026-08-29 as [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser) `v0.1.0`.
+OpenGGF pins exact commit `9e51ff79e7a542f3c50d96618a7e24e6fc72397e` at the optional
+`tools/tracechaser` gitlink. The remaining candidates are still recommendations.
 
 ## Decision criteria
 
@@ -44,11 +45,11 @@ runtime asset inputs.
 audit date: `OpenGGF`, `OpenGGF-WebZone`, `Actworks`, and `scddisasm`. None occupies the
 provisional recorder-project name below.
 
-## Extract first: recorder and fixture-publication toolchain
+## Extracted first: TraceChaser recorder and fixture-publication toolchain
 
 ### Recommended project
 
-Create one repository, provisionally `OpenGGF/GenesisTraceRecorder`, containing:
+The published `OpenGGF/TraceChaser` repository contains:
 
 - the supported native harness from `tools/bizhawk-headless/`;
 - legacy/differential Lua recorders, launchers, shared Lua modules, and probes from
@@ -71,7 +72,7 @@ The new project owns capture and publication. OpenGGF owns replay semantics and 
 comparison fixtures:
 
 ```text
-ROM + BK2 ── GenesisTraceRecorder ── trace schema v5 files ── OpenGGF replay tests
+ROM + BK2 ── TraceChaser ── trace schema v5 files ── OpenGGF replay tests
 ```
 
 Keep `src/test/resources/traces/` in OpenGGF during the first extraction. A normal build
@@ -154,9 +155,9 @@ that interface exists would simply export engine internals across a repository b
 1. **Freeze the portable trace-v5 contract and compatibility fixtures.** Both producer
    and consumer must validate the same positive and negative cases before their source
    trees are separated.
-2. **Extract and publish `GenesisTraceRecorder`.** It already has the cleanest executable
-   and dependency boundary and can remain optional to every OpenGGF build. Prove recorder
-   release → candidate validation → OpenGGF replay before deleting the in-tree copy.
+2. **Extract and publish `TraceChaser` — completed.** The history-preserved `v0.1.0`
+   release passed the six-capture reproduction and source-only policy gates before
+   OpenGGF removed the in-tree implementation and pinned the immutable release commit.
 3. **Reassess `RomWorkbench` only after a reusable ROM/codec API or second consumer exists.**
 4. **Reassess trace-fixture hosting only when repository weight becomes an active problem.**
 5. **Keep engine-facing capture, audio, replay, build-policy, and agent tooling in OpenGGF.**

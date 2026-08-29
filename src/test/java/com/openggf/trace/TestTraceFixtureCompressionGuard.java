@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * memory hooks enabled, whose aux streams dwarf the hooks-off captures.
  *
  * <p>The native harness compresses at publication time by default
- * ({@code tools/bizhawk-headless}, {@code --no-compress} to opt out), but that
+ * ({@code tools/tracechaser/bizhawk-headless}, {@code --no-compress} to opt out), but that
  * covers one producer. This guard covers the goal instead of the tool: a Lua
  * capture, a stable-retro capture, or a file copied in by hand is caught just
  * the same, because the check is on what the fixture tree contains.

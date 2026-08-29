@@ -44,6 +44,10 @@ stable-retro-*.zip
 
 # Debug tools (uncompiled standalone scripts)
 tools/*
+!tools/tracechaser-bootstrap.sh
+!tools/tracechaser-forward.lua
+!tools/tracechaser.ps1
+!tools/tracechaser.sh
 !tools/audio/
 !tools/audio/run_s1_audio_parity.sh
 !tools/audio/lib/

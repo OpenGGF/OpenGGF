@@ -10,6 +10,11 @@ This document tracks **intentional deviations** from the original Sonic 1 / 2 / 
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**TraceChaser extraction note (2026-08-29):** moving recorder and analysis
+utilities to the optional pinned `tools/tracechaser` submodule changes source
+ownership only. It introduces no cross-game or ROM-behaviour discrepancy, so
+no discrepancy entry was added or reclassified by the cutover.
+
 ## Table of Contents
 
 1. [Gloop Sound Toggle](#gloop-sound-toggle)
@@ -2386,7 +2391,7 @@ index space with this proxy would swap one non-ROM predicate for another.
 ### What is blocked, and the decision required
 
 No committed fixture records the flag. The recorder samples only `$FFB0` (Chaos count,
-`tools/bizhawk-headless/src/Recording/S3KRam.cs:247`); SS `aux_state.jsonl.gz` is
+`tools/tracechaser/bizhawk-headless/src/Recording/S3KRam.cs:247`); SS `aux_state.jsonl.gz` is
 byte-empty by design (`S3KCompleteRunSegmenter.cs:24`). Note `run_manifest.json` **does**
 carry `emeralds_before`/`emeralds_after` -- an earlier claim here that it did not was
 wrong -- but that is the Chaos count, not the flag.

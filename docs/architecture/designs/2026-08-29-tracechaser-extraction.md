@@ -362,14 +362,19 @@ git submodule update --init --recursive tools/tracechaser
 OpenGGF supplies `tools/tracechaser.sh` and `tools/tracechaser.ps1` as the
 checkout-aware bootstrap entry points. They do not download automatically.
 They either delegate to the pinned checkout or fail with the exact submodule
-initialisation command and the expected gitlink identity.
+initialisation command and the expected gitlink identity. Command delegation
+uses one canonical resolver: it rejects a dirty same-HEAD checkout, symbolic
+links or non-directory ancestors between the gitlink root and target, and any
+target whose resolved path escapes the checkout. Shell, Lua, Python, and
+PowerShell compatibility entry points execute only the path returned by that
+resolver.
 
 The two retained native-to-Java decode gates are not part of the ordinary test
-selection. Their existing ROM/movie environment gates remain, and they add a
-JUnit assumption for an initialised `tools/tracechaser` checkout before
-resolving the native harness. An explicit integration command selects them;
-the absence of the submodule is a skip, while a present but wrong gitlink is a
-hard failure.
+selection. Each method first resolves the optional checkout: absence skips and
+a present wrong commit fails. Only after an exact checkout is established does
+the existing ROM/movie environment opt-in become a JUnit assumption. An
+explicit integration command selects them, so an unset capture environment can
+never hide a wrong gitlink.
 
 For the 0.6 cycle, the documented public commands at former paths remain as
 thin forwarders where removing the path would otherwise make an agent follow
@@ -400,16 +405,20 @@ The portable conformance pack contains small positive and negative documents
 for metadata, physics-row shape, auxiliary JSONL, hardware timing, compression,
 and run manifests. TraceChaser validates the producer pack. OpenGGF retains a
 small consumer copy under `src/test/resources/tracechaser/` because ordinary
-tests must pass without an initialised submodule. Its `manifest.json` records:
+tests must pass without an initialised submodule. The central
+`provenance.json` records:
 
 - the originating TraceChaser commit;
 - the contract-pack version;
 - a path-and-SHA-256 manifest;
 - the OpenGGF consumer tests that use each item.
 
-When TraceChaser is initialised, a structural integration check compares the
-two manifests. With the submodule absent, OpenGGF validates its pinned consumer
-copy without network access.
+When TraceChaser is initialised, a structural integration check byte-compares
+the complete v5 tree, GPGX capability JSON, and audio-normalization contract
+against every declared source path. With the submodule absent, ordinary Maven
+parses all 31 v5 accept/reject cases and validates the exact copy set and hashes
+without network access; mutation tests reject tampered, missing, and extra
+provenance entries.
 
 Canonical fixture installation remains an explicit, user-approved operation.
 TraceChaser validators and comparators never overwrite

@@ -14,7 +14,7 @@ ROM RAM during BK2 playback) — it cannot be done in a no-hardware session.
 
 ## What v3.7 adds (vs the installed traces)
 
-Recorder: `tools/bizhawk/s1_complete_run_recorder.lua` (`metadata.lua_script_version == "3.7"`).
+Recorder: `tools/tracechaser/bizhawk/s1_complete_run_recorder.lua` (`metadata.lua_script_version == "3.7"`).
 CSV schema is UNCHANGED (player `x_sub`/`y_sub` have been columns 12-13 since v2.0).
 New, comparison-only aux events (gated by `aux_schema_extras`):
 
@@ -40,20 +40,20 @@ recorded ROM counters/markers for correct movie playback is fine; copying record
      and auto-detects zone/act, emitting one per-act output subdir).
 2. **Run the recorder** (headless EmuHawk, mirrors the s3k complete-run pattern):
    ```
-   docs/BizHawk-2.11-win-x64/EmuHawk.exe --chromeless \
-     --lua=tools/bizhawk/s1_complete_run_recorder.lua \
+   tools/tracechaser/.dependencies/BizHawk-2.11-win-x64/EmuHawk.exe --chromeless \
+     --lua=tools/tracechaser/bizhawk/s1_complete_run_recorder.lua \
      --movie=s1-complete-run.bk2 \
      "s1.gen"
    ```
    (Override the emulator path with `BIZHAWK_EXE` if needed. The v3.6+ recorder
    self-exits at movie end and pre-creates all per-act output subdirs in one
    shell-out — no per-segment cmd-window flashes.)
-3. **Output** lands in `tools/bizhawk/trace_output/<zone>_<act>/` (metadata.json +
+3. **Output** lands in `tools/tracechaser/bizhawk/trace_output/<zone>_<act>/` (metadata.json +
    physics.csv + aux_state.jsonl per act). Verify each `metadata.json` shows
    `"lua_script_version": "3.7"` and `aux_schema_extras` contains
    `"v_objstate_per_frame"` + `"camera_boundary_per_frame"`.
 4. **Install** each act's files into `src/test/resources/traces/s1/<zone>/`
-   (overwriting the stale ones). Run `tools/traces/compress-traces.ps1` if the
+   (overwriting the stale ones). Run `tools/tracechaser/traces/compress-traces.ps1` if the
    repo stores compressed traces.
 5. **Re-run the comparator** per zone and read the context window — the new aux now
    renders in `target/trace-reports/s1_<zone>_context.txt`:
