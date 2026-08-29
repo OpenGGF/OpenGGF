@@ -131,7 +131,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:238
     private void doRegWrite() {
-        int slot = chip.cycles % 12;
+        int slot = chip.cycles >= 12 ? chip.cycles - 12 : chip.cycles; /* cycles % 12 on 0..23 */
         int address;
         int channel = chip.channel;
         /* Update registers */
@@ -384,12 +384,12 @@ public final class NukedOpn2 {
     private void phaseGenerate() {
         int slot;
         /* Mask increment */
-        slot = (chip.cycles + 20) % 24;
+        slot = wrap24(chip.cycles + 20);
         if (chip.pgReset[slot] != 0) {
             chip.pgInc[slot] = 0;
         }
         /* Phase step */
-        slot = (chip.cycles + 19) % 24;
+        slot = wrap24(chip.cycles + 19);
         if (chip.pgReset[slot] != 0 || chip.modeTest21[3] != 0) {
             chip.pgPhase[slot] = 0;
         }
@@ -438,7 +438,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:591
     private void envelopeAdsr() {
-        int slot = (chip.cycles + 22) % 24;
+        int slot = wrap24(chip.cycles + 22);
 
         int nkon = chip.egKonLatch[slot];
         int okon = chip.egKon[slot];
@@ -614,7 +614,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:803
     private void envelopeGenerate() {
-        int slot = (chip.cycles + 23) % 24;
+        int slot = wrap24(chip.cycles + 23);
         int level;
 
         level = chip.egLevel[slot];
@@ -654,14 +654,14 @@ public final class NukedOpn2 {
 
     // ym3438.c:850
     private void fmPrepare() {
-        int slot = (chip.cycles + 6) % 24;
+        int slot = wrap24(chip.cycles + 6);
         int channel = chip.channel;
         int mod;
         int mod1;
         int mod2;
         int op = slot / 6;
         int connect = chip.connect[channel];
-        int prevslot = (chip.cycles + 18) % 24;
+        int prevslot = wrap24(chip.cycles + 18);
 
         /* Calculate modulation */
         mod1 = mod2 = 0;
@@ -694,7 +694,7 @@ public final class NukedOpn2 {
         }
         chip.fmMod[slot] = mod & 0xffff; /* Bit16u */
 
-        slot = (chip.cycles + 18) % 24;
+        slot = wrap24(chip.cycles + 18);
         /* OP1 */
         if (slot / 6 == 0) {
             chip.fmOp1[channel][1] = chip.fmOp1[channel][0];
@@ -708,7 +708,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:912
     private void chGenerate() {
-        int slot = (chip.cycles + 18) % 24;
+        int slot = wrap24(chip.cycles + 18);
         int channel = chip.channel;
         int op = slot / 6;
         int testDac = chip.modeTest2c[5];
@@ -801,7 +801,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:1029
     private void fmGenerate() {
-        int slot = (chip.cycles + 19) % 24;
+        int slot = wrap24(chip.cycles + 19);
         /* Calculate phase */
         int phase = (chip.fmMod[slot] + (chip.pgPhase[slot] >> 10)) & 0x3ff;
         int quarter;
@@ -1046,6 +1046,7 @@ public final class NukedOpn2 {
         envelopePrepare();
 
         /* Prepare fnum & block */
+        int nextChannel = chip.channel + 1 == 6 ? 0 : chip.channel + 1; /* (channel + 1) % 6, channel in 0..5 */
         if (chip.modeCh3 != 0) {
             /* Channel 3 special mode */
             switch (slot) {
@@ -1066,20 +1067,20 @@ public final class NukedOpn2 {
                 break;
             case 19: /* OP4 */
             default:
-                chip.pgFnum = chip.fnum[(chip.channel + 1) % 6];
-                chip.pgBlock = chip.block[(chip.channel + 1) % 6];
-                chip.pgKcode = chip.kcode[(chip.channel + 1) % 6];
+                chip.pgFnum = chip.fnum[nextChannel];
+                chip.pgBlock = chip.block[nextChannel];
+                chip.pgKcode = chip.kcode[nextChannel];
                 break;
             }
         } else {
-            chip.pgFnum = chip.fnum[(chip.channel + 1) % 6];
-            chip.pgBlock = chip.block[(chip.channel + 1) % 6];
-            chip.pgKcode = chip.kcode[(chip.channel + 1) % 6];
+            chip.pgFnum = chip.fnum[nextChannel];
+            chip.pgBlock = chip.block[nextChannel];
+            chip.pgKcode = chip.kcode[nextChannel];
         }
 
         updateLfo();
         doRegWrite();
-        chip.cycles = (chip.cycles + 1) % 24;
+        chip.cycles = wrap24(chip.cycles + 1);
         chip.channel = chip.cycles % 6;
 
         buffer[0] = chip.mol;
@@ -1139,7 +1140,7 @@ public final class NukedOpn2 {
         if ((port & 3) == 0 || (chipType & MODE_READMODE) != 0) {
             if (chip.modeTest21[6] != 0) {
                 /* Read test data */
-                int slot = (chip.cycles + 18) % 24;
+                int slot = wrap24(chip.cycles + 18);
                 int testdata = ((chip.pgRead & 0x01) << 15)
                         | ((chip.egRead[chip.modeTest21[0]] & 0x01) << 14);
                 if (chip.modeTest2c[4] != 0) {
@@ -1166,6 +1167,15 @@ public final class NukedOpn2 {
             return chip.status;
         }
         return 0;
+    }
+
+    /**
+     * {@code x % 24} for {@code x} in {@code 0..47}: every caller adds a
+     * constant below 24 to {@code cycles} (itself 0..23), so one conditional
+     * subtract gives the same slot as the C modulo without the division.
+     */
+    private static int wrap24(int x) {
+        return x >= 24 ? x - 24 : x;
     }
 
     /**
