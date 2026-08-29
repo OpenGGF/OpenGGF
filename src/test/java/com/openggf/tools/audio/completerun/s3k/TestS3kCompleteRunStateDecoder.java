@@ -9,9 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.openggf.tools.audio.completerun.s3k.S3kCompleteRunStateNormalizer.LiveSfx;
 import com.openggf.tools.audio.completerun.s3k.S3kCompleteRunStateNormalizer.SavedMusic;
 import com.openggf.tools.audio.completerun.s3k.S3kCompleteRunStateNormalizer.RomPointer;
+import com.openggf.tests.RomTestUtils;
+import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class TestS3kCompleteRunStateDecoder {
     private static final int TRACKS = 0x40;
@@ -244,11 +248,11 @@ class TestS3kCompleteRunStateDecoder {
     }
 
     private static Path rom() {
-        String configured = System.getProperty("s3k.rom.path");
-        if (configured == null || configured.isBlank()) {
-            throw new IllegalStateException("test requires -Ds3k.rom.path=<locked-on ROM>");
-        }
-        return Path.of(configured);
+        // Skip (never error) when the ROM is absent: ROM-less CI runners must
+        // report a skip, while release runs pass -Ds3k.rom.path explicitly.
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null, "Sonic 3&K locked-on ROM not available — skipping test");
+        return romFile.toPath();
     }
 
     private static byte[] baseState() {

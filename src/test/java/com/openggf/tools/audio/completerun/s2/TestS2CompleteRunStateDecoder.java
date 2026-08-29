@@ -5,8 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.openggf.tests.RomTestUtils;
+import java.io.File;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class TestS2CompleteRunStateDecoder {
     private static final int MUSIC = 0x1b98;
@@ -128,11 +132,11 @@ class TestS2CompleteRunStateDecoder {
     private record AssetRange(int base, int end) { }
 
     private static Path rom() {
-        String configured = System.getProperty("sonic2.rom.path");
-        if (configured == null || configured.isBlank()) {
-            throw new IllegalStateException("test requires -Dsonic2.rom.path=<REV01 ROM>");
-        }
-        return Path.of(configured);
+        // Skip (never error) when the ROM is absent: ROM-less CI runners must
+        // report a skip, while release runs pass -Dsonic2.rom.path explicitly.
+        File romFile = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(romFile != null, "Sonic 2 REV01 ROM not available — skipping test");
+        return romFile.toPath();
     }
 
     private static byte[] baseState() {

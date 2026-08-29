@@ -300,6 +300,10 @@ traces.
   the ordinary suite now also runs on every push to `develop`; `-Pguards`
   547 tests, all passing; `-Ptrace-replay` 870 tests with the six known-red
   frontier failures, 0 errors, 7 skipped.
+  ROM-backed test fixtures (`SharedLevel` and the S2/S3K complete-run
+  decoder tests) now skip with a reason instead of erroring when a ROM is
+  absent, so the ROM-less GitHub `test` job reports skips rather than
+  errors (verified below).
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
   and worktree-local direct-Maven procedures. The canonical Sonic 1, Sonic 2,
