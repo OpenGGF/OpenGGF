@@ -9,7 +9,7 @@ import com.openggf.game.timing.HardwareTimingJob;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;

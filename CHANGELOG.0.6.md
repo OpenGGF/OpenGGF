@@ -40,6 +40,26 @@ This file contains the complete 0.6 development snapshot history carried forward
   zone gate and guarded by `TestSonic3kObjectProfileRegistryGuard`, and all three
   `*OBJECT_CHECKLIST.md` files are regenerated from `ObjectDiscoveryTool`.
 
+- **Dead code removed:** the unreferenced `Sonic3kSpecialStageScalars`,
+  `CNZBossAnimations`, `DebugPrimitiveRenderer`, and `DebugColorShaderProgram`
+  classes are gone, along with the never-read
+  `DEBUG_COLLISION_VIEW_ENABLED` (`debug.flags.collisionView`) config key. An
+  existing `config.yaml` that still lists `collisionView` loads unchanged; the
+  key is simply reported as unknown.
+
+- **Shared power-up spawning no longer names Sonic object classes:** the S3K
+  elemental shields and insta-shield and the Sonic 1 water splash are now
+  supplied by `GameModule` factories (`getShieldFactory`,
+  `getInstaShieldFactory`, `getWaterSplashFactory`), with the cross-game donor
+  provider contributing the S3K shields when an S1/S2 host borrows them. Five
+  frozen ArchUnit exceptions retired; behaviour unchanged.
+
+- **Runtime decompressors now live in `com.openggf.data.compression`:** the
+  Kosinski, Nemesis, Enigma, Saxman, and DCM decoders (plus the resumable
+  Kosinski decoder and its snapshot records) moved out of the CLI-oriented
+  `com.openggf.tools` package so the ROM-loading pipeline no longer depends on
+  the tooling package for pure data decoding. No behaviour changed.
+
 - **The release structural checks are green again:** object priority rendering
   now reuses one palette-mask transition path, preserving the AIZ2 bridge
   layering fix while keeping rendering responsibility out of the already-large

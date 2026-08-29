@@ -1,4 +1,4 @@
-package com.openggf.tools;
+package com.openggf.data.compression;
 
 import org.junit.jupiter.api.Test;
 

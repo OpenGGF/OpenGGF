@@ -367,6 +367,31 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
      * @param player the player sprite to attach the controller to
      * @return a donor-game SuperStateController with ROM data pre-loaded, or null
      */
+    /**
+     * Returns the donor game's shield object factory, or {@code null} when no
+     * donor is active or the donor contributes no shield variants. Callers fall
+     * back to the host {@link GameModule#getShieldFactory()}.
+     */
+    public java.util.function.BiFunction<AbstractPlayableSprite, ShieldType,
+            com.openggf.level.objects.ShieldObjectInstance> getDonorShieldFactory() {
+        if (!active || donorProvider == null) {
+            return null;
+        }
+        return donorProvider.getShieldFactory();
+    }
+
+    /**
+     * Returns the donor game's insta-shield object factory, or {@code null}
+     * when no donor is active or the donor has no insta-shield object.
+     */
+    public java.util.function.Function<AbstractPlayableSprite,
+            com.openggf.level.objects.AbstractObjectInstance> getDonorInstaShieldFactory() {
+        if (!active || donorProvider == null) {
+            return null;
+        }
+        return donorProvider.getInstaShieldFactory();
+    }
+
     public SuperStateController createSuperStateController(AbstractPlayableSprite player) {
         if (!active || donorReader == null || donorCapabilities == null || donorProvider == null) {
             return null;

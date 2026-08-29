@@ -682,7 +682,7 @@ class TestArchUnitRules {
                             .and().areNotAnnotatedWith(CompositionRoot.class)
                             .should().callConstructorWhere(targetIsConcreteSonicProvider())
                             .as("shared code should not construct concrete Sonic provider/art/object classes"))
-                    .because("shared layers should obtain game-specific providers through GameModule or approved composition roots; frozen baseline: 1 violation");
+                    .because("shared layers should obtain game-specific providers through GameModule or approved composition roots; frozen baseline: 0 violations");
 
     @ArchTest
     static final ArchRule object_packages_do_not_access_global_game_services =
@@ -717,7 +717,7 @@ class TestArchUnitRules {
                                     "com.openggf.game.sonic2..",
                                     "com.openggf.game.sonic3k..")
                     .as("shared level and game layers should not depend on game-specific packages"))
-                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 14 violations");
+                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 9 violations");
 
     @ArchTest
     static final ArchRule per_game_packages_do_not_cross_depend =

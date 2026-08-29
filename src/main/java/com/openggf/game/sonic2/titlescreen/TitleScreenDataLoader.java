@@ -15,7 +15,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.TileLoadRequest;
-import com.openggf.tools.EnigmaReader;
+import com.openggf.data.compression.EnigmaReader;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.ByteArrayInputStream;

@@ -1,4 +1,4 @@
-package com.openggf.tools;
+package com.openggf.data.compression;
 
 /**
  * Observable result of one bounded Kosinski decoder step.

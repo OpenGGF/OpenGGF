@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k.resources;
 
 import com.openggf.data.Rom;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 
 import java.io.IOException;
 

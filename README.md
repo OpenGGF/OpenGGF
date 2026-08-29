@@ -337,6 +337,9 @@ The object checklists were regenerated from the registries (S2 122/122, S3K
 173/303), S3K object `$4F` is now gated by zone set so DEZ no longer spawns
 MGZ sinking mud, and the stale S2/S3K bug lists were folded into
 `docs/status/known-bugs.md`.
+Runtime decompressors moved from `tools/` to `com.openggf.data.compression`,
+power-up visuals now come from per-game `GameModule` factories instead of a
+shared spawner naming S3K classes, and four unreferenced classes were removed.
 
 The current S3K release priority is the AIZ → HCZ playable route. Knuckles
 routes, later-zone completeness, and some bonus/special-stage paths remain

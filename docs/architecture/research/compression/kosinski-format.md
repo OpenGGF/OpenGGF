@@ -8,9 +8,9 @@ Brett Kosinski"**, is preserved below. It is reference material only; runtime
 assets are decompressed from user-supplied ROMs by the current implementation
 owners:
 
-- [KosinskiReader](../../../../src/main/java/com/openggf/tools/KosinskiReader.java)
+- [KosinskiReader](../../../../src/main/java/com/openggf/data/compression/KosinskiReader.java)
   implements standard and moduled Kosinski decompression.
-- [ResumableKosinskiDecoder](../../../../src/main/java/com/openggf/tools/ResumableKosinskiDecoder.java)
+- [ResumableKosinskiDecoder](../../../../src/main/java/com/openggf/data/compression/ResumableKosinskiDecoder.java)
   owns resumable decoder state for incremental work.
 - [S3kKosDecompressionQueue](../../../../src/main/java/com/openggf/game/sonic3k/resources/S3kKosDecompressionQueue.java)
   owns the S3K runtime decompression-work queue.

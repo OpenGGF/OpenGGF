@@ -15,7 +15,7 @@ import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
-import com.openggf.tools.EnigmaReader;
+import com.openggf.data.compression.EnigmaReader;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.ByteArrayInputStream;

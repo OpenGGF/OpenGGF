@@ -6,7 +6,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.rings.RingFrame;
 import com.openggf.level.rings.RingFramePiece;
 import com.openggf.level.rings.RingSpriteSheet;
-import com.openggf.tools.NemesisReader;
+import com.openggf.data.compression.NemesisReader;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;

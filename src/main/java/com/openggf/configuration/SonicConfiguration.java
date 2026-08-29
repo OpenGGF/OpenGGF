@@ -158,11 +158,6 @@ public enum SonicConfiguration {
 	EDITOR_ENABLED,
 
 	/**
-	 * Whether to display debugging collision information on screen.
-	 */
-	DEBUG_COLLISION_VIEW_ENABLED,
-
-	/**
 	 * Key to toggle Debug Movement Mode at runtime.
 	 */
 	DEBUG_MODE_KEY,

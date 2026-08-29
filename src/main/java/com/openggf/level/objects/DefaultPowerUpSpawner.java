@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.InstaShieldHandle;
 import com.openggf.game.PlayableEntity;
@@ -8,17 +9,14 @@ import com.openggf.game.PowerUpSpawner;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PowerUpRules;
-import com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance;
-import com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance;
-import com.openggf.game.sonic3k.objects.FireShieldObjectInstance;
-import com.openggf.game.sonic3k.objects.InstaShieldObjectInstance;
-import com.openggf.game.sonic3k.objects.LightningShieldObjectInstance;
 import com.openggf.level.WaterSystem;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.managers.SpindashDustController;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -26,14 +24,12 @@ import java.util.logging.Logger;
  * Default implementation of {@link PowerUpSpawner} that creates concrete
  * power-up objects and registers them with the {@link ObjectManager}.
  * <p>
- * <b>Intentional bridge class:</b> This class imports game-specific concrete
- * types (S1 splash, S3K elemental shields) from the game-agnostic layer.
- * This is an accepted layering violation: the {@code switch} on
- * {@link ShieldType} maps each enum value to its concrete class without
- * relying on game-id checks, and game-specific divergences (invincibility
- * stars subclass, S1's fixed shield slot) are gated through
- * {@link com.openggf.game.GameModule} factories or
- * {@link PowerUpRules} flags.
+ * Game-specific visuals (S3K elemental shields and insta-shield, the S1 LZ
+ * splash, the S3K invincibility-stars subclass) are obtained from the active
+ * {@link GameModule} factories, and slot placement divergences (S1's fixed
+ * shield slot, S2/S3K's fixed dust-object splash) are gated through
+ * {@link PowerUpRules} flags. This class never names a concrete Sonic object
+ * class.
  */
 public class DefaultPowerUpSpawner implements PowerUpSpawner {
 
@@ -49,15 +45,12 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
     @Override
     public PowerUpObject spawnShield(PlayableEntity player, ShieldType type) {
         ShieldObjectInstance shield;
-        if (player instanceof AbstractPlayableSprite aps) {
-            shield = constructWithServices(() -> switch (type) {
-                case FIRE -> new FireShieldObjectInstance(aps);
-                case LIGHTNING -> new LightningShieldObjectInstance(aps);
-                case BUBBLE -> new BubbleShieldObjectInstance(aps);
-                default -> new ShieldObjectInstance(player);
-            });
+        BiFunction<AbstractPlayableSprite, ShieldType, ShieldObjectInstance> factory = shieldFactory();
+        if (player instanceof AbstractPlayableSprite aps && factory != null) {
+            shield = constructWithServices(() -> factory.apply(aps, type));
         } else {
             // Non-elemental fallback when player is not AbstractPlayableSprite
+            // or no game module is active to supply elemental variants.
             shield = constructWithServices(() -> new ShieldObjectInstance(player));
         }
         addPowerUpObject(shield);
@@ -66,8 +59,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
 
     @Override
     public PowerUpObject spawnInvincibilityStars(PlayableEntity player) {
-        ObjectServices services = objectServices();
-        GameModule module = services != null ? services.gameModule() : null;
+        GameModule module = gameModule();
         AbstractObjectInstance stars;
         if (module != null) {
             stars = constructWithServices(() -> module.getInvincibilityStarsFactory().apply(player));
@@ -84,7 +76,17 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             LOGGER.warning("createInstaShield called with non-AbstractPlayableSprite");
             return null;
         }
-        return constructWithServices(() -> new InstaShieldObjectInstance(aps));
+        Function<AbstractPlayableSprite, AbstractObjectInstance> factory = instaShieldFactory();
+        if (factory == null) {
+            LOGGER.warning("createInstaShield called for a game module without an insta-shield object");
+            return null;
+        }
+        AbstractObjectInstance instaShield = constructWithServices(() -> factory.apply(aps));
+        if (!(instaShield instanceof InstaShieldHandle handle)) {
+            LOGGER.warning("insta-shield factory returned an object that is not an InstaShieldHandle");
+            return null;
+        }
+        return handle;
     }
 
     @Override
@@ -159,10 +161,16 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             }
         }
 
-        // S1: use LZ splash art from ObjectRenderManager (Object 0x08)
-        var s1Splash = new Sonic1SplashObjectInstance(
-                player.getCentreX(), waterY);
-        addWaterSplashObject(s1Splash);
+        // Games whose splash is a level object (S1 LZ splash, Object 0x08)
+        // supply it through their module; games that draw the splash through
+        // the fixed dust object returned above and have no factory here.
+        GameModule module = gameModule();
+        BiFunction<Integer, Integer, AbstractObjectInstance> splashFactory =
+                module != null ? module.getWaterSplashFactory() : null;
+        if (splashFactory == null) {
+            return;
+        }
+        addWaterSplashObject(splashFactory.apply((int) player.getCentreX(), waterY));
     }
 
     /**
@@ -234,6 +242,43 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             return rules.powerUp();
         }
         return null;
+    }
+
+    /**
+     * Shield objects come from the cross-game donor when one is active (its
+     * hybrid capability rules are what enable elemental shields on a host that
+     * has none), otherwise from the host module.
+     */
+    private BiFunction<AbstractPlayableSprite, ShieldType, ShieldObjectInstance> shieldFactory() {
+        CrossGameFeatureProvider crossGame = crossGameFeatures();
+        BiFunction<AbstractPlayableSprite, ShieldType, ShieldObjectInstance> donor =
+                crossGame != null ? crossGame.getDonorShieldFactory() : null;
+        if (donor != null) {
+            return donor;
+        }
+        GameModule module = gameModule();
+        return module != null ? module.getShieldFactory() : null;
+    }
+
+    private Function<AbstractPlayableSprite, AbstractObjectInstance> instaShieldFactory() {
+        CrossGameFeatureProvider crossGame = crossGameFeatures();
+        Function<AbstractPlayableSprite, AbstractObjectInstance> donor =
+                crossGame != null ? crossGame.getDonorInstaShieldFactory() : null;
+        if (donor != null) {
+            return donor;
+        }
+        GameModule module = gameModule();
+        return module != null ? module.getInstaShieldFactory() : null;
+    }
+
+    private CrossGameFeatureProvider crossGameFeatures() {
+        ObjectServices services = objectServices();
+        return services != null ? services.crossGameFeatures() : null;
+    }
+
+    private GameModule gameModule() {
+        ObjectServices services = objectServices();
+        return services != null ? services.gameModule() : null;
     }
 
     private ObjectServices objectServices() {

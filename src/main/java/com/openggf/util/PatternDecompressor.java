@@ -3,8 +3,8 @@ package com.openggf.util;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.level.Pattern;
-import com.openggf.tools.KosinskiReader;
-import com.openggf.tools.NemesisReader;
+import com.openggf.data.compression.KosinskiReader;
+import com.openggf.data.compression.NemesisReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

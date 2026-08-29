@@ -7,8 +7,8 @@ import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
-import com.openggf.tools.EnigmaReader;
-import com.openggf.tools.NemesisReader;
+import com.openggf.data.compression.EnigmaReader;
+import com.openggf.data.compression.NemesisReader;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.ByteArrayInputStream;

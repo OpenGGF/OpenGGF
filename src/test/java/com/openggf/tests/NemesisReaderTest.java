@@ -3,7 +3,7 @@ package com.openggf.tests;
 import com.openggf.game.GameServices;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import com.openggf.tools.NemesisReader;
+import com.openggf.data.compression.NemesisReader;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;

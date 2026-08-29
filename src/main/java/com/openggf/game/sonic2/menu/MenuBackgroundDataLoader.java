@@ -6,7 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
-import com.openggf.tools.EnigmaReader;
+import com.openggf.data.compression.EnigmaReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
