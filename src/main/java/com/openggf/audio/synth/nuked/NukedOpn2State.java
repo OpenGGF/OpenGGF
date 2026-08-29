@@ -619,6 +619,287 @@ public final class NukedOpn2State {
         statusTime = other.statusTime;
     }
 
+    /**
+     * Value equality over every field, so a snapshot that carries this state
+     * compares by contents rather than identity (the struct compare a
+     * {@code memcmp} of two {@code ym3438_t} would give).
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof NukedOpn2State other)) {
+            return false;
+        }
+        return cycles == other.cycles
+                && channel == other.channel
+                && mol == other.mol
+                && mor == other.mor
+                && writeData == other.writeData
+                && writeA == other.writeA
+                && writeD == other.writeD
+                && writeAEn == other.writeAEn
+                && writeDEn == other.writeDEn
+                && writeBusy == other.writeBusy
+                && writeBusyCnt == other.writeBusyCnt
+                && writeFmAddress == other.writeFmAddress
+                && writeFmData == other.writeFmData
+                && writeFmModeA == other.writeFmModeA
+                && address == other.address
+                && data == other.data
+                && pinTestIn == other.pinTestIn
+                && pinIrq == other.pinIrq
+                && busy == other.busy
+                && lfoEn == other.lfoEn
+                && lfoFreq == other.lfoFreq
+                && lfoPm == other.lfoPm
+                && lfoAm == other.lfoAm
+                && lfoCnt == other.lfoCnt
+                && lfoInc == other.lfoInc
+                && lfoQuotient == other.lfoQuotient
+                && pgFnum == other.pgFnum
+                && pgBlock == other.pgBlock
+                && pgKcode == other.pgKcode
+                && Arrays.equals(pgInc, other.pgInc)
+                && Arrays.equals(pgPhase, other.pgPhase)
+                && Arrays.equals(pgReset, other.pgReset)
+                && pgRead == other.pgRead
+                && egCycle == other.egCycle
+                && egCycleStop == other.egCycleStop
+                && egShift == other.egShift
+                && egShiftLock == other.egShiftLock
+                && egTimerLowLock == other.egTimerLowLock
+                && egTimer == other.egTimer
+                && egTimerInc == other.egTimerInc
+                && egQuotient == other.egQuotient
+                && egCustomTimer == other.egCustomTimer
+                && egRate == other.egRate
+                && egKsv == other.egKsv
+                && egInc == other.egInc
+                && egRatemax == other.egRatemax
+                && Arrays.equals(egSl, other.egSl)
+                && egLfoAm == other.egLfoAm
+                && Arrays.equals(egTl, other.egTl)
+                && Arrays.equals(egState, other.egState)
+                && Arrays.equals(egLevel, other.egLevel)
+                && Arrays.equals(egOut, other.egOut)
+                && Arrays.equals(egKon, other.egKon)
+                && Arrays.equals(egKonCsm, other.egKonCsm)
+                && Arrays.equals(egKonLatch, other.egKonLatch)
+                && Arrays.equals(egCsmMode, other.egCsmMode)
+                && Arrays.equals(egSsgEnable, other.egSsgEnable)
+                && Arrays.equals(egSsgPgrstLatch, other.egSsgPgrstLatch)
+                && Arrays.equals(egSsgRepeatLatch, other.egSsgRepeatLatch)
+                && Arrays.equals(egSsgHoldUpLatch, other.egSsgHoldUpLatch)
+                && Arrays.equals(egSsgDir, other.egSsgDir)
+                && Arrays.equals(egSsgInv, other.egSsgInv)
+                && Arrays.equals(egRead, other.egRead)
+                && egReadInc == other.egReadInc
+                && Arrays.deepEquals(fmOp1, other.fmOp1)
+                && Arrays.equals(fmOp2, other.fmOp2)
+                && Arrays.equals(fmOut, other.fmOut)
+                && Arrays.equals(fmMod, other.fmMod)
+                && Arrays.equals(chAcc, other.chAcc)
+                && Arrays.equals(chOut, other.chOut)
+                && chLock == other.chLock
+                && chLockL == other.chLockL
+                && chLockR == other.chLockR
+                && chRead == other.chRead
+                && timerACnt == other.timerACnt
+                && timerAReg == other.timerAReg
+                && timerALoadLock == other.timerALoadLock
+                && timerALoad == other.timerALoad
+                && timerAEnable == other.timerAEnable
+                && timerAReset == other.timerAReset
+                && timerALoadLatch == other.timerALoadLatch
+                && timerAOverflowFlag == other.timerAOverflowFlag
+                && timerAOverflow == other.timerAOverflow
+                && timerBCnt == other.timerBCnt
+                && timerBSubcnt == other.timerBSubcnt
+                && timerBReg == other.timerBReg
+                && timerBLoadLock == other.timerBLoadLock
+                && timerBLoad == other.timerBLoad
+                && timerBEnable == other.timerBEnable
+                && timerBReset == other.timerBReset
+                && timerBLoadLatch == other.timerBLoadLatch
+                && timerBOverflowFlag == other.timerBOverflowFlag
+                && timerBOverflow == other.timerBOverflow
+                && Arrays.equals(modeTest21, other.modeTest21)
+                && Arrays.equals(modeTest2c, other.modeTest2c)
+                && modeCh3 == other.modeCh3
+                && modeKonChannel == other.modeKonChannel
+                && Arrays.equals(modeKonOperator, other.modeKonOperator)
+                && Arrays.equals(modeKon, other.modeKon)
+                && modeCsm == other.modeCsm
+                && modeKonCsm == other.modeKonCsm
+                && dacen == other.dacen
+                && dacdata == other.dacdata
+                && Arrays.equals(ks, other.ks)
+                && Arrays.equals(ar, other.ar)
+                && Arrays.equals(sr, other.sr)
+                && Arrays.equals(dt, other.dt)
+                && Arrays.equals(multi, other.multi)
+                && Arrays.equals(sl, other.sl)
+                && Arrays.equals(rr, other.rr)
+                && Arrays.equals(dr, other.dr)
+                && Arrays.equals(am, other.am)
+                && Arrays.equals(tl, other.tl)
+                && Arrays.equals(ssgEg, other.ssgEg)
+                && Arrays.equals(fnum, other.fnum)
+                && Arrays.equals(block, other.block)
+                && Arrays.equals(kcode, other.kcode)
+                && Arrays.equals(fnum3ch, other.fnum3ch)
+                && Arrays.equals(block3ch, other.block3ch)
+                && Arrays.equals(kcode3ch, other.kcode3ch)
+                && regA4 == other.regA4
+                && regAc == other.regAc
+                && Arrays.equals(connect, other.connect)
+                && Arrays.equals(fb, other.fb)
+                && Arrays.equals(panL, other.panL)
+                && Arrays.equals(panR, other.panR)
+                && Arrays.equals(ams, other.ams)
+                && Arrays.equals(pms, other.pms)
+                && status == other.status
+                && statusTime == other.statusTime;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 1;
+        result = 31 * result + cycles;
+        result = 31 * result + channel;
+        result = 31 * result + mol;
+        result = 31 * result + mor;
+        result = 31 * result + writeData;
+        result = 31 * result + writeA;
+        result = 31 * result + writeD;
+        result = 31 * result + writeAEn;
+        result = 31 * result + writeDEn;
+        result = 31 * result + writeBusy;
+        result = 31 * result + writeBusyCnt;
+        result = 31 * result + writeFmAddress;
+        result = 31 * result + writeFmData;
+        result = 31 * result + writeFmModeA;
+        result = 31 * result + address;
+        result = 31 * result + data;
+        result = 31 * result + pinTestIn;
+        result = 31 * result + pinIrq;
+        result = 31 * result + busy;
+        result = 31 * result + lfoEn;
+        result = 31 * result + lfoFreq;
+        result = 31 * result + lfoPm;
+        result = 31 * result + lfoAm;
+        result = 31 * result + lfoCnt;
+        result = 31 * result + lfoInc;
+        result = 31 * result + lfoQuotient;
+        result = 31 * result + pgFnum;
+        result = 31 * result + pgBlock;
+        result = 31 * result + pgKcode;
+        result = 31 * result + Arrays.hashCode(pgInc);
+        result = 31 * result + Arrays.hashCode(pgPhase);
+        result = 31 * result + Arrays.hashCode(pgReset);
+        result = 31 * result + pgRead;
+        result = 31 * result + egCycle;
+        result = 31 * result + egCycleStop;
+        result = 31 * result + egShift;
+        result = 31 * result + egShiftLock;
+        result = 31 * result + egTimerLowLock;
+        result = 31 * result + egTimer;
+        result = 31 * result + egTimerInc;
+        result = 31 * result + egQuotient;
+        result = 31 * result + egCustomTimer;
+        result = 31 * result + egRate;
+        result = 31 * result + egKsv;
+        result = 31 * result + egInc;
+        result = 31 * result + egRatemax;
+        result = 31 * result + Arrays.hashCode(egSl);
+        result = 31 * result + egLfoAm;
+        result = 31 * result + Arrays.hashCode(egTl);
+        result = 31 * result + Arrays.hashCode(egState);
+        result = 31 * result + Arrays.hashCode(egLevel);
+        result = 31 * result + Arrays.hashCode(egOut);
+        result = 31 * result + Arrays.hashCode(egKon);
+        result = 31 * result + Arrays.hashCode(egKonCsm);
+        result = 31 * result + Arrays.hashCode(egKonLatch);
+        result = 31 * result + Arrays.hashCode(egCsmMode);
+        result = 31 * result + Arrays.hashCode(egSsgEnable);
+        result = 31 * result + Arrays.hashCode(egSsgPgrstLatch);
+        result = 31 * result + Arrays.hashCode(egSsgRepeatLatch);
+        result = 31 * result + Arrays.hashCode(egSsgHoldUpLatch);
+        result = 31 * result + Arrays.hashCode(egSsgDir);
+        result = 31 * result + Arrays.hashCode(egSsgInv);
+        result = 31 * result + Arrays.hashCode(egRead);
+        result = 31 * result + egReadInc;
+        result = 31 * result + Arrays.deepHashCode(fmOp1);
+        result = 31 * result + Arrays.hashCode(fmOp2);
+        result = 31 * result + Arrays.hashCode(fmOut);
+        result = 31 * result + Arrays.hashCode(fmMod);
+        result = 31 * result + Arrays.hashCode(chAcc);
+        result = 31 * result + Arrays.hashCode(chOut);
+        result = 31 * result + chLock;
+        result = 31 * result + chLockL;
+        result = 31 * result + chLockR;
+        result = 31 * result + chRead;
+        result = 31 * result + timerACnt;
+        result = 31 * result + timerAReg;
+        result = 31 * result + timerALoadLock;
+        result = 31 * result + timerALoad;
+        result = 31 * result + timerAEnable;
+        result = 31 * result + timerAReset;
+        result = 31 * result + timerALoadLatch;
+        result = 31 * result + timerAOverflowFlag;
+        result = 31 * result + timerAOverflow;
+        result = 31 * result + timerBCnt;
+        result = 31 * result + timerBSubcnt;
+        result = 31 * result + timerBReg;
+        result = 31 * result + timerBLoadLock;
+        result = 31 * result + timerBLoad;
+        result = 31 * result + timerBEnable;
+        result = 31 * result + timerBReset;
+        result = 31 * result + timerBLoadLatch;
+        result = 31 * result + timerBOverflowFlag;
+        result = 31 * result + timerBOverflow;
+        result = 31 * result + Arrays.hashCode(modeTest21);
+        result = 31 * result + Arrays.hashCode(modeTest2c);
+        result = 31 * result + modeCh3;
+        result = 31 * result + modeKonChannel;
+        result = 31 * result + Arrays.hashCode(modeKonOperator);
+        result = 31 * result + Arrays.hashCode(modeKon);
+        result = 31 * result + modeCsm;
+        result = 31 * result + modeKonCsm;
+        result = 31 * result + dacen;
+        result = 31 * result + dacdata;
+        result = 31 * result + Arrays.hashCode(ks);
+        result = 31 * result + Arrays.hashCode(ar);
+        result = 31 * result + Arrays.hashCode(sr);
+        result = 31 * result + Arrays.hashCode(dt);
+        result = 31 * result + Arrays.hashCode(multi);
+        result = 31 * result + Arrays.hashCode(sl);
+        result = 31 * result + Arrays.hashCode(rr);
+        result = 31 * result + Arrays.hashCode(dr);
+        result = 31 * result + Arrays.hashCode(am);
+        result = 31 * result + Arrays.hashCode(tl);
+        result = 31 * result + Arrays.hashCode(ssgEg);
+        result = 31 * result + Arrays.hashCode(fnum);
+        result = 31 * result + Arrays.hashCode(block);
+        result = 31 * result + Arrays.hashCode(kcode);
+        result = 31 * result + Arrays.hashCode(fnum3ch);
+        result = 31 * result + Arrays.hashCode(block3ch);
+        result = 31 * result + Arrays.hashCode(kcode3ch);
+        result = 31 * result + regA4;
+        result = 31 * result + regAc;
+        result = 31 * result + Arrays.hashCode(connect);
+        result = 31 * result + Arrays.hashCode(fb);
+        result = 31 * result + Arrays.hashCode(panL);
+        result = 31 * result + Arrays.hashCode(panR);
+        result = 31 * result + Arrays.hashCode(ams);
+        result = 31 * result + Arrays.hashCode(pms);
+        result = 31 * result + status;
+        result = 31 * result + statusTime;
+        return result;
+    }
+
     /** Returns a deep copy of this state. */
     public NukedOpn2State copy() {
         NukedOpn2State copy = new NukedOpn2State();

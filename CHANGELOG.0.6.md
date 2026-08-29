@@ -14,6 +14,15 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Nuked-OPN2 chip state compares by value:** `NukedOpn2State` now
+  implements `equals`/`hashCode` over every field of the `ym3438_t` port, so a
+  `Ym2612Chip.Snapshot` taken twice from identical chip state compares equal.
+  The port had left the core state identity-compared, which turned
+  `TestPreparedSfxAdmission` and `TestAudioPresentationSnapshotParity`
+  deterministically red (10 tests) despite equal contents.
+  `TestNukedOpn2StateEquality` mutates each public field reflectively so a
+  field later added to the struct without an `equals` clause fails there.
+
 - **FM write-log capture tool:** `com.openggf.tools.audio.FmSfxRenderTool`
   renders one ROM-backed SFX or song headlessly through the real SMPS driver
   and writes the full mix, an FM-only render (PSG muted) and a frame-stamped
