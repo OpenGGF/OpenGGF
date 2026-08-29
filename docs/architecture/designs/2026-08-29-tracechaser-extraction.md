@@ -1,7 +1,7 @@
 # TraceChaser Repository Extraction Design
 
 Date: 2026-08-29
-Status: Proposed for review
+Status: Approved
 Target: OpenGGF 0.6
 
 ## Summary
@@ -173,8 +173,8 @@ executes a moved path. The initial dispositions are:
 
 | Current OpenGGF test | Cutover disposition |
 |---|---|
-| `TestS2CompleteRunRealRow769DecodeGate` | Retain as an env-gated OpenGGF integration test. Resolve `tools/tracechaser/bizhawk-headless/test.sh` only after a JUnit assumption confirms that the pinned submodule is present; skip when it is absent. |
-| `TestS3kCompleteRunRealRow810DecodeGate` | Same as the S2 real-row gate: retained, opt-in, and submodule-present-only. |
+| `TestS2CompleteRunRealRow769DecodeGate` | Retain as an env-gated OpenGGF integration test. Resolve `tools/tracechaser/bizhawk-headless/test.sh` only after a JUnit assumption confirms that the pinned submodule is present; skip when it is absent, but fail if it is present at a commit other than the recorded gitlink. |
+| `TestS3kCompleteRunRealRow810DecodeGate` | Same as the S2 real-row gate: retained and opt-in; skip when the submodule is absent, but fail when it is present at the wrong commit. |
 | `TestS1AudioParityProbeContract` | Move its probe and launcher assertions to TraceChaser's source-only contract suite; remove the Java test. |
 | `TestPlcTimingEvidenceTool#bothProbeStateMachinesHandleEmptyPartialAndCompletingCalls` | Move this Lua-producer behavioural test to TraceChaser; retain the rest of the Java test class for the OpenGGF-owned evidence tool. |
 | `TestTraceAnimationRecorderContract` | Move its recorder assertions to TraceChaser's source-only contract suite; remove the Java test. |
@@ -184,7 +184,10 @@ The path audit also identifies contract-only Java tests beyond those six. They
 test moved Lua implementations rather than OpenGGF Java behaviour and therefore
 move, with equivalent assertions, into TraceChaser's source-only suite:
 
-- `TestBizhawkProbeContractGuard`;
+- `TestBizhawkProbeContractGuard`, preserving its recursive enumeration of
+  every `bizhawk/probes/*.lua` file and its requirement that every probe other
+  than `probe_runtime.lua` delegates lifecycle and hook ownership to
+  `ProbeRuntime`;
 - `TestTraceRecorderCounterAddresses`;
 - `S2SpecialStageRecorderContractTest`;
 - `TestS1CompleteRunLuaContract` and `TestS1CompleteRunProbeContract`;
