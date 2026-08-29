@@ -46,6 +46,8 @@ import static com.openggf.audio.synth.nuked.NukedOpn2Tables.OP_OFFSET;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_DETUNE;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_LFO_SH1_FLAT;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_LFO_SH2_FLAT;
+import static com.openggf.audio.synth.nuked.NukedOpn2Tables.SLOT_CHANNEL;
+import static com.openggf.audio.synth.nuked.NukedOpn2Tables.SLOT_OP;
 
 /**
  * Cycle-accurate Yamaha YM3438 / YM2612 (OPN2) emulator: a faithful Java port
@@ -407,8 +409,7 @@ public final class NukedOpn2 {
             basefreq += detune;
         }
         basefreq &= 0x1ffff;
-        chip.pgInc[slot] = (basefreq * chip.multi[slot]) >> 1;
-        chip.pgInc[slot] &= 0xfffff;
+        chip.pgInc[slot] = ((basefreq * chip.multi[slot]) >> 1) & 0xfffff; /* one store for the C = then &= */
     }
 
     // ym3438.c:526
@@ -425,8 +426,7 @@ public final class NukedOpn2 {
         if (chip.pgReset[slot] != 0 || chip.modeTest21[3] != 0) {
             chip.pgPhase[slot] = 0;
         }
-        chip.pgPhase[slot] += chip.pgInc[slot];
-        chip.pgPhase[slot] &= 0xfffff;
+        chip.pgPhase[slot] = (chip.pgPhase[slot] + chip.pgInc[slot]) & 0xfffff; /* one store for the C += then &= */
     }
 
     // ym3438.c:545
@@ -434,39 +434,42 @@ public final class NukedOpn2 {
         final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = chip.cycles;
         int direction = 0;
+        /* ssg_eg[slot] and eg_kon[slot] are not written here, so one load each stands for the C re-reads */
+        int ssgEg = chip.ssgEg[slot];
+        int egKon = chip.egKon[slot];
         chip.egSsgPgrstLatch[slot] = 0;
         chip.egSsgRepeatLatch[slot] = 0;
         chip.egSsgHoldUpLatch[slot] = 0;
-        if ((chip.ssgEg[slot] & 0x08) != 0) {
+        if ((ssgEg & 0x08) != 0) {
             direction = chip.egSsgDir[slot];
             if ((chip.egLevel[slot] & 0x200) != 0) {
                 /* Reset */
-                if ((chip.ssgEg[slot] & 0x03) == 0x00) {
+                if ((ssgEg & 0x03) == 0x00) {
                     chip.egSsgPgrstLatch[slot] = 1;
                 }
                 /* Repeat */
-                if ((chip.ssgEg[slot] & 0x01) == 0x00) {
+                if ((ssgEg & 0x01) == 0x00) {
                     chip.egSsgRepeatLatch[slot] = 1;
                 }
                 /* Inverse */
-                if ((chip.ssgEg[slot] & 0x03) == 0x02) {
+                if ((ssgEg & 0x03) == 0x02) {
                     direction ^= 1;
                 }
-                if ((chip.ssgEg[slot] & 0x03) == 0x03) {
+                if ((ssgEg & 0x03) == 0x03) {
                     direction = 1;
                 }
             }
             /* Hold up */
             if (chip.egKonLatch[slot] != 0
-                    && ((chip.ssgEg[slot] & 0x07) == 0x05 || (chip.ssgEg[slot] & 0x07) == 0x03)) {
+                    && ((ssgEg & 0x07) == 0x05 || (ssgEg & 0x07) == 0x03)) {
                 chip.egSsgHoldUpLatch[slot] = 1;
             }
-            direction &= chip.egKon[slot];
+            direction &= egKon;
         }
         chip.egSsgDir[slot] = direction;
-        chip.egSsgEnable[slot] = (chip.ssgEg[slot] >> 3) & 0x01;
-        chip.egSsgInv[slot] = (chip.egSsgDir[slot] ^ (((chip.ssgEg[slot] >> 2) & 0x01) & ((chip.ssgEg[slot] >> 3) & 0x01)))
-                & chip.egKon[slot];
+        chip.egSsgEnable[slot] = (ssgEg >> 3) & 0x01;
+        chip.egSsgInv[slot] = (direction ^ (((ssgEg >> 2) & 0x01) & ((ssgEg >> 3) & 0x01)))
+                & egKon; /* eg_ssg_dir[slot] was just stored from direction */
     }
 
     // ym3438.c:591
@@ -482,10 +485,16 @@ public final class NukedOpn2 {
         int level;
         int nextlevel;
         int ssgLevel;
-        int nextstate = chip.egState[slot];
+        /* eg_state[slot], eg_ssg_enable[slot], eg_inc and eg_ratemax are read-only in this
+         * function, so each is loaded once where the C re-reads the field */
+        int state = chip.egState[slot];
+        int ssgEnable = chip.egSsgEnable[slot];
+        int egInc = chip.egInc;
+        int egRatemax = chip.egRatemax;
+        int nextstate = state;
         int inc = 0;
         chip.egRead[0] = chip.egReadInc;
-        chip.egReadInc = chip.egInc > 0 ? 1 : 0;
+        chip.egReadInc = egInc > 0 ? 1 : 0;
 
         /* Reset phase generator */
         chip.pgReset[slot] = ((nkon != 0 && okon == 0) || chip.egSsgPgrstLatch[slot] != 0) ? 1 : 0;
@@ -504,7 +513,7 @@ public final class NukedOpn2 {
         if (koffEvent) {
             level = ssgLevel;
         }
-        if (chip.egSsgEnable[slot] != 0) {
+        if (ssgEnable != 0) {
             egOff = level >> 9;
         } else {
             egOff = (level & 0x3f0) == 0x3f0 ? 1 : 0;
@@ -513,35 +522,35 @@ public final class NukedOpn2 {
         if (konEvent) {
             nextstate = EG_NUM_ATTACK;
             /* Instant attack */
-            if (chip.egRatemax != 0) {
+            if (egRatemax != 0) {
                 nextlevel = 0;
-            } else if (chip.egState[slot] == EG_NUM_ATTACK && level != 0 && chip.egInc != 0 && nkon != 0) {
-                inc = (~level << chip.egInc) >> 5; /* arithmetic shift of a negative int, as in C */
+            } else if (state == EG_NUM_ATTACK && level != 0 && egInc != 0 && nkon != 0) {
+                inc = (~level << egInc) >> 5; /* arithmetic shift of a negative int, as in C */
             }
         } else {
-            switch (chip.egState[slot]) {
+            switch (state) {
             case EG_NUM_ATTACK:
                 if (level == 0) {
                     nextstate = EG_NUM_DECAY;
-                } else if (chip.egInc != 0 && chip.egRatemax == 0 && nkon != 0) {
-                    inc = (~level << chip.egInc) >> 5;
+                } else if (egInc != 0 && egRatemax == 0 && nkon != 0) {
+                    inc = (~level << egInc) >> 5;
                 }
                 break;
             case EG_NUM_DECAY:
                 if ((level >> 4) == (chip.egSl[1] << 1)) {
                     nextstate = EG_NUM_SUSTAIN;
-                } else if (egOff == 0 && chip.egInc != 0) {
-                    inc = 1 << (chip.egInc - 1);
-                    if (chip.egSsgEnable[slot] != 0) {
+                } else if (egOff == 0 && egInc != 0) {
+                    inc = 1 << (egInc - 1);
+                    if (ssgEnable != 0) {
                         inc <<= 2;
                     }
                 }
                 break;
             case EG_NUM_SUSTAIN:
             case EG_NUM_RELEASE:
-                if (egOff == 0 && chip.egInc != 0) {
-                    inc = 1 << (chip.egInc - 1);
-                    if (chip.egSsgEnable[slot] != 0) {
+                if (egOff == 0 && egInc != 0) {
+                    inc = 1 << (egInc - 1);
+                    if (ssgEnable != 0) {
                         inc <<= 2;
                     }
                 }
@@ -558,14 +567,14 @@ public final class NukedOpn2 {
         }
 
         /* Envelope off */
-        if (!konEvent && chip.egSsgHoldUpLatch[slot] == 0 && chip.egState[slot] != EG_NUM_ATTACK && egOff != 0) {
+        if (!konEvent && chip.egSsgHoldUpLatch[slot] == 0 && state != EG_NUM_ATTACK && egOff != 0) {
             nextstate = EG_NUM_RELEASE;
             nextlevel = 0x3ff;
         }
 
         nextlevel += inc;
 
-        chip.egKon[slot] = chip.egKonLatch[slot];
+        chip.egKon[slot] = nkon; /* eg_kon_latch[slot], unchanged since it was read into nkon */
         chip.egLevel[slot] = nextlevel & 0x3ff; /* (Bit16u)nextlevel & 0x3ff */
         chip.egState[slot] = nextstate;
     }
@@ -614,8 +623,9 @@ public final class NukedOpn2 {
 
         /* Prepare rate & ksv */
         rateSel = chip.egState[slot];
-        if ((chip.egKon[slot] != 0 && chip.egSsgRepeatLatch[slot] != 0)
-                || (chip.egKon[slot] == 0 && chip.egKonLatch[slot] != 0)) {
+        int egKon = chip.egKon[slot]; /* read twice in C, not written here */
+        if ((egKon != 0 && chip.egSsgRepeatLatch[slot] != 0)
+                || (egKon == 0 && chip.egKonLatch[slot] != 0)) {
             rateSel = EG_NUM_ATTACK;
         }
         switch (rateSel) {
@@ -697,9 +707,10 @@ public final class NukedOpn2 {
         int mod;
         int mod1;
         int mod2;
-        int op = slot / 6;
+        int op = SLOT_OP[slot]; /* slot / 6 */
         int connect = chip.connect[channel];
         int prevslot = wrap24(chip.cycles + 18);
+        int prevOut = chip.fmOut[prevslot]; /* read by two flags below, not written here */
 
         /* Calculate modulation */
         mod1 = mod2 = 0;
@@ -716,17 +727,18 @@ public final class NukedOpn2 {
             mod1 |= chip.fmOp2[channel];
         }
         if ((alg & 0x08) != 0) {
-            mod2 |= chip.fmOut[prevslot];
+            mod2 |= prevOut;
         }
         if ((alg & 0x10) != 0) {
-            mod1 |= chip.fmOut[prevslot];
+            mod1 |= prevOut;
         }
         /* Bit16s: operands are 14-bit sign-extended, so OR and sum stay within 16 bits */
         mod = (short) (mod1 + mod2);
         if (op == 0) {
             /* Feedback */
-            mod = mod >> (10 - chip.fb[channel]);
-            if (chip.fb[channel] == 0) {
+            int fb = chip.fb[channel];
+            mod = mod >> (10 - fb);
+            if (fb == 0) {
                 mod = 0;
             }
         } else {
@@ -734,15 +746,16 @@ public final class NukedOpn2 {
         }
         chip.fmMod[slot] = mod & 0xffff; /* Bit16u */
 
-        slot = wrap24(chip.cycles + 18);
+        slot = prevslot; /* (cycles + 18) % 24 again */
         /* OP1 */
-        if (slot / 6 == 0) {
-            chip.fmOp1[channel][1] = chip.fmOp1[channel][0];
-            chip.fmOp1[channel][0] = chip.fmOut[slot];
+        if (SLOT_OP[slot] == 0) {
+            int[] op1 = chip.fmOp1[channel];
+            op1[1] = op1[0];
+            op1[0] = prevOut;
         }
         /* OP2 */
-        if (slot / 6 == 2) {
-            chip.fmOp2[channel] = chip.fmOut[slot];
+        if (SLOT_OP[slot] == 2) {
+            chip.fmOp2[channel] = prevOut;
         }
     }
 
@@ -751,9 +764,10 @@ public final class NukedOpn2 {
         final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = wrap24(chip.cycles + 18);
         int channel = chip.channel;
-        int op = slot / 6;
+        int op = SLOT_OP[slot]; /* slot / 6 */
         int testDac = chip.modeTest2c[5];
-        int acc = chip.chAcc[channel];
+        int accIn = chip.chAcc[channel];
+        int acc = accIn;
         int add = testDac;
         int sum;
         if (op == 0 && testDac == 0) {
@@ -771,7 +785,7 @@ public final class NukedOpn2 {
         }
 
         if (op == 0 || testDac != 0) {
-            chip.chOut[channel] = chip.chAcc[channel];
+            chip.chOut[channel] = accIn; /* ch_acc[channel] before this cycle's store */
         }
         chip.chAcc[channel] = sum;
     }
@@ -1128,7 +1142,7 @@ public final class NukedOpn2 {
         updateLfo();
         doRegWrite();
         chip.cycles = wrap24(chip.cycles + 1);
-        chip.channel = chip.cycles % 6;
+        chip.channel = SLOT_CHANNEL[chip.cycles]; /* cycles % 6 */
 
         buffer[0] = chip.mol;
         buffer[1] = chip.mor;

@@ -273,6 +273,12 @@ final class NukedOpn2Tables {
     /** {@code EG_STEPHI[rate & 3][timer]} as {@code [(rate & 3) * 4 + timer]}. */
     static final int[] EG_STEPHI_FLAT = new int[4 * 4];
 
+    /** {@code slot / 6} for slot 0..23: the operator index the C computes by division. */
+    static final int[] SLOT_OP = new int[24];
+
+    /** {@code cycles % 6} for cycles 0..23: the channel the C computes by modulo. */
+    static final int[] SLOT_CHANNEL = new int[24];
+
     static {
         for (int op = 0; op < 4; op++) {
             for (int connect = 0; connect < 8; connect++) {
@@ -293,6 +299,10 @@ final class NukedOpn2Tables {
             for (int j = 0; j < 4; j++) {
                 EG_STEPHI_FLAT[i * 4 + j] = EG_STEPHI[i][j];
             }
+        }
+        for (int slot = 0; slot < 24; slot++) {
+            SLOT_OP[slot] = slot / 6;
+            SLOT_CHANNEL[slot] = slot % 6;
         }
     }
 }
