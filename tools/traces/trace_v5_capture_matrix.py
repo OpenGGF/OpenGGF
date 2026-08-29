@@ -330,16 +330,22 @@ def verify_extraction_freeze(
 
 
 def verify_roms(repository_root: Path, document: dict[str, Any]) -> dict[str, Path]:
-    result: dict[str, Path] = {}
-    for game, expected in document["roms"].items():
-        configured = os.environ.get(expected["environment"])
-        path = Path(configured).expanduser() if configured else repository_root / expected["filename"]
-        path = path.resolve()
+    result = configured_rom_paths(repository_root, document)
+    for game, path in result.items():
+        expected = document["roms"][game]
         if not path.is_file():
             raise ValueError(f"verified {game} ROM is absent: {path}")
         if sha256_file(path).lower() != expected["sha256"].lower() or sha1_file(path).lower() != expected["sha1"].lower() or crc32_file(path) != expected["crc32"]:
             raise ValueError(f"verified {game} ROM identity mismatch: {path}")
-        result[game] = path
+    return result
+
+
+def configured_rom_paths(repository_root: Path, document: dict[str, Any]) -> dict[str, Path]:
+    result: dict[str, Path] = {}
+    for game, expected in document["roms"].items():
+        configured = os.environ.get(expected["environment"])
+        path = Path(configured).expanduser() if configured else repository_root / expected["filename"]
+        result[game] = path.resolve()
     return result
 
 
@@ -480,7 +486,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "expand":
             if args.batch_root is None:
                 raise ValueError("--batch-root is required for expand")
-            content = ("\n".join(expand_commands(args.repository_root, args.batch_root, document)) + "\n").encode()
+            roms = configured_rom_paths(args.repository_root, document)
+            content = ("\n".join(expand_commands(args.repository_root, args.batch_root, document, roms)) + "\n").encode()
             if args.output:
                 from tools.traces.no_replace_output import write_bytes_no_replace
                 write_bytes_no_replace(args.output, content, "capture command ledger")

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,7 @@ from tools.traces.trace_v5_capture_matrix import (
     assemble,
     expand_commands,
     load_document,
+    main,
     preflight,
     verify_freeze,
     verify_movies,
@@ -195,6 +197,38 @@ class TraceV5CaptureMatrixTests(unittest.TestCase):
                 self.assertIn(row["credits"]["observation_id"], command)
             else:
                 self.assertIn(row["movie"], command)
+
+    def test_expand_cli_uses_absolute_rom_environment_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            roms = {
+                "S1_ROM_PATH": root / "absolute-s1.gen",
+                "S2_ROM_PATH": root / "absolute-s2.gen",
+                "S3K_ROM_PATH": root / "absolute-s3k.gen",
+            }
+            previous = {name: os.environ.get(name) for name in roms}
+            try:
+                os.environ.update({name: str(path) for name, path in roms.items()})
+                output = root / "commands.txt"
+                self.assertEqual(
+                    0,
+                    main([
+                        "expand",
+                        "--repository-root", str(self.repository_root),
+                        "--batch-root", str(root / "batch"),
+                        "--output", str(output),
+                    ]),
+                )
+            finally:
+                for name, value in previous.items():
+                    if value is None:
+                        os.environ.pop(name, None)
+                    else:
+                        os.environ[name] = value
+
+            commands = output.read_text(encoding="utf-8")
+            for path in roms.values():
+                self.assertIn(str(path), commands)
 
     def test_preflight_refuses_existing_capture_output_and_candidate(self) -> None:
         document = copy.deepcopy(self.document)
