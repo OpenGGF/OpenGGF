@@ -14,6 +14,26 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **The FM synthesiser now runs on the Nuked-OPN2 port:** `Ym2612Chip` is a
+  thin facade over the cycle-accurate `com.openggf.audio.synth.nuked` core
+  (LGPL 2.1+), replacing the Genesis Plus GX-derived table core. The facade
+  keeps the engine's public chip API and call semantics: register writes are
+  reported to the write observer as before and applied with the chip's own
+  bus pacing before the next rendered sample, the SMPS voice unpack and
+  `silenceAll` write streams are unchanged, DAC samples stream as `0x2A`
+  writes at the cadence of each game's Z80 playback loop, mutes stay at the
+  output stage, and the rewind snapshot carries the complete chip state so a
+  restore continues bit-exactly. The facade is pinned sample-for-sample
+  against the pinned C build by 68 register scripts (all algorithms, channel
+  3 special mode, partial key-on, LFO, every SSG-EG mode, timers/CSM, DAC,
+  `silenceAll` and a seeded fuzz, in both output stages) regenerable with
+  `tools/audio/nuked-opn2/harness/`. Two audible consequences are recorded in
+  `docs/status/known-discrepancies.md`: the FM level sits about 2.5 dB lower
+  relative to the PSG than the old core's nominal scale, and the discrete
+  YM2612 model's resting level is now +288 LSB after the master gain instead
+  of +384. The engine-side DAC high-pass option was removed; DAC
+  interpolation remains.
+
 - **Nuked-OPN2 FM core ported (not yet wired to the synthesiser):** a new
   `com.openggf.audio.synth.nuked` package carries a function-for-function Java
   port of the pinned Nuked OPN2 `ym3438.c` (cycle-accurate YM3438/YM2612 from
@@ -21,7 +41,8 @@ This file contains the complete 0.6 development snapshot history carried forward
   made per instance and a plain-copy state struct for snapshots. Its output is
   confirmed bit-exact against the C build on a fixed voice script and on
   randomised register/read streams across all four chip types. The existing
-  `Ym2612Chip` still drives audio; switching over is a follow-up.
+  `Ym2612Chip` still drives audio; switching over is a follow-up. *Superseded:
+  the switch-over landed in the entry above.*
 
 - **HCZ2 Turbo Spikers no longer crash live rewind during unload:** attached
   shell and waterfall children now close their parent references immediately,

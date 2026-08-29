@@ -12,8 +12,8 @@ public class TestYm2612Attack {
         Ym2612Chip chip = new Ym2612Chip();
 
         chip.write(0, 0xB0, 0xC7); // Algo 7
+        chip.write(0, 0xA4, 0x22); // block/fnum high latch first (hardware order)
         chip.write(0, 0xA0, 0x00);
-        chip.write(0, 0xA4, 0x22);
 
         // Slot 0
         chip.write(0, 0x30, 0x01);

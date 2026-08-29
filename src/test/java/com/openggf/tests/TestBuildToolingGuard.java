@@ -71,7 +71,7 @@ class TestBuildToolingGuard {
             "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmark.java",
             "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmarkComparator.java",
             "src/test/java/com/openggf/audio/SmpsRepeatedPlaybackBenchmarkComparator.java",
-            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
+            "src/test/java/com/openggf/audio/synth/TestYm2612ChipNukedParity.java",
             "src/test/java/com/openggf/capture/CaptureRecorderTest.java",
             "src/test/java/com/openggf/capture/LiveCaptureControllerTest.java",
             "src/test/java/com/openggf/capture/LiveCaptureRecorderFactoryTest.java",
@@ -130,7 +130,7 @@ class TestBuildToolingGuard {
     private static final Set<String> TASK4_SUPPORT_FILES = Set.of(
             "src/main/resources/config.yaml",
             "tools/audio/README.md",
-            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
+            "src/test/java/com/openggf/audio/synth/TestYm2612ChipNukedParity.java",
             "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java",
             "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch8Codecs.java",
             "src/test/java/com/openggf/game/sonic1/objects/TestRewindFixS1Batch9Codecs.java",

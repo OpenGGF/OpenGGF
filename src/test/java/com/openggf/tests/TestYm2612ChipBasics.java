@@ -22,14 +22,11 @@ public class TestYm2612ChipBasics {
         int[] right = new int[512];
         chip.renderStereo(left, right);
 
-        boolean hasSignal = false;
-        for (int v : left) {
-            if (v != 0) {
-                hasSignal = true;
-                break;
-            }
-        }
-        assertTrue(hasSignal, "Expected rendered FM samples to be non-zero");
+        // The discrete YM2612 model rests at a constant positive level and the
+        // resampler settles over its first taps, so measure the swing of the
+        // steady state rather than testing for non-zero samples.
+        int swing = peakToPeak(java.util.Arrays.copyOfRange(left, 64, left.length));
+        assertTrue(swing > 1000, "Expected an audible FM tone, swing was " + swing);
     }
 
     @Test
@@ -79,9 +76,44 @@ public class TestYm2612ChipBasics {
     }
 
     @Test
-    public void multiChannelPanAndDacMixRemainBitExact() {
-        Ym2612Chip chip = new Ym2612Chip();
+    public void multiChannelPanAndDacMixIsDeterministicAndBatchInvariant() {
+        Ym2612Chip batched = new Ym2612Chip();
+        Ym2612Chip single = new Ym2612Chip();
+        configurePanAndDacMix(batched);
+        configurePanAndDacMix(single);
 
+        int[] left = new int[128];
+        int[] right = new int[128];
+        batched.renderStereo(left, right, 128);
+
+        int[] leftSingle = new int[128];
+        int[] rightSingle = new int[128];
+        for (int frame = 0; frame < 128; frame++) {
+            int[] l = new int[1];
+            int[] r = new int[1];
+            single.renderStereo(l, r, 1);
+            leftSingle[frame] = l[0];
+            rightSingle[frame] = r[0];
+        }
+
+        // Determinism and batch invariance: n frames in one call equal 1 frame n times.
+        assertArrayEquals(left, leftSingle);
+        assertArrayEquals(right, rightSingle);
+
+        // Channel 0 pans left only, channel 1 and the DAC pan right only, so the
+        // two sides carry different signals and both move.
+        int[] leftSteady = java.util.Arrays.copyOfRange(left, 32, left.length);
+        int[] rightSteady = java.util.Arrays.copyOfRange(right, 32, right.length);
+        assertTrue(peakToPeak(leftSteady) > 100, "left side must carry channel 0");
+        assertTrue(peakToPeak(rightSteady) > 100, "right side must carry channel 1 and the DAC");
+        boolean sidesDiffer = false;
+        for (int i = 32; i < left.length; i++) {
+            sidesDiffer |= left[i] != right[i];
+        }
+        assertTrue(sidesDiffer, "pan must separate the sides");
+    }
+
+    private static void configurePanAndDacMix(Ym2612Chip chip) {
         configureSimpleVoice(chip, 0, 0, 0x80, 0x22, 0x00);
         configureSimpleVoice(chip, 0, 1, 0x40, 0x25, 0x34);
 
@@ -91,61 +123,50 @@ public class TestYm2612ChipBasics {
         chip.write(0, 0x2B, 0x80);
         chip.write(1, 0xB2, 0x40);
         chip.write(0, 0x2A, 0xD0);
-
-        int[] left = new int[16];
-        int[] right = new int[16];
-        chip.renderStereo(left, right, 16);
-
-        assertArrayEquals(new int[] {
-                5577, 6978, 7889, 8738, 9836, 10773, 11694, 12609,
-                13593, 14076, 14075, 14081, 14077, 14079, 14078, 14079
-        }, left);
-        assertArrayEquals(new int[] {
-                5592, 8392, 10822, 13462, 14201, 14042, 14092, 14073,
-                14079, 14078, 14079, 14079, 14079, 14079, 14079, 14079
-        }, right);
     }
 
     /**
-     * Regression test for AU5: SSG-EG active count leak in forceSilenceChannel().
-     * Enables SSG-EG on a channel, force-silences it, then verifies the chip
-     * still renders cleanly without errors on subsequent frames.
+     * forceSilenceChannel is the SFX-steal policy: a channel looping under
+     * SSG-EG must fall silent immediately and stay silent, with no key-off
+     * write and no envelope tail, so the next voice load starts clean.
      */
     @Test
-    public void forceSilenceChannelResetsSSGEGState() {
+    public void forceSilenceChannelStopsAnSsgEgLoopingChannel() {
         Ym2612Chip chip = new Ym2612Chip();
         configureSimpleVoice(chip);
 
-        // Enable SSG-EG on all 4 operators of channel 0
-        chip.write(0, 0x90, 0x08); // op1 SSG-EG enable
-        chip.write(0, 0x94, 0x08); // op2 SSG-EG enable
-        chip.write(0, 0x98, 0x08); // op3 SSG-EG enable
-        chip.write(0, 0x9C, 0x08); // op4 SSG-EG enable
+        // Enable SSG-EG repeat on all 4 operators of channel 0: the envelope
+        // loops for ever instead of decaying.
+        chip.write(0, 0x90, 0x08);
+        chip.write(0, 0x94, 0x08);
+        chip.write(0, 0x98, 0x08);
+        chip.write(0, 0x9C, 0x08);
 
-        // All four operators should be counted as SSG-EG active.
-        assertEquals(4, chip.getSsgEgActiveCountForTest(),
-                "All four channel-0 operators should register as SSG-EG active");
-
-        // Render some samples with SSG-EG active
-        int[] left = new int[64];
-        int[] right = new int[64];
+        int[] left = new int[2048];
+        int[] right = new int[2048];
         chip.renderStereo(left, right);
+        assertTrue(peakToPeak(java.util.Arrays.copyOfRange(left, 64, left.length)) > 100,
+                "SSG-EG loop must be audible before the forced silence");
 
-        // Force silence the channel (this is the AU5 fix path)
         chip.forceSilenceChannel(0);
 
-        // Before the AU5 fix, ssgEgActiveCount would leak and never return to 0.
-        // This count reset is the actual "ResetsSSGEGState" regression target.
-        assertEquals(0, chip.getSsgEgActiveCountForTest(),
-                "forceSilenceChannel must clear the SSG-EG active count (AU5 regression)");
+        // A short settling window for the pipeline, then the tail must be flat
+        // at the chip's resting level: no oscillation, no envelope release.
+        int[] tail = new int[4096];
+        chip.renderStereo(tail, new int[tail.length]);
+        int[] settled = java.util.Arrays.copyOfRange(tail, 256, tail.length);
+        assertEquals(0, peakToPeak(settled),
+                "forceSilenceChannel must leave the channel at its resting level");
+    }
 
-        // Render again - should not throw or produce garbage.
-        // (Output is not asserted silent: forceSilenceChannel resets envelope/SSG-EG
-        // state but does not guarantee a fully-zero tail, so the SSG-EG count reset
-        // above is the meaningful oracle.)
-        int[] left2 = new int[512];
-        int[] right2 = new int[512];
-        chip.renderStereo(left2, right2);
+    private static int peakToPeak(int[] samples) {
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+        for (int sample : samples) {
+            min = Math.min(min, sample);
+            max = Math.max(max, sample);
+        }
+        return max - min;
     }
 
     private static void configureSimpleVoice(Ym2612Chip chip) {
@@ -158,9 +179,10 @@ public class TestYm2612ChipBasics {
         chip.write(port, 0xB0 + channel, 0x07);
         chip.write(port, 0xB4 + channel, pan);
 
-        // FNUM/BLOCK for a mid-range pitch
-        chip.write(port, 0xA0 + channel, a0);
+        // FNUM/BLOCK for a mid-range pitch: the high byte is a latch the low
+        // byte write consumes, so it goes first (hardware order).
         chip.write(port, 0xA4 + channel, a4);
+        chip.write(port, 0xA0 + channel, a0);
 
         // Set fast attack/decay and low TL on all operators
         int[] slots = {0x00, 0x04, 0x08, 0x0C}; // slot offsets within operator reg blocks
