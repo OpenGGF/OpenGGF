@@ -5,6 +5,12 @@
 summation that `com.openggf.audio.synth.Ym2612Chip` applies, so the Java
 facade can be pinned sample-for-sample against the C build without a ROM.
 
+The pacing is `ADDRESS_HOLD` / `DATA_HOLD` at the top of the C file — an
+address strobe, 1 clock, a data strobe, then 34 clocks (2 + the 32-cycle busy
+window, the first clock at which a status poll reads not-busy) — and must
+equal `Ym2612Chip.ADDRESS_SETTLE_CYCLES` / `DATA_SETTLE_CYCLES`; change both
+together and regenerate.
+
 `generate-adapter-scripts.py` writes the register scripts that
 `TestYm2612ChipNukedParity` runs; `regenerate-expectations.sh` rebuilds the
 harness, runs every script through it and rewrites `expected.txt` next to the

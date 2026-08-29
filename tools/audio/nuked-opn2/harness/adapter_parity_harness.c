@@ -6,7 +6,9 @@
  *
  * Script lines (stdin):
  *   type <flags>            OPN2_SetChipType(flags): 3 = YM2612|readmode, 2 = readmode
- *   write <port> <reg> <val> address strobe, 1 clock, data strobe, 13 clocks
+ *   write <port> <reg> <val> address strobe, ADDRESS_HOLD clocks, data strobe,
+ *                           DATA_HOLD clocks (Ym2612Chip.ADDRESS_SETTLE_CYCLES /
+ *                           DATA_SETTLE_CYCLES: 1 and 2 + 32, the busy window)
  *   render <n>              clock until n more frames have been consumed;
  *                           frames completed during write pacing count first,
  *                           exactly as Ym2612Chip.renderStereo(n) dequeues them
@@ -20,6 +22,10 @@
 #include <stdint.h>
 #include <string.h>
 #include "ym3438.h"
+
+/* Must equal Ym2612Chip.ADDRESS_SETTLE_CYCLES and DATA_SETTLE_CYCLES. */
+#define ADDRESS_HOLD 1
+#define DATA_HOLD (2 + 32)
 
 static ym3438_t chip;
 static int32_t sum_l, sum_r;
@@ -53,9 +59,9 @@ int main(void) {
         } else if (sscanf(line, "write %d %d %d", &a, &b, &c) == 3) {
             int i;
             OPN2_Write(&chip, (Bit32u) (a * 2), (Bit8u) b);
-            clock_once();
+            for (i = 0; i < ADDRESS_HOLD; i++) clock_once();
             OPN2_Write(&chip, (Bit32u) (a * 2 + 1), (Bit8u) c);
-            for (i = 0; i < 13; i++) clock_once();
+            for (i = 0; i < DATA_HOLD; i++) clock_once();
         } else if (sscanf(line, "render %d", &a) == 1) {
             consumed += a;
             while (frames < consumed) clock_once();

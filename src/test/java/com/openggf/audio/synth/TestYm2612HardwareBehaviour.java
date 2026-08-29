@@ -1706,6 +1706,76 @@ class TestYm2612HardwareBehaviour {
                     "TMR-01 through the facade: NA 1023 overflows one sample after the load lands in the drained write; was " + maxFirst);
         }
 
+        /** Instant-attack, fast-release voice on every channel through the public write API. */
+        private void instantVoices(Ym2612Chip chip) {
+            for (int ch = 0; ch < 6; ch++) {
+                int port = ch / 3;
+                int base = ch % 3;
+                chip.write(port, 0xB0 + base, 0x07);
+                chip.write(port, 0xB4 + base, 0xC0);
+                for (int regSlot = 0; regSlot < 16; regSlot += 4) {
+                    chip.write(port, 0x30 + base + regSlot, 0x01);
+                    chip.write(port, 0x40 + base + regSlot, 0x00);
+                    chip.write(port, 0x50 + base + regSlot, 0x1F);
+                    chip.write(port, 0x60 + base + regSlot, 0x00);
+                    chip.write(port, 0x70 + base + regSlot, 0x00);
+                    chip.write(port, 0x80 + base + regSlot, 0x0F);
+                    chip.write(port, 0x90 + base + regSlot, 0x00);
+                }
+                chip.write(port, 0xA4 + base, (4 << 3) | (0x439 >> 8));
+                chip.write(port, 0xA0 + base, 0x439 & 0xff);
+            }
+        }
+
+        private void assertFacadeChannelLevel(Ym2612Chip chip, int ch, int level, String message) {
+            NukedOpn2State core = chip.captureSnapshot().core();
+            for (int op = 1; op <= 4; op++) {
+                assertEquals(level, core.egLevel[slot(ch, op)], message + " (channel " + (ch + 1) + " op" + op + ")");
+            }
+        }
+
+        /**
+         * Two consecutive {@code $28} writes through the public API both take
+         * effect, for every ordered pair of channels. The {@code $28} latch is
+         * consumed only when the sequencer reaches its channel (up to 23
+         * cycles later) and the next {@code $28} data strobe overwrites it, so
+         * this holds only while the facade keeps each data strobe on the bus
+         * for the busy window (doc "Address latch behaviour", REG-06), as a
+         * busy-polling driver does.
+         */
+        @Test
+        void consecutiveKeyWritesThroughTheFacadeBothLand() {
+            for (int first = 0; first < 6; first++) {
+                for (int second = 0; second < 6; second++) {
+                    if (first == second) {
+                        continue;
+                    }
+                    Ym2612Chip chip = internalRateChip(1);
+                    instantVoices(chip);
+                    // Frames completed while the voice writes drained are rendered first; clear that backlog
+                    // so the key writes below are followed by live chip time.
+                    int[] left = new int[400];
+                    int[] right = new int[400];
+                    chip.renderStereo(left, right, 400);
+                    chip.write(0, 0x28, 0xF0 | keySelect(first));
+                    chip.write(0, 0x28, 0xF0 | keySelect(second));
+                    // The EG steps each slot every third sample, so an instant attack needs up to three frames.
+                    for (int frame = 0; frame < 12; frame++) {
+                        renderOne(chip);
+                    }
+                    String pair = "key-on " + (first + 1) + " then " + (second + 1);
+                    assertFacadeChannelLevel(chip, first, 0, pair + ": first write landed");
+                    assertFacadeChannelLevel(chip, second, 0, pair + ": second write landed");
+                    chip.write(0, 0x28, keySelect(first));
+                    chip.write(0, 0x28, keySelect(second));
+                    chip.renderStereo(left, right, 400);
+                    pair = "key-off " + (first + 1) + " then " + (second + 1);
+                    assertFacadeChannelLevel(chip, first, SILENT, pair + ": first write landed");
+                    assertFacadeChannelLevel(chip, second, SILENT, pair + ": second write landed");
+                }
+            }
+        }
+
         private int dacLevel(int chipType, int data) {
             Ym2612Chip chip = internalRateChip(chipType);
             chip.write(1, 0xB6, 0xC0);

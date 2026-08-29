@@ -14,6 +14,18 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **FM writes are paced by the chip's busy window:** `Ym2612Chip` now holds
+  each data strobe on the bus for 34 internal cycles (the 32-cycle busy
+  window plus the two clocks before a status read shows it), as a
+  busy-polling driver does, instead of 13. At the old spacing two consecutive
+  `$28` key writes could arrive before the sequencer consumed the first
+  latch, so the second overwrote it: on the captured SMPS logs the S1 GHZ
+  music lost 27 of 189 key-ons, S2 EHZ 65 of 138, S3K AIZ1 12 of 357, and
+  notes went missing (the LZ music at frame 102982 stayed silent). At the
+  new pacing no key-on or key-off is lost on any log; the adapter parity
+  harness and `TestYm2612ChipNukedParity` expectations were regenerated at
+  the same pacing and remain cycle-exact against the pinned C build.
+
 - **Nuked-OPN2 chip state compares by value:** `NukedOpn2State` now
   implements `equals`/`hashCode` over every field of the `ym3438_t` port, so a
   `Ym2612Chip.Snapshot` taken twice from identical chip state compares equal.

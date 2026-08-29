@@ -49,17 +49,23 @@ import java.util.Arrays;
  * {@link ChipWriteObserver} and queues it. Queued writes are applied, in
  * order, before the next rendered sample (and before a status read or a
  * forced channel silence, so ordering with those is preserved), each with
- * the bus pacing of {@code ym3438.c}: the address strobe is consumed on the
- * clock after it is presented ({@code doIo}, {@code ym3438.c:224}), the data
- * strobe likewise, and a slot register then lands when the sequencer reaches
- * the addressed slot, which {@code doRegWrite} ({@code ym3438.c:238}) checks
- * against {@code cycles % 12}, so the data is held for twelve further cycles
- * before the next strobe may replace it. Writes are never dropped: the busy
- * flag ({@code write_busy_cnt}, 32 cycles) is modelled by the core for
- * {@link #readStatus()} but the adapter, like the ROM's Z80 drivers, does not
- * wait on it. The cycles spent draining writes are real chip time and their
- * frames go to the resampler like any other, so the following render simply
- * needs fewer new frames; pitch and tempo are unaffected.
+ * the bus pacing of a driver that honours the chip's busy flag: the address
+ * strobe is consumed on the clock after it is presented ({@code doIo},
+ * {@code ym3438.c:224}) and does not raise busy, so the data strobe follows
+ * one clock later; the data strobe raises busy ({@code write_busy},
+ * {@code doIo}) for the 32-cycle window of {@code write_busy_cnt}, which a
+ * status read sees from the second clock after the strobe, so the next
+ * strobe is presented on the first clock at which a status poll returns
+ * not-busy ({@code DATA_SETTLE_CYCLES}). Every data strobe, the DAC's
+ * {@code 0x2A} stream included, holds the bus for that window; nothing keys
+ * on the register. This is what makes writes never drop: a {@code 0x28}
+ * latch ({@code mode_kon_channel}) is consumed only when the sequencer reaches
+ * its channel, up to 23 cycles later, and the next {@code 0x28} data strobe
+ * overwrites it, so a shorter hold loses key-ons that the ROM drivers, which
+ * wait on busy, never lose on hardware. The cycles spent draining writes are
+ * real chip time and their frames go to the resampler like any other, so the
+ * following render simply needs fewer new frames; pitch and tempo are
+ * unaffected.
  *
  * <h2>DAC</h2>
  * {@link #playDac(int)} streams a {@link DacData} sample as {@code 0x2A}
@@ -110,17 +116,26 @@ public class Ym2612Chip {
      */
     private static final int[] PIN_WINDOW_CHANNEL = {1, 5, 3, 0, 4, 2};
 
-    /** Clocks that must run after an address strobe before the next strobe ({@code doIo}, {@code ym3438.c:224}). */
+    /**
+     * Clocks that must run after an address strobe before the next strobe:
+     * the one on which {@code doIo} consumes it ({@code ym3438.c:224}). An
+     * address write does not raise busy in {@code ym3438.c} ({@code write_busy}
+     * follows {@code write_d_en} only) and whether it does on silicon is open
+     * (behaviour-vectors doc, open question 1), so the hold is the smallest
+     * one under which the address is latched before the data strobe arrives.
+     */
     private static final int ADDRESS_SETTLE_CYCLES = 1;
     /**
-     * Clocks that must run after a data strobe before the next strobe: one to
-     * consume the strobe ({@code ym3438.c:224}) and twelve for the slot sweep
-     * during which {@code doRegWrite} lands a held slot register
-     * ({@code ym3438.c:238}, {@code cycles % 12}).
+     * Clocks from a data strobe until a status poll first reads not-busy: the
+     * strobe is consumed on the first clock ({@code doIo} raises
+     * {@code write_busy}), the status byte reflects it from the second
+     * ({@code busy = write_busy}), and {@code write_busy_cnt} then holds busy
+     * for 32 cycles (behaviour-vectors doc REG-06 and "Address latch
+     * behaviour", 32 internal cycles ≈ 1.33 samples; asserted by
+     * {@code TestYm2612HardwareBehaviour.reg06BusyFlagLastsThirtyTwoInternalCycles}).
+     * A busy-polling driver presents its next strobe no earlier than this.
      */
-    private static final int DATA_SETTLE_CYCLES = 1 + 12;
-    /** A {@code 0x2A} DAC data strobe lands as it is consumed ({@code ym3438.c:238}, mode register block). */
-    private static final int DAC_DATA_SETTLE_CYCLES = 1;
+    private static final int DATA_SETTLE_CYCLES = 2 + 32;
 
     /** {@code EG_NUM_RELEASE} ({@code ym3438.c:41}). */
     private static final int EG_STATE_RELEASE = 3;
@@ -562,7 +577,7 @@ public class Ym2612Chip {
         if (dacWritePhase == 1) {
             core.write(1, dacWriteValue);
             dacWritePhase = 0;
-            busHold = DAC_DATA_SETTLE_CYCLES;
+            busHold = DATA_SETTLE_CYCLES;
         } else if (dacPendingValue != NO_DAC_VALUE) {
             core.write(0, DAC_REGISTER);
             dacWriteValue = dacPendingValue;

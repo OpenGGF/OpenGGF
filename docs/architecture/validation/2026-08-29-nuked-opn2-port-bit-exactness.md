@@ -171,6 +171,55 @@ does not catch this because its scripts and expectations both use the 1/13
 rule. This belongs to the adapter stage; it is outside this round's port
 scope and the contract's stage-1 verdict.
 
+### Pacing fix (adapter stage, 2026-08-29)
+
+The facade now paces every write as a busy-polling driver does: address
+strobe, 1 clock (consumed by `doIo`; an address write does not raise busy in
+`ym3438.c`, and whether it does on silicon is the behaviour-vectors doc's open
+question 1, so the smallest hold that latches the address before the data
+strobe is used), data strobe, then 34 clocks — the strobe is consumed on the
+first clock (`doIo` raises `write_busy`), the status byte reflects it from the
+second (`busy = write_busy`), and `write_busy_cnt` holds busy for 32 cycles
+(behaviour-vectors doc REG-06, "Address latch behaviour"; asserted by
+`TestYm2612HardwareBehaviour.reg06BusyFlagLastsThirtyTwoInternalCycles`), so
+34 is the first clock at which a status poll reads not-busy. The DAC's `0x2A`
+stream holds the same window; nothing keys on the register. `Ym2612Chip`
+(`ADDRESS_SETTLE_CYCLES` / `DATA_SETTLE_CYCLES`) and the adapter parity
+harness (`ADDRESS_HOLD` / `DATA_HOLD`) carry the same two constants, and
+`src/test/resources/audio/nuked-opn2/adapter/expected.txt` was regenerated
+from the C build at the new pacing (68 scripts; frame counts unchanged,
+checksums changed): `TestYm2612ChipNukedParity` 68/68 pass.
+
+The port-level fixtures were not touched (their `pace` lines are script
+data): `regenerate-bitexact-expectations.sh` re-run against the pinned C build
+left `port/expected.txt` byte-identical, and `TestNukedOpn2BitExactScripts`
+passes 732/732.
+
+Overwritten `0x28` latches on the SMPS logs at the new pacing (the probe from
+the finding above, `pace 1 34`):
+
+| Log | Key-ons lost | Key-offs lost |
+|---|---|---|
+| S1 `81` GHZ | 0 / 189 | 0 / 232 |
+| S1 `82` LZ | 0 / 73 | 0 / 125 |
+| S2 `81` EHZ | 0 / 138 | 0 / 178 |
+| S2 `8C` CPZ | 0 / 118 | 0 / 184 |
+| S3K `01` AIZ1 | 0 / 357 | 0 / 472 |
+| S3K `03` HCZ1 | 0 / 231 | 0 / 339 |
+| all 32 SFX | 0 / 370 | 0 / 442 |
+
+Audible check on the LZ `82` segment above, through `Ym2612Chip` itself at
+its internal rate with the same write log: channel 1's four slots are at
+attenuation 1023 in release at frame 102 981, and after the frame-102 982
+`0x28 = 0xF1` (followed by the `0x02` / `0x04` key-offs) they read
+`0/3/0/0` in attack/decay at frame 102 990, `7/0/2/0` in decay at frame
+103 500 and `16/0/3/0` at frame 104 000 — the note sounds, where the 1/13
+facade left the channel at 1023.
+`TestYm2612HardwareBehaviour.FacadeContract.consecutiveKeyWritesThroughTheFacadeBothLand`
+pins the behaviour through the public API for every ordered channel pair
+(key-on then key-off); with `DATA_SETTLE_CYCLES` set back to 13 it fails on
+the first pair.
+
 ## Files
 
 - C twin, generators and regeneration script:
