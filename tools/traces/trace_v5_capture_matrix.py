@@ -17,17 +17,30 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 MATRIX_FORMAT = "openggf-trace-v5-capture-matrix-v1"
+EXTRACTION_MATRIX_FORMAT = "openggf-tracechaser-extraction-capture-matrix-v1"
 MATRIX_DOCUMENT = (REPOSITORY_ROOT / "docs" / "architecture" / "validation" /
                    "trace" / "2026-08-04-trace-v5-capture-matrix.json")
+EXTRACTION_MATRIX_DOCUMENT = (REPOSITORY_ROOT / "docs" / "architecture" / "validation" /
+                              "trace" / "2026-08-29-tracechaser-extraction-capture-matrix.json")
+EXTRACTION_IDS = (
+    "s1-ghz1",
+    "s1-emeralds-run",
+    "s2-ehz1",
+    "s2-emeralds-run",
+    "s3k-aiz",
+    "s3k-complete",
+)
 
 ROMS = {
     "s1": {
@@ -120,11 +133,13 @@ def load_document(path: Path = MATRIX_DOCUMENT) -> dict[str, Any]:
 
 
 def validate_document(document: dict[str, Any]) -> None:
-    if document.get("format") != MATRIX_FORMAT:
+    document_format = document.get("format")
+    if document_format not in (MATRIX_FORMAT, EXTRACTION_MATRIX_FORMAT):
         raise ValueError("capture matrix format is unsupported")
     rows = document.get("rows")
-    if not isinstance(rows, list) or len(rows) != 36:
-        raise ValueError("capture matrix must contain exactly 36 rows")
+    expected_rows = 36 if document_format == MATRIX_FORMAT else len(EXTRACTION_IDS)
+    if not isinstance(rows, list) or len(rows) != expected_rows:
+        raise ValueError(f"capture matrix must contain exactly {expected_rows} rows")
     ids = [row.get("id") for row in rows]
     if any(not isinstance(identifier, str) or not identifier for identifier in ids) or len(ids) != len(set(ids)):
         raise ValueError("capture row ids must be nonempty and unique")
@@ -142,11 +157,14 @@ def validate_document(document: dict[str, Any]) -> None:
             raise ValueError(f"selectors missing for {row['id']}")
         if not isinstance(row.get("mappings"), list):
             raise ValueError(f"publication mappings missing for {row['id']}")
-    credits = [row for row in rows if row.get("credits")]
-    if {row["id"] for row in credits} != {"s1-credits-a", "s1-credits-b"}:
-        raise ValueError("matrix must contain exactly two credits captures")
-    if any(row["id"] != "s1-credits-b" and row["mappings"] == [] for row in credits):
-        raise ValueError("the first credits capture must own publication paths")
+    if document_format == MATRIX_FORMAT:
+        credits = [row for row in rows if row.get("credits")]
+        if {row["id"] for row in credits} != {"s1-credits-a", "s1-credits-b"}:
+            raise ValueError("matrix must contain exactly two credits captures")
+        if any(row["id"] != "s1-credits-b" and row["mappings"] == [] for row in credits):
+            raise ValueError("the first credits capture must own publication paths")
+    elif tuple(row["id"] for row in rows) != EXTRACTION_IDS:
+        raise ValueError("extraction capture matrix ids or ordering are unsupported")
 
 
 def sha256_file(path: Path) -> str:
@@ -174,6 +192,9 @@ def crc32_file(path: Path) -> str:
 
 
 def verify_freeze(repository_root: Path, document: dict[str, Any]) -> None:
+    if document["freeze"].get("policy") == "extraction-build-test-v1":
+        verify_extraction_freeze(repository_root, document)
+        return
     freeze = document["freeze"]
     source_commit = freeze["source_commit"]
     source_diff_base_commit = freeze.get("source_diff_base_commit")
@@ -196,6 +217,116 @@ def verify_freeze(repository_root: Path, document: dict[str, Any]) -> None:
         path = repository_root / artifact["path"]
         if not path.is_file() or path.stat().st_size != artifact["size"] or sha256_file(path) != artifact["sha256"]:
             raise ValueError(f"frozen {key} identity mismatch: {path}")
+
+
+def _command_first_line(command: list[str]) -> str:
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise ValueError(f"extraction toolchain command failed: {' '.join(command)}") from error
+    lines = result.stdout.splitlines()
+    if not lines:
+        raise ValueError(f"extraction toolchain command returned no identity: {' '.join(command)}")
+    return lines[0]
+
+
+def _run_clean_native_build_tests(
+    repository_root: Path,
+    source_commit: str,
+    bizhawk_home: Path,
+    native_test_filters: tuple[str, ...],
+) -> int:
+    with tempfile.TemporaryDirectory(prefix="tracechaser-extraction-build-") as temporary:
+        temporary_root = Path(temporary)
+        archive = temporary_root / "source.tar"
+        checkout = temporary_root / "source"
+        checkout.mkdir()
+        try:
+            with archive.open("wb") as output:
+                subprocess.run(
+                    ["git", "-C", str(repository_root), "archive", "--format=tar", source_commit],
+                    check=True,
+                    stdout=output,
+                )
+            with tarfile.open(archive) as source:
+                source.extractall(checkout, filter="data")
+            environment = os.environ.copy()
+            environment["BIZHAWK_HOME"] = str(bizhawk_home)
+            environment["MONO_PATH"] = str(bizhawk_home / "dll")
+            environment["LD_LIBRARY_PATH"] = str(bizhawk_home / "dll")
+            build_result = subprocess.run(
+                [str(checkout / "tools/bizhawk-headless/build.sh")],
+                cwd=checkout,
+                env=environment,
+            )
+            if build_result.returncode != 0:
+                return build_result.returncode
+            test_executable = checkout / "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.Tests.exe"
+            for test_filter in native_test_filters:
+                result = subprocess.run(
+                    ["/usr/bin/mono", str(test_executable), "--filter", test_filter, "--jobs", "1"],
+                    cwd=checkout,
+                    env=environment,
+                )
+                if result.returncode != 0:
+                    return result.returncode
+            return 0
+        except (OSError, subprocess.CalledProcessError, tarfile.TarError) as error:
+            raise ValueError("extraction clean native build/test setup failed") from error
+
+
+def verify_extraction_freeze(
+    repository_root: Path,
+    document: dict[str, Any],
+    *,
+    bizhawk_home: Path | None = None,
+    build_test_runner: Callable[[Path, str, Path, tuple[str, ...]], int] = _run_clean_native_build_tests,
+) -> None:
+    freeze = document["freeze"]
+    source_commit = freeze["source_commit"]
+    source_diff_base_commit = freeze.get("source_diff_base_commit")
+    if not isinstance(source_diff_base_commit, str) or not source_diff_base_commit:
+        raise ValueError("extraction source diff base commit is missing")
+    try:
+        subprocess.run(["git", "-C", str(repository_root), "cat-file", "-e", f"{source_diff_base_commit}^{{commit}}"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(repository_root), "cat-file", "-e", f"{source_commit}^{{commit}}"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(repository_root), "merge-base", "--is-ancestor", source_commit, "HEAD"], check=True, capture_output=True)
+        actual_diff = subprocess.run(
+            ["git", "-C", str(repository_root), "diff", "--full-index", "--binary", f"{source_diff_base_commit}..{source_commit}"],
+            check=True,
+            capture_output=True,
+        ).stdout
+    except subprocess.CalledProcessError as error:
+        raise ValueError("extraction source boundary is unavailable") from error
+    if hashlib.sha256(actual_diff).hexdigest() != freeze["source_diff_sha256"]:
+        raise ValueError("extraction source diff hash mismatch")
+
+    toolchain = freeze["toolchain"]
+    if _command_first_line(["/usr/bin/mono", "--version"]) != toolchain["mono_version"]:
+        raise ValueError("extraction Mono version mismatch")
+    if _command_first_line(["/usr/bin/xbuild", "/version"]) != toolchain["xbuild_version"]:
+        raise ValueError("extraction xbuild version mismatch")
+    roslyn_csc = Path(toolchain["roslyn_csc_path"])
+    if not roslyn_csc.is_file() or sha256_file(roslyn_csc) != toolchain["roslyn_csc_sha256"]:
+        raise ValueError("extraction Roslyn compiler SHA-256 mismatch")
+    if _command_first_line(["/usr/bin/mono", str(roslyn_csc), "-version"]) != toolchain["roslyn_csc_version"]:
+        raise ValueError("extraction Roslyn compiler version mismatch")
+
+    configured_filters = freeze.get("native_test_filters")
+    if not isinstance(configured_filters, list) or not configured_filters or any(
+        not isinstance(test_filter, str) or not test_filter for test_filter in configured_filters
+    ):
+        raise ValueError("extraction native test filters are missing")
+    native_test_filters = tuple(configured_filters)
+
+    if bizhawk_home is None:
+        configured = os.environ.get("BIZHAWK_HOME")
+        bizhawk_home = Path(configured) if configured else repository_root / "docs/BizHawk-2.11-linux-x64"
+    bizhawk_home = bizhawk_home.resolve()
+    if not bizhawk_home.is_dir():
+        raise ValueError(f"extraction BizHawk home is unavailable: {bizhawk_home}")
+    if build_test_runner(repository_root, source_commit, bizhawk_home, native_test_filters) != 0:
+        raise ValueError("extraction native build/tests failed")
 
 
 def verify_roms(repository_root: Path, document: dict[str, Any]) -> dict[str, Path]:
