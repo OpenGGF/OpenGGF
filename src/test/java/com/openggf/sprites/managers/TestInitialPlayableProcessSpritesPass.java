@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.tests.FullReset;
 import com.openggf.game.GameServices;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
@@ -23,6 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// Order-dependent when run after classes that leave a session level behind (passes alone);
+// full reset isolates it the same way TestMhzMushroomParachuteObjectInstance is isolated.
+@FullReset
 class TestInitialPlayableProcessSpritesPass {
 
     @AfterEach
