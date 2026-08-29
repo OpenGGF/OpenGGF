@@ -176,10 +176,17 @@ def crc32_file(path: Path) -> str:
 def verify_freeze(repository_root: Path, document: dict[str, Any]) -> None:
     freeze = document["freeze"]
     source_commit = freeze["source_commit"]
+    source_diff_base_commit = freeze.get("source_diff_base_commit")
+    if not isinstance(source_diff_base_commit, str) or not source_diff_base_commit:
+        raise ValueError("source diff base commit is missing from the replacement freeze")
+    try:
+        subprocess.run(["git", "-C", str(repository_root), "cat-file", "-e", f"{source_diff_base_commit}^{{commit}}"], check=True, capture_output=True)
+    except subprocess.CalledProcessError as error:
+        raise ValueError(f"source diff base commit is unavailable: {source_diff_base_commit}") from error
     try:
         subprocess.run(["git", "-C", str(repository_root), "cat-file", "-e", f"{source_commit}^{{commit}}"], check=True, capture_output=True)
         subprocess.run(["git", "-C", str(repository_root), "merge-base", "--is-ancestor", source_commit, "HEAD"], check=True, capture_output=True)
-        actual_diff = subprocess.run(["git", "-C", str(repository_root), "diff", "--full-index", "--binary", f"origin/develop..{source_commit}"], check=True, capture_output=True).stdout
+        actual_diff = subprocess.run(["git", "-C", str(repository_root), "diff", "--full-index", "--binary", f"{source_diff_base_commit}..{source_commit}"], check=True, capture_output=True).stdout
     except subprocess.CalledProcessError as error:
         raise ValueError(f"frozen source boundary is unavailable: {error}") from error
     if hashlib.sha256(actual_diff).hexdigest() != freeze["source_diff_sha256"]:

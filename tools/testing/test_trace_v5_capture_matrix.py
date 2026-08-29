@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +14,7 @@ from tools.traces.trace_v5_capture_matrix import (
     expand_commands,
     load_document,
     preflight,
+    verify_freeze,
     verify_movies,
     verify_roms,
 )
@@ -40,6 +42,37 @@ class TraceV5CaptureMatrixTests(unittest.TestCase):
     def test_hash_preflight_inputs_match_frozen_rom_and_movie_identities(self) -> None:
         verify_roms(self.repository_root, self.document)
         verify_movies(self.repository_root, self.document)
+
+    def test_freeze_diff_uses_immutable_base_after_origin_develop_moves(self) -> None:
+        document = copy.deepcopy(self.document)
+        document["freeze"]["source_diff_base_commit"] = (
+            "36be0aa44e4e1db9d2d586fff984e52ffd4fe053"
+        )
+        local_artifact = Path(__file__).relative_to(self.repository_root)
+        artifact_bytes = (self.repository_root / local_artifact).read_bytes()
+        artifact = {
+            "path": local_artifact.as_posix(),
+            "sha256": hashlib.sha256(artifact_bytes).hexdigest(),
+            "size": len(artifact_bytes),
+        }
+        document["freeze"]["native_artifact"] = artifact
+        document["freeze"]["native_test_artifact"] = artifact
+
+        verify_freeze(self.repository_root, document)
+
+    def test_freeze_diff_requires_immutable_base(self) -> None:
+        document = copy.deepcopy(self.document)
+        document["freeze"].pop("source_diff_base_commit", None)
+
+        with self.assertRaisesRegex(ValueError, "source diff base commit is missing"):
+            verify_freeze(self.repository_root, document)
+
+    def test_freeze_diff_rejects_unavailable_immutable_base(self) -> None:
+        document = copy.deepcopy(self.document)
+        document["freeze"]["source_diff_base_commit"] = "0" * 40
+
+        with self.assertRaisesRegex(ValueError, "source diff base commit is unavailable"):
+            verify_freeze(self.repository_root, document)
 
     def test_expander_emits_one_literal_trace_command_per_row(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
