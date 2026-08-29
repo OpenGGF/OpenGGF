@@ -34,6 +34,11 @@ public final class S3kGameOverCardObjectInstance extends AbstractGameOverCardObj
         super(mappingFrame);
     }
 
+    /** Headless probe constructor: the GAME word. */
+    public S3kGameOverCardObjectInstance() {
+        this(FRAME_GAME);
+    }
+
     /** The engine keeps ArtNem_GameOver resident; no Nemesis queue exists to wait on. */
     @Override
     protected boolean isArtPending() {

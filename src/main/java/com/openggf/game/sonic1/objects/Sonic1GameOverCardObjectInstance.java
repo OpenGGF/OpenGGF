@@ -25,6 +25,11 @@ public final class Sonic1GameOverCardObjectInstance extends AbstractGameOverCard
         super(mappingFrame);
     }
 
+    /** Headless probe constructor: the GAME word. */
+    public Sonic1GameOverCardObjectInstance() {
+        this(FRAME_GAME);
+    }
+
     @Override
     protected boolean isArtPending() {
         Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
