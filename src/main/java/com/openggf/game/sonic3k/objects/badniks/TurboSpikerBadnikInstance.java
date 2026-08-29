@@ -528,7 +528,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         private void detachFromParentOnUnload(TurboSpikerBadnikInstance owner) {
             if (attached && parent == owner) {
                 parent = null;
-                setDestroyed(true);
+                ObjectLifetimeOps.destroyLatched(this);
             }
         }
 
@@ -930,7 +930,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         @Override
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent == null || parent.isDestroyed()) {
-                setDestroyed(true);
+                ObjectLifetimeOps.destroyLatched(this);
                 return;
             }
             currentX = parent.getX();
@@ -945,7 +945,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
                 currentX = owner.getX();
                 currentY = owner.getY();
                 parent = null;
-                setDestroyed(true);
+                ObjectLifetimeOps.destroyLatched(this);
             }
         }
 
