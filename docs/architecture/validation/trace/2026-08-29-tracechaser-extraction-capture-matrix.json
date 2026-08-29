@@ -49,6 +49,7 @@
         "archive_name": "BizHawk-2.11-linux-x64.tar.gz",
         "archive_sha256": "cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8",
         "path": "tools/bizhawk/fetch_bizhawk_2_11_linux.sh",
+        "tracechaser_path": "bizhawk/fetch_bizhawk_2_11_linux.sh",
         "sha256": "8dadc9cad103b30155a72a948e81b360753f867cd35978e3e16cd115de25d85d"
       },
       "capabilities": [
@@ -109,6 +110,7 @@
       },
       "source_lock": {
         "path": "tools/bizhawk-headless/native/gpgx-audio-observer/source-lock.json",
+        "tracechaser_path": "bizhawk-headless/native/gpgx-audio-observer/source-lock.json",
         "sha256": "348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9"
       },
       "version": "2.11"
@@ -117,6 +119,23 @@
     "source_commit": "41828f10998f531e614d855c858ba1b26429d757",
     "source_diff_base_commit": "081167cb9363f989b74d56e7551b3cce37a8017a",
     "source_diff_sha256": "4238071a54cb4e23b2b19b63a05bf6ed57c535f61a0cd18ae9b34cc44be75b90",
+    "tracechaser_build": {
+      "source_commit": "398483941681d4b6a29d68494c5664a0e58a59a7",
+      "source_diff_base_commit": "88ec9f1c61992a04f72763d94a231e7ffe0ff801",
+      "source_diff_sha256": "4ffa6fc8e23a04ebdd52bc844d9aefc0554f8c7aee24de431aa2ff89fe870976",
+      "native_test_filters": [
+        "Bk2Reader",
+        "S1TraceCaptureRunner",
+        "S1RunCaptureRunner",
+        "S2TraceCaptureRunner",
+        "S2RunCaptureRunner records a level-ss-level round trip",
+        "S2RunCaptureRunner publishes mandatory audit manifest",
+        "S3K runner",
+        "S3KCompleteRun",
+        "S3K complete-run",
+        "TraceCli"
+      ]
+    },
     "toolchain": {
       "mono_version": "Mono JIT compiler version 6.12.0 (makepkg/0cbf0e290c3 Tue Jun 11 13:06:07 CEST 2024)",
       "roslyn_csc_path": "/usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe",
