@@ -17,14 +17,19 @@ includes IntelliJ project files. Any IDE with Maven support will work.
 ## Clone and Build
 
 ```bash
-git clone --recurse-submodules https://github.com/OpenGGF/OpenGGF.git
+git clone https://github.com/OpenGGF/OpenGGF.git
 cd OpenGGF
 tools/testing/install-hooks.sh
 mvn package
 ```
 
-For an existing checkout, initialize the pinned Sonic Retro disassembly references with
-`git submodule update --init`.
+The pinned Sonic Retro disassemblies are optional development references. The engine,
+Maven build, and ordinary tests do not require them. Contributors doing disassembly-backed
+parity research can initialize the exact reference revisions after cloning:
+
+```bash
+git submodule update --init
+```
 
 The executable OpenGGF JAR with all dependencies is written to the current
 worktree's Maven output tree:

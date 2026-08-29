@@ -2917,6 +2917,36 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void canonicalDisassembliesRemainOptionalDevelopmentReferences() throws Exception {
+        String developerSetup = Files.readString(Path.of("docs/guide/contributing/dev-setup.md"));
+        assertFalse(developerSetup.contains("git clone --recurse-submodules"),
+                "the default developer clone must not initialize optional disassembly references");
+        assertTrue(developerSetup.contains("git clone https://github.com/OpenGGF/OpenGGF.git"),
+                "the default developer setup must use an ordinary clone");
+        assertTrue(developerSetup.contains("git submodule update --init"),
+                "disassembly-backed development must retain an explicit opt-in command");
+
+        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+            String guidance = Files.readString(Path.of(agentGuide))
+                    .toLowerCase(Locale.ROOT)
+                    .replaceAll("\\s+", " ");
+            assertTrue(guidance.contains("optional development references"),
+                    () -> agentGuide + " must classify the disassemblies as optional development references");
+            assertTrue(guidance.contains("builds, tests, and runtime do not require them"),
+                    () -> agentGuide + " must keep the disassemblies outside the project dependency graph");
+        }
+
+        try (Stream<Path> workflows = Files.list(Path.of(".github/workflows"))) {
+            for (Path workflow : workflows.filter(path -> path.toString().endsWith(".yml")).toList()) {
+                String source = Files.readString(workflow);
+                assertFalse(Pattern.compile("(?m)^\\s*submodules:\\s*(?:true|recursive)\\s*$")
+                                .matcher(source).find(),
+                        () -> workflow + " must build and test without initialized disassembly submodules");
+            }
+        }
+    }
+
+    @Test
     void mergeHooksRejectProtectedLinkStagedDuringConflictResolution(@TempDir Path temporaryDirectory) throws Exception {
         Path repository = newRepository(temporaryDirectory, "merge-resolution-link");
         prepareConflictedMerge(repository);
