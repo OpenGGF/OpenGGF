@@ -364,6 +364,9 @@ The SN76489 PSG core was rewritten clean-room from public hardware documentation
 (`docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`), removing
 the Genesis Plus GX-derived `psg.c` code; behaviour was verified against a pinned GPGX
 harness (`docs/architecture/validation/2026-08-29-psg-clean-room-capture-comparison.md`).
+The FM:PSG mix balance was restored to its pre-rewrite ratio (PSG preamp 38 % in the mixer),
+recorded as uncalibrated against hardware in `docs/status/known-discrepancies.md`
+(`docs/architecture/validation/2026-08-29-audio-mix-calibration.md`).
 
 The current S3K release priority is the AIZ → HCZ playable route. Knuckles
 routes, later-zone completeness, and some bonus/special-stage paths remain

@@ -36,8 +36,9 @@ import java.util.Arrays;
  * so one full-scale channel sits at 6144, the largest power-of-two scaling
  * that keeps six full-scale channels inside 16 bits after the mixer's
  * {@code MASTER_GAIN_SHIFT}. The previous core's nominal per-channel scale
- * was 8191, so the FM level is about 2.5 dB lower than before relative to
- * the PSG; that is recorded in {@code docs/status/known-discrepancies.md}.
+ * was 8191; the mixer's {@code VirtualSynthesizer.PSG_PREAMP_PERCENT} carries
+ * the FM:PSG balance (see
+ * {@code docs/architecture/validation/2026-08-29-audio-mix-calibration.md}).
  * In YM2612 mode a silent channel still contributes {@code +3} per cycle
  * ({@code sign} cycles of {@code chOutput}), so a silenced chip rests at
  * {@code 72 << OUTPUT_SHIFT = 576} per side at chip scale; that is the model's

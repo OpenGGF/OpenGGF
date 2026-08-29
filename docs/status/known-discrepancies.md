@@ -44,6 +44,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 30. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated)
 31. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation)
 32. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores)
+33. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration)
 
 ---
 
@@ -2634,8 +2635,10 @@ the discrete DAC.
   `3 * 256 = 768` in both output stages (`chOutput`, `ym3438.c:947`). The facade
   applies one shift (`<< 3`), giving 6144 per channel: the largest power-of-two
   scaling that keeps six full-scale channels inside 16 bits after the master
-  gain. Relative to the previous core's 8191 the FM level is about 2.5 dB lower
-  against the PSG, whose scale did not move. No other gain is applied.
+  gain. Relative to the previous core's 8191 the FM level is about 2.5 dB lower;
+  the mixer's PSG preamp restores the previous FM:PSG balance (see "FM:PSG Mix
+  Balance Is Pre-Rewrite Parity, Not a Hardware Calibration"). No other gain is
+  applied in the chip.
 - **Resting level.** In YM2612 mode a silent channel's four pin cycles each carry
   the amplified sign of a non-negative output (+3), so a silenced chip rests at
   `72 << 3 = 576` per side at chip scale, +288 LSB after the master gain
@@ -2717,5 +2720,49 @@ The capture re-run in
 `docs/architecture/validation/2026-08-29-psg-clean-room-capture-comparison.md` §9
 matches the reference on the S1 `B6` tail to within 0.02 dB per attenuation step,
 identical transition counts, and cross-correlation 0.990–0.9999 at a constant lag.
+
+---
+
+## FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration
+
+**Location:** `VirtualSynthesizer.PSG_PREAMP_PERCENT` (applied via `PsgChip.configure(38, 0xFF)`)
+**Reference:** `docs/architecture/validation/2026-08-29-audio-mix-calibration.md`
+
+### Original Implementation
+
+The console mixes the YM2612 and SN76489 at a fixed analogue ratio. The engine
+never measured it: before the two core rewrites the balance was whatever the
+two Genesis Plus GX-derived cores produced through a plain sum — one full-scale
+FM channel 8191 against one full-scale PSG channel 2800 x 150 % = 4200, an
+FM:PSG ratio of 1.950 (+5.80 dB), with no preamp call anywhere in the mixer.
+
+### Our Implementation
+
+The Nuked-OPN2 facade emits 6144 per full-scale FM channel and the clean-room
+PSG 8191 per full-scale channel, so an unadjusted sum would have moved the
+balance by 8.30 dB toward the PSG. The mixer now sets the PSG output-stage
+preamp to 38 % (`6144 x 4200 / 8191^2 = 38.46 %`, rounded to the whole percent
+`configure` accepts), giving 6144 / 3112 = 1.974 (+5.90 dB), 0.10 dB from the
+pre-rewrite ratio. At the 16-bit output after `MASTER_GAIN_SHIFT` one full-scale
+FM channel is 3072, one full-scale PSG channel 1556, and silence rests at +288.
+Neither chip's own scale is adjusted.
+
+### Rationale
+
+No capture with both FM music and PSG sound exists in the repository (every
+`*-reference.wav` under `docs/architecture/research/audio/` is FM-only, the
+trace fixtures carry no PCM, and the BizHawk observer records chip writes, not
+audio), so the balance is **pre-rewrite parity, uncalibrated against hardware —
+it needs a two-chip capture**. Restoring the old ratio numerically keeps the
+audible balance players had rather than inventing a new one.
+
+### Verification
+
+`TestVirtualSynthesizerMix` asserts the documented per-chip levels, the ratio,
+and the resting level from the constants above. Removal condition: a hardware
+or trusted-emulator capture of one passage containing FM music and a PSG SFX,
+rendered through `FmSfxRenderTool` / `PsgSfxRenderTool` and matched on the
+relative RMS of the FM- and PSG-dominated segments; replace the 38 % with the
+measured value and retire this entry.
 
 ---
