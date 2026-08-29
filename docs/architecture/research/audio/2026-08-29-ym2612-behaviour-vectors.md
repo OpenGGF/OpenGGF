@@ -21,6 +21,16 @@ Confidence tags used on every vector:
 Where two public statements disagree, the disagreement is recorded rather than
 resolved by guessing.
 
+After the port landed, every vector was run against it by
+`TestYm2612HardwareBehaviour` and the rows that failed were re-derived from the
+pinned Nuked-OPN2 die model (`tools/audio/nuked-opn2/PIN.md`) and from this
+document's own arithmetic. Each correction is marked *(corrected)* inline and
+listed with its reasoning under *Nuked-OPN2 cross-check* at the end; the tag
+`N (die)` marks a value that rests on the die-derived model. The port itself was
+not changed: it is bit-exact with the pinned C build, so a row that disagreed
+with it was either a documentation error or a place where the die model refines
+the printed sources.
+
 ## Clock frame used by every vector
 
 All timings are stated in **samples** (one YM2612 output sample) so they are
@@ -133,7 +143,8 @@ following $A0-$A2 write. The latch is shared by all three channels of a part
 rather than being per channel; $AC-$AE have their own separate shared latch for
 channel-3 special mode (N, Nemesis register tests). Software must therefore
 write $A4 then $A0 for each channel, which is what every Sega sound driver
-does.
+does. The die model holds one $A4 latch and one $AC latch for all six channels,
+i.e. shared across both parts as well; tests pin the within-part sharing.
 
 ### Vectors
 
@@ -143,7 +154,7 @@ does.
 | REG-02 | Write A1 ← $A4, D1 ← $22; then A1 ← $A0, D1 ← $39 | Channel 4 (not channel 1) F-number = $239, block = 4. The $A4 value is visible in the channel only after the $A0 write. | M + N |
 | REG-03 | Write A0 ← $A4, D0 ← $22 only (no $A0 write) | Channel 1 block/F-number unchanged; the latch holds $22. A subsequent A0 ← $A1, D0 ← $00 sets **channel 2** to F-number $200, block 4 (shared latch). | N |
 | REG-04 | Write A0 ← $28, D0 ← $F0 then D0 ← $03 | First write keys on all four operators of channel 1. Second write (channel field 3) is ignored: channel 1 stays keyed on, no other channel changes. | M + N |
-| REG-05 | Write A0 ← $28, D0 ← $F5 | Channel 6 (bit 2 set, low bits 1 → channel index 5) has op1-op4 keyed on. | M |
+| REG-05 | Write A0 ← $28, D0 ← $F5 | Channel 5 (bit 2 set, low bits 01 → channel index 4) has op1-op4 keyed on; $F6 would select channel 6. *(corrected: the row originally said channel 6, against its own encoding table)* | M |
 | REG-06 | Data write on D0; read $4000 immediately, then again after 2 samples | First read: bit 7 = 1 (busy). Second read: bit 7 = 0. Busy window ≈ 1.33 samples. | N |
 | REG-07 | Write A1 ← $22, D1 ← $0F (Part II) | LFO stays disabled (global register ignored through Part II); Part I read of the LFO state unchanged. | N (`?` for other globals) |
 
@@ -161,8 +172,9 @@ att_total = min($3FF, eg_att + (TL << 3) + am_att)
 ```
 
 TL 0-127 → 0 … 95.25 dB (M). D1L (sustain level) 0-14 → 0 … 42 dB in 3 dB
-steps, i.e. `D1L << 5`; D1L = 15 → 93 dB (M), i.e. $3E0, which for practical
-purposes never lets the decay-1 phase end before silence.
+steps, i.e. `D1L << 5`; D1L = 15 → 93 dB (M), i.e. $3E0. *(corrected)* $3E0 is
+a threshold like any other: decay-1 hands over to decay-2 there, so a ramp that
+is to continue to silence needs D2R set as well (N (die)).
 
 ### Phases
 
@@ -199,7 +211,9 @@ release = min(63, 2 * (2 * RR + 1) + ks)          ; RR is 4-bit, so it is double
 
 F8-F11 are F-number bits 7-10 (M for N3/N4 and RS; N for the `R == 0` guard
 and the RR "×2 + 1" expansion). In channel 3 special mode each operator uses
-its own block/F-number for `kc` (N).
+its own block/F-number for `kc` (N). Note that `ks` is `kc >> 3` even at
+RS = 0, so a vector that names an exact effective rate must either add `ks` or
+pick `kc < 8` (block 1 or lower).
 
 ### Rate → timing
 
@@ -244,7 +258,13 @@ and 60-63 use 8 on every step. Concretely (N, Nemesis EG thread):
 | 60-63 | 8 8 8 8 8 8 8 8 |
 
 In decay/release phases `inc` is added to the attenuation directly (linear in
-dB). In attack the same `inc` scales an exponential step of the form
+dB). *(added)* Once a stored attenuation reaches $3F0 or more the EG treats the
+operator as off: on the next sample the level is replaced by $3FF and the phase
+becomes release (N (die)), so a linear ramp ends `… $3E8, $3F0, $3FF` and never
+shows $3F8. For rates 49-51, 53-55 and 57-59 the die model's per-step pattern is
+the same multiset as the table below but phase-shifted (the larger increment
+falls on the step whose low two counter bits are 0); the means, and therefore
+every duration in this document, are unchanged. In attack the same `inc` scales an exponential step of the form
 `att -= ((att ^ $3FF) * inc) >> 4` (plus a possible constant). The exact
 rounding of the attack step is `?` (open question 4); the *phase boundaries*
 and the decay-side increments are `N`. Rates 0-3 are also `?` (open question 5); the
@@ -267,10 +287,10 @@ Derived full-range (0 → $3FF, 96 dB) decay durations, in EG steps of 3 samples
 |---|---|---|---|
 | EG-01 | TL = 0, AR = 31, RS = 0, key on op | On the first sample after key on the operator attenuation is 0 and the EG is in decay-1 (attack skipped). | N |
 | EG-02 | AR = 31, RS = 3, block 7, F-number $7FF (kc = 31) | Effective rate = min(63, 62 + 31) = 63; still instant attack. | D |
-| EG-03 | D1R = 31, RS = 0, D1L = 15, key on with AR = 31 | Effective rate 62 → +8 per EG step. Attenuation reaches $3F8 after 127 EG steps (381 samples) and $3FF ≥ 128 steps (384 samples). | N + D |
-| EG-04 | D1R = 26 (rate 52), RS = 0, D1L = 4 | Decay-1 stops rising at att ≥ $080 (4 << 5) then decay-2 takes over at D2R's rate. Expected 64 EG steps (192 samples) to reach $080 at +2/step. | M + D |
+| EG-03 | D1R = 31, D2R = 31, RS = 0, D1L = 15, key on with AR = 31 | Effective rate 62 (63 with ks) → +8 per EG step. Attenuation is $3F0 after 126 EG steps (378 samples) and $3FF on the next sample; silence within 384 samples of key on. *(corrected: D1L 15 hands over to decay-2 at $3E0, hence D2R = 31; the EG snaps $3F0 → $3FF rather than passing $3F8)* | N (die) + D |
+| EG-04 | D1R = 26, RS = 0, kc < 8 (rate exactly 52), D1L = 4, D2R = 0 | Decay-1 stops rising at att ≥ $080 (4 << 5) then decay-2 takes over at D2R's rate (0 → holds at $080). Expected 64 EG steps (192 samples) to reach $080 at +2/step. *(corrected: kc pinned so that ks = 0)* | M + D |
 | EG-05 | D1R = 0 | Attenuation never changes in decay-1 (rate 0 → "no change"), regardless of RS/kc. | M + N |
-| EG-06 | RR = 15, RS = 0, key off from att = 0 | Release rate = 2 × 31 = 62 → +8/step; silence ($3FF) after 128 EG steps = 384 samples. | N + D |
+| EG-06 | RR = 15, RS = 0, key off from att = 0 | Release rate = 2 × 31 = 62 → +8/step; $3F0 after 126 EG steps, then $3FF: silence within 384 samples. *(corrected as EG-03)* | N (die) + D |
 | EG-07 | RS = 1, block 4, F-number $439, AR = 20 | kc = 16 + N4N3. F-number $439: F11 = 1, so N4 = 1, N3 = F10\|F9\|F8 = 0\|0\|0 → 0; kc = 18; ks = 18 >> 2 = 4; rate = 40 + 4 = 44. | M + D |
 | EG-08 | Key on, then key on again 10 samples later while still in attack | Second write has no effect: phase is not reset, envelope continues. | N |
 | EG-09 | Key off during attack at att = $100, then key on again | Release starts from $100; a key on during the release resumes attack from whatever attenuation the release reached — never from $3FF. | N |
@@ -299,7 +319,10 @@ same (M: 0.75 dB per TL step).
 
 Channel mixing: each carrier's 14-bit output is summed into a 14-bit channel
 accumulator clamped to −8192 … +8191 (N). The value handed to the DAC is the
-top 9 bits of that (Group 8).
+top 9 bits of that (Group 9). *(corrected)* The die model does the truncation
+first: each carrier's output is shifted to 9 bits (`>> 5`) before the sum, and
+the sum is clamped to −256 … +255 (N (die)). The two orderings give the same
+DAC value for every vector here; the 14-bit intermediate is not observable.
 
 ### Vectors
 
@@ -308,8 +331,8 @@ top 9 bits of that (Group 8).
 | TL-01 | att_total = 0, phase index 255 (peak) | level = 0 → mag = ((1018 \| 1024) << 2) >> 0 = 8168. Operator peak = +8168 (13-bit magnitude, not 8191). | N + D |
 | TL-02 | TL = 8 (6 dB), phase index 255 | level = 64 << 2 = 256 → exp index (~256)&$FF = $FF → 8168 >> 1 = 4084. Exactly half of TL-01. | M + D |
 | TL-03 | TL = 127, EG att = 0, peak phase | level = 127 × 8 × 4 = 4064 → shift 15, mag = 0. Operator silent. | D |
-| TL-04 | att_total = 0, phase index 0 | level = $859 = 2137 → shift 8, mantissa index (~2137)&$FF = $A6 → mag = ((exp[$A6] \| $400) << 2) >> 8. Small but non-zero (≈ 25). Sine table has no exact-zero entry: phase 0 and phase 512 differ only in sign. | N + D |
-| TL-05 | Channel with algorithm 7, all four ops TL = 0 at peak | Sum 4 × 8168 = 32672 → accumulator clamps to +8191. | N |
+| TL-04 | att_total = 0, phase index 0 | level = $859 = 2137 → shift 8, mantissa index (~2137)&$FF = $A6 → mag = ((exp[$A6] \| $400) << 2) >> 8 = (581 + 1024) × 4 >> 8 = 25 exactly. Sine table has no exact-zero entry: phase 0 and phase 512 differ only in sign (+25 / −25). | N + D |
+| TL-05 | Channel with algorithm 7, all four ops TL = 0 at peak | The channel clamps: the 9-bit value handed to the DAC is +255 at the peak and −256 at the trough. *(corrected: the die model clamps the 9-bit sum, see above)* | N (die) |
 
 ## Group 4 — Detune / multiple → phase increment
 
@@ -334,12 +357,16 @@ The detune table (M, Yamaha OPN application manual; index = key code 0-31):
 
 | DT | kc 0-15 | kc 16-31 |
 |---|---|---|
-| 1 | 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 | 2 3 3 3 4 4 4 5 5 6 6 7 8 8 8 8 |
+| 1 | 0 0 0 0 1 1 1 1 1 1 1 1 2 2 2 2 | 2 3 3 3 4 4 4 5 5 6 6 7 8 8 8 8 |
 | 2 | 1 1 1 1 2 2 2 2 2 3 3 3 4 4 4 5 | 5 6 6 7 8 8 9 10 11 12 13 14 16 16 16 16 |
 | 3 | 2 2 2 2 2 3 3 3 4 4 4 5 5 6 6 7 | 8 8 9 10 11 12 13 14 16 17 19 20 22 22 22 22 |
 
 The table unit is one LSB of `inc0`, i.e. Fs / 2^20 ≈ 0.0508 Hz at NTSC, applied
-before the multiple (D). Whether `inc1` wraps in 17 bits when a negative detune
+before the multiple (D). *(corrected)* DT 1 at kc 12-15 was transcribed as
+1 1 1 1; the die model computes every entry as a ROM value
+{16, 17, 19, 20, 22, 24, 27, 29}[row] shifted by the key code's octave, which
+gives 2 2 2 2 there and reproduces the other 92 entries exactly, so the
+transcription is taken to be the error. Key codes 29-31 use the kc 28 entry. Whether `inc1` wraps in 17 bits when a negative detune
 underflows a small `inc0` is `?` (open question 6).
 
 Frequency of a sine at the output: `f = inc × Fs / 2^20`.
@@ -350,10 +377,10 @@ Frequency of a sine at the output: `f = inc × Fs / 2^20`.
 |---|---|---|---|
 | PG-01 | fnum $439, block 4, DT 0, MUL 1 | inc0 = ($439 << 4) >> 1 = 8648; inc = 8648; f = 8648 × 53267.04 / 1048576 = 439.3 Hz (Sega's A4). | M + D |
 | PG-02 | fnum $439, block 4, DT 0, MUL 0 | inc = 4324; f = 219.7 Hz (one octave down). | M + D |
-| PG-03 | fnum $439, block 4, DT 1, MUL 2 | kc = 18 (see EG-07) → detune 3; inc = (8648 + 3) × 2 = 17302; f = 879.0 Hz. | M + D |
+| PG-03 | fnum $439, block 4, DT 1, MUL 2 | kc = 18 (see EG-07) → detune 3; inc = (8648 + 3) × 2 = 17302; f = 878.9 Hz. *(corrected arithmetic)* | M + D |
 | PG-04 | fnum $439, block 4, DT 5 (= −1), MUL 1 | inc = 8648 − 3 = 8645; f = 439.2 Hz. Pair with PG-01 → 0.15 Hz beat (the classic OPN chorus). | M + D |
 | PG-05 | fnum $001, block 0, DT 0, MUL 1 | inc0 = 0 (LSB lost at block 0) → operator phase never advances. | D from manual formula |
-| PG-06 | fnum $7FF, block 7, DT 3, MUL 15 | kc = 31 → detune 22; inc = (($7FF << 7) >> 1 + 22) × 15 = (130,880 + 22) × 15 = 1,963,530, taken mod 2^20 = 914,954. | D (`?` on the intermediate width) |
+| PG-06 | fnum $7FF, block 7, DT 3, MUL 15 | kc = 31 → detune 22; inc = (($7FF << 7) >> 1 + 22) × 15 = (131,008 + 22) × 15 = 1,965,450, taken mod 2^20 = 916,874. *(corrected arithmetic: $7FF << 6 = 131,008)* | D (`?` on the intermediate width; the die model masks the pre-multiple value to 17 bits, which this vector does not exercise) |
 
 ## Group 5 — Algorithms and feedback
 
@@ -392,24 +419,28 @@ Modulation input from a normal modulator into the next operator's phase is
 ## Group 6 — LFO
 
 The LFO has a 7-bit position counter (128 steps per cycle) that advances once
-every `period` samples (N, Nemesis). The manual's frequency table is printed for
-an 8 MHz clock; the period table that reproduces it exactly is:
+every `period` samples (N, Nemesis). *(corrected)* In the die model the
+sample counter is compared against the constant every internal cycle and the
+reset happens in the cycle after the count reaches it, while the count still
+increments once in that same sample, so the period **is** the constant:
 
-| $22 bits 2-0 | period (samples per step) | f at 8 MHz clock (manual) | f at NTSC Fs (D) |
-|---|---|---|---|
-| 0 | 109 | 3.98 Hz | 3.82 Hz |
-| 1 | 78 | 5.56 Hz | 5.34 Hz |
-| 2 | 72 | 6.02 Hz | 5.78 Hz |
-| 3 | 68 | 6.37 Hz | 6.12 Hz |
-| 4 | 63 | 6.88 Hz | 6.61 Hz |
-| 5 | 45 | 9.63 Hz | 9.25 Hz |
-| 6 | 9 | 48.1 Hz | 46.2 Hz |
-| 7 | 6 | 72.2 Hz | 69.4 Hz |
+| $22 bits 2-0 | period (samples per step) | f at 8 MHz clock (D) | f at 8 MHz printed in the manual | f at NTSC Fs (D) |
+|---|---|---|---|---|
+| 0 | 108 | 4.02 Hz | 3.98 Hz | 3.85 Hz |
+| 1 | 77 | 5.64 Hz | 5.56 Hz | 5.40 Hz |
+| 2 | 71 | 6.11 Hz | 6.02 Hz | 5.86 Hz |
+| 3 | 67 | 6.48 Hz | 6.37 Hz | 6.21 Hz |
+| 4 | 62 | 7.00 Hz | 6.88 Hz | 6.71 Hz |
+| 5 | 44 | 9.86 Hz | 9.63 Hz | 9.46 Hz |
+| 6 | 8 | 54.3 Hz | 48.1 Hz | 52.0 Hz |
+| 7 | 5 | 86.8 Hz | 72.2 Hz | 83.2 Hz |
 
-(Check: 8 000 000 / 144 / (128 × 109) = 3.98 Hz.) The commonly quoted compare
-values 108, 77, 71, 67, 62, 44, 8, 5 are these periods minus one — a counter
-that resets when it *reaches* the compare value has period compare + 1. Tests
-should assert on the period in samples, not on the compare constant.
+The manual's printed column fits `period + 1` (8 000 000 / 144 / (128 × 109)
+= 3.98 Hz), which is where the first draft's 109/78/72/68/63/45/9/6 came from.
+The die-derived counter is taken as authoritative for the period because it is
+the mechanism, not a rounded table; the disagreement with the printed figures
+(up to 20 % at settings 6 and 7) is recorded as open question 19 pending a
+hardware recording. Tests assert on the period in samples.
 
 LFO disabled ($22 bit 3 = 0): the position counter is held at 0 (N). What AM
 contributes at that held position when AMS ≠ 0 is `?` (open question 8).
@@ -451,11 +482,11 @@ column and the manual's cents are the anchors tests should use.
 
 | ID | Input | Expected observable | Tag |
 |---|---|---|---|
-| LFO-01 | $22 = $08 (enable, select 0) | LFO position advances by one every 109 samples; 128 × 109 = 13,952 samples per cycle (3.82 Hz NTSC). | M + N + D |
-| LFO-02 | $22 = $0F | Position advances every 6 samples; 768 samples per cycle (69.4 Hz NTSC). | M + N + D |
-| LFO-03 | $22 = $0E, AMS = 3, AM bit set, TL = 0, carrier at att 0 | Output amplitude swings between 0 dB and −11.8 dB (126 EG steps) once per 1,152 samples (9 × 128). | M + N |
+| LFO-01 | $22 = $08 (enable, select 0) | LFO position advances by one every 108 samples; 128 × 108 = 13,824 samples per cycle (3.85 Hz NTSC). *(corrected)* | N (die) + D |
+| LFO-02 | $22 = $0F | Position advances every 5 samples; 640 samples per cycle (83.2 Hz NTSC). *(corrected)* | N (die) + D |
+| LFO-03 | $22 = $0E, AMS = 3, AM bit set, TL = 0, carrier at att 0 | Output amplitude swings between 0 dB and −11.8 dB (126 EG steps) once per 1,024 samples (8 × 128). *(corrected)* | M + N (die) |
 | LFO-04 | AMS = 1, otherwise as LFO-03 | Depth 15 EG steps (1.4 dB). | M + D |
-| LFO-05 | $22 = $0F, PMS = 7, fnum $400, block 4 | Effective F-number swings $400 ± 48 → frequency swings ±4.7 % (≈ ±80 cents) at 69.4 Hz. | M + N + D |
+| LFO-05 | $22 = $0F, PMS = 7, fnum $400, block 4 | Effective F-number swings $400 ± 48 → phase increment 8192 ± 384 → frequency swings ±4.7 % (≈ ±80 cents) at 83.2 Hz (640-sample cycle). *(corrected rate)* | M + N + D |
 | LFO-06 | $22 = $00 (disabled), PMS = 7 | No pitch modulation: the LFO counter holds at position 0 and PM at position 0 is 0. | N |
 
 ## Group 7 — SSG-EG
@@ -464,10 +495,12 @@ $90+ bits: 3 = enable, 2 = attack (invert), 1 = alternate, 0 = hold (M). With
 SSG-EG enabled (values 8-15):
 
 - The envelope "end" is attenuation ≥ $200 (48 dB), not $3FF (N).
-- Decay-side rates run 4× faster: the effective rate is raised by 4 (one
-  extra `shift` step) for the decay-type phases; the attack curve itself is
-  not accelerated (N). Which phases exactly get the 4× is `?` (open
-  question 10).
+- Decay-side envelopes run 4× faster: *(corrected)* the increment applied at
+  each EG update is multiplied by 4 in decay-1, decay-2 and release (N (die);
+  below rate 48 this is the same as raising the rate by 8, not 4), so a
+  rate-62 ramp climbs 32 per EG step and covers 0 → $200 in 16 steps. The
+  attack curve itself is not accelerated (N). Open question 10 is answered by
+  the die model: all three decay-type phases.
 - When `att >= $200`:
   - not hold, not alternate (8, 12): restart — phase accumulator reset to 0,
     attenuation reset to 0, attack again (repeat) (N).
@@ -498,12 +531,12 @@ Manual shapes (level over time, high = loud):
 
 | ID | Input | Expected observable | Tag |
 |---|---|---|---|
-| SSG-01 | SSG = 8, AR = 31, D1R = 31 (rate 62 → +8/step), D1L = 15 | Attenuation ramps 0 → $200 in 64 EG steps (192 samples), then restarts at 0 with the phase accumulator at 0. Audible: a 192-sample sawtooth envelope repeating. | N + D |
-| SSG-02 | SSG = 9, same rates | One ramp to $200 (192 samples) then the operator stays silent (held at ≥ $200 → reported as $3FF) until key off. | M + N |
-| SSG-03 | SSG = 10, same rates | Ramp down 192 samples, then inversion toggles: audible level ramps back up over the next 192 samples, repeating (triangle, 384-sample period). | M + N |
+| SSG-01 | SSG = 8, AR = 31, D1R = 31 (rate 62 → +8 × 4 = +32/step), D1L = 15 | Attenuation ramps 0 → $200 in 16 EG steps (48 samples), then restarts at 0 with the phase accumulator at 0. Audible: a 48-sample sawtooth envelope repeating. *(corrected for the ×4 increment)* | N (die) + D |
+| SSG-02 | SSG = 9, same rates | One ramp to $200 (48 samples) then the operator stays silent (held at ≥ $200 → reported as $3FF) until key off. *(corrected)* | M + N |
+| SSG-03 | SSG = 10, same rates | Ramp down 48 samples, then inversion toggles: audible level ramps back up over the next 48 samples, repeating (triangle, 96-sample period). The phase accumulator is not reset on these alternate repeats in the die model (open question 11). *(corrected)* | M + N |
 | SSG-04 | SSG = 11, same rates | After the first ramp the inversion toggles and holds: audible level returns to 0 dB and stays there until key off. | M + N |
-| SSG-05 | SSG = 15 vs SSG = 9 | 15 starts silent and rises to loud once, then holds silent; 9 starts loud, decays once, holds silent. | M |
-| SSG-06 | SSG = 8, D1R = 10 vs SSG = 0, D1R = 10 | The SSG ramp runs 4× faster than the plain decay at the same register rate over the 0 → $200 span. | N (`?` on which phases) |
+| SSG-05 | SSG = 15 vs SSG = 9 | 15 starts silent and rises once, then holds silent; 9 starts loud, decays once, holds silent. *(refined)* The mode-15 rise stops one SSG step (32 = 3 dB) short of 0 dB: the inversion clears in the same step the level reaches $200, so the last inverted value shown is $020 (N (die)). | M + N (die) |
+| SSG-06 | SSG = 8, D1R = 20 (rate 40 at kc 0) vs SSG = 0, D1R = 20 | The SSG ramp runs 4× faster than the plain decay at the same register rate over the 0 → $200 span, within one 12-sample update. *(rate raised from 10 so the plain ramp fits a test)* | N (die) |
 
 ## Group 8 — Timers and CSM
 
@@ -616,8 +649,8 @@ against a hardware recording rather than this table.
 
 | ID | Input | Expected observable | Tag |
 |---|---|---|---|
-| CH3-01 | $27 = $40; $AD/$A9 = block 4 / $439; $AE/$AA = block 5 / $439; $AC/$A8 = block 3 / $439; $A6/$A2 = block 4 / $21A; ALG 7, all TL 0 | Four sines at 439.3, 878.6, 219.7 and 219.6 Hz respectively. | M + D |
-| CH3-02 | Same registers, $27 = $00 | Four sines all at the $A2/$A6 frequency (219.6 Hz). | M |
+| CH3-01 | $27 = $40; $AD/$A9 = block 4 / $439; $AE/$AA = block 5 / $439; $AC/$A8 = block 3 / $439; $A6/$A2 = block 4 / $21A; ALG 7, all TL 0 | Phase increments 8648, 17296, 4324 and 4304: four sines at 439.3, 878.6, 219.7 and 218.6 Hz respectively. *(corrected: $21A << 4 >> 1 = 4304 → 218.6 Hz, not 219.6)* | M + D |
+| CH3-02 | Same registers, $27 = $00 | Four sines all at the $A2/$A6 frequency (218.6 Hz). | M |
 | CH3-03 | $27 = $40, op1 block 7 / fnum $7FF, op4 block 0 / fnum $100, RS = 3 on both | op1 kc = 31 → ks = 31; op4 kc = 0 → ks = 0. The two operators' effective rates differ by 31 for the same register rate. | N + D |
 
 ## Group 11 — Sample rate and the 24-slot multiplex
@@ -658,7 +691,7 @@ assert on:
 | $50-$8F | 0 | AR/D1R/D2R/RR 0: an operator keyed on would never leave its $3FF attenuation (attack rate 0 = no change) | M |
 | $A0-$AE | 0 | fnum 0, block 0 → phase increment 0 | M |
 | $B0-$B2 | 0 | Algorithm 0, feedback 0 | M |
-| $B4-$B6 | 0 | L = R = 0: every channel muted until the driver writes panning | M |
+| $B4-$B6 | 0 | L = R = 0: every channel muted until the driver writes panning. *(disagreement)* The die model resets the pan bits to L = R = 1; nothing audible follows either way because every rate is 0, so tests assert the silence, not the pan bits (`?`, open question 20) | M vs N (die) |
 | Status | $00 | Not busy, no timer flags | M |
 | Phase accumulators | 0 | | N |
 | Address latches | 0 | | `?` |
@@ -670,8 +703,8 @@ Required /IC pulse width is `?` (open question 17).
 | ID | Input | Expected observable | Tag |
 |---|---|---|---|
 | RST-01 | Reset, then read $4000 | $00. | M |
-| RST-02 | Reset, then $28 ← $F0 only | Silence: L/R are 0 and every rate is 0. | M |
-| RST-03 | Reset; $B4 ← $C0; $50 ← $1F; $A4 ← $22; $A0 ← $39; $28 ← $F0 | Channel 1 op1-op4 audible at once with TL 0 (instant attack); algorithm 0 means only op4 is a carrier; frequency 439.3 Hz. | M + D |
+| RST-02 | Reset, then $28 ← $F0 only | Silence: every rate is 0 (attack rate 0 = no change), whatever the pan bits hold. | M |
+| RST-03 | Reset; $B4 ← $C0; $50/$54/$58/$5C ← $1F; $A4 ← $24; $A0 ← $39; $28 ← $F0 | Channel 1 op1-op4 audible at once with TL 0 (instant attack); algorithm 0 means only op4 is a carrier; reset MUL 0 = ×0.5 so the increment is 4324 (219.7 Hz). *(corrected: the draft wrote AR for op1 only, $A4 ← $22 is fnum $239, and MUL 0 halves the frequency)* | M + D |
 | RST-04 | Write registers, reset, read back behaviour | All Group 1 latches (including the shared $A4 latch) cleared. | M (`?` for latches) |
 
 ## Sources
@@ -716,30 +749,78 @@ recording or a primary-source page is attached to this document.
    (Group 2)
 6. Bit width of the pre-multiple increment when a negative detune underflows
    a small `inc0`: does it wrap in 17 bits (large positive increment) or clamp
-   at 0? (PG-06 and low-octave negative-detune patches)
+   at 0? (PG-06 and low-octave negative-detune patches) *Die model: wraps in
+   17 bits.*
 7. Shift applied to a modulator's 14-bit output before it is added to the next
-   operator's 10-bit phase (>> 1 assumed). (Group 5)
+   operator's 10-bit phase (>> 1 assumed). (Group 5) *Die model: >> 1, and the
+   feedback input is the sum of the two previous op1 outputs shifted by
+   10 − FB, as Group 5 states.*
 8. AM contribution when the LFO is disabled and AMS ≠ 0: is the held position
    0 treated as zero attenuation or as the triangle's value at position 0?
-   (LFO-06 sibling case)
+   (LFO-06 sibling case) *Die model: the triangle's value at position 0, which
+   is its maximum (126 before the AMS shift).*
 9. Full PM magnitude table for PMS 1-6 by F-number bit; only the PMS 7 column
    and the manual's cents figures are pinned. (Group 6)
 10. Which SSG-EG phases receive the 4× rate acceleration — decay-1/decay-2
     only, or release as well. (SSG-06)
 11. Whether an SSG-EG alternate repeat resets the phase accumulator like the
-    plain repeat does. (SSG-03)
+    plain repeat does. (SSG-03) *Die model: no; only modes 8 and 12 reset it.*
 12. CSM key-on pulse: is the key-off one sample (24 cycles) after the key-on,
     and where within the sample does it land relative to channel 3's operator
     slots? (TMR-06)
 13. Which $2C bit supplies the DAC's 9th (LSB) bit, and which bit routes the
-    DAC to all channels. (DAC-02)
+    DAC to all channels. (DAC-02) *Die model: bit 3 is the LSB, bit 5 routes
+    the DAC to every slot.*
 14. Order of the six channels within the multiplexed output slot sequence, and
-    the exact slot width. (Group 9)
+    the exact slot width. (Group 9) *Die model: four cycles per channel in the
+    order 2, 6, 4, 1, 5, 3.*
 15. Magnitude, in 9-bit LSBs, of the YM2612 ladder gap between the positive and
     negative halves. (DAC-06)
 16. Independent confirmation that channel-3 special-mode op2/op3 are $AA/$A8
     respectively rather than the reverse. (CH3-01)
 17. Minimum /IC pulse width in φM cycles, and whether the address latches and
     LFO/EG counters are cleared by /IC or only the register file. (Group 12)
+    *Die model: reset clears everything, latches and counters included.*
 18. Whether reads of $4001-$4003 return the status byte on YM3438 as they do on
     YM2612. (Group 1)
+19. LFO period: the die model's counter gives exactly 108/77/71/67/62/44/8/5
+    samples per step; the manual's printed frequencies fit one sample more. A
+    hardware LFO recording would settle which the silicon does. (Group 6)
+20. Pan bits after /IC: the manual's "all registers 0" versus the die model's
+    L = R = 1. (Group 12)
+
+## Nuked-OPN2 cross-check
+
+`src/test/java/com/openggf/audio/synth/TestYm2612HardwareBehaviour.java` runs
+every vector above against the port (through `NukedOpn2`'s public state where
+the facade hides the quantity, through `Ym2612Chip` where it does not). The
+port is bit-exact with the pinned C build, so each failing row was decided by
+re-deriving it: from this document's own formulas and printed tables first, and
+from the die model (`ym3438.c` at the pinned commit) where the printed sources
+do not reach. No port change was made. The decisions:
+
+| Row | Finding | Decision |
+|---|---|---|
+| REG-05 | $F5 has channel field 5, which the doc's own table maps to channel 5, not 6. | Doc corrected. |
+| Group 1 latch | The die model shares one $A4/$AC latch across both parts. | Noted; within-part sharing asserted. |
+| EG-03 / EG-06 | The EG replaces any stored level ≥ $3F0 with $3FF on the next sample; D1L 15 hands decay-1 to decay-2 at $3E0. | Doc corrected (D2R 31 added to EG-03; ramp ends $3F0 → $3FF). |
+| EG-04 | RS 0 still adds kc >> 3, so "rate 52" needs kc < 8. | Doc corrected (kc pinned). |
+| Rate table ≥ 48 | Same increments per four steps, different phase. | Noted; means asserted. |
+| TL-04 | ≈ 25 is exactly 25 by the doc's own formula. | Doc tightened. |
+| TL-05 | Per-operator 9-bit truncation before a 9-bit channel clamp; the DAC value is the same. | Doc corrected to the observable +255 / −256. |
+| Detune DT1 kc 12-15 | Transcribed 1 1 1 1; the ROM-and-shift structure that reproduces the other 92 entries gives 2 2 2 2. | Doc corrected. |
+| PG-03, PG-06, CH3-01 | Arithmetic slips (878.9 Hz; $7FF << 6 = 131,008 → 916,874; $21A → 4304 → 218.6 Hz). | Doc corrected. |
+| LFO periods | Counter period equals the constant (108 …), not constant + 1; the manual's Hz column fits + 1. | Doc corrected to the die model; recorded as open question 19. |
+| SSG-EG ×4 | The increment is multiplied by 4 (rate + 8 equivalent), in decay-1, decay-2 and release. | Doc corrected; SSG-01..03 timings 48 / 96 samples; open question 10 answered. |
+| SSG-05 | Mode 15's rise stops one step short of 0 dB when the inversion clears at $200. | Doc refined. |
+| RST-03 | AR written for op1 only, $A4 ← $22 is fnum $239, MUL 0 halves the frequency. | Doc corrected. |
+| RST pan bits | Die model resets L = R = 1; the manual says 0. | Recorded as open question 20; silence asserted. |
+| Open questions 6, 7, 8, 11, 13, 14, 17 | The die model answers them. | Answers noted beside each; the questions stay open for hardware confirmation. |
+
+Tolerances the test applies, and why: writes land at operator-slot granularity
+(Group 11), so "on the first sample after key on" is asserted as within three
+samples; timer B's 16-sample prescaler is free-running, so its first overflow
+is asserted within one prescaler period; the facade drains each write's own bus
+pacing (about 1.3 samples) through the core, so facade timer counts carry a
+two-sample allowance; SSG-06 compares two ramps whose updates are 12 samples
+apart, so 4× is asserted within one update.
