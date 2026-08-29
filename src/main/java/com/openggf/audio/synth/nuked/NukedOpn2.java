@@ -117,6 +117,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:224
     private void doIo() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         /* Write signal check */
         chip.writeAEn = (chip.writeA & 0x03) == 0x01 ? 1 : 0;
         chip.writeDEn = (chip.writeD & 0x03) == 0x01 ? 1 : 0;
@@ -129,188 +130,32 @@ public final class NukedOpn2 {
         chip.writeBusyCnt &= 0x1f;
     }
 
+    /**
+     * {@code OPN2_DoRegWrite}, split for the JIT: the per-cycle guards stay
+     * here and inline into {@link #clock(int[])}; the slot, channel and mode
+     * register decodes, which run only on a matching cycle or a strobe, are
+     * the three helpers below, in the C order. Same tests, same stores.
+     */
     // ym3438.c:238
     private void doRegWrite() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = chip.cycles >= 12 ? chip.cycles - 12 : chip.cycles; /* cycles % 12 on 0..23 */
-        int address;
         int channel = chip.channel;
         /* Update registers */
         if (chip.writeFmData != 0) {
             /* Slot */
             if (OP_OFFSET[slot] == (chip.address & 0x107)) {
-                if ((chip.address & 0x08) != 0) {
-                    /* OP2, OP4 */
-                    slot += 12;
-                }
-                address = chip.address & 0xf0;
-                switch (address) {
-                case 0x30: /* DT, MULTI */
-                    chip.multi[slot] = chip.data & 0x0f;
-                    if (chip.multi[slot] == 0) {
-                        chip.multi[slot] = 1;
-                    } else {
-                        chip.multi[slot] <<= 1;
-                    }
-                    chip.dt[slot] = (chip.data >> 4) & 0x07;
-                    break;
-                case 0x40: /* TL */
-                    chip.tl[slot] = chip.data & 0x7f;
-                    break;
-                case 0x50: /* KS, AR */
-                    chip.ar[slot] = chip.data & 0x1f;
-                    chip.ks[slot] = (chip.data >> 6) & 0x03;
-                    break;
-                case 0x60: /* AM, DR */
-                    chip.dr[slot] = chip.data & 0x1f;
-                    chip.am[slot] = (chip.data >> 7) & 0x01;
-                    break;
-                case 0x70: /* SR */
-                    chip.sr[slot] = chip.data & 0x1f;
-                    break;
-                case 0x80: /* SL, RR */
-                    chip.rr[slot] = chip.data & 0x0f;
-                    chip.sl[slot] = (chip.data >> 4) & 0x0f;
-                    chip.sl[slot] |= (chip.sl[slot] + 1) & 0x10;
-                    break;
-                case 0x90: /* SSG-EG */
-                    chip.ssgEg[slot] = chip.data & 0x0f;
-                    break;
-                default:
-                    break;
-                }
+                doRegWriteSlot(slot);
             }
 
             /* Channel */
             if (CH_OFFSET[channel] == (chip.address & 0x103)) {
-                address = chip.address & 0xfc;
-                switch (address) {
-                case 0xa0:
-                    chip.fnum[channel] = (chip.data & 0xff) | ((chip.regA4 & 0x07) << 8);
-                    chip.block[channel] = (chip.regA4 >> 3) & 0x07;
-                    chip.kcode[channel] = (chip.block[channel] << 2) | FN_NOTE[chip.fnum[channel] >> 7];
-                    break;
-                case 0xa4:
-                    chip.regA4 = chip.data & 0xff;
-                    break;
-                case 0xa8:
-                    chip.fnum3ch[channel] = (chip.data & 0xff) | ((chip.regAc & 0x07) << 8);
-                    chip.block3ch[channel] = (chip.regAc >> 3) & 0x07;
-                    chip.kcode3ch[channel] = (chip.block3ch[channel] << 2) | FN_NOTE[chip.fnum3ch[channel] >> 7];
-                    break;
-                case 0xac:
-                    chip.regAc = chip.data & 0xff;
-                    break;
-                case 0xb0:
-                    chip.connect[channel] = chip.data & 0x07;
-                    chip.fb[channel] = (chip.data >> 3) & 0x07;
-                    break;
-                case 0xb4:
-                    chip.pms[channel] = chip.data & 0x07;
-                    chip.ams[channel] = (chip.data >> 4) & 0x03;
-                    chip.panL[channel] = (chip.data >> 7) & 0x01;
-                    chip.panR[channel] = (chip.data >> 6) & 0x01;
-                    break;
-                default:
-                    break;
-                }
+                doRegWriteChannel(channel);
             }
         }
 
         if (chip.writeAEn != 0 || chip.writeDEn != 0) {
-            /* Data */
-            if (chip.writeAEn != 0) {
-                chip.writeFmData = 0;
-            }
-
-            if (chip.writeFmAddress != 0 && chip.writeDEn != 0) {
-                chip.writeFmData = 1;
-            }
-
-            /* Address */
-            if (chip.writeAEn != 0) {
-                if ((chip.writeData & 0xf0) != 0x00) {
-                    /* FM Write */
-                    chip.address = chip.writeData;
-                    chip.writeFmAddress = 1;
-                } else {
-                    /* SSG write */
-                    chip.writeFmAddress = 0;
-                }
-            }
-
-            /* FM Mode */
-            /* Data */
-            if (chip.writeDEn != 0 && (chip.writeData & 0x100) == 0) {
-                switch (chip.writeFmModeA) {
-                case 0x21: /* LSI test 1 */
-                    for (int i = 0; i < 8; i++) {
-                        chip.modeTest21[i] = (chip.writeData >> i) & 0x01;
-                    }
-                    break;
-                case 0x22: /* LFO control */
-                    if (((chip.writeData >> 3) & 0x01) != 0) {
-                        chip.lfoEn = 0x7f;
-                    } else {
-                        chip.lfoEn = 0;
-                    }
-                    chip.lfoFreq = chip.writeData & 0x07;
-                    break;
-                case 0x24: /* Timer A */
-                    chip.timerAReg &= 0x03;
-                    chip.timerAReg |= (chip.writeData & 0xff) << 2;
-                    break;
-                case 0x25:
-                    chip.timerAReg &= 0x3fc;
-                    chip.timerAReg |= chip.writeData & 0x03;
-                    break;
-                case 0x26: /* Timer B */
-                    chip.timerBReg = chip.writeData & 0xff;
-                    break;
-                case 0x27: /* CSM, Timer control */
-                    chip.modeCh3 = (chip.writeData & 0xc0) >> 6;
-                    chip.modeCsm = chip.modeCh3 == 2 ? 1 : 0;
-                    chip.timerALoad = chip.writeData & 0x01;
-                    chip.timerAEnable = (chip.writeData >> 2) & 0x01;
-                    chip.timerAReset = (chip.writeData >> 4) & 0x01;
-                    chip.timerBLoad = (chip.writeData >> 1) & 0x01;
-                    chip.timerBEnable = (chip.writeData >> 3) & 0x01;
-                    chip.timerBReset = (chip.writeData >> 5) & 0x01;
-                    break;
-                case 0x28: /* Key on/off */
-                    for (int i = 0; i < 4; i++) {
-                        chip.modeKonOperator[i] = (chip.writeData >> (4 + i)) & 0x01;
-                    }
-                    if ((chip.writeData & 0x03) == 0x03) {
-                        /* Invalid address */
-                        chip.modeKonChannel = 0xff;
-                    } else {
-                        chip.modeKonChannel = (chip.writeData & 0x03) + ((chip.writeData >> 2) & 1) * 3;
-                    }
-                    break;
-                case 0x2a: /* DAC data */
-                    chip.dacdata &= 0x01;
-                    chip.dacdata |= (chip.writeData ^ 0x80) << 1; /* write_data < 0x100 here, so stays 9-bit */
-                    break;
-                case 0x2b: /* DAC enable */
-                    chip.dacen = chip.writeData >> 7;
-                    break;
-                case 0x2c: /* LSI test 2 */
-                    for (int i = 0; i < 8; i++) {
-                        chip.modeTest2c[i] = (chip.writeData >> i) & 0x01;
-                    }
-                    chip.dacdata &= 0x1fe;
-                    chip.dacdata |= chip.modeTest2c[3];
-                    chip.egCustomTimer = (chip.modeTest2c[7] == 0 && chip.modeTest2c[6] != 0) ? 1 : 0;
-                    break;
-                default:
-                    break;
-                }
-            }
-
-            /* Address */
-            if (chip.writeAEn != 0) {
-                chip.writeFmModeA = chip.writeData & 0x1ff;
-            }
+            doRegWriteMode();
         }
 
         if (chip.writeFmData != 0) {
@@ -318,8 +163,193 @@ public final class NukedOpn2 {
         }
     }
 
+    /** Slot register decode of {@code OPN2_DoRegWrite}; {@code slot} is {@code cycles % 12}. */
+    // ym3438.c:247
+    private void doRegWriteSlot(int slot) {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
+        int address;
+        if ((chip.address & 0x08) != 0) {
+            /* OP2, OP4 */
+            slot += 12;
+        }
+        address = chip.address & 0xf0;
+        switch (address) {
+        case 0x30: /* DT, MULTI */
+            chip.multi[slot] = chip.data & 0x0f;
+            if (chip.multi[slot] == 0) {
+                chip.multi[slot] = 1;
+            } else {
+                chip.multi[slot] <<= 1;
+            }
+            chip.dt[slot] = (chip.data >> 4) & 0x07;
+            break;
+        case 0x40: /* TL */
+            chip.tl[slot] = chip.data & 0x7f;
+            break;
+        case 0x50: /* KS, AR */
+            chip.ar[slot] = chip.data & 0x1f;
+            chip.ks[slot] = (chip.data >> 6) & 0x03;
+            break;
+        case 0x60: /* AM, DR */
+            chip.dr[slot] = chip.data & 0x1f;
+            chip.am[slot] = (chip.data >> 7) & 0x01;
+            break;
+        case 0x70: /* SR */
+            chip.sr[slot] = chip.data & 0x1f;
+            break;
+        case 0x80: /* SL, RR */
+            chip.rr[slot] = chip.data & 0x0f;
+            chip.sl[slot] = (chip.data >> 4) & 0x0f;
+            chip.sl[slot] |= (chip.sl[slot] + 1) & 0x10;
+            break;
+        case 0x90: /* SSG-EG */
+            chip.ssgEg[slot] = chip.data & 0x0f;
+            break;
+        default:
+            break;
+        }
+    }
+
+    /** Channel register decode of {@code OPN2_DoRegWrite}. */
+    // ym3438.c:297
+    private void doRegWriteChannel(int channel) {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
+        int address = chip.address & 0xfc;
+        switch (address) {
+        case 0xa0:
+            chip.fnum[channel] = (chip.data & 0xff) | ((chip.regA4 & 0x07) << 8);
+            chip.block[channel] = (chip.regA4 >> 3) & 0x07;
+            chip.kcode[channel] = (chip.block[channel] << 2) | FN_NOTE[chip.fnum[channel] >> 7];
+            break;
+        case 0xa4:
+            chip.regA4 = chip.data & 0xff;
+            break;
+        case 0xa8:
+            chip.fnum3ch[channel] = (chip.data & 0xff) | ((chip.regAc & 0x07) << 8);
+            chip.block3ch[channel] = (chip.regAc >> 3) & 0x07;
+            chip.kcode3ch[channel] = (chip.block3ch[channel] << 2) | FN_NOTE[chip.fnum3ch[channel] >> 7];
+            break;
+        case 0xac:
+            chip.regAc = chip.data & 0xff;
+            break;
+        case 0xb0:
+            chip.connect[channel] = chip.data & 0x07;
+            chip.fb[channel] = (chip.data >> 3) & 0x07;
+            break;
+        case 0xb4:
+            chip.pms[channel] = chip.data & 0x07;
+            chip.ams[channel] = (chip.data >> 4) & 0x03;
+            chip.panL[channel] = (chip.data >> 7) & 0x01;
+            chip.panR[channel] = (chip.data >> 6) & 0x01;
+            break;
+        default:
+            break;
+        }
+    }
+
+    /** Strobe handling and mode-register ({@code 0x21}-{@code 0x2c}) decode of {@code OPN2_DoRegWrite}. */
+    // ym3438.c:335
+    private void doRegWriteMode() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
+        /* Data */
+        if (chip.writeAEn != 0) {
+            chip.writeFmData = 0;
+        }
+
+        if (chip.writeFmAddress != 0 && chip.writeDEn != 0) {
+            chip.writeFmData = 1;
+        }
+
+        /* Address */
+        if (chip.writeAEn != 0) {
+            if ((chip.writeData & 0xf0) != 0x00) {
+                /* FM Write */
+                chip.address = chip.writeData;
+                chip.writeFmAddress = 1;
+            } else {
+                /* SSG write */
+                chip.writeFmAddress = 0;
+            }
+        }
+
+        /* FM Mode */
+        /* Data */
+        if (chip.writeDEn != 0 && (chip.writeData & 0x100) == 0) {
+            switch (chip.writeFmModeA) {
+            case 0x21: /* LSI test 1 */
+                for (int i = 0; i < 8; i++) {
+                    chip.modeTest21[i] = (chip.writeData >> i) & 0x01;
+                }
+                break;
+            case 0x22: /* LFO control */
+                if (((chip.writeData >> 3) & 0x01) != 0) {
+                    chip.lfoEn = 0x7f;
+                } else {
+                    chip.lfoEn = 0;
+                }
+                chip.lfoFreq = chip.writeData & 0x07;
+                break;
+            case 0x24: /* Timer A */
+                chip.timerAReg &= 0x03;
+                chip.timerAReg |= (chip.writeData & 0xff) << 2;
+                break;
+            case 0x25:
+                chip.timerAReg &= 0x3fc;
+                chip.timerAReg |= chip.writeData & 0x03;
+                break;
+            case 0x26: /* Timer B */
+                chip.timerBReg = chip.writeData & 0xff;
+                break;
+            case 0x27: /* CSM, Timer control */
+                chip.modeCh3 = (chip.writeData & 0xc0) >> 6;
+                chip.modeCsm = chip.modeCh3 == 2 ? 1 : 0;
+                chip.timerALoad = chip.writeData & 0x01;
+                chip.timerAEnable = (chip.writeData >> 2) & 0x01;
+                chip.timerAReset = (chip.writeData >> 4) & 0x01;
+                chip.timerBLoad = (chip.writeData >> 1) & 0x01;
+                chip.timerBEnable = (chip.writeData >> 3) & 0x01;
+                chip.timerBReset = (chip.writeData >> 5) & 0x01;
+                break;
+            case 0x28: /* Key on/off */
+                for (int i = 0; i < 4; i++) {
+                    chip.modeKonOperator[i] = (chip.writeData >> (4 + i)) & 0x01;
+                }
+                if ((chip.writeData & 0x03) == 0x03) {
+                    /* Invalid address */
+                    chip.modeKonChannel = 0xff;
+                } else {
+                    chip.modeKonChannel = (chip.writeData & 0x03) + ((chip.writeData >> 2) & 1) * 3;
+                }
+                break;
+            case 0x2a: /* DAC data */
+                chip.dacdata &= 0x01;
+                chip.dacdata |= (chip.writeData ^ 0x80) << 1; /* write_data < 0x100 here, so stays 9-bit */
+                break;
+            case 0x2b: /* DAC enable */
+                chip.dacen = chip.writeData >> 7;
+                break;
+            case 0x2c: /* LSI test 2 */
+                for (int i = 0; i < 8; i++) {
+                    chip.modeTest2c[i] = (chip.writeData >> i) & 0x01;
+                }
+                chip.dacdata &= 0x1fe;
+                chip.dacdata |= chip.modeTest2c[3];
+                chip.egCustomTimer = (chip.modeTest2c[7] == 0 && chip.modeTest2c[6] != 0) ? 1 : 0;
+                break;
+            default:
+                break;
+            }
+        }
+
+        /* Address */
+        if (chip.writeAEn != 0) {
+            chip.writeFmModeA = chip.writeData & 0x1ff;
+        }
+    }
+
     // ym3438.c:457
     private void phaseCalcIncrement() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int chan = chip.channel;
         int slot = chip.cycles;
         int fnum = chip.pgFnum;
@@ -383,6 +413,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:526
     private void phaseGenerate() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot;
         /* Mask increment */
         slot = wrap24(chip.cycles + 20);
@@ -400,6 +431,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:545
     private void envelopeSsgEg() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = chip.cycles;
         int direction = 0;
         chip.egSsgPgrstLatch[slot] = 0;
@@ -439,6 +471,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:591
     private void envelopeAdsr() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = wrap24(chip.cycles + 22);
 
         int nkon = chip.egKonLatch[slot];
@@ -539,6 +572,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:715
     private void envelopePrepare() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int rate;
         int sum;
         int inc = 0;
@@ -615,6 +649,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:803
     private void envelopeGenerate() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = wrap24(chip.cycles + 23);
         int level;
 
@@ -644,6 +679,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:836
     private void updateLfo() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         if ((chip.lfoQuotient & LFO_CYCLES[chip.lfoFreq]) == LFO_CYCLES[chip.lfoFreq]) {
             chip.lfoQuotient = 0;
             chip.lfoCnt = (chip.lfoCnt + 1) & 0xff; /* Bit8u */
@@ -655,6 +691,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:850
     private void fmPrepare() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = wrap24(chip.cycles + 6);
         int channel = chip.channel;
         int mod;
@@ -711,6 +748,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:912
     private void chGenerate() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = wrap24(chip.cycles + 18);
         int channel = chip.channel;
         int op = slot / 6;
@@ -740,6 +778,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:947
     private void chOutput() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int cycles = chip.cycles;
         int slot = chip.cycles;
         int channel = chip.channel;
@@ -804,6 +843,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:1029
     private void fmGenerate() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = wrap24(chip.cycles + 19);
         /* Calculate phase */
         int phase = (chip.fmMod[slot] + (chip.pgPhase[slot] >> 10)) & 0x3ff;
@@ -835,6 +875,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:1066
     private void doTimerA() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int time;
         int load;
         load = chip.timerAOverflow;
@@ -873,6 +914,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:1115
     private void doTimerB() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int time;
         int load;
         load = chip.timerBOverflow;
@@ -909,6 +951,7 @@ public final class NukedOpn2 {
 
     // ym3438.c:1160
     private void keyOn() {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = chip.cycles;
         int chan = chip.channel;
         /* Key On */
@@ -967,6 +1010,7 @@ public final class NukedOpn2 {
      */
     // ym3438.c:1209
     public void clock(int[] buffer) {
+        final NukedOpn2State chip = this.chip; /* local copy of the reference: shorter bytecode, same object */
         int slot = chip.cycles;
         chip.lfoInc = chip.modeTest21[1];
         chip.pgRead >>>= 1;
