@@ -14,6 +14,15 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **FM write-log capture tool:** `com.openggf.tools.audio.FmSfxRenderTool`
+  renders one ROM-backed SFX or song headlessly through the real SMPS driver
+  and writes the full mix, an FM-only render (PSG muted) and a frame-stamped
+  log of every YM2612 register write (`--rate internal` stamps frames at the
+  chip's own output rate). The logs feed the Nuked-OPN2 port's cycle-for-cycle
+  pin against the C build (`TestNukedOpn2BitExactScripts`, 732 script runs
+  over 145 synthetic bodies and 38 SMPS write logs from all three games,
+  regenerable with `tools/audio/nuked-opn2/harness/`).
+
 - **The FM synthesiser now runs on the Nuked-OPN2 port:** `Ym2612Chip` is a
   thin facade over the cycle-accurate `com.openggf.audio.synth.nuked` core
   (LGPL 2.1+), replacing the Genesis Plus GX-derived table core. The facade
