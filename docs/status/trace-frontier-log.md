@@ -115043,3 +115043,23 @@ The other three death arms remain coordinates only.
   complete chain; S3K complete chain; S2 CPZ2 segment 10 frame 2252 / `air`;
   and S3K AIZ frame 20713 / `air`. No frontier moved and no green trace remains
   regressed.
+
+## 2026-08-29 - Post-audit integration sweep on develop
+
+- Worktree/branch: main checkout, `develop` at `0561aef9d` (seven audit-fix
+  branches merged: release docs, guide docs, hygiene, ordinary-suite repair,
+  ledgers + S3K `$4F` gate, decompressor relocation / power-up factories,
+  GAME OVER / TIME OVER card flow; plus a guard-baseline integration fix after
+  the collaborator commit `74cf38b71`).
+- Command: `mvn -Dmse=off -Ptrace-replay test -B -Dsurefire.runOrder=alphabetical`
+  with the three ROM paths passed as absolute `-D` properties from the repository root (`s1.gen`, `s2.gen`, `s3k.gen`).
+- Result: **870 tests, 6 failures, 0 errors, 7 skips.** Identities and
+  first-error signatures unchanged: `TestS3kReplayReferenceClosureIntegration`
+  frame 25589 / `player_animation_id` (113 errors);
+  `TestS1CompleteEmeraldRunChain`; `TestS2CompleteEmeraldRunChain`;
+  `TestS3kSonicTailsCompleteEmeraldRunChain`;
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` frame 2252 / `air`
+  (370 errors); `TestS3kAizTraceReplay` frame 20713 / `air` (37 errors).
+  No frontier moved and no green trace regressed.
+- Same tree: `-Pguards` 550 tests / 0 failures / 0 errors; ordinary suite
+  14,896 tests / 0 failures / 0 errors / 18 skipped (absolute ROM paths).
