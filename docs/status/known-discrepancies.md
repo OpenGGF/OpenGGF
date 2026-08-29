@@ -20,8 +20,8 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 6. [Multi-Sidekick Daisy Chain](#multi-sidekick-daisy-chain)
 7. [Sonic 1 Monitor Sidekick Guard](#sonic-1-monitor-sidekick-guard)
 8. [Bonus Stage Game Mode](#bonus-stage-game-mode)
-9. [HCZ Conveyor Belt Rolling State Clear](#hcz-conveyor-belt-rolling-state-clear)
-10. [Right-Wall Odd-Sensor Fallback Heuristics](#right-wall-odd-sensor-fallback-heuristics)
+9. [HCZ Conveyor Belt Rolling State Clear (Resolved)](#hcz-conveyor-belt-rolling-state-clear-resolved)
+10. [Right-Wall Penetration Timer Heuristic](#right-wall-penetration-timer-heuristic)
 11. [S2 CPZ Visual Water Surface Oscillation](#s2-cpz-visual-water-surface-oscillation)
 12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
 13. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge)
@@ -191,27 +191,41 @@ move.w  #tiles_to_bytes(ArtTile_Title_Card),d0
 
 We use **extended pattern ID ranges** with fixed bases that don't overlap:
 
-| Base | Category | Notes |
+| Range | `PatternAtlasRange` | Notes |
 |------|----------|-------|
-| `0x00000` | Level tiles | Corresponds to VRAM tile indices (0-~2047) |
-| `0x01000` | Special Stage | Track, objects, HUD for special stages |
-| `0x10000` | Reserved legacy results range | Historical docs referenced results here; current release-screen allocations are registered under `PatternAtlasRange.RESULTS_SCREENS` at `0x60000` |
-| `0x20000` | Objects | Monitors, springs, badniks, zone-specific objects |
-| `0x28000` | HUD | Score, time, rings display (fixed base) |
-| `0x30000` | Water surface | Underwater palette transition patterns |
-| `0x34000` | S3K Dust | Spindash/skid dust art (`Sonic3kDustArt.DUST_PATTERN_BASE`) |
-| `0x38000+` | Sidekick DPLC banks | Extra banks for duplicate-character sidekicks (global running offset) |
-| `0x39000+` | Sidekick tail appendages | Extra banks for duplicate Tails tail sprites (Obj05) |
-| `0x40000` | Title Card / S1 SS Results / S3K AIZ Intro | Shared base; mutually-exclusive game contexts (see below) |
-| `0x50000` | Level Select / S1 Title Card / S3K Title Card / S3K Data Select | Shared base; mutually-exclusive game contexts (see below) |
-| `0x60000` | Results screens | S1 Try Again Eggman, S2 title-screen background, S3K level results; registered as `PatternAtlasRange.RESULTS_SCREENS` |
-| `0x61000` | Results-screen suballocation | S1 Try Again emerald art (`PatternAtlasRange.RESULTS_SCREENS.base() + 0x1000`) |
-| `0x70000` | Special-stage results / S2 title sprites | Shared base in mutually-exclusive contexts; registered as `PatternAtlasRange.SPECIAL_STAGE_RESULTS` |
-| `0x80000` | S2 title-screen credit text | Separate title-screen text allocation |
-| `0xE0000` | S2 credits / S3K title animation | Shared base in mutually-exclusive contexts; registered as `PatternAtlasRange.S3K_TITLE_SCREEN_ANIMATION` |
-| `0xE8000` | S3K title sprites | Registered as `PatternAtlasRange.S3K_TITLE_SCREEN_SPRITES` |
-| `0x100000` | SEGA boot logos | S1/S2 SEGA logo tiles and S2 giant-Sonic boot-screen art; registered as `PatternAtlasRange.SEGA_BOOT_LOGOS` |
-| `0x108000`–`0x187FFF` | MGZ zoom-cue instance banks | 4096 non-overlapping 128-pattern banks for live/rewound MGZ end-boss scaled-art cues; registered as `PatternAtlasRange.MGZ_ZOOM_CUES`. Allocation is monotonic for process lifetime and fails loudly if exhausted, preventing a later cue from overwriting an earlier queued draw. |
+| `0x00000`–`0x01FFF` | `LEVEL_TILES` | Corresponds to VRAM tile indices (0-~2047); also the S2 special-stage playfield |
+| `0x03000`–`0x0FFFF` | `SPECIAL_STAGE_PLAYFIELD` | S3K special-stage track, objects and HUD (`Sonic3kSpecialStageManager`) |
+| `0x10000`–`0x17FFF` | `SONIC1_SPECIAL_STAGE` | S1 special-stage art (`Sonic1SpecialStageManager`) |
+| `0x20000`–`0x27FFF` | `OBJECTS` | Monitors, springs, badniks, zone-specific objects (`LevelManager`, the S2/S3K object art providers, MGZ boss and LBZ1 Knuckles cutscene art) |
+| `0x28000`–`0x2FFFF` | `HUD` | Score, time, rings display (fixed base) |
+| `0x30000`–`0x37FFF` | `WATER_SURFACE` | Underwater palette transition patterns; `Sonic3kDustArt` suballocates spindash/skid dust at `base() + 0x4000` (`0x34000`) |
+| `0x38000`–`0x3FFFF` | `SIDEKICK_BANKS` | Extra DPLC banks for duplicate-character sidekicks and Tails tail sprites (global running offset from `LevelManager`) |
+| `0x40000`–`0x47FFF` | `TITLE_CARDS` | S2 title card, S1/S2 special-stage results, S3K AIZ intro art; shared base in mutually-exclusive contexts (see below) |
+| `0x48000`–`0x4FFFF` | `TRANSIENT_EFFECTS` | Short-lived S3K effect art: ICZ snowboard (`IczSnowboardArtLoader`), lightning spark, `Sonic3kObjectArtProvider` transient sheets |
+| `0x50000`–`0x57FFF` | `MENU_AND_DATA_SELECT` | S1/S3K title cards, S1/S2/S3K level select, S3K data select; shared base in mutually-exclusive contexts (see below) |
+| `0x60000`–`0x67FFF` | `RESULTS_SCREENS` | S1 Try Again Eggman (`TryAgainEndManager`, emerald art at `base() + 0x1000`), S2 title-screen background, S3K level results |
+| `0x70000`–`0x77FFF` | `SPECIAL_STAGE_RESULTS` | S3K special-stage results and S2 title sprites; shared base in mutually-exclusive contexts |
+| `0x80000`–`0x87FFF` | `SONIC2_TITLE_CREDIT_TEXT` | S2 title-screen credit text |
+| `0x90000`–`0x97FFF` | `SONIC1_TITLE_FOREGROUND` | S1 title-screen foreground (`Sonic1TitleScreenDataLoader`) |
+| `0xA0000`–`0xA7FFF` | `SONIC1_TITLE_SPRITES` | S1 title-screen sprites |
+| `0xB0000`–`0xB7FFF` | `SONIC1_CREDIT_TEXT` | S1 credit text |
+| `0xC0000`–`0xC7FFF` | `SONIC1_TITLE_TM` | S1 title TM mark |
+| `0xD0000`–`0xD7FFF` | `SONIC1_TITLE_GHZ_BACKGROUND` | S1 title GHZ background |
+| `0xE0000`–`0xE7FFF` | `S3K_TITLE_SCREEN_ANIMATION` | S3K title animation and S2 credits text; shared base in mutually-exclusive contexts |
+| `0xE8000`–`0xEFFFF` | `S3K_TITLE_SCREEN_SPRITES` | S3K title sprites |
+| `0xF0000`–`0xF0FFF` | `SONIC2_ENDING_CHARACTER` | S2 ending character art (`Sonic2EndingArt`) |
+| `0xF1000`–`0xF1FFF` | `SONIC2_ENDING_FINAL_TORNADO` | S2 ending final Tornado |
+| `0xF2000`–`0xF2FFF` | `SONIC2_ENDING_PICS` | S2 ending photo frame |
+| `0xF3000`–`0xF3FFF` | `SONIC2_ENDING_MINI_TORNADO` | S2 ending mini Tornado |
+| `0xF4000`–`0xF4FFF` | `SONIC2_ENDING_CLOUDS` | S2 ending clouds |
+| `0xF5000`–`0xF5FFF` | `SONIC2_ENDING_ANIMAL` | S2 ending animal |
+| `0xF6000`–`0xF7FFF` | `SONIC2_CREDITS_LOGO` | S2 credits logo (`Sonic2LogoFlashManager`) |
+| `0xF8000`–`0xFFFFF` | `SONIC2_ENDING_VRAM` | S2 ending VRAM-relative art |
+| `0x100000`–`0x107FFF` | `SEGA_BOOT_LOGOS` | S1/S2 SEGA logo tiles and S2 giant-Sonic boot-screen art |
+| `0x108000`–`0x187FFF` | `MGZ_ZOOM_CUES` | 4096 non-overlapping 128-pattern banks for live/rewound MGZ end-boss scaled-art cues. Allocation is monotonic for process lifetime and fails loudly if exhausted, preventing a later cue from overwriting an earlier queued draw. |
+
+The table is transcribed from `src/main/java/com/openggf/graphics/PatternAtlasRange.java`
+(base and size per constant); regenerate it from that enum rather than editing rows by hand.
 
 **Shared-base contexts** (`0x40000`):
 - S2 Title Card (`TitleCardManager.PATTERN_BASE`) — gameplay scope, not active during cutscenes
@@ -555,7 +569,7 @@ None on gameplay determinism or reward correctness (ring/item totals match what 
 
 ---
 
-## HCZ Conveyor Belt Rolling State Clear
+## HCZ Conveyor Belt Rolling State Clear (Resolved)
 
 **Location:** `HCZConveyorBeltObjectInstance.java` (`capturePlayer()`)
 **ROM Reference:** `sonic3k.asm` lines 66490-66511 (standing capture), 66528-66547 (hanging capture)
@@ -577,73 +591,51 @@ The ROM's capture sequences for the HCZ conveyor belt (Obj 0x3E) do not contain 
     ; ... state init, DPLC call
 ```
 
-On the original hardware, `Status_Roll` is effectively neutralised during capture through side-effects of `object_control = 3` altering the player's main update path (skipping `Sonic_CheckRoll` and related routines). The release path unconditionally sets `Status_Roll` via `bset #Status_Roll,status(a1)` (sonic3k.asm:66454).
+The release path unconditionally sets `Status_Roll` via `bset #Status_Roll,status(a1)` (sonic3k.asm:66454).
 
 ### Our Implementation
 
-We explicitly clear the rolling state during capture:
-
-```java
-private void capturePlayer(AbstractPlayableSprite player, PlayerBeltState state,
-                           int snapY, int initialFrame, int initialPhase) {
-    player.setXSpeed((short) 0);
-    player.setYSpeed((short) 0);
-    player.setGSpeed((short) 0);
-    player.setRenderFlips(false, false);
-
-    // Explicit roll clear — not present in ROM capture sequence
-    if (player.getRolling()) {
-        player.setRolling(false);
-    }
-
-    player.setCentreY((short) snapY);
-    // ...
-}
-```
+An earlier engine build added an explicit `setRolling(false)` to `capturePlayer()` that the ROM does not
+perform, so that a player captured mid-roll would not count as attacking. That divergence has been removed:
+`capturePlayer()` now mirrors the ROM sequence instruction for instruction — velocity clears, render-flip clear,
+Y snap through `NativePositionOps.writeYPosPreserveSubpixel`, `anim = 0`, `object_control = 3` via
+`ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed()`, and the initial mapping frame — with no roll
+write. The release path still sets the roll bit as the ROM does (`sonic3k.asm:66454`).
 
 ### Rationale
 
-1. **Touch responses run while object-controlled** — `object_control = 3` suppresses solid object collisions and animation, but does NOT suppress touch response (enemy/badnik) collision checks.
-
-2. **Rolling = attacking** — `ObjectManager.isPlayerAttacking()` returns `true` when `getRolling()` is true. If `Status_Roll` persists from a jump into belt capture, the player incorrectly destroys enemies on contact (e.g. Chopper in HCZ) instead of taking damage.
-
-3. **Observed gameplay confirms vulnerability** — On original hardware, Chopper can grab and hurt Sonic while he is on the conveyor belt, proving the player is NOT in an attacking state during capture.
-
-4. **ROM clears implicitly, engine needs explicit** — The ROM achieves this through `object_control = 3` altering the player update path in ways our engine doesn't replicate as a side-effect. The explicit clear produces identical gameplay behavior.
-
-5. **Must clear before Y snap** — `setRolling(false)` restores standing radii, which changes sprite height. Clearing after `setCentreY()` would shift the centre by half the height delta (5px for Sonic). Clearing before the snap ensures the snap uses standing-height coordinates.
+The roll bit is left exactly as the ROM leaves it. Enemy touch responses consume the native attack state the
+same way the ROM does, so the earlier engine-side clear is no longer needed to keep the player vulnerable on the
+belt.
 
 ### Verification
 
-With the fix, the player is vulnerable to enemy touch responses while on the conveyor belt, matching original hardware behavior. The release path still unconditionally sets `Status_Roll`, so belt exit behavior is unaffected.
+Retained as a record of the removed divergence. `TestHCZConveyorBeltObjectInstance` covers the capture/release sequence.
 
 ---
 
-## Right-Wall Odd-Sensor Fallback Heuristics
+## Right-Wall Penetration Timer Heuristic
 
-**Location:** `CollisionSystem.pendingOddSensorFallbackAngles`, `AbstractPlayableSprite.rightWallPenetrationTimer`
+**Location:** `AbstractPlayableSprite.rightWallPenetrationTimer`
 **ROM Reference:** `AnglePos`/right-wall sensor selection paths in the Sonic 1, Sonic 2, and Sonic 3K disassemblies.
 
 ### Original Implementation
 
-The ROM resolves the active wall sensor and floor angle from the current frame's sensor probes. Odd/flagged angle values are snapped from the same frame's result; there is no cross-frame map of prior alternate-sensor angles.
+The ROM resolves the active wall sensor and floor angle from the current frame's sensor probes. Odd/flagged angle values are snapped from the same frame's result; there is no cross-frame map of prior alternate-sensor angles and no grace timer for right-wall penetration.
 
 ### Our Implementation
 
-The engine carries two narrow right-wall stability heuristics:
+The engine carries one narrow right-wall stability heuristic: `AbstractPlayableSprite.rightWallPenetrationTimer` gives a short grace period while resolving right-wall penetration and is captured in playable-sprite rewind snapshots.
 
-1. `CollisionSystem.pendingOddSensorFallbackAngles` can remember the alternate sensor angle from a previous RIGHTWALL frame and apply it when the selected sensor reports distance 0 with an odd angle.
-2. `AbstractPlayableSprite.rightWallPenetrationTimer` gives a short grace period while resolving right-wall penetration and is captured in playable-sprite rewind snapshots.
-
-`CollisionSystem.resetState()` clears the pending-angle map so singleton reuse between tests or gameplay sessions cannot inherit stale fallback state.
+A second heuristic, `CollisionSystem.pendingOddSensorFallbackAngles` (a cross-frame cache of the alternate sensor angle applied when the selected sensor reported distance 0 with an odd angle), has been **removed**: ROM `Sonic_Angle` (`docs/s1disasm/_incObj/Sonic AnglePos.asm:186-208`) snaps an odd selected angle straight to `(angle+0x20)&0xC0` from the current frame, and the cache was resurrecting a stale angle one frame early on the S1 LZ3 and S3K CNZ right-wall paths (see the `CHANGELOG.0.6.md` entry "S1 right-wall odd-angle snap (LZ3/CNZ)").
 
 ### Rationale
 
-The heuristics prevent visible ground-mode oscillation at right-wall transitions in the Java collision model while the broader collision pipeline still differs structurally from the ROM's exact object RAM and terrain probe sequencing.
+The remaining timer prevents visible ground-mode oscillation at right-wall transitions in the Java collision model while the broader collision pipeline still differs structurally from the ROM's exact object RAM and terrain probe sequencing.
 
 ### Verification
 
-`CollisionSystemTest.resetStateClearsPendingOddSensorFallbackAngles` guards the reset behavior. `TestAbstractPlayableSpriteRewindCapture` covers the captured `rightWallPenetrationTimer` field.
+`TestAbstractPlayableSpriteRewindCapture` covers the captured `rightWallPenetrationTimer` field.
 
 ---
 
@@ -2501,9 +2493,7 @@ object-side port audit have returned.
 
 ## S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)
 
-**Status:** open, deliberately not reproduced. **Cost:** part of a 2422-error
-`dynamic_art` cluster in the CPZ2 standalone segment; the mechanism accounts for
-under half of it.
+**Status:** reproduced (closed). Kept as the citation record for a `fixBugs` site.
 
 ### Original Implementation
 
@@ -2531,38 +2521,27 @@ The `fixBugs = 1` path uses `cmpi.b #ObjID_CPZBoss,id(a1)` and leaves `d7` alone
 
 ### Our Implementation
 
-`ObjectManager.runExecLoop` iterates `for (currentExecSlot = 0; currentExecSlot <
-execOrder.length; currentExecSlot++)`. The bound is a fixed array length: there is
-no remaining-count an executing object could write, and no path by which an object
-shortens the pass. The engine runs all three `LevelOnly` objects on frames where
-the ROM skips them, and is therefore **more correct than the ROM and wrong**.
+`CPZBossPipe.updateRetract()` (`docs/s2disasm/s2.asm:62244-62253` cited inline) now
+calls `ObjectManager.overrideRemainingObjectLoopSlots(...)` with the boss's own object
+id while the retract search runs, so the object pass ends where the ROM's does. The
+value is `ObjID_CPZBoss` read out of the disassembly, not a tuned duration, and the
+write stops once `Obj5D_flag` is set, exactly as the ROM's entry test at
+`docs/s2disasm/s2.asm:62220-62221` skips the search on later frames.
 
 ### Rationale
 
-Not reproduced, on three grounds measured rather than assumed:
-
-- **It is necessary but not sufficient.** `Obj5D` holds routine `$08` on two runs
-  in the recording, 5112-5123 and 5553-5564. Only the second produces any
-  divergence, because the skipped frames must land where `Obj05`'s animation would
-  otherwise have advanced.
-- **It explains under half the cluster.** `Obj5D` does not exist after row 6084,
-  yet 1247 of the 2422 errors — 51% — lie beyond 6600, in two ramps it cannot
-  influence.
-- **The change is disproportionate.** Reproducing it requires introducing a
-  mutable pass budget into the object dispatch loop *shared by all three games*
-  and exposing it to object code — a structural change to dispatch, not an
-  object-local port.
-
-Recorded here rather than ported because the standing rule that a `fixBugs`
-site must be commented where it is ported cannot apply when nothing is ported.
-This entry is the substitute: the flag, the routine and the citation, so the site
-is findable without the ported comment.
+An earlier revision recorded this as "deliberately not reproduced" because it required
+a mutable pass budget in the dispatch loop shared by all three games. That budget now
+exists as `overrideRemainingObjectLoopSlots`; see the `CHANGELOG.0.6.md` entry "The CPZ
+act 2 boss's retracting pipe now cuts the object pass short, as the shipped ROM does"
+for the measured effect (Tails' tails no longer animate DPLC frames the ROM never queues).
 
 ### Verification
 
 Probe `tools/bizhawk/probes/s2_cpz2_d7_clobber_probe.lua` over rows 5535-5600
 logs `d7` per `RunObject` iteration; rows 5554-5564 show 123 iterations ending at
-`$FFCE80`, their neighbours 144 ending at `$FFD3C0`.
+`$FFCE80`, their neighbours 144 ending at `$FFD3C0`. The inline `FixBugs` comment in
+`CPZBossPipe.updateRetract()` is the ported-site marker required by the project rule.
 
 ## S2 tornado (ObjB2): recorded single-instance SST rows are exact
 

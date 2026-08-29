@@ -333,6 +333,10 @@ Repository hygiene followed: IDE/scratch files and two native libraries were
 untracked, root plans and launcher scripts moved to `docs/architecture/` and
 `scripts/`, saved third-party web pages replaced with provenance stubs, and
 `CREDITS.md` now attributes every runtime library, test tool, and chip core.
+The object checklists were regenerated from the registries (S2 122/122, S3K
+173/303), S3K object `$4F` is now gated by zone set so DEZ no longer spawns
+MGZ sinking mud, and the stale S2/S3K bug lists were folded into
+`docs/status/known-bugs.md`.
 
 The current S3K release priority is the AIZ → HCZ playable route. Knuckles
 routes, later-zone completeness, and some bonus/special-stage paths remain

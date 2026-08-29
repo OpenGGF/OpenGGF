@@ -3,10 +3,13 @@ package com.openggf.sonic.tools;
 import org.junit.jupiter.api.Test;
 import com.openggf.level.LevelData;
 import com.openggf.tools.ObjectDiscoveryTool.LevelConfig;
+import com.openggf.game.sonic3k.constants.S3kZoneSet;
+import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.tools.Sonic3kObjectProfile;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,7 +31,15 @@ public class TestSonic3kObjectProfile {
 
         assertTrue(profile.getImplementedIds().contains(0x91));
         assertTrue(profile.getImplementedIds(aiz1).contains(0x91));
-        assertFalse(profile.getImplementedIds(mhz1).contains(0x91));
+        // Slot $91 is Obj_MHZMinibossTree in SK Set 2: implemented for MHZ under that
+        // name, but not as the AIZ miniboss, and absent from every other SKL zone.
+        LevelConfig soz1 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_SANDOPOLIS_1)
+                .findFirst()
+                .orElseThrow();
+        assertEquals("MHZMinibossTree", new Sonic3kObjectRegistry().getPrimaryName(0x91, S3kZoneSet.SKL));
+        assertTrue(profile.getImplementedIds(mhz1).contains(0x91));
+        assertFalse(profile.getImplementedIds(soz1).contains(0x91));
     }
 
     @Test
@@ -89,11 +100,21 @@ public class TestSonic3kObjectProfile {
                 0x82, 0x83, 0x88, 0x89,
                 0xA3, 0xA4, 0xA5, 0xA6, 0xA7
         };
+        Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
         for (int objectId : implementedCnzIds) {
             assertTrue(profile.getImplementedIds(cnz2).contains(objectId),
                     "CNZ object $" + Integer.toHexString(objectId) + " should be reported as implemented");
-            assertFalse(profile.getImplementedIds(mhz1).contains(objectId),
-                    "CNZ object $" + Integer.toHexString(objectId) + " must stay out of the SKL set");
+            boolean sameOwnerInBothSets = registry.getPrimaryName(objectId, S3kZoneSet.S3KL)
+                    .equals(registry.getPrimaryName(objectId, S3kZoneSet.SKL));
+            if (sameOwnerInBothSets) {
+                // CutsceneKnuckles, CutsceneButton and the CNZ water-level pair keep one
+                // owner in both pointer tables, so they are legitimately shared.
+                assertTrue(Sonic3kObjectProfile.SHARED_IMPLEMENTED_IDS.contains(objectId),
+                        "object $" + Integer.toHexString(objectId) + " has one owner in both sets");
+            } else {
+                assertFalse(profile.getImplementedIds(mhz1).contains(objectId),
+                        "CNZ object $" + Integer.toHexString(objectId) + " must stay out of the SKL set");
+            }
         }
     }
 
