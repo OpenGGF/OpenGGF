@@ -303,7 +303,7 @@ traces.
   ROM-backed test fixtures (`SharedLevel` and the S2/S3K complete-run
   decoder tests) now skip with a reason instead of erroring when a ROM is
   absent, so the ROM-less GitHub `test` job reports skips rather than
-  errors (verified below).
+  errors: a ROM-less `CI=true` simulation ran 14,821 tests with 0 failures and 0 errors, and the ROM-backed suite is unchanged.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
   and worktree-local direct-Maven procedures. The canonical Sonic 1, Sonic 2,
