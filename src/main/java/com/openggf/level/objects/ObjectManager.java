@@ -465,6 +465,11 @@ public class ObjectManager {
         return objectServices;
     }
 
+    /** The services this manager injects into every object it owns. */
+    public ObjectServices getObjectServices() {
+        return objectServices;
+    }
+
     public boolean usesTwoAxisCursorPlacement() {
         return slotLayout.twoAxisCursorPlacement();
     }

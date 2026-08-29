@@ -4,6 +4,7 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -280,6 +281,13 @@ public class Sonic3kGameModule implements GameModule {
             scrollHandlerProvider = new Sonic3kScrollHandlerProvider();
         }
         return scrollHandlerProvider;
+    }
+
+    private final GameOverFlowProvider gameOverFlowProvider = new Sonic3kGameOverFlowProvider();
+
+    @Override
+    public GameOverFlowProvider getGameOverFlowProvider() {
+        return gameOverFlowProvider;
     }
 
     @Override

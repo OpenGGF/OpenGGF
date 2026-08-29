@@ -162,6 +162,33 @@ class TestEngine {
         assertTrue(gameState.getCollectedSuperEmeraldIndices().isEmpty());
     }
 
+    /** docs/skdisasm/sonic3k.asm:16997-17012: zero lives on load costs a continue and gives three lives. */
+    @Test
+    void restoreSlotAfterGameOverSpendsAContinueAndRestoresThreeLives() {
+        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
+        GameStateManager gameState = new GameStateManager();
+        when(gameplayMode.getGameStateManager()).thenReturn(gameState);
+
+        Engine.restoreGameplayModeFromDataSelectPayload(gameplayMode, Map.of(
+                "lives", 0, "continues", 2, "chaosEmeralds", List.of(), "superEmeralds", List.of()));
+        assertEquals(3, gameState.getLives());
+        assertEquals(1, gameState.getContinues());
+
+        Engine.restoreGameplayModeFromDataSelectPayload(gameplayMode, Map.of(
+                "lives", 0, "continues", 0, "chaosEmeralds", List.of(), "superEmeralds", List.of()));
+        assertEquals(3, gameState.getLives());
+        assertEquals(0, gameState.getContinues(), "subq.b then bcc/clr.b clamps at zero");
+
+        Engine.restoreGameplayModeFromDataSelectPayload(gameplayMode, Map.of(
+                "lives", 2, "continues", 0, "chaosEmeralds", List.of(), "superEmeralds", List.of()));
+        assertEquals(3, gameState.getLives(), "fewer than three lives with no continues is topped up");
+
+        Engine.restoreGameplayModeFromDataSelectPayload(gameplayMode, Map.of(
+                "lives", 2, "continues", 1, "chaosEmeralds", List.of(), "superEmeralds", List.of()));
+        assertEquals(2, gameState.getLives(), "lives below three with a continue in hand are kept");
+        assertEquals(1, gameState.getContinues());
+    }
+
     @Test
     void drawMasterTitleScreenDoesNotRequireGameplayCamera() throws Exception {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());

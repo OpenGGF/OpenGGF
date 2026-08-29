@@ -340,6 +340,9 @@ MGZ sinking mud, and the stale S2/S3K bug lists were folded into
 Runtime decompressors moved from `tools/` to `com.openggf.data.compression`,
 power-up visuals now come from per-game `GameModule` factories instead of a
 shared spawner naming S3K classes, and four unreferenced classes were removed.
+The GAME OVER / TIME OVER card now runs in all three games from ROM art and
+mappings: a time over restarts the act, a game over fades to the title screen;
+continue screens are still absent (`docs/status/known-bugs.md`).
 
 The current S3K release priority is the AIZ → HCZ playable route. Knuckles
 routes, later-zone completeness, and some bonus/special-stage paths remain

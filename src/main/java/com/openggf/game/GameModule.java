@@ -130,6 +130,15 @@ public interface GameModule {
     }
 
     /**
+     * Owner of the GAME OVER / TIME OVER card spawn for this game, or
+     * {@code null} when the game has no such flow yet. See
+     * {@link GameOverFlowProvider}.
+     */
+    default GameOverFlowProvider getGameOverFlowProvider() {
+        return null;
+    }
+
+    /**
      * Returns the zone registry for this game.
      * The zone registry provides metadata about zones, acts, and levels.
      *

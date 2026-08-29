@@ -55,6 +55,19 @@ public interface RespawnState {
      *
      * @return the activation mark, or -1 if no star post has been activated
      */
+    /**
+     * ROM {@code clr.l (v_lamp_time).w} / {@code clr.l (Saved_Timer).w}: the
+     * TIME OVER card zeroes the banked star-post timer before restarting the
+     * level so the checkpoint reload reinstates 0:00 rather than the late time
+     * that produced the time over (docs/s1disasm/_incObj/39 Game
+     * Over.asm:82-87 (REV01), docs/s2disasm/s2.asm:27749-27751,
+     * docs/skdisasm/sonic3k.asm:62098-62100). A no-op while no star post has
+     * been passed, exactly as the ROM's clear of an unused word is.
+     */
+    default void clearSavedActTimer() {
+        // no-op by default
+    }
+
     default int getStarPostActivationMark() {
         return getLastCheckpointIndex();
     }

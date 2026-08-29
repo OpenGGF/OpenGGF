@@ -3,6 +3,7 @@ package com.openggf.game.sonic1;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.level.Pattern;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
@@ -150,6 +151,22 @@ public class Sonic1ObjectArt {
     /**
      * Loads Nemesis-compressed patterns from ROM.
      */
+    /**
+     * Obj39 GAME OVER / TIME OVER sheet: Nem_GameOver with Map_Over. The ROM
+     * decompresses it through PLC_GameOver when Sonic_HandleDeath asks for it;
+     * the engine keeps the decoded sheet resident and lets the PLC queue supply
+     * only the ready-timing the card waits on.
+     */
+    public ObjectSpriteSheet loadGameOverSheet() {
+        Pattern[] patterns = loadNemesisPatterns(Sonic1Constants.ART_NEM_GAME_OVER_ADDR);
+        if (patterns.length == 0) {
+            return null;
+        }
+        List<SpriteMappingFrame> frames = loadMappingFrames(
+                Sonic1Constants.MAP_GAME_OVER_ADDR, Sonic1Constants.MAP_GAME_OVER_FRAME_COUNT);
+        return new ObjectSpriteSheet(patterns, frames, 0, 1);
+    }
+
     public Pattern[] loadNemesisPatterns(int address) {
         try {
             return PatternDecompressor.nemesis(rom, address);

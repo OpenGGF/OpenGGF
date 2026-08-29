@@ -116,7 +116,9 @@ class TestRemainingRewindTailInventory {
         // 886/690: the object inventory gained six concrete runtime classes;
         // five pass the isolated round-trip probe, while Obj11's parent-owned
         // bridge segment is covered by TestS2BridgeSegmentGraphRewind.
-        return new TailInventory(886, 690, 196, 0, buckets);
+        // 889/693: the three GAME OVER / TIME OVER card classes, all passing
+        // the isolated probe through their zero-scalar recreate constructor.
+        return new TailInventory(889, 693, 196, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.game.GameOverExit;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugOverlayToggle;
@@ -1680,6 +1681,16 @@ public class GameLoop {
         if (!fadeManager.isActive()) {
             if (levelManager.consumeRespawnRequest()) {
                 startRespawnFade();
+                levelIterationAdmission.finishPlaybackBoundary(
+                        false, playbackDebugManager, userRecordingControls);
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
+            GameOverExit gameOverExit = levelManager.consumeGameOverExitRequest();
+            if (gameOverExit != null) {
+                userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+                GameLoopGameOverExit.startToBlack(gameOverExit, levelManager, audioManager, fadeManager,
+                        resolveGameplayModeContext(), this::returnToTitleScreenFromLevel);
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -3746,6 +3757,7 @@ public class GameLoop {
 
     private void startLevelFromTitleScreenImmediate() {
         setGameMode(GameMode.LEVEL);
+        GameServices.gameState().startNewGameFromTitle();
         try {
             levelManager.loadZoneAndActForFreshRuntime(0, 0);
         } catch (IOException e) {
@@ -4091,6 +4103,7 @@ public class GameLoop {
             // Reset level select manager
             levelSelect.reset();
 
+            GameServices.gameState().startNewGameFromTitle(); // S1 LevSel_Level -> PlayLevel (sonic.asm:2270-2283)
             // Fade out level select music
             audioManager.fadeOutMusic();
 
@@ -4149,6 +4162,13 @@ public class GameLoop {
     }
 
     // ==================== Level Transition Methods with Fade ====================
+
+    /** Shared by the ending and the GAME OVER card: black screen to title screen. */
+    private void returnToTitleScreenFromLevel() {
+        GameLoopGameOverExit.exitToTitleScreen(spriteManager, levelManager, camera,
+                () -> setGameMode(GameMode.TITLE_SCREEN), getTitleScreenProviderLazy(),
+                fadeManager, resolveGameplayModeContext());
+    }
 
     /**
      * Starts the fade-to-black transition for death respawn.
@@ -4747,26 +4767,8 @@ public class GameLoop {
      */
     private void exitEndingToTitleScreen() {
         LOGGER.info("Ending sequence complete, returning to title screen");
-
-        // Clean up any remaining demo state
-        spriteManager.setInputSuppressed(false);
-        levelManager.setForceHudSuppressed(false);
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite player) {
-            player.setControlLocked(false);
-            player.clearForcedInputMask();
-        }
-
-        audioManager.fadeOutMusic();
-
-        FadeManager fadeManager = this.fadeManager;
-        if (!fadeManager.isActive()) {
-            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
-                    this::doExitEndingToTitleScreen);
-        } else {
-            doExitEndingToTitleScreen();
-        }
+        GameLoopGameOverExit.startEndingReturn(spriteManager, levelManager, resolveMainCharacterCode(),
+                audioManager, fadeManager, resolveGameplayModeContext(), this::doExitEndingToTitleScreen);
     }
 
     /**
@@ -4774,18 +4776,7 @@ public class GameLoop {
      */
     private void doExitEndingToTitleScreen() {
         endingProvider = null;
-
-        camera.setX((short) 0);
-        camera.setY((short) 0);
-
-        setGameMode(GameMode.TITLE_SCREEN);
-
-        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-        if (titleScreen != null) {
-            titleScreen.initialize();
-        }
-
-        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+        returnToTitleScreenFromLevel();
         LOGGER.info("Ending -> Title Screen");
     }
 

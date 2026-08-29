@@ -7,6 +7,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
 
 import com.openggf.audio.GameMusic;
 import com.openggf.control.InputHandler;
+import com.openggf.game.JoypadPressSnapshot;
 import com.openggf.control.PlayerInputState;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -97,6 +98,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private int giveEmeraldsKey;
 	private int frameCounter;
 	private boolean inputSuppressed;
+	/**
+	 * ROM {@code v_jpadpress1}/{@code v_jpadpress2} for the current level frame,
+	 * published before the object pass so screen objects that poll a button
+	 * (the GAME OVER card) read the same press edge the players do.
+	 */
+	private JoypadPressSnapshot joypadPressSnapshot = JoypadPressSnapshot.NONE;
 	private boolean playbackInputSuppressed;
 	private final IdentityHashMap<AbstractPlayableSprite, Integer> playableUpdateOrder = new IdentityHashMap<>();
 	// Reused per-frame scratch for buildPlayableUpdateOrderInto(); valid only
@@ -251,6 +258,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		levelManager = null;
 		frameCounter = 0;
 		inputSuppressed = false;
+		joypadPressSnapshot = JoypadPressSnapshot.NONE;
 		playbackInputSuppressed = false;
 		lastSidekickSuppressed = false;
 		playableUpdateOrder.clear();
@@ -407,6 +415,12 @@ public class SpriteManager implements PlayableSstDispatcher {
         boolean suppressInput = inputSuppressed
                 || (playbackInputSuppressed && !handler.hasLogicalOverride());
 		PlayerInputState p1 = handler.logical().player1();
+		PlayerInputState p2 = handler.logical().player2();
+		joypadPressSnapshot = suppressInput
+				? JoypadPressSnapshot.NONE
+				: new JoypadPressSnapshot(
+						p1.actionPressedMask(), p1.startPressed(),
+						p2.actionPressedMask(), p2.startPressed());
 		int p1Held = !suppressInput ? p1.heldMask() : 0;
 		boolean up = (p1Held & AbstractPlayableSprite.INPUT_UP) != 0;
 		boolean down = (p1Held & AbstractPlayableSprite.INPUT_DOWN) != 0;
@@ -418,6 +432,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 				playable.setDirectionalInputPressed(up, down, left, right);
 			}
 		}
+	}
+
+	/** This level frame's controller press edges; {@link JoypadPressSnapshot#NONE} while input is suppressed. */
+	public JoypadPressSnapshot getJoypadPressSnapshot() {
+		return joypadPressSnapshot;
 	}
 
 	public void update(InputHandler handler) {

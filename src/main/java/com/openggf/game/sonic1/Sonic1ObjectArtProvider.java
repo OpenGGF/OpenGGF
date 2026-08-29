@@ -198,6 +198,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // Load SS results emerald art (Nem_ResultEm)
         loadResultsEmeraldArt(art);
 
+        registerSheet(ObjectArtKeys.GAME_OVER, art.loadGameOverSheet());
+
         // Load Giant Ring art (uncompressed, all zones)
         loadGiantRingArt(art);
 
