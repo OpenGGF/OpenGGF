@@ -56,7 +56,8 @@ Create one repository, provisionally `OpenGGF/GenesisTraceRecorder`, containing:
 - the stable-retro capture adapter from `tools/retro/`;
 - recorder-output validation, compression, comparison, and candidate-publication tools
   from `tools/traces/`; and
-- the tests under `tools/testing/` that directly exercise those scripts.
+- the two direct script tests under `tools/testing/`:
+  `test_trace_v5_capture_matrix.py` and `test_compare_trace_v5_candidates.py`.
 
 This should be one project rather than separate “headless”, “Lua”, and “trace scripts”
 repositories. They are different producers and validators for one artifact contract. The
@@ -144,16 +145,18 @@ that interface exists would simply export engine internals across a repository b
 | `TraceCaptureTool`, `TraceTriageTool`, benchmarks, headless boot, and object/zone scaffolding | These are engine operators with broad imports across sessions, rendering, level, object, audio, and trace services. |
 | Runtime decompression | It is part of ROM-backed asset loading. A separate repository would add release coordination without an established external consumer. |
 | Rewind inventory tools | They inspect OpenGGF-specific snapshot policies and production classes. |
-| `.githooks/`, `tools/testing/`, and test-report helpers | They enforce this repository's commit, documentation, CI, and regression policy. |
+| `.githooks/`, the remaining `tools/testing/` scripts, and test-report helpers | They enforce this repository's commit, documentation, CI, and regression policy. The two recorder-owned Python tests named above move with their subjects. |
 | `.agents/skills/` and `.claude/skills/` | They encode OpenGGF workflows. Skills that operate an extracted recorder should become thin consumer guidance after that project exists. |
 | Sonic Retro disassembly submodules | They are external, optional, pinned research references—not OpenGGF-owned code to extract. |
 
 ## Recommended order
 
-1. **Extract `GenesisTraceRecorder` first.** It already has the cleanest executable and
-   dependency boundary and can remain optional to every OpenGGF build.
-2. **Stabilize the cross-repository trace contract.** Prove recorder release → candidate
-   validation → OpenGGF replay before deleting the in-tree copy.
+1. **Freeze the portable trace-v5 contract and compatibility fixtures.** Both producer
+   and consumer must validate the same positive and negative cases before their source
+   trees are separated.
+2. **Extract and publish `GenesisTraceRecorder`.** It already has the cleanest executable
+   and dependency boundary and can remain optional to every OpenGGF build. Prove recorder
+   release → candidate validation → OpenGGF replay before deleting the in-tree copy.
 3. **Reassess `RomWorkbench` only after a reusable ROM/codec API or second consumer exists.**
 4. **Reassess trace-fixture hosting only when repository weight becomes an active problem.**
 5. **Keep engine-facing capture, audio, replay, build-policy, and agent tooling in OpenGGF.**

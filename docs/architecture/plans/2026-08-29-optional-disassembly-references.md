@@ -27,7 +27,8 @@
 
 **Interfaces:**
 - Consumes: existing `.gitmodules`, contributor guidance, and GitHub Actions workflows.
-- Produces: JUnit method `canonicalDisassembliesRemainOptionalDevelopmentReferences()`.
+- Produces: expanded JUnit method
+  `canonicalDisassembliesStayOptionalAndTrackableWhileLocalReferencesStayIgnored()`.
 
 - [x] **Step 1: Write the failing test**
 
@@ -40,7 +41,7 @@ instruction, and rejects recursive submodule checkout in `.github/workflows/*.ym
 Run:
 
 ```bash
-mvn -Dmse=off -Dtest=TestBuildToolingGuard#canonicalDisassembliesRemainOptionalDevelopmentReferences test -B
+mvn -Dmse=off -Dtest=TestBuildToolingGuard#canonicalDisassembliesStayOptionalAndTrackableWhileLocalReferencesStayIgnored test -B
 ```
 
 Expected: FAIL because `docs/guide/contributing/dev-setup.md` currently makes
