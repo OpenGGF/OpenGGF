@@ -34,6 +34,13 @@ This file contains the complete 0.6 development snapshot history carried forward
   harness and `TestYm2612ChipNukedParity` expectations were regenerated at
   the same pacing and remain cycle-exact against the pinned C build.
 
+- **Nuked-OPN2 port optimised without changing a bit:** the cycle-accurate FM
+  core is faster by construction-preserving changes only (division-free slot
+  arithmetic, flattened lookup tables, methods split to the JIT's inlining
+  size, hoisted state loads); the 732-script C-build pin, the facade parity
+  scripts and the hardware-behaviour suite are unchanged and still pass.
+  Before/after numbers per step are in
+  `docs/architecture/validation/2026-08-29-nuked-opn2-port-performance.md`.
 - **Nuked-OPN2 chip state compares by value:** `NukedOpn2State` now
   implements `equals`/`hashCode` over every field of the `ym3438_t` port, so a
   `Ym2612Chip.Snapshot` taken twice from identical chip state compares equal.

@@ -251,4 +251,60 @@ final class NukedOpn2Tables {
             { 1, 1, 1, 1, 1, 1, 1, 1 }  /* Out           */
         }
     };
+
+    /*
+     * Derived lookups. Nothing below is a new table: each is built once from
+     * the C tables above so a hot path can do one bounds-checked load where
+     * the multi-dimensional shape would cost two or three, and the values it
+     * yields are, by construction, exactly the C table's.
+     */
+
+    /**
+     * {@code FM_ALGORITHM[op][k][connect]} packed as bit {@code k} of entry
+     * {@code op * 8 + connect}; {@code fmPrepare} / {@code chGenerate} test
+     * the six flags with one load instead of six triple-indexed ones.
+     */
+    static final int[] FM_ALGORITHM_BITS = new int[4 * 8];
+
+    /** {@code PG_LFO_SH1[pms][lfo]} as {@code [pms * 8 + lfo]}. */
+    static final int[] PG_LFO_SH1_FLAT = new int[8 * 8];
+
+    /** {@code PG_LFO_SH2[pms][lfo]} as {@code [pms * 8 + lfo]}. */
+    static final int[] PG_LFO_SH2_FLAT = new int[8 * 8];
+
+    /** {@code EG_STEPHI[rate & 3][timer]} as {@code [(rate & 3) * 4 + timer]}. */
+    static final int[] EG_STEPHI_FLAT = new int[4 * 4];
+
+    /** {@code slot / 6} for slot 0..23: the operator index the C computes by division. */
+    static final int[] SLOT_OP = new int[24];
+
+    /** {@code cycles % 6} for cycles 0..23: the channel the C computes by modulo. */
+    static final int[] SLOT_CHANNEL = new int[24];
+
+    static {
+        for (int op = 0; op < 4; op++) {
+            for (int connect = 0; connect < 8; connect++) {
+                int bits = 0;
+                for (int k = 0; k < 6; k++) {
+                    bits |= FM_ALGORITHM[op][k][connect] << k;
+                }
+                FM_ALGORITHM_BITS[op * 8 + connect] = bits;
+            }
+        }
+        for (int pms = 0; pms < 8; pms++) {
+            for (int lfo = 0; lfo < 8; lfo++) {
+                PG_LFO_SH1_FLAT[pms * 8 + lfo] = PG_LFO_SH1[pms][lfo];
+                PG_LFO_SH2_FLAT[pms * 8 + lfo] = PG_LFO_SH2[pms][lfo];
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                EG_STEPHI_FLAT[i * 4 + j] = EG_STEPHI[i][j];
+            }
+        }
+        for (int slot = 0; slot < 24; slot++) {
+            SLOT_OP[slot] = slot / 6;
+            SLOT_CHANNEL[slot] = slot % 6;
+        }
+    }
 }
