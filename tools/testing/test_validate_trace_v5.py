@@ -204,6 +204,51 @@ class ValidateTraceV5Tests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode)
         self.assertIn("run_manifest.json: segments must be an array", result.stderr)
 
+    def test_rejects_per_segment_fields_in_interstitial_timing(self) -> None:
+        self.write_fixture("s3k", "complete_run")
+        self.write_manifest({})
+        event = self.interstitial_event(after_segment_index=-1, after_segment=None, ordinal=0)
+        event["raw_frame"] = event.pop("bk2_frame")
+        self.write_interstitial([event])
+
+        result = self.validate()
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("hardware_timing_interstitial.jsonl: line 1", result.stderr)
+        self.assertIn("unknown or missing field", result.stderr)
+
+    def test_rejects_interstitial_boundary_order_and_renaming(self) -> None:
+        self.write_fixture("s3k", "complete_run")
+        self.write_manifest({})
+        self.write_interstitial([
+            self.interstitial_event(after_segment_index=1, after_segment="second", ordinal=0),
+            self.interstitial_event(after_segment_index=0, after_segment="first", ordinal=1),
+            self.interstitial_event(after_segment_index=1, after_segment="renamed", ordinal=2),
+        ])
+
+        result = self.validate()
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("after_segment_index moved backward", result.stderr)
+        self.assertIn("renames after_segment_index 1", result.stderr)
+
+    def test_rejects_interstitial_duplicate_decreasing_and_hole_ordinals(self) -> None:
+        self.write_fixture("s3k", "complete_run")
+        self.write_manifest({})
+        duplicate = self.interstitial_event(after_segment_index=0, after_segment="first", ordinal=2)
+        self.write_interstitial([
+            self.interstitial_event(after_segment_index=0, after_segment="first", ordinal=0),
+            self.interstitial_event(after_segment_index=0, after_segment="first", ordinal=2),
+            duplicate,
+        ])
+
+        result = self.validate()
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("leaves a hole", result.stderr)
+        self.assertIn("repeats identity kos_module_queue#2", result.stderr)
+        self.assertIn("ordinal must increase per kind", result.stderr)
+
     def write_fixture(
             self, game: str, profile: str, compressed: bool = False, name: str = "fixture") -> Path:
         fixture = self.root / name
@@ -236,6 +281,26 @@ class ValidateTraceV5Tests(unittest.TestCase):
         }
         manifest.update(updates)
         (self.root / "run_manifest.json").write_text(json.dumps(manifest))
+
+    def write_interstitial(self, events: list[dict[str, object]]) -> None:
+        (self.root / "hardware_timing_interstitial.jsonl").write_text(
+            "".join(json.dumps(event, separators=(",", ":")) + "\n" for event in events)
+        )
+
+    @staticmethod
+    def interstitial_event(
+            *, after_segment_index: int, after_segment: str | None, ordinal: int) -> dict[str, object]:
+        return {
+            "event": "hardware_work_completed",
+            "origin": "interstitial",
+            "after_segment": after_segment,
+            "after_segment_index": after_segment_index,
+            "bk2_frame": 10,
+            "boundary": "vint_service",
+            "kind": "kos_module_queue",
+            "ordinal": ordinal,
+            "submission_fingerprint": FINGERPRINT,
+        }
 
     @staticmethod
     def write_timing(fixture: Path, raw_frame: int) -> None:

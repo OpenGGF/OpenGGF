@@ -235,7 +235,7 @@ def _run_clean_native_build_tests(
     source_commit: str,
     bizhawk_home: Path,
     native_test_filters: tuple[str, ...],
-) -> int:
+) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="tracechaser-extraction-build-") as temporary:
         temporary_root = Path(temporary)
         archive = temporary_root / "source.tar"
@@ -260,7 +260,7 @@ def _run_clean_native_build_tests(
                 env=environment,
             )
             if build_result.returncode != 0:
-                return build_result.returncode
+                return {"exit_code": build_result.returncode, "artifacts": {}}
             test_executable = checkout / "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.Tests.exe"
             for test_filter in native_test_filters:
                 result = subprocess.run(
@@ -269,10 +269,86 @@ def _run_clean_native_build_tests(
                     env=environment,
                 )
                 if result.returncode != 0:
-                    return result.returncode
-            return 0
+                    return {"exit_code": result.returncode, "artifacts": {}}
+            release = checkout / "tools/bizhawk-headless/bin/Release"
+            artifacts: dict[str, dict[str, Any]] = {}
+            for name in (
+                "BizHawk.Headless.Gpgx.exe",
+                "BizHawk.Headless.Gpgx.pdb",
+                "BizHawk.Headless.Gpgx.Tests.exe",
+                "BizHawk.Headless.Gpgx.Tests.pdb",
+            ):
+                path = release / name
+                artifacts[name] = {"size": path.stat().st_size, "sha256": sha256_file(path)}
+            return {"exit_code": 0, "artifacts": artifacts}
         except (OSError, subprocess.CalledProcessError, tarfile.TarError) as error:
             raise ValueError("extraction clean native build/test setup failed") from error
+
+
+def _verify_locked_repository_file(
+    repository_root: Path,
+    lock: dict[str, Any],
+    description: str,
+) -> bytes:
+    relative = lock.get("path")
+    expected_sha256 = lock.get("sha256")
+    if not isinstance(relative, str) or not relative or not isinstance(expected_sha256, str):
+        raise ValueError(f"BizHawk {description} lock is missing")
+    path = repository_root / relative
+    if not path.is_file() or sha256_file(path) != expected_sha256:
+        raise ValueError(f"BizHawk {description} lock identity mismatch")
+    return path.read_bytes()
+
+
+def verify_bizhawk_installation(
+    repository_root: Path,
+    bizhawk_home: Path,
+    freeze: dict[str, Any],
+) -> None:
+    binding = freeze.get("bizhawk")
+    if not isinstance(binding, dict) or binding.get("version") != "2.11":
+        raise ValueError("BizHawk 2.11 binding is missing")
+    archive_lock = binding.get("archive_lock")
+    source_lock = binding.get("source_lock")
+    if not isinstance(archive_lock, dict) or not isinstance(source_lock, dict):
+        raise ValueError("BizHawk archive/source lock is missing")
+    archive_bytes = _verify_locked_repository_file(repository_root, archive_lock, "archive")
+    _verify_locked_repository_file(repository_root, source_lock, "source")
+    archive_name = archive_lock.get("archive_name")
+    archive_sha256 = archive_lock.get("archive_sha256")
+    if not isinstance(archive_name, str) or not isinstance(archive_sha256, str):
+        raise ValueError("BizHawk archive lock contract is missing")
+    archive_text = archive_bytes.decode("utf-8", errors="strict")
+    if archive_name not in archive_text or archive_sha256 not in archive_text:
+        raise ValueError("BizHawk archive lock contract mismatch")
+
+    runtime_inputs = binding.get("runtime_inputs")
+    if not isinstance(runtime_inputs, dict) or not runtime_inputs:
+        raise ValueError("BizHawk runtime input lock is missing")
+    for relative, expected in runtime_inputs.items():
+        if not isinstance(relative, str) or not isinstance(expected, dict):
+            raise ValueError("BizHawk runtime input lock is malformed")
+        path = bizhawk_home / relative
+        if (
+            not path.is_file()
+            or path.stat().st_size != expected.get("size")
+            or sha256_file(path) != expected.get("sha256")
+        ):
+            raise ValueError(f"BizHawk runtime input identity mismatch: {relative}")
+
+    capabilities = binding.get("capabilities")
+    if not isinstance(capabilities, list) or not capabilities:
+        raise ValueError("BizHawk required capability evidence is missing")
+    for capability in capabilities:
+        if not isinstance(capability, dict):
+            raise ValueError("BizHawk required capability evidence is malformed")
+        relative = capability.get("path")
+        marker = capability.get("contains")
+        if not isinstance(relative, str) or not isinstance(marker, str) or not marker:
+            raise ValueError("BizHawk required capability evidence is malformed")
+        path = bizhawk_home / relative
+        if not path.is_file() or marker.encode("utf-8") not in path.read_bytes():
+            raise ValueError(f"BizHawk required capability is unavailable: {relative}")
 
 
 def verify_extraction_freeze(
@@ -280,7 +356,7 @@ def verify_extraction_freeze(
     document: dict[str, Any],
     *,
     bizhawk_home: Path | None = None,
-    build_test_runner: Callable[[Path, str, Path, tuple[str, ...]], int] = _run_clean_native_build_tests,
+    build_test_runner: Callable[[Path, str, Path, tuple[str, ...]], Any] = _run_clean_native_build_tests,
 ) -> None:
     freeze = document["freeze"]
     source_commit = freeze["source_commit"]
@@ -325,8 +401,30 @@ def verify_extraction_freeze(
     bizhawk_home = bizhawk_home.resolve()
     if not bizhawk_home.is_dir():
         raise ValueError(f"extraction BizHawk home is unavailable: {bizhawk_home}")
-    if build_test_runner(repository_root, source_commit, bizhawk_home, native_test_filters) != 0:
+    verify_bizhawk_installation(repository_root, bizhawk_home, freeze)
+
+    expected_artifacts = freeze.get("native_artifacts")
+    required_artifacts = {
+        "BizHawk.Headless.Gpgx.exe",
+        "BizHawk.Headless.Gpgx.pdb",
+        "BizHawk.Headless.Gpgx.Tests.exe",
+        "BizHawk.Headless.Gpgx.Tests.pdb",
+    }
+    if not isinstance(expected_artifacts, dict) or set(expected_artifacts) != required_artifacts:
+        raise ValueError("extraction deterministic native artifact lock is missing")
+    build_evidence = build_test_runner(repository_root, source_commit, bizhawk_home, native_test_filters)
+    if isinstance(build_evidence, int):
+        if build_evidence != 0:
+            raise ValueError("extraction native build/tests failed")
+        return
+    if not isinstance(build_evidence, dict) or build_evidence.get("exit_code") != 0:
         raise ValueError("extraction native build/tests failed")
+    actual_artifacts = build_evidence.get("artifacts")
+    if not isinstance(actual_artifacts, dict):
+        raise ValueError("extraction deterministic native artifact evidence is missing")
+    for name in sorted(required_artifacts):
+        if actual_artifacts.get(name) != expected_artifacts[name]:
+            raise ValueError(f"deterministic native artifact identity mismatch: {name}")
 
 
 def verify_roms(repository_root: Path, document: dict[str, Any]) -> dict[str, Path]:

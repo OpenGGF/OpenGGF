@@ -26,6 +26,93 @@
       "S3K complete-run",
       "TraceCli"
     ],
+    "native_artifacts": {
+      "BizHawk.Headless.Gpgx.Tests.exe": {
+        "sha256": "0e65176bb80e3fbee699a8bc4174a9adc62c6359e9773e8495fe68515a738947",
+        "size": 1024000
+      },
+      "BizHawk.Headless.Gpgx.Tests.pdb": {
+        "sha256": "2ef3337c4b54734b16eddf1a2a0149839842d5aedeac55bb8907ad0610fa2f63",
+        "size": 241468
+      },
+      "BizHawk.Headless.Gpgx.exe": {
+        "sha256": "5811e3103ac64a26c56e9ae08775ec0beab3ddf02be6b20ef31113abbb5cd316",
+        "size": 537600
+      },
+      "BizHawk.Headless.Gpgx.pdb": {
+        "sha256": "ac213d7c55316b63001b34a0c72e727f95767151ff6f2c75f5a2260aa526a0f7",
+        "size": 157796
+      }
+    },
+    "bizhawk": {
+      "archive_lock": {
+        "archive_name": "BizHawk-2.11-linux-x64.tar.gz",
+        "archive_sha256": "cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8",
+        "path": "tools/bizhawk/fetch_bizhawk_2_11_linux.sh",
+        "sha256": "8dadc9cad103b30155a72a948e81b360753f867cd35978e3e16cd115de25d85d"
+      },
+      "capabilities": [
+        {
+          "contains": "invisibleemulation",
+          "path": "dll/BizHawk.Client.Common.dll"
+        },
+        {
+          "contains": "client.invisibleemulation",
+          "path": "Lua/GBA/SonicAdvance_CamHack.lua"
+        }
+      ],
+      "runtime_inputs": {
+        "EmuHawk.exe": {
+          "sha256": "b2d4be5e2a766a5161cc26f3af2a90753c39d64c91c54a9884171aed09e21df3",
+          "size": 5320192
+        },
+        "Lua/GBA/SonicAdvance_CamHack.lua": {
+          "sha256": "19a528329ba0d0fc960105e1b450006fe6cb56b4abec62751aae47b90c273ee5",
+          "size": 875
+        },
+        "dll/BizHawk.BizInvoke.dll": {
+          "sha256": "8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7",
+          "size": 173056
+        },
+        "dll/BizHawk.Client.Common.dll": {
+          "sha256": "08f9578bfa36f6179fee41e5ce3a3067ce68808dc28ae206e4a5aa2bb7eca283",
+          "size": 1672192
+        },
+        "dll/BizHawk.Common.dll": {
+          "sha256": "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33",
+          "size": 399872
+        },
+        "dll/BizHawk.Emulation.Common.dll": {
+          "sha256": "f20cd009f6f5b0a95bd47b66c48dc8de85afcd7ae0cc6aab3486baf55f501fb4",
+          "size": 422912
+        },
+        "dll/BizHawk.Emulation.Cores.dll": {
+          "sha256": "0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7",
+          "size": 8774144
+        },
+        "dll/BizHawk.Emulation.DiscSystem.dll": {
+          "sha256": "a18f4ca3a7bb36aeea117dc36311664ad410b660d0052f55617055b3d6822d64",
+          "size": 351744
+        },
+        "dll/Newtonsoft.Json.dll": {
+          "sha256": "e1e27af7b07eeedf5ce71a9255f0422816a6fc5849a483c6714e1b472044fa9d",
+          "size": 711952
+        },
+        "dll/gpgx.wbx.zst": {
+          "sha256": "c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12",
+          "size": 400161
+        },
+        "dll/libwaterboxhost.so": {
+          "sha256": "d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78",
+          "size": 688512
+        }
+      },
+      "source_lock": {
+        "path": "tools/bizhawk-headless/native/gpgx-audio-observer/source-lock.json",
+        "sha256": "348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9"
+      },
+      "version": "2.11"
+    },
     "policy": "extraction-build-test-v1",
     "source_commit": "41828f10998f531e614d855c858ba1b26429d757",
     "source_diff_base_commit": "081167cb9363f989b74d56e7551b3cce37a8017a",

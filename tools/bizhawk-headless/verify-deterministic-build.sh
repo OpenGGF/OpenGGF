@@ -69,7 +69,7 @@ for name in "path-a" "path with spaces"; do
       MONO_PATH="$BIZHAWK_HOME_ARG/dll" \
       LD_LIBRARY_PATH="$BIZHAWK_HOME_ARG/dll${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
       mono bin/Release/BizHawk.Headless.Gpgx.Tests.exe \
-      --filter S2AudioObserverProfile --jobs 1
+      --filter TracePayloadCompressor --jobs 1
   )
 done
 

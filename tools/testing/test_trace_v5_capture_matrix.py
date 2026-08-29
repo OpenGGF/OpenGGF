@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import os
 import tempfile
 import unittest
@@ -58,8 +59,16 @@ class TraceV5CaptureMatrixTests(unittest.TestCase):
             [(row["id"], row["movie"], row["movie_sha256"]) for row in document["rows"]],
         )
         self.assertEqual("extraction-build-test-v1", document["freeze"]["policy"])
-        self.assertNotIn("native_artifact", document["freeze"])
-        self.assertNotIn("native_test_artifact", document["freeze"])
+        self.assertEqual(
+            {
+                "BizHawk.Headless.Gpgx.exe",
+                "BizHawk.Headless.Gpgx.pdb",
+                "BizHawk.Headless.Gpgx.Tests.exe",
+                "BizHawk.Headless.Gpgx.Tests.pdb",
+            },
+            set(document["freeze"]["native_artifacts"]),
+        )
+        self.assertEqual("2.11", document["freeze"]["bizhawk"]["version"])
 
     def test_hash_preflight_inputs_match_frozen_rom_and_movie_identities(self) -> None:
         verify_roms(self.repository_root, self.document)
@@ -153,8 +162,148 @@ class TraceV5CaptureMatrixTests(unittest.TestCase):
                 build_test_runner=lambda *_: 0,
             )
 
+    def test_extraction_freeze_rejects_wrong_deterministic_native_artifact(self) -> None:
+        document = self._extraction_document()
+        actual = copy.deepcopy(document["freeze"]["native_artifacts"])
+        actual["BizHawk.Headless.Gpgx.exe"] = {
+            "size": 5,
+            "sha256": hashlib.sha256(b"wrong").hexdigest(),
+        }
+
+        with self.assertRaisesRegex(ValueError, "deterministic native artifact identity mismatch"):
+            capture_matrix.verify_extraction_freeze(
+                self.repository_root,
+                document,
+                bizhawk_home=self.repository_root,
+                build_test_runner=lambda *_: {
+                    "exit_code": 0,
+                    "artifacts": actual,
+                },
+            )
+
+    def test_extraction_freeze_rejects_unlocked_bizhawk_runtime_input(self) -> None:
+        document = self._extraction_document()
+        document["freeze"]["bizhawk"] = {
+            "version": "2.11",
+            "archive_lock": {
+                "path": "tools/bizhawk/fetch_bizhawk_2_11_linux.sh",
+                "sha256": hashlib.sha256(
+                    (self.repository_root / "tools/bizhawk/fetch_bizhawk_2_11_linux.sh").read_bytes()
+                ).hexdigest(),
+                "archive_name": "BizHawk-2.11-linux-x64.tar.gz",
+                "archive_sha256": "cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8",
+            },
+            "source_lock": {
+                "path": "tools/bizhawk-headless/native/gpgx-audio-observer/source-lock.json",
+                "sha256": hashlib.sha256(
+                    (self.repository_root / "tools/bizhawk-headless/native/gpgx-audio-observer/source-lock.json").read_bytes()
+                ).hexdigest(),
+            },
+            "runtime_inputs": {
+                "dll/BizHawk.Common.dll": {
+                    "size": 7,
+                    "sha256": hashlib.sha256(b"trusted").hexdigest(),
+                },
+            },
+            "capabilities": [],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            (home / "dll").mkdir()
+            (home / "dll/BizHawk.Common.dll").write_bytes(b"wrong")
+
+            with self.assertRaisesRegex(ValueError, "BizHawk runtime input identity mismatch"):
+                capture_matrix.verify_extraction_freeze(
+                    self.repository_root,
+                    document,
+                    bizhawk_home=home,
+                    build_test_runner=lambda *_: 0,
+                )
+
+    def test_extraction_freeze_rejects_wrong_bizhawk_archive_lock(self) -> None:
+        document = self._extraction_document()
+        document["freeze"]["bizhawk"] = {
+            "version": "2.11",
+            "archive_lock": {
+                "path": "tools/bizhawk/fetch_bizhawk_2_11_linux.sh",
+                "sha256": "0" * 64,
+                "archive_name": "BizHawk-2.11-linux-x64.tar.gz",
+                "archive_sha256": "cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8",
+            },
+            "source_lock": {
+                "path": "tools/bizhawk-headless/native/gpgx-audio-observer/source-lock.json",
+                "sha256": hashlib.sha256(
+                    (self.repository_root / "tools/bizhawk-headless/native/gpgx-audio-observer/source-lock.json").read_bytes()
+                ).hexdigest(),
+            },
+            "runtime_inputs": {
+                "trusted.bin": {
+                    "size": len(b"trusted"),
+                    "sha256": hashlib.sha256(b"trusted").hexdigest(),
+                },
+            },
+            "capabilities": [],
+        }
+
+        with self.assertRaisesRegex(ValueError, "BizHawk archive lock identity mismatch"):
+            capture_matrix.verify_extraction_freeze(
+                self.repository_root,
+                document,
+                bizhawk_home=self.repository_root,
+                build_test_runner=lambda *_: 0,
+            )
+
+    def test_extraction_freeze_rejects_missing_bizhawk_capability(self) -> None:
+        document = self._extraction_document()
+        archive_lock = self.repository_root / "tools/bizhawk/fetch_bizhawk_2_11_linux.sh"
+        source_lock = self.repository_root / "tools/bizhawk-headless/native/gpgx-audio-observer/source-lock.json"
+        document["freeze"]["bizhawk"] = {
+            "version": "2.11",
+            "archive_lock": {
+                "path": str(archive_lock.relative_to(self.repository_root)),
+                "sha256": hashlib.sha256(archive_lock.read_bytes()).hexdigest(),
+                "archive_name": "BizHawk-2.11-linux-x64.tar.gz",
+                "archive_sha256": "cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8",
+            },
+            "source_lock": {
+                "path": str(source_lock.relative_to(self.repository_root)),
+                "sha256": hashlib.sha256(source_lock.read_bytes()).hexdigest(),
+            },
+            "runtime_inputs": {
+                "trusted.bin": {
+                    "size": len(b"trusted"),
+                    "sha256": hashlib.sha256(b"trusted").hexdigest(),
+                },
+            },
+            "capabilities": [{
+                "path": "Lua/GBA/SonicAdvance_CamHack.lua",
+                "contains": "client.invisibleemulation",
+            }],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            (home / "Lua/GBA").mkdir(parents=True)
+            (home / "trusted.bin").write_bytes(b"trusted")
+            (home / "Lua/GBA/SonicAdvance_CamHack.lua").write_text("-- wrong capability\n")
+
+            with self.assertRaisesRegex(ValueError, "BizHawk required capability is unavailable"):
+                capture_matrix.verify_extraction_freeze(
+                    self.repository_root,
+                    document,
+                    bizhawk_home=home,
+                    build_test_runner=lambda *_: 0,
+                )
+
     @staticmethod
     def _extraction_document() -> dict:
+        repository_root = Path(__file__).resolve().parents[2]
+        archive_lock = repository_root / "tools/bizhawk/fetch_bizhawk_2_11_linux.sh"
+        source_lock = repository_root / "tools/bizhawk-headless/native/gpgx-audio-observer/source-lock.json"
+        archive_bytes = archive_lock.read_bytes()
+        trusted_artifact = {
+            "size": len(b"trusted"),
+            "sha256": hashlib.sha256(b"trusted").hexdigest(),
+        }
         return {
             "freeze": {
                 "policy": "extraction-build-test-v1",
@@ -173,6 +322,38 @@ class TraceV5CaptureMatrixTests(unittest.TestCase):
                     "S3K complete-run",
                     "TraceCli",
                 ],
+                "native_artifacts": {
+                    name: copy.deepcopy(trusted_artifact)
+                    for name in (
+                        "BizHawk.Headless.Gpgx.exe",
+                        "BizHawk.Headless.Gpgx.pdb",
+                        "BizHawk.Headless.Gpgx.Tests.exe",
+                        "BizHawk.Headless.Gpgx.Tests.pdb",
+                    )
+                },
+                "bizhawk": {
+                    "version": "2.11",
+                    "archive_lock": {
+                        "path": str(archive_lock.relative_to(repository_root)),
+                        "sha256": hashlib.sha256(archive_bytes).hexdigest(),
+                        "archive_name": "BizHawk-2.11-linux-x64.tar.gz",
+                        "archive_sha256": "cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8",
+                    },
+                    "source_lock": {
+                        "path": str(source_lock.relative_to(repository_root)),
+                        "sha256": hashlib.sha256(source_lock.read_bytes()).hexdigest(),
+                    },
+                    "runtime_inputs": {
+                        str(archive_lock.relative_to(repository_root)): {
+                            "size": len(archive_bytes),
+                            "sha256": hashlib.sha256(archive_bytes).hexdigest(),
+                        },
+                    },
+                    "capabilities": [{
+                        "path": str(archive_lock.relative_to(repository_root)),
+                        "contains": "BizHawk-2.11-linux-x64.tar.gz",
+                    }],
+                },
                 "toolchain": {
                     "mono_version": "Mono JIT compiler version 6.12.0 (makepkg/0cbf0e290c3 Tue Jun 11 13:06:07 CEST 2024)",
                     "xbuild_version": "XBuild Engine Version 14.0",
@@ -229,6 +410,33 @@ class TraceV5CaptureMatrixTests(unittest.TestCase):
             commands = output.read_text(encoding="utf-8")
             for path in roms.values():
                 self.assertIn(str(path), commands)
+
+    def test_extraction_argv_ledger_is_exact_hash_addressed_argument_data(self) -> None:
+        ledger_path = (
+            self.repository_root / "docs/architecture/validation/trace"
+            / "2026-08-29-tracechaser-extraction-argv-ledger.json"
+        )
+        self.assertTrue(ledger_path.is_file(), "tracked argv ledger is missing")
+        if not ledger_path.is_file():
+            return
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        commands = ledger["commands"]
+        canonical = (json.dumps(commands, ensure_ascii=False, separators=(",", ":")) + "\n").encode()
+
+        self.assertEqual(hashlib.sha256(canonical).hexdigest(), ledger["argv_sha256"])
+        self.assertEqual(list(capture_matrix.EXTRACTION_IDS), [row["id"] for row in commands])
+        self.assertEqual(6, len({tuple(row["argv"]) for row in commands}))
+        self.assertEqual("prefix-substitution-without-shell-reparse", ledger["expansion_contract"]["algorithm"])
+        for row in commands:
+            self.assertEqual("${OPENGGF_REPOSITORY_ROOT}/tools/bizhawk-headless/run.sh", row["argv"][0])
+            self.assertIn("${TRACECHASER_EVIDENCE_ROOT}/pre-extraction/captures/", row["argv"][-1] if row["id"] == "s1-ghz1" else " ".join(row["argv"]))
+
+    def test_deterministic_build_guard_uses_distribution_independent_smoke_test(self) -> None:
+        guard = (self.repository_root / "tools/bizhawk-headless/verify-deterministic-build.sh").read_text()
+
+        self.assertIn("--filter TracePayloadCompressor", guard)
+        self.assertNotIn("--filter Bk2Reader", guard)
+        self.assertNotIn("--filter S2AudioObserverProfile", guard)
 
     def test_preflight_refuses_existing_capture_output_and_candidate(self) -> None:
         document = copy.deepcopy(self.document)
