@@ -14,6 +14,24 @@ below describes how the current implementation works, only what its consumers
 require of it. Figures stamped with a commit hash were measured at
 `8290558c4` (worktree `feature/ai-psg-clean-room`, based on `develop`).
 
+### Provenance note (added after the provenance audit)
+
+This contract describes the **pre-existing public API** and the semantics its
+callers already depend on. Those semantics were historically GPGX-shaped, so
+GPGX names appear below as *compatibility targets and validation comparators*
+— not as a source. The rewritten `PsgChip` was implemented sources-closed from
+the hardware specification
+(`docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`)
+alone; the implementer did not open this document's reference-core section,
+the previous class body, GPGX, libvgm, MAME or BizHawk. An independent
+provenance audit compared the result against the old class and GPGX `psg.c`
+and found no shared identifiers, comments, state decomposition or clock
+bookkeeping (see
+`docs/architecture/validation/2026-08-29-psg-clean-room-capture-comparison.md`).
+Where a line below says "mirrors `psg_config`" or "GPGX behaviour", read it as
+"must remain call-compatible with what callers expect" — the behaviour itself
+is derived from the spec.
+
 ### Reference core
 
 - **Primary:** Genesis Plus GX `core/sound/psg.c` as vendored in BizHawk
