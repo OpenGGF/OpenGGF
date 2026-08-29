@@ -21,8 +21,11 @@ This file contains the complete 0.6 development snapshot history carried forward
   and its non-commercial licence provenance. The new core runs every generator
   on the chip's ÷16 tick, models the Sega-integrated variant's 16-bit LFSR
   (taps `0x0009`, 57,337-state white-noise cycle), its period-0/1 constant-high
-  rule that SMPS relies on for the top of its note table, tone-2-linked noise,
-  the latch/data write protocol and the 2 dB attenuator ladder with a true off,
+  rule that SMPS relies on for the top of its note table, tone-2-linked noise
+  (whose clock keeps running at one edge per tick when tone 2 sits at that
+  period-0/1 top entry, so the 22 SFX written that way — S1/S2 Splash, Spikes
+  Move, Fireball and Lava Ball among them — hiss at the highest noise pitch
+  instead of falling silent), the latch/data write protocol and the 2 dB attenuator ladder with a true off,
   and places every polarity flip, shift and volume step at its exact tick inside
   the sample stream through the LGPL `BlipDeltaBuffer`. Channel output is
   unipolar and hardware-relative (full scale 8191); the HQ/fast kernel toggle

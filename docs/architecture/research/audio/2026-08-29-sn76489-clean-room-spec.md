@@ -279,10 +279,17 @@ mid-period). This document does not assert which the Sega part implements (known
 ambiguity, §10); an implementation may use either, but must not claim the separate
 counter as a hardware fact. Tone 2 keeps sounding normally (drivers usually mute tone
 2 with attenuation 0xF while using it this way — SMPS's "PSG noise" tracks do exactly
-that). If `N₂ ≤ 1`, the constant-high rule leaves tone 2's output with no edges, so
-under the datasheet wiring the LFSR cannot shift; this document specifies **the LFSR
-stops shifting**, which is also what the separate-counter model gives if the
-period-0/1 rule is applied to the noise counter (§10).
+that). If `N₂ ≤ 1`, the constant-high rule pins tone 2's *output latch*, but the ten-bit
+counter beneath it still expires every tick (the "counter wraps but the polarity
+latch is held" reading of §10.1). The noise clock takes the counter's expiry, not
+the held output: this document specifies **the noise clock keeps running at one
+edge per tick**, so the LFSR shifts every second tick — the fastest noise the chip
+produces. In the separate-counter model that is a reload of `max(N₂, 1)`. The SMPS
+drivers rely on it: writing the top note-table entry (`0x000`, §3.3) into tone 2
+under a linked noise track is their idiom for the highest noise pitch, and 22 SFX
+across the three games sit in that state, some for their whole body. An earlier
+revision of this document specified a stopped LFSR by reasoning from the datasheet
+wiring alone; the capture comparison overturned that (§10.5).
 
 ### 4.2 Feedback mode (`m`, bit 2)
 
@@ -588,6 +595,7 @@ periodic mode alike.
 | `$FF` | noise attenuation 0xF; LFSR untouched |
 | `$A0 $3F $BF` | tone 1 `N = 0x3F0`, then tone 1 muted; latch = tone 1 attenuation |
 | `$C1 $00` | tone 2 `N = 0x001` → constant high output at tone 2's attenuation |
+| `$C1 $00 $E7 $F0` | as above, then white noise linked to tone 2: the LFSR shifts every 2 ticks (§4.1, §10.5) |
 
 ### 9.5 Reference generator
 
@@ -627,13 +635,20 @@ documented, cited measurement), not by copying an emulator.
    already counted below the newly written `N` continues to zero (this spec) or is
    clamped/reloaded immediately. Audible only as a one-off half-period glitch on
    downward pitch changes.
-5. **Noise counter at `N₂ ≤ 1` in tone-2-linked mode:** whether the Sega
-   constant-high rule stops the LFSR clock (this spec) or the noise counter flips every
-   tick. Audible on any SMPS PSG SFX that sweeps tone 2 to the top of the table while
-   the noise channel is linked. *Review note:* the TI datasheet wires "tone generator
-   #3 output" into the noise clock, and a constant output has no edges, so "stops" is
-   the only reading consistent with the datasheet wiring plus the documented
-   constant-high rule. Still unmeasured on the Sega part.
+5. **Resolved for the engine — noise counter at `N₂ ≤ 1` in tone-2-linked mode
+   keeps flipping every tick.** The first revision specified a stopped LFSR, the
+   only reading consistent with the datasheet's "tone generator #3 output" wiring
+   *if* the held output is what feeds the noise clock. The capture comparison of
+   2026-08-29 (`docs/architecture/validation/2026-08-29-psg-clean-room-capture-comparison.md`,
+   §6 and §9) showed both reference cores clocking the noise at the counter's
+   expiry instead — one edge per tick, an LFSR shift every second tick, ≈ −7.5 dBFS
+   of white noise — and that 22 SMPS SFX, including the S1/S2 Splash for its whole
+   1.7 s body, are written in exactly that state; a stopped LFSR silences them. This
+   spec now says the noise clock follows the counter's expiry (§4.1), which is what
+   the "counter wraps, latch held" reading of item 1 predicts. Which of the two
+   reference cores' rates (GPGX: shift per 2 ticks; MAME: shift per tick) the Sega
+   part produces is still unmeasured on hardware; the engine follows the pinned
+   GPGX reference, as the engine contract's tolerances are stated against it.
 6. **Reset value of the tone period registers** (0x000 in this spec vs 0x3FF or
    undefined) — unobservable while muted, but visible if a driver un-mutes a channel
    before writing a period.

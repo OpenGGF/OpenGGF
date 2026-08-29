@@ -10,6 +10,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -287,7 +288,7 @@ class TestPsgChipHardwareBehaviour {
     }
 
     @Test
-    void toneTwoLinkedNoiseFollowsToneTwoPeriodAndStopsWhenItHoldsHigh() {
+    void toneTwoLinkedNoiseFollowsToneTwoPeriodAndKeepsClockingAtTheTopOfTheTable() {
         PsgChip chip = tickChip(PsgChip.ChipType.INTEGRATED);
         chip.write(0xC0);
         chip.write(0x01); // tone 2 N = 0x10
@@ -300,13 +301,23 @@ class TestPsgChipHardwareBehaviour {
         List<Integer> slower = shiftTicks(chip, 200);
         assertEquals(64, slower.get(slower.size() - 1) - slower.get(slower.size() - 2));
 
-        chip.write(0xC1);
-        chip.write(0x00); // N2 = 1: no edges, the LFSR stops (§4.1, §10.5)
-        advanceTicks(chip, 200);
-        int frozen = chip.captureSnapshot().lfsr();
-        assertEquals(List.of(), shiftTicks(chip, 5000));
-        assertEquals(frozen, chip.captureSnapshot().lfsr());
-        assertTrue(chip.captureSnapshot().polarities()[2], "tone 2 itself holds high");
+        // §10.5: N2 <= 1 pins tone 2's output high, but the counter that feeds
+        // the noise clock still expires every tick, so the LFSR shifts every
+        // second tick — the highest noise pitch, not silence. The SMPS note
+        // tables end in exactly this value (§3.3).
+        for (int[] topOfTable : new int[][]{{0xC1, 0x00}, {0xC0, 0x00}}) {
+            chip.write(topOfTable[0]);
+            chip.write(topOfTable[1]);
+            advanceTicks(chip, 200);
+            int before = chip.captureSnapshot().lfsr();
+            List<Integer> fastest = shiftTicks(chip, 1000);
+            assertEquals(500, fastest.size(), "one shift per two ticks at N2 = " + (topOfTable[0] & 1));
+            for (int i = 1; i < fastest.size(); i++) {
+                assertEquals(2, fastest.get(i) - fastest.get(i - 1));
+            }
+            assertNotEquals(before, chip.captureSnapshot().lfsr());
+            assertTrue(chip.captureSnapshot().polarities()[2], "tone 2 itself holds high (§3.2)");
+        }
     }
 
     @Test

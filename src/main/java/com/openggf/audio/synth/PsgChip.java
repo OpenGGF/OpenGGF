@@ -367,32 +367,41 @@ public class PsgChip {
      * The noise clock is a fourth counter of the same shape. Rate {@code 11}
      * is modelled as Maxim describes it — a separate counter reloaded with
      * tone 2's period — rather than the TI datasheet's shared flip-flop; the
-     * two differ only in phase (§4.1, §10.13). With N2 <= 1 on the
-     * integrated part the constant-high rule leaves the clock without edges,
-     * so the LFSR stops (§4.1, §10.5).
+     * two differ only in phase (§4.1, §10.13). What that counter borrows from
+     * tone 2 is its <em>reload value</em>, not its held output: with
+     * N2 &lt;= 1 the integrated part's constant-high rule pins tone 2's
+     * polarity latch (§3.2) while the ten-bit counter underneath still
+     * expires every tick, and that expiry is what clocks the noise. So the
+     * linked noise square wave keeps flipping once per tick, the LFSR shifts
+     * every second tick, and SMPS's top-of-table noise notes are the highest
+     * noise pitch rather than silence (§4.1, §10.5, resolved by the capture
+     * comparison of 2026-08-29).
      */
     private void tickNoise() {
         int rate = noiseControl & 0x3;
-        boolean linked = rate == 3;
-        int period = linked ? tonePeriod[2] : NOISE_RELOAD[rate];
-        boolean hold = linked && holdsHigh(period);
+        int reload = rate == 3 ? linkedNoiseReload(tonePeriod[2]) : NOISE_RELOAD[rate];
         if (counter[NOISE_CHANNEL] == 0) {
-            counter[NOISE_CHANNEL] = linked ? reloadFor(period) : period;
-            if (hold) {
-                polarity[NOISE_CHANNEL] = true;
-            }
+            counter[NOISE_CHANNEL] = reload;
         } else if (--counter[NOISE_CHANNEL] == 0) {
-            counter[NOISE_CHANNEL] = linked ? reloadFor(period) : period;
-            if (hold) {
-                polarity[NOISE_CHANNEL] = true;
-                return;
-            }
+            counter[NOISE_CHANNEL] = reload;
             boolean rising = !polarity[NOISE_CHANNEL];
             polarity[NOISE_CHANNEL] = rising;
             if (rising || noiseShiftOnEveryToggle) {
                 shiftLfsr();
             }
         }
+    }
+
+    /**
+     * Ticks between noise-clock edges when linked to tone 2 (§4.1). The
+     * discrete part's period 0 wraps to 0x400 like its tone counter; on the
+     * integrated part periods 0 and 1 both expire every tick (§10.5).
+     */
+    private int linkedNoiseReload(int tonePeriodTwo) {
+        if (chipType == ChipType.DISCRETE) {
+            return reloadFor(tonePeriodTwo);
+        }
+        return Math.max(tonePeriodTwo, 1);
     }
 
     /** Ticks until the next expiry for a period register value. */

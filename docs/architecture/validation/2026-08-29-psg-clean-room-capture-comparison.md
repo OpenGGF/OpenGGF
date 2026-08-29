@@ -359,3 +359,72 @@ to `OldPsgChip` in package `com.openggf.audio.synth` with `setHqMode(true)`.
 Scripts are the write logs from §2 turned into `r <gap>` / `w <byte>` lines
 plus 0.1 s of tail; for the tick-rate run every `r` count is scaled by
 223 721.5625 / 44 100.
+
+## 9. Round 1 re-run: linked noise at tone 2 period ≤ 1 (fix applied)
+
+`PsgChip.tickNoise` now reloads the tone-2-linked noise counter with
+`max(N₂, 1)` on the integrated part — the noise clock follows tone 2's counter
+expiry rather than its held output latch — while the tone channel keeps the
+constant-high rule (spec §4.1 and §10.5 updated; `docs/status/known-discrepancies.md`
+§31 records the choice while the hardware question stays open). The three
+vectors named in §6 were re-rendered through the same reference harness
+(Appendix A) and the same scripts, at tick rate and additionally at 8× tick
+rate (1,789,772.5 Hz, every `r` count × 8). The 8× rate is needed for a
+meaningful cross-correlation: at tick rate a shift every 2 ticks is a signal at
+fs/4, where the two band-limiting kernels (GPGX `blip_buf` vs `BlipDeltaBuffer`)
+differ in ringing and cap the correlation at ≈0.90 even for identical bit
+streams — visible before the fix on the *unchanged* `N₂ = 22 / 6` segments
+(0.9956 / 0.9855 at tick rate, 0.9972 / 0.9976 at 8×). At 8× the same 2-tick
+square wave sits at fs/32, inside both kernels' pass-bands, and only the model
+is being compared.
+
+Tick-rate levels and transitions (reference / new, RMS in dBFS of each core's
+own scale, transitions of the mean-removed signal per segment):
+
+| Segment | reference | new (before) | new (after) |
+|---|---|---|---|
+| `syn-tone2-1-noise-linked` (`C1 00 E7 F0`, 223,722 ticks) | −7.59 dB, 55,909 | −∞, 0 | −7.59 dB, 55,935 |
+| `syn-noise-rewrite-midstream` seg 3 (`E7`, tone 2 = 0) | −7.59 dB, 27,952 | −∞, 0 | −7.59 dB, 27,947 |
+| `s1-b6` tone 2 = 0, attenuation 0 | −7.54 dB, 925 | −45.7 dB, 1 | −7.14 dB, 925 |
+| `s1-b6` attenuation 1 … 11 (eleven steps) | −9.60 → −29.56 dB, 901–951 | −26.2 → −46.2 dB, 1 | −9.60 → −29.54 dB, identical counts |
+| `s1-b6` release (attenuation 15) | −48.20 dB, 1 | — | −48.17 dB, 1 |
+
+(The attenuation-0 segment of `B6` reads 0.4 dB apart, and the difference is
+confined to its first 256 ticks — reference −8.25 dB, new −3.97 dB; every later
+256-tick block agrees to within the block-to-block scatter and the transition
+counts per block are identical. What differs there is the high-pass memory
+each core carries into the segment: the preceding tone 2 = 1014 / 998 / 982
+segments shift their LFSR at different times in the two cores, since the
+power-on noise-clock polarity offset recorded in §5 (a half noise period)
+scales with the period — ≈5 ticks at `N₂ = 6`, ≈1,000 ticks at `N₂ ≈ 1,000` —
+so the two cores enter the fast-noise segment from different points of a slow
+decay. That offset is pre-existing, documented, and untouched by this fix; the
+cross-correlation is positive (0.9904 here, 0.9998–0.9999 from the next step
+on), so the two cores are not inverted relative to each other.)
+
+Cross-correlation at 8× tick rate, 32,768-sample windows, best lag searched
+over ±6 ticks (±40 ticks where the documented power-on and re-phase offsets
+demand it):
+
+| Segment | xcorr | lag (ticks) |
+|---|---|---|
+| `syn-tone2-1-noise-linked` | 0.9985 | −3.5, constant |
+| `syn-noise-rewrite-midstream` seg 1 (÷16 from reset) | 0.9946 | −33.5 (the §5 power-on offset) |
+| `syn-noise-rewrite-midstream` seg 2 (÷64) | 0.9980 | −1.5 |
+| `syn-noise-rewrite-midstream` seg 3 (`E7`, tone 2 = 0) | 0.9927 / 0.9941 / 0.9945 skipping 32 / 128 / 1024 ticks | −23.5, constant (the §5 `rr = 11` re-phase) |
+| `syn-noise-rewrite-midstream` seg 4 (÷32) | 0.9996 | −1.5 |
+| `s1-b6` tone 2 = 22, 6 | 0.9972, 0.9976 | −5.5 |
+| `s1-b6` tone 2 = 0, attenuation 0 … 11 | 0.9904, then 0.9998–0.9999 | −0.5, constant across all twelve |
+| `s1-b6` release | 0.9998 | 0 |
+
+The three `B6` segments with tone 2 = 1014 / 998 / 982 (2–5 transitions per
+segment) carry too few events for a windowed correlation and are unchanged by
+the fix (their path, `N₂ ≥ 2`, is not touched).
+
+Verdict for the re-run: the §8 "Noise with tone-2-linked N ≤ 1" row moves to
+**pass** — levels within 0.02 dB from the second step on, transition counts
+identical or within 0.05 %, cross-correlation ≥ 0.99 at a constant lag on every
+segment the finding named. Tests: `TestPsgChipHardwareBehaviour` (29, the
+linked-noise vector now asserting one shift per two ticks at `N₂ = 1` and
+`N₂ = 0` with tone 2 held high), the nine PSG-touching audio classes (119
+tests) and the `-Pguards` profile.
