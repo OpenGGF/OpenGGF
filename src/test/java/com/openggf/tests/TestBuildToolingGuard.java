@@ -62,7 +62,7 @@ class TestBuildToolingGuard {
             "docs/guide/contributing/trace-framework-reference.md",
             "docs/guide/playing/getting-started.md",
             "docs/guide/contributing/tutorial-implement-object.md",
-            "docs/guide/PLAN.md");
+            "docs/architecture/plans/2026-03-25-user-guide-authoring-plan.md");
     private static final Pattern RAW_SUPPORTED_MAVEN_COMMAND = Pattern.compile(
             "^\\s*`?mvn (?:test|package|clean|verify|compile|test-compile)\\b");
 
@@ -1406,7 +1406,7 @@ class TestBuildToolingGuard {
 
         for (String file : List.of(
                 "docs/guide/contributing/dev-setup.md",
-                "docs/guide/PLAN.md",
+                "docs/architecture/plans/2026-03-25-user-guide-authoring-plan.md",
                 "docs/guide/contributing/trace-replay.md",
                 "docs/guide/contributing/trace-framework-reference.md")) {
             String guidance = Files.readString(Path.of(file)).toLowerCase(Locale.ROOT);
