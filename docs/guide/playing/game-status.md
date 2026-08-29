@@ -50,7 +50,7 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - All zones playable: EHZ, CPZ, ARZ, CNZ, HTZ, MCZ, OOZ, MTZ (3 acts), SCZ, WFZ, DEZ.
 - 9 boss fights: EHZ, CPZ, ARZ, CNZ, HTZ, MCZ, WFZ, and both DEZ bosses (Mecha Sonic
   and Death Egg Robot) plus the Robotnik escape sequence.
-- 99.2% of objects implemented (119 of 120 unique object types).
+- All 122 unique placed object types found in the ROM are implemented (see OBJECT_CHECKLIST.md).
 - Special stages functional with emerald collection.
 - Tails CPU AI follower with flight and input replay.
 - Super Sonic with per-game physics.
@@ -67,7 +67,6 @@ expectations honestly -- what works well, what is incomplete, and what you might
 
 ### Known gaps
 
-- 1 unimplemented object (see OBJECT_CHECKLIST.md for details).
 - MTZ boss is implemented but may have minor accuracy issues.
 - Some visual effects (screen distortion, specific palette transitions) may differ
   slightly from the original.

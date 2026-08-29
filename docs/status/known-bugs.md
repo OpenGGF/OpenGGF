@@ -1,5 +1,10 @@
 # Known Bugs and Unfinished Work (Engine-Wide)
 
+> **Canonical ledger.** This is the only open-bug list; trace frontiers live in
+> [trace-frontier-log.md](trace-frontier-log.md) and S3K bug write-ups in
+> [s3k-known-bugs.md](s3k-known-bugs.md). The former `bug-list.md` (S2) and `s3k-bug-list.md`
+> (AIZ, 2026-03-25) working lists were folded in here on 2026-08-28 and deleted.
+
 This document tracks **bugs**, incomplete implementations, and known parity gaps that we intend to fix but haven't addressed yet. Entries here are *not* intentional — they're acknowledged problems with a plan (or hope) of eventual resolution.
 
 For **intentional** deviations from the original ROMs (architectural choices, feature extensions, deliberate bug-fixes of ROM data), see [known-discrepancies.md](known-discrepancies.md).
@@ -17,6 +22,7 @@ Entries should include:
 1. [Game Over and Continue Flow Missing](#game-over-and-continue-flow-missing)
 2. [Persisted Editor Saves Disabled for S3K Gameplay Loads](#persisted-editor-saves-disabled-for-s3k-gameplay-loads)
 3. [Trace Replay Recorder Coverage Follow-Up](#trace-replay-recorder-coverage-follow-up)
+4. [S3K AIZ Items Carried From The 2026-03-25 Working List](#s3k-aiz-items-carried-from-the-2026-03-25-working-list)
 
 ---
 
@@ -109,3 +115,43 @@ Remove this entry once the remaining pre-v3 trace fallback path in `TraceExecuti
 `TraceData` is deleted or intentionally retained with a documented compatibility reason, and the
 release trace gate distinguishes green guard traces from known-red frontier traces without hidden
 warning-only failures.
+
+---
+
+## S3K AIZ Items Carried From The 2026-03-25 Working List
+
+**Location:** `src/main/java/com/openggf/game/sonic3k/objects/AizVineHandleLogic.java`,
+`src/main/java/com/openggf/game/sonic3k/Sonic3kWaterDataProvider.java`, AIZ1 launcher object (unidentified)
+
+### Symptom
+
+Three observations from the retired `s3k-bug-list.md` remain **unverified since 2026-03-25**; nobody has
+reproduced or refuted them against the current engine:
+
+- **AIZ rope swing:** jumping off the rope swing for the first time was reported to activate the insta-shield
+  immediately. The ROM release path sets `Status_InAir` and `Status_Roll` on the player and writes nothing to
+  `double_jump_flag` inside `Obj_AIZRideVineHandle` (`docs/skdisasm/sonic3k.asm:46449+`); the engine release
+  in `AizVineHandleLogic` sets air and rolling the same way. Whether the ROM also arms the insta-shield on the
+  next jump press has not been checked frame-for-frame.
+- **AIZ water launcher:** the object that launches the player over the water was reported to launch too short.
+  The report did not name the object id.
+- **AIZ1 water effect before the fire sequence:** Act 1 showed no water effect before the fire while the
+  post-fire state showed the wavy effect. `Sonic3kWaterDataProvider` now carries explicit AIZ act 0 / act 1
+  branches, but which state is ROM-accurate has not been confirmed visually.
+
+Two further items from that list are resolved and are not carried: water surface sprites are rendered by
+`Sonic3kWaterSurfaceManager` (`TestSonic3kInitialWaveSplashSstOwner`), and invincibility stars are
+`Sonic3kInvincibilityStarsObjectInstance`. The one open item from the retired S2 `bug-list.md` — ARZ rising
+pillars resetting when they leave the screen — is ROM behaviour, not a bug: `Obj2B` exits through
+`MarkObjGone`, which clears the respawn bit so the pillar reappears in its initial state
+(`docs/s2disasm/s2.asm:51297-51524`; `RisingPillarObjectInstance` deliberately does not mark itself remembered).
+
+### Suspected cause
+
+Unknown; the items predate the trace-replay suite and no trace exercises them.
+
+### Removal condition
+
+Remove each bullet once it is reproduced against the current engine and either fixed with a ROM citation or
+shown to match the ROM. Remove the entry when no bullet remains.
+

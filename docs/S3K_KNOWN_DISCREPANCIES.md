@@ -54,16 +54,32 @@ The ROM creates `Obj_AIZPlaneIntro` inside `SpawnLevelMainSprites`, which runs d
 
 ### Our Implementation
 
-We spawn the intro object from `Sonic3kAIZEvents.init()`, the zone-specific level event handler:
+We spawn the intro object from `Sonic3kAIZEvents`, the zone-specific level event handler. `init(act)` calls
+`spawnIntroObject()` when `shouldSpawnIntro(act)` holds (act 1 and the bootstrap is not skipping the intro), and
+`updateAct1()` re-runs it as a one-shot fallback if the object is missing before the camera reaches the start of
+the tracked range. The spawn reuses the ROM's fixed dynamic-object slot rather than allocating a fresh one:
 
 ```java
-@Override
-public void init(int act) {
-    if (act == 0 && !bootstrap.isAiz1GameplayAfterIntro()) {
-        spawnObject(new AizPlaneIntroInstance(...));
+private boolean spawnIntroObject() {
+    AizPlaneIntroInstance existing = findLiveIntroObject();
+    if (existing != null) {
+        // ROM SpawnLevelMainSprites installs Obj_AIZPlaneIntro in a fixed
+        // dynamic-object slot before the first Process_Sprites call
+        // (sonic3k.asm:7849-7853, 8111-8126). A duplicate engine event init
+        // must re-adopt that live object, not allocate a second parent.
+        AizPlaneIntroInstance.adoptActiveIntroInstance(existing);
+        return true;
     }
+    // ...
+    ObjectSpawn spawn = new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0);
+    AizPlaneIntroInstance intro = lm.getObjectManager().createDynamicObjectAtSlot(
+            () -> new AizPlaneIntroInstance(spawn), AIZ_PLANE_INTRO_SST_SLOT);
+    // ...
 }
 ```
+
+`init()` also clears the camera's level-started flag before the spawn, matching the `clr.b (Level_started_flag).w`
+in `SpawnLevelMainSprites`.
 
 ### Rationale
 
@@ -250,7 +266,7 @@ OpenGGF now keeps the native S3K save-screen flow but stores saves as JSON envel
 
 ## Tails Flying-With-Cargo Physics
 
-**Location:** Tails flight physics (`SidekickCpuController`, `PlayableSpriteMovement.applyGravity`)
+**Location:** Tails flight physics (`TailsFlightController`, `PlayableSpriteMovement.applyGravity`); CNZ1 carry and CPU flight routines (`SidekickCpuController`)
 **ROM Reference:** `sonic3k.asm:27592` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27553` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
 
 ### Original Implementation
