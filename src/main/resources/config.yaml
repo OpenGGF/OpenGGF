@@ -55,7 +55,7 @@ audio:
   region: "NTSC"   # Region for audio timing
   dacInterpolate: true   # DAC interpolation (smoother sound)
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
-  psgNoiseShiftEveryToggle: true   # PSG noise LFSR clock mode: true=shift on every toggle (MAME), false=positive edges (GPGX)
+  psgNoiseShiftEveryToggle: true   # PSG noise LFSR clock mode: true=shift on every toggle, false=one shift per rising edge (hardware)
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 
 # ── Characters ──

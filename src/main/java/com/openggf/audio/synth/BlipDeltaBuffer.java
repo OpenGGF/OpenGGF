@@ -326,6 +326,19 @@ public class BlipDeltaBuffer {
     }
 
     /**
+     * Number of clocks that must be run (and passed to {@link #endFrame}) so
+     * that at least {@code samples} samples are available to
+     * {@link #readSamples}; blip_buf's {@code blip_clocks_needed}.
+     */
+    public int clocksNeeded(int samples) {
+        long needed = (long) samples << (FRAC_BITS + FACTOR_FP_BITS);
+        if (needed < offsetFp) {
+            return 0;
+        }
+        return (int) ((needed - offsetFp + factorFp - 1) / factorFp);
+    }
+
+    /**
      * End the current frame and advance the buffer position.
      * Uses integer clocks to eliminate floating-point precision loss.
      */

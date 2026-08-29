@@ -42,7 +42,7 @@ history and the source headers establish it:
 | Engine class | Origin | Notes |
 |--------------|--------|-------|
 | `Ym2612Chip` | `ym2612.c` from Genesis Plus GX, as shipped in libvgm / SMPSPlay. That file is Jarek Burczynski and Tatsuyuki Satoh's MAME `fm.c` with Eke-Eke's Genesis Plus GX fixes. | Began as an original implementation (2025-11-27); the core tables and update logic were ported from the GPGX/libvgm `ym2612.c` on 2025-12-10 (commit `eae2da2ca`) and the class cites `ym2612.c` line numbers. Genesis Plus GX's own licence permits non-commercial use only. |
-| `PsgChip` | `psg.c` from Genesis Plus GX (Copyright 2016-2017 Eke-Eke). | Header states "Based on the Genesis Plus GX PSG core"; timing (`PSG_MCYCLES_RATIO`), noise and volume handling follow `psg.c`. `psg.c` carries Eke-Eke's non-commercial licence in its header. |
+| `PsgChip` | None. Clean-room implementation written from the public SN76489 specification in `docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md` (Maxim's SMS Power! notes, the TI datasheet, the Sega hardware manual). | No emulator source was consulted: not the previous Genesis Plus GX-derived body of this class, not `psg.c`, libvgm, MAME or BizHawk. Output is band-limited through `BlipDeltaBuffer` (below). |
 | `BlipDeltaBuffer` | `blip_buf.c` by Shay Green, as modified for Genesis Plus GX. | Library is LGPL 2.1 or later. |
 | `BlipResampler` | Windowed-sinc resampler written for OpenGGF, "based on the same principles as" blip_buf. | Not a port. |
 
