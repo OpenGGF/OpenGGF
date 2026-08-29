@@ -4,6 +4,16 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **The ordinary test suite is green again and runs on develop pushes:** the
+  CNZ visual-capture test no longer pre-steps the player before the level's
+  one-shot initial `Process_Sprites` pass (which desynced the sprite clock from
+  the level clock and tripped the epoch validation), the MHZ mushroom parachute
+  scenarios rebuild the session per test so a level leaked by an earlier class
+  cannot feed its wall sensors, the unwired `config/surefire-non-trace-excludes.txt`
+  that had been quietly hiding the CNZ failure is gone, and CI now executes
+  the default suite on pushes to `develop` and `master` rather than only on
+  pull requests and the nightly schedule.
+
 - **The release structural checks are green again:** object priority rendering
   now reuses one palette-mask transition path, preserving the AIZ2 bridge
   layering fix while keeping rendering responsibility out of the already-large

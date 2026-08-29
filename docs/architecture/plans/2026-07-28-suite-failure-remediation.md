@@ -20,6 +20,10 @@ shared causes before downstream symptoms, and deliver no new regressions to
   decompression queues require further work before traces are deterministic.
 - Every authoritative suite command passes
   `-Dsurefire.excludesFile=config/surefire-non-trace-excludes.txt`.
+  *(Retired 2026-08-28: the file was never wired into `pom.xml` or CI, the
+  default Surefire configuration already excludes `**/tests/trace/**`, and its
+  one extra entry only hid `TestS3kCnzVisualCapture`, whose failure has since
+  been fixed at the root. Plain `mvn -Dmse=off test` is the ordinary suite.)*
 - Update this plan and the design, then re-review both, if investigation changes
   an ownership or sequencing assumption.
 

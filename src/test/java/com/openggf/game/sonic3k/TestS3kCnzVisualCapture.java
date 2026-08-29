@@ -390,7 +390,11 @@ public class TestS3kCnzVisualCapture {
         GroundSensor.setLevelManager(levelManager);
         camera.updatePosition(true);
         levelManager.updateObjectPositions();
-        GameServices.sprites().updateWithoutInput();
+        // Do not pre-step the playable slot here. The level load publishes the
+        // one-shot initial Process_Sprites pass and zeroes the sprite counter to
+        // match the level counter; the first driven frame consumes that pass and
+        // validates both counters against its epoch, so a manual
+        // updateWithoutInput() would desync the sprite clock by one.
 
         return player;
     }
