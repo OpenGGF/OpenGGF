@@ -35,8 +35,9 @@ This project uses documentation, tools, and reference implementations from many 
 
 ### Emulation cores
 
-The chip emulators under `src/main/java/com/openggf/audio/synth/` are Java ports of
-C cores rather than original designs. Their provenance, as far as the repository
+The provenance of the chip emulators under `src/main/java/com/openggf/audio/synth/`
+varies — `Ym2612Chip` is a port of a C core, `PsgChip` is a clean-room
+implementation. As far as the repository
 history and the source headers establish it:
 
 | Engine class | Origin | Notes |
