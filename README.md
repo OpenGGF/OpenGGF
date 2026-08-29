@@ -294,8 +294,10 @@ traces.
   temporary, and per-Surefire-fork LWJGL output below that worktree's `target/`
   tree. Measured at `develop` `2e06eb403` on 2026-08-28 with JDK 21 and
   absolute ROM paths: ordinary suite 14,868 tests, 1 failure, 1 error, 18
-  skipped (`TestS3kCnzVisualCapture` and the order-dependent
-  `TestMhzMushroomParachuteObjectInstance`, both under repair); `-Pguards`
+  skipped; both remaining reds (`TestS3kCnzVisualCapture`, a stale test
+  pre-step, and the order-dependent `TestMhzMushroomParachuteObjectInstance`)
+  were then fixed, giving 14,868 tests, 0 failures, 0 errors, 18 skipped, and
+  the ordinary suite now also runs on every push to `develop`; `-Pguards`
   547 tests, all passing; `-Ptrace-replay` 870 tests with the six known-red
   frontier failures, 0 errors, 7 skipped.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
