@@ -156,6 +156,14 @@ classification of every line; exit 2 or higher is a tool failure.
   Rename old tool roots to root boundaries, selected Python tests to
   `testing/`, Lua resources to `testing/lua/`, and normalization JSON to
   `contracts/audio/`.
+- [ ] If the reachable-object audit finds developer-local absolute paths in
+  otherwise required history, preserve the files and lineage but redact only
+  the exact reviewed literals with `git filter-repo --replace-text`. Record
+  each old literal's SHA-256, neutral replacement, affected paths/commits, and
+  the literal replacement file in `history-redactions.tsv` and
+  `docs/history-import.md`. This exception never applies to ROM/BK2 data,
+  binaries, build output, credentials, or other unreviewed content; those remain
+  hard failures requiring reclassification or re-filtering.
 - [ ] Exclude exactly `bizhawk/diag_aiz2_djf_probe_output.txt` and
   `bizhawk/diag_aiz2_monitor_solid_output.txt`; the evidence allowlist is empty.
 - [ ] Record all old/new paths. Prove history with the resulting root commit,
