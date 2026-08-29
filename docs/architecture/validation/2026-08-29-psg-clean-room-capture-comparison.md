@@ -1,17 +1,225 @@
-# PSG clean-room core: capture comparison (round 1)
+# PSG clean-room core: capture comparison
 
-**Worktree:** `feature/ai-psg-clean-room` at `2bdd32746` (new core landed in
-`cdc4fdb0d`), based on `develop` `8290558c4`.
+**Worktree:** `feature/ai-psg-clean-room`, based on `develop` `8290558c4`.
 **Contract:** [`../designs/2026-08-29-psg-clean-room-contract.md`](../designs/2026-08-29-psg-clean-room-contract.md).
-**Verdict:** **FAIL** — pitch, attenuation ladder, onset timing, DC and the
-white/periodic noise *sequence* all match the pinned reference within the
-tolerances below, but the new core silences the noise channel whenever the
-noise clock is linked to tone 2 and tone 2's period is 0 or 1. The reference
+
+Two rounds. **Round 2** (HEAD `81485bea6`, after the linked-noise fix) is the
+current record and is first; the **round 1** record (`2bdd32746`, before the
+fix) follows unchanged as history, with its §9 re-run written by the fix lane.
+
+## Round 2 — full re-run at `81485bea6`
+
+**Verdict: PASS.** Every vector of round 1 plus four of the SFX the round-1
+finding named (S1/S2 `AA` Splash, S2 `A2` Spike Switch, S3K `42` Insta-Shield
+Attack) was re-rendered through the engine at HEAD and compared against the
+pinned GPGX reference at 44.1 kHz, 48 kHz, tick rate and 8× tick rate. Tone
+pitch, the 2 dB attenuation ladders, onset timing, DC and the white/periodic
+noise sequence all match within the tolerances of §R2.5; the one round-1
+failure (linked noise at tone-2 period ≤ 1) now matches level, transition
+count and sequence, and the 22 affected SFX — sampled here through `AA`, `A2`,
+`B6`, `42` — emit noise where they were silent. Two behaviours where the new
+core deliberately diverges from GPGX are recorded and bounded in §R2.4; neither
+is reachable by any SFX of the three ROMs, and neither is audible.
+
+### R2.1 Method
+
+Same harness as round 1 (§1–§2 and Appendix A below), rebuilt from scratch in a
+fresh scratch directory against HEAD `target/classes`:
+
+- **Reference:** pinned GPGX `psg.c` (sha256
+  `8ce153597bd02b34472e6b74b29be9eddce796e8a269049eda9bad815b766700`) +
+  `blip_buf.c`, `PSG_INTEGRATED`, `psg_config(100, 0xFF)`, `hq_psg = 1`.
+- **New core:** `PsgChip(rate, INTEGRATED)` with `setNoiseShiftOnEveryToggle(false)`,
+  driven through `renderStereo` by the same `w`/`r` script.
+- **Control:** `develop`'s `PsgChip.java` compiled as `OldPsgChip` (verified
+  byte-identical to `git show develop:…/PsgChip.java` apart from the rename),
+  `setHqMode(true)`. Valid only at 44.1 k / 48 k: above the chip clock its
+  resampler emits one transition per tick in every segment (≈4095 per 32 768
+  samples at 8×), so the `old` columns at tick / 8× rates are discarded.
+- **Vectors:** the 25 round-1 scripts (9 driver SFX + 16 synthetic) plus
+  `s1-aa` (58 writes, 85 260 frames), `s2-aa` (58, 85 260), `s2-a2` (65,
+  11 025), `s3k-42` (64, 15 435). Driver write logs were regenerated at HEAD by
+  `PsgSfxRenderTool`; the nine round-1 logs are byte-identical to round 1's
+  (checked for `s1-a0`, `s1-b6`, `s2-bc`, `s3k-36`; frame and write counts
+  identical for all nine), as expected since the fix touches the chip, not the
+  driver. Tick-rate scripts are byte-identical to round 1's.
+- **Engine path check:** for all 13 PSG SFX, the engine's FM-muted WAV equals
+  `(fresh PsgChip replay of the log) >> 1 + 384` for **every** sample from
+  sample 16 on (the 384 is the muted YM path's resting level, present in the
+  seven FM-only controls too), so the chip streams below are what the engine
+  emits. `git diff develop HEAD --stat -- src/main/java/com/openggf/audio/`
+  lists only `PsgChip.java`, the additive `BlipDeltaBuffer.clocksNeeded`, and
+  the new tool; the mix path is untouched.
+- **Analysis:** pure Python 3 (no numpy on this machine): zero-crossing
+  fundamental and RMS dB per write-delimited segment (each core in dBFS of its
+  own full scale, 2800 vs 8191), 4096-point Hann FFT for spectral peak and
+  flatness, sign-transition counts of the mean-removed signal, first-sample
+  onset at 1 % of full scale, FFT cross-correlation with ±2048-tick lag search
+  over 32 768-tick windows at tick rate, and direct cross-correlation at 8× tick
+  rate with ±6 / ±25 / ±50-tick searches. Unit tests at HEAD:
+  `TestPsgChipHardwareBehaviour` 29/29 green.
+
+### R2.2 Tone channels (unchanged by the fix — no regression)
+
+**Pitch**, 44.1 kHz, every audible single-tone segment against
+`f = 3 579 545 / (32 N)`: 20 (S1 `A0`) + 21 (S2 `A0`) + 22 (S3K `62`) + 26 × 3
+(`A4` / `36`) + 1 (`CD`) + 15 (sweep) segments, all within tolerance. Worst
+cases: S1 `A0` N = 119, 940.01 Hz expected, 939.73 ref / 941.16 new (0.12 %);
+S2 `A0` N = 127, 880.79 → 880.65 / 882.00 (0.14 %); S3K `62` N = 159, 703.53 →
+703.35 / 704.47 (0.13 %); `CD` N = 31, 3608.41 → 3605.07 / 3607.62; sweep
+N = 256, 436.96 → 436.83 / 436.83. New-vs-reference never exceeds 0.18 % (the
+zero-crossing resolution on a 735-sample note). 48 kHz: same segments, worst
+0.14 %. At tick rate every tone segment cross-correlates at 0.997–0.999 with
+the constant 1-tick write-rounding lag of round 1.
+
+**Attenuation ladder** (tone 0 sweep, ref / new, dBFS): −5.87/−5.87,
+−8.12/−8.12, −10.12/−10.12, −12.14/−12.13, −14.13/−14.12, −16.12/−16.12,
+−18.13/−18.13, −20.14/−20.13, −22.12/−22.11, −24.14/−24.13, −26.13/−26.13,
+−28.13/−28.11, −30.16/−30.12, −32.15/−32.12, −34.16/−34.12, tail
+−46.99/−46.95. Steps 2.00 ± 0.02 dB; agreement ≤ 0.04 dB (48 kHz: ≤ 0.03 dB).
+
+**Onsets**: the first deviating sample after every write group is identical in
+reference and new for every tone SFX (S1 `A0` 21/21 groups, S2 `A0` 22/22, S3K
+`62` 23/23, `CD` 2/2; e.g. 739/739, 4407/4407, 6612/6612 …). The two `A4`/`36`
+groups that differ (5147 vs 5149, 22056 vs 22057) follow a fully silenced
+segment whose decaying high-pass tail sets the detection baseline; they are
+within 2 samples (45 µs) and sit on the inverted-phase PSG3 channel of §R2.4.
+The `develop` control is still 7 samples early on the first note.
+
+**DC**: whole-stream mean of every driver vector is 0.000–0.006 LSB in the
+reference and 0.000–0.006 in the new core (`develop`: 24–345 LSB). Tails after
+silence match: `A0` −18.81/−18.81 dB, `A4` −31.11/−31.25, `AA` −46.69/−46.64.
+
+**Stereo**: L == R for every sample, every core, every rate.
+
+### R2.3 Noise channel
+
+**Ladder** (noise sweep, ÷16 white, ref / new): −6.36/−6.35, −8.58/−8.58,
+−10.57/−10.57, −12.54/−12.54, −14.56/−14.56, −16.56/−16.55, −18.51/−18.50,
+−20.55/−20.55, −22.53/−22.52, −24.56/−24.56, −26.54/−26.54, −28.53/−28.52,
+−30.54/−30.50, −32.56/−32.53, −34.51/−34.48 dB, agreement ≤ 0.04 dB.
+
+**Character** (44.1 kHz, 2 s): white ÷16 7018 / 7027 transitions, spectral
+peak 2153.3 Hz in both, flatness 0.303 / 0.298; white ÷64 1742 / 1745, peak
+538.3 Hz both, flatness 0.230 / 0.228; periodic ÷16 1756 / 1766, single line
+at 872.1 Hz both, flatness 0.009 / 0.005; periodic linked to tone 2 = 0x40
+444 / 444, 107.7 Hz both. The mid-stream rewrite vector (`E4`→`E6`→`E7`→`E5`)
+matches segment by segment: −6.65/−6.65, −6.65/−6.65, −12.72/−12.72,
+−6.52/−6.52 dB with peaks 2153.3 / 538.3 / 979.8 / 269.2 Hz in both.
+
+**The round-1 failure, re-measured.** Linked noise with tone 2 at period 0/1
+(`rr = 11`), the state round 1 found silent:
+
+| Vector / segment | reference | new | old (`develop`, 44.1 k) |
+|---|---|---|---|
+| `syn-tone2-1-noise-linked` (`C1 00 E7 F0`), tick rate | −7.60 dB, 8225 tr | −7.60 dB, 8262 tr | present |
+| same, 8× tick rate, 32 768-sample window | −6.28 dB, 1016 tr | −6.28 dB, 1018 tr, **xcorr 0.9985 @ −3.5 ticks** | — |
+| `syn-noise-rewrite-midstream` seg 3 (`E7`, tone 2 = 0), tick | −7.61 dB, 8240 tr | −7.60 dB, 8234 tr | present |
+| S1 `B6` tone 2 = 0, attenuation 0…11, 8× | −6.38 → −28.30 dB, 903–952 tr | −6.34 → −28.28 dB, identical counts (±1), **xcorr 0.9904 then 0.9998–0.9999 @ −0.5** | −5.6 → −6.6 dB |
+| S1 / S2 `AA` Splash, 15 segments tone 2 = 0, attenuation 0…14, 8× | −6.30 → −34.31 dB, 933–1049 tr | −6.30 → −34.27 dB, counts ±2, **xcorr 0.9983–0.9991 @ −5.5** | −12.9 → −46.5 dB (44.1 k) |
+| S1 / S2 `AA`, 44.1 kHz, 15 segments | −12.74 → −40.72 dB, flat 0.761–0.783 | −12.74 → −40.68 dB, flat 0.762–0.784, same peak bin in every segment | |
+| S2 `A2` tone 2 = 0 segment, 8× | −7.04 dB, 790 tr | −7.04 dB, 790 tr, xcorr 0.9997 @ −1.5 | |
+| S3K `42` four tone 2 = 0 segments, 8× | −8.48 / −6.30 / −6.28 / −6.28 dB | same to 0.01 dB, counts ±2, xcorr 0.9981–0.9986 @ −5.5 | |
+
+Level within 0.04 dB, transition counts within 0.3 %, and the LFSR bit
+sequence identical (xcorr ≥ 0.99 at a lag that is constant across every
+attenuation step of a note). `B6`'s attenuation-0 segment still reads
+0.28 dB apart at tick rate (−7.52 / −7.24; 0.04 dB at 8×), the entry
+transient §9 explains — it enters tone 2 = 0 from N₂ = 982 with the two cores'
+slow-noise phases apart; the `AA` segments, which enter it from N₂ = 21, show
+no such gap (≤ 0.01 dB from the first segment on).
+
+**Sequence identity for linked noise at N₂ ≥ 2** (8× tick rate, wide lag
+search, new vs reference): S2 `A2` N₂ = 23 → 0.9976 @ −5.5 and, after the
+tone-2 = 0 passage, 0.970–0.9975 @ −23.5 across six attenuation steps; N₂ = 7 →
+0.9971 @ +10.5. S3K `42` N₂ = 5 → 0.9927 / 0.9975 @ −21.5, N₂ = 11 →
+0.9880 / 0.9847 @ −45.5; its N₂ = 17 / 23 / 29 / 35 segments lie outside the
+±50-tick window and were placed by the tick-rate FFT search at lags 69 / 93 /
+117 / 141 with 0.959–0.976. Those lags are exactly `4 N₂ + 1`: two LFSR
+shifts (one shift per `2 N₂` ticks) plus the write-rounding tick. The two-step
+state offset is set at note-on — GPGX's zero counter shifts at the write and
+its `rr = 11` copy of the tone-2 phase adds another — during the ÷2-tick
+passage where it is the −5.5-tick lag of the table above, and it then scales
+with the shift period. S2 `BC`'s lag grows from 14 to 49 ticks in 5-tick steps
+as its tone-2 period sweeps 31 → 66 (`N₂ − 17`, always sub-period, constant
+within each segment, xcorr 0.982–0.998 at tick rate); round 1's raw output has
+the same staircase, so its prose "14 ticks throughout" described only the first
+segment. All of these are phase offsets of an identical sequence, the class
+round 1 §5 documented, and none is a behaviour change from the fix: the
+`N₂ ≥ 2` path is untouched and every such segment reproduces round 1's numbers.
+
+**Slow linked noise (N₂ ≈ 1000)**: `B6` 1014 / 998 / 982, `A2` 1015 / 999 /
+1008 / 992 / 976 and `42` 1023 / 1017 carry 0–5 transitions per segment (one
+shift per ≈ 2000 ticks), so per-segment RMS depends on where the one or two
+edges fall and reads up to 5 dB apart (e.g. `A2` 992: −17.3 / −12.5 dB at
+44.1 k) with a lag of `N₂ − 1` ticks where a correlation exists at all. That
+is the half-noise-period power-on offset of round 1 §5 scaled to a 2000-tick
+period; the `develop` control disagrees with the reference by the same order
+on the same segments (`A2` 992: −23.1 dB). Unchanged, sub-period, and below
+the resolution a windowed measurement has on two edges.
+
+### R2.4 Deliberate divergences from the reference (bounded, unreachable)
+
+1. **Tone output at period 0 / 1.** GPGX (`zeroFreqInc = 1 × PSG_MCYCLES_RATIO`
+   for `PSG_INTEGRATED`) toggles the tone flip-flop every tick — a 111.86 kHz
+   square wave, 31 703 transitions per 223 722 ticks, −24.0 dB of band-limited
+   residue at tick rate and −28.8 dB at 44.1 kHz. The new core holds the output
+   high (spec §3.2 / §9.3, the Sega-part rule), 1 transition, −22.0 / −22.8 dB
+   (the single onset step discharging). Neither is audible: the reference's
+   content lies above Nyquist at every practical rate, and both cores'
+   residues are the high-pass discharge of one step. Round 1 §4 mentioned the
+   reset-parity consequence of this (a half-period start-phase inversion on
+   some `A4` / `36` PSG3 segments, still 0.961 at lag ±136 here) but did not
+   tabulate the vector itself. A scan of all 284 SFX write logs of the three
+   ROMs finds **no** tone channel audible (attenuation < 15) at period ≤ 1, so
+   the divergence is unreachable from the games' SFX.
+2. **Tone at period 2** (`syn-tone-2-vol0`, 55.9 kHz): equal RMS −9.37 dB in
+   both at tick rate, 16 317 vs 16 384 transitions, correlation only 0.713
+   because a 4-tick square wave sits at fs/4 where the two band-limiting
+   kernels ring differently — the same cap that limits tick-rate correlation
+   of ÷2-tick noise to ≈ 0.90 and disappears at 8× (§R2.3). At 44.1 kHz the
+   residual is −39.9 dB relative. Not a model difference.
+
+### R2.5 Verdict against the contract's tolerances
+
+| Criterion | Tolerance | Round 2 result |
+|---|---|---|
+| Tone fundamental vs ROM period | ±0.5 %; new vs ref ±0.3 % | pass — worst 0.14 % / 0.18 %, 3 rates |
+| Attenuation ladder, tone and noise | 2 dB ± 0.1; new vs ref ± 0.1 dB | pass — ≤ 0.04 dB |
+| Onset sample after each write | same sample ± 1 | pass — identical on every tone note-on; 2-sample cases only after silenced tails |
+| DC after high-pass | ≤ 1 LSB mean | pass — ≤ 0.006 LSB on driver vectors |
+| Noise sequence, ÷16 / ÷32 / ÷64 and linked N₂ ≥ 2 | xcorr ≥ 0.98 at a constant lag; transitions ± 2 %; same spectral peak | pass — ≥ 0.98 (tick, FFT) / ≥ 0.985 (8×) at constant sub-period lags; same peak bin in every segment |
+| Noise with tone-2-linked N₂ ≤ 1 | as above | **pass** — was fail: levels ≤ 0.04 dB, counts ≤ 0.3 %, xcorr 0.990–0.9999 @ constant lag on `B6`, `AA`, `A2`, `42` and both synthetic vectors |
+| Stereo identity, chunking, rates | L == R; 44.1 k / 48 k / tick | pass |
+| Mix-path no-regression (FM-only captures' SFX) | zero PSG contribution, path untouched | pass — 0 PSG writes, constant 384 LSB, `VirtualSynthesizer` unchanged |
+
+**pass = true.** Tolerances are as in round 1: 0.5 % is the pitch resolution a
+735-sample note allows a zero-crossing count; 0.1 dB covers the reference's
+`uint16` truncation of `2800 × 10^(−A/10)` against the new core's rounding of
+`8191 × …` (worst 0.02 dB); 0.98 is the tick-rate correlation floor of an
+identical bit stream through two different band-limiting kernels away from
+fs/4 (0.985–0.999 measured on every `N₂ ≥ 2` segment in both rounds).
+
+**Still not exercised:** the BizHawk-native `gpgx_s3k_pcm_psg_sample` tap
+(needs a BK2 per SFX and a headless run), so driver write *timing* against the
+real Z80 remains outside both rounds; and the `every-toggle` noise mode, which
+has no GPGX counterpart and is covered only by the 2× transition property in
+`TestPsgChipReferenceParity`.
+
+---
+
+## Round 1 record — `2bdd32746`, before the fix
+
+**Verdict at the time:** **FAIL** — pitch, attenuation ladder, onset timing, DC
+and the white/periodic noise *sequence* all matched the pinned reference within
+the tolerances below, but the new core silenced the noise channel whenever the
+noise clock was linked to tone 2 and tone 2's period was 0 or 1. The reference
 (and MAME, and the previous engine core) produce maximum-rate noise there. The
-shipped SMPS note tables put period 0 at the top of the PSG range, so this is
-not a corner case: **22 of the 68 noise-carrying SFX across the three ROMs
-drive that state**, among them S1/S2 `AA` Splash, S2 `A2` Spike Switch and the
-`B6` Spikes Move target of this round. Details in §6.
+shipped SMPS note tables put period 0 at the top of the PSG range, so this was
+not a corner case: **22 of the 68 noise-carrying SFX across the three ROMs**
+drive that state, among them S1/S2 `AA` Splash, S2 `A2` Spike Switch and the
+`B6` Spikes Move target of the round. Details in §6; resolved by `81485bea6`
+(§9 and Round 2 above).
 
 ## 1. What was compared, and against what
 
