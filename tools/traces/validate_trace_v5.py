@@ -29,7 +29,11 @@ TIMING_FIELDS = frozenset({
     "event", "raw_frame", "boundary", "kind", "ordinal", "submission_fingerprint",
 })
 BOUNDARY_ORDER = {"vint_service": 0, "post_objects": 1, "pre_main_loop": 2}
-KIND_ORDER = {"kos_module_queue": 0, "kos_decompression_queue": 1}
+KIND_ORDER = {
+    "kos_module_queue": 0,
+    "kos_decompression_queue": 1,
+    "nemesis_plc_queue": 2,
+}
 FINGERPRINT = re.compile(r"sha256:[0-9a-f]{64}\Z")
 
 
@@ -216,7 +220,7 @@ class Validation:
             return None
         if not isinstance(event["submission_fingerprint"], str) or not FINGERPRINT.fullmatch(event["submission_fingerprint"]):
             self.reject(path, f"line {number} has invalid submission_fingerprint")
-        if kind == "kos_decompression_queue" and boundary != "pre_main_loop":
+        if kind in {"kos_decompression_queue", "nemesis_plc_queue"} and boundary != "pre_main_loop":
             self.reject(path, f"line {number} direct completion kind requires pre_main_loop boundary")
         return raw_frame, boundary, kind, ordinal
 

@@ -119,6 +119,26 @@ class ValidateTraceV5Tests(unittest.TestCase):
         self.assertIn(f"{fixture / 'hardware_timing.jsonl'}: line 1", result.stderr)
         self.assertIn("pre_main_loop", result.stderr)
 
+    def test_accepts_current_s1_nemesis_timing_only_at_pre_main_loop(self) -> None:
+        for boundary, expected_returncode in (("pre_main_loop", 0), ("post_objects", 1)):
+            with self.subTest(boundary=boundary):
+                fixture = self.write_fixture("s1", "complete_run", name=boundary)
+                (fixture / "hardware_timing.jsonl").write_text(
+                    json.dumps({
+                        "event": "hardware_work_completed",
+                        "raw_frame": 0,
+                        "boundary": boundary,
+                        "kind": "nemesis_plc_queue",
+                        "ordinal": 0,
+                        "submission_fingerprint": FINGERPRINT,
+                    }) + "\n")
+
+                result = self.validate(fixture)
+
+                self.assertEqual(expected_returncode, result.returncode, result.stderr)
+                if boundary != "pre_main_loop":
+                    self.assertIn("pre_main_loop", result.stderr)
+
     def test_requires_a_non_boolean_non_negative_trace_frame_count_before_loading_timing(self) -> None:
         for invalid_count in (None, True, -1, 1.5):
             with self.subTest(invalid_count=invalid_count):
