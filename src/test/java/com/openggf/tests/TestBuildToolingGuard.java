@@ -2891,7 +2891,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void canonicalDisassemblySubmodulesAreTrackableWhileLocalReferencesStayIgnored(
+    void canonicalDisassembliesStayOptionalAndTrackableWhileLocalReferencesStayIgnored(
             @TempDir Path temporaryDirectory) throws Exception {
         Path repository = newRepository(temporaryDirectory, "disassembly-ignore");
         installProjectIgnoreRules(repository);
@@ -2914,6 +2914,60 @@ class TestBuildToolingGuard {
             assertGitSucceeds(repository, "check-ignore", "-q", "--", disassembly);
             Files.delete(directory);
         }
+
+        String developerSetup = Files.readString(Path.of("docs/guide/contributing/dev-setup.md"));
+        assertFalse(developerSetup.contains("git clone --recurse-submodules"),
+                "the default developer clone must not initialize optional disassembly references");
+        assertTrue(developerSetup.contains("git clone https://github.com/OpenGGF/OpenGGF.git"),
+                "the default developer setup must use an ordinary clone");
+        assertTrue(developerSetup.contains("git submodule update --init"),
+                "disassembly-backed development must retain an explicit opt-in command");
+
+        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+            String guidance = Files.readString(Path.of(agentGuide))
+                    .toLowerCase(Locale.ROOT)
+                    .replaceAll("\\s+", " ");
+            assertTrue(guidance.contains("optional development references"),
+                    () -> agentGuide + " must classify the disassemblies as optional development references");
+            assertTrue(guidance.contains("builds, tests, and runtime do not require them"),
+                    () -> agentGuide + " must keep the disassemblies outside the project dependency graph");
+        }
+
+        try (Stream<Path> workflows = Files.walk(Path.of(".github/workflows"))) {
+            for (Path workflow : workflows
+                    .filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+                        return name.endsWith(".yml") || name.endsWith(".yaml");
+                    })
+                    .toList()) {
+                String source = Files.readString(workflow);
+                assertFalse(workflowInitializesOptionalSubmodules(source),
+                        () -> workflow + " must build and test without initialized disassembly submodules");
+            }
+        }
+
+        assertTrue(workflowInitializesOptionalSubmodules("submodules: recursive # checkout input\n"));
+        assertTrue(workflowInitializesOptionalSubmodules("submodules: 'TRUE'\n"));
+        assertTrue(workflowInitializesOptionalSubmodules("run: git submodule update --init\n"));
+        assertTrue(workflowInitializesOptionalSubmodules(
+                "run: git clone https://example.invalid/repository.git --recurse-submodules\n"));
+        assertTrue(workflowInitializesOptionalSubmodules(
+                "run: git clone --recursive https://example.invalid/repository.git\n"));
+        assertFalse(workflowInitializesOptionalSubmodules("submodules: false\n"));
+        assertFalse(workflowInitializesOptionalSubmodules("run: git status --short\n"));
+    }
+
+    private static boolean workflowInitializesOptionalSubmodules(String source) {
+        Pattern checkoutSetting = Pattern.compile(
+                "(?im)^\\s*submodules\\s*:\\s*(['\"]?)(?:true|recursive)\\1\\s*(?:#.*)?$");
+        Pattern directInitialization = Pattern.compile(
+                "(?im)\\bgit\\s+submodule\\s+(?:init|update)\\b");
+        Pattern recursiveClone = Pattern.compile(
+                "(?im)\\bgit\\s+clone\\b[^\\r\\n]*--(?:recurse-submodules|recursive)\\b");
+        return checkoutSetting.matcher(source).find()
+                || directInitialization.matcher(source).find()
+                || recursiveClone.matcher(source).find();
     }
 
     @Test
