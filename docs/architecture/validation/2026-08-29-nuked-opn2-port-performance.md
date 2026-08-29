@@ -1,4 +1,4 @@
-# Nuked-OPN2 port performance (round 1)
+# Nuked-OPN2 port performance (round 1 and optimisation pass)
 
 **Date:** 2026-08-29
 **Branch / commit:** `feature/ai-nuked-opn2-fm-core` at `4da04a09d`
@@ -110,6 +110,158 @@ develop:     FADE_THROUGHPUT median=153.18 unit=renderedSecPerWallSec medianAllo
   measurement on the slowest supported machine belongs in a later round before
   release sign-off.
 
+## Optimisation pass
+
+**Date:** 2026-08-29 (same day, second session)
+**Branch / commit:** `feature/ai-nuked-opn2-perf` (worktree
+`.worktrees/nuked-opn2-perf`, branched from `feature/ai-nuked-opn2-fm-core` at
+`d2f775bcc`); one commit per step, listed below.
+**Machine / JVM:** unchanged (Ryzen 9 9950X, OpenJDK 21.0.11, default JIT and
+GC, no JVM flags). Same `NukedPerfBench` (appendix; the only edit is that
+`RUNS` now reads `-Druns`, default 10), compiled against the worktree's
+`target/classes`, 3 warm-up + 10 timed runs, median.
+
+### Result
+
+| Measurement | Before (`d2f775bcc`) | After | Gain |
+|---|---|---|---|
+| Bare core, ns per 24-cycle frame (`nuked` mode alone) | 1 159 | **885** | 1.31x |
+| Bare core, ns per clock | 48.3 | **36.9** | |
+| Bare core, % of one core at 53 267 Hz | 6.18 % | **4.71 %** | |
+| Facade, ns per 44.1 kHz sample (`facade` mode alone) | 1 470 | **1 138** | 1.29x |
+| Facade, % of one core at 44.1 kHz | 6.48 % | **5.02 %** | |
+| Bare / facade in one JVM (`all` mode, as round 1 reported) | 1 159 / 1 470 | 898 / 1 172 | |
+| Allocation per timed run, both benches | 0 B | **0 B** | |
+| `TestSmpsFadeAudioThroughput` | 16.01x realtime | **20.32x realtime = 4.92 %** | |
+
+The 2x target was **not** reached, and the calibration below says why: the
+pinned `ym3438.c` compiled with `gcc -O2` runs the identical patch at
+**530 ns per frame** (22 ns per clock; the two builds produce the same
+`sink` checksum), so 2x from 1 159 ns would have meant matching native C.
+The port now sits at 1.67x the C time, down from 2.19x. Every step is
+bit-exact: the gate (`TestNukedOpn2BitExactScripts` 732 scripts,
+`TestYm2612ChipNukedParity` 68, `TestYm2612HardwareBehaviour`,
+`TestNukedOpn2PortSmoke`, `TestNukedOpn2StateEquality`,
+`TestYm2612ChipSnapshot`, `TestVirtualSynthesizerSnapshot`,
+`TestChipWriteObserver`; 888 tests) was run after every step and never
+regenerated. The C harnesses under `tools/audio/nuked-opn2/harness/` are
+untouched.
+
+### Steps (each its own commit, each gated)
+
+| Step | Commit | Change | ns/frame | Delta |
+|---|---|---|---|---|
+| 0 | `d2f775bcc` | baseline, re-measured | 1 159 | |
+| 1 | `7c1f6b178` | `(cycles + k) % 24` -> `wrap24` conditional subtract (operand is 0..47); `cycles % 12`, `(channel + 1) % 6` likewise | 1 105 | -4.7 % |
+| 2 | `817e81249` | `FM_ALGORITHM[op][k][connect]` packed as bits of `FM_ALGORITHM_BITS[op*8+connect]`; `PG_LFO_SH1/2` and `EG_STEPHI` flattened; all derived from the C tables in the static initialiser | 1 000 | -9.5 % |
+| 3 | `c9c37bb74` | JIT inlining: local copy of the `chip` reference in every per-cycle method (bytecode -3 bytes per access); `doRegWrite` split into per-cycle guards + slot / channel / mode decode helpers | 940 | -6.0 % |
+| 4 | `97cc5a077` | per-slot fields that a function reads several times but never writes are loaded once (`ssg_eg`, `eg_state`, `eg_ssg_enable`, `eg_kon`, `fb`, `fm_out[prevslot]`); `+=`/`&=` pairs on `pg_phase`, `pg_inc` become one store; `SLOT_OP` / `SLOT_CHANNEL` tables for `slot / 6`, `cycles % 6` | 885 | -5.9 % |
+
+Cumulative: 1 159 -> 885 ns, **-23.6 %**.
+
+### Profile
+
+* **JFR** (`jdk.ExecutionSample`) attributes ~46 % of samples to `clock()`
+  itself (everything C2 inlined) and the rest to the six callees C2 refused to
+  inline; it cannot see inside the inlined body.
+* **`-XX:+PrintInlining`** on the baseline: `doRegWrite` (1 792 bytes),
+  `envelopeAdsr` (681), `envelopePrepare` (532), `chOutput` (399),
+  `fmPrepare` (358) and `phaseCalcIncrement` (344) are all "hot method too big"
+  (C2 `FreqInlineSize` = 325). Setting `-XX:FreqInlineSize=2500` on the
+  baseline was worth ~9 %, almost all of it `doRegWrite` (the per-cycle
+  guards were paying a full call every cycle). After step 3 the remaining
+  three oversize callees are `envelopeAdsr` (579), `envelopePrepare` (433)
+  and `phaseCalcIncrement` (330); forcing them in (`FreqInlineSize=700`)
+  measured *worse* (972 vs 940), and so did every smaller threshold
+  (250: 956, 200: 982, 150: 1 089, 100: 1 073), so the default is the sweet
+  spot and no further splitting was done.
+* **`-XX:+TrustFinalNonStaticFields`**: no gain (1 166 vs 1 159), so the
+  51 `final int[]` references are not the cost; the bounds checks and reloads
+  behind them are.
+* **PC sampling** (no `perf` on this machine, JDK has no `hsdis`): the
+  bench was run as a child of `gdb`, interrupted 1 500 times at 20 ms, and the
+  PCs binned against a `disassemble` of the live C2 `clock()` nmethod
+  (13.5 KB of code). 1 033 samples fell in the nmethod. The histogram is
+  **flat** - the hottest 256-byte bucket (the `fmGenerate` LOGSIN/EXP chain)
+  holds 12 %, `fmPrepare` about 17 %, and no instruction exceeds 3 %. The
+  listing shows the systemic cost instead: 93 `vmovd` GPR<->XMM spills and
+  873 stack-slot references in 2 863 instructions (register pressure from the
+  single inlined body), an `arr.length` load plus compare before nearly every
+  per-slot access, and int[] loads re-issued after every int[] store because
+  C2 cannot prove two state arrays are distinct objects. Those are the shape of
+  a struct-of-arrays port on a JIT that does not trust final fields, not a
+  handful of slow lines, which is why the remaining steps were all shape
+  changes rather than local fixes.
+* **Ablation** (removing one pipeline stage at a time in a scratch copy) was
+  tried and rejected as a cost breakdown: the savings sum to far more than the
+  total and removing the trivial `doIo` "saved" 210 ns, i.e. it measures JIT
+  compilation-shape effects, not stage cost.
+
+### Tried and reverted
+
+* **Polling output availability once per frame** in
+  `Ym2612Chip.renderStereo` (`hasOutputSample()` can only change when
+  `cycles` wraps to 0, so a `clockFrame()` inner loop stops at the same
+  cycle): 1 160-1 170 ns/sample against 1 134-1 142 for the plain per-cycle
+  loop, two runs each, i.e. ~2 % slower from the extra loop level. Reverted;
+  the facade is left as it was, apart from the core it wraps.
+* **More inlining** (see profile): worse at every threshold above or below the
+  default.
+
+### Facade
+
+`Ym2612Chip` was not changed. Its overhead over the bare core is now
+1 138 ns/sample / (53 267 / 44 100) = 942 ns per native frame against 885 bare,
+i.e. ~6 % for DAC servicing, mute lookup, frame summation and the 16-tap
+stereo FIR; the write-pacing logic was deliberately left alone because a
+concurrent branch is changing it.
+
+### Verification
+
+Per-step gate: see the step table (888/0 after every step; the 732-script
+pin took 46-52 s per run). Final runs on `97cc5a077` (all three ROM paths passed as absolute `-D` properties, `-Dmse=off`):
+
+```
+# Gate (run after every step; this is the step-4 run)
+mvn -Dmse=off -B "-Dtest=TestNukedOpn2BitExactScripts,TestNukedOpn2PortSmoke,TestYm2612ChipNukedParity,TestYm2612HardwareBehaviour,TestNukedOpn2StateEquality,TestYm2612ChipSnapshot,TestVirtualSynthesizerSnapshot,TestChipWriteObserver" test
+  Tests run: 888, Failures: 0, Errors: 0, Skipped: 0   (732 bit-exact scripts in 46 s)
+
+# Whole audio tree
+mvn -Dmse=off -B "-Dtest=com/openggf/audio/**/*" test
+  Tests run: 1651, Failures: 0, Errors: 0, Skipped: 8   (120 classes; the 8 skips are
+  AudioRegressionTest's opt-in reference captures and TestSmpsRepeatedPlaybackBenchmark, as before)
+
+# Structural guards
+mvn -Dmse=off -Pguards -B test
+  Tests run: 550, Failures: 0, Errors: 0, Skipped: 0
+
+# Whole-stack fade window
+mvn -Dmse=off -B "-Dtest=TestSmpsFadeAudioThroughput" test
+  FADE_THROUGHPUT median=20.32 unit=renderedSecPerWallSec medianAllocatedBytes=31944 allocatedSupported=true iterations=[19.61,20.32,20.31,20.35,20.37] preRollSec=1.5 fadeWindowFrames=198656 bufferFrames=1024 sampleRate=44100
+  (round 1 on the same tree: 16.01; the 31 944 B/window residual is the SMPS driver's, unchanged)
+
+# Micro-bench, final (this worktree, target/classes of 97cc5a077)
+java -cp bench:target/classes perf.NukedPerfBench nuked
+  NUKED_NATIVE median_ns_per_sample=885.7 cpu_pct_one_core_at_53267Hz=4.71 allocBytesPerRun=[0 x10]
+java -cp bench:target/classes perf.NukedPerfBench facade
+  FACADE outputRate=44100.0 median_ns_per_output_sample=1138.3 cpu_pct_one_core=5.02 allocBytesPerRun=[0 x10]
+java -cp bench:target/classes perf.NukedPerfBench all
+  NUKED_NATIVE median_ns_per_sample=898.3 ... FACADE median_ns_per_output_sample=1172.4 allocBytesPerRun=[0 x10] (both)
+```
+
+### Calibration: the C build
+
+```c
+/* cbench.c: the NukedPerfBench patch and loop against the pinned ym3438.c */
+OPN2_Reset(&chip); OPN2_SetChipType(ym3438_mode_ym2612);
+/* ... identical register programme via OPN2_Write + 24 OPN2_Clock per strobe ... */
+for (f = 0; f < 53267; f++) { for (c = 0; c < 24; c++) { OPN2_Clock(&chip, b); l += b[0]; r += b[1]; } sink += labs(l) + labs(r); }
+```
+
+`gcc -O2` and `gcc -O3 -march=native` both: **530 ns per frame**, `sink`
+96821748 = the Java bench's `sink` for the same run count, so the two are
+clocking the same state.
+
 ## Appendix: micro-bench source
 
 ```java
@@ -126,7 +278,7 @@ import java.util.Locale;
 /** Micro-bench: NukedOpn2 at native rate, Ym2612Chip facade at engine output rate. */
 public final class NukedPerfBench {
     static final double NATIVE_RATE = 53267.0;
-    static final int RUNS = 10;
+    static final int RUNS = Integer.getInteger("runs", 10);
     static final ThreadMXBean MX = (ThreadMXBean) ManagementFactory.getThreadMXBean();
 
     // Six-channel patch: algorithm 4, two-carrier voice with TL/AR/DR/RR set.
