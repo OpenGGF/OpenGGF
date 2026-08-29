@@ -14,6 +14,15 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Nuked-OPN2 FM core ported (not yet wired to the synthesiser):** a new
+  `com.openggf.audio.synth.nuked` package carries a function-for-function Java
+  port of the pinned Nuked OPN2 `ym3438.c` (cycle-accurate YM3438/YM2612 from
+  the die shot, LGPL 2.1+, licence text under `LICENSES/`), with the chip type
+  made per instance and a plain-copy state struct for snapshots. Its output is
+  confirmed bit-exact against the C build on a fixed voice script and on
+  randomised register/read streams across all four chip types. The existing
+  `Ym2612Chip` still drives audio; switching over is a follow-up.
+
 - **HCZ2 Turbo Spikers no longer crash live rewind during unload:** attached
   shell and waterfall children now close their parent references immediately,
   while launched shells retain their independent ROM lifetime.

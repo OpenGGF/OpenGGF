@@ -24,6 +24,8 @@ This project uses documentation, tools, and reference implementations from many 
 | **Eke-Eke**          | Genesis Plus GX - YM2612 and PSG emulation cores (see *Emulation cores* below) <br/><br/> https://github.com/ekeeke/Genesis-Plus-GX |
 | **Jarek Burczynski, Tatsuyuki Satoh (MAME)** | Original `fm.c` YM2612 software implementation that the Genesis Plus GX / libvgm `ym2612.c` core descends from |
 | **Nemesis, Sauraen** | YM2612 hardware tests and die-shot analysis credited in the `ym2612.c` core header <br/><br/> http://gendev.spritesmind.net/forum/viewtopic.php?t=386 |
+| **Alexey Khokholov (Nuke.YKT)** | Nuked OPN2 - cycle-accurate YM3438/YM2612 emulator from the die shot (LGPL 2.1+), ported as `NukedOpn2` (see *Emulation cores* below) <br/><br/> https://github.com/nukeykt/Nuked-OPN2 |
+| **Silicon Pr0n (digshadow); Matthew Gambrell, Olli Niemitalo** | YM3438 decap and die shot, and the OPL2 ROM dumps, credited in the Nuked OPN2 header |
 | **Shay Green (blargg)** | blip_buf band-limited synthesis library (LGPL 2.1+), the model for `BlipDeltaBuffer` <br/><br/> http://www.slack.net/~ant/ |
 | **MAME Team**        | Sound emulation cores used by SMPSPlay                                                                                          |
 | **libvgm**           | Audio output and emulation libraries; carries the same GPGX-derived `ym2612.c` core that SMPSPlay uses <br/><br/> https://github.com/ValleyBell/libvgm |
@@ -42,6 +44,7 @@ history and the source headers establish it:
 | Engine class | Origin | Notes |
 |--------------|--------|-------|
 | `Ym2612Chip` | `ym2612.c` from Genesis Plus GX, as shipped in libvgm / SMPSPlay. That file is Jarek Burczynski and Tatsuyuki Satoh's MAME `fm.c` with Eke-Eke's Genesis Plus GX fixes. | Began as an original implementation (2025-11-27); the core tables and update logic were ported from the GPGX/libvgm `ym2612.c` on 2025-12-10 (commit `eae2da2ca`) and the class cites `ym2612.c` line numbers. Genesis Plus GX's own licence permits non-commercial use only. |
+| `nuked.NukedOpn2` | `ym3438.c` / `ym3438.h` from Nuked OPN2 (Copyright 2017-2022 Alexey Khokholov), upstream commit `335747d7`, pinned in `tools/audio/nuked-opn2/PIN.md`. | A function-for-function port with `ym3438.c` line citations; every table and per-cycle stage is upstream's. LGPL 2.1 or later (`LICENSES/LGPL-2.1.txt`); the package NOTICE in `package-info.java` records how it combines with the GPL-3 engine. |
 | `PsgChip` | `psg.c` from Genesis Plus GX (Copyright 2016-2017 Eke-Eke). | Header states "Based on the Genesis Plus GX PSG core"; timing (`PSG_MCYCLES_RATIO`), noise and volume handling follow `psg.c`. `psg.c` carries Eke-Eke's non-commercial licence in its header. |
 | `BlipDeltaBuffer` | `blip_buf.c` by Shay Green, as modified for Genesis Plus GX. | Library is LGPL 2.1 or later. |
 | `BlipResampler` | Windowed-sinc resampler written for OpenGGF, "based on the same principles as" blip_buf. | Not a port. |
