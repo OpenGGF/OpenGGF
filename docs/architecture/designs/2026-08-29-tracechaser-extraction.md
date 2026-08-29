@@ -114,8 +114,11 @@ supported workflows and dependency contract.
 TraceChaser may consume ROMs, BK2 movies, existing trace trees, and output roots
 only through explicit arguments or documented environment variables. It must
 not locate files by reaching into an OpenGGF checkout. OpenGGF may invoke the
-pinned TraceChaser checkout, but Maven production or test code must not import,
-compile, or execute TraceChaser.
+pinned TraceChaser checkout, but OpenGGF production code and ordinary Maven
+tests must not import, compile, or execute TraceChaser. A separately selected,
+opt-in integration-test profile may execute the pinned checkout after assuming
+that the submodule is initialised; those tests must skip, rather than fail, when
+the gitlink worktree is absent.
 
 ## Initial TraceChaser layout
 
@@ -163,10 +166,72 @@ The inventory step classifies every tracked candidate as one of:
 5. compatibility wrapper retained by OpenGGF;
 6. generated, third-party, machine-local, or obsolete material to exclude.
 
-Generated diagnostic outputs such as `diag_*_output.txt` and `regen_*.log` are
-excluded unless an active test or a committed engineering record identifies the
-exact file as immutable evidence. Evidence exceptions use an explicit allowlist
-with a reason and consumer; filename shape alone never makes a log durable.
+### Existing OpenGGF test dependencies
+
+The cutover inventory must account for every Java test that currently reads or
+executes a moved path. The initial dispositions are:
+
+| Current OpenGGF test | Cutover disposition |
+|---|---|
+| `TestS2CompleteRunRealRow769DecodeGate` | Retain as an env-gated OpenGGF integration test. Resolve `tools/tracechaser/bizhawk-headless/test.sh` only after a JUnit assumption confirms that the pinned submodule is present; skip when it is absent. |
+| `TestS3kCompleteRunRealRow810DecodeGate` | Same as the S2 real-row gate: retained, opt-in, and submodule-present-only. |
+| `TestS1AudioParityProbeContract` | Move its probe and launcher assertions to TraceChaser's source-only contract suite; remove the Java test. |
+| `TestPlcTimingEvidenceTool#bothProbeStateMachinesHandleEmptyPartialAndCompletingCalls` | Move this Lua-producer behavioural test to TraceChaser; retain the rest of the Java test class for the OpenGGF-owned evidence tool. |
+| `TestTraceAnimationRecorderContract` | Move its recorder assertions to TraceChaser's source-only contract suite; remove the Java test. |
+| `TestCompleteRunAudioCutoffFrontier` | Retain the Java test. Copy `gpgx-audio-capability-v1.json` to `src/test/resources/tracechaser/gpgx-audio-capability-v1.json` with origin commit and SHA-256 provenance. |
+
+The path audit also identifies contract-only Java tests beyond those six. They
+test moved Lua implementations rather than OpenGGF Java behaviour and therefore
+move, with equivalent assertions, into TraceChaser's source-only suite:
+
+- `TestBizhawkProbeContractGuard`;
+- `TestTraceRecorderCounterAddresses`;
+- `S2SpecialStageRecorderContractTest`;
+- `TestS1CompleteRunLuaContract` and `TestS1CompleteRunProbeContract`;
+- `TestS1AudioParityLuaContract`;
+- `TestS1GameplayAudioTimelineLuaContract` and
+  `TestS1Ghz1GameplayAudioProbeContract`.
+
+Java tests whose only reference is explanatory prose remain in OpenGGF and have
+their citations rewritten during cutover. Before deletion, an automated path
+audit over `src/main/` and `src/test/` must reach zero unclassified references
+to the former implementation roots.
+
+### Lua contract fixtures
+
+The following fixtures move with the Lua components and the contract tests that
+drive them:
+
+- `src/test/resources/bizhawk/probe_runtime_contract_test.lua`;
+- `src/test/resources/bizhawk/s1_audio_parity_contract_test.lua`;
+- `src/test/resources/bizhawk/s1_gameplay_audio_timeline_contract_test.lua`.
+
+The shared `normalization-contract-v1.json` vector remains in OpenGGF because
+OpenGGF Java normalizer, comparator, and JSONL tests consume it. TraceChaser
+receives a conformance-pack copy with the same origin-and-hash manifest used for
+other cross-repository contract inputs.
+
+### `tools/testing` classification
+
+The four trace-v5 Python tests receive explicit dispositions:
+
+| Current path | Cutover disposition |
+|---|---|
+| `tools/testing/test_compare_trace_v5_candidates.py` | Move with the candidate comparator. |
+| `tools/testing/test_trace_v5_capture_matrix.py` | Move with the capture-matrix implementation; make OpenGGF fixture and movie roots explicit integration inputs. |
+| `tools/testing/test_validate_trace_v5.py` | Move with the validator. |
+| `tools/testing/test_trace_v5_publication_manifest.py` | Retain in OpenGGF because it guards OpenGGF's canonical publication transaction and predecessor archive. |
+
+`install-hooks.sh`, `install-hooks.ps1`, `Compare-SurefireRedSet.ps1`, and
+`Test-CompareSurefireRedSet.ps1` remain OpenGGF repository infrastructure and
+must not enter the history filter.
+
+The tracked files `tools/bizhawk/diag_aiz2_djf_probe_output.txt` and
+`tools/bizhawk/diag_aiz2_monitor_solid_output.txt` have no committed reader or
+documentation evidence consumer and are excluded. The initial
+diagnostic-output evidence allowlist is therefore empty. Any later exception
+must identify the exact file as immutable evidence and record its reason and
+consumer; filename shape alone never makes a log durable.
 
 The extraction excludes:
 
@@ -204,10 +269,20 @@ after its public baseline is accepted.
 
 There is necessarily a short coordination window in which the candidate
 TraceChaser repository exists while OpenGGF still contains the source paths.
-During that window the filtered import is frozen: fixes land once in OpenGGF
-and are replayed into the candidate before the handoff. The OpenGGF cutover is
-the single authority switch; no released OpenGGF revision maintains two
-implementations.
+The extraction-base trigger is the merge of the currently in-flight S2 native
+recorder workflow into `develop`, including its focused tests and documentation.
+The exact merge commit becomes the recorded extraction base. Before filtering,
+the maintainer verifies that no unmerged S2 recorder change remains in its
+development worktree.
+
+That trigger deliberately does not wait for the queued S1 complete-run and two
+S3K native workflows. Once the extraction base is named, new recorder work
+starts in TraceChaser. If any queued workflow has already acquired unique
+commits by then, those commits are replayed onto the filtered candidate and do
+not land as a second OpenGGF implementation. Corrections required to stabilise
+the frozen candidate land once in OpenGGF and are replayed into TraceChaser only
+until the authority-switch commit. The OpenGGF cutover is the single authority
+switch; no released OpenGGF revision maintains two implementations.
 
 ## BizHawk dependency policy
 
@@ -232,13 +307,28 @@ TraceChaser does not redistribute BizHawk. It provides:
   incompatible installation before recording;
 - reviewed lock updates for any future BizHawk change.
 
-The existing Linux 2.11 lock is retained as migration evidence:
+Two existing locks serve different consumers and remain distinct after the
+migration.
+
+The Lua/runtime installer lock comes from
+`tools/bizhawk/fetch_bizhawk_2_11_linux.sh`:
 
 ```text
 archive: BizHawk-2.11-linux-x64.tar.gz
 sha256: cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8
-upstream commit: 427556b5ef3ac437eba754d90c5e7e9096c9a8df
 ```
+
+Its existing extracted-layout checks and
+`client.invisibleemulation` capability check are lifted into the TraceChaser
+dependency preflight rather than reimplemented as a new contract.
+
+The reproducible native GPGX observer source lock comes from
+`tools/bizhawk-headless/native/gpgx-audio-observer/source-lock.json`. It pins
+the BizHawk source commit
+`427556b5ef3ac437eba754d90c5e7e9096c9a8df`, the Genesis Plus GX and musl source
+commits, Git object identities, and critical-file hashes used by the native
+rebuild. It is not an archive-install lock and remains owned by the native build
+workflow.
 
 The implementation verifies rather than assumes corresponding Windows release
 asset hashes before adding them to the lock. An installer never downloads from
@@ -271,6 +361,13 @@ checkout-aware bootstrap entry points. They do not download automatically.
 They either delegate to the pinned checkout or fail with the exact submodule
 initialisation command and the expected gitlink identity.
 
+The two retained native-to-Java decode gates are not part of the ordinary test
+selection. Their existing ROM/movie environment gates remain, and they add a
+JUnit assumption for an initialised `tools/tracechaser` checkout before
+resolving the native harness. An explicit integration command selects them;
+the absence of the submodule is a skip, while a present but wrong gitlink is a
+hard failure.
+
 For the 0.6 cycle, the documented public commands at former paths remain as
 thin forwarders where removing the path would otherwise make an agent follow
 stale instructions. Forwarders contain no recorder, parser, validator, or
@@ -299,8 +396,8 @@ beyond the existing hardware-timing exception documented by OpenGGF.
 The portable conformance pack contains small positive and negative documents
 for metadata, physics-row shape, auxiliary JSONL, hardware timing, compression,
 and run manifests. TraceChaser validates the producer pack. OpenGGF retains a
-small consumer copy because ordinary tests must pass without an initialised
-submodule. That copy records:
+small consumer copy under `src/test/resources/tracechaser/` because ordinary
+tests must pass without an initialised submodule. Its `manifest.json` records:
 
 - the originating TraceChaser commit;
 - the contract-pack version;
@@ -376,10 +473,41 @@ trace workflow, including:
 - structural guards for submodule optionality, documentation paths, and
   prohibited duplicate implementations.
 
+The initial active-path rewrite contains these 13 contributor-guidance and
+skill files:
+
+- `docs/guide/contributing/trace-framework-reference.md`;
+- `docs/guide/contributing/trace-replay.md`;
+- `docs/guide/contributing/trace-v5-publication.md`;
+- `docs/agent-workflow/runbooks/runbook-multi-agent-trace-orchestration.md`;
+- `docs/agent-workflow/runbooks/runbook-s1-v37-regen.md`;
+- `bizhawk-headless-trace/SKILL.md`, `plc-system/SKILL.md`,
+  `s1-trace-replay/SKILL.md`, and `trace-replay-bug-fixing/SKILL.md`, each under
+  both `.agents/skills/` and `.claude/skills/`.
+
+Release notes, discrepancy documents, and repository/agent guidance are
+additional cutover obligations rather than part of that count. The cutover
+commit stages `README.md` as required by merge policy and sets
+`Agent-Docs: updated` and `Skills: updated` with both mirror pairs staged.
+
 Historical designs, audits, validation reports, and frontier records retain
 their original commands as point-in-time evidence. They receive a central
 migration mapping rather than mass rewriting that would falsify history. Active
 guidance must not direct agents to removed implementation paths.
+
+### Source references and emitted commands
+
+The current `src/main/` tree contains nine references to
+`tools/bizhawk-headless` across comments and one emitted command. Every source
+and test comment that cites a moved recorder file is rewritten to its
+`tools/tracechaser/bizhawk-headless/...` path, which resolves at the pinned
+gitlink commit. In particular, direct `src/Recording/*.cs:line` citations remain
+specific rather than being replaced by a generic project link.
+
+`S3kLoadTimeProfileGenerator` currently emits
+`tools/bizhawk-headless/run.sh --mode load-time`; the authority-switch commit
+changes that user-facing command to the canonical TraceChaser invocation. The
+cutover path audit covers Java string literals and comments as well as Markdown.
 
 ## Validation strategy
 
@@ -431,11 +559,21 @@ Before and after cutover, OpenGGF records and compares:
 - release packaging proof that TraceChaser and BizHawk artifacts are absent
   from the OpenGGF runtime distribution.
 
+The TraceChaser optionality assertions extend the existing
+`TestBuildToolingGuard` policy added by `c1833132c`, alongside the canonical
+optional-disassembly checks. They verify the gitlink is trackable, default
+clone/setup and ordinary CI do not initialise it, and trace setup retains an
+explicit opt-in command. A separate boundary guard rejects migrated
+implementation files under their former OpenGGF roots; it does not reject the
+named compatibility wrappers or consumer-conformance copies.
+
 ## Coordinated cutover
 
 The migration proceeds through these gates:
 
-1. Freeze an extraction base and complete the file classification.
+1. Merge the in-flight S2 native recorder workflow, verify its worktree has no
+   unmerged recorder changes, record that `develop` merge commit as the
+   extraction base, and complete the file classification.
 2. Create the history-filtered TraceChaser candidate.
 3. Remove excluded and third-party material from the candidate.
 4. Make paths portable without changing recorder behaviour.
@@ -444,8 +582,10 @@ The migration proceeds through these gates:
 7. Pass TraceChaser source-only CI and clean-checkout capture validation.
 8. Publish the first TraceChaser release tag.
 9. In one OpenGGF change, delete migrated implementations, add the pinned
-   `tools/tracechaser` gitlink, add thin wrappers, and update active docs,
-   skills, guards, release notes, and conformance provenance.
+   `tools/tracechaser` gitlink, add thin wrappers, resolve every disposition in
+   the test/resource inventory above, and update the 13 active guidance/skill
+   files plus guards, source citations and commands, README, agent docs, release
+   notes, and conformance provenance.
 10. Pass OpenGGF submodule-absent, submodule-present, full ROM-backed, guard,
     focused trace, and release-package validation.
 11. Merge and push the OpenGGF cutover only after both repositories' evidence
@@ -499,8 +639,11 @@ The extraction is complete only when:
 5. OpenGGF contains no migrated implementation copy.
 6. OpenGGF pins the accepted TraceChaser release commit at
    `tools/tracechaser`.
-7. OpenGGF ordinary builds and tests pass with the submodule absent.
-8. Trace workflows pass with the submodule initialised.
+7. OpenGGF ordinary builds and tests pass with the submodule absent, with every
+   former Java-to-tool dependency either moved, consumer-copied, or explicitly
+   skipped as one of the two opt-in integration gates above.
+8. Trace workflows and the two opt-in native-to-Java integration gates pass
+   with the submodule initialised at the pinned commit.
 9. Active OpenGGF docs and mirrored skills use the new canonical workflow.
 10. Existing trace-v5 outputs and OpenGGF replay behaviour remain compatible.
 11. OpenGGF 0.6 full tests, guards, and release packaging show no regression.
