@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
+import com.openggf.game.OscillationManager;
 import com.openggf.game.GameModule;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.EngineContext;
@@ -94,6 +95,10 @@ public final class TestEnvironment {
     private static void resetToBootstrapBaseline() {
         GroundSensor.setLevelManager(null);
         SonicConfigurationService.getInstance().resetToDefaults();
+        // OscillationManager is a process-wide static table advanced by every level
+        // frame; objects that read it (e.g. CnzHoverFanInstance) assume the reset
+        // baseline in unit tests, so it must not leak across classes in a fork.
+        OscillationManager.reset();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
         // CRITICAL: Capture the current game's profile BEFORE resetting the module.
