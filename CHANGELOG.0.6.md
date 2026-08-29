@@ -14,6 +14,19 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Special-stage rings alternate speakers again (S3K):** every ROM ring
+  collect — the level's `GiveRing`, the Blue Sphere ring routine at
+  `loc_984C`, badniks that award rings — sends the same `sfx_RingRight` id,
+  and it is the Z80 driver (`zPlaySound_CheckRing`) that toggles it with
+  `sfx_RingLeft` before playback. The engine only alternated the
+  `GameSound.RING` request, so callers that sent the raw id (the Blue Sphere
+  stage, the Mega Chopper) played every ring through the right speaker.
+  `AudioManager.playSfx(int)` now takes the same alternation for the
+  profile's raw ring id, in all three games, as the S1, S2 and S3K drivers
+  do. New tests render `$33`/`$34` through the sequencer and Nuked-OPN2
+  facade and assert the channel each lands on, and that consecutive raw
+  requests alternate.
+
 - **Licence notices ship with every build:** `NOTICE.md` at the repository
   root records the Nuked OPN2 FM core (Alexey Khokholov, LGPL-2.1-or-later,
   pinned upstream commit) and the modifications made to it; `LICENSE`,
