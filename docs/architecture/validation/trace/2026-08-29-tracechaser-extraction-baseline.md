@@ -112,24 +112,34 @@ None is a moved producer or active extraction dependency.
 
 ## Versioned path inventory
 
-The adjacent TSV contains 531 unique data rows with the required seven columns.
+The adjacent TSV contains 532 unique data rows with the required nine columns.
 It classifies all 346 tracked files below the four candidate roots, every named
 Python/Java/Lua/audio contract, `LICENSE`, the normalization contract, and
 every tracked file containing an old-root reference.
 
-Disposition counts are:
+History-filter actions are deliberately distinct from final OpenGGF cutover
+actions. Task 2 reads only `history_disposition` and `history_new_path`; it
+cannot consume a conceptual test replacement or a later forwarder decision.
+Counts are:
 
-| Disposition | Count |
+| Phase / disposition | Count |
 | --- | ---: |
-| `move` | 360 |
-| `retain` | 56 |
-| `consumer-copy` | 3 |
-| `delete-generated` | 2 |
-| `historical-reference` | 110 |
+| history `move` | 352 |
+| history `exclude` | 180 |
+| cutover `delete` | 340 |
+| cutover `forwarder` | 12 |
+| cutover `retain` | 59 |
+| cutover `historical-reference` | 110 |
+| cutover `delete-after-task-5` | 9 |
+| cutover `split-after-task-5` | 2 |
 
-Automated checks found zero duplicate paths, zero missing candidate-root paths,
-and zero unclassified tracked reference files. The two generated diagnostic
-outputs are the only `delete-generated` rows. The four
+Automated checks found zero duplicate paths, zero duplicate history
+destinations, zero missing candidate-root paths, and zero unclassified tracked
+reference files. All Java contract tests are history-excluded OpenGGF inputs;
+the eleven replacement/split actions are gated on Task 5 proof. The twelve
+public run/test/Lua/validation/comparison/compression/matrix paths are
+individually named forwarders. The two generated diagnostics are history
+excluded and cutover-deleted. The four
 `tools/testing/test_*trace_v5*.py` files, both hook installers, and both
 Surefire tools have explicit individual dispositions.
 
@@ -155,16 +165,29 @@ The extraction-specific matrix is
 - Roslyn compiler SHA-256:
   `81e98ade50f3e4127237128211778bd6ebe0c3998c9cc2f5eb44f3196a0297f8`.
 
-The policy checks the immutable source diff, exact toolchain, a clean archive
-build, 150 selected capture-relevant native contracts, all ROM/movie hashes,
-and the current fixture inventory. Native executable byte identity is not an
-authority because clean-checkout paths are embedded in the assemblies.
-Observational final build values were:
+The policy checks the immutable source diff, exact toolchain, official BizHawk
+2.11 archive/source locks, eleven exact runtime inputs, both required
+`client.invisibleemulation` capability witnesses, a clean archive build, 150
+selected capture-relevant native contracts, all ROM/movie hashes, and the
+current fixture inventory. The deterministic compiler maps both ordinary and
+space-containing checkouts to the canonical source path, so all four EXE/PDB
+identities are release authority:
 
-| Binary | Size | Observed SHA-256 |
+| Artifact | Size | Required SHA-256 |
 | --- | ---: | --- |
 | `BizHawk.Headless.Gpgx.exe` | 537,600 | `5811e3103ac64a26c56e9ae08775ec0beab3ddf02be6b20ef31113abbb5cd316` |
+| `BizHawk.Headless.Gpgx.pdb` | 157,796 | `ac213d7c55316b63001b34a0c72e727f95767151ff6f2c75f5a2260aa526a0f7` |
 | `BizHawk.Headless.Gpgx.Tests.exe` | 1,024,000 | `0e65176bb80e3fbee699a8bc4174a9adc62c6359e9773e8495fe68515a738947` |
+| `BizHawk.Headless.Gpgx.Tests.pdb` | 241,468 | `2ef3337c4b54734b16eddf1a2a0149839842d5aedeac55bb8907ad0610fa2f63` |
+
+The official Linux archive SHA-256 is
+`cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8`.
+The installer-lock SHA-256 is
+`8dadc9cad103b30155a72a948e81b360753f867cd35978e3e16cd115de25d85d`;
+the native source-lock SHA-256 is
+`348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9`.
+An arbitrary `BIZHAWK_HOME` is rejected before build if any locked runtime
+input or capability witness differs.
 
 The preflight ran in the fresh, previously absent root:
 
@@ -184,13 +207,18 @@ passed, and matrix expansion wrote exactly six commands. The ledger SHA-256 is
 the complete capture log SHA-256 is
 `40a5ef17a99b43bcab37e0a36f943d2cdeea31d5ef57d47d7dee21959802433c`.
 
+Review preflight re-proved the locked build in a second fresh root. All 150
+selected tests and all four deterministic artifact gates passed; all six output
+roots and the Task 9 candidate were absent, with 469,109,690,368 bytes
+available against 5,125,000,000 required.
+
 ## ROM and movie identities
 
 | Game | Absolute ROM | SHA-1 | SHA-256 |
 | --- | --- | --- | --- |
-| S1 | `$OPENGGF_S1_ROM` (absolute, discovered below `$OPENGGF_MAIN_ROOT`) | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` | `1b7f6635bd713f37f3c2f44f302b872c2e3c5f56e63637918dad4637146900fd` |
-| S2 | `$OPENGGF_S2_ROM` (absolute, discovered below `$OPENGGF_MAIN_ROOT`) | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` | `193bc4064ce0daf27ea9e908ed246d87ec576cc294833badebb590b6ad8e8f6b` |
-| S3K | `$OPENGGF_S3K_ROM` (absolute, discovered below `$OPENGGF_MAIN_ROOT`) | `CFBF98C36C776677290A872547AC47C53D2761D6` | `fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23` |
+| S1 | `$S1_ROM_PATH` (absolute, discovered below `$OPENGGF_MAIN_ROOT`) | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` | `1b7f6635bd713f37f3c2f44f302b872c2e3c5f56e63637918dad4637146900fd` |
+| S2 | `$S2_ROM_PATH` (absolute, discovered below `$OPENGGF_MAIN_ROOT`) | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` | `193bc4064ce0daf27ea9e908ed246d87ec576cc294833badebb590b6ad8e8f6b` |
+| S3K | `$S3K_ROM_PATH` (absolute, discovered below `$OPENGGF_MAIN_ROOT`) | `CFBF98C36C776677290A872547AC47C53D2761D6` | `fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23` |
 
 | Capture | BK2 path below `src/test/resources/traces` | BK2 SHA-256 |
 | --- | --- | --- |
@@ -205,19 +233,23 @@ No BK2 or ROM was copied.
 
 ## Literal argument ledger
 
-The exact generated ledger, including its resolved machine-local absolute
-paths, remains the immutable external `capture-commands.txt` whose SHA-256 is
-recorded above. The repository-safe transcription below replaces only those
-absolute prefixes with the recorded environment variables; command ordering,
-arguments, selectors, and input/output paths relative to those roots are exact.
+The adjacent tracked
+`2026-08-29-tracechaser-extraction-argv-ledger.json` is the exact ordered argv
+authority. Its canonical command-array SHA-256 is
+`46d639e8b91ea59c3c236d99876163e3b48b833949b69390aab3c529eae4070b`.
+Each `${NAME}` token is prefix-substituted with the required absolute root as
+raw UTF-8 and the resulting ordered strings are passed directly to process
+creation without joining or shell reparsing. This reconstructs every argument
+byte from the tracked base while keeping machine-local prefixes out of Git.
+The shell rendering below is informative; the JSON argv arrays are authority.
 
 ```bash
-"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$OPENGGF_S1_ROM" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s1-ghz1"
-"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$OPENGGF_S1_ROM" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s1-emeralds-run" --run-id s1-sonic-complete-withemeralds
-"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$OPENGGF_S2_ROM" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s2/ehz1_fullrun/s2-ehz1.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s2-ehz1" --trace-profile gameplay_unlock
-"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$OPENGGF_S2_ROM" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s2-emeralds-run" --run-id s2-sonic-tails-complete-emeralds
-"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$OPENGGF_S3K_ROM" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/s3-aiz1-2-sonictails.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s3k-aiz" --trace-profile aiz_end_to_end --load-queue-state
-"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$OPENGGF_S3K_ROM" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s3k-complete" --trace-profile complete_run --load-queue-state
+"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$S1_ROM_PATH" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s1-ghz1"
+"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$S1_ROM_PATH" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s1-emeralds-run" --run-id s1-sonic-complete-withemeralds
+"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$S2_ROM_PATH" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s2/ehz1_fullrun/s2-ehz1.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s2-ehz1" --trace-profile gameplay_unlock
+"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$S2_ROM_PATH" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s2-emeralds-run" --run-id s2-sonic-tails-complete-emeralds
+"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$S3K_ROM_PATH" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/s3-aiz1-2-sonictails.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s3k-aiz" --trace-profile aiz_end_to_end --load-queue-state
+"$OPENGGF_REPOSITORY_ROOT/tools/bizhawk-headless/run.sh" --mode trace --rom "$S3K_ROM_PATH" --movie "$OPENGGF_REPOSITORY_ROOT/src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2" --output "$TRACECHASER_EVIDENCE_ROOT/pre-extraction/captures/s3k-complete" --trace-profile complete_run --load-queue-state
 ```
 
 ## Frozen output corpus
@@ -240,6 +272,13 @@ logical decompressed SHA-256.
 The inventories are immutable external artifacts at
 `TRACECHASER_EVIDENCE_ROOT/pre-extraction/inventories/<capture-id>.json`.
 They are outside both repositories and outside every capture root.
+
+The strict validator now opens the field-disjoint run-root
+`hardware_timing_interstitial.jsonl` companion. For `s3k-complete` it validated
+1,087 per-segment timing events plus all 11 interstitial events, preserving the
+recorded total of 1,098. It enforces exact grammar, boundary ordering/name
+stability, unique/increasing per-kind ordinals, and contiguous within-boundary
+spans; interstitial fields cannot be accepted as per-segment timing fields.
 
 Task 9 must compare a fresh standalone reproduction with:
 
@@ -267,8 +306,9 @@ Any unexplained byte or semantic difference blocks release.
 | feature before Task 1 corrections, same ordinary suite | 14,896 run; 0 failures; 0 errors; 36 skipped; BUILD SUCCESS (03:25) |
 | feature before Task 1 corrections, same guards | 550 run; 0 failures; 0 errors; 0 skipped; BUILD SUCCESS (01:55) |
 | extraction matrix clean-build selected native contracts | 150 passed; 0 failed; 0 skipped |
-| four trace-v5 Python modules after corrections | 55 tests; OK (73.325 s) |
-| Java/Lua producer, audio, and PLC focused selector | 79 run; 0 failures; 0 errors; 3 skipped; BUILD SUCCESS (13.974 s) |
+| two-path deterministic EXE/PDB guard after review | PASS; both paths byte-identical; 24 smoke assertions passed |
+| four trace-v5 Python modules after review | 64 tests; OK (72.616 s) |
+| Java/Lua producer, audio, and PLC focused selector | 79 run; 0 failures; 0 errors; 3 skipped; BUILD SUCCESS (13.543 s) |
 | full current native `--no-gates`, all ROMs, writable task temp | 653 tests: 636 passed; 14 failed; 3 skipped |
 
 The focused Maven selector was:
@@ -310,10 +350,15 @@ These were committed separately from this evidence:
   verified absolute ROM environment paths;
 - `717c6ff6eb0d77198ac866d489b27ee2539583e7`: the v5 validator recognizes
   the already-landed S1 `nemesis_plc_queue` kind and enforces its existing
-  `pre_main_loop` boundary.
+  `pre_main_loop` boundary;
+- `a8bbcbbebcfe7bad39294066e38a39eba6983940`: exact deterministic EXE/PDB
+  and BizHawk 2.11 input gates, strict run-root interstitial timing validation,
+  and the tracked normalized argv authority requested by Task 1 review.
 
-The last correction changed validator coverage only. It did not change recorder
-behaviour, trace schema, canonical fixtures, or any expected capture hash.
+The review correction changed the verifier, validator, deterministic-build
+smoke selector, and evidence documents only. It did not change recorder
+behaviour, trace schema, canonical fixtures, or any expected capture hash, so
+the six outputs were revalidated rather than rerecorded.
 
 The `TRACECHASER_EXTRACTION_BASE` is the 40-character commit containing this
 baseline and the adjacent inventory. It is exported immediately after that

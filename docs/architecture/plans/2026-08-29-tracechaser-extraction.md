@@ -92,11 +92,15 @@ capture corpus with hashes, counts, and ordering.
 - [ ] Merge updated local `develop` into the feature worktree. Run the same two
   suites there and compare them before extraction changes.
 - [ ] Inventory every candidate tracked path and every old-root reference. TSV
-  columns are `old_path`, `kind`, `disposition`, `owner`, `consumer`, `new_path`,
-  and `notes`; dispositions are `move`, `forwarder`, `consumer-copy`, `retain`,
-  `delete-generated`, and `historical-reference`. Zero paths/references remain
-  unclassified. Name the four `tools/testing/test_*trace_v5*.py` files and
-  explicitly retain hook installers and Surefire tools.
+  columns are `old_path`, `kind`, `history_disposition`, `history_new_path`,
+  `cutover_disposition`, `cutover_new_path`, `owner`, `consumer`, and `notes`.
+  History dispositions are only `move` and `exclude`; cutover dispositions are
+  `retain`, `delete`, `forwarder`, `historical-reference`,
+  `delete-after-task-5`, and `split-after-task-5`. A history move is an exact
+  byte-preserving filter/rename, never a conceptual language replacement. Zero
+  paths/references remain unclassified. Name the four
+  `tools/testing/test_*trace_v5*.py` files and explicitly retain hook installers
+  and Surefire tools.
 - [ ] Create `TRACECHASER_EVIDENCE_ROOT/pre-extraction` outside both repositories.
   Require `TRACECHASER_WORK_ROOT` not to exist before creating it; never reuse or
   merge an earlier filtered clone or evidence directory.
@@ -140,13 +144,18 @@ classification of every line; exit 2 or higher is a tool failure.
 
 - [ ] Record `git filter-repo --version`. Create a fresh `--no-local` clone at
   `TRACECHASER_ROOT`, remove OpenGGF remotes, and create `main` at the exact base.
-- [ ] Generate `history-filter-paths.tsv` from the frozen inventory, review it,
-  and use it to construct an explicit `git filter-repo --force` invocation with
-  one `--path` and `--path-rename` argument per reviewed entry. Record the exact
-  clone and filter commands verbatim in `docs/history-import.md`; execute that
-  command, not an independently reconstructed list. Rename old tool roots to
-  root boundaries, selected tests to `testing/`, Lua resources to
-  `testing/lua/`, and normalization JSON to `contracts/audio/`.
+- [ ] Generate `history-filter-paths.tsv` only from rows whose
+  `history_disposition` is `move`, using `old_path` and `history_new_path`
+  exactly; never read `cutover_disposition` or `cutover_new_path` while building
+  the filter. Review it, and use it to construct an explicit
+  `git filter-repo --force` invocation with one `--path` and `--path-rename`
+  argument per reviewed entry. Record the exact clone and filter commands
+  verbatim in `docs/history-import.md`; execute that command, not an
+  independently reconstructed list. Java assertion sources remain excluded
+  OpenGGF inputs until Task 5 independently implements their replacements.
+  Rename old tool roots to root boundaries, selected Python tests to
+  `testing/`, Lua resources to `testing/lua/`, and normalization JSON to
+  `contracts/audio/`.
 - [ ] Exclude exactly `bizhawk/diag_aiz2_djf_probe_output.txt` and
   `bizhawk/diag_aiz2_monitor_solid_output.txt`; the evidence allowlist is empty.
 - [ ] Record all old/new paths. Prove history with the resulting root commit,
@@ -341,9 +350,12 @@ when every step is staged together.
 - [ ] Update retained audio callers `run_s1_audio_parity.sh`,
   `run_s1_ghz1_gameplay_audio_timeline.sh`, and
   `build-s1-ym-busy-program.py` to use verified pinned paths. Test before delete.
-- [ ] Keep reviewed thin forwarders for run/test/Lua/validation/comparison/
-  compression and the public capture-matrix entry point unless every supported
-  caller is migrated and the old command is explicitly historical.
+- [ ] Consume only the inventory's `cutover_disposition` for the authority
+  switch. Keep every individually named `forwarder` row for
+  run/test/Lua/validation/comparison/compression and the public capture-matrix
+  entry point unless every supported caller is migrated and the old command is
+  explicitly historical. Apply `delete-after-task-5` and `split-after-task-5`
+  only after the corresponding Task 5 replacement proof passes.
 - [ ] Delete all other old-root implementation files and moved producer tests/
   resources only after replacements pass. Explicitly disposition both S1 tests,
   both decode gates, PLC evidence, animation recorder, and GPGX consumer.
