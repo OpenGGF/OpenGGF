@@ -2,8 +2,11 @@
 
 Date: 2026-08-29
 Scope: the programmable sound generator integrated into the Sega 315-5313 VDP (Mega
-Drive / Genesis), which is a licensed reimplementation of the Texas Instruments
-SN76489 family as first integrated into the Sega Master System VDP.
+Drive / Genesis), a functionally compatible reimplementation of the Texas Instruments
+SN76489 family, first integrated by Sega into the Master System VDP. (Whether the
+reimplementation was licensed is not publicly documented and is not claimed here.)
+
+Reviewed 2026-08-29 under the same source rule (see §11 for the review record).
 
 ## Source rule
 
@@ -14,12 +17,15 @@ the chip only:
   the primary reference for the Sega-integrated variant, including the LFSR
   measurements.
 - Texas Instruments, *SN76489 / SN76489A / SN76496 Programmable Tone/Noise Generator*
-  datasheet — register formats, attenuator step, noise shift rates.
+  datasheet — register formats, attenuator step, noise shift rates (its noise-rate
+  table names the fourth setting "Tone generator #3 output"), and the `READY`
+  write handshake (~32 clocks) of the discrete part.
 - Sega, *Mega Drive / Genesis Hardware Manual* — clock derivation, port addresses.
 - Published hardware measurements of the SMS and Mega Drive PSG (SMS Power! forum
   measurements of the LFSR sequence and tone-period-0 behaviour).
 - The SMPS sound-driver disassemblies under `docs/` (for the "why SMPS relies on it"
-  paragraph only; those are game code, not emulator code).
+  paragraph only; those are game code, not emulator code), and the shipped ROM bytes
+  of the PSG note tables (§3.3), read directly from the ROM images.
 
 No emulator source was consulted (not the engine's own `PsgChip.java`, not Genesis Plus
 GX, not libvgm/MAME, not BizHawk). Points where memory of the public sources was not
@@ -32,9 +38,15 @@ emulator.
 | Region | Master clock | PSG input clock (master ÷ 15) | Internal tick (input ÷ 16) |
 |---|---|---|---|
 | NTSC | 53,693,175 Hz | **3,579,545 Hz** | **223,721.5625 Hz** |
-| PAL | 53,203,424 Hz | **3,546,893 Hz** | **221,680.8125 Hz** |
+| PAL | 53,203,424 Hz | **3,546,895 Hz** (53,203,424 ÷ 15 = 3,546,894.93) | **221,680.93 Hz** |
 
 - The PSG input clock is the same 3.58 MHz / 3.55 MHz clock that drives the Z80.
+- The PAL figure `3,546,893 Hz` that appears in many references (and in VGM file
+  headers) is 53,203,400 ÷ 15; it differs from the value derived from the PAL master
+  clock above by 2 Hz (0.6 ppm) and the two are interchangeable for every purpose in
+  this document. The table is kept internally consistent with the stated master
+  clock; `PSG_Sample_Rate` in the S1/S2 disassemblies is defined as
+  `Master_Clock/15/16` with `Master_Clock = 53693175` (NTSC), i.e. 223,721.5625 Hz.
 - Everything the sound generators do — tone counters, noise counter, LFSR shifting —
   happens on the **÷16 internal tick**. Nothing observable changes between ticks except
   register contents (which are written asynchronously by the CPU and are sampled by the
@@ -112,8 +124,13 @@ Effects of a latch/data byte, in order:
 
 ### 2.4 Access timing
 
-Writes are accepted at any time; the VDP does not stall the CPU for PSG writes. The
-register update is visible to the generators from the next ÷16 tick. For an emulator
+Writes are accepted at any time. Whether the Mega Drive VDP inserts wait states on a
+PSG write is not stated in the public documentation consulted here (known ambiguity,
+§10); the discrete TI part documents a `READY` handshake in which the chip holds the
+CPU for roughly 32 input clocks (two ÷16 ticks) while it clocks the byte in, so on
+that part a write becomes effective up to two ticks after the CPU issues it. For the
+integrated part this document assumes the register update is visible to the
+generators from the next ÷16 tick after the write. For an emulator
 running at sample resolution this means a write must be timestamped in input-clock (or
 at least ÷16-tick) units and applied to the generator state before the tick that
 follows it — a write cannot be quantised to the output sample period without
@@ -142,7 +159,7 @@ Equivalently: the polarity flips once every `N` ticks, so the square wave has a
 half-period of `N` ticks and a full period of `2N` ticks:
 
 ```
-f = 3,579,545 / (32 × N)  Hz (NTSC)      f = 3,546,893 / (32 × N)  Hz (PAL)
+f = 3,579,545 / (32 × N)  Hz (NTSC)      f = 3,546,895 / (32 × N)  Hz (PAL)
 ```
 
 | N | NTSC frequency | PAL frequency |
@@ -150,11 +167,11 @@ f = 3,579,545 / (32 × N)  Hz (NTSC)      f = 3,546,893 / (32 × N)  Hz (PAL)
 | 0x3FF (1023) | 109.35 Hz | 108.35 Hz |
 | 0x1AC (428) | 261.36 Hz | 258.97 Hz |
 | 0x010 (16) | 6,991.30 Hz | 6,927.53 Hz |
-| 0x001 | (111,860.78 Hz nominal — see §3.2) | (110,840.41 Hz nominal) |
+| 0x001 | (111,860.78 Hz nominal — see §3.2) | (110,840.47 Hz nominal) |
 
 Changing `N` while a channel is sounding does not reset the counter or the polarity;
 the new value is used at the next reload. (Whether a new `N` smaller than the
-current count truncates the current half-period is a known ambiguity, §9.)
+current count truncates the current half-period is a known ambiguity, §10.)
 
 ### 3.2 Period 0 and period 1 on the Sega-integrated variant
 
@@ -178,15 +195,24 @@ titles that play PCM samples through the PSG work on Sega hardware and produce a
 
 The SMPS PSG note table (`PSGFrequencies` in `docs/s1disasm/s1.sounddriver.asm`,
 the same shape in the S2 and S3K drivers) is generated as
-`min(0x3FF, round(PSG_Sample_Rate / (f × 2)))` with `PSG_Sample_Rate = 223,721.56`,
-i.e. exactly the ÷16 tick rate above. The table's top entries are generated from a
-nominal frequency of **223,721.56 Hz**, which yields a period of **0 (or 1, depending
-on how 0.5 rounds)** — deliberately the DC case. Those entries are the driver's
-"highest note", and the Sonic 3 table uses the same trick at both ends: its bottom
-octave is clamped to 0x3FF (109.34 Hz) and its top two semitones are the DC value.
-When a track plays one of those notes (or when SMPS modulation/detune arithmetic
-pushes a period to 0 or 1), the Sega variant produces a constant level at the
-current envelope volume instead of a 109 Hz tone. Any emulator that implements the
+`min(0x3FF, round(PSG_Sample_Rate / (f × 2)))` with `PSG_Sample_Rate = Master_Clock/15/16
+= 223,721.5625`, i.e. exactly the ÷16 tick rate above. The top of the table is
+generated from a nominal frequency of **223,721.56 Hz**, which the formula turns into
+`round(0.5)` — deliberately the DC case. The **shipped ROM bytes** settle how that
+rounded (checked directly in the ROM images, not via an assembler or an emulator):
+
+| Driver | Table location in ROM | Entries | Top entries |
+|---|---|---|---|
+| Sonic 1 (68k SMPS) | `0x729CE` (label `word_729CE`), 70 words big-endian | c-1 … a-6 | last entry (a-6) = **`0x000`** at `0x72A58` |
+| Sonic 3 & Knuckles (Z80 SMPS) | `0x2E6A88`, 84 words little-endian | 7 octaves | a-6 = `0x010` (6,991.28 Hz), then a#-6 and b-6 = **`0x000`, `0x000`** |
+| Sonic 2 (Z80 SMPS) | Saxman-compressed in ROM; bytes not read | same source table as S1 | assembled from the same `223721.56` entry; not independently confirmed |
+
+So the DC entries are **period 0**, not 1. The Sonic 3 table extends the range at both
+ends: its first **nine** notes (c-0 … g#-0) clamp to 0x3FF (109.35 Hz) and the
+remaining three of that octave are real periods (`0x3F7`, `0x3BE`, `0x388`); its top
+two semitones are the period-0 DC value. When a track plays one of those notes (or
+when SMPS modulation/detune arithmetic pushes a period to 0 or 1), the Sega variant
+produces a constant level at the current envelope volume instead of a 109 Hz tone. Any emulator that implements the
 TI wrap-to-0x400 rule will play an audible low buzz where the ROM plays a DC hold, so
 the `N ≤ 1 ⇒ constant high` rule is **required** for SMPS parity, not optional.
 
@@ -235,12 +261,28 @@ every **low-to-high transition** of the noise counter's polarity (one shift per 
 reloads). That is why "÷16" in the register description corresponds to a shift every
 32 ticks = 512 input clocks, matching the datasheet's `clock/512`.
 
-In mode `11` the noise counter is clocked from tone 2's period register value but has
-its **own** counter and polarity; it does not read tone 2's live counter. Tone 2 keeps
-sounding normally (drivers usually mute tone 2 with attenuation 0xF while using it
-this way — SMPS's "PSG noise" tracks do exactly that). If `N₂ ≤ 1`, the Sega
-period-0/1 rule applies to the noise counter as well and the LFSR stops shifting
-(known ambiguity, §9).
+In mode `11` the two public sources describe the wiring differently, and the
+difference is one of phase only:
+
+- The TI datasheet's noise-rate table names the fourth setting **"Tone generator #3
+  output"**, and its block diagram feeds that output into the noise clock mux. Under
+  that wiring the LFSR is clocked by the rising edges of tone 2's *actual* output —
+  tone 2's counter and polarity flip-flop are shared, and the noise shift is phase-
+  locked to the audible tone 2 square wave.
+- Maxim's description models a separate noise counter that is reloaded with the value
+  of tone 2's period register. Frequency is identical; the noise flip phase is
+  independent of tone 2's.
+
+The two models produce the same shift *rate* and differ only in where the shifts fall
+relative to tone 2's edges (and in the transient when `rr` is switched to `11`
+mid-period). This document does not assert which the Sega part implements (known
+ambiguity, §10); an implementation may use either, but must not claim the separate
+counter as a hardware fact. Tone 2 keeps sounding normally (drivers usually mute tone
+2 with attenuation 0xF while using it this way — SMPS's "PSG noise" tracks do exactly
+that). If `N₂ ≤ 1`, the constant-high rule leaves tone 2's output with no edges, so
+under the datasheet wiring the LFSR cannot shift; this document specifies **the LFSR
+stops shifting**, which is also what the separate-counter model gives if the
+period-0/1 rule is applied to the noise counter (§10).
 
 ### 4.2 Feedback mode (`m`, bit 2)
 
@@ -260,7 +302,17 @@ period-0/1 rule applies to the noise counter as well and the LFSR stops shifting
 | Reset value | `0x8000` | `0x4000` |
 | Output bit | bit 0 | bit 0 |
 | Periodic-mode period | 16 shifts | 15 shifts |
-| White-mode period from reset | **57,337 shifts** (the 0x0009 polynomial is not maximal; 0x8000 lies on a 57,337-state cycle, not the full 65,535) | 32,767 shifts (maximal) |
+| White-mode period from reset | **57,337 shifts** (the 0x0009 polynomial is not maximal; 0x8000 lies on a 57,337-state cycle, not the full 65,535 — see below) | 32,767 shifts (maximal) |
+
+Why the Sega register is not maximal-length: taps at bits 0 and 3 of a right-shifting
+16-bit register implement the trinomial `x^16 + x^13 + 1` (reciprocal `x^16 + x^3 + 1`).
+No trinomial whose degree is a multiple of 8 is irreducible over GF(2) (Swan's
+theorem), so no 16-bit two-tap LFSR can be maximal. This one factors as a degree-3 times
+a degree-13 primitive polynomial, and its 65,535 non-zero states split into exactly
+three cycles of length **7, 8,191 and 57,337** (`7 × 8,191 = 57,337`; `7 + 8,191 +
+57,337 = 65,535`). The reset value 0x8000 lies on the 57,337 cycle. The 15-bit TI
+register (`x^15 + x + 1`) is primitive and gives the full 32,767. Both figures were
+recomputed independently for the review record (§11).
 
 Shift step (Sega, white):
 
@@ -280,15 +332,17 @@ out  = lfsr & 1
 
 The output level of the noise channel is `out ? level[A] : 0` — unipolar, like the
 tone channels. The noise output is read from bit 0 **after** the shift (known
-ambiguity, §9 — but see the test vectors, which only differ by one sample of delay).
+ambiguity, §10 — but see the test vectors, which only differ by one sample of delay).
 
 ### 4.4 Which bit is output
 
 Bit 0 (the bit that will next be shifted out). Because the reset pattern is a single
 1 at the top, the first 14 (Sega) or 13 (TI) outputs after a reset are 0 whatever the
-mode. That silence-after-reset is audible when a driver resets the noise register at
-a high rate; SMPS PSG SFX that retrigger noise every few frames rely on it being
-exactly this long.
+mode. That silence-after-reset (14 shifts: 2.0 ms at `rr = 00`, 8.0 ms at `rr = 10`,
+longer at slow tone-2-linked rates) is audible when a driver resets the noise register
+at a high rate, so an emulator must reproduce the reset value and the output-bit
+position exactly. SMPS PSG SFX do re-write the noise register on every retrigger; no
+claim is made here that any track depends on the exact length of the gap.
 
 ### 4.5 When the LFSR resets
 
@@ -299,8 +353,9 @@ exactly this long.
 - **Not** on noise attenuation writes (`1111xxxx`), not on tone writes, not when the
   rate changes because tone 2's period changed in mode `11`.
 
-Resetting the LFSR does not reset the noise down-counter; the next shift happens at
-the next rising edge of the existing noise square wave.
+This document assumes that resetting the LFSR does not reset the noise down-counter,
+so the next shift happens at the next rising edge of the existing noise square wave.
+Neither public source states this either way; it is an assumption, recorded in §10.
 
 ## 5. Attenuation
 
@@ -342,7 +397,7 @@ depends on.
 
 The nominal step is exactly 2 dB on the datasheet; measured Sega chips deviate by up
 to a few tenths of a dB per step, and the top step (0→1) is often reported slightly
-larger than 2 dB (known ambiguity, §9). The 2 dB ideal is the specification here.
+larger than 2 dB (known ambiguity, §10). The 2 dB ideal is the specification here.
 
 ## 6. Output stage, DC level and channel summing
 
@@ -363,7 +418,7 @@ larger than 2 dB (known ambiguity, §9). The 2 dB ideal is the specification her
 - **Relative loudness.** On the Mega Drive the PSG is mixed into the YM2612 output
   at a fixed analogue ratio in the console's mixer; a full-scale PSG channel
   (`A = 0`, one of four) is quieter than a full-scale YM2612 channel. The exact ratio
-  varies by board revision and is not a property of the PSG (known ambiguity, §9).
+  varies by board revision and is not a property of the PSG (known ambiguity, §10).
 
 For a bipolar emulator representation the recommended mapping is
 `out = level[A] × (polarity ? +1 : −1) / 2` **plus** a constant `level[A] / 2`, i.e.
@@ -419,7 +474,8 @@ Facts an emulator has to respect, in decreasing order of audibility:
    treatment as the tone flips applies (each LFSR step is a step in the output level
    whenever the output bit changes).
 5. **Attenuation writes are instantaneous** and can arrive at up to the CPU's write
-   rate; for the DAC trick the write rate is 8–26 kHz. They are level steps at the
+   rate; for the DAC trick the write rate is whatever the sample-playback loop
+   achieves, typically in the low-to-mid kHz range. They are level steps at the
    write time and need the same band-limiting treatment as polarity flips.
 6. **Period 0/1 channels never flip**: an emulator must not generate a 111.9 kHz
    (`N = 1`) or 109 Hz (`N = 0` wrapped) tone on the Sega variant.
@@ -574,7 +630,10 @@ documented, cited measurement), not by copying an emulator.
 5. **Noise counter at `N₂ ≤ 1` in tone-2-linked mode:** whether the Sega
    constant-high rule stops the LFSR clock (this spec) or the noise counter flips every
    tick. Audible on any SMPS PSG SFX that sweeps tone 2 to the top of the table while
-   the noise channel is linked.
+   the noise channel is linked. *Review note:* the TI datasheet wires "tone generator
+   #3 output" into the noise clock, and a constant output has no edges, so "stops" is
+   the only reading consistent with the datasheet wiring plus the documented
+   constant-high rule. Still unmeasured on the Sega part.
 6. **Reset value of the tone period registers** (0x000 in this spec vs 0x3FF or
    undefined) — unobservable while muted, but visible if a driver un-mutes a channel
    before writing a period.
@@ -583,16 +642,89 @@ documented, cited measurement), not by copying an emulator.
    and the whole ladder is slightly non-monotonic in step size. Also whether
    `A = 14` is −28 dB or somewhat lower on the integrated part.
 8. **Whether attenuation changes are truly asynchronous** or are synchronised to the
-   ÷16 tick. Difference is at most 4.5 µs of timing.
+   ÷16 tick. Difference is at most 4.5 µs of timing. The discrete part's `READY`
+   handshake (~32 clocks per write, datasheet) shows that on that part register
+   updates are clocked in over about two ticks; whether the integrated part has any
+   comparable latency, or stalls the 68000/Z80 for PSG writes, is not publicly
+   documented as far as this review found.
 9. **PSG-to-YM2612 mix ratio on the Mega Drive** (board-revision dependent; not a PSG
    property). Needed for output calibration, not for the core.
-10. **Whether the `PSGFrequencies` top entry assembles to 0 or 1** (`round(0.5)`),
-    which the S1 disassembly's macro leaves to the assembler. Either value produces
-    the same output on the Sega variant, so only the register-readback value differs.
+10. **Resolved — the `PSGFrequencies` top entry is 0.** The shipped ROM bytes carry
+    `0x000` for the S1 a-6 entry (ROM `0x72A58`) and `0x000, 0x000` for the S3K
+    a#-6/b-6 entries (ROM `0x2E6A88 + 0xA4`); see §3.3. A rebuild with an assembler
+    that rounds 0.5 up would emit 1 instead, which is why the disassembly source alone
+    could not settle it. Either value produces the same output on the Sega variant.
 11. **Whether a data byte following a noise latch byte resets the LFSR when it writes
     the same value** — this spec says any write resets; a "reset only on change" rule
     has been suggested but not, to this author's knowledge, measured.
 12. **The white-noise cycle length.** 57,337 is what the stated polynomial and reset
-    value give; if the true hardware output were ever measured as a 65,535-cycle, the
-    taps or width in Maxim's page would have to be revisited. The 0x0009 / 16-bit /
-    0x8000 description is the one all published Sega measurements report.
+    value give (the algebra is in §4.3: the three cycles are 7, 8,191 and 57,337, and
+    no 16-bit two-tap register can be maximal). If the true hardware output were ever
+    measured as a 65,535-cycle, the taps or width in Maxim's page would have to be
+    revisited. The 0x0009 / 16-bit / 0x8000 description is the one all published Sega
+    measurements report; this review found no public capture that states the cycle
+    length as a number, so the hardware-capture citation remains open.
+13. **Phase of the tone-2-linked noise clock:** whether the LFSR is clocked from tone
+    2's own output flip-flop (TI datasheet wiring, "tone generator #3 output") or from
+    a separate noise counter reloaded with tone 2's period (Maxim's description).
+    Same rate either way; differs in the phase of shifts relative to tone 2's edges and
+    in the transient when `rr` is switched to `11`. See §4.1.
+14. **Whether a noise-register write also reloads the noise down-counter.** This spec
+    assumes it does not (§4.5). Not stated by either public source.
+15. **Whether the Mega Drive VDP stalls the writing CPU on a PSG write.** The discrete
+    part holds `READY` low for ~32 clocks; nothing public found for the 315-5313.
+    Affects only bus timing, not the generators.
+
+## 11. Review record (2026-08-29)
+
+Adversarial review under the same source rule (no emulator source, no `PsgChip.java`).
+Every numeric claim was recomputed from scratch with an independent script:
+
+- LFSR state sequences and output bits for all four §9.1 vectors (Sega white/periodic,
+  TI white/periodic), the ones-at-shift positions, and the cycle lengths 57,337 / 16 /
+  32,767 / 15 — all reproduce. The full cycle decomposition of the Sega register
+  (7 + 8,191 + 57,337) was added to §4.3.
+- Attenuation table: every `linear`, `×8191` and `×32767` entry reproduces to the
+  stated rounding.
+- NTSC clock chain, all tone frequencies in §3.1, the noise rates in §4.1, and every
+  cell of the §9.3 timing table reproduce.
+- All nine §9.4 write-protocol vectors decode as stated.
+
+Defects found and corrected in this revision:
+
+1. PAL PSG clock was internally inconsistent with the stated PAL master clock
+   (53,203,424 ÷ 15 = 3,546,895, not 3,546,893). Table corrected; the conventional
+   figure and its origin noted (§1).
+2. §3.3 claimed the Sonic 3 table clamps its whole bottom octave to 0x3FF; only the
+   first nine notes clamp (`0x3F7`, `0x3BE`, `0x388` follow). Corrected from the
+   disassembly source and the ROM bytes.
+3. §3.3 left the top-entry value as "0 or 1"; the shipped ROM bytes are 0 for S1 and
+   S3K. Resolved (§3.3, §10.10).
+4. §4.1 asserted as fact that the tone-2-linked noise clock uses its own counter and
+   "does not read tone 2's live counter". The TI datasheet wires tone generator #3's
+   output into the noise clock; the separate-counter form is Maxim's model. Restated
+   as two phase-equivalent models with a new ambiguity (§10.13).
+5. §2.4 asserted the VDP does not stall the CPU on PSG writes; no public source found.
+   Hedged, with the discrete part's `READY` handshake cited (§2.4, §10.8, §10.15).
+6. §4.4 claimed SMPS SFX "rely on" the post-reset silence being exactly 14 shifts
+   long; unsupported. Replaced with the measurable gap lengths and a neutral statement.
+7. §4.5 stated as fact that a noise write leaves the noise down-counter alone; neither
+   source says so. Marked as an assumption (§10.14).
+8. §8 gave "8–26 kHz" as the DAC-trick write rate with no source. Softened.
+9. Scope line called the Sega part a "licensed" reimplementation; unsupported. Reworded.
+10. Four cross-references pointed "known ambiguity" readers at §9 (the test vectors)
+    instead of §10. Corrected.
+
+Claims attacked and **not** refuted (kept as written): 16-bit / taps 0x0009 / reset
+0x8000 / output bit 0 for the Sega register and 15-bit / 0x0003 / 0x4000 for TI;
+LFSR reset on any noise-register write including a data byte and including a rewrite
+of the same value; periods 0 and 1 both constant-high on the Sega part; 2 dB
+attenuator steps with 0xF a true off; ÷15 then ÷16 clock chain; port addresses;
+latch/data protocol including the 6-bit data byte for tone and the 4-bit data byte for
+attenuation/noise; the unipolar channel output and linear four-channel sum.
+
+Open questions the review could not close from public sources: the reset values of
+the tone-period and noise-control registers; before/after sampling phase of the noise
+output bit; counter behaviour when a smaller period is written mid-count; the measured
+attenuator ladder of the Sega part; the PSG-to-YM2612 mix ratio per board revision;
+a published capture stating the white-noise cycle length as a number.
