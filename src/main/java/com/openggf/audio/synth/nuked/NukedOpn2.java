@@ -36,16 +36,16 @@ import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_NUM_ATTACK;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_NUM_DECAY;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_NUM_RELEASE;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_NUM_SUSTAIN;
-import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_STEPHI;
+import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_STEPHI_FLAT;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EXPROM;
-import static com.openggf.audio.synth.nuked.NukedOpn2Tables.FM_ALGORITHM;
+import static com.openggf.audio.synth.nuked.NukedOpn2Tables.FM_ALGORITHM_BITS;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.FN_NOTE;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.LFO_CYCLES;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.LOGSINROM;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.OP_OFFSET;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_DETUNE;
-import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_LFO_SH1;
-import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_LFO_SH2;
+import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_LFO_SH1_FLAT;
+import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_LFO_SH2_FLAT;
 
 /**
  * Cycle-accurate Yamaha YM3438 / YM2612 (OPN2) emulator: a faithful Java port
@@ -344,7 +344,8 @@ public final class NukedOpn2 {
         if ((lfoL & 0x08) != 0) {
             lfoL ^= 0x0f;
         }
-        fm = (fnumH >> PG_LFO_SH1[pms][lfoL]) + (fnumH >> PG_LFO_SH2[pms][lfoL]);
+        /* Flattened [pms][lfoL] lookups: one load each, same entries */
+        fm = (fnumH >> PG_LFO_SH1_FLAT[(pms << 3) | lfoL]) + (fnumH >> PG_LFO_SH2_FLAT[(pms << 3) | lfoL]);
         if (pms > 5) {
             fm <<= pms - 5;
         }
@@ -568,7 +569,7 @@ public final class NukedOpn2 {
                     break;
                 }
             } else {
-                inc = EG_STEPHI[rate & 0x03][chip.egTimerLowLock] + (rate >> 2) - 11;
+                inc = EG_STEPHI_FLAT[((rate & 0x03) << 2) | chip.egTimerLowLock] + (rate >> 2) - 11; /* flattened [4][4] */
                 if (inc > 4) {
                     inc = 4;
                 }
@@ -666,19 +667,21 @@ public final class NukedOpn2 {
         /* Calculate modulation */
         mod1 = mod2 = 0;
 
-        if (FM_ALGORITHM[op][0][connect] != 0) {
+        /* The six FM_ALGORITHM[op][k][connect] flags read as bits of one packed entry */
+        int alg = FM_ALGORITHM_BITS[(op << 3) | connect];
+        if ((alg & 0x01) != 0) {
             mod2 |= chip.fmOp1[channel][0];
         }
-        if (FM_ALGORITHM[op][1][connect] != 0) {
+        if ((alg & 0x02) != 0) {
             mod1 |= chip.fmOp1[channel][1];
         }
-        if (FM_ALGORITHM[op][2][connect] != 0) {
+        if ((alg & 0x04) != 0) {
             mod1 |= chip.fmOp2[channel];
         }
-        if (FM_ALGORITHM[op][3][connect] != 0) {
+        if ((alg & 0x08) != 0) {
             mod2 |= chip.fmOut[prevslot];
         }
-        if (FM_ALGORITHM[op][4][connect] != 0) {
+        if ((alg & 0x10) != 0) {
             mod1 |= chip.fmOut[prevslot];
         }
         /* Bit16s: operands are 14-bit sign-extended, so OR and sum stay within 16 bits */
@@ -718,7 +721,7 @@ public final class NukedOpn2 {
         if (op == 0 && testDac == 0) {
             acc = 0;
         }
-        if (FM_ALGORITHM[op][5][chip.connect[channel]] != 0 && testDac == 0) {
+        if ((FM_ALGORITHM_BITS[(op << 3) | chip.connect[channel]] & 0x20) != 0 && testDac == 0) { /* [op][5][connect] */
             add += chip.fmOut[slot] >> 5; /* arithmetic shift of Bit16s */
         }
         sum = acc + add;
