@@ -349,6 +349,8 @@ jobs:
           Copy-Item "$env:BUILD_ROOT/OpenGGF.exe" "$env:DISTRIBUTION_ROOT/OpenGGF/"
           Copy-Item "$env:BUILD_ROOT/config.yaml" "$env:DISTRIBUTION_ROOT/OpenGGF/"
           Copy-Item "$env:BUILD_ROOT/native-libs/*.dll" "$env:DISTRIBUTION_ROOT/OpenGGF/"
+          Copy-Item LICENSE, NOTICE.md, CREDITS.md "$env:DISTRIBUTION_ROOT/OpenGGF/"
+          Copy-Item -Recurse LICENSES "$env:DISTRIBUTION_ROOT/OpenGGF/LICENSES"
           Compress-Archive -Path "$env:DISTRIBUTION_ROOT/OpenGGF" -DestinationPath "$env:DISTRIBUTION_ROOT/OpenGGF-windows.zip"
           Remove-Item -Recurse -Force "$env:DISTRIBUTION_ROOT/OpenGGF"
 
@@ -360,9 +362,11 @@ jobs:
         run: |
           mkdir -p "$DISTRIBUTION_ROOT"
           bash src/packaging/assemble-macos-app.sh "$BUILD_ROOT/OpenGGF" "$DISTRIBUTION_ROOT"
+          cp LICENSE NOTICE.md CREDITS.md "$DISTRIBUTION_ROOT/"
+          cp -R LICENSES "$DISTRIBUTION_ROOT/LICENSES"
           cd "$DISTRIBUTION_ROOT"
-          zip -r OpenGGF-macos.zip OpenGGF.app config.yaml
-          rm -rf OpenGGF.app
+          zip -r OpenGGF-macos.zip OpenGGF.app config.yaml LICENSE LICENSES NOTICE.md CREDITS.md
+          rm -rf OpenGGF.app LICENSES
 
       - name: Package (Linux)
         if: matrix.platform == 'linux'
@@ -374,6 +378,8 @@ jobs:
           cp "$BUILD_ROOT/OpenGGF" "$DISTRIBUTION_ROOT/OpenGGF/"
           cp "$BUILD_ROOT/config.yaml" "$DISTRIBUTION_ROOT/OpenGGF/"
           cp "$BUILD_ROOT"/native-libs/*.so "$DISTRIBUTION_ROOT/OpenGGF/"
+          cp LICENSE NOTICE.md CREDITS.md "$DISTRIBUTION_ROOT/OpenGGF/"
+          cp -R LICENSES "$DISTRIBUTION_ROOT/OpenGGF/LICENSES"
           tar -czvf "$DISTRIBUTION_ROOT/OpenGGF-linux.tar.gz" -C "$DISTRIBUTION_ROOT" OpenGGF
           rm -rf "$DISTRIBUTION_ROOT/OpenGGF"
 
@@ -414,6 +420,10 @@ jobs:
               fail("Could not read project version from pom.xml")
           version = match.group(1)
 
+          # NOTICE.md: the GPL-3 / LGPL-2.1 texts and notices accompany every copy.
+          LICENCE_FILES = {"LICENSE", "LICENSES/LGPL-2.1.txt", "NOTICE.md", "CREDITS.md"}
+          LICENCE_FILES_IN_JAR = {f"META-INF/openggf/{name}" for name in LICENCE_FILES}
+
           jar = artifact_root / f"OpenGGF-{version}-jar-with-dependencies.jar"
           if not jar.is_file():
               fail(f"Missing packaged JVM jar: {jar}")
@@ -424,6 +434,11 @@ jobs:
                   fail(f"{jar} is missing META-INF/MANIFEST.MF")
           if "Main-Class: com.openggf.Engine" not in manifest:
               fail(f"{jar} manifest does not bootstrap com.openggf.Engine")
+          with zipfile.ZipFile(jar) as archive:
+              jar_names = set(archive.namelist())
+          missing_notices = sorted(LICENCE_FILES_IN_JAR - jar_names)
+          if missing_notices:
+              fail(f"{jar} is missing licence notices: {', '.join(missing_notices)}")
           stale_manifest_terms = ["jogl", "gluegen", "joal", "jocl"]
           stale_terms = [term for term in stale_manifest_terms if term in manifest.lower()]
           if stale_terms:
@@ -435,7 +450,7 @@ jobs:
                   fail(f"Missing Windows archive: {archive_path}")
               with zipfile.ZipFile(archive_path) as archive:
                   names = set(archive.namelist())
-              required = {"OpenGGF/OpenGGF.exe", "OpenGGF/config.yaml"}
+              required = {"OpenGGF/OpenGGF.exe", "OpenGGF/config.yaml"} | {f"OpenGGF/{name}" for name in LICENCE_FILES}
               missing = sorted(required - names)
               if missing:
                   fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
@@ -452,7 +467,7 @@ jobs:
                       "OpenGGF.app/Contents/MacOS/OpenGGF",
                       "OpenGGF.app/Contents/MacOS/OpenGGF.bin",
                       "config.yaml",
-                  }
+                  } | LICENCE_FILES
                   missing = sorted(required - names)
                   if missing:
                       fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
@@ -473,7 +488,7 @@ jobs:
                   fail(f"Missing Linux archive: {archive_path}")
               with tarfile.open(archive_path, "r:gz") as archive:
                   members = {member.name: member for member in archive.getmembers()}
-              required = {"OpenGGF/OpenGGF", "OpenGGF/config.yaml"}
+              required = {"OpenGGF/OpenGGF", "OpenGGF/config.yaml"} | {f"OpenGGF/{name}" for name in LICENCE_FILES}
               missing = sorted(required - set(members))
               if missing:
                   fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
@@ -554,6 +569,11 @@ jobs:
                   fail(f"{jar} is missing META-INF/MANIFEST.MF")
           if "Main-Class: com.openggf.Engine" not in manifest:
               fail(f"{jar} manifest does not bootstrap com.openggf.Engine")
+          licence_files = {"LICENSE", "LICENSES/LGPL-2.1.txt", "NOTICE.md", "CREDITS.md"}
+          missing_notices = sorted(f"META-INF/openggf/{name}" for name in licence_files
+                                   if f"META-INF/openggf/{name}" not in names)
+          if missing_notices:
+              fail(f"{jar} is missing licence notices: {', '.join(missing_notices)}")
 
           required_native_payloads = {
               "natives-linux": ("linux/x64/", ".so"),

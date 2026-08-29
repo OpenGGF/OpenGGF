@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2017-2022 Alexey Khokholov (Nuke.YKT)
  * Java port Copyright (C) 2026 the OpenGGF contributors
+ * Modified 2026-08 by the OpenGGF contributors: translated from C to Java;
+ * chip type made per instance; state copy helpers and value equality added.
  *
  * This file is part of Nuked OPN2 (Java port).
  *

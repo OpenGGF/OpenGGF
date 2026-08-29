@@ -151,8 +151,9 @@ public class VirtualSynthesizer implements Synthesizer {
 
         ym.renderStereo(scratchLeft, scratchRight, frames);
 
-        // GPGX-style: FM output is clipped to +/-8191 internally.
-        // No output gain is applied here; volume issues are in EG/feedback.
+        // FM frames arrive at the facade's scale: one full-scale channel is 6144 (the 24-cycle pin sum,
+        // 768 per channel, shifted by Ym2612Chip.OUTPUT_SHIFT), so six channels stay inside 16 bits
+        // after MASTER_GAIN_SHIFT. No output gain is applied here; volume issues are in EG/feedback.
         psg.renderStereo(scratchLeft, scratchRight, frames);
 
         int sampleOffset = frameOffset * 2;

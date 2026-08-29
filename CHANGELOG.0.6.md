@@ -14,6 +14,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Licence notices ship with every build:** `NOTICE.md` at the repository
+  root records the Nuked OPN2 FM core (Alexey Khokholov, LGPL-2.1-or-later,
+  pinned upstream commit) and the modifications made to it; `LICENSE`,
+  `LICENSES/`, `NOTICE.md` and `CREDITS.md` are packaged into every jar under
+  `META-INF/openggf/` and into the Linux, Windows and macOS release archives,
+  and the release smoke validation checks for them. README gains a Licensing
+  section.
+
 - **FM writes are paced by the chip's busy window:** `Ym2612Chip` now holds
   each data strobe on the bus for 34 internal cycles (the 32-cycle busy
   window plus the two clocks before a status read shows it), as a
