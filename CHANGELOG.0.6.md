@@ -4,6 +4,18 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history
 
+- **Sonic 3&K object id `$4F` is no longer instantiated as sinking mud in the S&K
+  zone set:** `Sprite_Listing3` (SK Set 1, zones 0-6) maps `$4F` to `Obj_SinkingMud`
+  but `Sprite_ListingK` (SK Set 2, zones 7-13) maps the same slot to
+  `Obj_DEZStaircase` (`docs/skdisasm/Levels/Misc/Object pointers - SK Set 1.asm:90`,
+  `- SK Set 2.asm:90`; table selection at `docs/skdisasm/sonic3k.asm:37411`
+  `loc_1B6A8`). The registry registered the slot unconditionally, so DEZ staircase
+  placements would have spawned MGZ mud; the factory now follows the zone set like
+  its dual-table neighbours and hands SKL zones the named placeholder. The S3K object
+  checklist generator's implemented-id lists are transcribed from the registry per
+  zone gate and guarded by `TestSonic3kObjectProfileRegistryGuard`, and all three
+  `*OBJECT_CHECKLIST.md` files are regenerated from `ObjectDiscoveryTool`.
+
 - **The release structural checks are green again:** object priority rendering
   now reuses one palette-mask transition path, preserving the AIZ2 bridge
   layering fix while keeping rendering responsibility out of the already-large
