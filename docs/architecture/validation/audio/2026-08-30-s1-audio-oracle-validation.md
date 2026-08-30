@@ -76,8 +76,8 @@ tooling map documented as the one working path:
 | SFX capture determinism | debug-mode and production-mode runs emitted byte-identical captures; a third run reproduced the same 15,893,088 bytes |
 | SFX transport pins | `launch_update_music_invocations` 514 (same 989-row prefix as the music movie); all eight dispatches recorded exactly once at the authored frames |
 | Engine music comparison (committed `.gz` fixture) | **`S1 audio parity: MATCH (14690 ticks)`**, exit 0 |
-| Break-it-on-purpose, fixture side | tick 5000 DAC `duration` 11→12 in a temp copy → `track_state_mismatch, tick 5000, role DAC, field duration, reference 12, openggf 11`, exit 3 |
-| Break-it-on-purpose, engine side | tick 7000 event 0 `ym2612 p0 reg $28` value 1→0 in a temp copy → `event_value_different, tick 7000, event 0, reference value=1, openggf value=0`, exit 3 |
+| Break-it-on-purpose, fixture side | run A: tick 5000 `tempoTimeout` 3→4 in a temp copy → `global_state_mismatch, tick 5000, field tempo_timeout, reference 4, openggf 3`, exit 3; run B (concurrent writer's, per 0c1d0580e): tick 5000 DAC `duration` 11→12 → `track_state_mismatch`, exit 3 |
+| Break-it-on-purpose, engine side | run A: tick 3001 event 0 `ym2612 p0 reg $A4` 34→35 in a temp copy → `event_value_different, tick 3001, event 0`, exit 3; run B (same provenance): tick 7000 event 0 `ym2612 p0 reg $28` 1→0 → `event_value_different`, exit 3 |
 | Engine SFX comparison (first light) | **MISMATCH** at tick 351 — the first SFX dispatch — `event_extra`: engine emits `psg $9F` at SFX admission where the ROM writes nothing (see `docs/status/audio-frontier-log.md`) |
 | Unit tests | `com.openggf.tools.audio.parity.*`: green (fixture contract, CLI, comparator, JSONL, normalizer, capture, new SFX schema tests) |
 

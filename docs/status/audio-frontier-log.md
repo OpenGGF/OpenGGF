@@ -66,10 +66,16 @@ defined by `com.openggf.tools.audio.parity`.
   (external run root; also reachable via `tools/audio/run_s1_audio_parity.sh --mode music
   --output-root <external dir>`).
 - **Result:** **`S1 audio parity: MATCH (14690 ticks)`**, exit 0.
-- **Break-it-on-purpose (comparator proof it actually compares):**
-  - one corrupted fixture byte (tick 5000 DAC `duration` 11→12 in a temp copy) →
-    `MISMATCH kind: track_state_mismatch, tick 5000, role DAC, field duration,
-    reference 12, openggf 11`, exit 3;
-  - one corrupted engine write (tick 7000 event 0 `ym2612 p0 reg 0x28` value 1→0 in a
-    temp copy) → `MISMATCH kind: event_value_different, tick 7000, event 0,
-    reference value=1, openggf value=0`, exit 3.
+- **Break-it-on-purpose (comparator proof it actually compares):** two independent
+  corruption experiments were run (this lane's, and the concurrent writer's — see the
+  validation record's provenance note); all four outcomes were first divergences with
+  exit 3:
+  - fixture byte, run A: tick 5000 `tempoTimeout` 3→4 → `global_state_mismatch,
+    tick 5000, field tempo_timeout, reference 4, openggf 3`;
+  - engine write, run A: tick 3001 event 0 `ym2612 p0 reg 0xA4` 34→35 →
+    `event_value_different, tick 3001, event 0`;
+  - fixture byte, run B (concurrent writer's, per commit 0c1d0580e; not re-run by
+    this lane): tick 5000 DAC `duration` 11→12 → `track_state_mismatch, tick 5000,
+    role DAC, field duration`;
+  - engine write, run B (same provenance): tick 7000 event 0 `ym2612 p0 reg 0x28`
+    1→0 → `event_value_different, tick 7000, event 0`.
