@@ -53,11 +53,14 @@ from the cited lines — none was measured from a fixture.
   branches back to `VBlank_Music`: `S:716`, `S:720`, `S:748`), the paused mode, and the
   special stage. There is **no PAL branch anywhere in the driver** — no region test, no
   double update, no tempo compensation (whole-file read; CD CAD-08 S1 half derived).
-- A **second call in the same frame** happens when `f_doupdatesinhblank` is set
-  (`S:852`): the H-int delayed-update path clears the flag and calls the driver again
-  (`S:1050-1062`). The driver has no re-entrancy guard; both calls run the full pass, so
-  music advances two ticks on such frames. How often the flag is set during LZ play is a
-  game-state question (§18 q4).
+- A **deferred call** replaces the V-int call when `f_doupdatesinhblank` is set: the LZ
+  water workaround in `VBlank_Levels` sets the flag and pops the return into
+  `VBlank_Music` (`addq.l #4,sp` — "postpone updating the sound driver as well",
+  `S:846-854`), so the V-int pass is **skipped**; the H-int handler then clears the flag,
+  performs the deferred screen updates, and runs the frame's single `UpdateMusic` pass
+  (`S:1050-1064`). Cadence is unchanged — one pass per frame — only the pass's position
+  inside the frame moves. How often the deferral fires during LZ play is a game-state
+  question (§18 q4).
 - Entry sequence (`SD:148-165`): `stopZ80`, spin on the bus-request bit, then test
   `zDAC_Status` bit 7 (`$A01FFD`, `Z80:14`). If the Z80 is mid-sample-write ("not
   accepting"), release the bus and restart the entry. This is the only place the 68k
@@ -81,8 +84,8 @@ from the cited lines — none was measured from a fixture.
   | `DoModulation` (`SD:484`, `516`) | +4 unless a step fired | the post-modulation frequency write happens only on frames where a modulation step produced a new value |
 
 - **Oracle tick definition:** one tick = one complete `UpdateMusic` pass (normal, pause,
-  or load-frame shape), in V-int order, with the H-int second call counted as its own
-  tick. The invocation boundary for a RAM comparison is the `rts` of `DoStartZ80` (or
+  or load-frame shape), in V-int order; a frame whose pass was deferred to H-int still
+  contributes exactly one tick. The invocation boundary for a RAM comparison is the `rts` of `DoStartZ80` (or
   the tamper return).
 
 ### 1.2 State
@@ -118,9 +121,10 @@ driver pass runs normally (durations decrement, due notes are emitted). Derivati
 counter elapses, phase-free of the outer presentation frame (EM §3.2 step 6); commands
 drain once per outer frame (EM §3.2 step 3). Adaptation point GAP §1.2 #1 (risk high for
 any invocation-keyed oracle): frame-locked boundary + one `ServiceEvent` per ROM pass.
-The S1 load-frame skip and the H-int second call are per-game cadence facts the S1
-profile must expose; the H-int call needs a game-side predicate, not a driver constant
-(GAP §1.2 #1). The existing S1 `MATCH` bypassed the live clock
+The S1 load-frame skip is a per-game cadence fact the S1 profile must expose; the H-int
+deferral moves a pass within the frame without changing the tick count, so it matters only
+to sub-frame write timing, and its trigger needs a game-side predicate, not a driver
+constant (GAP §1.2 #1). The existing S1 `MATCH` bypassed the live clock
 (`S1OpenGgfAudioCapture` calls `advanceBatch` directly, EM §5.1), so live-graph phase is
 unmeasured (GAP §5 last item).
 
@@ -368,11 +372,15 @@ sites above; priority table read from ROM `$71AE8` — §17).
    `v_tempo_mod` and (unless `f_speedup`) `v_main_tempo(_timeout)`. FixBugs #4 (register
    init order, zero-FM songs) is unreachable — every shipped header declares `$06` or
    `$07`.
-5. FM/DAC track init (`SD:838-854`; TV2.2), PSG init (`SD:885-906`; the PSG header's
-   4th byte is read and dropped, `SD:903`).
+5. FM/DAC track init (`SD:838-854`; TV2.2), PSG init (`SD:885-906`; the per-track byte between the volume and the envelope id —
+   the frequency-envelope byte smps2asm emits — is read and dropped, `SD:903`).
 6. FM6 handling (`SD:856-882`): if byte 2 == 7 (only `Mus89` Special Stage and `Mus93`
-   Get Emerald): write `$2B := 0` (I) — DAC **disabled**, and nothing re-enables it
-   except `StopAllSound` (the S1 DAC-disable latch; §14.3 note, CD OVR-08 context).
+   Get Emerald): write `$2B := 0` (I) — DAC **disabled**. On the 68k side only `StopAllSound`
+   re-enables it; the Z80 also writes `$2B := $80` whenever it starts a DPCM sample
+   (`Z80:103-106`), but those two songs never trigger that — their `smpsHeaderDAC` label
+   aliases the stopped PSG3 data, so the DAC track reaches `$F2` without ever writing a
+   sample byte (`Mus89 - Special Stage.asm:171-174`, `Mus93 - Get Emerald.asm:73-77`)
+   (the S1 DAC-disable latch; §14.3 note, CD OVR-08 context).
    Otherwise: `$28 := $06` (key-off FM6), TL `$7F` to FM6's operators
    (`$42,$4A,$46,$4E` II — note order op1,op3,op2,op4), `$B6 := $C0` (II).
 7. SFX re-marking (`SD:909-942`): every playing SFX track sets bit 2 on the music track
@@ -400,8 +408,12 @@ each written to part I then part II before the next register.
 **TV5.1 — GHZ load burst (U0 write list).** In order: `$28←$02,$06,$01,$05,$00,$04`
 (I); TL `$7F` ×24 in the `FMSilenceAll` order above; PSG `$9F,$BF,$DF,$FF`; then FM6
 silence: `$28←$06` (I), `$42←$7F`,`$4A←$7F`,`$46←$7F`,`$4E←$7F` (II), `$B6←$C0` (II);
-then note-offs `$28←$00,$01,$02,$04,$05,$06` (I) and PSG `$9F,$BF,$DF` — no other
-writes. RAM: TV2.2. Derivation: steps 2, 6, 8 above with GHZ's `Chan $06`.
+then note-offs `$28←$00,$01,$02,$04,$05,$00` (I) — the sixth write comes from the
+**uninitialised music FM6 slot**: GHZ's `Chan $06` initialises only DAC+FM1-5, so music
+FM6's `VoiceControl` is still zero after the `InitMusicPlayback` clear and its note-off
+keys FM1 off again instead of FM6 (the step-6 FM6 silence already covered the real FM6;
+the shipped-branch comment at `SD:1526-1535` names exactly this gap) — and PSG
+`$9F,$BF,$DF` — no other writes. RAM: TV2.2. Derivation: steps 2, 6, 8 above with GHZ's `Chan $06`.
 
 **TV5.2 — stop-all burst.** Request `$E4`: `$2B←$80` (I), `$27←$00` (I), then
 `FMSilenceAll` + `PSGSilenceAll` as above; RAM per TV2.1 plus the FixBugs #11 survivor
@@ -472,7 +484,11 @@ special tracks and silence PSG3 (`SD:1180-1191`).
   nothing is restored.
 - `cfStopTrack` (`$F2`, §10) performs the same restore in its SFX phase, including
   `v_sndprio := 0` — this is the "latch clears when an SFX track stops" half of
-  CD ADM-01 (`SD:2504-2506`).
+  CD ADM-01 (`SD:2504-2506`). Two differences from `StopSFX`: its music-FM restore
+  touches the music track only if that track is **playing** (`SD:2525-2526` — a stopped
+  music track keeps bit 2 and gets no voice re-upload), and its PSG restore *does* check
+  that special PSG3 is playing (`SD:2542-2543`, the check FixBugs #9 notes is missing
+  from `StopSFX`).
 - Override semantics: bit 2 suppresses every hardware write from the marked track
   (`FMUpdateFreq` `SD:534`, `FMNoteOn/Off` `SD:1671/1687`, `WriteFMIorIIMain`
   `SD:1702-1705`, `SetPSGVolume` `SD:1967`, `PSGUpdateFreq` `SD:1894`, `PSGNoteOff`
@@ -563,9 +579,12 @@ takeover of TV6.1 in intent; per-write verification is the oracle's job.
   (70 words, `SD:2049-2063`, `$729CE`; `MakePSGFrequency(f) = min($3FF,
   round(PSG_Sample_Rate/2f))`, `PSG_Sample_Rate = Z80_Clock/16`, `Z80_Clock =
   53693175/15`, `C:12-14`); `note == $80` → at-rest, `Freq := -1`, `PSGNoteOff`.
-  `PSGUpdateFreq` writes `VoiceControl | (d6 & $F)` then `(d6 >> 4) & $3F` every
-  frame the track is neither resting nor overridden (noise tracks substitute `$C0` as
-  the latch channel). `PSGNoteOff` (`SD:1997-2004`): `VoiceControl | $1F`; keying off
+  `PSGUpdateFreq` writes `VoiceControl | (d6 & $F)` then `(d6 >> 4) & $3F` unless the
+  track is resting or overridden (noise tracks substitute `$C0` as the latch channel) —
+  but, exactly as on FM, it is reached on a non-note-start frame **only through
+  `DoModulation`'s step path** (the `+4` entry tamper skips the `jsr PSGUpdateFreq` in
+  `PSGUpdateTrack`, `SD:1822-1828`, `483-520`): PSG frequency goes out at note start
+  (`PSGDoNoteOn`) and on modulation-step frames, not every frame. `PSGNoteOff` (`SD:1997-2004`): `VoiceControl | $1F`; keying off
   PSG3 does **not** silence noise (FixBugs #16). `PSGSetFreq` calls
   `FinishTrackUpdate` itself and the caller runs it again — harmless double execution
   (`SD:1863-1879`).
@@ -582,11 +601,11 @@ takeover of TV6.1 in intent; per-write verification is the oracle's job.
 ### 7.2 Test vectors
 
 **TV7.1 — FM table entry derivation.** `M68000_Clock = 53693175/7 = 7670453` (integer);
-`FM_Sample_Rate = 7670453/144 = 53266`. Entry 0 (B, 15.39 Hz):
-`round(15.39·2097152/53266) = round(605.92) = 606 = $25E`. Entry 5 (E):
-`round(20.64·2097152/53266) = round(812.62) = $32D`. Entry 65 (E, octave 5) =
+`FM_Sample_Rate = 7670453/144 = 53267`. Entry 0 (B, 15.39 Hz):
+`round(15.39·2097152/53267) = round(605.91) = 606 = $25E`. Entry 5 (E):
+`round(20.64·2097152/53267) = round(812.61) = 813 = $32D`. Entry 65 (E, octave 5) =
 `$32D + 5·$800 = $2B2D` — the value TV6.1 writes. Entry 1 (C):
-`round(16.35·2097152/53266) = 644 = $284`; `nC6` (`$C9`, idx 73) → `$284 + 6·$800 =
+`round(16.35·2097152/53267) = round(643.71) = 644 = $284`; `nC6` (`$C9`, idx 73) → `$284 + 6·$800 =
 $3284`, the ring's third note.
 
 **TV7.2 — PSG jump SFX (`SndA0`).** PSG1, transpose `$F4` (−12), volume 0, envelope 0
@@ -702,8 +721,9 @@ pitch. `$F1` sets bit 3, `$F4` clears it (`SD:2484-2486`, `2577-2579`).
 `PSGUpdateVolFX` (`SD:1924-1926`): per frame, only when `VoiceIndex != 0`.
 `PSGDoVolFX` (`SD:1928-1959`): `d6 := Volume`; envelope `PSG_Index[VoiceIndex-1]`
 (`SD:41-64`); read byte at `VolEnvIndex`, post-increment; `$80` → `VolEnvHold`
-(`SD:1991-1993`) decrements the index back, so the **last pre-terminator value repeats
-forever** — the `$80` itself is never applied; any other bit-7 byte would fall through
+(`SD:1991-1993`) decrements the index back and returns **without a volume write** — from
+the terminator frame on, the envelope path emits no further volume writes for the rest of
+the note (the chip retains the last value sent); the `$80` itself is never applied; any other bit-7 byte would fall through
 and be added (FixBugs #15 — unreachable: all nine shipped envelopes contain only
 non-negative bytes then `$80`, `SD:46-64`; CD SEQ-04 derived with that effect
 correction). Values are added to `Volume` and clamped to `$F` at `$10`+.
@@ -723,9 +743,10 @@ U(n+2): wait 1→0, no write. U(n+3): speed 1→0 → reload 1; steps `$32`→`$
 the (full) step reload negates delta. Derivation: `SD:483-520`, TV7.2 values.
 
 **TV9.2 — GHZ PSG1 envelope.** Volume 1, `fTone_03` = `0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,
-7,$80` (`SD:50`). Per frame volume bytes: `$91,$91,$92,$92,…,$98,$98`, then `$80`
-terminator → hold → `$98` every subsequent frame of the note. At the next attacked
-note `VolEnvIndex` resets to 0. Derivation: `SD:1928-1993`, envelope data.
+7,$80` (`SD:50`). Per frame volume bytes: `$91,$91,$92,$92,…,$98,$98` (16 writes), then the
+terminator is reached → **no further volume writes** for the rest of the note (the chip
+holds `$98`; `VolEnvIndex` parks on the `$80`). At the next attacked note `VolEnvIndex`
+resets to 0. Derivation: `SD:1928-1993`, envelope data.
 
 **TV9.3 — modulation reload at note.** `SndCC` (Spring): `smpsModSet $03,$01,$5D,$0F`
 then `nB3 $0C`, then `smpsModOff`. At the `nB3` note start, `FinishTrackUpdate`
@@ -804,8 +825,8 @@ jumps while non-zero → the block plays 7 times; on song loop, re-entry finds 0
 
 - **Fade-out** (`FadeOutMusic` `SD:1360-1367`, id `$E0`): `StopSFX` +
   `StopSpecialSFX` first (CD FADE-02 derived), `v_fadeout_delay := 3`,
-  `v_fadeout_counter := $28`, DAC track bit 7 cleared (drums stop at once — **no**
-  Z80 write; the current sample runs out), `f_speedup := 0` (CD FADE-03 S1 half
+  `v_fadeout_counter := $28`, the DAC track's whole `PlaybackControl` byte cleared (`clr.b`, `SD:1365`; drums stop
+  at once — **no** Z80 write; the current sample runs out), `f_speedup := 0` (CD FADE-03 S1 half
   derived). `DoFadeOut` (`SD:1371-1422`) each pass: delay non-zero → decrement,
   return; else `counter -= 1`; **at 0 → `StopAllSound` with no final volume step**
   (CD FADE-04 S1 half derived); otherwise `delay := 3` and step: music FM tracks
@@ -979,8 +1000,8 @@ plays speed shoes outside levels, but the driver accepts it).
 ### 14.1 Ring left/right (`SD:984-991`)
 
 If `v_ring_speaker == 0` the request byte becomes `$CE` (`SndCE`, FM4, `panLeft`);
-otherwise it stays `$B5` (`SndB5`, FM5, `panRight`). The byte's bit 0 is toggled either
-way. Reset to 0 by **every song load** (RAM clear, §5 step 2) and `StopAllSound` — so
+otherwise it stays `$B5` (`SndB5`, FM5, `panRight`). Bit 0 of `v_ring_speaker` is
+toggled either way (`bchg`, `SD:991`). Reset to 0 by **every song load** (RAM clear, §5 step 2) and `StopAllSound` — so
 the first ring after any song start is the left one. The two SFX use different FM
 channels, so consecutive rings overlap rather than restart. Both priority `$70`. The
 game only ever requests `$B5` (`_incObj/25, 37 Rings.asm:192` per MAP). The RAM comment
@@ -1118,7 +1139,7 @@ actually reaches, with the engine's current branch:
 | 21 | `Mus83` PSG3 notes overflow `PSGFrequencies` (`Mus83 - MZ.asm:183` per MAP) | MZ music, always | Java table has no overrun bytes — model tables as ROM-reads with neighbours (§7.3) |
 | 22 | `Mus86` FM3 detune not reset at loop (`Mus86 - SBZ.asm:128` per MAP) | SBZ music | data-faithful playback reproduces it automatically — no engine action |
 | 23 | `Mus91` stray `$E6 $0C` on a PSG track (`Mus91 - Credits.asm:731` per MAP) | Credits | exercises the `$E6`-on-PSG path (§10) — engine must add-then-read-FM-voice, not ignore |
-| 24 | `SndBC` FM5 transpose `$90` (`SndBC - Teleport.asm:7` per MAP) | Teleport SFX | index wraps via `& $7F` (§7.1) — data-faithful; no S1 engine patch exists (the S2 `$90→$10` patch, CD REQ-04/DEF-05, is S2-only) |
+| 24 | `SndBC` FM5 transpose `$90` (`SndBC - Teleport.asm:11`; MAP's `:7` is the FixBugs guard line) | Teleport SFX | index wraps via `& $7F` (§7.1) — data-faithful; no S1 engine patch exists (the S2 `$90→$10` patch, CD REQ-04/DEF-05, is S2-only) |
 
 Unreachable by shipped data (state for completeness): #2/#3 (ids `$94-$9F`, `$D1-$DF`
 — blocked from the sound test `S:2222-2229`, `S:2213`), #4 (no zero-FM song), #5/#6
@@ -1160,7 +1181,7 @@ Carried unchanged from MAP §18 (q1-q11), owned by this spec's sections: q1 (`St
 stale `a3` effect) §16; q2 (byte-only `d0` upper-word dirtiness — an interrupt-path
 question) §16; q3 (**partially retired**: TV8.3 enumerates the shipped SFX that reach
 FixBugs #19; remaining: the ROM bytes read through a zero `v_special_voice_ptr`) §8;
-q4 (H-int second-call frequency in real LZ play — game-state) §1; q5 (`$2B` on
+q4 (H-int deferral frequency in real LZ play — game-state) §1; q5 (`$2B` on
 restore scenario) §13; q6 (zero-FM path — unreachable) §16; q7 (`zPCM_Table` bytes vs
 the compressed blob) §15; q8 (DPCM accumulator wrap and the generated sample files)
 §15; q9 (gosub stack vs `LoopCounters[4..11]` in shipped songs) §2; q10 (queue-write
@@ -1169,7 +1190,7 @@ phase vs V-int) §3; q11 (busy-poll duration — hardware) §7.
 From EM: q5 (which `Freq` stores are detuned — for S1, `Freq` always stores the
 **base** table word; detune and modulation are added at write time, `SD:524-545`,
 `SD:509-515` — settled for S1, remains open for S3K); q8 (S1 lag-frame call —
-settled §1.1: lag frames call it once; the H-int path is the only double-call).
+settled §1.1: lag frames call it once; the H-int path defers a call, it never doubles one).
 
 Hardware-question register (not answerable from this source): YM2612 busy-window
 duration (q11); the effective result of TL bytes ≥ `$80` (chip masking); DPCM delta
@@ -1193,7 +1214,7 @@ content or anchor), **n/a** (not applicable to S1).
 | CAD-03 | derived | §3.1 (anchors `:147`/`:174-176`, `cfSetTempo :2256` ✓); `$EA` also resets the countdown |
 | CAD-08 (S1 half) | derived | §1.1 — no PAL path exists in the S1 driver |
 | CAD-10 | derived | §1.1 — music DAC→FM→PSG, then SFX, then special |
-| CAD-11 | derived | §1.1 — 68k driver, one pass per V-int (+H-int extra) |
+| CAD-11 | derived | §1.1 — 68k driver, one pass per V-int (the H-int deferral moves a pass, never adds one) |
 | CAD-12 (S1) | derived | §13.2 — timeout reset = definite phase; `SpeedUpIndex` per-song |
 | ADM-01 (S1) | **corrected** | §4.1: the global gate lives in `CycleSoundQueue` (`SD:637-672`), not `Sound_PlaySFX :977`; rejection precedes track init; bit 7 = accept-but-never-store; clear sites §4.1/§6.2 |
 | ADM-03 (S1) | derived | §6.1 — channels claimed at request time (bit 2 during the load) |
@@ -1236,3 +1257,68 @@ content or anchor), **n/a** (not applicable to S1).
 Rows not listed (CAD-04..07, CAD-09, ADM-02, ADM-07, ADM-09, REQ-06/07, OVR-06/07/10,
 FADE-06, PAUSE-02/03, VOICE-01/04, SEQ-01..03, DAC-02, DAC-06, DATA-01/03, CHIP-02..08,
 DEF-01..08, DEF-11) are S2/S3K or chip/config rows outside this game's driver spec.
+
+---
+
+## 20. Review record (adversarial pass, 2026-08-30)
+
+Reviewed on `feature/ai-sdre-spec-review-s1` under the same sources-closed rule: full
+re-read of `s1.sounddriver.asm` (all 2867 lines) and `s1.sounddriver.ram.asm`,
+`sound/z80.asm` in full, and targeted reads of `sonic.asm`, `_Constants.asm`,
+`_inc/Queue Sound Routines.asm`, `_inc/PauseGame.asm`, `sound/_smps2asm_inc.asm`, and the
+cited song/SFX data files. More than half of the test vectors were recomputed by hand from
+the disassembly. Verdicts: **refuted** — the claim contradicted the disassembly and has
+been corrected in place; **weakened** — materially imprecise, tightened in place;
+**stands** — re-derived and confirmed unchanged.
+
+| # | Claim as originally written | Verdict | Evidence |
+|---|---|---|---|
+| R1 | §1.1: `f_doupdatesinhblank` produces a **second** driver call in the same frame; "music advances two ticks on such frames" | **refuted, fixed** | The LZ water workaround in `VBlank_Levels` sets the flag and pops the return into `VBlank_Music` (`addq.l #4,sp`, comment "postpone updating the sound driver as well", `S:846-854`), so the V-int pass is skipped; the H-int handler then runs the frame's single `UpdateMusic` pass (`S:1050-1064`). A deferral, never a doubling. Ripples fixed: §1.1 oracle tick definition, §1.5, §18 q4 and EM-q8 wording, §19 CAD-11 |
+| R2 | §7.1: `PSGUpdateFreq` writes the period "every frame the track is neither resting nor overridden" | **refuted, fixed** | On non-note-start frames the `jsr PSGUpdateFreq` (`SD:1826`) is reached only when `DoModulation` returns through its step path; the `+4` entry tamper (`SD:485`) otherwise returns straight to the track walk. PSG frequency cadence = note start + modulation-step frames, same as FM |
+| R3 | §9.2/TV9.2: after the `$80` terminator "the last pre-terminator value repeats forever" / "`$98` every subsequent frame of the note" | **refuted, fixed** | `VolEnvHold` (`SD:1991-1993`) decrements the index and returns **without** calling `SetPSGVolume`; from the terminator frame on no envelope volume write is emitted — the chip retains the last byte sent |
+| R4 | TV5.1: load-burst note-offs `$28←$00,$01,$02,$04,$05,$06` | **refuted, fixed** | GHZ declares `Chan $06` (DAC+FM1-5); music FM6's `VoiceControl` is still 0 after the `InitMusicPlayback` clear, so the sixth `FMNoteOff` emits `$28←$00` (`SD:944-951`; the shipped-branch comment `SD:1526-1535` names the undefined-channel gap) |
+| R5 | TV7.1: `FM_Sample_Rate = 7670453/144 = 53266` | **refuted, fixed** | Integer division gives 53267 (`144·53267 = 7670448 ≤ 7670453`). Recomputed entries 0/1/5 are unchanged (`$25E`, `$284`, `$32D`), so no downstream vector moves |
+| R6 | §11.1: fade-out start "DAC track bit 7 cleared" | **weakened, fixed** | `clr.b v_music_dac_track.PlaybackControl` (`SD:1365`) zeroes the whole byte — same audible effect, different RAM image for the §2 field registry |
+| R7 | §5 step 6: after `$2B := 0` "nothing re-enables it except `StopAllSound`" | **weakened, fixed** | The Z80 writes `$2B := $80` whenever it starts a DPCM sample (`Z80:103-106`); the claim holds in shipped play only because `Mus89`/`Mus93`'s DAC label aliases the stopped PSG3 data, so their DAC track reaches `$F2` without writing a sample byte |
+| R8 | §5 step 5: "the PSG header's 4th byte is read and dropped" | **weakened, fixed** | The dropped byte is the per-track frequency-envelope byte between volume and envelope id (the 5th data byte of the 6-byte entry), `SD:903` with `INC:340-355` |
+| R9 | §16 #24 anchor `SndBC - Teleport.asm:7` | **weakened, fixed** | The shipped `$90` transpose byte is line 11; line 7 is the `FixMusicAndSFXDataBugs` guard |
+| R10 | §14.1: "The byte's bit 0 is toggled either way" | **weakened, fixed** | The toggle is `bchg #0` on `v_ring_speaker` (`SD:991`), not on the request byte |
+| R11 | §6.2: `cfStopTrack` "performs the same restore" as `StopSFX` | **weakened, fixed** | Two checks differ: `cfStopTrack`'s music-FM restore runs only if the music track is playing (`SD:2525-2526`), and its PSG restore checks special PSG3 is playing (`SD:2542-2543`) — the check whose absence in `StopSFX` is FixBugs #9 |
+
+Recomputed from the disassembly and **standing** (no change needed): TV2.1-TV2.2 (RAM
+clear at `S:409-413`; GHZ init image incl. `FMDACInitBytes` 6,0,1,2,4,5 and PSG voice ids
+3/6/4); TV3.1-TV3.3 (hold cadence, first-note latency, divider stretch to U13); TV4.1-TV4.2
+(write-back serialisation, bit-7 accept-but-never-store, `$BF=$7F` vs `$AE=$60` rejection;
+priority table bytes re-read in full); TV5.2; TV6.1 (all 31 voice-upload writes recomputed
+against the `SndB5` raw voice block, `$E0 $40` compose to `$B5←$40`, `$2B2D` frequency,
+`$28←$F5` key-on), TV6.2 (restore emits no frequency/key-on), TV6.3 (special-layer
+precedence, `SD:1072-1075`/`SD:2512-2518`); TV7.1 values, TV7.2 (`$140`→`$80,$14,$90`;
+`$EF`→`$8F,$0E,$90`; note ids `nF2=$9E`, `nBb2=$A3`), TV7.3; TV8.1-TV8.2 (mask `$A`
+LSB-first over storage order op1,op3,op2,op4; `SendVoiceTL` carry skip vs `SetVoice`'s
+none), TV8.3 (the `smpsAlterVol` grep reproduces exactly the listed normal SFX; `SndD0`
+also contains `$E6` but is special-phase, where `v_special_voice_ptr` is the *correct*
+bank); TV9.1 (`$87,$0E` at U(n+3)), TV9.3 (`$225E+$5D=$22BB` on part II offset 0);
+TV10.1-TV10.2; TV11.1 (delay burn U1-U3, 39 steps U4→U156, stop-all at U160), TV11.2;
+TV12.1-TV12.2 (pause/unpause bursts, resume covering music+SFX+special FM);
+TV13.1-TV13.3 (backup/restore images, 1-up-aware `$E2`/`$E3` editing the backup,
+`Mus88` tempo `$05` = its `SpeedUpIndex` byte, fade-in completion on pass 121, no `$B6`
+re-send); TV14.1 (`SndCE` = FM4, `panLeft`, `nE5 $04`; `sfx_RingLeft` unreferenced by game
+code outside `_Constants.asm`), TV14.2 (`$1F`-frame latch window); TV15.1-TV15.2 (U13
+kick, pitch bytes `$17`/`$01`/`$1B`/`$12` re-derived from `pcmLoopCounterBase`, the
+`DAC_sample_rate` bytes `12 15 1C 1D`, timpani latch warning `SD:326-327`); the SEGA
+`$0B` loop count and 68k busy-wait `$12×$10000`; the Z80 per-byte 301-cycle split 124/177
+(summed from the source's own per-instruction annotations); `StopAllSound`'s `$390`-byte
+clear leaving special-PSG3 offsets `$20-$2F`; `InitMusicPlayback`'s exact save/restore
+set; `TempoWait`'s unconditional ten-slot loop; the queue/dispatch ranges and stack-tamper
+table of §1.1; the §2 RAM offsets and gosub/loop-counter overlap; all 26 coord-flag rows
+of §10 (`cfOpF9`'s fixed part-I `$88`/`$8C` writes included); and the "Engine today"
+anchors spot-checked at the merged head (`S1AudioFieldRegistry` = 29 `field(` entries;
+`SPEED_UP_TEMPOS` equal to ROM `07 72 73 26 15 08 FF 05`; `setChannelOverridden`'s
+restore-frequency divergence at `SmpsSequencer.java:683-685`; the TIMEOUT extension loop's
+`t.active && t.duration > 0` gate at `SmpsSequencer.java:1266-1281`).
+
+Not independently re-derived here: MAP-verified ROM byte spot checks (`$71A94`,
+`SoundPriorities` bytes at `$71AE8`, `DAC_sample_rate` at `$71CC4` — re-derived from the
+build formulas above but not re-read from a ROM dump), and the EM/GAP/CD engine-history
+statements the spec quotes as inputs. No claim in the spec was traced to the reverted
+parity branch or any third-party SMPS source.
