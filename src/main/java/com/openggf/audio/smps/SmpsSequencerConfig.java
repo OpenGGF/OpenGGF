@@ -10,11 +10,22 @@ import java.util.Set;
 public final class SmpsSequencerConfig {
 
     public enum TempoMode {
-        /** S3K: accumulator overflow → skip (delay). Tick on non-overflow. Higher tempo = slower. */
+        /**
+         * S3K (TempoWait D:2607-2621): accumulator carry → delay frame — every
+         * music slot's DurationTimeout is pre-incremented and the track walk
+         * still runs. Higher tempo = more delays = slower.
+         */
         OVERFLOW,
-        /** S2: accumulator overflow → tick. Skip on non-overflow. Higher tempo = faster. */
+        /**
+         * S2 (TempoWait sd:596-619): accumulator NO-carry → delay frame — every
+         * music slot's DurationTimeout is pre-incremented and the track walk
+         * still runs. Higher tempo = fewer delays = faster.
+         */
         OVERFLOW2,
-        /** S1: countdown from tempo; when 0, extend all track durations by 1. Always tick. */
+        /**
+         * S1 (TempoWait SD:1549-1561): countdown from tempo; on expiry every
+         * music slot's DurationTimeout is extended by 1. Always tick.
+         */
         TIMEOUT
     }
 

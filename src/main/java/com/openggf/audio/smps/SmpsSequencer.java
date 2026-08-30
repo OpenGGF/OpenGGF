@@ -453,6 +453,17 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         // Initialize Region and Tempo
         setRegion(Region.NTSC);
 
+        // Z80 drivers seed the tempo accumulator with the header tempo at song
+        // load (S2 sd:1820-1822: TempoTimeout = CurrentTempo = tempo; S3K
+        // D:1829-1831: zTempoAccumulator = zCurrentTempo = tempo), so the first
+        // TempoWait adds the tempo to an already-seeded value. TIMEOUT (S1)
+        // seeds its countdown in calculateTempo. SFX programs have no music
+        // tempo accumulator (their pass is not tempo-gated).
+        if (config.getTempoMode() != SmpsSequencerConfig.TempoMode.TIMEOUT
+                && !(smpsData instanceof SmpsSfxData)) {
+            tempoAccumulator = tempoWeight;
+        }
+
         int z80Start = smpsData.getZ80StartAddress();
 
         if (smpsData instanceof SmpsSfxData sfxData) {
@@ -1258,71 +1269,100 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void processTempoFrame() {
+        if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW && !sfxMode) {
+            // S3K music frame: fades advance inside each zUpdateMusic
+            // (zDoMusicFadeOut runs per music update, D:2331-2385), so the fade
+            // step lives inside musicUpdateOverflow(), not at the frame boundary.
+            musicUpdateOverflow();
+            // S3K speed-up: timeout-based double update (ROM: zDoSpeedUp)
+            // zTempoSpeedup=N → one extra zUpdateMusic every (N+1) frames.
+            if (speedMultiplier > 1) {
+                if (speedupTimeout <= 0) {
+                    speedupTimeout = speedMultiplier;
+                    musicUpdateOverflow();
+                } else {
+                    speedupTimeout--;
+                }
+            }
+            return;
+        }
         processObservedFadeStep();
 
         if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
             return;
         }
         if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.TIMEOUT) {
-            // S1 style: always tick, but periodically extend track durations
-            // SFX bypass tempo extension entirely - they just tick every frame
+            // S1 UpdateMusic SD:174-176: every pass decrements v_main_tempo_timeout;
+            // on zero, TempoWait (SD:1549-1561) reloads it from v_main_tempo and adds
+            // 1 to the DurationTimeout of all ten music slots WITHOUT testing the
+            // playing bit (the loop at SD:1551-1558 walks every slot). The track walk
+            // always runs; S1 has no skip frame. SFX and special tracks are never
+            // held (they live in their own sequencers, sfxMode == true there).
             if (!sfxMode) {
                 tempoAccumulator--;
                 if (tempoAccumulator <= 0) {
                     tempoAccumulator = tempoWeight;
-                    // Extend all active music track durations by 1
                     for (Track t : tracks) {
-                        if (t.active && t.duration > 0) {
-                            t.duration++;
-                        }
+                        t.duration++;
                     }
                 }
             }
             tick(sfxMode);
         } else if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
-            // S2: tick when accumulator overflows. Higher tempo = more ticks = faster.
-            tempoAccumulator += tempoWeight;
-            if (tempoAccumulator >= tempoModBase) {
-                tempoAccumulator -= tempoModBase;
-                int tickCount = Math.max(1, speedMultiplier);
-                for (int tickIndex = 0; tickIndex < tickCount; tickIndex++) {
-                    tick(sfxMode && tickIndex == tickCount - 1);
-                }
-            }
-        } else {
-            // S3K OVERFLOW: tick when accumulator does NOT overflow. Higher tempo = more skips = slower.
-            // SFX bypass: Z80 driver processes SFX every frame (zUpdateSFXTracks),
-            // independent of music tempo. Without this, tempoWeight=tempoModBase
-            // causes overflow every frame → SFX never ticks.
             if (sfxMode) {
+                // S2 SFX durations decrement every frame via the SFX pass
+                // (sd:821-835); TempoWait touches only the ten music slots.
                 tick(true);
             } else {
-                tempoAccumulator += tempoWeight;
-                if (tempoAccumulator >= tempoModBase) {
-                    tempoAccumulator -= tempoModBase;
-                    // Overflow → skip this frame (delay)
-                } else {
-                    // No overflow → tick normally
-                    tick();
-                }
-                // S3K speed-up: timeout-based double update (ROM: zDoSpeedUp)
-                // zTempoSpeedup=N → one extra zUpdateMusic every (N+1) frames.
-                if (speedMultiplier > 1) {
-                    if (speedupTimeout <= 0) {
-                        speedupTimeout = speedMultiplier;
-                        // Re-run tempo processing for the extra update
-                        tempoAccumulator += tempoWeight;
-                        if (tempoAccumulator >= tempoModBase) {
-                            tempoAccumulator -= tempoModBase;
-                        } else {
-                            tick();
-                        }
-                    } else {
-                        speedupTimeout--;
-                    }
-                }
+                musicUpdateOverflow2();
+            }
+        } else {
+            // OVERFLOW (S3K) SFX pass: zUpdateSFXTracks services SFX every frame
+            // regardless of music tempo (D:727).
+            tick(true);
+        }
+    }
+
+    /**
+     * One S2 {@code zUpdateMusic} (sd:545-551, FixDriverBugs off): {@code TempoWait}
+     * (sd:596-619) runs first — {@code TempoTimeout += CurrentTempo}; on carry the
+     * frame is normal; on NO carry every music slot's {@code DurationTimeout} is
+     * incremented (sd:609-616, no playing-bit test) — and the track walk then always
+     * runs, so envelopes, modulation, note fill and the per-frame frequency/volume
+     * writes all continue on a delay frame; only note expiry is pushed out.
+     */
+    private void musicUpdateOverflow2() {
+        tempoAccumulator += tempoWeight;
+        if (tempoAccumulator >= tempoModBase) {
+            tempoAccumulator -= tempoModBase; // carry → normal frame
+        } else {
+            // No carry → delay: the pre-increment cancels this update's decrement.
+            for (Track t : tracks) {
+                t.duration++;
             }
         }
+        tick();
+    }
+
+    /**
+     * One S3K {@code zUpdateMusic}: fades advance once per music update
+     * (zDoMusicFadeOut, D:2331-2385), then {@code TempoWait} (D:2607-2621) —
+     * {@code zTempoAccumulator += zCurrentTempo}; on 8-bit carry every music slot's
+     * {@code DurationTimeout} byte is incremented (no playing-bit test) — then the
+     * track walk always runs; envelopes, note fill, modulation and the per-frame
+     * frequency writes continue on a delay frame; only note expiry is pushed out.
+     */
+    private void musicUpdateOverflow() {
+        processObservedFadeStep();
+        tempoAccumulator += tempoWeight;
+        if (tempoAccumulator >= tempoModBase) {
+            tempoAccumulator -= tempoModBase;
+            // Carry → delay: the pre-increment cancels this update's decrement.
+            for (Track t : tracks) {
+                t.duration++;
+            }
+        }
+        tick();
     }
 
     private void processObservedFadeStep() {
@@ -1496,8 +1536,15 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 if (t.pos < programView.dataLength()) {
                     normalTempo = programView.dataByteAt(t.pos++) & 0xFF;
                     calculateTempo();
-                    // Parity: EA (Tempo Set) resets the tempo accumulator/counter to the new tempo value
-                    tempoAccumulator = tempoWeight;
+                    // S1 cfSetTempo (SD:2256-2258) writes v_main_tempo AND resets
+                    // the countdown; the Z80 drivers' cfSetTempo replaces
+                    // CurrentTempo only — S2 sd:3207-3209 and S3K D:3861-3863 do
+                    // not touch the accumulator (CD CAD-03), so the accumulated
+                    // phase is kept and the new rate takes effect at the next
+                    // TempoWait.
+                    if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.TIMEOUT) {
+                        tempoAccumulator = tempoWeight;
+                    }
                 }
                 break;
             case 0xEB:

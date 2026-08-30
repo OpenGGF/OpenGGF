@@ -27,6 +27,31 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-08-31 — S2 frontier: tick-0 `tempoTimeout` green after the delay-frame cadence fix
+
+- **Worktree/branch:** `.worktrees/sdre2-cadence`, `feature/ai-sdre2-cadence`
+  (the fix lands in the same commit as this entry; base
+  `feature/ai-sound-driver-re` `fc3e70c95`).
+- **Fixture:** `src/test/resources/audio/parity/s2/s2-ehz-reload-w10150-10900.raw.jsonl.gz`
+  (unchanged committed reference).
+- **Command:** the entry-of-record S2 invocation (`S2AudioOracleTool --fixture
+  <committed fixture> --rom <s2.gen>` on the compiled worktree classes, as in
+  the 2026-08-30 first-measurement entry).
+- **Result:** DIVERGENCE — first divergence still tick 0 (movie row 10201),
+  now `track.FM2.dataPointer` expected `0x1424` actual `0x1428`;
+  **698 → 669 of 698 ticks divergent**. The previous frontier field,
+  tick-0 `global.tempoTimeout` (`0x3c` vs `0x0`), is green: the sequencer now
+  seeds its accumulator at song load (`sd:1820-1822`) and runs `TempoWait` on
+  the first update (`sd:545-551`), and a no-carry frame pre-increments every
+  music slot's `DurationTimeout` while the track walk still runs
+  (`sd:596-619`, gap analysis §1.2 #2).
+- **Notes:** the exposed `dataPointer` divergence is a load/track-walk stream
+  position gap (engine 4 bytes ahead on FM2 at the first update), not a
+  cadence field — it belongs to a music-load/note-parse lane. Cross-checks at
+  the same commit: S1 GHZ music oracle **MATCH (14,690 ticks)** held; S1
+  sound-test SFX frontier unchanged (tick 351 `event_extra`); S3K frontier
+  unchanged (tick 3 boot-silence `EVENT_MISSING`, unreachable by cadence).
+
 ## 2026-08-30 — S1 sound-test SFX oracle first light: red at the first SFX admission
 
 - **Worktree/branch:** `.worktrees/sdre-oracle-s1`, `feature/ai-sdre-oracle-s1` (commit recorded with the fixture landing).

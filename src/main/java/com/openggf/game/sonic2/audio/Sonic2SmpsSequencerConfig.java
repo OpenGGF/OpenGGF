@@ -58,6 +58,13 @@ public final class Sonic2SmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                // TempoWait runs at the top of EVERY zUpdateMusic including the
+                // first after a song load (sd:545-551): the load seeds
+                // TempoTimeout = CurrentTempo (sd:1820-1822), so update 1 adds
+                // the tempo to the seed (EHZ: 9Eh + 9Eh = 13Ch → carry → 3Ch).
+                // DefDrv.txt's "Tempo1Tick = PlayMusic" claim does not match the
+                // shipped driver and previously skipped the first TempoWait.
+                .tempoOnFirstTick(true)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
                 .build();
     }

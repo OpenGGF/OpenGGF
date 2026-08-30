@@ -14,6 +14,20 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **SMPS main-tempo cadence now matches the shipped drivers:** on an S2/S3K
+  tempo-delay frame the engine used to skip the whole track service; the real
+  drivers pre-increment every music slot's `DurationTimeout` and still run the
+  full track walk (S1 `TempoWait` SD:1549-1561; S2 sd:596-619; S3K
+  D:2607-2621), so envelopes, modulation, note fill and per-frame frequency
+  writes continue and only note expiry is delayed. The S2 sequencer also seeds
+  its tempo accumulator at song load and runs `TempoWait` on the very first
+  update (sd:1820-1822, sd:545-551), the S1 extension now hits stopped slots
+  (the ROM loop tests no playing bit), and the `EA` tempo change keeps the
+  accumulated phase on the Z80 drivers (S2 sd:3207-3209, S3K D:3861-3863)
+  while still resetting S1's countdown (SD:2256-2258). This turned the S2
+  driver oracle's tick-0 `tempoTimeout` divergence green (698 → 669 divergent
+  ticks) while the S1 GHZ music oracle stayed a byte-identical 14,690-tick
+  MATCH.
 - **Sonic 1 driver oracle is committed and re-runnable:** the S1 GHZ
   music-driver parity oracle (driver-RAM track state plus the ordered YM/PSG
   write stream per `UpdateMusic` invocation, recorded from BizHawk 2.11 /
