@@ -24,6 +24,20 @@ class MyTest {
 }
 ```
 
+### Class-level teardown is automatic
+
+Every reset above runs *before* a test; nothing restores state after the last test of a
+class. `HeadlessStateTeardownExtension` (registered globally through
+`src/test/resources/META-INF/services/org.junit.jupiter.api.extension.Extension` with
+`junit.jupiter.extensions.autodetection.enabled=true` in `junit-platform.properties`)
+therefore calls `TestEnvironment.resetAll()` after every top-level test class, so a
+`HeadlessTestFixture`, `SharedLevel`, gameplay session, or configuration write cannot leak
+into the next class of a reused Surefire fork. It does not run after `@Nested` classes and
+does not replace per-test hygiene: a class whose own tests depend on a clean baseline still
+declares `SingletonResetExtension`, `@RequiresRom`, or an `@AfterEach`.
+`TestHeadlessStateTeardownGuard` (run under `-Pguards`) pins the wiring and
+`TestHeadlessStateTeardownExtension` proves it is active at runtime.
+
 ## Manual setup (legacy)
 
 `HeadlessTestFixture.java` (`com.openggf.tests`) implements these steps and is the worked example to read.
@@ -47,6 +61,7 @@ class MyTest {
 |---|---|
 | `SingletonResetExtension` | JUnit 5 extension for automated singleton teardown |
 | `@FullReset` | Annotation triggering a full engine reset |
+| `HeadlessStateTeardownExtension` | Auto-registered; resets the engine baseline after every top-level test class |
 | `StubObjectServices` | Test double for `ObjectServices` |
 | `TestObjectServicesMigrationGuard` | Scanner-based guard preventing singleton access in objects |
 | `TestNoServicesInObjectConstructors` | Ensures objects don't call `services()` during construction |
