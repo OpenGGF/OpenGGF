@@ -27,6 +27,30 @@ This file contains the complete 0.6 development snapshot history carried forward
   duplicate implementations, and all languages consume one canonical resolver
   that refuses dirty, symlinked, non-directory, or checkout-escaping targets.
 
+- **The PSG core is a clean-room SN76489:** `PsgChip` was rewritten from the
+  public hardware specification
+  (`docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`)
+  with no emulator source consulted, replacing the Genesis Plus GX-derived body
+  and its non-commercial licence provenance. The new core runs every generator
+  on the chip's ÷16 tick, models the Sega-integrated variant's 16-bit LFSR
+  (taps `0x0009`, 57,337-state white-noise cycle), its period-0/1 constant-high
+  rule that SMPS relies on for the top of its note table, tone-2-linked noise
+  (whose clock keeps running at one edge per tick when tone 2 sits at that
+  period-0/1 top entry, so the 22 SFX written that way — S1/S2 Splash, Spikes
+  Move, Fireball and Lava Ball among them — hiss at the highest noise pitch
+  instead of falling silent), the latch/data write protocol and the 2 dB attenuator ladder with a true off,
+  and places every polarity flip, shift and volume step at its exact tick inside
+  the sample stream through the LGPL `BlipDeltaBuffer`. Channel output is
+  unipolar and hardware-relative (full scale 8191); the HQ/fast kernel toggle
+  and the built-in preamp are gone, so FM/PSG balance belongs to the mixer via
+  `configure(preamp, panning)`. The chip's own default noise clocking is now
+  the hardware rule (one shift per rising edge); `audio.psgNoiseShiftEveryToggle`
+  still selects the every-toggle variant and production keeps applying it from
+  config. `TestPsgChipGpgxParity` (which reflected into the old core's private
+  fields) is replaced by `TestPsgChipHardwareBehaviour`, which asserts the
+  specification's LFSR, attenuation, write-protocol, flip-timing, DC and
+  snapshot vectors through the public API only.
+
 - **HCZ2 Turbo Spikers no longer crash live rewind during unload:** attached
   shell and waterfall children now close their parent references immediately,
   while launched shells retain their independent ROM lifetime.

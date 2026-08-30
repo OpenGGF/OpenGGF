@@ -350,6 +350,10 @@ shared spawner naming S3K classes, and four unreferenced classes were removed.
 The GAME OVER / TIME OVER card now runs in all three games from ROM art and
 mappings: a time over restarts the act, a game over fades to the title screen;
 continue screens are still absent (`docs/status/known-bugs.md`).
+The SN76489 PSG core was rewritten clean-room from public hardware documentation
+(`docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`), removing
+the Genesis Plus GX-derived `psg.c` code; behaviour was verified against a pinned GPGX
+harness (`docs/architecture/validation/2026-08-29-psg-clean-room-capture-comparison.md`).
 
 The current S3K release priority is the AIZ → HCZ playable route. Knuckles
 routes, later-zone completeness, and some bonus/special-stage paths remain
