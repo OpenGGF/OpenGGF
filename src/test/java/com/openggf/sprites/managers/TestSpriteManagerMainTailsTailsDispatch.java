@@ -3,8 +3,10 @@ package com.openggf.sprites.managers;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.tests.SingletonResetExtension;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.sprites.playable.Tails;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -79,6 +81,17 @@ class TestSpriteManagerMainTailsTailsDispatch {
 
         assertEquals(0, laterController.captureRewindState().currentAnim(),
                 "slot 97 must not scan past the native Player 2 sidekick");
+    }
+
+    /**
+     * configuredMainTails() writes MAIN_CHARACTER_CODE into the configuration
+     * singleton, which SingletonResetExtension does not restore; a later class
+     * that loads a level in @BeforeAll (TestInitialPlayableProcessSpritesPass)
+     * would otherwise spawn Tails as the main character.
+     */
+    @AfterEach
+    void restoreConfiguration() {
+        TestEnvironment.resetAll();
     }
 
     private static Tails configuredMainTails() {

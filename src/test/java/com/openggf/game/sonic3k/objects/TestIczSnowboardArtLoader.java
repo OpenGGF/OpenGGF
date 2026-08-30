@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.game.OscillationManager;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -55,6 +56,9 @@ class TestIczSnowboardArtLoader {
                 oldMainCharacter != null ? oldMainCharacter : "sonic");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
                 oldSidekickCharacters != null ? oldSidekickCharacters : "");
+        // The headless fixtures advance the process-wide OscillationManager; clear it
+        // so later classes in the same fork start from the reset baseline.
+        OscillationManager.reset();
     }
 
     @Test

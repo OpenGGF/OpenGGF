@@ -19,6 +19,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,6 +50,19 @@ public class TestS3kBonusStageHeadlessBoot {
     private static final int ACT_1 = 0;
     private static final int IDLE_FRAMES = 60;
     private static final int FRAME0_RINGS = 25;
+
+    /**
+     * Each test builds a {@link HeadlessTestFixture} that leaves its bonus-stage
+     * level (zone 0x13-0x15) registered in the gameplay session. Later classes in
+     * the same reused fork that consult {@code GameServices.levelOrNull()} -- the
+     * S3K object registry derives its zone set from the loaded level's ROM zone
+     * id, and any id above 6 resolves to SKL -- would otherwise inherit it, so
+     * tear the session down here rather than relying on the next class to reset.
+     */
+    @AfterEach
+    void cleanup() {
+        TestEnvironment.resetAll();
+    }
 
     @Test
     public void gumballZoneBootsHeadlesslyWithMachineFromLayout() {
