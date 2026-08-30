@@ -101,8 +101,8 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
                                    ▼
                 ┌──────────────────────────────────────────┐
                 │  Recorder (Lua or Python)                │
-                │   - tools/bizhawk/*.lua                  │
-                │   - tools/retro/*.py                     │
+                │   - tools/tracechaser/bizhawk/*.lua                  │
+                │   - tools/tracechaser/retro/*.py                     │
                 └──────────────────────────────────────────┘
                                    │ writes 3 files
                                    ▼
@@ -145,21 +145,21 @@ their own legally-obtained copy.
 
 ## 3. Part I — Recording: BizHawk Lua
 
-BizHawk (`docs/BizHawk-2.11-win-x64/EmuHawk.exe`, not checked in) runs the ROM with a
+BizHawk (`tools/tracechaser/.dependencies/BizHawk-2.11-win-x64/EmuHawk.exe`, not checked in) runs the ROM with a
 deterministic BK2 movie. A companion Lua script is loaded with `--lua` which, via
 `event.onframeend`, snapshots RAM into `physics.csv` and emits diagnostic events into
 `aux_state.jsonl`. The script is the authoritative source of truth for the fixture format.
 
 ### 3.1 Script inventory
 
-`tools/bizhawk/` contains **15 Lua files** and **4 batch launchers**:
+`tools/tracechaser/bizhawk/` contains **15 Lua files** and **4 batch launchers**:
 
 | Category | File | Purpose |
 |---|---|---|
 | Main recorder | `s1_trace_recorder.lua` | S1 REV01 per-frame physics |
 | Main recorder | `s2_trace_recorder.lua` | S2 REV01 per-frame physics, Sonic + Tails |
 | Main recorder | `s3k_trace_recorder.lua` | S3&K per-frame physics, zone_act_state + checkpoints |
-| Credits recorder | `s1_credits_trace_recorder.lua` (removed; see `tools/retro/s1_credits_trace_recorder.py`) | Recorded the 8 ROM-owned credits demos |
+| Credits recorder | `s1_credits_trace_recorder.lua` (removed; see `tools/tracechaser/retro/s1_credits_trace_recorder.py`) | Recorded the 8 ROM-owned credits demos |
 | Launcher | `record_trace.bat` | Wraps BizHawk for S1 recording |
 | Launcher | `record_s2_trace.bat` | Wraps BizHawk for S2 recording with PowerShell stdout bridge |
 | Launcher | `record_s3k_trace.bat` | Wraps BizHawk for S3K recording, exposes `aiz_end_to_end` profile |
@@ -179,7 +179,7 @@ deterministic BK2 movie. A companion Lua script is loaded with `--lua` which, vi
 
 ### 3.2 `s1_trace_recorder.lua`
 
-**File:** `tools/bizhawk/s1_trace_recorder.lua` (~680 lines)
+**File:** `tools/tracechaser/bizhawk/s1_trace_recorder.lua` (~680 lines)
 
 #### Frame detection
 
@@ -257,7 +257,7 @@ All events carry `frame` (the trace frame number) and `vfc` (`gameplay_frame_cou
 
 ### 3.3 `s2_trace_recorder.lua`
 
-**File:** `tools/bizhawk/s2_trace_recorder.lua` (~947 lines) — the most complex recorder.
+**File:** `tools/tracechaser/bizhawk/s2_trace_recorder.lua` (~947 lines) — the most complex recorder.
 
 #### What changes vs S1
 
@@ -298,7 +298,7 @@ tails_x_sub,tails_y_sub,tails_routine,tails_status_byte,tails_stand_on_obj
 
 ### 3.4 `s3k_trace_recorder.lua`
 
-**File:** `tools/bizhawk/s3k_trace_recorder.lua` (~745 lines).
+**File:** `tools/tracechaser/bizhawk/s3k_trace_recorder.lua` (~745 lines).
 
 #### Critical S3K differences
 
@@ -357,7 +357,7 @@ is committed.
 
 This Lua recorder and its `record_s1_credits_traces.bat` launcher no longer exist in the
 tree; the surviving credits recorder is the stable-retro
-`tools/retro/s1_credits_trace_recorder.py` (section 4.4), which writes the same layout
+`tools/tracechaser/retro/s1_credits_trace_recorder.py` (section 4.4), which writes the same layout
 under `trace_output/credits_demos/`. The description below is kept because the trace
 schema it produced is still what the credits fixtures carry.
 
@@ -432,7 +432,7 @@ stable-retro is a Python library that embeds the same Genesis Plus GX core as Bi
 fully headless and runs on macOS / Linux / WSL. It produces byte-identical output to the
 BizHawk Lua recorder. S1 has full Python support; S2 and S3K are planned.
 
-`tools/retro/` contents:
+`tools/tracechaser/retro/` contents:
 
 | File | Lines | Role |
 |---|---|---|
@@ -520,13 +520,13 @@ Three input-source modes, controlled by CLI flags:
 
 ```bash
 # Native stable-retro BK2
-python tools/retro/s1_trace_recorder.py --movie path.bk2 --output-dir tools/retro/trace_output/
+python tools/tracechaser/retro/s1_trace_recorder.py --movie path.bk2 --output-dir tools/tracechaser/retro/trace_output/
 
 # Auto-parse a BizHawk BK2
-python tools/retro/s1_trace_recorder.py --bizhawk-bk2 path.bk2 --output-dir ...
+python tools/tracechaser/retro/s1_trace_recorder.py --bizhawk-bk2 path.bk2 --output-dir ...
 
 # Boot from a savestate (GreenHillZone.Act1 etc.) — used for interactive or unit-test recordings
-python tools/retro/s1_trace_recorder.py --state GreenHillZone.Act1 --output-dir ...
+python tools/tracechaser/retro/s1_trace_recorder.py --state GreenHillZone.Act1 --output-dir ...
 ```
 
 The main loop looks like:
@@ -1381,19 +1381,19 @@ None of these predecessor versions is a current compatibility target.
 
 **Current recorder:**
 
-- `tools/bizhawk-headless/run.sh`
-- `tools/bizhawk-headless/src/Recording/`
+- `tools/tracechaser/bizhawk-headless/run.sh`
+- `tools/tracechaser/bizhawk-headless/src/Recording/`
 
 **Historical/diagnostic recorder references:**
 
-- `tools/bizhawk/s1_trace_recorder.lua`
-- `tools/bizhawk/s2_trace_recorder.lua`
-- `tools/bizhawk/s3k_trace_recorder.lua`
-- `tools/bizhawk/record_trace.bat`, `record_s2_trace.bat`, `record_s3k_trace.bat`
-- `tools/retro/trace_core.py`
-- `tools/retro/s1_trace_recorder.py`
-- `tools/retro/s1_credits_trace_recorder.py`
-- `tools/retro/requirements.txt`
+- `tools/tracechaser/bizhawk/s1_trace_recorder.lua`
+- `tools/tracechaser/bizhawk/s2_trace_recorder.lua`
+- `tools/tracechaser/bizhawk/s3k_trace_recorder.lua`
+- `tools/tracechaser/bizhawk/record_trace.bat`, `record_s2_trace.bat`, `record_s3k_trace.bat`
+- `tools/tracechaser/retro/trace_core.py`
+- `tools/tracechaser/retro/s1_trace_recorder.py`
+- `tools/tracechaser/retro/s1_credits_trace_recorder.py`
+- `tools/tracechaser/retro/requirements.txt`
 
 **Java harness** (`src/test/java/com/openggf/tests/trace/`):
 

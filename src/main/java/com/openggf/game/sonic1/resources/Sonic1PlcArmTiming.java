@@ -39,7 +39,7 @@ public final class Sonic1PlcArmTiming
 
     /**
      * The recorder's canonical descriptor encoding for this kind
-     * (tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs).
+     * (tools/tracechaser/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs).
      * A Nemesis PLC descriptor has no compressed length in ROM and no
      * modules, and its destination is the tile index the ROM's own
      * {@code v_plc_buffer} slot holds.

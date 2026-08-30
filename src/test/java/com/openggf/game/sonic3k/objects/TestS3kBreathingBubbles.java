@@ -10,8 +10,10 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -49,6 +51,19 @@ public class TestS3kBreathingBubbles {
     public static void configure() {
         SonicConfigurationService.getInstance()
                 .setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+    }
+
+    /**
+     * Every test here builds an HCZ1 HeadlessTestFixture and never releases it,
+     * and configure() writes S3K_SKIP_INTROS into the configuration singleton.
+     * Neither is restored by the per-test reset, so a later class in the same
+     * fork that assumes open air (TestMhzMushroomParachuteObjectInstance's wall
+     * sensors read terrain through GameServices.levelOrNull()) would otherwise
+     * collide with HCZ1 terrain. Tear the session down at the source.
+     */
+    @AfterEach
+    void releaseLevelAndConfiguration() {
+        TestEnvironment.resetAll();
     }
 
     @Test

@@ -157,7 +157,7 @@ public final class HardwareTimingService
      * production has claimed its result.
      *
      * <p>The recorder discards everything it observes before a segment's first
-     * arm (tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83),
+     * arm (tools/tracechaser/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83),
      * so work released through {@link #admitUnrepresentedReadiness} appears
      * nowhere in the stream. Ordinals are the only counter the engine and the
      * recording share, so an arm the recorder never counted must not occupy a

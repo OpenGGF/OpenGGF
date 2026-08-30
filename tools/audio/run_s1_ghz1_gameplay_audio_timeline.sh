@@ -36,13 +36,12 @@ done
 
 SCRIPT_DIR=$(cd "${BASH_SOURCE[0]%/*}" && pwd -P)
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
+TRACECHASER_BOOTSTRAP="$REPO/tools/tracechaser-bootstrap.sh"
 MOVIE="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2"
 RUN_PATH="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds"
 ARTIFACT_ROOT="$REPO/target"
 BUILD_ROOT="$REPO/target"
 OUTPUT_ROOT="$REPO/target/audio-parity/s1-ghz1-gameplay"
-PROBE="$REPO/tools/bizhawk/probes/s1_ghz1_gameplay_audio_timeline_probe.lua"
-LAUNCHER="$REPO/tools/bizhawk/run_bizhawk_lua.sh"
 ROM_PATH=""
 BIZHAWK_DIR="${BIZHAWK_HOME:-}"
 
@@ -77,6 +76,10 @@ while [ "$#" -gt 0 ]; do
 		*) echo "Argument error: unknown option: $1" >&2; usage >&2; exit "$EXIT_USAGE" ;;
 	esac
 done
+
+PROBE=$("$TRACECHASER_BOOTSTRAP" --require \
+	"bizhawk/probes/s1_ghz1_gameplay_audio_timeline_probe.lua") || exit $?
+LAUNCHER=$("$TRACECHASER_BOOTSTRAP" --require "bizhawk/run_bizhawk_lua.sh") || exit $?
 
 [ -n "$ROM_PATH" ] || { echo "Argument error: --rom is required" >&2; usage >&2; exit "$EXIT_USAGE"; }
 if [ -z "$BIZHAWK_DIR" ]; then

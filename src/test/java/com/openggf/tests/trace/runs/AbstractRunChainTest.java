@@ -2982,7 +2982,7 @@ abstract class AbstractRunChainTest {
      * iteration at all. Every such row is silently lost from the stamp, so a
      * gap edge raised late in a chain reports a row hundreds short of the one
      * the recorder wrote. The recorder's contract is the movie row it has
-     * consumed ("tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":
+     * consumed ("tools/tracechaser/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":
      * 199-215), so the driver states it rather than inferring it.
      */
     private static void stateMovieLogicalRow(TraceRunFrameDriver.Step step) {

@@ -32,6 +32,7 @@ import org.mockito.MockedStatic;
 import static org.mockito.Mockito.mockStatic;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSolidObjectManager {
@@ -44,6 +45,17 @@ public class TestSolidObjectManager {
     @AfterEach
     public void tearDown() {
         SessionManager.clear();
+        GameModuleRegistry.reset();
+    }
+
+    @Test
+    void tearDownRestoresSonic2BootstrapAfterSonic1SolidCoverage() {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+
+        tearDown();
+
+        assertInstanceOf(Sonic2GameModule.class, GameModuleRegistry.getBootstrapDefault(),
+                "a following class must not inherit Sonic 1 unified-collision rules");
     }
 
     @Test

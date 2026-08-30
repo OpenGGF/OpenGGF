@@ -15,8 +15,10 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -32,6 +34,19 @@ import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestBatbotBadnikInstance {
+
+    /**
+     * HeadlessTestFixture opens a gameplay session with a loaded CNZ level and
+     * this class uses no reset extension, so the session would outlive the
+     * class. Later unit tests in the same fork that query terrain statically
+     * (ObjectTerrainUtils reads GameServices.levelOrNull(); e.g. the Madmole
+     * side drill's ObjHitFloor_DoRoutine) assume no level is registered and
+     * would otherwise snap onto CNZ collision.
+     */
+    @AfterEach
+    void closeHeadlessSession() {
+        TestEnvironment.resetAll();
+    }
 
     @Test
     void registryCreatesBatbotForSkSetOneSlotA5() {

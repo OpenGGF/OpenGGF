@@ -204,7 +204,7 @@ special-stage-return work; read the recorder before reasoning about a
 - **`movie_logical_frame` is the physical BK2 movie row**, not a count of
   production iterations. `S1RunCaptureRunner`'s `rowsConsumed` counts every
   movie row from zero
-  (`tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs`:199-215) and
+  (`tools/tracechaser/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs`:199-215) and
   reaches the observer through `PrepareDynamicArtCursor` (:212, :420-430) and
   `S1DynamicArtObserver.MarkAdvanceBoundary`
   (`.../S1DynamicArtObserver.cs`:108-128);
