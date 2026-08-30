@@ -69,6 +69,8 @@ uses a distinct directory below `target/test-tmp`.
   suite report hundreds of phantom failures (Mockito stubbing errors leaking across
   classes, ROM fixtures failing to load) that look like real regressions but aren't. The
   build fails fast at `validate` if the JVM is wrong.
+- **Lua 5.4 runs the TraceChaser forwarder guard.** Set `LUA_BIN` when the executable is
+  not named `lua`; CI pins it to `lua5.4` and verifies the version before Maven.
 - Maven Silent Extension is enabled by default (`-Dmse=relaxed` via `.mvn/maven.config`).
   Use `-Dmse=off` when you need full Maven logs.
 - In PowerShell, quote `-D...` properties (`mvn "-Dtest=com.openggf.pkg.TestClass" test`).
@@ -103,6 +105,14 @@ optional development references pinned to the canonical Sonic Retro repositories
 tests, and runtime do not require them. Contributors doing disassembly-backed parity research
 can opt in with `git submodule update --init`. The SMPS audio reference under
 `docs/SMPS-rips/SMPSPlay/` remains untracked and available locally.
+
+Trace producers, BizHawk integration, probes, and trace validation utilities live in the
+optional pinned `tools/tracechaser/` submodule. Ordinary builds and tests do not require it.
+For trace work, run `git submodule update --init --recursive tools/tracechaser`, then follow
+TraceChaser's own capture guide. OpenGGF keeps only 0.6 compatibility forwarders at selected
+old command paths; new guidance must use `tools/tracechaser/...`. BizHawk is not vendored:
+TraceChaser requires the verified official 2.11 release because later versions remove Lua
+functionality used by the supported recorders.
 
 ## Temporary and durable artifacts
 

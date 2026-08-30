@@ -153,7 +153,7 @@ class TestCompleteRunAudioCutoffFrontier {
 
     @Test
     void bindsTheActualTask8CompleteRunCutoffVectors() throws Exception {
-        Path capability = Path.of("tools/bizhawk-headless/fixtures/gpgx-audio-capability-v1.json");
+        Path capability = Path.of("src/test/resources/tracechaser/gpgx-audio-capability-v1.json");
         assertEquals(CompleteRunAudioProfiles.GPGX_AUDIO_CAPABILITY_SHA256,
                 HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                         .digest(Files.readAllBytes(capability))));

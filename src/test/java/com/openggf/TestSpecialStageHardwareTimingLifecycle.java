@@ -29,6 +29,8 @@ import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import com.openggf.tests.RomTestUtils;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
@@ -169,6 +171,14 @@ class TestSpecialStageHardwareTimingLifecycle {
     @Test
     void fatalInitializationErrorAbortsPartialTimingInstallThenRethrows(
             @TempDir Path dir) throws Exception {
+        // finishSpecialStageLaunch opens the Sonic 2 ROM in
+        // configureStandaloneSpecialStageAudio() before it reaches the mocked
+        // doEnterSpecialStage; without the ROM that IOException is swallowed by
+        // abortLaunchFailure (only Errors rethrow) and the fatal path under test
+        // is never entered. Skip, rather than error, on a ROM-less runner.
+        java.io.File romFile = RomTestUtils.ensureSonic2RomAvailable();
+        Assumptions.assumeTrue(romFile != null,
+                "Sonic 2 ROM not available — fatal SS launch path needs it");
         writeTrace(dir, true);
         SpecialStageTraceData trace = SpecialStageTraceData.load(dir);
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
@@ -176,6 +186,13 @@ class TestSpecialStageHardwareTimingLifecycle {
         GameplayModeContext failedContext =
                 SessionManager.openGameplaySession(new Sonic2GameModule());
         attachCoreManagers(failedContext);
+        // Install the ROM explicitly: production RomManager otherwise opens the
+        // configured default path relative to the working directory, which only
+        // exists on checkouts that keep a ROM beside the sources.
+        com.openggf.data.Rom rom = new com.openggf.data.Rom();
+        Assumptions.assumeTrue(rom.open(romFile.getAbsolutePath()),
+                "Sonic 2 ROM could not be opened: " + romFile);
+        com.openggf.data.RomManager.getInstance().setRom(rom);
         var failedRegistry = failedContext.getRewindRegistry();
         TraceSessionLauncher session = session(
                 dir, trace, TraceReplaySessionBootstrap.snapshotGameplayConfig());

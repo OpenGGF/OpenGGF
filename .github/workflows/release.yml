@@ -33,6 +33,7 @@ jobs:
       SONIC1_ROM_PATH: ${{ vars.SONIC1_ROM_PATH }}
       SONIC2_ROM_PATH: ${{ vars.SONIC2_ROM_PATH }}
       S3K_ROM_PATH: ${{ vars.S3K_ROM_PATH }}
+      LUA_BIN: lua5.4
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,6 +44,12 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+
+      - name: Verify Lua 5.4
+        shell: bash
+        run: |
+          command -v "$LUA_BIN"
+          "$LUA_BIN" -e 'assert(_VERSION == "Lua 5.4")'
 
       - name: Verify trace replay ROM paths
         shell: bash

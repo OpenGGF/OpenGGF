@@ -7,27 +7,32 @@ import com.openggf.tools.audio.completerun.s2.S2CompleteRunReferenceRawAdapter.H
 import com.openggf.tools.audio.completerun.s2.S2CompleteRunReferenceRawAdapter.RawBoundary;
 import com.openggf.tools.audio.completerun.s2.S2CompleteRunReferenceRawAdapter.RawFrame;
 import com.openggf.tests.TestTempFiles;
+import com.openggf.tests.TraceChaserTestSupport;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Assumptions;
 
 /** Opt-in native proof that real row 769 reaches the strict S2 Java state pipeline. */
 class TestS2CompleteRunRealRow769DecodeGate {
     @Test
-    @EnabledIfEnvironmentVariable(named = "OPENGGF_S2_COMPLETE_AUDIO_DECODE_GATE", matches = "1")
+    @Tag("tracechaser-integration")
     void capturesAndDecodesTheExactRealRow769Boundary() throws Exception {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        Path traceChaser = TraceChaserTestSupport.requirePinnedCheckout();
+        Assumptions.assumeTrue("1".equals(System.getenv("OPENGGF_S2_COMPLETE_AUDIO_DECODE_GATE")),
+                "set OPENGGF_S2_COMPLETE_AUDIO_DECODE_GATE=1 to run the native capture");
         Path rom = requiredPath("S2_ROM_PATH");
         Path movie = requiredPath("S2_BK2_PATH");
         Path raw = TestTempFiles.createTempFile("openggf-s2-row769-", ".jsonl");
         Files.delete(raw);
         try {
             ProcessBuilder builder = new ProcessBuilder(
-                    root.resolve("tools/bizhawk-headless/test.sh").toString(),
+                    traceChaser.resolve("bizhawk-headless/test.sh").toString(),
                     "--filter", "prove the real row 769 raw boundary");
             builder.directory(root.toFile());
             builder.inheritIO();

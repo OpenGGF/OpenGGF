@@ -18,7 +18,7 @@ replay. `lua_script_version` was removed, not renamed. V5 also removes
 
 ## Capture matrix
 
-All production capture uses `tools/bizhawk-headless/run.sh --mode trace` with a
+All production capture uses `tools/tracechaser/bizhawk-headless/run.sh --mode trace` with a
 verified user-supplied ROM and a destination that does not exist.
 
 | Family | Input and selector | Output shape |
@@ -42,9 +42,9 @@ Capture the complete fleet to scratch. Do not overlay or copy it into
 `src/test/resources/traces`.
 
 ```bash
-python3 tools/traces/validate_trace_v5.py /scratch/v5-candidate/traces
+python3 tools/tracechaser/traces/validate_trace_v5.py /scratch/v5-candidate/traces
 
-python3 tools/traces/compare_trace_v5_candidates.py \
+python3 tools/tracechaser/traces/compare_trace_v5_candidates.py \
   src/test/resources/traces /scratch/v5-candidate/traces \
   --mode credits-20-to-42 \
   --output /scratch/v5-candidate-report.json
@@ -93,7 +93,7 @@ endianness or a documented derivation.
 Verify it against both the candidate and comparison report:
 
 ```bash
-python3 tools/traces/verify_s1_credits_raw_host_evidence.py \
+python3 tools/tracechaser/traces/verify_s1_credits_raw_host_evidence.py \
   src/test/resources/traces \
   /scratch/v5-candidate/traces \
   /scratch/v5-candidate-report.json \

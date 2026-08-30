@@ -15,7 +15,7 @@ publishes an all-or-nothing output directory.
 - Discover the ROM at the repository root; do not assume a filename. Verify
   the documented game/hash when the capture identity matters:
   S1 `AFE05EEE`, S2 REV01 `7B905383`, S3&K `63522553`.
-- Use BizHawk 2.11 Linux x64 at `docs/BizHawk-2.11-linux-x64` or set
+- Use BizHawk 2.11 Linux x64 at `tools/tracechaser/.dependencies/BizHawk-2.11-linux-x64` or set
   `BIZHAWK_HOME` to an absolute existing directory. Do not substitute 2.11.1.
 - Keep the BK2's truthful filename. The published `source_bk2` metadata must
   match it exactly.
@@ -26,7 +26,7 @@ publishes an all-or-nothing output directory.
 The game is selected from the ROM. Always use `--mode trace`:
 
 ```bash
-tools/bizhawk-headless/run.sh \
+tools/tracechaser/bizhawk-headless/run.sh \
   --mode trace \
   --rom "$S1_ROM_PATH" \
   --movie "$MOVIE" \
@@ -45,8 +45,8 @@ exclusive modes:
 For S1, a complete-emeralds movie is a distinct run from the ordinary complete
 run. Give it its own run ID and destination; never replace the existing run.
 For S2/S3&K, follow the game-specific run-mode options in
-`tools/bizhawk/README.md` and the corresponding behavior document under
-`tools/bizhawk-headless/docs/`.
+`tools/tracechaser/bizhawk/README.md` and the corresponding behavior document under
+`tools/tracechaser/bizhawk-headless/docs/`.
 
 Do not set diagnostic recorder environment variables unless the task
 specifically requires them. Do not inject movie length or gameplay state to
@@ -97,5 +97,5 @@ must remain distinct fixtures.
 Run the native harness tests relevant to the capture, then the applicable Java
 trace replay tests. Record any new first-error frame/field and update the trace
 frontier log when a frontier moves. Use the behavior documents and
-`tools/bizhawk/README.md` as the detailed protocol references; this skill is
+`tools/tracechaser/bizhawk/README.md` as the detailed protocol references; this skill is
 the task-discovery and publication checklist, not a second recorder spec.

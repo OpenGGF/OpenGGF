@@ -24,8 +24,11 @@ import com.openggf.level.objects.TouchCategoryDecodeMode;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.Direction;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tools.Sonic2ObjectProfile;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -37,6 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@FullReset
+@ExtendWith(SingletonResetExtension.class)
 class TestOOZPlacedObjectGaps {
 
     @Test

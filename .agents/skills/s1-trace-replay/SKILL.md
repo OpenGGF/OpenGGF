@@ -23,11 +23,11 @@ $ARGUMENTS: Optional zone name or action. Examples:
 - BK2 movies live beside their fixtures under
   `src/test/resources/traces/s1/<zone>/`.
 - For the native recorder: Mono 6.12 + xbuild, and a BizHawk distribution at
-  `docs/BizHawk-2.11-linux-x64` (or `BIZHAWK_HOME`).
+  `tools/tracechaser/.dependencies/BizHawk-2.11-linux-x64` (or `BIZHAWK_HOME`).
 
 ## Step 1: Record the trace
 
-**S1 recording is migrated to the native harness** (`tools/bizhawk-headless/`). It runs
+**S1 recording is migrated to the native harness** (`tools/tracechaser/bizhawk-headless/`). It runs
 under Mono with no display, so prefer it over the Lua recorder:
 
 ```bash
@@ -35,7 +35,7 @@ under Mono with no display, so prefer it over the Lua recorder:
 mkdir -p "$OGGF_TASK_DIR"
 TASK_DIR="$OGGF_TASK_DIR"
 TRACE_DIR="$TASK_DIR/capture"
-tools/bizhawk-headless/run.sh \
+tools/tracechaser/bizhawk-headless/run.sh \
     --rom "$S1_ROM_PATH" \
     --movie src/test/resources/traces/s1/<zone>/<movie>.bk2 \
     --output "$TRACE_DIR" \
@@ -47,12 +47,12 @@ tools/bizhawk-headless/run.sh \
 is a new child beneath that parent, so the native harness receives the
 required non-existent `--output` path. Use `--run-id <id>` for complete-run / run-mode
 captures instead of `--trace-profile`. Validate changes with
-`tools/bizhawk-headless/test.sh --filter S1` — the differential gates compare against the
+`tools/tracechaser/bizhawk-headless/test.sh --filter S1` — the differential gates compare against the
 committed fixtures byte-for-byte.
 
-The Lua recorder (`tools/bizhawk/s1_trace_recorder.lua`) remains the behavioural authority
+The Lua recorder (`tools/tracechaser/bizhawk/s1_trace_recorder.lua`) remains the behavioural authority
 the native port is validated against, and still works on Linux via
-`tools/bizhawk/run_bizhawk_lua.sh <lua> <bk2> <rom>` with `DISPLAY=:0`. Reach for it when
+`tools/tracechaser/bizhawk/run_bizhawk_lua.sh <lua> <bk2> <rom>` with `DISPLAY=:0`. Reach for it when
 cross-checking the native output, not as the default path.
 
 ### Verify recording succeeded
@@ -68,7 +68,7 @@ Check the written `metadata.json`:
 - BizHawk does not print Lua output to stdout in chromeless mode. Judge Lua runs by output
   files and timestamps, never console output. The native harness does report errors on
   stderr and exits non-zero.
-- Lua output lands in `tools/bizhawk/trace_output/` (relative to the *script's* folder, not
+- Lua output lands in `tools/tracechaser/bizhawk/trace_output/` (relative to the *script's* folder, not
   BizHawk's), and each run OVERWRITES the previous one — record and copy one zone at a
   time. The native harness writes to whatever `--output` you pass and refuses to clobber.
 
@@ -76,7 +76,7 @@ Check the written `metadata.json`:
 
 After each recording, copy the three output files into the fixture directory (paths are
 repo-relative; `$SRC` is your `--output` dir for a native capture, or
-`tools/bizhawk/trace_output` for a Lua one). The `.bk2` is unchanged:
+`tools/tracechaser/bizhawk/trace_output` for a Lua one). The `.bk2` is unchanged:
 
 ```bash
 SRC="$TRACE_DIR"

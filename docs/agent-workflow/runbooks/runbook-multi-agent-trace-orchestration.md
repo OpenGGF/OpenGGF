@@ -620,7 +620,7 @@ if test -z "$(git log --format=%H "${BENCH_BASE}..${BENCH_BRANCH}")"; then git b
   `--chromeless` alone does NOT do this.
 - **Self-exit:** the lua MUST `client.exit()` when done. A bare
   `while true do emu.frameadvance() end` (no exit) or a `client.pause()` tail LEAKS
-  EmuHawk at multiple GB. Use `tools/bizhawk/diag_template_fast.lua` (fill only its
+  EmuHawk at multiple GB. Use `tools/tracechaser/bizhawk/diag_template_fast.lua` (fill only its
   two marked sections).
 - **Read-count crash:** >~12–16 `mainmemory.read_*` per frame at speedmode 6400 makes
   EmuHawk silently exit. Drop to `speedmode(100)` in the capture window, or buffer/
