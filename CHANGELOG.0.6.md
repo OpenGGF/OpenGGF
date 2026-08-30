@@ -107,6 +107,18 @@ This file contains the complete 0.6 development snapshot history carried forward
   duplicate implementations, and all languages consume one canonical resolver
   that refuses dirty, symlinked, non-directory, or checkout-escaping targets.
 
+- **FM:PSG balance restored after the two core rewrites:** the Nuked-OPN2
+  facade (6144 per full-scale FM channel) and the clean-room PSG (8191 per
+  full-scale channel) would have summed to a mix 8.3 dB heavier in PSG than
+  before. `VirtualSynthesizer` now sets the PSG output-stage preamp to 38 %
+  (`6144 x 4200 / 8191^2`), restoring the pre-rewrite ratio to within 0.10 dB
+  with more headroom than before (loudest render -11.9 dBFS, no clipping).
+  This is pre-rewrite parity, not a hardware calibration — no two-chip
+  capture exists — and is recorded as such in `docs/status/known-discrepancies.md`
+  and `docs/architecture/validation/2026-08-29-audio-mix-calibration.md`;
+  `TestVirtualSynthesizerMix` asserts the documented per-chip levels, ratio
+  and resting level instead of a pasted golden render.
+
 - **The PSG core is a clean-room SN76489:** `PsgChip` was rewritten from the
   public hardware specification
   (`docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`)
