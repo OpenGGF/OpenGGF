@@ -292,6 +292,13 @@ traces.
   share. A further SMPS and chip-level parity programme built during the 0.6
   cycle is deferred to 0.7 and is not part of this release; see the release
   summary for what was withdrawn and why.
+- **Sound-driver reverse-engineering groundwork:** disassembly-cited routine
+  maps and behaviour specs for all three games' SMPS drivers, an engine gap
+  analysis, and committed driver-parity oracles (S1 GHZ music and sound-test
+  SFX, an S2 EHZ windowed driver capture, and the S3K AIZ1 intro) with a new
+  `docs/status/audio-frontier-log.md` recording every comparison; all
+  artifacts are indexed from
+  `docs/architecture/designs/audio/2026-08-30-sound-driver-re-index.md`.
 - **Resolve-ready capture:** live and trace recording can select DNxHR SQ video
   with lossless 24-bit PCM audio in a MOV container for DaVinci Resolve on Linux.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,

@@ -33,3 +33,7 @@ and validation records remain here as historical engineering evidence.
 Domain names such as audio, testing, trace, performance, or S3K zones may
 appear as subfolders inside one of those categories. They do not form a
 parallel top-level taxonomy.
+
+Audio: the sound-driver reverse-engineering artifacts (driver maps, gap
+analysis, behaviour specs, and oracle records) are indexed in
+[architecture/designs/audio/2026-08-30-sound-driver-re-index.md](architecture/designs/audio/2026-08-30-sound-driver-re-index.md).
