@@ -90,12 +90,19 @@ S1-style PAL compensation does not exist anywhere else; **no tempo multiplier of
 kind** is applied for PAL (CAD-08 confirmed for S2).
 
 **The 68k side of the boundary** (`sndDriverInput`, `s2:1270-1330`): with the Z80 bus
-held, if `QueueToPlay == 80h` take `Music0` else `Music1`; ids `>= MusID_Pause (FEh)`
-become `StopMusic = id - FEh + 7Fh` (`FE→7F` pause, `FF→80h` unpause) and are not
-queued; any other id is written to `QueueToPlay`. Then for `d1 = 3..0` — **four**
-slots with fixBugs off (`s2:1304-1310`), the fourth aliasing the first byte of
-`VoiceTblPtr`, harmless because `SoundQueue.SFX2` is never written (`const:1883`) —
-copy `Sound_Queue.SFX0[d1]` into `Queue0[d1]` when the driver slot is 0.
+held, the music slots are read **only when `QueueToPlay == 80h`** — a busy driver
+defers both music slots a frame; when it is `80h`, `Music0` is taken if non-zero,
+else `Music1`. Ids `>= MusID_Pause (FEh)` become `StopMusic = id - FEh + 7Fh`
+(`FE→7F` pause, `FF→80h` unpause) and are not queued; any other id is written to
+`QueueToPlay`. Then for `d1 = 3..0` — **four** slots with fixBugs off
+(`s2:1306-1314`) — copy `Sound_Queue.SFX0[d1]` into `Queue0[d1]` when the driver
+byte is 0. The `d1 = 2` read is `SoundQueue.SFX2`, which no 68k routine ever
+writes (`const:1883`), so that slot is always empty; the `d1 = 3` read is
+`SoundQueue.SFX0 + 3` = **`Music1`** (the struct is Music0, SFX0, SFX1, SFX2,
+Music1), and the write lands on `Queue0 + 3` = the **first byte of
+`VoiceTblPtr`** — so a pending `Music1` request (PlayMusic's overflow slot,
+`s2:1526`) can be stolen into `VoiceTblPtr`'s low byte whenever that byte is 0,
+and cleared. Rare, but not harmless-by-construction.
 
 ### 1.2 State read/written
 
@@ -446,8 +453,10 @@ track never runs `zSetVoice`, `sd:1919-1924`), `DACEnabled = 80h`. Then write
 
 **`zInitMusicPlayback`** (`sd:2580-2654`): save/zero/restore per §2.2, then
 `QueueToPlay = 80h`, then (FixDriverBugs off, `sd:2649-2653`) **`zFMSilenceAll` +
-`zPSGSilenceAll`**. `zFMSilenceAll` (`sd:2518-2540`): key-off `28h = 02,01,00` then
-`06,05,04` (b counts 3→1, part I write then `set 2,c` part II write per iteration),
+`zPSGSilenceAll`**. `zFMSilenceAll` (`sd:2518-2540`): key-off `28h = 02,06, 01,05,
+00,04` (b counts 3→1; each iteration writes the channel byte, then rewrites it with
+bit 2 set — both through `zWriteFMI`, since `28h` is a part-I register and the bit
+selects the part-II *channels* in the data byte),
 then `FFh` to registers `30h-8Fh` on **both parts** (96 writes each) — including
 FM3-5 that SFX may own, which is why step 1 of `zPlayMusic` stops SFX first.
 `zPSGSilenceAll` (`sd:1412-1418`): `9Fh, BFh, DFh, FFh`.
@@ -464,7 +473,9 @@ after the clear, so its note-off writes PSG byte `1Fh` (§18 q5).
 For a 6-FM song (e.g. EHZ, `smpsHeaderChan $06, $03` — FM+DAC count 6, so FM6
 unused): key-off ×6 (`28h`: 02,06,01,05,00,04), `FFh`→`30h-8Fh` both parts,
 PSG `9F BF DF FF`, `28h = 06h`, TL `42/46/4A/4E = FFh` (part II), `B6h = C0h`,
-`2Bh = 80h`, then `zInitSFX`'s `28h` note-offs ×6 and PSG `9F BF DF FF` again.
+`2Bh = 80h`, then `zInitSFX`'s `28h` note-offs ×6 (`00,01,02,04,05,06`) and PSG
+`9F BF DF` — three `zPSGNoteOff`s on the music PSG tracks; the noise `FFh` write
+is the FixBugs branch (§7), so it is **not** repeated here.
 First notes follow on the next invocation (`DurationTimeout = 1`).
 
 ### 5.3 Test vectors
@@ -569,12 +580,18 @@ dispatch, `zPlayMusic`).
    `PlaybackControl = 80h`, `VoiceControl = 05h`, `DurationTimeout = 1`,
    `AMSFMSPan = C0h`. Same invocation, SFX pass, first service emits (all FM5 data
    writes on part II because `VoiceControl` bit 2 is set; `ch = VoiceControl&3 = 1`):
-   - `EF 00` voice upload (voice bytes `04; 37 72 77 49; 1F 1F 1F 1F; 07 0A 07 0D;
-     00 0B 00 0B; 1F 0F 1F 0F; TL 23 80 23 80`): `B1 = 04`; `31/35/39/3D = 37/72/77/49`;
-     `51/55/59/5D = 1F×4`; `61/65/69/6D = 07/0A/07/0D`; `71/75/79/7D = 00/0B/00/0B`;
-     `81/85/89/8D = 1F/0F/1F/0F`; `B5 = C0`; algorithm 4 → `zVolTLMaskTbl[4] = 0Ch`
-     (`sd:3235-3238`) → TL writes `41 = 23h`, `45 = 80h`, `49 = 23h+05h = 28h`,
-     `4D = 80h+05h = 85h` (unclamped 8-bit add, bit 7 lands in the register,
+   - `EF 00` voice upload (voice bytes `04; 37 77 72 49; 1F 1F 1F 1F; 07 07 0A 0D;
+     00 00 0B 0B; 1F 1F 0F 0F; TL 23 23 80 80` — the bytes the `smpsVc*` macros
+     emit for `SonicDriverVer == 2` with `SourceSMPS2ASM = 0`, ops in `4,2,3,1`
+     order and algorithm-derived bit 7 OR'd onto the slot TLs, `inc:917-958`; the
+     in-file byte comment above `Sound_Ring_Voices` lists the middle operator pair
+     in the S1/S3K `4,3,2,1` order and does not match the assembled bytes):
+     `B1 = 04`; `31/35/39/3D = 37/77/72/49`;
+     `51/55/59/5D = 1F×4`; `61/65/69/6D = 07/07/0A/0D`; `71/75/79/7D = 00/00/0B/0B`;
+     `81/85/89/8D = 1F/1F/0F/0F`; `B5 = C0`; algorithm 4 → `zVolTLMaskTbl[4] = 0Ch`
+     (`sd:3235-3238`) → TL writes `41 = 23h`, `45 = 23h`, `49 = 80h+05h = 85h`,
+     `4D = 80h+05h = 85h` (the masked slots carry the `80h`-flagged TL bytes;
+     unclamped 8-bit add, bit 7 lands in the register,
      `sd:3399-3431`; hardware effect §18 q6).
    - `E0 40` (`smpsPan panRight`): `AMSFMSPan = (C0h & 37h) | 40h = 40h`; `B5 = 40`.
    - Note `nE5, $05`: key-off `28 = 05` (part I); frequency: index
@@ -661,8 +678,11 @@ Write cadence:
 - `zFMUpdateFreq` (`sd:1089-1117`): `hl = signext(Detune) + Freq`; write
   `A4h+ch = h` then `A0h+ch = l` (part per `VoiceControl` bit 2). `zPSGUpdateFreq`
   (`sd:1209-1251`): `hl = signext(Detune) + Freq`; `E0h` tracks write with latch
-  `C0h`; byte 1 `reg | (l & 0Fh)`, byte 2 `(hl >> 4) & 3Fh`. Both return without
-  writing when bit 1 or bit 2 is set.
+  `C0h`; byte 1 `reg | (l & 0Fh)`, byte 2 `(hl >> 4) & 3Fh`. `zPSGUpdateFreq`
+  returns without writing when bit 1 or bit 2 is set (`and 6`, `sd:1210-1212`);
+  `zFMUpdateFreq` tests **only bit 2** (`sd:1090`) — an FM rest never reaches it
+  because `zFMPrepareNote` returns on bit 1 and `zDoModulation` returns to the
+  caller's caller on bit 1.
 - Key-on (`zFMNoteOn`, `sd:2797-2806`): `28h = VoiceControl | F0h`, part I always;
   skipped when bit 1 or 2. Key-off (`zFMNoteOff`, `sd:2814-2827`):
   `28h = VoiceControl`; skipped when bit 4 or 2. `zPSGNoteOff` (`sd:1357-1380`):
@@ -687,7 +707,7 @@ Write cadence:
    expiry skips key-off (bit 4 checked in `zFMNoteOff`) and, via
    `zFinishTrackUpdate`'s bit-4 early return, keeps `NoteFillTimeout` and
    `VolFlutter` — the spindash rev's `nG5,$16,smpsNoAttack → nG6,$18` re-pitches
-   without a key edge (`E0 - Spin Dash Rev.asm:11-14`).
+   without a key edge (`E0 - Spin Dash Rev.asm:13-15`).
 4. **Rest.** FM byte `80h`: `zFMDoRest` zeroes `Freq`, sets bit 1; the pending
    key-on and frequency writes are suppressed (`zFMPrepareNote` returns on rest) —
    a rest emits only the preceding key-off.
@@ -763,7 +783,9 @@ pops its return address; bit 1 set or bit 3 clear → return to caller's caller 
 frequency write this frame, §7); `ModulationWait` counts down first (no write while
 waiting); then `ModulationSpeed` counts down — non-zero → return (no write);
 expired → reload speed from `ptr+1`; if `ModulationSteps == 0` → reload steps from
-`ptr+3` and **negate `ModulationDelta`** with no write that frame; else `dec` steps,
+`ptr+3` **raw — the `zz >> 1` halving happens only at arm time** (`sd:3494-3495`
+vs `sd:1011-1015`), so the first leg runs `zz/2` steps and every later leg `zz` —
+and **negate `ModulationDelta`** with no write that frame; else `dec` steps,
 `ModulationVal += signext(Delta)`, `de = Freq + ModulationVal`, jump into the
 frequency writer (a real write, even under a tempo delay frame).
 
@@ -772,12 +794,15 @@ frequency writer (a real write, even under a tempo delay frame).
 1. **Jump SFX** (`smpsModSet $02,$01,$F8,$65` → wait 2, speed 1, delta −8, steps
    `65h>>1 = 32h`): frames 1-2 after the attack no frequency write; from frame 3 a
    write every frame: `140h-8 = 138h` → `88h/13h`, `130h` → `80h/13h`, `128h` →
-   `88h/12h`… for 50 steps; then one silent frame (delta → +8, steps reload), then
-   rising writes.
+   `88h/12h`… for 50 steps; then one silent frame (delta → +8, steps reload **to
+   `65h` raw = 101 steps**, §9.1), then 101 rising writes — legs after the first
+   are twice the length of the first.
 2. **Ring FM5 has no `F0`** — bit 3 stays clear, so its running frames emit **no**
    `A5/A1` rewrites: the only frequency writes are the three note-ons of §6.4.
-3. **Steps-halving check:** `zz = 65h` (odd) → 32h steps, i.e. the down-leg is
-   50 frames, not 101 — a captured stream's turnaround frame count is the test.
+3. **Steps-halving check:** `zz = 65h` (odd) → 32h steps, i.e. the *first*
+   down-leg is 50 frames, not 101 — while every later leg is 101 (raw reload,
+   §9.1). The first-turnaround frame count and the leg asymmetry are both
+   checkable signatures in a captured stream.
 
 ### 9.3 Engine today
 
@@ -828,11 +853,11 @@ the busy window's length is a chip question, resolved-by-chip-cores).
 
 ### 10.3 Test vectors
 
-1. **Ring voice upload** — §6.4 vector 1's 27-write sequence with computed TLs
-   (`23/80/28/85`).
+1. **Ring voice upload** — §6.4 vector 1's 26-write sequence (1 `B0h+ch` + 4
+   DT/MUL + 16 + 1 pan + 4 TL) with computed TLs (`23/23/85/85`).
 2. **`E6` mid-note:** EHZ FM5 data `smpsAlterVol $F8` (`E6 F8`): `Volume = 25h-8 =
    1Dh`, immediate TL rewrite of the masked slots only.
-3. **Restore-path upload:** §6.4 vector 1's tail — same 27 writes with the music
+3. **Restore-path upload:** §6.4 vector 1's tail — same 26 writes with the music
    track's voice/volume/pan, no frequency, no key.
 4. **Volume bit 7 guard:** after `E6` pushes `Volume` to `≥ 80h`, `zSetChanVol`
    stops writing TLs at all (`sd:3448-3450`) — the stale TLs stay on the chip.
@@ -927,14 +952,21 @@ reload, nothing else.
    N+1…: no writes except DAC residue. Kick drum triggered on frame N−1 finishes
    streaming.
 2. **Unpause with EHZ (6 FM music tracks playing, no SFX):** 7 iterations of
-   `zResumeTrack`: for DAC track `B6h = C0h`… wait — `B4h + (6 & 3) = B6h`, part II
-   (bit 2 of `VoiceControl = 6`), then voice 0 of `EHZ_Voices` uploaded to FM3''s
-   registers on part II (ch bits `6&3 = 2`) — the FM6 register set; then FM1-6's
+   `zResumeTrack`: for the DAC track, pan write `B6h = C0h` (`B4h + (6 & 3)`,
+   part II since bit 2 of `VoiceControl = 6`), then voice 0 of `EHZ_Voices`
+   uploaded to the ch-2 part-II register set — FM6's registers; then FM1-6's
    own pan + voice uploads. Then silence until each track's next note keys on.
-3. **Pause → `MusID_Stop` → unpause:** `FDh` while paused clears `StopMusic` and
-   wipes tracks but leaves `zPaused = FFh` (`sd:2545-2547`, `zClearTrackPlaybackMem`
-   clears only `1B80h-1E37h`) — the *next* pause request finds `zPaused` set and
-   silences nothing (§18 q10, carried from S2M).
+3. **Pause → `MusID_Stop` → unpause:** the stop cannot run while paused. `FDh`
+   lands in `QueueToPlay` (it is `< MusID_Pause`, so `sndDriverInput` queues it,
+   `s2:1296-1302`) and sits there, because dispatch runs only on a V-int that
+   begins with `StopMusic == 0` (§1.1 step 2) and `s2:1298` is the only 68k
+   `StopMusic` writer. The frame after the unpause clears `StopMusic`,
+   `zStopSoundAndMusic` wipes tracks with `zPaused` already 0. The stale-`zPaused`
+   hazard S2M q11 asked about (`zClearTrackPlaybackMem` clears only
+   `1B80h-1E37h`, leaving `zPaused`) is therefore unreachable through the
+   documented 68k interface; `zStopSoundAndMusic`'s own `StopMusic = 0`
+   (`sd:2545-2547`) covers the race where the 68k posts a pause *after* this
+   V-int's `StopMusic` check — that pause request is eaten (§18 q10, resolved).
 
 ### 12.3 Engine today
 
@@ -953,19 +985,22 @@ reproduce, not clean up.
 plain `zBGMLoad` restart (no re-save; repeated 1-ups are stable — CD OVR-09).
 Else: `res 2` on all 10 music tracks, `res 7` on all 6 SFX tracks (SFX die
 silently — their channels were already restored by the §5.1 step-1
-`zStopSoundEffects` a few instructions earlier); copy `1B80h-1F3Bh` (`zVar` + 10
-music tracks, `1BCh` bytes) to `zTracksSaveStart`; `1upPlaying = 80h`; **then**
+`zStopSoundEffects` a few instructions earlier); copy `1B80h-1D3Bh` (`zVar` + 10
+music tracks, `1BCh` bytes) to `zTracksSaveStart` (`1E38h-1FF3h`);
+`1upPlaying = 80h`; **then**
 `SFXPriorityVal = 0` — after the backup (FixBugs off `sd:1714-1722`), so the stale
 latch is restored with the song (CD OVR-04's S2 half confirmed). Then `zBGMLoad`
 loads the jingle (uncompressed, §5.1 — `zMusicData` still holds the saved song's
 decompressed data, which is what makes the restored `DataPointer`s valid).
 While `1upPlaying`: SFX requests are dropped with a latch reset (§6.1);
 `zSpeedUpMusic`/`zSlowDownMusic` write `zSaveVar.CurrentTempo`/`SpeedUpFlag` — the
-**backup** — instead of the live variables (`sd:2686-2718`), so a speed change
-during the jingle applies after restore (CD CAD-12/OVR-06-analogue).
+**backup** — but the tempo *value* still comes from the **live**
+`TempoTurbo`/`TempoMod` (`sd:2686-2703`), i.e. the jingle's own tempi while it
+plays; so a speed change during the jingle applies after restore, at the
+jingle's tempo value (CD CAD-12/OVR-06-analogue; §13.2 v1).
 
 **Restore** (`E4` at the jingle's end, `cfFadeInToPrevious`, `sd:3084-3163`): block
-copy back over `1B80h-1F3Bh`; `zBankSwitchToMusic`; DAC track `set 2` ("muted
+copy back over `1B80h-1D3Bh`; `zBankSwitchToMusic`; DAC track `set 2` ("muted
 during fade-in" reuse of the override bit); `c = 28h - FadeInCounter`; FM playing
 tracks: `set 1` (at rest), `Volume += c`, `zSetVoiceMusic(VoiceIndex)` (voice +
 pan + attenuated TLs; **no frequency, no key**); PSG playing tracks: `set 1`,
@@ -996,9 +1031,11 @@ pickup `s2:25946-25947`, expiry `s2:36325`, `s2:39054`.
    jingle is *not* tempo-boosted: `zBGMLoad` reads `SpeedUpFlag`, which
    `zInitMusicPlayback` preserved… note: the jingle therefore loads at
    `zSpedUpTempoTable[17h] = CDh` turbo — equal to its normal `CDh`, so audibly
-   identical). Speed-shoes expiry during the jingle writes
-   `zSaveVar.CurrentTempo = TempoMod`-of-EHZ`= 9Eh`, `zSaveVar.SpeedUpFlag = 0`;
-   after `E4` the level music resumes at normal tempo.
+   identical). Speed-shoes expiry during the jingle reads the **live** `TempoMod`
+   — the *jingle's* `CDh`, not EHZ's `9Eh` (`sd:2697-2703`) — and writes
+   `zSaveVar.CurrentTempo = CDh`, `zSaveVar.SpeedUpFlag = 0`; after `E4` the
+   level music resumes at tempo `CDh` (*faster* than its normal `9Eh`: stall
+   rate 51/256 vs 98/256) until the next song load or tempo command.
 2. **Stale priority:** ring SFX (`70h`) playing when the 1-up starts → backup holds
    `SFXPriorityVal = 70h` (zeroed only after the copy); after `E4`, until some SFX
    ends, requests with priority `< 70h` (e.g. `DAh` gloop, `60h`) are rejected even
@@ -1082,8 +1119,9 @@ Command `FAh`. `2Bh = 80h` (DAC on; **no panning reset** — FixBugs off
 `sd:1606-1611`, the chant plays with whatever `B6h` panning is current);
 `bankswitch Snd_Sega`; stream `Snd_Sega.size/2` byte-pairs to `2Ah` data port with
 a `djnz` of `pcmLoopCounter(Snd_Sega.sample_rate)` per byte (152 cycles per 2 bytes
-at `b = 1`, `sd:1626-1652`); abort between pairs when `QueueToPlay != 80h`
-(`sd:1636-1638` — a new request stops the chant); then bank back and
+at `b = 1`, `sd:1626-1652`); abort after the *first* byte of a pair when `QueueToPlay != 80h`
+(`sd:1636-1638` — a new request stops the chant, possibly on an odd byte); then
+bank back and
 `2Bh = DACEnabled`. Runs **inside `zVInt` with interrupts implicitly consumed** —
 music, SFX and the frame loop freeze for the chant's duration. Engine: `SegaPcmSpec`
 + host-linear sample with lifecycle events (EM; CD CHIP-08 divergence recorded);
@@ -1097,7 +1135,8 @@ adaptation GA §1.2 #20 (render through the DAC path at the Z80 loop period).
 2. **Gloop:** requests DA ×4 from boot → played on 1st and 3rd (flag 0→FF play,
    FF→0 drop, …).
 3. **Spindash ladder:** rev at frames 0, 30, 60, … (Δ < 60): transposes
-   `FEh, FFh, 00h, …`; an 11th rev and beyond hold `09h` (`FEh + 0Bh`). A rev after
+   `FEh, FFh, 00h, …` — rev *N* plays `FEh + (N−1)`; the 12th rev and beyond hold
+   `09h` (`FEh + 0Bh`, the index stops being stored at `0Ch`). A rev after
    a >60-frame gap restarts at `FEh`.
 4. **SEGA abort:** chant playing, 68k queues any id → `QueueToPlay != 80h` at the
    next pair boundary → chant stops, `2Bh = DACEnabled`, and the queued id
@@ -1258,11 +1297,50 @@ memory:
    (GA §1.2 #24).
 9. `zResumeTrack` writing voice 0 into FM6 through the DAC track while `2Bh` may
    be `80h` — audible effect is a YM2612 DAC-priority question. (S2M q9.)
-10. `MusID_Stop` while paused leaves `zPaused = FFh` (§12.2 v3); whether the 68k
-    can produce that sequence in normal play was not traced. (S2M q11.)
+10. *(resolved by this review)* `MusID_Stop` while paused cannot dispatch:
+    every paused V-int skips `zUpdateEverything` (`StopMusic != 0`, `sd:403-407`)
+    and `s2:1298` is the only 68k `StopMusic` writer, so the id waits in
+    `QueueToPlay` until the unpause (§12.2 v3). No stale-`zPaused` state is
+    reachable through `sndDriverInput`. (Was S2M q11.)
 11. DAC intra-frame timing perturbations (forced early sample, `stopZ80`/DMA
     holds, interrupt latency): not derivable from the source; oracle-only tier.
     (S2M q3; hard rule 3 — never a spec constant.)
 12. The engine-side question EM open q 6 (`noteOnPrevent` dead knob) does not
     involve S2 (`Sonic2SmpsSequencerConfig` leaves it defaulted) — noted for
     completeness, owner unchanged.
+
+## 19. Review record (adversarial pass, 2026-08-30)
+
+Sources-closed re-derivation against `docs/s2disasm/s2.sounddriver.asm`, `s2.asm`,
+`s2.constants.asm`, `sound/_smps2asm_inc.asm` and the data under `docs/s2disasm/sound/`
+only. Over half the test vectors were recomputed from scratch (all of §1.4, §3.4,
+§4.4, §14.5; §6.4 v1/v4; §7.2 v2-v4; §8.2 v1; §9.2 v1/v3; §10.3 v1-v4; §12.2 v1-v3;
+§13.2 v1-v3; §15.2 v1/v3), and every routine/line anchor spot-checked resolved to the
+claimed code. Verdicts: **refuted** = the original claim was wrong and is now fixed
+in place; **weakened** = right substance, wrong detail or misleading wording, fixed;
+**stands** = attacked and survived.
+
+| # | Claim (as originally written) | Verdict | Evidence |
+|---|---|---|---|
+| 1 | §6.4 v1: ring voice bytes `37 72 77 49 / 07 0A 07 0D / 00 0B 00 0B / 1F 0F 1F 0F / TL 23 80 23 80`, TL writes `23/80/28/85` | **refuted, fixed** | The values were copied from the byte *comment* above `Sound_Ring_Voices` (`C5 - Tally End.asm:53-56`), which lists ops in `4,3,2,1` order. The assembled bytes come from the `smpsVc*` macros, whose `SonicDriverVer == 2` branch emits ops in `4,2,3,1` order with algorithm-derived bit 7 on slot TLs (`inc:953-958`; `SourceSMPS2ASM = 0` per `smpsHeaderStartSong` default). Emission for alg 4, TLs `00/23/00/23`, masks on ops 1 and 3, gives `37 77 72 49 / 07 07 0A 0D / 00 00 0B 0B / 1F 1F 0F 0F / TL 23 23 80 80` → TL writes `23/23/85/85`. Cross-check: only this order puts the `80h`-flagged TLs in the positions `zVolTLMaskTbl[4] = 0Ch` marks as volume slots. |
+| 2 | §1.1: 68k boundary "if `QueueToPlay == 80h` take `Music0` else `Music1`"; 4th SFX slot "harmless because `SoundQueue.SFX2` is never written" | **refuted, fixed** | `s2:1273-1284`: `QueueToPlay != 80h` skips *both* music slots (`bne.s .doSFX`); `Music1` is the fallback when `Music0` is empty. The `d1 = 3` iteration reads `SoundQueue.SFX0 + 3` = `Music1` (struct order Music0, SFX0, SFX1, SFX2, Music1, `const:1879-1885`), not `SFX2` (that is `d1 = 2`); a pending `Music1` (written by `PlayMusic`'s overflow, `s2:1526`) can be stolen into `VoiceTblPtr`'s low byte and cleared. |
+| 3 | §13.2 v1: speed-shoes expiry during the 1-up jingle writes `zSaveVar.CurrentTempo` = EHZ's `TempoMod = 9Eh`; music resumes at normal tempo | **refuted, fixed** | `sd:2697-2703` (shipped branch): `zSlowDownMusic` loads `a` from the **live** `zAbsVar.TempoMod` — during the jingle that is ExtraLife's `CDh` — and only the *store* is redirected to `zSaveVar`. After `E4` the level music runs at `CDh` until the next load/tempo event. §13.1 amended to say value-from-live, store-to-backup. |
+| 4 | §12.2 v3: "`FDh` while paused clears `StopMusic` and wipes tracks but leaves `zPaused = FFh`" (open question §18 q10) | **refuted, fixed; q10 resolved** | Dispatch is gated: a paused V-int takes `zPauseMusic → zUpdateDAC` (`sd:403-407`) and never runs `zPlaySoundByIndex`; `s2:1298` is the sole 68k `StopMusic` writer, so `StopMusic` stays `7Fh` while `zPaused = FFh`. The `FDh` waits in `QueueToPlay` until unpause. `zStopSoundAndMusic`'s `StopMusic = 0` covers the mid-V-int race (pause posted after the check is eaten). |
+| 5 | §13.1: 1-up save/restore copies "`1B80h-1F3Bh`" | **refuted (arithmetic), fixed** | `zTracksSaveEnd - zTracksSaveStart = 1BCh`; source `1B80h-1D3Bh`, destination `1E38h-1FF3h` (`sd:215-227`, `1704-1709`, `3087-3090`). `1F3Bh` fits neither range. |
+| 6 | §5.2: song-load burst ends with "`zInitSFX`'s … PSG `9F BF DF FF` again" | **refuted, fixed** | `zInitSFX`'s PSG loop is 3 × `zPSGNoteOff` on the music PSG tracks (`sd:2069-2074`) → `9F BF DF`; the noise `FFh` in `zPSGNoteOff` is FixBugs-only code (`sd:1369-1379`). |
+| 7 | §10.3: voice upload is a "27-write sequence" | **refuted (count), fixed** | 1 (`B0h+ch`) + 4 (DT/MUL) + 16 + 1 (`B4h+ch`) + 4 (TL) = 26 (`sd:3305-3431`). |
+| 8 | §14.5 v3: "an 11th rev and beyond hold `09h`" | **refuted (off-by-one), fixed** | Rev *N* plays `FEh + (N−1)` (`sd:2159-2175`, `2297-2308`); the cap `0Bh` is first *played* on the 12th rev. |
+| 9 | §7.1: FM/PSG frequency writers "both return without writing when bit 1 or bit 2 is set" | **weakened, fixed** | `zFMUpdateFreq` tests only bit 2 (`sd:1090`); bit-1 rests are filtered upstream (`zFMPrepareNote` `sd:1080-1081`, `zDoModulation` `sd:989-990`). `zPSGUpdateFreq` genuinely tests `and 6` (`sd:1210-1212`). Observable behaviour as originally stated; the routine attribution was wrong. |
+| 10 | §9.1: modulation "reload steps from `ptr+3`" (halving implied to apply throughout) | **weakened, fixed** | `srl a` exists only at arm time (`sd:3494-3495`); the mid-note reload stores `zz` raw (`sd:1011-1015`). First leg `zz/2` steps, later legs `zz` — §9.2 v1/v3 updated with the 50-vs-101 signature. |
+| 11 | §5.1: `zFMSilenceAll` key-off "`28h = 02,01,00` then `06,05,04` (part I write then `set 2,c` part II write)" | **weakened, fixed** | Actual sequence interleaves `02,06, 01,05, 00,04` (`sd:2519-2528`), and both writes go through `zWriteFMI` — `28h` is a part-I register; `set 2,c` retargets the *channel bits in the data byte*. (§5.2 already listed the right order.) |
+| 12 | §14.4: SEGA chant "abort between pairs" | **weakened, fixed** | The `QueueToPlay` check sits between the two bytes of a pair (`sd:1636-1638`); the chant can stop on an odd byte. |
+| 13 | §1.1 cadence: PAL double update every 5th V-int; `sd:448` comment and S2M §5.2 wrong | **stands** | Recount from `sd:441-452` + reload 5 at `sd:1823-1824`: decrements 4,3,2,1,0 → fires every 5th; 6 music updates per 5 frames = 1.2×. |
+| 14 | §3: `TempoWait` no-carry stalls; increment hits all 10 slots; runs before first track update; `EA`/speed keep phase | **stands** | `sd:596-619` (`ret c`, `MUSIC_TRACK_COUNT` loop with no playing test), `sd:545-551`, `sd:3207-3209`, `sd:2707-2711`. §3.4 v1/v2/v3 accumulator sequences recomputed byte-exact (carry pattern, `13Ch/DAh/178h/116h/B4h`; `19Ah…CEh`; turbo `BEh` = `zSpedUpTempoTable[1]`, `sd:3860`). |
+| 15 | §4: one dequeue per invocation; reject-outright; Jump `80h` never stored; priority table values | **stands** | `sd:1496-1550` re-traced; all 81 `zSFXPriority` bytes re-read (`sd:3717-3722`) and every §4.1 exception value re-verified (A0=80, AA=68, BF=7F, DB=62, ED=71, F0=6F, …). §4.4 v1-v4 recomputed. |
+| 16 | §5: load order, silence burst, FM6/DAC decision, `82h` init, `DurationTimeout = 1`, Queue2 loss, four uncompressed songs | **stands** | `sd:1738-2076`, `2580-2654` re-traced; `music/list of compressed songs.txt` lists exactly the other 27 (98/9B/9D/9E absent); EHZ header values confirmed (`82 - EHZ.asm:4-14`). |
+| 17 | §6: admission-time claim, no takeover writes, restore = voice+pan+TL at-rest with no frequency, PSG unconditional `res 2`, pan-lost-under-override | **stands** | `sd:2178-2331` (only chip write in `zPlaySound` is the PSG3 `DF/FF` pair), `sd:3514-3599`, `sd:3022-3029`. Ring lifecycle (§6.4 v1) recomputed end-to-end: note bytes `nE5/nG5/nC6 = C1h/C4h/C9h` (`inc:31-45`), frequency words `2B2Dh/2BC5h/3284h` re-derived from the `sd:1384-1409` formula with `const:2141-2143` clocks. |
+| 18 | §7/§8: write cadences, PSG envelope `80h` freeze, tie gate, noise-not-silenced | **stands** | `sd:968-979`, `1265-1349`, `1357-1380`; §7.2 v2 (Jump: `140h → 80h,14h`; `EFh → 8Fh,0Eh`) and §8.2 v1 (Env3 `94h…9Bh` hold) recomputed; Jump header transpose `F4h`, volume 0 confirmed (`A0 - Jump.asm:7`). |
+| 19 | §12: pause destructive sweep, unpause = pan + full voice reload incl. DAC-track voice-0-to-FM6 quirk, nothing else restored | **stands** | `sd:1422-1491` re-traced; `zResumeTrack` register math recomputed (`B6h`, ch-2 part II). |
+| 20 | §15: DAC 295 cycles/2 samples, `dpcmLoopCounter` formula, forced early sample, re-trigger by bare duration | **stands** | `sd:311-314`, `499`, `680-728`, `759-815`; §15.2 v1 recomputed (`dpcmLoopCounter(8250) = 23`, effective ≈ 8257 Hz), v3 (`b = 1` → ≈ 24.3 kHz). |
+| 21 | Engine-today statements (§1.5, §3.5, §5.4, §14.3, §15.3) | **stands** | Spot-checked in-tree: `SmpsSequencer.java:1282-1291` OVERFLOW2 skip-tick branch, `DacData.java:10-16` baseCycles 288, `Sonic2SfxData.java:116-121` `90h→10h` patch, `adjustSfxPitch` overridden only by `Sonic3kAudioProfile`, `Sonic2SmpsSequencerConfig:60-61` OVERFLOW2/S2_Z80. |
+| 22 | Data-side anchors (headers, transposes, pan) | **stands** | `smpsHeaderTempo` at `82 - EHZ.asm:5` / `98 - Extra Life.asm:5`; spindash rev transpose `FEh` (`E0 - Spin Dash Rev.asm:7`); release `90h` shipped (`BC - Spin Dash Release.asm:11`); `B5` pans right / `CE` pans left (`B5 - Ring.asm:11`, `CE - Ring Left Speaker.asm:12`); 68k senders `s2:25040/25042/25082` (ring), `25946`, `36325`, `39054` (tempo). One citation corrected: the rev tie is at `E0 - Spin Dash Rev.asm:13-15`, not `:11-14`. |
