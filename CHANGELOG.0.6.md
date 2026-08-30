@@ -14,6 +14,22 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **S2 sound-driver oracle (first committed audio reference):** a windowed
+  reference capture of the shipped S2 driver running under emulated hardware
+  — full Z80 RAM image plus the attributed YM/PSG write stream per driver
+  invocation, movie rows 10150-10899 of the pinned complete-emeralds movie
+  (EHZ music reload, thirteen SFX, the speed-up command) — is now committed
+  under `src/test/resources/audio/parity/s2/` with digest-locked integrity
+  tests, and `S2AudioOracleComparator`/`S2AudioOracleTool` compare it
+  tick-by-tick (one tick = one completed `zUpdateMusic` service) against a
+  headless engine capture through the real `SmpsDriver`/`SmpsSequencer`.
+  First measurement is an expected red recorded in the new
+  `docs/status/audio-frontier-log.md`: the engine does not model the ROM's
+  song-load tempo-accumulator seed (first divergence `global.tempoTimeout`
+  0x3C vs 0, tick 0). The oracle also surfaced two hardware cadence facts the
+  comparator now encodes: a Saxman song load masks interrupts across six
+  frames, and the catch-up costs the driver a V-int.
+
 - **Special-stage rings alternate speakers again (S3K):** every ROM ring
   collect — the level's `GiveRing`, the Blue Sphere ring routine at
   `loc_984C`, badniks that award rings — sends the same `sfx_RingRight` id,
