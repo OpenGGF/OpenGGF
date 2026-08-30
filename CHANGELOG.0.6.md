@@ -14,6 +14,19 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Trace tooling now has one external owner:** trace recording, BizHawk 2.11
+  integration, probes, validation, comparison, compression, and publication
+  utilities moved with preserved history to
+  [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser). OpenGGF pins
+  immutable `v0.1.0` commit `9e51ff79e7a542f3c50d96618a7e24e6fc72397e`
+  as an optional `tools/tracechaser` submodule; ordinary Maven, packaging, and
+  runtime remain independent of it. Schema v5 consumer fixtures and Java
+  accept/reject semantics remain local and run in the ordinary suite; GPGX and
+  normalization copies are hash-bound by the same provenance contract.
+  Selected 0.6 command paths are thin compatibility forwarders rather than
+  duplicate implementations, and all languages consume one canonical resolver
+  that refuses dirty, symlinked, non-directory, or checkout-escaping targets.
+
 - **The PSG core is a clean-room SN76489:** `PsgChip` was rewritten from the
   public hardware specification
   (`docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`)

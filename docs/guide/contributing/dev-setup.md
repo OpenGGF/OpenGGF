@@ -28,8 +28,25 @@ Maven build, and ordinary tests do not require them. Contributors doing disassem
 parity research can initialize the exact reference revisions after cloning:
 
 ```bash
-git submodule update --init
+git submodule update --init docs/s1disasm docs/s2disasm docs/skdisasm
 ```
+
+Trace recording and analysis are also optional. Those workflows use the exact
+TraceChaser release pinned by OpenGGF and the verified official BizHawk 2.11
+installation documented there:
+
+```bash
+git submodule update --init --recursive tools/tracechaser
+tools/tracechaser-bootstrap.sh --check
+```
+
+The submodule never initializes itself and normal builds do not require it.
+Compatibility launchers resolve each command through
+`tools/tracechaser-bootstrap.sh --require <relative-path>` before execution.
+That resolver derives the expected commit from the gitlink and refuses a dirty
+checkout, symbolic-link or non-directory path component, or a target that
+resolves outside the pinned checkout. Status 2 means uninitialized, status 3
+means the wrong commit, and status 4 means an unsafe or missing path.
 
 The executable OpenGGF JAR with all dependencies is written to the current
 worktree's Maven output tree:

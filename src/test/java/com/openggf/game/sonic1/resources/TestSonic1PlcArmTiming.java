@@ -38,7 +38,7 @@ class TestSonic1PlcArmTiming {
      * The identity the recorder writes for this descriptor. The recorder
      * computes the same canonical encoding over
      * {@code (NEMESIS_PLC_QUEUE, source, 0, tile, patterns, "nemesis", 0)}
-     * (tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs),
+     * (tools/tracechaser/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs),
      * so a fixture whose edge disagrees with the engine's submission fails the
      * replay rather than arming something else.
      */
@@ -135,7 +135,7 @@ class TestSonic1PlcArmTiming {
 
     /**
      * The recorder discards everything observed before a segment's first arm
-     * (tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83),
+     * (tools/tracechaser/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83),
      * so an arm released in an unrepresented span is absent from the stream.
      * It must therefore not occupy a place in the shared numbering either: the
      * next represented arm has to carry the ordinal the recording gives it.

@@ -2958,6 +2958,34 @@ class TestBuildToolingGuard {
         assertFalse(workflowInitializesOptionalSubmodules("run: git status --short\n"));
     }
 
+    @Test
+    void traceChaserStaysExactOptionalAndOutsideOrdinaryBuilds() throws Exception {
+        String modules = Files.readString(Path.of(".gitmodules"));
+        assertTrue(modules.contains("[submodule \"tools/tracechaser\"]"));
+        assertTrue(modules.contains("url = https://github.com/OpenGGF/TraceChaser.git"));
+        assertFalse(modules.substring(modules.indexOf("[submodule \"tools/tracechaser\"]"))
+                .contains("branch ="), "TraceChaser must never float on a branch");
+        assertEquals("160000 9e51ff79e7a542f3c50d96618a7e24e6fc72397e 0\ttools/tracechaser",
+                gitOutput(Path.of("."), "ls-files", "-s", "--", "tools/tracechaser").strip());
+
+        String pom = Files.readString(Path.of("pom.xml"));
+        assertTrue(pom.contains("<surefire.excludedGroups>tracechaser-integration</surefire.excludedGroups>"));
+        assertTrue(pom.contains("<excludedGroups>${surefire.excludedGroups}</excludedGroups>"));
+        assertTrue(pom.contains("<id>tracechaser-integration</id>"));
+        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+            String guidance = Files.readString(Path.of(agentGuide));
+            assertTrue(guidance.contains("optional pinned `tools/tracechaser/` submodule"));
+            assertTrue(guidance.contains(
+                    "git submodule update --init --recursive tools/tracechaser"));
+        }
+        try (Stream<Path> workflows = Files.walk(Path.of(".github/workflows"))) {
+            for (Path workflow : workflows.filter(Files::isRegularFile).toList()) {
+                assertFalse(workflowInitializesOptionalSubmodules(Files.readString(workflow)),
+                        () -> workflow + " must not initialize optional TraceChaser");
+            }
+        }
+    }
+
     private static boolean workflowInitializesOptionalSubmodules(String source) {
         Pattern checkoutSetting = Pattern.compile(
                 "(?im)^\\s*submodules\\s*:\\s*(['\"]?)(?:true|recursive)\\1\\s*(?:#.*)?$");

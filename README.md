@@ -290,6 +290,12 @@ traces.
 - **Modern development and validation tools:** level-editor foundations,
   ROM offset and compression tools, headless gameplay tests, BizHawk trace
   replay, visual/audio regression checks, and release/architecture guards.
+  External trace producers and utilities are maintained in
+  [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser) and pinned as
+  an optional submodule at the reviewed `v0.1.0` commit. Normal builds, tests,
+  packaging, and runtime do not initialize it; trace contributors opt in with
+  `git submodule update --init --recursive tools/tracechaser`. TraceChaser uses
+  verified official BizHawk 2.11 and does not vendor emulator distributions.
   Maven runs directly in each worktree and keeps build, report, diagnostic,
   temporary, and per-Surefire-fork LWJGL output below that worktree's `target/`
   tree. Measured at `develop` `2e06eb403` on 2026-08-28 with JDK 21 and

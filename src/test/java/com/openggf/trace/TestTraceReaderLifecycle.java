@@ -64,13 +64,14 @@ class TestTraceReaderLifecycle {
         assertPathBalanced(events, plainOrdinary.resolve("aux_state.jsonl"), CYCLES);
         assertPathBalanced(events, gzipOrdinary.resolve("physics.csv.gz"), CYCLES);
         assertPathBalanced(events, gzipOrdinary.resolve("aux_state.jsonl.gz"), CYCLES);
-        // S1/S2 deliberately scan the stored frame domain before parsing the
-        // typed rows, so each physics file has two balanced reader lifetimes.
-        assertPathBalanced(events, s1.resolve("physics.csv"), 2 * CYCLES);
+        // S1 carries no dynamic-art state and parses physics once. The S2 run
+        // fixture does carry it, so its conditional stored-domain validation
+        // adds a second balanced reader lifetime.
+        assertPathBalanced(events, s1.resolve("physics.csv"), CYCLES);
         assertPathBalanced(events, s2.resolve("physics.csv"), 2 * CYCLES);
         assertPathBalanced(events, s2.resolve("aux_state.jsonl"), CYCLES);
         assertPathBalanced(events, s3k.resolve("physics.csv"), CYCLES);
-        assertEquals(10L * CYCLES, events.stream()
+        assertEquals(9L * CYCLES, events.stream()
                 .filter(event -> event.event() == TraceFiles.ReaderLifecycleEvent.OPENED)
                 .count(), "every parser family must execute in every cycle");
     }

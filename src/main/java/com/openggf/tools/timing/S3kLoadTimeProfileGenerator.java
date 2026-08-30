@@ -762,7 +762,7 @@ public final class S3kLoadTimeProfileGenerator {
                     .append("# input_set_key\tsha256:")
                     .append(inputSetKey(movies, recorderCommit)).append('\n')
                     .append("# capture_command\tBIZHAWK_HOME=<bizhawk> ")
-                    .append("tools/bizhawk-headless/run.sh --mode load-time ")
+                    .append("tools/tracechaser/bizhawk-headless/run.sh --mode load-time ")
                     .append("--rom <s3k-rom> --movie <movie-path> ")
                     .append("--output target/load-time-measurements/<fixture>\n")
                     .append("# generation_command\tmvn -q exec:java ")

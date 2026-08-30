@@ -71,7 +71,7 @@ history and the source headers establish it:
 
 | Project | Contribution |
 |---------|--------------|
-| **BizHawk** <br/> https://tasvideos.org/BizHawk | Emulator and BK2 movie format behind the headless trace recorder in `tools/bizhawk-headless/`; its Genesis Plus GX core produces the reference physics, aux-state, and audio traces the `*TraceReplay` suites compare against |
+| **BizHawk** <br/> https://tasvideos.org/BizHawk | Emulator and BK2 movie format behind the optional pinned TraceChaser recorder in `tools/tracechaser/bizhawk-headless/`; its Genesis Plus GX core produces the reference physics, aux-state, and audio traces the `*TraceReplay` suites compare against. OpenGGF does not distribute BizHawk; TraceChaser verifies the official 2.11 release. |
 | **TASVideos** <br/> https://tasvideos.org | Hosts BizHawk and the movie-format documentation the recorder relies on |
 | **Genesis Plus GX** (Eke-Eke) | Emulation core inside BizHawk used for trace capture, in addition to the chip cores ported above |
 

@@ -22,8 +22,10 @@ RESEARCH = ROOT / "docs/architecture/research/audio"
 AUDIT = RESEARCH / "s1-ring-ym-write-audit-v2.json"
 PAN_LEDGER = RESEARCH / "s1-ring-ym-write-instruction-ledger-v1.tsv"
 NO_PAN_LEDGER = RESEARCH / "s1-ring-no-pan-ym-write-instruction-ledger-v1.tsv"
-LEDGER_BUILDER = (ROOT / "tools/bizhawk-headless/native/gpgx-audio-lab"
-                  / "build-representative-ledger.sh")
+TRACECHASER_BOOTSTRAP = ROOT / "tools/tracechaser-bootstrap.sh"
+LEDGER_BUILDER_RELATIVE = (
+    "bizhawk-headless/native/gpgx-audio-lab/build-representative-ledger.sh")
+LEDGER_BUILDER: Path
 LEDGER_HEADER = (
     "occurrence_ordinal\tframe\tafter_source_ordinal\tcpu\tpc\topcode\t"
     "start_master_cycle\trefresh_delay_total_master_cycles\tnext_pc\t"
@@ -34,6 +36,15 @@ LEDGER_HEADER = (
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def require_tracechaser(relative: str) -> Path:
+    resolved = subprocess.run(
+        [str(TRACECHASER_BOOTSTRAP), "--require", relative],
+        text=True, stdout=subprocess.PIPE)
+    if resolved.returncode:
+        raise SystemExit(resolved.returncode)
+    return Path(resolved.stdout.strip())
 
 
 def load_json(path: Path) -> dict:
@@ -376,6 +387,8 @@ def write_markdown(path: Path, document: dict) -> None:
 
 
 def main() -> None:
+    global LEDGER_BUILDER
+    LEDGER_BUILDER = require_tracechaser(LEDGER_BUILDER_RELATIVE)
     parser = argparse.ArgumentParser()
     parser.add_argument("--extract-no-pan-ledger", action="store_true")
     parser.add_argument("--oracle", type=Path)

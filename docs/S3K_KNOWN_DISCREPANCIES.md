@@ -9,6 +9,10 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**TraceChaser extraction note (2026-08-29):** the optional pinned trace-tool
+submodule changes recorder ownership, not Sonic 3 & Knuckles runtime behaviour.
+No S3K discrepancy was added or reclassified by the cutover.
+
 ## Table of Contents
 
 1. [AIZ Intro Object Spawn Source](#aiz-intro-object-spawn-source)
@@ -1286,7 +1290,7 @@ frame fixture-relative in the first place.
 ### The compared field is not "prepared"
 
 The recorder projects this field from bit 15 of `Kos_decomp_queue_count`
-(`tools/bizhawk-headless/src/Recording/LoadQueueStateProjector.cs`:
+(`tools/tracechaser/bizhawk-headless/src/Recording/LoadQueueStateProjector.cs`:
 `bool prepared = (rawCount & 0x8000) != 0;`). In the ROM that bit means
 **decompression is in progress right now**, not "prepared":
 
