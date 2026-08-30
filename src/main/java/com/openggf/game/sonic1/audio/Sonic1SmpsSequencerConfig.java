@@ -67,6 +67,7 @@ public final class Sonic1SmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                .palUpdateMode(SmpsSequencerConfig.PalUpdateMode.NONE)
                 .coordFlagParamOverrides(coordOverrides)
                 .applyModOnNote(false)   // S1: don't apply modulation during note start (ModAlgo = 68k)
                 .halveModSteps(true)     // S1 cfModulation and FinishTrackUpdate both use lsr.b #1

@@ -2,11 +2,17 @@ package com.openggf.audio.smps;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.smps.SmpsSequencer.Track;
 import com.openggf.audio.smps.SmpsSequencer.TrackType;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -199,6 +205,146 @@ class TestSmpsSequencerCadence {
         }
         assertEquals(0x7F - 9, track.duration, "one decrement per update, no holds");
         assertEquals(0, sequencer.captureSnapshot().tempoAccumulator());
+    }
+
+    @Test
+    void s2PalRunsSixMusicUpdatesPerFiveFramesButServicesSfxOncePerFrame() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                .tempoOnFirstTick(true)
+                .palUpdateMode(SmpsSequencerConfig.PalUpdateMode.EXTRA_MUSIC)
+                .build();
+        SmpsDriver driver = new SmpsDriver(50.0);
+        Track music = addPrimedDriverTrack(driver, config, 0xFF, false);
+        Track sfx = addPrimedDriverTrack(driver, config, 0xFF, true);
+        driver.setRegion(SmpsSequencer.Region.PAL);
+
+        for (int frame = 0; frame < 5; frame++) {
+            driver.serviceOuterFrame();
+        }
+        assertEquals(5, driver.captureSnapshot().palUpdateCounter(),
+                "the fifth S2 PAL frame reloads the shared counter");
+
+        assertEquals(0x40 - 6, music.duration,
+                "sd:445-452 repeats only zUpdateMusic on the fifth PAL V-int");
+        assertEquals(0x40 - 5, sfx.duration,
+                "the S2 SFX pass remains single-service on PAL");
+    }
+
+    @Test
+    void palDoesNotRewriteAnyGamesCurrentTempo() {
+        for (SmpsSequencerConfig.TempoMode tempoMode
+                : SmpsSequencerConfig.TempoMode.values()) {
+            SmpsSequencer sequencer = newSequencer(
+                    new SmpsSequencerConfig.Builder()
+                            .tempoMode(tempoMode)
+                            .tempoOnFirstTick(true)
+                            .build(),
+                    0x80, new byte[] {(byte) 0x81, 0x08});
+            sequencer.setRegion(SmpsSequencer.Region.PAL);
+            assertEquals(0x80, sequencer.captureSnapshot().tempoWeight(),
+                    tempoMode + " keeps the ROM CurrentTempo byte on PAL");
+        }
+    }
+
+    @Test
+    void s3kPalRunsSevenWholeUpdatesPerSixFramesInSfxThenMusicOrder() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                .tempoOnFirstTick(true)
+                .palUpdateMode(SmpsSequencerConfig.PalUpdateMode.EXTRA_FULL)
+                .build();
+        SmpsDriver driver = new SmpsDriver(50.0);
+        Track music = addPrimedDriverTrack(driver, config, 0, false);
+        Track sfx = addPrimedDriverTrack(driver, config, 0, true);
+        driver.setRegion(SmpsSequencer.Region.PAL);
+        for (int frame = 0; frame < 5; frame++) {
+            driver.serviceOuterFrame();
+        }
+        SmpsDriverSnapshot beforeRepeat = driver.captureSnapshot();
+        assertEquals(0, beforeRepeat.palUpdateCounter(),
+                "five S3K PAL frames leave the shared counter at zero");
+
+        List<Boolean> sixthFrameOrder = new ArrayList<>();
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                    sixthFrameOrder.add(event.sequencer().sfx());
+                }
+            }
+        });
+        driver.serviceOuterFrame();
+
+        assertEquals(0x40 - 7, music.duration,
+                "D:482-499 repeats the complete update on the sixth PAL V-int");
+        assertEquals(0x40 - 7, sfx.duration,
+                "the repeated S3K update includes the SFX pass");
+        assertEquals(List.of(true, false, true, false), sixthFrameOrder,
+                "each S3K full update keeps the ROM's SFX-before-music order");
+        assertEquals(4, driver.captureSnapshot().palUpdateCounter(),
+                "the repeat reloads 5 and the same-frame re-check decrements to 4");
+
+        driver.restoreSnapshot(beforeRepeat);
+        assertEquals(0, driver.captureSnapshot().palUpdateCounter(),
+                "rewind restores the shared PAL phase");
+        driver.serviceOuterFrame();
+        assertEquals(4, driver.captureSnapshot().palUpdateCounter(),
+                "the restored zero phase repeats on the same next frame");
+    }
+
+    @Test
+    void s3kSpeedShoesRunFiveMusicUpdatesPerFourFrames() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                .tempoOnFirstTick(true)
+                .palUpdateMode(SmpsSequencerConfig.PalUpdateMode.EXTRA_FULL)
+                .build();
+        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsSequencer musicSequencer = addPrimedDriverSequencer(
+                driver, config, 0, false);
+        Track music = musicSequencer.getTracks().getFirst();
+        Track sfx = addPrimedDriverTrack(driver, config, 0, true);
+        musicSequencer.setSpeedMultiplier(8);
+
+        int[] expectedMusicUpdates = {2, 1, 1, 1, 2, 1, 1, 1};
+        int[] expectedTimeout = {6, 4, 2, 0, 6, 4, 2, 0};
+        int previousMusicDuration = 0x40;
+        int previousSfxDuration = 0x40;
+        for (int frame = 0; frame < expectedMusicUpdates.length; frame++) {
+            driver.serviceOuterFrame();
+            assertEquals(expectedMusicUpdates[frame],
+                    previousMusicDuration - music.duration,
+                    "music services in speed-shoes frame " + (frame + 1));
+            assertEquals(1, previousSfxDuration - sfx.duration,
+                    "SFX remains one pass per NTSC frame " + (frame + 1));
+            assertEquals(expectedTimeout[frame],
+                    musicSequencer.captureSnapshot().speedupTimeout(),
+                    "zSpeedupTimeout after frame " + (frame + 1));
+            previousMusicDuration = music.duration;
+            previousSfxDuration = sfx.duration;
+        }
+    }
+
+    private static Track addPrimedDriverTrack(
+            SmpsDriver driver, SmpsSequencerConfig config, int tempo,
+            boolean sfx) {
+        return addPrimedDriverSequencer(driver, config, tempo, sfx)
+                .getTracks().getFirst();
+    }
+
+    private static SmpsSequencer addPrimedDriverSequencer(
+            SmpsDriver driver, SmpsSequencerConfig config, int tempo,
+            boolean sfx) {
+        SmpsSequencer sequencer = new SmpsSequencer(
+                new ProgramMusicData(tempo, new byte[] {(byte) 0x81, 0x40}),
+                AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), config);
+        Track track = addFmTrack(sequencer);
+        sequencer.setSfxMode(sfx);
+        sequencer.read(new short[0], 0);
+        driver.addSequencer(sequencer, sfx);
+        return sequencer;
     }
 
     // -----------------------------------------------------------------------

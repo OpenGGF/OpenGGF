@@ -29,6 +29,16 @@ public final class SmpsSequencerConfig {
         TIMEOUT
     }
 
+    /** ROM PAL compensation performed at the driver invocation boundary. */
+    public enum PalUpdateMode {
+        /** S1: no PAL cadence branch. */
+        NONE,
+        /** S2 sd:441-452: repeat music only when the five-count expires. */
+        EXTRA_MUSIC,
+        /** S3K D:482-499: repeat the complete SFX-then-music update. */
+        EXTRA_FULL
+    }
+
     /** How carrier operators are determined for volume scaling. */
     public enum VolMode {
         /** S1/S2: carrier mask derived from algorithm number via ALGO_OUT_MASK table. */
@@ -109,6 +119,7 @@ public final class SmpsSequencerConfig {
     private final boolean applyModOnNote;
     private final boolean halveModSteps;
     private final Set<Integer> extraTrkEndFlags;
+    private final PalUpdateMode palUpdateMode;
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
     private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
     private final boolean direct68kDriver;
@@ -144,6 +155,7 @@ public final class SmpsSequencerConfig {
         this.extraTrkEndFlags = (b.extraTrkEndFlags != null)
                 ? Collections.unmodifiableSet(b.extraTrkEndFlags)
                 : Collections.emptySet();
+        this.palUpdateMode = b.palUpdateMode;
         this.relativePointers = b.relativePointers;
         this.tempoOnFirstTick = b.tempoOnFirstTick;
         this.direct68kDriver = b.direct68kDriver;
@@ -228,6 +240,10 @@ public final class SmpsSequencerConfig {
      */
     public Set<Integer> getExtraTrkEndFlags() {
         return extraTrkEndFlags;
+    }
+
+    public PalUpdateMode getPalUpdateMode() {
+        return palUpdateMode;
     }
 
     /**
@@ -332,6 +348,7 @@ public final class SmpsSequencerConfig {
         private boolean applyModOnNote = true;
         private boolean halveModSteps = true;
         private Set<Integer> extraTrkEndFlags = null;
+        private PalUpdateMode palUpdateMode = PalUpdateMode.NONE;
         private boolean relativePointers = false;
         private boolean tempoOnFirstTick = false;
         private boolean direct68kDriver = false;
@@ -359,6 +376,7 @@ public final class SmpsSequencerConfig {
         public Builder applyModOnNote(boolean val) { applyModOnNote = val; return this; }
         public Builder halveModSteps(boolean val) { halveModSteps = val; return this; }
         public Builder extraTrkEndFlags(Set<Integer> val) { extraTrkEndFlags = val; return this; }
+        public Builder palUpdateMode(PalUpdateMode val) { palUpdateMode = val; return this; }
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
@@ -380,6 +398,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(fmChannelOrder, "fmChannelOrder");
             Objects.requireNonNull(psgChannelOrder, "psgChannelOrder");
             Objects.requireNonNull(tempoMode, "tempoMode");
+            Objects.requireNonNull(palUpdateMode, "palUpdateMode");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);

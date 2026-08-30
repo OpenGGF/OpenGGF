@@ -722,11 +722,18 @@ class TestAudioPresentationSnapshotParity {
                 int referenceFrames =
                         referenceClock.samplesForNextFrame();
                 assertEquals(referenceFrames, packetSizes[frame]);
+                reference.beginRendering();
+                short[] referencePcm;
+                try {
+                    reference.serviceOuterFrame();
+                    referencePcm = java.util.Arrays.copyOf(
+                            referenceMixer.mix(reference, referenceFrames),
+                            referenceFrames * 2);
+                } finally {
+                    reference.endRendering();
+                }
                 assertArrayEquals(
-                        java.util.Arrays.copyOf(
-                                referenceMixer.mix(
-                                        reference, referenceFrames),
-                                referenceFrames * 2),
+                        referencePcm,
                         actualPackets[frame],
                         "manager producer PCM must match independently "
                                 + "reconstructed source-bearing state");
@@ -891,6 +898,8 @@ class TestAudioPresentationSnapshotParity {
         assertEquals(expected.continuousSfxFlag(),
                 actual.continuousSfxFlag());
         assertEquals(expected.contSfxLoopCnt(), actual.contSfxLoopCnt());
+        assertEquals(expected.palUpdateCounter(),
+                actual.palUpdateCounter());
         assertArrayEquals(expected.fmLockSequencerIds(),
                 actual.fmLockSequencerIds());
         assertArrayEquals(expected.psgLockSequencerIds(),

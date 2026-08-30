@@ -14,7 +14,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
-- **SMPS main-tempo cadence now matches the shipped drivers:** on an S2/S3K
+- **SMPS service cadence now follows the shipped drivers' V-blank loops:** live
+  presentation services each driver once per outer frame, independently of PCM
+  packet size. S2 PAL playback performs six music updates per five VInts while
+  leaving SFX at one update per VInt (`sd:441-452`); S3K PAL playback repeats
+  the complete SFX-then-music pass for seven updates per six VInts
+  (`D:482-499`); and S3K's shared speed-up tail performs five music updates per
+  four VInts (`D:743-758`). The shared PAL byte is driver-owned and rewindable,
+  and PAL no longer mutates the song's tempo byte. On an S2/S3K
   tempo-delay frame the engine used to skip the whole track service; the real
   drivers pre-increment every music slot's `DurationTimeout` and still run the
   full track walk (S1 `TempoWait` SD:1549-1561; S2 sd:596-619; S3K

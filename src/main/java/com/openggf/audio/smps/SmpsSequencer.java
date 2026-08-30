@@ -831,12 +831,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             base = config.getSpeedUpTempos().getOrDefault(smpsData.getId(), base);
         }
 
-        double multiplier = 1.0;
-        if (region == Region.PAL && !smpsData.isPalSpeedupDisabled()) {
-            multiplier = 1.2; // Compensate 50Hz by speeding up music
-        }
-
-        int weighted = (int) (base * multiplier);
+        // PAL compensation belongs to the ROM driver's update counter, not to
+        // CurrentTempo (S2 sd:441-452; S3K D:482-499; S1 has no PAL branch).
+        int weighted = base;
         if (weighted > 0xFF)
             weighted = 0xFF;
 
@@ -953,20 +950,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     @Override
     public int read(short[] buffer, int length) {
         if (!primed) {
-            if (config.isTempoOnFirstTick()) {
-                if (tempoWeight != 0) {
-                    processTempoFrame(); // S1/S3K: process tempo on first frame (DOTEMPO)
-                } else {
-                    // Tempo-0 songs (e.g. S3K Title Screen) need an unconditional first tick
-                    // so their FF 00 (TEMPO_SET) command can execute and set the real tempo.
-                    tick();
-                }
-            } else {
-                if (tempoWeight != 0) {
-                    tick(); // S2: skip tempo on first frame (PlayMusic)
-                }
-            }
-            primed = true;
+            primeFirstService();
         }
 
         if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
@@ -981,6 +965,34 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             buffer[i] = scratchSample[0];
         }
         return length;
+    }
+
+    /**
+     * Runs the sequencer service owned by one outer presentation frame.
+     * The ROM drivers enter from V-blank; PCM packet size must not decide when
+     * this state transition occurs (S1 SD:147, S2 sd:399, S3K D:470-481).
+     */
+    public void serviceOuterFrame() {
+        if (!primed) {
+            primeFirstService();
+            return;
+        }
+        processTempoFrame();
+    }
+
+    private void primeFirstService() {
+        if (config.isTempoOnFirstTick()) {
+            if (tempoWeight != 0) {
+                processTempoFrame();
+            } else {
+                // Tempo-0 songs (e.g. S3K Title Screen) need an unconditional
+                // first tick so FF 00 can install the real tempo.
+                tick();
+            }
+        } else if (tempoWeight != 0) {
+            tick();
+        }
+        primed = true;
     }
 
     public void advance(double samples) {
@@ -1274,16 +1286,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             // (zDoMusicFadeOut runs per music update, D:2331-2385), so the fade
             // step lives inside musicUpdateOverflow(), not at the frame boundary.
             musicUpdateOverflow();
-            // S3K speed-up: timeout-based double update (ROM: zDoSpeedUp)
-            // zTempoSpeedup=N → one extra zUpdateMusic every (N+1) frames.
-            if (speedMultiplier > 1) {
-                if (speedupTimeout <= 0) {
-                    speedupTimeout = speedMultiplier;
-                    musicUpdateOverflow();
-                } else {
-                    speedupTimeout--;
-                }
-            }
             return;
         }
         processObservedFadeStep();
@@ -1321,6 +1323,22 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             // regardless of music tempo (D:727).
             tick(true);
         }
+    }
+
+    /**
+     * Runs the shared tail after an S3K SFX or music pass (D:743-758).
+     * Expiry reloads {@code zTempoSpeedup}, runs one extra music update, then
+     * consumes that extra update's own tail decrement.
+     */
+    public void serviceS3kSpeedupTail() {
+        if (speedMultiplier <= 1) {
+            return;
+        }
+        if (speedupTimeout <= 0) {
+            speedupTimeout = speedMultiplier;
+            processTempoFrame();
+        }
+        speedupTimeout--;
     }
 
     /**

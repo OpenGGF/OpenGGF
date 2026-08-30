@@ -1228,7 +1228,13 @@ class TestAudioPresentationCommandResolver {
     }
 
     private static void mix(AudioVoiceRegistry registry, int frames) {
-        new AudioPresentationMixer(frames).mix(registry, frames);
+        registry.beginRendering();
+        try {
+            registry.serviceOuterFrame();
+            new AudioPresentationMixer(frames).mix(registry, frames);
+        } finally {
+            registry.endRendering();
+        }
     }
 
     private static List<AudioPresentationCommand> drain(

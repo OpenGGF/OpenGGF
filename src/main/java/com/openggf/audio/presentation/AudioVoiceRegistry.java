@@ -282,6 +282,21 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         completionSweepRequired = false;
     }
 
+    /** Services every live SMPS driver once at the outer-frame boundary. */
+    public void serviceOuterFrame() {
+        assertOwnerThread();
+        if (!rendering) {
+            throw new IllegalStateException(
+                    "outer-frame service requires active voice traversal");
+        }
+        for (int index = 0; index < orderedVoiceCount; index++) {
+            PresentationVoice voice = orderedVoices[index];
+            if (voice instanceof SmpsCompositeVoice composite) {
+                composite.serviceOuterFrame();
+            }
+        }
+    }
+
     public void endRendering() {
         assertOwnerThread();
         if (!rendering) {

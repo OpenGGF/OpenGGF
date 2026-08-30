@@ -150,6 +150,38 @@ class TestSmpsCompositeVoice {
     }
 
     @Test
+    void outerFrameServiceAdvancesSmpsOnceWhilePacketRenderingDoesNotAdvanceTracks() {
+        SmpsDriver driver = new SmpsDriver(48_000.0);
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                .tempoOnFirstTick(true)
+                .fmChannelOrder(new int[] {0})
+                .build();
+        FrameLockedMusicData musicData = new FrameLockedMusicData();
+        assertEquals(1, musicData.getFmPointers().length,
+                "fixture exposes one real FM track");
+        SmpsSequencer sequencer = new SmpsSequencer(
+                musicData, AudioTestFixtures.EMPTY_DAC,
+                driver, AudioManager.getInstance(), config);
+        SmpsSequencer.Track track = sequencer.getTracks().getFirst();
+        driver.addSequencer(sequencer, false);
+        SmpsCompositeVoice voice = composite(driver, 1_000);
+
+        voice.serviceOuterFrame();
+        assertEquals(8, track.duration,
+                "the first V-blank service parses the first note");
+
+        voice.mixInto(new long[200], 100);
+        voice.mixInto(new long[2_000], 1_000);
+        assertEquals(8, track.duration,
+                "PCM packet sizes cannot create sample-domain driver updates");
+
+        voice.serviceOuterFrame();
+        assertEquals(7, track.duration,
+                "the next outer frame runs exactly one further driver update");
+    }
+
+    @Test
     void stopDelegatesToDriverStopAll() {
         RecordingSmpsDriver driver = new RecordingSmpsDriver();
         SmpsCompositeVoice voice = composite(driver);
@@ -275,6 +307,11 @@ class TestSmpsCompositeVoice {
 
         @Override
         public int read(short[] buffer, int length) {
+            return renderFramePcm(buffer, length);
+        }
+
+        @Override
+        public int renderFramePcm(short[] buffer, int length) {
             readCalls++;
             for (int sample = 0; sample < length; sample += 2) {
                 buffer[sample] = (short) (100 + sample / 2);
@@ -307,5 +344,24 @@ class TestSmpsCompositeVoice {
         @Override public int read16(int offset) { return 0; }
         @Override public int getBaseNoteOffset() { return 0; }
         @Override public String toString() { return name; }
+    }
+
+    private static final class FrameLockedMusicData extends AbstractSmpsData {
+        private FrameLockedMusicData() {
+            super(new byte[] {0, (byte) 0x81, 0x08}, 0);
+            tempo = 0;
+        }
+
+        @Override
+        protected void parseHeader() {
+            channels = 1;
+            fmPointers = new int[] {1};
+            fmKeyOffsets = new int[] {0};
+            fmVolumeOffsets = new int[] {0};
+        }
+        @Override public byte[] getVoice(int voiceId) { return new byte[25]; }
+        @Override public byte[] getPsgEnvelope(int id) { return new byte[0]; }
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
     }
 }

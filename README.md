@@ -298,7 +298,10 @@ traces.
   SFX, an S2 EHZ windowed driver capture, and the S3K AIZ1 intro) with a new
   `docs/status/audio-frontier-log.md` recording every comparison; all
   artifacts are indexed from
-  `docs/architecture/designs/audio/2026-08-30-sound-driver-re-index.md`.
+  `docs/architecture/designs/audio/2026-08-30-sound-driver-re-index.md`. The
+  first source-backed corrections now lock live sequencing to one V-blank
+  service per outer frame and reproduce S2/S3K PAL repeat cadence and S3K's
+  shared speed-up tail.
 - **Resolve-ready capture:** live and trace recording can select DNxHR SQ video
   with lossless 24-bit PCM audio in a MOV container for DaVinci Resolve on Linux.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,

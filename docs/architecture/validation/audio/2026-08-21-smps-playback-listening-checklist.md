@@ -52,7 +52,7 @@ failed.
 
 | Status | Scene | Authenticity focus | Listener / date / notes |
 |---|---|---|---|
-| [ ] | Green Hill Zone music with drums, then ring, jump, spring, and explosion SFX | Direct 68k cadence, PSG envelopes, DAC timing, and music-before-SFX service order | |
+| [ ] | Green Hill Zone music with drums, then ring, jump, spring, and explosion SFX | Direct 68k cadence, PSG envelopes, DAC timing, and music-before-SFX service order | Retest pending after the outer-frame cadence correction |
 | [ ] | Trigger two contending SFX, then replace the BGM while one remains active | Global priority latch; ordinary BGM replacement preserves live normal/special SFX and rebinds overrides | |
 | [ ] | Pause and resume while FM, PSG, and DAC are active | FM pan-to-zero/key-off and PSG silence; resume restores pan without inventing a voice reload | |
 | [ ] | Trigger 1-up while an SFX owns a channel, then retrigger before restore | SFX stop/block boundary, priority clear, restore fade, and the shipped `FixBugs=0` FM6/DAC masking behavior | |
@@ -62,26 +62,26 @@ failed.
 
 | Status | Scene | Authenticity focus | Listener / date / notes |
 |---|---|---|---|
-| [ ] | Emerald Hill or Chemical Plant for at least 60 seconds, including drums | Carry/no-carry note holds while envelopes/modulation continue every VInt; 295-cycle DAC service | |
+| [ ] | Emerald Hill or Chemical Plant for at least 60 seconds, including drums | Carry/no-carry note holds while envelopes/modulation continue every VInt; 295-cycle DAC service | Retest pending after the tempo-delay and outer-frame cadence corrections |
 | [ ] | Charge spindash repeatedly, release, wait for timeout, and repeat | Bounded semitone ladder, 60-service reset, and shipped `$90` release transpose | |
 | [ ] | Play lower/equal/higher-priority SFX on free and occupied roles | Single global priority latch rejects low priority even when another role is free | |
 | [ ] | Replace BGM while an SFX is active | S2 kills SFX before the new music load; no synthetic takeover/reset writes | |
 | [ ] | Pause and resume during active music | Destructive FM silencer on pause and voice reload on resume | |
 | [ ] | Trigger speed shoes and 1-up in both orders, including a repeated 1-up | Preserved tempo phase and the shipped `FixDriverBugs=0` stale priority-latch restore | |
-| [ ] | Run an eligible song in PAL mode | Six music services across five PAL VInts while SFX remains single-service | |
+| [ ] | Run an eligible song in PAL mode | Six music services across five PAL VInts while SFX remains single-service | Retest pending after the driver-global PAL counter correction |
 
 ## Sonic 3 & Knuckles locked-on
 
 | Status | Scene | Authenticity focus | Listener / date / notes |
 |---|---|---|---|
 | [ ] | AIZ music, then CNZ or LBZ music with audible modulation envelopes | Seeded tempo phase, signed negative modulation deltas, and shipped bogus-`BC` loop operands | |
-| [ ] | Trigger overlapping FM/PSG SFX during music and let each end | SFX-before-music service order, admission-time override, and same-VInt release | |
-| [ ] | Trigger speed shoes for at least eight VInts | Shared timeout tails and the extra music update every four outer VInts | |
+| [ ] | Trigger overlapping FM/PSG SFX during music and let each end | SFX-before-music service order, admission-time override, and same-VInt release | Retest pending after the frame-locked SFX-before-music correction |
+| [ ] | Trigger speed shoes for at least eight VInts | Shared timeout tails and the extra music update every four outer VInts | Retest pending after the shared speed-up-tail correction |
 | [ ] | Pause/resume while FM6/DAC and PSG are active | FM6/DAC remains live under the S3K pause policy; PSG silence and FM pan restore match retail | |
 | [ ] | Trigger first and repeated 1-up while speed-up is active | Jingle runs at normal speed, displaced speed state returns, and native FM-only fade-back is audible | |
 | [ ] | Start fade-out while DAC, PSG, and FM are active | DAC/PSG stop immediately; only FM performs the 40-step delayed fade | |
 | [ ] | Let the boot SEGA chant play, then stop or skip it | StopAll exclusivity, YM2612 DAC rendering, no simultaneous SMPS mix, and no discarded-owner restore | |
-| [ ] | Run locked-on PAL playback through at least two repeat boundaries | Driver-global sixth-VInt full repeat includes SFX, music, fade, and speed tails without dephasing | |
+| [ ] | Run locked-on PAL playback through at least two repeat boundaries | Driver-global sixth-VInt full repeat includes SFX, music, fade, and speed tails without dephasing | Retest pending after the driver-global PAL repeat correction |
 | [ ] | Enter a Blue Sphere stage while speed shoes are active | Special-stage music starts at normal tempo; the outgoing level fade is unchanged | Retest pending after the entry-boundary fix |
 | [x] | Collect several special-stage rings | Retail Z80 `zRingSpeaker` alternates left and right output | User listening pass, 2026-08-21 |
 | [ ] | Collect isolated and rapidly adjacent Blue Spheres, including immediately after a spring or bumper | Both notes retain the intended `$05` then `$0A` carrier attenuation; admission key-off/SSG-EG clear occurs before the following driver update's `RR=FF`/voice/key-on phase; the first note emits one final modulated frequency before key-on; cross-SFX replacement does not transiently upload the music voice | The mixer-level candidate still sounded wrong after a completed pickup. Retest the key-on-aligned candidate, especially the first sphere after enough time for the prior effect to finish. |

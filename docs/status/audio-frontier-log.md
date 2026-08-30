@@ -27,6 +27,31 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-08-31 — Cadence 2–4 land without moving the three live oracle frontiers
+
+- **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,
+  `feature/ai-sdre2-cadence-resume` (the fix lands in the same commit; base
+  `f07e45c44`).
+- **Fixtures:** the unchanged committed S1 GHZ, S2 EHZ reload-window, and S3K
+  AIZ1 intro references named in their entries below.
+- **Commands:** S1 engine capture and comparison against the committed fixture
+  through `S1AudioParityTool capture` / `compare` in
+  `<external run root>/sdre2-s1-committed`; the entry-of-record
+  S2 and S3K Java invocations below with absolute, SHA-1-verified ROM paths.
+- **Results:** S1 music **MATCH (14,690 ticks)**. S2 remains at tick 0,
+  `track.FM2.dataPointer`, expected `0x1424`, actual `0x1428`, **669 of 698
+  ticks divergent**. S3K remains at tick 3, `EVENT_MISSING`, event 0, reference
+  PSG `0x9F`, engine missing.
+- **Notes:** live presentation is now outer-frame locked; S2 PAL uses the
+  driver-global 6-per-5 music cadence while SFX stays single-service; S3K PAL
+  repeats the complete driver pass 7-per-6 and the shared speed tail produces
+  the cited 5-per-4 vector. These branches are absent from the three current
+  oracle windows, so unchanged frontiers are expected; the cadence vectors are
+  pinned by `TestSmpsSequencerCadence`. A fresh BizHawk S1 reference recapture
+  was attempted through `run_s1_audio_parity.sh` but the local host had no X
+  display; that capture failure is not reported as a parity result. The
+  committed-reference engine comparison above is the recorded gate.
+
 ## 2026-08-31 — S2 frontier: tick-0 `tempoTimeout` green after the delay-frame cadence fix
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence`, `feature/ai-sdre2-cadence`

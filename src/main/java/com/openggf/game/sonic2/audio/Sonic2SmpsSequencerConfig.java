@@ -58,6 +58,7 @@ public final class Sonic2SmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                .palUpdateMode(SmpsSequencerConfig.PalUpdateMode.EXTRA_MUSIC)
                 // TempoWait runs at the top of EVERY zUpdateMusic including the
                 // first after a song load (sd:545-551): the load seeds
                 // TempoTimeout = CurrentTempo (sd:1820-1822), so update 1 adds

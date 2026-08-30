@@ -66,6 +66,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private int continuousSfxId;
     private boolean continuousSfxFlag;
     private int contSfxLoopCnt;
+    /** Shared Z80 PAL cadence byte: zPALUpdTick / zPalDblUpdCounter. */
+    private int palUpdateCounter = 5;
     private long nextSfxAdmissionOrdinal;
     private SfxContentionObserver sfxContentionObserver = SfxContentionObserver.NONE;
     /** Diagnostic-only state; deliberately absent from rewind snapshots. */
@@ -102,6 +104,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final int continuousSfxId;
         private final boolean continuousSfxFlag;
         private final int contSfxLoopCnt;
+        private final int palUpdateCounter;
         private final DacData liveDacDataReference;
         private final VirtualSynthesizer.Snapshot synthSnapshot;
 
@@ -124,6 +127,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 int continuousSfxId,
                 boolean continuousSfxFlag,
                 int contSfxLoopCnt,
+                int palUpdateCounter,
                 DacData liveDacDataReference,
                 VirtualSynthesizer.Snapshot synthSnapshot) {
             this.owner = owner;
@@ -144,6 +148,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.contSfxLoopCnt = contSfxLoopCnt;
+            this.palUpdateCounter = palUpdateCounter;
             this.liveDacDataReference = liveDacDataReference;
             this.synthSnapshot = synthSnapshot;
         }
@@ -1144,6 +1149,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
+                    palUpdateCounter,
                     captureLiveDacDataReference(),
                     captureSynthSnapshot());
         }
@@ -1211,6 +1217,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             continuousSfxId = token.continuousSfxId;
             continuousSfxFlag = token.continuousSfxFlag;
             contSfxLoopCnt = token.contSfxLoopCnt;
+            palUpdateCounter = token.palUpdateCounter;
             restoreLiveDacDataReference(token.liveDacDataReference);
             restoreSynthSnapshot(token.synthSnapshot);
             if (serviceSequencerOrdinals != null) {
@@ -1257,6 +1264,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
+                    palUpdateCounter,
                     entries,
                     captureLockIds(fmLocks, sequencerIds),
                     captureLockIds(psgLocks, sequencerIds),
@@ -1306,6 +1314,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             continuousSfxId = snapshot.continuousSfxId();
             continuousSfxFlag = snapshot.continuousSfxFlag();
             contSfxLoopCnt = snapshot.contSfxLoopCnt();
+            palUpdateCounter = snapshot.palUpdateCounter();
 
             for (int i = 0; i < entries.size(); i++) {
                 SmpsDriverSnapshot.SequencerEntry entry = entries.get(i);
@@ -1670,6 +1679,95 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         return readMode == ReadMode.HYBRID
                 ? readHybrid(buffer, length)
                 : readSampleAccurate(buffer, length);
+    }
+
+    /** Runs one V-blank-owned service for every sequencer in this driver. */
+    public void serviceOuterFrame() {
+        synchronized (sequencersLock) {
+            SmpsSequencer music = firstMusicSequencerLocked();
+            SmpsSequencerConfig.PalUpdateMode palMode = music == null
+                    ? SmpsSequencerConfig.PalUpdateMode.NONE
+                    : music.getConfig().getPalUpdateMode();
+            if (palMode == SmpsSequencerConfig.PalUpdateMode.EXTRA_FULL) {
+                serviceSfxThenMusic();
+                if (region == SmpsSequencer.Region.PAL) {
+                    // S&K fix_sndbugs=0: test before decrement; zero reloads 5,
+                    // repeats zUpdateEverything, then the re-check stores 4.
+                    if (palUpdateCounter == 0) {
+                        palUpdateCounter = 5;
+                        serviceSfxThenMusic();
+                    }
+                    palUpdateCounter--;
+                }
+            } else {
+                if (palMode == SmpsSequencerConfig.PalUpdateMode.EXTRA_MUSIC
+                        && region == SmpsSequencer.Region.PAL
+                        && music != null
+                        && !music.getSmpsData().isPalSpeedupDisabled()) {
+                    // S2 FixDriverBugs=0: decrement first; zero reloads 5 and
+                    // calls zUpdateMusic once before the normal music pass.
+                    palUpdateCounter--;
+                    if (palUpdateCounter == 0) {
+                        palUpdateCounter = 5;
+                        serviceSequencers(false);
+                    }
+                }
+                serviceSequencers(false);
+                serviceSequencers(true);
+            }
+            removeCompletedSequencers();
+        }
+    }
+
+    private void serviceSfxThenMusic() {
+        SmpsSequencer music = firstMusicSequencerLocked();
+        serviceSequencers(true);
+        if (music != null) {
+            music.serviceS3kSpeedupTail();
+        }
+        serviceSequencers(false);
+        if (music != null) {
+            music.serviceS3kSpeedupTail();
+        }
+    }
+
+    private void serviceSequencers(boolean sfx) {
+        int size = sequencers.size();
+        for (int index = 0; index < size; index++) {
+            SmpsSequencer sequencer = sequencers.get(index);
+            if (isSfx(sequencer) != sfx) {
+                continue;
+            }
+            sequencer.serviceOuterFrame();
+            if (sequencer.isComplete()) {
+                pendingRemovals.add(sequencer);
+            }
+        }
+    }
+
+    private SmpsSequencer firstMusicSequencerLocked() {
+        for (int index = 0; index < sequencers.size(); index++) {
+            SmpsSequencer sequencer = sequencers.get(index);
+            if (!isSfx(sequencer)) {
+                return sequencer;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Renders PCM without advancing SMPS track state. Presentation first calls
+     * {@link #serviceOuterFrame()}, then renders the clock-sized packet.
+     */
+    public int renderFramePcm(short[] buffer, int length) {
+        if (length < 0 || length > buffer.length || (length & 1) != 0) {
+            throw new IllegalArgumentException(
+                    "length must be an even count within the target buffer");
+        }
+        synchronized (sequencersLock) {
+            super.renderFrames(buffer, 0, length / 2);
+        }
+        return length;
     }
 
     private int readSampleAccurate(short[] buffer, int length) {
