@@ -67,8 +67,9 @@ defined by `com.openggf.tools.audio.parity`.
   --output-root <external dir>`).
 - **Result:** **`S1 audio parity: MATCH (14690 ticks)`**, exit 0.
 - **Break-it-on-purpose (comparator proof it actually compares):**
-  - one corrupted fixture byte (tick 5000 `tempoTimeout` 3→4 in a temp copy) →
-    `MISMATCH kind: global_state_mismatch, tick 5000, field tempo_timeout, reference 4,
-    openggf 3`, exit 3;
-  - one corrupted engine write (tick 3001 event 0 `ym2612 p0 reg 0xA4` value 34→35 in a
-    temp copy) → `MISMATCH kind: event_value_different, tick 3001, event 0`, exit 3.
+  - one corrupted fixture byte (tick 5000 DAC `duration` 11→12 in a temp copy) →
+    `MISMATCH kind: track_state_mismatch, tick 5000, role DAC, field duration,
+    reference 12, openggf 11`, exit 3;
+  - one corrupted engine write (tick 7000 event 0 `ym2612 p0 reg 0x28` value 1→0 in a
+    temp copy) → `MISMATCH kind: event_value_different, tick 7000, event 0,
+    reference value=1, openggf value=0`, exit 3.
