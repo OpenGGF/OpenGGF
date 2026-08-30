@@ -52,7 +52,7 @@ failed.
 
 | Status | Scene | Authenticity focus | Listener / date / notes |
 |---|---|---|---|
-| [ ] | Green Hill Zone music with drums, then ring, jump, spring, and explosion SFX | Direct 68k cadence, PSG envelopes, DAC timing, and music-before-SFX service order | Retest pending after the outer-frame cadence correction |
+| [ ] | Green Hill Zone music with drums, then ring, jump, spring, and explosion SFX | Direct 68k cadence, PSG envelopes, DAC timing, and music-before-SFX service order | Retest pending after the outer-frame cadence and PSG admission-write corrections |
 | [ ] | Trigger two contending SFX, then replace the BGM while one remains active | Global priority latch; ordinary BGM replacement preserves live normal/special SFX and rebinds overrides | |
 | [ ] | Pause and resume while FM, PSG, and DAC are active | FM pan-to-zero/key-off and PSG silence; resume restores pan without inventing a voice reload | |
 | [ ] | Trigger 1-up while an SFX owns a channel, then retrigger before restore | SFX stop/block boundary, priority clear, restore fade, and the shipped `FixBugs=0` FM6/DAC masking behavior | |

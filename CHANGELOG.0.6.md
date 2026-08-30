@@ -14,6 +14,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 1 PSG SFX admission now leaves the write stream to the SFX track:**
+  taking PSG1/2 from music no longer injects the engine's synthetic
+  maximum-attenuation latch. The shipped `Sound_PlaySFX` routine
+  (`SD:977-1087`) only marks the music track overridden and initializes SFX
+  RAM, except for its explicit PSG3 `$DF/$FF` pair. This moves the committed
+  sound-test SFX oracle from the first jump admission at tick 351 to that
+  effect's release at tick 377 while the 14,690-tick S1 music oracle remains a
+  MATCH.
 - **SMPS service cadence now follows the shipped drivers' V-blank loops:** live
   presentation services each driver once per outer frame, independently of PCM
   packet size. S2 PAL playback performs six music updates per five VInts while

@@ -2038,7 +2038,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         psgLocks[ch], (SmpsSequencer) source);
                 if (decision.acquired()) {
                     // Silence channel if stealing from music (not from another SFX or self)
-                    if (psgLocks[ch] != source && !isSfx(psgLocks[ch])) {
+                    if (psgLocks[ch] != source && !isSfx(psgLocks[ch])
+                            && usesForcedPsgTakeover(source)) {
                         silencePsgChannel(ch);
                     }
                     psgLocks[ch] = (SmpsSequencer) source;
@@ -2070,7 +2071,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                             psgLocks[ch], (SmpsSequencer) source);
                     if (decision.acquired()) {
                         // Silence channel if stealing from music (not from another SFX or self)
-                        if (psgLocks[ch] != source && !isSfx(psgLocks[ch])) {
+                        if (psgLocks[ch] != source && !isSfx(psgLocks[ch])
+                                && usesForcedPsgTakeover(source)) {
                             silencePsgChannel(ch);
                         }
                         psgLocks[ch] = (SmpsSequencer) source;
@@ -2197,6 +2199,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private static boolean usesForcedFmTakeover(Object source) {
         return ((SmpsSequencer) source).getConfig().getFmSfxTakeoverMode()
                 == SmpsSequencerConfig.FmSfxTakeoverMode.FORCE_RESET;
+    }
+
+    private static boolean usesForcedPsgTakeover(Object source) {
+        return ((SmpsSequencer) source).getConfig().getPsgSfxTakeoverMode()
+                == SmpsSequencerConfig.PsgSfxTakeoverMode.FORCE_SILENCE;
     }
 
     private LockDecision decideLock(SfxContentionObserver.Bus bus,

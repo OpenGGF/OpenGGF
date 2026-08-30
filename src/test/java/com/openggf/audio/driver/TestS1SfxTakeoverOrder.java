@@ -44,6 +44,37 @@ class TestS1SfxTakeoverOrder {
         assertEquals(List.of("YM:0:28:05", "YM:1:B1:3C"), observer.events);
     }
 
+    @Test
+    void sonic1PsgTakeoverStartsWithTheSfxLatchInsteadOfSyntheticSilence() {
+        SmpsDriver driver = new SmpsDriver();
+        RecordingObserver observer = new RecordingObserver();
+        driver.setChipWriteObserver(observer);
+        SmpsSequencer sfx = sequencer(driver, Sonic1SmpsSequencerConfig.CONFIG);
+        driver.addSequencer(sfx, true);
+        observer.events.clear();
+
+        sfx.writePsg(0x80);
+
+        assertEquals(List.of("PSG:80"), observer.events,
+                "S1 Sound_PlaySFX emits no PSG1 admission silence; the"
+                        + " SFX track's first latch owns the visible write");
+    }
+
+    @Test
+    void legacyProfilesRetainTheirSyntheticPsgTakeoverSilence() {
+        SmpsDriver driver = new SmpsDriver();
+        RecordingObserver observer = new RecordingObserver();
+        driver.setChipWriteObserver(observer);
+        SmpsSequencer sfx = sequencer(
+                driver, new SmpsSequencerConfig.Builder().build());
+        driver.addSequencer(sfx, true);
+        observer.events.clear();
+
+        sfx.writePsg(0x80);
+
+        assertEquals(List.of("PSG:9F", "PSG:80"), observer.events);
+    }
+
     private static SmpsSequencer sequencer(SmpsDriver driver, SmpsSequencerConfig config) {
         return new SmpsSequencer(new SingleFm5SfxData(), AudioTestFixtures.EMPTY_DAC,
                 driver, () -> {}, config);

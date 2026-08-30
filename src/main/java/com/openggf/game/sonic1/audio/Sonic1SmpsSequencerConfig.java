@@ -79,6 +79,10 @@ public final class Sonic1SmpsSequencerConfig {
                 // The shipped Sound_PlaySFX initializes track RAM only. SetVoice and the
                 // track's own note-off establish the takeover during UpdateMusic.
                 .fmSfxTakeoverMode(FmSfxTakeoverMode.REGISTER_SEQUENCE)
+                // Sound_PlaySFX (SD:977-1087) emits no PSG takeover write
+                // except the explicit PSG3 DF/FF pair in its own load path.
+                .psgSfxTakeoverMode(
+                        SmpsSequencerConfig.PsgSfxTakeoverMode.REGISTER_SEQUENCE)
                 .build();
     }
 

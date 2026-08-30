@@ -27,6 +27,28 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-08-31 — S1 SFX frontier advances from admission tick 351 to release tick 377
+
+- **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,
+  `feature/ai-sdre2-cadence-resume` (the fix lands in the same commit; base
+  `fcc190d5f`).
+- **Fixture:** `src/test/resources/audio/parity/s1/s1-soundtest-sfx-reference.v1.jsonl.gz`
+  (unchanged committed reference).
+- **Command:** `S1AudioParityTool capture --capture sfx` followed by `compare`
+  against the committed fixture in `<external run root>/sdre2-s1-sfx`, with
+  the absolute SHA-1-verified S1 REV01 ROM path.
+- **Result:** **MISMATCH**, first divergence tick **377**, event 3: the engine
+  emits an extra PSG `0x9F` after the reference's final event. Tick 351's prior
+  `event_extra` is green. The S1 GHZ music gate remains **MATCH (14,690
+  ticks)** in a fresh committed-reference engine capture.
+- **Notes:** `Sound_PlaySFX` (`SD:977-1087`) has no PSG1/2 takeover write; the
+  typed S1 PSG takeover profile now leaves the first visible write to the SFX
+  track while legacy profiles retain the existing synthetic silence. The new
+  tick-377 frontier is release-shaped: after both streams write PSG `0xB3`,
+  `0xF7`, `0x9F`, the engine writes a second `0x9F` and begins immediate music
+  restoration, while the reference stops. That belongs to the profile-shaped
+  stop/restore gap (§6.2), not admission.
+
 ## 2026-08-31 — Cadence 2–4 land without moving the three live oracle frontiers
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,

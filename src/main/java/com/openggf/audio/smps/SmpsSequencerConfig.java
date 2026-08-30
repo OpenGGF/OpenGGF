@@ -87,6 +87,14 @@ public final class SmpsSequencerConfig {
         REGISTER_SEQUENCE
     }
 
+    /** How a PSG channel is prepared when an SFX first takes it from music. */
+    public enum PsgSfxTakeoverMode {
+        /** Legacy engine behavior: inject a maximum-attenuation latch. */
+        FORCE_SILENCE,
+        /** Shipped-driver behavior: let the SFX bytecode own visible writes. */
+        REGISTER_SEQUENCE
+    }
+
     /** Exact shipped-driver sequence used to upload a 25-byte FM voice. */
     public enum FmVoiceWriteProfile {
         /** Sonic 1's 68k SetVoice routine. */
@@ -124,6 +132,7 @@ public final class SmpsSequencerConfig {
     private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
     private final boolean direct68kDriver;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
+    private final PsgSfxTakeoverMode psgSfxTakeoverMode;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
 
     // --- S3K-specific config fields ---
@@ -160,6 +169,7 @@ public final class SmpsSequencerConfig {
         this.tempoOnFirstTick = b.tempoOnFirstTick;
         this.direct68kDriver = b.direct68kDriver;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
+        this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
@@ -264,6 +274,10 @@ public final class SmpsSequencerConfig {
         return fmSfxTakeoverMode;
     }
 
+    public PsgSfxTakeoverMode getPsgSfxTakeoverMode() {
+        return psgSfxTakeoverMode;
+    }
+
     public FmVoiceWriteProfile getFmVoiceWriteProfile() {
         return fmVoiceWriteProfile;
     }
@@ -353,6 +367,7 @@ public final class SmpsSequencerConfig {
         private boolean tempoOnFirstTick = false;
         private boolean direct68kDriver = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
+        private PsgSfxTakeoverMode psgSfxTakeoverMode = PsgSfxTakeoverMode.FORCE_SILENCE;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
 
         // S3K-specific defaults (S2 compatible)
@@ -381,6 +396,7 @@ public final class SmpsSequencerConfig {
         public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
+        public Builder psgSfxTakeoverMode(PsgSfxTakeoverMode val) { psgSfxTakeoverMode = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
@@ -400,6 +416,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(tempoMode, "tempoMode");
             Objects.requireNonNull(palUpdateMode, "palUpdateMode");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
+            Objects.requireNonNull(psgSfxTakeoverMode, "psgSfxTakeoverMode");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);
         }
