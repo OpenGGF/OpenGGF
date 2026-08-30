@@ -27,6 +27,33 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-08-31 — S3K tick-3 attribution retracted: this is the 68k PSG bootstrap, not `zStopAllSound`
+
+- **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,
+  `feature/ai-sdre2-cadence-resume` at `a390f1649` plus this documentation
+  correction.
+- **Fixture:** `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz`
+  (unchanged committed reference).
+- **Command:** the entry-of-record `S3kAudioParityTool compare` invocation
+  below, plus direct inspection of the fixture's first non-empty write rows
+  against `skdisasm/sonic3k.asm:175-184,260` and
+  `Sound/Z80 Sound Driver.asm` `zInitAudioDriver` / `zStopAllSound`.
+- **Result:** the comparator remains red at tick 3, event 0, PSG `0x9F`
+  missing. **No production fix is valid at that frontier.** The reference row
+  contains exactly `0x9F,0xBF,0xDF,0xFF`, matching the 68k power-on
+  `PSGInitValues` loop before the SMPS driver is installed. The actual Z80
+  initialization burst first appears at tick 13 and continues at tick 14 with
+  the source-specified FM silence/SSG-EG/PSG/DAC/FM3 sequence.
+- **Notes:** the 2026-08-30 entry's claim that tick 3 was
+  `zInitAudioDriver -> zStopAllSound` is retracted. `S3kOpenGgfAudioCapture`
+  is a driver/request host and has no 68k power-on execution boundary; adding
+  the four writes on oracle tick 3 would key engine behavior to a fixture
+  frame, while emitting them from `SmpsDriver` startup would assign 68k-owned
+  work to the wrong subsystem. This is a host-capture scope gap. The committed
+  fixture and comparator remain unchanged, so a later oracle revision must
+  establish a source-owned 68k bootstrap boundary before it can expose the
+  first driver-owned divergence.
+
 ## 2026-08-31 — S1 SFX frontier advances from admission tick 351 to release tick 377
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,
@@ -201,7 +228,7 @@ defined by `com.openggf.tools.audio.parity`.
     `S2 driver oracle: DIVERGENCE at tick 20 (movie row 10222), field
     writes[0]: … expected=ym0[0x28]=0x0 actual=ym0[0x28]=0x40 [1 of 698
     ticks divergent]`.
-## 2026-08-30 - S3K oracle first frontier: boot silence burst (tick 3)
+## 2026-08-30 - S3K oracle first frontier: boot silence burst (tick 3) — attribution retracted
 
 - Worktree `.worktrees/sdre-oracle-s3k`, branch `feature/ai-sdre-oracle-s3k`
   (fixture, capture tooling and comparator land in the same commit as this
@@ -220,16 +247,14 @@ defined by `com.openggf.tools.audio.parity`.
   com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare
   --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz
   --rom <locked-on s3k.gen>`
-- Result: **red**, as expected for the first run.
+- Result: **red**, as expected for the first run. **Superseded attribution:**
+  the 2026-08-31 correction above proves this row is the 68k power-on PSG
+  initialization loop, not the Z80 driver's initialization burst.
   First divergence: **tick 3, `EVENT_MISSING`, event 0** — the reference
-  emits the Z80 boot's `zStopAllSound` silence burst (first decoded write:
-  PSG `9Fh`) three frames after power-on
-  (`zInitAudioDriver` → `zStopAllSound`, skdisasm
-  `Sound/Z80 Sound Driver.asm`), while the engine's driver emits nothing
-  until the first game request: the engine has no boot-time driver
-  initialisation burst. Error count: first divergence only (comparator
-  stops); ticks 0-2 of the same run are green (`MATCH (3 ticks)` with
-  `--ticks 3`).
+  emits PSG `9Fh` as the first of the 68k bootstrap's four
+  `PSGInitValues`; the driver-only engine host emits nothing. Error count:
+  first divergence only (comparator stops); ticks 0-2 of the same run are
+  green (`MATCH (3 ticks)` with `--ticks 3`).
 - Broken on purpose before trusting the comparison (project rule): a
   corrupted `zCurrentTempo` byte in a temp copy (terminal digest recomputed)
   reports `GLOBAL_STATE_MISMATCH` at its exact tick with expected/actual
