@@ -20,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 /** Guards the optional, immutable TraceChaser consumer boundary. */
 class TestTraceChaserBoundaryGuard {
     private static final String PIN = "9e51ff79e7a542f3c50d96618a7e24e6fc72397e";
+    private static final String LUA_BIN = System.getenv().getOrDefault("LUA_BIN", "lua");
 
     @Test
     void exactGitlinkAndNonFloatingConfigurationAreTracked() throws Exception {
@@ -147,7 +148,7 @@ class TestTraceChaserBoundaryGuard {
         copy("tools/bizhawk/s1_trace_recorder.lua", fixture.root());
 
         Result result = run(fixture.root(), Map.of("TRACECHASER_SENTINEL", fixture.marker().toString()),
-                "lua", "tools/bizhawk/s1_trace_recorder.lua");
+                LUA_BIN, "tools/bizhawk/s1_trace_recorder.lua");
 
         assertEquals(4, result.exitCode(), result.output());
         assertFalse(Files.exists(fixture.marker()), "outside Lua target executed");
