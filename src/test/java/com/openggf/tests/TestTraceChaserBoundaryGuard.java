@@ -103,8 +103,24 @@ class TestTraceChaserBoundaryGuard {
     }
 
     @Test
-    void bootstrapReturnsFourForMissingPinnedCommand() throws Exception {
-        Result missing = run(Path.of("."), "bash", "tools/tracechaser-bootstrap.sh",
+    void bootstrapReturnsFourForMissingPinnedCommand(@TempDir Path temp) throws Exception {
+        Path repo = temp.resolve("repo");
+        Path checkout = repo.resolve("tools/tracechaser");
+        Files.createDirectories(checkout);
+        assertEquals(0, run(checkout, "git", "init").exitCode());
+        assertEquals(0, run(checkout, "git", "config", "user.email", "test@example.invalid").exitCode());
+        assertEquals(0, run(checkout, "git", "config", "user.name", "Test").exitCode());
+        Files.writeString(checkout.resolve("README.md"), "pinned\n");
+        assertEquals(0, run(checkout, "git", "add", "README.md").exitCode());
+        assertEquals(0, run(checkout, "git", "commit", "-m", "pinned").exitCode());
+        String expected = run(checkout, "git", "rev-parse", "HEAD").output().strip();
+
+        assertEquals(0, run(repo, "git", "init").exitCode());
+        assertEquals(0, run(repo, "git", "update-index", "--add", "--cacheinfo",
+                "160000," + expected + ",tools/tracechaser").exitCode());
+        copy("tools/tracechaser-bootstrap.sh", repo);
+
+        Result missing = run(repo, "bash", "tools/tracechaser-bootstrap.sh",
                 "--require", "missing-command");
         assertEquals(4, missing.exitCode(), missing.output());
     }
