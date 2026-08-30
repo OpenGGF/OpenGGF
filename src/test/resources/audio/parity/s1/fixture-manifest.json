@@ -1,0 +1,53 @@
+{
+  "schema": "openggf.s1_audio_parity_fixture_manifest.v1",
+  "game": "Sonic 1 World REV01",
+  "rom": {
+    "sha1": "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b",
+    "crc32": "afe05eee"
+  },
+  "recorder_pin": {
+    "tracechaser_gitlink": "9e51ff79e7a542f3c50d96618a7e24e6fc72397e",
+    "bizhawk": "BizHawk 2.11 Linux x64 (EmuHawk.exe sha256 b2d4be5e2a766a5161cc26f3af2a90753c39d64c91c54a9884171aed09e21df3)",
+    "core": "Genplus-gx"
+  },
+  "movies": [
+    {
+      "file": "s1-soundtest-ghz.bk2",
+      "sha256": "622ff642d0b0835a4f77bee568f2413f288ead3306a8bc2a93e8d8f77f24ca9c",
+      "input_rows": 989
+    },
+    {
+      "file": "s1-soundtest-sfx.bk2",
+      "sha256": "3da775e4fdd3770e9687e178b6a11922873d1021a2013565ebe842451a7a33a2",
+      "input_rows": 2791
+    }
+  ],
+  "references": [
+    {
+      "file": "s1-soundtest-ghz-reference.v1.jsonl.gz",
+      "capture": "s1_ghz_music_driver_reference",
+      "movie": "s1-soundtest-ghz.bk2",
+      "uncompressed_sha256": "5941958c4eb38da4f71e1e5860b49b2d13d6fa0aaedcf244fa7b8d4ecb5d6efc",
+      "uncompressed_bytes": 117646785,
+      "terminal_record_count": 14690,
+      "cycle_start": 5473,
+      "period": 4608,
+      "epoch_open_frame": 823,
+      "recorder_probe": "tools/audio/probes/s1_audio_driver_parity_probe.lua",
+      "capture_command": "OGGF_OUT=<external>/reference.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_audio_driver_parity_probe.lua src/test/resources/audio/parity/s1/s1-soundtest-ghz.bk2 <s1-rev01.gen>"
+    },
+    {
+      "file": "s1-soundtest-sfx-reference.v1.jsonl.gz",
+      "capture": "s1_soundtest_sfx_driver_reference",
+      "movie": "s1-soundtest-sfx.bk2",
+      "uncompressed_sha256": "2a3007c0d46a219afe5e8f0739851157830fc19b4bc4342fe1466470f2946f05",
+      "uncompressed_bytes": 15893088,
+      "terminal_record_count": 1967,
+      "cycle_start": 0,
+      "period": 0,
+      "epoch_open_frame": 823,
+      "recorder_probe": "tools/audio/probes/s1_audio_sfx_parity_probe.lua",
+      "capture_command": "OGGF_OUT=<external>/reference-sfx.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_audio_sfx_parity_probe.lua src/test/resources/audio/parity/s1/s1-soundtest-sfx.bk2 <s1-rev01.gen>"
+    }
+  ]
+}

@@ -1788,6 +1788,24 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
+    /**
+     * Tool-facing: detaches every sequencer that has completed, releasing its
+     * channel locks exactly as the render loop's completion cleanup would.
+     * Parity capture hosts advance sequencers directly and never call
+     * {@link #read(short[])}, so they invoke this once per driver tick.
+     */
+    public void reapCompletedSequencers() {
+        synchronized (sequencersLock) {
+            for (int i = 0; i < sequencers.size(); i++) {
+                SmpsSequencer seq = sequencers.get(i);
+                if (seq.isComplete() && !pendingRemovals.contains(seq)) {
+                    pendingRemovals.add(seq);
+                }
+            }
+            removeCompletedSequencers();
+        }
+    }
+
     @Override
     public boolean isComplete() {
         return sequencers.isEmpty();
