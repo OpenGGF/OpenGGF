@@ -39,7 +39,7 @@ class TestS1AudioParityCli {
     }
 
     @Test
-    void outputRootMustStayInRepositoryTargetAndCannotEscapeThroughSymlinks() throws Exception {
+    void outputRootAllowsExternalRunRootsButNeverTestResourcesOrStrayRepoPaths() throws Exception {
         Path repo = Files.createDirectories(temp.resolve("repo"));
         Files.createDirectories(repo.resolve("target/audio-parity"));
         Files.createDirectories(repo.resolve("src/test/resources"));
@@ -48,13 +48,21 @@ class TestS1AudioParityCli {
         assertEquals(repo.resolve("target/audio-parity/s1-ghz").toAbsolutePath().normalize(),
                 S1AudioParityTool.resolveSafeOutputRoot(repo,
                         repo.resolve("target/audio-parity/s1-ghz")));
+        // TraceChaser's output policy forbids reference captures inside either source
+        // tree, so an explicit run root outside the repository is the wrapper shape.
+        assertEquals(outside.toRealPath().resolve("run"),
+                S1AudioParityTool.resolveSafeOutputRoot(repo, outside.resolve("run")));
         assertUnsafe(repo, repo.resolve("src/test/resources/audio/parity-output"),
                 "src/test/resources");
         assertUnsafe(repo, repo.resolve("target/audio-parity/../../src/test/resources/escape"),
                 "src/test/resources");
+        assertUnsafe(repo, repo.resolve("stray-output"), "target/audio-parity");
 
+        // A symlink below target/audio-parity resolves to its real, external target,
+        // which the external-run-root rule then admits explicitly.
         Files.createSymbolicLink(repo.resolve("target/audio-parity/link"), outside);
-        assertUnsafe(repo, repo.resolve("target/audio-parity/link/run"), "outside repository target/audio-parity");
+        assertEquals(outside.toRealPath().resolve("run"),
+                S1AudioParityTool.resolveSafeOutputRoot(repo, repo.resolve("target/audio-parity/link/run")));
     }
 
     @Test

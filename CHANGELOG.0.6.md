@@ -14,6 +14,26 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 1 driver oracle is committed and re-runnable:** the S1 GHZ
+  music-driver parity oracle (driver-RAM track state plus the ordered YM/PSG
+  write stream per `UpdateMusic` invocation, recorded from BizHawk 2.11 /
+  Genesis Plus GX) now lives in the repository: the full 14,690-tick GHZ
+  reference capture is committed gzip-compressed with a fixture manifest and
+  integrity test, alongside a new sound-test SFX movie and reference that play
+  eight normal SFX ($A0 $A4 $A6 $AA $B5 $C6 $CC $CF) over the running GHZ
+  music and record each `Sound_PlaySFX` dispatch as the request-sequence
+  contract. The comparator pairs the new SFX capture kinds, replays the
+  recorded dispatches through the real `SmpsDriver`/`SmpsSequencer`, and
+  reports the first divergence with tick, field and both values. The Lua
+  recorder's `pc_manifest` fallback no longer reads the nonexistent
+  "System Bus" BizHawk domain (it maps 68k bus addresses onto the real
+  `68K RAM`/`MD CART` domains and asserts the domain list at startup), and
+  `tools/audio/run_s1_audio_parity.sh` works again: reference captures land in
+  an explicit run root outside the repository, satisfying both TraceChaser's
+  output policy and the parity tool. Engine GHZ music parity re-verified:
+  `MATCH (14690 ticks)`. New results are recorded in
+  `docs/status/audio-frontier-log.md`.
+
 - **Special-stage rings alternate speakers again (S3K):** every ROM ring
   collect — the level's `GiveRing`, the Blue Sphere ring routine at
   `loc_984C`, badniks that award rings — sends the same `sfx_RingRight` id,
