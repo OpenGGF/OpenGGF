@@ -296,6 +296,9 @@ traces.
   packaging, and runtime do not initialize it; trace contributors opt in with
   `git submodule update --init --recursive tools/tracechaser`. TraceChaser uses
   verified official BizHawk 2.11 and does not vendor emulator distributions.
+  GitHub's structural-guard job installs Lua 5.4 for the retained forwarder
+  security guard; local contributors can set `LUA_BIN` when their Lua 5.4
+  executable has another name.
   Maven runs directly in each worktree and keeps build, report, diagnostic,
   temporary, and per-Surefire-fork LWJGL output below that worktree's `target/`
   tree. Measured at `develop` `2e06eb403` on 2026-08-28 with JDK 21 and

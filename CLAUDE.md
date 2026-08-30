@@ -69,6 +69,8 @@ uses a distinct directory below `target/test-tmp`.
   suite report hundreds of phantom failures (Mockito stubbing errors leaking across
   classes, ROM fixtures failing to load) that look like real regressions but aren't. The
   build fails fast at `validate` if the JVM is wrong.
+- **Lua 5.4 runs the TraceChaser forwarder guard.** Set `LUA_BIN` when the executable is
+  not named `lua`; CI pins it to `lua5.4` and verifies the version before Maven.
 - Maven Silent Extension is enabled by default (`-Dmse=relaxed` via `.mvn/maven.config`).
   Use `-Dmse=off` when you need full Maven logs.
 - In PowerShell, quote `-D...` properties (`mvn "-Dtest=com.openggf.pkg.TestClass" test`).

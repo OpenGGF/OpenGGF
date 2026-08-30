@@ -14,6 +14,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **TraceChaser boundary guards run reliably in CI:** the GitHub
+  structural-guard job now installs and selects Lua 5.4 before Maven, while the
+  release runner verifies its provisioned interpreter. The Lua forwarder test
+  consumes the explicit `LUA_BIN` selection instead of assuming a runner image
+  provides an unversioned `lua` command.
+
 - **Trace tooling now has one external owner:** trace recording, BizHawk 2.11
   integration, probes, validation, comparison, compression, and publication
   utilities moved with preserved history to

@@ -28,6 +28,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -925,6 +926,46 @@ class TestBuildToolingGuard {
             fail("structural guards must be gated by CI on every push:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
+    }
+
+    @Test
+    void traceChaserBoundaryCiJobsShouldProvisionLua54() throws Exception {
+        Map<String, String> ciJobs = yamlJobBlocks(
+                Files.readString(Path.of(".github/workflows/ci.yml")));
+        Map<String, String> releaseJobs = yamlJobBlocks(
+                Files.readString(Path.of(".github/workflows/release.yml")));
+
+        String guards = ciJobs.get("guards");
+        assertNotNull(guards, ".github/workflows/ci.yml is missing job guards");
+        assertTrue(guards.contains("LUA_BIN: lua5.4"),
+                "CI guards job must select the pinned Lua executable");
+        assertTrue(guards.contains("Install Lua 5.4"),
+                "CI guards job must install Lua before Maven");
+        assertTrue(guards.contains("sudo apt-get install --yes lua5.4"),
+                "CI guards job must install the selected Lua package");
+        assertTrue(guards.contains("assert(_VERSION == \"Lua 5.4\")"),
+                "CI guards job must verify the installed Lua version");
+        assertTrue(guards.indexOf("Install Lua 5.4") < guards.indexOf("mvn -Dmse=off"),
+                "CI guards job must install Lua before running Maven");
+
+        String releaseTest = releaseJobs.get("test");
+        assertNotNull(releaseTest, ".github/workflows/release.yml is missing test job");
+        assertTrue(releaseTest.contains("LUA_BIN: lua5.4"),
+                "release test job must select the pinned Lua executable");
+        assertTrue(releaseTest.contains("Verify Lua 5.4"),
+                "release test job must preflight Lua before Maven");
+        assertTrue(releaseTest.contains("command -v \"$LUA_BIN\""),
+                "release test job must require its configured Lua executable");
+        assertTrue(releaseTest.contains("assert(_VERSION == \"Lua 5.4\")"),
+                "release test job must verify the configured Lua version");
+        assertTrue(releaseTest.indexOf("Verify Lua 5.4")
+                        < releaseTest.indexOf("mvn -Dmse=off test -B"),
+                "release test job must verify Lua before running Maven");
+
+        String boundaryGuard = Files.readString(Path.of(
+                "src/test/java/com/openggf/tests/TestTraceChaserBoundaryGuard.java"));
+        assertTrue(boundaryGuard.contains("System.getenv().getOrDefault(\"LUA_BIN\", \"lua\")"),
+                "TraceChaser Lua guard must consume the CI-selected executable");
     }
 
     private static List<String> guardTestSources() throws Exception {
