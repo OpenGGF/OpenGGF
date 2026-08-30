@@ -7,3 +7,7 @@
 [submodule "docs/skdisasm"]
 	path = docs/skdisasm
 	url = https://github.com/sonicretro/skdisasm.git
+
+[submodule "tools/tracechaser"]
+	path = tools/tracechaser
+	url = https://github.com/OpenGGF/TraceChaser.git

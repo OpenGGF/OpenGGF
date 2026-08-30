@@ -69,7 +69,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
      * Hog animation script), so its animate routine does not run until the
      * following frame and the object lives exactly one frame longer -- 40
      * frames from spawn to delete rather than 39. Measured on the shipped ROM
-     * by tools/bizhawk/probes/s1_lz3_explosion_lifetime_probe.lua.
+     * by tools/tracechaser/bizhawk/probes/s1_lz3_explosion_lifetime_probe.lua.
      *
      * <p>That one frame decides when the explosion's object slot is freed, and
      * therefore which slot {@code FindFreeObj} hands the next allocation. In

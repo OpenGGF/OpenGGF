@@ -101,6 +101,24 @@ This file contains the complete 0.6 development snapshot history carried forward
   randomised register/read streams across all four chip types. The existing
   `Ym2612Chip` still drives audio; switching over is a follow-up. *Superseded:
   the switch-over landed in the entry above.*
+- **TraceChaser boundary guards run reliably in CI:** the GitHub
+  structural-guard job now installs and selects Lua 5.4 before Maven, while the
+  release runner verifies its provisioned interpreter. The Lua forwarder test
+  consumes the explicit `LUA_BIN` selection instead of assuming a runner image
+  provides an unversioned `lua` command.
+
+- **Trace tooling now has one external owner:** trace recording, BizHawk 2.11
+  integration, probes, validation, comparison, compression, and publication
+  utilities moved with preserved history to
+  [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser). OpenGGF pins
+  immutable `v0.1.0` commit `9e51ff79e7a542f3c50d96618a7e24e6fc72397e`
+  as an optional `tools/tracechaser` submodule; ordinary Maven, packaging, and
+  runtime remain independent of it. Schema v5 consumer fixtures and Java
+  accept/reject semantics remain local and run in the ordinary suite; GPGX and
+  normalization copies are hash-bound by the same provenance contract.
+  Selected 0.6 command paths are thin compatibility forwarders rather than
+  duplicate implementations, and all languages consume one canonical resolver
+  that refuses dirty, symlinked, non-directory, or checkout-escaping targets.
 
 - **FM:PSG balance restored after the two core rewrites:** the Nuked-OPN2
   facade (6144 per full-scale FM channel) and the clean-room PSG (8191 per

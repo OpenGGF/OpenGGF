@@ -4,7 +4,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
@@ -51,8 +50,12 @@ public class TestSonic1PlatformObjectInstanceRespawn {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        // The platform reads services().romZoneId() from the gameplay session's
+        // LevelManager, not from the stub below. activeGameplayMode() reuses any
+        // session a previous class in the fork left open, so a leaked level whose
+        // zone index is 3 (S3K CNZ, S1 SLZ) would trip the SLZ subtype override and
+        // keep the platform alive; open a clean session from the shared baseline.
+        TestEnvironment.resetAll();
         GameServices.camera().resetState();
     }
 

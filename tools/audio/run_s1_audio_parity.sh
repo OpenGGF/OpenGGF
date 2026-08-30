@@ -32,6 +32,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/s1_audio_parity_protocol.sh
 source "$SCRIPT_DIR/lib/s1_audio_parity_protocol.sh"
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
+TRACECHASER_BOOTSTRAP="$REPO/tools/tracechaser-bootstrap.sh"
 ROM_PATH=""
 MOVIE_PATH="$REPO/src/test/resources/audio/parity/s1/s1-soundtest-ghz.bk2"
 BIZHAWK_DIR="${BIZHAWK_HOME:-}"
@@ -60,6 +61,10 @@ done
 
 [ -z "${OGGF_AUDIO_PARITY_JAVA_BIN:-}" ] || \
 	fail "OGGF_AUDIO_PARITY_JAVA_BIN is unsupported; the trusted Java tool cannot be replaced"
+
+PROBE=$("$TRACECHASER_BOOTSTRAP" --require \
+	"bizhawk/probes/s1_audio_driver_parity_probe.lua") || exit $?
+LAUNCHER=$("$TRACECHASER_BOOTSTRAP" --require "bizhawk/run_bizhawk_lua.sh") || exit $?
 
 if [ -z "$BIZHAWK_DIR" ]; then
 	for candidate in "$REPO/docs/BizHawk-2.11-linux-x64" \
@@ -106,9 +111,6 @@ REFERENCE_1="$RUN_DIR/reference-1.jsonl"
 REFERENCE_2="$RUN_DIR/reference-2.jsonl"
 OPENGGF_1="$RUN_DIR/openggf-1.jsonl"
 OPENGGF_2="$RUN_DIR/openggf-2.jsonl"
-PROBE="$REPO/tools/bizhawk/probes/s1_audio_driver_parity_probe.lua"
-LAUNCHER="$REPO/tools/bizhawk/run_bizhawk_lua.sh"
-
 capture_reference() {
 	local output=$1
 	local log=$2

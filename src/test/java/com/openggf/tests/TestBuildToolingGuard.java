@@ -28,6 +28,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -925,6 +926,46 @@ class TestBuildToolingGuard {
             fail("structural guards must be gated by CI on every push:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
+    }
+
+    @Test
+    void traceChaserBoundaryCiJobsShouldProvisionLua54() throws Exception {
+        Map<String, String> ciJobs = yamlJobBlocks(
+                Files.readString(Path.of(".github/workflows/ci.yml")));
+        Map<String, String> releaseJobs = yamlJobBlocks(
+                Files.readString(Path.of(".github/workflows/release.yml")));
+
+        String guards = ciJobs.get("guards");
+        assertNotNull(guards, ".github/workflows/ci.yml is missing job guards");
+        assertTrue(guards.contains("LUA_BIN: lua5.4"),
+                "CI guards job must select the pinned Lua executable");
+        assertTrue(guards.contains("Install Lua 5.4"),
+                "CI guards job must install Lua before Maven");
+        assertTrue(guards.contains("sudo apt-get install --yes lua5.4"),
+                "CI guards job must install the selected Lua package");
+        assertTrue(guards.contains("assert(_VERSION == \"Lua 5.4\")"),
+                "CI guards job must verify the installed Lua version");
+        assertTrue(guards.indexOf("Install Lua 5.4") < guards.indexOf("mvn -Dmse=off"),
+                "CI guards job must install Lua before running Maven");
+
+        String releaseTest = releaseJobs.get("test");
+        assertNotNull(releaseTest, ".github/workflows/release.yml is missing test job");
+        assertTrue(releaseTest.contains("LUA_BIN: lua5.4"),
+                "release test job must select the pinned Lua executable");
+        assertTrue(releaseTest.contains("Verify Lua 5.4"),
+                "release test job must preflight Lua before Maven");
+        assertTrue(releaseTest.contains("command -v \"$LUA_BIN\""),
+                "release test job must require its configured Lua executable");
+        assertTrue(releaseTest.contains("assert(_VERSION == \"Lua 5.4\")"),
+                "release test job must verify the configured Lua version");
+        assertTrue(releaseTest.indexOf("Verify Lua 5.4")
+                        < releaseTest.indexOf("mvn -Dmse=off test -B"),
+                "release test job must verify Lua before running Maven");
+
+        String boundaryGuard = Files.readString(Path.of(
+                "src/test/java/com/openggf/tests/TestTraceChaserBoundaryGuard.java"));
+        assertTrue(boundaryGuard.contains("System.getenv().getOrDefault(\"LUA_BIN\", \"lua\")"),
+                "TraceChaser Lua guard must consume the CI-selected executable");
     }
 
     private static List<String> guardTestSources() throws Exception {
@@ -2956,6 +2997,34 @@ class TestBuildToolingGuard {
                 "run: git clone --recursive https://example.invalid/repository.git\n"));
         assertFalse(workflowInitializesOptionalSubmodules("submodules: false\n"));
         assertFalse(workflowInitializesOptionalSubmodules("run: git status --short\n"));
+    }
+
+    @Test
+    void traceChaserStaysExactOptionalAndOutsideOrdinaryBuilds() throws Exception {
+        String modules = Files.readString(Path.of(".gitmodules"));
+        assertTrue(modules.contains("[submodule \"tools/tracechaser\"]"));
+        assertTrue(modules.contains("url = https://github.com/OpenGGF/TraceChaser.git"));
+        assertFalse(modules.substring(modules.indexOf("[submodule \"tools/tracechaser\"]"))
+                .contains("branch ="), "TraceChaser must never float on a branch");
+        assertEquals("160000 9e51ff79e7a542f3c50d96618a7e24e6fc72397e 0\ttools/tracechaser",
+                gitOutput(Path.of("."), "ls-files", "-s", "--", "tools/tracechaser").strip());
+
+        String pom = Files.readString(Path.of("pom.xml"));
+        assertTrue(pom.contains("<surefire.excludedGroups>tracechaser-integration</surefire.excludedGroups>"));
+        assertTrue(pom.contains("<excludedGroups>${surefire.excludedGroups}</excludedGroups>"));
+        assertTrue(pom.contains("<id>tracechaser-integration</id>"));
+        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+            String guidance = Files.readString(Path.of(agentGuide));
+            assertTrue(guidance.contains("optional pinned `tools/tracechaser/` submodule"));
+            assertTrue(guidance.contains(
+                    "git submodule update --init --recursive tools/tracechaser"));
+        }
+        try (Stream<Path> workflows = Files.walk(Path.of(".github/workflows"))) {
+            for (Path workflow : workflows.filter(Files::isRegularFile).toList()) {
+                assertFalse(workflowInitializesOptionalSubmodules(Files.readString(workflow)),
+                        () -> workflow + " must not initialize optional TraceChaser");
+            }
+        }
     }
 
     private static boolean workflowInitializesOptionalSubmodules(String source) {

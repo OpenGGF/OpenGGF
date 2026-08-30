@@ -186,7 +186,7 @@ public final class DynamicArtLifecycleService
     /**
      * Gap-edge numbering is per LOGICAL FRAME, not per gap. The recorder keys
      * its counter on the edge's frame
-     * ("tools/bizhawk-headless/src/Recording/S1DynamicArtObserver.cs":247-252),
+     * ("tools/tracechaser/bizhawk-headless/src/Recording/S1DynamicArtObserver.cs":247-252),
      * so two edges sharing a frame are 0 and 1 while a later frame in the same
      * gap restarts at 0.
      */
@@ -1123,7 +1123,7 @@ public final class DynamicArtLifecycleService
     /**
      * Supplies the physical movie row a gap edge should carry. The recorder
      * stamps gap edges with the BK2 row it has consumed
-     * ("tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":199-215,
+     * ("tools/tracechaser/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":199-215,
      * whose {@code rowsConsumed} counts every movie row from zero, and
      * S1DynamicArtObserver:483, which replaces a gap edge's frame with it).
      * Counting production iterations instead loses a row for every suppressed
