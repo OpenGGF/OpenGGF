@@ -1829,8 +1829,36 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return false;
         }
+        if (isRingSpeakerToggleRequest(sfxId)) {
+            // Mirrors the sound driver's ring-speaker toggle, which keys on
+            // the raw ring request id rather than on the caller: every ROM
+            // ring collect (level GiveRing, the special-stage sphere/ring
+            // routine, badniks that award rings) sends the same right-side id
+            // and the driver alternates it with the left-side id itself
+            // (S3K: zPlaySound_CheckRing, skdisasm/Sound/Z80 Sound Driver.asm
+            // :1919-1925; S2: zPlaySound_CheckRing, s2disasm/s2.sounddriver.asm
+            // :2127-2135; S1: Sound_ChkRing, s1disasm/s1.sounddriver.asm
+            // :984-991). Requesting the raw id therefore takes the same
+            // alternation as GameSound.RING; only an explicit left-side id
+            // bypasses the toggle, as in the ROM.
+            playSfx(GameSound.RING, pitch);
+            return true;
+        }
         requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
         return playBaseSfx(baseAudioSource, sfxId, pitch);
+    }
+
+    /**
+     * True when {@code sfxId} is the active profile's raw ring request id —
+     * the id every ROM ring collect sends and the sound driver alternates
+     * between speakers before playback.
+     */
+    private boolean isRingSpeakerToggleRequest(int sfxId) {
+        if (soundMap == null) {
+            return false;
+        }
+        Integer ringRight = soundMap.get(GameSound.RING_RIGHT);
+        return ringRight != null && ringRight == sfxId;
     }
 
     private boolean playBaseSfx(
