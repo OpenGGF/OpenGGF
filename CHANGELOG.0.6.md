@@ -14,6 +14,80 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Licence notices ship with every build:** `NOTICE.md` at the repository
+  root records the Nuked OPN2 FM core (Alexey Khokholov, LGPL-2.1-or-later,
+  pinned upstream commit) and the modifications made to it; `LICENSE`,
+  `LICENSES/`, `NOTICE.md` and `CREDITS.md` are packaged into every jar under
+  `META-INF/openggf/` and into the Linux, Windows and macOS release archives,
+  and the release smoke validation checks for them. README gains a Licensing
+  section.
+
+- **FM writes are paced by the chip's busy window:** `Ym2612Chip` now holds
+  each data strobe on the bus for 34 internal cycles (the 32-cycle busy
+  window plus the two clocks before a status read shows it), as a
+  busy-polling driver does, instead of 13. At the old spacing two consecutive
+  `$28` key writes could arrive before the sequencer consumed the first
+  latch, so the second overwrote it: on the captured SMPS logs the S1 GHZ
+  music lost 27 of 189 key-ons, S2 EHZ 65 of 138, S3K AIZ1 12 of 357, and
+  notes went missing (the LZ music at frame 102982 stayed silent). At the
+  new pacing no key-on or key-off is lost on any log; the adapter parity
+  harness and `TestYm2612ChipNukedParity` expectations were regenerated at
+  the same pacing and remain cycle-exact against the pinned C build.
+
+- **Nuked-OPN2 port optimised without changing a bit:** the cycle-accurate FM
+  core is faster by construction-preserving changes only (division-free slot
+  arithmetic, flattened lookup tables, methods split to the JIT's inlining
+  size, hoisted state loads); the 732-script C-build pin, the facade parity
+  scripts and the hardware-behaviour suite are unchanged and still pass.
+  Before/after numbers per step are in
+  `docs/architecture/validation/2026-08-29-nuked-opn2-port-performance.md`.
+- **Nuked-OPN2 chip state compares by value:** `NukedOpn2State` now
+  implements `equals`/`hashCode` over every field of the `ym3438_t` port, so a
+  `Ym2612Chip.Snapshot` taken twice from identical chip state compares equal.
+  The port had left the core state identity-compared, which turned
+  `TestPreparedSfxAdmission` and `TestAudioPresentationSnapshotParity`
+  deterministically red (10 tests) despite equal contents.
+  `TestNukedOpn2StateEquality` mutates each public field reflectively so a
+  field later added to the struct without an `equals` clause fails there.
+
+- **FM write-log capture tool:** `com.openggf.tools.audio.FmSfxRenderTool`
+  renders one ROM-backed SFX or song headlessly through the real SMPS driver
+  and writes the full mix, an FM-only render (PSG muted) and a frame-stamped
+  log of every YM2612 register write (`--rate internal` stamps frames at the
+  chip's own output rate). The logs feed the Nuked-OPN2 port's cycle-for-cycle
+  pin against the C build (`TestNukedOpn2BitExactScripts`, 732 script runs
+  over 145 synthetic bodies and 38 SMPS write logs from all three games,
+  regenerable with `tools/audio/nuked-opn2/harness/`).
+
+- **The FM synthesiser now runs on the Nuked-OPN2 port:** `Ym2612Chip` is a
+  thin facade over the cycle-accurate `com.openggf.audio.synth.nuked` core
+  (LGPL 2.1+), replacing the Genesis Plus GX-derived table core. The facade
+  keeps the engine's public chip API and call semantics: register writes are
+  reported to the write observer as before and applied with the chip's own
+  bus pacing before the next rendered sample, the SMPS voice unpack and
+  `silenceAll` write streams are unchanged, DAC samples stream as `0x2A`
+  writes at the cadence of each game's Z80 playback loop, mutes stay at the
+  output stage, and the rewind snapshot carries the complete chip state so a
+  restore continues bit-exactly. The facade is pinned sample-for-sample
+  against the pinned C build by 68 register scripts (all algorithms, channel
+  3 special mode, partial key-on, LFO, every SSG-EG mode, timers/CSM, DAC,
+  `silenceAll` and a seeded fuzz, in both output stages) regenerable with
+  `tools/audio/nuked-opn2/harness/`. Two audible consequences are recorded in
+  `docs/status/known-discrepancies.md`: the FM level sits about 2.5 dB lower
+  relative to the PSG than the old core's nominal scale, and the discrete
+  YM2612 model's resting level is now +288 LSB after the master gain instead
+  of +384. The engine-side DAC high-pass option was removed; DAC
+  interpolation remains.
+
+- **Nuked-OPN2 FM core ported (not yet wired to the synthesiser):** a new
+  `com.openggf.audio.synth.nuked` package carries a function-for-function Java
+  port of the pinned Nuked OPN2 `ym3438.c` (cycle-accurate YM3438/YM2612 from
+  the die shot, LGPL 2.1+, licence text under `LICENSES/`), with the chip type
+  made per instance and a plain-copy state struct for snapshots. Its output is
+  confirmed bit-exact against the C build on a fixed voice script and on
+  randomised register/read streams across all four chip types. The existing
+  `Ym2612Chip` still drives audio; switching over is a follow-up. *Superseded:
+  the switch-over landed in the entry above.*
 - **TraceChaser boundary guards run reliably in CI:** the GitHub
   structural-guard job now installs and selects Lua 5.4 before Maven, while the
   release runner verifies its provisioned interpreter. The Lua forwarder test

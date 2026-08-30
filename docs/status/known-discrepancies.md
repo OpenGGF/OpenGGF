@@ -47,7 +47,8 @@ no discrepancy entry was added or reclassified by the cutover.
 28. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
 29. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
 30. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated)
-31. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores)
+31. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation)
+32. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores)
 
 ---
 
@@ -2616,6 +2617,66 @@ trace comparator remains deliberately unchanged in this patch.
 **Removal condition.** Give the parent Tornado an exact identity through the child-presence
 tail without slot fitting, compare and close the state-8-and-later rows, then promote the
 Tornado-only warning helper to `Severity.ERROR`.
+
+## YM2612 Output Scale, Resting Level and DAC Presentation
+
+`Ym2612Chip` is a facade over the Nuked-OPN2 port (`audio.synth.nuked`), which is
+clocked one internal cycle at a time and leaves time-multiplexed pin values on
+MOL/MOR. The facade's output sample is the sum of the 24 pin values of a frame
+(the RC-averaged pin of the real part), shifted left by 3.
+
+### Original Implementation
+
+The discrete YM2612's analogue output is what it is; the previous engine core
+(a Genesis Plus GX derivative) presented one FM channel at a nominal full scale
+of 8191 and rested, when silenced, at +768 at chip scale (+384 after the
+mixer's `MASTER_GAIN_SHIFT`), a resting level that was inherent to that model of
+the discrete DAC.
+
+### Our Implementation
+
+- **Scale.** In the 24-cycle pin sum a full-scale channel contributes
+  `3 * 256 = 768` in both output stages (`chOutput`, `ym3438.c:947`). The facade
+  applies one shift (`<< 3`), giving 6144 per channel: the largest power-of-two
+  scaling that keeps six full-scale channels inside 16 bits after the master
+  gain. Relative to the previous core's 8191 the FM level is about 2.5 dB lower
+  against the PSG, whose scale did not move. No other gain is applied.
+- **Resting level.** In YM2612 mode a silent channel's four pin cycles each carry
+  the amplified sign of a non-negative output (+3), so a silenced chip rests at
+  `72 << 3 = 576` per side at chip scale, +288 LSB after the master gain
+  (previously +384). Types 1 and 2 (YM3438 output stage) rest at 0. Muted
+  channels keep this resting contribution, as a keyed-off channel does on
+  silicon. The offset is the model's own and is not adjusted.
+- **DAC cadence.** `playDac` streams PCM as `0x2A` writes every
+  `(baseCycles + 26 * (rate - 1)) / 2` Z80 cycles, from the Z80 playback loops
+  (`s1disasm sound/z80.asm zPlayPCMLoop`, `s2disasm s2.sounddriver.asm
+  zWriteToDAC`, `skdisasm Sound/Z80 Sound Driver.asm zPlayDigitalAudio`): the
+  fixed instruction path per byte plus the taken `djnz` iterations. The two
+  halves of each byte are not equally long on the Z80 (S1: 124 and 177 cycles
+  before the pitch loop) but `DacData` carries only the per-byte total, so the
+  facade spaces the two samples evenly; the Z80 loop also stalls while the
+  chip bus is busy with sequencer writes, which the facade models by pausing
+  the cadence rather than dropping samples. The S2 loader's `baseCycles` of 288
+  differs from the 295 that `s2.sounddriver.asm` counts for its own loop; the
+  loader value is used as found and is a separate follow-up.
+- **DAC interpolation** (`audio.dacInterpolate`, default on) is a presentation
+  option with no hardware counterpart: between two PCM samples the facade
+  writes a linearly interpolated `0x2A` value once per output frame. The
+  previous core's engine-side DAC high-pass option was removed with the
+  switch-over.
+
+### Rationale
+
+The facade must not add constants to reproduce the previous core's numbers:
+the port is a derivative of one pinned source and its output is pinned
+sample-for-sample against the C build (`TestYm2612ChipNukedParity`). The scale
+shift is the single explicit adjustment the port contract permits.
+
+### Verification
+
+`TestYm2612ChipNukedParity` (68 scripts against the C harness under
+`tools/audio/nuked-opn2/harness/`), `TestYm2612ChipSnapshot`,
+`TestChipWriteObserver`, `TestSfxAdmissionMutationJournal`.
 
 ---
 

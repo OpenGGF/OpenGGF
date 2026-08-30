@@ -212,6 +212,22 @@ The project is open source. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md), the
 tracker, OBJECT_CHECKLIST.md for unimplemented game objects, and CHANGELOG.md for the current state
 of each game. The codebase uses a provider-based architecture that makes it relatively
 straightforward to add new objects, zones, and game-specific behaviour.
+## Licensing
+
+OpenGGF is free software under the GNU General Public License, version 3
+([`LICENSE`](LICENSE)). The FM sound core under
+`src/main/java/com/openggf/audio/synth/nuked/` is a Java port of
+[Nuked OPN2](https://github.com/nukeykt/Nuked-OPN2) by Alexey Khokholov
+(Nuke.YKT) and remains under the GNU Lesser General Public License, version
+2.1 or later ([`LICENSES/LGPL-2.1.txt`](LICENSES/LGPL-2.1.txt)); it may be
+extracted and reused under that licence on its own, and the combined program
+is conveyed under GPL-3 through LGPL section 3. [`NOTICE.md`](NOTICE.md)
+records the component, its pinned upstream revision and the modifications
+made; [`CREDITS.md`](CREDITS.md) lists every contributor, reference source and
+library. The executable JAR carries `LICENSE`, `LICENSES/`, `NOTICE.md` and
+`CREDITS.md` under `META-INF/openggf/`, and the release archives ship them
+next to the launcher.
+
 ## Releases
 
 ### v0.6.prerelease — Current development snapshot

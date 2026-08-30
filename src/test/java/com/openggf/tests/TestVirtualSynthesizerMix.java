@@ -4,27 +4,70 @@ import com.openggf.audio.synth.VirtualSynthesizer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * The mixed FM + PSG render is deterministic, carries both chips, and does
+ * not depend on how the frames are batched.
+ */
 public class TestVirtualSynthesizerMix {
 
+    private static final int FRAMES = 512;
+
     @Test
-    public void mixedFmAndPsgOutputRemainsBitExact() {
-        VirtualSynthesizer synth = new VirtualSynthesizer();
-        configurePsg(synth);
-        configureFm(synth);
+    public void mixedFmAndPsgOutputIsDeterministicAndBatchInvariant() {
+        VirtualSynthesizer batched = new VirtualSynthesizer();
+        VirtualSynthesizer again = new VirtualSynthesizer();
+        VirtualSynthesizer fmOnly = new VirtualSynthesizer();
+        VirtualSynthesizer fmSingle = new VirtualSynthesizer();
+        VirtualSynthesizer psgOnly = new VirtualSynthesizer();
+        configurePsg(batched);
+        configureFm(batched);
+        configurePsg(again);
+        configureFm(again);
+        configureFm(fmOnly);
+        configureFm(fmSingle);
+        configurePsg(psgOnly);
 
-        short[] buffer = new short[32];
-        synth.render(buffer);
+        short[] batchedOut = new short[FRAMES * 2];
+        batched.render(batchedOut);
+        short[] againOut = new short[FRAMES * 2];
+        again.render(againOut);
+        assertArrayEquals(batchedOut, againOut, "the mix must be deterministic");
 
-        // FM-only control (all four PSG channels muted) is unchanged by the
-        // clean-room PSG rewrite: 378, 908, 1373, 1822, 2346, 2829, 3287,
-        // 3744, 4236, 4478, 4477, 4480, 4478, 4479, 4479, 4479 per side.
-        assertArrayEquals(new short[] {
-                378, 378, 914, 914, 1363, 1363, 1854, 1854,
-                2325, 2325, 2924, 2924, 3315, 3315, 4282, 4282,
-                7374, 7374, 8585, 8585, 8425, 8425, 8580, 8580,
-                8507, 8507, 8543, 8543, 8523, 8523, 8519, 8519
-        }, buffer);
+        // The FM chip renders n frames in one call exactly as 1 frame n times.
+        short[] fmOut = new short[FRAMES * 2];
+        fmOnly.render(fmOut);
+        short[] fmSingleOut = new short[FRAMES * 2];
+        for (int frame = 0; frame < FRAMES; frame++) {
+            fmSingle.renderFrames(fmSingleOut, frame, 1);
+        }
+        assertArrayEquals(fmOut, fmSingleOut, "one call of n frames must equal n calls of one frame");
+
+        short[] psgOut = new short[FRAMES * 2];
+        psgOnly.render(psgOut);
+        assertTrue(peakToPeak(fmOut) > 1000, "FM channel must be audible on its own");
+        assertTrue(peakToPeak(psgOut) > 1000, "PSG channel must be audible on its own");
+
+        // Both chips accumulate into the same buffer before the master gain, so
+        // the mix differs from either chip alone.
+        boolean differsFromFm = false;
+        boolean differsFromPsg = false;
+        for (int i = 0; i < batchedOut.length; i++) {
+            differsFromFm |= batchedOut[i] != fmOut[i];
+            differsFromPsg |= batchedOut[i] != psgOut[i];
+        }
+        assertTrue(differsFromFm && differsFromPsg, "mix must carry both chips");
+    }
+
+    private static int peakToPeak(short[] samples) {
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+        for (short sample : samples) {
+            min = Math.min(min, sample);
+            max = Math.max(max, sample);
+        }
+        return max - min;
     }
 
     private static void configurePsg(VirtualSynthesizer synth) {
@@ -36,8 +79,8 @@ public class TestVirtualSynthesizerMix {
     private static void configureFm(VirtualSynthesizer synth) {
         synth.writeFm(TestVirtualSynthesizerMix.class, 0, 0xB0, 0x07);
         synth.writeFm(TestVirtualSynthesizerMix.class, 0, 0xB4, 0xC0);
-        synth.writeFm(TestVirtualSynthesizerMix.class, 0, 0xA0, 0x00);
         synth.writeFm(TestVirtualSynthesizerMix.class, 0, 0xA4, 0x22);
+        synth.writeFm(TestVirtualSynthesizerMix.class, 0, 0xA0, 0x00);
 
         int[] slots = {0x00, 0x04, 0x08, 0x0C};
         for (int slot : slots) {

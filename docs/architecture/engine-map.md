@@ -51,7 +51,7 @@ non-obvious placements:
 | `game.rewind` | Keyframes, deterministic seek/replay, generic field capture, identity ids, policy registry, compact schema capture |
 | `level.scroll.compose` | Shared deform/parallax composition around `ScrollEffectComposer` |
 | `audio.*` | Split across `audio` (backend), `audio.synth` (chip emulation), `audio.smps` (sequencer/loader), `audio.driver`, `audio.runtime`, `audio.rewind`, `audio.debug` |
-| `audio.synth` | `PsgChip` is the sole PSG core (clean-room SN76489 written from `docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`; band-limited through the LGPL `BlipDeltaBuffer`) |
+| `audio.synth` | `PsgChip` is the sole PSG core (clean-room SN76489 written from `docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`; band-limited through the LGPL `BlipDeltaBuffer`); `Ym2612Chip` is a facade over the Nuked-OPN2 port in `audio.synth.nuked`, which is the sole FM core |
 | `physics` | Sensors, terrain collision, unified `CollisionSystem` |
 | `tools` | Compression utilities (Kosinski, Nemesis, Saxman), `ObjectDiscoveryTool`, disassembly tools incl. `RomOffsetFinder` |
 | `LevelFrameStep` | Lives at the `com.openggf` package **root**, not under `level` |
@@ -414,10 +414,13 @@ Emulates Mega Drive sound hardware: **YM2612** (FM synthesis, 6 channels), **PSG
 `game.sonicX.audio`. `audio.runtime` holds the deterministic FIFO/PCM ring buffers used by
 gameplay rewind.
 
-**Accuracy expectation:** implement features identically to hardware. Cross-reference the
-libvgm chip cores (`emu/cores/ym2612.c`, `emu/cores/sn76489*.c` — fetch libvgm separately if
-needed) and the SMPSPlay source rather than simplified versions. Do not "twiddle knobs" —
-diagnose against a source of truth.
+**Accuracy expectation:** implement features identically to hardware. The FM core is the
+Nuked-OPN2 port (`audio.synth.nuked`, pinned by `tools/audio/nuked-opn2/PIN.md`); its only
+reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it (write pacing,
+frame summation, resampling, DAC streaming, mutes, snapshot) pinned against the C build by
+`TestYm2612ChipNukedParity`. For the PSG cross-reference the libvgm `emu/cores/sn76489*.c`
+cores, and for the sequencer the SMPSPlay source, rather than simplified versions. Do not
+"twiddle knobs" — diagnose against a source of truth.
 
 Reference material: `docs/SMPS-rips/SMPSPlay/` (SMPSPlay source), `docs/SMPS-rips/` (ripped
 audio data and SMPSPlay configurations), `docs/YM2612.java.example` (a Gens YM2612 port,

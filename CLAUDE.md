@@ -354,8 +354,10 @@ future "support the bug-fixed revisions" effort tractable, since the sites are
 otherwise invisible once ported. `Camera.java:122-124` and
 `Sonic1BatbrainBadnikInstance.java:394` are existing examples of the shape.
 
-**Audio accuracy:** reference the libvgm chip cores and the SMPSPlay source rather than
-simplified versions. Diagnose against a source of truth instead of twiddling knobs.
+**Audio accuracy:** the FM core is the Nuked-OPN2 port (`audio.synth.nuked`); its only
+reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For the PSG
+reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
+versions. Diagnose against a source of truth instead of twiddling knobs.
 
 ### Sonic 3&K bring-up notes
 

@@ -24,6 +24,8 @@ This project uses documentation, tools, and reference implementations from many 
 | **Eke-Eke**          | Genesis Plus GX - YM2612 and PSG emulation cores (see *Emulation cores* below) <br/><br/> https://github.com/ekeeke/Genesis-Plus-GX |
 | **Jarek Burczynski, Tatsuyuki Satoh (MAME)** | Original `fm.c` YM2612 software implementation that the Genesis Plus GX / libvgm `ym2612.c` core descends from |
 | **Nemesis, Sauraen** | YM2612 hardware tests and die-shot analysis credited in the `ym2612.c` core header <br/><br/> http://gendev.spritesmind.net/forum/viewtopic.php?t=386 |
+| **Alexey Khokholov (Nuke.YKT)** | Nuked OPN2 - cycle-accurate YM3438/YM2612 emulator from the die shot (LGPL 2.1+), ported as `NukedOpn2` (see *Emulation cores* below) <br/><br/> https://github.com/nukeykt/Nuked-OPN2 |
+| **Silicon Pr0n (digshadow); Matthew Gambrell, Olli Niemitalo** | YM3438 decap and die shot, and the OPL2 ROM dumps, credited in the Nuked OPN2 header |
 | **Shay Green (blargg)** | blip_buf band-limited synthesis library (LGPL 2.1+), the model for `BlipDeltaBuffer` <br/><br/> http://www.slack.net/~ant/ |
 | **MAME Team**        | Sound emulation cores used by SMPSPlay                                                                                          |
 | **libvgm**           | Audio output and emulation libraries; carries the same GPGX-derived `ym2612.c` core that SMPSPlay uses <br/><br/> https://github.com/ValleyBell/libvgm |
@@ -35,14 +37,17 @@ This project uses documentation, tools, and reference implementations from many 
 
 ### Emulation cores
 
-The provenance of the chip emulators under `src/main/java/com/openggf/audio/synth/`
-varies — `Ym2612Chip` is a port of a C core, `PsgChip` is a clean-room
-implementation. As far as the repository
-history and the source headers establish it:
+The chip emulators under `src/main/java/com/openggf/audio/synth/` are both clean of
+the non-commercial Genesis Plus GX provenance they once carried: `PsgChip` is a
+clean-room implementation written from the public SN76489 specification, and the
+FM core is the Nuked OPN2 port in the `nuked` sub-package with `Ym2612Chip` as the
+engine's facade over it, carrying no emulation logic of its own. Their provenance,
+as far as the repository history and the source headers establish it:
 
 | Engine class | Origin | Notes |
 |--------------|--------|-------|
-| `Ym2612Chip` | `ym2612.c` from Genesis Plus GX, as shipped in libvgm / SMPSPlay. That file is Jarek Burczynski and Tatsuyuki Satoh's MAME `fm.c` with Eke-Eke's Genesis Plus GX fixes. | Began as an original implementation (2025-11-27); the core tables and update logic were ported from the GPGX/libvgm `ym2612.c` on 2025-12-10 (commit `eae2da2ca`) and the class cites `ym2612.c` line numbers. Genesis Plus GX's own licence permits non-commercial use only. |
+| `Ym2612Chip` | Facade over `nuked.NukedOpn2` (below); no other emulator source consulted. | Engine glue only: write queue and bus pacing, per-frame pin sum and output scale, internal-rate resampling, SMPS voice unpack, Z80-driver DAC streaming, output-stage mutes and the rewind snapshot, all written from `docs/architecture/designs/2026-08-29-nuked-opn2-port-contract.md`. From 2025-12-10 (commit `eae2da2ca`) until the Nuked switch-over it was a port of the Genesis Plus GX / libvgm `ym2612.c` (Jarek Burczynski and Tatsuyuki Satoh's MAME `fm.c` with Eke-Eke's fixes, non-commercial licence); that code is gone from the tree. |
+| `nuked.NukedOpn2` | `ym3438.c` / `ym3438.h` from Nuked OPN2 (Copyright 2017-2022 Alexey Khokholov), upstream commit `335747d7`, pinned in `tools/audio/nuked-opn2/PIN.md`. | A function-for-function port with `ym3438.c` line citations; every table and per-cycle stage is upstream's. LGPL 2.1 or later (`LICENSES/LGPL-2.1.txt`); the package NOTICE in `package-info.java` records how it combines with the GPL-3 engine. |
 | `PsgChip` | None. Clean-room implementation written from the public SN76489 specification in `docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md` (Maxim's SMS Power! notes, the TI datasheet, the Sega hardware manual). | No emulator source was consulted: not the previous Genesis Plus GX-derived body of this class, not `psg.c`, libvgm, MAME or BizHawk. Output is band-limited through `BlipDeltaBuffer` (below). |
 | `BlipDeltaBuffer` | `blip_buf.c` by Shay Green, as modified for Genesis Plus GX. | Library is LGPL 2.1 or later. |
 | `BlipResampler` | Windowed-sinc resampler written for OpenGGF, "based on the same principles as" blip_buf. | Not a port. |

@@ -1015,6 +1015,18 @@
                     <include>version.properties</include>
                 </includes>
             </resource>
+            <!-- Licence texts and notices travel with every jar (NOTICE.md, GPL-3 / LGPL-2.1 s.1). -->
+            <resource>
+                <directory>${project.basedir}</directory>
+                <targetPath>META-INF/openggf</targetPath>
+                <filtering>false</filtering>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>LICENSES/**</include>
+                    <include>NOTICE.md</include>
+                    <include>CREDITS.md</include>
+                </includes>
+            </resource>
         </resources>
         <plugins>
             <plugin>
