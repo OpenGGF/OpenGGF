@@ -43,9 +43,16 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
     private static final int MAX_BLOB_SIZE = 0x4000; // 16 KB safety limit
 
     private byte[][] psgEnvelopes;
+    private byte[] zeroAddressVoiceBank;
 
     public Sonic1SmpsLoader(Rom rom) {
         super(rom);
+        try {
+            zeroAddressVoiceBank = rom.readBytes(0, 0x100);
+        } catch (IOException error) {
+            throw new IllegalStateException(
+                    "cannot read the S1 ROM vector area", error);
+        }
         loadPsgEnvelopes();
     }
 
@@ -138,6 +145,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
             Sonic1SfxData data = new Sonic1SfxData(raw, 0);
             data.setPsgEnvelopes(psgEnvelopes);
+            data.setZeroAddressVoiceBank(zeroAddressVoiceBank);
             data.setId(sfxId);
             sfxCache.put(sfxId, data);
             return data;
@@ -273,6 +281,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
             Sonic1SfxData data = new Sonic1SfxData(raw, 0);
             data.setPsgEnvelopes(psgEnvelopes);
+            data.setZeroAddressVoiceBank(zeroAddressVoiceBank);
             data.setId(sfxId);
             sfxCache.put(sfxId, data);
             return data;

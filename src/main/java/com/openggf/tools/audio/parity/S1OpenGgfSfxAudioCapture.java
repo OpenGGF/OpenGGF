@@ -31,7 +31,6 @@ import java.util.Objects;
  */
 public final class S1OpenGgfSfxAudioCapture {
     private static final double SAMPLE_RATE = 44_100.0;
-    private static final int NTSC_SAMPLES = 735;
 
     private S1OpenGgfSfxAudioCapture() {
     }
@@ -88,6 +87,7 @@ public final class S1OpenGgfSfxAudioCapture {
         private final List<AudioParityChipWrite> writes = new ArrayList<>();
         private int ordinal;
         private int dispatchCount;
+        private int ringSpeaker;
 
         private CaptureIterator(Sonic1SmpsLoader loader, AbstractSmpsData song, DacData dacData,
                 S1OpenGgfAudioCapture.SongContract contract, int terminalCount,
@@ -108,7 +108,17 @@ public final class S1OpenGgfSfxAudioCapture {
         }
 
         private void submitDispatches(List<Integer> dispatches) {
-            for (int soundId : dispatches) {
+            for (int requestedSoundId : dispatches) {
+                int soundId = requestedSoundId;
+                if (soundId == 0xB5) {
+                    // S1 Sound_PlaySFX substitutes the left-speaker program CE
+                    // while v_ring_speaker is zero, then toggles the source-owned
+                    // bit for the next ring request (SD:984-991).
+                    if (ringSpeaker == 0) {
+                        soundId = 0xCE;
+                    }
+                    ringSpeaker ^= 1;
+                }
                 AbstractSmpsData sfx = Objects.requireNonNull(loader.loadSfx(soundId),
                         "recorded SFX id is absent from the verified ROM: 0x"
                                 + Integer.toHexString(soundId));
@@ -142,9 +152,7 @@ public final class S1OpenGgfSfxAudioCapture {
                 // ROM walk order inside one UpdateMusic invocation: music tracks
                 // first, SFX tracks after — the driver's sequencer list preserves
                 // that order (music added first, SFX in admission order).
-                for (SmpsSequencer sequencer : List.copyOf(driver.sequencersForTesting())) {
-                    sequencer.advanceBatch(NTSC_SAMPLES);
-                }
+                driver.serviceOuterFrame();
             }
             driver.reapCompletedSequencers();
             SmpsSequencerSnapshot snapshot = musicSequencer.captureSnapshot();

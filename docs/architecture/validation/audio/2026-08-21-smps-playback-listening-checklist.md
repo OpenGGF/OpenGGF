@@ -42,7 +42,7 @@ failed.
 | Status | Event | What to compare | Listener / date / notes |
 |---|---|---|---|
 | [ ] | Normal music for at least 60 seconds | Tempo, pitch, FM/PSG balance, DAC rhythm, loop continuity, modulation, and envelope cadence | |
-| [ ] | Several overlapping FM and PSG SFX | Admission order, priority rejection, channel takeover, retained music channels, and release timing | |
+| [ ] | Several overlapping FM and PSG SFX | Admission order, priority rejection, channel takeover, retained music channels, and release timing | Retest pending after the S1 per-track release and fixed SFX-RAM walk corrections; include skid PSG3/noise overlap, splash FM5+PSG3 ordering, ring replacement, ring-loss, and signpost release |
 | [ ] | Pause during music, during an SFX, and during active DAC | Mute write order, absence of stray notes, continuous DAC clocking where applicable, and resume state | |
 | [ ] | Fade start through terminal cleanup | Immediate channel silencing, fade length/steps, absence of an extra final step, and silence after completion | |
 | [ ] | Speed-up enable and disable | Tempo transition phase, effect/envelope cadence, and restoration of normal tempo | |
@@ -52,7 +52,7 @@ failed.
 
 | Status | Scene | Authenticity focus | Listener / date / notes |
 |---|---|---|---|
-| [ ] | Green Hill Zone music with drums, then ring, jump, spring, and explosion SFX | Direct 68k cadence, PSG envelopes, DAC timing, and music-before-SFX service order | Retest pending after the outer-frame cadence and PSG admission-write corrections |
+| [ ] | Green Hill Zone music with drums, then ring, jump, spring, and explosion SFX | Direct 68k cadence, PSG envelopes, DAC timing, and music-before-SFX service order | Retest pending after the exact 1,967-tick SFX-oracle match; check jump release, alternating ring pan, skid PSG3/noise takeover, splash tied-volume/order, ring-loss volume, and signpost release |
 | [ ] | Trigger two contending SFX, then replace the BGM while one remains active | Global priority latch; ordinary BGM replacement preserves live normal/special SFX and rebinds overrides | |
 | [ ] | Pause and resume while FM, PSG, and DAC are active | FM pan-to-zero/key-off and PSG silence; resume restores pan without inventing a voice reload | |
 | [ ] | Trigger 1-up while an SFX owns a channel, then retrigger before restore | SFX stop/block boundary, priority clear, restore fade, and the shipped `FixBugs=0` FM6/DAC masking behavior | |

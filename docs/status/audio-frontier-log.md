@@ -27,6 +27,33 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-08-31 — S1 sound-test SFX oracle reaches full MATCH
+
+- **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,
+  `feature/ai-sdre2-cadence-resume` at `4c1efea6c` plus the pending S1
+  implementation tranche.
+- **Fixture:** `src/test/resources/audio/parity/s1/s1-soundtest-sfx-reference.v1.jsonl.gz`
+  (unchanged committed reference; S1 World REV01 ROM SHA-1
+  `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`).
+- **Command:** `S1AudioParityTool capture --capture sfx --reference
+  <run-root>/reference.jsonl.gz --rom <absolute verified ROM> --output
+  <run-root>/openggf.jsonl`, followed by `S1AudioParityTool compare
+  --reference <run-root>/reference.jsonl.gz --openggf
+  <run-root>/openggf.jsonl --human-report <run-root>/report.txt
+  --json-report <run-root>/report.json`.
+- **Result:** **`S1 audio parity: MATCH (1967 ticks)`**, exit 0. A fresh
+  capture/comparison against the committed GHZ music fixture remains
+  **`MATCH (14690 ticks)`**, exit 0.
+- **Notes:** first-divergence work from tick 377 through the end of the
+  fixture modelled source-owned S1 behavior: one terminal note-off; the
+  explicit PSG3 `$DF/$FF` admission pair and shared tone-3/noise ownership;
+  per-track release with FM voice/pan and PSG rest/noise restoration; fixed
+  SFX-RAM walk order; tied PSG volume service; raw `$B5` ring-speaker
+  alternation; and shipped `FixBugs=0` `SendVoiceTL` reads through the global
+  special-SFX pointer, including ROM vector bytes when it is zero. No fixture
+  or comparator was changed. Human listening remains pending in the SMPS
+  playback checklist.
+
 ## 2026-08-31 — S3K service projection crosses SEGA PCM to the hidden stop request
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,

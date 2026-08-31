@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 1 sound effects now match the shipped REV01 driver oracle:** all
+  1,967 sound-test ticks match across jump, skid, splash, ring, ring-loss,
+  hurt, push, and signpost effects over GHZ music. The engine now follows the
+  retail driver's PSG3 admission/noise ownership, per-track channel release,
+  fixed SFX-RAM service order, tied-note PSG volume writes, ring-speaker
+  alternation, and the shipped `FixBugs=0` FM-volume pointer behavior. The
+  protected 14,690-tick GHZ music oracle remains an exact match.
 - **The S3K sound-driver oracle now enforces its Z80 ownership boundary:**
   CPU-tagged 68k host writes remain authenticated in the committed capture but
   are excluded from driver comparison. This removes the false tick-3

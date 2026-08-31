@@ -15,6 +15,7 @@ import com.openggf.game.GameServices;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -22,6 +23,7 @@ import java.util.logging.Logger;
 
 public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private static final Logger LOGGER = Logger.getLogger(SmpsSequencer.class.getName());
+    private static final byte[] ZERO_FM_VOICE = new byte[25];
     private final AbstractSmpsData smpsData;
     private final MusicRestoreSink audioManager;
     private AbstractSmpsData fallbackVoiceData;
@@ -468,6 +470,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
         if (smpsData instanceof SmpsSfxData sfxData) {
             initSfxTracks(sfxData, z80Start);
+            if (config.getSfxTrackWalkMode()
+                    == SmpsSequencerConfig.SfxTrackWalkMode.CHANNEL_RAM_ORDER) {
+                tracks.sort(Comparator.comparingInt(SmpsSequencer::sfxTrackRamOrder));
+            }
             setSfxMode(true);
             return;
         }
@@ -535,6 +541,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.dividingTiming = dividingTiming;
             tracks.add(t);
         }
+    }
+
+    private static int sfxTrackRamOrder(Track track) {
+        return switch (track.type) {
+            case DAC -> track.channelId;
+            case FM -> 8 + track.channelId;
+            case PSG -> 16 + track.channelId;
+        };
     }
 
     @Override
@@ -673,6 +687,30 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 if (wasOverridden && !overridden) {
                     if (!t.active)
                         continue;
+
+                    if (t.type == TrackType.FM
+                            && config.getFmSfxReleaseMode()
+                            == SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE) {
+                        // S1 cfStopTrack: the SFX track already sent FMNoteOff;
+                        // restore the music voice/pan, mark it at rest, and do
+                        // not resend frequency or key on (SD:2489-2537).
+                        t.resting = true;
+                        refreshInstrument(t);
+                        continue;
+                    }
+                    if (t.type == TrackType.PSG
+                            && config.getPsgSfxReleaseMode()
+                            == SmpsSequencerConfig.PsgSfxReleaseMode.ROM_REST_RESTORE) {
+                        // S1 cfStopTrack clears the override at rest. Only a
+                        // restored noise track re-latches PSGNoise; ordinary
+                        // PSG volume/frequency wait for the next note
+                        // (SD:2538-2563).
+                        t.resting = true;
+                        if (t.noiseMode) {
+                            synth.writePsg(this, 0xe0 | (t.psgNoiseParam & 0x0f));
+                        }
+                        continue;
+                    }
 
                     // Channel released from SFX, restore instrument and volume
                     refreshInstrument(t);
@@ -1143,6 +1181,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             finishSfxTempoFrame();
         }
         if (driver != null) {
+            // A completed track returns its channel during this driver
+            // service, before later fixed-RAM slots run next frame. A wholly
+            // completed sequencer stays owned until completion cleanup.
+            driver.reconcileInactiveSfxTracks(this);
             driver.endSequencerService(service);
         }
     }
@@ -1475,7 +1517,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         switch (cmd) {
             case 0xF2: // Stop
                 t.active = false;
-                stopNote(t);
+                // tickTrack() owns the one terminal note-off after command
+                // parsing. Calling it here too emitted a duplicate write.
                 break;
             case 0xE3: // Return
                 handleReturn(t);
@@ -1581,7 +1624,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 // Check for game-specific TRK_END flags (e.g., S1 0xEE = stop track)
                 if (!config.getExtraTrkEndFlags().isEmpty() && config.getExtraTrkEndFlags().contains(cmd)) {
                     t.active = false;
-                    stopNote(t);
                     break;
                 }
                 int params = flagParamLength(cmd);
@@ -1895,7 +1937,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void setPsgVolume(Track t) {
         if (t.pos < programView.dataLength()) {
             t.volumeOffset += programView.dataByteAt(t.pos++);
-            refreshVolume(t);
+            // S1 cfChangePSGVolume only mutates track RAM. The subsequent
+            // PSGDoVolFX in the same track update owns the one visible write
+            // (SD:2276-2279, 1813-1821).
+            if (!config.isDirect68kDriver()) {
+                refreshVolume(t);
+            }
         }
     }
 
@@ -2242,6 +2289,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 t.fmVolEnvHold = false;
                 refreshVolume(t);
             }
+        } else if (t.type == TrackType.PSG && config.isDirect68kDriver()) {
+            // S1 PSGUpdateTrack always falls through PSGDoVolFX after a new
+            // stream unit. A tied/no-attack note preserves envelope state but
+            // still resends its current volume (SD:1813-1821, 1926-1987).
+            refreshVolume(t);
         }
         clearTransientNoAttack(t);
     }
@@ -2404,6 +2456,24 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             return;
         }
         if (config.isDirect68kDriver()) {
+            byte[] volumeVoice = t.voiceData;
+            if (isSfx && !specialSfx
+                    && config.getFmVolumeVoiceBankMode()
+                    == SmpsSequencerConfig.FmVolumeVoiceBankMode.S1_SPECIAL_POINTER_BUG) {
+                // S1 FixBugs=0 SendVoiceTL reads VoicePtr(a6), aliasing the
+                // global special-SFX pointer instead of this track's VoicePtr
+                // (SD:2391-2398). A cleared pointer reads zero TL bytes from
+                // the ROM vector area in the shipped image.
+                SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
+                        ? smpsDriver : null;
+                byte[] specialVoice = driver == null ? null
+                        : driver.s1SpecialSfxVoiceForBug(t.voiceId);
+                byte[] zeroAddressVoice = smpsData
+                        instanceof ZeroAddressFmVoiceProvider provider
+                        ? provider.getZeroAddressFmVoice(t.voiceId) : null;
+                volumeVoice = specialVoice != null ? specialVoice
+                        : zeroAddressVoice != null ? zeroAddressVoice : ZERO_FM_VOICE;
+            }
             int port = t.channelId < 3 ? 0 : 1;
             int channel = t.channelId % 3;
             int[] operatorOffsets = { 0, 8, 4, 12 };
@@ -2413,7 +2483,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 if ((mask & (1 << operator)) == 0) {
                     continue;
                 }
-                int rawTl = t.voiceData[21 + normalizedVoiceIndices[operator]] & 0xff;
+                int rawTl = volumeVoice[21 + normalizedVoiceIndices[operator]] & 0xff;
                 int adjusted = rawTl + (t.volumeOffset & 0xff);
                 // S1/S2 SendVoiceTL skips the write when the byte addition carries.
                 if (adjusted > 0xff) {

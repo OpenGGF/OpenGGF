@@ -92,7 +92,41 @@ public final class SmpsSequencerConfig {
         /** Legacy engine behavior: inject a maximum-attenuation latch. */
         FORCE_SILENCE,
         /** Shipped-driver behavior: let the SFX bytecode own visible writes. */
-        REGISTER_SEQUENCE
+        REGISTER_SEQUENCE,
+        /** S1: bytecode owns PSG1/2; PSG3 admission explicitly writes DF, FF. */
+        S1_PSG3_SILENCE_PAIR
+    }
+
+    /** How an FM channel returns to music after its SFX track stops. */
+    public enum FmSfxReleaseMode {
+        /** Legacy engine behavior: silence, restore all state, then resend frequency. */
+        LEGACY_FULL_RESTORE,
+        /** Shipped S1 behavior: the SFX note-off stands; restore voice/pan at rest. */
+        ROM_VOICE_RESTORE
+    }
+
+    /** How a PSG channel returns to music after its SFX track stops. */
+    public enum PsgSfxReleaseMode {
+        /** Legacy engine behavior: silence, restore volume, then resend frequency. */
+        LEGACY_FULL_RESTORE,
+        /** Shipped S1 behavior: the SFX note-off stands; restore at rest/noise only. */
+        ROM_REST_RESTORE
+    }
+
+    /** How SFX track RAM is walked after header initialization. */
+    public enum SfxTrackWalkMode {
+        /** Preserve the SFX header entry order. */
+        HEADER_ORDER,
+        /** Walk the fixed driver RAM slots: DAC/FM channels, then PSG channels. */
+        CHANNEL_RAM_ORDER
+    }
+
+    /** Voice bank used by an in-stream FM volume change. */
+    public enum FmVolumeVoiceBankMode {
+        /** Read total levels from the current track's voice bank. */
+        TRACK_VOICE_BANK,
+        /** Shipped S1 FixBugs=0 path: ordinary SFX read the special-SFX bank. */
+        S1_SPECIAL_POINTER_BUG
     }
 
     /** Exact shipped-driver sequence used to upload a 25-byte FM voice. */
@@ -135,6 +169,10 @@ public final class SmpsSequencerConfig {
     private final boolean writeFmPanOnNote;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
     private final PsgSfxTakeoverMode psgSfxTakeoverMode;
+    private final FmSfxReleaseMode fmSfxReleaseMode;
+    private final PsgSfxReleaseMode psgSfxReleaseMode;
+    private final SfxTrackWalkMode sfxTrackWalkMode;
+    private final FmVolumeVoiceBankMode fmVolumeVoiceBankMode;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
 
     // --- S3K-specific config fields ---
@@ -174,6 +212,10 @@ public final class SmpsSequencerConfig {
         this.writeFmPanOnNote = b.writeFmPanOnNote;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
+        this.fmSfxReleaseMode = b.fmSfxReleaseMode;
+        this.psgSfxReleaseMode = b.psgSfxReleaseMode;
+        this.sfxTrackWalkMode = b.sfxTrackWalkMode;
+        this.fmVolumeVoiceBankMode = b.fmVolumeVoiceBankMode;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
@@ -292,6 +334,22 @@ public final class SmpsSequencerConfig {
         return psgSfxTakeoverMode;
     }
 
+    public FmSfxReleaseMode getFmSfxReleaseMode() {
+        return fmSfxReleaseMode;
+    }
+
+    public PsgSfxReleaseMode getPsgSfxReleaseMode() {
+        return psgSfxReleaseMode;
+    }
+
+    public SfxTrackWalkMode getSfxTrackWalkMode() {
+        return sfxTrackWalkMode;
+    }
+
+    public FmVolumeVoiceBankMode getFmVolumeVoiceBankMode() {
+        return fmVolumeVoiceBankMode;
+    }
+
     public FmVoiceWriteProfile getFmVoiceWriteProfile() {
         return fmVoiceWriteProfile;
     }
@@ -384,6 +442,11 @@ public final class SmpsSequencerConfig {
         private boolean writeFmPanOnNote = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
         private PsgSfxTakeoverMode psgSfxTakeoverMode = PsgSfxTakeoverMode.FORCE_SILENCE;
+        private FmSfxReleaseMode fmSfxReleaseMode = FmSfxReleaseMode.LEGACY_FULL_RESTORE;
+        private PsgSfxReleaseMode psgSfxReleaseMode = PsgSfxReleaseMode.LEGACY_FULL_RESTORE;
+        private SfxTrackWalkMode sfxTrackWalkMode = SfxTrackWalkMode.HEADER_ORDER;
+        private FmVolumeVoiceBankMode fmVolumeVoiceBankMode =
+                FmVolumeVoiceBankMode.TRACK_VOICE_BANK;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
 
         // S3K-specific defaults (S2 compatible)
@@ -415,6 +478,10 @@ public final class SmpsSequencerConfig {
         public Builder writeFmPanOnNote(boolean val) { writeFmPanOnNote = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder psgSfxTakeoverMode(PsgSfxTakeoverMode val) { psgSfxTakeoverMode = val; return this; }
+        public Builder fmSfxReleaseMode(FmSfxReleaseMode val) { fmSfxReleaseMode = val; return this; }
+        public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }
+        public Builder sfxTrackWalkMode(SfxTrackWalkMode val) { sfxTrackWalkMode = val; return this; }
+        public Builder fmVolumeVoiceBankMode(FmVolumeVoiceBankMode val) { fmVolumeVoiceBankMode = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
@@ -435,6 +502,10 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(palUpdateMode, "palUpdateMode");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
             Objects.requireNonNull(psgSfxTakeoverMode, "psgSfxTakeoverMode");
+            Objects.requireNonNull(fmSfxReleaseMode, "fmSfxReleaseMode");
+            Objects.requireNonNull(psgSfxReleaseMode, "psgSfxReleaseMode");
+            Objects.requireNonNull(sfxTrackWalkMode, "sfxTrackWalkMode");
+            Objects.requireNonNull(fmVolumeVoiceBankMode, "fmVolumeVoiceBankMode");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);
         }
