@@ -331,7 +331,8 @@ public final class CompleteRunAudioComparator {
             throws ValidationException {
         Entry entry;
         while ((entry = stream.next()) != null) {
-            if (!(entry.record instanceof Lifecycle) || layers.isCompared(ComparisonLayer.LIFECYCLE)) return entry;
+            if (!(entry.record instanceof Lifecycle)
+                    || layers.isCompared(ComparisonLayer.LIFECYCLE)) return entry;
         }
         return null;
     }
@@ -391,57 +392,106 @@ public final class CompleteRunAudioComparator {
                 return diff(Kind.OWNER, expected.absoluteFrame(), "baseline.role_owners",
                         expected.roleOwners(), actual.roleOwners());
             }
-            if (!layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)) return null;
-            try {
-                String expectedSemantic = baselineFrontierProjection(expected);
-                String actualSemantic = baselineFrontierProjection(actual);
-                return expectedSemantic.equals(actualSemantic) ? null
-                        : diff(Kind.CUTOFF_FRONTIER_VALUE, expected.absoluteFrame(),
-                                "baseline.frontier", expected.frontier(), actual.frontier());
-            } catch (IOException failure) {
-                throw new AssertionError("validated baseline frontier could not be canonicalized", failure);
+            if (layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)
+                    && layers.isCompared(ComparisonLayer.CHIP_EVENTS)) {
+                try {
+                    String expectedSemantic = baselineFrontierProjection(expected);
+                    String actualSemantic = baselineFrontierProjection(actual);
+                    return expectedSemantic.equals(actualSemantic) ? null
+                            : diff(Kind.CUTOFF_FRONTIER_VALUE, expected.absoluteFrame(),
+                                    "baseline.frontier", expected.frontier(), actual.frontier());
+                } catch (IOException failure) {
+                    throw new AssertionError("validated baseline frontier could not be canonicalized", failure);
+                }
             }
+            if (layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)
+                    && (!cutoffServicePayloads(expected.frontier().activeStack()).equals(
+                                cutoffServicePayloads(actual.frontier().activeStack()))
+                            || !cutoffServicePayloads(expected.frontier().pendingDescendants()).equals(
+                                cutoffServicePayloads(actual.frontier().pendingDescendants())))) {
+                return diff(Kind.CUTOFF_FRONTIER_VALUE, expected.absoluteFrame(),
+                        "baseline.frontier.services", expected.frontier(), actual.frontier());
+            }
+            if (layers.isCompared(ComparisonLayer.CHIP_EVENTS)
+                    && (!expected.frontier().rawChipEvents().equals(actual.frontier().rawChipEvents())
+                            || expected.frontier().ymPort0Latch() != actual.frontier().ymPort0Latch()
+                            || expected.frontier().ymPort1Latch() != actual.frontier().ymPort1Latch())) {
+                return diff(Kind.CHIP_EVENT_VALUE, expected.absoluteFrame(), "baseline.frontier.chip_events",
+                        new CutoffChipPayload(expected.frontier().rawChipEvents(),
+                                expected.frontier().ymPort0Latch(), expected.frontier().ymPort1Latch()),
+                        new CutoffChipPayload(actual.frontier().rawChipEvents(),
+                                actual.frontier().ymPort0Latch(), actual.frontier().ymPort1Latch()));
+            }
+            return null;
         }
         if (reference instanceof Frame expected && engine instanceof Frame actual) {
             return frameDifference(expected, actual, layers);
         }
         if (reference instanceof Lifecycle expected && engine instanceof Lifecycle actual) {
             if (!layers.isCompared(ComparisonLayer.LIFECYCLE)) return null;
-            if (expected.ordinal() != actual.ordinal()) {
-                return diff(Kind.LIFECYCLE_ORDER, Math.min(expected.absoluteFrame(), actual.absoluteFrame()),
-                        "lifecycle.ordinal", expected.ordinal(), actual.ordinal());
-            }
             int frame = Math.min(expected.absoluteFrame(), actual.absoluteFrame());
             String location = "lifecycle[" + expected.ordinal() + "]";
-            if (expected.absoluteFrame() != actual.absoluteFrame()) {
-                return diff(Kind.LIFECYCLE_VALUE, frame, location + ".absolute_frame",
-                        expected.absoluteFrame(), actual.absoluteFrame());
+            if (layers.isCompared(ComparisonLayer.LIFECYCLE)) {
+                if (expected.ordinal() != actual.ordinal()) {
+                    return diff(Kind.LIFECYCLE_ORDER, frame,
+                            "lifecycle.ordinal", expected.ordinal(), actual.ordinal());
+                }
+                if (expected.absoluteFrame() != actual.absoluteFrame()) {
+                    return diff(Kind.LIFECYCLE_VALUE, frame, location + ".absolute_frame",
+                            expected.absoluteFrame(), actual.absoluteFrame());
+                }
+                if (!expected.kind().equals(actual.kind())) {
+                    return diff(Kind.LIFECYCLE_VALUE, frame, location + ".kind",
+                            expected.kind(), actual.kind());
+                }
+                if (!expected.details().equals(actual.details())) {
+                    return diff(Kind.LIFECYCLE_VALUE, frame,
+                            location + ".details", expected.details(), actual.details());
+                }
             }
-            if (!expected.kind().equals(actual.kind())) {
-                return diff(Kind.LIFECYCLE_VALUE, frame, location + ".kind",
-                        expected.kind(), actual.kind());
+            if (layers.isCompared(ComparisonLayer.OWNERSHIP)) {
+                return lifecycleOwnershipDifference(expected.ownershipTransitions(),
+                        actual.ownershipTransitions(), frame, location + ".ownership_transitions");
             }
-            if (!expected.details().equals(actual.details())) {
-                return diff(Kind.LIFECYCLE_VALUE, Math.min(expected.absoluteFrame(), actual.absoluteFrame()),
-                        location + ".details", expected.details(), actual.details());
-            }
-            Difference ownership = lifecycleOwnershipDifference(expected.ownershipTransitions(),
-                    actual.ownershipTransitions(), frame, location + ".ownership_transitions");
-            if (ownership != null) return ownership;
-            return expected.equals(actual) ? null
-                    : diff(Kind.LIFECYCLE_VALUE, frame, location, expected, actual);
+            return null;
         }
         if (reference instanceof CutoffFrontier expected && engine instanceof CutoffFrontier actual) {
-            if (!layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)) return null;
-            try {
-                String expectedSemantic = CompleteRunAudioJson.writeSemanticRecord(expected);
-                String actualSemantic = CompleteRunAudioJson.writeSemanticRecord(actual);
-                return expectedSemantic.equals(actualSemantic) ? null
-                        : diff(Kind.CUTOFF_FRONTIER_VALUE, -1, "cutoff_frontier",
-                                expectedSemantic, actualSemantic);
-            } catch (IOException failure) {
-                throw new AssertionError("validated frontier could not be canonicalized", failure);
+            if (layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)
+                    && layers.isCompared(ComparisonLayer.STATE)
+                    && layers.isCompared(ComparisonLayer.CHIP_EVENTS)) {
+                try {
+                    String expectedSemantic = CompleteRunAudioJson.writeSemanticRecord(expected);
+                    String actualSemantic = CompleteRunAudioJson.writeSemanticRecord(actual);
+                    return expectedSemantic.equals(actualSemantic) ? null
+                            : diff(Kind.CUTOFF_FRONTIER_VALUE, -1, "cutoff_frontier",
+                                    expectedSemantic, actualSemantic);
+                } catch (IOException failure) {
+                    throw new AssertionError("validated frontier could not be canonicalized", failure);
+                }
             }
+            if (layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)
+                    && (!cutoffServicePayloads(expected.activeStack()).equals(
+                                cutoffServicePayloads(actual.activeStack()))
+                            || !cutoffServicePayloads(expected.pendingDescendants()).equals(
+                                cutoffServicePayloads(actual.pendingDescendants())))) {
+                return diff(Kind.CUTOFF_FRONTIER_VALUE, -1, "cutoff_frontier.services",
+                        cutoffServicePayloads(expected.activeStack()), cutoffServicePayloads(actual.activeStack()));
+            }
+            if (layers.isCompared(ComparisonLayer.CHIP_EVENTS)
+                    && (!expected.rawChipEvents().equals(actual.rawChipEvents())
+                            || expected.ymPort0Latch() != actual.ymPort0Latch()
+                            || expected.ymPort1Latch() != actual.ymPort1Latch())) {
+                return diff(Kind.CHIP_EVENT_VALUE, -1, "cutoff_frontier.chip_events",
+                        new CutoffChipPayload(expected.rawChipEvents(), expected.ymPort0Latch(),
+                                expected.ymPort1Latch()),
+                        new CutoffChipPayload(actual.rawChipEvents(), actual.ymPort0Latch(),
+                                actual.ymPort1Latch()));
+            }
+            if (layers.isCompared(ComparisonLayer.STATE)) {
+                return stateDifference(expected.terminalState(), actual.terminalState(), -1,
+                        "cutoff_frontier.terminal_state");
+            }
+            return null;
         }
         if (reference instanceof Terminal expected && engine instanceof Terminal actual) {
             if (expected.exclusiveEnd() != actual.exclusiveEnd() || expected.frameCount() != actual.frameCount()
@@ -658,6 +708,13 @@ public final class CompleteRunAudioComparator {
 
     private static List<ChipEvent> flattenChips(List<DriverService> services) {
         return services.stream().flatMap(service -> service.chipEvents().stream()).toList();
+    }
+
+    private static List<CutoffServicePayload> cutoffServicePayloads(List<CutoffService> services) {
+        return services.stream().map(service -> new CutoffServicePayload(
+                service.parentFrame(), service.parentOrdinal(), service.depth(), service.kind(), service.state(),
+                service.beginFrame(), service.beginOrdinal(), service.endFrame(), service.endOrdinal(),
+                service.ancestry())).toList();
     }
 
     private static Difference stateObservationsDifference(List<DriverService> reference,
@@ -901,6 +958,10 @@ public final class CompleteRunAudioComparator {
             String queueSource, Integer queueSlot) { }
     private record ServicePayload(String kind, ServiceCompletion completion, Long carriedBoundaryOrdinal,
             ServiceCoordinate beginCoordinate, ServiceCoordinate endCoordinate, ServiceAncestry ancestry) { }
+    private record CutoffServicePayload(Integer parentFrame, long parentOrdinal, int depth, String kind,
+            FrontierServiceState state, int beginFrame, long beginOrdinal, Integer endFrame, Long endOrdinal,
+            ServiceAncestry ancestry) { }
+    private record CutoffChipPayload(List<ChipEvent> events, int ymPort0Latch, int ymPort1Latch) { }
     private record DecisionPayload(int nativeId, String contentKey, boolean accepted, String reason,
             Integer priorityBefore, Integer priorityAfter, List<HardwareRole> requestedRoles,
             List<RoleDecision> roles) { }
@@ -1157,6 +1218,7 @@ public final class CompleteRunAudioComparator {
         private final Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions;
         private final Map<String, OwnershipTransition> ownershipTransitions;
         private final PendingRequestPolicy pendingPolicy;
+        private final ComparisonLayerInventory layers;
         private final Map<Long, NativeSoundIdentity> pendingRequests = new LinkedHashMap<>();
         private final Map<HardwareRole, OwnerRef> liveOwners = new EnumMap<>(HardwareRole.class);
         private final Map<HardwareRole, ArrayDeque<OwnerRef>> savedOwners =
@@ -1198,6 +1260,7 @@ public final class CompleteRunAudioComparator {
             decisionResolutions = profile.decisionResolutions();
             ownershipTransitions = profile.ownershipTransitions();
             pendingPolicy = profile.pendingRequestPolicy();
+            layers = metadata.comparisonLayerInventory();
         }
 
         void accept(CompleteRunAudioTrace.Record record) throws ValidationException {
@@ -1208,41 +1271,58 @@ public final class CompleteRunAudioComparator {
                 }
                 baseline = true;
                 previousSourceFrame = value.absoluteFrame();
-                baselineOwners(value);
-                state(value.state());
-                baselineFrontier(value.frontier());
+                if (compares(ComparisonLayer.OWNERSHIP)) baselineOwners(value);
+                if (compares(ComparisonLayer.STATE)) state(value.state());
+                if (compares(ComparisonLayer.CUTOFF_FRONTIER)
+                        || compares(ComparisonLayer.CHIP_EVENTS)) baselineFrontier(value.frontier());
             } else if (record instanceof Frame frame) {
                 if (!nativeResets.isEmpty()) ordinal("native reset is not followed by its typed lifecycle");
                 if (!baseline) ordinal("frame precedes baseline");
                 sourceCoordinate(frame.absoluteFrame());
                 segment(frame);
-                for (Request request : frame.requests()) {
-                    if (request.ordinal() != requestOrdinal++) ordinal("request ordinal is not globally contiguous");
-                    if (pendingRequests.size() == pendingPolicy.maximumPending()) {
-                        throw new ValidationException(ValidationException.Kind.PENDING_CAPACITY_INVALID, side,
-                                "unresolved requests exceed the profile-owned bound");
+                if (compares(ComparisonLayer.REQUESTS)) {
+                    for (Request request : frame.requests()) {
+                        if (request.ordinal() != requestOrdinal++) {
+                            ordinal("request ordinal is not globally contiguous");
+                        }
+                        NativeSoundIdentity identity = requestIdentity(request);
+                        if (compares(ComparisonLayer.DECISIONS)) {
+                            if (pendingRequests.size() == pendingPolicy.maximumPending()) {
+                                throw new ValidationException(ValidationException.Kind.PENDING_CAPACITY_INVALID, side,
+                                        "unresolved requests exceed the profile-owned bound");
+                            }
+                            pendingRequests.put(request.ordinal(), identity);
+                            peakPendingRequests = Math.max(peakPendingRequests, pendingRequests.size());
+                        }
                     }
-                    pendingRequests.put(request.ordinal(), requestIdentity(request));
-                    peakPendingRequests = Math.max(peakPendingRequests, pendingRequests.size());
                 }
                 for (int serviceIndex = 0; serviceIndex < frame.services().size(); serviceIndex++) {
                     DriverService service = frame.services().get(serviceIndex);
-                    if (service.ordinal() != serviceOrdinal++) ordinal("service ordinal is not globally contiguous");
-                    releaseCarriedService(service, frame.nativeDiagnostics(), serviceIndex);
-                    for (Decision decision : service.decisions()) {
-                        decision(decision);
+                    if (compares(ComparisonLayer.SERVICES)
+                            && service.ordinal() != serviceOrdinal++) {
+                        ordinal("service ordinal is not globally contiguous");
                     }
-                    state(service.state());
+                    if (compares(ComparisonLayer.CUTOFF_FRONTIER)) {
+                        releaseCarriedService(service, frame.nativeDiagnostics(), serviceIndex);
+                    }
+                    if (compares(ComparisonLayer.DECISIONS)) {
+                        for (Decision decision : service.decisions()) decision(decision);
+                    }
+                    if (compares(ComparisonLayer.STATE)) state(service.state());
                 }
-                for (ChipEvent event : frame.rawChipEvents()) {
-                    if (event.ordinal() != chipOrdinal++) ordinal("chip-event ordinal is not globally contiguous");
+                if (compares(ComparisonLayer.CHIP_EVENTS)) {
+                    for (ChipEvent event : frame.rawChipEvents()) {
+                        if (event.ordinal() != chipOrdinal++) ordinal("chip-event ordinal is not globally contiguous");
+                    }
                 }
                 boolean buffered = metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity;
-                if (buffered != (frame.nativeDiagnostics() != null)) {
+                boolean authenticateNativeServices = compares(ComparisonLayer.SERVICES)
+                        || compares(ComparisonLayer.CUTOFF_FRONTIER);
+                if (authenticateNativeServices && buffered != (frame.nativeDiagnostics() != null)) {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "native frame diagnostics do not match the observer identity");
                 }
-                if (buffered) {
+                if (authenticateNativeServices && buffered) {
                     DeferredFrameEvidence deferred = deferredServiceBegins(
                             frame.absoluteFrame(), frame.nativeDiagnostics());
                     nativeRawOrder(frame.absoluteFrame(), frame.nativeDiagnostics(), deferred);
@@ -1259,7 +1339,9 @@ public final class CompleteRunAudioComparator {
                                     "native frame services violate global begin or release order");
                         }
                         if (profile.cutoffFrontierPolicy().serviceRules().stream()
-                                .noneMatch(rule -> rule.matches(service) && rule.acceptsChipSources(service))) {
+                                .noneMatch(rule -> rule.matches(service, compares(ComparisonLayer.STATE))
+                                        && (!compares(ComparisonLayer.CHIP_EVENTS)
+                                                || rule.acceptsChipSources(service)))) {
                             throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                                     "native frame service is outside the exact observer manifest");
                         }
@@ -1288,27 +1370,32 @@ public final class CompleteRunAudioComparator {
                                     "native reset root does not begin in its captured frame");
                         }
                         resetRoots.add(resetRoot);
-                        nativeResets.addLast(new NativeResetExpectation(frame.absoluteFrame(), reset.power(),
-                                frame.services().get(serviceIndex).ordinal()));
+                        if (compares(ComparisonLayer.LIFECYCLE)) {
+                            nativeResets.addLast(new NativeResetExpectation(frame.absoluteFrame(), reset.power(),
+                                    frame.services().get(serviceIndex).ordinal()));
+                        }
                     }
-                    int resetIndex = 0;
-                    for (FrontierOwnedChip owned : frame.nativeDiagnostics().rawChipInventory()) {
-                        while (resetIndex < resetRoots.size()
-                                && resetRoots.get(resetIndex).beginOrdinal() < owned.event().ordinal()) {
+                    if (compares(ComparisonLayer.CHIP_EVENTS)) {
+                        int resetIndex = 0;
+                        for (FrontierOwnedChip owned : frame.nativeDiagnostics().rawChipInventory()) {
+                            while (resetIndex < resetRoots.size()
+                                    && resetRoots.get(resetIndex).beginOrdinal() < owned.event().ordinal()) {
+                                nativeYmPort0Latch = 0;
+                                nativeYmPort1Latch = 0;
+                                resetIndex++;
+                            }
+                            replayNativeYm(owned.event());
+                        }
+                        while (resetIndex < resetRoots.size()) {
                             nativeYmPort0Latch = 0;
                             nativeYmPort1Latch = 0;
                             resetIndex++;
                         }
-                        replayNativeYm(owned.event());
-                    }
-                    while (resetIndex < resetRoots.size()) {
-                        nativeYmPort0Latch = 0;
-                        nativeYmPort1Latch = 0;
-                        resetIndex++;
                     }
                 }
             } else if (record instanceof Lifecycle lifecycle) {
-                if (!baseline || lifecycle.ordinal() != lifecycleOrdinal++) {
+                boolean compareLifecycleRecord = compares(ComparisonLayer.LIFECYCLE);
+                if (!baseline || compareLifecycleRecord && lifecycle.ordinal() != lifecycleOrdinal++) {
                     ordinal("lifecycle ordinal is not globally contiguous after baseline");
                 }
                 if (!nativeResets.isEmpty()) {
@@ -1327,12 +1414,13 @@ public final class CompleteRunAudioComparator {
             } else if (record instanceof CutoffFrontier frontier) {
                 if (!nativeResets.isEmpty()) ordinal("native reset lifecycle is missing before cutoff");
                 boolean buffered = metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity;
-                if (buffered != (frontier.nativeDiagnostics() != null)) {
+                if (compares(ComparisonLayer.CUTOFF_FRONTIER)
+                        && buffered != (frontier.nativeDiagnostics() != null)) {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "native cutoff diagnostics do not match the observer identity");
                 }
-                accountCarriedAtCutoff(frontier);
-                if (buffered) {
+                if (compares(ComparisonLayer.CUTOFF_FRONTIER)) accountCarriedAtCutoff(frontier);
+                if (compares(ComparisonLayer.CUTOFF_FRONTIER) && buffered) {
                     deferredCutoff(frontier.nativeDiagnostics());
                     List<FrontierService> terminalServices = java.util.stream.Stream.concat(
                             frontier.nativeDiagnostics().activeStack().stream(),
@@ -1353,34 +1441,41 @@ public final class CompleteRunAudioComparator {
                     }
                     managedCutoff(terminalServices);
                     continuedNativeCarriedTokens.clear();
-                    for (FrontierOwnedChip owned : frontier.nativeDiagnostics().rawChipInventory()) {
-                        if (owned.event().coordinate() <= previousNativeRawCoordinate) {
-                            throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
-                                    "native cutoff chip coordinates are not globally increasing");
+                    if (compares(ComparisonLayer.CHIP_EVENTS)) {
+                        for (FrontierOwnedChip owned : frontier.nativeDiagnostics().rawChipInventory()) {
+                            if (owned.event().coordinate() <= previousNativeRawCoordinate) {
+                                throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                        "native cutoff chip coordinates are not globally increasing");
+                            }
+                            previousNativeRawCoordinate = owned.event().coordinate();
+                            replayNativeYm(owned.event());
                         }
-                        previousNativeRawCoordinate = owned.event().coordinate();
-                        replayNativeYm(owned.event());
+                        if (nativeYmPort0Latch != null && nativeYmPort0Latch != frontier.ymPort0Latch()
+                                || nativeYmPort1Latch != null && nativeYmPort1Latch != frontier.ymPort1Latch()) {
+                            throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                    "native YM latch replay disagrees with the terminal cutoff");
+                        }
                     }
-                    if (nativeYmPort0Latch != null && nativeYmPort0Latch != frontier.ymPort0Latch()
-                            || nativeYmPort1Latch != null && nativeYmPort1Latch != frontier.ymPort1Latch()) {
+                }
+                if (compares(ComparisonLayer.CUTOFF_FRONTIER)) {
+                    try {
+                        profile.cutoffFrontierPolicy().validate(frontier,
+                                compares(ComparisonLayer.STATE), compares(ComparisonLayer.CHIP_EVENTS));
+                    } catch (RuntimeException failure) {
                         throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
-                                "native YM latch replay disagrees with the terminal cutoff");
+                                "cutoff frontier does not match its exact service manifest", failure);
                     }
                 }
-                try {
-                    profile.cutoffFrontierPolicy().validate(frontier);
-                } catch (RuntimeException failure) {
-                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
-                            "cutoff frontier does not match its exact service manifest", failure);
-                }
-                state(frontier.terminalState());
+                if (compares(ComparisonLayer.STATE)) state(frontier.terminalState());
             } else if (record instanceof Terminal) {
-                if (!carriedServices.isEmpty() || !nativeCarriedServices.isEmpty()) {
+                if (compares(ComparisonLayer.CUTOFF_FRONTIER)
+                        && (!carriedServices.isEmpty() || !nativeCarriedServices.isEmpty())) {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "terminal leaves carried-in services unresolved");
                 }
-                if (!activeManagedServices.isEmpty() || !completedManagedServices.isEmpty()
-                        || !nativePromotionEvidence.isEmpty() || deferredReservation != null) {
+                if (compares(ComparisonLayer.CUTOFF_FRONTIER)
+                        && (!activeManagedServices.isEmpty() || !completedManagedServices.isEmpty()
+                        || !nativePromotionEvidence.isEmpty() || deferredReservation != null)) {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "terminal leaves native managed-service evidence unaccounted");
                 }
@@ -1390,75 +1485,87 @@ public final class CompleteRunAudioComparator {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "terminal native capability does not match the exact profile literal");
                 }
-                if (pendingRequests.size() > pendingPolicy.maximumAtTerminal()) {
+                if (compares(ComparisonLayer.DECISIONS)
+                        && pendingRequests.size() > pendingPolicy.maximumAtTerminal()) {
                     throw new ValidationException(ValidationException.Kind.PENDING_UNRESOLVED, side,
                             "capture terminates with unresolved requests outside the profile allowance");
                 }
-                if (stateObservationRequired) {
+                if (compares(ComparisonLayer.OWNERSHIP) && stateObservationRequired) {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "capture terminates before a lifecycle ownership change is observed in state");
                 }
-                List<SavedOwnerDepth> terminalDepths = profile.hardwareRoles().stream()
-                        .filter(role -> !savedOwners.get(role).isEmpty())
-                        .map(role -> new SavedOwnerDepth(role, savedOwners.get(role).size()))
-                        .toList();
-                if (!terminalDepths.equals(profile.restoreStackPolicy().terminalDepths())) {
-                    throw new ValidationException(ValidationException.Kind.RESTORE_STACK_INVALID, side,
-                            "capture terminal restore stacks do not match the exact profile allowance");
+                if (compares(ComparisonLayer.OWNERSHIP)) {
+                    List<SavedOwnerDepth> terminalDepths = profile.hardwareRoles().stream()
+                            .filter(role -> !savedOwners.get(role).isEmpty())
+                            .map(role -> new SavedOwnerDepth(role, savedOwners.get(role).size()))
+                            .toList();
+                    if (!terminalDepths.equals(profile.restoreStackPolicy().terminalDepths())) {
+                        throw new ValidationException(ValidationException.Kind.RESTORE_STACK_INVALID, side,
+                                "capture terminal restore stacks do not match the exact profile allowance");
+                    }
                 }
                 terminal = true;
             }
         }
 
         private void baselineFrontier(BoundaryFrontier frontier) throws ValidationException {
-            for (CutoffService service : frontier.activeStack()) {
-                carriedServices.put(service.beginOrdinal(), service);
+            boolean compareCutoff = compares(ComparisonLayer.CUTOFF_FRONTIER);
+            boolean compareChips = compares(ComparisonLayer.CHIP_EVENTS);
+            if (compareCutoff) {
+                for (CutoffService service : frontier.activeStack()) {
+                    carriedServices.put(service.beginOrdinal(), service);
+                }
             }
-            chipOrdinal = frontier.rawChipEvents().size();
+            if (compareChips) chipOrdinal = frontier.rawChipEvents().size();
             boolean buffered = metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity;
-            if (!buffered && frontier.nativeDiagnostics() != null) {
+            if (compareCutoff && !buffered && frontier.nativeDiagnostics() != null) {
                 throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                         "callback baseline cannot carry buffered-native proof");
             }
             if (frontier.nativeDiagnostics() == null) return;
-            NativeDeferredServiceBegin deferred =
-                    frontier.nativeDiagnostics().pendingDeferredServiceBegin();
-            if (deferred != null) {
-                FrontierService currentOwner = frontier.nativeDiagnostics().activeStack().getLast();
-                validateAttestedDeferredOwner(deferred, currentOwner);
-                deferredReservation = new DeferredReservationState(deferred,
-                        DeferredOwner.from(currentOwner), null, false);
-            }
-            List<FrontierService> nativeBoundaryServices = java.util.stream.Stream.concat(
-                    frontier.nativeDiagnostics().activeStack().stream(),
-                    frontier.nativeDiagnostics().pendingDescendants().stream())
-                    .sorted(java.util.Comparator.comparingInt(FrontierService::beginFrame)
-                            .thenComparingLong(FrontierService::beginOrdinal)).toList();
-            for (FrontierService service : nativeBoundaryServices) {
-                if (profile.cutoffFrontierPolicy().serviceRules().stream()
-                        .noneMatch(rule -> rule.matches(service) && rule.acceptsChipSources(service))) {
-                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
-                            "baseline native carry-in is outside the exact observer manifest");
+            if (compareCutoff) {
+                NativeDeferredServiceBegin deferred =
+                        frontier.nativeDiagnostics().pendingDeferredServiceBegin();
+                if (deferred != null) {
+                    FrontierService currentOwner = frontier.nativeDiagnostics().activeStack().getLast();
+                    validateAttestedDeferredOwner(deferred, currentOwner);
+                    deferredReservation = new DeferredReservationState(deferred,
+                            DeferredOwner.from(currentOwner), null, false);
                 }
-                previousNativeBeginFrame = service.beginFrame();
-                previousNativeBeginOrdinal = service.beginOrdinal();
-            }
-            for (int index = 0; index < frontier.nativeDiagnostics().activeStack().size(); index++) {
-                FrontierService service = frontier.nativeDiagnostics().activeStack().get(index);
-                nativeCarriedServices.put(frontier.activeStack().get(index).beginOrdinal(), service);
-            }
-            for (FrontierOwnedChip owned : frontier.nativeDiagnostics().rawChipInventory()) {
-                if (owned.event().coordinate() <= previousNativeRawCoordinate) {
-                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
-                            "baseline native chip coordinates are not globally increasing");
+                List<FrontierService> nativeBoundaryServices = java.util.stream.Stream.concat(
+                        frontier.nativeDiagnostics().activeStack().stream(),
+                        frontier.nativeDiagnostics().pendingDescendants().stream())
+                        .sorted(java.util.Comparator.comparingInt(FrontierService::beginFrame)
+                                .thenComparingLong(FrontierService::beginOrdinal)).toList();
+                for (FrontierService service : nativeBoundaryServices) {
+                    if (profile.cutoffFrontierPolicy().serviceRules().stream()
+                            .noneMatch(rule -> rule.matches(service, compares(ComparisonLayer.STATE))
+                                    && (!compareChips || rule.acceptsChipSources(service)))) {
+                        throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                "baseline native carry-in is outside the exact observer manifest");
+                    }
+                    previousNativeBeginFrame = service.beginFrame();
+                    previousNativeBeginOrdinal = service.beginOrdinal();
                 }
-                previousNativeRawCoordinate = owned.event().coordinate();
-                replayNativeYm(owned.event());
+                for (int index = 0; index < frontier.nativeDiagnostics().activeStack().size(); index++) {
+                    FrontierService service = frontier.nativeDiagnostics().activeStack().get(index);
+                    nativeCarriedServices.put(frontier.activeStack().get(index).beginOrdinal(), service);
+                }
             }
-            if (nativeYmPort0Latch != null && nativeYmPort0Latch != frontier.ymPort0Latch()
-                    || nativeYmPort1Latch != null && nativeYmPort1Latch != frontier.ymPort1Latch()) {
-                throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
-                        "baseline native YM latch replay disagrees with semantic carry-in");
+            if (compareChips) {
+                for (FrontierOwnedChip owned : frontier.nativeDiagnostics().rawChipInventory()) {
+                    if (owned.event().coordinate() <= previousNativeRawCoordinate) {
+                        throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                "baseline native chip coordinates are not globally increasing");
+                    }
+                    previousNativeRawCoordinate = owned.event().coordinate();
+                    replayNativeYm(owned.event());
+                }
+                if (nativeYmPort0Latch != null && nativeYmPort0Latch != frontier.ymPort0Latch()
+                        || nativeYmPort1Latch != null && nativeYmPort1Latch != frontier.ymPort1Latch()) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "baseline native YM latch replay disagrees with semantic carry-in");
+                }
             }
         }
 
@@ -1538,8 +1645,10 @@ public final class CompleteRunAudioComparator {
                 DeferredFrameEvidence deferred) throws ValidationException {
             List<NativeRawSlot> slots = java.util.stream.Stream.concat(
                     java.util.stream.Stream.concat(
-                            diagnostics.rawChipInventory().stream().map(owned -> new NativeRawSlot(
-                                    owned.event().coordinate(), owned.event().ordinal())),
+                            (compares(ComparisonLayer.CHIP_EVENTS)
+                                    ? diagnostics.rawChipInventory().stream().map(owned -> new NativeRawSlot(
+                                            owned.event().coordinate(), owned.event().ordinal()))
+                                    : java.util.stream.Stream.<NativeRawSlot>empty()),
                             diagnostics.managedCorrelations().stream()
                                     .flatMap(correlation -> correlation.events().stream())
                                     .map(event -> new NativeRawSlot(event.coordinate(), event.ordinal()))),
@@ -1842,7 +1951,8 @@ public final class CompleteRunAudioComparator {
 
         private boolean matchesServiceRule(FrontierService service) {
             return profile.cutoffFrontierPolicy().serviceRules().stream()
-                    .anyMatch(rule -> rule.matches(service) && rule.acceptsChipSources(service));
+                    .anyMatch(rule -> rule.matches(service, compares(ComparisonLayer.STATE))
+                            && (!compares(ComparisonLayer.CHIP_EVENTS) || rule.acceptsChipSources(service)));
         }
 
         private void validateAttestedDeferredOwner(NativeDeferredServiceBegin origin,
@@ -2151,14 +2261,16 @@ public final class CompleteRunAudioComparator {
                 throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                         "normalized state does not match the exact profile inventory", failure);
             }
-            for (RoleState role : state.roles()) {
-                OwnerRef owner = liveOwners.get(role.role());
-                if (owner == null || role.active() != (owner.origin() != OwnerOrigin.NONE)) {
-                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
-                            "normalized role activity does not match its exact live owner");
+            if (compares(ComparisonLayer.OWNERSHIP)) {
+                for (RoleState role : state.roles()) {
+                    OwnerRef owner = liveOwners.get(role.role());
+                    if (owner == null || role.active() != (owner.origin() != OwnerOrigin.NONE)) {
+                        throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                "normalized role activity does not match its exact live owner");
+                    }
                 }
+                stateObservationRequired = false;
             }
-            stateObservationRequired = false;
         }
 
         private void baselineOwners(Baseline value) throws ValidationException {
@@ -2190,24 +2302,41 @@ public final class CompleteRunAudioComparator {
         }
 
         private void lifecycle(Lifecycle lifecycle) throws ValidationException {
+            if (!compares(ComparisonLayer.LIFECYCLE)) return;
             if (lifecycle.absoluteFrame() < metadata.fixture().firstFrame()
                     || lifecycle.absoluteFrame() >= metadata.fixture().exclusiveEnd()
                     || lifecycle.absoluteFrame() < previousSourceFrame) {
                 throw new ValidationException(ValidationException.Kind.LIFECYCLE_INVALID, side,
                         "lifecycle coordinates are outside or regress within the fixture interval");
             }
-            try {
-                profile.validateLifecycle(lifecycle);
-            } catch (RuntimeException failure) {
-                throw new ValidationException(ValidationException.Kind.LIFECYCLE_INVALID, side,
-                        "lifecycle does not match the exact profile rule", failure);
+            LifecycleRule rule = profile.lifecycleRules().get(lifecycle.kind());
+            if (compares(ComparisonLayer.LIFECYCLE)) {
+                try {
+                    if (rule == null || !rule.kind().equals(lifecycle.kind())
+                            || !rule.detailFields().equals(lifecycle.details().keySet().stream().toList())) {
+                        throw new IllegalArgumentException("lifecycle marker does not match the profile rule");
+                    }
+                } catch (RuntimeException failure) {
+                    throw new ValidationException(ValidationException.Kind.LIFECYCLE_INVALID, side,
+                            "lifecycle does not match the exact profile rule", failure);
+                }
             }
-            LifecycleOwnershipAction action = profile.lifecycleRules().get(lifecycle.kind()).ownershipAction();
-            boolean changed = false;
-            for (LifecycleOwnership ownership : lifecycle.ownershipTransitions()) {
-                changed |= lifecycleTransition(ownership, action);
+            if (compares(ComparisonLayer.OWNERSHIP)) {
+                try {
+                    if (rule == null || !rule.ownershipRoleSets().contains(lifecycle.ownershipTransitions().stream()
+                            .map(LifecycleOwnership::role).toList())) {
+                        throw new IllegalArgumentException("lifecycle ownership does not match the profile rule");
+                    }
+                } catch (RuntimeException failure) {
+                    throw new ValidationException(ValidationException.Kind.LIFECYCLE_INVALID, side,
+                            "lifecycle does not match the exact profile rule", failure);
+                }
+                boolean changed = false;
+                for (LifecycleOwnership ownership : lifecycle.ownershipTransitions()) {
+                    changed |= lifecycleTransition(ownership, rule.ownershipAction());
+                }
+                stateObservationRequired |= changed;
             }
-            stateObservationRequired |= changed;
             previousSourceFrame = lifecycle.absoluteFrame();
         }
 
@@ -2281,10 +2410,12 @@ public final class CompleteRunAudioComparator {
                             "decision requests a role outside the profile hardware inventory");
                 }
             }
-            for (RoleDecision role : decision.roleDecisions()) {
-                if (!hardwareRoles.contains(role.role())) {
-                    throw new ValidationException(ValidationException.Kind.ROLE_INVALID, side,
-                            "role decision is outside the profile hardware inventory");
+            if (compares(ComparisonLayer.OWNERSHIP)) {
+                for (RoleDecision role : decision.roleDecisions()) {
+                    if (!hardwareRoles.contains(role.role())) {
+                        throw new ValidationException(ValidationException.Kind.ROLE_INVALID, side,
+                                "role decision is outside the profile hardware inventory");
+                    }
                 }
             }
             NativeSoundIdentity requested = pendingRequests.get(decision.requestOrdinal());
@@ -2306,8 +2437,8 @@ public final class CompleteRunAudioComparator {
             }
             OwnerRef admitted = new OwnerRef(resolved.ownerClass(), resolved.contentKey(), resolved.nativeId(),
                     OwnerOrigin.REQUEST, decision.requestOrdinal());
-            for (RoleDecision role : decision.roleDecisions()) {
-                transition(role, admitted, transition);
+            if (compares(ComparisonLayer.OWNERSHIP)) {
+                for (RoleDecision role : decision.roleDecisions()) transition(role, admitted, transition);
             }
             pendingRequests.remove(decision.requestOrdinal());
             completedRequests++;
@@ -2345,6 +2476,10 @@ public final class CompleteRunAudioComparator {
 
         private static OwnerRef noneOwner() {
             return new OwnerRef(OwnerClass.NONE, "none", 0, OwnerOrigin.NONE, -1);
+        }
+
+        private boolean compares(ComparisonLayer layer) {
+            return layers.isCompared(layer);
         }
 
         private ValidationDiagnostics diagnostics() {
