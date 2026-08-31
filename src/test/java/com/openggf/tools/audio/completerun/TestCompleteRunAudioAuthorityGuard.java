@@ -93,14 +93,19 @@ class TestCompleteRunAudioAuthorityGuard {
                             + "Coordinator|Driver|Session|Owner)|"
                             + "[A-Z][A-Za-z0-9_]*Playback(?:Controller|Manager|"
                             + "Coordinator|Driver|Session|Owner))\\b"),
+            forbidden("frame-input-authority",
+                    "\\b(?:com\\.openggf\\.tools\\.)?RecordingFrameDriver\\b"),
             forbidden("timing-authority",
                     "\\b(?:HardwareTiming|HardwareCompletion|RecordedCompletion)"
                             + "[A-Za-z0-9_]*\\b"),
             forbidden("oracle-authority",
                     "(?i)\\b[a-z0-9_]*(?:oracle|audio_?parity)[a-z0-9_]*\\b"),
             forbidden("reference-authority",
-                    "(?i)\\b[a-z0-9_]*(?:reference|expected|sidecar)"
-                            + "[a-z0-9_]*\\b"));
+                    "(?:(?i:\\b(?:reference|expected|sidecar)[a-z0-9_]*\\b)|"
+                            + "\\b[A-Za-z0-9_]*(?:Reference|Expected|Sidecar)"
+                            + "[A-Za-z0-9_]*\\b|"
+                            + "(?i:\\b(?:[a-z0-9]+_)+(?:reference|expected|sidecar)"
+                            + "(?:_[a-z0-9]+)*\\b))"));
     private static final List<ForbiddenAuthority> FORBIDDEN_ENGINE_OPERATIONS = List.of(
             forbidden("fixture-bootstrap",
                     "\\b(?:HeadlessGameBoot|HeadlessTestFixture|"
@@ -367,6 +372,11 @@ class TestCompleteRunAudioAuthorityGuard {
                 new AuthorityMutation(
                         "PlaybackTimelineController owner;", "playback-authority"),
                 new AuthorityMutation(
+                        "RecordingFrameDriver owner;", "frame-input-authority"),
+                new AuthorityMutation(
+                        "com.openggf.tools.RecordingFrameDriver owner;",
+                        "frame-input-authority"),
+                new AuthorityMutation(
                         "TraceHardwareTimingScheduleCompiler owner;",
                         "trace-authority"),
                 new AuthorityMutation(
@@ -453,6 +463,22 @@ class TestCompleteRunAudioAuthorityGuard {
                 final class ProductionAudioHelper {
                     SmpsSfxPlaybackPolicy policy;
                     void stopPlayback() { }
+                }
+                """);
+        List<String> violations = new ArrayList<>();
+
+        inspectProducerAuthority(producer, violations);
+
+        assertEquals(List.of(), violations);
+    }
+
+    @Test
+    void unexpectedIdentifiersAreNotReferenceAuthority() throws IOException {
+        Path producer = temporaryDirectory.resolve("ProductionAudioHelper.java");
+        Files.writeString(producer, """
+                final class ProductionAudioHelper {
+                    boolean unexpectedMode;
+                    RuntimeException unexpectedFailure;
                 }
                 """);
         List<String> violations = new ArrayList<>();
