@@ -14,6 +14,15 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Production audio diagnostics now have a deterministic headless boundary:**
+  `AudioManager` owns an exclusive transactional observer lease that survives
+  backend and presentation rebuilds, while the complete-run tooling records a
+  globally ordered, bounded stream of immutable request, service, chip-write,
+  and contention observations. `Engine` exposes the same configured startup
+  branch to a caller-supplied no-device backend and input handler, captures
+  exact logical audio snapshots at row boundaries, and tears down gameplay and
+  audio ownership without creating a GLFW window or OpenAL device. The ordinary
+  outer-frame audio presentation remains the sole cadence owner.
 - **Sonic 1 sound effects now match the shipped REV01 driver oracle:** all
   1,967 sound-test ticks match across jump, skid, splash, ring, ring-loss,
   hurt, push, and signpost effects over GHZ music. The engine now follows the

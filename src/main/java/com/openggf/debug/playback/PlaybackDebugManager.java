@@ -131,6 +131,16 @@ public final class PlaybackDebugManager {
         return INSTANCE;
     }
 
+    /**
+     * Whether a playback cursor currently owns, or is scheduled to own, a
+     * production input boundary. This is deliberately mode-independent: a
+     * pending level-load rebind still reserves future input ownership.
+     */
+    public synchronized boolean hasActiveOrScheduledSession() {
+        return (enabled && movie != null && timeline != null)
+                || pendingLevelLoadMovie != null;
+    }
+
     public synchronized void handleInput(InputHandler input) {
         if (input == null) {
             return;
