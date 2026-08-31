@@ -3,6 +3,7 @@ package com.openggf.tools.audio.completerun;
 import com.openggf.Engine;
 import com.openggf.GameLoop;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioRequestObserver;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.configuration.SonicConfiguration;
@@ -37,11 +38,15 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
 class TestProductionBk2AudioRunner {
     private SonicConfigurationService config;
     private AudioManager audio;
     private PerformanceProfiler profiler;
+    private CrossGameFeatureProvider crossGameFeatures;
+    private RomManager romManager;
     private EngineContext context;
     private InputHandler input;
     private HeadlessSmpsAudioBackend backend;
@@ -58,16 +63,18 @@ class TestProductionBk2AudioRunner {
         audio.destroy();
         audio.resetState();
         profiler = mock(PerformanceProfiler.class);
+        crossGameFeatures = mock(CrossGameFeatureProvider.class);
+        romManager = mock(RomManager.class);
         context = new EngineContext(
                 config,
                 new GraphicsManager(),
                 audio,
-                mock(RomManager.class),
+                romManager,
                 profiler,
                 mock(DebugOverlayManager.class),
                 PlaybackDebugManager.getInstance(),
                 mock(RomDetectionService.class),
-                mock(CrossGameFeatureProvider.class));
+                crossGameFeatures);
         EngineServices.configure(context);
         input = new InputHandler();
         backend = new HeadlessSmpsAudioBackend(config, profiler);
@@ -200,6 +207,30 @@ class TestProductionBk2AudioRunner {
                         context, movie(0), row -> { }));
 
         assertTrue(failure.getMessage().contains("at least one BK2 row"));
+        assertNull(Engine.currentGameLoop());
+    }
+
+    @Test
+    void failedStartupClosesObserverLeaseBeforeProductionResources()
+            throws Exception {
+        List<String> order = new ArrayList<>();
+        when(romManager.getRom()).thenThrow(
+                new IllegalStateException("injected startup failure"));
+        doAnswer(invocation -> {
+            try {
+                audio.setRequestObserver(AudioRequestObserver.NONE);
+                order.add("resources-after-observer");
+            } catch (IllegalStateException observerStillActive) {
+                order.add("resources-before-observer");
+            }
+            return null;
+        }).when(crossGameFeatures).resetState();
+
+        assertThrows(RuntimeException.class,
+                () -> ProductionBk2AudioRunner.run(
+                        context, movie(1), row -> { }));
+
+        assertEquals(List.of("resources-after-observer"), order);
         assertNull(Engine.currentGameLoop());
     }
 

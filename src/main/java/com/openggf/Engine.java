@@ -595,7 +595,9 @@ public class Engine {
 	 * Initializes the ordinary configured startup graph without creating a
 	 * window, GL context, or audio device. The caller owns both supplied
 	 * instances; this seam only installs them and executes the same startup
-	 * branch used by {@link #init()}.
+	 * branch used by {@link #init()}. The configured session remains owned by
+	 * the caller if startup throws, so {@link #closeConfiguredHeadlessSession()}
+	 * must run from the caller's cleanup scope.
 	 */
 	public void initializeConfiguredHeadlessSession(
 			InputHandler input, com.openggf.audio.AudioBackend backend) {
@@ -614,20 +616,7 @@ public class Engine {
 		}
 		audioBackendInitialized = true;
 		configuredHeadlessSession = true;
-		try {
-			initializeConfiguredStartup();
-		} catch (RuntimeException | Error failure) {
-			Throwable cleanupFailure =
-					cleanupConfiguredHeadlessResources();
-			cleanupFailure = releaseConfiguredHeadlessInput(cleanupFailure);
-			if (cleanupFailure != null) {
-				failure.addSuppressed(cleanupFailure);
-			} else {
-				configuredHeadlessSession = false;
-				audioBackendInitialized = false;
-			}
-			throw failure;
-		}
+		initializeConfiguredStartup();
 	}
 
 	/** Idempotent no-platform teardown for {@link #initializeConfiguredHeadlessSession}. */

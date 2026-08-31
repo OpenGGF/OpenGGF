@@ -111,11 +111,19 @@ class TestEngineConfiguredHeadlessStartup {
         FailingStartupProbeEngine engine =
                 new FailingStartupProbeEngine(context());
         InputHandler firstInput = new InputHandler();
+        firstInput.setLogicalOverride(LogicalInputSnapshot.neutral());
         TrackingBackend firstBackend = new TrackingBackend();
 
         assertThrows(IllegalStateException.class,
                 () -> engine.initializeConfiguredHeadlessSession(
                         firstInput, firstBackend));
+
+        assertEquals(0, firstBackend.destroyCalls,
+                "the caller must retain cleanup ordering after startup fails");
+        assertTrue(firstInput.hasLogicalOverride());
+        assertFalse(audio.captureLogicalSnapshot().ringLeft());
+
+        engine.closeConfiguredHeadlessSession();
 
         assertEquals(1, firstBackend.destroyCalls);
         assertFalse(firstInput.hasLogicalOverride());
