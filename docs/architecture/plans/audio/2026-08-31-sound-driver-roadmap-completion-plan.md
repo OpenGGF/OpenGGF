@@ -230,9 +230,14 @@ diagnostic tools remain usable without changing gameplay behavior.
 
 **Interfaces:**
 
-- Produces stable commands equivalent to:
-  `--complete-audio-game s2|s3k --rom <absolute> --movie <absolute>
-  --service-manifest <absolute> --capability <absolute> --output <create-new-absolute-file>`.
+- Produces stable commands equivalent to S2:
+  `--complete-audio-game s2 --rom <absolute> --movie <absolute>
+  --service-manifest <absolute> --capability <absolute> --output <create-new-absolute-file>`;
+  and S3K:
+  `--complete-audio-game s3k --rom <absolute> --movie <absolute>
+  --service-manifest <absolute> --output <create-new-absolute-file>`.
+  S2 requires `--capability`; S3K forbids it because its pinned runner/profile
+  has no capability input.
   These are TraceChaser's observer service manifest and capability fixture, not OpenGGF's
   complete-run run manifest. OpenGGF retains the latter separately for canonical fixture/segment
   identity.
@@ -277,15 +282,17 @@ diagnostic tools remain usable without changing gameplay behavior.
 - [ ] Write RED process tests using a deterministic fake executable that records argv and creates
   or fails a raw file. Treat `Request.referenceHome()` as the pinned TraceChaser root and assert
   deterministic resolution of
-  `bizhawk-headless/fixtures/gpgx-audio-service-manifests-v1.json` and
-  `bizhawk-headless/fixtures/gpgx-audio-capability-v1.json`, exact absolute paths, no shell
-  interpretation, bounded stderr, nonzero exit propagation, and cleanup of uncommitted output.
+  `bizhawk-headless/fixtures/gpgx-audio-service-manifests-v1.json` for both games and
+  `bizhawk-headless/fixtures/gpgx-audio-capability-v1.json` for S2 only, exact absolute paths,
+  no shell interpretation, bounded stderr, nonzero exit propagation, and cleanup of uncommitted
+  output.
 - [ ] Implement `ProcessBuilder` invocation with an explicit argv list and Task 2's closed game
-  selector. Resolve the service manifest, capability fixture, and built launcher only from the
-  canonical fixed paths below `Request.referenceHome()`; require ordinary non-symlink files and
-  let TraceChaser enforce their pinned content hashes. OpenGGF's `Request.runManifest()` remains
-  separate and is used only for canonical fixture/segment identity. Accept no caller-provided
-  executable arguments beyond the typed request fields.
+  selector. Resolve the service manifest and built launcher only from the canonical fixed paths
+  below `Request.referenceHome()` for both games; resolve and pass the capability fixture only
+  for S2. Require ordinary non-symlink files and let TraceChaser enforce their pinned content
+  hashes. OpenGGF's `Request.runManifest()` remains separate and is used only for canonical
+  fixture/segment identity. Accept no caller-provided executable arguments beyond the typed
+  request fields.
 - [ ] Write RED projector tests from hand-authored minimal valid raw prefixes: state/chip/cutoff
   events become canonical records in source order; raw streams without approved request events
   produce no `Request`/`Decision`; unknown semantic events abort publication. For every native
