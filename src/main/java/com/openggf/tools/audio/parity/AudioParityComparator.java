@@ -196,7 +196,7 @@ public final class AudioParityComparator {
     }
 
     private static AudioParityMetadata readMetadata(Path path) throws IOException {
-        try (BufferedReader input = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+        try (BufferedReader input = AudioParityJsonl.openReader(path)) {
             String line = input.readLine();
             if (line == null || line.isBlank()) {
                 throw new IllegalArgumentException("missing capture metadata line");
@@ -255,12 +255,17 @@ public final class AudioParityComparator {
             return difference(AudioParityReport.Kind.CAPTURE_FAILURE, 0, null, null, null,
                     "metadata", String.valueOf(reference), String.valueOf(openGgf), null);
         }
-        AudioParityReport result = metadataField("capture", AudioParitySchema.REFERENCE_CAPTURE,
-                reference.capture());
-        if (result != null) {
-            return result;
+        String expectedOpenGgfKind;
+        if (AudioParitySchema.REFERENCE_CAPTURE.equals(reference.capture())) {
+            expectedOpenGgfKind = AudioParitySchema.OPENGGF_CAPTURE;
+        } else if (AudioParitySchema.SFX_REFERENCE_CAPTURE.equals(reference.capture())) {
+            expectedOpenGgfKind = AudioParitySchema.SFX_OPENGGF_CAPTURE;
+        } else {
+            return metadataField("capture",
+                    AudioParitySchema.REFERENCE_CAPTURE + " or " + AudioParitySchema.SFX_REFERENCE_CAPTURE,
+                    reference.capture());
         }
-        result = metadataField("capture", AudioParitySchema.OPENGGF_CAPTURE, openGgf.capture());
+        AudioParityReport result = metadataField("capture", expectedOpenGgfKind, openGgf.capture());
         if (result != null) {
             return result;
         }
@@ -300,6 +305,12 @@ public final class AudioParityComparator {
                 ticksCompared);
         if (global != null) {
             return global;
+        }
+        AudioParityReport dispatches = stateField(AudioParityReport.Kind.DISPATCH_MISMATCH,
+                reference.ordinal(), ticksCompared, "GLOBAL", "dispatches",
+                reference.dispatches(), openGgf.dispatches());
+        if (dispatches != null) {
+            return dispatches;
         }
         for (int index = 0; index < AudioParitySchema.ROLES.size(); index++) {
             AudioParityReport track = compareTrack(reference.tracks().get(index), openGgf.tracks().get(index),
@@ -528,8 +539,13 @@ public final class AudioParityComparator {
         private final BufferedReader reader;
 
         private DigestingReader(Path path) throws IOException {
-            reader = new BufferedReader(new java.io.InputStreamReader(
-                    new DigestInputStream(Files.newInputStream(path), digest), StandardCharsets.UTF_8));
+            // The digest covers the file's stored bytes (compressed for a .gz
+            // fixture) so both passes observe the same identity.
+            InputStream stream = new DigestInputStream(Files.newInputStream(path), digest);
+            if (path.getFileName().toString().endsWith(".gz")) {
+                stream = new java.util.zip.GZIPInputStream(stream);
+            }
+            reader = new BufferedReader(new java.io.InputStreamReader(stream, StandardCharsets.UTF_8));
         }
 
         private String readLine() throws IOException {

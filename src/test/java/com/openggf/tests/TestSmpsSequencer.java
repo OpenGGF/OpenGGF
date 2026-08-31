@@ -102,7 +102,7 @@ public class TestSmpsSequencer {
     }
 
     @Test
-    public void testTempoZeroStallsPlayback() {
+    public void testS2TempoZeroWalksTracksWithoutExpiringTheCurrentNote() {
         byte[] data = new byte[32];
         data[2] = 2; // 2 FM Channels so channel 1 avoids DAC path
         data[5] = 0; // Tempo zero should halt progression
@@ -126,12 +126,16 @@ public class TestSmpsSequencer {
         short[] buf = new short[4000];
         seq.read(buf);
 
-        // Only the DAC enable write should be present when tempo is zero
-        assertEquals(1, synth.log.size(), "Sequencer should not advance when tempo is zero");
+        long keyOnCount = synth.log.stream()
+                .filter(entry -> entry.contains("R28 VF"))
+                .count();
+        assertEquals(1, keyOnCount,
+                "S2 TempoWait still walks tracks at tempo zero, but its"
+                        + " no-carry pre-increment prevents the note expiring");
     }
 
     @Test
-    public void testTempoChangeResetsAccumulator() {
+    public void testS2TempoChangePreservesAccumulator() {
         byte[] data = new byte[48];
         data[2] = 2; // 2 FM Channels so we can use channel 1 for FM note sequencing
         data[5] = (byte) 0xC0; // Initial fast tempo
@@ -161,9 +165,8 @@ public class TestSmpsSequencer {
         MockSynth synth = new MockSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        // Enough samples for ~16 frames. Without resetting the accumulator, the leftover fast-tempo ticks
-        // would advance to the second note (takes ~10 frames), but with a reset the slow tempo (takes ~17 frames)
-        // keeps it out of range of this buffer.
+        // S2 cfSetTempo changes CurrentTempo only (sd:3207-3209); the live
+        // TempoTimeout phase is preserved, so the second note remains in range.
         short[] buf = new short[12000];
         seq.read(buf);
 
@@ -173,8 +176,10 @@ public class TestSmpsSequencer {
         int secondNoteIdx = logStr.indexOf("RA4 V02", firstNoteIdx + 1);
         assertTrue(firstNoteIdx >= 0, "First note should play. Log: " + logStr);
         assertTrue(logStr.contains("R28 V00"), "Rest after tempo change should key off the channel");
-        assertEquals(1, keyOnCount, "Second note should not play within the buffer when the tempo accumulator resets");
-        assertEquals(-1, secondNoteIdx, "Accumulator reset should delay the second note past the buffer");
+        assertEquals(2, keyOnCount,
+                "Preserving TempoTimeout should keep the second note in range");
+        assertTrue(secondNoteIdx >= 0,
+                "The preserved accumulator should reach the second note");
     }
 
     @Test
@@ -473,7 +478,7 @@ public class TestSmpsSequencer {
     }
 
     @Test
-    public void testS2HoldE7PreventsRetrigger() {
+    public void testS2HoldE7StillRetriggersFm() {
         byte[] data = new byte[64];
         data[2] = 2; // DAC + FM1
         data[4] = 1; // Dividing timing
@@ -487,7 +492,7 @@ public class TestSmpsSequencer {
         data[pos++] = (byte) 0x81; // Note 1
         data[pos++] = 0x01;        // Duration
         data[pos++] = (byte) 0xE7; // HOLD / no-attack for next note
-        data[pos++] = (byte) 0x83; // Note 2 (should sustain, not retrigger)
+        data[pos++] = (byte) 0x83; // Note 2 (no attack state, but FM keys on)
         data[pos++] = 0x01;        // Duration
         data[pos] = (byte) 0xF2;   // Stop
 
@@ -499,7 +504,8 @@ public class TestSmpsSequencer {
         long fmKeyOnCount = synth.fmLog.stream()
                 .filter(s -> s.startsWith("0:28:") && s.endsWith("F0"))
                 .count();
-        assertEquals(1, fmKeyOnCount, "E7 HOLD should prevent retriggering the second FM note");
+        assertEquals(2, fmKeyOnCount,
+                "S2's shipped no-attack path still executes the FM key-on");
     }
 
     @Test

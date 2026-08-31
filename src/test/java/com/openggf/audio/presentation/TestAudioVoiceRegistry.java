@@ -2480,6 +2480,11 @@ class TestAudioVoiceRegistry {
         }
 
         @Override
+        public int renderFramePcm(short[] buffer, int length) {
+            throw new IllegalStateException("fixture failure");
+        }
+
+        @Override
         public boolean isComplete() {
             return false;
         }

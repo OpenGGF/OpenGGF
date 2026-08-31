@@ -14,6 +14,92 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 1 sound effects now match the shipped REV01 driver oracle:** all
+  1,967 sound-test ticks match across jump, skid, splash, ring, ring-loss,
+  hurt, push, and signpost effects over GHZ music. The engine now follows the
+  retail driver's PSG3 admission/noise ownership, per-track channel release,
+  fixed SFX-RAM service order, tied-note PSG volume writes, ring-speaker
+  alternation, and the shipped `FixBugs=0` FM-volume pointer behavior. The
+  protected 14,690-tick GHZ music oracle remains an exact match.
+- **The S3K sound-driver oracle now enforces its Z80 ownership boundary:**
+  CPU-tagged 68k host writes remain authenticated in the committed capture but
+  are excluded from driver comparison. This removes the false tick-3
+  `PSGInitValues` frontier and exposes the first real Z80 boundary at tick 13,
+  where the source driver begins its boot-time `zStopAllSound` service.
+- **Sonic 2 EHZ music-driver parity now reaches the first SFX override:** the
+  oracle now samples completed `zUpdateMusic` services rather than a
+  begin-frame image that could catch the Z80 halfway through its track walk,
+  and compares only child-service writes instead of folding the parent V-int's
+  song-load burst into the tick. Source-backed sequencer fixes cover resting
+  PSG envelope cursors, FM pan/TL write order, E7 lifetime and key-on behavior,
+  and note-start modulation order. The committed window now matches through
+  ticks 0-209; tick 210 is the expected next-tier boundary where the reference
+  admits an SFX and marks FM4 overridden while the music-only engine capture
+  intentionally injects none.
+- **Sonic 1 PSG SFX admission now leaves the write stream to the SFX track:**
+  taking PSG1/2 from music no longer injects the engine's synthetic
+  maximum-attenuation latch. The shipped `Sound_PlaySFX` routine
+  (`SD:977-1087`) only marks the music track overridden and initializes SFX
+  RAM, except for its explicit PSG3 `$DF/$FF` pair. This moves the committed
+  sound-test SFX oracle from the first jump admission at tick 351 to that
+  effect's release at tick 377 while the 14,690-tick S1 music oracle remains a
+  MATCH.
+- **SMPS service cadence now follows the shipped drivers' V-blank loops:** live
+  presentation services each driver once per outer frame, independently of PCM
+  packet size. S2 PAL playback performs six music updates per five VInts while
+  leaving SFX at one update per VInt (`sd:441-452`); S3K PAL playback repeats
+  the complete SFX-then-music pass for seven updates per six VInts
+  (`D:482-499`); and S3K's shared speed-up tail performs five music updates per
+  four VInts (`D:743-758`). The shared PAL byte is driver-owned and rewindable,
+  and PAL no longer mutates the song's tempo byte. On an S2/S3K
+  tempo-delay frame the engine used to skip the whole track service; the real
+  drivers pre-increment every music slot's `DurationTimeout` and still run the
+  full track walk (S1 `TempoWait` SD:1549-1561; S2 sd:596-619; S3K
+  D:2607-2621), so envelopes, modulation, note fill and per-frame frequency
+  writes continue and only note expiry is delayed. The S2 sequencer also seeds
+  its tempo accumulator at song load and runs `TempoWait` on the very first
+  update (sd:1820-1822, sd:545-551), the S1 extension now hits stopped slots
+  (the ROM loop tests no playing bit), and the `EA` tempo change keeps the
+  accumulated phase on the Z80 drivers (S2 sd:3207-3209, S3K D:3861-3863)
+  while still resetting S1's countdown (SD:2256-2258). This turned the S2
+  driver oracle's tick-0 `tempoTimeout` divergence green (698 → 669 divergent
+  ticks) while the S1 GHZ music oracle stayed a byte-identical 14,690-tick
+  MATCH.
+- **Sonic 1 driver oracle is committed and re-runnable:** the S1 GHZ
+  music-driver parity oracle (driver-RAM track state plus the ordered YM/PSG
+  write stream per `UpdateMusic` invocation, recorded from BizHawk 2.11 /
+  Genesis Plus GX) now lives in the repository: the full 14,690-tick GHZ
+  reference capture is committed gzip-compressed with a fixture manifest and
+  integrity test, alongside a new sound-test SFX movie and reference that play
+  eight normal SFX ($A0 $A4 $A6 $AA $B5 $C6 $CC $CF) over the running GHZ
+  music and record each `Sound_PlaySFX` dispatch as the request-sequence
+  contract. The comparator pairs the new SFX capture kinds, replays the
+  recorded dispatches through the real `SmpsDriver`/`SmpsSequencer`, and
+  reports the first divergence with tick, field and both values. The Lua
+  recorder's `pc_manifest` fallback no longer reads the nonexistent
+  "System Bus" BizHawk domain (it maps 68k bus addresses onto the real
+  `68K RAM`/`MD CART` domains and asserts the domain list at startup), and
+  `tools/audio/run_s1_audio_parity.sh` works again: reference captures land in
+  an explicit run root outside the repository, satisfying both TraceChaser's
+  output policy and the parity tool. Engine GHZ music parity re-verified:
+  `MATCH (14690 ticks)`. New results are recorded in
+  `docs/status/audio-frontier-log.md`.
+- **S2 sound-driver oracle (first committed audio reference):** a windowed
+  reference capture of the shipped S2 driver running under emulated hardware
+  — full Z80 RAM image plus the attributed YM/PSG write stream per driver
+  invocation, movie rows 10150-10899 of the pinned complete-emeralds movie
+  (EHZ music reload, thirteen SFX, the speed-up command) — is now committed
+  under `src/test/resources/audio/parity/s2/` with digest-locked integrity
+  tests, and `S2AudioOracleComparator`/`S2AudioOracleTool` compare it
+  tick-by-tick (one tick = one completed `zUpdateMusic` service) against a
+  headless engine capture through the real `SmpsDriver`/`SmpsSequencer`.
+  First measurement is an expected red recorded in the new
+  `docs/status/audio-frontier-log.md`: the engine does not model the ROM's
+  song-load tempo-accumulator seed (first divergence `global.tempoTimeout`
+  0x3C vs 0, tick 0). The oracle also surfaced two hardware cadence facts the
+  comparator now encodes: a Saxman song load masks interrupts across six
+  frames, and the catch-up costs the driver a V-int.
+
 - **Special-stage rings alternate speakers again (S3K):** every ROM ring
   collect — the level's `GiveRing`, the Blue Sphere ring routine at
   `loc_984C`, badniks that award rings — sends the same `sfx_RingRight` id,

@@ -137,6 +137,7 @@ public final class AudioPresentationProducer {
                 commands.applyPending(commandApplier);
                 registry.beginRendering();
                 try {
+                    registry.serviceOuterFrame();
                     pcm = forwardRate > 1.0
                             ? mixForwardResampled(stereoFrames)
                             : mixer.mix(registry, stereoFrames);

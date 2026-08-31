@@ -58,13 +58,18 @@ public final class SmpsCompositeVoice implements PresentationVoice {
         }
         int samples = stereoFrames * 2;
         Arrays.fill(scratch, 0, samples, (short) 0);
-        int renderedSamples = driver.read(scratch, samples);
+        int renderedSamples = driver.renderFramePcm(scratch, samples);
         if (renderedSamples < 0 || renderedSamples > samples) {
             throw new IllegalStateException("SmpsDriver returned an invalid sample count");
         }
         for (int sample = 0; sample < renderedSamples; sample++) {
             accumulation[sample] += scratch[sample];
         }
+    }
+
+    /** Runs the driver's one frame-locked V-blank service before PCM mixing. */
+    public void serviceOuterFrame() {
+        driver.serviceOuterFrame();
     }
 
     @Override

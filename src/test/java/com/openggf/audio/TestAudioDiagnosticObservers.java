@@ -685,7 +685,7 @@ class TestAudioDiagnosticObservers {
     }
 
     @Test
-    void serviceCallbacksMatchZeroOneAndMultipleActualSequencerTicks() {
+    void serviceCallbacksMatchEachDriverFrameTrackWalk() {
         SmpsDriver driver = new SmpsDriver(600.0);
         SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
@@ -720,32 +720,32 @@ class TestAudioDiagnosticObservers {
         driver.read(new short[0]);
         restoreTempoState(music, 10, 0, 1, 0);
         driver.read(new short[20]);
-        assertEquals(List.of(), services,
-                "a real tempo frame whose accumulator does not overflow"
-                        + " executes zero SMPS ticks and reports no service");
+        assertEquals(List.of(
+                "begin:SEQUENCER_TICK:0:129",
+                "end:SEQUENCER_TICK:0:129"), services,
+                "a tempo-delay frame still performs the ROM's full track"
+                        + " walk and reports one driver service");
 
+        services.clear();
         restoreTempoState(music, 10, 250, 1, 0);
         driver.read(new short[20]);
         assertEquals(List.of(
-                "begin:SEQUENCER_TICK:0:129",
-                "end:SEQUENCER_TICK:0:129"), services);
+                "begin:SEQUENCER_TICK:1:129",
+                "end:SEQUENCER_TICK:1:129"), services);
 
         services.clear();
         restoreTempoState(music, 10, 250, 3, 0);
         driver.read(new short[20]);
         assertEquals(List.of(
-                "begin:SEQUENCER_TICK:1:129",
-                "end:SEQUENCER_TICK:1:129",
                 "begin:SEQUENCER_TICK:2:129",
-                "end:SEQUENCER_TICK:2:129",
-                "begin:SEQUENCER_TICK:3:129",
-                "end:SEQUENCER_TICK:3:129"), services,
-                "one OVERFLOW2 tempo frame that invokes tick three times"
-                        + " emits three distinct ordered services");
+                "end:SEQUENCER_TICK:2:129"), services,
+                "the speed multiplier is serviced by the S3K driver's"
+                        + " shared speed-up tail, not by multiplying an"
+                        + " individual sequencer's track walk");
     }
 
     @Test
-    void speedupSubticksConsumeSfxBudgetOnlyOnTheFinalLiteralTick() {
+    void musicSpeedSettingDoesNotMultiplyAnSfxTrackWalk() {
         SmpsDriver driver = new SmpsDriver(60.0);
         SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
@@ -772,14 +772,13 @@ class TestAudioDiagnosticObservers {
 
         driver.read(new short[2]);
 
-        assertEquals(List.of(2, 2, 1), maxTicksAfterService,
-                "speed-up adds literal sequencer ticks but the shipped SFX"
-                        + " budget still decrements once per tempo frame,"
-                        + " on its final tick");
+        assertEquals(List.of(1), maxTicksAfterService,
+                "the S3K speed-up tail repeats music updates only; an SFX"
+                        + " still consumes its budget once per driver pass");
     }
 
     @Test
-    void fadeOnlyFrameIsOneTypedServiceAndNoFadeZeroTickIsNone() {
+    void fadeOnlyFrameAndTempoDelayTrackWalkHaveTypedServices() {
         SmpsDriver driver = new SmpsDriver(60.0);
         SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
@@ -812,21 +811,30 @@ class TestAudioDiagnosticObservers {
                 Integer.MAX_VALUE,
                 music.captureSnapshot().fade());
         driver.read(new short[2]);
-        assertEquals(List.of(), events,
-                "a zero-tick tempo frame with no fade has no service");
+        assertEquals("begin:SEQUENCER_TICK:0", events.getFirst());
+        assertEquals("end:SEQUENCER_TICK:0", events.getLast());
+        assertTrue(events.subList(1, events.size() - 1).stream()
+                .allMatch("write:SEQUENCER_TICK"::equals));
+        assertTrue(events.size() > 2,
+                "a tempo-delay frame still walks tracks and scopes writes"
+                        + " to its sequencer service");
 
+        events.clear();
         restoreDiagnosticState(music, 10, 0, 1, 0,
                 Integer.MAX_VALUE,
                 new SmpsSequencerSnapshot.FadeSnapshot(
                         1, 0, 0, 1, 1, true, true));
         driver.read(new short[2]);
 
-        assertEquals("begin:FADE_STEP:0", events.getFirst());
-        assertEquals("end:FADE_STEP:0", events.getLast());
-        assertTrue(events.subList(1, events.size() - 1).stream()
+        assertEquals("begin:FADE_STEP:1", events.getFirst());
+        int fadeEnd = events.indexOf("end:FADE_STEP:1");
+        assertTrue(fadeEnd > 1);
+        assertTrue(events.subList(1, fadeEnd).stream()
                 .allMatch("write:FADE_STEP"::equals));
-        assertTrue(events.size() > 2,
+        assertTrue(events.size() > fadeEnd + 2,
                 "an actual fade volume step writes inside its service");
+        assertEquals("begin:SEQUENCER_TICK:2", events.get(fadeEnd + 1));
+        assertEquals("end:SEQUENCER_TICK:2", events.getLast());
     }
 
     @Test

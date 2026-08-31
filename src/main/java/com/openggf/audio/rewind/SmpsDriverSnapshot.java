@@ -18,6 +18,7 @@ public record SmpsDriverSnapshot(
         int continuousSfxId,
         boolean continuousSfxFlag,
         int contSfxLoopCnt,
+        int palUpdateCounter,
         List<SequencerEntry> sequencers,
         int[] fmLockSequencerIds,
         int[] psgLockSequencerIds,
@@ -46,10 +47,26 @@ public record SmpsDriverSnapshot(
                 continuousSfxId,
                 continuousSfxFlag,
                 contSfxLoopCnt,
+                5,
                 sequencers,
                 fmLockSequencerIds,
                 psgLockSequencerIds,
                 null);
+    }
+
+    public SmpsDriverSnapshot(
+            SmpsSequencer.Region region,
+            SmpsDriver.ReadMode readMode,
+            int continuousSfxId,
+            boolean continuousSfxFlag,
+            int contSfxLoopCnt,
+            List<SequencerEntry> sequencers,
+            int[] fmLockSequencerIds,
+            int[] psgLockSequencerIds,
+            VirtualSynthesizer.Snapshot synthSnapshot) {
+        this(region, readMode, continuousSfxId, continuousSfxFlag,
+                contSfxLoopCnt, 5, sequencers, fmLockSequencerIds,
+                psgLockSequencerIds, synthSnapshot);
     }
 
     @Override

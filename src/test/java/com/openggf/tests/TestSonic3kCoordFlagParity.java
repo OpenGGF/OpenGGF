@@ -386,6 +386,7 @@ public class TestSonic3kCoordFlagParity {
         assertSame(fixture.handlers.handlerFor("s3k"),
                 restored.driver().captureSnapshot().sequencers().get(0)
                         .config().getCoordFlagHandler());
+        restored.serviceOuterFrame();
         restored.mixInto(new long[20_000], 10_000);
         assertEquals(1, fixture.state.spindashRevCounter());
     }
@@ -488,8 +489,9 @@ public class TestSonic3kCoordFlagParity {
 
         int finalPacked = finalFmPackedFrequency(fmTrack);
 
-        assertEquals(0x2A74, finalPacked,
-                "S3K zDoModulation decrements ModulationSteps every sustain tick, not only when speed elapses");
+        assertEquals(0x2A94, finalPacked,
+                "S3K zDoModulation decrements ModulationSteps on every full"
+                        + " track walk, including tempo-delay services");
     }
 
     @Test
@@ -763,8 +765,14 @@ public class TestSonic3kCoordFlagParity {
         }
 
         void mix() {
-            new AudioPresentationMixer(MAX_STEREO_FRAMES)
-                    .mix(registry, MAX_STEREO_FRAMES);
+            registry.beginRendering();
+            try {
+                registry.serviceOuterFrame();
+                new AudioPresentationMixer(MAX_STEREO_FRAMES)
+                        .mix(registry, MAX_STEREO_FRAMES);
+            } finally {
+                registry.endRendering();
+            }
         }
     }
 

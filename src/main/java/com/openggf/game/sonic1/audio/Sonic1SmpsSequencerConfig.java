@@ -67,6 +67,7 @@ public final class Sonic1SmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                .palUpdateMode(SmpsSequencerConfig.PalUpdateMode.NONE)
                 .coordFlagParamOverrides(coordOverrides)
                 .applyModOnNote(false)   // S1: don't apply modulation during note start (ModAlgo = 68k)
                 .halveModSteps(true)     // S1 cfModulation and FinishTrackUpdate both use lsr.b #1
@@ -78,6 +79,25 @@ public final class Sonic1SmpsSequencerConfig {
                 // The shipped Sound_PlaySFX initializes track RAM only. SetVoice and the
                 // track's own note-off establish the takeover during UpdateMusic.
                 .fmSfxTakeoverMode(FmSfxTakeoverMode.REGISTER_SEQUENCE)
+                // Sound_PlaySFX (SD:977-1087) emits no PSG takeover write
+                // except the explicit PSG3 DF/FF pair in its own load path.
+                .psgSfxTakeoverMode(
+                        SmpsSequencerConfig.PsgSfxTakeoverMode.S1_PSG3_SILENCE_PAIR)
+                // cfStopTrack (SD:2489-2563): the completed SFX already sent
+                // its note-off. FM restores voice/pan at rest; PSG clears the
+                // override at rest and only re-latches noise when applicable.
+                .fmSfxReleaseMode(
+                        SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE)
+                .psgSfxReleaseMode(
+                        SmpsSequencerConfig.PsgSfxReleaseMode.ROM_REST_RESTORE)
+                // UpdateMusic walks fixed SFX RAM slots (FM3..5, then PSG1..3),
+                // independently of the order used by the SFX header loader.
+                .sfxTrackWalkMode(
+                        SmpsSequencerConfig.SfxTrackWalkMode.CHANNEL_RAM_ORDER)
+                // FixBugs=0 SendVoiceTL addresses VoicePtr from the driver-RAM
+                // base for ordinary SFX, aliasing v_special_voice_ptr.
+                .fmVolumeVoiceBankMode(
+                        SmpsSequencerConfig.FmVolumeVoiceBankMode.S1_SPECIAL_POINTER_BUG)
                 .build();
     }
 

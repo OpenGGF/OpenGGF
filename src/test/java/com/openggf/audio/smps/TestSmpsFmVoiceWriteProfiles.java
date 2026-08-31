@@ -65,14 +65,16 @@ class TestSmpsFmVoiceWriteProfiles {
     }
 
     @Test
-    void s2VolumeRefreshRotatesTheAlgorithmMaskAcrossAscendingRegisters() {
+    void s2VolumeRefreshWritesAllTlsAndAddsVolumeOnlyToCarriers() {
         byte[] voice = DISTINCT_VOICE.clone();
         voice[22] = (byte) 0x96;
         voice[23] = (byte) 0x97;
         voice[24] = (byte) 0x98;
         Sonic2SmpsData source = new Sonic2SmpsData(musicBlob(voice), 0);
 
-        assertEquals(List.of("0:44:98", "0:48:99", "0:4C:9A"),
+        // S2's zSetFMTLs writes every TL register; the algorithm mask only
+        // controls whether the channel volume is added to that operator.
+        assertEquals(List.of("0:40:15", "0:44:98", "0:48:99", "0:4C:9A"),
                 captureVolume(source, Sonic2SmpsSequencerConfig.CONFIG, 2));
     }
 

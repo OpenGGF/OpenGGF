@@ -31,15 +31,27 @@ public record AudioParityMetadata(
         if (!AudioParitySchema.VERSION.equals(schema)) {
             throw new IllegalArgumentException("unknown audio parity schema: " + schema);
         }
+        boolean sfxCapture = capture.equals(AudioParitySchema.SFX_REFERENCE_CAPTURE)
+                || capture.equals(AudioParitySchema.SFX_OPENGGF_CAPTURE);
         if (!capture.equals(AudioParitySchema.REFERENCE_CAPTURE)
-                && !capture.equals(AudioParitySchema.OPENGGF_CAPTURE)) {
+                && !capture.equals(AudioParitySchema.OPENGGF_CAPTURE)
+                && !sfxCapture) {
             throw new IllegalArgumentException("unknown audio parity capture kind: " + capture);
         }
-        long expectedTerminal = (long) cycleStart + 2L * period + 1L;
-        if (cycleStart < 0 || period <= 0 || terminalRecordCount <= 0
-                || expectedTerminal != terminalRecordCount
-                || terminalRecordCount > AudioParitySchema.MAX_INVOCATIONS) {
-            throw new IllegalArgumentException("cycle_start, period, and terminal_record_count are out of range");
+        if (sfxCapture) {
+            // The SFX capture is bounded by its movie, not a recurrence proof.
+            if (cycleStart != 0 || period != 0 || terminalRecordCount <= 0
+                    || terminalRecordCount > AudioParitySchema.MAX_INVOCATIONS) {
+                throw new IllegalArgumentException(
+                        "SFX capture requires cycle_start 0, period 0, and a bounded terminal_record_count");
+            }
+        } else {
+            long expectedTerminal = (long) cycleStart + 2L * period + 1L;
+            if (cycleStart < 0 || period <= 0 || terminalRecordCount <= 0
+                    || expectedTerminal != terminalRecordCount
+                    || terminalRecordCount > AudioParitySchema.MAX_INVOCATIONS) {
+                throw new IllegalArgumentException("cycle_start, period, and terminal_record_count are out of range");
+            }
         }
         romSha1 = romSha1.toLowerCase();
         romCrc32 = romCrc32.toLowerCase();
@@ -63,6 +75,13 @@ public record AudioParityMetadata(
         return new AudioParityMetadata(AudioParitySchema.VERSION, AudioParitySchema.OPENGGF_CAPTURE,
                 cycleStart, period,
                 terminalRecordCount, romSha1, romCrc32, JsonNodeFactory.instance.objectNode());
+    }
+
+    public static AudioParityMetadata openGgfSfx(int terminalRecordCount, String romSha1,
+            String romCrc32) {
+        return new AudioParityMetadata(AudioParitySchema.VERSION,
+                AudioParitySchema.SFX_OPENGGF_CAPTURE, 0, 0, terminalRecordCount, romSha1,
+                romCrc32, JsonNodeFactory.instance.objectNode());
     }
 
     @Override

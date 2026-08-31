@@ -10,12 +10,33 @@ import java.util.Set;
 public final class SmpsSequencerConfig {
 
     public enum TempoMode {
-        /** S3K: accumulator overflow → skip (delay). Tick on non-overflow. Higher tempo = slower. */
+        /**
+         * S3K (TempoWait D:2607-2621): accumulator carry → delay frame — every
+         * music slot's DurationTimeout is pre-incremented and the track walk
+         * still runs. Higher tempo = more delays = slower.
+         */
         OVERFLOW,
-        /** S2: accumulator overflow → tick. Skip on non-overflow. Higher tempo = faster. */
+        /**
+         * S2 (TempoWait sd:596-619): accumulator NO-carry → delay frame — every
+         * music slot's DurationTimeout is pre-incremented and the track walk
+         * still runs. Higher tempo = fewer delays = faster.
+         */
         OVERFLOW2,
-        /** S1: countdown from tempo; when 0, extend all track durations by 1. Always tick. */
+        /**
+         * S1 (TempoWait SD:1549-1561): countdown from tempo; on expiry every
+         * music slot's DurationTimeout is extended by 1. Always tick.
+         */
         TIMEOUT
+    }
+
+    /** ROM PAL compensation performed at the driver invocation boundary. */
+    public enum PalUpdateMode {
+        /** S1: no PAL cadence branch. */
+        NONE,
+        /** S2 sd:441-452: repeat music only when the five-count expires. */
+        EXTRA_MUSIC,
+        /** S3K D:482-499: repeat the complete SFX-then-music update. */
+        EXTRA_FULL
     }
 
     /** How carrier operators are determined for volume scaling. */
@@ -66,6 +87,48 @@ public final class SmpsSequencerConfig {
         REGISTER_SEQUENCE
     }
 
+    /** How a PSG channel is prepared when an SFX first takes it from music. */
+    public enum PsgSfxTakeoverMode {
+        /** Legacy engine behavior: inject a maximum-attenuation latch. */
+        FORCE_SILENCE,
+        /** Shipped-driver behavior: let the SFX bytecode own visible writes. */
+        REGISTER_SEQUENCE,
+        /** S1: bytecode owns PSG1/2; PSG3 admission explicitly writes DF, FF. */
+        S1_PSG3_SILENCE_PAIR
+    }
+
+    /** How an FM channel returns to music after its SFX track stops. */
+    public enum FmSfxReleaseMode {
+        /** Legacy engine behavior: silence, restore all state, then resend frequency. */
+        LEGACY_FULL_RESTORE,
+        /** Shipped S1 behavior: the SFX note-off stands; restore voice/pan at rest. */
+        ROM_VOICE_RESTORE
+    }
+
+    /** How a PSG channel returns to music after its SFX track stops. */
+    public enum PsgSfxReleaseMode {
+        /** Legacy engine behavior: silence, restore volume, then resend frequency. */
+        LEGACY_FULL_RESTORE,
+        /** Shipped S1 behavior: the SFX note-off stands; restore at rest/noise only. */
+        ROM_REST_RESTORE
+    }
+
+    /** How SFX track RAM is walked after header initialization. */
+    public enum SfxTrackWalkMode {
+        /** Preserve the SFX header entry order. */
+        HEADER_ORDER,
+        /** Walk the fixed driver RAM slots: DAC/FM channels, then PSG channels. */
+        CHANNEL_RAM_ORDER
+    }
+
+    /** Voice bank used by an in-stream FM volume change. */
+    public enum FmVolumeVoiceBankMode {
+        /** Read total levels from the current track's voice bank. */
+        TRACK_VOICE_BANK,
+        /** Shipped S1 FixBugs=0 path: ordinary SFX read the special-SFX bank. */
+        S1_SPECIAL_POINTER_BUG
+    }
+
     /** Exact shipped-driver sequence used to upload a 25-byte FM voice. */
     public enum FmVoiceWriteProfile {
         /** Sonic 1's 68k SetVoice routine. */
@@ -98,10 +161,18 @@ public final class SmpsSequencerConfig {
     private final boolean applyModOnNote;
     private final boolean halveModSteps;
     private final Set<Integer> extraTrkEndFlags;
+    private final PalUpdateMode palUpdateMode;
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
     private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
     private final boolean direct68kDriver;
+    private final boolean advancePsgEnvelopeOnRest;
+    private final boolean writeFmPanOnNote;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
+    private final PsgSfxTakeoverMode psgSfxTakeoverMode;
+    private final FmSfxReleaseMode fmSfxReleaseMode;
+    private final PsgSfxReleaseMode psgSfxReleaseMode;
+    private final SfxTrackWalkMode sfxTrackWalkMode;
+    private final FmVolumeVoiceBankMode fmVolumeVoiceBankMode;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
 
     // --- S3K-specific config fields ---
@@ -133,10 +204,18 @@ public final class SmpsSequencerConfig {
         this.extraTrkEndFlags = (b.extraTrkEndFlags != null)
                 ? Collections.unmodifiableSet(b.extraTrkEndFlags)
                 : Collections.emptySet();
+        this.palUpdateMode = b.palUpdateMode;
         this.relativePointers = b.relativePointers;
         this.tempoOnFirstTick = b.tempoOnFirstTick;
         this.direct68kDriver = b.direct68kDriver;
+        this.advancePsgEnvelopeOnRest = b.advancePsgEnvelopeOnRest;
+        this.writeFmPanOnNote = b.writeFmPanOnNote;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
+        this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
+        this.fmSfxReleaseMode = b.fmSfxReleaseMode;
+        this.psgSfxReleaseMode = b.psgSfxReleaseMode;
+        this.sfxTrackWalkMode = b.sfxTrackWalkMode;
+        this.fmVolumeVoiceBankMode = b.fmVolumeVoiceBankMode;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
@@ -219,6 +298,10 @@ public final class SmpsSequencerConfig {
         return extraTrkEndFlags;
     }
 
+    public PalUpdateMode getPalUpdateMode() {
+        return palUpdateMode;
+    }
+
     /**
      * Whether in-stream pointers (F6 Jump, F7 Loop, F8 Call) use PC-relative addressing.
      * S1 (68k): true — pointer value is signed offset from (ptrAddr + 1).
@@ -233,8 +316,38 @@ public final class SmpsSequencerConfig {
         return direct68kDriver;
     }
 
+    /** Whether a newly parsed PSG rest still consumes the first envelope byte. */
+    public boolean isAdvancePsgEnvelopeOnRest() {
+        return advancePsgEnvelopeOnRest;
+    }
+
+    /** Whether FM note preparation repeats the track's current pan register. */
+    public boolean isWriteFmPanOnNote() {
+        return writeFmPanOnNote;
+    }
+
     public FmSfxTakeoverMode getFmSfxTakeoverMode() {
         return fmSfxTakeoverMode;
+    }
+
+    public PsgSfxTakeoverMode getPsgSfxTakeoverMode() {
+        return psgSfxTakeoverMode;
+    }
+
+    public FmSfxReleaseMode getFmSfxReleaseMode() {
+        return fmSfxReleaseMode;
+    }
+
+    public PsgSfxReleaseMode getPsgSfxReleaseMode() {
+        return psgSfxReleaseMode;
+    }
+
+    public SfxTrackWalkMode getSfxTrackWalkMode() {
+        return sfxTrackWalkMode;
+    }
+
+    public FmVolumeVoiceBankMode getFmVolumeVoiceBankMode() {
+        return fmVolumeVoiceBankMode;
     }
 
     public FmVoiceWriteProfile getFmVoiceWriteProfile() {
@@ -321,10 +434,19 @@ public final class SmpsSequencerConfig {
         private boolean applyModOnNote = true;
         private boolean halveModSteps = true;
         private Set<Integer> extraTrkEndFlags = null;
+        private PalUpdateMode palUpdateMode = PalUpdateMode.NONE;
         private boolean relativePointers = false;
         private boolean tempoOnFirstTick = false;
         private boolean direct68kDriver = false;
+        private boolean advancePsgEnvelopeOnRest = true;
+        private boolean writeFmPanOnNote = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
+        private PsgSfxTakeoverMode psgSfxTakeoverMode = PsgSfxTakeoverMode.FORCE_SILENCE;
+        private FmSfxReleaseMode fmSfxReleaseMode = FmSfxReleaseMode.LEGACY_FULL_RESTORE;
+        private PsgSfxReleaseMode psgSfxReleaseMode = PsgSfxReleaseMode.LEGACY_FULL_RESTORE;
+        private SfxTrackWalkMode sfxTrackWalkMode = SfxTrackWalkMode.HEADER_ORDER;
+        private FmVolumeVoiceBankMode fmVolumeVoiceBankMode =
+                FmVolumeVoiceBankMode.TRACK_VOICE_BANK;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
 
         // S3K-specific defaults (S2 compatible)
@@ -348,10 +470,18 @@ public final class SmpsSequencerConfig {
         public Builder applyModOnNote(boolean val) { applyModOnNote = val; return this; }
         public Builder halveModSteps(boolean val) { halveModSteps = val; return this; }
         public Builder extraTrkEndFlags(Set<Integer> val) { extraTrkEndFlags = val; return this; }
+        public Builder palUpdateMode(PalUpdateMode val) { palUpdateMode = val; return this; }
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
+        public Builder advancePsgEnvelopeOnRest(boolean val) { advancePsgEnvelopeOnRest = val; return this; }
+        public Builder writeFmPanOnNote(boolean val) { writeFmPanOnNote = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
+        public Builder psgSfxTakeoverMode(PsgSfxTakeoverMode val) { psgSfxTakeoverMode = val; return this; }
+        public Builder fmSfxReleaseMode(FmSfxReleaseMode val) { fmSfxReleaseMode = val; return this; }
+        public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }
+        public Builder sfxTrackWalkMode(SfxTrackWalkMode val) { sfxTrackWalkMode = val; return this; }
+        public Builder fmVolumeVoiceBankMode(FmVolumeVoiceBankMode val) { fmVolumeVoiceBankMode = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
@@ -369,7 +499,13 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(fmChannelOrder, "fmChannelOrder");
             Objects.requireNonNull(psgChannelOrder, "psgChannelOrder");
             Objects.requireNonNull(tempoMode, "tempoMode");
+            Objects.requireNonNull(palUpdateMode, "palUpdateMode");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
+            Objects.requireNonNull(psgSfxTakeoverMode, "psgSfxTakeoverMode");
+            Objects.requireNonNull(fmSfxReleaseMode, "fmSfxReleaseMode");
+            Objects.requireNonNull(psgSfxReleaseMode, "psgSfxReleaseMode");
+            Objects.requireNonNull(sfxTrackWalkMode, "sfxTrackWalkMode");
+            Objects.requireNonNull(fmVolumeVoiceBankMode, "fmVolumeVoiceBankMode");
             Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);
         }
