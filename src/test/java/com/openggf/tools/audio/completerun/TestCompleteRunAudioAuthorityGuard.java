@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -73,42 +72,33 @@ class TestCompleteRunAudioAuthorityGuard {
             Path.of("src/main/java/com/openggf/audio/driver/SmpsDriverServiceObserver.java"),
             Path.of("src/main/java/com/openggf/audio/driver/SmpsRequestAdmissionPolicy.java"));
     private static final Pattern GAME_NAME_CHECK = Pattern.compile(
-            "(?i)\\b(sonic\\s*[123]|sonic3k|s1|s2|s3k)\\b");
-    private static final Pattern REFERENCE_AUTHORITY_PARAMETER =
-            Pattern.compile("(?i)\\b(reference|expected|oracle|sidecar)"
-                    + "[a-z0-9_]*\\b");
-    private static final List<ForbiddenAuthority> FORBIDDEN_ENGINE_AUTHORITIES = List.of(
-            forbidden("trace-runtime",
-                    "\\b(?:TraceSessionLauncher|TraceReplaySessionBootstrap|"
-                            + "TraceReplayBootstrap|TraceReplayDrive|TraceReplayDriver|"
-                            + "TraceReplayFixture|TraceData|TraceEntry|TraceFiles|"
-                            + "TraceMetadata|TraceFrame|TraceEvent|TraceHistoryHydration|"
-                            + "TracePayloadReader|TraceDataLoader|SpecialStageTraceData|"
-                            + "Sonic1SpecialStageTraceData|Sonic3kSpecialStageTraceData|"
-                            + "TraceInputSource|TraceRunFrameDriver)\\b"),
-            forbidden("trace-playback-owner",
-                    "\\bTraceRunPlaybackCoordinator\\b"),
-            forbidden("alternate-input-owner",
-                    "\\b(?:PlaybackDebugManager|RecordingFrameDriver|"
-                            + "TraceRunSpecialStageRows|SpecialStageRecordedPassPacing|"
-                            + "UserRecordingSessionLauncher)\\b"),
+            "(?i)(?<![a-z0-9])(?:sonic(?:[_\\s-]*[123](?:k)?)|"
+                    + "s[_-]?[123](?:k)?)(?![a-z0-9])");
+    private static final Set<String> PERMITTED_BK2_INPUT_TYPES = Set.of(
+            "Bk2FrameInput", "Bk2Movie", "Bk2MovieLoader",
+            "RecordedInputSnapshots");
+    private static final Pattern DEBUG_PLAYBACK_TYPE = Pattern.compile(
+            "\\bcom\\.openggf\\.debug\\.playback\\.([A-Za-z0-9_*]+)");
+    private static final List<ForbiddenAuthority> AUTHORITY_CATEGORIES = List.of(
+            forbidden("forbidden-package",
+                    "\\bcom\\.openggf\\.(?:trace|game\\.(?:timing|recording)|"
+                            + "tools\\.audio\\.parity)(?:\\.|\\b)"),
+            forbidden("trace-authority",
+                    "\\bTrace(?![A-Za-z0-9_]*Playback)"
+                            + "(?!RunManifest\\b|Manifest\\b)[A-Za-z0-9_]+\\b"),
+            forbidden("playback-authority",
+                    "\\b[A-Za-z0-9_]*Playback[A-Za-z0-9_]*\\b"),
+            forbidden("timing-authority",
+                    "\\b(?:HardwareTiming|HardwareCompletion|RecordedCompletion)"
+                            + "[A-Za-z0-9_]*\\b"),
+            forbidden("oracle-authority",
+                    "\\b[A-Za-z0-9_]*(?:Oracle|AudioParity)[A-Za-z0-9_]*\\b"),
+            forbidden("reference-authority",
+                    "\\b(?:reference|expected|oracle|sidecar)[A-Za-z0-9_]*\\b"));
+    private static final List<ForbiddenAuthority> FORBIDDEN_ENGINE_OPERATIONS = List.of(
             forbidden("fixture-bootstrap",
                     "\\b(?:HeadlessGameBoot|HeadlessTestFixture|"
                             + "UserRecordingSmokeHarness)\\b"),
-            forbidden("reference-producer-process",
-                    "\\bTraceChaserAudioProcess\\b"),
-            forbidden("reference-home", "\\breferenceHome\\b"),
-            forbidden("reference-reader",
-                    "\\b(?:S2OracleEngineCapture|S3kOpenGgfAudioCapture|"
-                            + "[A-Za-z0-9_]*(?:ReferenceRawAdapter|ReferenceReader|"
-                            + "ReferenceProjector|ReferenceProducer|AudioOracleComparator)|"
-                            + "referenceTick|SPEED_UP_ROW)\\b"),
-            forbidden("raw-oracle-payload",
-                    "\\b(?:S2OracleRawStream|AudioParityJsonl)\\b"),
-            forbidden("hardware-timing",
-                    "\\b(?:HardwareTiming[A-Za-z0-9_]*|TraceHardwareTimingBoundaryObserver|"
-                            + "HardwareCompletionEdge|RecordedCompletionAuthority|"
-                            + "hardwareTiming|hardware_timing)\\b"),
             forbidden("direct-startup-mutation",
                     "\\b(?:loadLevel|loadCurrentLevel|loadDefaultStartingLevel|"
                             + "selectEntry|setGameMode)\\s*\\("),
@@ -210,7 +200,7 @@ class TestCompleteRunAudioAuthorityGuard {
         inspectDiscoveredEngineSources(
                 temporaryDirectory, Set.of(), violations);
 
-        assertEquals(List.of(helper + ":trace-runtime"), violations);
+        assertEquals(List.of(helper + ":trace-authority"), violations);
     }
 
     @Test
@@ -323,8 +313,8 @@ class TestCompleteRunAudioAuthorityGuard {
         inspectProducerAuthority(producer, violations);
 
         assertEquals(List.of(
-                producer + ":trace-runtime",
-                producer + ":reference-home"), violations);
+                producer + ":trace-authority",
+                producer + ":reference-authority"), violations);
     }
 
     @Test
@@ -352,12 +342,107 @@ class TestCompleteRunAudioAuthorityGuard {
         inspectProducerAuthority(producer, violations);
 
         assertEquals(List.of(
-                producer + ":trace-runtime",
-                producer + ":trace-playback-owner",
-                producer + ":reference-home",
-                producer + ":raw-oracle-payload",
-                producer + ":hardware-timing",
+                producer + ":trace-authority",
+                producer + ":playback-authority",
+                producer + ":timing-authority",
+                producer + ":oracle-authority",
+                producer + ":reference-authority",
                 producer + ":direct-startup-mutation"), violations);
+    }
+
+    @Test
+    void categoryClosureRejectsEquivalentAndFutureAuthorityOwners()
+            throws IOException {
+        List<AuthorityMutation> mutations = List.of(
+                new AuthorityMutation(
+                        "TraceRunReplayWalker owner;", "trace-authority"),
+                new AuthorityMutation(
+                        "TraceRunSpecialStageRowDriver owner;", "trace-authority"),
+                new AuthorityMutation(
+                        "PlaybackTimelineController owner;", "playback-authority"),
+                new AuthorityMutation(
+                        "TraceHardwareTimingScheduleCompiler owner;",
+                        "trace-authority"),
+                new AuthorityMutation(
+                        "HardwareTimingService owner;", "timing-authority"),
+                new AuthorityMutation(
+                        "HardwareTimingSnapshot owner;", "timing-authority"),
+                new AuthorityMutation(
+                        "S2OracleDriverState owner;", "oracle-authority"),
+                new AuthorityMutation(
+                        "S2AudioOracleTool owner;", "oracle-authority"),
+                new AuthorityMutation(
+                        "AudioParityComparator owner;", "oracle-authority"),
+                new AuthorityMutation(
+                        "java.nio.file.Path oracleCapture;"
+                                + " void run(java.nio.file.Path referenceCapture) { }",
+                        "reference-authority"),
+                new AuthorityMutation(
+                        "com.openggf.trace.future.AnyFutureAuthority owner;",
+                        "forbidden-package"));
+
+        for (int index = 0; index < mutations.size(); index++) {
+            AuthorityMutation mutation = mutations.get(index);
+            Path producer = temporaryDirectory.resolve(
+                    "ProductionAudioHelper" + index + ".java");
+            Files.writeString(producer,
+                    "final class ProductionAudioHelper" + index + " { "
+                            + mutation.source() + " }\n");
+            List<String> violations = new ArrayList<>();
+
+            inspectProducerAuthority(producer, violations);
+
+            assertEquals(List.of(producer + ":" + mutation.expectedLabel()),
+                    violations, mutation.source());
+        }
+    }
+
+    @Test
+    void playbackPackageAllowsOnlyBk2InputTypes() throws IOException {
+        Path producer = temporaryDirectory.resolve("ProductionAudioHelper.java");
+        Files.writeString(producer, """
+                import com.openggf.debug.playback.Bk2FrameInput;
+                import com.openggf.debug.playback.Bk2Movie;
+                import com.openggf.debug.playback.Bk2MovieLoader;
+                import com.openggf.debug.playback.RecordedInputSnapshots;
+                final class ProductionAudioHelper { }
+                """);
+        List<String> violations = new ArrayList<>();
+        inspectProducerAuthority(producer, violations);
+        assertEquals(List.of(), violations);
+
+        Files.writeString(producer, """
+                import com.openggf.debug.playback.PlaybackDebugManager;
+                final class ProductionAudioHelper { }
+                """);
+        inspectProducerAuthority(producer, violations);
+        assertEquals(List.of(producer + ":playback-authority"), violations);
+
+        violations.clear();
+        Files.writeString(producer, """
+                import com.openggf.debug.playback.*;
+                final class ProductionAudioHelper { }
+                """);
+        inspectProducerAuthority(producer, violations);
+        assertEquals(List.of(producer + ":playback-authority"), violations);
+    }
+
+    @Test
+    void sharedNeutralityRecognizesProjectStyleGameIdentifiers()
+            throws IOException {
+        Path source = temporaryDirectory.resolve("ProductionBk2AudioRunner.java");
+        Files.writeString(source, """
+                final class ProductionBk2AudioRunner {
+                    int SONIC_2;
+                    int SONIC_3K;
+                    int SONIC_2_ROM;
+                }
+                """);
+        List<String> violations = new ArrayList<>();
+
+        inspectGameNeutrality(source, violations);
+
+        assertEquals(List.of(source + ":game-specific-authority"), violations);
     }
 
     @Test
@@ -464,7 +549,6 @@ class TestCompleteRunAudioAuthorityGuard {
             Path path, List<String> violations) {
         try {
             String source = stripCommentsAndLiterals(Files.readString(path));
-            inspectReferenceConstructorAuthority(path, source, violations);
             inspectForbiddenEngineAuthorities(path, source, true, violations);
         } catch (IOException failure) {
             throw new IllegalStateException(failure);
@@ -520,7 +604,6 @@ class TestCompleteRunAudioAuthorityGuard {
             inspectForbiddenEngineAuthorities(
                     path, source, !establishedFramework, violations);
             if (!establishedFramework) {
-                inspectReferenceConstructorAuthority(path, source, violations);
                 if (!isTypedGameSource(root, path)) {
                     inspectGameNeutrality(path, source, violations);
                 }
@@ -539,36 +622,30 @@ class TestCompleteRunAudioAuthorityGuard {
         return Set.of("s1", "s2", "s3k").contains(owner);
     }
 
-    private static void inspectReferenceConstructorAuthority(
-            Path path, String source, List<String> violations) {
-        String name = path.getFileName().toString();
-        String simpleName = name.substring(0,
-                name.length() - ".java".length());
-        Pattern constructor = Pattern.compile(
-                "\\b" + Pattern.quote(simpleName)
-                        + "\\s*\\(([^)]*)\\)",
-                Pattern.DOTALL);
-        var constructors = constructor.matcher(source);
-        while (constructors.find()) {
-            var parameter = REFERENCE_AUTHORITY_PARAMETER.matcher(
-                    constructors.group(1));
-            if (parameter.find()) {
-                violations.add(path + ":"
-                        + parameter.group().toLowerCase(Locale.ROOT));
-            }
-        }
-    }
-
     private static void inspectForbiddenEngineAuthorities(
             Path path,
             String source,
             boolean authenticatedSource,
             List<String> violations) {
-        for (ForbiddenAuthority authority : FORBIDDEN_ENGINE_AUTHORITIES) {
-            if (authority.label().equals("reference-home")
+        for (ForbiddenAuthority authority : AUTHORITY_CATEGORIES) {
+            if (authority.label().equals("reference-authority")
                     && !authenticatedSource) {
                 continue;
             }
+            if (authority.pattern().matcher(source).find()) {
+                violations.add(path + ":" + authority.label());
+            }
+        }
+        var playbackTypes = DEBUG_PLAYBACK_TYPE.matcher(source);
+        while (playbackTypes.find()) {
+            if (!PERMITTED_BK2_INPUT_TYPES.contains(playbackTypes.group(1))) {
+                String violation = path + ":playback-authority";
+                if (!violations.contains(violation)) {
+                    violations.add(violation);
+                }
+            }
+        }
+        for (ForbiddenAuthority authority : FORBIDDEN_ENGINE_OPERATIONS) {
             if (authority.pattern().matcher(source).find()) {
                 violations.add(path + ":" + authority.label());
             }
@@ -690,6 +767,8 @@ class TestCompleteRunAudioAuthorityGuard {
     }
 
     private record ForbiddenAuthority(String label, Pattern pattern) { }
+
+    private record AuthorityMutation(String source, String expectedLabel) { }
 
     private enum LexicalState {
         CODE,
