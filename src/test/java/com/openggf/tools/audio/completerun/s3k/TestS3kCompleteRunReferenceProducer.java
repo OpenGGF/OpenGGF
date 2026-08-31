@@ -2,6 +2,7 @@ package com.openggf.tools.audio.completerun.s3k;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -70,7 +71,7 @@ class TestS3kCompleteRunReferenceProducer {
         assertEquals(List.of(new CompleteRunAudioTrace.PsgWrite(0, 0x44)), cutoff.rawChipEvents());
 
         var chip = new CompleteRunAudioTrace.FrontierChipEvent(
-                10, 10, "Z80", 4256, 4, 0, 68, true, null, null);
+                13, 13, "Z80", 4256, 4, 0, 68, true, null, null);
         var snapshot = new CompleteRunAudioTrace.FrontierSnapshot(2, "Z80", 4256, List.of(0x7f));
         var active = new CompleteRunAudioTrace.FrontierService(1, 0, 0, "DigitalAudioDispatch",
                 CompleteRunAudioTrace.FrontierServiceState.OPEN, 810, 0, 4256, 9, "Z80",
@@ -78,10 +79,10 @@ class TestS3kCompleteRunReferenceProducer {
         var transition = new CompleteRunAudioTrace.NativeAncestryTransition(
                 4, 810, 4, 2, 2, 1, 1, 13, "Z80", 4360);
         List<CompleteRunAudioTrace.FrontierService> pending = List.of(
-                completedService(2, 1, 1, 1, 3, 1, 1, List.of()),
-                completedService(3, 2, 2, 2, 5, 1, 1, List.of(transition)),
-                completedService(4, 1, 1, 6, 7, 1, 1, List.of()),
-                completedService(5, 1, 1, 8, 9, 1, 1, List.of()));
+                completedService(2, 1, 1, 1, 3, 1, 1, 4360, 13, List.of()),
+                completedService(3, 2, 2, 2, 5, 1, 1, 4357, 12, List.of(transition)),
+                completedService(4, 1, 1, 6, 7, 1, 1, 4357, 12, List.of()),
+                completedService(5, 1, 1, 8, 9, 1, 1, 4357, 12, List.of()));
         var nativeCutoff = cutoff.nativeDiagnostics();
         assertEquals(List.of(active), nativeCutoff.activeStack());
         assertEquals(pending, nativeCutoff.pendingDescendants());
@@ -110,43 +111,161 @@ class TestS3kCompleteRunReferenceProducer {
     }
 
     @Test
+    void preservesDistinctPendingGenerationsWhenAFrameLocalTokenIsReused() throws Exception {
+        Path raw = Files.writeString(temporary.resolve("s3k-pending-token-reuse.jsonl"),
+                pendingTokenReusePrefix());
+
+        var records = new S3kCompleteRunReferenceProjector()
+                .projectPrefixForTesting(raw.toAbsolutePath(), rom()).records();
+        CompleteRunAudioTrace.CutoffFrontier cutoff =
+                (CompleteRunAudioTrace.CutoffFrontier) records.get(3);
+
+        assertEquals(List.of(2L, 2L), cutoff.nativeDiagnostics().pendingDescendants().stream()
+                .map(CompleteRunAudioTrace.FrontierService::token).toList());
+        assertEquals(List.of(810, 811), cutoff.nativeDiagnostics().pendingDescendants().stream()
+                .map(CompleteRunAudioTrace.FrontierService::beginFrame).toList());
+        assertEquals(2, cutoff.pendingDescendants().size());
+        assertTrue(cutoff.pendingDescendants().getFirst().beginFrame()
+                < cutoff.pendingDescendants().getLast().beginFrame());
+    }
+
+    @Test
     void rejectsCutoffAncestryThatDiffersFromItsObservedPromotionEvent() throws Exception {
         String mismatched = fullFrontierPrefix().replace(
                 "\"coordinate\":4,\"native_ordinal\":4,\"previous_parent_token\":2",
                 "\"coordinate\":4,\"native_ordinal\":3,\"previous_parent_token\":2");
-        Path raw = Files.writeString(temporary.resolve("s3k-ancestry-mismatch.jsonl"), mismatched);
+        assertCorrelationFailure(mismatched, "s3k-ancestry-mismatch.jsonl",
+                "S3K cutoff ancestry transition differs from its observed event");
 
-        assertThrows(IllegalArgumentException.class, () -> new S3kCompleteRunReferenceProjector()
-                .projectPrefixForTesting(raw.toAbsolutePath(), rom()));
+        String mismatchedPreviousAncestry = fullFrontierPrefix().replace(
+                "\"previous_parent_token\":2,\"previous_depth\":2",
+                "\"previous_parent_token\":5,\"previous_depth\":2");
+        assertCorrelationFailure(mismatchedPreviousAncestry,
+                "s3k-ancestry-previous-mismatch.jsonl",
+                "S3K cutoff ancestry transition differs from its observed event");
 
         String mismatchedBoundary = fullFrontierPrefix().replaceFirst(
                 "\\\"begin_pc\\\":4300", "\\\"begin_pc\\\":4301");
-        Path boundaryRaw = Files.writeString(
-                temporary.resolve("s3k-boundary-mismatch.jsonl"), mismatchedBoundary);
-        assertThrows(IllegalArgumentException.class, () -> new S3kCompleteRunReferenceProjector()
-                .projectPrefixForTesting(boundaryRaw.toAbsolutePath(), rom()));
+        assertCorrelationFailure(mismatchedBoundary, "s3k-boundary-mismatch.jsonl",
+                "S3K cutoff service differs from its observed boundary event");
 
         String mismatchedBeginCoordinate = fullFrontierPrefix().replaceFirst(
-                "\\\"begin_coordinate\\\":1", "\\\"begin_coordinate\\\":41");
-        Path beginCoordinateRaw = Files.writeString(
-                temporary.resolve("s3k-begin-coordinate-mismatch.jsonl"), mismatchedBeginCoordinate);
-        assertThrows(IllegalArgumentException.class, () -> new S3kCompleteRunReferenceProjector()
-                .projectPrefixForTesting(beginCoordinateRaw.toAbsolutePath(), rom()));
+                "\\\"begin_coordinate\\\":1", "\\\"begin_coordinate\\\":0");
+        assertCorrelationFailure(mismatchedBeginCoordinate, "s3k-begin-coordinate-mismatch.jsonl",
+                "S3K cutoff service begin was not observed in the raw rows");
 
         String mismatchedEndCoordinate = fullFrontierPrefix().replaceFirst(
-                "\\\"end_coordinate\\\":3", "\\\"end_coordinate\\\":43");
-        Path endCoordinateRaw = Files.writeString(
-                temporary.resolve("s3k-end-coordinate-mismatch.jsonl"), mismatchedEndCoordinate);
-        assertThrows(IllegalArgumentException.class, () -> new S3kCompleteRunReferenceProjector()
-                .projectPrefixForTesting(endCoordinateRaw.toAbsolutePath(), rom()));
+                "\\\"end_coordinate\\\":3", "\\\"end_coordinate\\\":2");
+        assertCorrelationFailure(mismatchedEndCoordinate, "s3k-end-coordinate-mismatch.jsonl",
+                "S3K cutoff service differs from its observed boundary event");
 
         String mismatchedPromotionCoordinate = fullFrontierPrefix().replaceFirst(
                 "\\\"coordinate\\\":4,\\\"native_ordinal\\\":4,\\\"previous_parent_token\\\":2",
                 "\\\"coordinate\\\":44,\\\"native_ordinal\\\":4,\\\"previous_parent_token\\\":2");
-        Path promotionCoordinateRaw = Files.writeString(
-                temporary.resolve("s3k-promotion-coordinate-mismatch.jsonl"), mismatchedPromotionCoordinate);
-        assertThrows(IllegalArgumentException.class, () -> new S3kCompleteRunReferenceProjector()
-                .projectPrefixForTesting(promotionCoordinateRaw.toAbsolutePath(), rom()));
+        assertCorrelationFailure(mismatchedPromotionCoordinate, "s3k-promotion-coordinate-mismatch.jsonl",
+                "S3K cutoff ancestry transition differs from its observed event");
+
+        String endedOpenService = fullFrontierPrefix().replace(
+                psgEvent(13, 1, 9, 4256), psgEvent(13, 1, 9, 4256)
+                        + "," + endEvent(14, 1, 0, 9, 4357, 12));
+        assertCorrelationFailure(endedOpenService, "s3k-open-service-ended.jsonl",
+                "S3K cutoff service lifecycle differs from observed events");
+    }
+
+    @Test
+    void rejectsMalformedRawYmAndPsgEventsBeforeCanonicalProjection() throws Exception {
+        String invalidYm = fullFrontierPrefix().replace(
+                psgEvent(13, 1, 9, 4256), rawEvent(13, 1, 0, 4256, 4, 3, 9, 0, 68));
+        assertCorrelationFailure(invalidYm, "s3k-invalid-ym-subject.jsonl",
+                "S3K raw YM event shape changed");
+
+        String invalidPsg = fullFrontierPrefix().replace(
+                psgEvent(13, 1, 9, 4256), rawEvent(13, 1, 0, 4256, 1, 4, 9, 0, 68));
+        assertCorrelationFailure(invalidPsg, "s3k-invalid-psg-subject.jsonl",
+                "S3K raw PSG event shape changed");
+
+        String ordinaryResetChip = fullFrontierPrefix().replace(
+                psgEvent(13, 1, 9, 4256),
+                psgEvent(13, 1, 9, 4256).replace("\"pc\":4256", "\"pc\":0")
+                        .replace("\"source_cpu\":1", "\"source_cpu\":3"));
+        assertCorrelationFailure(ordinaryResetChip, "s3k-ordinary-reset-chip.jsonl",
+                "S3K raw ordinary chip source/PC changed");
+
+        String resetBegin = rawEvent(0, 1, 0, 0, 0, 8, 1, 0, 0)
+                .replace("\"source_cpu\":1", "\"source_cpu\":3");
+        String resetChip = rawEvent(1, 1, 0, 1, 0, 4, 1, 0, 68);
+        String resetEnd = rawEvent(2, 1, 0, 0, 0, 9, 1, 0, 0)
+                .replace("\"source_cpu\":1", "\"source_cpu\":3");
+        assertCorrelationFailure(withFrameEvents(rawPrefix(false),
+                        resetBegin + "," + resetChip + "," + resetEnd),
+                "s3k-reset-nonreset-chip.jsonl", "S3K raw reset chip source/PC changed");
+
+        String orphanedGeneration = rawPrefix(false)
+                .replace("\"parent_token\":0", "\"parent_token\":2")
+                .replace("\"depth\":0", "\"depth\":1");
+        assertCorrelationFailure(orphanedGeneration, "s3k-orphaned-service-generation.jsonl",
+                "S3K raw service begin is not nested under innermost service");
+
+        String malformedMarker = rawPrefix(false).replace(
+                endEvent(2, 1, 0, 3, 60, 12),
+                rawEvent(2, 1, 0, 60, 9, 10, 3, 0, 255)
+                        + "," + endEvent(3, 1, 0, 3, 60, 12));
+        assertCorrelationFailure(malformedMarker, "s3k-malformed-marker.jsonl",
+                "S3K raw marker event shape changed");
+
+        String impossibleFirstToken = rawPrefix(false).replace(
+                "\"service_token\":1", "\"service_token\":42");
+        assertCorrelationFailure(impossibleFirstToken, "s3k-impossible-token-generation.jsonl",
+                "S3K raw service token allocation changed");
+    }
+
+    @Test
+    void rejectsEventGraphsThatCouldNotBeEmittedByTheNativeServiceStack() throws Exception {
+        String nonTopParent = fullFrontierPrefix().replace(
+                beginEvent(2, 3, 2, 7, 2, 4300, 10),
+                beginEvent(2, 3, 1, 7, 1, 4300, 10));
+        assertCorrelationFailure(nonTopParent, "s3k-non-top-parent.jsonl",
+                "S3K raw service begin is not nested under innermost service");
+
+        String nonTopEvent = fullFrontierPrefix().replace(
+                endEvent(3, 2, 1, 7, 4360, 13),
+                rawEvent(3, 1, 0, 4256, 0, 4, 9, 0, 68));
+        assertCorrelationFailure(nonTopEvent, "s3k-non-top-event.jsonl",
+                "S3K raw event is not owned by innermost service");
+
+        String orphanPromotion = fullFrontierPrefix().replace(
+                endEvent(3, 2, 1, 7, 4360, 13),
+                rawEvent(3, 3, 2, 4360, 13, 10, 7, 2, 0));
+        assertCorrelationFailure(orphanPromotion, "s3k-orphan-promotion.jsonl",
+                "S3K raw ancestry transition is not adjacent to parent completion");
+
+        String snapshotProvenance = fullFrontierPrefix().replace(
+                snapshotEvent(11, 1, 0, 4256, 2, 6, 9, 0, 1, "127"),
+                snapshotEvent(11, 1, 0, 4257, 2, 6, 9, 0, 1, "127"));
+        assertCorrelationFailure(snapshotProvenance, "s3k-snapshot-provenance.jsonl",
+                "S3K raw snapshot source/PC continuity changed");
+    }
+
+    @Test
+    void rejectsCutoffChipAndSnapshotPayloadsNotProvenByObservedEvents() throws Exception {
+        String chipCoordinate = fullFrontierPrefix().replace(
+                "\"coordinate\":13,\"native_ordinal\":13,\"event_kind\":4",
+                "\"coordinate\":12,\"native_ordinal\":13,\"event_kind\":4");
+        assertCorrelationFailure(chipCoordinate, "s3k-chip-coordinate-mismatch.jsonl",
+                "S3K cutoff chip differs from its observed event");
+
+        String chipValue = fullFrontierPrefix().replace(
+                "\"event_kind\":4,\"subject\":0,\"value\":68",
+                "\"event_kind\":4,\"subject\":0,\"value\":69");
+        assertCorrelationFailure(chipValue, "s3k-chip-value-mismatch.jsonl",
+                "S3K cutoff chip differs from its observed event");
+
+        assertCorrelationFailure(fullFrontierPrefix(0, true, "7f"),
+                "s3k-chip-owner-mismatch.jsonl",
+                "S3K cutoff chip differs from its observed event");
+        assertCorrelationFailure(fullFrontierPrefix(0, false, "7e"),
+                "s3k-snapshot-mismatch.jsonl",
+                "S3K cutoff snapshot differs from its observed event sequence");
     }
 
     @Test
@@ -204,7 +323,9 @@ class TestS3kCompleteRunReferenceProducer {
                 + "\"first_row\":810,\"exclusive_end\":434417,\"state_start\":7168,\"state_exclusive_end\":8192}\n";
         String baseline = boundary("baseline", "\"row\":810,", state, "[]");
         String frame = "{\"type\":\"frame\",\"row\":810,\"lag\":true,\"state_hex\":\""
-                + state + "\",\"events\":[" + psgEvent() + "]}\n";
+                + state + "\",\"events\":[" + beginEvent(0, 1, 0, 3, 0, 40, 9)
+                + "," + psgEvent(1, 1, 3, 56)
+                + "," + endEvent(2, 1, 0, 3, 60, 12) + "]}\n";
         String cutoff = boundary("cutoff", "\"exclusive_end\":811,", state, "[]");
         return metadata + baseline + frame + cutoff + (trailing ? "{}\n" : "");
     }
@@ -222,6 +343,11 @@ class TestS3kCompleteRunReferenceProducer {
     }
 
     private static String fullFrontierPrefix(int coordinateOffset) {
+        return fullFrontierPrefix(coordinateOffset, false, "7f");
+    }
+
+    private static String fullFrontierPrefix(int coordinateOffset, boolean chipOwnedBySecond,
+            String snapshotHex) {
         String state = "00".repeat(1024);
         String metadata = "{\"type\":\"metadata\",\"schema\":\"openggf.s3k-complete-run-audio-raw.v1\","
                 + "\"rom_sha1\":\"cfbf98c36c776677290a872547ac47c53d2761d6\","
@@ -232,26 +358,32 @@ class TestS3kCompleteRunReferenceProducer {
         String events = beginEvent(0, 1, 0, 9, 0, 4256, 9)
                 + "," + beginEvent(1, 2, 1, 7, 1, 4300, 10)
                 + "," + beginEvent(2, 3, 2, 7, 2, 4300, 10)
-                + "," + endEvent(3, 2, 1, 7, 4357, 12)
+                + "," + endEvent(3, 2, 1, 7, 4360, 13)
                 + "," + transitionEvent(4, 3, 1, 7, 1, 4360, 13)
                 + "," + endEvent(5, 3, 1, 7, 4357, 12)
                 + "," + beginEvent(6, 4, 1, 7, 1, 4300, 10)
                 + "," + endEvent(7, 4, 1, 7, 4357, 12)
                 + "," + beginEvent(8, 5, 1, 7, 1, 4300, 10)
                 + "," + endEvent(9, 5, 1, 7, 4357, 12)
-                + "," + psgEvent(10, 1, 9, 4256);
+                + "," + snapshotEvent(10, 1, 0, 4256, 2, 5, 9, 0, 0, "0")
+                + "," + snapshotEvent(11, 1, 0, 4256, 2, 6, 9, 0, 1, "127")
+                + "," + snapshotEvent(12, 1, 0, 4256, 2, 7, 9, 1, 0, "0")
+                + "," + psgEvent(13, 1, 9, 4256);
         String frame = "{\"type\":\"frame\",\"row\":810,\"lag\":false,\"state_hex\":\""
                 + state + "\",\"events\":[" + events + "]}\n";
+        String chip = "{\"coordinate\":" + (13 + coordinateOffset)
+                + ",\"native_ordinal\":13,\"event_kind\":4,\"subject\":0,"
+                + "\"value\":68,\"pc\":4256,\"source_cpu\":1,\"data\":true,"
+                + "\"port\":0,\"register\":0}";
         String active = frontierService(1, 0, 9, 0, coordinateOffset, 0, 4256, 9,
                 false, 0, 0, 0, 0,
-                "[{\"coordinate\":" + (10 + coordinateOffset)
-                        + ",\"native_ordinal\":10,\"event_kind\":4,\"subject\":0,"
-                        + "\"value\":68,\"pc\":4256,\"source_cpu\":1,\"data\":true,"
-                        + "\"port\":0,\"register\":0}]",
-                "[{\"range_id\":2,\"source_cpu\":1,\"pc\":4256,\"bytes_hex\":\"7f\"}]", "[]");
+                chipOwnedBySecond ? "[]" : "[" + chip + "]",
+                "[{\"range_id\":2,\"source_cpu\":1,\"pc\":4256,\"bytes_hex\":\""
+                        + snapshotHex + "\"}]", "[]");
         List<String> pending = List.of(
                 frontierService(2, 1, 7, 1, 1 + coordinateOffset, 3 + coordinateOffset, 4300, 10,
-                        true, 4357, 12, 1, 1, "[]", "[]", "[]"),
+                        true, 4360, 13, 1, 1, chipOwnedBySecond ? "[" + chip + "]" : "[]",
+                        "[]", "[]"),
                 frontierService(3, 2, 7, 2, 2 + coordinateOffset, 5 + coordinateOffset, 4300, 10,
                         true, 4357, 12, 1, 1, "[]", "[]", ancestry(coordinateOffset)),
                 frontierService(4, 1, 7, 1, 6 + coordinateOffset, 7 + coordinateOffset, 4300, 10,
@@ -263,16 +395,47 @@ class TestS3kCompleteRunReferenceProducer {
     }
 
     private static String tokenReusePrefix() {
-        String original = fullFrontierPrefix(1);
+        String original = fullFrontierPrefix(2);
         int frameStart = original.indexOf("{\"type\":\"frame\"");
         String prefix = original.substring(0, frameStart);
         String reused = "{\"type\":\"frame\",\"row\":810,\"lag\":false,\"state_hex\":\""
                 + "00".repeat(1024) + "\",\"events\":["
-                + transitionEvent(0, 3, 2, 7, 2, 4360, 13) + "]}\n";
+                + beginEvent(0, 1, 0, 7, 0, 4300, 10) + ","
+                + endEvent(1, 1, 0, 7, 4357, 12) + "]}\n";
         String finalFrame = original.substring(frameStart)
                 .replaceFirst("\\\"row\\\":810", "\\\"row\\\":811")
                 .replaceFirst("\\\"exclusive_end\\\":811", "\\\"exclusive_end\\\":812");
         return prefix + reused + finalFrame;
+    }
+
+    private static String pendingTokenReusePrefix() {
+        String base = rawPrefix(false);
+        int frameStart = base.indexOf("{\"type\":\"frame\"");
+        String prefix = base.substring(0, frameStart);
+        String state = "00".repeat(1024);
+        String first = "{\"type\":\"frame\",\"row\":810,\"lag\":false,\"state_hex\":\""
+                + state + "\",\"events\":[" + beginEvent(0, 1, 0, 9, 0, 4256, 9) + ","
+                + beginEvent(1, 2, 1, 7, 1, 4300, 10) + ","
+                + endEvent(2, 2, 1, 7, 4357, 12) + "]}\n";
+        String second = "{\"type\":\"frame\",\"row\":811,\"lag\":false,\"state_hex\":\""
+                + state + "\",\"events\":[" + beginEvent(0, 2, 1, 7, 1, 4300, 10) + ","
+                + endEvent(1, 2, 1, 7, 4357, 12) + "]}\n";
+        String active = frontierService(1, 0, 9, 0, 0, 0, 4256, 9,
+                false, 0, 0, 0, 0, "[]", "[]", "[]");
+        String firstPending = frontierService(2, 1, 7, 1, 1, 2, 4300, 10,
+                true, 4357, 12, 1, 1, "[]", "[]", "[]");
+        String secondPending = frontierService(2, 1, 7, 1, 3, 4, 4300, 10,
+                true, 4357, 12, 1, 1, "[]", "[]", "[]");
+        String cutoff = boundaryWithPending(state, active, firstPending + "," + secondPending)
+                .replace("\"exclusive_end\":811", "\"exclusive_end\":812");
+        return prefix + first + second + cutoff;
+    }
+
+    private static String withFrameEvents(String prefix, String events) {
+        int marker = prefix.indexOf("\"events\":[");
+        int start = marker + "\"events\":[".length();
+        int end = prefix.indexOf("]}\n", start);
+        return prefix.substring(0, start) + events + prefix.substring(end);
     }
 
     private static String beginEvent(int ordinal, int token, int parent, int serviceKind,
@@ -302,6 +465,16 @@ class TestS3kCompleteRunReferenceProducer {
                 + "\"value\":" + value + ",\"flags\":0,\"reserved\":0,\"payload\":\"0\"}";
     }
 
+    private static String snapshotEvent(int ordinal, int token, int parent, int pc, int subject,
+            int kind, int serviceKind, int offset, int payloadLength, String payload) {
+        return "{\"ordinal\":" + ordinal + ",\"service_token\":" + token
+                + ",\"parent_token\":" + parent + ",\"pc\":" + pc + ",\"subject\":" + subject
+                + ",\"offset\":" + offset + ",\"kind\":" + kind + ",\"service_kind\":"
+                + serviceKind + ",\"depth\":0,\"source_cpu\":1,\"payload_length\":"
+                + payloadLength + ",\"value\":0,\"flags\":0,\"reserved\":0,\"payload\":\""
+                + payload + "\"}";
+    }
+
     private static String frontierService(int token, int parent, int kind, int depth,
             int beginCoordinate, int endCoordinate, int beginPc, int beginHook, boolean complete,
             int endPc, int endHook, int currentParent, int currentDepth, String chips,
@@ -325,15 +498,24 @@ class TestS3kCompleteRunReferenceProducer {
 
     private static CompleteRunAudioTrace.FrontierService completedService(int token, int parent,
             int depth, int beginOrdinal, int endOrdinal, int currentParent, int currentDepth,
-            List<CompleteRunAudioTrace.NativeAncestryTransition> transitions) {
+            int endPc, int endHook, List<CompleteRunAudioTrace.NativeAncestryTransition> transitions) {
         return new CompleteRunAudioTrace.FrontierService(token, parent, depth, "DpcmIteration",
                 CompleteRunAudioTrace.FrontierServiceState.COMPLETED, 810, beginOrdinal, 4300, 10,
-                "Z80", 810, (long) endOrdinal, 4357, 12, List.of(), List.of(), currentParent,
+                "Z80", 810, (long) endOrdinal, endPc, endHook, List.of(), List.of(), currentParent,
                 currentDepth, transitions);
     }
 
     private static String sha256(byte[] bytes) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+    }
+
+    private void assertCorrelationFailure(String contents, String filename, String message) throws Exception {
+        Path raw = Files.writeString(temporary.resolve(filename), contents);
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> new S3kCompleteRunReferenceProjector()
+                        .projectPrefixForTesting(raw.toAbsolutePath(), rom()));
+        assertEquals(message, failure.getMessage());
+        assertNull(failure.getCause());
     }
 
     private static String boundaryWithPending(String state, String active, String pending) {
@@ -350,10 +532,4 @@ class TestS3kCompleteRunReferenceProducer {
                 + active + ",\"pending_descendants\":[]}\n";
     }
 
-    private static String psgEvent() {
-        return "{\"ordinal\":0,\"service_token\":1,\"parent_token\":0,\"pc\":56,"
-                + "\"subject\":0,\"offset\":0,\"kind\":4,\"service_kind\":3,\"depth\":0,"
-                + "\"source_cpu\":1,\"payload_length\":0,\"value\":68,\"flags\":0,"
-                + "\"reserved\":0,\"payload\":\"0\"}";
-    }
 }

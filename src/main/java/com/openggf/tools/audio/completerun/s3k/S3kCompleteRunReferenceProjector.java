@@ -3,10 +3,13 @@ package com.openggf.tools.audio.completerun.s3k;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace;
 import com.openggf.tools.audio.completerun.CompleteRunAudioCaptureStore;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
@@ -95,9 +98,11 @@ public final class S3kCompleteRunReferenceProjector {
         private int ymPort0Latch;
         private int ymPort1Latch;
         private long nextEventCoordinate;
-        private final Map<Integer, ObservedEvent> begins = new LinkedHashMap<>();
-        private final Map<Integer, ObservedEvent> ends = new LinkedHashMap<>();
-        private final Map<Integer, List<ObservedTransition>> transitions = new LinkedHashMap<>();
+        private final List<ObservedService> liveServices = new ArrayList<>();
+        private final List<ObservedService> pendingServices = new ArrayList<>();
+        private final Map<Long, ObservedService> servicesByBegin = new LinkedHashMap<>();
+        private ObservedService resetService;
+        private int nextToken;
 
         private Transaction(S3kCompleteRunAssetCatalog catalog) { this(catalog, null, null); }
 
@@ -124,20 +129,29 @@ public final class S3kCompleteRunReferenceProjector {
 
         @Override public void frame(S3kCompleteRunReferenceRawAdapter.RawFrame value) throws IOException {
             requireStarted();
-            begins.clear();
-            ends.clear();
-            transitions.clear();
-            for (var event : value.events()) {
+            List<CompleteRunAudioTrace.ChipEvent> chips = new ArrayList<>();
+            List<ObservedService> completed = new ArrayList<>();
+            nextToken = 1;
+            for (ObservedService active : liveServices) {
+                while (nextToken == active.token()) nextToken = nextToken(nextToken);
+            }
+            for (int index = 0; index < value.events().size(); index++) {
+                var event = value.events().get(index);
                 long coordinate = Math.addExact(nextEventCoordinate, event.ordinal());
                 ObservedEvent observed = new ObservedEvent(value.row(), coordinate, event);
-                if (event.kind() == 1) begins.put(event.serviceToken(), observed);
-                else if (event.kind() == 2) ends.put(event.serviceToken(), observed);
-                else if (event.kind() == 11) transitions.computeIfAbsent(event.serviceToken(),
-                        ignored -> new ArrayList<>()).add(
-                                new ObservedTransition(value.row(), coordinate, event));
+                observe(observed, value.events(), index, chips, completed);
             }
+            if (resetService != null || liveServices.stream().anyMatch(service -> service.snapshot != null)) {
+                throw new IllegalArgumentException("S3K raw snapshot crosses a frame boundary");
+            }
+            pendingServices.addAll(completed);
+            pendingServices.removeIf(service -> liveServices.stream()
+                    .noneMatch(active -> active.token() == service.rootToken));
+            servicesByBegin.clear();
+            java.util.stream.Stream.concat(liveServices.stream(), pendingServices.stream())
+                    .forEach(service -> servicesByBegin.put(service.begin.coordinate(), service));
+            completed.forEach(service -> servicesByBegin.putIfAbsent(service.begin.coordinate(), service));
             nextEventCoordinate = Math.addExact(nextEventCoordinate, value.events().size());
-            List<CompleteRunAudioTrace.ChipEvent> chips = chips(value.events());
             var state = normalize(value.driverState());
             var service = new CompleteRunAudioTrace.DriverService(0, "native-observation",
                     CompleteRunAudioTrace.ServiceCompletion.COMPLETED, List.of(), state, chips);
@@ -151,18 +165,22 @@ public final class S3kCompleteRunReferenceProjector {
                     .map(this::frontierService).toList();
             List<CompleteRunAudioTrace.FrontierService> pending = value.pendingDescendants().stream()
                     .map(this::frontierService).toList();
-            List<CompleteRunAudioTrace.FrontierOwnedChip> chips = java.util.stream.Stream
-                    .concat(active.stream(), pending.stream())
-                    .flatMap(service -> service.chipEvents().stream()
-                            .map(event -> new CompleteRunAudioTrace.FrontierOwnedChip(service.token(), event)))
-                    .sorted(Comparator.comparingLong(valueChip -> valueChip.event().coordinate())).toList();
+            List<CompleteRunAudioTrace.FrontierService> services = java.util.stream.Stream
+                    .concat(active.stream(), pending.stream()).toList();
+            List<CompleteRunAudioTrace.FrontierOwnedChip> chips = new ArrayList<>();
             List<CompleteRunAudioTrace.FrontierOwnedSnapshot> snapshots = new ArrayList<>();
-            for (var service : java.util.stream.Stream.concat(active.stream(), pending.stream()).toList()) {
-                for (int index = 0; index < service.snapshots().size(); index++) {
+            for (int serviceIndex = 0; serviceIndex < services.size(); serviceIndex++) {
+                var service = services.get(serviceIndex);
+                for (var event : service.chipEvents()) {
+                    chips.add(new CompleteRunAudioTrace.FrontierOwnedChip(
+                            service.token(), serviceIndex, event));
+                }
+                for (var snapshot : service.snapshots()) {
                     snapshots.add(new CompleteRunAudioTrace.FrontierOwnedSnapshot(
-                            service.token(), index, service.snapshots().get(index)));
+                            service.token(), serviceIndex, snapshot));
                 }
             }
+            chips.sort(Comparator.comparingLong(valueChip -> valueChip.event().coordinate()));
             append(CompleteRunAudioTrace.CutoffFrontier.fromNative(active, pending, chips, snapshots,
                     value.ymPort0Latch(), value.ymPort1Latch(), value.nativeArmEpoch(), value.nativeArmed(),
                     normalize(value.driverState()), sha256(value.driverState())));
@@ -199,36 +217,29 @@ public final class S3kCompleteRunReferenceProjector {
             return result;
         }
 
-        private List<CompleteRunAudioTrace.ChipEvent> chips(
-                List<S3kCompleteRunReferenceRawAdapter.RawEvent> events) {
-            List<CompleteRunAudioTrace.ChipEvent> result = new ArrayList<>();
-            for (var event : events) {
-                if (event.kind() == 3) {
-                    int port = event.subject() >>> 1;
-                    if ((event.subject() & 1) == 0) {
-                        if (port == 0) ymPort0Latch = event.value(); else ymPort1Latch = event.value();
-                    } else {
-                        int register = port == 0 ? ymPort0Latch : ymPort1Latch;
-                        result.add(new CompleteRunAudioTrace.YmWrite(result.size(), port, register, event.value()));
-                    }
-                } else if (event.kind() == 4) {
-                    result.add(new CompleteRunAudioTrace.PsgWrite(result.size(), event.value()));
-                }
-            }
-            return List.copyOf(result);
-        }
-
         private void requireStarted() {
             if (!started) throw new IllegalStateException("S3K projection transaction is not open");
         }
 
         private CompleteRunAudioTrace.FrontierService frontierService(
                 S3kCompleteRunReferenceRawAdapter.RawService raw) {
-            ObservedEvent begin = requireEvent(begins.get(raw.token()), "S3K cutoff service begin");
+            ObservedService serviceEvidence = servicesByBegin.get(raw.beginCoordinate());
+            if (serviceEvidence == null || serviceEvidence.token() != raw.token()) {
+                throw new IllegalArgumentException("S3K cutoff service begin was not observed in the raw rows");
+            }
+            ObservedEvent begin = serviceEvidence.begin;
             ObservedEvent end = raw.complete() || raw.cancelled()
-                    ? requireEvent(ends.get(raw.token()), "S3K cutoff service end") : null;
+                    ? requireEvent(serviceEvidence.end, "S3K cutoff service end") : null;
+            boolean observedComplete = serviceEvidence.end != null;
+            if (observedComplete != (raw.complete() || raw.cancelled())
+                    || (!observedComplete && !liveServices.contains(serviceEvidence))) {
+                throw new IllegalArgumentException(
+                        "S3K cutoff service lifecycle differs from observed events");
+            }
             requireBoundaryEvent(begin, raw, true);
             if (end != null) requireBoundaryEvent(end, raw, false);
+            requireChipEvidence(serviceEvidence, raw.chips());
+            requireSnapshotEvidence(serviceEvidence, raw.snapshots());
             List<CompleteRunAudioTrace.FrontierChipEvent> chips = raw.chips().stream().map(chip ->
                     new CompleteRunAudioTrace.FrontierChipEvent(chip.coordinate(), chip.nativeOrdinal(),
                             cpu(chip.sourceCpu()), Math.toIntExact(chip.pc()), chip.eventKind(), chip.subject(),
@@ -237,7 +248,7 @@ public final class S3kCompleteRunReferenceProjector {
             List<CompleteRunAudioTrace.FrontierSnapshot> snapshots = raw.snapshots().stream().map(snapshot ->
                     new CompleteRunAudioTrace.FrontierSnapshot(snapshot.rangeId(), cpu(snapshot.sourceCpu()),
                             Math.toIntExact(snapshot.pc()), unsigned(snapshot.bytes()))).toList();
-            List<ObservedTransition> observedTransitions = transitions.getOrDefault(raw.token(), List.of());
+            List<ObservedTransition> observedTransitions = serviceEvidence.transitions;
             if (observedTransitions.size() != raw.ancestryTransitions().size()) {
                 throw new IllegalArgumentException("S3K cutoff ancestry transition coordinates are incomplete");
             }
@@ -248,6 +259,8 @@ public final class S3kCompleteRunReferenceProjector {
                 var event = observed.event();
                 if (event.ordinal() != transition.nativeOrdinal()
                         || observed.coordinate() != transition.coordinate()
+                        || observed.previousParent() != transition.previousParentToken()
+                        || observed.previousDepth() != transition.previousDepth()
                         || event.serviceToken() != raw.token()
                         || event.serviceKind() != raw.kind()
                         || event.parentToken() != transition.currentParentToken()
@@ -279,6 +292,386 @@ public final class S3kCompleteRunReferenceProjector {
         private static ObservedEvent requireEvent(ObservedEvent value, String label) {
             if (value == null) throw new IllegalArgumentException(label + " was not observed in the raw rows");
             return value;
+        }
+
+        private void observe(ObservedEvent observed,
+                List<S3kCompleteRunReferenceRawAdapter.RawEvent> events, int index,
+                List<CompleteRunAudioTrace.ChipEvent> chips, List<ObservedService> completed) {
+            var event = observed.event();
+            switch (event.kind()) {
+                case 1 -> beginService(observed, false);
+                case 2 -> endService(observed, false, events, index, completed);
+                case 3 -> observeYm(observed, chips);
+                case 4 -> observePsg(observed, chips);
+                case 5, 6, 7 -> observeSnapshot(observed, events, index);
+                case 8 -> {
+                    ymPort0Latch = 0;
+                    ymPort1Latch = 0;
+                    beginService(observed, true);
+                }
+                case 9 -> endService(observed, true, events, index, completed);
+                case 10 -> observeMarker(event);
+                case 11 -> observeTransition(observed, events, index, completed);
+                default -> throw new IllegalArgumentException("unknown S3K native event kind");
+            }
+        }
+
+        private void beginService(ObservedEvent observed, boolean reset) {
+            var event = observed.event();
+            requireZeroPayload(event, reset ? "S3K raw reset begin shape changed"
+                    : "S3K raw service begin shape changed");
+            if (event.serviceToken() == 0 || event.serviceToken() != availableToken()
+                    || ((event.depth() == 0) != (event.parentToken() == 0))) {
+                throw new IllegalArgumentException("S3K raw service token allocation changed");
+            }
+            nextToken = nextToken(event.serviceToken());
+            if (liveServices.stream().anyMatch(service -> service.token() == event.serviceToken())
+                    || resetService != null) {
+                throw new IllegalArgumentException("S3K raw service begin identity changed");
+            }
+            int expectedParent = liveServices.isEmpty() ? 0 : liveServices.getLast().token();
+            if (!reset && (event.parentToken() != expectedParent || event.depth() != liveServices.size())) {
+                throw new IllegalArgumentException(
+                        "S3K raw service begin is not nested under innermost service");
+            }
+            kind(event.serviceKind());
+            if (reset) {
+                if (event.sourceCpu() != 3 || event.pc() != 0 || event.depth() != 0
+                        || event.parentToken() != 0 || event.offset() != 0
+                        || event.subject() != liveServices.size() || event.flags() > 1) {
+                    throw new IllegalArgumentException("S3K raw reset begin shape changed");
+                }
+            } else if (event.subject() == 0 || event.flags() != 0) {
+                throw new IllegalArgumentException("S3K raw service begin shape changed");
+            }
+            ObservedService service = new ObservedService(observed,
+                    liveServices.isEmpty() ? event.serviceToken() : liveServices.getFirst().rootToken);
+            if (reset) resetService = service;
+            else liveServices.add(service);
+        }
+
+        private void endService(ObservedEvent observed, boolean reset,
+                List<S3kCompleteRunReferenceRawAdapter.RawEvent> events, int index,
+                List<ObservedService> completed) {
+            var event = observed.event();
+            requireZeroPayload(event, reset ? "S3K raw reset end shape changed"
+                    : "S3K raw service end shape changed");
+            boolean promotes = !reset && index + 1 < events.size() && events.get(index + 1).kind() == 11;
+            ObservedService service;
+            if (reset) {
+                service = requireOwned(event);
+            } else if (promotes) {
+                if (liveServices.size() < 2) {
+                    throw new IllegalArgumentException("S3K raw promotion has no direct parent");
+                }
+                service = liveServices.get(liveServices.size() - 2);
+                requireIdentity(event, service);
+            } else {
+                service = requireOwned(event);
+            }
+            if (service.snapshot != null) {
+                throw new IllegalArgumentException("S3K raw service ended during a snapshot");
+            }
+            if (reset) {
+                if (!liveServices.isEmpty()) {
+                    throw new IllegalArgumentException("S3K raw reset ended before service cancellations");
+                }
+                if (event.sourceCpu() != 3 || event.pc() != 0 || event.subject() != 0
+                        || event.flags() != service.begin.event().flags()) {
+                    throw new IllegalArgumentException("S3K raw reset end shape changed");
+                }
+            } else {
+                boolean cancelled = (event.flags() & 2) != 0;
+                if (cancelled != (resetService != null)) {
+                    throw new IllegalArgumentException("S3K raw service cancellation/reset ownership changed");
+                }
+                if (cancelled ? event.flags() != 2 || event.subject() != 0
+                        || event.sourceCpu() != 3 || event.pc() != 0
+                        : event.flags() != 0 || event.subject() == 0) {
+                    throw new IllegalArgumentException("S3K raw service end shape changed");
+                }
+            }
+            service.end = observed;
+            service.sealEvidence();
+            if (reset) resetService = null;
+            else liveServices.remove(service);
+            completed.add(service);
+        }
+
+        private void observeYm(ObservedEvent observed, List<CompleteRunAudioTrace.ChipEvent> chips) {
+            var event = observed.event();
+            ObservedService service = requireOwned(event);
+            requireChipSource(event, service);
+            if (event.subject() < 0 || event.subject() > 3 || event.offset() != 0
+                    || event.payloadLength() != 0 || event.payload().signum() != 0
+                    || event.flags() != 0) {
+                throw new IllegalArgumentException("S3K raw YM event shape changed");
+            }
+            int port = event.subject() < 2 ? 0 : 1;
+            int register = port == 0 ? ymPort0Latch : ymPort1Latch;
+            boolean data = event.subject() == 1 || event.subject() == 3;
+            service.chips.addChip(observed.coordinate(), event.ordinal(), event.kind(), event.subject(),
+                    event.value(), event.pc(), event.sourceCpu(), data, port, register);
+            if (data) {
+                chips.add(new CompleteRunAudioTrace.YmWrite(chips.size(), port, register, event.value()));
+            } else if (port == 0) {
+                ymPort0Latch = event.value();
+            } else {
+                ymPort1Latch = event.value();
+            }
+        }
+
+        private void observePsg(ObservedEvent observed, List<CompleteRunAudioTrace.ChipEvent> chips) {
+            var event = observed.event();
+            ObservedService service = requireOwned(event);
+            requireChipSource(event, service);
+            if (event.subject() != 0 || event.offset() != 0 || event.payloadLength() != 0
+                    || event.payload().signum() != 0 || event.flags() != 0) {
+                throw new IllegalArgumentException("S3K raw PSG event shape changed");
+            }
+            service.chips.addChip(observed.coordinate(), event.ordinal(), event.kind(), 0,
+                    event.value(), event.pc(), event.sourceCpu(), true, 0, 0);
+            chips.add(new CompleteRunAudioTrace.PsgWrite(chips.size(), event.value()));
+        }
+
+        private void observeSnapshot(ObservedEvent observed,
+                List<S3kCompleteRunReferenceRawAdapter.RawEvent> events, int index) {
+            var event = observed.event();
+            ObservedService service = snapshotOwner(event, events, index);
+            int length = switch (event.subject()) {
+                case 1 -> 8192;
+                case 2 -> 1;
+                default -> throw new IllegalArgumentException("S3K raw snapshot range is unknown");
+            };
+            if (event.flags() != 0 || event.value() != 0) {
+                throw new IllegalArgumentException("S3K raw snapshot event shape changed");
+            }
+            if (event.kind() == 5) {
+                if (service.snapshot != null || event.offset() != 0 || event.payloadLength() != 0
+                        || event.payload().signum() != 0) {
+                    throw new IllegalArgumentException("S3K raw snapshot begin shape changed");
+                }
+                service.snapshot = new SnapshotAssembly(event.subject(), length,
+                        event.sourceCpu(), event.pc());
+            } else if (event.kind() == 6) {
+                SnapshotAssembly snapshot = service.snapshot;
+                if (snapshot == null || snapshot.range != event.subject()
+                        || event.offset() != snapshot.bytes.size() || event.payloadLength() < 1
+                        || event.payloadLength() > 8
+                        || snapshot.bytes.size() + event.payloadLength() > snapshot.length
+                        || event.sourceCpu() != snapshot.sourceCpu || event.pc() != snapshot.pc) {
+                    if (snapshot != null && (event.sourceCpu() != snapshot.sourceCpu
+                            || event.pc() != snapshot.pc)) {
+                        throw new IllegalArgumentException(
+                                "S3K raw snapshot source/PC continuity changed");
+                    }
+                    throw new IllegalArgumentException("S3K raw snapshot chunk shape changed");
+                }
+                writeLittleEndian(snapshot.bytes, event.payload(), event.payloadLength());
+            } else {
+                SnapshotAssembly snapshot = service.snapshot;
+                if (snapshot == null || snapshot.range != event.subject() || event.offset() != snapshot.length
+                        || snapshot.bytes.size() != snapshot.length || event.payloadLength() != 0
+                        || event.payload().signum() != 0 || event.sourceCpu() != snapshot.sourceCpu
+                        || event.pc() != snapshot.pc) {
+                    throw new IllegalArgumentException("S3K raw snapshot end shape changed");
+                }
+                service.snapshots.addSnapshot(snapshot.range, snapshot.sourceCpu,
+                        snapshot.pc, snapshot.bytes.toByteArray());
+                service.snapshot = null;
+            }
+        }
+
+        private void observeTransition(ObservedEvent observed,
+                List<S3kCompleteRunReferenceRawAdapter.RawEvent> events, int index,
+                List<ObservedService> completed) {
+            var event = observed.event();
+            requireZeroPayload(event, "S3K raw ancestry transition shape changed");
+            if (event.flags() != 0 || event.subject() == 0
+                    || ((event.depth() == 0) != (event.parentToken() == 0))) {
+                throw new IllegalArgumentException("S3K raw ancestry transition shape changed");
+            }
+            if (index == 0 || events.get(index - 1).kind() != 2 || liveServices.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "S3K raw ancestry transition is not adjacent to parent completion");
+            }
+            var ended = events.get(index - 1);
+            ObservedService service = liveServices.getLast();
+            int expectedParent = liveServices.size() < 2 ? 0
+                    : liveServices.get(liveServices.size() - 2).token();
+            int expectedDepth = liveServices.size() - 1;
+            if (service.token() != event.serviceToken() || service.kind != event.serviceKind()
+                    || ended.serviceToken() != service.currentParent
+                    || ended.subject() != event.subject() || ended.pc() != event.pc()
+                    || ended.sourceCpu() != event.sourceCpu()
+                    || event.parentToken() != expectedParent || event.depth() != expectedDepth) {
+                throw new IllegalArgumentException("S3K raw ancestry transition ownership changed");
+            }
+            int oldRoot = service.rootToken;
+            service.transitions.add(new ObservedTransition(observed.frame(), observed.coordinate(),
+                    service.currentParent, service.currentDepth, event));
+            service.currentParent = event.parentToken();
+            service.currentDepth = event.depth();
+            if (event.parentToken() == 0) {
+                service.rootToken = service.token();
+                reassignDescendantRoots(service, oldRoot, completed);
+            }
+        }
+
+        private void observeMarker(S3kCompleteRunReferenceRawAdapter.RawEvent event) {
+            if (event.subject() == 0 || event.offset() != 0 || event.flags() != 0
+                    || event.payloadLength() != 0 || event.payload().signum() != 0
+                    || event.value() < 0 || event.value() > 4) {
+                throw new IllegalArgumentException("S3K raw marker event shape changed");
+            }
+            if (event.serviceToken() == 0) {
+                if (event.parentToken() != 0 || event.serviceKind() != 0 || event.depth() != 0) {
+                    throw new IllegalArgumentException("S3K raw marker event ownership changed");
+                }
+            } else {
+                if (event.value() == 2 && liveServices.size() >= 2
+                        && liveServices.get(liveServices.size() - 2).token() == event.serviceToken()) {
+                    requireIdentity(event, liveServices.get(liveServices.size() - 2));
+                } else {
+                    requireOwned(event);
+                }
+            }
+        }
+
+        private ObservedService requireOwned(S3kCompleteRunReferenceRawAdapter.RawEvent event) {
+            if (resetService != null && resetService.token() == event.serviceToken()
+                    && !liveServices.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "S3K raw reset event precedes service cancellations");
+            }
+            ObservedService service = resetService != null && resetService.token() == event.serviceToken()
+                    ? resetService : liveServices.isEmpty() ? null : liveServices.getLast();
+            if (service == null || service.token() != event.serviceToken()) {
+                throw new IllegalArgumentException(
+                        "S3K raw event is not owned by innermost service");
+            }
+            requireIdentity(event, service);
+            return service;
+        }
+
+        private static void requireIdentity(S3kCompleteRunReferenceRawAdapter.RawEvent event,
+                ObservedService service) {
+            if (service.kind != event.serviceKind() || service.currentParent != event.parentToken()
+                    || service.currentDepth != event.depth()) {
+                throw new IllegalArgumentException("S3K raw event ownership changed");
+            }
+        }
+
+        private void requireChipSource(S3kCompleteRunReferenceRawAdapter.RawEvent event,
+                ObservedService owner) {
+            if (owner == resetService) {
+                if (event.sourceCpu() != 3 || event.pc() != 0) {
+                    throw new IllegalArgumentException("S3K raw reset chip source/PC changed");
+                }
+            } else if (event.sourceCpu() == 3) {
+                throw new IllegalArgumentException("S3K raw ordinary chip source/PC changed");
+            }
+        }
+
+        private ObservedService snapshotOwner(S3kCompleteRunReferenceRawAdapter.RawEvent event,
+                List<S3kCompleteRunReferenceRawAdapter.RawEvent> events, int index) {
+            if (resetService != null || liveServices.isEmpty()
+                    || liveServices.getLast().token() == event.serviceToken()) return requireOwned(event);
+            if (liveServices.size() < 2
+                    || liveServices.get(liveServices.size() - 2).token() != event.serviceToken()) {
+                throw new IllegalArgumentException("S3K raw event is not owned by innermost service");
+            }
+            ObservedService parent = liveServices.get(liveServices.size() - 2);
+            requireIdentity(event, parent);
+            int at = index;
+            while (at < events.size() && events.get(at).kind() >= 5 && events.get(at).kind() <= 7) {
+                if (events.get(at).serviceToken() != parent.token()) {
+                    throw new IllegalArgumentException("S3K raw promotion snapshot ownership changed");
+                }
+                at++;
+            }
+            if (at + 1 >= events.size() || events.get(at).kind() != 2
+                    || events.get(at).serviceToken() != parent.token() || events.get(at + 1).kind() != 11) {
+                throw new IllegalArgumentException("S3K raw promotion snapshot adjacency changed");
+            }
+            return parent;
+        }
+
+        private static void requireZeroPayload(S3kCompleteRunReferenceRawAdapter.RawEvent event,
+                String message) {
+            if (event.offset() != 0 || event.payloadLength() != 0 || event.payload().signum() != 0
+                    || event.value() != 0) {
+                throw new IllegalArgumentException(message);
+            }
+        }
+
+        private int availableToken() {
+            int candidate = nextToken;
+            for (int attempts = 0; attempts < 65535 && candidate != 0; attempts++) {
+                int proposed = candidate;
+                boolean used = liveServices.stream().anyMatch(service -> service.token() == proposed);
+                if (!used) return candidate;
+                candidate = nextToken(candidate);
+            }
+            return 0;
+        }
+
+        private static int nextToken(int token) { return token == 0xffff ? 0 : token + 1; }
+
+        private void reassignDescendantRoots(ObservedService promoted, int oldRoot,
+                List<ObservedService> completed) {
+            for (ObservedService candidate : java.util.stream.Stream
+                    .concat(pendingServices.stream(), completed.stream()).toList()) {
+                if (candidate.rootToken != oldRoot) continue;
+                int parent = candidate.begin.event().parentToken();
+                for (int steps = 0; parent != 0 && steps < 8; steps++) {
+                    if (parent == promoted.token()) {
+                        candidate.rootToken = promoted.token();
+                        break;
+                    }
+                    ObservedService ancestor = null;
+                    for (ObservedService possible : java.util.stream.Stream
+                            .concat(pendingServices.stream(), completed.stream()).toList()) {
+                        if (possible.token() == parent
+                                && possible.begin.coordinate() < candidate.begin.coordinate()
+                                && (ancestor == null || possible.begin.coordinate() > ancestor.begin.coordinate())) {
+                            ancestor = possible;
+                        }
+                    }
+                    if (ancestor == null) break;
+                    parent = ancestor.begin.event().parentToken();
+                }
+            }
+        }
+
+        private static void writeLittleEndian(ByteArrayOutputStream output, BigInteger payload, int length) {
+            for (int index = 0; index < length; index++) {
+                output.write(payload.shiftRight(index * 8).byteValue());
+            }
+        }
+
+        private static void requireChipEvidence(ObservedService observed,
+                List<S3kCompleteRunReferenceRawAdapter.RawChip> raw) {
+            EvidenceDigest supplied = new EvidenceDigest((byte) 1);
+            for (var chip : raw) supplied.addChip(chip.coordinate(), chip.nativeOrdinal(), chip.eventKind(),
+                    chip.subject(), chip.value(), chip.pc(), chip.sourceCpu(), chip.data(),
+                    chip.port(), chip.register());
+            if (observed.chips.count != raw.size()
+                    || !Arrays.equals(observed.chips.finish(), supplied.finish())) {
+                throw new IllegalArgumentException("S3K cutoff chip differs from its observed event");
+            }
+        }
+
+        private static void requireSnapshotEvidence(ObservedService observed,
+                List<S3kCompleteRunReferenceRawAdapter.RawSnapshot> raw) {
+            EvidenceDigest supplied = new EvidenceDigest((byte) 2);
+            for (var snapshot : raw) supplied.addSnapshot(snapshot.rangeId(), snapshot.sourceCpu(),
+                    snapshot.pc(), snapshot.bytes());
+            if (observed.snapshots.count != raw.size()
+                    || !Arrays.equals(observed.snapshots.finish(), supplied.finish())) {
+                throw new IllegalArgumentException(
+                        "S3K cutoff snapshot differs from its observed event sequence");
+            }
         }
 
         private static void requireBoundaryEvent(ObservedEvent observed,
@@ -334,7 +727,90 @@ public final class S3kCompleteRunReferenceProjector {
 
         private record ObservedEvent(int frame, long coordinate,
                 S3kCompleteRunReferenceRawAdapter.RawEvent event) { }
-        private record ObservedTransition(int frame, long coordinate,
+        private record ObservedTransition(int frame, long coordinate, int previousParent, int previousDepth,
                 S3kCompleteRunReferenceRawAdapter.RawEvent event) { }
+
+        private static final class ObservedService {
+            private final ObservedEvent begin;
+            private final int kind;
+            private int currentParent;
+            private int currentDepth;
+            private ObservedEvent end;
+            private final List<ObservedTransition> transitions = new ArrayList<>();
+            private final EvidenceDigest chips = new EvidenceDigest((byte) 1);
+            private final EvidenceDigest snapshots = new EvidenceDigest((byte) 2);
+            private SnapshotAssembly snapshot;
+            private int rootToken;
+
+            private ObservedService(ObservedEvent begin, int rootToken) {
+                this.begin = begin;
+                this.kind = begin.event().serviceKind();
+                this.currentParent = begin.event().parentToken();
+                this.currentDepth = begin.event().depth();
+                this.rootToken = rootToken;
+            }
+
+            private int token() { return begin.event().serviceToken(); }
+
+            private void sealEvidence() {
+                chips.finish();
+                snapshots.finish();
+            }
+        }
+
+        private static final class SnapshotAssembly {
+            private final int range;
+            private final int length;
+            private final int sourceCpu;
+            private final long pc;
+            private final ByteArrayOutputStream bytes;
+
+            private SnapshotAssembly(int range, int length, int sourceCpu, long pc) {
+                this.range = range;
+                this.length = length;
+                this.sourceCpu = sourceCpu;
+                this.pc = pc;
+                this.bytes = new ByteArrayOutputStream(length);
+            }
+        }
+
+        private static final class EvidenceDigest {
+            private final MessageDigest digest;
+            private byte[] finished;
+            private int count;
+
+            private EvidenceDigest(byte domain) {
+                try { digest = MessageDigest.getInstance("SHA-256"); }
+                catch (NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); }
+                digest.update(domain);
+            }
+
+            private void addChip(long coordinate, long ordinal, int eventKind, int subject,
+                    int value, long pc, int sourceCpu, boolean data, int port, int register) {
+                requireOpen();
+                integer(coordinate); integer(ordinal); integer(eventKind); integer(subject); integer(value);
+                integer(pc); integer(sourceCpu); integer(data ? 1 : 0); integer(port); integer(register);
+                count++;
+            }
+
+            private void addSnapshot(int range, int sourceCpu, long pc, byte[] bytes) {
+                requireOpen();
+                integer(range); integer(sourceCpu); integer(pc); integer(bytes.length); digest.update(bytes);
+                count++;
+            }
+
+            private byte[] finish() {
+                if (finished == null) finished = digest.digest();
+                return finished.clone();
+            }
+
+            private void requireOpen() {
+                if (finished != null) throw new IllegalStateException("S3K evidence digest is sealed");
+            }
+
+            private void integer(long value) {
+                for (int shift = 56; shift >= 0; shift -= 8) digest.update((byte) (value >>> shift));
+            }
+        }
     }
 }

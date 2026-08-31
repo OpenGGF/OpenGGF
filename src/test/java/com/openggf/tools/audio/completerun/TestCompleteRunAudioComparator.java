@@ -1577,8 +1577,9 @@ class TestCompleteRunAudioComparator {
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 7, 0, 0, "RESET",
                 FIRST_FRAME, 8L, 0, 0, List.of(), List.of());
         FrameNativeDiagnostics diagnostics = new FrameNativeDiagnostics(List.of(ordinary, resetRoot, powerRoot),
-                List.of(new FrontierOwnedChip(1, beforeAddress), new FrontierOwnedChip(1, beforeData),
-                        new FrontierOwnedChip(7, afterData)), List.of(),
+                List.of(new FrontierOwnedChip(1, 0, beforeAddress),
+                        new FrontierOwnedChip(1, 0, beforeData),
+                        new FrontierOwnedChip(7, 1, afterData)), List.of(),
                 List.of(new NativeResetDiagnostic(7, false), new NativeResetDiagnostic(8, true)));
         Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
                 List.of(service(0, List.of(), List.of(new YmWrite(0, 0, 0x2a, 0x7f)), state(1), "driver"),

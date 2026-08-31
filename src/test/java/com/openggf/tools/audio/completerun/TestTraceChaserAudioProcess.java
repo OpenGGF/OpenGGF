@@ -7,9 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -63,10 +70,9 @@ class TestTraceChaserAudioProcess {
     @Test
     void rejectsNonCanonicalOrLinkedInputsBeforeStartingAProcess() throws Exception {
         Fixture fixture = fixture("strict-root");
-        Path linkedManifest = fixture.referenceHome.resolve("linked-manifest.json");
-        Files.createSymbolicLink(linkedManifest, fixture.serviceManifest);
-        Files.delete(fixture.serviceManifest);
-        Files.createSymbolicLink(fixture.serviceManifest, linkedManifest);
+        Path realManifest = fixture.referenceHome.resolve("real-manifest.json");
+        Files.move(fixture.serviceManifest, realManifest);
+        Files.createSymbolicLink(fixture.serviceManifest, realManifest);
         Path output = temporary.resolve("not-started").toAbsolutePath();
 
         assertThrows(IllegalArgumentException.class, () -> new TraceChaserAudioProcess().capture(
@@ -102,6 +108,42 @@ class TestTraceChaserAudioProcess {
         }
     }
 
+    @Test
+    void interruptionWaitsForChildDeathAndStderrDrainBeforeRemovingStaging() throws Exception {
+        Fixture fixture = fixture("interrupted-root");
+        Path output = temporary.resolve("interrupted").toAbsolutePath();
+        DelayedTerminationProcess child = new DelayedTerminationProcess(true);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        AtomicBoolean interruptPreserved = new AtomicBoolean();
+
+        Thread worker = Thread.ofPlatform().start(() -> {
+            try {
+                new TraceChaserAudioProcess(arguments -> child).capture(
+                        fixture.request(output), TraceChaserAudioProcess.Game.S2);
+            } catch (Throwable problem) {
+                failure.set(problem);
+                interruptPreserved.set(Thread.currentThread().isInterrupted());
+            }
+        });
+        assertTrue(child.firstWaitEntered.await(5, java.util.concurrent.TimeUnit.SECONDS));
+        assertTrue(hasStagingDirectory());
+
+        worker.interrupt();
+        worker.join(5_000);
+
+        assertFalse(worker.isAlive(), "capture did not return after interruption");
+        assertTrue(failure.get() instanceof InterruptedException);
+        assertTrue(interruptPreserved.get(), "capture did not restore the interrupt status");
+        assertTrue(java.util.Arrays.stream(failure.get().getSuppressed())
+                .anyMatch(IOException.class::isInstance),
+                "capture did not retain the stderr-drain cleanup failure");
+        assertFalse(child.isAlive(),
+                "capture returned while the TraceChaser child was still alive");
+        assertTrue(child.stderrClosed.get(), "capture returned before the stderr reader drained");
+        assertFalse(hasStagingDirectory(), "capture returned before staging cleanup completed");
+        assertFalse(Files.exists(output));
+    }
+
     private Fixture fixture(String directory) throws IOException {
         Path referenceHome = Files.createDirectories(temporary.resolve(directory)).toAbsolutePath();
         Path tool = Files.createDirectories(referenceHome.resolve("bizhawk-headless"));
@@ -127,11 +169,78 @@ class TestTraceChaserAudioProcess {
                 rom, movie, runManifest);
     }
 
+    private boolean hasStagingDirectory() {
+        try (var entries = Files.list(temporary)) {
+            return entries.anyMatch(path -> path.getFileName().toString().startsWith(".audio-reference-"));
+        } catch (IOException failure) {
+            throw new IllegalStateException(failure);
+        }
+    }
+
     private record Fixture(Path referenceHome, Path launcher, Path serviceManifest,
             Path capability, Path argvLog, Path rom, Path movie, Path runManifest) {
         CompleteRunAudioProducer.Request request(Path output) {
             return new CompleteRunAudioProducer.Request(ProducerKind.REFERENCE, "profile",
                     rom, movie, runManifest, referenceHome, output);
         }
+    }
+
+    private static final class DelayedTerminationProcess extends Process {
+        private final CountDownLatch firstWaitEntered = new CountDownLatch(1);
+        private final PipedInputStream stderr = new PipedInputStream();
+        private final PipedOutputStream stderrWriter;
+        private final CountDownLatch terminated = new CountDownLatch(1);
+        private final AtomicBoolean stderrClosed = new AtomicBoolean();
+        private final boolean failStderr;
+        private int waits;
+        private volatile boolean alive = true;
+
+        private DelayedTerminationProcess(boolean failStderr) throws IOException {
+            this.failStderr = failStderr;
+            stderrWriter = new PipedOutputStream(stderr);
+        }
+
+        @Override public OutputStream getOutputStream() { return OutputStream.nullOutputStream(); }
+        @Override public InputStream getInputStream() { return InputStream.nullInputStream(); }
+        @Override public InputStream getErrorStream() {
+            InputStream source = failStderr ? new InputStream() {
+                @Override public int read() throws IOException {
+                    try { terminated.await(); }
+                    catch (InterruptedException failure) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("stderr reader interrupted", failure);
+                    }
+                    throw new IOException("synthetic stderr drain failure");
+                }
+            } : stderr;
+            return new java.io.FilterInputStream(source) {
+                @Override public void close() throws IOException {
+                    super.close();
+                    stderrClosed.set(true);
+                }
+            };
+        }
+
+        @Override public synchronized int waitFor() throws InterruptedException {
+            waits++;
+            if (waits == 1) {
+                firstWaitEntered.countDown();
+                new CountDownLatch(1).await();
+            }
+            alive = false;
+            terminated.countDown();
+            try { stderrWriter.close(); }
+            catch (IOException failure) { throw new IllegalStateException(failure); }
+            return 137;
+        }
+
+        @Override public int exitValue() {
+            if (alive) throw new IllegalThreadStateException("alive");
+            return 137;
+        }
+
+        @Override public void destroy() { }
+        @Override public Process destroyForcibly() { return this; }
+        @Override public boolean isAlive() { return alive; }
     }
 }

@@ -175,8 +175,8 @@ class TestCompleteRunAudioTrace {
         FrontierService rawChild = new FrontierService(2, 1, 1, "child", FrontierServiceState.COMPLETED,
                 2, 2, 0x180, 12, "Z80", 2, 7L, 0x190, 13, List.of(), List.of(nested));
         FrameNativeDiagnostics diagnostics = new FrameNativeDiagnostics(List.of(rawParent, rawChild),
-                List.of(new FrontierOwnedChip(1, first), new FrontierOwnedChip(2, nested),
-                        new FrontierOwnedChip(1, resumed)), List.of());
+                List.of(new FrontierOwnedChip(1, 0, first), new FrontierOwnedChip(2, 1, nested),
+                        new FrontierOwnedChip(1, 0, resumed)), List.of());
         Frame frame = new Frame(3, "nested", false, List.of(), List.of(parent, child),
                 List.of(new PsgWrite(0, 0x90), new PsgWrite(1, 0x91), new PsgWrite(2, 0x92)), diagnostics);
 
@@ -191,8 +191,10 @@ class TestCompleteRunAudioTrace {
                 0x92, 15, List.of(), List.of(duplicateCoordinate));
         assertThrows(IllegalArgumentException.class, () -> new FrameNativeDiagnostics(
                 List.of(rawParent, rawChild, duplicateOwner),
-                List.of(new FrontierOwnedChip(1, first), new FrontierOwnedChip(3, duplicateCoordinate),
-                        new FrontierOwnedChip(2, nested), new FrontierOwnedChip(1, resumed)), List.of()));
+                List.of(new FrontierOwnedChip(1, 0, first),
+                        new FrontierOwnedChip(3, 2, duplicateCoordinate),
+                        new FrontierOwnedChip(2, 1, nested),
+                        new FrontierOwnedChip(1, 0, resumed)), List.of()));
     }
 
     @Test

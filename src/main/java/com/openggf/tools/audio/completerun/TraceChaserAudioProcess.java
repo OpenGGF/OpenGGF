@@ -19,6 +19,21 @@ public final class TraceChaserAudioProcess {
             Path.of("bizhawk-headless/fixtures/gpgx-audio-service-manifests-v1.json");
     private static final Path CAPABILITY =
             Path.of("bizhawk-headless/fixtures/gpgx-audio-capability-v1.json");
+    private final ProcessFactory processFactory;
+
+    @FunctionalInterface
+    interface ProcessFactory {
+        Process start(List<String> arguments) throws IOException;
+    }
+
+    public TraceChaserAudioProcess() {
+        this(arguments -> new ProcessBuilder(arguments)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD).start());
+    }
+
+    TraceChaserAudioProcess(ProcessFactory processFactory) {
+        this.processFactory = Objects.requireNonNull(processFactory, "process factory");
+    }
 
     public enum Game { S2("s2"), S3K("s3k");
         private final String selector;
@@ -81,10 +96,12 @@ public final class TraceChaserAudioProcess {
         argv.add(raw.toString());
 
         Process process = null;
+        Thread reader = null;
+        BoundedStderr stderr = null;
         try {
-            process = new ProcessBuilder(argv).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
-            BoundedStderr stderr = new BoundedStderr(process.getErrorStream());
-            Thread reader = Thread.ofVirtual().start(stderr);
+            process = processFactory.start(List.copyOf(argv));
+            stderr = new BoundedStderr(process.getErrorStream());
+            reader = Thread.ofVirtual().start(stderr);
             int exit = process.waitFor();
             reader.join();
             if (stderr.failure != null) throw stderr.failure;
@@ -94,12 +111,48 @@ public final class TraceChaserAudioProcess {
             file(raw, "TraceChaser raw output");
             return new Result(raw, staging);
         } catch (IOException | InterruptedException | RuntimeException | Error failure) {
-            if (process != null && process.isAlive()) process.destroyForcibly();
+            boolean interrupted = terminateAndDrain(process, reader, failure);
+            if (stderr != null && stderr.failure != null && stderr.failure != failure) {
+                failure.addSuppressed(stderr.failure);
+            }
             try { deleteTree(staging); }
             catch (IOException cleanupFailure) { failure.addSuppressed(cleanupFailure); }
-            if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
+            if (failure instanceof InterruptedException || interrupted) Thread.currentThread().interrupt();
             throw failure;
         }
+    }
+
+    private static boolean terminateAndDrain(Process process, Thread reader, Throwable failure) {
+        boolean interrupted = false;
+        if (process != null) {
+            try { process.destroyForcibly(); }
+            catch (RuntimeException | Error terminationFailure) {
+                failure.addSuppressed(terminationFailure);
+            }
+            boolean reaped = false;
+            while (!reaped) {
+                try {
+                    process.waitFor();
+                    reaped = true;
+                } catch (InterruptedException waitInterrupted) {
+                    interrupted = true;
+                    failure.addSuppressed(waitInterrupted);
+                }
+            }
+        }
+        if (reader != null) {
+            boolean joined = false;
+            while (!joined) {
+                try {
+                    reader.join();
+                    joined = true;
+                } catch (InterruptedException joinInterrupted) {
+                    interrupted = true;
+                    failure.addSuppressed(joinInterrupted);
+                }
+            }
+        }
+        return interrupted;
     }
 
     private static Path directory(Path value, String label) {

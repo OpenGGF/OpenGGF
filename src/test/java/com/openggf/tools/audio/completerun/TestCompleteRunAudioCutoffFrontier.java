@@ -226,6 +226,117 @@ class TestCompleteRunAudioCutoffFrontier {
     }
 
     @Test
+    void nativeTokenReuseResolvesParentsByNonOverlappingServiceGeneration() {
+        FrontierService root = new FrontierService(1, 0, 0, "root", FrontierServiceState.OPEN,
+                899, 0, 0x38, 1, "Z80", null, null, null, null, List.of(), List.of());
+        FrontierService oldGeneration = new FrontierService(2, 1, 1, "old",
+                FrontierServiceState.COMPLETED, 900, 0, 0x40, 2, "Z80",
+                900, 1L, 0x42, 3, List.of(), List.of());
+        FrontierService newGeneration = new FrontierService(2, 1, 1, "new",
+                FrontierServiceState.COMPLETED, 901, 0, 0x44, 4, "Z80",
+                901, 3L, 0x46, 5, List.of(), List.of());
+        FrontierService child = new FrontierService(3, 2, 2, "child",
+                FrontierServiceState.COMPLETED, 901, 1, 0x48, 6, "Z80",
+                901, 2L, 0x4a, 7, List.of(), List.of());
+
+        CutoffFrontier frontier = CutoffFrontier.fromNative(List.of(root),
+                List.of(oldGeneration, newGeneration, child), List.of(), List.of(),
+                0, 0, 1, true, STATE, "b".repeat(64));
+
+        CutoffService semanticNew = frontier.pendingDescendants().get(1);
+        CutoffService semanticChild = frontier.pendingDescendants().get(2);
+        assertEquals(new ServiceCoordinate(semanticNew.beginFrame(), semanticNew.beginOrdinal()),
+                semanticChild.ancestry().beginParent());
+
+        FrontierService overlapping = new FrontierService(2, 1, 1, "overlap",
+                FrontierServiceState.COMPLETED, 900, 1, 0x44, 4, "Z80",
+                901, 3L, 0x46, 5, List.of(), List.of());
+        assertThrows(IllegalArgumentException.class, () -> CutoffFrontier.fromNative(List.of(root),
+                List.of(oldGeneration, overlapping), List.of(), List.of(),
+                0, 0, 1, true, STATE, "b".repeat(64)));
+
+        FrontierChipEvent oldChip = new FrontierChipEvent(10, 0, "Z80", 0x40,
+                4, 0, 0x90, true, null, null);
+        FrontierChipEvent newChip = new FrontierChipEvent(11, 0, "Z80", 0x44,
+                4, 0, 0x91, true, null, null);
+        FrontierSnapshot oldSnapshot = new FrontierSnapshot(2, "Z80", 0x40, List.of(1));
+        FrontierSnapshot newSnapshot = new FrontierSnapshot(2, "Z80", 0x44, List.of(2));
+        FrontierService ownedOld = new FrontierService(2, 1, 1, "old",
+                FrontierServiceState.COMPLETED, 900, 0, 0x40, 2, "Z80",
+                900, 1L, 0x42, 3, List.of(oldSnapshot), List.of(oldChip));
+        FrontierService ownedNew = new FrontierService(2, 1, 1, "new",
+                FrontierServiceState.COMPLETED, 901, 0, 0x44, 4, "Z80",
+                901, 3L, 0x46, 5, List.of(newSnapshot), List.of(newChip));
+        List<FrontierOwnedChip> exactChips = List.of(
+                new FrontierOwnedChip(2, 1, oldChip), new FrontierOwnedChip(2, 2, newChip));
+        List<FrontierOwnedSnapshot> exactSnapshots = List.of(
+                new FrontierOwnedSnapshot(2, 1, oldSnapshot),
+                new FrontierOwnedSnapshot(2, 2, newSnapshot));
+        assertDoesNotThrow(() -> CutoffFrontier.fromNative(List.of(root),
+                List.of(ownedOld, ownedNew), exactChips, exactSnapshots,
+                0, 0, 1, true, STATE, "b".repeat(64)));
+        assertThrows(IllegalArgumentException.class, () -> CutoffFrontier.fromNative(List.of(root),
+                List.of(ownedOld, ownedNew), List.of(new FrontierOwnedChip(2, 2, oldChip),
+                        new FrontierOwnedChip(2, 2, newChip)), exactSnapshots,
+                0, 0, 1, true, STATE, "b".repeat(64)));
+        assertThrows(IllegalArgumentException.class, () -> CutoffFrontier.fromNative(List.of(root),
+                List.of(ownedOld, ownedNew), exactChips,
+                List.of(new FrontierOwnedSnapshot(2, 2, oldSnapshot),
+                        new FrontierOwnedSnapshot(2, 2, newSnapshot)),
+                0, 0, 1, true, STATE, "b".repeat(64)));
+    }
+
+    @Test
+    void repeatedPromotionsResolveEachTemporalDirectParentExactly() {
+        FrontierService root = new FrontierService(9, 0, 0, "root", FrontierServiceState.OPEN,
+                799, 0, 0x30, 1, "Z80", null, null, null, null, List.of(), List.of());
+        FrontierService firstParent = new FrontierService(1, 9, 1, "first-parent",
+                FrontierServiceState.COMPLETED, 800, 0, 0x40, 2, "Z80",
+                802, 0L, 0x44, 5, List.of(), List.of());
+        FrontierService secondParent = new FrontierService(2, 1, 2, "second-parent",
+                FrontierServiceState.COMPLETED, 800, 1, 0x50, 3, "Z80",
+                801, 0L, 0x54, 4, List.of(), List.of());
+        NativeAncestryTransition first = new NativeAncestryTransition(
+                10, 801, 1, 2, 3, 1, 2, 4, "Z80", 0x54);
+        NativeAncestryTransition second = new NativeAncestryTransition(
+                20, 802, 1, 1, 2, 9, 1, 5, "Z80", 0x44);
+        FrontierService child = new FrontierService(3, 2, 3, "child", FrontierServiceState.OPEN,
+                800, 2, 0x60, 6, "Z80", null, null, null, null, List.of(), List.of(),
+                9, 1, List.of(first, second));
+
+        CutoffFrontier frontier = assertDoesNotThrow(() -> CutoffFrontier.fromNative(
+                List.of(root, child), List.of(firstParent, secondParent), List.of(), List.of(),
+                0, 0, 1, true, STATE, "b".repeat(64)));
+        assertEquals(2, frontier.activeStack().get(1).ancestry().transitions().size());
+
+        NativeAncestryTransition wrongHook = new NativeAncestryTransition(
+                20, 802, 1, 1, 2, 9, 1, 6, "Z80", 0x44);
+        FrontierService mismatched = new FrontierService(3, 2, 3, "child", FrontierServiceState.OPEN,
+                800, 2, 0x60, 6, "Z80", null, null, null, null, List.of(), List.of(),
+                9, 1, List.of(first, wrongHook));
+        assertThrows(IllegalArgumentException.class, () -> CutoffFrontier.fromNative(
+                List.of(root, mismatched), List.of(firstParent, secondParent), List.of(), List.of(),
+                0, 0, 1, true, STATE, "b".repeat(64)));
+    }
+
+    @Test
+    void promotionCannotSpliceAParentGenerationThatBeganAfterItsChild() {
+        FrontierService laterParent = new FrontierService(2, 9, 1, "later-parent",
+                FrontierServiceState.COMPLETED, 801, 0, 0x50, 3, "Z80",
+                802, 0L, 0x54, 4, List.of(), List.of());
+        NativeAncestryTransition transition = new NativeAncestryTransition(
+                20, 802, 1, 2, 2, 9, 1, 4, "Z80", 0x54);
+        FrontierService child = new FrontierService(3, 2, 2, "child", FrontierServiceState.OPEN,
+                800, 0, 0x60, 6, "Z80", null, null, null, null, List.of(), List.of(),
+                9, 1, List.of(transition));
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> CompleteRunAudioTrace.resolvePromotionParent(
+                        List.of(child, laterParent), child, transition));
+        assertEquals("native previous ancestry parent is missing", failure.getMessage());
+    }
+
+    @Test
     void terminalCountsIncludeTheMandatoryFrontierCardinality() {
         Terminal terminal = new Terminal(10, 1, 0, 0, 0, 0, 0, 0, 1, 2, "c".repeat(64));
         terminal.validateObservedCounts(new CaptureCounts(1, 0, 0, 0, 0, 0, 0, 1, 2));
@@ -420,15 +531,18 @@ class TestCompleteRunAudioCutoffFrontier {
 
     private static CutoffFrontier frontier(List<FrontierService> active, List<FrontierService> pending) {
         List<FrontierService> services = java.util.stream.Stream.concat(active.stream(), pending.stream()).toList();
-        List<FrontierOwnedChip> chips = services.stream()
-                .flatMap(service -> service.chipEvents().stream().map(event -> new FrontierOwnedChip(service.token(), event)))
-                .sorted(java.util.Comparator.comparingLong(owned -> owned.event().coordinate())).toList();
+        List<FrontierOwnedChip> chips = new java.util.ArrayList<>();
         java.util.ArrayList<FrontierOwnedSnapshot> snapshots = new java.util.ArrayList<>();
-        for (FrontierService service : services) {
-            for (int index = 0; index < service.snapshots().size(); index++) {
-                snapshots.add(new FrontierOwnedSnapshot(service.token(), index, service.snapshots().get(index)));
+        for (int serviceIndex = 0; serviceIndex < services.size(); serviceIndex++) {
+            FrontierService service = services.get(serviceIndex);
+            for (FrontierChipEvent event : service.chipEvents()) {
+                chips.add(new FrontierOwnedChip(service.token(), serviceIndex, event));
+            }
+            for (FrontierSnapshot snapshot : service.snapshots()) {
+                snapshots.add(new FrontierOwnedSnapshot(service.token(), serviceIndex, snapshot));
             }
         }
+        chips.sort(java.util.Comparator.comparingLong(owned -> owned.event().coordinate()));
         return CutoffFrontier.fromNative(active, pending, chips, snapshots,
                 0, 0, 1, true, STATE, "b".repeat(64));
     }
