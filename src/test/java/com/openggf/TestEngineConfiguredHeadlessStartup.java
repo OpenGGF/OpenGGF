@@ -1,11 +1,14 @@
 package com.openggf;
 
 import com.openggf.audio.AudioBackend;
+import com.openggf.audio.GameSound;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.PerformanceProfiler;
@@ -30,11 +33,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestEngineConfiguredHeadlessStartup {
     private SonicConfigurationService config;
     private AudioManager audio;
+    private CrossGameFeatureProvider crossGameFeatures;
 
     @BeforeEach
     void setUp() {
@@ -48,6 +54,7 @@ class TestEngineConfiguredHeadlessStartup {
         audio.destroy();
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
+        crossGameFeatures = mock(CrossGameFeatureProvider.class);
     }
 
     @AfterEach
@@ -112,14 +119,46 @@ class TestEngineConfiguredHeadlessStartup {
 
         assertEquals(1, firstBackend.destroyCalls);
         assertFalse(firstInput.hasLogicalOverride());
+        assertCleanLogicalAudioState();
 
         TrackingBackend retryBackend = new TrackingBackend();
         engine.initializeConfiguredHeadlessSession(
                 new InputHandler(), retryBackend);
         assertSame(retryBackend, audio.getBackend());
         assertEquals(2, engine.initializeGameCalls);
+        assertCleanLogicalAudioState();
         engine.closeConfiguredHeadlessSession();
         assertEquals(1, retryBackend.destroyCalls);
+    }
+
+    @Test
+    void successiveHeadlessSessionsStartWithFreshAudioAndReleaseInputLast() {
+        InputHandler firstInput = new InputHandler();
+        firstInput.setLogicalOverride(LogicalInputSnapshot.neutral());
+        TrackingBackend firstBackend = new TrackingBackend(firstInput);
+        StartupProbeEngine first = new StartupProbeEngine(context());
+        first.initializeConfiguredHeadlessSession(firstInput, firstBackend);
+        audio.playSfx(GameSound.RING);
+        AudioLogicalSnapshot dirty = audio.captureLogicalSnapshot();
+        assertFalse(dirty.ringLeft());
+        assertTrue(dirty.commandEntryCount() > 0);
+
+        first.closeConfiguredHeadlessSession();
+
+        assertTrue(firstBackend.logicalOverridePresentDuringDestroy,
+                "runtime resources must close before the BK2 input override");
+        assertFalse(firstInput.hasLogicalOverride());
+        assertCleanLogicalAudioState();
+        verify(crossGameFeatures).resetState();
+
+        StartupProbeEngine second = new StartupProbeEngine(context());
+        TrackingBackend secondBackend = new TrackingBackend();
+        second.initializeConfiguredHeadlessSession(
+                new InputHandler(), secondBackend);
+
+        assertCleanLogicalAudioState();
+        second.closeConfiguredHeadlessSession();
+        verify(crossGameFeatures, times(2)).resetState();
     }
 
     @Test
@@ -164,7 +203,15 @@ class TestEngineConfiguredHeadlessStartup {
                 mock(DebugOverlayManager.class),
                 mock(PlaybackDebugManager.class),
                 mock(RomDetectionService.class),
-                mock(CrossGameFeatureProvider.class));
+                crossGameFeatures);
+    }
+
+    private void assertCleanLogicalAudioState() {
+        AudioLogicalSnapshot snapshot = audio.captureLogicalSnapshot();
+        assertTrue(snapshot.ringLeft());
+        assertEquals(0, snapshot.commandEntryCount());
+        assertTrue(snapshot.donorGameIds().isEmpty());
+        assertTrue(snapshot.donorBindings().isEmpty());
     }
 
     private static class StartupProbeEngine extends Engine {
@@ -181,8 +228,18 @@ class TestEngineConfiguredHeadlessStartup {
     }
 
     private static class TrackingBackend extends NullAudioBackend {
+        private final InputHandler trackedInput;
         private boolean initialized;
         private int destroyCalls;
+        private boolean logicalOverridePresentDuringDestroy;
+
+        private TrackingBackend() {
+            this(null);
+        }
+
+        private TrackingBackend(InputHandler trackedInput) {
+            this.trackedInput = trackedInput;
+        }
 
         @Override
         public void init() {
@@ -192,15 +249,21 @@ class TestEngineConfiguredHeadlessStartup {
         @Override
         public void destroy() {
             destroyCalls++;
+            if (trackedInput != null) {
+                logicalOverridePresentDuringDestroy =
+                        trackedInput.hasLogicalOverride();
+            }
         }
     }
 
     private static final class FailingStartupProbeEngine
             extends StartupProbeEngine {
+        private final AudioManager audio;
         private boolean failStartup = true;
 
         private FailingStartupProbeEngine(EngineContext context) {
             super(context);
+            audio = context.audio();
         }
 
         @Override
@@ -208,6 +271,7 @@ class TestEngineConfiguredHeadlessStartup {
             super.initializeGame();
             if (failStartup) {
                 failStartup = false;
+                audio.playSfx(GameSound.RING);
                 throw new IllegalStateException("injected startup failure");
             }
         }

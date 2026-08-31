@@ -248,9 +248,9 @@ class TestProductionBk2AudioRunner {
                 "cursor.advance()",
                 "consumer.accept(");
         assertOrdered(source,
-                "input::clearLogicalOverride",
                 "installedObservations::close",
-                "engine::closeConfiguredHeadlessSession");
+                "engine::closeConfiguredHeadlessSession",
+                "input::clearLogicalOverride");
     }
 
     private static void assertOrdered(String source, String... tokens) {

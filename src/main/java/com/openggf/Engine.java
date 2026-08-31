@@ -619,14 +619,13 @@ public class Engine {
 		} catch (RuntimeException | Error failure) {
 			Throwable cleanupFailure =
 					cleanupConfiguredHeadlessResources();
+			cleanupFailure = releaseConfiguredHeadlessInput(cleanupFailure);
 			if (cleanupFailure != null) {
 				failure.addSuppressed(cleanupFailure);
 			} else {
 				configuredHeadlessSession = false;
 				audioBackendInitialized = false;
 			}
-			input.clearLogicalOverride();
-			setInputHandler(null);
 			throw failure;
 		}
 	}
@@ -636,12 +635,8 @@ public class Engine {
 		if (!configuredHeadlessSession) {
 			return;
 		}
-		InputHandler installedInput = inputHandler;
-		if (installedInput != null) {
-			installedInput.clearLogicalOverride();
-		}
-		setInputHandler(null);
 		Throwable failure = cleanupConfiguredHeadlessResources();
+		failure = releaseConfiguredHeadlessInput(failure);
 		if (failure != null) {
 			rethrowConfiguredHeadlessCleanupFailure(failure);
 		}
@@ -651,21 +646,44 @@ public class Engine {
 
 	private Throwable cleanupConfiguredHeadlessResources() {
 		Throwable failure = null;
-		try {
-			SessionManager.clear();
-		} catch (RuntimeException | Error cleanupFailure) {
-			failure = cleanupFailure;
-		}
-		try {
-			audioManager.destroy();
-		} catch (RuntimeException | Error cleanupFailure) {
-			if (failure == null) {
-				failure = cleanupFailure;
-			} else {
-				failure.addSuppressed(cleanupFailure);
-			}
-		}
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, liveCaptureController::close);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, SessionManager::clear);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, audioManager::clearDonorAudio);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, crossGameFeatureProvider::resetState);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, gameLoop::closePresence);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, audioManager::resetState);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, audioManager::destroy);
 		return failure;
+	}
+
+	private Throwable releaseConfiguredHeadlessInput(Throwable failure) {
+		InputHandler installedInput = inputHandler;
+		if (installedInput != null) {
+			failure = appendConfiguredHeadlessCleanupFailure(
+					failure, installedInput::clearLogicalOverride);
+		}
+		return appendConfiguredHeadlessCleanupFailure(
+				failure, () -> setInputHandler(null));
+	}
+
+	private static Throwable appendConfiguredHeadlessCleanupFailure(
+			Throwable aggregate, Runnable cleanup) {
+		try {
+			cleanup.run();
+		} catch (RuntimeException | Error failure) {
+			if (aggregate == null) {
+				return failure;
+			}
+			aggregate.addSuppressed(failure);
+		}
+		return aggregate;
 	}
 
 	private static void rethrowConfiguredHeadlessCleanupFailure(

@@ -94,8 +94,6 @@ public final class ProductionBk2AudioRunner {
             throw failure;
         } finally {
             Throwable cleanupFailure = primaryFailure;
-            cleanupFailure = appendCleanupFailure(
-                    cleanupFailure, input::clearLogicalOverride);
             CompleteRunAudioObserverLease installedObservations = observations;
             if (installedObservations != null) {
                 cleanupFailure = appendCleanupFailure(
@@ -103,6 +101,8 @@ public final class ProductionBk2AudioRunner {
             }
             cleanupFailure = appendCleanupFailure(
                     cleanupFailure, engine::closeConfiguredHeadlessSession);
+            cleanupFailure = appendCleanupFailure(
+                    cleanupFailure, input::clearLogicalOverride);
             cleanupFailure = appendCleanupFailure(
                     cleanupFailure, Engine::clearGlobalInstance);
             if (primaryFailure == null && cleanupFailure != null) {
