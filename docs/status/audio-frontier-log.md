@@ -27,6 +27,31 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-08-31 — S3K service projection crosses SEGA PCM to the hidden stop request
+
+- **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,
+  `feature/ai-sdre2-cadence-resume` (the PCM-tier correction lands with this
+  entry).
+- **Fixture:** `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz`
+  (unchanged authenticated 5,400-frame reference).
+- **Command:** `S3kAudioParityTool compare --reference <committed fixture>
+  --rom <absolute SHA-1-verified locked-on ROM>` after compiling the worktree.
+- **Result:** services 0-127 match. First divergence service **128** (source
+  frame **242**), `EVENT_MISSING`, event 0: reference Z80 YM part II
+  `82h = FFh`, engine missing.
+- **Notes:** `FFh` enters `zPlaySEGAPCM`, which clears its request flag and
+  disables interrupts for the whole chant (`D:4372-4424`). The projection now
+  keeps the command-owned 84-write stop-all service, excludes register `2Ah`
+  sample transport / `2Bh=80` DAC entry, and emits no fictitious driver
+  services for the 100 transport-only frame rows. This yields **5,286**
+  complete services. At source frame 242 the reference emits another exact
+  stop-all burst, consistent with `FEh` (`cmd_StopSEGA`), but its pre-frame
+  mailbox is empty: the 68k request is written and consumed within
+  `host.Advance`, before the post-frame RAM snapshot. The v1 producer therefore
+  cannot authorize the engine request at service 128. Moving this frontier
+  requires a true pre-consumption 68k-to-Z80 mailbox probe, not inference from
+  the burst.
+
 ## 2026-08-31 — S3K service projection reaches the SEGA command at service 49
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,

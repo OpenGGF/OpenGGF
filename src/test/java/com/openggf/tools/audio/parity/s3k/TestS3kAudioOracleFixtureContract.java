@@ -70,7 +70,7 @@ class TestS3kAudioOracleFixtureContract {
         List<S3kAudioTick> services = new ArrayList<>();
         S3kAudioReferenceReader.readDriverServices(REFERENCE, services::add);
 
-        assertEquals(5_386, services.size());
+        assertEquals(5_286, services.size());
         S3kAudioTick boot = services.getFirst();
         assertEquals(List.of(0, 0, 0), boot.mailbox(),
                 "pre-install mailbox bytes are not a boot-service input");
@@ -84,7 +84,7 @@ class TestS3kAudioOracleFixtureContract {
     }
 
     @Test
-    void engineBootAndInitialFadeServicesMatchTheProjectedRomServices() {
+    void engineMatchesThroughTheInitialSegaPcmTransportWindow() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
         List<S3kAudioTick> services = new ArrayList<>();
@@ -92,11 +92,11 @@ class TestS3kAudioOracleFixtureContract {
 
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(
-                        rom.toPath(), services.subList(0, 2), null);
+                        rom.toPath(), services.subList(0, 51), null);
 
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(
-                        services.subList(0, 2), engine.ticks());
+                        services.subList(0, 51), engine.ticks());
         assertTrue(report.matches(), report.toHumanText());
     }
 

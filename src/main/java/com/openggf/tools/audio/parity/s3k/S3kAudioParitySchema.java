@@ -7,10 +7,11 @@ import java.util.List;
  *
  * <p>The reference stream is produced by
  * {@code tools/audio/run_s3k_audio_oracle_reference.sh}: one JSONL row per
- * emulated frame. After boot the Z80 driver runs from {@code zVInt} once per
- * vertical blank (skdisasm {@code Sound/Z80 Sound Driver.asm} {@code zVInt});
- * pre-install frames contain no invocation and the boot service crosses frame
- * boundaries. Rows carry the pre-frame 68k request mailboxes, the
+ * emulated frame. After boot the Z80 driver normally runs from {@code zVInt}
+ * once per vertical blank (skdisasm {@code Sound/Z80 Sound Driver.asm}
+ * {@code zVInt}); pre-install frames contain no invocation, the boot service
+ * crosses frame boundaries, and {@code zPlaySEGAPCM} disables interrupts for
+ * its entire transport. Rows carry the pre-frame 68k request mailboxes, the
  * ordered CPU-tagged YM/PSG write stream of the frame, and a post-frame
  * snapshot of driver RAM {@code 1C00h..1FA0h}
  * ({@code zDataStart..zTracksSaveEnd}). The driver projection compares only

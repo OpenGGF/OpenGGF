@@ -150,18 +150,27 @@ from tick 13 or from the reference write stream.
 The service projection now implements that revision without changing the
 fixture: frames before `zPalDblUpdCounter` becomes 5 are grouped into one boot
 service, because the store is the final source-owned initialization marker
-before `ei` (`D:523-551`). This yields 5,386 complete services. The engine
+before `ei` (`D:523-551`). The engine
 host emits the exact 85-write `zStopAllSound` boot sequence and matches the
 following `E1h` fade-init service, including its unconditional four-write PSG
-silence. The first divergence is now service 49, where `FFh` enters
-`zPlaySegaSound` and begins another stop-all burst; SEGA PCM remains an
-explicit host gap.
+silence. Service 49's `FFh` command also matches its 84-write stop-all prefix.
+The following `zPlaySEGAPCM` loop clears its flag and disables interrupts for
+100 frame rows; the projection excludes its `2Ah` sample transport and
+`2Bh=80` DAC entry and emits no fictional `zVInt` services during that span.
+The resulting stream has 5,286 services. The first divergence is service 128
+(source frame 242), another stop-all burst whose `FEh` input was written and
+consumed inside the captured frame. The v1 pre-frame mailbox misses that
+boundary, so it cannot authorize the same engine request.
 
 ## 7. Known limits and open questions
 
 1. The engine capture host models the immediate PSG-silence edge of fades but
    not their active-song envelope; PSG-mute (`E3h`) and the SEGA chant (`FFh`)
    remain unmodelled. Unsupported tails are logged.
+   The SEGA PCM transport is intentionally a separate tier; its source loop
+   disables interrupts, so transport-only frame rows are not driver services.
+   A producer-side pre-consumption mailbox probe is still required for 68k
+   requests written and consumed within one frame.
    Divergences beyond such ticks are only meaningful once those transforms
    are modelled or the passage avoids them.
 2. `voiceIndex`/`modulationCtrl` engine mappings are best-effort composites

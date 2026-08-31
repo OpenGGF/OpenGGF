@@ -132,12 +132,36 @@ public final class S3kAudioReferenceReader {
                 List.of(0, 0, 0), bootCompletion.global(),
                 bootCompletion.tracks(), bootWrites));
         int ordinal = 1;
+        boolean segaPcmSuspended = false;
         for (int index = completion + 1; index < frames.size(); index++) {
             S3kAudioTick frame = frames.get(index);
+            boolean hasPcmTransport = frame.writes().stream()
+                    .anyMatch(S3kAudioReferenceReader::isPcmTransportWrite);
+            if (segaPcmSuspended) {
+                if (hasPcmTransport) {
+                    // zPlaySEGAPCM executes with interrupts disabled; these
+                    // frame rows contain transport only, not zVInt services
+                    // (D:4372-4424).
+                    continue;
+                }
+                segaPcmSuspended = false;
+            }
+            List<AudioParityChipWrite> serviceWrites = frame.writes().stream()
+                    .filter(write -> !isPcmTransportWrite(write))
+                    .toList();
             serviceConsumer.accept(new S3kAudioTick(ordinal++, frame.lag(),
-                    frame.mailbox(), frame.global(), frame.tracks(), frame.writes()));
+                    frame.mailbox(), frame.global(), frame.tracks(), serviceWrites));
+            if (frame.mailbox().contains(S3kAudioParitySchema.CMD_SEGA)) {
+                segaPcmSuspended = true;
+            }
         }
         return metadata;
+    }
+
+    private static boolean isPcmTransportWrite(AudioParityChipWrite write) {
+        return write.chip().equals("ym2612") && write.port() == 0
+                && (write.register() == 0x2a
+                        || write.register() == 0x2b && write.value() == 0x80);
     }
 
     static Metadata parseMetadata(String line) throws IOException {

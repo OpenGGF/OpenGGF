@@ -86,7 +86,11 @@ public final class S3kOpenGgfAudioCapture {
             // zStopAllSound followed by the initial driver-variable stores
             // (D:523-551,2460-2521). The reference projector finds completion
             // through zPalDblUpdCounter=5, not through a movie frame.
-            emitS3kBootService(driver);
+            emitS3kStopAllWrites(driver);
+            // zInitAudioDriver jumps into the first idle digital-audio loop,
+            // whose no-sample branch disables DAC once more (D:523-551,
+            // 4267-4415).
+            driver.writeFm(driver, 0, 0x2b, 0x00);
             S3kAudioTick bootReference = reference.getFirst();
             addTick(ticks, driver, writes, bootReference, corruptWriteTick);
 
@@ -124,7 +128,7 @@ public final class S3kOpenGgfAudioCapture {
     }
 
     /** Exact S&K {@code zStopAllSound} write order (D:2460-2521). */
-    private static void emitS3kBootService(SmpsDriver driver) {
+    private static void emitS3kStopAllWrites(SmpsDriver driver) {
         for (int channel : new int[] { 6, 0, 1, 2, 4, 5 }) {
             int port = (channel & 4) == 0 ? 0 : 1;
             int offset = channel & 3;
@@ -145,9 +149,6 @@ public final class S3kOpenGgfAudioCapture {
         driver.writePsg(driver, 0xff);
         driver.writeFm(driver, 0, 0x2b, 0x00);
         driver.writeFm(driver, 0, 0x27, 0x00);
-        // zFM3NormalMode falls through zStopDAC (D:2511-2521), so 2Bh is
-        // written a second time in the shipped fix_sndbugs=0 path.
-        driver.writeFm(driver, 0, 0x2b, 0x00);
     }
 
     private static void dispatch(int request, Sonic3kSmpsLoader loader, DacData dacData,
@@ -195,8 +196,16 @@ public final class S3kOpenGgfAudioCapture {
                     + Integer.toHexString(id) + " is not modelled by this capture host");
             return;
         }
-        if (id == S3kAudioParitySchema.CMD_MUTE_PSG
-                || id == S3kAudioParitySchema.CMD_SEGA) {
+        if (id == S3kAudioParitySchema.CMD_SEGA) {
+            // zPlaySegaSound begins with zStopAllSound, then leaves the PCM
+            // loop to stream register 2Ah between interrupt services
+            // (D:2703-2719,4267-4415).
+            emitS3kStopAllWrites(driver);
+            unsupported.add("tick " + ordinal
+                    + ": SEGA PCM transport is outside the driver-service oracle");
+            return;
+        }
+        if (id == S3kAudioParitySchema.CMD_MUTE_PSG) {
             unsupported.add("tick " + ordinal + ": request 0x" + Integer.toHexString(id)
                     + " is not modelled by this capture host");
             return;
