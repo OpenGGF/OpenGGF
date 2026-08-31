@@ -2,9 +2,12 @@ package com.openggf.tools.audio.parity.s3k;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.tests.RomTestUtils;
+import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -60,6 +63,41 @@ class TestS3kAudioOracleFixtureContract {
                 "the 68k PSGInitValues bootstrap is outside the Z80 driver oracle");
         assertEquals(0xff, ticks.get(13).writes().get(0).value(),
                 "the first Z80 zStopAllSound write must remain in the projection");
+    }
+
+    @Test
+    void driverServiceProjectionGroupsBootAtItsRamOwnedCompletionMarker() {
+        List<S3kAudioTick> services = new ArrayList<>();
+        S3kAudioReferenceReader.readDriverServices(REFERENCE, services::add);
+
+        assertEquals(5_386, services.size());
+        S3kAudioTick boot = services.getFirst();
+        assertEquals(List.of(0, 0, 0), boot.mailbox(),
+                "pre-install mailbox bytes are not a boot-service input");
+        assertEquals(85, boot.writes().size());
+        assertEquals(0xff, boot.writes().getFirst().value());
+        assertEquals(0x82, boot.writes().getFirst().register());
+        assertEquals(0x2b, boot.writes().getLast().register());
+        assertEquals(0, boot.writes().getLast().value());
+        assertEquals(List.of(0xe1, 0, 0), services.get(1).mailbox(),
+                "the first ordinary zVInt consumes the request left pending during boot");
+    }
+
+    @Test
+    void engineBootAndInitialFadeServicesMatchTheProjectedRomServices() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> services = new ArrayList<>();
+        S3kAudioReferenceReader.readDriverServices(REFERENCE, services::add);
+
+        S3kOpenGgfAudioCapture.CaptureResult engine =
+                S3kOpenGgfAudioCapture.capture(
+                        rom.toPath(), services.subList(0, 2), null);
+
+        S3kAudioParityComparator.Report report =
+                S3kAudioParityComparator.compare(
+                        services.subList(0, 2), engine.ticks());
+        assertTrue(report.matches(), report.toHumanText());
     }
 
     private static String sha256(Path path) throws Exception {

@@ -23,7 +23,7 @@ import java.util.Objects;
 
 /**
  * ROM-backed headless host that drives the engine's S3K SMPS driver with the
- * request timeline of an oracle reference capture and records, per NTSC frame,
+ * request timeline of an oracle reference capture and records, per complete driver service,
  * the ordered chip writes plus a driver-RAM-shaped state export.
  *
  * <p>The reference's per-tick mailbox bytes are driver <em>inputs</em> (the
@@ -38,7 +38,6 @@ import java.util.Objects;
  */
 public final class S3kOpenGgfAudioCapture {
     private static final double SAMPLE_RATE = 44_100.0;
-    private static final int NTSC_SAMPLES = 735;
 
     private S3kOpenGgfAudioCapture() {
     }
@@ -78,30 +77,77 @@ public final class S3kOpenGgfAudioCapture {
 
             List<String> unsupported = new ArrayList<>();
             List<S3kAudioTick> ticks = new ArrayList<>(reference.size());
-            short[] buffer = new short[NTSC_SAMPLES * 2];
-            for (S3kAudioTick referenceTick : reference) {
+            if (reference.isEmpty()) {
+                return new CaptureResult(ticks, unsupported);
+            }
+
+            // zInitAudioDriver owns one complete pre-V-int service. Its busy
+            // loop has no engine-visible effect; the observable boundary is
+            // zStopAllSound followed by the initial driver-variable stores
+            // (D:523-551,2460-2521). The reference projector finds completion
+            // through zPalDblUpdCounter=5, not through a movie frame.
+            emitS3kBootService(driver);
+            S3kAudioTick bootReference = reference.getFirst();
+            addTick(ticks, driver, writes, bootReference, corruptWriteTick);
+
+            for (int index = 1; index < reference.size(); index++) {
+                S3kAudioTick referenceTick = reference.get(index);
                 int ordinal = referenceTick.ordinal();
                 for (int request : referenceTick.mailbox()) {
                     if (request != 0) {
                         dispatch(request, loader, dacData, driver, unsupported, ordinal);
                     }
                 }
-                driver.read(buffer, buffer.length);
-                if (corruptWriteTick != null && corruptWriteTick == ordinal && !writes.isEmpty()) {
-                    AudioParityChipWrite first = writes.get(0);
-                    writes.set(0, first.chip().equals("psg")
-                            ? AudioParityChipWrite.psg(first.value() ^ 0x01)
-                            : AudioParityChipWrite.ym2612(first.port(), first.register(),
-                                    first.value() ^ 0x01));
-                }
-                S3kAudioTick normalized = S3kAudioStateNormalizer.normalize(ordinal,
-                        referenceTick.mailbox(), driver.captureSnapshot());
-                ticks.add(new S3kAudioTick(ordinal, false, normalized.mailbox(),
-                        normalized.global(), normalized.tracks(), List.copyOf(writes)));
-                writes.clear();
+                driver.serviceOuterFrame();
+                addTick(ticks, driver, writes, referenceTick, corruptWriteTick);
             }
             return new CaptureResult(ticks, unsupported);
         }
+    }
+
+    private static void addTick(List<S3kAudioTick> ticks, SmpsDriver driver,
+            List<AudioParityChipWrite> writes, S3kAudioTick referenceTick,
+            Integer corruptWriteTick) {
+        int ordinal = referenceTick.ordinal();
+        if (corruptWriteTick != null && corruptWriteTick == ordinal && !writes.isEmpty()) {
+            AudioParityChipWrite first = writes.getFirst();
+            writes.set(0, first.chip().equals("psg")
+                    ? AudioParityChipWrite.psg(first.value() ^ 0x01)
+                    : AudioParityChipWrite.ym2612(first.port(), first.register(),
+                            first.value() ^ 0x01));
+        }
+        S3kAudioTick normalized = S3kAudioStateNormalizer.normalize(ordinal,
+                referenceTick.mailbox(), driver.captureSnapshot());
+        ticks.add(new S3kAudioTick(ordinal, false, normalized.mailbox(),
+                normalized.global(), normalized.tracks(), List.copyOf(writes)));
+        writes.clear();
+    }
+
+    /** Exact S&K {@code zStopAllSound} write order (D:2460-2521). */
+    private static void emitS3kBootService(SmpsDriver driver) {
+        for (int channel : new int[] { 6, 0, 1, 2, 4, 5 }) {
+            int port = (channel & 4) == 0 ? 0 : 1;
+            int offset = channel & 3;
+            for (int register = 0x80; register <= 0x8c; register += 4) {
+                driver.writeFm(driver, port, register + offset, 0xff);
+            }
+            for (int register = 0x40; register <= 0x4c; register += 4) {
+                driver.writeFm(driver, port, register + offset, 0x7f);
+            }
+            driver.writeFm(driver, 0, 0x28, channel);
+            for (int register = 0x90; register <= 0x9c; register += 4) {
+                driver.writeFm(driver, port, register + offset, 0x00);
+            }
+        }
+        driver.writePsg(driver, 0x9f);
+        driver.writePsg(driver, 0xbf);
+        driver.writePsg(driver, 0xdf);
+        driver.writePsg(driver, 0xff);
+        driver.writeFm(driver, 0, 0x2b, 0x00);
+        driver.writeFm(driver, 0, 0x27, 0x00);
+        // zFM3NormalMode falls through zStopDAC (D:2511-2521), so 2Bh is
+        // written a second time in the shipped fix_sndbugs=0 path.
+        driver.writeFm(driver, 0, 0x2b, 0x00);
     }
 
     private static void dispatch(int request, Sonic3kSmpsLoader loader, DacData dacData,
@@ -139,8 +185,17 @@ public final class S3kOpenGgfAudioCapture {
             driver.stopAllSfx();
             return;
         }
-        if (id == S3kAudioParitySchema.CMD_FADE_OUT || id == S3kAudioParitySchema.CMD_FADE_OUT2
-                || id == S3kAudioParitySchema.CMD_MUTE_PSG
+        if (id == S3kAudioParitySchema.CMD_FADE_OUT
+                || id == S3kAudioParitySchema.CMD_FADE_OUT2) {
+            // zFadeOutMusic falls through zHaltDACPSG and always silences all
+            // PSG channels on the request service (D:2307-2327). The later
+            // 28h-step, six-service fade remains explicitly unsupported here.
+            emitPsgSilence(driver);
+            unsupported.add("tick " + ordinal + ": active music fade for request 0x"
+                    + Integer.toHexString(id) + " is not modelled by this capture host");
+            return;
+        }
+        if (id == S3kAudioParitySchema.CMD_MUTE_PSG
                 || id == S3kAudioParitySchema.CMD_SEGA) {
             unsupported.add("tick " + ordinal + ": request 0x" + Integer.toHexString(id)
                     + " is not modelled by this capture host");
@@ -148,6 +203,13 @@ public final class S3kOpenGgfAudioCapture {
         }
         // E0h and E6h-FEh: zStopAllSound (map §4.3).
         driver.stopAll();
+    }
+
+    private static void emitPsgSilence(SmpsDriver driver) {
+        driver.writePsg(driver, 0x9f);
+        driver.writePsg(driver, 0xbf);
+        driver.writePsg(driver, 0xdf);
+        driver.writePsg(driver, 0xff);
     }
 
     private static void verifyRomIdentity(Path path) {

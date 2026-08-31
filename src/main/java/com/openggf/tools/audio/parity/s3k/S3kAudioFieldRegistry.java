@@ -52,6 +52,9 @@ public final class S3kAudioFieldRegistry {
             field("soundQueue", Scope.GLOBAL, "zSoundQueue0..2 1C05-07 (map §4.2)",
                     "no driver-side queue bytes (gap #4)", Comparison.DIAGNOSTIC),
             field("nextSound", Scope.GLOBAL, "zNextSound 1C09 (map §4.2)", "none", Comparison.DIAGNOSTIC),
+            field("palDoubleUpdateCounter", Scope.GLOBAL,
+                    "zPalDblUpdCounter 1C04 (map §1.3)",
+                    "SmpsDriverSnapshot.palUpdateCounter", Comparison.DIAGNOSTIC),
 
             field("playing", Scope.TRACK, "PlaybackControl bit 7 (map §2)",
                     "SmpsTrackSnapshot.active", Comparison.GATE),

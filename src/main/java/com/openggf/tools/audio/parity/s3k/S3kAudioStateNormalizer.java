@@ -45,20 +45,22 @@ public final class S3kAudioStateNormalizer {
         for (int index = 0; index < S3kAudioParitySchema.SFX_ROLE_COUNT; index++) {
             tracks.add(sfxSlot(index, sfx));
         }
-        return new S3kAudioTick(ordinal, false, mailbox, global(music), tracks, List.of());
+        return new S3kAudioTick(ordinal, false, mailbox, global(music, driver), tracks, List.of());
     }
 
-    private static S3kAudioTick.GlobalState global(SmpsSequencerSnapshot music) {
+    private static S3kAudioTick.GlobalState global(
+            SmpsSequencerSnapshot music, SmpsDriverSnapshot driver) {
         if (music == null) {
             return new S3kAudioTick.GlobalState(0, 0, 0, 0, null, null, null, null, null, null,
-                    null, null);
+                    null, null, driver.palUpdateCounter());
         }
         return new S3kAudioTick.GlobalState(
                 music.tempoWeight() & 0xff,
                 music.tempoAccumulator() & 0xff,
                 music.speedShoes() ? SPEED_SHOES_TEMPO : 0,
                 music.speedupTimeout() & 0xff,
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null,
+                driver.palUpdateCounter());
     }
 
     /**

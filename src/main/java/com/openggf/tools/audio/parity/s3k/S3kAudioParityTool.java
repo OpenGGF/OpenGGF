@@ -84,7 +84,7 @@ public final class S3kAudioParityTool {
         Integer corrupt = options.containsKey("corrupt-engine-write-tick")
                 ? Integer.parseInt(options.get("corrupt-engine-write-tick")) : null;
         List<S3kAudioTick> reference = new ArrayList<>();
-        S3kAudioReferenceReader.read(referencePath, reference::add);
+        S3kAudioReferenceReader.readDriverServices(referencePath, reference::add);
         if (options.containsKey("ticks")) {
             int limit = Integer.parseInt(options.get("ticks"));
             if (limit < 1 || limit > reference.size()) {

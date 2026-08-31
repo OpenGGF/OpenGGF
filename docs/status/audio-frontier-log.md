@@ -27,6 +27,29 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-08-31 — S3K service projection reaches the SEGA command at service 49
+
+- **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,
+  `feature/ai-sdre2-cadence-resume` (the service projection lands with this
+  entry).
+- **Fixture:** `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz`
+  (unchanged authenticated 5,400-frame reference).
+- **Command:** `S3kAudioParityTool compare --reference <committed fixture>
+  --rom <absolute SHA-1-verified locked-on ROM>` after compiling the worktree.
+- **Result:** the complete boot service and the first ordinary `E1h`
+  fade-init service match. First divergence service **49**, `EVENT_MISSING`,
+  event 0: reference Z80 YM part II `82h = FFh`, engine missing.
+- **Notes:** the reader now projects 5,400 frame rows into 5,386 complete Z80
+  services. It groups the cross-frame boot burst by the source-owned
+  `zPalDblUpdCounter` transition `0 -> 5` at `zInitAudioDriver` completion
+  (`D:523-551`), producing one 85-write boot service without a frame-number
+  trigger. The engine host emits the exact shipped `zStopAllSound` sequence;
+  the next service consumes the `E1h` request that remained pending during
+  boot and matches its unconditional `zPSGSilenceAll`. Service 49 consumes
+  `FFh` (`cmd_SEGA`), whose first action is another `zStopAllSound`; SEGA PCM
+  dispatch is still explicitly unsupported by the host and is the new
+  frontier.
+
 ## 2026-08-31 — S3K driver projection advances from the 68k bootstrap to Z80 boot at tick 13
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,

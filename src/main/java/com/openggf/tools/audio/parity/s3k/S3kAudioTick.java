@@ -51,7 +51,8 @@ public record S3kAudioTick(
             Integer fadeInTimeout,      // 1C29
             Integer pauseFlag,          // 1C10
             List<Integer> soundQueue,   // 1C05-07
-            Integer nextSound) {        // 1C09
+            Integer nextSound,          // 1C09
+            Integer palDoubleUpdateCounter) { // 1C04, boot-completion marker
         public GlobalState {
             soundQueue = soundQueue == null ? null : List.copyOf(soundQueue);
         }

@@ -89,7 +89,7 @@ class TestS3kAudioParityComparator {
         }
         return new S3kAudioTick(ordinal, false, List.of(0, 0, 0),
                 new S3kAudioTick.GlobalState(tempo, 0, 0, 0, null, null, null, null, null, null,
-                        null, null),
+                        null, null, 5),
                 tracks,
                 List.of(AudioParityChipWrite.ym2612(0, 0x28, 0x00),
                         AudioParityChipWrite.ym2612(0, 0xB4, 0xC0),

@@ -95,6 +95,51 @@ public final class S3kAudioReferenceReader {
         }
     }
 
+    /**
+     * Projects the power-on frame stream onto complete Z80 driver services.
+     * The boot service begins before the first Z80 write and completes when
+     * {@code zInitAudioDriver} stores 5 to {@code zPalDblUpdCounter}
+     * (D:523-551); all earlier frame fragments form one service. Every later
+     * NTSC frame is one ordinary {@code zVInt} service.
+     */
+    public static Metadata readDriverServices(
+            Path path, Consumer<S3kAudioTick> serviceConsumer) {
+        List<S3kAudioTick> frames = new ArrayList<>();
+        Metadata metadata = read(path, frames::add);
+        int completion = -1;
+        for (int index = 0; index < frames.size(); index++) {
+            Integer counter = frames.get(index).global().palDoubleUpdateCounter();
+            if (counter != null && counter == 5) {
+                completion = index;
+                break;
+            }
+            if (counter == null || counter != 0) {
+                throw new IllegalArgumentException(
+                        "invalid pre-install PAL counter at frame " + index);
+            }
+        }
+        if (completion < 0) {
+            throw new IllegalArgumentException(
+                    "reference never completes zInitAudioDriver");
+        }
+
+        List<AudioParityChipWrite> bootWrites = new ArrayList<>();
+        for (int index = 0; index <= completion; index++) {
+            bootWrites.addAll(frames.get(index).writes());
+        }
+        S3kAudioTick bootCompletion = frames.get(completion);
+        serviceConsumer.accept(new S3kAudioTick(0, bootCompletion.lag(),
+                List.of(0, 0, 0), bootCompletion.global(),
+                bootCompletion.tracks(), bootWrites));
+        int ordinal = 1;
+        for (int index = completion + 1; index < frames.size(); index++) {
+            S3kAudioTick frame = frames.get(index);
+            serviceConsumer.accept(new S3kAudioTick(ordinal++, frame.lag(),
+                    frame.mailbox(), frame.global(), frame.tracks(), frame.writes()));
+        }
+        return metadata;
+    }
+
     static Metadata parseMetadata(String line) throws IOException {
         JsonNode row = JSON.readTree(line);
         if (!row.path("row").asText().equals("metadata")) {
@@ -185,7 +230,7 @@ public final class S3kAudioReferenceReader {
                 ramByte(ram, 0x1C0E), ramByte(ram, 0x1C0F), ramByte(ram, 0x1C29),
                 ramByte(ram, 0x1C10),
                 List.of(ramByte(ram, 0x1C05), ramByte(ram, 0x1C06), ramByte(ram, 0x1C07)),
-                ramByte(ram, 0x1C09));
+                ramByte(ram, 0x1C09), ramByte(ram, 0x1C04));
     }
 
     static List<S3kAudioTrackState> decodeTracks(byte[] ram) {

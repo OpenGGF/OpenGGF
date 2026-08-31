@@ -15,8 +15,8 @@ skdisasm-backed routine map/spec only; TraceChaser/engine code was read for
 
 ## 1. What was built
 
-A committed, re-runnable frame-shaped oracle for the S3K Z80 sound driver
-(driver-RAM track state + ordered YM/PSG write stream per emulated frame),
+A committed, re-runnable capture with a complete-service comparison projection
+for the S3K Z80 sound driver (driver-RAM track state + ordered YM/PSG writes),
 with the reference produced by the
 native headless GPGX harness rather than the S1 lane's Lua/EmuHawk path
 (which cannot see Z80-issued chip writes and is barred for this lane).
@@ -107,8 +107,9 @@ ROM identity, RAM window, ordinal continuity, terminal digest), replays the
 recorded request timeline into the engine's real `SmpsDriver` +
 `Sonic3kSmpsLoader`/`Sonic3kSmpsSequencerConfig` (music `01h-32h`, credits
 `DCh`, SFX `33h-DBh`, `E0h/E2h/E6h-FEh` stop-all, `E4h` stop-SFX, mirroring
-`zPlaySoundByIndex` D:1641-1665; `E1h/E5h/E3h/FFh` are reported as
-unmodelled), advances one NTSC frame (735 samples) per tick, captures chip
+`zPlaySoundByIndex` D:1641-1665; unimplemented command tails are reported),
+projects boot by the source-owned `zPalDblUpdCounter = 5` completion store and
+then advances one outer-frame driver service per tick, captures chip
 writes via `ChipWriteObserver`, and normalizes
 `SmpsDriverSnapshot`/`SmpsSequencerSnapshot` into the driver-RAM vocabulary.
 Comparison per tick, in order: GATE globals (`zCurrentTempo`,
@@ -130,7 +131,7 @@ bytes are compared and which stay DIAGNOSTIC (unmapped engine coordinate:
 - One corrupted engine write → `EVENT_VALUE_DIFFERENT` at its exact
   tick/event (`TestS3kAudioParityComparator`, committed).
 
-## 6. First frontier (corrected 2026-08-31)
+## 6. Frontier progression (corrected 2026-08-31)
 
 The initial tick-3 attribution was wrong: its four PSG writes carry observer
 CPU tag 2 and exactly match the 68k `PSGInitValues` power-on loop
@@ -146,10 +147,21 @@ source-owned driver-installation boundary. A valid next revision must model or
 capture that boot as a service boundary; it must not trigger engine behavior
 from tick 13 or from the reference write stream.
 
+The service projection now implements that revision without changing the
+fixture: frames before `zPalDblUpdCounter` becomes 5 are grouped into one boot
+service, because the store is the final source-owned initialization marker
+before `ei` (`D:523-551`). This yields 5,386 complete services. The engine
+host emits the exact 85-write `zStopAllSound` boot sequence and matches the
+following `E1h` fade-init service, including its unconditional four-write PSG
+silence. The first divergence is now service 49, where `FFh` enters
+`zPlaySegaSound` and begins another stop-all burst; SEGA PCM remains an
+explicit host gap.
+
 ## 7. Known limits and open questions
 
-1. The engine capture host models neither fades (`E1h/E5h`), PSG-mute
-   (`E3h`), nor the SEGA chant (`FFh`); requests are logged as unmodelled.
+1. The engine capture host models the immediate PSG-silence edge of fades but
+   not their active-song envelope; PSG-mute (`E3h`) and the SEGA chant (`FFh`)
+   remain unmodelled. Unsupported tails are logged.
    Divergences beyond such ticks are only meaningful once those transforms
    are modelled or the passage avoids them.
 2. `voiceIndex`/`modulationCtrl` engine mappings are best-effort composites
@@ -162,7 +174,5 @@ from tick 13 or from the reference write stream.
    need their own movies (the capture runner takes any BK2).
 5. The oracle compares from power-on; per-song oracles (like S1 GHZ) can be
    cut from any tick range later. The committed fixture keeps the power-on
-   origin and authenticates both CPUs' writes, while the driver projection
-   admits only Z80 writes. Its frame rows split the boot `zStopAllSound`
-   service across ticks 13-14, so boot parity needs a service-shaped boundary
-   rather than frame-index alignment.
+   origin and authenticates both CPUs' writes, while the comparison projection
+   admits only Z80 writes and groups the split boot service semantically.
