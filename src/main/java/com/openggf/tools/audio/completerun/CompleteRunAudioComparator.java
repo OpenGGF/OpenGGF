@@ -282,7 +282,8 @@ public final class CompleteRunAudioComparator {
                 RecordView actualView = view(actual);
                 if (first == null) {
                     Difference found = difference(expected == null ? null : expected.record,
-                            actual == null ? null : actual.record);
+                            actual == null ? null : actual.record,
+                            reference.metadata.comparisonLayerInventory());
                     if (found == null) {
                         context.before(expectedView, actualView);
                     } else {
@@ -302,7 +303,9 @@ public final class CompleteRunAudioComparator {
         SourceIdentity engineIdentity = engine.identity(Side.ENGINE);
         if (first == null) {
             Context empty = emptyContext();
-            return new CompleteRunAudioReport(Kind.MATCH, referenceIdentity, engineIdentity, -1,
+            Kind kind = reference.metadata.comparisonLayerInventory().allLayersCompared()
+                    ? Kind.MATCH : Kind.REFERENCE_LIMITATION;
+            return new CompleteRunAudioReport(kind, referenceIdentity, engineIdentity, -1,
                     null, null, null, empty, empty, null, null, null, null);
         }
         return new CompleteRunAudioReport(first.kind, referenceIdentity, engineIdentity, first.frame,
@@ -348,24 +351,38 @@ public final class CompleteRunAudioComparator {
             return diff(Kind.METADATA_IDENTITY, -1, "metadata.state_inventory",
                     reference.stateInventory(), engine.stateInventory());
         }
+        if (!reference.comparisonLayerInventory().equals(engine.comparisonLayerInventory())) {
+            return diff(Kind.METADATA_IDENTITY, -1, "metadata.comparison_layer_inventory",
+                    reference.comparisonLayerInventory(), engine.comparisonLayerInventory());
+        }
         return null;
     }
 
     /** Pure record classifier used by the streaming pass and defensive impossible-state tests. */
     static Difference difference(CompleteRunAudioTrace.Record reference,
             CompleteRunAudioTrace.Record engine) {
+        return difference(reference, engine, ComparisonLayerInventory.allCompared());
+    }
+
+    static Difference difference(CompleteRunAudioTrace.Record reference,
+            CompleteRunAudioTrace.Record engine, ComparisonLayerInventory layers) {
+        Objects.requireNonNull(layers, "comparison layer inventory");
         if (reference == null || engine == null) return missingRecord(reference, engine);
         if (reference instanceof Baseline expected && engine instanceof Baseline actual) {
             if (expected.absoluteFrame() != actual.absoluteFrame()) {
                 return frameCoordinate(expected.absoluteFrame(), actual.absoluteFrame(), "baseline.absolute_frame");
             }
-            Difference state = stateDifference(expected.state(), actual.state(), expected.absoluteFrame(),
-                    "baseline.state");
-            if (state != null) return state;
-            if (!expected.roleOwners().equals(actual.roleOwners())) {
+            if (layers.isCompared(ComparisonLayer.STATE)) {
+                Difference state = stateDifference(expected.state(), actual.state(), expected.absoluteFrame(),
+                        "baseline.state");
+                if (state != null) return state;
+            }
+            if (layers.isCompared(ComparisonLayer.OWNERSHIP)
+                    && !expected.roleOwners().equals(actual.roleOwners())) {
                 return diff(Kind.OWNER, expected.absoluteFrame(), "baseline.role_owners",
                         expected.roleOwners(), actual.roleOwners());
             }
+            if (!layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)) return null;
             try {
                 String expectedSemantic = CompleteRunAudioJson.writeSemanticRecord(expected);
                 String actualSemantic = CompleteRunAudioJson.writeSemanticRecord(actual);
@@ -377,9 +394,10 @@ public final class CompleteRunAudioComparator {
             }
         }
         if (reference instanceof Frame expected && engine instanceof Frame actual) {
-            return frameDifference(expected, actual);
+            return frameDifference(expected, actual, layers);
         }
         if (reference instanceof Lifecycle expected && engine instanceof Lifecycle actual) {
+            if (!layers.isCompared(ComparisonLayer.LIFECYCLE)) return null;
             if (expected.ordinal() != actual.ordinal()) {
                 return diff(Kind.LIFECYCLE_ORDER, Math.min(expected.absoluteFrame(), actual.absoluteFrame()),
                         "lifecycle.ordinal", expected.ordinal(), actual.ordinal());
@@ -405,6 +423,7 @@ public final class CompleteRunAudioComparator {
                     : diff(Kind.LIFECYCLE_VALUE, frame, location, expected, actual);
         }
         if (reference instanceof CutoffFrontier expected && engine instanceof CutoffFrontier actual) {
+            if (!layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)) return null;
             try {
                 String expectedSemantic = CompleteRunAudioJson.writeSemanticRecord(expected);
                 String actualSemantic = CompleteRunAudioJson.writeSemanticRecord(actual);
@@ -416,30 +435,33 @@ public final class CompleteRunAudioComparator {
             }
         }
         if (reference instanceof Terminal expected && engine instanceof Terminal actual) {
-            if (expected.exclusiveEnd() != actual.exclusiveEnd()
-                    || expected.frameCount() != actual.frameCount()
-                    || expected.requestCount() != actual.requestCount()
-                    || expected.serviceCount() != actual.serviceCount()
-                    || expected.decisionCount() != actual.decisionCount()
-                    || expected.ymCount() != actual.ymCount()
-                    || expected.psgCount() != actual.psgCount()
-                    || expected.lifecycleCount() != actual.lifecycleCount()
-                    || expected.cutoffActiveCount() != actual.cutoffActiveCount()
-                    || expected.cutoffPendingCount() != actual.cutoffPendingCount()) {
+            if (expected.exclusiveEnd() != actual.exclusiveEnd() || expected.frameCount() != actual.frameCount()
+                    || layers.isCompared(ComparisonLayer.REQUESTS) && expected.requestCount() != actual.requestCount()
+                    || layers.isCompared(ComparisonLayer.SERVICES) && expected.serviceCount() != actual.serviceCount()
+                    || layers.isCompared(ComparisonLayer.DECISIONS) && expected.decisionCount() != actual.decisionCount()
+                    || layers.isCompared(ComparisonLayer.CHIP_EVENTS)
+                            && (expected.ymCount() != actual.ymCount() || expected.psgCount() != actual.psgCount())
+                    || layers.isCompared(ComparisonLayer.LIFECYCLE)
+                            && expected.lifecycleCount() != actual.lifecycleCount()
+                    || layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)
+                            && (expected.cutoffActiveCount() != actual.cutoffActiveCount()
+                                    || expected.cutoffPendingCount() != actual.cutoffPendingCount())) {
                 return diff(Kind.TERMINAL_COUNT, Math.min(expected.exclusiveEnd(), actual.exclusiveEnd()),
                         "terminal.counts", expected.counts(), actual.counts());
             }
-            if (!expected.semanticDigest().equals(actual.semanticDigest())) {
+            if (layers.allLayersCompared() && !expected.semanticDigest().equals(actual.semanticDigest())) {
                 return diff(Kind.TERMINAL_DIGEST, expected.exclusiveEnd(), "terminal.semantic_digest",
                         expected.semanticDigest(), actual.semanticDigest());
             }
             return null;
         }
         if (reference instanceof Lifecycle lifecycle) {
+            if (!layers.isCompared(ComparisonLayer.LIFECYCLE)) return null;
             return diff(Kind.LIFECYCLE_MISSING, lifecycle.absoluteFrame(), "lifecycle",
                     lifecycle, engine);
         }
         if (engine instanceof Lifecycle lifecycle) {
+            if (!layers.isCompared(ComparisonLayer.LIFECYCLE)) return null;
             return diff(Kind.LIFECYCLE_EXTRA, lifecycle.absoluteFrame(), "lifecycle",
                     reference, lifecycle);
         }
@@ -494,7 +516,7 @@ public final class CompleteRunAudioComparator {
         return diff(Kind.RECORD_SHAPE, recordFrame(reference, engine), "record.eof", reference, engine);
     }
 
-    private static Difference frameDifference(Frame reference, Frame engine) {
+    private static Difference frameDifference(Frame reference, Frame engine, ComparisonLayerInventory layers) {
         if (reference.absoluteFrame() != engine.absoluteFrame()) {
             return frameCoordinate(reference.absoluteFrame(), engine.absoluteFrame(), "frame.absolute_frame");
         }
@@ -504,11 +526,14 @@ public final class CompleteRunAudioComparator {
                     new FrameCoordinatesPayload(reference.segment(), reference.lag()),
                     new FrameCoordinatesPayload(engine.segment(), engine.lag()));
         }
-        Difference requests = requestDifference(reference.requests(), engine.requests(), frame);
-        if (requests != null) return requests;
-        Difference services = serviceDifference(reference.services(), engine.services(), frame);
+        if (layers.isCompared(ComparisonLayer.REQUESTS)) {
+            Difference requests = requestDifference(reference.requests(), engine.requests(), frame);
+            if (requests != null) return requests;
+        }
+        Difference services = serviceDifference(reference.services(), engine.services(), frame, layers);
         if (services != null) return services;
-        return reference.rawChipEvents().equals(engine.rawChipEvents()) ? null
+        return !layers.isCompared(ComparisonLayer.CHIP_EVENTS) || reference.rawChipEvents().equals(engine.rawChipEvents())
+                ? null
                 : diff(Kind.CHIP_EVENT_VALUE, frame, "frame.raw_chip_events",
                         reference.rawChipEvents(), engine.rawChipEvents());
     }
@@ -545,35 +570,42 @@ public final class CompleteRunAudioComparator {
     }
 
     private static Difference serviceDifference(List<DriverService> reference,
-            List<DriverService> engine, int frame) {
-        if (reference.size() != engine.size()) {
+            List<DriverService> engine, int frame, ComparisonLayerInventory layers) {
+        boolean compareServices = layers.isCompared(ComparisonLayer.SERVICES);
+        if (compareServices && reference.size() != engine.size()) {
             int index = commonPrefix(reference, engine);
             return diff(reference.size() > engine.size() ? Kind.SERVICE_MISSING : Kind.SERVICE_EXTRA,
                     frame, "frame.services[" + index + "]", at(reference, index), at(engine, index));
         }
-        if (isPermutation(reference, engine, CompleteRunAudioComparator::servicePayload)) {
+        if (compareServices && isPermutation(reference, engine, CompleteRunAudioComparator::servicePayload)) {
             return diff(Kind.SERVICE_ORDER, frame, "frame.services", reference, engine);
         }
-        for (int index = 0; index < reference.size(); index++) {
+        for (int index = 0; index < Math.min(reference.size(), engine.size()); index++) {
             DriverService expected = reference.get(index);
             DriverService actual = engine.get(index);
             String location = "frame.services[" + index + "]";
-            if (expected.ordinal() != actual.ordinal()) {
+            if (compareServices && expected.ordinal() != actual.ordinal()) {
                 return diff(Kind.SERVICE_ORDER, frame, location + ".ordinal",
                         expected.ordinal(), actual.ordinal());
             }
-            if (!expected.kind().equals(actual.kind())) {
+            if (compareServices && !expected.kind().equals(actual.kind())) {
                 return diff(Kind.SERVICE_VALUE, frame, location + ".kind", expected.kind(), actual.kind());
             }
-            Difference decisions = decisionDifference(expected.decisions(), actual.decisions(), frame,
-                    location + ".decisions");
-            if (decisions != null) return decisions;
-            Difference state = stateDifference(expected.state(), actual.state(), frame, location + ".state");
-            if (state != null) return state;
-            Difference chips = chipDifference(expected.chipEvents(), actual.chipEvents(), frame,
-                    location + ".chip_events");
-            if (chips != null) return chips;
-            if (!expected.equals(actual)) {
+            if (layers.isCompared(ComparisonLayer.DECISIONS)) {
+                Difference decisions = decisionDifference(expected.decisions(), actual.decisions(), frame,
+                        location + ".decisions", layers.isCompared(ComparisonLayer.OWNERSHIP));
+                if (decisions != null) return decisions;
+            }
+            if (layers.isCompared(ComparisonLayer.STATE)) {
+                Difference state = stateDifference(expected.state(), actual.state(), frame, location + ".state");
+                if (state != null) return state;
+            }
+            if (layers.isCompared(ComparisonLayer.CHIP_EVENTS)) {
+                Difference chips = chipDifference(expected.chipEvents(), actual.chipEvents(), frame,
+                        location + ".chip_events");
+                if (chips != null) return chips;
+            }
+            if (compareServices && !expected.equals(actual)) {
                 return diff(Kind.SERVICE_VALUE, frame, location, expected, actual);
             }
         }
@@ -581,7 +613,7 @@ public final class CompleteRunAudioComparator {
     }
 
     private static Difference decisionDifference(List<Decision> reference, List<Decision> engine,
-            int frame, String location) {
+            int frame, String location, boolean compareOwnership) {
         if (reference.size() != engine.size()) {
             int index = commonPrefix(reference, engine);
             return diff(reference.size() > engine.size() ? Kind.DECISION_MISSING : Kind.DECISION_EXTRA,
@@ -604,7 +636,7 @@ public final class CompleteRunAudioComparator {
                         new PriorityPayload(expected.priorityBefore(), expected.priorityAfter()),
                         new PriorityPayload(actual.priorityBefore(), actual.priorityAfter()));
             }
-            if (expected.roleDecisions().size() == actual.roleDecisions().size()) {
+            if (compareOwnership && expected.roleDecisions().size() == actual.roleDecisions().size()) {
                 for (int role = 0; role < expected.roleDecisions().size(); role++) {
                     RoleDecision expectedRole = expected.roleDecisions().get(role);
                     RoleDecision actualRole = actual.roleDecisions().get(role);

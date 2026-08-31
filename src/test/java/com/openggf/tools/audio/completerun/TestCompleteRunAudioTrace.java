@@ -16,6 +16,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class TestCompleteRunAudioTrace {
+    private static final String ALL_COMPARED_LAYER_JSON = "\"comparisonLayerInventory\":[{\"layer\":\"REQUESTS\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"DECISIONS\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"SERVICES\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"STATE\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"OWNERSHIP\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"LIFECYCLE\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"CHIP_EVENTS\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"CUTOFF_FRONTIER\",\"status\":\"COMPARED\",\"reason\":null}]";
     @Test
     void nativeDeferredServiceBeginRetainsExactImmutableManagedEvidence() {
         NativeDeferredServiceBegin pending = new NativeDeferredServiceBegin(
@@ -576,6 +577,34 @@ class TestCompleteRunAudioTrace {
     }
 
     @Test
+    void comparisonLayerInventoryRequiresOneCanonicalClaimForEveryLayer() {
+        List<ComparisonLayerClaim> claims = new ArrayList<>(ComparisonLayerInventory.allCompared().claims());
+
+        claims.add(claims.getFirst());
+        List<ComparisonLayerClaim> duplicate = List.copyOf(claims);
+        assertThrows(IllegalArgumentException.class, () -> new ComparisonLayerInventory(duplicate));
+
+        claims = new ArrayList<>(ComparisonLayerInventory.allCompared().claims());
+        claims.removeLast();
+        List<ComparisonLayerClaim> missing = List.copyOf(claims);
+        assertThrows(IllegalArgumentException.class, () -> new ComparisonLayerInventory(missing));
+
+        claims = new ArrayList<>(ComparisonLayerInventory.allCompared().claims());
+        java.util.Collections.swap(claims, 0, 1);
+        List<ComparisonLayerClaim> reordered = List.copyOf(claims);
+        assertThrows(IllegalArgumentException.class, () -> new ComparisonLayerInventory(reordered));
+    }
+
+    @Test
+    void comparisonLayerInventoryRejectsDependentClaimsWithoutTheirAuthority() {
+        List<ComparisonLayerClaim> claims = new ArrayList<>(ComparisonLayerInventory.allCompared().claims());
+        claims.set(ComparisonLayer.REQUESTS.ordinal(), new ComparisonLayerClaim(ComparisonLayer.REQUESTS,
+                ComparisonLayerStatus.UNAVAILABLE, "no pre-consumption request observer"));
+
+        assertThrows(IllegalArgumentException.class, () -> new ComparisonLayerInventory(claims));
+    }
+
+    @Test
     void stateRejectsDuplicateFieldNames() {
         assertThrows(IllegalArgumentException.class, () -> new NormalizedState(List.of(
                 new StateField("tempo", 1), new StateField("tempo", 2)), List.of()));
@@ -801,21 +830,25 @@ class TestCompleteRunAudioTrace {
     void callbackObserverMetadataHasIndependentCanonicalJsonAndStrictParserGates() throws Exception {
         String canonical = """
                 {"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"OPENGGF","producerRuntimeIdentity":{"producerName":"OpenGGF","producerVersion":"0.6","emulatorName":"OpenGGF","emulatorVersion":"0.6","coreName":"SMPS","coreVersion":"1","observerAdapter":"CALLBACK_ONLY","artifactSha256":{"OPENGGF_PRODUCER":"4444444444444444444444444444444444444444444444444444444444444444"}},"observerRuntimeIdentity":{"kind":"CALLBACK","id":"openggf.callback.v1"},"observerProof":{"observerProfile":"test.observer.v1","callbackSource":"m68k.execute","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
+        canonical = canonical.substring(0, canonical.length() - 1) + "," + ALL_COMPARED_LAYER_JSON + "}";
+        final String canonicalJson = canonical;
 
         assertEquals(canonical, CompleteRunAudioJson.writeMetadata(fixture.metadata));
         assertEquals(fixture.metadata, readMetadata(canonical));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"kind\":\"CALLBACK\"", "\"kind\":\"UNKNOWN\"")));
+                () -> readMetadata(canonicalJson.replace("," + ALL_COMPARED_LAYER_JSON, "")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"observerRuntimeIdentity\":{\"kind\":\"CALLBACK\",\"id\":\"openggf.callback.v1\"},", "")));
+                () -> readMetadata(canonicalJson.replace("\"kind\":\"CALLBACK\"", "\"kind\":\"UNKNOWN\"")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"id\":\"openggf.callback.v1\"",
+                () -> readMetadata(canonicalJson.replace("\"observerRuntimeIdentity\":{\"kind\":\"CALLBACK\",\"id\":\"openggf.callback.v1\"},", "")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonicalJson.replace("\"id\":\"openggf.callback.v1\"",
                         "\"id\":\"openggf.callback.v1\",\"id\":\"duplicate\"")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"observerAdapter\":\"CALLBACK_ONLY\"",
+                () -> readMetadata(canonicalJson.replace("\"observerAdapter\":\"CALLBACK_ONLY\"",
                         "\"observerAdapter\":\"REFLECTION\"")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"id\":\"openggf.callback.v1\"",
+                () -> readMetadata(canonicalJson.replace("\"id\":\"openggf.callback.v1\"",
                         "\"id\":\"openggf.callback.v1\",\"unknown\":0")));
     }
 
@@ -898,22 +931,24 @@ class TestCompleteRunAudioTrace {
                         + ",\"TASK8_HOST_SOURCE\":\"c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7\""
                         + ",\"GPGX_OBSERVER_CAPABILITY\":\"845323d7fa50af24b4f516c8937fa231737d3e66df648a90e035fdd56072f326\""
                         + ",\"REFERENCE_INSTALLATION_TREE\":\"830351fbda507637719647ffe283a542fcb319b0b2609dc53d675fe553e31c87\"");
+        canonical = canonical.substring(0, canonical.length() - 1) + "," + ALL_COMPARED_LAYER_JSON + "}";
+        final String canonicalJson = canonical;
         assertEquals(canonical, CompleteRunAudioJson.writeMetadata(metadata));
         assertEquals(metadata, readMetadata(canonical));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"eventSize\":32,", "")));
+                () -> readMetadata(canonicalJson.replace("\"eventSize\":32,", "")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"capacity\":65536",
+                () -> readMetadata(canonicalJson.replace("\"capacity\":65536",
                         "\"capacity\":65536,\"capacity\":65536")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"enabled\":true", "\"enabled\":false")));
+                () -> readMetadata(canonicalJson.replace("\"enabled\":true", "\"enabled\":false")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"maximumFrameOccupancy\":1",
+                () -> readMetadata(canonicalJson.replace("\"maximumFrameOccupancy\":1",
                         "\"maximumFrameOccupancy\":2000009")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"overflowCount\":0", "\"overflowCount\":1")));
+                () -> readMetadata(canonicalJson.replace("\"overflowCount\":0", "\"overflowCount\":1")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"overflowCount\":0}",
+                () -> readMetadata(canonicalJson.replace("\"overflowCount\":0}",
                         "\"overflowCount\":0,\"unknown\":0}")));
     }
 

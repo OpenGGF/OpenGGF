@@ -136,6 +136,8 @@ final class CompleteRunAudioJson {
         json.writeFieldName("chunkPolicy"); WRITER.writeValue(json, metadata.chunkPolicy());
         json.writeFieldName("hardwareRoles"); WRITER.writeValue(json, metadata.hardwareRoles());
         json.writeFieldName("stateInventory"); WRITER.writeValue(json, metadata.stateInventory());
+        json.writeFieldName("comparisonLayerInventory"); writeComparisonLayerInventory(json,
+                metadata.comparisonLayerInventory());
         json.writeEndObject();
     }
 
@@ -197,7 +199,39 @@ final class CompleteRunAudioJson {
         field(p,"chunkPolicy"); ChunkPolicy policy=policy(p);
         field(p,"hardwareRoles"); List<HardwareRole> roles=enums(p,HardwareRole.class,"hardware roles");
         field(p,"stateInventory"); StateInventory inventory=inventory(p);
-        end(p,"metadata"); return new Metadata(schema,profile,fixture,kind,runtime,observerIdentity,proof,policy,roles,inventory);
+        field(p,"comparisonLayerInventory"); ComparisonLayerInventory layers=comparisonLayerInventory(p);
+        end(p,"metadata"); return new Metadata(schema,profile,fixture,kind,runtime,observerIdentity,proof,policy,
+                roles,inventory,layers);
+    }
+
+    private static void writeComparisonLayerInventory(JsonGenerator json, ComparisonLayerInventory inventory)
+            throws IOException {
+        json.writeStartArray();
+        for (ComparisonLayerClaim claim : inventory.claims()) {
+            json.writeStartObject();
+            json.writeStringField("layer", claim.layer().name());
+            json.writeStringField("status", claim.status().name());
+            if (claim.reason() == null) json.writeNullField("reason");
+            else json.writeStringField("reason", claim.reason());
+            json.writeEndObject();
+        }
+        json.writeEndArray();
+    }
+
+    private static ComparisonLayerInventory comparisonLayerInventory(JsonParser p) throws IOException {
+        array(p, "comparison layer inventory");
+        List<ComparisonLayerClaim> claims = new ArrayList<>();
+        while (p.nextToken() != JsonToken.END_ARRAY) {
+            bound(claims, "comparison layer claim");
+            startCurrent(p, "comparison layer claim");
+            field(p, "layer"); ComparisonLayer layer = enumValue(p, ComparisonLayer.class, "comparison layer");
+            field(p, "status"); ComparisonLayerStatus status = enumValue(p, ComparisonLayerStatus.class,
+                    "comparison layer status");
+            field(p, "reason"); String reason = nullableText(p, "comparison layer reason");
+            end(p, "comparison layer claim");
+            claims.add(new ComparisonLayerClaim(layer, status, reason));
+        }
+        return new ComparisonLayerInventory(claims);
     }
 
     private static Baseline baseline(JsonParser p) throws IOException { startCurrent(p,"baseline"); field(p,"absoluteFrame"); int frame=intValue(p,"baseline frame"); field(p,"state"); NormalizedState state=state(p); field(p,"roleOwners"); List<RoleOwner> owners=roleOwners(p); field(p,"frontier"); BoundaryFrontier frontier=boundaryFrontier(p); end(p,"baseline"); return new Baseline(frame,state,owners,frontier); }

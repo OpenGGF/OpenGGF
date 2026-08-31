@@ -310,10 +310,84 @@ public final class CompleteRunAudioTrace {
         }
     }
 
+    /** Semantic observation domains declared by a pinned complete-run capture profile. */
+    public enum ComparisonLayer {
+        REQUESTS,
+        DECISIONS,
+        SERVICES,
+        STATE,
+        OWNERSHIP,
+        LIFECYCLE,
+        CHIP_EVENTS,
+        CUTOFF_FRONTIER
+    }
+
+    /** Whether a semantic layer is independently available for comparison. */
+    public enum ComparisonLayerStatus { COMPARED, UNAVAILABLE }
+
+    /** One immutable authority claim for a canonical comparison layer. */
+    public record ComparisonLayerClaim(ComparisonLayer layer, ComparisonLayerStatus status, String reason) {
+        public ComparisonLayerClaim {
+            Objects.requireNonNull(layer, "comparison layer");
+            Objects.requireNonNull(status, "comparison layer status");
+            if (status == ComparisonLayerStatus.COMPARED && reason != null) {
+                throw new IllegalArgumentException("compared layer must not carry an unavailable reason");
+            }
+            if (status == ComparisonLayerStatus.UNAVAILABLE) {
+                requireText(reason, "unavailable comparison-layer reason");
+            }
+        }
+    }
+
+    /**
+     * Complete, canonically ordered comparison authority inventory. Unavailable layers are
+     * explicit evidence limitations, never empty-array matches.
+     */
+    public record ComparisonLayerInventory(List<ComparisonLayerClaim> claims) {
+        public ComparisonLayerInventory {
+            claims = List.copyOf(Objects.requireNonNull(claims, "comparison layer claims"));
+            if (claims.size() != ComparisonLayer.values().length) {
+                throw new IllegalArgumentException("comparison inventory must claim every layer exactly once");
+            }
+            for (ComparisonLayer layer : ComparisonLayer.values()) {
+                ComparisonLayerClaim claim = claims.get(layer.ordinal());
+                if (claim.layer() != layer) {
+                    throw new IllegalArgumentException("comparison inventory claims must use canonical layer order");
+                }
+            }
+            if (claims.get(ComparisonLayer.DECISIONS.ordinal()).status() == ComparisonLayerStatus.COMPARED
+                    && claims.get(ComparisonLayer.REQUESTS.ordinal()).status() != ComparisonLayerStatus.COMPARED) {
+                throw new IllegalArgumentException("compared decisions require compared requests");
+            }
+            if (claims.get(ComparisonLayer.OWNERSHIP.ordinal()).status() == ComparisonLayerStatus.COMPARED
+                    && claims.get(ComparisonLayer.DECISIONS.ordinal()).status() != ComparisonLayerStatus.COMPARED) {
+                throw new IllegalArgumentException("compared ownership requires compared decisions");
+            }
+        }
+
+        public static ComparisonLayerInventory allCompared() {
+            return new ComparisonLayerInventory(java.util.Arrays.stream(ComparisonLayer.values())
+                    .map(layer -> new ComparisonLayerClaim(layer, ComparisonLayerStatus.COMPARED, null)).toList());
+        }
+
+        public ComparisonLayerClaim claim(ComparisonLayer layer) {
+            return claims.get(Objects.requireNonNull(layer, "comparison layer").ordinal());
+        }
+
+        public boolean isCompared(ComparisonLayer layer) {
+            return claim(layer).status() == ComparisonLayerStatus.COMPARED;
+        }
+
+        public boolean allLayersCompared() {
+            return claims.stream().allMatch(claim -> claim.status() == ComparisonLayerStatus.COMPARED);
+        }
+    }
+
     public record Metadata(String schema, String profileId, CompleteRunFixture fixture,
             ProducerKind producerKind, ProducerRuntimeIdentity producerRuntimeIdentity,
             ObserverRuntimeIdentity observerRuntimeIdentity, ObserverProof observerProof, ChunkPolicy chunkPolicy,
-            List<HardwareRole> hardwareRoles, StateInventory stateInventory) {
+            List<HardwareRole> hardwareRoles, StateInventory stateInventory,
+            ComparisonLayerInventory comparisonLayerInventory) {
         public Metadata {
             requireText(schema, "schema");
             requireText(profileId, "profileId");
@@ -329,6 +403,16 @@ public final class CompleteRunAudioTrace {
             Objects.requireNonNull(chunkPolicy, "chunk policy");
             hardwareRoles = canonicalRoles(hardwareRoles, "metadata hardware roles");
             Objects.requireNonNull(stateInventory, "metadata state inventory");
+            Objects.requireNonNull(comparisonLayerInventory, "metadata comparison layer inventory");
+        }
+
+        /** Compatibility constructor for source-owned synthetic fixtures; JSON remains fail-closed. */
+        public Metadata(String schema, String profileId, CompleteRunFixture fixture,
+                ProducerKind producerKind, ProducerRuntimeIdentity producerRuntimeIdentity,
+                ObserverRuntimeIdentity observerRuntimeIdentity, ObserverProof observerProof, ChunkPolicy chunkPolicy,
+                List<HardwareRole> hardwareRoles, StateInventory stateInventory) {
+            this(schema, profileId, fixture, producerKind, producerRuntimeIdentity, observerRuntimeIdentity,
+                    observerProof, chunkPolicy, hardwareRoles, stateInventory, ComparisonLayerInventory.allCompared());
         }
 
         /** Binds the caller-selected fixture and semantic inventories to their registered profile. */
@@ -336,7 +420,8 @@ public final class CompleteRunAudioTrace {
             Objects.requireNonNull(profile, "profile");
             if (!profileId.equals(profile.id()) || !fixture.equals(profile.fixture())
                     || !hardwareRoles.equals(canonicalRoles(profile.hardwareRoles(), "profile hardware roles"))
-                    || !stateInventory.equals(profile.stateInventory())) {
+                    || !stateInventory.equals(profile.stateInventory())
+                    || !comparisonLayerInventory.equals(profile.comparisonLayerInventory())) {
                 throw new IllegalArgumentException("metadata fixture does not match the selected profile");
             }
         }

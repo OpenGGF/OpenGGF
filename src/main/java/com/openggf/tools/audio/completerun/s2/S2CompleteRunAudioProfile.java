@@ -43,6 +43,9 @@ public final class S2CompleteRunAudioProfile {
                     S2CompleteRunStateNormalizer.GLOBAL_FIELDS,
                     S2CompleteRunStateNormalizer.ACTIVE_ROLE_FIELDS);
         }
+        @Override public CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayerInventory() {
+            return comparisonLayers();
+        }
         @Override public Map<CompleteRunAudioTrace.RawAudioRequest,
                 CompleteRunAudioTrace.NativeSoundIdentity> nativeSoundIdentities() { return IDENTITIES; }
         @Override public Map<CompleteRunAudioTrace.ProducerKind,
@@ -92,6 +95,28 @@ public final class S2CompleteRunAudioProfile {
                     "one_up_restore", new CompleteRunAudioTrace.LifecycleRule("one_up_restore", List.of(),
                             CompleteRunAudioTrace.LifecycleOwnershipAction.RESTORE_SAVED, List.of(ROLES)));
         }
+    }
+
+    private static CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayers() {
+        String requestAuthority = "TraceChaser S2 service manifest lacks the approved pre-consumption M68K sndDriverInput observation";
+        String adapter = "S2 complete-run reference adapter is not installed";
+        return new CompleteRunAudioTrace.ComparisonLayerInventory(List.of(
+                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.REQUESTS,
+                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, requestAuthority),
+                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.DECISIONS,
+                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, requestAuthority),
+                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.SERVICES,
+                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, adapter),
+                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.STATE,
+                        CompleteRunAudioTrace.ComparisonLayerStatus.COMPARED, null),
+                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.OWNERSHIP,
+                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, requestAuthority),
+                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.LIFECYCLE,
+                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, adapter),
+                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.CHIP_EVENTS,
+                        CompleteRunAudioTrace.ComparisonLayerStatus.COMPARED, null),
+                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.CUTOFF_FRONTIER,
+                        CompleteRunAudioTrace.ComparisonLayerStatus.COMPARED, null)));
     }
 
     private static CompleteRunAudioTrace.CompleteRunFixture fixture() {

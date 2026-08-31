@@ -59,6 +59,38 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void unavailableRequestAuthorityProducesReferenceLimitationRatherThanAnEmptyArrayMatch() throws Exception {
+        TestProfile profile = profile("comparator.layers." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = limitedLayers(false);
+        CompleteRunAudioProfiles.register(profile);
+        Path reference = writeCapture("limited-reference", profile, ProducerKind.REFERENCE, 1, this::plainFrame);
+        Path engine = writeCapture("limited-engine", profile, ProducerKind.OPENGGF, 1,
+                row -> requestAndDecisionFrame(row, request(0, 0xc0),
+                        decision(0, 1, 2, owner(0, 0xc0)), 0));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertEquals(CompleteRunAudioReport.Kind.REFERENCE_LIMITATION, report.kind(), report.toText());
+        assertTrue(report.toJson().contains("comparisonLayerInventory"));
+    }
+
+    @Test
+    void aComparedStateMismatchWinsOverTheReferenceLimitation() throws Exception {
+        TestProfile profile = profile("comparator.layers-state." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = limitedLayers(true);
+        CompleteRunAudioProfiles.register(profile);
+        Path reference = writeCapture("limited-state-reference", profile, ProducerKind.REFERENCE, 1,
+                row -> new Frame(FIRST_FRAME + row, "test", false, List.of(),
+                        List.of(service(0, List.of(), List.of(), state(1)))));
+        Path engine = writeCapture("limited-state-engine", profile, ProducerKind.OPENGGF, 1,
+                row -> new Frame(FIRST_FRAME + row, "test", false, List.of(),
+                        List.of(service(0, List.of(), List.of(), state(2)))));
+
+        assertEquals(CompleteRunAudioReport.Kind.STATE_FIELD_VALUE,
+                CompleteRunAudioComparator.compare(reference, engine).kind());
+    }
+
+    @Test
     void baselineSemanticFrontierComparesAcrossProducersAndIgnoresNativeSidecar() throws Exception {
         TestProfile profile = profile("comparator.baseline-frontier."
                 + PROFILE_SEQUENCE.incrementAndGet(), 1);
@@ -2703,6 +2735,26 @@ class TestCompleteRunAudioComparator {
         return new TestProfile(id, fixture);
     }
 
+    private static ComparisonLayerInventory limitedLayers(boolean compareState) {
+        return new ComparisonLayerInventory(List.of(
+                new ComparisonLayerClaim(ComparisonLayer.REQUESTS, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference lacks pre-consumption request authority"),
+                new ComparisonLayerClaim(ComparisonLayer.DECISIONS, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference lacks pre-consumption request authority"),
+                new ComparisonLayerClaim(ComparisonLayer.SERVICES, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference service authority is unavailable"),
+                new ComparisonLayerClaim(ComparisonLayer.STATE,
+                        compareState ? ComparisonLayerStatus.COMPARED : ComparisonLayerStatus.UNAVAILABLE,
+                        compareState ? null : "reference state authority is unavailable"),
+                new ComparisonLayerClaim(ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference lacks decision ownership authority"),
+                new ComparisonLayerClaim(ComparisonLayer.LIFECYCLE, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference lifecycle authority is unavailable"),
+                new ComparisonLayerClaim(ComparisonLayer.CHIP_EVENTS, ComparisonLayerStatus.COMPARED, null),
+                new ComparisonLayerClaim(ComparisonLayer.CUTOFF_FRONTIER, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference cutoff-frontier authority is unavailable")));
+    }
+
     private Path writeCapture(String name, TestProfile profile, ProducerKind kind, int frames,
             IntFunction<Frame> framesFactory) throws Exception {
         return writeCapture(name, metadata(profile, kind, profile.producerRuntimeIdentities().get(kind)),
@@ -2985,7 +3037,7 @@ class TestCompleteRunAudioComparator {
                         kind == ProducerKind.REFERENCE ? "m68k.execute" : "java.observer",
                         List.of(new CallbackProof("driver.service", 1))),
                 new ChunkPolicy(CHUNK_FRAME_ROWS, "gzip", 0), profile.hardwareRoles(),
-                profile.stateInventory());
+                profile.stateInventory(), profile.comparisonLayerInventory());
     }
 
     private Frame shiftedAdmissionFrame(int row, Decision admission, int admissionRow) {
@@ -3215,6 +3267,7 @@ class TestCompleteRunAudioComparator {
                 0, 0, 0, false, "f".repeat(64), CutoffFrontierPolicy.capabilityDigest(
                         CutoffFrontier.empty(new NormalizedState(List.of(), List.of()))), null);
         private Map<ProducerKind, NativeCapabilitySummary> capabilities = Map.of();
+        private ComparisonLayerInventory comparisonLayers = ComparisonLayerInventory.allCompared();
 
         private TestProfile(String id, CompleteRunFixture fixture) {
             this.id = id;
@@ -3278,6 +3331,7 @@ class TestCompleteRunAudioComparator {
         @Override public StateInventory stateInventory() {
             return new StateInventory(List.of("tempo"), List.of("cursor"));
         }
+        @Override public ComparisonLayerInventory comparisonLayerInventory() { return comparisonLayers; }
         @Override public Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities() {
             return Map.of(
                     new RawAudioRequest(OwnerClass.SFX, 0xc0, "mailbox", 0),
