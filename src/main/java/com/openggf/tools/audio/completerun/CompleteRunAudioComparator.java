@@ -606,6 +606,27 @@ public final class CompleteRunAudioComparator {
             if (compareServices && !expected.kind().equals(actual.kind())) {
                 return diff(Kind.SERVICE_VALUE, frame, location + ".kind", expected.kind(), actual.kind());
             }
+            if (compareServices && expected.completion() != actual.completion()) {
+                return diff(Kind.SERVICE_VALUE, frame, location + ".completion",
+                        expected.completion(), actual.completion());
+            }
+            if (compareServices && !Objects.equals(expected.carriedBoundaryOrdinal(),
+                    actual.carriedBoundaryOrdinal())) {
+                return diff(Kind.SERVICE_VALUE, frame, location + ".carried_boundary_ordinal",
+                        expected.carriedBoundaryOrdinal(), actual.carriedBoundaryOrdinal());
+            }
+            if (compareServices && !Objects.equals(expected.beginCoordinate(), actual.beginCoordinate())) {
+                return diff(Kind.SERVICE_VALUE, frame, location + ".begin_coordinate",
+                        expected.beginCoordinate(), actual.beginCoordinate());
+            }
+            if (compareServices && !Objects.equals(expected.endCoordinate(), actual.endCoordinate())) {
+                return diff(Kind.SERVICE_VALUE, frame, location + ".end_coordinate",
+                        expected.endCoordinate(), actual.endCoordinate());
+            }
+            if (compareServices && !expected.ancestry().equals(actual.ancestry())) {
+                return diff(Kind.SERVICE_VALUE, frame, location + ".ancestry",
+                        expected.ancestry(), actual.ancestry());
+            }
         }
         if (layers.isCompared(ComparisonLayer.DECISIONS)) {
             Difference decisions = decisionDifference(flattenDecisions(reference), flattenDecisions(engine), frame,
@@ -780,7 +801,8 @@ public final class CompleteRunAudioComparator {
     }
 
     private static ServicePayload servicePayload(DriverService service) {
-        return new ServicePayload(service.kind(), service.completion(), service.ancestry());
+        return new ServicePayload(service.kind(), service.completion(), service.carriedBoundaryOrdinal(),
+                service.beginCoordinate(), service.endCoordinate(), service.ancestry());
     }
 
     private static DecisionPayload decisionPayload(Decision decision, boolean includeOwnership) {
@@ -877,7 +899,8 @@ public final class CompleteRunAudioComparator {
 
     private record RequestPayload(OwnerClass ownerClass, String contentKey, int nativeId,
             String queueSource, Integer queueSlot) { }
-    private record ServicePayload(String kind, ServiceCompletion completion, ServiceAncestry ancestry) { }
+    private record ServicePayload(String kind, ServiceCompletion completion, Long carriedBoundaryOrdinal,
+            ServiceCoordinate beginCoordinate, ServiceCoordinate endCoordinate, ServiceAncestry ancestry) { }
     private record DecisionPayload(int nativeId, String contentKey, boolean accepted, String reason,
             Integer priorityBefore, Integer priorityAfter, List<HardwareRole> requestedRoles,
             List<RoleDecision> roles) { }

@@ -156,6 +156,47 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void comparedServicesDetectEveryServiceOwnedFieldWithoutNestedAuthority() {
+        ComparisonLayerInventory inventory = layers(ComparisonLayer.DECISIONS, ComparisonLayerStatus.UNAVAILABLE,
+                "reference decision authority is unavailable",
+                ComparisonLayer.STATE, ComparisonLayerStatus.UNAVAILABLE, "reference state authority is unavailable",
+                ComparisonLayer.CHIP_EVENTS, ComparisonLayerStatus.UNAVAILABLE,
+                "reference chip authority is unavailable");
+        ServiceCoordinate begin = new ServiceCoordinate(FIRST_FRAME, 0);
+        ServiceCoordinate end = new ServiceCoordinate(FIRST_FRAME + 1, 0);
+        DriverService reference = new DriverService(0, "driver", ServiceCompletion.COMPLETED,
+                List.of(decision(0, 1, 2, owner(0, 0xc0))), state(1), List.of(new YmWrite(0, 0, 0x22, 1)),
+                1L, begin, end, ServiceAncestry.root());
+        List<ServiceFieldCase> cases = List.of(
+                new ServiceFieldCase("completion", new DriverService(0, "driver", ServiceCompletion.RESET_CANCELLED,
+                        List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2), List.of(new YmWrite(0, 0, 0x22, 2)),
+                        1L, begin, end, ServiceAncestry.root())),
+                new ServiceFieldCase("carried_boundary_ordinal", new DriverService(0, "driver",
+                        ServiceCompletion.COMPLETED, List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2),
+                        List.of(new YmWrite(0, 0, 0x22, 2)), 2L, begin, end, ServiceAncestry.root())),
+                new ServiceFieldCase("begin_coordinate", new DriverService(0, "driver", ServiceCompletion.COMPLETED,
+                        List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2), List.of(new YmWrite(0, 0, 0x22, 2)),
+                        1L, new ServiceCoordinate(FIRST_FRAME, 1), end, ServiceAncestry.root())),
+                new ServiceFieldCase("end_coordinate", new DriverService(0, "driver", ServiceCompletion.COMPLETED,
+                        List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2), List.of(new YmWrite(0, 0, 0x22, 2)),
+                        1L, begin, new ServiceCoordinate(FIRST_FRAME + 2, 0), ServiceAncestry.root())),
+                new ServiceFieldCase("ancestry", new DriverService(0, "driver", ServiceCompletion.COMPLETED,
+                        List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2), List.of(new YmWrite(0, 0, 0x22, 2)),
+                        1L, begin, end, new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME - 1, 0), 1,
+                                new ServiceCoordinate(FIRST_FRAME - 1, 0), 1, List.of()))));
+
+        for (ServiceFieldCase mutation : cases) {
+            CompleteRunAudioComparator.Difference difference = CompleteRunAudioComparator.difference(
+                    new Frame(FIRST_FRAME, "test", false, List.of(), List.of(reference)),
+                    new Frame(FIRST_FRAME, "test", false, List.of(), List.of(mutation.actual())), inventory);
+
+            assertNotNull(difference, mutation.field());
+            assertEquals(CompleteRunAudioReport.Kind.SERVICE_VALUE, difference.kind(), mutation.field());
+            assertEquals("frame.services[0]." + mutation.field(), difference.location(), mutation.field());
+        }
+    }
+
+    @Test
     void incompatibleInventoriesFailBeforeAnySemanticComparison() throws Exception {
         TestProfile profile = registerProfile(1);
         Path reference = writeCapture("inventory-reference", profile, ProducerKind.REFERENCE, 1, this::plainFrame);
@@ -3251,6 +3292,8 @@ class TestCompleteRunAudioComparator {
             NormalizedState state, String kind) {
         return new DriverService(ordinal, kind, ServiceCompletion.COMPLETED, decisions, state, chipEvents);
     }
+
+    private record ServiceFieldCase(String field, DriverService actual) { }
 
     private static NormalizedState state(int tempo) {
         return new NormalizedState(List.of(new StateField("tempo", tempo)), inactiveRoles());
