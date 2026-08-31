@@ -6,15 +6,24 @@ Scope: S2/S3K production-owned validation, with S1 as precedent and a regression
 
 ## Decision
 
-Authenticated OpenGGF audio evidence must be produced by OpenGGF running from the
-identified user-supplied ROM and BK2 controller input. OpenGGF must naturally submit its
-own music and sound-effect requests and advance the production audio boundary. Reference
-driver state, requests, mailbox values, trace physics, auxiliary state, and fixture
-coordinates remain comparison-only.
+Validation has two connected but causally independent halves. TraceChaser/BizHawk is the
+emulator-facing reference producer and authority for the exact raw candidate it captures.
+OpenGGF is the consumer/client and canonical-store publication authority: it validates
+TraceChaser output, runs itself from the same identified ROM and BK2 controller input,
+captures its own behavior, compares the two streams, and controls installation of a
+canonical fixture after explicit approval.
 
-This replaces the previously contemplated request-replay approach. It does not authorize a
-new TraceChaser M68K execution or request hook. Existing fixture-assisted S2 and S3K tools
-remain useful diagnostics, but cannot certify an authenticated `MATCH`.
+TraceChaser output flows into OpenGGF's validation tooling but never into OpenGGF gameplay
+decisions. OpenGGF must naturally submit its own music and sound-effect requests and advance
+the production audio boundary. Reference driver state, requests, mailbox values, trace
+physics, auxiliary state, and fixture coordinates remain comparison-only.
+
+This replaces the previously contemplated request-replay approach and the initial mistaken
+proposal to build a second reference framework inside OpenGGF. It reuses TraceChaser's
+reviewed complete-run audio observer, profiles, raw sinks, capture runners, capability
+ledger, and publication workflow together with OpenGGF's existing `CompleteRunAudio*`
+consumer framework. Existing fixture-assisted S2 and S3K oracle tools remain useful
+diagnostics, but cannot certify an authenticated `MATCH`.
 
 ## Six-stage roadmap
 
@@ -36,10 +45,11 @@ the earlier reverse-engineering, gap, or implementation objectives.
 
 ## Evidence terminology
 
-- `MATCH` means a bounded, authenticated comparison in which the identified ROM/reference
-  producer and OpenGGF independently receive the same identified controller input, OpenGGF
-  naturally produces its requests, all records in the declared window compare equal, and
-  no required observation is missing.
+- `MATCH` means a bounded, authenticated, layer-scoped comparison in which the identified
+  TraceChaser producer and OpenGGF independently receive the same identified controller
+  input, OpenGGF naturally produces its behavior, all records in the declared coverage
+  inventory compare equal, and no observation required by that inventory is missing. A
+  service/state/chip `MATCH` does not imply request/admission parity.
 - `fixture-assisted projection` means a diagnostic whose OpenGGF-side behavior is partly
   selected or populated by reference data. It may identify a useful first divergence but
   cannot pass an acceptance gate.
@@ -63,7 +73,9 @@ The production OpenGGF capture may receive only:
    pinned identity;
 2. normal engine initialization and source-owned configuration;
 3. the current and previous controller rows from an identified BK2 movie; and
-4. ordinary user-independent capture bounds that decide when observation starts and stops,
+4. the pinned run manifest only through a strict identity/segment-inventory view matching
+   `CompleteRunFixture`; and
+5. ordinary user-independent capture bounds that decide when observation starts and stops,
    never what the engine does.
 
 All startup values must be attributable to one of those owners. The capture may record the
@@ -72,12 +84,14 @@ diagnostics or comparison fields.
 
 ### Forbidden behavior inputs
 
-The production capture must not consume `TraceData`, `TraceEntry`, `TraceRunManifest`,
-`TraceSessionLauncher`, `TraceReplayDrive`, `TraceReplaySessionBootstrap`, physics rows,
-auxiliary rows, `hardware_timing.jsonl`, reference audio rows, reference sound IDs, queue
-vectors, mailbox bytes, speed-up coordinates, or output-inferred requests. It must not jump
-the input cursor, hydrate gameplay state, synchronize state each frame, or infer a request
-from its later consequences.
+The production capture must not consume `TraceData`, `TraceEntry`, `TraceSessionLauncher`,
+`TraceReplayDrive`, `TraceReplaySessionBootstrap`, manifest bootstrap/descriptors, physics
+rows, auxiliary rows, `hardware_timing.jsonl`, reference audio rows, reference sound IDs,
+queue vectors, mailbox bytes, speed-up coordinates, or output-inferred requests. Its
+`CompleteRunAudioProducer.Request.runManifest()` input is restricted to exact file identity,
+movie identity, and segment boundaries already pinned by the profile; all other fields are
+rejected or ignored by a tested whitelist. It must not jump the input cursor, hydrate
+gameplay state, synchronize state each frame, or infer a request from its later consequences.
 
 The existing hardware-timing exception remains exactly as documented elsewhere: it may
 delay readiness of matching production-submitted work or admit an already-existing lag
@@ -90,7 +104,53 @@ ban the repository's separate, policy-permitted timing port.
 pre-window reconstruction. Its position, collision, random, counter, and alignment values
 are trace-derived gameplay state and cannot authenticate natural startup for this purpose.
 
-## Production capture architecture
+## Producer-consumer architecture
+
+### TraceChaser/BizHawk reference producer
+
+TraceChaser owns capture correctness, emulator observation, native service reconstruction,
+producer/runtime identity, raw staging, and exact candidate evidence. OpenGGF owns canonical
+store publication after strict consumer validation. The design reuses, rather than
+duplicates:
+
+- `CompleteRunAudioObserver` and the locked GPGX buffered audio observer ABI;
+- `S2AudioObserverProfile` with `S2CompleteAudioCaptureRunner` and
+  `S2CompleteAudioRawSink`;
+- `S3kAudioObserverProfile` with `S3kCompleteAudioCaptureRunner` and
+  `S3kCompleteAudioRawSink`;
+- the reviewed service manifest, capability fixture, source/build/artifact locks, and native
+  behavioral gates; and
+- TraceChaser's validate/capture/publish policy, including external scratch capture and
+  explicit approval before canonical fixture replacement.
+
+TraceChaser produces lossless raw streams. It does not write directly into OpenGGF's
+canonical fixture tree and does not decide whether OpenGGF passes. The missing OpenGGF fixed
+reference producers must invoke the pinned TraceChaser runner, validate the raw stream
+through the game-owned strict adapter, project it into the existing canonical
+`CompleteRunAudioTrace`, and publish through `CompleteRunAudioCaptureStore`.
+
+The native observer already uses a closed, reviewed service graph of exact Z80/M68K
+instruction boundaries. Reuse of that graph is part of this design. No general callback API,
+arbitrary address supplied by OpenGGF, or new fixture-specific request hook is introduced.
+
+### OpenGGF consumer/client
+
+OpenGGF owns the canonical schema, typed per-game profiles and state normalizers, strict raw
+adapters, consumer-side fixture installation, independent engine producer, comparator,
+first-divergence report, and acceptance tests. Existing owners are retained:
+
+- `CompleteRunAudioTrace`, `CompleteRunAudioCaptureStore`,
+  `CompleteRunAudioComparator`, and `CompleteRunAudioTool`;
+- `S2CompleteRunAudioProfile`, `S2CompleteRunReferenceRawAdapter`, state decoder,
+  normalizer, asset catalog, and native sound resolver; and
+- the equivalent S3K profile/adapter/preflight/decoder/normalizer/catalog/resolver stack.
+
+The missing integration is not a new schema family. It is the fixed S2/S3K reference
+producer adapters, the independent OpenGGF producers, the runtime/proof/capability bindings
+that replace `UnavailableProducerBinding`, and any source-owned normalization needed to turn
+validated raw events into the semantic layers actually supported by the approved observer
+graph. In particular, current S2 raw services cannot become canonical requests or decisions;
+those layers remain unavailable until a policy-compliant pre-consumption observation exists.
 
 ### `ProductionBk2AudioRunner`
 
@@ -161,60 +221,76 @@ Later output cannot be used to reconstruct a missing earlier request.
 
 ### Independent producer flow
 
-The reference producer and the OpenGGF producer run separately and complete their captures
-before comparison. No reference path, stream, parsed row, callback, or request collection is
-passed to the OpenGGF producer. The OpenGGF capture is regenerated under the current
-worktree's `target/` tree or an explicit external output directory; Maven output is never
-redirected to a shared durable root.
+The TraceChaser reference producer and the OpenGGF producer run separately and complete
+their captures before comparison. No reference path, stream, parsed row, callback, or
+request collection is passed to the OpenGGF producer. Both consume the exact ROM and BK2
+identities pinned by the same `CompleteRunAudioProfile`; only the controller movie is a
+shared behavior input. The OpenGGF capture is regenerated under the current worktree's
+`target/` tree or an explicit external output directory; Maven output is never redirected
+to a shared durable root.
 
 The comparator validates both streams completely, then compares from their declared common
 boundary. It reports the first missing, extra, reordered, or different semantic event and
 does not realign after divergence. Frame, tick, service, and cursor coordinates describe
 where an event was observed; they cannot trigger it.
 
-An identity-only `ProductionAudioRunManifest` replaces trace run manifests for this lane.
-It may name the profile, ROM and BK2 paths and hashes, producer identity, capture bounds,
-schema version, and expected comparison range. It may not carry segment bootstrap state,
-physics/auxiliary paths, trace replay descriptors, request values, hardware timing, or any
-coordinate used to choose engine behavior. A trusted launcher may validate this manifest;
-the OpenGGF producer receives only the already validated profile, ROM, BK2, bounds, and
-output path.
+The existing `CompleteRunAudioProfile` and `CompleteRunFixture` are the identity and bounds
+contract. They pin the ROM, BK2, segment inventory, comparison interval, producer bindings,
+runtime identities, observer proofs, and capability summary. No new parallel run-manifest
+type is introduced. `CompleteRunAudioProducer.Request` already supplies the pinned run
+manifest to both producers. The OpenGGF producer may validate only its identity and the
+profile-matching movie/segment inventory; bootstrap state, dynamic-art descriptors,
+physics/auxiliary paths, hardware timing, and replay descriptors cannot affect capture.
 
 ### Event contract
 
-The game-neutral timeline schema records four ordered layers. Every request carries a
-producer-owned request ordinal, request class, raw sound ID, source owner, BK2 cursor, and
-outer-frame ordinal. Admission records correlate a request ordinal and carry their own
-ordinal, resolved identity, requested/acquired roles, priority/arbitration outcome, and
-displaced/final owner. Service records carry a service ordinal and kind, outer-frame
-ancestry, normalized driver/track state, and final ownership vector. Chip records carry a
-service ordinal plus ordered YM2612 or PSG writes. Per-game source PCs, mailbox addresses,
-queue slots, and native tick ordinals are diagnostics owned by typed profiles, not required
-behavior inputs.
+The existing game-neutral `complete_run_audio.v1` schema records ordered metadata,
+baseline, frame, lifecycle, and terminal records. Within it, requests, decisions/services,
+normalized state, role ownership, lifecycle transitions, and chip events remain distinct.
+Raw TraceChaser coordinates, service tokens, hook tokens, source PCs, mailbox addresses,
+queue slots, and native ordinals are validated provenance or diagnostics; the canonical
+adapter projects them into producer-neutral frame/service ownership and may not silently
+discard an event it cannot semantically explain.
 
-Result kinds are closed: `MATCH`, `MISMATCH`, `REFERENCE_LIMITATION`,
-`AUTHORITY_VIOLATION`, `CAPTURE_UNAVAILABLE`, and `INVALID_INPUT`. A missing request layer
-is `REFERENCE_LIMITATION` or `CAPTURE_UNAVAILABLE`, never an inferred `MATCH`.
+Every canonical request carries its producer-owned ordinal, request class/native identity,
+source owner, and frame. Decisions correlate the request and carry resolved identity,
+priority/arbitration outcome, and ownership transition. Services carry their source-owned
+kind/order, normalized driver state, role-owner vector, and ordered YM2612/PSG events.
+
+The current `CompleteRunAudioReport.Kind` and capture metadata cannot express a layer-scoped
+result: the comparator always compares requests before services and terminal equality
+requires request/decision counts. Before S2/S3K bindings become available, the framework
+must gain a pinned comparison-layer inventory in the profile/capture identity and an
+explicit `REFERENCE_LIMITATION` outcome. That extension determines whether requests,
+decisions, services, state, ownership/lifecycle, and chip writes are required, unavailable,
+or compared. A missing request layer is never represented by equal empty arrays or an
+inferred request `MATCH`. Until this extension lands, absence of request authority remains
+producer unavailability/capture failure rather than a partial `MATCH`.
 
 ## Feasibility gates
 
 Implementation proceeds in fail-closed gates. A failed gate produces an explicit product or
 authority gap rather than a weaker acceptance claim.
 
-1. **Headless production initialization.** The exact ROM can enter and step the normal
+1. **Reference-producer integration.** The pinned TraceChaser runner produces a complete raw
+   candidate whose identities, ABI, bounds, event graph, driver state, baseline, and cutoff
+   pass the existing game-owned OpenGGF adapter. The canonical projection declares every
+   represented and unavailable semantic layer and publishes only through a private
+   transaction.
+2. **Headless production initialization.** The exact ROM can enter and step the normal
    startup game mode without GLFW presentation and without trace bootstrap, direct level
    load, or fixture state.
-2. **Input cardinality and edges.** One BK2 cursor row is applied per production outer
+3. **Input cardinality and edges.** One BK2 cursor row is applied per production outer
    frame. Held/pressed semantics, cursor advancement, presentation, and
    `AudioManager.update()` each have asserted cardinality, including non-gameplay modes.
    Trace fast-forward and user-recording pump paths are disabled and asserted absent.
-3. **Natural audio observation.** Observers attached before the first request record
+4. **Natural audio observation.** Observers attached before the first request record
    OpenGGF-owned requests and their later consequences without changing behavior.
-4. **Route reachability.** The identified movie naturally reaches the intended comparable
+5. **Route reachability.** The identified movie naturally reaches the intended comparable
    game mode and window. An unsupported transition, special-stage cadence, title path, or
    initialization mode is recorded as a product gap.
-5. **Authenticated comparison.** Only after gates 1-4 pass may the capture be compared and
-   described as `MATCH` or as a first divergence.
+6. **Authenticated comparison.** Only after gates 1-5 pass may the declared common layers be
+   compared and described as `MATCH` or as a first divergence.
 
 ## Game-specific application
 
@@ -232,14 +308,37 @@ instead of exempting legacy hydration.
 
 ### Sonic 2
 
-The first target remains the EHZ window whose fixture-assisted projection currently reaches
-ticks 0-209 and diverges at tick 210. The runner must attempt the identified movie from its
-natural startup and traverse every intervening mode, including the special stage, until the
-EHZ window. The speed-up transition must arise from OpenGGF gameplay/runtime state.
-`SPEED_UP_ROW` may identify a comparison mismatch but cannot schedule that transition.
-The movie is `sonic-2-sonic-tails-complete-emeralds.bk2`, SHA-256
-`e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5`; the current reference
-window is `[10150,10900)` with the diagnostic first divergence at movie row 10412.
+The primary authenticated lane is the existing TraceChaser/OpenGGF complete-run contract
+`s2_rev01_complete_emeralds.v1`. It pins
+`sonic-2-sonic-tails-complete-emeralds.bk2`, SHA-256
+`e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5`, with comparison rows
+`[769,259590)`. TraceChaser already proves two identical full native captures: 259,590
+frames, 169,986,419 events, maximum frame occupancy 1,825, and an empty cutoff frontier.
+`S2CompleteRunReferenceRawAdapter`, the state decoder/normalizer, native sound resolver,
+profile, store, comparator, and CLI already exist in OpenGGF. The missing pieces are the
+fixed reference producer/projection and independent OpenGGF producer bindings.
+
+OpenGGF starts from movie frame zero, retains naturally produced audio state through the
+prepublication interval, and compares from row 769. It does not hydrate the row-769 state.
+The first authenticated result is the first divergence of that complete-run prefix; the
+design does not skip directly to a known later fixture frontier.
+
+This design uses the full canonical interval `[769,259590)` and does not introduce a second
+window profile. The older EHZ fixture `[10150,10900)` remains a diagnostic projection whose first reported
+divergence is movie row 10412 / driver tick 210. That coordinate lies inside the complete-run
+movie and becomes ordinary downstream coverage only if the production-owned comparison
+naturally reaches it. The speed-up transition must arise from OpenGGF gameplay/runtime
+state. `SPEED_UP_ROW` may identify a diagnostic mismatch but cannot schedule the transition.
+
+The current TraceChaser S2 service manifest does not observe the M68K `sndDriverInput`
+request transfer at ROM PC `$1084`; its raw stream therefore authenticates native services,
+Z80 state, and chip writes, not a pre-consumption request timeline. The canonical reference
+adapter must leave that layer unavailable rather than infer it from `$0000..$1FFF` snapshots
+or output. Initial complete-run results may authenticate declared service/state/chip layers
+while reporting `REFERENCE_LIMITATION` for request/admission parity.
+The raw-to-canonical adapter is tested to emit no `Request` or `Decision` record from a raw
+stream lacking an approved source event. It may not synthesize them from driver snapshots,
+service boundaries, chip writes, or coordinates.
 
 Before the long-route capture is attempted, a dedicated feasibility test must prove that
 pure BK2 logical input can enter, run, and exit the S2 special stage through normal
@@ -254,20 +353,34 @@ runtime guards must prevent reference fixtures or trace rows from being connecte
 The production comparator rejects their v1 schema and their result/logging path reports only
 `fixture-assisted projection`, never authenticated `MATCH`.
 
-If production startup cannot reach the current EHZ boundary, the result is `unresolved` and
-the route blocker becomes implementation work. A smaller fresh-EHZ source-owned scenario
-may test driver behavior, but it is labelled `unit/synthetic contract` and cannot be
-relabeled as authentication of the existing movie window.
+If production startup cannot reach row 769 or later transitions, the result is `unresolved`
+and the route blocker becomes implementation work. A smaller fresh-EHZ source-owned
+scenario may test driver behavior, but it is labelled `unit/synthetic contract` and cannot
+be relabelled as authentication of the complete-run window.
 
 ### Sonic 3&K
 
-The first target remains the power-on fixture through source frame 242 / driver service 128.
-The OpenGGF runner must use the same identified power-on movie and naturally traverse boot,
-SEGA/title/data selection, and AIZ routing. Existing complete-run AIZ segments begin after
-this boundary and do not establish the same input identity or startup route.
-The movie is `s3k-complete-sonic-tails.bk2`, SHA-256
-`82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`; the current reference
-fixture covers source frames `[0,5400)`.
+The primary authenticated lane is the separate existing complete-run contract
+`s3k_locked_on_knuckles_superemeralds.v1`. It pins
+`s3k-knuckles-complete-superemeralds.bk2`, SHA-256
+`aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`, with comparison rows
+`[810,434417)`. TraceChaser already proves two identical full native captures: 434,417
+frames, 254,921,281 events, maximum frame occupancy 1,446, and the source-correct
+one-active/four-pending cutoff frontier. OpenGGF already has the strict raw adapter,
+publication-inert preflight, state decoder/normalizer, native sound resolver, profile,
+store, comparator, and CLI. Both fixed producer bindings and the canonical semantic
+projection remain unavailable.
+
+OpenGGF must replay the Knuckles movie from frame zero and retain its own audio state while
+discarding only the same declared prepublication rows. It must not fresh-load AIZ or hydrate
+the TraceChaser row-810 boundary. The first authenticated result is the first divergence from
+the row-810 carried-in frontier.
+
+The existing service-128 diagnostic is a different identity:
+`s3k-complete-sonic-tails.bk2`, SHA-256
+`82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`, source frames
+`[0,5400)`. Its character, route, frame count, and boundary are unrelated to the Knuckles
+complete-run profile and must never be accepted under that profile.
 
 `S3kOpenGgfAudioCapture` currently dispatches `referenceTick.mailbox()` and copies reference
 mailbox state into its result. That path is explicitly a `fixture-assisted projection`. It
@@ -276,43 +389,55 @@ path, mailbox/request identity must be OpenGGF-produced and independently observ
 missing policy-compliant pre-consumption M68K-to-Z80 observation remains `unresolved`; chip
 writes or output bursts cannot stand in for it.
 
-Accordingly, service 128 / source frame 242 is an investigation target, not currently a
-`MATCH`-eligible endpoint. Until an already policy-compliant reference observation exposes
-the pre-consumption request, the authority-correct outcome at that boundary is
-`REFERENCE_LIMITATION`. A complete authenticated comparison may stop through service 127;
-it must not silently extend across service 128.
+Accordingly, service 128 / source frame 242 remains a secondary investigation target, not a
+`MATCH`-eligible endpoint of the Knuckles complete-run lane. Until a separately reviewed
+Sonic/Tails TraceChaser profile exposes the missing pre-consumption request under its own
+identity, the authority-correct outcome there is `REFERENCE_LIMITATION`. It is not a reason
+to disconnect the row-810+ complete-run comparison.
 
-If the normal OpenGGF product cannot reproduce the power-on/title route, that is an upstream
-product gap. An AIZ fresh-level scenario may provide source-owned unit evidence but cannot
-authenticate service 128 of the existing power-on fixture.
+If the normal OpenGGF product cannot reproduce either power-on/title route, that is an
+upstream product gap. An AIZ fresh-level scenario may provide source-owned unit evidence but
+cannot authenticate either complete-run boundary.
 
 ## TraceChaser boundary
 
-No new general M68K execute, memory-write, sound-request, or managed native callback is part
-of this design. TraceChaser's two established hardware-timing observers retain their narrow
-scope. A one-off Lua script may diagnose a source boundary and must be discarded after use;
-its result cannot publish a canonical request fixture or authorize replay into OpenGGF.
+TraceChaser is connected as the sole emulator/reference producer. Its reviewed buffered
+GPGX audio observer and closed service manifests are reused as-is, including their exact
+source-owned Z80 and M68K instruction observations. They are not the deferred general Lua
+diagnostic-hook families prohibited by TraceChaser policy.
 
-Consequently, a reference-side pre-consumption request observation remains a declared
-limitation wherever the current approved producer lacks one. The design prefers an honest
-unresolved boundary over output-derived request inference or a policy exception hidden in
-tooling.
+No new general M68K execute, memory-write, sound-request, or caller-configurable native
+callback is part of the first implementation. A one-off Lua script may diagnose a source
+boundary and must be discarded after use; its result cannot publish a canonical request
+fixture or authorize replay into OpenGGF. Any future extension for the separate Sonic/Tails
+frame-242 profile must follow TraceChaser's recorder-correctness, identity, native-gate,
+independent-review, and explicit-publication-approval workflow.
+
+The current complete-run native event graph must be projected without invention. A
+reference-side pre-consumption request observation remains a declared limitation wherever
+the approved graph lacks one. The design prefers an honest unresolved semantic field over
+output-derived request inference or a policy exception hidden in tooling.
 
 ## Record and publication contract
 
-Each capture begins with metadata naming schema version, producer, ROM identity, BK2
-identity, configuration relevant to startup, capture bounds, event inventory, and command
-provenance. Records use unsigned normalized values, strict allowed fields, ordered arrays,
-monotonic ordinals, and terminal completeness metadata. Identity or schema mismatch makes
-the run invalid before comparison.
+TraceChaser's raw staging schemas remain
+`openggf.s2-complete-run-audio-raw.v1` and
+`openggf.s3k-complete-run-audio-raw.v1`. The strict OpenGGF adapters validate exact ROM,
+BK2, service-manifest, interval, driver-state range, event ABI, ordinals, ancestry, chip
+writes, baseline, and cutoff before any canonical publication. The canonical consumer
+schema remains `complete_run_audio.v1`; its metadata pins producer kind, runtime/observer
+identity and proof, profile, fixture, capabilities, segment inventory, capture counts, and
+terminal digest. Identity or schema mismatch makes the run invalid before comparison.
 
-OpenGGF capture streams are regenerable outputs, not new gameplay inputs. Durable validation
-evidence commits only the small design/validation report and identity/hash manifest under the
-matching `docs/architecture/validation/audio/` or research location. Raw durable captures
-belong in an explicit external task archive named by the report; transient Maven output
-stays below the worktree's `target/`. No
-uncompressed trace payload is committed under trace resources. Publications use validated,
-atomic create-new behavior so a failed run cannot replace prior evidence.
+TraceChaser candidates are captured into explicit durable scratch outside both repositories.
+They are never written directly into OpenGGF's fixture tree. OpenGGF's raw adapter and
+canonical store publish create-new transactions only after complete validation; installing
+or replacing a canonical reference remains a separate explicit user decision. OpenGGF
+engine captures are regenerable outputs, not gameplay inputs. Durable validation evidence
+commits only the small design/validation report and identity/hash manifest under the matching
+architecture location. Raw captures remain in the named external task archive; transient
+Maven output stays below the worktree's `target/`. No uncompressed trace payload is committed
+under trace resources.
 
 `docs/status/audio-frontier-log.md` must be updated whenever a frontier moves, a prior pass
 regresses, or a complete sweep selects a new target. It records the command, commit and
@@ -327,6 +452,8 @@ This audio-specific record is additional to, not a replacement for, any general
 The runner or comparator fails closed on:
 
 - ROM or BK2 identity mismatch;
+- TraceChaser service-manifest, observer, capability, runtime, raw-schema, or event-ABI
+  identity mismatch;
 - unavailable or bypassed production startup;
 - any trace/bootstrap/reference dependency on the engine producer;
 - an input cursor jump, missing row, duplicate consumption, or incorrect press edge;
@@ -346,31 +473,46 @@ The implementation must add or extend tests that prove:
 
 1. BK2 conversion and `InputHandler` overrides preserve held/pressed edges across menu and
    gameplay modes.
-2. The headless startup seam uses normal ROM selection, initialization, and `GameLoop` mode
+2. TraceChaser's pinned S2/S3K capture runners and raw sinks produce streams accepted by the
+   existing strict OpenGGF adapters, while changed identities, raw events, bounds, states,
+   baselines, and cutoff frontiers fail before canonical publication.
+3. The comparison-layer inventory is part of immutable profile/capture identity; the
+   comparator rejects incompatible inventories, cannot report request `MATCH` when the
+   reference layer is unavailable, and never treats equal empty arrays as proof. Raw S2/S3K
+   streams lacking an approved request event project zero canonical requests/decisions and
+   report that limitation explicitly.
+4. The headless startup seam uses normal ROM selection, initialization, and `GameLoop` mode
    routing without trace bootstrap or direct level hydration.
-3. Every BK2 cursor row owns exactly one production outer frame: one step, one outer-audio
+5. Every BK2 cursor row owns exactly one production outer frame: one step, one outer-audio
    presentation/update, and one cursor advance, including legal/master/title/data-select
    modes. This is an outer-frame contract, not a claim that every mode advances one gameplay
    tick. Trace fast-forward and user-recording pump paths are disabled; any pause retention
    is source-cited and represented in the contract rather than fitted.
-4. Audio observers are behaviorally inert, installed before first request, and detached on
+6. Audio observers are behaviorally inert, installed before first request, and detached on
    both success and failure.
-5. A static authority guard rejects `com.openggf.trace.*`, `TraceSessionLauncher`,
-   `TraceReplaySessionBootstrap`, `TraceReplayDrive`, `TraceData`, `TraceRunManifest`,
-   reference readers, any hardware-timing input to this producer,
+7. A static authority guard rejects `TraceSessionLauncher`,
+   `TraceReplaySessionBootstrap`, `TraceReplayDrive`, `TraceData`, trace payload readers,
+   reference readers in the OpenGGF producer, any hardware-timing input to this producer,
    `S2OracleEngineCapture.DriverRequest`,
    `SPEED_UP_ROW`, `S3kOpenGgfAudioCapture`, and `referenceTick.mailbox()` dependencies from
-   authenticated producers. Existing diagnostic tools may retain their current dependencies
-   only behind result types and labels that cannot emit authenticated `MATCH`.
-6. S2 synthetic `DriverRequest` and S3K fixture-mailbox entry points cannot be called by an
+   the authenticated OpenGGF producer. The fixed reference producer is explicitly permitted
+   to invoke TraceChaser and the game-owned raw adapter. Existing diagnostic tools may retain
+   their current dependencies only behind result types and labels that cannot emit
+   authenticated `MATCH`. A separate manifest-authority test permits only the identity and
+   segment-inventory projection described above and rejects every gameplay/bootstrap field.
+8. S2 synthetic `DriverRequest` and S3K fixture-mailbox entry points cannot be called by an
    authenticated runner and cannot publish a `MATCH` result.
-7. The comparator rejects alignment shifts and reports the exact first request, admission,
+9. The existing `CompleteRunAudioComparator` rejects alignment shifts and reports the exact
+   first request, admission,
    service, ownership, state, or write divergence.
-8. ROM-gated feasibility tests prove the natural S2 and S3K routes separately before their
+10. ROM-gated feasibility tests prove the natural S2 and S3K routes separately before their
    full comparisons are enabled.
-9. Existing S1 bounded driver-core/fixture-assisted results and focused audio/parity suites
+11. Fresh-CLI tests prove the closed registry loads both profiles and their pinned reference
+    and OpenGGF producer bindings without ambient class initialization.
+12. Existing S1 bounded driver-core/fixture-assisted results and focused audio/parity suites
    do not regress, without relabelling them as production-owned `MATCH`.
-10. Delivery runs focused tests, the ordinary suite, and the fresh-JVM `-Pguards` suite on
+13. Delivery runs TraceChaser's relevant native unit/ROM gates plus OpenGGF focused tests,
+    the ordinary suite, and the fresh-JVM `-Pguards` suite on
     JDK 21 with all three absolute ROM properties and verified skip counts.
 
 ## Remaining work beyond the first S2/S3K frontiers
@@ -387,8 +529,11 @@ separate from driver-state equality and stay in the human listening queue.
 - **Replay reference requests, mailbox bytes, or speed coordinates into OpenGGF.** This
   would make comparison data decide what happens and could only produce a fixture-assisted
   projection.
-- **Add a new TraceChaser M68K request hook.** Current TraceChaser policy forbids the needed
-  general callback, and changing that policy is outside this design.
+- **Duplicate TraceChaser's reference producer inside OpenGGF.** This would fork the reviewed
+  service graph, build identities, native gates, and publication authority for no benefit.
+- **Add an arbitrary TraceChaser M68K request-hook API.** The first implementation reuses the
+  approved closed audio observer; any later profile extension must be source-owned and
+  reviewed inside TraceChaser, not caller-configured by OpenGGF.
 - **Infer hidden requests from service bursts or chip writes.** Consequences do not prove
   request identity or timing.
 - **Use trace-hydrated level replay as natural startup.** It can validate behavior after a
@@ -400,12 +545,16 @@ separate from driver-state equality and stay in the human listening queue.
 ## Explicitly unresolved until implemented and observed
 
 - a clean, headless frame-zero production startup shared with the normal engine;
-- natural S3K production request capture through source frame 242 / service 128;
+- natural OpenGGF S2 and S3K complete-run production capture from frame zero through the
+  pinned comparison boundaries;
+- canonical TraceChaser-raw-to-`CompleteRunAudioTrace` semantic projection and fixed
+  reference producer bindings for S2/S3K;
+- natural S3K Sonic/Tails production request capture through source frame 242 / service 128;
 - a policy-compliant reference-side pre-consumption M68K-to-Z80 request observation where
   the current producer lacks one;
 - the S2 speed-up transition independently produced by OpenGGF on the identified route;
 - the S3K mailbox/request identity independently produced by OpenGGF;
-- S2/S3K complete-run producer availability;
+- S2/S3K fixed OpenGGF producer bindings and complete-run comparator execution;
 - authenticated pause, 1-up, fade, full DAC/PCM, table, and modulation coverage; and
 - the remaining human listening checklist.
 
@@ -413,18 +562,27 @@ These are design gates, not promises already satisfied by existing green tests.
 
 ## Expected ownership split
 
-The implementation plan should preserve one game-neutral framework and typed profiles:
+The implementation plan should complete the existing framework rather than create
+`tools.audio.production` duplicates:
 
-- `src/main/java/com/openggf/tools/audio/production/ProductionAudioTimeline.java`
-- `src/main/java/com/openggf/tools/audio/production/ProductionAudioTimelineJsonl.java`
-- `src/main/java/com/openggf/tools/audio/production/ProductionAudioComparator.java`
-- `src/main/java/com/openggf/tools/audio/production/ProductionAudioProfile.java`
-- `src/main/java/com/openggf/tools/audio/production/ProductionAudioRunManifest.java`
-- `src/test/java/com/openggf/tools/audio/production/ProductionBk2AudioRunner.java`
-- `src/test/java/com/openggf/tools/audio/production/TestProductionAudioAuthorityGuard.java`
-- per-game S2/S3K capture profiles below the same test tooling package; and
-- thin `tools/audio/run_s2_production_audio_validation.sh` and S3K equivalents.
+- retain TraceChaser's `CompleteRunAudioObserver`, S2/S3K observer profiles, capture runners,
+  raw sinks, manifests, capability ledger, and native gates;
+- retain OpenGGF's `CompleteRunAudioTrace`, store, comparator, tool, registry, profiles, raw
+  adapters, decoders, normalizers, catalogs, and resolvers;
+- extend that framework with an immutable comparison-layer inventory and explicit reference
+  limitation reporting before any layer-scoped result can be published;
+- add the fixed classes already reserved by `CompleteRunAudioProducerRegistry`:
+  `S2CompleteRunReferenceProducer`, `S2CompleteRunOpenGgfProducer`,
+  `S3kCompleteRunReferenceProducer`, and `S3kCompleteRunOpenGgfProducer`;
+- add only the smallest game-neutral production BK2 runner and scoped observer adapter needed
+  by both OpenGGF producers;
+- replace each `UnavailableProducerBinding` with pinned runtime identity, observer proof,
+  observer runtime identity, and capability summary derived from reviewed artifacts; and
+- continue using `tools/audio/run_complete_audio_parity.sh` rather than adding parallel S2
+  and S3K validation CLIs.
 
-Shared runner, schema, comparator, and manifest code contain no game names, zone names,
-route literals, sound IDs, or frame literals. Those facts belong in typed per-game profiles
-and authenticated manifests. Production gameplay packages do not import the tooling schema.
+Shared OpenGGF runner/store/comparator code contains no game names, zone names, route
+literals, sound IDs, or frame literals. Those facts remain in typed per-game profiles.
+Production gameplay packages do not import the tooling schema. TraceChaser source is never
+copied into OpenGGF; OpenGGF's fixed reference producers will invoke the pinned external
+producer and consume its validated output.

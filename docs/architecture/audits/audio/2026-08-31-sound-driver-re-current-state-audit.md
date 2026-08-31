@@ -1,7 +1,9 @@
 # Sound-driver RE current-state audit
 
 Date: 2026-08-31
-Branch/worktree audited: current `feature/ai-sound-driver-roadmap-completion`, commit `165da2cda`, representing current `develop` evidence for the sound-driver roadmap.
+Evidence baseline audited: `develop` commit `165da2cda`. The audit artifacts were developed
+on `feature/ai-sound-driver-roadmap-completion`; its later documentation-only commits do not
+alter the product code or test baseline assessed here.
 Scope: point-in-time audit of Sonic 1, Sonic 2, and Sonic 3&K sound-driver reverse-engineering work. This is not an implementation plan.
 
 ## Original six objectives
@@ -64,9 +66,9 @@ fixture-assisted input authority described below.
 
 | Objective | Status | Evidence and limits |
 |---|---|---|
-| 1. Reverse-engineer driver | PARTIAL | S1/S2/S3K routine maps, behavior specs, gap analyses, and authenticated fixture producers exist. Remaining hardware-edge and request-boundary behavior is not fully observed, especially S2/S3K request transfer before Z80 consumption. Cross-game remaining gaps include ROM-read priority/tempo/request tables, DAC/PCM timing, and analog mix, which is outside this driver-oracle scope. |
+| 1. Reverse-engineer driver | PARTIAL | S1/S2/S3K routine maps, behavior specs, gap analyses, and TraceChaser native reference-capture capabilities exist. Remaining hardware-edge and request-boundary behavior is not fully observed, especially S2/S3K request transfer before Z80 consumption. Cross-game remaining gaps include ROM-read priority/tempo/request tables, DAC/PCM timing, and analog mix, which is outside this driver-oracle scope. |
 | 2. Document behavior/routines | PARTIAL | Documentation exists under `docs/architecture/research/audio/`, `docs/architecture/designs/audio/`, `docs/architecture/audits/audio/`, and validation docs. Currentness is partial: some docs are now stale or contradictory after later fixes. |
-| 3. Compare with OpenGGF | PARTIAL | S1 has bounded driver-core comparisons, but not production-owned input comparisons: the music lane uses a source-owned GHZ start with reference-defined cadence/bounds, while the SFX lane replays reference dispatches. The S2 0-209 and S3K 0-127 prefixes are fixture-assisted projections: S2 derives speed-up timing from a fixture row, while S3K dispatches reference mailbox values into the standalone host. Their first unmatched boundaries expose this authority problem as well as missing request observation. |
+| 3. Compare with OpenGGF | PARTIAL | OpenGGF already owns a cross-game `CompleteRunAudio*` schema/store/comparator/profile framework and strict S2/S3K TraceChaser raw adapters, while TraceChaser owns full native S2/S3K captures. Their fixed reference and independent OpenGGF producer bindings remain unavailable, so no complete-run comparison has executed. S1 has bounded driver-core comparisons, but not production-owned input comparisons. The older S2 0-209 and S3K 0-127 prefixes are fixture-assisted projections. |
 | 4. Catalogue gaps | PARTIAL | `2026-08-30-sound-driver-re-gap-analysis.md` catalogues major gaps, but several S1 rows are stale after later cadence, PSG takeover, SFX restore, and SFX oracle fixes. |
 | 5. Implement gaps | PARTIAL | Source-owned fixes landed for cadence, S1 TIMEOUT track walk, S1 SFX takeover/release ordering, ring request alternation, and selected pointer/voice behavior. Queue admission, true priority state, pause, full 1-up/fade/speed paths, PSG overrun behavior, ROM-read tables, S3K code-byte modulation envelopes and every-frame frequency edge, DAC/PCM timing, S2/S3K pause/1-up/fade, and S2/S3K request-boundary behavior remain incomplete or unverified. |
 | 6. Validate | PARTIAL | Automated focused and prior full-suite baselines are green. Synthetic unit tests and fixture-contract tests prove narrow code contracts. S1 live executions prove bounded driver-core behavior but not a production-owned input path; the S1 SFX and current S2/S3K executions are fixture-assisted diagnostic projections and cannot certify independent request scheduling. Human listening remains pending except the S3K ring-panning check. |
@@ -94,6 +96,8 @@ fixture-assisted input authority described below.
 |---|---|---|---|
 | Driver routine/spec documentation | PARTIAL | Docs | S2 research/spec/gap material exists, and the current frontier log records the active oracle boundary. Documentation is useful but not complete proof of every driver edge. |
 | Fixture producer and comparator | DONE as tooling | Code + fixture contracts | S2 authenticated oracle tooling and fixture support landed in `feat(audio): commit the S2 driver oracle - reference fixture and comparator`. Fixture-contract tests protect schema and integrity, but parity still depends on live compare executions. |
+| TraceChaser complete-run reference capability | DONE as producer capability | Native observer + two deterministic complete captures | TraceChaser's `S2CompleteAudioCaptureRunner` and raw sink pin the complete-emeralds BK2, capture all `$0000..$1FFF` Z80 RAM plus native services/chip writes for rows `[769,259590)`, and record 169,986,419 events with an empty cutoff frontier. The duplicate-run evidence is recorded in `docs/architecture/research/audio/2026-08-11-complete-run-audio-frontier-checkpoint.md`. This is the reference producer half, not an OpenGGF comparison result. |
+| OpenGGF complete-run consumer integration | PARTIAL / NOT EXECUTABLE | Schema/store/comparator/profile/raw adapter | `CompleteRunAudioTrace`, store, comparator, CLI, S2 profile, raw adapter, decoder, normalizer, catalog, and resolver exist. `S2CompleteRunReferenceProducer` and `S2CompleteRunOpenGgfProducer` are absent and both profile bindings are explicitly unavailable. The raw adapter validates TraceChaser staging but does not yet publish a canonical semantic capture. |
 | Engine parity against oracle | PARTIAL / FIXTURE-ASSISTED | Diagnostic execution + unit/parity | `docs/status/audio-frontier-log.md` records an S2 EHZ projected prefix through ticks 0-209, with tick 210 as the first SFX override boundary. `S2AudioOracleComparator` derives the engine speed-up transition from fixture row `SPEED_UP_ROW`, so this is not an independent authenticated engine-input timeline. |
 | Request capture at boundary | NOT DONE | Missing observation point | The current S2 producer does not observe the M68K-to-Z80 sound request before the Z80 driver consumes it. `S2OracleEngineCapture.DriverRequest` is presently a source-owned synthetic unit seam only; connecting fixture requests to it would violate comparison-only authority. The tick-210 frontier cannot be fixed by inferring or replaying requests from output or fixture coordinates. |
 | Implemented driver gaps | PARTIAL | Code + unit | Shared cadence, total-level, note, and sequencer fixes benefit S2 where applicable. S2-specific request/admission behavior and hidden request state are not complete. |
@@ -106,6 +110,8 @@ fixture-assisted input authority described below.
 |---|---|---|---|
 | Driver routine/spec documentation | PARTIAL | Docs | S3K audio oracle, service projection, and architecture notes exist, but the hidden request boundary remains unresolved. |
 | Fixture producer and comparator | DONE as tooling | Code + fixture contracts | S3K authenticated oracle tooling and fixture support landed in `feat(audio): add S3K sound-driver oracle (capture, fixture, comparator)`. Fixture-contract tests protect schema and integrity, but parity still depends on live compare executions. |
+| TraceChaser complete-run reference capability | DONE as producer capability | Native observer + two deterministic complete captures | TraceChaser's `S3kCompleteAudioCaptureRunner` and raw sink pin the Knuckles/Super-Emeralds BK2, capture `$1C00..$1FFF` driver RAM plus native services/chip writes for rows `[810,434417)`, and record 254,921,281 events with the source-correct one-active/four-pending cutoff frontier. This is distinct from the Sonic/Tails frame-242 fixture. |
+| OpenGGF complete-run consumer integration | PARTIAL / NOT EXECUTABLE | Schema/store/comparator/profile/raw adapter/preflight | The S3K profile, raw adapter, publication-inert preflight, decoder, normalizer, catalog, resolver, common store, comparator, and CLI exist. `S3kCompleteRunReferenceProducer` and `S3kCompleteRunOpenGgfProducer` are absent and both bindings remain unavailable, so no canonical reference-vs-OpenGGF run exists. |
 | Engine parity against oracle | PARTIAL / FIXTURE-ASSISTED | Diagnostic execution + unit/parity | `docs/status/audio-frontier-log.md` records a fixture-assisted S3K projection through services 0-127. `S3kOpenGgfAudioCapture` dispatches each nonzero reference mailbox value into the standalone host and copies the reference mailbox into the engine result; the comparator does not independently compare an engine-produced mailbox. Service 128 / source frame 242 is the active hidden stop-request and authority frontier. |
 | CPU ownership projection | DONE for current comparator | Live oracle + docs | The current S3K fixture retains both CPU streams. The comparator projection excludes 68k writes when authenticating the Z80-owned service window. |
 | Request capture at boundary | NOT DONE | Missing observation point + authority risk | The current capture cannot observe the true pre-consumption M68K-to-Z80 mailbox state that explains the hidden stop request. Output bursts are insufficient evidence for request identity or timing, and a newly captured fixture request may be compared but may not be replayed into OpenGGF as a behavior-driving value. |
@@ -155,8 +161,11 @@ under the stricter authority definition. Their active failures sit where the cur
 producers lack the M68K-side request state and the current engine hosts do not supply an
 independently produced input timeline.
 
-The compliant next validation boundary is production OpenGGF gameplay producing and
-observing its own requests while reference data remains comparison-only. The current evidence
-does not authorize a new TraceChaser observer/probe revision. Output, service bursts,
-frame/tick coordinates, and fixture-specific behavior do not establish request identity or
-authorize request replay.
+The compliant next validation boundary connects the two existing halves: TraceChaser remains
+the emulator/reference producer, while OpenGGF consumes its validated raw output, runs the
+same ROM/BK2 independently, and compares two canonical `CompleteRunAudioTrace` stores.
+Reference data remains comparison-only and never drives the OpenGGF run. The first integration
+should reuse the reviewed TraceChaser complete-run observer/profile suite and OpenGGF's
+existing complete-run consumer framework rather than inventing a second reference producer.
+Output, service bursts, frame/tick coordinates, and fixture-specific behavior still do not
+establish a missing request identity or authorize request replay.
