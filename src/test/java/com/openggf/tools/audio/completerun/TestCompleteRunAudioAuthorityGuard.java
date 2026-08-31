@@ -81,20 +81,26 @@ class TestCompleteRunAudioAuthorityGuard {
             "\\bcom\\.openggf\\.debug\\.playback\\.([A-Za-z0-9_*]+)");
     private static final List<ForbiddenAuthority> AUTHORITY_CATEGORIES = List.of(
             forbidden("forbidden-package",
-                    "\\bcom\\.openggf\\.(?:trace|game\\.(?:timing|recording)|"
-                            + "tools\\.audio\\.parity)(?:\\.|\\b)"),
+                    "(?<![A-Za-z0-9_])(?:(?:[a-z_][a-z0-9_]*\\.)*trace\\."
+                            + "(?:[A-Za-z_*][A-Za-z0-9_*]*)|"
+                            + "com\\.openggf\\.(?:game\\.(?:timing|recording)|"
+                            + "tools\\.audio\\.parity)(?:\\.|\\b))"),
             forbidden("trace-authority",
                     "\\bTrace(?![A-Za-z0-9_]*Playback)"
                             + "(?!RunManifest\\b|Manifest\\b)[A-Za-z0-9_]+\\b"),
             forbidden("playback-authority",
-                    "\\b[A-Za-z0-9_]*Playback[A-Za-z0-9_]*\\b"),
+                    "\\b(?:Playback[A-Za-z0-9_]*(?:Controller|Manager|"
+                            + "Coordinator|Driver|Session|Owner)|"
+                            + "[A-Z][A-Za-z0-9_]*Playback(?:Controller|Manager|"
+                            + "Coordinator|Driver|Session|Owner))\\b"),
             forbidden("timing-authority",
                     "\\b(?:HardwareTiming|HardwareCompletion|RecordedCompletion)"
                             + "[A-Za-z0-9_]*\\b"),
             forbidden("oracle-authority",
-                    "\\b[A-Za-z0-9_]*(?:Oracle|AudioParity)[A-Za-z0-9_]*\\b"),
+                    "(?i)\\b[a-z0-9_]*(?:oracle|audio_?parity)[a-z0-9_]*\\b"),
             forbidden("reference-authority",
-                    "\\b(?:reference|expected|oracle|sidecar)[A-Za-z0-9_]*\\b"));
+                    "(?i)\\b[a-z0-9_]*(?:reference|expected|sidecar)"
+                            + "[a-z0-9_]*\\b"));
     private static final List<ForbiddenAuthority> FORBIDDEN_ENGINE_OPERATIONS = List.of(
             forbidden("fixture-bootstrap",
                     "\\b(?:HeadlessGameBoot|HeadlessTestFixture|"
@@ -374,8 +380,22 @@ class TestCompleteRunAudioAuthorityGuard {
                 new AuthorityMutation(
                         "AudioParityComparator owner;", "oracle-authority"),
                 new AuthorityMutation(
-                        "java.nio.file.Path oracleCapture;"
-                                + " void run(java.nio.file.Path referenceCapture) { }",
+                        "S2CompleteRunReferenceProjector owner;",
+                        "reference-authority"),
+                new AuthorityMutation(
+                        "S3kCompleteRunReferenceProducer owner;",
+                        "reference-authority"),
+                new AuthorityMutation(
+                        "java.nio.file.Path EXPECTED_AUDIO;",
+                        "reference-authority"),
+                new AuthorityMutation(
+                        "java.nio.file.Path SidecarPath;",
+                        "reference-authority"),
+                new AuthorityMutation(
+                        "java.nio.file.Path OracleCapture;",
+                        "oracle-authority"),
+                new AuthorityMutation(
+                        "void run(java.nio.file.Path referenceCapture) { }",
                         "reference-authority"),
                 new AuthorityMutation(
                         "com.openggf.trace.future.AnyFutureAuthority owner;",
@@ -395,6 +415,51 @@ class TestCompleteRunAudioAuthorityGuard {
             assertEquals(List.of(producer + ":" + mutation.expectedLabel()),
                     violations, mutation.source());
         }
+    }
+
+    @Test
+    void tracePackageClosureRejectsNestedSegmentsAndWildcards()
+            throws IOException {
+        Path producer = temporaryDirectory.resolve("ProductionAudioHelper.java");
+        Files.writeString(producer, """
+                import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
+                final class ProductionAudioHelper { }
+                """);
+        List<String> violations = new ArrayList<>();
+        inspectProducerAuthority(producer, violations);
+        assertEquals(List.of(producer + ":forbidden-package"), violations);
+
+        Files.writeString(producer, """
+                import com.openggf.game.sonic2.trace.*;
+                final class ProductionAudioHelper { }
+                """);
+        violations.clear();
+        inspectProducerAuthority(producer, violations);
+        assertEquals(List.of(producer + ":forbidden-package"), violations);
+
+        Files.writeString(producer, """
+                import trace.future.*;
+                final class ProductionAudioHelper { }
+                """);
+        violations.clear();
+        inspectProducerAuthority(producer, violations);
+        assertEquals(List.of(producer + ":forbidden-package"), violations);
+    }
+
+    @Test
+    void ordinaryAudioPlaybackTerminologyIsNotAuthority() throws IOException {
+        Path producer = temporaryDirectory.resolve("ProductionAudioHelper.java");
+        Files.writeString(producer, """
+                final class ProductionAudioHelper {
+                    SmpsSfxPlaybackPolicy policy;
+                    void stopPlayback() { }
+                }
+                """);
+        List<String> violations = new ArrayList<>();
+
+        inspectProducerAuthority(producer, violations);
+
+        assertEquals(List.of(), violations);
     }
 
     @Test
