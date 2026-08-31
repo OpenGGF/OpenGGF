@@ -36,6 +36,7 @@ class TestSonic1BreakItemSfxOnset {
         int noteOn = observer.events.indexOf("YM:0:28:F5");
         assertTrue(noteOn >= 0, "C1 FM5 note-on was not observed");
         assertEquals(List.of(
+                "PSG:DF", "PSG:FF",
                 "YM:1:B1:3C",
                 "YM:1:31:0F", "YM:1:39:01", "YM:1:35:03", "YM:1:3D:01",
                 "YM:1:51:1F", "YM:1:59:1F", "YM:1:55:1F", "YM:1:5D:1F",
