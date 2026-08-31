@@ -43,12 +43,11 @@ public final class S2OracleRawStream {
         public static final int SERVICE_UPDATE_MUSIC = 9;
 
         /**
-         * True for the writes the sequencer-level oracle compares: those issued
-         * by the driver's music/SFX service (VInt pass or zUpdateMusic), as
-         * opposed to the DAC sample loop, drum dispatch, or SEGA PCM playback.
+         * True for writes from the nested zUpdateMusic service, as opposed to
+         * its parent VInt, the DAC sample loop, drum dispatch, or SEGA PCM.
          */
-        public boolean sequencerOwned() {
-            return serviceKind == SERVICE_VINT || serviceKind == SERVICE_UPDATE_MUSIC;
+        public boolean updateMusicOwned() {
+            return serviceKind == SERVICE_UPDATE_MUSIC;
         }
     }
 
@@ -64,7 +63,7 @@ public final class S2OracleRawStream {
     }
 
     public record Frame(int row, boolean lag, byte[] state, List<ChipWrite> writes,
-            int updateMusicBegins) {
+            int updateMusicCompletions) {
         public Frame {
             state = state.clone();
             writes = List.copyOf(writes);
@@ -140,28 +139,28 @@ public final class S2OracleRawStream {
                 require(row == expected && row < end, "frame rows are not contiguous and in range");
                 JsonNode events = record.get("events");
                 sink.frame(new Frame(row, bool(record, "lag"), state(record),
-                        foldWrites(events, latches), countUpdateMusicBegins(events)));
+                        foldWrites(events, latches), countUpdateMusicCompletions(events)));
                 expected++;
             }
         }
     }
 
     /**
-     * Counts completed-service begins for the UpdateMusic kind (manifest kind
-     * 9): the ROM driver invocation marker. A frame with zero of these ran no
-     * zUpdateMusic — the Z80 was still inside a long service (a Saxman song
-     * load spans several frames with interrupts masked) or paused.
+     * Counts completed UpdateMusic services (manifest kind 9). The completion
+     * marker, rather than the begin marker, identifies the frame whose RAM
+     * image contains the post-service state: a long update can cross a video
+     * frame boundary after its begin event.
      */
-    private static int countUpdateMusicBegins(JsonNode events) {
+    private static int countUpdateMusicCompletions(JsonNode events) {
         require(events != null && events.isArray(), "frame events are absent");
-        int begins = 0;
+        int completions = 0;
         for (JsonNode event : events) {
-            if (integer(event, "kind") == 1
+            if (integer(event, "kind") == 2
                     && integer(event, "service_kind") == ChipWrite.SERVICE_UPDATE_MUSIC) {
-                begins++;
+                completions++;
             }
         }
-        return begins;
+        return completions;
     }
 
     private static List<ChipWrite> foldWrites(JsonNode events, int[] latches) {

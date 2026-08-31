@@ -109,10 +109,11 @@ window's own `first_row`/`exclusive_end` in the metadata. Chip-event decoding:
 raw event kind 3 carries the YM bus address in `subject`
 (0/2 = port0/port1 address latch, 1/3 = port0/port1 data), kind 4 is a PSG
 data byte — the literal `gpgx_audio_trace_fm_write(address & 3, data)`
-contract in patch 0001. Decoding was validated against the anchor row, whose
-folded write stream reproduces the shipped song-load burst exactly as the
-behaviour spec §5.2 orders it (key-off `28h`: 02,06,01,05,00,04; `FFh` to
-`30h-8Fh` on both parts; PSG `9F BF DF FF`; FM6 handling; `2Bh`; note-offs).
+contract in patch 0001. The raw stream retains both parent `zVInt` writes
+(service kind 3, including the multi-frame song load) and nested
+`zUpdateMusic` writes (kind 9). Completed-update oracle ticks compare kind 9
+only; the parent load burst remains capture evidence and is specified in
+behaviour spec §5.2, but is not folded into a child-service write stream.
 
 ## 3. The tick model: one completed `zUpdateMusic`, not one frame
 
@@ -123,16 +124,20 @@ itself shows why this recovery is not optional:
 - The Saxman EHZ load runs with interrupts masked across movie rows
   **10195-10200** — those frames' RAM images show the half-initialised load
   (`zVar` zeroed, tracks empty) and contain no `zUpdateMusic` service.
-- The caught-up Z80 then **misses row 10202's V-int entirely**: `TempoTimeout`
-  holds `3Ch` across rows 10201-10202 and the `+9Eh` recurrence only starts
-  at 10203.
+- Update 0 **begins** in row 10201 but runs across the frame boundary and
+  **completes** in row 10202. The caught-up Z80 misses row 10202's new V-int:
+  `TempoTimeout` holds `3Ch` across those two snapshots and the next `+9Eh`
+  recurrence starts at 10203.
 
-So the reference's invocation stream is: update 0 completes inside row 10201
-(load + first update in one invocation), update 1 inside row 10203, then one
-per row. `S2AudioOracleComparator.buildTicks` recovers exactly this from the
-kind-9 service begins; the sequencer-owned writes of the in-between frames
-belong to the tick that completes them. No other realignment exists: tick
-`n` of the reference is compared against engine update `n`.
+So the reference's invocation stream is: update 0 begins in row 10201 and
+completes in row 10202 (load + first update in one V-int), update 1 completes
+inside row 10203, then one per row. `S2AudioOracleComparator.buildTicks`
+recovers this from kind-9 service **completion** markers and uses the
+completion-frame RAM image; the kind-9 writes since the previous completion
+belong to that tick. Using begin-frame RAM had exposed a mid-track-walk image
+(DAC/FM1 advanced, FM2 onward stale) as if it were post-update state. No
+realignment beyond the service boundary exists: reference tick `n` is
+compared against engine update `n`.
 
 ## 4. Comparison vocabulary (field registry)
 
@@ -142,15 +147,16 @@ belong to the tick that completes them. No other realignment exists: tick
 `tempoDivider`, `detune`, `controlBits` (playing/do-not-attack/modulation),
 `freq` (FM `block<<11|fnum`; PSG table word), `volFlutter` (PSG cursor);
 globals `currentTempo` (speed-shoes-effective) and `tempoTimeout`. The write
-stream compares the ordered sequencer-owned writes (service kinds 3/9);
+stream compares the ordered completed-`zUpdateMusic` writes (service kind 9);
 DAC-sample, drum-dispatch and SEGA-PCM writes (kinds 4/6/7) are the PCM tier,
 excluded by service attribution rather than by register heuristics. Every
 excluded ROM field is listed in `S2OracleComparison.NOT_COMPARED` with its
 reason — the registry is a classification, not silent scope loss.
 
 The engine side (`S2OracleEngineCapture`) drives EHZ through the real S2
-driver stack, emits the shipped song-load silence burst at tick 0
-(spec §5.1-5.2, FixDriverBugs=0), applies `setSpeedShoes(true)` at the tick
+driver stack, emits the shipped song-load silence burst before tick 0
+(spec §5.1-5.2, FixDriverBugs=0) but keeps those parent-service writes outside
+the kind-9 stream, applies `setSpeedShoes(true)` at the tick
 whose reference row consumed the movie's `FBh` command, and maps each
 post-update `SmpsSequencerSnapshot` into the ROM vocabulary (EM §2.3 mapping).
 The engine never reads the fixture; its inputs are the documented request
@@ -158,7 +164,7 @@ timeline (song id, speed-up tick ordinal) — trace data stays comparison-only.
 SFX request injection is deliberately out of this tier (registry entry); the
 fixture already carries the reference side of the SFX slots for the next tier.
 
-## 5. First measurement and break-it evidence
+## 5. Measurements and break-it evidence
 
 Recorded in `docs/status/audio-frontier-log.md` (2026-08-30 entry): expected
 red — DIVERGENCE at tick 0 (row 10201), `global.tempoTimeout` expected `0x3c`
@@ -170,6 +176,17 @@ first result was trusted: a corrupted reference byte and a corrupted engine
 write each move the report to exactly the corrupted tick and field, and the
 untampered self-comparison is `MATCH (698 ticks)`
 (`TestS2AudioOracleComparator`).
+
+The 2026-08-31 completion-boundary correction supersedes the begin-frame
+frontier above: FM2's apparent `1424h` pointer was the RAM image taken halfway
+through update 0, not driver behaviour. With completion-frame state and
+kind-9-only writes, the engine matches the music-only prefix through ticks
+0-209. The current first divergence is tick 210 (movie row 10412): the
+reference has FM4 `PlaybackControl` override bit 2 set by an admitted SFX, so
+`zFMUpdateFreq` suppresses its modulation write (`sd:1088-1092`); the
+music-only engine capture intentionally injects no SFX and therefore emits
+that write. This is the declared next-tier SFX admission boundary, not an EHZ
+music divergence.
 
 ## 6. Deviations, limitations, open questions
 

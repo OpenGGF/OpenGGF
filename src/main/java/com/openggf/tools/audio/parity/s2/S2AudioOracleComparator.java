@@ -18,13 +18,13 @@ import java.util.Objects;
  *
  * <p><b>One oracle tick is one completed {@code zUpdateMusic} service</b>, not
  * one video frame: the observer's service stream marks each update (manifest
- * kind 9), and the reference shows why the distinction matters — a Saxman song
- * load runs for several frames with interrupts masked, so the frames inside it
+ * kind 9 completion), and the reference shows why the distinction matters —
+ * a Saxman song load runs for several frames with interrupts masked, so the frames inside it
  * contain no driver update at all (e.g. rows 10196-10200 of this fixture hold
  * the half-initialised RAM of the in-progress load, and row 10202's V-int was
  * missed entirely while the Z80 caught up). Ticks are recovered from the
- * reference's own service markers; within a tick, the sequencer-owned writes
- * of every frame since the previous update belong to that tick. No realignment
+ * reference's own service markers; within a tick, the kind-9 writes since the
+ * previous completion belong to that tick. No realignment
  * beyond this service-marker recovery is performed: tick {@code n} of the
  * reference is compared against engine update {@code n}, and the first
  * divergence is reported with its tick, movie row, field, and expected/actual
@@ -130,11 +130,11 @@ public final class S2AudioOracleComparator {
                 continue;
             }
             for (S2OracleRawStream.ChipWrite write : frame.writes()) {
-                if (write.sequencerOwned()) {
+                if (write.updateMusicOwned()) {
                     pending.add(write);
                 }
             }
-            if (frame.updateMusicBegins() > 0) {
+            if (frame.updateMusicCompletions() > 0) {
                 ticks.add(new ReferenceTick(ticks.size(), frame.row(), frame.state(),
                         pending));
                 pending = new ArrayList<>();

@@ -1198,9 +1198,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 }
             }
 
-            if (t.duration == 0 && config.isDirect68kDriver()) {
+            if (t.duration == 0
+                    && t.type != TrackType.DAC
+                    && config.getNoteOnPrevent()
+                            == SmpsSequencerConfig.NoteOnPrevent.REST) {
                 // S1/S2 clear PlaybackControl bit 4 only when the current duration
-                // expires, before interpreting the next stream unit.
+                // expires on FM/PSG, before interpreting the next stream unit.
+                // S2 zDACUpdateTrack has no matching res 4 and retains the bit
+                // (sd:775-819 versus 821-835 and 1123-1138).
                 t.tieNext = false;
             }
             while (t.duration == 0 && t.active) {
@@ -2062,10 +2067,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             if (config.getDelayFreq() == SmpsSequencerConfig.DelayFreq.RESET) {
                 resetTrackedFrequency(t);
             }
-            if (config.isDirect68kDriver() && t.type == TrackType.PSG && !preventAttack) {
-                // S1 PSGUpdateTrack still runs PSGDoVolFX after PSGSetFreq marks
-                // a rest. It advances VolEnvIndex, but SetPSGVolume suppresses
-                // the write because the resting bit is set.
+            if (config.isAdvancePsgEnvelopeOnRest()
+                    && t.type == TrackType.PSG && !preventAttack) {
+                // S1 PSGUpdateTrack and S2 zPSGUpdateTrack still run their
+                // volume-envelope step after parsing a rest. The cursor
+                // advances, but the resting bit suppresses the chip write
+                // (S2 sd:1123-1131, 1276-1312).
                 primePsgRestEnvelope(t);
             }
             clearTransientNoAttack(t);
@@ -2142,24 +2149,34 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
             writeFmFreq(port, ch, fnum, block);
             // S1/S2 FMPrepareNote writes only A4/A0; pan is written by SetVoice
-            // or its coordination flag. Keep the existing Z80 refresh behavior.
-            if (!config.isDirect68kDriver()) {
+            // or its coordination flag (S2 sd:821-835, 2797-2807).
+            if (config.isWriteFmPanOnNote()) {
                 applyFmPanAmsFms(t);
             }
-            // S2 (ModAlgo 68k_a) applies modulation before note-on; S1 (ModAlgo 68k) does not.
-            if (t.modEnabled && config.isApplyModOnNote()) {
+            // The S3K HOLD-family path applies its note-start modulation before
+            // key-on. S2 calls zFMNoteOn first and zDoModulation afterwards
+            // (sd:821-835); S1 does not apply modulation at note start.
+            if (t.modEnabled && config.isApplyModOnNote()
+                    && config.getNoteOnPrevent()
+                            == SmpsSequencerConfig.NoteOnPrevent.HOLD) {
                 t.forceModulationWrite = true;
                 applyModulation(t);
             }
 
             // S1/S2 smpsNoAttack suppresses FMNoteOff and the per-note state
-            // reset, but FMUpdateTrack still branches to FMNoteOn after the
-            // tied frequency has been prepared. Preserve the Z80-family HOLD
-            // behavior, which suppresses its key-on too.
-            if (config.isDirect68kDriver() || !preventAttack) {
+            // reset, but FMNoteOn tests only rest/override bits and still keys
+            // on after the tied frequency is prepared (S2 sd:2797-2825).
+            // Preserve the S3K HOLD behavior, which suppresses its key-on.
+            if (config.getNoteOnPrevent() == SmpsSequencerConfig.NoteOnPrevent.REST
+                    || !preventAttack) {
                 synth.writeFm(this, 0, 0x28, 0xF0 | chVal); // Key On after latching frequency/pan
                 LOGGER.fine("FM KEY ON: chVal=" + Integer.toHexString(chVal) + " port=" + port + " fnum="
                         + Integer.toHexString(fnum) + " block=" + block + " note=" + Integer.toHexString(t.note));
+            }
+            if (t.modEnabled && config.isApplyModOnNote()
+                    && config.getNoteOnPrevent()
+                            == SmpsSequencerConfig.NoteOnPrevent.REST) {
+                applyModulation(t);
             }
 
         } else {
@@ -2230,7 +2247,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void clearTransientNoAttack(Track t) {
-        if (!config.isDirect68kDriver()) {
+        if (config.getNoteOnPrevent() == SmpsSequencerConfig.NoteOnPrevent.HOLD) {
             t.tieNext = false;
         }
     }
@@ -2363,7 +2380,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (t.type == TrackType.FM) {
             updateFmTotalLevel(t);
         } else if (t.type == TrackType.PSG) {
-            if (t.envAtRest || (config.isDirect68kDriver() && t.resting)) {
+            if (t.envAtRest || t.resting) {
                 return;
             }
             int vol = t.note == 0x80 ? 0x0f
@@ -2414,6 +2431,22 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 ? bit7CarrierMask(t.voiceData, 21)
                 : ALGO_OUT_MASK_SLOT[t.voiceData[0] & 0x07];
         int[] registerOffsets = operatorRegisterOffsets();
+        if (config.getFmVoiceWriteProfile()
+                == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80) {
+            // zSetChanVol calls zSetFMTLs, whose four-operator loop always
+            // writes every TL. zVolTLMaskTbl controls only whether Volume is
+            // added; non-carriers are rewritten unchanged (sd:3385-3424,
+            // 3438-3457). FixDriverBugs=0 keeps the 8-bit carrier addition.
+            for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
+                int rawTl = t.voiceData[21 + storedOperator] & 0xff;
+                int tl = (mask & (1 << storedOperator)) == 0
+                        ? rawTl
+                        : computeS2TotalLevel(t, rawTl, storedOperator);
+                synth.writeFm(this, port,
+                        0x40 + registerOffsets[storedOperator] + ch, tl);
+            }
+            return;
+        }
         for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
             if ((mask & (1 << storedOperator)) == 0) {
                 continue;

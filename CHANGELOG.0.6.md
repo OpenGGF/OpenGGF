@@ -14,6 +14,16 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 2 EHZ music-driver parity now reaches the first SFX override:** the
+  oracle now samples completed `zUpdateMusic` services rather than a
+  begin-frame image that could catch the Z80 halfway through its track walk,
+  and compares only child-service writes instead of folding the parent V-int's
+  song-load burst into the tick. Source-backed sequencer fixes cover resting
+  PSG envelope cursors, FM pan/TL write order, E7 lifetime and key-on behavior,
+  and note-start modulation order. The committed window now matches through
+  ticks 0-209; tick 210 is the expected next-tier boundary where the reference
+  admits an SFX and marks FM4 overridden while the music-only engine capture
+  intentionally injects none.
 - **Sonic 1 PSG SFX admission now leaves the write stream to the SFX track:**
   taking PSG1/2 from music no longer injects the engine's synthetic
   maximum-attenuation latch. The shipped `Sound_PlaySFX` routine

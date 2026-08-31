@@ -27,6 +27,31 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-08-31 — S2 EHZ music prefix reaches the first SFX override at tick 210
+
+- **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,
+  `feature/ai-sdre2-cadence-resume` (the fixes land with this entry).
+- **Fixture:** `src/test/resources/audio/parity/s2/s2-ehz-reload-w10150-10900.raw.jsonl.gz`
+  (unchanged committed reference).
+- **Command:** `S2AudioOracleTool --fixture <committed fixture> --rom
+  <absolute SHA-1-verified S2 REV01 ROM>` on the compiled worktree classes.
+- **Result:** DIVERGENCE at tick **210** (movie row **10412**), `writes[0]`:
+  reference PSG `0x9A`, engine YM part II `A4h = 33h`; **303 of 698 ticks
+  divergent**. Ticks 0-209 match.
+- **Notes:** the comparator now pairs each tick with the kind-9 service
+  **completion** frame, not its begin frame; update 0 begins at row 10201 and
+  completes at row 10202, so the old FM2 `1424h/1428h` frontier was a
+  mid-track-walk snapshot. Tick writes are likewise kind-9-owned only rather
+  than mixing the parent V-int's multi-frame load burst into its child update.
+  The engine fixes exposed along the prefix are source-owned S2 semantics:
+  resting PSG envelopes advance without writing, FM note preparation does not
+  repeat pan, `zSetChanVol` rewrites all four TLs, E7 persists on DAC while
+  FM/PSG clear it at expiry, FM no-attack still keys on, and note-start
+  modulation follows key-on without forcing a write. At tick 210 the
+  reference FM4 has override bit 2 set by an SFX and suppresses its modulation
+  write (`sd:1088-1092`); this music-only engine capture deliberately injects
+  no SFX. The next S2 frontier is therefore the declared SFX/admission tier.
+
 ## 2026-08-31 — S3K tick-3 attribution retracted: this is the 68k PSG bootstrap, not `zStopAllSound`
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,

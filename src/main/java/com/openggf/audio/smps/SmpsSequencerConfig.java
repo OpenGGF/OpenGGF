@@ -131,6 +131,8 @@ public final class SmpsSequencerConfig {
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
     private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
     private final boolean direct68kDriver;
+    private final boolean advancePsgEnvelopeOnRest;
+    private final boolean writeFmPanOnNote;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
     private final PsgSfxTakeoverMode psgSfxTakeoverMode;
     private final FmVoiceWriteProfile fmVoiceWriteProfile;
@@ -168,6 +170,8 @@ public final class SmpsSequencerConfig {
         this.relativePointers = b.relativePointers;
         this.tempoOnFirstTick = b.tempoOnFirstTick;
         this.direct68kDriver = b.direct68kDriver;
+        this.advancePsgEnvelopeOnRest = b.advancePsgEnvelopeOnRest;
+        this.writeFmPanOnNote = b.writeFmPanOnNote;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
         this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
@@ -270,6 +274,16 @@ public final class SmpsSequencerConfig {
         return direct68kDriver;
     }
 
+    /** Whether a newly parsed PSG rest still consumes the first envelope byte. */
+    public boolean isAdvancePsgEnvelopeOnRest() {
+        return advancePsgEnvelopeOnRest;
+    }
+
+    /** Whether FM note preparation repeats the track's current pan register. */
+    public boolean isWriteFmPanOnNote() {
+        return writeFmPanOnNote;
+    }
+
     public FmSfxTakeoverMode getFmSfxTakeoverMode() {
         return fmSfxTakeoverMode;
     }
@@ -366,6 +380,8 @@ public final class SmpsSequencerConfig {
         private boolean relativePointers = false;
         private boolean tempoOnFirstTick = false;
         private boolean direct68kDriver = false;
+        private boolean advancePsgEnvelopeOnRest = true;
+        private boolean writeFmPanOnNote = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
         private PsgSfxTakeoverMode psgSfxTakeoverMode = PsgSfxTakeoverMode.FORCE_SILENCE;
         private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
@@ -395,6 +411,8 @@ public final class SmpsSequencerConfig {
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
+        public Builder advancePsgEnvelopeOnRest(boolean val) { advancePsgEnvelopeOnRest = val; return this; }
+        public Builder writeFmPanOnNote(boolean val) { writeFmPanOnNote = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder psgSfxTakeoverMode(PsgSfxTakeoverMode val) { psgSfxTakeoverMode = val; return this; }
         public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }

@@ -25,14 +25,46 @@ class TestS2AudioOracleComparator {
     void recoversUpdateTicksAcrossTheSongLoadStall() throws Exception {
         List<S2AudioOracleComparator.ReferenceTick> ticks = anchorTicks();
         // The Saxman EHZ load masks interrupts across rows 10195-10200 and the
-        // caught-up Z80 misses row 10202's V-int, so the recovered updates
-        // must start at row 10201 and skip 10202.
-        assertEquals(10_201, ticks.get(0).row());
+        // first update begins in row 10201 but does not complete until row
+        // 10202. The recovered tick must use the completion-frame RAM image,
+        // then resume with the next complete update in row 10203.
+        assertEquals(10_202, ticks.get(0).row());
         assertEquals(10_203, ticks.get(1).row());
         assertEquals(10_204, ticks.get(2).row());
         S2OracleDriverState anchor = S2OracleDriverState.decode(ticks.get(0).state());
         assertEquals(S2OracleSchema.ANCHOR_ROM_MUSIC_ID, anchor.globals().curSong());
         assertEquals(0x9e, anchor.globals().currentTempo());
+        assertEquals(0x1428, anchor.musicTracks().get(2).dataPointer());
+        assertTrue(ticks.get(0).writes().stream().allMatch(write ->
+                write.serviceKind()
+                        == S2OracleRawStream.ChipWrite.SERVICE_UPDATE_MUSIC));
+    }
+
+    @Test
+    void firstUpdatesFollowS2PsgAndFmWriteSemantics() {
+        File rom = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S2 REV01 ROM unavailable");
+
+        List<S2OracleEngineCapture.EngineTick> ticks = S2OracleEngineCapture.capture(
+                rom.toPath(), 2, 2);
+        S2OracleEngineCapture.EngineTick tick = ticks.get(0);
+
+        // zPSGUpdateTrack calls zPSGDoVolFX after parsing a new note, including
+        // a rest. zPSGDoVolFX advances VolFlutter before the resting bit
+        // suppresses the chip write (sd:1123-1131, 1276-1312).
+        assertEquals(1, tick.musicSlots().get(7).volFlutter());
+        assertEquals(1, tick.musicSlots().get(8).volFlutter());
+        assertEquals(1, tick.musicSlots().get(9).volFlutter());
+        assertEquals(4, tick.writes().stream()
+                .filter(S2OracleRawStream.ChipWrite::ym)
+                .filter(write -> write.register() >= 0xb4 && write.register() <= 0xb6)
+                .count(), "zFMPrepareNote must not repeat the voice's pan write");
+        assertEquals(2, tick.writes().stream()
+                .filter(S2OracleRawStream.ChipWrite::ym)
+                .filter(write -> write.port() == 1 && write.register() == 0x40)
+                .count(), "E6 must rewrite unchanged non-carrier TLs too");
+        assertTrue(ticks.get(1).writes().isEmpty(),
+                "resting PSG envelopes advance without writing attenuation");
     }
 
     @Test

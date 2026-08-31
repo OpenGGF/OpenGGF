@@ -462,6 +462,8 @@ final class SmpsAssetCatalog {
                 .relativePointers(source.isRelativePointers())
                 .tempoOnFirstTick(source.isTempoOnFirstTick())
                 .direct68kDriver(source.isDirect68kDriver())
+                .advancePsgEnvelopeOnRest(source.isAdvancePsgEnvelopeOnRest())
+                .writeFmPanOnNote(source.isWriteFmPanOnNote())
                 .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
                 .volMode(source.getVolMode())

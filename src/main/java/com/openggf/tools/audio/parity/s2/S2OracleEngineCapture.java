@@ -82,6 +82,10 @@ public final class S2OracleEngineCapture {
             driver.addSequencer(sequencer, false);
             driver.setChipWriteObserver(writes);
             emitS2MusicLoadBurst(driver, song);
+            // Oracle ticks are completed zUpdateMusic services (manifest kind
+            // 9), not their parent zVInt service (kind 3). Keep the source-
+            // accurate load burst out of the per-update write stream.
+            writes.drain();
 
             int z80Start = song.getZ80StartAddress();
             for (int ordinal = 0; ordinal < tickCount; ordinal++) {

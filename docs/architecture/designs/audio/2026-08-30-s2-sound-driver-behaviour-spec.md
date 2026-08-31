@@ -476,7 +476,11 @@ PSG `9F BF DF FF`, `28h = 06h`, TL `42/46/4A/4E = FFh` (part II), `B6h = C0h`,
 `2Bh = 80h`, then `zInitSFX`'s `28h` note-offs ×6 (`00,01,02,04,05,06`) and PSG
 `9F BF DF` — three `zPSGNoteOff`s on the music PSG tracks; the noise `FFh` write
 is the FixBugs branch (§7), so it is **not** repeated here.
-First notes follow on the next invocation (`DurationTimeout = 1`).
+Control returns from `zBGMLoad` to the same `zUpdateEverything` pass, so that
+pass then calls `zUpdateMusic`: the first notes are parsed in the same V-int
+that finishes the load (`DurationTimeout` was initialised to 1). A long Saxman
+load can span several video frames before that first update completes, but it
+does not create a separate driver invocation between load and note parsing.
 
 ### 5.3 Test vectors
 
