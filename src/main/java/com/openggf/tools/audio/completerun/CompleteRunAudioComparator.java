@@ -609,7 +609,7 @@ public final class CompleteRunAudioComparator {
         }
         if (layers.isCompared(ComparisonLayer.DECISIONS)) {
             Difference decisions = decisionDifference(flattenDecisions(reference), flattenDecisions(engine), frame,
-                    "frame.decisions", layers.isCompared(ComparisonLayer.OWNERSHIP));
+                    layers.isCompared(ComparisonLayer.OWNERSHIP));
             if (decisions != null) return decisions;
         }
         if (layers.isCompared(ComparisonLayer.STATE)) {
@@ -624,8 +624,15 @@ public final class CompleteRunAudioComparator {
         return null;
     }
 
-    private static List<Decision> flattenDecisions(List<DriverService> services) {
-        return services.stream().flatMap(service -> service.decisions().stream()).toList();
+    private static List<ServiceDecision> flattenDecisions(List<DriverService> services) {
+        List<ServiceDecision> decisions = new ArrayList<>();
+        for (int serviceIndex = 0; serviceIndex < services.size(); serviceIndex++) {
+            List<Decision> serviceDecisions = services.get(serviceIndex).decisions();
+            for (int decisionIndex = 0; decisionIndex < serviceDecisions.size(); decisionIndex++) {
+                decisions.add(new ServiceDecision(serviceIndex, decisionIndex, serviceDecisions.get(decisionIndex)));
+            }
+        }
+        return decisions;
     }
 
     private static List<ChipEvent> flattenChips(List<DriverService> services) {
@@ -646,20 +653,21 @@ public final class CompleteRunAudioComparator {
         return null;
     }
 
-    private static Difference decisionDifference(List<Decision> reference, List<Decision> engine,
-            int frame, String location, boolean compareOwnership) {
+    private static Difference decisionDifference(List<ServiceDecision> reference, List<ServiceDecision> engine,
+            int frame, boolean compareOwnership) {
         if (reference.size() != engine.size()) {
             int index = commonPrefix(reference, engine);
             return diff(reference.size() > engine.size() ? Kind.DECISION_MISSING : Kind.DECISION_EXTRA,
-                    frame, location + "[" + index + "]", at(reference, index), at(engine, index));
+                    frame, decisionLocation(reference, engine, index), at(reference, index), at(engine, index));
         }
-        if (isPermutation(reference, engine, decision -> decisionOrderPayload(decision, compareOwnership))) {
-            return diff(Kind.DECISION_ORDER, frame, location, reference, engine);
+        if (isPermutation(reference, engine,
+                decision -> decisionOrderPayload(decision.decision(), compareOwnership))) {
+            return diff(Kind.DECISION_ORDER, frame, "frame.decisions", reference, engine);
         }
         for (int index = 0; index < reference.size(); index++) {
-            Decision expected = reference.get(index);
-            Decision actual = engine.get(index);
-            String item = location + "[" + index + "]";
+            Decision expected = reference.get(index).decision();
+            Decision actual = engine.get(index).decision();
+            String item = decisionLocation(reference, engine, index);
             if (expected.requestOrdinal() != actual.requestOrdinal()) {
                 return diff(Kind.DECISION_ORDER, frame, item + ".request_ordinal",
                         expected.requestOrdinal(), actual.requestOrdinal());
@@ -686,6 +694,12 @@ public final class CompleteRunAudioComparator {
             }
         }
         return null;
+    }
+
+    private static String decisionLocation(List<ServiceDecision> reference, List<ServiceDecision> engine,
+            int index) {
+        ServiceDecision decision = index < reference.size() ? reference.get(index) : engine.get(index);
+        return "frame.services[" + decision.serviceIndex() + "].decisions[" + decision.decisionIndex() + "]";
     }
 
     private static Difference chipDifference(List<ChipEvent> reference, List<ChipEvent> engine,
@@ -877,6 +891,7 @@ public final class CompleteRunAudioComparator {
     private record PsgPayload(int value) { }
     private record FrameCoordinatesPayload(String segment, boolean lag) { }
     private record PriorityPayload(Integer before, Integer after) { }
+    private record ServiceDecision(int serviceIndex, int decisionIndex, Decision decision) { }
 
     private record Snapshot(Path source, Metadata metadata, String rootDigest, String semanticDigest,
             PublicationIdentity publication, String metadataSha256) {
