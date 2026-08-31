@@ -45,7 +45,7 @@ class TestGameLoopExclusiveFrameDrive {
         playback.startSession(movie(), 0);
 
         assertTrue(loop.externalFrameOrInputOwnerActive());
-        assertTrue(GameLoop.externalFrameOrInputOwnerActive(context));
+        assertTrue(ExternalFrameOrInputOwnership.active(context));
         playback.endSession();
         assertFalse(loop.externalFrameOrInputOwnerActive());
     }

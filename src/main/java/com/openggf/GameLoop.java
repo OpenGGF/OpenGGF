@@ -800,22 +800,8 @@ public class GameLoop {
         return paused || userPaused;
     }
 
-    /**
-     * Whether another production owner can drive frame cardinality or input.
-     * Authenticated one-row runners use this semantic gate without depending
-     * on any concrete replay or playback implementation.
-     */
     public boolean externalFrameOrInputOwnerActive() {
-        return externalFrameOrInputOwnerActive(engineServices);
-    }
-
-    /** Same ownership gate available before an Engine publishes itself. */
-    public static boolean externalFrameOrInputOwnerActive(
-            EngineContext engineServices) {
-        Objects.requireNonNull(engineServices, "engineServices");
-        return TraceSessionLauncher.active() != null
-                || engineServices.playbackDebug()
-                        .hasActiveOrScheduledSession();
+        return ExternalFrameOrInputOwnership.active(engineServices);
     }
 
     /**

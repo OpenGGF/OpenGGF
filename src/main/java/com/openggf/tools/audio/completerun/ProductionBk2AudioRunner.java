@@ -1,6 +1,7 @@
 package com.openggf.tools.audio.completerun;
 
 import com.openggf.Engine;
+import com.openggf.ExternalFrameOrInputOwnership;
 import com.openggf.GameLoop;
 import com.openggf.InputBindingFactory;
 import com.openggf.audio.AudioManager;
@@ -66,7 +67,7 @@ public final class ProductionBk2AudioRunner {
         }
         requireAuthenticatedConfiguration(context.configuration());
         requireExclusiveFrameDrive(
-                GameLoop.externalFrameOrInputOwnerActive(context));
+                ExternalFrameOrInputOwnership.active(context));
 
         AudioManager audio = context.audio();
         InputHandler input = new InputHandler(
@@ -179,7 +180,7 @@ public final class ProductionBk2AudioRunner {
             throw new IllegalStateException(
                     "configured BK2 input handler identity was replaced");
         }
-        if (audio.getBackend() != backend) {
+        if (!audio.hasInstalledBackend(backend)) {
             throw new IllegalStateException(
                     "configured headless SMPS backend identity was replaced");
         }

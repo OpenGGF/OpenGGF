@@ -322,6 +322,11 @@ public class AudioManager implements MusicRestoreSink {
         return backend;
     }
 
+    /** Tests whether the exact expected backend remains installed. */
+    public synchronized boolean hasInstalledBackend(AudioBackend expected) {
+        return backend == java.util.Objects.requireNonNull(expected, "expected");
+    }
+
     /**
      * The active backend's output (synthesis) sample rate. Routed through
      * AudioManager so callers don't reach the backend directly (see

@@ -607,7 +607,7 @@ public class Engine {
 		}
 		setInputHandler(input);
 		audioManager.setBackend(backend);
-		if (audioManager.getBackend() != backend) {
+		if (!audioManager.hasInstalledBackend(backend)) {
 			setInputHandler(null);
 			throw new IllegalStateException(
 					"the supplied headless audio backend was not installed");
