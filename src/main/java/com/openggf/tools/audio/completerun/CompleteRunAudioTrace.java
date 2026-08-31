@@ -1976,14 +1976,19 @@ public final class CompleteRunAudioTrace {
         }
 
         public void validate(CutoffFrontier frontier) {
-            validate(frontier, true, true);
+            validate(frontier, true, true, true);
         }
 
         public void validate(CutoffFrontier frontier,
                 boolean validateStateEvidence, boolean validateChipEvidence) {
+            validate(frontier, true, validateStateEvidence, validateChipEvidence);
+        }
+
+        public void validate(CutoffFrontier frontier, boolean validateTopologyEvidence,
+                boolean validateStateEvidence, boolean validateChipEvidence) {
             Objects.requireNonNull(frontier, "cutoff frontier");
-            if (frontier.activeStack().size() != expectedActive
-                    || frontier.pendingDescendants().size() != expectedPending
+            if (validateTopologyEvidence && frontier.activeStack().size() != expectedActive
+                    || validateTopologyEvidence && frontier.pendingDescendants().size() != expectedPending
                     || validateChipEvidence
                             && frontier.activeStack().stream().mapToLong(service -> service.chipEvents().size()).sum()
                             + frontier.pendingDescendants().stream()
@@ -1995,12 +2000,13 @@ public final class CompleteRunAudioTrace {
                                     != expectedSnapshotBytes
                     || validateChipEvidence && frontier.ymPort0Latch() != expectedYmPort0Latch
                     || validateChipEvidence && frontier.ymPort1Latch() != expectedYmPort1Latch
-                    || frontier.nativeDiagnostics() != null
+                    || validateTopologyEvidence && frontier.nativeDiagnostics() != null
                             && (frontier.nativeDiagnostics().armEpoch() != expectedArmEpoch
-                                    || frontier.nativeDiagnostics().armed() != expectedArmed
-                                    || validateStateEvidence && !frontier.nativeDiagnostics().terminalZ80Digest()
-                                            .equals(expectedTerminalZ80Digest))
-                    || validateChipEvidence && !capabilityDigest(frontier)
+                                    || frontier.nativeDiagnostics().armed() != expectedArmed)
+                    || validateStateEvidence && frontier.nativeDiagnostics() != null
+                            && !frontier.nativeDiagnostics().terminalZ80Digest()
+                                    .equals(expectedTerminalZ80Digest)
+                    || validateTopologyEvidence && validateChipEvidence && !capabilityDigest(frontier)
                             .equals(expectedSemanticCapabilityDigest)) {
                 throw new IllegalArgumentException("cutoff frontier exceeds its profile-owned limit");
             }
@@ -2008,18 +2014,20 @@ public final class CompleteRunAudioTrace {
                 if (validateChipEvidence
                                 && frontier.nativeDiagnostics().rawChipInventory().size()
                                         != expectedNativeChipEvents
-                        || validateStateEvidence && validateChipEvidence
+                        || validateTopologyEvidence && validateStateEvidence && validateChipEvidence
                                 && (expectedNativeCapabilityDigest == null
                                         || !nativeCapabilityDigest(frontier.nativeDiagnostics())
                                                 .equals(expectedNativeCapabilityDigest))) {
                     throw new IllegalArgumentException("native cutoff frontier differs from its capability");
                 }
-                for (FrontierService service : java.util.stream.Stream.concat(
-                        frontier.nativeDiagnostics().activeStack().stream(),
-                        frontier.nativeDiagnostics().pendingDescendants().stream()).toList()) {
-                    if (serviceRules.stream().noneMatch(rule -> rule.matches(service, validateStateEvidence)
-                            && (!validateChipEvidence || rule.acceptsChipSources(service)))) {
-                        throw new IllegalArgumentException("cutoff frontier is outside its service manifest");
+                if (validateTopologyEvidence) {
+                    for (FrontierService service : java.util.stream.Stream.concat(
+                            frontier.nativeDiagnostics().activeStack().stream(),
+                            frontier.nativeDiagnostics().pendingDescendants().stream()).toList()) {
+                        if (serviceRules.stream().noneMatch(rule -> rule.matches(service, validateStateEvidence)
+                                && (!validateChipEvidence || rule.acceptsChipSources(service)))) {
+                            throw new IllegalArgumentException("cutoff frontier is outside its service manifest");
+                        }
                     }
                 }
             }
