@@ -223,6 +223,7 @@ diagnostic tools remain usable without changing gameplay behavior.
   wrapper cannot call the existing pinned method without widening internal behavior.
 - Modify: `bizhawk-headless/src/Recording/S3kCompleteAudioCaptureRunner.cs` under the same rule.
 - Modify: `bizhawk-headless/tests/TraceCliTests.cs`
+- Create: `bizhawk-headless/run-complete-audio.sh`
 - Test: `bizhawk-headless/tests/S2CompleteAudioCaptureRunnerTests.cs`
 - Test: `bizhawk-headless/tests/S3kCompleteAudioCaptureRunnerTests.cs`
 - Modify: the TraceChaser capture guide owning command-line publication.
@@ -243,6 +244,10 @@ diagnostic tools remain usable without changing gameplay behavior.
   identity.
 - Consumes the existing `CaptureRawPinned(...)` methods and raw sinks without changing their ABI,
   observer graph, service manifest, identity, bounds, or cutoff rules.
+- Produces one dedicated Linux launcher below the TraceChaser root. It accepts only the closed
+  complete-audio argv, sources the pinned environment, unsets `DISPLAY`, and executes the fixed
+  built assembly through Mono. It does not accept the generic trace wrapper's repository/fixture
+  roots and does not invoke a shell command string supplied by OpenGGF.
 
 - [ ] Create an isolated TraceChaser feature worktree/branch from its pinned commit; do not switch
   the checkout used by the OpenGGF main workspace.
@@ -253,6 +258,9 @@ diagnostic tools remain usable without changing gameplay behavior.
 - [ ] Add one closed command branch selecting only the two compiled runner methods. Stage output
   beside the destination, close and validate capture, then atomically create the destination;
   never overwrite an existing file.
+- [ ] Dispatch complete-audio before the generic trace boundary and add the dedicated launcher;
+  prove at Main level that generic boundary arguments remain rejected by the closed command and
+  that the launcher preserves the exact argv.
 - [ ] Run `bizhawk-headless/test.sh --jobs 1 --filter 'TraceCliTests'`, then the S2 and S3K
   complete-audio runner/raw-sink filters.
 - [ ] Commit and independently review the TraceChaser change; update the OpenGGF submodule pointer
@@ -275,9 +283,11 @@ diagnostic tools remain usable without changing gameplay behavior.
 
 - Consumes: `CompleteRunAudioProducer.Request`, Task 2's fixed command, raw adapters, state
   decoders/normalizers, and `CompleteRunAudioCaptureStore.writeNew(...)`.
-- Produces: canonical reference stores for state/chip/cutoff layers and any service/ownership/
+- Produces: transactionally staged canonical reference records for state/chip/cutoff layers and any service/ownership/
   lifecycle layer whose exact native-to-canonical equivalence is proven by the game-owned
-  projector tests; zero request/decision records under the current observer graph.
+  projector tests; zero request/decision records under the current observer graph. Authenticated
+  canonical store publication remains fail-closed until Task 7 installs exact reference runtime
+  identities, observer identities/proofs, and capability summaries.
 
 - [ ] Write RED process tests using a deterministic fake executable that records argv and creates
   or fails a raw file. Treat `Request.referenceHome()` as the pinned TraceChaser root and assert
@@ -287,7 +297,7 @@ diagnostic tools remain usable without changing gameplay behavior.
   no shell interpretation, bounded stderr, nonzero exit propagation, and cleanup of uncommitted
   output.
 - [ ] Implement `ProcessBuilder` invocation with an explicit argv list and Task 2's closed game
-  selector. Resolve the service manifest and built launcher only from the canonical fixed paths
+  selector. Resolve the service manifest and dedicated complete-audio launcher only from the canonical fixed paths
   below `Request.referenceHome()` for both games; resolve and pass the capability fixture only
   for S2. Require ordinary non-symlink files and let TraceChaser enforce their pinned content
   hashes. OpenGGF's `Request.runManifest()` remains separate and is used only for canonical
@@ -301,9 +311,10 @@ diagnostic tools remain usable without changing gameplay behavior.
 - [ ] Implement each adapter `Sink` as a private staged transaction. Decode/normalize driver state
   through the existing game-owned classes and write canonical records only on adapter `commit()`.
 - [ ] Write RED direct producer tests for wrong producer kind/profile/ROM/BK2/manifest/
-  reference-home, pre-existing output, subprocess failure, adapter failure, and successful
-  create-new store. Invoke producer classes directly here because the registry correctly rejects
-  them until Task 7 installs pinned bindings; move successful registry/CLI production to Task 7.
+  reference-home, pre-existing output, subprocess failure, adapter failure, and fail-closed
+  authentication while the profile binding is unavailable. Exercise projector/store mechanics
+  only with explicitly test-only synthetic metadata; never publish production captures with a
+  placeholder identity. Move successful direct producer, registry, and CLI publication to Task 7.
 - [ ] Implement the two reserved fixed reference producers and run their focused tests plus both
   existing raw-adapter suites.
 - [ ] Commit as `feat(audio): consume TraceChaser complete-run references`.
@@ -441,6 +452,9 @@ diagnostic tools remain usable without changing gameplay behavior.
   layer inventory from Task 3's projector evidence: a service/ownership/lifecycle layer stays
   unavailable unless its exact cross-producer equivalence was proven. Keep request/decision
   limitations until a separately reviewed source observation exists.
+- [ ] Immediately after installing each exact REFERENCE binding, run the deferred Task 3 direct
+  producer success/create-new-store tests before enabling registry/CLI production. The resulting
+  store must pass both fixture-profile and runtime-profile validation; no late identity patching.
 - [ ] Update the shell wrapper to validate its external run root and TraceChaser home, invoke both
   fixed producers twice, require byte-identical captures, compare, and publish only the small run
   manifest/report.
