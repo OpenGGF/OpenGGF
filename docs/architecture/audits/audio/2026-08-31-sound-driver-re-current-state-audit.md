@@ -66,19 +66,19 @@ fixture-assisted input authority described below.
 |---|---|---|
 | 1. Reverse-engineer driver | PARTIAL | S1/S2/S3K routine maps, behavior specs, gap analyses, and authenticated fixture producers exist. Remaining hardware-edge and request-boundary behavior is not fully observed, especially S2/S3K request transfer before Z80 consumption. Cross-game remaining gaps include ROM-read priority/tempo/request tables, DAC/PCM timing, and analog mix, which is outside this driver-oracle scope. |
 | 2. Document behavior/routines | PARTIAL | Documentation exists under `docs/architecture/research/audio/`, `docs/architecture/designs/audio/`, `docs/architecture/audits/audio/`, and validation docs. Currentness is partial: some docs are now stale or contradictory after later fixes. |
-| 3. Compare with OpenGGF | PARTIAL | S1 has bounded independent driver-oracle matches. The S2 0-209 and S3K 0-127 prefixes are fixture-assisted projections, not independent authenticated matches: S2 derives speed-up timing from a fixture row, while S3K dispatches reference mailbox values into the standalone host. Their first unmatched boundaries expose this authority problem as well as missing request observation. |
+| 3. Compare with OpenGGF | PARTIAL | S1 has bounded driver-core comparisons, but not production-owned input comparisons: the music lane uses a source-owned GHZ start with reference-defined cadence/bounds, while the SFX lane replays reference dispatches. The S2 0-209 and S3K 0-127 prefixes are fixture-assisted projections: S2 derives speed-up timing from a fixture row, while S3K dispatches reference mailbox values into the standalone host. Their first unmatched boundaries expose this authority problem as well as missing request observation. |
 | 4. Catalogue gaps | PARTIAL | `2026-08-30-sound-driver-re-gap-analysis.md` catalogues major gaps, but several S1 rows are stale after later cadence, PSG takeover, SFX restore, and SFX oracle fixes. |
 | 5. Implement gaps | PARTIAL | Source-owned fixes landed for cadence, S1 TIMEOUT track walk, S1 SFX takeover/release ordering, ring request alternation, and selected pointer/voice behavior. Queue admission, true priority state, pause, full 1-up/fade/speed paths, PSG overrun behavior, ROM-read tables, S3K code-byte modulation envelopes and every-frame frequency edge, DAC/PCM timing, S2/S3K pause/1-up/fade, and S2/S3K request-boundary behavior remain incomplete or unverified. |
-| 6. Validate | PARTIAL | Automated focused and prior full-suite baselines are green. Synthetic unit tests and fixture-contract tests prove narrow code contracts. S1 live executions prove only their bounded windows; the current S2/S3K executions are fixture-assisted diagnostic projections and cannot certify independent request scheduling. Human listening remains pending except the S3K ring-panning check. |
+| 6. Validate | PARTIAL | Automated focused and prior full-suite baselines are green. Synthetic unit tests and fixture-contract tests prove narrow code contracts. S1 live executions prove bounded driver-core behavior but not a production-owned input path; the S1 SFX and current S2/S3K executions are fixture-assisted diagnostic projections and cannot certify independent request scheduling. Human listening remains pending except the S3K ring-panning check. |
 
 ## Sonic 1 status matrix
 
 | Claim/gap | Status | Evidence type | Evidence and limits |
 |---|---|---|---|
 | Driver routine/spec documentation | PARTIAL | Docs | `docs/architecture/research/audio/2026-08-30-s1-sound-driver-routine-map.md` and `docs/architecture/designs/audio/2026-08-30-s1-sound-driver-behaviour-spec.md` map the S1 driver, RAM, FixBugs=0 sites, and expected behavior, but currentness is partial because later fixes and the H-int/load-frame review changed several claims. |
-| GHZ music oracle parity | DONE | Live oracle execution + unit/fixture contracts | `docs/status/audio-frontier-log.md` records S1 GHZ music `MATCH (14690 ticks)`. This is a bounded fixture slice, not all music. Unit and fixture-contract tests protect the transport but are not substitutes for the live compare. |
-| Sound-test SFX oracle parity | DONE | Live oracle execution + unit/fixture contracts | `docs/status/audio-frontier-log.md` records S1 sound-test SFX `MATCH (1967 ticks)`. Coverage is bounded to the captured normal-SFX fixture, not the full SFX universe, special-layer playback, or special track RAM. |
-| SFX takeover/release and track order | DONE for covered slice | Code + synthetic unit + live oracle | `SmpsSequencer`, `SmpsDriver`, `Sonic1SmpsSequencerConfig`, `TestS1SfxTakeoverOrder`, and the S1 SFX oracle cover the landed normal-SFX path. Special-layer behavior remains narrower than the driver as a whole. |
+| GHZ music driver-core parity | DONE for covered slice; not production-owned | Live driver-core execution + unit/fixture contracts | `docs/status/audio-frontier-log.md` records S1 GHZ music equality over 14,690 ticks. `S1OpenGgfAudioCapture` starts the source-owned GHZ song but reads reference metadata for cadence and terminal bounds. This proves a bounded driver-core slice, not natural gameplay request generation or all music. |
+| Sound-test SFX driver-core parity | DONE as fixture-assisted projection | Live fixture-assisted execution + unit/fixture contracts | `docs/status/audio-frontier-log.md` records equality over 1,967 ticks, but `S1OpenGgfSfxAudioCapture` replays each reference `dispatches` value at its recorded invocation ordinal. Coverage is bounded to that normal-SFX fixture and is not a production-owned request comparison. |
+| SFX takeover/release and track order | DONE for covered synthetic/fixture-assisted slice | Code + synthetic unit + fixture-assisted execution | `SmpsSequencer`, `SmpsDriver`, `Sonic1SmpsSequencerConfig`, `TestS1SfxTakeoverOrder`, and the S1 SFX projection cover the landed normal-SFX path. Special-layer behavior remains narrower than the driver as a whole, and natural gameplay request scheduling is not proven by this lane. |
 | Special-pointer bug behavior | PARTIAL / UNVERIFIED | Code + synthetic unit | `TestSonic1SfxData` proves zero-address voice normalization. The normal-SFX fixture does not cover special-layer playback, so the special-pointer behavior is not live-oracle-proven for that layer. |
 | Live driver cadence | PARTIAL / UNVERIFIED | Code + synthetic unit | `SmpsDriver.serviceOuterFrame`, `SmpsSequencer`, and `TestSmpsSequencerCadence` pin frame-locked service and S1 TIMEOUT behavior. H-int/load-frame cadence remains unresolved/unverified, and there is still no all-driver live oracle. |
 | Sound queue admission and global priority state | PARTIAL / NOT DONE | Docs + code inspection | `AudioParitySchema` can carry diagnostic queue/priority fields, but `Sonic1AudioProfile` does not own a true S1 priority admission override; presentation admission still uses `NO_PRIORITY` context. |
@@ -120,7 +120,7 @@ fixture-assisted input authority described below.
 - `docs/architecture/research/audio/2026-08-30-s1-sound-driver-routine-map.md` still describes an H-int-driven second `UpdateMusic` call in the same frame. `docs/architecture/designs/audio/2026-08-30-s1-sound-driver-behaviour-spec.md` later refutes that as deferral rather than a same-frame second call.
 - `docs/architecture/designs/audio/2026-08-30-s1-sound-driver-behaviour-spec.md` still has pre-fix statements that S1 TIMEOUT extension was gated on active/duration state. Current `SmpsSequencer` behavior updates the full track walk on the timeout cadence.
 - The same S1 spec predates later S1 SFX restore, takeover-order, PSG takeover, ring alternation, and special-pointer fixes. Its gap table should be read as historical unless a row is supported by current code or oracle evidence.
-- Public release/status text correctly reports the bounded S1 matches, but those statements should not be generalized beyond the committed GHZ music and sound-test SFX slices.
+- Public release/status text reports bounded S1 matches under the legacy driver-core contract. Under the production-owned authority vocabulary adopted after this audit, GHZ music is a bounded driver-core equality result and sound-test SFX is a fixture-assisted projection; neither should be generalized to natural gameplay request production.
 - `docs/status/audio-frontier-log.md` calls the S2 0-209 and S3K 0-127 prefixes matches.
   Those entries predate this authority audit. They should be read as fixture-assisted
   diagnostic projections until production OpenGGF inputs independently produce the same
@@ -147,10 +147,11 @@ not an authorized unblock.
 
 ## Audit conclusion
 
-The sound-driver RE roadmap is substantially advanced but not complete. S1 has authenticated
-bounded matches for GHZ music and sound-test normal SFX, plus several source-owned
-implementation fixes. S2 and S3K have useful fixture-assisted diagnostic projections, but
-not independent authenticated frontiers. Their active failures sit where the current
+The sound-driver RE roadmap is substantially advanced but not complete. S1 has bounded
+driver-core equality for GHZ music, a fixture-assisted normal-SFX projection, and several
+source-owned implementation fixes. S2 and S3K likewise have useful fixture-assisted
+diagnostic projections, but no game yet has a power-on, production-owned audio frontier
+under the stricter authority definition. Their active failures sit where the current
 producers lack the M68K-side request state and the current engine hosts do not supply an
 independently produced input timeline.
 
