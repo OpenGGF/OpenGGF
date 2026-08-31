@@ -24,7 +24,8 @@ import java.util.zip.GZIPInputStream;
  *
  * <p>Validates the metadata row, per-row shape, the terminal tick count and
  * the terminal body SHA-256 (over the raw tick-row bytes) while decoding each
- * RAM snapshot into the fixed sixteen-slot track vocabulary.
+ * RAM snapshot into the fixed sixteen-slot track vocabulary and projecting
+ * the CPU-tagged write bus onto Z80-owned driver writes.
  */
 public final class S3kAudioReferenceReader {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -141,12 +142,19 @@ public final class S3kAudioReferenceReader {
         for (JsonNode write : row.path("writes")) {
             String chip = write.get(0).asText();
             if (chip.equals("ym")) {
-                // ["ym", port, register, value, source_cpu]; keep Z80-issued
-                // and 68k-issued writes alike: the write bus is the oracle
-                // boundary and the S3K driver owns it after boot.
+                // ["ym", port, register, value, source_cpu]. The fixture
+                // retains the whole bus, but this is a Z80 driver oracle: the
+                // 68k PSGInitValues bootstrap and other host writes belong to
+                // a separate execution boundary (sonic3k.asm:175-184,260).
+                if (!z80Owned(write, 4, frame)) {
+                    continue;
+                }
                 writes.add(AudioParityChipWrite.ym2612(write.get(1).asInt(),
                         write.get(2).asInt(), write.get(3).asInt()));
             } else if (chip.equals("psg")) {
+                if (!z80Owned(write, 2, frame)) {
+                    continue;
+                }
                 writes.add(AudioParityChipWrite.psg(write.get(1).asInt()));
             } else {
                 throw new IllegalArgumentException("unknown chip in write row: " + chip);
@@ -154,6 +162,16 @@ public final class S3kAudioReferenceReader {
         }
         return new S3kAudioTick(frame, row.path("lag").asBoolean(false), mailbox,
                 decodeGlobals(ram), decodeTracks(ram), writes);
+    }
+
+    private static boolean z80Owned(JsonNode write, int sourceIndex, int frame) {
+        int sourceCpu = write.path(sourceIndex).asInt(-1);
+        if (sourceCpu != S3kAudioParitySchema.SOURCE_CPU_Z80
+                && sourceCpu != S3kAudioParitySchema.SOURCE_CPU_M68K) {
+            throw new IllegalArgumentException(
+                    "unknown write source CPU " + sourceCpu + " at tick " + frame);
+        }
+        return sourceCpu == S3kAudioParitySchema.SOURCE_CPU_Z80;
     }
 
     private static int ramByte(byte[] ram, int address) {

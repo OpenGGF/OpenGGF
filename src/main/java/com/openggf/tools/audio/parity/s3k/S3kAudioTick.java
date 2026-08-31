@@ -5,7 +5,7 @@ import com.openggf.tools.audio.parity.AudioParityChipWrite;
 import java.util.List;
 import java.util.Objects;
 
-/** One S3K driver invocation: globals, sixteen track slots, ordered chip writes. */
+/** One S3K oracle frame: globals, sixteen track slots, and Z80-owned chip writes. */
 public record S3kAudioTick(
         int ordinal,
         boolean lag,

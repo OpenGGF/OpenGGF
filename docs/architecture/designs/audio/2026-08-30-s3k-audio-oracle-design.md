@@ -15,9 +15,9 @@ skdisasm-backed routine map/spec only; TraceChaser/engine code was read for
 
 ## 1. What was built
 
-A committed, re-runnable per-invocation oracle for the S3K Z80 sound driver
-in the shape that worked for S1 (driver-RAM track state + ordered YM/PSG
-write stream per driver invocation), with the reference produced by the
+A committed, re-runnable frame-shaped oracle for the S3K Z80 sound driver
+(driver-RAM track state + ordered YM/PSG write stream per emulated frame),
+with the reference produced by the
 native headless GPGX harness rather than the S1 lane's Lua/EmuHawk path
 (which cannot see Z80-issued chip writes and is barred for this lane).
 
@@ -38,23 +38,27 @@ native headless GPGX harness rather than the S1 lane's Lua/EmuHawk path
 
 ## 2. Reference capture semantics
 
-One reference row = one emulated frame = one `zVInt` driver invocation
-(spec §1: the whole driver runs inside the vertical-blank interrupt; the DAC
-loop between interrupts touches no track RAM). Per row:
+One reference row = one emulated frame. After boot, each ordinary row contains
+one `zVInt` driver invocation (spec §1: the whole interrupt update runs inside
+vertical blank; the DAC loop between interrupts touches no track RAM). This is
+not true before the driver is installed: power-on rows contain no driver, and
+the initial `zStopAllSound` service crosses frames 13-14. Per row:
 
-- **`mailbox` (pre-invocation)** — `zMusicNumber`/`zSFXNumber0`/`zSFXNumber1`
+- **`mailbox` (pre-frame)** — `zMusicNumber`/`zSFXNumber0`/`zSFXNumber1`
   (`1C0A-1C0C`) read *before* the frame advances: the 68k-written requests
   the coming invocation consumes (`zFillSoundQueue`, map §4.2). These are
   driver *inputs*, recorded so the engine can be driven with the same request
   timeline; they are never copied into engine state.
-- **`writes`** — the frame's ordered YM/PSG bus writes from the patch-0001
+- **`writes`** — the frame's ordered, CPU-tagged YM/PSG bus writes from the patch-0001
   observer's kind-3/kind-4 chip events, decoded with the production YM
   address-latch rule (subjects 0/2 latch a register address per port and
   survive frames; subjects 1/3 emit `port/register/value`); PSG events emit
-  the raw byte. Each write also records the issuing CPU. No
-  service-ownership projection is used — attribution is out of band via the
-  RAM snapshot, per the lane brief.
-- **`ram` (post-invocation)** — Z80 `1C00h-1FA0h`
+  the raw byte. Each write also records the issuing CPU. The committed fixture
+  retains this complete authenticated bus stream; the Java driver's comparison
+  projection admits only CPU 1 (Z80) writes and excludes CPU 2 (68k) host
+  writes. No finer service-ownership projection is available in this v1
+  frame-shaped capture.
+- **`ram` (post-frame)** — Z80 `1C00h-1FA0h`
   (`zDataStart..zTracksSaveEnd`), the driver's variable + track + 1-up-save
   RAM, read from the core's `Z80 RAM` memory domain after the frame. Post-pass
   sampling matches the S1 recorder convention (trace row N is after frame N).
@@ -73,8 +77,8 @@ observer core, verified against the committed
 stock BizHawk 2.11 home verified against `install-core.sh`'s `LOCKED_STOCK`
 list. The runner script re-verifies both hashes on every run and assembles
 the BizHawk home in the caller's scratch directory. The S3K-only diagnostic
-patches (0002/0003, cycle-stamped) were **not** used: the per-invocation
-oracle needs frame + execution order, which the production core provides,
+patches (0002/0003, cycle-stamped) were **not** used: the frame oracle needs
+frame + execution order, which the production core provides,
 and the diagnostic locks are `production_lock_eligible: false`.
 
 The C# entry point compiles against the pinned TraceChaser harness sources
@@ -110,7 +114,7 @@ writes via `ChipWriteObserver`, and normalizes
 Comparison per tick, in order: GATE globals (`zCurrentTempo`,
 `zTempoAccumulator`, `zTempoSpeedup`, `zSpeedupTimeout`), GATE track fields
 for the sixteen fixed slots (nine music, seven SFX, ROM slot order), then the
-ordered write stream. First difference wins; nothing realigns.
+ordered Z80-owned write stream. First difference wins; nothing realigns.
 `S3kAudioFieldRegistry` is the executable inventory of which zTrack/global
 bytes are compared and which stay DIAGNOSTIC (unmapped engine coordinate:
 `DataPointer`, modulation phase bytes, `zDACIndex`, fades, queue bytes).
@@ -126,13 +130,21 @@ bytes are compared and which stay DIAGNOSTIC (unmapped engine coordinate:
 - One corrupted engine write → `EVENT_VALUE_DIFFERENT` at its exact
   tick/event (`TestS3kAudioParityComparator`, committed).
 
-## 6. First frontier
+## 6. First frontier (corrected 2026-08-31)
 
-See `docs/status/audio-frontier-log.md` 2026-08-30: red at **tick 3,
-`EVENT_MISSING` event 0** — the reference's Z80 boot `zStopAllSound` burst
-(first write PSG `9Fh`) has no engine counterpart, because the engine driver
-performs no boot-time initialisation writes. This lane does not fix driver
-behaviour; the entry pins the start line for the driver-repair lanes.
+The initial tick-3 attribution was wrong: its four PSG writes carry observer
+CPU tag 2 and exactly match the 68k `PSGInitValues` power-on loop
+(`sonic3k.asm:175-184,260`), not the Z80 driver's `zStopAllSound`. The reader
+now validates the CPU tag and projects only CPU 1 writes without modifying the
+committed fixture. Ticks 0-12 then match; the first driver-owned divergence is
+tick **13**, `EVENT_MISSING` event 0, reference YM part II `82h = FFh`.
+
+That write begins the real `zInitAudioDriver -> zStopAllSound` boot service
+(spec §1 and §5, `D:523-551,2460-2521`), which spans capture frames 13-14
+before normal `zVInt` service. The current frame-shaped engine host has no
+source-owned driver-installation boundary. A valid next revision must model or
+capture that boot as a service boundary; it must not trigger engine behavior
+from tick 13 or from the reference write stream.
 
 ## 7. Known limits and open questions
 
@@ -149,5 +161,8 @@ behaviour; the entry pins the start line for the driver-repair lanes.
 4. PAL, pause, 1-up and speed-shoes passages are not in this fixture; they
    need their own movies (the capture runner takes any BK2).
 5. The oracle compares from power-on; per-song oracles (like S1 GHZ) can be
-   cut from any tick range later, but the committed fixture keeps the
-   power-on origin so the boot burst stays visible.
+   cut from any tick range later. The committed fixture keeps the power-on
+   origin and authenticates both CPUs' writes, while the driver projection
+   admits only Z80 writes. Its frame rows split the boot `zStopAllSound`
+   service across ticks 13-14, so boot parity needs a service-shaped boundary
+   rather than frame-index alignment.

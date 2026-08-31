@@ -7,16 +7,23 @@ import java.util.List;
  *
  * <p>The reference stream is produced by
  * {@code tools/audio/run_s3k_audio_oracle_reference.sh}: one JSONL row per
- * driver invocation (one emulated frame; the Z80 driver runs from {@code zVInt}
- * once per vertical blank, skdisasm {@code Sound/Z80 Sound Driver.asm}
- * {@code zVInt}), carrying the pre-invocation 68k request mailboxes, the
- * ordered YM/PSG write stream of the frame, and a post-invocation snapshot of
- * driver RAM {@code 1C00h..1FA0h} ({@code zDataStart..zTracksSaveEnd}).
+ * emulated frame. After boot the Z80 driver runs from {@code zVInt} once per
+ * vertical blank (skdisasm {@code Sound/Z80 Sound Driver.asm} {@code zVInt});
+ * pre-install frames contain no invocation and the boot service crosses frame
+ * boundaries. Rows carry the pre-frame 68k request mailboxes, the
+ * ordered CPU-tagged YM/PSG write stream of the frame, and a post-frame
+ * snapshot of driver RAM {@code 1C00h..1FA0h}
+ * ({@code zDataStart..zTracksSaveEnd}). The driver projection compares only
+ * writes tagged to the Z80; 68k host writes remain authenticated fixture data.
  */
 public final class S3kAudioParitySchema {
     public static final String VERSION = "openggf.s3k_audio_oracle_reference.v1";
     public static final String S3K_LOCKED_ON_SHA1 = "cfbf98c36c776677290a872547ac47c53d2761d6";
     public static final String S3K_LOCKED_ON_CRC32 = "63522553";
+
+    /** Source-CPU tags emitted by the pinned GPGX audio observer. */
+    public static final int SOURCE_CPU_Z80 = 1;
+    public static final int SOURCE_CPU_M68K = 2;
 
     /** Z80 address of {@code zDataStart}; the RAM window starts here. */
     public static final int RAM_WINDOW_START = 0x1C00;

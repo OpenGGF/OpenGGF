@@ -9,7 +9,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +49,17 @@ class TestS3kAudioOracleFixtureContract {
         assertEquals(metadata.path("movie").path("sha256").asText(), streamMetadata.movieSha256());
         assertEquals(metadata.path("observer").path("core_zst_sha256").asText(),
                 streamMetadata.observerCoreSha256());
+    }
+
+    @Test
+    void driverProjectionExcludes68kBootstrapWritesButKeepsZ80Writes() {
+        List<S3kAudioTick> ticks = new ArrayList<>();
+        S3kAudioReferenceReader.read(REFERENCE, ticks::add);
+
+        assertTrue(ticks.get(3).writes().isEmpty(),
+                "the 68k PSGInitValues bootstrap is outside the Z80 driver oracle");
+        assertEquals(0xff, ticks.get(13).writes().get(0).value(),
+                "the first Z80 zStopAllSound write must remain in the projection");
     }
 
     private static String sha256(Path path) throws Exception {

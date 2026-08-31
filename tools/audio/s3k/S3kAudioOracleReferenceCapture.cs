@@ -12,9 +12,10 @@ namespace OpenGGF.BizHawk.Headless
     /// S3K sound-driver oracle reference capture.
     ///
     /// Replays a BK2 movie through the headless GPGX host with the pinned
-    /// patch-0001 audio-observer core and records, per emulated frame (= one
-    /// zVInt driver invocation on non-lag frames; skdisasm
-    /// Sound/Z80 Sound Driver.asm zVInt), three things:
+    /// patch-0001 audio-observer core and records per emulated frame. After
+    /// driver boot, an ordinary frame contains one zVInt invocation
+    /// (skdisasm Sound/Z80 Sound Driver.asm zVInt); pre-install frames contain
+    /// none, and the initial zStopAllSound crosses frame boundaries. Records:
     ///   1. the 68k-side request mailboxes read *before* the frame advances
     ///      (zMusicNumber/zSFXNumber0/zSFXNumber1 at 1C0A-1C0C), i.e. the
     ///      driver inputs the coming invocation will consume;
@@ -22,12 +23,12 @@ namespace OpenGGF.BizHawk.Headless
     ///      the observer's kind-3/kind-4 chip events with the same YM
     ///      address-latch rule the production observer uses (address writes
     ///      on subjects 0/2 latch; data writes on subjects 1/3 emit);
-    ///   3. a post-invocation snapshot of the driver's variable+track RAM
+    ///   3. a post-frame snapshot of the driver's variable+track RAM
     ///      (Z80 1C00h..1FA0h, zDataStart..zTracksSaveEnd).
     ///
-    /// Track attribution is deliberately out of band: the RAM snapshot at the
-    /// invocation boundary carries the track structs; no service-ownership
-    /// projection from the observer is used.
+    /// Track attribution is deliberately out of band: the post-frame RAM
+    /// snapshot carries the track structs. The write rows retain source CPU,
+    /// but no finer service-ownership projection is used.
     ///
     /// Environment:
     ///   BIZHAWK_HOME                observer-core BizHawk home (assembled by

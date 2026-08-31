@@ -27,6 +27,31 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-08-31 — S3K driver projection advances from the 68k bootstrap to Z80 boot at tick 13
+
+- **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,
+  `feature/ai-sdre2-cadence-resume` (the projection fix lands with this entry).
+- **Fixture:** `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz`
+  (unchanged committed reference; its CPU-tagged full-bus rows and terminal
+  digest remain intact).
+- **Command:** the entry-of-record `S3kAudioParityTool compare` invocation
+  below with the absolute SHA-1-verified locked-on ROM; `--ticks 13` was run
+  separately as the green-prefix gate.
+- **Result:** ticks **0-12 MATCH**. First divergence tick **13**,
+  `EVENT_MISSING`, event 0: reference Z80 YM part II `82h = FFh`, engine
+  missing (first-divergence-only comparator).
+- **Notes:** the reader now validates each captured write's observer
+  `source_cpu` and projects only CPU 1 (Z80) into this driver oracle. CPU 2
+  (68k) writes, including tick 3's `PSGInitValues` `9F BF DF FF`, remain in
+  the digest-authenticated fixture but are outside comparison. Tick 13 is the
+  genuine `zInitAudioDriver -> zStopAllSound` burst (S3K spec §1 boot and §5,
+  `D:523-551,2460-2521`); it spans movie frames 13-14 before ordinary `zVInt`
+  service. The current frame-shaped engine host has no source-owned driver
+  installation/boot-service boundary. Emitting it at a fixture frame or
+  triggering it from comparison writes would violate the no-trace-hydration
+  rule, so this frontier requires a service-shaped oracle/host boundary rather
+  than a production sequencer patch.
+
 ## 2026-08-31 — S2 EHZ music prefix reaches the first SFX override at tick 210
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,

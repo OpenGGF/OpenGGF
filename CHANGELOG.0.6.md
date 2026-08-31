@@ -14,6 +14,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **The S3K sound-driver oracle now enforces its Z80 ownership boundary:**
+  CPU-tagged 68k host writes remain authenticated in the committed capture but
+  are excluded from driver comparison. This removes the false tick-3
+  `PSGInitValues` frontier and exposes the first real Z80 boundary at tick 13,
+  where the source driver begins its boot-time `zStopAllSound` service.
 - **Sonic 2 EHZ music-driver parity now reaches the first SFX override:** the
   oracle now samples completed `zUpdateMusic` services rather than a
   begin-frame image that could catch the Z80 halfway through its track walk,
