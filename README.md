@@ -314,40 +314,15 @@ traces.
   Sonic 2 special stages preserve their first pre-start object-pass deferral
   across fade-from-white restores.
 - **Modern development and validation tools:** level-editor foundations,
-  ROM offset and compression tools, headless gameplay tests, BizHawk trace
-  replay, visual/audio regression checks, and release/architecture guards.
-  External trace producers and utilities are maintained in
-  [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser) and pinned as
-  an optional submodule at the reviewed `v0.1.0` commit. Normal builds, tests,
-  packaging, and runtime do not initialize it; trace contributors opt in with
+  ROM offset and compression tools, headless gameplay tests, trace replay,
+  visual/audio regression checks, and release/architecture guards. Trace
+  recording, probing, and publication utilities live in
+  [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser), pinned here
+  as an optional submodule. They are not required to build, test, package, or
+  run the engine; trace contributors can initialize them with
   `git submodule update --init --recursive tools/tracechaser`. TraceChaser uses
-  verified official BizHawk 2.11 and does not vendor emulator distributions.
-  GitHub's structural-guard job installs Lua 5.4 for the retained forwarder
-  security guard; local contributors can set `LUA_BIN` when their Lua 5.4
-  executable has another name.
-  Maven runs directly in each worktree and keeps build, report, diagnostic,
-  temporary, and per-Surefire-fork LWJGL output below that worktree's `target/`
-  tree. Measured at `develop` `2e06eb403` on 2026-08-28 with JDK 21 and
-  absolute ROM paths: ordinary suite 14,868 tests, 1 failure, 1 error, 18
-  skipped; both remaining reds (`TestS3kCnzVisualCapture`, a stale test
-  pre-step, and the order-dependent `TestMhzMushroomParachuteObjectInstance`)
-  were then fixed, giving 14,868 tests, 0 failures, 0 errors, 18 skipped, and
-  the ordinary suite now also runs on every push to `develop`; `-Pguards`
-  547 tests, all passing; `-Ptrace-replay` 870 tests with the six known-red
-  frontier failures, 0 errors, 7 skipped.
-  ROM-backed test fixtures (`SharedLevel` and the S2/S3K complete-run
-  decoder tests) now skip with a reason instead of erroring when a ROM is
-  absent, so the ROM-less GitHub `test` job reports skips rather than
-  errors: a ROM-less `CI=true` simulation ran 14,821 tests with 0 failures and 0 errors, and the ROM-backed suite is unchanged.
-  Five order-dependent leaks between classes sharing a Surefire fork were
-  also closed at their source: `TestBatbotBadnikInstance`,
-  `TestS3kBonusStageHeadlessBoot`, and `TestS3kBreathingBubbles` now tear
-  down the headless gameplay session (and the `S3K_SKIP_INTROS`
-  configuration write) they left registered in `GameServices`,
-  `TestUserRecordingControls` restores the process-wide `EngineServices`
-  context its mocked `GameLoop` had installed, and
-  `TestSonic1PlatformObjectInstanceRespawn` opens a clean session instead of
-  inheriting a leaked level.
+  a verified official BizHawk 2.11 installation rather than vendoring the
+  emulator.
 - **Agent-friendly workflows:** Codex and Claude workflows include ROM
   cross-referencing, object/boss/zone implementation guidance, trace diagnosis,
   and worktree-local direct-Maven procedures. The canonical Sonic 1, Sonic 2,
