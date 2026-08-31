@@ -9,6 +9,8 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.audio.Sonic2Music;
+import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.audio.Sonic2SmpsConstants;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 
@@ -33,13 +35,13 @@ import java.util.Objects;
  * (zInitMusicPlayback/zBGMLoad, s2.sounddriver.asm:1667-2075, FixDriverBugs=0)
  * and then performs the first driver update.
  *
- * <p>Nothing here reads the fixture: the request timeline (music id, the
- * speed-up tick) comes from {@link S2OracleSchema} constants, which document
- * the 68k requests the movie made — inputs, not comparison data.
+ * <p>Nothing here reads the fixture: the music id and speed-up tick come from
+ * {@link S2OracleSchema} constants, while callers may supply raw driver SFX
+ * requests captured at their source-owned pre-consumption boundary. Requests
+ * are stimuli, never inferred from comparison state or chip writes.
  */
 public final class S2OracleEngineCapture {
     private static final double SAMPLE_RATE = 44_100.0;
-    private static final int NTSC_SAMPLES = 735;
 
     private S2OracleEngineCapture() {
     }
@@ -54,8 +56,26 @@ public final class S2OracleEngineCapture {
         }
     }
 
+    /** A raw byte written to the S2 driver's sound request queue before a tick. */
+    public record DriverRequest(int tick, int soundId) {
+        public DriverRequest {
+            if (tick < 0) {
+                throw new IllegalArgumentException("request tick must be non-negative");
+            }
+            if (soundId < Sonic2Sfx.ID_BASE || soundId > Sonic2Sfx.ID_MAX) {
+                throw new IllegalArgumentException("request must be a Sonic 2 SFX id");
+            }
+        }
+    }
+
     public static List<EngineTick> capture(Path romPath, int tickCount, int speedUpTick) {
+        return capture(romPath, tickCount, speedUpTick, List.of());
+    }
+
+    public static List<EngineTick> capture(Path romPath, int tickCount, int speedUpTick,
+            List<DriverRequest> requests) {
         Objects.requireNonNull(romPath, "romPath");
+        requests = validateRequests(requests, tickCount);
         verifyRomIdentity(romPath);
         Rom rom = new Rom();
         if (!rom.open(romPath.toString())) {
@@ -88,15 +108,30 @@ public final class S2OracleEngineCapture {
             writes.drain();
 
             int z80Start = song.getZ80StartAddress();
+            int requestIndex = 0;
+            boolean ringLeftNext = true;
             for (int ordinal = 0; ordinal < tickCount; ordinal++) {
                 if (ordinal == speedUpTick) {
                     sequencer.setSpeedShoes(true);
                 }
-                if (ordinal == 0) {
-                    sequencer.read(new short[0], 0);
-                } else {
-                    sequencer.advanceBatch(NTSC_SAMPLES);
+                if (requestIndex < requests.size()
+                        && requests.get(requestIndex).tick() == ordinal) {
+                    int requestedId = requests.get(requestIndex++).soundId();
+                    int resolvedId = requestedId;
+                    if (requestedId == Sonic2Sfx.RING_RIGHT.id) {
+                        // zPlaySound_CheckRing resolves the raw B5h request to
+                        // CEh while zRingSpeaker is zero, complements the flag,
+                        // then leaves the next B5h request unchanged
+                        // (s2.sounddriver.asm:2127-2135). FixDriverBugs=0 does
+                        // not alter this shipped-ROM branch.
+                        resolvedId = ringLeftNext
+                                ? Sonic2Sfx.RING_LEFT.id
+                                : Sonic2Sfx.RING_RIGHT.id;
+                        ringLeftNext = !ringLeftNext;
+                    }
+                    admitSfx(loader, dacData, driver, resolvedId);
                 }
+                driver.serviceOuterFrame();
                 SmpsSequencerSnapshot snapshot = sequencer.captureSnapshot();
                 ticks.add(new EngineTick(ordinal,
                         effectiveTempo(snapshot, song),
@@ -106,6 +141,37 @@ public final class S2OracleEngineCapture {
             }
             return ticks;
         }
+    }
+
+    private static List<DriverRequest> validateRequests(
+            List<DriverRequest> requests, int tickCount) {
+        Objects.requireNonNull(requests, "requests");
+        List<DriverRequest> copy = List.copyOf(requests);
+        int previousTick = -1;
+        for (DriverRequest request : copy) {
+            Objects.requireNonNull(request, "request");
+            if (request.tick() >= tickCount) {
+                throw new IllegalArgumentException("request tick exceeds capture range");
+            }
+            if (request.tick() <= previousTick) {
+                throw new IllegalArgumentException(
+                        "requests must be ordered with at most one per tick");
+            }
+            previousTick = request.tick();
+        }
+        return copy;
+    }
+
+    private static void admitSfx(Sonic2SmpsLoader loader, DacData dacData,
+            SmpsDriver driver, int soundId) {
+        AbstractSmpsData sfx = Objects.requireNonNull(loader.loadSfx(soundId),
+                "S2 SFX is absent from the verified ROM");
+        SmpsSequencer sfxSequencer = new SmpsSequencer(sfx, dacData, driver, () -> { },
+                Sonic2SmpsSequencerConfig.CONFIG);
+        sfxSequencer.setSampleRate(SAMPLE_RATE);
+        sfxSequencer.setSfxMode(true);
+        sfxSequencer.setSfxPriority(Sonic2SmpsConstants.getSfxPriority(soundId));
+        driver.addSequencer(sfxSequencer, true);
     }
 
     private static int effectiveTempo(SmpsSequencerSnapshot snapshot, AbstractSmpsData song) {

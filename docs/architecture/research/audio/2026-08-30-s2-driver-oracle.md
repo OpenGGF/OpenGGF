@@ -159,10 +159,15 @@ driver stack, emits the shipped song-load silence burst before tick 0
 the kind-9 stream, applies `setSpeedShoes(true)` at the tick
 whose reference row consumed the movie's `FBh` command, and maps each
 post-update `SmpsSequencerSnapshot` into the ROM vocabulary (EM §2.3 mapping).
-The engine never reads the fixture; its inputs are the documented request
-timeline (song id, speed-up tick ordinal) — trace data stays comparison-only.
-SFX request injection is deliberately out of this tier (registry entry); the
-fixture already carries the reference side of the SFX slots for the next tier.
+The engine never reads the fixture; its inputs are source-owned requests —
+trace data stays comparison-only. The capture host now accepts an explicit,
+ordered raw-SFX request stream, resolves the driver's ring-speaker toggle
+(`zPlaySound_CheckRing`, `sd:2116-2135`), loads the selected ROM SFX, and
+admits it before the target outer-frame service. A first raw `B5h` request
+therefore resolves to `CEh` from the shipped initial `zRingSpeaker = 0`, while
+the next raw ring request resolves to `B5h`. The unit vector proves raw `B5h`
+and explicit `CEh` produce the same first-update writes; it does not derive a
+request time or ring side from the oracle's output.
 
 ## 5. Measurements and break-it evidence
 
@@ -214,8 +219,24 @@ music divergence.
   off) would need the same treatment (gap analysis §5 open question, now
   partially answered empirically: the frame-boundary snapshot is **not**
   always post-`zVInt`-settled).
-- **NTSC only**, music + speed-up tier; SFX injection, pause, 1-up, and the
+- **NTSC only**, music + speed-up comparison tier; pause, 1-up, and the
   request/admission timeline are the next tiers (gap analysis §4.2 phase C).
+  The engine-side SFX stimulus and ROM-backed admission path now exist, but
+  the committed v1 window samples Z80 RAM only after `host.Advance`: its queue
+  bytes have already been consumed. Observer ABI 4 can snapshot ranges only
+  at completion boundaries and its observation marker does not carry the 68k
+  request register, so it cannot recover the pre-consumption request stream.
+  At tick 210 the live SFX pointer `F839h` maps through the ROM table to the
+  `CEh` left-ring program (`F829h-F83Dh`), but that post-admission state is an
+  outcome, not authority to inject raw `B5h` at that tick. The leading
+  reference `PSG 9Ah` is not a ring identity either: both `B5h` and `CEh` are
+  FM5 programs in the disassembly, so attributing that write to the ring would
+  be another output-derived inference.
+  Moving this frontier requires a producer probe at the 68k-to-Z80 request
+  mailbox before consumption; neither post-frame RAM nor comparison writes
+  may be used to synthesize that schedule. A historical ABI-5 branch was also
+  inspected and rejected as evidence because its locked core/artifact
+  identity remains ABI 4.
 - **Engine music-id mapping.** Engine `Sonic2Music.EMERALD_HILL` (0x81) plays
   the song the ROM driver calls request id `0x82`; the oracle profile carries
   that mapping explicitly (`Sonic2SmpsLoader.findMusicOffset` documents the

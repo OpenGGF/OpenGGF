@@ -68,6 +68,28 @@ class TestS2AudioOracleComparator {
     }
 
     @Test
+    void explicitDriverRequestsResolveAndAdmitTheFirstRingBeforeTheTargetUpdate() {
+        File rom = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S2 REV01 ROM unavailable");
+
+        List<S2OracleEngineCapture.EngineTick> musicOnly =
+                S2OracleEngineCapture.capture(rom.toPath(), 2, 2);
+        List<S2OracleEngineCapture.EngineTick> withRing =
+                S2OracleEngineCapture.capture(rom.toPath(), 2, 2,
+                        List.of(new S2OracleEngineCapture.DriverRequest(
+                                0, 0xb5)));
+        List<S2OracleEngineCapture.EngineTick> withExplicitLeftRing =
+                S2OracleEngineCapture.capture(rom.toPath(), 2, 2,
+                        List.of(new S2OracleEngineCapture.DriverRequest(
+                                0, 0xce)));
+
+        assertNotEquals(musicOnly.get(0).writes(), withRing.get(0).writes(),
+                "a source-owned SFX request must affect its target driver update");
+        assertEquals(withExplicitLeftRing.get(0).writes(), withRing.get(0).writes(),
+                "zRingSpeaker=0 must resolve the first raw B5h request to CEh");
+    }
+
+    @Test
     void corruptedReferenceByteMovesTheFirstDivergence() throws Exception {
         List<S2AudioOracleComparator.ReferenceTick> ticks = anchorTicks();
         // A self-comparison built from the reference's own decoded ticks is the
