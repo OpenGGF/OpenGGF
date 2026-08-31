@@ -118,7 +118,10 @@ class TestTraceChaserAudioProcess {
 
         Thread worker = Thread.ofPlatform().start(() -> {
             try {
-                new TraceChaserAudioProcess(arguments -> child).capture(
+                new TraceChaserAudioProcess(arguments -> {
+                    child.staging.set(Path.of(arguments.get(arguments.indexOf("--output") + 1)).getParent());
+                    return child;
+                }).capture(
                         fixture.request(output), TraceChaserAudioProcess.Game.S2);
             } catch (Throwable problem) {
                 failure.set(problem);
@@ -140,6 +143,10 @@ class TestTraceChaserAudioProcess {
         assertFalse(child.isAlive(),
                 "capture returned while the TraceChaser child was still alive");
         assertTrue(child.stderrClosed.get(), "capture returned before the stderr reader drained");
+        assertTrue(child.stagingPresentAtTermination.get(),
+                "capture removed staging before the child termination was observed");
+        assertTrue(child.stagingPresentAtStderrClose.get(),
+                "capture removed staging before the stderr reader closed");
         assertFalse(hasStagingDirectory(), "capture returned before staging cleanup completed");
         assertFalse(Files.exists(output));
     }
@@ -191,6 +198,9 @@ class TestTraceChaserAudioProcess {
         private final PipedOutputStream stderrWriter;
         private final CountDownLatch terminated = new CountDownLatch(1);
         private final AtomicBoolean stderrClosed = new AtomicBoolean();
+        private final AtomicBoolean stagingPresentAtTermination = new AtomicBoolean();
+        private final AtomicBoolean stagingPresentAtStderrClose = new AtomicBoolean();
+        private final AtomicReference<Path> staging = new AtomicReference<>();
         private final boolean failStderr;
         private int waits;
         private volatile boolean alive = true;
@@ -216,6 +226,7 @@ class TestTraceChaserAudioProcess {
             return new java.io.FilterInputStream(source) {
                 @Override public void close() throws IOException {
                     super.close();
+                    stagingPresentAtStderrClose.set(Files.isDirectory(staging.get()));
                     stderrClosed.set(true);
                 }
             };
@@ -228,6 +239,7 @@ class TestTraceChaserAudioProcess {
                 new CountDownLatch(1).await();
             }
             alive = false;
+            stagingPresentAtTermination.set(Files.isDirectory(staging.get()));
             terminated.countDown();
             try { stderrWriter.close(); }
             catch (IOException failure) { throw new IllegalStateException(failure); }

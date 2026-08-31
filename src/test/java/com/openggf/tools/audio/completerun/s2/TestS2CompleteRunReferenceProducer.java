@@ -43,6 +43,21 @@ class TestS2CompleteRunReferenceProducer {
     }
 
     @Test
+    void assignsGloballyContiguousCanonicalOrdinalsAcrossFrames() throws Exception {
+        Path raw = Files.writeString(temporary.resolve("s2-two-frames.jsonl"), twoFramePrefix());
+
+        List<CompleteRunAudioTrace.Record> records = new S2CompleteRunReferenceProjector()
+                .projectPrefixForTesting(raw.toAbsolutePath(), rom()).records();
+        CompleteRunAudioTrace.Frame first = (CompleteRunAudioTrace.Frame) records.get(1);
+        CompleteRunAudioTrace.Frame second = (CompleteRunAudioTrace.Frame) records.get(2);
+
+        assertEquals(0, first.services().getFirst().ordinal());
+        assertEquals(1, second.services().getFirst().ordinal());
+        assertEquals(0, first.rawChipEvents().getFirst().ordinal());
+        assertEquals(1, second.rawChipEvents().getFirst().ordinal());
+    }
+
+    @Test
     void lateRawFailureAbortsThePrivateProjectionTransaction() throws Exception {
         Path raw = Files.writeString(temporary.resolve("invalid.jsonl"), rawPrefix(true));
         Path output = temporary.resolve("invalid-capture").toAbsolutePath();
@@ -150,6 +165,15 @@ class TestS2CompleteRunReferenceProducer {
                 + state + "\",\"events\":[" + psgEvent() + "]}\n";
         String cutoff = boundary("cutoff", "\"exclusive_end\":770,", state, "[]");
         return metadata + baseline + frame + cutoff + (trailing ? "{}\n" : "");
+    }
+
+    private static String twoFramePrefix() {
+        String first = rawPrefix(false);
+        String cutoff = boundary("cutoff", "\"exclusive_end\":770,", "00".repeat(8192), "[]");
+        String second = "{\"type\":\"frame\",\"row\":770,\"lag\":false,\"state_hex\":\""
+                + "00".repeat(8192) + "\",\"events\":[" + psgEvent() + "]}\n";
+        return first.replace(cutoff, second
+                + boundary("cutoff", "\"exclusive_end\":771,", "00".repeat(8192), "[]"));
     }
 
     private static List<CompleteRunAudioTrace.Record> records(Path output) throws Exception {

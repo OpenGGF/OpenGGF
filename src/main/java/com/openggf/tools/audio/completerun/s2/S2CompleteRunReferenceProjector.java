@@ -89,6 +89,8 @@ public final class S2CompleteRunReferenceProjector {
         private boolean committed;
         private int ymPort0Latch;
         private int ymPort1Latch;
+        private long nextServiceOrdinal;
+        private long nextChipOrdinal;
 
         private Transaction(S2CompleteRunAssetCatalog catalog) { this(catalog, null, null); }
 
@@ -115,7 +117,7 @@ public final class S2CompleteRunReferenceProjector {
             requireStarted();
             List<CompleteRunAudioTrace.ChipEvent> chips = chips(value.events());
             var state = normalize(value.driverState());
-            var service = new CompleteRunAudioTrace.DriverService(0, "native-observation",
+            var service = new CompleteRunAudioTrace.DriverService(nextServiceOrdinal++, "native-observation",
                     CompleteRunAudioTrace.ServiceCompletion.COMPLETED, List.of(), state, chips);
             append(new CompleteRunAudioTrace.Frame(value.row(), segment(value.row()), value.lag(),
                     List.of(), List.of(service), chips, null));
@@ -169,10 +171,11 @@ public final class S2CompleteRunReferenceProjector {
                         if (port == 0) ymPort0Latch = event.value(); else ymPort1Latch = event.value();
                     } else {
                         int register = port == 0 ? ymPort0Latch : ymPort1Latch;
-                        result.add(new CompleteRunAudioTrace.YmWrite(result.size(), port, register, event.value()));
+                        result.add(new CompleteRunAudioTrace.YmWrite(
+                                nextChipOrdinal++, port, register, event.value()));
                     }
                 } else if (event.kind() == 4) {
-                    result.add(new CompleteRunAudioTrace.PsgWrite(result.size(), event.value()));
+                    result.add(new CompleteRunAudioTrace.PsgWrite(nextChipOrdinal++, event.value()));
                 } else if (event.kind() < 1 || event.kind() > 10) {
                     throw new IllegalArgumentException("S2 raw semantic event is unsupported");
                 }

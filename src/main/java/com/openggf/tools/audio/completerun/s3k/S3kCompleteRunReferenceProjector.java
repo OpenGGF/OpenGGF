@@ -18,6 +18,49 @@ import java.util.Map;
 
 /** Transactional projection of validated S3K native observations into canonical records. */
 public final class S3kCompleteRunReferenceProjector {
+    // Closed transcription of games.s3k.hooks in the reviewed manifest at
+    // tools/tracechaser commit 36502baf4ed9fce1c8ae8da6c27827cac9c5df38,
+    // SHA-256 ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0.
+    private static final Map<Integer, ManifestHook> S3K_HOOKS = Map.ofEntries(
+            hook(1, 1, 0, HookAction.PUSH_BEGIN, 6, 0),
+            hook(2, 1, 56, HookAction.PUSH_BEGIN, 3, 0),
+            hook(4, 1, 56, HookAction.TAIL_POP_PUSH, 3, 6),
+            hook(17, 1, 56, HookAction.TAIL_POP_PUSH, 3, 9),
+            hook(21, 1, 56, HookAction.PUSH_BEGIN, 3, 7),
+            hook(25, 1, 69, HookAction.POP_END_AT_PC, 0, 12),
+            hook(3, 1, 132, HookAction.POP_END_AT_PC, 0, 3),
+            hook(23, 1, 283, HookAction.PUSH_BEGIN, 11, 3),
+            hook(24, 1, 289, HookAction.TAIL_POP_PUSH, 12, 11),
+            hook(26, 1, 289, HookAction.TAIL_POP_PUSH, 12, 12),
+            hook(18, 1, 4234, HookAction.PUSH_BEGIN, 9, 0),
+            hook(19, 1, 4234, HookAction.TAIL_POP_PUSH, 9, 6),
+            hook(9, 1, 4256, HookAction.PUSH_BEGIN, 9, 0),
+            hook(20, 1, 4256, HookAction.TAIL_POP_PUSH, 9, 9),
+            hook(22, 1, 4256, HookAction.TAIL_POP_PUSH, 9, 7),
+            hook(10, 1, 4300, HookAction.PUSH_BEGIN, 7, 0),
+            hook(11, 1, 4300, HookAction.TAIL_POP_PUSH, 7, 9),
+            hook(12, 1, 4357, HookAction.POP_END_AT_PC, 0, 7),
+            hook(13, 1, 4390, HookAction.PUSH_BEGIN, 10, 0),
+            hook(14, 1, 4432, HookAction.PUSH_BEGIN, 8, 0),
+            hook(15, 1, 4432, HookAction.TAIL_POP_PUSH, 8, 10),
+            hook(16, 1, 4453, HookAction.POP_END_AT_PC, 0, 8),
+            hook(5, 2, 642, HookAction.PUSH_BEGIN, 5, 0),
+            hook(6, 2, 652, HookAction.POP_END_AT_PC, 0, 5),
+            hook(7, 2, 4814, HookAction.PUSH_BEGIN, 2, 0),
+            hook(8, 2, 4934, HookAction.POP_END_AT_PC, 0, 2));
+
+    private enum HookAction {
+        PUSH_BEGIN, POP_END_AT_PC, TAIL_POP_PUSH, DIRECT_PARENT_PROMOTION, OBSERVATION_MARKER
+    }
+    private record ManifestHook(int token, int sourceCpu, int pc, HookAction action,
+            int serviceKind, int expectedKind) { }
+
+    private static Map.Entry<Integer, ManifestHook> hook(int token, int sourceCpu, int pc,
+            HookAction action, int serviceKind, int expectedKind) {
+        return Map.entry(token, new ManifestHook(
+                token, sourceCpu, pc, action, serviceKind, expectedKind));
+    }
+
     public record Projection(List<CompleteRunAudioTrace.Record> records) {
         public Projection { records = List.copyOf(records); }
     }
@@ -97,6 +140,8 @@ public final class S3kCompleteRunReferenceProjector {
         private boolean committed;
         private int ymPort0Latch;
         private int ymPort1Latch;
+        private long nextServiceOrdinal;
+        private long nextChipOrdinal;
         private long nextEventCoordinate;
         private final List<ObservedService> liveServices = new ArrayList<>();
         private final List<ObservedService> pendingServices = new ArrayList<>();
@@ -153,7 +198,7 @@ public final class S3kCompleteRunReferenceProjector {
             completed.forEach(service -> servicesByBegin.putIfAbsent(service.begin.coordinate(), service));
             nextEventCoordinate = Math.addExact(nextEventCoordinate, value.events().size());
             var state = normalize(value.driverState());
-            var service = new CompleteRunAudioTrace.DriverService(0, "native-observation",
+            var service = new CompleteRunAudioTrace.DriverService(nextServiceOrdinal++, "native-observation",
                     CompleteRunAudioTrace.ServiceCompletion.COMPLETED, List.of(), state, chips);
             append(new CompleteRunAudioTrace.Frame(value.row(), segment(value.row()), value.lag(),
                     List.of(), List.of(service), chips, null));
@@ -299,8 +344,15 @@ public final class S3kCompleteRunReferenceProjector {
                 List<CompleteRunAudioTrace.ChipEvent> chips, List<ObservedService> completed) {
             var event = observed.event();
             switch (event.kind()) {
-                case 1 -> beginService(observed, false);
-                case 2 -> endService(observed, false, events, index, completed);
+                case 1 -> {
+                    requireBoundaryHook(event, events, index, true);
+                    beginService(observed, false);
+                }
+                case 2 -> {
+                    if (event.flags() == 2) requireResetCancellationBoundary(event);
+                    else requireBoundaryHook(event, events, index, false);
+                    endService(observed, false, events, index, completed);
+                }
                 case 3 -> observeYm(observed, chips);
                 case 4 -> observePsg(observed, chips);
                 case 5, 6, 7 -> observeSnapshot(observed, events, index);
@@ -320,6 +372,10 @@ public final class S3kCompleteRunReferenceProjector {
             var event = observed.event();
             requireZeroPayload(event, reset ? "S3K raw reset begin shape changed"
                     : "S3K raw service begin shape changed");
+            if (reset && event.serviceKind() != 1) {
+                throw new IllegalArgumentException(
+                        "S3K raw reset service kind differs from reviewed service manifest");
+            }
             if (event.serviceToken() == 0 || event.serviceToken() != availableToken()
                     || ((event.depth() == 0) != (event.parentToken() == 0))) {
                 throw new IllegalArgumentException("S3K raw service token allocation changed");
@@ -356,6 +412,10 @@ public final class S3kCompleteRunReferenceProjector {
             var event = observed.event();
             requireZeroPayload(event, reset ? "S3K raw reset end shape changed"
                     : "S3K raw service end shape changed");
+            if (reset && event.serviceKind() != 1) {
+                throw new IllegalArgumentException(
+                        "S3K raw reset service kind differs from reviewed service manifest");
+            }
             boolean promotes = !reset && index + 1 < events.size() && events.get(index + 1).kind() == 11;
             ObservedService service;
             if (reset) {
@@ -413,7 +473,8 @@ public final class S3kCompleteRunReferenceProjector {
             service.chips.addChip(observed.coordinate(), event.ordinal(), event.kind(), event.subject(),
                     event.value(), event.pc(), event.sourceCpu(), data, port, register);
             if (data) {
-                chips.add(new CompleteRunAudioTrace.YmWrite(chips.size(), port, register, event.value()));
+                chips.add(new CompleteRunAudioTrace.YmWrite(
+                        nextChipOrdinal++, port, register, event.value()));
             } else if (port == 0) {
                 ymPort0Latch = event.value();
             } else {
@@ -431,7 +492,7 @@ public final class S3kCompleteRunReferenceProjector {
             }
             service.chips.addChip(observed.coordinate(), event.ordinal(), event.kind(), 0,
                     event.value(), event.pc(), event.sourceCpu(), true, 0, 0);
-            chips.add(new CompleteRunAudioTrace.PsgWrite(chips.size(), event.value()));
+            chips.add(new CompleteRunAudioTrace.PsgWrite(nextChipOrdinal++, event.value()));
         }
 
         private void observeSnapshot(ObservedEvent observed,
@@ -487,6 +548,12 @@ public final class S3kCompleteRunReferenceProjector {
                 List<ObservedService> completed) {
             var event = observed.event();
             requireZeroPayload(event, "S3K raw ancestry transition shape changed");
+            ManifestHook hook = requireManifestHook(event.subject());
+            if (event.pc() != hook.pc() || event.sourceCpu() != hook.sourceCpu()
+                    || hook.action() != HookAction.DIRECT_PARENT_PROMOTION) {
+                throw new IllegalArgumentException(
+                        "S3K raw ancestry hook semantics differ from reviewed service manifest");
+            }
             if (event.flags() != 0 || event.subject() == 0
                     || ((event.depth() == 0) != (event.parentToken() == 0))) {
                 throw new IllegalArgumentException("S3K raw ancestry transition shape changed");
@@ -524,18 +591,69 @@ public final class S3kCompleteRunReferenceProjector {
                     || event.value() < 0 || event.value() > 4) {
                 throw new IllegalArgumentException("S3K raw marker event shape changed");
             }
-            if (event.serviceToken() == 0) {
-                if (event.parentToken() != 0 || event.serviceKind() != 0 || event.depth() != 0) {
-                    throw new IllegalArgumentException("S3K raw marker event ownership changed");
-                }
-            } else {
-                if (event.value() == 2 && liveServices.size() >= 2
-                        && liveServices.get(liveServices.size() - 2).token() == event.serviceToken()) {
-                    requireIdentity(event, liveServices.get(liveServices.size() - 2));
-                } else {
-                    requireOwned(event);
-                }
+            ManifestHook hook = requireManifestHook(event.subject());
+            if (event.pc() != hook.pc() || event.sourceCpu() != hook.sourceCpu()
+                    || hook.action() != HookAction.OBSERVATION_MARKER
+                    || hook.expectedKind() != event.serviceKind()) {
+                throw new IllegalArgumentException(
+                        "S3K raw marker hook semantics differ from reviewed service manifest");
             }
+        }
+
+        private void requireBoundaryHook(S3kCompleteRunReferenceRawAdapter.RawEvent event,
+                List<S3kCompleteRunReferenceRawAdapter.RawEvent> events, int index, boolean begin) {
+            ManifestHook hook = requireManifestHook(event.subject());
+            if (event.pc() != hook.pc() || event.sourceCpu() != hook.sourceCpu()) {
+                throw new IllegalArgumentException(
+                        "S3K raw service hook semantics differ from reviewed service manifest");
+            }
+            boolean valid;
+            if (begin && hook.action() == HookAction.PUSH_BEGIN) {
+                int activeKind = liveServices.isEmpty() ? 0 : liveServices.getLast().kind;
+                valid = event.serviceKind() == hook.serviceKind()
+                        && hook.expectedKind() == activeKind;
+            } else if (begin && hook.action() == HookAction.TAIL_POP_PUSH) {
+                valid = event.serviceKind() == hook.serviceKind() && index > 0
+                        && tailPair(events.get(index - 1), event, hook);
+            } else if (!begin && hook.action() == HookAction.POP_END_AT_PC) {
+                valid = event.serviceKind() == hook.expectedKind();
+            } else if (!begin && hook.action() == HookAction.TAIL_POP_PUSH) {
+                valid = event.serviceKind() == hook.expectedKind() && index + 1 < events.size()
+                        && tailPair(event, events.get(index + 1), hook);
+            } else {
+                valid = false;
+            }
+            if (!valid) {
+                throw new IllegalArgumentException(
+                        "S3K raw service hook semantics differ from reviewed service manifest");
+            }
+        }
+
+        private static void requireResetCancellationBoundary(
+                S3kCompleteRunReferenceRawAdapter.RawEvent event) {
+            if (event.subject() != 0 || event.pc() != 0 || event.sourceCpu() != 3) {
+                throw new IllegalArgumentException("S3K raw reset cancellation semantics changed");
+            }
+        }
+
+        private static boolean tailPair(S3kCompleteRunReferenceRawAdapter.RawEvent end,
+                S3kCompleteRunReferenceRawAdapter.RawEvent begin, ManifestHook hook) {
+            return end.kind() == 2 && begin.kind() == 1
+                    && begin.ordinal() == end.ordinal() + 1
+                    && end.subject() == hook.token() && begin.subject() == hook.token()
+                    && end.pc() == hook.pc() && begin.pc() == hook.pc()
+                    && end.sourceCpu() == hook.sourceCpu() && begin.sourceCpu() == hook.sourceCpu()
+                    && end.serviceKind() == hook.expectedKind()
+                    && begin.serviceKind() == hook.serviceKind();
+        }
+
+        private static ManifestHook requireManifestHook(int token) {
+            ManifestHook hook = S3K_HOOKS.get(token);
+            if (hook == null) {
+                throw new IllegalArgumentException(
+                        "S3K raw hook token is not declared by reviewed service manifest");
+            }
+            return hook;
         }
 
         private ObservedService requireOwned(S3kCompleteRunReferenceRawAdapter.RawEvent event) {
