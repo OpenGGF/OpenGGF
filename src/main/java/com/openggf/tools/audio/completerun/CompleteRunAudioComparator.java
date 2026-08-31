@@ -275,15 +275,15 @@ public final class CompleteRunAudioComparator {
                 PassStream right = PassStream.open(store, engine, Side.ENGINE, ProducerKind.OPENGGF,
                     fileIdentities)) {
             while (true) {
-                Entry expected = left.next();
-                Entry actual = right.next();
+                ComparisonLayerInventory layers = reference.metadata.comparisonLayerInventory();
+                Entry expected = nextComparable(left, layers);
+                Entry actual = nextComparable(right, layers);
                 if (expected == null && actual == null) break;
                 RecordView expectedView = view(expected);
                 RecordView actualView = view(actual);
                 if (first == null) {
                     Difference found = difference(expected == null ? null : expected.record,
-                            actual == null ? null : actual.record,
-                            reference.metadata.comparisonLayerInventory());
+                            actual == null ? null : actual.record, layers);
                     if (found == null) {
                         context.before(expectedView, actualView);
                     } else {
@@ -325,6 +325,15 @@ public final class CompleteRunAudioComparator {
 
     private static Context emptyContext() {
         return new Context(List.of(), null, List.of());
+    }
+
+    private static Entry nextComparable(PassStream stream, ComparisonLayerInventory layers)
+            throws ValidationException {
+        Entry entry;
+        while ((entry = stream.next()) != null) {
+            if (!(entry.record instanceof Lifecycle) || layers.isCompared(ComparisonLayer.LIFECYCLE)) return entry;
+        }
+        return null;
     }
 
     private static Difference metadataDifference(Metadata reference, Metadata engine) {
@@ -384,8 +393,8 @@ public final class CompleteRunAudioComparator {
             }
             if (!layers.isCompared(ComparisonLayer.CUTOFF_FRONTIER)) return null;
             try {
-                String expectedSemantic = CompleteRunAudioJson.writeSemanticRecord(expected);
-                String actualSemantic = CompleteRunAudioJson.writeSemanticRecord(actual);
+                String expectedSemantic = baselineFrontierProjection(expected);
+                String actualSemantic = baselineFrontierProjection(actual);
                 return expectedSemantic.equals(actualSemantic) ? null
                         : diff(Kind.CUTOFF_FRONTIER_VALUE, expected.absoluteFrame(),
                                 "baseline.frontier", expected.frontier(), actual.frontier());
@@ -473,6 +482,12 @@ public final class CompleteRunAudioComparator {
         }
         return diff(Kind.RECORD_SHAPE, recordFrame(reference, engine), "record.type",
                 reference.getClass().getSimpleName(), engine.getClass().getSimpleName());
+    }
+
+    private static String baselineFrontierProjection(Baseline baseline) throws IOException {
+        return CompleteRunAudioJson.writeSemanticRecord(new Baseline(baseline.absoluteFrame(),
+                new NormalizedState(List.of(), List.of()), List.of(new RoleOwner(HardwareRole.FM1,
+                        new OwnerRef(OwnerClass.NONE, "none", 0, OwnerOrigin.NONE, -1))), baseline.frontier()));
     }
 
     private static Difference lifecycleOwnershipDifference(List<LifecycleOwnership> reference,
@@ -591,23 +606,42 @@ public final class CompleteRunAudioComparator {
             if (compareServices && !expected.kind().equals(actual.kind())) {
                 return diff(Kind.SERVICE_VALUE, frame, location + ".kind", expected.kind(), actual.kind());
             }
-            if (layers.isCompared(ComparisonLayer.DECISIONS)) {
-                Difference decisions = decisionDifference(expected.decisions(), actual.decisions(), frame,
-                        location + ".decisions", layers.isCompared(ComparisonLayer.OWNERSHIP));
-                if (decisions != null) return decisions;
-            }
-            if (layers.isCompared(ComparisonLayer.STATE)) {
-                Difference state = stateDifference(expected.state(), actual.state(), frame, location + ".state");
-                if (state != null) return state;
-            }
-            if (layers.isCompared(ComparisonLayer.CHIP_EVENTS)) {
-                Difference chips = chipDifference(expected.chipEvents(), actual.chipEvents(), frame,
-                        location + ".chip_events");
-                if (chips != null) return chips;
-            }
-            if (compareServices && !expected.equals(actual)) {
-                return diff(Kind.SERVICE_VALUE, frame, location, expected, actual);
-            }
+        }
+        if (layers.isCompared(ComparisonLayer.DECISIONS)) {
+            Difference decisions = decisionDifference(flattenDecisions(reference), flattenDecisions(engine), frame,
+                    "frame.decisions", layers.isCompared(ComparisonLayer.OWNERSHIP));
+            if (decisions != null) return decisions;
+        }
+        if (layers.isCompared(ComparisonLayer.STATE)) {
+            Difference state = stateObservationsDifference(reference, engine, frame);
+            if (state != null) return state;
+        }
+        if (layers.isCompared(ComparisonLayer.CHIP_EVENTS)) {
+            Difference chips = chipDifference(flattenChips(reference), flattenChips(engine), frame,
+                    "frame.service_chip_events");
+            if (chips != null) return chips;
+        }
+        return null;
+    }
+
+    private static List<Decision> flattenDecisions(List<DriverService> services) {
+        return services.stream().flatMap(service -> service.decisions().stream()).toList();
+    }
+
+    private static List<ChipEvent> flattenChips(List<DriverService> services) {
+        return services.stream().flatMap(service -> service.chipEvents().stream()).toList();
+    }
+
+    private static Difference stateObservationsDifference(List<DriverService> reference,
+            List<DriverService> engine, int frame) {
+        if (reference.size() != engine.size()) {
+            return diff(Kind.STATE_FIELD_NAME, frame, "frame.service_states.size",
+                    reference.size(), engine.size());
+        }
+        for (int index = 0; index < reference.size(); index++) {
+            Difference state = stateDifference(reference.get(index).state(), engine.get(index).state(), frame,
+                    "frame.service_states[" + index + "]");
+            if (state != null) return state;
         }
         return null;
     }
@@ -619,7 +653,7 @@ public final class CompleteRunAudioComparator {
             return diff(reference.size() > engine.size() ? Kind.DECISION_MISSING : Kind.DECISION_EXTRA,
                     frame, location + "[" + index + "]", at(reference, index), at(engine, index));
         }
-        if (isPermutation(reference, engine, CompleteRunAudioComparator::decisionOrderPayload)) {
+        if (isPermutation(reference, engine, decision -> decisionOrderPayload(decision, compareOwnership))) {
             return diff(Kind.DECISION_ORDER, frame, location, reference, engine);
         }
         for (int index = 0; index < reference.size(); index++) {
@@ -647,10 +681,7 @@ public final class CompleteRunAudioComparator {
                     }
                 }
             }
-            if (!decisionPayload(expected).equals(decisionPayload(actual))) {
-                return diff(Kind.DECISION_VALUE, frame, item, expected, actual);
-            }
-            if (!expected.equals(actual)) {
+            if (!decisionPayload(expected, compareOwnership).equals(decisionPayload(actual, compareOwnership))) {
                 return diff(Kind.DECISION_VALUE, frame, item, expected, actual);
             }
         }
@@ -735,25 +766,22 @@ public final class CompleteRunAudioComparator {
     }
 
     private static ServicePayload servicePayload(DriverService service) {
-        return new ServicePayload(service.kind(), service.completion(), service.decisions().stream()
-                .map(CompleteRunAudioComparator::decisionOrderPayload).toList(), service.state(),
-                service.chipEvents().stream().map(CompleteRunAudioComparator::chipPayload).toList(),
-                service.ancestry());
+        return new ServicePayload(service.kind(), service.completion(), service.ancestry());
     }
 
-    private static DecisionPayload decisionPayload(Decision decision) {
+    private static DecisionPayload decisionPayload(Decision decision, boolean includeOwnership) {
         return new DecisionPayload(decision.resolvedNativeId(), decision.resolvedContentKey(),
                 decision.accepted(), decision.reason(), decision.priorityBefore(), decision.priorityAfter(),
-                decision.requestedRoles(), decision.roleDecisions());
+                decision.requestedRoles(), includeOwnership ? decision.roleDecisions() : List.of());
     }
 
-    private static DecisionOrderPayload decisionOrderPayload(Decision decision) {
+    private static DecisionOrderPayload decisionOrderPayload(Decision decision, boolean includeOwnership) {
         return new DecisionOrderPayload(decision.resolvedNativeId(), decision.resolvedContentKey(),
                 decision.accepted(), decision.reason(), decision.priorityBefore(), decision.priorityAfter(),
-                decision.requestedRoles(), decision.roleDecisions().stream()
+                decision.requestedRoles(), includeOwnership ? decision.roleDecisions().stream()
                         .map(role -> new RoleOrderPayload(role.role(), ownerPayload(role.displacedOwner()),
                                 ownerPayload(role.finalOwner())))
-                        .toList());
+                        .toList() : List.of());
     }
 
     private static OwnerPayload ownerPayload(OwnerRef owner) {
@@ -835,9 +863,7 @@ public final class CompleteRunAudioComparator {
 
     private record RequestPayload(OwnerClass ownerClass, String contentKey, int nativeId,
             String queueSource, Integer queueSlot) { }
-    private record ServicePayload(String kind, ServiceCompletion completion,
-            List<DecisionOrderPayload> decisions, NormalizedState state,
-            List<Object> chips, ServiceAncestry ancestry) { }
+    private record ServicePayload(String kind, ServiceCompletion completion, ServiceAncestry ancestry) { }
     private record DecisionPayload(int nativeId, String contentKey, boolean accepted, String reason,
             Integer priorityBefore, Integer priorityAfter, List<HardwareRole> requestedRoles,
             List<RoleDecision> roles) { }

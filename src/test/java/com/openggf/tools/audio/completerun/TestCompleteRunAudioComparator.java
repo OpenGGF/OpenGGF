@@ -91,6 +91,89 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void unavailableLifecycleRowsDoNotShiftFollowingFramesOrEof() throws Exception {
+        TestProfile profile = profile("comparator.layers-lifecycle." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(ComparisonLayer.LIFECYCLE, ComparisonLayerStatus.UNAVAILABLE,
+                "reference lifecycle authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+        List<CompleteRunAudioTrace.Record> reference = List.of(
+                new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()),
+                new Lifecycle(0, FIRST_FRAME, "pulse", Map.of("payload", 1), List.of()), plainFrame(0));
+        List<CompleteRunAudioTrace.Record> engine = List.of(
+                new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()), plainFrame(0));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(
+                writeRecords("lifecycle-reference", metadata(profile, ProducerKind.REFERENCE,
+                        profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), reference),
+                writeRecords("lifecycle-engine", metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)), engine));
+
+        assertEquals(CompleteRunAudioReport.Kind.REFERENCE_LIMITATION, report.kind(), report.toText());
+    }
+
+    @Test
+    void unavailableBaselineOwnershipDoesNotLeakThroughTheCutoffProjection() {
+        ComparisonLayerInventory inventory = layers(ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                "reference ownership authority is unavailable");
+        OwnerRef baselineMusic = new OwnerRef(OwnerClass.MUSIC, "music.81", 0x81,
+                OwnerOrigin.BASELINE, 0);
+        Baseline reference = new Baseline(FIRST_FRAME, state(1),
+                List.of(new RoleOwner(HardwareRole.FM1, NONE)));
+        Baseline engine = new Baseline(FIRST_FRAME, state(1),
+                List.of(new RoleOwner(HardwareRole.FM1, baselineMusic)));
+
+        assertEquals(null, CompleteRunAudioComparator.difference(reference, engine, inventory));
+    }
+
+    @Test
+    void comparedStatesCannotBeLostBehindUnavailableServiceCardinality() {
+        ComparisonLayerInventory inventory = layers(ComparisonLayer.SERVICES, ComparisonLayerStatus.UNAVAILABLE,
+                "reference service authority is unavailable");
+        Frame reference = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(
+                service(0, List.of(), List.of(), state(1)), service(1, List.of(), List.of(), state(2))));
+        Frame engine = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(
+                service(0, List.of(), List.of(), state(1))));
+
+        assertEquals(CompleteRunAudioReport.Kind.STATE_FIELD_NAME,
+                CompleteRunAudioComparator.difference(reference, engine, inventory).kind());
+    }
+
+    @Test
+    void comparedServiceProjectionExcludesUnavailableNestedLayers() {
+        ComparisonLayerInventory inventory = layers(ComparisonLayer.DECISIONS, ComparisonLayerStatus.UNAVAILABLE,
+                "reference decision authority is unavailable",
+                ComparisonLayer.STATE, ComparisonLayerStatus.UNAVAILABLE, "reference state authority is unavailable",
+                ComparisonLayer.CHIP_EVENTS, ComparisonLayerStatus.UNAVAILABLE,
+                "reference chip authority is unavailable");
+        DriverService reference = service(0, List.of(decision(0, 1, 2, owner(0, 0xc0))),
+                List.of(new YmWrite(0, 0, 0x22, 1)), state(1));
+        DriverService engine = service(0, List.of(decision(0, 2, 3, owner(0, 0xc1))),
+                List.of(new YmWrite(0, 0, 0x22, 2)), state(2));
+
+        assertEquals(null, CompleteRunAudioComparator.difference(
+                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(reference)),
+                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(engine)), inventory));
+    }
+
+    @Test
+    void incompatibleInventoriesFailBeforeAnySemanticComparison() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("inventory-reference", profile, ProducerKind.REFERENCE, 1, this::plainFrame);
+        Metadata incompatible = new Metadata(SCHEMA, profile.id(), profile.fixture(), ProducerKind.OPENGGF,
+                profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF),
+                profile.observerRuntimeIdentities().get(ProducerKind.OPENGGF),
+                profile.observerProofs().get(ProducerKind.OPENGGF), new ChunkPolicy(CHUNK_FRAME_ROWS, "gzip", 0),
+                profile.hardwareRoles(), profile.stateInventory(), layers(ComparisonLayer.LIFECYCLE,
+                        ComparisonLayerStatus.UNAVAILABLE, "reference lifecycle authority is unavailable"));
+        Path engine = writeCapture("inventory-engine", incompatible, 1, this::plainFrame);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.METADATA_PROFILE_MISMATCH);
+    }
+
+    @Test
     void baselineSemanticFrontierComparesAcrossProducersAndIgnoresNativeSidecar() throws Exception {
         TestProfile profile = profile("comparator.baseline-frontier."
                 + PROFILE_SEQUENCE.incrementAndGet(), 1);
@@ -2753,6 +2836,24 @@ class TestCompleteRunAudioComparator {
                 new ComparisonLayerClaim(ComparisonLayer.CHIP_EVENTS, ComparisonLayerStatus.COMPARED, null),
                 new ComparisonLayerClaim(ComparisonLayer.CUTOFF_FRONTIER, ComparisonLayerStatus.UNAVAILABLE,
                         "reference cutoff-frontier authority is unavailable")));
+    }
+
+    private static ComparisonLayerInventory layers(Object... changes) {
+        List<ComparisonLayerClaim> claims = new ArrayList<>(ComparisonLayerInventory.allCompared().claims());
+        for (int index = 0; index < changes.length; index += 3) {
+            ComparisonLayer layer = (ComparisonLayer) changes[index];
+            claims.set(layer.ordinal(), new ComparisonLayerClaim(layer, (ComparisonLayerStatus) changes[index + 1],
+                    (String) changes[index + 2]));
+        }
+        if (claims.get(ComparisonLayer.REQUESTS.ordinal()).status() == ComparisonLayerStatus.UNAVAILABLE) {
+            claims.set(ComparisonLayer.DECISIONS.ordinal(), new ComparisonLayerClaim(ComparisonLayer.DECISIONS,
+                    ComparisonLayerStatus.UNAVAILABLE, "request authority is unavailable"));
+        }
+        if (claims.get(ComparisonLayer.DECISIONS.ordinal()).status() == ComparisonLayerStatus.UNAVAILABLE) {
+            claims.set(ComparisonLayer.OWNERSHIP.ordinal(), new ComparisonLayerClaim(ComparisonLayer.OWNERSHIP,
+                    ComparisonLayerStatus.UNAVAILABLE, "decision authority is unavailable"));
+        }
+        return new ComparisonLayerInventory(claims);
     }
 
     private Path writeCapture(String name, TestProfile profile, ProducerKind kind, int frames,
