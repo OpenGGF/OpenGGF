@@ -142,7 +142,7 @@ public final class S2CompleteRunAudioProfile {
         return new CompleteRunAudioTrace.CompleteRunFixture(
                 "8bca5dcef1af3e00098666fd892dc1c2a76333f9", "7b905383",
                 "e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5", 259590,
-                "dfb220822eab3c524472aa02d6d78463a9489233b97fdd9ccd9340c9f3a10411",
+                "ff7b332e343c8672e48f6acfa7df673ae18dc558a1fb9f2863471b4a3b102578",
                 segments, 769, 259590);
     }
 

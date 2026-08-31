@@ -3,6 +3,10 @@ package com.openggf.tools.audio.completerun.s2;
 import com.openggf.tools.audio.completerun.CompleteRunAudioProfiles;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.UnavailableProducerBinding;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS2CompleteRunAudioFixture {
     @Test
-    void completeEmeraldFixturePinsEverySegmentGapAndTerminalRow() {
+    void completeEmeraldFixturePinsEverySegmentGapAndTerminalRow() throws Exception {
         var fixture = CompleteRunAudioProfiles.require("s2_rev01_complete_emeralds.v1").fixture();
 
         assertEquals("8bca5dcef1af3e00098666fd892dc1c2a76333f9", fixture.romSha1());
@@ -18,8 +22,12 @@ class TestS2CompleteRunAudioFixture {
         assertEquals("e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5",
                 fixture.bk2Sha256());
         assertEquals(259_590, fixture.bk2RowCount());
-        assertEquals("dfb220822eab3c524472aa02d6d78463a9489233b97fdd9ccd9340c9f3a10411",
+        assertEquals("ff7b332e343c8672e48f6acfa7df673ae18dc558a1fb9f2863471b4a3b102578",
                 fixture.runManifestSha256());
+        Path manifest = Path.of("src/test/resources/traces/s2/runs/"
+                + "s2-sonic-tails-complete-emeralds/run_manifest.json");
+        assertEquals(fixture.runManifestSha256(), HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(manifest))));
         assertEquals(769, fixture.firstFrame());
         assertEquals(259_590, fixture.exclusiveEnd());
         assertEquals(35, fixture.segments().size());

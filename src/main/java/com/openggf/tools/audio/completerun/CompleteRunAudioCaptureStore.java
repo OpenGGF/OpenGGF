@@ -108,7 +108,12 @@ public final class CompleteRunAudioCaptureStore {
         void delete(Path path) throws IOException;
     }
 
-    public interface Writer extends CompleteRunAudioRecordSink { }
+    public interface Writer extends CompleteRunAudioRecordSink {
+        /** Appends the terminal from counts and digests independently accumulated by this writer. */
+        void finish(CompleteRunAudioTrace.NativeCapabilitySummary nativeCapability) throws IOException;
+        /** Discards the private staging tree without attempting publication. */
+        void abort() throws IOException;
+    }
 
     public interface Reader extends Iterator<Record>, AutoCloseable {
         Metadata metadata();
@@ -224,6 +229,39 @@ public final class CompleteRunAudioCaptureStore {
         private CaptureCounts counts() {
             return new CaptureCounts(frames, requests, services, decisions, ym, psg, lifecycles,
                     cutoffActive, cutoffPending);
+        }
+
+        @Override
+        public void finish(CompleteRunAudioTrace.NativeCapabilitySummary nativeCapability) throws IOException {
+            requireOpen();
+            if (!baselineSeen || !cutoffSeen || terminalSeen) {
+                throw new IllegalArgumentException("capture is not ready for terminal finalization");
+            }
+            CaptureCounts captured = counts();
+            append(new Terminal(metadata.fixture().exclusiveEnd(), captured.frameCount(),
+                    captured.requestCount(), captured.serviceCount(), captured.decisionCount(),
+                    captured.ymCount(), captured.psgCount(), captured.lifecycleCount(),
+                    captured.cutoffActiveCount(), captured.cutoffPendingCount(), nativeCapability,
+                    digestCopy(rootDigest), digestCopy(semanticDigest)));
+        }
+
+        @Override
+        public void abort() throws IOException {
+            if (closed) return;
+            IOException failure = null;
+            if (current != null) {
+                try { current.gzip.close(); }
+                catch (IOException problem) { failure = problem; }
+                current = null;
+            }
+            try {
+                stagingCleaner.delete(staging);
+                closed = true;
+            } catch (IOException cleanupFailure) {
+                if (failure == null) failure = cleanupFailure;
+                else failure.addSuppressed(cleanupFailure);
+            }
+            if (failure != null) throw failure;
         }
 
         private ChunkWriter current() throws IOException {
@@ -693,6 +731,10 @@ public final class CompleteRunAudioCaptureStore {
     private static void update(MessageDigest digest, String record) { digest.update((record + "\n").getBytes(StandardCharsets.UTF_8)); }
     private static MessageDigest sha256() { try { return MessageDigest.getInstance("SHA-256"); } catch (NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); } }
     private static String digest(MessageDigest digest) { return HexFormat.of().formatHex(digest.digest()); }
+    private static String digestCopy(MessageDigest digest) {
+        try { return HexFormat.of().formatHex(((MessageDigest) digest.clone()).digest()); }
+        catch (CloneNotSupportedException impossible) { throw new AssertionError(impossible); }
+    }
     private static void manifestField(JsonParser parser,String name)throws IOException{if(parser.nextToken()!=com.fasterxml.jackson.core.JsonToken.FIELD_NAME||!name.equals(parser.currentName())||parser.nextToken()==null)throw new IllegalArgumentException("expected manifest field: "+name);} private static String manifestText(JsonParser parser,String label)throws IOException{if(parser.currentToken()!=com.fasterxml.jackson.core.JsonToken.VALUE_STRING)throw new IllegalArgumentException(label+" must be text");return parser.getText();} private static int manifestInt(JsonParser parser,String label)throws IOException{if(parser.currentToken()!=com.fasterxml.jackson.core.JsonToken.VALUE_NUMBER_INT)throw new IllegalArgumentException(label+" must be int");return parser.getIntValue();} private static String manifestHash(JsonParser parser)throws IOException{String value=manifestText(parser,"manifest hash");if(!value.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("manifest hash must be canonical SHA-256");return value;}
     private void suppressCleanupFailure(Path root, Throwable primary) {
         try {
