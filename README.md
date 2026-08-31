@@ -301,7 +301,10 @@ traces.
   `docs/architecture/designs/audio/2026-08-30-sound-driver-re-index.md`. The
   first source-backed corrections now lock live sequencing to one V-blank
   service per outer frame and reproduce S2/S3K PAL repeat cadence and S3K's
-  shared speed-up tail.
+  shared speed-up tail. Sonic 1's committed sound-test SFX oracle now matches
+  all 1,967 ticks while its protected GHZ music oracle remains matched across
+  14,690 ticks; the current S2 and S3K frontiers stop where their first-version
+  captures cannot observe a request before the retail driver consumes it.
 - **Resolve-ready capture:** live and trace recording can select DNxHR SQ video
   with lossless 24-bit PCM audio in a MOV container for DaVinci Resolve on Linux.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,
