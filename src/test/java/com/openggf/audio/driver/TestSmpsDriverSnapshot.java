@@ -2,19 +2,58 @@ package com.openggf.audio.driver;
 
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.rewind.LegacySmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.synth.VirtualSynthesizer;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestSmpsDriverSnapshot {
+
+    @Test
+    void logicalSnapshotContainsNoPhysicalSynthState() {
+        assertTrue(Arrays.stream(
+                        SmpsDriverSnapshot.class.getRecordComponents())
+                .noneMatch(component -> component.getType()
+                        == VirtualSynthesizer.Snapshot.class));
+    }
+
+    @Test
+    void resolvingLogicalMementoEmitsNoChipWrites() {
+        AtomicInteger writes = new AtomicInteger();
+        ChipWriteObserver observer = new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.incrementAndGet();
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                writes.incrementAndGet();
+            }
+        };
+        SmpsDriver source = new SmpsDriver(48_000.0, observer);
+        source.addSequencer(newSequencer("music", 0x81, source), false);
+        SmpsDriverSnapshot memento = source.captureSnapshot();
+        SmpsDriver target = new SmpsDriver(48_000.0, observer);
+        writes.set(0);
+
+        target.restoreSnapshot(
+                memento, SmpsDriverSnapshot.liveReferences());
+
+        assertEquals(0, writes.get());
+    }
 
     @Test
     void precomputedTrustRequiresAnExplicitDescriptor() {
@@ -362,13 +401,14 @@ class TestSmpsDriverSnapshot {
         uninterrupted.read(new short[74], 74);
         restored.read(new short[74], 74);
 
-        SmpsDriverSnapshot snapshot = uninterrupted.captureSnapshot();
+        LegacySmpsDriverSnapshot snapshot =
+                uninterrupted.captureLegacySnapshot();
         perturbSynth(uninterrupted);
         short[] expected = new short[192];
         uninterrupted.read(expected, expected.length);
 
         perturbSynth(restored);
-        restored.restoreSnapshot(snapshot);
+        restored.restoreLegacySnapshot(snapshot);
         perturbSynth(restored);
         short[] actual = new short[192];
         restored.read(actual, actual.length);

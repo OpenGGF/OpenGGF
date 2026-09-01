@@ -866,8 +866,7 @@ class TestPreparedSfxAdmission {
                 0,
                 entries,
                 fmLocks,
-                psgLocks,
-                driver.captureSynthSnapshot()));
+                psgLocks));
         return new AllocationFixture(driver, sequencer(
                 driver, 0xA0, config(null), track(0, 1)));
     }

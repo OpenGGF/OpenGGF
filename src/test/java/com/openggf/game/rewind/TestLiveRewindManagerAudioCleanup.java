@@ -607,7 +607,7 @@ class TestLiveRewindManagerAudioCleanup {
                                 .PresentationVoiceSnapshot.Smps.class
                                 ::cast)
                         .anyMatch(voice -> hasSfxSource(
-                                voice.driver(), sfxId)),
+                                voice.driver().logical(), sfxId)),
                 "producer snapshot must retain source-bearing SFX "
                         + Integer.toHexString(sfxId));
     }

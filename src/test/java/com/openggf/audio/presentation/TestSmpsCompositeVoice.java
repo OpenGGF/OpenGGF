@@ -42,7 +42,8 @@ class TestSmpsCompositeVoice {
         assertSame(currentStream, backend.currentStreamForTesting());
         assertNull(backend.sfxStreamForTesting());
         assertSame(musicDriver, voice.driver());
-        assertEquals(2, ((PresentationVoiceSnapshot.Smps) voice.snapshot()).driver().sequencers().size());
+        assertEquals(2, ((PresentationVoiceSnapshot.Smps) voice.snapshot())
+                .driver().logical().sequencers().size());
 
         RecordingSmpsDriver capacityDriver = new RecordingSmpsDriver();
         SmpsCompositeVoice capacityVoice = composite(capacityDriver);
@@ -81,13 +82,16 @@ class TestSmpsCompositeVoice {
         assertArrayEquals(new long[] {100, -100, 101, -101}, mixed);
         assertEquals(1, driver.readCalls);
         assertSame(driver, voice.driver());
-        assertEquals(3, snapshot.driver().sequencers().size());
-        assertEquals(2, snapshot.driver().fmLockSequencerIds()[0]);
-        assertEquals(0x20, snapshot.driver().sequencers().get(1).snapshot().sfxPriority());
-        assertEquals(0x60, snapshot.driver().sequencers().get(2).snapshot().sfxPriority());
-        assertFalse(snapshot.driver().sequencers().get(0).sfx());
-        assertTrue(snapshot.driver().sequencers().get(1).sfx());
-        assertTrue(snapshot.driver().sequencers().get(2).sfx());
+        assertEquals(3, snapshot.driver().logical().sequencers().size());
+        assertEquals(2, snapshot.driver().logical()
+                .fmLockSequencerIds()[0]);
+        assertEquals(0x20, snapshot.driver().logical().sequencers()
+                .get(1).snapshot().sfxPriority());
+        assertEquals(0x60, snapshot.driver().logical().sequencers()
+                .get(2).snapshot().sfxPriority());
+        assertFalse(snapshot.driver().logical().sequencers().get(0).sfx());
+        assertTrue(snapshot.driver().logical().sequencers().get(1).sfx());
+        assertTrue(snapshot.driver().logical().sequencers().get(2).sfx());
     }
 
     @Test
@@ -106,16 +110,19 @@ class TestSmpsCompositeVoice {
         assertSame(backend.musicDriverForTesting(), voice.driver());
         assertSame(backend.currentStreamForTesting(), voice.driver());
         assertNull(backend.sfxStreamForTesting());
-        assertEquals(2, snapshot.driver().sequencers().size(),
+        assertEquals(2, snapshot.driver().logical().sequencers().size(),
                 "continuous retrigger must extend the owned SFX instead of creating a standalone sequencer");
-        assertEquals(0xBC, snapshot.driver().continuousSfxId());
-        assertTrue(snapshot.driver().continuousSfxFlag());
+        assertEquals(0xBC, snapshot.driver().logical().continuousSfxId());
+        assertTrue(snapshot.driver().logical().continuousSfxFlag());
         assertEquals(continuousSfx.getChannels() + continuousSfx.getPsgChannels(),
-                snapshot.driver().contSfxLoopCnt());
-        assertEquals(snapshot.driver().sequencers().get(0).source(),
-                snapshot.driver().sequencers().get(1).fallbackVoiceSource());
-        assertSame(dacData, snapshot.driver().sequencers().get(0).dacData());
-        assertSame(dacData, snapshot.driver().sequencers().get(1).dacData());
+                snapshot.driver().logical().contSfxLoopCnt());
+        assertEquals(snapshot.driver().logical().sequencers().get(0).source(),
+                snapshot.driver().logical().sequencers().get(1)
+                        .fallbackVoiceSource());
+        assertSame(dacData, snapshot.driver().logical().sequencers()
+                .get(0).dacData());
+        assertSame(dacData, snapshot.driver().logical().sequencers()
+                .get(1).dacData());
     }
 
     @Test
@@ -129,7 +136,8 @@ class TestSmpsCompositeVoice {
         assertNull(backend.currentStreamForTesting());
         assertSame(standaloneSfxDriver, backend.sfxStreamForTesting());
         assertSame(standaloneSfxDriver, standalone.driver());
-        assertEquals(2, ((PresentationVoiceSnapshot.Smps) standalone.snapshot()).driver().sequencers().size());
+        assertEquals(2, ((PresentationVoiceSnapshot.Smps) standalone.snapshot())
+                .driver().logical().sequencers().size());
     }
 
     @Test

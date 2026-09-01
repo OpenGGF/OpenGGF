@@ -1114,7 +1114,7 @@ public final class AudioPresentationSourceFactory
     private static int restoredSfxSoundId(
             PresentationVoiceSnapshot.Smps snapshot) {
         for (SmpsDriverSnapshot.SequencerEntry entry
-                : snapshot.driver().sequencers()) {
+                : snapshot.driver().logical().sequencers()) {
             if (entry.sfx()) {
                 return entry.source().id();
             }

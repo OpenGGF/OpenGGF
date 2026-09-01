@@ -2,6 +2,7 @@ package com.openggf.audio.driver;
 
 import com.openggf.audio.AudioStream;
 import com.openggf.audio.MusicRestoreSink;
+import com.openggf.audio.rewind.LegacySmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -1494,6 +1495,20 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
     }
 
     public SmpsDriverSnapshot captureSnapshot() {
+        return captureLogicalState();
+    }
+
+    public LegacySmpsDriverSnapshot captureLegacySnapshot() {
+        synchronized (sequencersLock) {
+            return new LegacySmpsDriverSnapshot(
+                    captureLogicalState(),
+                    requireStandalonePhysical().captureSynthSnapshot(),
+                    requireStandalonePhysical()
+                            .selectedDacDataForSnapshot());
+        }
+    }
+
+    private SmpsDriverSnapshot captureLogicalState() {
         synchronized (sequencersLock) {
             IdentityHashMap<SmpsSequencer, Integer> sequencerIds = new IdentityHashMap<>();
             IdentityHashMap<AbstractSmpsData, SmpsSourceDescriptor> sourceDescriptors = new IdentityHashMap<>();
@@ -1534,15 +1549,11 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                     palUpdateCounter,
                     entries,
                     captureLockIds(fmLocks, sequencerIds),
-                    captureLockIds(psgLocks, sequencerIds),
-                    captureSynthSnapshot());
+                    captureLockIds(psgLocks, sequencerIds));
         }
     }
 
-    /**
-     * Restores logical SMPS driver state only. Native/audio-chip presentation state is
-     * cleared and must be refreshed by subsequent sequencer advancement.
-     */
+    /** Restores logical SMPS driver state without touching the physical device. */
     public void restoreSnapshot(SmpsDriverSnapshot snapshot) {
         restoreSnapshot(snapshot, SmpsDriverSnapshot.liveReferences());
     }
@@ -1559,6 +1570,14 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
         Objects.requireNonNull(resolver, "resolver");
         List<SmpsDriverSnapshot.SequencerEntry> entries = snapshot.sequencers();
         List<ResolvedSequencerDependencies> resolved = resolveSequencerDependencies(entries, resolver);
+        restoreLogicalState(snapshot, entries, resolved);
+        observeLifecycle(SmpsDriverServiceObserver.LifecycleKind.RESTORE);
+    }
+
+    private void restoreLogicalState(
+            SmpsDriverSnapshot snapshot,
+            List<SmpsDriverSnapshot.SequencerEntry> entries,
+            List<ResolvedSequencerDependencies> resolved) {
         synchronized (sequencersLock) {
             sequencers.clear();
             sfxSequencers.clear();
@@ -1628,11 +1647,27 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                 }
             }
         }
-        if (snapshot.synthSnapshot() != null) {
-            restoreSynthSnapshot(snapshot.synthSnapshot());
-        } else {
-            silenceAll();
-        }
+    }
+
+    public void restoreLegacySnapshot(
+            LegacySmpsDriverSnapshot snapshot) {
+        restoreLegacySnapshot(
+                snapshot, SmpsDriverSnapshot.liveReferences());
+    }
+
+    public void restoreLegacySnapshot(
+            LegacySmpsDriverSnapshot snapshot,
+            SmpsDriverSnapshot.DependencyResolver resolver) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(resolver, "resolver");
+        SmpsDriverSnapshot logical = snapshot.logical();
+        List<SmpsDriverSnapshot.SequencerEntry> entries =
+                logical.sequencers();
+        List<ResolvedSequencerDependencies> resolved =
+                resolveSequencerDependencies(entries, resolver);
+        restoreLogicalState(logical, entries, resolved);
+        restoreLiveDacDataReference(snapshot.liveDacReference());
+        restoreSynthSnapshot(snapshot.physical());
         observeLifecycle(SmpsDriverServiceObserver.LifecycleKind.RESTORE);
     }
 

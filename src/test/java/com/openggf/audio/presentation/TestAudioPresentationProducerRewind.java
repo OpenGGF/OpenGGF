@@ -372,7 +372,7 @@ class TestAudioPresentationProducerRewind {
                 new PresentationVoiceSnapshot.Smps(
                         1, 0, 0x81,
                         AudioSourceDescriptor.baseMusic(0x81),
-                        1, source.captureSnapshot());
+                        1, source.captureLegacySnapshot());
         AudioPresentationSnapshot selected =
                 new AudioPresentationSnapshot(
                         2, List.of(voice),

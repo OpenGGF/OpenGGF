@@ -197,7 +197,7 @@ class TestAudioPresentationSnapshotParity {
                                 .BASE_MUSIC,
                         com.openggf.audio.rewind.SmpsSourceDescriptor.Kind
                                 .BASE_SFX_ID),
-                stagedMusic.driver().sequencers().stream()
+                stagedMusic.driver().logical().sequencers().stream()
                         .map(entry -> entry.source().kind()).toList());
         assertTrue(audio.commitDeferredReverseLogicalRestore());
         audio.endReverseAudioPresentation();
@@ -267,7 +267,7 @@ class TestAudioPresentationSnapshotParity {
         assertFalse(released.voices().stream()
                 .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
                 .map(PresentationVoiceSnapshot.Smps.class::cast)
-                .flatMap(voice -> voice.driver().sequencers().stream())
+                .flatMap(voice -> voice.driver().logical().sequencers().stream())
                 .anyMatch(com.openggf.audio.rewind.SmpsDriverSnapshot
                         .SequencerEntry::sfx));
         assertTrue(released.speedShoesEnabled());
@@ -676,7 +676,7 @@ class TestAudioPresentationSnapshotParity {
             assertTrue(boundary.presentation().voices().stream()
                     .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
                     .map(PresentationVoiceSnapshot.Smps.class::cast)
-                    .flatMap(voice -> voice.driver().sequencers().stream())
+                    .flatMap(voice -> voice.driver().logical().sequencers().stream())
                     .anyMatch(
                             com.openggf.audio.rewind.SmpsDriverSnapshot
                                     .SequencerEntry::sfx));
@@ -853,11 +853,11 @@ class TestAudioPresentationSnapshotParity {
                 assertEquals(leftSmps.musicId(), rightSmps.musicId());
                 assertEquals(leftSmps.sourceDescriptor(),
                         rightSmps.sourceDescriptor());
-                assertEquals(leftSmps.driver().continuousSfxId(),
-                        rightSmps.driver().continuousSfxId());
-                assertEquals(leftSmps.driver().sequencers().stream()
+                assertEquals(leftSmps.driver().logical().continuousSfxId(),
+                        rightSmps.driver().logical().continuousSfxId());
+                assertEquals(leftSmps.driver().logical().sequencers().stream()
                                 .map(entry -> entry.source()).toList(),
-                        rightSmps.driver().sequencers().stream()
+                        rightSmps.driver().logical().sequencers().stream()
                                 .map(entry -> entry.source()).toList());
             } else if (left instanceof PresentationVoiceSnapshot.Sample
                     leftSample
@@ -878,10 +878,18 @@ class TestAudioPresentationSnapshotParity {
                     instanceof PresentationVoiceSnapshot.Smps left
                     && actual.voices().get(index)
                     instanceof PresentationVoiceSnapshot.Smps right) {
-                assertDriverSnapshotExactly(
+                assertLegacyDriverSnapshotExactly(
                         left.driver(), right.driver());
             }
         }
+    }
+
+    private static void assertLegacyDriverSnapshotExactly(
+            com.openggf.audio.rewind.LegacySmpsDriverSnapshot expected,
+            com.openggf.audio.rewind.LegacySmpsDriverSnapshot actual) {
+        assertDriverSnapshotExactly(expected.logical(), actual.logical());
+        assertDeepSnapshotEquals(expected.physical(), actual.physical());
+        assertSame(expected.liveDacReference(), actual.liveDacReference());
     }
 
     private static void assertDriverSnapshotExactly(
@@ -916,8 +924,6 @@ class TestAudioPresentationSnapshotParity {
                     right.fallbackVoiceSource());
             assertDeepSnapshotEquals(left.snapshot(), right.snapshot());
         }
-        assertDeepSnapshotEquals(expected.synthSnapshot(),
-                actual.synthSnapshot());
     }
 
     private static void assertReleaseStateExactly(

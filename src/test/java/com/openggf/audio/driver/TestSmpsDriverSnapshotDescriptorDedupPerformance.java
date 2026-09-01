@@ -314,8 +314,7 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
                 0,
                 entries,
                 fmLocks,
-                psgLocks,
-                fixture.driver.captureSynthSnapshot());
+                psgLocks);
     }
 
     private static Fixture fixture() {

@@ -456,7 +456,7 @@ class TestAudioVoiceRegistry {
         restored.restore(snapshot, new FixtureResolver());
         List<short[]> actual = mixPackets(restored, 10);
 
-        assertFalse(smpsSnapshot.driver().sequencers().isEmpty(),
+        assertFalse(smpsSnapshot.driver().logical().sequencers().isEmpty(),
                 "registry snapshot must preserve a live SMPS sequencer");
         assertTrue(expected.stream()
                 .flatMapToInt(packet -> {
@@ -1419,10 +1419,10 @@ class TestAudioVoiceRegistry {
         List<PresentationVoiceSnapshot> voices = List.of(
                 new PresentationVoiceSnapshot.Smps(
                         1, 0, 0x81, AudioSourceDescriptor.baseMusic(0x81),
-                        MAX_STEREO_FRAMES, source.captureSnapshot()),
+                        MAX_STEREO_FRAMES, source.captureLegacySnapshot()),
                 new PresentationVoiceSnapshot.Smps(
                         2, 0, 0x82, AudioSourceDescriptor.baseMusic(0x82),
-                        MAX_STEREO_FRAMES, source.captureSnapshot()));
+                        MAX_STEREO_FRAMES, source.captureLegacySnapshot()));
         AudioPresentationSnapshot snapshot = new AudioPresentationSnapshot(
                 3, voices,
                 new AudioPresentationSnapshot.MusicSlotSnapshot(

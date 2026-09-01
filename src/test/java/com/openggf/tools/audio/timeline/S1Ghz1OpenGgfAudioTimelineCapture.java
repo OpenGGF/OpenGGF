@@ -382,7 +382,7 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             }
             for (var voice : presentation.voices()) {
                 if (voice instanceof com.openggf.audio.presentation.PresentationVoiceSnapshot.Smps smps) {
-                    applyLocks(smps.driver(), owners);
+                    applyLocks(smps.driver().logical(), owners);
                 }
             }
             effectiveOwners.putAll(owners);

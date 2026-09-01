@@ -6,7 +6,6 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
-import com.openggf.audio.synth.VirtualSynthesizer;
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,8 +20,7 @@ public record SmpsDriverSnapshot(
         int palUpdateCounter,
         List<SequencerEntry> sequencers,
         int[] fmLockSequencerIds,
-        int[] psgLockSequencerIds,
-        VirtualSynthesizer.Snapshot synthSnapshot) {
+        int[] psgLockSequencerIds) {
 
     public SmpsDriverSnapshot {
         Objects.requireNonNull(region, "region");
@@ -50,23 +48,7 @@ public record SmpsDriverSnapshot(
                 5,
                 sequencers,
                 fmLockSequencerIds,
-                psgLockSequencerIds,
-                null);
-    }
-
-    public SmpsDriverSnapshot(
-            SmpsSequencer.Region region,
-            SmpsDriver.ReadMode readMode,
-            int continuousSfxId,
-            boolean continuousSfxFlag,
-            int contSfxLoopCnt,
-            List<SequencerEntry> sequencers,
-            int[] fmLockSequencerIds,
-            int[] psgLockSequencerIds,
-            VirtualSynthesizer.Snapshot synthSnapshot) {
-        this(region, readMode, continuousSfxId, continuousSfxFlag,
-                contSfxLoopCnt, 5, sequencers, fmLockSequencerIds,
-                psgLockSequencerIds, synthSnapshot);
+                psgLockSequencerIds);
     }
 
     @Override

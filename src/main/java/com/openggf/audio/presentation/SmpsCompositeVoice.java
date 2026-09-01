@@ -85,7 +85,7 @@ public final class SmpsCompositeVoice implements PresentationVoice {
     @Override
     public PresentationVoiceSnapshot snapshot() {
         return new PresentationVoiceSnapshot.Smps(voiceId, priority, musicId, sourceDescriptor,
-                maxStereoFrames, driver.captureSnapshot());
+                maxStereoFrames, driver.captureLegacySnapshot());
     }
 
     public static final class LiveCommandMutationToken {
@@ -124,6 +124,7 @@ public final class SmpsCompositeVoice implements PresentationVoice {
                 || !Objects.equals(snapshot.sourceDescriptor(), sourceDescriptor)) {
             throw new IllegalArgumentException("snapshot identity does not match composite voice");
         }
-        driver.restoreSnapshot(snapshot.driver(), Objects.requireNonNull(resolver, "resolver"));
+        driver.restoreLegacySnapshot(
+                snapshot.driver(), Objects.requireNonNull(resolver, "resolver"));
     }
 }

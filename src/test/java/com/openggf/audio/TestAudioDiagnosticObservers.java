@@ -1796,8 +1796,6 @@ class TestAudioDiagnosticObservers {
                 actual.sequencers().stream()
                         .map(entry -> JSON.valueToTree(entry.snapshot()))
                         .toList());
-        assertEquals(JSON.valueToTree(expected.synthSnapshot()),
-                JSON.valueToTree(actual.synthSnapshot()));
     }
 
     private static final class PersistentMusicData extends AbstractSmpsData {
