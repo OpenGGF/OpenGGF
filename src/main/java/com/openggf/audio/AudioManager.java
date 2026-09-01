@@ -638,16 +638,18 @@ public class AudioManager implements MusicRestoreSink {
                 throw failure;
             }
             publishPresentationCoordHandlers(presentationPreparation);
-             baseAudioSource = new BaseAudioSource(
-                     previous.rom(), audioProfile,
-                     candidateLoader, candidateDac,
-                     candidateConfig, candidateGeneration);
-             if (shadowFactory != null) {
-                 shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
-             }
-         } finally {
-             endSourceMutation();
-         }
+            baseAudioSource = new BaseAudioSource(
+                    previous.rom(), audioProfile,
+                    candidateLoader, candidateDac,
+                    candidateConfig, candidateGeneration);
+            if (shadowProducer != null) {
+                replaceShadowPresentationForBaseMutation();
+            } else if (shadowFactory != null) {
+                shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
+            }
+        } finally {
+            endSourceMutation();
+        }
     }
 
     public GameAudioProfile getAudioProfile() {
@@ -667,6 +669,9 @@ public class AudioManager implements MusicRestoreSink {
                     rom, previous.profile(), candidateLoader, candidateDac,
                     previous.config(),
                     candidateGeneration);
+            if (shadowProducer != null) {
+                replaceShadowPresentationForBaseMutation();
+            }
         } finally {
             endSourceMutation();
         }
@@ -869,7 +874,7 @@ public class AudioManager implements MusicRestoreSink {
                 AudioSourceDescriptor.baseMusic(musicId), maxFrames);
         shadowCommands.submit(
                 new AudioPresentationCommand.ReplaceMusic(music),
-                () -> true, shadowRegistry::apply);
+                () -> true, this::drainShadowCommandsAtOwnerBoundary);
     }
 
     public void playStandaloneSfx(
@@ -899,17 +904,17 @@ public class AudioManager implements MusicRestoreSink {
                 data.getChannels() + data.getPsgChannels(), maxFrames);
         shadowCommands.submit(
                 new AudioPresentationCommand.AddSmpsSfx(source),
-                () -> true, shadowRegistry::apply);
+                () -> true, this::drainShadowCommandsAtOwnerBoundary);
     }
 
     public void stopStandalonePlayback() {
         ensureStandalonePresentation();
         shadowCommands.submit(new AudioPresentationCommand.StopMusic(),
-                () -> true, shadowRegistry::apply);
+                () -> true, this::drainShadowCommandsAtOwnerBoundary);
         shadowCommands.submit(new AudioPresentationCommand.StopAllSfx(),
-                () -> true, shadowRegistry::apply);
+                () -> true, this::drainShadowCommandsAtOwnerBoundary);
         shadowCommands.submit(new AudioPresentationCommand.StopRawPcm(),
-                () -> true, shadowRegistry::apply);
+                () -> true, this::drainShadowCommandsAtOwnerBoundary);
     }
 
     SmpsSequencerConfig bindLegacyConfigToPresentationOwner(
@@ -993,7 +998,7 @@ public class AudioManager implements MusicRestoreSink {
         ensureShadowPresentation();
         if (deferredReverseLogicalSnapshot == null) {
             shadowResolver.submit(command);
-            shadowCommands.applyPending(shadowRegistry::apply);
+            shadowProducer.applyPendingCommandsAtOwnerBoundary();
             ringLeft = managerRingAfter(ringLeft, command);
             return;
         }
@@ -1025,7 +1030,11 @@ public class AudioManager implements MusicRestoreSink {
                                             + configuredFrameRate() - 1)
                                             / configuredFrameRate()),
                             warning -> resolutionFailure[0] = warning,
-                            () -> true, stagedRegistry::apply);
+                            () -> true,
+                            () -> {
+                                throw new IllegalStateException(
+                                        "detached staging queue exceeded capacity");
+                            });
             long nextVoice = selected.presentation().voices().stream()
                     .mapToLong(voice -> switch (voice) {
                         case PresentationVoiceSnapshot.Smps smps ->
@@ -1249,14 +1258,21 @@ public class AudioManager implements MusicRestoreSink {
             case SUPPRESSED_INTERNAL_RESTORE -> {
             }
             case STOP_TRANSIENT_SFX_RESYNC_MUSIC -> {
-                shadowRegistry.stopTransientVoices();
-                shadowRegistry.apply(
-                        new AudioPresentationCommand.RestoreMusicOverride());
+                shadowCommands.submit(
+                        new AudioPresentationCommand.RestoreMusicOverride(),
+                        () -> true,
+                        this::drainShadowCommandsAtOwnerBoundary);
+                shadowProducer
+                        .stopTransientVoicesThenApplyPendingCommandsAtOwnerBoundary();
             }
             case STOP_TRANSIENT_SFX ->
-                    shadowRegistry.stopTransientVoices();
+                    shadowProducer.stopTransientVoicesAtOwnerBoundary();
             case STOP_ALL_PRESENTATION -> {
-                shadowRegistry.clear();
+                shadowCommands.submit(
+                        new AudioPresentationCommand.HardReset(),
+                        () -> true,
+                        this::drainShadowCommandsAtOwnerBoundary);
+                shadowProducer.applyPendingCommandsAtOwnerBoundary();
                 shadowProducer.clearHistory();
                 shadowParity.historyBoundary();
             }
@@ -1522,7 +1538,8 @@ public class AudioManager implements MusicRestoreSink {
             shadowRestoreRequested = false;
             mirrorShadowCommand(() -> shadowCommands.submit(
                     new AudioPresentationCommand.RestoreMusicOverride(),
-                    () -> false, command -> { }));
+                    () -> true,
+                    this::drainShadowCommandsAtOwnerBoundary));
         }
     }
 
@@ -2835,6 +2852,14 @@ public class AudioManager implements MusicRestoreSink {
         }
     }
 
+    private void drainShadowCommandsAtOwnerBoundary() {
+        if (shadowProducer == null) {
+            throw new IllegalStateException(
+                    "presentation producer is not installed");
+        }
+        shadowProducer.applyPendingCommandsAtOwnerBoundary();
+    }
+
     private boolean sendLiveBackendCommands() {
         return false;
     }
@@ -2842,13 +2867,13 @@ public class AudioManager implements MusicRestoreSink {
     public void toggleMute(ChannelType type, int channel) {
         mirrorShadowCommand(() -> shadowCommands.submit(
                 new AudioPresentationCommand.ToggleMute(type, channel),
-                () -> true, shadowRegistry::apply));
+                () -> true, this::drainShadowCommandsAtOwnerBoundary));
     }
 
     public void toggleSolo(ChannelType type, int channel) {
         mirrorShadowCommand(() -> shadowCommands.submit(
                 new AudioPresentationCommand.ToggleSolo(type, channel),
-                () -> true, shadowRegistry::apply));
+                () -> true, this::drainShadowCommandsAtOwnerBoundary));
     }
 
     public boolean isMuted(ChannelType type, int channel) {
@@ -2917,7 +2942,7 @@ public class AudioManager implements MusicRestoreSink {
         shadowResolver = new AudioPresentationCommandResolver(shadowCommands,
                 shadowFactory, new ShadowSources(maxFrames),
                 warning -> LOGGER.warning("Presentation shadow: " + warning),
-                () -> true, shadowRegistry::apply);
+                () -> true, this::drainShadowCommandsAtOwnerBoundary);
         AudioPresentationMixer mixer = new AudioPresentationMixer(maxFrames);
         AudioPresentationSink sink = presentationSink != null
                 ? presentationSink : new NoDeviceAudioSink(sampleRate);
@@ -2935,6 +2960,14 @@ public class AudioManager implements MusicRestoreSink {
         shadowFrameRate = frameRate;
         shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
         rebindLiveCaptureAudioHandle(sampleRate);
+    }
+
+    private void replaceShadowPresentationForBaseMutation() {
+        clearPreparedReverseRestore();
+        detachLiveCaptureAudioHandleForRebuild();
+        closeShadowPresentation();
+        ensurePresentationSink();
+        ensureShadowPresentation();
     }
 
     private void restoreShadowMusic() {

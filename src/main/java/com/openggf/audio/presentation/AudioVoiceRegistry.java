@@ -155,6 +155,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         private final AudioPresentationDependencyResolver
                 .DiagnosticTransaction diagnostics;
         private boolean diagnosticsPublished;
+        private boolean commitPrepared;
         private boolean consumed;
 
         private RegistryLiveMutation() {
@@ -421,14 +422,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             pushSessionMusic(push.music());
             return true;
         }
-        if (command instanceof RestoreMusicOverride) {
-            restoreSessionMusic();
-            return true;
-        }
-        if (command instanceof EndMusicOverride end) {
-            endSessionMusic(end.musicId());
-            return true;
-        }
         if (command instanceof AddSmpsSfx) {
             return true;
         }
@@ -461,6 +454,19 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             return true;
         }
         return false;
+    }
+
+    boolean hasActiveMusicMetadata() {
+        return activeMusic != null;
+    }
+
+    int activeMusicMetadataId() {
+        return activeMusic == null ? -1 : activeMusic.musicId();
+    }
+
+    boolean activeMusicMetadataUsesSession() {
+        return activeMusic != null
+                && activeMusic.voice() instanceof SmpsMusicHandle;
     }
 
     private static boolean isPreparedSmps(MusicVoiceEntry music) {
@@ -560,9 +566,28 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             throw new IllegalStateException(
                     "audio registry mutation is not active");
         }
-        state.diagnostics.endPreparation();
+        if (!state.commitPrepared) {
+            prepareLiveMutationCommit(token);
+        }
         state.consumed = true;
         liveMutationOpen = false;
+    }
+
+    /** Runs the only fallible commit work while rollback is still possible. */
+    public void prepareLiveMutationCommit(LiveMutationToken token) {
+        assertOwnerBoundary();
+        RegistryLiveMutation state = requireLiveMutation(token);
+        requireUnconsumed(state);
+        if (!liveMutationOpen) {
+            throw new IllegalStateException(
+                    "audio registry mutation is not active");
+        }
+        if (state.commitPrepared) {
+            throw new IllegalStateException(
+                    "audio registry mutation commit is already prepared");
+        }
+        state.diagnostics.endPreparation();
+        state.commitPrepared = true;
     }
 
     /** Publishes diagnostics only after the composite owner committed. */

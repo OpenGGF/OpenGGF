@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -149,5 +150,41 @@ class TestSmpsPhysicalPort {
         assertEquals(committedWriteCount, observer.events().size());
         assertEquals(SmpsSessionTestFixtures.json(committed),
                 SmpsSessionTestFixtures.json(session.captureSnapshot()));
+    }
+
+    @Test
+    void muteAndOutputControlsRequireTheCurrentScopedEpoch() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+
+        session.applyChannelMasks(1 << 2, 1 << 1);
+        SmpsDriverSessionSnapshot masked = session.captureSnapshot();
+        assertTrue(masked.physical().synth().ym().mutes()[2]);
+        assertTrue(masked.physical().synth().psg().mutes()[1]);
+
+        SmpsPhysicalPort port = session.openTestEpoch(
+                SmpsSessionTestFixtures.owner(50));
+        port.setFmMute(2, false);
+        port.setPsgMute(1, false);
+        port.writePsg(0x84);
+        assertFalse(session.captureSnapshot().physical().outputSilenced());
+        port.silenceOutput();
+        session.closeTestEpoch(port.epoch());
+        JsonNode committed = SmpsSessionTestFixtures.json(
+                session.captureSnapshot());
+
+        assertFalse(session.captureSnapshot()
+                .physical().synth().ym().mutes()[2]);
+        assertFalse(session.captureSnapshot()
+                .physical().synth().psg().mutes()[1]);
+        assertTrue(session.captureSnapshot().physical().outputSilenced());
+        assertThrows(IllegalStateException.class,
+                () -> port.setFmMute(2, true));
+        assertThrows(IllegalStateException.class,
+                () -> port.setPsgMute(1, true));
+        assertThrows(IllegalStateException.class, port::silenceOutput);
+        assertEquals(committed, SmpsSessionTestFixtures.json(
+                session.captureSnapshot()));
     }
 }

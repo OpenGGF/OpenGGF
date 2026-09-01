@@ -160,16 +160,6 @@ public final class SmpsPhysicalDevice {
         state.consumed = true;
     }
 
-    void applyChannelMasks(int fmMask, int psgMask) {
-        requireActive();
-        for (int channel = 0; channel < 6; channel++) {
-            setFmMute(channel, (fmMask & (1 << channel)) != 0);
-        }
-        for (int channel = 0; channel < 4; channel++) {
-            setPsgMute(channel, (psgMask & (1 << channel)) != 0);
-        }
-    }
-
     void setFmMute(int channel, boolean mute) {
         requireActive();
         synth.setFmMute(channel, mute);

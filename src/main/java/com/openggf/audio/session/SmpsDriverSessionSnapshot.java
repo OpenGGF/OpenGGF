@@ -9,11 +9,17 @@ public record SmpsDriverSessionSnapshot(
         SmpsPendingGlobalCommand pendingGlobalCommand,
         SmpsSessionProfileFingerprint profile,
         SmpsSourceDescriptor selectedDacSource,
+        boolean speedShoesEnabled,
+        int speedMultiplier,
         SmpsPhysicalDevice.Snapshot physical) {
     public SmpsDriverSessionSnapshot {
         Objects.requireNonNull(pendingGlobalCommand,
                 "pendingGlobalCommand");
         Objects.requireNonNull(profile, "profile");
         Objects.requireNonNull(physical, "physical");
+        if (speedMultiplier < 1) {
+            throw new IllegalArgumentException(
+                    "speedMultiplier must be positive");
+        }
     }
 }

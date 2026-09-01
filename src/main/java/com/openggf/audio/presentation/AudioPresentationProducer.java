@@ -559,6 +559,8 @@ public final class AudioPresentationProducer {
             smpsSession.commitRestore(restore.session());
             registry.commitPreparedRestoreState(restore.registry());
             registry.reapplySessionControls();
+            registry.prepareLiveMutationCommit(registryMutation);
+            smpsSession.prepareLiveMutationCommit(sessionMutation);
             registry.commitLiveMutation(registryMutation);
             registryCommitted = true;
             smpsSession.commitLiveMutation(sessionMutation);
@@ -585,8 +587,7 @@ public final class AudioPresentationProducer {
         } catch (RuntimeException ignored) {
             // Observer failures cannot roll back or reject committed audio.
         }
-        registry.publishCommittedDiagnostics(registryMutation);
-        smpsSession.publishCommittedDiagnostics();
+        publishSessionDiagnosticsQuarantined(registryMutation);
     }
 
     private void discardPreparedRestore(
@@ -610,12 +611,13 @@ public final class AudioPresentationProducer {
             registryMutation = registry.captureLiveMutation();
             smpsSession.applyCommand(new SmpsSessionCommand.StopAllSfx());
             registry.stopTransientVoices();
+            registry.prepareLiveMutationCommit(registryMutation);
+            smpsSession.prepareLiveMutationCommit(sessionMutation);
             registry.commitLiveMutation(registryMutation);
             registryCommitted = true;
             smpsSession.commitLiveMutation(sessionMutation);
             sessionCommitted = true;
-            registry.publishCommittedDiagnostics(registryMutation);
-            smpsSession.publishCommittedDiagnostics();
+            publishSessionDiagnosticsQuarantined(registryMutation);
         } catch (RuntimeException failure) {
             if (registryMutation != null && !registryCommitted) {
                 try {
@@ -635,12 +637,75 @@ public final class AudioPresentationProducer {
         }
     }
 
+    /** Applies rewind resynchronization as one session/registry mutation. */
+    public void stopTransientVoicesThenApplyPendingCommandsAtOwnerBoundary() {
+        assertOwnerBoundary();
+        if (smpsSession == null) {
+            registry.stopTransientVoices();
+            commands.applyPending(commandApplier);
+            return;
+        }
+        SmpsDriverSession.LiveMutationToken sessionMutation =
+                smpsSession.captureLiveMutation();
+        AudioVoiceRegistry.LiveMutationToken registryMutation = null;
+        AudioPresentationCommandQueue.PendingBatch commandBatch = null;
+        boolean registryCommitted = false;
+        boolean sessionCommitted = false;
+        boolean commandsCommitted = false;
+        try {
+            registryMutation = registry.captureLiveMutation();
+            commandBatch = commands.capturePendingBatch();
+            smpsSession.applyCommand(new SmpsSessionCommand.StopAllSfx());
+            registry.stopTransientVoices();
+            commands.applyPendingBatch(commandBatch,
+                    this::applyResolvedSessionCommand);
+            prepareSessionCommandCommit(
+                    commandBatch, registryMutation, sessionMutation);
+            registry.commitLiveMutation(registryMutation);
+            registryCommitted = true;
+            smpsSession.commitLiveMutation(sessionMutation);
+            sessionCommitted = true;
+            commands.commitPendingBatch(commandBatch);
+            commandsCommitted = true;
+            publishSessionDiagnosticsQuarantined(registryMutation);
+        } catch (RuntimeException failure) {
+            if (registryMutation != null && !registryCommitted) {
+                try {
+                    registry.rollbackLiveMutation(registryMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            if (!sessionCommitted) {
+                try {
+                    smpsSession.rollbackLiveMutation(sessionMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            if (commandBatch != null && !commandsCommitted) {
+                try {
+                    commands.rollbackPendingBatch(commandBatch);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            throw failure;
+        }
+    }
+
+    public void stopTransientVoicesAtOwnerBoundary() {
+        assertOwnerBoundary();
+        stopTransientVoicesAtomically();
+    }
+
     /**
      * Fully drains commands queued while reverse output owned the frame
-     * boundary. Successfully applied entries are consumed exactly once; if an
-     * apply fails, the failure and its successors remain queued and this
-     * method throws. Callers must capture boundary state only after this
-     * method returns normally.
+     * boundary. Session-backed presentation retains the complete captured
+     * prefix until the registry/session composite commit, so any failure
+     * leaves the original order exactly retryable. The standalone Task-6
+     * compatibility path retains its legacy per-command consumption. Callers
+     * must capture boundary state only after this method returns normally.
      */
     public void applyPendingCommandsAtOwnerBoundary() {
         assertOwnerBoundary();
@@ -729,11 +794,14 @@ public final class AudioPresentationProducer {
         SmpsDriverSession.LiveMutationToken sessionMutation =
                 smpsSession.captureLiveMutation();
         AudioVoiceRegistry.LiveMutationToken registryMutation = null;
+        AudioPresentationCommandQueue.PendingBatch commandBatch = null;
         boolean registryCommitted = false;
         boolean sessionCommitted = false;
+        boolean commandsCommitted = false;
         try {
             registryMutation = registry.captureLiveMutation();
-            commands.applyPendingAtomically(
+            commandBatch = commands.capturePendingBatch();
+            commands.applyPendingBatch(commandBatch,
                     this::applyResolvedSessionCommand);
             registry.beginRendering();
             SmpsServiceOutcome outcome = smpsSession.serviceForward();
@@ -744,12 +812,15 @@ public final class AudioPresentationProducer {
                     ? mixSessionForwardResampled(stereoFrames)
                     : mixSessionForward(stereoFrames);
             registry.endRendering();
+            prepareSessionCommandCommit(
+                    commandBatch, registryMutation, sessionMutation);
             registry.commitLiveMutation(registryMutation);
             registryCommitted = true;
             smpsSession.commitLiveMutation(sessionMutation);
             sessionCommitted = true;
-            registry.publishCommittedDiagnostics(registryMutation);
-            smpsSession.publishCommittedDiagnostics();
+            commands.commitPendingBatch(commandBatch);
+            commandsCommitted = true;
+            publishSessionDiagnosticsQuarantined(registryMutation);
             return pcm;
         } catch (RuntimeException failure) {
             if (registryMutation != null && !registryCommitted) {
@@ -766,6 +837,13 @@ public final class AudioPresentationProducer {
                     failure.addSuppressed(rollbackFailure);
                 }
             }
+            if (commandBatch != null && !commandsCommitted) {
+                try {
+                    commands.rollbackPendingBatch(commandBatch);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
             throw failure;
         }
     }
@@ -774,18 +852,24 @@ public final class AudioPresentationProducer {
         SmpsDriverSession.LiveMutationToken sessionMutation =
                 smpsSession.captureLiveMutation();
         AudioVoiceRegistry.LiveMutationToken registryMutation = null;
+        AudioPresentationCommandQueue.PendingBatch commandBatch = null;
         boolean registryCommitted = false;
         boolean sessionCommitted = false;
+        boolean commandsCommitted = false;
         try {
             registryMutation = registry.captureLiveMutation();
-            commands.applyPendingAtomically(
+            commandBatch = commands.capturePendingBatch();
+            commands.applyPendingBatch(commandBatch,
                     this::applyResolvedSessionCommand);
+            prepareSessionCommandCommit(
+                    commandBatch, registryMutation, sessionMutation);
             registry.commitLiveMutation(registryMutation);
             registryCommitted = true;
             smpsSession.commitLiveMutation(sessionMutation);
             sessionCommitted = true;
-            registry.publishCommittedDiagnostics(registryMutation);
-            smpsSession.publishCommittedDiagnostics();
+            commands.commitPendingBatch(commandBatch);
+            commandsCommitted = true;
+            publishSessionDiagnosticsQuarantined(registryMutation);
         } catch (RuntimeException failure) {
             if (registryMutation != null && !registryCommitted) {
                 try {
@@ -801,8 +885,34 @@ public final class AudioPresentationProducer {
                     failure.addSuppressed(rollbackFailure);
                 }
             }
+            if (commandBatch != null && !commandsCommitted) {
+                try {
+                    commands.rollbackPendingBatch(commandBatch);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
             throw failure;
         }
+    }
+
+    private void prepareSessionCommandCommit(
+            AudioPresentationCommandQueue.PendingBatch commandBatch,
+            AudioVoiceRegistry.LiveMutationToken registryMutation,
+            SmpsDriverSession.LiveMutationToken sessionMutation) {
+        commands.preparePendingBatchCommit(commandBatch);
+        registry.prepareLiveMutationCommit(registryMutation);
+        smpsSession.prepareLiveMutationCommit(sessionMutation);
+    }
+
+    private void publishSessionDiagnosticsQuarantined(
+            AudioVoiceRegistry.LiveMutationToken registryMutation) {
+        try {
+            registry.publishCommittedDiagnostics(registryMutation);
+        } catch (RuntimeException ignored) {
+            // Observer failures cannot reject or replay committed audio.
+        }
+        smpsSession.publishCommittedDiagnostics();
     }
 
     private void applyResolvedSessionCommand(

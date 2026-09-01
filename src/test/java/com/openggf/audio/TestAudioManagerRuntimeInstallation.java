@@ -3,6 +3,7 @@ package com.openggf.audio;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -175,6 +178,48 @@ class TestAudioManagerRuntimeInstallation {
     }
 
     @Test
+    void baseGenerationChangesReplaceOneSessionWhileDonorChangesPreserveIt()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new FixedRateNullBackend(48_000));
+        audio.setAudioProfile(musicProfile());
+        audio.setRom(new Rom());
+        audio.presentFrame(PresentationMode.SILENT);
+        SmpsDriverSession first = shadowSession(audio);
+
+        audio.setAudioProfile(musicProfile());
+
+        SmpsDriverSession afterProfile = shadowSession(audio);
+        assertNotSame(first, afterProfile,
+                "a base profile generation change replaces the session");
+        assertThrows(IllegalStateException.class, first::captureSnapshot,
+                "the previous base session must be closed");
+        audio.presentFrame(PresentationMode.SILENT);
+        assertSame(afterProfile, shadowSession(audio),
+                "the profile change installs exactly one replacement");
+
+        audio.setRom(new Rom());
+
+        SmpsDriverSession afterRom = shadowSession(audio);
+        assertNotSame(afterProfile, afterRom,
+                "a base ROM generation change replaces the session");
+        assertThrows(IllegalStateException.class,
+                afterProfile::captureSnapshot,
+                "the prior-generation session must be closed");
+        audio.presentFrame(PresentationMode.SILENT);
+        assertSame(afterRom, shadowSession(audio),
+                "the ROM change installs exactly one replacement");
+
+        audio.registerDonorLoader("donor",
+                new AudioTestFixtures.StubSmpsLoader(),
+                AudioTestFixtures.EMPTY_DAC);
+
+        assertSame(afterRom, shadowSession(audio),
+                "donor catalog changes retain the base-owned session");
+    }
+
+    @Test
     void resetStateReinstallsBackendSinkWithoutReplacingTheBackend()
             throws Exception {
         AudioManager audio = AudioManager.getInstance();
@@ -305,6 +350,14 @@ class TestAudioManagerRuntimeInstallation {
         Field field = AudioManager.class.getDeclaredField("presentationSink");
         field.setAccessible(true);
         return (AudioPresentationSink) field.get(audio);
+    }
+
+    private static SmpsDriverSession shadowSession(AudioManager audio)
+            throws Exception {
+        Field field = AudioManager.class.getDeclaredField(
+                "shadowSmpsSession");
+        field.setAccessible(true);
+        return (SmpsDriverSession) field.get(audio);
     }
 
     private static class FixedRateNullBackend extends NullAudioBackend {

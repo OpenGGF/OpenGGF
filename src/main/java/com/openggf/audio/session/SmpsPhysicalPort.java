@@ -21,6 +21,12 @@ public interface SmpsPhysicalPort {
 
     void forceSilenceFmChannel(int channelId);
 
+    void setFmMute(int channel, boolean mute);
+
+    void setPsgMute(int channel, boolean mute);
+
+    void silenceOutput();
+
     AdmissionToken captureAdmissionState(int fmMask, int psgMask);
 
     void restoreAdmissionState(AdmissionToken token);

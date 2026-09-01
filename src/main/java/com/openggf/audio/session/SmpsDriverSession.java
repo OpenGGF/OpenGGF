@@ -51,7 +51,9 @@ public final class SmpsDriverSession implements AutoCloseable {
             PreparedPendingService pendingService) {
         public PreparedSavedOverride {
             Objects.requireNonNull(logical, "logical");
-            Objects.requireNonNull(policy, "policy");
+            if (musicId(logical) >= 0) {
+                Objects.requireNonNull(policy, "policy");
+            }
         }
     }
 
@@ -75,7 +77,9 @@ public final class SmpsDriverSession implements AutoCloseable {
             PendingService pendingService) {
         private SavedOverride {
             Objects.requireNonNull(logical, "logical");
-            Objects.requireNonNull(policy, "policy");
+            if (musicId(logical) >= 0) {
+                Objects.requireNonNull(policy, "policy");
+            }
         }
     }
 
@@ -123,6 +127,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         private final int speedMultiplier;
         private final boolean ringLeft;
         private final int diagnosticCount;
+        private boolean commitPrepared;
         private boolean consumed;
 
         private SessionLiveMutation(
@@ -215,6 +220,24 @@ public final class SmpsDriverSession implements AutoCloseable {
         public void forceSilenceFmChannel(int channelId) {
             requireOpen(this);
             device.forceSilenceFmChannel(channelId);
+        }
+
+        @Override
+        public void setFmMute(int channel, boolean mute) {
+            requireOpen(this);
+            device.setFmMute(channel, mute);
+        }
+
+        @Override
+        public void setPsgMute(int channel, boolean mute) {
+            requireOpen(this);
+            device.setPsgMute(channel, mute);
+        }
+
+        @Override
+        public void silenceOutput() {
+            requireOpen(this);
+            device.silenceOutput();
         }
 
         @Override
@@ -326,8 +349,7 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort();
-            device.setFmMute(channel, mute);
+            currentPort().setFmMute(channel, mute);
         }
 
         @Override
@@ -335,8 +357,7 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort();
-            device.setPsgMute(channel, mute);
+            currentPort().setPsgMute(channel, mute);
         }
 
         @Override
@@ -468,9 +489,9 @@ public final class SmpsDriverSession implements AutoCloseable {
         installDriverObservers();
         withPort(driverIdentity, port -> {
             applyProgram(port, policy.boot());
+            port.silenceOutput();
             return null;
         });
-        device.silenceOutput();
         initialized = true;
         driver.observeLifecycle(
                 SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED);
@@ -489,9 +510,9 @@ public final class SmpsDriverSession implements AutoCloseable {
             clearOverrides();
             withPort(driverIdentity, port -> {
                 applyProgram(port, policy.stopAll());
+                port.silenceOutput();
                 return null;
             });
-            device.silenceOutput();
             restoreLogicalWithoutWrites(emptyLogicalSnapshot(
                     driver.captureSnapshot()));
             pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
@@ -555,6 +576,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             case SmpsSessionCommand.StopAllSfx ignored -> stopAllSfx();
             case SmpsSessionCommand.PushOverride push ->
                     pushOverride(push.activation());
+            case SmpsSessionCommand.SuspendForPcmOverride ignored ->
+                    suspendForPcmOverride();
             case SmpsSessionCommand.RestoreOverride ignored ->
                     restoreOverride();
             case SmpsSessionCommand.EndOverride end ->
@@ -600,6 +623,8 @@ public final class SmpsDriverSession implements AutoCloseable {
                 pendingGlobalCommand,
                 profile,
                 selectedDacSource,
+                speedShoesEnabled,
+                speedMultiplier,
                 device.captureSnapshot());
     }
 
@@ -653,8 +678,11 @@ public final class SmpsDriverSession implements AutoCloseable {
                 : resolvedLogical.savedOverrides()) {
             SmpsDacSelection selected = resolveSelectedDac(
                     saved.logical(), resolver);
+            SmpsLogicalTransitionPolicy savedPolicy =
+                    musicId(saved.logical()) < 0
+                            ? null : policyForSavedMusic(saved.logical());
             savedOverrides.add(new PreparedSavedOverride(
-                    saved.logical(), policyForSavedMusic(saved.logical()),
+                    saved.logical(), savedPolicy,
                     selected, preparePendingService(
                             saved.logical().pendingService(), resolver)));
         }
@@ -680,6 +708,8 @@ public final class SmpsDriverSession implements AutoCloseable {
         pendingGlobalCommand =
                 resolved.session().pendingGlobalCommand();
         selectedDacSource = resolved.session().selectedDacSource();
+        speedShoesEnabled = resolved.session().speedShoesEnabled();
+        speedMultiplier = resolved.session().speedMultiplier();
         pendingService = materializePendingService(
                 resolved.pendingService());
         clearOverrides();
@@ -693,6 +723,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                     saved.policy(), saved.selectedDac(),
                     materializePendingService(saved.pendingService()));
         }
+        applyCurrentLogicalControls();
     }
 
     public LiveMutationToken captureLiveMutation() {
@@ -718,8 +749,27 @@ public final class SmpsDriverSession implements AutoCloseable {
             throw new IllegalStateException(
                     "SMPS session mutation is not active");
         }
+        if (!state.commitPrepared) {
+            prepareLiveMutationCommit(token);
+        }
         state.consumed = true;
         transactionOpen = false;
+    }
+
+    /** Validates commit while the composite owner can still roll back. */
+    public void prepareLiveMutationCommit(LiveMutationToken token) {
+        requireActive();
+        SessionLiveMutation state = requireLiveMutation(token);
+        requireUnconsumed(state);
+        if (!transactionOpen) {
+            throw new IllegalStateException(
+                    "SMPS session mutation is not active");
+        }
+        if (state.commitPrepared) {
+            throw new IllegalStateException(
+                    "SMPS session mutation commit is already prepared");
+        }
+        state.commitPrepared = true;
     }
 
     public void rollbackLiveMutation(LiveMutationToken token) {
@@ -792,7 +842,17 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     public void applyChannelMasks(int fmMask, int psgMask) {
         requireActive();
-        device.applyChannelMasks(fmMask, psgMask);
+        withPort(driverIdentity, port -> {
+            for (int channel = 0; channel < 6; channel++) {
+                port.setFmMute(channel,
+                        (fmMask & (1 << channel)) != 0);
+            }
+            for (int channel = 0; channel < 4; channel++) {
+                port.setPsgMute(channel,
+                        (psgMask & (1 << channel)) != 0);
+            }
+            return null;
+        });
     }
 
     public void setDriverServiceObserver(
@@ -963,6 +1023,10 @@ public final class SmpsDriverSession implements AutoCloseable {
     }
 
     private void stopMusic() {
+        stopMusic(true);
+    }
+
+    private void stopMusic(boolean discardOverrides) {
         SmpsSequencer music = driver.firstMusicSequencer();
         if (music != null) {
             withPort(driverIdentity, port -> {
@@ -989,20 +1053,25 @@ public final class SmpsDriverSession implements AutoCloseable {
         restoreLogicalWithoutWrites(filterLogicalSnapshot(
                 driver.captureSnapshot(), true));
         pendingService = null;
-        clearOverrides();
+        if (discardOverrides) {
+            clearOverrides();
+        }
         if (driver.captureSnapshot().sequencers().isEmpty()) {
-            device.silenceOutput();
+            withPort(driverIdentity, port -> {
+                port.silenceOutput();
+                return null;
+            });
         }
     }
 
     private void stopAllSfx() {
         withPort(driverIdentity, port -> {
             driver.stopAllSfx();
+            if (driver.firstMusicSequencer() == null) {
+                port.silenceOutput();
+            }
             return null;
         });
-        if (driver.firstMusicSequencer() == null) {
-            device.silenceOutput();
-        }
     }
 
     private void pushOverride(
@@ -1027,13 +1096,34 @@ public final class SmpsDriverSession implements AutoCloseable {
                 SmpsDriverServiceObserver.LifecycleKind.SAVE);
     }
 
+    private void suspendForPcmOverride() {
+        if (overrideCount == overrideStack.length) {
+            throw new IllegalStateException(
+                    "SMPS music override capacity exhausted");
+        }
+        SmpsDriverSnapshot current = driver.captureSnapshot();
+        boolean savesSmpsMusic = musicId(current) >= 0;
+        SmpsDriverSnapshot saved = savesSmpsMusic
+                ? current : emptyLogicalSnapshot(current);
+        overrideStack[overrideCount++] = new SavedOverride(
+                saved,
+                savesSmpsMusic ? policyForSavedMusic(saved) : null,
+                savesSmpsMusic ? selectedDacFor(saved) : null,
+                savesSmpsMusic ? pendingService : null);
+        stopMusic(false);
+        driver.observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.SAVE);
+    }
+
     private void restoreOverride() {
         if (overrideCount == 0) {
             return;
         }
         SavedOverride saved = overrideStack[--overrideCount];
         overrideStack[overrideCount] = null;
-        if (saved.pendingService() != null) {
+        if (musicId(saved.logical()) < 0) {
+            stopMusic(false);
+        } else if (saved.pendingService() != null) {
             restoreLogicalWithoutWrites(saved.logical());
             pendingService = saved.pendingService();
         } else {
@@ -1081,9 +1171,9 @@ public final class SmpsDriverSession implements AutoCloseable {
                 driver.captureSnapshot()));
         withPort(driverIdentity, port -> {
             applyProgram(port, policy.boot());
+            port.silenceOutput();
             return null;
         });
-        device.silenceOutput();
         initialized = true;
         selectedDacSource = null;
         driver.observeLifecycle(

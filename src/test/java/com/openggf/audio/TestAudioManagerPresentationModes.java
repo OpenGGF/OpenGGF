@@ -16,6 +16,7 @@ import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.SmpsAssetKey;
 import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -202,6 +203,76 @@ class TestAudioManagerPresentationModes {
 
         assertEquals(0x81, audio.captureLogicalSnapshot().presentation()
                 .activeMusic().musicId());
+    }
+
+    @Test
+    void authoritativeResyncPopsThePersistentSessionOverride() {
+        AudioManager audio = AudioManager.getInstance();
+        configureSessionMusic(audio, 0x81, 0x82);
+        audio.playMusic(0x81);
+        audio.playMusic(0x82);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(0x82, activeSmpsMusicId(audio));
+        audio.beginReverseAudioPresentation();
+
+        audio.afterRewindRestore(7,
+                AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+
+        assertEquals(0x81, activeSmpsMusicId(audio),
+                "resync must pop the persistent session override, not only "
+                        + "its registry handle");
+    }
+
+    @Test
+    void stopAllPresentationClearsPersistentSessionAndRegistry() {
+        AudioManager audio = AudioManager.getInstance();
+        configureSessionMusic(audio, 0x81);
+        audio.playMusic(0x81);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(0x81, activeSmpsMusicId(audio));
+        audio.beginReverseAudioPresentation();
+
+        audio.afterRewindRestore(7,
+                AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+
+        var presentation = audio.captureLogicalSnapshot().presentation();
+        assertNull(presentation.activeMusic());
+        assertTrue(presentation.smpsLogical().sequencers().isEmpty(),
+                "stop-all must clear the persistent logical driver too");
+    }
+
+    @Test
+    void nullSelectionLogicalStagingUsesThePersistentSessionTransaction() {
+        AudioManager audio = AudioManager.getInstance();
+        configureSessionMusic(audio, 0x81);
+
+        audio.replayTimelineCommandLogically(new AudioCommand.PlayMusic(
+                0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null));
+
+        assertEquals(0x81, activeSmpsMusicId(audio),
+                "null-selection staging must not update registry metadata alone");
+    }
+
+    @Test
+    void synchronousQueuePressureDrainUsesTheSessionCompositeBoundary()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        configureSessionMusic(audio, 0x81);
+        audio.playMusic(0x81);
+        AudioPresentationCommandQueue queue = commands(audio);
+        for (int index = queue.size();
+                index < AudioPresentationCommandQueue.CAPACITY; index++) {
+            queue.submit(new AudioPresentationCommand.FadeMusic(
+                            index + 1, 1),
+                    () -> true, ignored -> { });
+        }
+
+        audio.toggleMute(ChannelType.FM, 0);
+
+        assertEquals(0x81, activeSmpsMusicId(audio),
+                "pressure drain must apply the queued activation to the session");
+        assertEquals(1, queue.size(),
+                "the triggering command remains queued after the drained batch");
     }
 
     @Test
@@ -564,6 +635,41 @@ class TestAudioManagerPresentationModes {
                 SampleBackedVoice.loopingMusic(
                         voiceId, registeredPcm(audio, assetId),
                         48_000, 1.0f));
+    }
+
+    private static void configureSessionMusic(
+            AudioManager audio, int... musicIds) {
+        AudioTestFixtures.StubSmpsLoader loader =
+                new AudioTestFixtures.StubSmpsLoader();
+        for (int musicId : musicIds) {
+            AudioTestFixtures.StubSmpsData music =
+                    new AudioTestFixtures.StubSmpsData(
+                            "session-music-" + musicId);
+            music.setId(musicId);
+            loader.musicResults.put(musicId, music);
+        }
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader) {
+            @Override
+            public boolean isMusicOverride(int musicId) {
+                return musicId == 0x82;
+            }
+
+            @Override
+            public SmpsSequencerConfig getSequencerConfig() {
+                return new SmpsSequencerConfig.Builder().build();
+            }
+        });
+        audio.setRom(new com.openggf.data.Rom());
+    }
+
+    private static int activeSmpsMusicId(AudioManager audio) {
+        return audio.captureLogicalSnapshot().presentation().smpsLogical()
+                .sequencers().stream()
+                .filter(entry -> !entry.sfx())
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "no persistent SMPS music is active"))
+                .source().id();
     }
 
     private static DecodedPcm registeredPcm(

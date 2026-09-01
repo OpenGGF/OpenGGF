@@ -83,6 +83,7 @@ public final class AudioPresentationCommandResolver {
     private final Consumer<String> warningConsumer;
     private final BooleanSupplier ownerThreadBoundary;
     private final Consumer<AudioPresentationCommand> synchronousApply;
+    private final Runnable synchronousDrain;
     private long nextVoiceId = 1;
 
     public AudioPresentationCommandResolver(
@@ -101,6 +102,26 @@ public final class AudioPresentationCommandResolver {
                 ownerThreadBoundary, "ownerThreadBoundary");
         this.synchronousApply = Objects.requireNonNull(
                 synchronousApply, "synchronousApply");
+        synchronousDrain = null;
+    }
+
+    public AudioPresentationCommandResolver(
+            AudioPresentationCommandQueue queue,
+            AudioPresentationSourceFactory factory,
+            Sources sources,
+            Consumer<String> warningConsumer,
+            BooleanSupplier ownerThreadBoundary,
+            Runnable synchronousDrain) {
+        this.queue = Objects.requireNonNull(queue, "queue");
+        this.factory = Objects.requireNonNull(factory, "factory");
+        this.sources = Objects.requireNonNull(sources, "sources");
+        this.warningConsumer =
+                Objects.requireNonNull(warningConsumer, "warningConsumer");
+        this.ownerThreadBoundary = Objects.requireNonNull(
+                ownerThreadBoundary, "ownerThreadBoundary");
+        synchronousApply = null;
+        this.synchronousDrain = Objects.requireNonNull(
+                synchronousDrain, "synchronousDrain");
     }
 
     public static AudioPresentationCommandResolver controlsOnly(
@@ -408,7 +429,11 @@ public final class AudioPresentationCommandResolver {
     }
 
     private void enqueue(AudioPresentationCommand command) {
-        queue.submit(command, ownerThreadBoundary, synchronousApply);
+        if (synchronousDrain != null) {
+            queue.submit(command, ownerThreadBoundary, synchronousDrain);
+        } else {
+            queue.submit(command, ownerThreadBoundary, synchronousApply);
+        }
     }
 
     private long allocateVoiceId() {

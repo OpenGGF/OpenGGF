@@ -3,15 +3,21 @@ package com.openggf.audio.session;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.ChannelType;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.output.NoDeviceAudioSink;
+import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationCommandQueue;
+import com.openggf.audio.presentation.AudioPresentationDependencyResolver;
 import com.openggf.audio.presentation.AudioPresentationMixer;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
+import com.openggf.audio.presentation.DecodedPcm;
 import com.openggf.audio.presentation.DecodedPcmCache;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -21,13 +27,17 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSequencerTestAccess;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -319,6 +329,308 @@ class TestSmpsDriverSession {
         session.serviceForward();
 
         assertSame(fingerprint, session.captureSnapshot().profile());
+    }
+
+    @Test
+    void restoreOwnsControlStateUsedByTheNextActivation() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        session.applyCommand(new SmpsSessionCommand.SetSpeedShoes(true));
+        session.applyCommand(new SmpsSessionCommand.SetSpeedMultiplier(4));
+        SmpsDriverSessionSnapshot selectedSession =
+                session.captureSnapshot();
+        SmpsDriverSnapshot selectedLogical =
+                session.captureLogicalSnapshot();
+
+        session.applyCommand(new SmpsSessionCommand.SetSpeedShoes(false));
+        session.applyCommand(new SmpsSessionCommand.SetSpeedMultiplier(1));
+        session.commitRestore(session.prepareRestore(
+                selectedSession, selectedLogical, ignored -> null));
+        session.queueActivation(activation(10));
+
+        var activated = session.captureLogicalSnapshot()
+                .sequencers().getFirst().snapshot();
+        assertTrue(activated.speedShoes(),
+                "restored speed-shoes state must own later activations");
+        assertEquals(4, activated.speedMultiplier(),
+                "abandoned-timeline multiplier must not leak forward");
+    }
+
+    @Test
+    void serviceFailureRetainsTheAppliedCommandBatchAtItsRetryPosition() {
+        AtomicBoolean failActivation = new AtomicBoolean(true);
+        SmpsPhysicalPolicy delegate =
+                LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
+        SmpsPhysicalPolicy policy = new SmpsPhysicalPolicy() {
+            @Override
+            public Identity identity() {
+                return new Identity("test-fail-once-activation");
+            }
+
+            @Override
+            public SmpsWriteProgram boot() {
+                return delegate.boot();
+            }
+
+            @Override
+            public SmpsWriteProgram stopAll() {
+                return delegate.stopAll();
+            }
+
+            @Override
+            public SmpsWriteProgram activateMusic(
+                    SmpsMusicActivation activation) {
+                if (failActivation.getAndSet(false)) {
+                    throw new IllegalStateException(
+                            "injected service failure");
+                }
+                return delegate.activateMusic(activation);
+            }
+        };
+        SmpsPhysicalDevice.Settings physicalSettings =
+                SmpsSessionTestFixtures.settings();
+        SmpsDriverSession session = new SmpsDriverSession(
+                physicalSettings, policy,
+                new SmpsSessionTestFixtures.RecordingObserver(),
+                new SmpsSessionProfileFingerprint(
+                        "test", 7, policy.identity(), physicalSettings));
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory.Settings settings =
+                new AudioPresentationSourceFactory.Settings(
+                        44_100, SmpsSequencer.Region.NTSC,
+                        false, false, false, false, 1,
+                        () -> { }, new DecodedPcmCache(), ignored -> null);
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(
+                        () -> true, handlers, settings, session);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = new AudioPresentationProducer(
+                44_100, 60, 44_100, 32, registry, commands,
+                new AudioPresentationMixer(735),
+                new NoDeviceAudioSink(44_100), session);
+        PreparedSmpsMusicActivation prepared = activation(12);
+        AudioSourceDescriptor source = AudioSourceDescriptor.baseMusic(12);
+        commands.submit(new AudioPresentationCommand.ReplaceMusic(
+                        new AudioPresentationCommand.MusicVoiceEntry(
+                                12, source,
+                                new AudioPresentationCommand
+                                        .SmpsVoiceDescriptor(
+                                        12, 0, 12, source, 735,
+                                        prepared))),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+
+        assertThrows(IllegalStateException.class,
+                () -> producer.present(0, PresentationMode.FORWARD));
+        assertEquals(1, commands.size(),
+                "a service failure must leave the applied batch queued");
+        assertTrue(session.captureLogicalSnapshot().sequencers().isEmpty(),
+                "the failed service transaction must roll back logical state");
+
+        producer.present(0, PresentationMode.SILENT);
+
+        assertEquals(0, commands.size());
+        assertEquals(12, session.captureLogicalSnapshot()
+                .sequencers().getFirst().source().id());
+    }
+
+    @Test
+    void renderFailureRetainsTheAppliedCommandBatchAtItsRetryPosition()
+            throws Exception {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = sessionProducer(
+                session, registry, commands);
+        commands.submit(
+                new AudioPresentationCommand.SetSpeedMultiplier(4),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+        Field renderBuffer = AudioPresentationProducer.class
+                .getDeclaredField("smpsSourcePcm");
+        renderBuffer.setAccessible(true);
+        short[] validBuffer = (short[]) renderBuffer.get(producer);
+        renderBuffer.set(producer, new short[0]);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> producer.present(0, PresentationMode.FORWARD));
+        assertEquals(1, commands.size(),
+                "render failure must leave the applied batch queued");
+        assertEquals(1, session.captureSnapshot().speedMultiplier(),
+                "render failure must roll session controls back");
+
+        renderBuffer.set(producer, validBuffer);
+        producer.present(1, PresentationMode.SILENT);
+
+        assertEquals(0, commands.size());
+        assertEquals(4, session.captureSnapshot().speedMultiplier());
+    }
+
+    @Test
+    void registryCommitPreparationFailureRetainsTheBatchAndRollsBackSession() {
+        AtomicBoolean failPreparation = new AtomicBoolean(true);
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioPresentationDependencyResolver resolver =
+                resolverWithDiagnostics(factory, () -> {
+                    if (failPreparation.getAndSet(false)) {
+                        throw new IllegalStateException(
+                                "injected registry prepare failure");
+                    }
+                }, () -> { });
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, resolver, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = sessionProducer(
+                session, registry, commands);
+        commands.submit(
+                new AudioPresentationCommand.SetSpeedMultiplier(4),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+
+        assertThrows(IllegalStateException.class,
+                () -> producer.present(0, PresentationMode.SILENT));
+        assertEquals(1, commands.size());
+        assertEquals(1, session.captureSnapshot().speedMultiplier(),
+                "participant prepare failure must roll back session controls");
+
+        producer.present(1, PresentationMode.SILENT);
+
+        assertEquals(0, commands.size());
+        assertEquals(4, session.captureSnapshot().speedMultiplier());
+    }
+
+    @Test
+    void diagnosticPublicationFailureCannotRetainOrReplayCommittedBatch() {
+        AtomicInteger diagnosticCommits = new AtomicInteger();
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioPresentationDependencyResolver resolver =
+                resolverWithDiagnostics(factory, () -> { }, () -> {
+                    diagnosticCommits.incrementAndGet();
+                    throw new IllegalStateException(
+                            "injected diagnostic publication failure");
+                });
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, resolver, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = sessionProducer(
+                session, registry, commands);
+        commands.submit(
+                new AudioPresentationCommand.ToggleMute(
+                        ChannelType.FM, 0),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+
+        producer.present(0, PresentationMode.SILENT);
+
+        assertEquals(0, commands.size(),
+                "diagnostic publication follows the irreversible commit");
+        assertTrue(session.captureSnapshot()
+                .physical().synth().ym().mutes()[0]);
+        assertEquals(1, diagnosticCommits.get());
+
+        producer.present(1, PresentationMode.SILENT);
+
+        assertTrue(session.captureSnapshot()
+                .physical().synth().ym().mutes()[0],
+                "the committed toggle must not replay after observer failure");
+        assertEquals(2, diagnosticCommits.get(),
+                "each presentation owns a new diagnostic transaction");
+    }
+
+    private static AudioPresentationSourceFactory sessionFactory(
+            SmpsDriverSession session,
+            SmpsCoordFlagHandlerOwner handlers) {
+        AudioPresentationSourceFactory.Settings settings =
+                new AudioPresentationSourceFactory.Settings(
+                        44_100, SmpsSequencer.Region.NTSC,
+                        false, false, false, false, 1,
+                        () -> { }, new DecodedPcmCache(), ignored -> null);
+        return new AudioPresentationSourceFactory(
+                () -> true, handlers, settings, session);
+    }
+
+    private static AudioPresentationProducer sessionProducer(
+            SmpsDriverSession session,
+            AudioVoiceRegistry registry,
+            AudioPresentationCommandQueue commands) {
+        return new AudioPresentationProducer(
+                44_100, 60, 44_100, 32, registry, commands,
+                new AudioPresentationMixer(735),
+                new NoDeviceAudioSink(44_100), session);
+    }
+
+    private static AudioPresentationDependencyResolver
+            resolverWithDiagnostics(
+            AudioPresentationSourceFactory factory,
+            Runnable prepare,
+            Runnable commit) {
+        return new AudioPresentationDependencyResolver() {
+            @Override
+            public DiagnosticTransaction beginDiagnosticTransaction() {
+                return new DiagnosticTransaction() {
+                    @Override
+                    public void endPreparation() {
+                        prepare.run();
+                    }
+
+                    @Override
+                    public void commit() {
+                        commit.run();
+                    }
+
+                    @Override
+                    public void discard() {
+                    }
+                };
+            }
+
+            @Override
+            public DecodedPcm resolvePcm(String assetId) {
+                return factory.resolvePcm(assetId);
+            }
+
+            @Override
+            public com.openggf.audio.smps.DacData resolveDac(
+                    SmpsSourceDescriptor source) {
+                return factory.resolveDac(source);
+            }
+
+            @Override
+            public SmpsCompositeVoice recreateSmps(
+                    PresentationVoiceSnapshot.Smps snapshot) {
+                return factory.recreateSmps(snapshot);
+            }
+
+            @Override
+            public SmpsCompositeVoice recreateSmps(
+                    AudioPresentationCommand.SmpsVoiceDescriptor descriptor) {
+                return factory.recreateSmps(descriptor);
+            }
+        };
     }
 
     private static PreparedSmpsMusicActivation activation(int id) {

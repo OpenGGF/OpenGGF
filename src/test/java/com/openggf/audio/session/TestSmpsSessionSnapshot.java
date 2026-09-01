@@ -223,6 +223,7 @@ class TestSmpsSessionSnapshot {
                 new SmpsDriverSessionSnapshot(
                         current.initialized(), current.pendingGlobalCommand(),
                         stale, current.selectedDacSource(),
+                        current.speedShoesEnabled(), current.speedMultiplier(),
                         current.physical());
         var before = SmpsSessionTestFixtures.json(current);
         observer.clear();

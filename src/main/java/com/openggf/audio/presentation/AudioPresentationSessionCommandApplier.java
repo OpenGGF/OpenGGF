@@ -34,20 +34,41 @@ public final class AudioPresentationSessionCommandApplier {
                 session.applyCommand(new SmpsSessionCommand.StopMusic());
             }
         } else if (command
-                instanceof AudioPresentationCommand.PushMusicOverride push
-                && push.music().voiceDescriptor()
-                instanceof AudioPresentationCommand.SmpsVoiceDescriptor smps
-                && smps.activation() != null) {
-            session.applyCommand(
-                    new SmpsSessionCommand.PushOverride(smps.activation()));
+                instanceof AudioPresentationCommand.PushMusicOverride push) {
+            boolean replacesDifferentForeground =
+                    registry.hasActiveMusicMetadata()
+                            && registry.activeMusicMetadataId()
+                            != push.music().musicId();
+            if (push.music().voiceDescriptor()
+                    instanceof AudioPresentationCommand.SmpsVoiceDescriptor smps
+                    && smps.activation() != null) {
+                if (replacesDifferentForeground
+                        && !registry.activeMusicMetadataUsesSession()) {
+                    session.applyCommand(
+                            new SmpsSessionCommand.SuspendForPcmOverride());
+                }
+                session.applyCommand(
+                        new SmpsSessionCommand.PushOverride(
+                                smps.activation()));
+            } else if (replacesDifferentForeground) {
+                session.applyCommand(
+                        new SmpsSessionCommand.SuspendForPcmOverride());
+            } else {
+                session.applyCommand(new SmpsSessionCommand.StopMusic());
+            }
         } else if (command
                 instanceof AudioPresentationCommand.RestoreMusicOverride) {
             session.applyCommand(
                     new SmpsSessionCommand.RestoreOverride());
         } else if (command
                 instanceof AudioPresentationCommand.EndMusicOverride end) {
-            session.applyCommand(
-                    new SmpsSessionCommand.EndOverride(end.musicId()));
+            if (registry.activeMusicMetadataId() == end.musicId()) {
+                session.applyCommand(
+                        new SmpsSessionCommand.RestoreOverride());
+            } else {
+                session.applyCommand(
+                        new SmpsSessionCommand.EndOverride(end.musicId()));
+            }
         } else if (command instanceof AudioPresentationCommand.AddSmpsSfx add) {
             var program = registry.prepareSessionSfx(add);
             if (program != null) {

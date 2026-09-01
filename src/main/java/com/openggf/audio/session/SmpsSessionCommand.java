@@ -23,6 +23,13 @@ public sealed interface SmpsSessionCommand {
         }
     }
 
+    /**
+     * Saves the current SMPS music slot, if any, and suspends it while a
+     * sample-backed music override owns the presentation foreground.
+     */
+    record SuspendForPcmOverride() implements SmpsSessionCommand {
+    }
+
     record RestoreOverride() implements SmpsSessionCommand {
     }
 

@@ -217,6 +217,63 @@ class TestAudioPresentationCommandQueue {
     }
 
     @Test
+    void capturedBatchStaysInExactOrderUntilCompositeCommit() {
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        for (int steps : new int[] {1, 2, 3}) {
+            queue.submit(new FadeMusic(steps, 1),
+                    () -> true, ignored -> { });
+        }
+        List<Integer> attempts = new ArrayList<>();
+        AudioPresentationCommandQueue.PendingBatch first =
+                queue.capturePendingBatch();
+
+        queue.applyPendingBatch(first, command -> attempts.add(
+                ((FadeMusic) command).steps()));
+        assertEquals(3, queue.size(),
+                "application alone must not consume the captured prefix");
+        queue.rollbackPendingBatch(first);
+
+        AudioPresentationCommandQueue.PendingBatch retry =
+                queue.capturePendingBatch();
+        queue.applyPendingBatch(retry, command -> attempts.add(
+                ((FadeMusic) command).steps()));
+        queue.preparePendingBatchCommit(retry);
+        queue.commitPendingBatch(retry);
+
+        assertEquals(List.of(1, 2, 3, 1, 2, 3), attempts,
+                "rollback leaves every command at its original retry position");
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void appliedBatchRemainsRetryableWhenCompositeRenderFails() {
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new SetSpeedMultiplier(4),
+                () -> true, ignored -> { });
+        AudioPresentationCommandQueue.PendingBatch batch =
+                queue.capturePendingBatch();
+
+        assertThrows(IllegalStateException.class, () -> {
+            try {
+                queue.applyPendingBatch(batch, ignored -> { });
+                throw new IllegalStateException(
+                        "injected physical render failure");
+            } catch (RuntimeException failure) {
+                queue.rollbackPendingBatch(batch);
+                throw failure;
+            }
+        });
+
+        assertEquals(1, queue.size(),
+                "render completion precedes command consumption");
+        List<AudioPresentationCommand> retry = new ArrayList<>();
+        queue.applyPendingAtomically(retry::add);
+        assertEquals(List.of(new SetSpeedMultiplier(4)), retry);
+    }
+
+    @Test
     void everyAudioCommandVariantHasOneResolvedPresentationCommand() {
         Set<String> resolvedNames = Arrays.stream(AudioPresentationCommand.class.getPermittedSubclasses())
                 .map(Class::getSimpleName)

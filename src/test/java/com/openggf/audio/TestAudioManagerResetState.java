@@ -145,7 +145,7 @@ public class TestAudioManagerResetState {
     }
 
     @Test
-    void setRomAndProfilePublishNewGenerationsWithoutRetargetingSnapshots() {
+    void setRomAndProfileCreateHardSessionBoundariesWithoutRetargetingSnapshots() {
         Rom firstRom = new Rom();
         Rom secondRom = new Rom();
         DacData firstDac = dac(291);
@@ -179,8 +179,10 @@ public class TestAudioManagerResetState {
         assertSame(secondRom, replacementProfile.lastRom,
                 "setAudioProfile must rebuild against the currently published ROM");
         am.restoreLogicalSnapshot(oldSnapshot);
-        assertEquals(first.descriptor(), currentSource().descriptor());
-        assertSame(firstDac, currentSource().dac());
+        assertEquals(replacement.descriptor(), currentSource().descriptor(),
+                "a stale-profile snapshot must not retarget the replacement session");
+        assertSame(profileDac, currentSource().dac(),
+                "the current base dependency must survive stale-profile restore rejection");
     }
 
     @Test

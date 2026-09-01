@@ -30,7 +30,6 @@ class TestSmpsSessionThreadOwnership {
                 () -> device.restoreSnapshot(snapshot, null),
                 device::captureLiveMutation,
                 () -> device.rollbackLiveMutation(token),
-                () -> device.applyChannelMasks(1, 1),
                 device::close);
 
         for (Runnable entry : entries) {
@@ -77,6 +76,9 @@ class TestSmpsSessionThreadOwnership {
                 () -> port.playDac(0x81),
                 port::stopDac,
                 () -> port.forceSilenceFmChannel(0),
+                () -> port.setFmMute(0, true),
+                () -> port.setPsgMute(0, true),
+                port::silenceOutput,
                 () -> port.captureAdmissionState(1, 1),
                 () -> port.restoreAdmissionState(admission),
                 session::close);

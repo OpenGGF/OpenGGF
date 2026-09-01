@@ -16,6 +16,27 @@ public final class AudioPresentationCommandQueue {
             new AudioPresentationCommand[CAPACITY];
     private final BooleanSupplier renderingActive;
     private int size;
+    private PendingBatch activeBatch;
+
+    static final class PendingBatch {
+        private final AudioPresentationCommandQueue owner;
+        private final int capturedSize;
+        private State state = State.OPEN;
+
+        private PendingBatch(
+                AudioPresentationCommandQueue owner, int capturedSize) {
+            this.owner = owner;
+            this.capturedSize = capturedSize;
+        }
+
+        private enum State {
+            OPEN,
+            APPLIED,
+            PREPARED,
+            COMMITTED,
+            ROLLED_BACK
+        }
+    }
 
     public AudioPresentationCommandQueue() {
         this(() -> false);
@@ -28,17 +49,40 @@ public final class AudioPresentationCommandQueue {
     public void submit(AudioPresentationCommand command,
                        BooleanSupplier ownerThreadBoundary,
                        Consumer<AudioPresentationCommand> synchronousApply) {
+        Objects.requireNonNull(synchronousApply, "synchronousApply");
+        submitInternal(command, ownerThreadBoundary,
+                () -> drainAtOwnerBoundary(
+                        ownerThreadBoundary, synchronousApply));
+    }
+
+    /**
+     * Authoritative submission seam whose pressure fallback asks the
+     * presentation owner to drain the complete queue transactionally.
+     */
+    public void submit(AudioPresentationCommand command,
+                       BooleanSupplier ownerThreadBoundary,
+                       Runnable synchronousDrain) {
+        Objects.requireNonNull(synchronousDrain, "synchronousDrain");
+        submitInternal(command, ownerThreadBoundary,
+                () -> drainAtOwnerBoundary(
+                        ownerThreadBoundary, synchronousDrain));
+    }
+
+    private void submitInternal(
+            AudioPresentationCommand command,
+            BooleanSupplier ownerThreadBoundary,
+            Runnable pressureDrain) {
         Objects.requireNonNull(command, "command");
         Objects.requireNonNull(ownerThreadBoundary, "ownerThreadBoundary");
-        Objects.requireNonNull(synchronousApply, "synchronousApply");
         assertNotRendering();
+        assertNoActiveBatch();
 
         if (coalesce(command)) {
             return;
         }
 
         if (command.structural()) {
-            admitStructural(command, ownerThreadBoundary, synchronousApply);
+            admitStructural(command, pressureDrain);
             return;
         }
 
@@ -46,7 +90,7 @@ public final class AudioPresentationCommandQueue {
             if (command.droppableSampleStart()) {
                 return;
             }
-            drainAtOwnerBoundary(ownerThreadBoundary, synchronousApply);
+            pressureDrain.run();
         }
         entries[size++] = command;
     }
@@ -54,6 +98,7 @@ public final class AudioPresentationCommandQueue {
     public void applyPending(Consumer<AudioPresentationCommand> applier) {
         Objects.requireNonNull(applier, "applier");
         assertNotRendering();
+        assertNoActiveBatch();
         drain(applier);
     }
 
@@ -65,29 +110,83 @@ public final class AudioPresentationCommandQueue {
     public void applyPendingAtomically(
             Consumer<AudioPresentationCommand> applier) {
         Objects.requireNonNull(applier, "applier");
+        PendingBatch batch = capturePendingBatch();
+        try {
+            applyPendingBatch(batch, applier);
+            preparePendingBatchCommit(batch);
+            commitPendingBatch(batch);
+        } catch (RuntimeException failure) {
+            if (activeBatch == batch) {
+                rollbackPendingBatch(batch);
+            }
+            throw failure;
+        }
+    }
+
+    /** Captures the exact retry prefix without consuming any command. */
+    PendingBatch capturePendingBatch() {
         assertNotRendering();
-        int capturedSize = size;
-        for (int index = 0; index < capturedSize; index++) {
+        assertNoActiveBatch();
+        PendingBatch batch = new PendingBatch(this, size);
+        activeBatch = batch;
+        return batch;
+    }
+
+    /** Applies the captured prefix while retaining it in the ledger. */
+    void applyPendingBatch(
+            PendingBatch batch,
+            Consumer<AudioPresentationCommand> applier) {
+        Objects.requireNonNull(applier, "applier");
+        PendingBatch resolved = requireActiveBatch(
+                batch, PendingBatch.State.OPEN);
+        for (int index = 0; index < resolved.capturedSize; index++) {
             applier.accept(entries[index]);
         }
-        int remaining = size - capturedSize;
-        if (remaining > 0) {
-            System.arraycopy(entries, capturedSize,
-                    entries, 0, remaining);
+        resolved.state = PendingBatch.State.APPLIED;
+    }
+
+    /** Validates the no-fail queue commit before composite participants commit. */
+    void preparePendingBatchCommit(PendingBatch batch) {
+        PendingBatch resolved = requireActiveBatch(
+                batch, PendingBatch.State.APPLIED);
+        if (size != resolved.capturedSize) {
+            throw new IllegalStateException(
+                    "audio command queue changed during a captured batch");
         }
-        java.util.Arrays.fill(entries, remaining, size, null);
-        size = remaining;
+        resolved.state = PendingBatch.State.PREPARED;
+    }
+
+    /** Consumes a previously prepared prefix after the composite commit. */
+    void commitPendingBatch(PendingBatch batch) {
+        PendingBatch resolved = requireActiveBatch(
+                batch, PendingBatch.State.PREPARED);
+        java.util.Arrays.fill(entries, 0, resolved.capturedSize, null);
+        size = 0;
+        resolved.state = PendingBatch.State.COMMITTED;
+        activeBatch = null;
+    }
+
+    /** Leaves the exact prefix in place for retry and releases the batch. */
+    void rollbackPendingBatch(PendingBatch batch) {
+        PendingBatch resolved = requireActiveBatch(batch);
+        if (resolved.state == PendingBatch.State.COMMITTED
+                || resolved.state == PendingBatch.State.ROLLED_BACK) {
+            throw new IllegalStateException(
+                    "audio command batch is already consumed");
+        }
+        resolved.state = PendingBatch.State.ROLLED_BACK;
+        activeBatch = null;
     }
 
     public int size() {
         return size;
     }
 
-    private void admitStructural(AudioPresentationCommand command,
-                                 BooleanSupplier ownerThreadBoundary,
-                                 Consumer<AudioPresentationCommand> synchronousApply) {
+    private void admitStructural(
+            AudioPresentationCommand command,
+            Runnable pressureDrain) {
         if (size == CAPACITY && !removeOldestDroppableSampleStart()) {
-            drainAtOwnerBoundary(ownerThreadBoundary, synchronousApply);
+            pressureDrain.run();
         }
         entries[size++] = command;
     }
@@ -136,6 +235,22 @@ public final class AudioPresentationCommandQueue {
         drain(synchronousApply);
     }
 
+    private void drainAtOwnerBoundary(
+            BooleanSupplier ownerThreadBoundary,
+            Runnable synchronousDrain) {
+        if (!ownerThreadBoundary.getAsBoolean()) {
+            throw new IllegalStateException(
+                    "full audio command queue may drain only at its owner boundary");
+        }
+        assertNotRendering();
+        int before = size;
+        synchronousDrain.run();
+        if (before > 0 && size >= before) {
+            throw new IllegalStateException(
+                    "owner-boundary audio drain made no progress");
+        }
+    }
+
     private void drain(Consumer<AudioPresentationCommand> applier) {
         while (size > 0) {
             AudioPresentationCommand command = entries[0];
@@ -157,5 +272,30 @@ public final class AudioPresentationCommandQueue {
             throw new IllegalStateException(
                     "audio commands cannot be submitted or drained during rendering");
         }
+    }
+
+    private void assertNoActiveBatch() {
+        if (activeBatch != null) {
+            throw new IllegalStateException(
+                    "an audio command batch is already active");
+        }
+    }
+
+    private PendingBatch requireActiveBatch(PendingBatch batch) {
+        if (batch == null || batch.owner != this || activeBatch != batch) {
+            throw new IllegalArgumentException(
+                    "audio command batch belongs to another transaction");
+        }
+        return batch;
+    }
+
+    private PendingBatch requireActiveBatch(
+            PendingBatch batch, PendingBatch.State expected) {
+        PendingBatch resolved = requireActiveBatch(batch);
+        if (resolved.state != expected) {
+            throw new IllegalStateException(
+                    "audio command batch is not " + expected);
+        }
+        return resolved;
     }
 }
