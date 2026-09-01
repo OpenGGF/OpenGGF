@@ -1,282 +1,172 @@
 package com.openggf.tools.audio.completerun.s3k;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.tngtech.archunit.core.domain.AccessTarget.CodeUnitAccessTarget;
-import com.tngtech.archunit.core.domain.JavaAccess;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
-import com.tngtech.archunit.core.domain.JavaCodeUnit;
-import com.tngtech.archunit.core.domain.JavaMethodCall;
-import com.tngtech.archunit.core.domain.JavaMethodReference;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import java.io.IOException;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import javax.tools.ToolProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class TestS3kSubmissionIsolationGuard {
-    private static final String RAW_ADAPTER =
-            S3kCompleteRunReferenceRawAdapter.class.getName();
+    private static final String ADAPTER =
+            "com.openggf.tools.audio.completerun.s3k."
+                    + "S3kCompleteRunReferenceRawAdapter";
     private static final String PROJECTOR =
-            S3kCompleteRunReferenceProjector.class.getName();
+            "com.openggf.tools.audio.completerun.s3k."
+                    + "S3kCompleteRunReferenceProjector";
+    private static final String RAW_SUBMISSION = ADAPTER + "$RawSubmission";
+    private static final String UNBOUND_AUTHORITY = "UNBOUND_TEST_ONLY";
+    private static final String SUBMISSION_SCHEMA =
+            "openggf.s3k-complete-run-audio-raw.v2";
 
     @TempDir
     Path temporaryDirectory;
 
     @Test
-    void unboundSubmissionEntriesRemainPackagePrivate() throws NoSuchMethodException {
-        int adapterModifiers = S3kCompleteRunReferenceRawAdapter.class.getDeclaredMethod(
-                "scanSubmissionV2PrefixForTesting", Path.class,
-                S3kCompleteRunReferenceRawAdapter.Sink.class).getModifiers();
-        int projectorModifiers = S3kCompleteRunReferenceProjector.class.getDeclaredMethod(
-                "projectSubmissionV2PrefixForTesting", Path.class, Path.class).getModifiers();
-
-        assertPackagePrivate(adapterModifiers);
-        assertPackagePrivate(projectorModifiers);
-    }
-
-    @Test
-    void compiledProductionCannotReachUnboundSubmissionEntries() {
+    void productionOmitsTheUnboundSubmissionExperiment() throws IOException {
         JavaClasses production = new ClassFileImporter()
                 .importPath(Path.of("target/classes"));
 
-        assertEquals(List.of(), unauthorizedSubmissionCalls(production),
-                "the UNBOUND_TEST_ONLY S3K raw-v2 path must remain unreachable from"
-                        + " production entry points and bindings");
-        assertEquals(List.of(), reflectiveSubmissionAccesses(production),
-                "reflection and private MethodHandles lookups must not bypass the"
-                        + " S3K raw-v2 caller boundary");
+        assertEquals(List.of(), experimentalBytecodeIdentifiers(production),
+                "the deferred S3K raw-v2 Java experiment must stay out of production"
+                        + " bytecode until authenticated capture and binding review");
+        assertEquals(List.of(), experimentalSourceLiterals(
+                        Path.of("src/main/java")),
+                "the exact unbound authority/schema literals must stay out of production"
+                        + " Java sources");
     }
 
     @Test
-    void bytecodeGuardRejectsAnUnauthorizedBinding() {
-        JavaClasses mutation = new ClassFileImporter().importClasses(
-                UnauthorizedBinding.class);
+    void guardRejectsExactExperimentalIdentifiersUnderProductionClasses()
+            throws IOException {
+        Mutation mutation = compileProductionMutation();
 
-        List<String> violations = unauthorizedSubmissionCalls(mutation);
-
-        assertEquals(1, violations.size(), violations.toString());
-        assertFalse(violations.getFirst().isBlank());
+        assertEquals(List.of(
+                PROJECTOR + "#SUBMISSION_HOOKS",
+                PROJECTOR + "#projectSubmissionV2PrefixForTesting(java.nio.file.Path,"
+                        + "java.nio.file.Path)",
+                ADAPTER + "#SUBMISSION_SCHEMA",
+                ADAPTER + "#scanSubmissionV2PrefixForTesting(java.nio.file.Path,"
+                        + ADAPTER + "$Sink)",
+                RAW_SUBMISSION),
+                experimentalBytecodeIdentifiers(mutation.classes()));
+        assertEquals(List.of(
+                mutation.adapterSource() + ":" + UNBOUND_AUTHORITY,
+                mutation.adapterSource() + ":" + SUBMISSION_SCHEMA),
+                experimentalSourceLiterals(mutation.sourceRoot()));
     }
 
-    @Test
-    void bytecodeGuardRejectsAnotherMethodOnTheApprovedOwner() throws IOException {
-        JavaClasses mutation = compileApprovedOwnerMutation();
-
-        List<String> violations = unauthorizedSubmissionCalls(mutation);
-
-        assertEquals(1, violations.size(), violations.toString());
-        assertTrue(violations.getFirst().contains("otherEntry"), violations.toString());
+    private static List<String> experimentalBytecodeIdentifiers(JavaClasses classes) {
+        List<String> violations = new ArrayList<>();
+        classes.stream().filter(type -> RAW_SUBMISSION.equals(type.getName()))
+                .forEach(type -> violations.add(RAW_SUBMISSION));
+        classes.stream().filter(type -> ADAPTER.equals(type.getName()))
+                .findFirst().ifPresent(type -> inspectAdapter(type, violations));
+        classes.stream().filter(type -> PROJECTOR.equals(type.getName()))
+                .findFirst().ifPresent(type -> inspectProjector(type, violations));
+        return violations.stream().sorted().toList();
     }
 
-    @Test
-    void bytecodeGuardRejectsReflectiveAccessibilityAndInvocation() {
-        JavaClasses mutation = new ClassFileImporter().importClasses(
-                ReflectiveBinding.class);
-
-        List<String> violations = reflectiveSubmissionAccesses(mutation);
-
-        assertEquals(1, violations.size(), violations.toString());
+    private static void inspectAdapter(JavaClass type, List<String> violations) {
+        type.getFields().stream()
+                .filter(field -> "SUBMISSION_SCHEMA".equals(field.getName()))
+                .forEach(field -> violations.add(ADAPTER + "#SUBMISSION_SCHEMA"));
+        type.getMethods().stream()
+                .filter(method -> "scanSubmissionV2PrefixForTesting".equals(
+                        method.getName()))
+                .filter(method -> rawParameterNames(method).equals(List.of(
+                        Path.class.getName(), ADAPTER + "$Sink")))
+                .forEach(method -> violations.add(ADAPTER
+                        + "#scanSubmissionV2PrefixForTesting(java.nio.file.Path,"
+                        + ADAPTER + "$Sink)"));
     }
 
-    @Test
-    void bytecodeGuardRejectsPrivateMethodHandleLookup() {
-        JavaClasses mutation = new ClassFileImporter().importClasses(
-                MethodHandleBinding.class);
-
-        List<String> violations = reflectiveSubmissionAccesses(mutation);
-
-        assertEquals(1, violations.size(), violations.toString());
+    private static void inspectProjector(JavaClass type, List<String> violations) {
+        type.getFields().stream()
+                .filter(field -> "SUBMISSION_HOOKS".equals(field.getName()))
+                .forEach(field -> violations.add(PROJECTOR + "#SUBMISSION_HOOKS"));
+        type.getMethods().stream()
+                .filter(method -> "projectSubmissionV2PrefixForTesting".equals(
+                        method.getName()))
+                .filter(method -> rawParameterNames(method).equals(List.of(
+                        Path.class.getName(), Path.class.getName())))
+                .forEach(method -> violations.add(PROJECTOR
+                        + "#projectSubmissionV2PrefixForTesting(java.nio.file.Path,"
+                        + "java.nio.file.Path)"));
     }
 
-    @Test
-    void bytecodeGuardRejectsPackageLookupWithoutPrivateLookupIn() {
-        JavaClasses mutation = new ClassFileImporter().importClasses(
-                PackageLookupBinding.class);
-
-        List<String> violations = reflectiveSubmissionAccesses(mutation);
-
-        assertEquals(1, violations.size(), violations.toString());
+    private static List<String> rawParameterNames(
+            com.tngtech.archunit.core.domain.JavaCodeUnit method) {
+        return method.getRawParameterTypes().stream().map(JavaClass::getName).toList();
     }
 
-    private static void assertPackagePrivate(int modifiers) {
-        assertFalse(Modifier.isPublic(modifiers));
-        assertFalse(Modifier.isProtected(modifiers));
-        assertFalse(Modifier.isPrivate(modifiers));
-    }
-
-    private static List<String> unauthorizedSubmissionCalls(JavaClasses classes) {
-        return classes.stream()
-                .flatMap(owner -> owner.getAccessesFromSelf().stream())
-                .filter(TestS3kSubmissionIsolationGuard::targetsUnboundSubmissionEntry)
-                .filter(access -> !isApprovedProjectorAdapterCall(access))
-                .map(JavaAccess::getDescription)
-                .sorted()
-                .distinct()
-                .toList();
-    }
-
-    private static List<String> reflectiveSubmissionAccesses(JavaClasses classes) {
-        return classes.stream()
-                .flatMap(owner -> owner.getCodeUnits().stream())
-                .filter(TestS3kSubmissionIsolationGuard::referencesUnboundClassObject)
-                .filter(TestS3kSubmissionIsolationGuard::acquiresNonPublicAccess)
-                .map(codeUnit -> codeUnit.getFullName()
-                        + ":reflective-unbound-submission-access")
-                .sorted()
-                .toList();
-    }
-
-    private static boolean targetsUnboundSubmissionEntry(JavaAccess<?> access) {
-        if (!(access instanceof JavaMethodCall)
-                && !(access instanceof JavaMethodReference)) {
-            return false;
+    private static List<String> experimentalSourceLiterals(Path root) throws IOException {
+        List<String> violations = new ArrayList<>();
+        try (var sources = Files.walk(root)) {
+            for (Path source : sources.filter(path -> path.toString().endsWith(".java"))
+                    .sorted().toList()) {
+                String text = Files.readString(source);
+                if (text.contains(SUBMISSION_SCHEMA)) {
+                    violations.add(source + ":" + SUBMISSION_SCHEMA);
+                }
+                if (text.contains(UNBOUND_AUTHORITY)) {
+                    violations.add(source + ":" + UNBOUND_AUTHORITY);
+                }
+            }
         }
-        String owner = access.getTargetOwner().getName();
-        String method = access.getTarget().getName();
-        return RAW_ADAPTER.equals(owner)
-                        && "scanSubmissionV2PrefixForTesting".equals(method)
-                || PROJECTOR.equals(owner)
-                        && "projectSubmissionV2PrefixForTesting".equals(method);
+        return violations.stream().sorted().toList();
     }
 
-    private static boolean isApprovedProjectorAdapterCall(JavaAccess<?> access) {
-        return exactCodeUnit(access.getOrigin(), PROJECTOR,
-                        "projectSubmissionV2PrefixForTesting",
-                        Path.class.getName(), Path.class.getName())
-                && access.getTarget() instanceof CodeUnitAccessTarget target
-                && exactCodeUnit(target, RAW_ADAPTER,
-                        "scanSubmissionV2PrefixForTesting",
-                        Path.class.getName(),
-                        S3kCompleteRunReferenceRawAdapter.Sink.class.getName());
-    }
-
-    private static boolean referencesUnboundClassObject(JavaCodeUnit codeUnit) {
-        return codeUnit.getReferencedClassObjects().stream()
-                .map(reference -> reference.getValue().getName())
-                .anyMatch(name -> RAW_ADAPTER.equals(name) || PROJECTOR.equals(name));
-    }
-
-    private static boolean acquiresNonPublicAccess(JavaCodeUnit codeUnit) {
-        return codeUnit.getMethodCallsFromSelf().stream()
-                .anyMatch(call -> {
-                    String owner = call.getTargetOwner().getName();
-                    String method = call.getName();
-                    return Class.class.getName().equals(owner)
-                                    && ("getDeclaredMethod".equals(method)
-                                            || "getDeclaredMethods".equals(method))
-                            || MethodHandles.class.getName().equals(owner)
-                                    && "privateLookupIn".equals(method)
-                            || MethodHandles.Lookup.class.getName().equals(owner)
-                                    && ("findVirtual".equals(method)
-                                            || "findStatic".equals(method)
-                                            || "findSpecial".equals(method)
-                                            || "unreflect".equals(method));
-                });
-    }
-
-    private static boolean exactCodeUnit(JavaCodeUnit codeUnit, String owner,
-            String name, String... parameters) {
-        return owner.equals(codeUnit.getOwner().getName())
-                && name.equals(codeUnit.getName())
-                && codeUnit.getRawParameterTypes().stream()
-                        .map(type -> type.getName())
-                        .toList().equals(List.of(parameters));
-    }
-
-    private static boolean exactCodeUnit(CodeUnitAccessTarget codeUnit, String owner,
-            String name, String... parameters) {
-        return owner.equals(codeUnit.getOwner().getName())
-                && name.equals(codeUnit.getName())
-                && codeUnit.getRawParameterTypes().stream()
-                        .map(type -> type.getName())
-                        .toList().equals(List.of(parameters));
-    }
-
-    private JavaClasses compileApprovedOwnerMutation() throws IOException {
-        Path source = temporaryDirectory.resolve(
-                "com/openggf/tools/audio/completerun/s3k/"
-                        + "S3kCompleteRunReferenceProjector.java");
-        Path classes = temporaryDirectory.resolve("classes");
-        Files.createDirectories(source.getParent());
+    private Mutation compileProductionMutation() throws IOException {
+        Path sourceRoot = temporaryDirectory.resolve("src/main/java");
+        Path packageRoot = sourceRoot.resolve(
+                "com/openggf/tools/audio/completerun/s3k");
+        Path classes = temporaryDirectory.resolve("target/classes");
+        Files.createDirectories(packageRoot);
         Files.createDirectories(classes);
-        Files.writeString(source, """
+        Path adapter = packageRoot.resolve("S3kCompleteRunReferenceRawAdapter.java");
+        Path projector = packageRoot.resolve("S3kCompleteRunReferenceProjector.java");
+        Files.writeString(adapter, """
+                package com.openggf.tools.audio.completerun.s3k;
+
+                import java.nio.file.Path;
+
+                public final class S3kCompleteRunReferenceRawAdapter {
+                    static final String SUBMISSION_SCHEMA =
+                            "openggf.s3k-complete-run-audio-raw.v2";
+                    static final String AUTHORITY = "UNBOUND_TEST_ONLY";
+                    interface Sink { }
+                    record RawSubmission(int request) { }
+                    static void scanSubmissionV2PrefixForTesting(Path raw, Sink sink) { }
+                }
+                """);
+        Files.writeString(projector, """
                 package com.openggf.tools.audio.completerun.s3k;
 
                 import java.nio.file.Path;
 
                 public final class S3kCompleteRunReferenceProjector {
-                    void projectSubmissionV2PrefixForTesting(Path raw, Path rom)
-                            throws Exception {
-                        S3kCompleteRunReferenceRawAdapter
-                                .scanSubmissionV2PrefixForTesting(raw, null);
-                    }
-
-                    void otherEntry(Path raw, Path rom) throws Exception {
-                        S3kCompleteRunReferenceRawAdapter
-                                .scanSubmissionV2PrefixForTesting(raw, null);
+                    static final Object SUBMISSION_HOOKS = new Object();
+                    Object projectSubmissionV2PrefixForTesting(Path raw, Path rom) {
+                        return null;
                     }
                 }
                 """);
         int result = ToolProvider.getSystemJavaCompiler().run(null, null, null,
-                "--release", "21", "-classpath", Path.of("target/classes").toString(),
-                "-d", classes.toString(), source.toString());
-        assertEquals(0, result, "could not compile exact-owner bytecode mutation");
-        return new ClassFileImporter().importPath(classes);
+                "--release", "21", "-d", classes.toString(),
+                adapter.toString(), projector.toString());
+        assertEquals(0, result, "could not compile production-shape v2 mutation");
+        return new Mutation(sourceRoot, adapter,
+                new ClassFileImporter().importPath(classes));
     }
 
-    private static final class UnauthorizedBinding {
-        Object acquire(S3kCompleteRunReferenceProjector projector, Path raw, Path rom)
-                throws IOException {
-            return projector.projectSubmissionV2PrefixForTesting(raw, rom);
-        }
-    }
-
-    private static final class ReflectiveBinding {
-        Object acquire(S3kCompleteRunReferenceProjector projector, Path raw, Path rom)
-                throws Exception {
-            Method method = S3kCompleteRunReferenceProjector.class.getDeclaredMethod(
-                    "projectSubmissionV2PrefixForTesting", Path.class, Path.class);
-            if (!method.trySetAccessible()) {
-                method.setAccessible(true);
-            }
-            return method.invoke(projector, raw, rom);
-        }
-    }
-
-    private static final class MethodHandleBinding {
-        Object acquire(S3kCompleteRunReferenceProjector projector, Path raw, Path rom)
-                throws Throwable {
-            return MethodHandles.privateLookupIn(S3kCompleteRunReferenceProjector.class,
-                            MethodHandles.lookup())
-                    .findVirtual(S3kCompleteRunReferenceProjector.class,
-                            "projectSubmissionV2PrefixForTesting",
-                            MethodType.methodType(
-                                    S3kCompleteRunReferenceProjector.Projection.class,
-                                    Path.class, Path.class))
-                    .invoke(projector, raw, rom);
-        }
-    }
-
-    private static final class PackageLookupBinding {
-        Object acquire(S3kCompleteRunReferenceProjector projector, Path raw, Path rom)
-                throws Throwable {
-            return MethodHandles.lookup()
-                    .findVirtual(S3kCompleteRunReferenceProjector.class,
-                            "projectSubmissionV2PrefixForTesting",
-                            MethodType.methodType(
-                                    S3kCompleteRunReferenceProjector.Projection.class,
-                                    Path.class, Path.class))
-                    .invoke(projector, raw, rom);
-        }
-    }
+    private record Mutation(Path sourceRoot, Path adapterSource,
+            JavaClasses classes) { }
 }
