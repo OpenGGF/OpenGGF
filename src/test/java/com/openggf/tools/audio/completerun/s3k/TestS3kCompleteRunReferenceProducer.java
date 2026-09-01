@@ -382,7 +382,8 @@ class TestS3kCompleteRunReferenceProducer {
         Path root = Path.of("").toAbsolutePath();
         return new CompleteRunAudioProducer.Request(CompleteRunAudioTrace.ProducerKind.REFERENCE,
                 S3kCompleteRunAudioProfile.ID, rom(),
-                root.resolve("src/test/resources/traces/s3k/_movies/s3k-knuckles-complete-superemeralds.bk2"),
+                root.resolve("src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/"
+                        + "s3k-knuckles-complete-superemeralds.bk2"),
                 root.resolve("src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/run_manifest.json"),
                 root.resolve("tools/tracechaser"), output);
     }
