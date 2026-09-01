@@ -453,6 +453,7 @@ final class SmpsAssetCatalog {
                 .fmChannelOrder(source.getFmChannelOrder())
                 .psgChannelOrder(source.getPsgChannelOrder())
                 .tempoMode(source.getTempoMode())
+                .palUpdateMode(source.getPalUpdateMode())
                 .coordFlagParamOverrides(
                         source.getCoordFlagParamOverrides())
                 .applyModOnNote(source.isApplyModOnNote())

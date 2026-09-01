@@ -14,6 +14,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Speed Shoes once again accelerate music in all three games:** immutable
+  SMPS presentation assets now retain their driver cadence mode. This restores
+  S3K's native five-music-updates-per-four-VInts speed-up tail; cross-game
+  coverage also verifies that S1/S2 tempo swaps and each game's return to
+  normal cadence remain intact when the power-up expires.
 - **Sonic 1 sound effects now match the shipped REV01 driver oracle:** all
   1,967 sound-test ticks match across jump, skid, splash, ring, ring-loss,
   hurt, push, and signpost effects over GHZ music. The engine now follows the
