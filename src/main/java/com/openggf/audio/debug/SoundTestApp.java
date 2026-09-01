@@ -294,6 +294,96 @@ public final class SoundTestApp {
         return "0x" + Integer.toHexString(value).toUpperCase(Locale.ROOT);
     }
 
+    static int renderToWav(
+            AbstractSmpsData data,
+            DacData dacSamples,
+            SmpsSequencerConfig seqConfig,
+            File outputFile,
+            boolean isSfx,
+            double outputRate,
+            int maxSamples) throws IOException {
+        try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
+                "sound-test", 0,
+                new SmpsPhysicalDevice.Settings(outputRate, true, false),
+                LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
+                ChipWriteObserver.NONE)) {
+            SmpsDriver driver = stream.logicalDriver();
+            driver.setRegion(SmpsSequencer.Region.NTSC);
+
+            SmpsSequencer seq = new SmpsSequencer(
+                    data, dacSamples, driver, seqConfig);
+            seq.setSampleRate(outputRate);
+            seq.setSfxMode(isSfx);
+            driver.addSequencer(seq, isSfx);
+
+            int sampleRate = (int) Math.round(outputRate);
+            short[] buffer = new short[1024 * 2];
+            try (RandomAccessFile raf = new RandomAccessFile(
+                    outputFile, "rw")) {
+                raf.setLength(0);
+                raf.write(new byte[44]);
+
+                int totalSamples = 0;
+                while (totalSamples < maxSamples) {
+                    int frames = Math.min(1024,
+                            maxSamples - totalSamples);
+                    int shorts = frames * 2;
+                    stream.read(buffer, shorts);
+                    for (int i = 0; i < shorts; i++) {
+                        raf.writeByte(buffer[i] & 0xFF);
+                        raf.writeByte((buffer[i] >> 8) & 0xFF);
+                    }
+                    totalSamples += frames;
+                    if (isSfx && driver.isComplete()) {
+                        break;
+                    }
+                }
+
+                int dataSize = totalSamples * 2 * 2;
+                raf.seek(0);
+                writeWavHeader(raf, sampleRate, 2, 16, dataSize);
+                return totalSamples;
+            }
+        }
+    }
+
+    private static void writeWavHeader(
+            RandomAccessFile raf,
+            int sampleRate,
+            int channels,
+            int bitsPerSample,
+            int dataSize) throws IOException {
+        int byteRate = sampleRate * channels * bitsPerSample / 8;
+        int blockAlign = channels * bitsPerSample / 8;
+        raf.writeBytes("RIFF");
+        writeIntLE(raf, dataSize + 36);
+        raf.writeBytes("WAVE");
+        raf.writeBytes("fmt ");
+        writeIntLE(raf, 16);
+        writeShortLE(raf, (short) 1);
+        writeShortLE(raf, (short) channels);
+        writeIntLE(raf, sampleRate);
+        writeIntLE(raf, byteRate);
+        writeShortLE(raf, (short) blockAlign);
+        writeShortLE(raf, (short) bitsPerSample);
+        raf.writeBytes("data");
+        writeIntLE(raf, dataSize);
+    }
+
+    private static void writeIntLE(
+            RandomAccessFile raf, int value) throws IOException {
+        raf.writeByte(value & 0xFF);
+        raf.writeByte((value >> 8) & 0xFF);
+        raf.writeByte((value >> 16) & 0xFF);
+        raf.writeByte((value >> 24) & 0xFF);
+    }
+
+    private static void writeShortLE(
+            RandomAccessFile raf, short value) throws IOException {
+        raf.writeByte(value & 0xFF);
+        raf.writeByte((value >> 8) & 0xFF);
+    }
+
     private static class InteractiveState {
         private final SmpsLoader loader;
         private final DacData dacData;
@@ -687,102 +777,14 @@ public final class SoundTestApp {
          * For SFX, renders until complete.
          * For music, renders for a fixed duration (default 60 seconds).
          */
-        private int renderToWav(AbstractSmpsData data, DacData dacSamples, File outputFile, boolean isSfx) throws IOException {
+        private int renderToWav(AbstractSmpsData data, DacData dacSamples,
+                File outputFile, boolean isSfx) throws IOException {
             double outputRate = getOutputSampleRate();
-            try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
-                    "sound-test", 0,
-                    new SmpsPhysicalDevice.Settings(
-                            outputRate, true, false),
-                    LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
-                    ChipWriteObserver.NONE)) {
-                SmpsDriver driver = stream.logicalDriver();
-                driver.setRegion(SmpsSequencer.Region.NTSC);
-
-                SmpsSequencer seq = new SmpsSequencer(
-                        data, dacSamples, driver, seqConfig);
-                seq.setSampleRate(outputRate);
-                if (isSfx) {
-                    seq.setSfxMode(true);
-                }
-                driver.addSequencer(seq, isSfx);
-
-                int sampleRate = (int) Math.round(outputRate);
-                int maxSamples = isSfx ? sampleRate * 10 : sampleRate * 60;
-                int bufferSize = 1024;
-                short[] buffer = new short[bufferSize * 2];
-
-                try (RandomAccessFile raf = new RandomAccessFile(outputFile, "rw")) {
-                // Write placeholder header (44 bytes)
-                byte[] header = new byte[44];
-                raf.write(header);
-
-                int totalSamples = 0;
-                while (totalSamples < maxSamples) {
-                    stream.read(buffer);
-
-                    // Write samples as little-endian 16-bit
-                    for (int i = 0; i < buffer.length; i++) {
-                        raf.writeByte(buffer[i] & 0xFF);
-                        raf.writeByte((buffer[i] >> 8) & 0xFF);
-                    }
-
-                    totalSamples += bufferSize;
-
-                    // Check if SFX is complete
-                    if (isSfx && driver.isComplete()) {
-                        break;
-                    }
-                }
-
-                // Calculate sizes
-                int dataSize = totalSamples * 2 * 2; // samples * 2 channels * 2 bytes per sample
-
-                // Go back and write proper WAV header
-                raf.seek(0);
-                writeWavHeader(raf, sampleRate, 2, 16, dataSize);
-
-                    return totalSamples;
-                }
-            }
-        }
-
-        /**
-         * Writes a WAV file header.
-         */
-        private void writeWavHeader(RandomAccessFile raf, int sampleRate, int channels, int bitsPerSample, int dataSize) throws IOException {
-            int byteRate = sampleRate * channels * bitsPerSample / 8;
-            int blockAlign = channels * bitsPerSample / 8;
-
-            // RIFF header
-            raf.writeBytes("RIFF");
-            writeIntLE(raf, dataSize + 36); // File size - 8
-            raf.writeBytes("WAVE");
-
-            // fmt chunk
-            raf.writeBytes("fmt ");
-            writeIntLE(raf, 16); // Chunk size
-            writeShortLE(raf, (short) 1); // Audio format (PCM)
-            writeShortLE(raf, (short) channels);
-            writeIntLE(raf, sampleRate);
-            writeIntLE(raf, byteRate);
-            writeShortLE(raf, (short) blockAlign);
-            writeShortLE(raf, (short) bitsPerSample);
-
-            // data chunk
-            raf.writeBytes("data");
-            writeIntLE(raf, dataSize);
-        }
-
-        private void writeIntLE(RandomAccessFile raf, int value) throws IOException {
-            raf.writeByte(value & 0xFF);
-            raf.writeByte((value >> 8) & 0xFF);
-            raf.writeByte((value >> 16) & 0xFF);
-            raf.writeByte((value >> 24) & 0xFF);
-        }
-
-        private void writeShortLE(RandomAccessFile raf, short value) throws IOException {
-            raf.writeByte(value & 0xFF);
-            raf.writeByte((value >> 8) & 0xFF);
+            int sampleRate = (int) Math.round(outputRate);
+            return SoundTestApp.renderToWav(
+                    data, dacSamples, seqConfig, outputFile, isSfx,
+                    outputRate,
+                    isSfx ? sampleRate * 10 : sampleRate * 60);
         }
 
         private double getOutputSampleRate() {

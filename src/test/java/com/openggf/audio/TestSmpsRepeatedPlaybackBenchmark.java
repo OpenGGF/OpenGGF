@@ -2,7 +2,7 @@ package com.openggf.audio;
 
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.PresentationMode;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -478,13 +478,12 @@ class TestSmpsRepeatedPlaybackBenchmark {
             AudioVoiceRegistry registry =
                     (AudioVoiceRegistry) field(audio, "shadowRegistry");
             int liveVoices = registry.orderedVoiceCount();
-            int sequencers = 0;
-            if (liveVoices > 0
-                    && registry.orderedVoiceAt(0)
-                    instanceof SmpsCompositeVoice composite) {
-                sequencers = composite.driver()
-                        .sequencersForTesting().size();
-            }
+            SmpsDriverSession session = (SmpsDriverSession)
+                    field(audio, "shadowSmpsSession");
+            com.openggf.audio.driver.SmpsDriver driver =
+                    (com.openggf.audio.driver.SmpsDriver)
+                            field(session, "driver");
+            int sequencers = driver.sequencersForTesting().size();
             return new Topology(liveVoices, sequencers);
         }
 

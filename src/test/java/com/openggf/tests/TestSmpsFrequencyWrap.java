@@ -86,7 +86,7 @@ public class TestSmpsFrequencyWrap {
         SmpsSequencer seq = new SmpsSequencer(smps, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[2000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         // Analyze writes
         // We expect a write to A4 (Block/FNum MSB)

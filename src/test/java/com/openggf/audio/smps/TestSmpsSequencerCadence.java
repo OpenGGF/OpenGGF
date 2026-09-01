@@ -77,7 +77,7 @@ class TestSmpsSequencerCadence {
     /** Runs one driver update: the first via the primer, the rest via advanceBatch. */
     private static void runUpdate(SmpsSequencer sequencer, int updateIndex) {
         if (updateIndex == 0) {
-            sequencer.read(new short[0], 0);
+            sequencer.advanceSamples(0);
         } else {
             sequencer.advanceBatch(1);
         }
@@ -342,7 +342,7 @@ class TestSmpsSequencerCadence {
                 AudioManager.getInstance(), config);
         Track track = addFmTrack(sequencer);
         sequencer.setSfxMode(sfx);
-        sequencer.read(new short[0], 0);
+        sequencer.advanceSamples(0);
         driver.addSequencer(sequencer, sfx);
         return sequencer;
     }

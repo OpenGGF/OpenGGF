@@ -169,7 +169,7 @@ public final class S1OpenGgfSfxAudioCapture {
             List<Integer> dispatches = dispatchesByOrdinal.getOrDefault(ordinal, List.of());
             submitDispatches(dispatches);
             if (ordinal == 0) {
-                musicSequencer.read(new short[0], 0);
+                musicSequencer.advanceSamples(0);
             } else {
                 // ROM walk order inside one UpdateMusic invocation: music tracks
                 // first, SFX tracks after — the driver's sequencer list preserves

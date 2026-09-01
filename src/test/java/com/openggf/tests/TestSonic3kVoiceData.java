@@ -93,7 +93,7 @@ public class TestSonic3kVoiceData {
         // Run a few frames to process the track through voice load + SSG-EG command
         short[] buffer = new short[4096];
         for (int i = 0; i < 5; i++) {
-            seq.read(buffer);
+            seq.advanceSamples(buffer.length);
         }
 
         // Find the FM track (channel != DAC)
@@ -150,7 +150,7 @@ public class TestSonic3kVoiceData {
         // Run enough frames to process through voice change
         short[] buffer = new short[4096];
         for (int i = 0; i < 10; i++) {
-            seq.read(buffer);
+            seq.advanceSamples(buffer.length);
         }
 
         SmpsSequencer.Track fmTrackObj = findTrack(seq, SmpsSequencer.TrackType.FM);

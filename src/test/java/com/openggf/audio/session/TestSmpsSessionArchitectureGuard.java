@@ -1,10 +1,11 @@
 package com.openggf.audio.session;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.AudioStream;
 import com.openggf.audio.presentation.PcmPresentationVoice;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.synth.Synthesizer;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -13,6 +14,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestSmpsSessionArchitectureGuard {
@@ -58,6 +61,17 @@ class TestSmpsSessionArchitectureGuard {
         assertEquals(List.of(), foreignVirtualSynthConstruction,
                 "only SmpsPhysicalDevice may construct chip pairs");
 
+        List<String> interfaceTypedSynthFields = production.stream()
+                .flatMap(owner -> owner.getAllFields().stream())
+                .filter(field -> field.getRawType()
+                        .isEquivalentTo(Synthesizer.class))
+                .map(field -> field.getOwner().getFullName() + "."
+                        + field.getName())
+                .sorted()
+                .toList();
+        assertEquals(List.of(), interfaceTypedSynthFields,
+                "a Synthesizer-typed field can hide physical ownership");
+
         List<String> foreignSessionConstruction = production.stream()
                 .flatMap(owner -> owner.getConstructorCallsFromSelf().stream())
                 .filter(call -> call.getTargetOwner()
@@ -78,7 +92,7 @@ class TestSmpsSessionArchitectureGuard {
     void logicalDriverSequencerAndSnapshotGraphHasNoPhysicalOwnership() {
         for (Class<?> logical : List.of(
                 SmpsDriver.class, SmpsSequencer.class,
-                SmpsDriverSnapshot.class, SmpsCompositeVoice.class)) {
+                SmpsDriverSnapshot.class)) {
             assertEquals(List.of(), Arrays.stream(logical.getDeclaredFields())
                     .filter(field -> isPhysical(field.getType()))
                     .map(TestSmpsSessionArchitectureGuard::describe)
@@ -92,8 +106,28 @@ class TestSmpsSessionArchitectureGuard {
                         .toList(), logical.getName());
             }
         }
-        assertFalse(PcmPresentationVoice.class
-                .isAssignableFrom(SmpsCompositeVoice.class));
+        assertFalse(AudioStream.class.isAssignableFrom(SmpsSequencer.class),
+                "the sequencer advances logical state but never renders PCM");
+        assertFalse(Arrays.stream(SmpsSequencer.class.getDeclaredFields())
+                .anyMatch(field -> field.getType() == Synthesizer.class));
+        assertFalse(Arrays.stream(SmpsSequencer.class.getDeclaredConstructors())
+                .flatMap(constructor -> Arrays.stream(
+                        constructor.getParameterTypes()))
+                .anyMatch(type -> type == Synthesizer.class));
+        assertTrue(production().get(SmpsSequencer.class)
+                        .getDirectDependenciesFromSelf().stream()
+                        .noneMatch(dependency -> dependency.getTargetClass()
+                                .isEquivalentTo(VirtualSynthesizer.class)),
+                "logical sequencers cannot depend on the physical synth");
+        assertTrue(production().get(SmpsSequencer.class)
+                        .getMethodCallsFromSelf().stream()
+                        .noneMatch(call -> call.getTargetOwner()
+                                        .isEquivalentTo(
+                                                VirtualSynthesizer.class)
+                                && call.getName().equals("render")),
+                "logical sequencers cannot render PCM through a cast");
+        assertThrows(ClassNotFoundException.class, () -> Class.forName(
+                "com.openggf.audio.presentation.SmpsCompositeVoice"));
         assertThrows(ClassNotFoundException.class, () -> Class.forName(
                 "com.openggf.audio.presentation.PresentationVoiceSnapshot$Smps"));
         assertThrows(ClassNotFoundException.class, () -> Class.forName(
@@ -120,6 +154,21 @@ class TestSmpsSessionArchitectureGuard {
                 "presentation factories and voices cannot create private SMPS hardware");
     }
 
+    @Test
+    void physicalOwnerAllowlistMatchesOnlyTheExactSessionOrItsNestedTypes()
+            throws Exception {
+        Method method = TestSmpsSessionArchitectureGuard.class
+                .getDeclaredMethod("isAllowedPhysicalOwner", String.class);
+        method.setAccessible(true);
+
+        assertTrue((boolean) method.invoke(null,
+                SmpsDriverSession.class.getName()));
+        assertTrue((boolean) method.invoke(null,
+                SmpsDriverSession.class.getName() + "$PreparedRestore"));
+        assertFalse((boolean) method.invoke(null,
+                SmpsDriverSession.class.getName() + "Impostor"));
+    }
+
     private static JavaClasses production() {
         return new ClassFileImporter()
                 .withImportOption(new ImportOption.DoNotIncludeTests())
@@ -127,7 +176,8 @@ class TestSmpsSessionArchitectureGuard {
     }
 
     private static boolean isAllowedPhysicalOwner(String ownerName) {
-        return PHYSICAL_FIELD_OWNERS.stream().anyMatch(ownerName::startsWith)
+        return PHYSICAL_FIELD_OWNERS.stream().anyMatch(allowed ->
+                ownerName.equals(allowed) || ownerName.startsWith(allowed + "$"))
                 || ownerName.equals(SmpsSessionProfileFingerprint.class.getName())
                 || isPhysicalName(ownerName);
     }

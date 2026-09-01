@@ -35,7 +35,6 @@ import com.openggf.audio.presentation.SampleBackedVoice;
 import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
 import com.openggf.audio.presentation.SmpsAssetKey;
 import com.openggf.audio.presentation.SmpsSfxInstantiation;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
@@ -286,10 +285,11 @@ class TestAudioDiagnosticObservers {
             }
 
             @Override
-            public SmpsCompositeVoice instantiateStandaloneCached(
-                    ResolvedSmpsSfxSource source) {
-                throw new IllegalStateException("asset evicted after resolve");
+            public com.openggf.audio.session.PreparedSmpsSfxProgram
+                    prepareCached(ResolvedSmpsSfxSource source) {
+                return null;
             }
+
 
             @Override
             public void observeAdmission(Admission admission) {
@@ -302,16 +302,24 @@ class TestAudioDiagnosticObservers {
         AudioPresentationSourceFactory factory =
                 new AudioPresentationSourceFactory(
                         () -> true, testCoordFlags);
-        AudioVoiceRegistry registry = new AudioVoiceRegistry(
-                lateCacheMiss, factory,
-                testCoordFlags, ignored -> { });
         ResolvedSmpsSfxSource resolved = new ResolvedSmpsSfxSource(
                 700,
                 new SmpsAssetKey("fixture", SmpsAssetKey.Route.BASE_ID,
                         0xA0, null),
                 65_536, 0x60, 0, 1, 800);
 
-        registry.apply(new AudioPresentationCommand.AddSmpsSfx(resolved));
+        try (SmpsDriverSession session =
+                     SmpsSessionTestSupport.installed(48_000)) {
+            AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                    lateCacheMiss, factory, testCoordFlags,
+                    ignored -> { }, session);
+            AudioPresentationSessionCommandApplier.apply(
+                    session, registry,
+                    new AudioPresentationCommand.AddSmpsSfx(resolved));
+            assertEquals(0, registry.orderedVoiceCount());
+            assertEquals(0, session.captureLogicalSnapshot()
+                    .sequencers().size());
+        }
 
         assertEquals(1, evaluations.get(),
                 "a resolved request evaluates once before cache insertion");
@@ -324,8 +332,6 @@ class TestAudioDiagnosticObservers {
                 "late rejection preserves evaluated identity and original"
                         + " priority while defining post-rejection priority"
                         + " as the unchanged original priority");
-        assertEquals(0, registry.orderedVoiceCount());
-
         AtomicInteger unresolvedEvaluations = new AtomicInteger();
         loader.sfxResults.put(0xA1, null);
         audio.setAudioProfile(profile(context -> {
@@ -368,16 +374,23 @@ class TestAudioDiagnosticObservers {
         ResolvedSmpsSfxSource source = factory.resolveSmpsSfx(
                 800, key, 65_536, 0x60, 0, 1, 800);
         clearFactorySfxCache(factory);
-        AudioVoiceRegistry registry = new AudioVoiceRegistry(
-                factory, factory, testCoordFlags, ignored -> { });
-
-        registry.apply(new AudioPresentationCommand.AddSmpsSfx(source));
+        try (SmpsDriverSession session =
+                     SmpsSessionTestSupport.installed(48_000)) {
+            AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                    factory, factory, testCoordFlags,
+                    ignored -> { }, session);
+            AudioPresentationSessionCommandApplier.apply(
+                    session, registry,
+                    new AudioPresentationCommand.AddSmpsSfx(source));
+            assertEquals(0, registry.orderedVoiceCount());
+            assertEquals(0, session.captureLogicalSnapshot()
+                    .sequencers().size());
+        }
 
         assertEquals(1, evaluations.get());
         assertEquals(List.of(new AdmissionResult(false,
                 RejectionReason.CACHE_MISS,
                 0x31, 0x31, 0xE4)), decisions);
-        assertEquals(0, registry.orderedVoiceCount());
     }
 
     @Test

@@ -345,7 +345,7 @@ public final class S1OpenGgfAudioCapture {
                 throw new NoSuchElementException();
             }
             if (ordinal == 0) {
-                sequencer.read(new short[0], 0);
+                sequencer.advanceSamples(0);
             } else {
                 sequencer.advanceBatch(NTSC_SAMPLES);
                 advancedSamples += NTSC_SAMPLES;

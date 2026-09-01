@@ -81,7 +81,7 @@ public class TestSmpsInstrumentParsing {
         SmpsSequencer seq = new SmpsSequencer(smps, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[2000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         // 1. Verify the data source preserves the raw S2 register-order voice.
         byte[] expectedVoice = new byte[25];

@@ -89,7 +89,7 @@ public class TestSmpsKeyDisplacement {
         SmpsSequencer seq = new SmpsSequencer(smps, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[2000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         // Analyze writes
         int block = -1;

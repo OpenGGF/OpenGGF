@@ -9,7 +9,6 @@ import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.PcmPresentationVoice;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.AudioFrameClock;
@@ -46,6 +45,7 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioPresentationArchitectureGuard {
@@ -159,7 +159,7 @@ class TestAudioPresentationArchitectureGuard {
     void sessionBackedPresentationHasNoAuthoritativeCarrierDependency()
             throws IOException {
         Set<String> compatibilityTypes = Set.of(
-                SmpsCompositeVoice.class.getName());
+                "com.openggf.audio.presentation.SmpsCompositeVoice");
         JavaClasses authoritative = new ClassFileImporter().importClasses(
                 AudioPresentationProducer.class,
                 AudioPresentationMixer.class,
@@ -180,8 +180,8 @@ class TestAudioPresentationArchitectureGuard {
                         + "standalone SMPS compatibility carriers");
         assertTrue(PcmPresentationVoice.class
                 .isAssignableFrom(SampleBackedVoice.class));
-        assertFalse(PcmPresentationVoice.class
-                .isAssignableFrom(SmpsCompositeVoice.class));
+        assertThrows(ClassNotFoundException.class, () -> Class.forName(
+                "com.openggf.audio.presentation.SmpsCompositeVoice"));
 
         String producer = Files.readString(PRODUCTION_ROOT.resolve(
                 "audio/presentation/AudioPresentationProducer.java"));
@@ -203,7 +203,7 @@ class TestAudioPresentationArchitectureGuard {
                 "audio/presentation/AudioVoiceRegistry.java"));
         String apply = compactMethod(registry,
                 "public void apply(AudioPresentationCommand command)");
-        assertTrue(apply.indexOf("hasLegacySmpsCarrier(command)")
+        assertTrue(apply.indexOf("hasUnownedSmps(command)")
                         < apply.indexOf("applySessionMetadata(command)"),
                 "session commands must reject compatibility carriers before "
                         + "the authoritative metadata path");
@@ -212,12 +212,7 @@ class TestAudioPresentationArchitectureGuard {
         assertTrue(restore.indexOf("validateAuthoritativeSnapshot(snapshot)")
                         < restore.indexOf("resolver.beginDiagnosticTransaction()"),
                 "carrier snapshots must fail before dependency recreation");
-        String ordered = compactMethod(registry,
-                "private void rebuildOrderedVoices()");
-        assertTrue(ordered.contains(
-                "smpsSession == null && standaloneSmps != null"),
-                "only a null-session compatibility registry may expose the "
-                        + "standalone carrier in its ordered voices");
+        assertFalse(registry.contains("standaloneSmps"));
     }
 
     @Test
@@ -305,8 +300,8 @@ class TestAudioPresentationArchitectureGuard {
                 .map(component -> component.getName() + ":"
                         + component.getType().getName())
                 .toList());
-        assertFalse(PcmPresentationVoice.class
-                .isAssignableFrom(SmpsCompositeVoice.class));
+        assertThrows(ClassNotFoundException.class, () -> Class.forName(
+                "com.openggf.audio.presentation.SmpsCompositeVoice"));
     }
 
     private static String compactMethod(String source, String marker) {
@@ -352,7 +347,7 @@ class TestAudioPresentationArchitectureGuard {
                 "freshSource/copyDac @ audio/presentation/AudioPresentationSourceFactory.java",
                 "load before lookup @ audio/presentation/AudioPresentationCommandResolver.java",
                 "load before lookup @ audio/AudioManager.java",
-                "observer-free registry snapshot @ audio/presentation/AudioVoiceRegistry.java",
+                "retired registry SMPS owner method @ audio/presentation/AudioVoiceRegistry.java",
                 "warmed descriptor materialization @ audio/presentation/AudioPresentationSourceFactory.java",
                 "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
                 smpsOwnershipViolations(sources));
@@ -507,7 +502,7 @@ class TestAudioPresentationArchitectureGuard {
                         + "private final void captureHelper() throws IOException { "
                         + "captureLiveCommandMutation(); }");
         assertTrue(smpsOwnershipViolations(registryMutation).contains(
-                "observer-free registry snapshot @ "
+                "retired registry SMPS owner method @ "
                         + "audio/presentation/AudioVoiceRegistry.java"));
     }
 
@@ -596,7 +591,7 @@ class TestAudioPresentationArchitectureGuard {
                     registry);
 
             assertTrue(smpsOwnershipViolations(sources).contains(
-                    "observer-free registry snapshot @ "
+                    "retired registry SMPS owner method @ "
                             + "audio/presentation/AudioVoiceRegistry.java"),
                     registry);
         }
@@ -717,8 +712,7 @@ class TestAudioPresentationArchitectureGuard {
                 "private Object resolveSmpsSfxCommand() { "
                         + "factory.findRegisteredSmpsSfxAsset(); "
                         + "return loader.load(); }");
-        sources.put("audio/presentation/AudioVoiceRegistry.java",
-                "private void addSmpsSfxToOwner() {}");
+        sources.put("audio/presentation/AudioVoiceRegistry.java", "");
         sources.put("audio/driver/SmpsDriver.java",
                 "public void commitSfxAdmission() { Object state = "
                         + "hasChipWriteObserver() "
@@ -821,12 +815,8 @@ class TestAudioPresentationArchitectureGuard {
 
         String registrySource = sanitizedSource(source(sources,
                 "audio/presentation/AudioVoiceRegistry.java"));
-        String registry = requiredMethodBody(registrySource,
-                "addSmpsSfxToOwner(",
-                "audio/presentation/AudioVoiceRegistry.java", violations);
-        if (registry != null && !observerSafeReachable(
-                registrySource, "addSmpsSfxToOwner", false)) {
-            violations.add("observer-free registry snapshot @ "
+        if (methodBody(registrySource, "addSmpsSfxToOwner(") != null) {
+            violations.add("retired registry SMPS owner method @ "
                     + "audio/presentation/AudioVoiceRegistry.java");
         }
 

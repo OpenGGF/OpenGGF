@@ -501,23 +501,6 @@ public final class AudioPresentationSourceFactory
     }
 
     /**
-     * Builds the transitional backend-owned music voice without taking
-     * ownership of the legacy loader's data or DAC bank.
-     */
-    public SmpsCompositeVoice legacyMusicSmps(
-            String gameId,
-            int musicId,
-            long voiceId,
-            AbstractSmpsData data,
-            DacData dac,
-            SmpsSequencerConfig config,
-            AudioSourceDescriptor descriptor,
-            int maxStereoFrames) {
-        throw new UnsupportedOperationException(
-                "standalone SMPS presentation voices were removed");
-    }
-
-    /**
      * Copies a legacy sequencer profile while replacing its mutable
      * coordination handler with this backend's private owner.
      */
@@ -763,16 +746,6 @@ public final class AudioPresentationSourceFactory
     }
 
     @Override
-    public SmpsCompositeVoice instantiateStandaloneCached(
-            ResolvedSmpsSfxSource source) {
-        assertOwnerBoundary();
-        cacheLookupCount.incrementAndGet();
-        requireCached(source);
-        throw new UnsupportedOperationException(
-                "standalone SMPS presentation voices were removed");
-    }
-
-    @Override
     public Admission evaluateAdmission(
             ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
         Objects.requireNonNull(source, "source");
@@ -969,8 +942,8 @@ public final class AudioPresentationSourceFactory
                 findRegisteredSmpsSfxAsset(
                         source.assetKey(), source.dependencyGeneration());
         if (cached == null) {
-            throw new IllegalStateException(
-                    "SMPS SFX asset cache miss: " + source.assetKey());
+            throw new SmpsSfxInstantiation.CacheMissException(
+                    source.assetKey());
         }
         return cached;
     }

@@ -40,7 +40,7 @@ class TestSonic3kSmpsMetaCommandOperands {
         SmpsSequencer sequencer = new SmpsSequencer(smps, EMPTY_DAC, new VirtualSynthesizer(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
 
-        sequencer.read(new short[20_000]);
+        sequencer.advanceSamples(20_000);
         SmpsSequencer.Track fm = sequencer.getTracks().stream()
                 .filter(track -> track.type == SmpsSequencer.TrackType.FM)
                 .findFirst().orElseThrow();

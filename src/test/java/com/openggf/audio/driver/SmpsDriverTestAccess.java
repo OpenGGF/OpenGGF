@@ -7,13 +7,13 @@ import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.audio.smps.DacData;
 
-import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 /** Test-only owner for legacy driver-level fixtures migrated to sessions. */
 public final class SmpsDriverTestAccess {
     private static final Map<SmpsDriver, OwnedSmpsAudioStream> STREAMS =
-            new IdentityHashMap<>();
+            new WeakHashMap<>();
 
     private SmpsDriverTestAccess() {
     }
@@ -72,5 +72,25 @@ public final class SmpsDriverTestAccess {
                     "driver was not created by SmpsDriverTestAccess");
         }
         return stream;
+    }
+
+    public static synchronized void close(SmpsDriver driver) {
+        OwnedSmpsAudioStream stream = STREAMS.remove(driver);
+        if (stream == null) {
+            throw new IllegalArgumentException(
+                    "driver was not created by SmpsDriverTestAccess");
+        }
+        stream.close();
+    }
+
+    public static synchronized int trackedSessionCount() {
+        return STREAMS.size();
+    }
+
+    public static synchronized void closeAll() {
+        for (OwnedSmpsAudioStream stream : STREAMS.values()) {
+            stream.close();
+        }
+        STREAMS.clear();
     }
 }

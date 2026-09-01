@@ -599,7 +599,6 @@ class TestAudioManagerPresentationModes {
             default -> throw new AssertionError(policy);
         }
         assertNull(presentation.rawPcmVoiceId());
-        assertNull(presentation.standaloneSmpsVoiceId());
     }
 
     private static long rawPcmCursor(AudioManager audio) {

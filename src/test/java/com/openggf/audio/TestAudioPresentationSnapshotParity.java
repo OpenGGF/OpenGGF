@@ -10,7 +10,6 @@ import com.openggf.audio.presentation.DecodedPcm;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
@@ -749,11 +748,6 @@ class TestAudioPresentationSnapshotParity {
                         throw new AssertionError("no SFX SMPS expected");
                     }
 
-                    @Override
-                    public SmpsCompositeVoice instantiateStandaloneCached(
-                            com.openggf.audio.presentation.ResolvedSmpsSfxSource source) {
-                        throw new AssertionError("no SFX SMPS expected");
-                    }
                 },
                 resolver,
                 new SmpsCoordFlagHandlerOwner(
@@ -805,8 +799,6 @@ class TestAudioPresentationSnapshotParity {
             AudioPresentationSnapshot actual) {
         assertEquals(expected.activeMusic(), actual.activeMusic());
         assertEquals(expected.overrideStack(), actual.overrideStack());
-        assertEquals(expected.standaloneSmpsVoiceId(),
-                actual.standaloneSmpsVoiceId());
         assertEquals(expected.rawPcmVoiceId(), actual.rawPcmVoiceId());
         assertEquals(expected.fmMuteMask(), actual.fmMuteMask());
         assertEquals(expected.fmSoloMask(), actual.fmSoloMask());

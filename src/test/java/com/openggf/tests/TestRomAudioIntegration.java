@@ -74,7 +74,7 @@ public class TestRomAudioIntegration {
         // Run enough frames to cover early percussion passages
         short[] buffer = new short[4096];
         for (int i = 0; i < 32; i++) {
-            seq.read(buffer);
+            seq.advanceSamples(buffer.length);
         }
 
         boolean hasNoiseLatch = synth.psg.stream().anyMatch(v -> (v & 0xF0) == 0xE0);
@@ -127,7 +127,7 @@ public class TestRomAudioIntegration {
                 Sonic2SmpsSequencerConfig.CONFIG);
         short[] buffer = new short[4096];
         for (int i = 0; i < 50; i++) {
-            seq.read(buffer);
+            seq.advanceSamples(buffer.length);
         }
         assertTrue(seq.isComplete() || seq.getSamplesUntilNextTempoFrame() > 0,
                 "Sequencer should keep a live tempo schedule after playback, not deadlock");
@@ -141,7 +141,7 @@ public class TestRomAudioIntegration {
         short[][] frames = new short[iterations][];
         short[] buffer = new short[4096];
         for (int i = 0; i < iterations; i++) {
-            seq.read(buffer);
+            seq.advanceSamples(buffer.length);
             frames[i] = buffer.clone();
         }
         return frames;
@@ -164,7 +164,7 @@ public class TestRomAudioIntegration {
         synth.psg.clear();
 
         short[] buffer = new short[4096];
-        seq.read(buffer);
+        seq.advanceSamples(buffer.length);
 
         boolean hasSequencedCommands = !synth.fm.isEmpty() || !synth.psg.isEmpty();
 
@@ -186,7 +186,7 @@ public class TestRomAudioIntegration {
         // the composed driver performs this automatically on music admission.
         synth.setDacData(dacData);
         short[] buffer = new short[4096];
-        seq.read(buffer);
+        seq.advanceSamples(buffer.length);
 
         assertSame(dacData, synth.configuredDacData,
                 "Explicit standalone DAC selection should retain ROM samples");

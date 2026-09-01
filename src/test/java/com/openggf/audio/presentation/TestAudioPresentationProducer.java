@@ -629,11 +629,6 @@ class TestAudioPresentationProducer {
                 throw new AssertionError("no SMPS SFX expected");
             }
 
-            @Override
-            public SmpsCompositeVoice instantiateStandaloneCached(
-                    ResolvedSmpsSfxSource source) {
-                throw new AssertionError("no SMPS SFX expected");
-            }
         };
     }
 

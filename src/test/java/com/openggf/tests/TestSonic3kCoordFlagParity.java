@@ -76,7 +76,7 @@ public class TestSonic3kCoordFlagParity {
         };
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[20000]);
+        seq.advanceSamples(20000);
 
         SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
         assertEquals(0, fm.voiceId, "E5 must not switch instrument on S3K");
@@ -91,7 +91,7 @@ public class TestSonic3kCoordFlagParity {
         };
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[20000]);
+        seq.advanceSamples(20000);
 
         SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
         assertEquals(1, fm.keyOffset);
@@ -109,7 +109,7 @@ public class TestSonic3kCoordFlagParity {
         };
         Sonic3kSmpsData smps = createMusicData(2, 1, fmTrack, psgTrack, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[20000]);
+        seq.advanceSamples(20000);
 
         SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
         SmpsSequencer.Track psg = findTrack(seq, SmpsSequencer.TrackType.PSG);
@@ -125,7 +125,7 @@ public class TestSonic3kCoordFlagParity {
         };
         Sonic3kSmpsData smps = createMusicData(2, 1, new byte[] { (byte) 0xF2 }, psgTrack, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[20000]);
+        seq.advanceSamples(20000);
 
         SmpsSequencer.Track psg = findTrack(seq, SmpsSequencer.TrackType.PSG);
         assertEquals(0x0F, psg.volumeOffset);
@@ -141,7 +141,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(2, 1, new byte[] { (byte) 0xF2 }, psgTrack, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[20000]);
+        seq.advanceSamples(20000);
 
         SmpsSequencer.Track psg = findTrack(seq, SmpsSequencer.TrackType.PSG);
         assertEquals(0, psg.psgNoiseParam);
@@ -159,7 +159,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[25000]);
+        seq.advanceSamples(25000);
 
         boolean wroteA4 = false;
         boolean wroteA0 = false;
@@ -184,7 +184,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(1, 1, null, psgTrack, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[25000]);
+        seq.advanceSamples(25000);
 
         // DEF_Z80_T2 first entry is 0x3FF, so channel 0 writes should include 0x8F then 0x3F.
         assertTrue(synth.psgWrites.contains(0x8F));
@@ -201,7 +201,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(1, 1, null, psgTrack, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[25000]);
+        seq.advanceSamples(25000);
 
         assertTrue(synth.psgWrites.contains(0x8F), "PSG note should still write frequency after negative transpose");
         assertTrue(synth.psgWrites.contains(0x3F), "Lowest S3K PSG entry should write high byte 0x3F");
@@ -217,7 +217,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(1, 1, null, psgTrack, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[25000]);
+        seq.advanceSamples(25000);
 
         assertTrue(synth.psgWrites.contains(0x8F), "Underflow should wrap to 0x3FF low nibble");
         assertTrue(synth.psgWrites.contains(0x3F), "Underflow should wrap to 0x3FF high bits");
@@ -239,7 +239,7 @@ public class TestSonic3kCoordFlagParity {
         };
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[20000]);
+        seq.advanceSamples(20000);
 
         SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
         assertEquals(112, fm.keyOffset, "S3K transpose add must wrap as signed byte");
@@ -253,7 +253,7 @@ public class TestSonic3kCoordFlagParity {
         };
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[20000]);
+        seq.advanceSamples(20000);
 
         SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
         assertEquals(-65, fm.keyOffset, "S3K transpose set must wrap as signed byte");
@@ -270,7 +270,7 @@ public class TestSonic3kCoordFlagParity {
         };
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[20000]);
+        seq.advanceSamples(20000);
 
         SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
         assertEquals(3, fm.keyOffset, "E9 should add the persistent spindash rev value to track transpose");
@@ -377,7 +377,7 @@ public class TestSonic3kCoordFlagParity {
         };
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null, null, 0);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[2]);
+        seq.advanceSamples(2);
 
         assertTrue(seq.getSamplesUntilNextTempoFrame() < Integer.MAX_VALUE,
                 "S3K tempo 0 still ticks every video frame and must not batch indefinitely");
@@ -398,7 +398,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[40000]);
+        seq.advanceSamples(40000);
 
         int baseC5A4 = (5 << 3) | ((644 >> 8) & 0x07);
         int lastA4 = -1;
@@ -529,7 +529,7 @@ public class TestSonic3kCoordFlagParity {
         psgEnvs.put(1, new byte[] { 0x03, (byte) 0x81 });
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, psgEnvs);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[25000]);
+        seq.advanceSamples(25000);
 
         SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
         assertTrue(fm.fmVolEnvData != null && fm.fmVolEnvData.length > 0, "FM vol env should be loaded by FF 06");
@@ -549,7 +549,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(1, 1, null, psgTrack, null, modEnvs);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[25000]);
+        seq.advanceSamples(25000);
 
         SmpsSequencer.Track psg = findTrack(seq, SmpsSequencer.TrackType.PSG);
         assertEquals(1, psg.modEnvCache, "Mod envelope delta should be cached");
@@ -570,7 +570,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(1, 1, null, psgTrack, null, modEnvs);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[25000]);
+        seq.advanceSamples(25000);
 
         assertTrue(synth.psgWrites.contains(0x82), "Expected modulation write at 0x282 (+1 detune, +1 env)");
         assertFalse(synth.psgWrites.contains(0x83), "Detune must not be applied twice (would write 0x283)");
@@ -590,7 +590,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(1, 1, null, psgTrack, null, modEnvs);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[25000]);
+        seq.advanceSamples(25000);
 
         SmpsSequencer.Track psg = findTrack(seq, SmpsSequencer.TrackType.PSG);
         assertEquals(3, psg.modEnvCache, "CHG_MULT should affect modulation delta via Z80 (mult+1)");
@@ -800,7 +800,7 @@ public class TestSonic3kCoordFlagParity {
         CaptureSynth synth = new CaptureSynth();
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
-        seq.read(new short[60000]);
+        seq.advanceSamples(60000);
 
         int high = -1;
         int low = -1;

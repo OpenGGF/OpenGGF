@@ -13,7 +13,6 @@ public record AudioPresentationSnapshot(
         List<PresentationVoiceSnapshot> voices,
         MusicSlotSnapshot activeMusic,
         List<MusicSlotSnapshot> overrideStack,
-        Long standaloneSmpsVoiceId,
         Long rawPcmVoiceId,
         int fmMuteMask,
         int fmSoloMask,
@@ -30,7 +29,7 @@ public record AudioPresentationSnapshot(
 
     private static final AudioPresentationSnapshot EMPTY =
             new AudioPresentationSnapshot(0, List.of(), null, List.of(),
-                    null, null, 0, 0, 0, 0, false, false, false, 1, true,
+                    null, 0, 0, 0, 0, false, false, false, 1, true,
                     new SmpsCoordFlagRuntimeState.Snapshot(0), null, null);
 
     public AudioPresentationSnapshot {
@@ -42,35 +41,6 @@ public record AudioPresentationSnapshot(
             throw new IllegalArgumentException(
                     "session and logical SMPS snapshots must be paired");
         }
-    }
-
-    /**
-     * Legacy standalone/tool constructor retained until direct callers move
-     * to the session-owned presentation snapshot.
-     */
-    @Deprecated(forRemoval = true)
-    public AudioPresentationSnapshot(
-            long nextVoiceId,
-            List<PresentationVoiceSnapshot> voices,
-            MusicSlotSnapshot activeMusic,
-            List<MusicSlotSnapshot> overrideStack,
-            Long standaloneSmpsVoiceId,
-            Long rawPcmVoiceId,
-            int fmMuteMask,
-            int fmSoloMask,
-            int psgMuteMask,
-            int psgSoloMask,
-            boolean sfxBlocked,
-            boolean pendingRestore,
-            boolean speedShoesEnabled,
-            int speedMultiplier,
-            boolean ringLeft,
-            SmpsCoordFlagRuntimeState.Snapshot coordFlagRuntimeState) {
-        this(nextVoiceId, voices, activeMusic, overrideStack,
-                standaloneSmpsVoiceId, rawPcmVoiceId, fmMuteMask, fmSoloMask,
-                psgMuteMask, psgSoloMask, sfxBlocked, pendingRestore,
-                speedShoesEnabled, speedMultiplier, ringLeft,
-                coordFlagRuntimeState, null, null);
     }
 
     public static AudioPresentationSnapshot empty() {

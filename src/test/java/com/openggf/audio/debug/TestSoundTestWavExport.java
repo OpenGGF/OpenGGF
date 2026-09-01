@@ -1,0 +1,43 @@
+package com.openggf.audio.debug;
+
+import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.smps.SmpsSequencerConfig;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class TestSoundTestWavExport {
+    @TempDir
+    Path outputDirectory;
+
+    @Test
+    void renderToWavWritesExactStereoPcmFrameCount() throws Exception {
+        Path output = outputDirectory.resolve("sound-test.wav");
+        Files.write(output, new byte[4_096]);
+        int frames = SoundTestApp.renderToWav(
+                new AudioTestFixtures.StubSmpsData("sound-test-export"),
+                AudioTestFixtures.EMPTY_DAC,
+                new SmpsSequencerConfig.Builder().build(),
+                output.toFile(), false, 8_000.0, 37);
+
+        assertEquals(37, frames);
+        assertEquals(44 + 37 * 4, Files.size(output));
+        try (AudioInputStream wav = AudioSystem.getAudioInputStream(
+                output.toFile())) {
+            AudioFormat format = wav.getFormat();
+            assertEquals(AudioFormat.Encoding.PCM_SIGNED,
+                    format.getEncoding());
+            assertEquals(8_000.0f, format.getSampleRate());
+            assertEquals(16, format.getSampleSizeInBits());
+            assertEquals(2, format.getChannels());
+            assertEquals(37, wav.getFrameLength());
+        }
+    }
+}

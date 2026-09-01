@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestOwnedSmpsAudioStream {
     @Test
@@ -58,6 +59,36 @@ class TestOwnedSmpsAudioStream {
 
         assertEquals(initializedWrites, writes.get(),
                 "adapter close is resource release, not global stop");
+    }
+
+    @Test
+    void legacyDriverTestAccessReleasesItsSessionOnClose() {
+        SmpsDriver driver =
+                com.openggf.audio.driver.SmpsDriverTestAccess.create(44_100);
+
+        com.openggf.audio.driver.SmpsDriverTestAccess.close(driver);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> com.openggf.audio.driver.SmpsDriverTestAccess.stream(driver));
+        assertEquals(0,
+                com.openggf.audio.driver.SmpsDriverTestAccess.trackedSessionCount());
+    }
+
+    @Test
+    void legacyDriverTestAccessClassLifecycleClosesEverySession() {
+        SmpsDriver first =
+                com.openggf.audio.driver.SmpsDriverTestAccess.create(44_100);
+        SmpsDriver second =
+                com.openggf.audio.driver.SmpsDriverTestAccess.create(44_100);
+
+        com.openggf.audio.driver.SmpsDriverTestAccess.closeAll();
+
+        assertEquals(0,
+                com.openggf.audio.driver.SmpsDriverTestAccess.trackedSessionCount());
+        assertThrows(IllegalArgumentException.class,
+                () -> com.openggf.audio.driver.SmpsDriverTestAccess.stream(first));
+        assertThrows(IllegalArgumentException.class,
+                () -> com.openggf.audio.driver.SmpsDriverTestAccess.stream(second));
     }
 
     private static OwnedSmpsAudioStream stream(AtomicInteger writes) {

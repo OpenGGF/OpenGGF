@@ -17,7 +17,6 @@ import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcm;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;

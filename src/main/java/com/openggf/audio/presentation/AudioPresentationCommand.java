@@ -107,17 +107,6 @@ public sealed interface AudioPresentationCommand
             }
         }
 
-        /** Task-6 standalone/tool compatibility constructor. */
-        @Deprecated(forRemoval = true)
-        public SmpsVoiceDescriptor(
-                long voiceId,
-                int priority,
-                Integer musicId,
-                AudioSourceDescriptor sourceDescriptor,
-                int maxStereoFrames) {
-            this(voiceId, priority, musicId, sourceDescriptor,
-                    maxStereoFrames, null);
-        }
     }
 
     record MusicVoiceEntry(int musicId, AudioSourceDescriptor sourceDescriptor,

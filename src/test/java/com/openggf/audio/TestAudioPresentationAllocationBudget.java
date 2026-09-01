@@ -19,7 +19,6 @@ import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoice;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.presentation.SmpsSfxInstantiation;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -546,11 +545,6 @@ class TestAudioPresentationAllocationBudget {
                 throw new AssertionError("no SMPS SFX expected");
             }
 
-            @Override
-            public SmpsCompositeVoice instantiateStandaloneCached(
-                    com.openggf.audio.presentation.ResolvedSmpsSfxSource source) {
-                throw new AssertionError("no SMPS SFX expected");
-            }
         };
     }
 

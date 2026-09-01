@@ -80,7 +80,7 @@ public class TestSmpsSequencer {
 
         // Increase buffer to ensure at least one tick at 0x80 tempo (~2 frames)
         short[] buf = new short[2000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         boolean foundFreq = false;
         boolean foundKeyOn = false;
@@ -124,7 +124,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[4000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         long keyOnCount = synth.log.stream()
                 .filter(entry -> entry.contains("R28 VF"))
@@ -168,7 +168,7 @@ public class TestSmpsSequencer {
         // S2 cfSetTempo changes CurrentTempo only (sd:3207-3209); the live
         // TempoTimeout phase is preserved, so the second note remains in range.
         short[] buf = new short[12000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         String logStr = synth.log.toString();
         long keyOnCount = synth.log.stream().filter(entry -> entry.contains("R28 VF")).count();
@@ -212,7 +212,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[12000];
-        seq.read(buf); // should execute both notes
+        seq.advanceSamples(buf.length); // should execute both notes
 
         String logStr = String.join(" | ", synth.log);
         long keyOnCount = synth.log.stream()
@@ -242,7 +242,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[5000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         String logStr = String.join(" | ", synth.log);
 
@@ -275,7 +275,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[100];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         assertEquals(0xAA, seq.getCommData(), "Comm data should be 0xAA");
     }
@@ -306,7 +306,7 @@ public class TestSmpsSequencer {
 
         // Read small buffer. Track should still be active and playing the note.
         short[] buf = new short[2000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         SmpsSequencer.DebugState state = seq.debugState();
         // Index 0 is FM1 (DAC track skipped because ptr is 0)
@@ -359,7 +359,7 @@ public class TestSmpsSequencer {
         int lastNote = -1;
 
         for (int i = 0; i < 300; i++) {
-            seq.read(buf);
+            seq.advanceSamples(buf.length);
             SmpsSequencer.DebugState state = seq.debugState();
             if (!state.tracks.isEmpty()) {
                 SmpsSequencer.DebugTrack t = state.tracks.get(0);
@@ -414,7 +414,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         // Prime sequencer (runs initial tick) without advancing tempo frames
-        seq.read(new short[2]);
+        seq.advanceSamples(2);
         // Advance enough samples for one additional tempo tick (2 frames @ tempo 0x80)
         seq.advance(1500);
 
@@ -458,7 +458,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         // Prime sequencer (runs initial tick)
-        seq.read(new short[2]);
+        seq.advanceSamples(2);
         // Advance enough samples for one additional tempo tick
         seq.advance(1500);
 
@@ -499,7 +499,7 @@ public class TestSmpsSequencer {
         AbstractSmpsData smps = new Sonic2SmpsData(data);
         MockFmSynth synth = new MockFmSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
-        seq.read(new short[12000]);
+        seq.advanceSamples(12000);
 
         long fmKeyOnCount = synth.fmLog.stream()
                 .filter(s -> s.startsWith("0:28:") && s.endsWith("F0"))
@@ -530,7 +530,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(sfx, dacData, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         // Prime and run a few ticks
-        seq.read(new short[2]);
+        seq.advanceSamples(2);
         SmpsSequencer.DebugState initial = seq.debugState();
         seq.advance(20000);
 
