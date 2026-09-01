@@ -182,7 +182,7 @@ public final class S3kOpenGgfAudioCapture {
             return;
         }
         if (id == S3kAudioParitySchema.CMD_STOP_SFX) {
-            driver.stopAllSfx();
+            stream.stopSmpsSfx();
             return;
         }
         if (id == S3kAudioParitySchema.CMD_FADE_OUT

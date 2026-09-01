@@ -22,7 +22,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kSpeedShoesCommandSemantics {
@@ -125,22 +129,40 @@ class TestSonic3kSpeedShoesCommandSemantics {
             monitor.update(frame, player);
         }
 
-        Timer timer = GameServices.timers().getTimerForCode(
-                "SpeedShoes-" + player.getCode());
+        String timerCode = "SpeedShoes-" + player.getCode();
+        Timer timer = GameServices.timers().getTimerForCode(timerCode);
         assertTrue(player.hasSpeedShoes());
-        assertTrue(timer != null,
+        assertNotNull(timer,
                 "production monitor pickup must register SpeedShoesTimer");
-        assertTrue(timer.perform(),
-                "production timer expiry must complete");
 
-        int count = audio.commandTimeline().entryCount();
+        int commandCountAfterPickup = audio.commandTimeline().entryCount();
         AudioCommand.SetSpeedMultiplier on = assertInstanceOf(
                 AudioCommand.SetSpeedMultiplier.class,
-                audio.commandTimeline().entryAt(count - 2).command());
+                audio.commandTimeline().entryAt(
+                        commandCountAfterPickup - 1).command());
+        assertEquals(8, on.multiplier());
+
+        int initialTicks = timer.getTicks();
+        for (int update = 1; update < initialTicks; update++) {
+            GameServices.timers().update();
+            assertSame(timer, GameServices.timers().getTimerForCode(timerCode),
+                    "timer must remain registered before expiry");
+            assertTrue(player.hasSpeedShoes());
+            assertEquals(commandCountAfterPickup,
+                    audio.commandTimeline().entryCount(),
+                    "countdown updates must preserve semantic multiplier 8");
+        }
+
+        GameServices.timers().update();
+        assertNull(GameServices.timers().getTimerForCode(timerCode),
+                "TimerManager must remove the completed production timer");
+        assertFalse(player.hasSpeedShoes());
+
+        int count = audio.commandTimeline().entryCount();
         AudioCommand.SetSpeedMultiplier off = assertInstanceOf(
                 AudioCommand.SetSpeedMultiplier.class,
                 audio.commandTimeline().entryAt(count - 1).command());
-        assertEquals(8, on.multiplier());
+        assertEquals(commandCountAfterPickup + 1, count);
         assertEquals(1, off.multiplier());
     }
 }

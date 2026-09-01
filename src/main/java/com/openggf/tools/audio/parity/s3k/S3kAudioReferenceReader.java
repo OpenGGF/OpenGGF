@@ -137,6 +137,8 @@ public final class S3kAudioReferenceReader {
             S3kAudioTick frame = frames.get(index);
             boolean hasPcmTransport = frame.writes().stream()
                     .anyMatch(S3kAudioReferenceReader::isPcmTransportWrite);
+            S3kAudioTick.ProducerInputEvidence inputEvidence =
+                    S3kAudioTick.ProducerInputEvidence.available();
             if (segaPcmSuspended) {
                 if (hasPcmTransport) {
                     // zPlaySEGAPCM executes with interrupts disabled; these
@@ -144,13 +146,20 @@ public final class S3kAudioReferenceReader {
                     // (D:4372-4424).
                     continue;
                 }
-                segaPcmSuspended = false;
             }
             List<AudioParityChipWrite> serviceWrites = frame.writes().stream()
                     .filter(write -> !isPcmTransportWrite(write))
                     .toList();
+            if (segaPcmSuspended && !serviceWrites.isEmpty()) {
+                segaPcmSuspended = false;
+                if (frame.mailbox().stream().allMatch(value -> value == 0)) {
+                    inputEvidence = S3kAudioTick.ProducerInputEvidence.unavailable(
+                            "mailbox input was unavailable for the first observable service after reference producer interrupt services suspended");
+                }
+            }
             serviceConsumer.accept(new S3kAudioTick(ordinal++, frame.lag(),
-                    frame.mailbox(), frame.global(), frame.tracks(), serviceWrites));
+                    frame.mailbox(), frame.global(), frame.tracks(), serviceWrites,
+                    inputEvidence));
             if (frame.mailbox().contains(S3kAudioParitySchema.CMD_SEGA)) {
                 segaPcmSuspended = true;
             }

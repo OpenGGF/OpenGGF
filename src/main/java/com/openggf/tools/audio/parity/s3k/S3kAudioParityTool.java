@@ -14,7 +14,7 @@ import java.util.Map;
  * <pre>
  *   validate --reference &lt;jsonl[.gz]&gt;
  *   compare  --reference &lt;jsonl[.gz]&gt; --rom &lt;s3k.gen&gt; [--ticks N]
- *            [--corrupt-engine-write-tick N]
+ *            [--format text|json] [--corrupt-engine-write-tick N]
  * </pre>
  *
  * <p>{@code validate} streams the reference, checking schema, ROM identity,
@@ -22,13 +22,15 @@ import java.util.Map;
  * additionally drives the engine's S3K SMPS driver with the reference's
  * request timeline and reports the first divergence (tick + field +
  * expected/actual), with no realignment. Exit codes: 0 match, 2 usage,
- * 3 mismatch, 4 invalid capture/tool failure.
+ * 3 mismatch, 4 invalid capture/tool failure, 5 authenticated reference
+ * limitation.
  */
 public final class S3kAudioParityTool {
     public static final int EXIT_MATCH = 0;
     public static final int EXIT_USAGE = 2;
     public static final int EXIT_MISMATCH = 3;
     public static final int EXIT_TOOL_FAILURE = 4;
+    public static final int EXIT_REFERENCE_LIMITATION = 5;
 
     private S3kAudioParityTool() {
     }
@@ -81,6 +83,7 @@ public final class S3kAudioParityTool {
     private static int compare(Map<String, String> options, PrintStream out) {
         Path referencePath = requiredPath(options, "reference");
         Path rom = requiredPath(options, "rom");
+        String format = options.getOrDefault("format", "text");
         Integer corrupt = options.containsKey("corrupt-engine-write-tick")
                 ? Integer.parseInt(options.get("corrupt-engine-write-tick")) : null;
         List<S3kAudioTick> reference = new ArrayList<>();
@@ -94,13 +97,33 @@ public final class S3kAudioParityTool {
         }
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(rom, reference, corrupt);
-        for (String message : engine.unsupportedRequests()) {
-            out.println("unsupported request: " + message);
+        if ("text".equals(format)) {
+            for (String message : engine.unsupportedRequests()) {
+                out.println("unsupported request: " + message);
+            }
         }
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
-        out.println(report.toHumanText());
-        return report.matches() ? EXIT_MATCH : EXIT_MISMATCH;
+        out.println(renderReport(report, format));
+        return exitCode(report);
+    }
+
+    static String renderReport(
+            S3kAudioParityComparator.Report report, String format) {
+        return switch (format) {
+            case "text" -> report.toHumanText();
+            case "json" -> report.toMachineText();
+            default -> throw new UsageException(
+                    "--format must be text or json");
+        };
+    }
+
+    static int exitCode(S3kAudioParityComparator.Report report) {
+        return switch (report.kind()) {
+            case MATCH -> EXIT_MATCH;
+            case REFERENCE_LIMITATION -> EXIT_REFERENCE_LIMITATION;
+            default -> EXIT_MISMATCH;
+        };
     }
 
     private static Path requiredPath(Map<String, String> options, String name) {
@@ -130,7 +153,7 @@ public final class S3kAudioParityTool {
     private static void usage(PrintStream stream) {
         stream.println("usage: S3kAudioParityTool validate --reference <jsonl[.gz]>");
         stream.println("       S3kAudioParityTool compare --reference <jsonl[.gz]> --rom <s3k.gen>");
-        stream.println("           [--ticks N] [--corrupt-engine-write-tick N]");
+        stream.println("           [--ticks N] [--format text|json] [--corrupt-engine-write-tick N]");
     }
 
     private static final class UsageException extends RuntimeException {

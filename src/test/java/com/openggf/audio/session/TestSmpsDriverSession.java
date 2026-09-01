@@ -297,11 +297,19 @@ class TestSmpsDriverSession {
         commands.submit(new AudioPresentationCommand.SetSpeedMultiplier(8),
                 () -> true,
                 producer::applyPendingCommandsAtOwnerBoundary);
+        commands.submit(new AudioPresentationCommand.ResetRingAlternation(false),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
         producer.present(0, PresentationMode.SILENT);
+        handlers.state().setSpindashRevCounter(9);
         assertTrue(session.captureSnapshot().speedShoesEnabled());
         assertEquals(8, session.captureSnapshot().speedMultiplier());
+        assertFalse(session.captureSnapshot().ringLeft());
         assertTrue(registry.snapshot().speedShoesEnabled());
         assertEquals(8, registry.snapshot().speedMultiplier());
+        assertFalse(registry.snapshot().ringLeft());
+        assertEquals(9, registry.snapshot().coordFlagRuntimeState()
+                .spindashRevCounter());
 
         commands.submit(stopCommand, () -> true,
                 producer::applyPendingCommandsAtOwnerBoundary);
@@ -317,8 +325,12 @@ class TestSmpsDriverSession {
                 "failed command " + sourceCommandId + " must remain queued");
         assertTrue(session.captureSnapshot().speedShoesEnabled());
         assertEquals(8, session.captureSnapshot().speedMultiplier());
+        assertFalse(session.captureSnapshot().ringLeft());
         assertTrue(registry.snapshot().speedShoesEnabled());
         assertEquals(8, registry.snapshot().speedMultiplier());
+        assertFalse(registry.snapshot().ringLeft());
+        assertEquals(9, registry.snapshot().coordFlagRuntimeState()
+                .spindashRevCounter());
 
         renderBuffer.set(producer, validBuffer);
         producer.present(2, PresentationMode.FORWARD);
@@ -326,8 +338,12 @@ class TestSmpsDriverSession {
         assertEquals(0, commands.size());
         assertFalse(session.captureSnapshot().speedShoesEnabled());
         assertEquals(1, session.captureSnapshot().speedMultiplier());
+        assertTrue(session.captureSnapshot().ringLeft());
         assertFalse(registry.snapshot().speedShoesEnabled());
         assertEquals(1, registry.snapshot().speedMultiplier());
+        assertTrue(registry.snapshot().ringLeft());
+        assertEquals(0, registry.snapshot().coordFlagRuntimeState()
+                .spindashRevCounter());
         session.queueActivation(activation(0x21));
         var nextMusic = session.captureLogicalSnapshot()
                 .sequencers().getFirst().snapshot();
@@ -359,16 +375,22 @@ class TestSmpsDriverSession {
                 new SmpsSessionTestFixtures.RecordingObserver();
         SmpsDriverSession session = SmpsSessionTestFixtures.session(observer);
         session.install();
-        session.queueActivation(activation(70));
+        session.queueActivation(activationWithFmTrack(70));
         session.serviceForward();
         session.applyCommand(new SmpsSessionCommand.SetSpeedMultiplier(8));
         session.applyCommand(new SmpsSessionCommand.ResetRingAlternation(false));
+        session.applyCommand(new SmpsSessionCommand.PushOverride(
+                activationWithFmTrack(71)));
+        session.serviceForward();
         session.applyCommand(new SmpsSessionCommand.AdmitSfx(
                 continuousSfx(0xBC)));
-        session.applyCommand(new SmpsSessionCommand.PushOverride(
-                activation(71)));
         SmpsDriverSessionSnapshot beforeSession = session.captureSnapshot();
         SmpsDriverSnapshot beforeLogical = session.captureLogicalSnapshot();
+        SmpsDriverSnapshot.SequencerEntry beforeMusic = beforeLogical
+                .sequencers().stream().filter(entry -> !entry.sfx())
+                .findFirst().orElseThrow();
+        assertTrue(beforeMusic.snapshot().tracks().getFirst().overridden(),
+                "the test must exercise active SFX ownership of a music track");
         observer.clear();
 
         session.applyCommand(new SmpsSessionCommand.StopSmpsSfx());
@@ -377,9 +399,14 @@ class TestSmpsDriverSession {
         SmpsDriverSnapshot afterLogical = session.captureLogicalSnapshot();
         assertTrue(afterLogical.sequencers().stream().noneMatch(
                 SmpsDriverSnapshot.SequencerEntry::sfx));
-        assertEquals(beforeLogical.sequencers().stream()
-                        .filter(entry -> !entry.sfx()).toList(),
-                afterLogical.sequencers());
+        SmpsDriverSnapshot.SequencerEntry afterMusic = afterLogical
+                .sequencers().stream().filter(entry -> !entry.sfx())
+                .findFirst().orElseThrow();
+        assertEquals(beforeMusic.source(), afterMusic.source());
+        assertFalse(afterMusic.snapshot().tracks().getFirst().overridden(),
+                "E4 must release SFX ownership from the surviving music track");
+        assertTrue(Arrays.stream(afterLogical.fmLockSequencerIds())
+                .allMatch(owner -> owner == -1));
         assertEquals(beforeLogical.continuousSfxId(),
                 afterLogical.continuousSfxId());
         assertEquals(beforeLogical.continuousSfxFlag(),
@@ -806,13 +833,16 @@ class TestSmpsDriverSession {
                 SmpsSourceDescriptor.Kind.BASE_SFX_ID, id, null, null,
                 data.getZ80StartAddress(), data.getData().length,
                 Arrays.hashCode(data.getData()), false, 7);
-        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .sfxChannelOwnershipMode(
+                        SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
+                .build();
         SmpsDriver detached = new SmpsDriver();
         SmpsSequencer sequencer = new SmpsSequencer(
                 data, SmpsSessionTestFixtures.dac(), detached, detached,
                 AudioManager.getInstance(), config, source,
                 SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE);
-        SmpsSequencerTestAccess.addActiveFmTrack(sequencer, 1);
+        SmpsSequencerTestAccess.addActiveFmTrack(sequencer, 0);
         sequencer.setIsSfx(true);
         return new PreparedSmpsSfxProgram(
                 new SmpsDriverSnapshot.SequencerEntry(

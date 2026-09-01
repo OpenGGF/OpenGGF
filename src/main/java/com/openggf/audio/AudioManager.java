@@ -870,6 +870,7 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
+        ringLeft = true;
         recordTimelineCommand(
                 new AudioCommand.StopSegaPcmAndRetainGlobalStop(
                         sourceCommandId));
@@ -879,6 +880,7 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
+        ringLeft = true;
         recordTimelineCommand(
                 new AudioCommand.RetainGlobalStop(sourceCommandId));
     }
@@ -1008,15 +1010,20 @@ public class AudioManager implements MusicRestoreSink {
             case AudioCommand.StopAllSfx ignored -> backend.stopAllSfx();
             case AudioCommand.StopSmpsSfx ignored -> backend.stopAllSfx();
             case AudioCommand.RetainGlobalStop ignored ->
-                    backend.stopPlayback();
+                    {
+                        ringLeft = true;
+                        backend.stopPlayback();
+                    }
             case AudioCommand.PlaySegaPcm ignored -> {
                 // The authoritative presentation owns raw SEGA PCM.
             }
             case AudioCommand.StopRawPcm ignored -> {
                 // The authoritative presentation owns raw SEGA PCM.
             }
-            case AudioCommand.StopSegaPcmAndRetainGlobalStop ignored ->
-                    backend.stopPlayback();
+            case AudioCommand.StopSegaPcmAndRetainGlobalStop ignored -> {
+                ringLeft = true;
+                backend.stopPlayback();
+            }
             case AudioCommand.ReferenceLimitation ignored -> {
                 // Explicitly unsupported commands perform no mutation.
             }
@@ -1174,6 +1181,11 @@ public class AudioManager implements MusicRestoreSink {
             boolean current, AudioCommand command) {
         if (command instanceof AudioCommand.ResetRingAlternation reset) {
             return reset.ringLeft();
+        }
+        if (command instanceof AudioCommand.RetainGlobalStop
+                || command instanceof AudioCommand
+                .StopSegaPcmAndRetainGlobalStop) {
+            return true;
         }
         if (command instanceof AudioCommand.PlaySfx sfx
                 && sfx.route() == AudioCommand.SfxRoute.RING_RESOLVED) {

@@ -11,6 +11,7 @@ public record SmpsDriverSessionSnapshot(
         SmpsSourceDescriptor selectedDacSource,
         boolean speedShoesEnabled,
         int speedMultiplier,
+        boolean ringLeft,
         SmpsPhysicalDevice.Snapshot physical) {
     public SmpsDriverSessionSnapshot {
         Objects.requireNonNull(pendingGlobalCommand,

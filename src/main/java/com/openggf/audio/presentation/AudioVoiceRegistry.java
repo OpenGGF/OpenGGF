@@ -704,6 +704,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         pendingRestore = false;
         speedShoesEnabled = false;
         speedMultiplier = 1;
+        ringLeft = true;
+        coordFlagHandlers.reset();
         rebuildOrderedVoices();
     }
 

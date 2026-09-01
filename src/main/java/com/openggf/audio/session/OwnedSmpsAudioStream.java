@@ -58,6 +58,11 @@ public final class OwnedSmpsAudioStream
         session.applyGlobalStopNow();
     }
 
+    /** Applies the owning session's logical S3K {@code zStopSFX} boundary. */
+    public void stopSmpsSfx() {
+        session.applyCommand(new SmpsSessionCommand.StopSmpsSfx());
+    }
+
     public VirtualSynthesizer.Snapshot captureSynthSnapshotForTesting() {
         return session.capturePhysicalSnapshotForTesting().synth();
     }

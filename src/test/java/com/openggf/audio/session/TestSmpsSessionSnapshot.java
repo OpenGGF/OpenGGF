@@ -164,6 +164,7 @@ class TestSmpsSessionSnapshot {
                         current.initialized(), current.pendingGlobalCommand(),
                         stale, current.selectedDacSource(),
                         current.speedShoesEnabled(), current.speedMultiplier(),
+                        current.ringLeft(),
                         current.physical());
         var before = SmpsSessionTestFixtures.json(current);
         observer.clear();

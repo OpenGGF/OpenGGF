@@ -18,7 +18,8 @@ public final class S3kAudioParityComparator {
     public record Report(Kind kind, int ticksCompared, Integer tick, String role, String field,
             Integer eventIndex, String reference, String openggf) {
         public enum Kind {
-            MATCH, TICK_COUNT_MISMATCH, GLOBAL_STATE_MISMATCH, TRACK_STATE_MISMATCH,
+            MATCH, REFERENCE_LIMITATION, TICK_COUNT_MISMATCH,
+            GLOBAL_STATE_MISMATCH, TRACK_STATE_MISMATCH,
             EVENT_MISSING, EVENT_EXTRA, EVENT_VALUE_DIFFERENT
         }
 
@@ -30,7 +31,10 @@ public final class S3kAudioParityComparator {
             if (matches()) {
                 return "S3K audio oracle: MATCH (" + ticksCompared + " ticks)";
             }
-            StringBuilder result = new StringBuilder("S3K audio oracle: MISMATCH\nkind: " + kind);
+            String status = kind == Kind.REFERENCE_LIMITATION
+                    ? "REFERENCE_LIMITATION" : "MISMATCH";
+            StringBuilder result = new StringBuilder(
+                    "S3K audio oracle: " + status + "\nkind: " + kind);
             if (tick != null) result.append("\ntick: ").append(tick);
             if (role != null) result.append("\nrole: ").append(role);
             if (field != null) result.append("\nfield: ").append(field);
@@ -38,6 +42,34 @@ public final class S3kAudioParityComparator {
             result.append("\nreference: ").append(reference);
             result.append("\nopenggf: ").append(openggf);
             return result.toString();
+        }
+
+        /** Stable one-line machine view with a fixed field order. */
+        public String toMachineText() {
+            return "{\"schema\":\"openggf.s3k_audio_oracle_report.v1\""
+                    + ",\"kind\":\"" + kind + "\""
+                    + ",\"ticks_compared\":" + ticksCompared
+                    + ",\"tick\":" + jsonNumber(tick)
+                    + ",\"role\":" + jsonString(role)
+                    + ",\"field\":" + jsonString(field)
+                    + ",\"event\":" + jsonNumber(eventIndex)
+                    + ",\"reference\":" + jsonString(reference)
+                    + ",\"openggf\":" + jsonString(openggf) + "}";
+        }
+
+        private static String jsonNumber(Integer value) {
+            return value == null ? "null" : value.toString();
+        }
+
+        private static String jsonString(String value) {
+            if (value == null) {
+                return "null";
+            }
+            return "\"" + value.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\r", "\\r")
+                    .replace("\n", "\\n")
+                    .replace("\t", "\\t") + "\"";
         }
     }
 
@@ -50,6 +82,13 @@ public final class S3kAudioParityComparator {
                     Integer.toString(reference.size()), Integer.toString(openGgf.size()));
         }
         for (int ordinal = 0; ordinal < reference.size(); ordinal++) {
+            S3kAudioTick.ProducerInputEvidence input =
+                    reference.get(ordinal).producerInputEvidence();
+            if (input.unavailable()) {
+                return new Report(Report.Kind.REFERENCE_LIMITATION,
+                        ordinal, ordinal, null, "producer_input", null,
+                        input.detail(), "<unavailable>");
+            }
             Report difference = compareTick(reference.get(ordinal), openGgf.get(ordinal), ordinal);
             if (difference != null) {
                 return difference;

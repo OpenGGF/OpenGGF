@@ -78,6 +78,68 @@ class TestS3kAudioParityComparator {
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_MISSING, report.kind());
     }
 
+    @Test
+    void authenticatedUnavailableProducerInputIsAReferenceLimitation() {
+        S3kAudioTick ordinary = tick(0, 0x40, 0xB4);
+        S3kAudioTick reference = new S3kAudioTick(
+                ordinary.ordinal(), ordinary.lag(), ordinary.mailbox(),
+                ordinary.global(), ordinary.tracks(), ordinary.writes(),
+                S3kAudioTick.ProducerInputEvidence.unavailable(
+                        "mailbox sampling was suspended"));
+        List<AudioParityChipWrite> writes = new ArrayList<>(ordinary.writes());
+        writes.removeLast();
+        S3kAudioTick engine = new S3kAudioTick(
+                ordinary.ordinal(), ordinary.lag(), ordinary.mailbox(),
+                ordinary.global(), ordinary.tracks(), writes);
+
+        S3kAudioParityComparator.Report report =
+                S3kAudioParityComparator.compare(
+                        List.of(reference), List.of(engine));
+
+        assertEquals(S3kAudioParityComparator.Report.Kind.REFERENCE_LIMITATION,
+                report.kind());
+        assertEquals(0, report.tick());
+        assertEquals("producer_input", report.field());
+        assertTrue(report.toHumanText().startsWith(
+                "S3K audio oracle: REFERENCE_LIMITATION"));
+        assertTrue(report.toMachineText().contains(
+                "\"kind\":\"REFERENCE_LIMITATION\""));
+        assertEquals(S3kAudioParityTool.EXIT_REFERENCE_LIMITATION,
+                S3kAudioParityTool.exitCode(report));
+    }
+
+    @Test
+    void missingWriteWithoutProducerEvidenceCannotBeDowngraded() {
+        S3kAudioTick reference = tick(0, 0x40, 0xB4);
+        List<AudioParityChipWrite> writes = new ArrayList<>(reference.writes());
+        writes.removeLast();
+        S3kAudioTick engine = new S3kAudioTick(
+                reference.ordinal(), reference.lag(), reference.mailbox(),
+                reference.global(), reference.tracks(), writes);
+
+        S3kAudioParityComparator.Report report =
+                S3kAudioParityComparator.compare(
+                        List.of(reference), List.of(engine));
+
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_MISSING,
+                report.kind());
+        assertEquals(S3kAudioParityTool.EXIT_MISMATCH,
+                S3kAudioParityTool.exitCode(report));
+    }
+
+    @Test
+    void cliReportFormatSelectsStableHumanOrMachineRendering() {
+        S3kAudioParityComparator.Report report =
+                S3kAudioParityComparator.compare(
+                        List.of(tick(0, 0x40, 0xB4)),
+                        List.of(tick(0, 0x40, 0xB4)));
+
+        assertEquals(report.toHumanText(),
+                S3kAudioParityTool.renderReport(report, "text"));
+        assertEquals(report.toMachineText(),
+                S3kAudioParityTool.renderReport(report, "json"));
+    }
+
     private static S3kAudioTick tick(int ordinal, int tempo, int psgWrite) {
         List<S3kAudioTrackState> tracks = new ArrayList<>();
         for (int index = 0; index < S3kAudioParitySchema.ROLES.size(); index++) {

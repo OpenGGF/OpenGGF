@@ -660,6 +660,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         // (pinned skdisasm D:2460-2521); normalized controls are off / 1x.
         speedShoesEnabled = false;
         speedMultiplier = 1;
+        ringLeft = true;
         withPort(driverIdentity, port -> {
             applyProgram(port, policy.stopAll());
             port.silenceOutput();
@@ -679,6 +680,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                 selectedDacSource,
                 speedShoesEnabled,
                 speedMultiplier,
+                ringLeft,
                 device.captureSnapshot());
     }
 
@@ -764,6 +766,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         selectedDacSource = resolved.session().selectedDacSource();
         speedShoesEnabled = resolved.session().speedShoesEnabled();
         speedMultiplier = resolved.session().speedMultiplier();
+        ringLeft = resolved.session().ringLeft();
         pendingService = materializePendingService(
                 resolved.pendingService());
         clearOverrides();
@@ -1136,11 +1139,7 @@ public final class SmpsDriverSession implements AutoCloseable {
      * logical operation emits no guessed physical writes.
      */
     private void stopSmpsSfx() {
-        SmpsDriverSnapshot current = driver.captureSnapshot();
-        restoreLogicalWithoutWrites(filterLogicalSnapshot(
-                current, false, true));
-        driver.observeLifecycle(
-                SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
+        driver.stopAllSfxWithoutRestoreWrites();
     }
 
     private void pushOverride(

@@ -1859,6 +1859,32 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
     }
 
     /**
+     * Releases the logical SFX slots without emitting channel restoration
+     * writes or clearing the continuous-SFX bookkeeping bytes. S3K
+     * {@code zStopSFX} owns a distinct seven-slot physical-write program; the
+     * session uses this boundary until that program is ported in full.
+     */
+    public void stopAllSfxWithoutRestoreWrites() {
+        synchronized (sequencersLock) {
+            sfxRemovalBuffer.clear();
+            sfxRemovalBuffer.addAll(sfxSequencers);
+            for (int i = 0; i < sfxRemovalBuffer.size(); i++) {
+                SmpsSequencer sfx = sfxRemovalBuffer.get(i);
+                sequencers.remove(sfx);
+                releaseLocksWithoutRestoreWrites(sfx);
+                sfxSequencers.remove(sfx);
+                sfxSequencersById.remove(sfx.getSmpsData().getId(), sfx);
+                forgetSfxClaims(sfx);
+                sfxAdmissionOrdinals.remove(sfx);
+                forgetSequencerServiceIdentity(sfx);
+            }
+            pendingConflictOwners.clear();
+        }
+        observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
+    }
+
+    /**
      * Advances direct-read logical cadence while a separate owner renders the
      * physical frames. Presentation never calls this compatibility boundary.
      */
@@ -2118,6 +2144,28 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         psgLatches.remove(seq);
         sfxAdmissionOrdinals.remove(seq);
         pendingConflictOwners.keySet().removeIf(key -> key.challenger() == seq);
+    }
+
+    private void releaseLocksWithoutRestoreWrites(SmpsSequencer seq) {
+        for (int i = 0; i < fmLocks.length; i++) {
+            if (fmLocks[i] == seq) {
+                fmLocks[i] = null;
+                updateOverridesWithoutRestore(
+                        SmpsSequencer.TrackType.FM, i, false);
+            }
+        }
+        for (int i = 0; i < psgLocks.length; i++) {
+            if (psgLocks[i] == seq) {
+                psgLocks[i] = null;
+                updateOverridesWithoutRestore(
+                        SmpsSequencer.TrackType.PSG, i, false);
+            }
+        }
+        seq.setPsgLatchChannel(-1);
+        psgLatches.remove(seq);
+        sfxAdmissionOrdinals.remove(seq);
+        pendingConflictOwners.keySet().removeIf(
+                key -> key.challenger() == seq);
     }
 
     /** Releases stopped tracks while their sibling SFX tracks remain active. */

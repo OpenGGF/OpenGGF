@@ -81,6 +81,8 @@ class TestS3kAudioOracleFixtureContract {
         assertEquals(0, boot.writes().getLast().value());
         assertEquals(List.of(0xe1, 0, 0), services.get(1).mailbox(),
                 "the first ordinary zVInt consumes the request left pending during boot");
+        assertTrue(services.get(128).producerInputEvidence().unavailable(),
+                "the projector must retain its authenticated suspended-input evidence");
     }
 
     @Test
@@ -112,13 +114,11 @@ class TestS3kAudioOracleFixtureContract {
         // resumed service is [0,0,0]. Keep this producer-input omission as an
         // explicit frontier instead of deriving an engine command from the
         // reference write stream.
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_MISSING,
+        assertEquals(S3kAudioParityComparator.Report.Kind.REFERENCE_LIMITATION,
                 report.kind());
         assertEquals(128, report.tick());
-        assertEquals(0, report.eventIndex());
-        assertEquals(services.get(128).writes().getFirst().toString(),
-                report.reference());
-        assertEquals("<missing>", report.openggf());
+        assertEquals("producer_input", report.field());
+        assertTrue(report.reference().contains("interrupt services suspended"));
     }
 
     private static String sha256(Path path) throws Exception {
