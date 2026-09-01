@@ -274,12 +274,8 @@ class TestAudioPresentationSnapshotParity {
                 audio.captureLogicalSnapshot().presentation();
         assertEquals(AudioSourceDescriptor.baseMusic(0x81),
                 released.activeMusic().sourceDescriptor());
-        assertFalse(released.voices().stream()
-                .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
-                .map(PresentationVoiceSnapshot.Smps.class::cast)
-                .flatMap(voice -> voice.driver().logical().sequencers().stream())
-                .anyMatch(com.openggf.audio.rewind.SmpsDriverSnapshot
-                        .SequencerEntry::sfx));
+        assertTrue(released.voices().isEmpty(),
+                "session SMPS state must not use ordered voice carriers");
         assertTrue(released.speedShoesEnabled());
         assertEquals(3, released.speedMultiplier());
     }
@@ -829,25 +825,8 @@ class TestAudioPresentationSnapshotParity {
             PresentationVoiceSnapshot left = expected.voices().get(index);
             PresentationVoiceSnapshot right = actual.voices().get(index);
             assertEquals(left.getClass(), right.getClass());
-            if (left instanceof PresentationVoiceSnapshot.Smps leftSmps
-                    && right instanceof PresentationVoiceSnapshot.Smps
-                            rightSmps) {
-                assertEquals(leftSmps.voiceId(), rightSmps.voiceId());
-                assertEquals(leftSmps.musicId(), rightSmps.musicId());
-                assertEquals(leftSmps.sourceDescriptor(),
-                        rightSmps.sourceDescriptor());
-                assertEquals(leftSmps.driver().logical().continuousSfxId(),
-                        rightSmps.driver().logical().continuousSfxId());
-                assertEquals(leftSmps.driver().logical().sequencers().stream()
-                                .map(entry -> entry.source()).toList(),
-                        rightSmps.driver().logical().sequencers().stream()
-                                .map(entry -> entry.source()).toList());
-            } else if (left instanceof PresentationVoiceSnapshot.Sample
-                    leftSample
-                    && right instanceof PresentationVoiceSnapshot.Sample
-                            rightSample) {
-                assertEquals(leftSample, rightSample);
-            }
+            assertEquals((PresentationVoiceSnapshot.Sample) left,
+                    (PresentationVoiceSnapshot.Sample) right);
         }
     }
 
@@ -856,23 +835,6 @@ class TestAudioPresentationSnapshotParity {
             AudioPresentationSnapshot actual) {
         assertPresentationLogicalEquals(expected, actual);
         assertEquals(expected.nextVoiceId(), actual.nextVoiceId());
-        for (int index = 0; index < expected.voices().size(); index++) {
-            if (expected.voices().get(index)
-                    instanceof PresentationVoiceSnapshot.Smps left
-                    && actual.voices().get(index)
-                    instanceof PresentationVoiceSnapshot.Smps right) {
-                assertLegacyDriverSnapshotExactly(
-                        left.driver(), right.driver());
-            }
-        }
-    }
-
-    private static void assertLegacyDriverSnapshotExactly(
-            com.openggf.audio.rewind.LegacySmpsDriverSnapshot expected,
-            com.openggf.audio.rewind.LegacySmpsDriverSnapshot actual) {
-        assertDriverSnapshotExactly(expected.logical(), actual.logical());
-        assertDeepSnapshotEquals(expected.physical(), actual.physical());
-        assertSame(expected.liveDacReference(), actual.liveDacReference());
     }
 
     private static void assertDriverSnapshotExactly(
@@ -1092,11 +1054,6 @@ class TestAudioPresentationSnapshotParity {
                 return pcm;
             }
 
-            @Override
-            public SmpsCompositeVoice recreateSmps(
-                    PresentationVoiceSnapshot.Smps snapshot) {
-                throw new AssertionError("no SMPS voice expected");
-            }
         };
     }
 

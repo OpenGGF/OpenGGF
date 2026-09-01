@@ -720,14 +720,6 @@ class TestAudioManagerPresentationModes {
                         throw new AssertionError("no PCM voice expected");
                     }
 
-                    @Override
-                    public com.openggf.audio.presentation.SmpsCompositeVoice
-                            recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new AssertionError(
-                                "authoritative snapshot has no SMPS voice");
-                    }
-
                 };
         producer.beginReverse(1.0);
         producer.prepareRestoreSelection(selected, resolver);

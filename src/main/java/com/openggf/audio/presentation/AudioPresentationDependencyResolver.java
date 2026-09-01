@@ -40,8 +40,6 @@ public interface AudioPresentationDependencyResolver {
                 "no cached DAC dependency for " + source);
     }
 
-    SmpsCompositeVoice recreateSmps(PresentationVoiceSnapshot.Smps snapshot);
-
     default PresentationVoice recreateVoice(
             AudioPresentationCommand.VoiceDescriptor descriptor) {
         if (descriptor instanceof AudioPresentationCommand.SampleVoiceDescriptor sample) {
@@ -49,13 +47,8 @@ public interface AudioPresentationDependencyResolver {
             return SampleBackedVoice.restore(
                     snapshot, resolvePcm(snapshot.assetId()));
         }
-        return recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor) descriptor);
+        throw new IllegalArgumentException(
+                "SMPS voices are recreated by the session owner");
     }
 
-    default SmpsCompositeVoice recreateSmps(
-            AudioPresentationCommand.SmpsVoiceDescriptor descriptor) {
-        throw new IllegalStateException(
-                "no cached SMPS music for " + descriptor.sourceDescriptor());
-    }
 }

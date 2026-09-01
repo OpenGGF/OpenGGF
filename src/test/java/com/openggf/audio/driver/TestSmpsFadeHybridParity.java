@@ -132,7 +132,7 @@ public class TestSmpsFadeHybridParity {
         AbstractSmpsData musicData = loader.loadMusic(MUSIC_EHZ);
         assertNotNull(musicData, "Music data should load");
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(mode);
 
@@ -168,7 +168,8 @@ public class TestSmpsFadeHybridParity {
             }
 
             int framesToRead = Math.min(BUFFER_FRAMES, totalFrames - framesRendered);
-            driver.read(buffer, framesToRead * 2);
+            SmpsDriverTestAccess.read(
+                    driver, buffer, framesToRead * 2);
             System.arraycopy(buffer, 0, pcm, framesRendered * 2, framesToRead * 2);
             if (fadeTriggered && framesRendered < PRE_ROLL_FRAMES + FADE_ACTIVE_PROBE_FRAMES) {
                 chunksDuringFade += driver.getHybridChunkCountForTesting();

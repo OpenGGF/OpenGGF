@@ -7,6 +7,7 @@ import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.driver.PreparedSfxAdmission;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import com.openggf.audio.presentation.AudioPresentationCommand.AddSmpsSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.EndMusicOverride;
 import com.openggf.audio.presentation.AudioPresentationCommand.HardReset;
@@ -24,7 +25,6 @@ import com.openggf.audio.presentation.AudioPresentationCommand.StopRawPcm;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleMute;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleSolo;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
-import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.CoordFlagContext;
 import com.openggf.audio.smps.CoordFlagHandler;
@@ -310,30 +310,6 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void logicalSmpsVoiceIsNeverMixedOrFailedByThePcmRegistry() {
-        List<String> warnings = new ArrayList<>();
-        RecordingInstantiation instantiation = new RecordingInstantiation();
-        AudioVoiceRegistry registry = registry(instantiation, warnings);
-        SmpsCompositeVoice throwing = new SmpsCompositeVoice(
-                80, 0, 0x81, AudioSourceDescriptor.baseMusic(0x81),
-                MAX_STEREO_FRAMES, new ThrowingDriver());
-        instantiation.enqueueMusicDriver(new ThrowingDriver());
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
-                0x81, AudioSourceDescriptor.baseMusic(0x81), throwing)));
-        AudioPresentationMixer mixer =
-                new AudioPresentationMixer(MAX_STEREO_FRAMES, registry::onVoiceFailure);
-
-        registry.beginRendering();
-        mixer.mixPcmVoices(registry, 1, new short[2], 0);
-        assertEquals(1, registry.orderedVoiceCount(),
-                "Task-6 standalone carrier remains available to direct callers");
-        registry.endRendering();
-
-        assertEquals(1, registry.orderedVoiceCount());
-        assertEquals(0, warnings.size());
-    }
-
-    @Test
     void crossThreadRemovalAndFailureCallbacksCannotMutateActiveTraversal()
             throws InterruptedException {
         List<String> warnings = new ArrayList<>();
@@ -408,12 +384,6 @@ class TestAudioVoiceRegistry {
                     public DecodedPcm resolvePcm(String assetId) {
                         throw new IllegalStateException("missing " + assetId);
                     }
-
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new IllegalStateException("missing SMPS");
-                    }
                 };
 
         assertThrows(IllegalStateException.class,
@@ -428,121 +398,10 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void standaloneSmpsRestoreCarrierDoesNotEnterAuthoritativePcmMixer() {
-        RecordingInstantiation instantiation = new RecordingInstantiation();
-        AudioVoiceRegistry original = registry(instantiation, new ArrayList<>());
-        SmpsDriver driver = new SmpsDriver();
-        AudioTestFixtures.StubSmpsData data =
-                new AudioTestFixtures.StubSmpsData("music");
-        data.setId(0x81);
-        driver.addSequencer(new SmpsSequencer(
-                data, dacData(), driver, AudioManager.getInstance(),
-                new SmpsSequencerConfig.Builder().build()), false);
-        primeSynth(driver);
-        instantiation.enqueueMusicDriver(driver);
-        original.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
-                0x81, AudioSourceDescriptor.baseMusic(0x81),
-                composite(70, 0x81, driver))));
-
-        AudioPresentationSnapshot snapshot = original.snapshot();
-        PresentationVoiceSnapshot.Smps smpsSnapshot = snapshot.voices().stream()
-                .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
-                .map(PresentationVoiceSnapshot.Smps.class::cast)
-                .findFirst()
-                .orElseThrow();
-        List<short[]> expected = mixPcmPackets(original, 10);
-
-        AudioVoiceRegistry restored =
-                registry(new RecordingInstantiation(), new ArrayList<>());
-        restored.restore(snapshot, new FixtureResolver());
-        List<short[]> actual = mixPcmPackets(restored, 10);
-
-        assertFalse(smpsSnapshot.driver().logical().sequencers().isEmpty(),
-                "registry snapshot must preserve a live SMPS sequencer");
-        assertFalse(expected.stream()
-                .flatMapToInt(packet -> {
-                    int[] samples = new int[packet.length];
-                    for (int index = 0; index < packet.length; index++) {
-                        samples[index] = packet[index];
-                    }
-                    return Arrays.stream(samples);
-                })
-                .anyMatch(sample -> sample != 0),
-                "standalone logical compatibility state is not rendered by"
-                        + " the authoritative PCM registry mixer");
-        for (int packet = 0; packet < expected.size(); packet++) {
-            assertArrayEquals(expected.get(packet), actual.get(packet));
-        }
-    }
-
-    @Test
-    void discardPreparedSmpsRestoreIsWriteFreeAndPreservesLiveRegistry() {
-        AudioVoiceRegistry registry =
-                registry(new RecordingInstantiation(), new ArrayList<>());
-        registry.apply(raw(longSample(90, 0, "live-raw")));
-        AudioPresentationSnapshot liveBefore = registry.snapshot();
-
-        SmpsDriver source = populatedDriver(ChipWriteObserver.NONE, 0x81);
-        PresentationVoiceSnapshot.Smps selectedVoice =
-                (PresentationVoiceSnapshot.Smps) composite(
-                        1, 0x81, source).snapshot();
-        AudioPresentationSnapshot selected = new AudioPresentationSnapshot(
-                2, List.of(selectedVoice),
-                new AudioPresentationSnapshot.MusicSlotSnapshot(
-                        0x81, AudioSourceDescriptor.baseMusic(0x81), 1),
-                List.of(), null, null, 0, 0, 0, 0,
-                false, false, false, 1, true,
-                new SmpsCoordFlagRuntimeState.Snapshot(0));
-        AtomicInteger ymWrites = new AtomicInteger();
-        AtomicInteger psgWrites = new AtomicInteger();
-        AtomicReference<SmpsDriver> detached = new AtomicReference<>();
-        AudioPresentationDependencyResolver resolver =
-                new AudioPresentationDependencyResolver() {
-                    @Override
-                    public DecodedPcm resolvePcm(String assetId) {
-                        throw new AssertionError("no PCM restore expected");
-                    }
-
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        SmpsDriver driver = populatedDriver(
-                                countingChipObserver(ymWrites, psgWrites),
-                                0x82);
-                        SmpsCompositeVoice voice = new SmpsCompositeVoice(
-                                snapshot.voiceId(), snapshot.priority(),
-                                snapshot.musicId(), snapshot.sourceDescriptor(),
-                                snapshot.maxStereoFrames(), driver);
-                        voice.restore(snapshot,
-                                SmpsDriverSnapshot.liveReferences());
-                        detached.set(driver);
-                        return voice;
-                    }
-                };
-        AudioVoiceRegistry.PreparedSnapshotRestore prepared =
-                registry.prepareSnapshotRestore(selected, resolver);
-        ymWrites.set(0);
-        psgWrites.set(0);
-
-        registry.discardPreparedRestore(prepared);
-
-        assertEquals(0, ymWrites.get(),
-                "discard must not silence a detached YM device");
-        assertEquals(0, psgWrites.get(),
-                "discard must not silence a detached PSG device");
-        assertEquals(liveBefore, registry.snapshot(),
-                "discard must not mutate the published registry");
-        assertEquals(1, detached.get().sequencersForTesting().size(),
-                "discard releases the detached graph without stopping it");
-    }
-
-    @Test
     void restoreIntoEmptyRegistryRecreatesEveryDedicatedAndSampleSlot() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry original = registry(instantiation, new ArrayList<>());
-        SmpsCompositeVoice music = composite(10, 0x81, new SmpsDriver());
-        original.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
-                0x81, AudioSourceDescriptor.baseMusic(0x81), music)));
+        original.apply(new ReplaceMusic(music(10, 0x81, "base")));
         original.apply(new PushMusicOverride(music(11, 0x82, "override")));
         original.apply(new AddSmpsSfx(source(12, 0xB0)));
         original.apply(raw(longSample(13, 0, "raw")));
@@ -553,10 +412,9 @@ class TestAudioVoiceRegistry {
         AudioVoiceRegistry restored = registry(new RecordingInstantiation(), new ArrayList<>());
         restored.restore(snapshot, resolver);
 
-        assertEquals(List.of(11L, 12L, 13L, 14L), orderedIds(restored));
+        assertEquals(List.of(11L, 13L, 14L), orderedIds(restored));
         assertEquals(1, restored.snapshot().overrideStack().size());
-        assertEquals(2, resolver.recreatedSmps);
-        assertEquals(MAX_STEREO_FRAMES, resolver.lastMaxStereoFrames);
+        assertEquals(0, resolver.recreatedSmps);
     }
 
     @Test
@@ -608,7 +466,7 @@ class TestAudioVoiceRegistry {
         musicSequencer.setOnFadeComplete(fadeCompletions::incrementAndGet);
         musicSequencer.triggerFadeIn(2, 1);
         instantiation.enqueueMusicDriver(driver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x82, AudioSourceDescriptor.baseMusic(0x82),
                 composite(1, 0x82, new SmpsDriver()))));
         AudioPresentationCommandQueue queue =
@@ -644,7 +502,7 @@ class TestAudioVoiceRegistry {
         musicSequencer.setOnFadeComplete(fadeCompletions::incrementAndGet);
         musicSequencer.triggerFadeIn(2, 1);
         instantiation.enqueueMusicDriver(driver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x82, AudioSourceDescriptor.baseMusic(0x82),
                 composite(1, 0x82, new SmpsDriver()))));
         AudioPresentationCommandQueue queue =
@@ -669,50 +527,6 @@ class TestAudioVoiceRegistry {
                 "retry must attach exactly one SFX sequencer");
         assertSame(musicSequencer, driver.firstMusicSequencer());
         assertEquals(1, fadeCompletions.get());
-        assertEquals(0, queue.size());
-    }
-
-    @Test
-    void failedSfxPreparationLeavesExactDacBankAndPlaybackBeforeRetry() {
-        DacData musicDac = dacData(
-                new byte[] {0, 24, 64, 127, (byte) 255, (byte) 196, 96, 32});
-        DacData sfxDac = dacData(
-                new byte[] {127, 96, 64, 32, 16, 8, 4, 0});
-        FailingMutationDriver driver =
-                populatedFailingMutationDriver(musicDac);
-        FailingMutationDriver uninterrupted =
-                populatedFailingMutationDriver(musicDac);
-        TransactionalSfxInstantiation instantiation =
-                new TransactionalSfxInstantiation(sfxDac, noOpHandler());
-        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
-        instantiation.enqueueMusicDriver(driver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
-                0x82, AudioSourceDescriptor.baseMusic(0x82),
-                composite(1, 0x82, new SmpsDriver()))));
-        primeDacPlayback(driver, musicDac);
-        primeDacPlayback(uninterrupted, musicDac);
-        AudioPresentationCommandQueue queue =
-                new AudioPresentationCommandQueue();
-        queue.submit(new AddSmpsSfx(source(2, 0xB0)),
-                () -> true, registry::apply);
-        driver.failNextSfxAttachment();
-
-        assertThrows(IllegalStateException.class,
-                () -> queue.applyPending(registry::apply));
-
-        assertSame(musicDac, activeDacData(driver),
-                "pre-mutation rejection must retain the exact DAC bank");
-        short[] expected = renderFrames(uninterrupted, 128);
-        short[] actual = renderFrames(driver, 128);
-        assertArrayEquals(expected, actual,
-                "pre-mutation rejection must retain in-flight DAC playback");
-        assertEquals(1, queue.size());
-
-        queue.applyPending(registry::apply);
-
-        assertSame(musicDac, activeDacData(driver),
-                "successful attachment must retain the owning music DAC bank");
-        assertEquals(2, driver.sequencersForTesting().size());
         assertEquals(0, queue.size());
     }
 
@@ -750,7 +564,7 @@ class TestAudioVoiceRegistry {
         FailingMutationDriver driver =
                 populatedFailingMutationDriver();
         instantiation.enqueueMusicDriver(driver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x82, AudioSourceDescriptor.baseMusic(0x82),
                 composite(1, 0x82, new SmpsDriver()))));
         AudioPresentationCommandQueue queue =
@@ -771,93 +585,6 @@ class TestAudioVoiceRegistry {
         assertEquals(8, state.spindashRevCounter(),
                 "retry must apply the start notification exactly once");
         assertEquals(0, queue.size());
-    }
-
-    @Test
-    void realYmObserverFailureRollsBackRegistryCommandAndQueueBeforeRetry() {
-        assertRealObserverFailureRollsBackRegistryCommand(false);
-    }
-
-    @Test
-    void realPsgObserverFailureRollsBackRegistryCommandAndQueueBeforeRetry() {
-        assertRealObserverFailureRollsBackRegistryCommand(true);
-    }
-
-    private static void assertRealObserverFailureRollsBackRegistryCommand(
-            boolean psg) {
-        SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
-        state.setSpindashRevCounter(7);
-        SmpsCoordFlagHandlerOwner handlerOwner =
-                new SmpsCoordFlagHandlerOwner(state);
-        handlerOwner.register("observer-test", shared -> new CoordFlagHandler() {
-            @Override
-            public void onSfxStart(int sfxId) {
-                shared.setSpindashRevCounter(
-                        shared.spindashRevCounter() + 1);
-            }
-
-            @Override
-            public boolean handleFlag(
-                    CoordFlagContext context,
-                    SmpsSequencer.Track track,
-                    int command) {
-                return false;
-            }
-
-            @Override
-            public int flagParamLength(int command) {
-                return -1;
-            }
-        });
-        int channelMask = psg ? 0x80 : 0;
-        ObserverSfxInstantiation instantiation =
-                new ObserverSfxInstantiation(
-                        channelMask, handlerOwner.handlerFor("observer-test"));
-        SmpsDriver driver = new SmpsDriver();
-        SmpsSequencer existing = new SmpsSequencer(
-                new FixtureSfxData(0xAF,
-                        new FixtureSfxTrack(channelMask, 1, 0, 0)),
-                dacData(), driver, AudioManager.getInstance(),
-                new SmpsSequencerConfig.Builder().build());
-        driver.addSequencer(existing, true);
-        instantiation.enqueueMusicDriver(driver);
-        AudioVoiceRegistry registry = new AudioVoiceRegistry(
-                instantiation, instantiation, handlerOwner, ignored -> {
-                });
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
-                0x82, AudioSourceDescriptor.baseMusic(0x82),
-                composite(1, 0x82, driver))));
-        assertEquals(1, registry.orderedVoiceCount(),
-                "Task-6 standalone carrier remains available to direct callers");
-        List<SmpsSequencer> sequencerIdentities =
-                driver.sequencersForTesting();
-        Object registryBefore = JSON.valueToTree(registry.snapshot());
-        driver.setChipWriteObserver(new FailOnceChipObserver(psg));
-        AudioPresentationCommandQueue queue =
-                new AudioPresentationCommandQueue();
-        queue.submit(new AddSmpsSfx(source(2, 0xB0)),
-                () -> true, registry::apply);
-
-        assertThrows(IllegalStateException.class,
-                () -> queue.applyPending(registry::apply));
-
-        assertEquals(registryBefore, JSON.valueToTree(registry.snapshot()),
-                "registry and full driver/synth state roll back exactly");
-        assertEquals(1, registry.snapshot().activeMusic().voiceId());
-        assertSequencerIdentities(sequencerIdentities,
-                driver.sequencersForTesting());
-        assertEquals(7, state.spindashRevCounter());
-        assertEquals(1, queue.size(),
-                "the failed command remains queued for retry");
-
-        queue.applyPending(registry::apply);
-
-        assertEquals(8, state.spindashRevCounter(),
-                "retry publishes coordination exactly once");
-        assertEquals(0, queue.size());
-        assertEquals(1, driver.sequencersForTesting().size());
-        assertEquals(0xB0, driver.sequencersForTesting().get(0)
-                .getSmpsData().getId());
     }
 
     @Test
@@ -927,7 +654,7 @@ class TestAudioVoiceRegistry {
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
         FailingMutationDriver driver = populatedFailingMutationDriver();
         instantiation.enqueueMusicDriver(driver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x82, AudioSourceDescriptor.baseMusic(0x82),
                 composite(1, 0x82, new SmpsDriver()))));
         registry.apply(new AddSmpsSfx(source(2, 0xB0)));
@@ -967,10 +694,10 @@ class TestAudioVoiceRegistry {
         FailingMutationDriver overrideDriver = populatedFailingMutationDriver();
         instantiation.enqueueMusicDriver(baseDriver);
         instantiation.enqueueMusicDriver(overrideDriver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x82, AudioSourceDescriptor.baseMusic(0x82),
                 composite(1, 0x82, new SmpsDriver()))));
-        registry.apply(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+        registry.apply(new PushMusicOverride(legacyMusicEntry(
                 0x83, AudioSourceDescriptor.baseMusic(0x83),
                 composite(2, 0x83, new SmpsDriver()))));
         SmpsSequencer baseSequencer = baseDriver.firstMusicSequencer();
@@ -1048,7 +775,7 @@ class TestAudioVoiceRegistry {
         CountingVoice wrong = new CountingVoice(43, 0);
         AudioVoiceRegistry registry =
                 registryWithFixedRecreation(wrong);
-        MusicVoiceEntry entry = MusicVoiceEntry.fromVoice(
+        MusicVoiceEntry entry = legacyMusicEntry(
                 0x85, AudioSourceDescriptor.baseMusic(0x85),
                 composite(43, 0x85, new SmpsDriver()));
 
@@ -1117,7 +844,7 @@ class TestAudioVoiceRegistry {
         instantiation.enqueueMusicDriver(new SmpsDriver());
         AudioPresentationCommandQueue queue =
                 new AudioPresentationCommandQueue();
-        queue.submit(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+        queue.submit(new PushMusicOverride(legacyMusicEntry(
                         0x82, AudioSourceDescriptor.baseMusic(0x82),
                         composite(2, 0x82, new SmpsDriver()))),
                 () -> true, registry::apply);
@@ -1153,7 +880,7 @@ class TestAudioVoiceRegistry {
         instantiation.enqueueMusicDriver(new SmpsDriver());
         AudioPresentationCommandQueue queue =
                 new AudioPresentationCommandQueue();
-        queue.submit(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        queue.submit(new ReplaceMusic(legacyMusicEntry(
                         0x82, AudioSourceDescriptor.baseMusic(0x82),
                         composite(2, 0x82, new SmpsDriver()))),
                 () -> true, registry::apply);
@@ -1188,7 +915,7 @@ class TestAudioVoiceRegistry {
         instantiation.enqueueMusicDriver(new SmpsDriver());
         AudioPresentationCommandQueue queue =
                 new AudioPresentationCommandQueue();
-        queue.submit(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+        queue.submit(new PushMusicOverride(legacyMusicEntry(
                         0x82, AudioSourceDescriptor.baseMusic(0x82),
                         composite(2, 0x82, new SmpsDriver()))),
                 () -> true, registry::apply);
@@ -1272,7 +999,7 @@ class TestAudioVoiceRegistry {
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
         RecordingDriver driver = new RecordingDriver(false);
         instantiation.enqueueMusicDriver(driver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, driver))));
 
@@ -1290,10 +1017,10 @@ class TestAudioVoiceRegistry {
         RecordingDriver override = new RecordingDriver(false);
         instantiation.enqueueMusicDriver(base);
         instantiation.enqueueMusicDriver(override);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, base))));
-        registry.apply(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+        registry.apply(new PushMusicOverride(legacyMusicEntry(
                 0x82, AudioSourceDescriptor.baseMusic(0x82),
                 composite(2, 0x82, override))));
 
@@ -1384,10 +1111,10 @@ class TestAudioVoiceRegistry {
         RecordingDriver override = new RecordingDriver(false);
         instantiation.enqueueMusicDriver(base);
         instantiation.enqueueMusicDriver(override);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, base))));
-        registry.apply(new PushMusicOverride(MusicVoiceEntry.fromVoice(
+        registry.apply(new PushMusicOverride(legacyMusicEntry(
                 0x82, AudioSourceDescriptor.baseMusic(0x82),
                 composite(2, 0x82, override))));
 
@@ -1421,18 +1148,7 @@ class TestAudioVoiceRegistry {
     void restoringIntoADirtyRegistryRendersBitExactlyLikeAFreshRestore() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry original = registry(instantiation, new ArrayList<>());
-        SmpsDriver driver = new SmpsDriver();
-        AudioTestFixtures.StubSmpsData data =
-                new AudioTestFixtures.StubSmpsData("music");
-        data.setId(0x81);
-        driver.addSequencer(new SmpsSequencer(
-                data, dacData(), driver, AudioManager.getInstance(),
-                new SmpsSequencerConfig.Builder().build()), false);
-        primeSynth(driver);
-        instantiation.enqueueMusicDriver(driver);
-        original.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
-                0x81, AudioSourceDescriptor.baseMusic(0x81),
-                composite(70, 0x81, driver))));
+        original.apply(new ReplaceMusic(music(70, 0x81, "music")));
         original.apply(raw(longSample(71, 2, "raw")));
         AudioPresentationSnapshot snapshot = original.snapshot();
 
@@ -1467,84 +1183,6 @@ class TestAudioVoiceRegistry {
         }
     }
 
-    /**
-     * The prepare-failure cleanup loop only has work to do when some voices
-     * were already recreated before the failing one. A resolver that throws on
-     * the first voice (as
-     * {@code failedSnapshotDependencyResolutionDoesNotDestroyLiveRegistry}
-     * uses) runs that loop over an all-null array, so a double-stop or a leaked
-     * voice there would be invisible.
-     */
-    @Test
-    void partialPrepareFailureDropsEarlierSmpsVoiceWithoutChipWrites() {
-        AudioVoiceRegistry registry =
-                registry(new RecordingInstantiation(), new ArrayList<>());
-        SmpsDriver source = populatedDriver(ChipWriteObserver.NONE, 0x81);
-        List<PresentationVoiceSnapshot> voices = List.of(
-                new PresentationVoiceSnapshot.Smps(
-                        1, 0, 0x81, AudioSourceDescriptor.baseMusic(0x81),
-                        MAX_STEREO_FRAMES, source.captureLegacySnapshot()),
-                new PresentationVoiceSnapshot.Smps(
-                        2, 0, 0x82, AudioSourceDescriptor.baseMusic(0x82),
-                        MAX_STEREO_FRAMES, source.captureLegacySnapshot()));
-        AudioPresentationSnapshot snapshot = new AudioPresentationSnapshot(
-                3, voices,
-                new AudioPresentationSnapshot.MusicSlotSnapshot(
-                        0x81, AudioSourceDescriptor.baseMusic(0x81), 1),
-                List.of(new AudioPresentationSnapshot.MusicSlotSnapshot(
-                        0x82, AudioSourceDescriptor.baseMusic(0x82), 2)),
-                null, null, 0, 0, 0, 0,
-                false, false, false, 1, true,
-                new SmpsCoordFlagRuntimeState.Snapshot(0));
-        AtomicInteger ymWrites = new AtomicInteger();
-        AtomicInteger psgWrites = new AtomicInteger();
-        List<SmpsDriver> recreated = new ArrayList<>();
-        AudioPresentationDependencyResolver failsOnTheSecondVoice =
-                new AudioPresentationDependencyResolver() {
-                    @Override
-                    public DecodedPcm resolvePcm(String assetId) {
-                        throw new AssertionError("no PCM voice expected");
-                    }
-
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps voiceSnapshot) {
-                        if (voiceSnapshot.voiceId() == 2) {
-                            throw new IllegalStateException(
-                                    "injected recreation failure");
-                        }
-                        SmpsDriver driver = new SmpsDriver(OUTPUT_RATE);
-                        driver.setChipWriteObserver(
-                                countingChipObserver(ymWrites, psgWrites));
-                        recreated.add(driver);
-                        SmpsCompositeVoice voice = new SmpsCompositeVoice(
-                                voiceSnapshot.voiceId(),
-                                voiceSnapshot.priority(),
-                                voiceSnapshot.musicId(),
-                                voiceSnapshot.sourceDescriptor(),
-                                voiceSnapshot.maxStereoFrames(), driver);
-                        voice.restore(voiceSnapshot,
-                                SmpsDriverSnapshot.liveReferences());
-                        return voice;
-                    }
-                };
-
-        assertThrows(IllegalStateException.class,
-                () -> registry.prepareSnapshotRestore(
-                        snapshot, failsOnTheSecondVoice));
-
-        assertEquals(1, recreated.size(),
-                "the failure must land after the first voice was recreated");
-        assertEquals(0, ymWrites.get(),
-                "dependency-failure discard must not silence YM");
-        assertEquals(0, psgWrites.get(),
-                "dependency-failure discard must not silence PSG");
-        assertEquals(1, recreated.get(0).sequencersForTesting().size(),
-                "dependency-failure discard drops rather than stops SMPS");
-        assertEquals(0, registry.orderedVoiceCount(),
-                "a failed preparation must publish nothing");
-    }
-
     @Test
     void continuousRetriggerExtendsMusicOwnerWithoutCreatingSequencer() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
@@ -1552,7 +1190,7 @@ class TestAudioVoiceRegistry {
         RecordingDriver driver = new RecordingDriver(true);
         driver.primeContinuousSfx(0xBC);
         instantiation.enqueueMusicDriver(driver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, driver))));
 
@@ -1571,7 +1209,7 @@ class TestAudioVoiceRegistry {
         CapturingDriver ownerDriver = new CapturingDriver(ownerEvents);
         instantiation.enqueueMusicDriver(ownerDriver);
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, ownerDriver))));
 
@@ -1616,7 +1254,7 @@ class TestAudioVoiceRegistry {
         continuousInstantiation.enqueueMusicDriver(continuousDriver);
         AudioVoiceRegistry continuousRegistry = registry(
                 continuousInstantiation, new ArrayList<>());
-        continuousRegistry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        continuousRegistry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x82, AudioSourceDescriptor.baseMusic(0x82),
                 composite(5, 0x82, continuousDriver))));
 
@@ -1653,7 +1291,7 @@ class TestAudioVoiceRegistry {
         instantiation.enqueueMusicDriver(driver);
         AudioVoiceRegistry registry = registry(instantiation,
                 new ArrayList<>());
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, driver))));
 
@@ -1678,7 +1316,7 @@ class TestAudioVoiceRegistry {
                 instantiation, instantiation,
                 new SmpsCoordFlagHandlerOwner(state), ignored -> {
                 });
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, driver))));
 
@@ -1719,7 +1357,7 @@ class TestAudioVoiceRegistry {
         RecordingDriver driver = new RecordingDriver(true);
         driver.primeContinuousSfx(0xBC);
         instantiation.enqueueMusicDriver(driver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, new RecordingDriver(true)))));
 
@@ -1791,13 +1429,6 @@ class TestAudioVoiceRegistry {
                     }
 
                     @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new AssertionError(
-                                "fixed recreation must bypass snapshot restore");
-                    }
-
-                    @Override
                     public PresentationVoice recreateVoice(
                             AudioPresentationCommand.VoiceDescriptor descriptor) {
                         return voice;
@@ -1841,13 +1472,9 @@ class TestAudioVoiceRegistry {
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
         FailingControlDriver driver = new FailingControlDriver();
         instantiation.enqueueMusicDriver(driver);
-        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+        registry.apply(new ReplaceMusic(legacyMusicEntry(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, new SmpsDriver()))));
-        boolean[] fmBefore =
-                driver.captureSynthSnapshot().ym().mutes();
-        boolean[] psgBefore =
-                driver.captureSynthSnapshot().psg().mutes();
         driver.failNextControl();
         AudioPresentationCommandQueue queue =
                 new AudioPresentationCommandQueue();
@@ -1862,10 +1489,6 @@ class TestAudioVoiceRegistry {
         assertEquals(0, appliedMask.applyAsInt(failed));
         assertTrue(failed.ringLeft(),
                 "a successor cannot pass a retained failing command");
-        assertArrayEquals(fmBefore,
-                driver.captureSynthSnapshot().ym().mutes());
-        assertArrayEquals(psgBefore,
-                driver.captureSynthSnapshot().psg().mutes());
         assertEquals(2, queue.size());
 
         queue.applyPending(registry::apply);
@@ -1905,44 +1528,33 @@ class TestAudioVoiceRegistry {
         return driver;
     }
 
-    private static SmpsDriver populatedDriver(
-            ChipWriteObserver observer, int sourceId) {
-        SmpsDriver driver = new SmpsDriver(OUTPUT_RATE, observer);
-        AudioTestFixtures.StubSmpsData data =
-                new AudioTestFixtures.StubSmpsData("prepared-discard");
-        data.setId(sourceId);
-        SmpsSequencer sequencer = new SmpsSequencer(
-                data, dacData(), driver, AudioManager.getInstance(),
-                new SmpsSequencerConfig.Builder().build());
-        driver.addSequencer(sequencer, false);
-        return driver;
-    }
-
-    private static ChipWriteObserver countingChipObserver(
-            AtomicInteger ymWrites, AtomicInteger psgWrites) {
-        return new ChipWriteObserver() {
-            @Override
-            public void onYm2612Write(int port, int register, int value) {
-                ymWrites.incrementAndGet();
-            }
-
-            @Override
-            public void onPsgWrite(int value) {
-                psgWrites.incrementAndGet();
-            }
-        };
-    }
-
     private static MusicVoiceEntry music(long voiceId, int musicId, String asset) {
-        return MusicVoiceEntry.fromVoice(
+        return legacyMusicEntry(
                 musicId, AudioSourceDescriptor.baseMusic(musicId),
                 SampleBackedVoice.loopingMusic(voiceId,
                         pcm(asset, 100, 200, 300, 400), OUTPUT_RATE, 1.0f));
     }
 
+    /** Exercises the deliberately non-authoritative null-session registry. */
+    private static MusicVoiceEntry legacyMusicEntry(
+            int musicId,
+            AudioSourceDescriptor sourceDescriptor,
+            PresentationVoice voice) {
+        if (voice instanceof SmpsCompositeVoice composite) {
+            return new MusicVoiceEntry(
+                    musicId, sourceDescriptor,
+                    new AudioPresentationCommand.SmpsVoiceDescriptor(
+                            composite.voiceId(), composite.priority(),
+                            musicId, sourceDescriptor,
+                            MAX_STEREO_FRAMES, null));
+        }
+        return MusicVoiceEntry.fromVoice(
+                musicId, sourceDescriptor, voice);
+    }
+
     private static MusicVoiceEntry fallbackMusic(int musicId, long voiceId,
                                                  String asset) {
-        return MusicVoiceEntry.fromVoice(
+        return legacyMusicEntry(
                 musicId, AudioSourceDescriptor.fallbackMusic(musicId),
                 SampleBackedVoice.loopingMusic(voiceId,
                         pcm(asset, 100, 200), OUTPUT_RATE, 1.0f));
@@ -1984,44 +1596,6 @@ class TestAudioVoiceRegistry {
     private static DacData dacData(byte[] samples) {
         return new DacData(Map.of(1, samples),
                 Map.of(0x81, new DacData.DacEntry(1, 4)), 295);
-    }
-
-    private static void primeDacPlayback(
-            SmpsDriver driver, DacData dacData) {
-        driver.setDacData(dacData);
-        driver.writeFm(driver, 0, 0x2B, 0x80);
-        driver.playDac(driver, 0x81);
-    }
-
-    private static short[] renderFrames(
-            SmpsDriver driver, int frameCount) {
-        short[] samples = new short[frameCount * 2];
-        driver.renderFrames(samples, 0, frameCount);
-        return samples;
-    }
-
-    private static DacData activeDacData(SmpsDriver driver) {
-        return ((FailingMutationDriver) driver).activeDacDataForTesting();
-    }
-
-    private static void primeSynth(SmpsDriver driver) {
-        driver.setDacData(dacData());
-        driver.setDacInterpolate(true);
-        driver.writeFm(driver, 0, 0x22, 0x0B);
-        driver.writeFm(driver, 0, 0x2B, 0x80);
-        driver.setInstrument(driver, 0, new byte[] {
-                0x32, 0x71, 0x0D, 0x33, 0x01, 0x5F, 0x5F, 0x5F, 0x5F,
-                0x14, 0x0E, 0x0E, 0x0E, 0x08, 0x08, 0x08, 0x08,
-                0x0F, 0x0F, 0x0F, 0x0F, 0x1B, 0x16, 0x1F, 0x00
-        });
-        driver.writeFm(driver, 0, 0xA4, 0x22);
-        driver.writeFm(driver, 0, 0xA0, 0x69);
-        driver.writeFm(driver, 0, 0xB4, 0xC7);
-        driver.writeFm(driver, 0, 0x28, 0xF0);
-        driver.playDac(driver, 0x81);
-        driver.writePsg(driver, 0x84);
-        driver.writePsg(driver, 0x12);
-        driver.writePsg(driver, 0x92);
     }
 
     private static SmpsCompositeVoice composite(long voiceId, int musicId,
@@ -2162,26 +1736,18 @@ class TestAudioVoiceRegistry {
         }
 
         @Override
-        public SmpsCompositeVoice recreateSmps(
-                PresentationVoiceSnapshot.Smps snapshot) {
-            SmpsCompositeVoice voice = new SmpsCompositeVoice(
-                    snapshot.voiceId(), snapshot.priority(), snapshot.musicId(),
-                    snapshot.sourceDescriptor(), snapshot.maxStereoFrames(),
-                    new SmpsDriver());
-            voice.restore(snapshot, SmpsDriverSnapshot.liveReferences());
-            return voice;
-        }
-
-        @Override
-        public SmpsCompositeVoice recreateSmps(
-                AudioPresentationCommand.SmpsVoiceDescriptor descriptor) {
-            SmpsDriver driver = musicDriverIndex < musicDrivers.size()
-                    ? musicDrivers.get(musicDriverIndex++) : new SmpsDriver();
-            lastRecreatedSmps = new SmpsCompositeVoice(
-                    descriptor.voiceId(), descriptor.priority(),
-                    descriptor.musicId(), descriptor.sourceDescriptor(),
-                    descriptor.maxStereoFrames(), driver);
-            return lastRecreatedSmps;
+        public PresentationVoice recreateVoice(
+                AudioPresentationCommand.VoiceDescriptor descriptor) {
+            if (descriptor instanceof AudioPresentationCommand.SmpsVoiceDescriptor smps) {
+                SmpsDriver driver = musicDriverIndex < musicDrivers.size()
+                        ? musicDrivers.get(musicDriverIndex++) : new SmpsDriver();
+                lastRecreatedSmps = new SmpsCompositeVoice(
+                        smps.voiceId(), smps.priority(), smps.musicId(),
+                        smps.sourceDescriptor(), smps.maxStereoFrames(), driver);
+                return lastRecreatedSmps;
+            }
+            return AudioPresentationDependencyResolver.super
+                    .recreateVoice(descriptor);
         }
 
         @Override
@@ -2575,23 +2141,6 @@ class TestAudioVoiceRegistry {
         }
     }
 
-    private static final class ThrowingDriver extends SmpsDriver {
-        @Override
-        public int read(short[] buffer, int length) {
-            throw new IllegalStateException("fixture failure");
-        }
-
-        @Override
-        public int renderFramePcm(short[] buffer, int length) {
-            throw new IllegalStateException("fixture failure");
-        }
-
-        @Override
-        public boolean isComplete() {
-            return false;
-        }
-    }
-
     private static final class FailingControlDriver extends SmpsDriver {
         private boolean failNextControl;
 
@@ -2639,10 +2188,6 @@ class TestAudioVoiceRegistry {
         private boolean failNextStopAllSfx;
         private int stopAllCalls;
         private int commitCalls;
-
-        private DacData activeDacDataForTesting() {
-            return selectedDacDataForTesting();
-        }
 
         private void failNextControl() {
             failNextControl = true;
@@ -2918,17 +2463,5 @@ class TestAudioVoiceRegistry {
             };
         }
 
-        @Override
-        public SmpsCompositeVoice recreateSmps(
-                PresentationVoiceSnapshot.Smps snapshot) {
-            recreatedSmps++;
-            lastMaxStereoFrames = snapshot.maxStereoFrames();
-            SmpsCompositeVoice voice = new SmpsCompositeVoice(
-                    snapshot.voiceId(), snapshot.priority(), snapshot.musicId(),
-                    snapshot.sourceDescriptor(), snapshot.maxStereoFrames(),
-                    new SmpsDriver());
-            voice.restore(snapshot, SmpsDriverSnapshot.liveReferences());
-            return voice;
-        }
     }
 }

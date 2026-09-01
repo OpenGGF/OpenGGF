@@ -380,10 +380,8 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             for (S1GameplayAudioTimeline.HardwareRole role : S1GameplayAudioTimeline.HardwareRole.values()) {
                 owners.put(role, presentedMusic);
             }
-            for (var voice : presentation.voices()) {
-                if (voice instanceof com.openggf.audio.presentation.PresentationVoiceSnapshot.Smps smps) {
-                    applyLocks(smps.driver().logical(), owners);
-                }
+            if (presentation.smpsLogical() != null) {
+                applyLocks(presentation.smpsLogical(), owners);
             }
             effectiveOwners.putAll(owners);
             return new S1GameplayAudioTimeline.OwnerVector(owners.get(FM3), owners.get(FM4), owners.get(FM5),

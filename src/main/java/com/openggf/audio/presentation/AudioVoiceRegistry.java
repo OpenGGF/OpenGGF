@@ -812,9 +812,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         for (int index = 0; index < overrideCount; index++) {
             addMusicSnapshot(voices, overrideStack[index]);
         }
-        if (smpsSession == null) {
-            addVoiceSnapshot(voices, standaloneSmps, null);
-        }
         addVoiceSnapshot(voices, rawPcm, null);
         for (int index = 0; index < sampleSfxCount; index++) {
             addVoiceSnapshot(voices, sampleSfx[index], null);
@@ -830,8 +827,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 voices,
                 activeMusic == null ? null : slotSnapshot(activeMusic),
                 overrides,
-                smpsSession == null && standaloneSmps != null
-                        ? standaloneSmps.voiceId() : null,
+                null,
                 rawPcm == null ? null : rawPcm.voiceId(),
                 fmMuteMask,
                 fmSoloMask,
@@ -2114,8 +2110,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     "session-backed restore requires the SMPS snapshot pair");
         }
         if (snapshot.standaloneSmpsVoiceId() != null
-                || snapshot.voices().stream().anyMatch(
-                        PresentationVoiceSnapshot.Smps.class::isInstance)) {
+                ) {
             throw new IllegalArgumentException(
                     "session-backed restore cannot contain a standalone SMPS carrier");
         }
@@ -2149,7 +2144,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             List<PresentationVoiceSnapshot> voices,
             PresentationVoice voice,
             MusicSlot music) {
-        if (voice == null || voice instanceof SmpsMusicHandle
+        if (!(voice instanceof SampleBackedVoice)
                 || containsVoiceId(voices, voice.voiceId())) {
             return;
         }
@@ -2161,12 +2156,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     music.musicId(), music.sourceDescriptor(),
                     sample.sourcePositionQ32(), sample.sourceStepQ32(),
                     sample.gainQ16(), sample.looping(), sample.stopped());
-        } else if (music != null
-                && snapshot instanceof PresentationVoiceSnapshot.Smps smps) {
-            snapshot = new PresentationVoiceSnapshot.Smps(
-                    smps.voiceId(), smps.priority(), music.musicId(),
-                    music.sourceDescriptor(), smps.maxStereoFrames(),
-                    smps.driver());
         }
         voices.add(snapshot);
     }
@@ -2182,10 +2171,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     private static long snapshotVoiceId(PresentationVoiceSnapshot snapshot) {
-        if (snapshot instanceof PresentationVoiceSnapshot.Sample sample) {
-            return sample.voiceId();
-        }
-        return ((PresentationVoiceSnapshot.Smps) snapshot).voiceId();
+        return ((PresentationVoiceSnapshot.Sample) snapshot).voiceId();
     }
 
     private static AudioPresentationSnapshot.MusicSlotSnapshot slotSnapshot(
@@ -2198,24 +2184,12 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private PresentationVoice recreate(
             PresentationVoiceSnapshot snapshot,
             AudioPresentationDependencyResolver resolver) {
-        if (snapshot instanceof PresentationVoiceSnapshot.Sample sample) {
-            DecodedPcm pcm = Objects.requireNonNull(
-                    resolver.resolvePcm(sample.assetId()),
-                    "resolver returned no PCM for " + sample.assetId());
-            return SampleBackedVoice.restore(sample, pcm);
-        }
-        SmpsCompositeVoice composite = Objects.requireNonNull(
-                resolver.recreateSmps((PresentationVoiceSnapshot.Smps) snapshot),
-                "resolver returned no SMPS composite");
-        PresentationVoiceSnapshot.Smps smps =
-                (PresentationVoiceSnapshot.Smps) snapshot;
-        if (composite.voiceId() != smps.voiceId()
-                || composite.snapshot() instanceof PresentationVoiceSnapshot.Smps
-                recreated && recreated.maxStereoFrames() != smps.maxStereoFrames()) {
-            throw new IllegalArgumentException(
-                    "resolver did not honor composite snapshot identity");
-        }
-        return composite;
+        PresentationVoiceSnapshot.Sample sample =
+                (PresentationVoiceSnapshot.Sample) snapshot;
+        DecodedPcm pcm = Objects.requireNonNull(
+                resolver.resolvePcm(sample.assetId()),
+                "resolver returned no PCM for " + sample.assetId());
+        return SampleBackedVoice.restore(sample, pcm);
     }
 
     private MusicSlot restoreMusicSlot(
@@ -2355,12 +2329,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                         "no presentation PCM resolver for " + assetId);
             }
 
-            @Override
-            public SmpsCompositeVoice recreateSmps(
-                    PresentationVoiceSnapshot.Smps snapshot) {
-                throw new IllegalStateException(
-                        "no presentation SMPS snapshot resolver");
-            }
         };
     }
 }

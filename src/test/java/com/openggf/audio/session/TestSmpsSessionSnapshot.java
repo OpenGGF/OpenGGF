@@ -92,70 +92,11 @@ class TestSmpsSessionSnapshot {
                 snapshot.smpsSession().physical());
         assertEquals(session.captureLogicalSnapshot(),
                 snapshot.smpsLogical());
-        assertTrue(snapshot.voices().stream().noneMatch(
-                PresentationVoiceSnapshot.Smps.class::isInstance));
+        assertTrue(snapshot.voices().isEmpty());
         assertFalse(Arrays.stream(
                         SmpsDriverSnapshot.class.getRecordComponents())
                 .anyMatch(component -> component.getType()
                         == SmpsPhysicalDevice.Snapshot.class));
-    }
-
-    @Test
-    void authoritativeRestoreRejectsStandaloneSmpsCarrierBeforeRecreation() {
-        SmpsDriverSession session = SmpsSessionTestFixtures.session(
-                new SmpsSessionTestFixtures.RecordingObserver());
-        session.install();
-        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
-                new SmpsCoordFlagRuntimeState());
-        AudioPresentationSourceFactory factory =
-                new AudioPresentationSourceFactory(
-                        () -> true, handlers,
-                        AudioPresentationSourceFactory.Settings.defaults(),
-                        session);
-        AudioVoiceRegistry registry = new AudioVoiceRegistry(
-                factory, factory, handlers, ignored -> { }, session);
-        AudioPresentationSnapshot valid = registry.snapshot();
-        PresentationVoiceSnapshot.Smps carrier =
-                new PresentationVoiceSnapshot.Smps(
-                        91, 0, null, null, 4,
-                        new SmpsDriver().captureLegacySnapshot());
-        AudioPresentationSnapshot malformed =
-                new AudioPresentationSnapshot(
-                        valid.nextVoiceId(), List.of(carrier), null,
-                        List.of(), carrier.voiceId(), null,
-                        valid.fmMuteMask(), valid.fmSoloMask(),
-                        valid.psgMuteMask(), valid.psgSoloMask(),
-                        valid.sfxBlocked(), valid.pendingRestore(),
-                        valid.speedShoesEnabled(), valid.speedMultiplier(),
-                        valid.ringLeft(), valid.coordFlagRuntimeState(),
-                        valid.smpsSession(), valid.smpsLogical());
-        AtomicInteger recreations = new AtomicInteger();
-        AudioPresentationDependencyResolver resolver =
-                new AudioPresentationDependencyResolver() {
-                    @Override
-                    public DecodedPcm resolvePcm(String assetId) {
-                        throw new AssertionError("no PCM restore expected");
-                    }
-
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        recreations.incrementAndGet();
-                        return new SmpsCompositeVoice(
-                                snapshot.voiceId(), snapshot.priority(),
-                                snapshot.musicId(),
-                                AudioSourceDescriptor.baseMusic(0x81),
-                                snapshot.maxStereoFrames(),
-                                new SmpsDriver());
-                    }
-                };
-
-        assertThrows(IllegalArgumentException.class,
-                () -> registry.prepareSnapshotRestore(
-                        malformed, resolver));
-        assertEquals(0, recreations.get(),
-                "authoritative restore must reject compatibility carriers "
-                        + "before consulting their legacy resolver");
     }
 
     @Test

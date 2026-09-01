@@ -3,6 +3,7 @@ package com.openggf.audio.presentation;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -12,6 +13,7 @@ import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
 import org.junit.jupiter.api.AfterEach;
@@ -70,9 +72,9 @@ class TestSmpsAssetCatalog {
     void copiedSonic1ConfigKeepsOnePsg3PairOnAdmissionAndReplacement() {
         SmpsSequencerConfig copy = SmpsAssetCatalog.copyConfigWithoutHandler(
                 Sonic1SmpsSequencerConfig.CONFIG);
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         List<Integer> writes = new ArrayList<>();
-        driver.setChipWriteObserver(new ChipWriteObserver() {
+        SmpsDriverTestAccess.setChipWriteObserver(driver, new ChipWriteObserver() {
             @Override
             public void onYm2612Write(int port, int register, int value) {
             }
@@ -94,19 +96,6 @@ class TestSmpsAssetCatalog {
         driver.addSequencer(replacement, true);
         assertEquals(List.of(0xDF, 0xFF), writes,
                 "replacement must not add generic cleanup around S1's pair");
-    }
-
-    @Test
-    void legacyMusicSessionBuildsItsDescriptorBeforeSequencerConstruction() {
-        CountingMusicData data = CountingMusicData.music(0x81, 1);
-
-        factory().legacyMusicSmps(
-                "base", 0x81, 1, data, dac(1), config(),
-                AudioSourceDescriptor.baseMusic(0x81), 32);
-
-        assertEquals(1, data.dataReads(),
-                "the session descriptor must be materialized once before"
-                        + " sequencer construction, not inferred again");
     }
 
     @Test
@@ -399,37 +388,31 @@ class TestSmpsAssetCatalog {
                 factory.musicSmps(gameId, 0x81, 20 + generation,
                         generation, CountingMusicData.music(0x81, 1),
                         dac, config, logicalDescriptor, 32);
-        SmpsCompositeVoice first = factory.recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor)
-                        firstEntry.voiceDescriptor());
-        SmpsCompositeVoice second = factory.recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor)
-                        secondEntry.voiceDescriptor());
-        SmpsSequencer firstSequencer = first.driver().firstMusicSequencer();
-        SmpsSequencer secondSequencer = second.driver().firstMusicSequencer();
+        var firstSequencer = ((AudioPresentationCommand.SmpsVoiceDescriptor)
+                firstEntry.voiceDescriptor()).activation().incomingMusic();
+        var secondSequencer = ((AudioPresentationCommand.SmpsVoiceDescriptor)
+                secondEntry.voiceDescriptor()).activation().incomingMusic();
         SmpsAssetCatalog.ProgramEntry registered =
                 factory.findRegisteredSmpsMusicAsset(
                         new SmpsAssetKey(gameId, route, 0x81, null),
                         generation);
 
-        assertSame(registered.program(), firstSequencer.getSmpsData());
-        assertSame(registered.program(), secondSequencer.getSmpsData());
-        assertSame(registered.programView(), firstSequencer.programView());
-        assertSame(registered.programView(), secondSequencer.programView());
-        assertSame(registered.dac(), firstSequencer.getDacData());
-        assertSame(registered.dac(), secondSequencer.getDacData());
-        assertSame(registered.staticConfig(), firstSequencer.getConfig());
-        assertSame(registered.staticConfig(), secondSequencer.getConfig());
+        assertSame(registered.program(), firstSequencer.smpsData());
+        assertSame(registered.program(), secondSequencer.smpsData());
+        assertSame(registered.dac(), firstSequencer.dacData());
+        assertSame(registered.dac(), secondSequencer.dacData());
+        assertSame(registered.staticConfig(), firstSequencer.config());
+        assertSame(registered.staticConfig(), secondSequencer.config());
         assertSame(registered.sourceDescriptor(),
-                firstSequencer.getSourceDescriptor());
+                firstSequencer.source());
         assertSame(registered.sourceDescriptor(),
-                secondSequencer.getSourceDescriptor());
+                secondSequencer.source());
         assertNotSame(firstSequencer, secondSequencer);
-        assertNotSame(firstSequencer.getTracks(), secondSequencer.getTracks());
-        assertNotSame(firstSequencer.getTracks().getFirst(),
-                secondSequencer.getTracks().getFirst());
-        assertEquals(firstSequencer.getTracks().getFirst().pos,
-                secondSequencer.getTracks().getFirst().pos);
+        assertNotSame(firstSequencer.snapshot(), secondSequencer.snapshot());
+        assertEquals(firstSequencer.snapshot().normalTempo(),
+                secondSequencer.snapshot().normalTempo());
+        assertEquals(firstSequencer.snapshot().tracks().getFirst().pos(),
+                secondSequencer.snapshot().tracks().getFirst().pos());
     }
 
     private static SmpsAssetCatalog catalog() {
@@ -445,7 +428,8 @@ class TestSmpsAssetCatalog {
                         48_000, SmpsSequencer.Region.NTSC,
                         false, false, false, false, 1,
                         AudioManager.getInstance(), new DecodedPcmCache(),
-                        ignored -> null));
+                        ignored -> null),
+                SmpsSessionTestSupport.installed(48_000));
     }
 
     private static SmpsAssetCatalog.ProgramKey programKey(

@@ -11,7 +11,6 @@ import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioKeyframeStore;
-import com.openggf.audio.rewind.LegacySmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.driver.SmpsDriver;
@@ -160,9 +159,7 @@ class TestAudioPresentationArchitectureGuard {
     void sessionBackedPresentationHasNoAuthoritativeCarrierDependency()
             throws IOException {
         Set<String> compatibilityTypes = Set.of(
-                SmpsCompositeVoice.class.getName(),
-                PresentationVoiceSnapshot.Smps.class.getName(),
-                LegacySmpsDriverSnapshot.class.getName());
+                SmpsCompositeVoice.class.getName());
         JavaClasses authoritative = new ClassFileImporter().importClasses(
                 AudioPresentationProducer.class,
                 AudioPresentationMixer.class,
@@ -198,10 +195,9 @@ class TestAudioPresentationArchitectureGuard {
                 "audio/presentation/AudioPresentationSourceFactory.java"));
         String sessionMusic = compactMethod(factory,
                 "MusicVoiceEntry musicSmpsFromRegistered(");
-        assertTrue(sessionMusic.indexOf("if (smpsSession != null)")
-                        < sessionMusic.indexOf("buildMusicVoice("),
-                "the prepared session activation must return before the "
-                        + "standalone carrier branch");
+        assertTrue(sessionMusic.contains("if (smpsSession == null)"));
+        assertTrue(sessionMusic.contains("prepareMusicActivation(source)"));
+        assertFalse(sessionMusic.contains("SmpsCompositeVoice"));
 
         String registry = Files.readString(PRODUCTION_ROOT.resolve(
                 "audio/presentation/AudioVoiceRegistry.java"));
@@ -271,6 +267,46 @@ class TestAudioPresentationArchitectureGuard {
                 .map(component -> component.getName() + ":"
                         + component.getType().getName())
                 .toList());
+    }
+
+    @Test
+    void presentationCannotConstructPrivateChipPairsOrStorePhysicalPorts()
+            throws IOException {
+        String presentation = Files.walk(PRODUCTION_ROOT.resolve(
+                        "audio/presentation"))
+                .filter(path -> path.toString().endsWith(".java"))
+                .sorted()
+                .map(path -> {
+                    try {
+                        return Files.readString(path);
+                    } catch (IOException failure) {
+                        throw new IllegalStateException(failure);
+                    }
+                })
+                .reduce("", String::concat);
+        assertFalse(presentation.contains("new VirtualSynthesizer"));
+        assertFalse(presentation.matches(
+                "(?s).*new\\s+SmpsDriver\\s*\\(.*"));
+        assertEquals(List.of(), Arrays.stream(SmpsDriver.class
+                        .getDeclaredFields())
+                .filter(field -> field.getType()
+                        == SmpsPhysicalPort.class)
+                .map(field -> field.getName() + ":"
+                        + field.getType().getName())
+                .toList());
+    }
+
+    @Test
+    void logicalSnapshotsAndVoicesCannotRenderOrOwnPhysicalState() {
+        assertEquals(List.of(), Arrays.stream(
+                        SmpsDriverSnapshot.class.getRecordComponents())
+                .filter(component -> component.getType()
+                        == VirtualSynthesizer.Snapshot.class)
+                .map(component -> component.getName() + ":"
+                        + component.getType().getName())
+                .toList());
+        assertFalse(PcmPresentationVoice.class
+                .isAssignableFrom(SmpsCompositeVoice.class));
     }
 
     private static String compactMethod(String source, String marker) {

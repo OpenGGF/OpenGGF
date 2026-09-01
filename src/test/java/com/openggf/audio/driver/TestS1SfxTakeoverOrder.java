@@ -17,9 +17,9 @@ class TestS1SfxTakeoverOrder {
 
     @Test
     void sonic1FmTakeoverStartsWithTheSfxRegisterInsteadOfSyntheticReset() {
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
         SmpsSequencer sfx = sequencer(driver, Sonic1SmpsSequencerConfig.CONFIG);
         driver.addSequencer(sfx, true);
         observer.events.clear();
@@ -32,9 +32,9 @@ class TestS1SfxTakeoverOrder {
 
     @Test
     void legacyProfilesRetainTheirExistingSyntheticTakeoverPolicy() {
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
         SmpsSequencer sfx = sequencer(driver, new SmpsSequencerConfig.Builder().build());
         driver.addSequencer(sfx, true);
         observer.events.clear();
@@ -46,9 +46,9 @@ class TestS1SfxTakeoverOrder {
 
     @Test
     void sonic1PsgTakeoverStartsWithTheSfxLatchInsteadOfSyntheticSilence() {
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
         SmpsSequencer sfx = sequencer(driver, Sonic1SmpsSequencerConfig.CONFIG);
         driver.addSequencer(sfx, true);
         observer.events.clear();
@@ -62,9 +62,9 @@ class TestS1SfxTakeoverOrder {
 
     @Test
     void sonic1Psg3AdmissionEmitsOnlyTheRomsExplicitToneAndNoiseSilencePair() {
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
 
         driver.addSequencer(sequencer(driver,
                 Sonic1SmpsSequencerConfig.CONFIG, 0xC0), true);
@@ -76,9 +76,9 @@ class TestS1SfxTakeoverOrder {
 
     @Test
     void sonic1Psg3ReplacementDoesNotDuplicateTheAdmissionSilencePair() {
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
         SmpsSequencer oldSfx = sequencer(
                 driver, Sonic1SmpsSequencerConfig.CONFIG, 0xC0, 0xC1);
         SmpsSequencer replacement = sequencer(
@@ -95,9 +95,9 @@ class TestS1SfxTakeoverOrder {
 
     @Test
     void psg3SfxOwnershipAlsoSuppressesMusicNoiseLatches() {
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
         SmpsSequencer sfx = sequencer(driver,
                 Sonic1SmpsSequencerConfig.CONFIG, 0xC0);
         driver.addSequencer(sfx, true);
@@ -113,9 +113,9 @@ class TestS1SfxTakeoverOrder {
 
     @Test
     void legacyProfilesRetainTheirSyntheticPsgTakeoverSilence() {
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
         SmpsSequencer sfx = sequencer(
                 driver, new SmpsSequencerConfig.Builder().build());
         driver.addSequencer(sfx, true);

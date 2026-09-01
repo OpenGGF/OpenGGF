@@ -1,6 +1,9 @@
 package com.openggf.tools.audio.parity.s2;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsTrackSnapshot;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -95,12 +98,18 @@ public final class S2OracleEngineCapture {
 
             List<EngineTick> ticks = new ArrayList<>(tickCount);
             WriteRecorder writes = new WriteRecorder();
-            SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+            try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
+                    "s2-oracle", 0,
+                    new SmpsPhysicalDevice.Settings(
+                            SAMPLE_RATE, false, false),
+                    LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
+                    ChipWriteObserver.NONE)) {
+            SmpsDriver driver = stream.logicalDriver();
             SmpsSequencer sequencer = new SmpsSequencer(song, dacData, driver, () -> { },
                     Sonic2SmpsSequencerConfig.CONFIG);
             sequencer.setSampleRate(SAMPLE_RATE);
             driver.addSequencer(sequencer, false);
-            driver.setChipWriteObserver(writes);
+            stream.setChipWriteObserver(writes);
             emitS2MusicLoadBurst(driver, song);
             // Oracle ticks are completed zUpdateMusic services (manifest kind
             // 9), not their parent zVInt service (kind 3). Keep the source-
@@ -140,6 +149,7 @@ public final class S2OracleEngineCapture {
                         writes.drain()));
             }
             return ticks;
+            }
         }
     }
 

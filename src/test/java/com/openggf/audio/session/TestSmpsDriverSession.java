@@ -619,17 +619,6 @@ class TestSmpsDriverSession {
                 return factory.resolveDac(source);
             }
 
-            @Override
-            public SmpsCompositeVoice recreateSmps(
-                    PresentationVoiceSnapshot.Smps snapshot) {
-                return factory.recreateSmps(snapshot);
-            }
-
-            @Override
-            public SmpsCompositeVoice recreateSmps(
-                    AudioPresentationCommand.SmpsVoiceDescriptor descriptor) {
-                return factory.recreateSmps(descriptor);
-            }
         };
     }
 

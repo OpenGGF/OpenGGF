@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -35,11 +36,6 @@ public class TestSmpsDriver {
     static class SpyDriver extends SmpsDriver {
         List<String> log = new ArrayList<>();
         List<Integer> rawPsgWrites = new ArrayList<>();
-
-        @Override
-        public void render(short[] buffer) {
-            // No-op for synth rendering
-        }
 
         @Override
         public void writeFm(Object source, int port, int reg, int val) {
@@ -276,16 +272,16 @@ public class TestSmpsDriver {
 
     @Test
     public void testReadMatchesSingleFrameChunkingForSilentDriver() {
-        SmpsDriver bulkDriver = new SmpsDriver();
-        SmpsDriver singleFrameDriver = new SmpsDriver();
+        SmpsDriver bulkDriver = SmpsDriverTestAccess.create(44_100);
+        SmpsDriver singleFrameDriver = SmpsDriverTestAccess.create(44_100);
 
         short[] actual = new short[512];
         short[] expected = new short[512];
         short[] frame = new short[2];
 
-        bulkDriver.read(actual);
+        SmpsDriverTestAccess.read(bulkDriver, actual);
         for (int i = 0; i < expected.length / 2; i++) {
-            singleFrameDriver.read(frame);
+            SmpsDriverTestAccess.read(singleFrameDriver, frame);
             expected[i * 2] = frame[0];
             expected[i * 2 + 1] = frame[1];
         }

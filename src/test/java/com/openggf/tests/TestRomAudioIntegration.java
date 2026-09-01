@@ -199,8 +199,10 @@ public class TestRomAudioIntegration {
         AbstractSmpsData data = loader.loadMusic(0x82);
         DacData dac = loader.loadDacData();
 
-        com.openggf.audio.driver.SmpsDriver bulkDriver = new com.openggf.audio.driver.SmpsDriver();
-        com.openggf.audio.driver.SmpsDriver singleFrameDriver = new com.openggf.audio.driver.SmpsDriver();
+        com.openggf.audio.driver.SmpsDriver bulkDriver =
+                com.openggf.audio.driver.SmpsDriverTestAccess.create(44_100);
+        com.openggf.audio.driver.SmpsDriver singleFrameDriver =
+                com.openggf.audio.driver.SmpsDriverTestAccess.create(44_100);
         bulkDriver.addSequencer(new SmpsSequencer(data, dac, bulkDriver, Sonic2SmpsSequencerConfig.CONFIG), false);
         singleFrameDriver.addSequencer(new SmpsSequencer(data, dac, singleFrameDriver, Sonic2SmpsSequencerConfig.CONFIG), false);
 
@@ -208,9 +210,11 @@ public class TestRomAudioIntegration {
         short[] expected = new short[1024];
         short[] frame = new short[2];
 
-        bulkDriver.read(actual);
+        com.openggf.audio.driver.SmpsDriverTestAccess.read(
+                bulkDriver, actual);
         for (int i = 0; i < expected.length / 2; i++) {
-            singleFrameDriver.read(frame);
+            com.openggf.audio.driver.SmpsDriverTestAccess.read(
+                    singleFrameDriver, frame);
             expected[i * 2] = frame[0];
             expected[i * 2 + 1] = frame[1];
         }

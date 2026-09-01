@@ -2,9 +2,6 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
-import com.openggf.audio.rewind.SmpsDriverSnapshot;
-
-import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -19,7 +16,6 @@ public final class SmpsCompositeVoice implements PresentationVoice {
     private final AudioSourceDescriptor sourceDescriptor;
     private final int maxStereoFrames;
     private final SmpsDriver driver;
-    private final short[] scratch;
 
     public SmpsCompositeVoice(long voiceId, int priority, Integer musicId,
                               AudioSourceDescriptor sourceDescriptor, int maxStereoFrames,
@@ -33,7 +29,6 @@ public final class SmpsCompositeVoice implements PresentationVoice {
         this.sourceDescriptor = sourceDescriptor;
         this.maxStereoFrames = maxStereoFrames;
         this.driver = Objects.requireNonNull(driver, "driver");
-        scratch = new short[maxStereoFrames * 2];
     }
 
     public SmpsDriver driver() {
@@ -52,20 +47,8 @@ public final class SmpsCompositeVoice implements PresentationVoice {
 
     @Override
     public void mixInto(long[] accumulation, int stereoFrames) {
-        Objects.requireNonNull(accumulation, "accumulation");
-        if (stereoFrames < 0 || stereoFrames > maxStereoFrames
-                || accumulation.length < (long) stereoFrames * 2) {
-            throw new IllegalArgumentException("requested stereo frames exceed composite capacity");
-        }
-        int samples = stereoFrames * 2;
-        Arrays.fill(scratch, 0, samples, (short) 0);
-        int renderedSamples = driver.renderFramePcm(scratch, samples);
-        if (renderedSamples < 0 || renderedSamples > samples) {
-            throw new IllegalStateException("SmpsDriver returned an invalid sample count");
-        }
-        for (int sample = 0; sample < renderedSamples; sample++) {
-            accumulation[sample] += scratch[sample];
-        }
+        throw new UnsupportedOperationException(
+                "standalone SMPS presentation voices were removed");
     }
 
     /** Runs the driver's one frame-locked V-blank service before PCM mixing. */
@@ -85,8 +68,8 @@ public final class SmpsCompositeVoice implements PresentationVoice {
 
     @Override
     public PresentationVoiceSnapshot snapshot() {
-        return new PresentationVoiceSnapshot.Smps(voiceId, priority, musicId, sourceDescriptor,
-                maxStereoFrames, driver.captureLegacySnapshot());
+        throw new UnsupportedOperationException(
+                "standalone SMPS presentation snapshots were removed");
     }
 
     public static final class LiveCommandMutationToken {
@@ -116,16 +99,4 @@ public final class SmpsCompositeVoice implements PresentationVoice {
         driver.rollbackLiveCommandMutation(token.driverToken);
     }
 
-    public void restore(PresentationVoiceSnapshot.Smps snapshot,
-                        SmpsDriverSnapshot.DependencyResolver resolver) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        if (snapshot.voiceId() != voiceId || snapshot.priority() != priority
-                || snapshot.maxStereoFrames() != maxStereoFrames
-                || !Objects.equals(snapshot.musicId(), musicId)
-                || !Objects.equals(snapshot.sourceDescriptor(), sourceDescriptor)) {
-            throw new IllegalArgumentException("snapshot identity does not match composite voice");
-        }
-        driver.restoreLegacySnapshot(
-                snapshot.driver(), Objects.requireNonNull(resolver, "resolver"));
-    }
 }

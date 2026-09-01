@@ -1,6 +1,9 @@
 package com.openggf.tools.audio.parity.s3k;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -60,10 +63,16 @@ public final class S3kOpenGgfAudioCapture {
         try (rom) {
             Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(rom);
             DacData dacData = loader.loadDacData();
-            SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+            try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
+                    "s3k-oracle", 0,
+                    new SmpsPhysicalDevice.Settings(
+                            SAMPLE_RATE, false, false),
+                    LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
+                    ChipWriteObserver.NONE)) {
+            SmpsDriver driver = stream.logicalDriver();
             driver.setRegion(SmpsSequencer.Region.NTSC);
             List<AudioParityChipWrite> writes = new ArrayList<>();
-            driver.setChipWriteObserver(new ChipWriteObserver() {
+            stream.setChipWriteObserver(new ChipWriteObserver() {
                 @Override
                 public void onYm2612Write(int port, int register, int value) {
                     writes.add(AudioParityChipWrite.ym2612(port, register, value));
@@ -106,6 +115,7 @@ public final class S3kOpenGgfAudioCapture {
                 addTick(ticks, driver, writes, referenceTick, corruptWriteTick);
             }
             return new CaptureResult(ticks, unsupported);
+            }
         }
     }
 

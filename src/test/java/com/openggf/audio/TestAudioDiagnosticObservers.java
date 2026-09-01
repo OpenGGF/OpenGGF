@@ -12,6 +12,7 @@ import static org.mockito.Mockito.mock;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.audio.driver.SfxContentionObserver;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver.LifecycleEvent;
 import com.openggf.audio.driver.SmpsDriverServiceObserver.LifecycleKind;
@@ -25,6 +26,7 @@ import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.SmpsAdmissionContext;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioPresentationSessionCommandApplier;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcm;
 import com.openggf.audio.presentation.PresentationMode;
@@ -46,6 +48,8 @@ import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.CoordFlagHandler;
+import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
@@ -478,7 +482,8 @@ class TestAudioDiagnosticObservers {
         assertEquals(new AdmissionResult(true, RejectionReason.NONE,
                 0x31, 0x72, 0xE0), backendDecisions.getFirst());
 
-        serviceOneTick(base, 0x81);
+        serviceOneTick(base, 0x81,
+                backend.stateForTesting().currentStream());
         assertEquals(List.of(0L), serviceEnds);
 
         backend.playSmps(data("backend-override", 0x82),
@@ -622,7 +627,7 @@ class TestAudioDiagnosticObservers {
 
     @Test
     void serviceCallbacksMatchEachDriverFrameTrackWalk() {
-        SmpsDriver driver = new SmpsDriver(600.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(600.0);
         SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
                 .tempoModBase(0x100)
@@ -653,9 +658,9 @@ class TestAudioDiagnosticObservers {
             }
         });
 
-        driver.read(new short[0]);
+        SmpsDriverTestAccess.read(driver, new short[0]);
         restoreTempoState(music, 10, 0, 1, 0);
-        driver.read(new short[20]);
+        SmpsDriverTestAccess.read(driver, new short[20]);
         assertEquals(List.of(
                 "begin:SEQUENCER_TICK:0:129",
                 "end:SEQUENCER_TICK:0:129"), services,
@@ -664,14 +669,14 @@ class TestAudioDiagnosticObservers {
 
         services.clear();
         restoreTempoState(music, 10, 250, 1, 0);
-        driver.read(new short[20]);
+        SmpsDriverTestAccess.read(driver, new short[20]);
         assertEquals(List.of(
                 "begin:SEQUENCER_TICK:1:129",
                 "end:SEQUENCER_TICK:1:129"), services);
 
         services.clear();
         restoreTempoState(music, 10, 250, 3, 0);
-        driver.read(new short[20]);
+        SmpsDriverTestAccess.read(driver, new short[20]);
         assertEquals(List.of(
                 "begin:SEQUENCER_TICK:2:129",
                 "end:SEQUENCER_TICK:2:129"), services,
@@ -682,7 +687,7 @@ class TestAudioDiagnosticObservers {
 
     @Test
     void musicSpeedSettingDoesNotMultiplyAnSfxTrackWalk() {
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
                 .tempoModBase(0x100)
@@ -706,7 +711,7 @@ class TestAudioDiagnosticObservers {
             }
         });
 
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
 
         assertEquals(List.of(1), maxTicksAfterService,
                 "the S3K speed-up tail repeats music updates only; an SFX"
@@ -715,7 +720,7 @@ class TestAudioDiagnosticObservers {
 
     @Test
     void fadeOnlyFrameAndTempoDelayTrackWalkHaveTypedServices() {
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
                 .tempoModBase(0x100)
@@ -728,7 +733,7 @@ class TestAudioDiagnosticObservers {
         driver.addSequencer(music, false);
         List<String> events = new ArrayList<>();
         ServiceEvent[] active = {null};
-        driver.setChipWriteObserver(new ChipWriteObserver() {
+        SmpsDriverTestAccess.setChipWriteObserver(driver, new ChipWriteObserver() {
             @Override
             public void onYm2612Write(int port, int register, int value) {
                 assertNotNull(active[0], "fade write must be service-scoped");
@@ -746,7 +751,7 @@ class TestAudioDiagnosticObservers {
         restoreDiagnosticState(music, 10, 0, 1, 0,
                 Integer.MAX_VALUE,
                 music.captureSnapshot().fade());
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
         assertEquals("begin:SEQUENCER_TICK:0", events.getFirst());
         assertEquals("end:SEQUENCER_TICK:0", events.getLast());
         assertTrue(events.subList(1, events.size() - 1).stream()
@@ -760,7 +765,7 @@ class TestAudioDiagnosticObservers {
                 Integer.MAX_VALUE,
                 new SmpsSequencerSnapshot.FadeSnapshot(
                         1, 0, 0, 1, 1, true, true));
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
 
         assertEquals("begin:FADE_STEP:1", events.getFirst());
         int fadeEnd = events.indexOf("end:FADE_STEP:1");
@@ -775,7 +780,7 @@ class TestAudioDiagnosticObservers {
 
     @Test
     void finalSfxTickAndCompletionCleanupBracketEveryWrite() {
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         SmpsSequencer sfx = new SmpsSequencer(
                 new LongRunningFmSfxData(), AudioTestFixtures.EMPTY_DAC,
                 driver, audio, new SmpsSequencerConfig.Builder().build());
@@ -787,7 +792,7 @@ class TestAudioDiagnosticObservers {
         driver.addSequencer(sfx, true);
         restoreDiagnosticState(sfx, 1, 255, 1, 0, 1,
                 sfx.captureSnapshot().fade());
-        driver.setChipWriteObserver(new ChipWriteObserver() {
+        SmpsDriverTestAccess.setChipWriteObserver(driver, new ChipWriteObserver() {
             @Override
             public void onYm2612Write(int port, int register, int value) {
                 assertNotNull(active[0], "YM write escaped a service");
@@ -838,7 +843,7 @@ class TestAudioDiagnosticObservers {
             }
         });
 
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
 
         int tickEnd = events.indexOf("end:SEQUENCER_TICK:0");
         int cleanupBegin = events.indexOf("begin:COMPLETION_CLEANUP:1");
@@ -865,7 +870,7 @@ class TestAudioDiagnosticObservers {
 
     @Test
     void serviceObservationPreservesMusicThenSfxSequencerTickOrder() {
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         SmpsSequencer music = new SmpsSequencer(
                 new LongRunningMusicData(0x81),
                 AudioTestFixtures.EMPTY_DAC, driver, audio,
@@ -890,7 +895,7 @@ class TestAudioDiagnosticObservers {
             }
         });
 
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
 
         assertEquals(List.of(0x81, 0xA0), order,
                 "observation must not perturb the driver's established"
@@ -1001,7 +1006,7 @@ class TestAudioDiagnosticObservers {
     }
 
     @Test
-    void coordinationStartRollsBackAndContinuousRetryDoesNotStartAgain() {
+    void sessionCoordinationStartRunsOnceForContinuousRetrigger() {
         SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
         SmpsCoordFlagHandlerOwner owner = new SmpsCoordFlagHandlerOwner(state);
         owner.register("fixture", runtime -> new CoordFlagHandler() {
@@ -1023,14 +1028,13 @@ class TestAudioDiagnosticObservers {
                 return -1;
             }
         });
+        SmpsDriverSession session =
+                SmpsSessionTestSupport.installed(48_000);
         AudioPresentationSourceFactory factory =
-                new AudioPresentationSourceFactory(() -> true, owner);
-        AtomicInteger observerFailures = new AtomicInteger();
-        factory.setAdmissionObserver(decision -> {
-            if (observerFailures.getAndDecrement() > 0) {
-                throw new IllegalStateException("decision failed");
-            }
-        });
+                new AudioPresentationSourceFactory(
+                        () -> true, owner,
+                        AudioPresentationSourceFactory.Settings.defaults(),
+                        session);
         SmpsAssetKey key = new SmpsAssetKey(
                 "fixture", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
         factory.registerSmpsSfxAsset(
@@ -1052,27 +1056,21 @@ class TestAudioDiagnosticObservers {
         ResolvedSmpsSfxSource source = factory.resolveSmpsSfx(
                 900, key, 65_536, 0x60, 0xA0, 1, 900);
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
-                factory, factory, owner, ignored -> { });
+                factory, factory, owner, ignored -> { }, session);
 
-        observerFailures.set(1);
-        assertThrows(AudioDiagnosticObserverException.class,
-                () -> registry.apply(
-                        new AudioPresentationCommand.AddSmpsSfx(source)));
-        assertEquals(0, state.spindashRevCounter());
+        AudioPresentationSessionCommandApplier.apply(
+                session, registry,
+                new AudioPresentationCommand.AddSmpsSfx(source));
+        assertEquals(1, state.spindashRevCounter());
         assertEquals(0, registry.orderedVoiceCount());
 
-        registry.apply(new AudioPresentationCommand.AddSmpsSfx(source));
-        assertEquals(1, state.spindashRevCounter());
-        assertEquals(1, registry.orderedVoiceCount());
-
-        observerFailures.set(1);
-        assertThrows(AudioDiagnosticObserverException.class,
-                () -> registry.apply(
-                        new AudioPresentationCommand.AddSmpsSfx(source)));
+        AudioPresentationSessionCommandApplier.apply(
+                session, registry,
+                new AudioPresentationCommand.AddSmpsSfx(source));
         assertEquals(1, state.spindashRevCounter(),
-                "continuous extension skips onSfxStart even when retried");
-        registry.apply(new AudioPresentationCommand.AddSmpsSfx(source));
-        assertEquals(1, state.spindashRevCounter());
+                "continuous extension skips onSfxStart");
+        assertEquals(1, session.captureLogicalSnapshot()
+                .sequencers().size());
     }
 
     @Test
@@ -1399,16 +1397,19 @@ class TestAudioDiagnosticObservers {
     @Test
     void noneObserversDoNotChangeSnapshotsWritesLocksOrConstructorSilence()
             throws Exception {
-        SmpsDriver ordinary = new SmpsDriver();
-        SmpsDriver inert = new SmpsDriver();
-        inert.setChipWriteObserver(ChipWriteObserver.NONE);
+        SmpsDriver ordinary = SmpsDriverTestAccess.create(48_000);
+        SmpsDriver inert = SmpsDriverTestAccess.create(48_000);
+        SmpsDriverTestAccess.setChipWriteObserver(
+                inert, ChipWriteObserver.NONE);
         inert.setSfxContentionObserver(SfxContentionObserver.NONE);
         inert.setServiceObserver(SmpsDriverServiceObserver.NONE);
 
         List<String> ordinaryWrites = new ArrayList<>();
         List<String> inertWrites = new ArrayList<>();
-        ordinary.setChipWriteObserver(recordingChipObserver(ordinaryWrites));
-        inert.setChipWriteObserver(recordingChipObserver(inertWrites));
+        SmpsDriverTestAccess.setChipWriteObserver(
+                ordinary, recordingChipObserver(ordinaryWrites));
+        SmpsDriverTestAccess.setChipWriteObserver(
+                inert, recordingChipObserver(inertWrites));
         exerciseWrites(ordinary);
         exerciseWrites(inert);
 
@@ -1416,9 +1417,11 @@ class TestAudioDiagnosticObservers {
         assertEquals(JSON.valueToTree(ordinary.captureSnapshot()),
                 JSON.valueToTree(inert.captureSnapshot()));
 
-        SmpsDriver defaultDriver = new SmpsDriver();
-        SmpsDriver explicitNoneDriver = new SmpsDriver();
-        explicitNoneDriver.setChipWriteObserver(ChipWriteObserver.NONE);
+        SmpsDriver defaultDriver = SmpsDriverTestAccess.create(48_000);
+        SmpsDriver explicitNoneDriver =
+                SmpsDriverTestAccess.create(48_000);
+        SmpsDriverTestAccess.setChipWriteObserver(
+                explicitNoneDriver, ChipWriteObserver.NONE);
         explicitNoneDriver.setSfxContentionObserver(
                 SfxContentionObserver.NONE);
         explicitNoneDriver.setServiceObserver(
@@ -1442,8 +1445,8 @@ class TestAudioDiagnosticObservers {
                 explicitNoneDriver.captureSnapshot());
         short[] defaultPcm = new short[256];
         short[] explicitNonePcm = new short[256];
-        defaultDriver.read(defaultPcm);
-        explicitNoneDriver.read(explicitNonePcm);
+        SmpsDriverTestAccess.read(defaultDriver, defaultPcm);
+        SmpsDriverTestAccess.read(explicitNoneDriver, explicitNonePcm);
         assertArrayEquals(defaultPcm, explicitNonePcm,
                 "explicit NONE must preserve future PCM");
         assertDriverStateEquals(defaultDriver.captureSnapshot(),
@@ -1517,13 +1520,22 @@ class TestAudioDiagnosticObservers {
     }
 
     private static void serviceOneTick(SmpsDriver driver, int soundId) {
+        serviceOneTick(driver, soundId, null);
+    }
+
+    private static void serviceOneTick(
+            SmpsDriver driver, int soundId, AudioStream stream) {
         SmpsSequencer sequencer = driver.sequencersForTesting().stream()
                 .filter(candidate -> candidate.getSourceDescriptor().id()
                         == soundId)
                 .findFirst().orElseThrow();
         sequencer.setSampleRate(60.0);
         restoreTempoState(sequencer, 10, 250, 1, 0);
-        driver.read(new short[2]);
+        if (stream == null) {
+            SmpsDriverTestAccess.read(driver, new short[2]);
+        } else {
+            stream.read(new short[2]);
+        }
     }
 
     private GameAudioProfile profile(SmpsRequestAdmissionPolicy policy) {

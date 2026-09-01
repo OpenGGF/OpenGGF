@@ -1,6 +1,9 @@
 package com.openggf.tools.audio;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -143,14 +146,17 @@ public final class PsgSfxRenderTool {
 
     private static Render render(AbstractSmpsData sfx, DacData dac, SmpsSequencerConfig config,
             double rate, int maxFrames, boolean muteFm) {
-        SmpsDriver driver = new SmpsDriver(rate);
-        driver.setRegion(SmpsSequencer.Region.NTSC);
-        for (int ch = 0; muteFm && ch < FM_CHANNELS; ch++) {
-            driver.setFmMute(ch, true);
-        }
+        try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
+                "psg-render", 0,
+                new SmpsPhysicalDevice.Settings(rate, false, false),
+                LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
+                ChipWriteObserver.NONE)) {
+            SmpsDriver driver = stream.logicalDriver();
+            driver.setRegion(SmpsSequencer.Region.NTSC);
+            stream.applyChannelMasks(muteFm ? 0x3F : 0, 0);
         List<Write> writes = new ArrayList<>();
         long[] framesRendered = {0};
-        driver.setChipWriteObserver(new ChipWriteObserver() {
+        stream.setChipWriteObserver(new ChipWriteObserver() {
             @Override
             public void onYm2612Write(int port, int register, int value) {
             }
@@ -170,7 +176,7 @@ public final class PsgSfxRenderTool {
         short[] frame = new short[2];
         int frames = 0;
         while (frames < maxFrames && !driver.isComplete()) {
-            driver.read(frame, 2);
+            stream.read(frame, 2);
             samples[frames * 2] = frame[0];
             samples[frames * 2 + 1] = frame[1];
             frames++;
@@ -178,7 +184,8 @@ public final class PsgSfxRenderTool {
         }
         short[] trimmed = new short[frames * 2];
         System.arraycopy(samples, 0, trimmed, 0, trimmed.length);
-        return new Render(trimmed, frames, driver.isComplete(), writes);
+            return new Render(trimmed, frames, driver.isComplete(), writes);
+        }
     }
 
     private static void writeWav(Path path, short[] interleaved, double rate) throws IOException {

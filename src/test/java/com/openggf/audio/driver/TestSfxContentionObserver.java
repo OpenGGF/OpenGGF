@@ -22,7 +22,7 @@ class TestSfxContentionObserver {
     @Test
     void serviceIdentityStorageStaysBoundedAcrossThousandsOfLifecycles() {
         // Break caught: append-only diagnostic identities retained every historical SFX.
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         List<Long> tickIdentities = new ArrayList<>();
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
             @Override
@@ -35,14 +35,14 @@ class TestSfxContentionObserver {
 
         for (int iteration = 0; iteration < 1_000; iteration++) {
             driver.addSequencer(oneTickSfx(driver), true);
-            driver.read(new short[2]);
+            SmpsDriverTestAccess.read(driver, new short[2]);
             assertEquals(0, driver.sequencersForTesting().size());
             assertEquals(0, driver.trackedServiceSequencerCountForTesting());
         }
 
         for (int iteration = 0; iteration < 1_000; iteration++) {
             driver.addSequencer(longRunningSfx(driver), true);
-            driver.read(new short[2]);
+            SmpsDriverTestAccess.read(driver, new short[2]);
             assertEquals(1, driver.sequencersForTesting().size());
             assertEquals(1, driver.trackedServiceSequencerCountForTesting(),
                     "same-ID replacement must release the displaced identity");
@@ -53,7 +53,7 @@ class TestSfxContentionObserver {
             driver.restoreSnapshot(rewindPoint);
             assertEquals(0, driver.trackedServiceSequencerCountForTesting(),
                     "snapshot reconstruction starts with no historical identity");
-            driver.read(new short[2]);
+            SmpsDriverTestAccess.read(driver, new short[2]);
             assertEquals(1, driver.sequencersForTesting().size());
             assertEquals(1, driver.trackedServiceSequencerCountForTesting());
         }
@@ -72,10 +72,10 @@ class TestSfxContentionObserver {
 
     @Test
     void disabledServiceObserverAllocatesNoSequencerIdentityStorage() {
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         driver.addSequencer(longRunningSfx(driver), true);
 
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
 
         assertEquals(SmpsDriverServiceObserver.NONE,
                 driver.serviceObserver());
@@ -85,7 +85,7 @@ class TestSfxContentionObserver {
 
     @Test
     void rollbackDropsOnlyProvisionalIdentityAndNeverReusesItsOrdinal() {
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         List<SmpsDriverServiceObserver.ServiceEvent> ticks =
                 new ArrayList<>();
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
@@ -97,18 +97,18 @@ class TestSfxContentionObserver {
             }
         });
         driver.addSequencer(longRunningMusic(driver, 0x81), false);
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
         SmpsDriver.LiveCommandMutationToken rollback =
                 driver.captureLiveCommandMutation();
 
         driver.addSequencer(longRunningSfx(driver, 0xA1), true);
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
         assertEquals(2, driver.trackedServiceSequencerCountForTesting());
 
         driver.rollbackLiveCommandMutation(rollback);
         assertEquals(1, driver.trackedServiceSequencerCountForTesting());
         driver.addSequencer(longRunningSfx(driver, 0xA2), true);
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
 
         List<Long> musicIdentities = ticks.stream()
                 .filter(event -> event.sequencer().source().id() == 0x81)

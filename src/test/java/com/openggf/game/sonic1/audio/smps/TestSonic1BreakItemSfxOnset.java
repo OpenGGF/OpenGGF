@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.ChipWriteObserver;
@@ -22,16 +23,15 @@ class TestSonic1BreakItemSfxOnset {
     void breakItemFm5OnsetMatchesTheDriverVisibleRegisterOrder() {
         Sonic1SmpsLoader loader = new Sonic1SmpsLoader(TestEnvironment.currentRom());
         AbstractSmpsData data = loader.loadSfx(0xC1);
-        SmpsDriver driver = new SmpsDriver(44_100);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriver driver = SmpsDriverTestAccess.create(44_100, observer);
 
         SmpsSequencer sfx = new SmpsSequencer(data, loader.loadDacData(), driver,
                 () -> {}, Sonic1SmpsSequencerConfig.CONFIG);
         assertEquals(List.of(), observer.events,
                 "constructing the ROM-backed C1 SFX must be chip-write-free");
         driver.addSequencer(sfx, true);
-        driver.read(new short[2_000], 2_000);
+        SmpsDriverTestAccess.read(driver, new short[2_000], 2_000);
 
         int noteOn = observer.events.indexOf("YM:0:28:F5");
         assertTrue(noteOn >= 0, "C1 FM5 note-on was not observed");

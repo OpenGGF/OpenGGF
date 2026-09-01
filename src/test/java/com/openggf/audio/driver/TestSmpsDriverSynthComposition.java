@@ -21,7 +21,7 @@ class TestSmpsDriverSynthComposition {
     }
 
     @Test
-    void composedDriverPreservesStandaloneWriteRenderAndSnapshotBehavior() {
+    void ownedAdapterPreservesWriteRenderAndSnapshotBehavior() {
         List<ChipWrite> writes = new ArrayList<>();
         ChipWriteObserver observer = new ChipWriteObserver() {
             @Override
@@ -34,7 +34,8 @@ class TestSmpsDriverSynthComposition {
                 writes.add(new PsgWrite(value));
             }
         };
-        SmpsDriver driver = new SmpsDriver(48_000.0, observer);
+        SmpsDriver driver = SmpsDriverTestAccess.create(
+                48_000.0, observer);
         writes.clear();
 
         Object source = new Object();
@@ -42,7 +43,7 @@ class TestSmpsDriverSynthComposition {
         driver.writePsg(source, 0x9F);
         short[] pcm = new short[1_600];
 
-        assertEquals(pcm.length, driver.renderFramePcm(pcm, pcm.length));
+        assertEquals(pcm.length, SmpsDriverTestAccess.read(driver, pcm));
         assertEquals(List.of(new YmWrite(0, 0x2B, 0x80), new PsgWrite(0x9F)),
                 writes);
         assertNotNull(driver.captureSnapshot());

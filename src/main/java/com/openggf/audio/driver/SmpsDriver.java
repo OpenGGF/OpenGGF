@@ -1,8 +1,6 @@
 package com.openggf.audio.driver;
 
-import com.openggf.audio.AudioStream;
 import com.openggf.audio.MusicRestoreSink;
-import com.openggf.audio.rewind.LegacySmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -11,8 +9,6 @@ import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSequencerHost;
-import com.openggf.audio.synth.VirtualSynthesizer;
-import com.openggf.audio.synth.ChipWriteObserver;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,8 +22,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
-        AudioStream {
+public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
+    @FunctionalInterface
+    public interface DirectPcmRenderer {
+        void render(short[] target, int frameOffset, int stereoFrames);
+    }
     public enum ReadMode {
         SAMPLE_ACCURATE,
         HYBRID
@@ -35,8 +34,24 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
 
     private static final int MIN_BATCH_SAMPLES = 32;
 
+    private enum DetachedLogicalWriteTarget implements SmpsLogicalWriteTarget {
+        INSTANCE;
+
+        @Override public void writeFm(Object source, int port, int register, int value) { }
+        @Override public void writePsg(Object source, int value) { }
+        @Override public void setInstrument(Object source, int channel,
+                byte[] voice) { }
+        @Override public void playDac(Object source, int note) { }
+        @Override public void stopDac(Object source) { }
+        @Override public void setDacData(DacData data) { }
+        @Override public void setFmMute(int channel, boolean mute) { }
+        @Override public void setPsgMute(int channel, boolean mute) { }
+        @Override public void setDacInterpolate(boolean interpolate) { }
+        @Override public void silenceAll() { }
+        @Override public void selectDac(SmpsSourceDescriptor source, DacData data) { }
+    }
+
     private final SmpsLogicalWriteTarget synthesizer;
-    private final VirtualSynthesizer standalonePhysical;
 
     private final Object sequencersLock = new Object();
     private final List<SmpsSequencer> sequencers = new ArrayList<>();
@@ -59,9 +74,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
     // Reusable buffer for stopAllSfx() to avoid per-call ArrayList allocation
     private final List<SmpsSequencer> sfxRemovalBuffer = new ArrayList<>();
 
-    // Scratch buffer for read() to avoid per-frame allocations
-    private final short[] scratchFrameBuf = new short[2];
-    private short[] chunkScratch = new short[0];
     private ReadMode readMode = ReadMode.HYBRID;
     private int hybridChunkCountForTesting;
 
@@ -112,8 +124,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
         private final boolean continuousSfxFlag;
         private final int contSfxLoopCnt;
         private final int palUpdateCounter;
-        private final DacData liveDacDataReference;
-        private final VirtualSynthesizer.Snapshot synthSnapshot;
 
         private LiveCommandMutationToken(
                 SmpsDriver owner,
@@ -134,9 +144,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                 int continuousSfxId,
                 boolean continuousSfxFlag,
                 int contSfxLoopCnt,
-                int palUpdateCounter,
-                DacData liveDacDataReference,
-                VirtualSynthesizer.Snapshot synthSnapshot) {
+                int palUpdateCounter) {
             this.owner = owner;
             this.sequencers = sequencers;
             this.sequencerStates = sequencerStates;
@@ -156,8 +164,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
             this.continuousSfxFlag = continuousSfxFlag;
             this.contSfxLoopCnt = contSfxLoopCnt;
             this.palUpdateCounter = palUpdateCounter;
-            this.liveDacDataReference = liveDacDataReference;
-            this.synthSnapshot = synthSnapshot;
         }
     }
 
@@ -187,8 +193,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
         private final int continuousSfxId;
         private final boolean continuousSfxFlag;
         private final int continuousLoopCount;
-        private final DacData dacData;
-        private final VirtualSynthesizer.SfxAdmissionState synthState;
 
         private SfxAdmissionMutationState(
                 SmpsSequencer[] affected,
@@ -207,8 +211,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                 long nextAdmissionOrdinal, long nextServiceOrdinal,
                 long nextServiceSequencerOrdinal,
                 int continuousSfxId, boolean continuousSfxFlag,
-                int continuousLoopCount, DacData dacData,
-                VirtualSynthesizer.SfxAdmissionState synthState) {
+                int continuousLoopCount) {
             this.continuousOnly = false;
             this.affected = affected;
             this.sequencerStates = sequencerStates;
@@ -234,8 +237,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.continuousLoopCount = continuousLoopCount;
-            this.dacData = dacData;
-            this.synthState = synthState;
         }
 
         private SfxAdmissionMutationState(
@@ -270,32 +271,23 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.continuousLoopCount = continuousLoopCount;
-            this.dacData = null;
-            this.synthState = null;
         }
     }
 
     public SmpsDriver() {
-        this(new VirtualSynthesizer());
+        this(DetachedLogicalWriteTarget.INSTANCE);
     }
 
     public SmpsDriver(double outputSampleRate) {
-        this(new VirtualSynthesizer(outputSampleRate));
+        this();
+        if (!Double.isFinite(outputSampleRate)
+                || outputSampleRate <= 0.0) {
+            throw new IllegalArgumentException(
+                    "outputSampleRate must be positive and finite");
+        }
     }
 
-    public SmpsDriver(
-            double outputSampleRate, ChipWriteObserver observer) {
-        this(new VirtualSynthesizer(outputSampleRate, observer));
-    }
-
-    private SmpsDriver(VirtualSynthesizer standalonePhysical) {
-        this(standalonePhysical, standalonePhysical);
-    }
-
-    private SmpsDriver(
-            SmpsLogicalWriteTarget synthesizer,
-            VirtualSynthesizer standalonePhysical) {
-        this.standalonePhysical = standalonePhysical;
+    private SmpsDriver(SmpsLogicalWriteTarget synthesizer) {
         this.synthesizer = Objects.requireNonNull(
                 synthesizer, "synthesizer");
     }
@@ -307,56 +299,12 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
     public static SmpsDriver createSessionDriver(
             SmpsDriverSessionAccess sessionAccess) {
         return new SmpsDriver(
-                Objects.requireNonNull(sessionAccess, "sessionAccess"), null);
-    }
-
-    private VirtualSynthesizer requireStandalonePhysical() {
-        if (standalonePhysical == null) {
-            throw new IllegalStateException(
-                    "session-backed SMPS driver has no standalone physical synthesizer");
-        }
-        return standalonePhysical;
-    }
-
-    public void setOutputSampleRate(double outputSampleRate) {
-        requireStandalonePhysical().setOutputSampleRate(outputSampleRate);
-    }
-
-    public double getOutputSampleRate() {
-        return requireStandalonePhysical().getOutputSampleRate();
-    }
-
-    public void setChipWriteObserver(ChipWriteObserver observer) {
-        requireStandalonePhysical().setChipWriteObserver(observer);
-    }
-
-    protected boolean hasChipWriteObserver() {
-        return standalonePhysical != null
-                && standalonePhysical.hasChipWriteObserver();
-    }
-
-    public VirtualSynthesizer.Snapshot captureSynthSnapshot() {
-        return requireStandalonePhysical().captureSynthSnapshot();
-    }
-
-    public void restoreSynthSnapshot(VirtualSynthesizer.Snapshot snapshot) {
-        requireStandalonePhysical().restoreSynthSnapshot(snapshot);
-    }
-
-    public VirtualSynthesizer.SfxAdmissionState captureSfxAdmissionState(
-            int affectedFmMask, int affectedPsgMask) {
-        return requireStandalonePhysical().captureSfxAdmissionState(
-                affectedFmMask, affectedPsgMask);
-    }
-
-    public void restoreSfxAdmissionState(
-            VirtualSynthesizer.SfxAdmissionState state) {
-        requireStandalonePhysical().restoreSfxAdmissionState(state);
+                Objects.requireNonNull(sessionAccess, "sessionAccess"));
     }
 
     @Override
     public void setDacData(DacData data) {
-        requireStandalonePhysical().setDacData(data);
+        synthesizer.setDacData(data);
     }
 
     @Override
@@ -365,57 +313,27 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                 Objects.requireNonNull(data, "data"));
     }
 
-    protected DacData captureLiveDacDataReference() {
-        return requireStandalonePhysical().selectedDacDataForSnapshot();
-    }
-
-    /**
-     * Exposes only the selected DAC-bank identity to composed-driver test
-     * subclasses; the physical synthesizer itself remains private.
-     */
-    protected DacData selectedDacDataForTesting() {
-        return requireStandalonePhysical().selectedDacDataForSnapshot();
-    }
-
-    protected void restoreLiveDacDataReference(DacData data) {
-        requireStandalonePhysical().restoreSelectedDacData(data);
-    }
-
     public void setFmMute(int channel, boolean mute) {
-        requireStandalonePhysical().setFmMute(channel, mute);
+        synthesizer.setFmMute(channel, mute);
     }
 
     public void setPsgMute(int channel, boolean mute) {
-        requireStandalonePhysical().setPsgMute(channel, mute);
+        synthesizer.setPsgMute(channel, mute);
     }
 
     public void setDacInterpolate(boolean interpolate) {
-        requireStandalonePhysical().setDacInterpolate(interpolate);
-    }
-
-    public void setPsgNoiseShiftOnEveryToggle(boolean everyToggle) {
-        requireStandalonePhysical().setPsgNoiseShiftOnEveryToggle(everyToggle);
-    }
-
-    public boolean isPsgNoiseShiftOnEveryToggle() {
-        return requireStandalonePhysical().isPsgNoiseShiftOnEveryToggle();
+        synthesizer.setDacInterpolate(interpolate);
     }
 
     @Override
     public void silenceAll() {
-        requireStandalonePhysical().silenceAll();
+        synthesizer.silenceAll();
     }
 
     public void forceSilenceChannel(int channelId) {
-        requireStandalonePhysical().forceSilenceChannel(channelId);
-    }
-
-    public void render(short[] buffer) {
-        requireStandalonePhysical().render(buffer);
-    }
-
-    public void renderFrames(short[] buffer, int frameOffset, int frames) {
-        requireStandalonePhysical().renderFrames(buffer, frameOffset, frames);
+        if (synthesizer instanceof SmpsDriverSessionAccess access) {
+            access.forceSilenceFmChannel(channelId);
+        }
     }
 
     /** Installs the disabled-by-default complete-service diagnostic observer. */
@@ -695,15 +613,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
     }
 
     private boolean hasPotentiallyThrowingAdmissionObserver() {
-        // Session observers are deferred and quarantined by the composite
-        // owner. The session transaction already captures the complete
-        // logical/device rollback state, so allocating the standalone
-        // admission journal would both duplicate that boundary and attempt
-        // to read a private synthesizer this composed driver does not own.
-        return standalonePhysical != null
-                && (hasChipWriteObserver()
-                || sfxContentionObserver != SfxContentionObserver.NONE
-                || serviceObserver != SmpsDriverServiceObserver.NONE);
+        return sfxContentionObserver != SfxContentionObserver.NONE
+                || serviceObserver != SmpsDriverServiceObserver.NONE;
     }
 
     private void commitNewSfxAdmission(PreparedSfxAdmission admission) {
@@ -1242,13 +1153,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                     nextSfxAdmissionOrdinal,
                     nextServiceOrdinal, nextServiceSequencerOrdinal,
                     continuousSfxId,
-                    continuousSfxFlag, contSfxLoopCnt,
-                    captureLiveDacDataReference(),
-                    admission.affectedFmMask() == 0
-                            && admission.affectedPsgMask() == 0
-                            ? null : captureSfxAdmissionState(
-                                    admission.affectedFmMask(),
-                                    admission.affectedPsgMask()));
+                    continuousSfxFlag, contSfxLoopCnt);
         }
     }
 
@@ -1263,10 +1168,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                 continuousSfxFlag = state.continuousSfxFlag;
                 contSfxLoopCnt = state.continuousLoopCount;
                 return;
-            }
-            restoreLiveDacDataReference(state.dacData);
-            if (state.synthState != null) {
-                restoreSfxAdmissionState(state.synthState);
             }
             for (int index = 0; index < state.affected.length; index++) {
                 state.affected[index].rollbackLiveCommandMutation(
@@ -1441,11 +1342,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
-                    palUpdateCounter,
-                    standalonePhysical == null
-                            ? null : captureLiveDacDataReference(),
-                    standalonePhysical == null
-                            ? null : captureSynthSnapshot());
+                    palUpdateCounter);
         }
     }
 
@@ -1512,10 +1409,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
             continuousSfxFlag = token.continuousSfxFlag;
             contSfxLoopCnt = token.contSfxLoopCnt;
             palUpdateCounter = token.palUpdateCounter;
-            if (standalonePhysical != null) {
-                restoreLiveDacDataReference(token.liveDacDataReference);
-                restoreSynthSnapshot(token.synthSnapshot);
-            }
             if (serviceSequencerOrdinals != null) {
                 serviceSequencerOrdinals.keySet().retainAll(sequencers);
             }
@@ -1524,16 +1417,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
 
     public SmpsDriverSnapshot captureSnapshot() {
         return captureLogicalState();
-    }
-
-    public LegacySmpsDriverSnapshot captureLegacySnapshot() {
-        synchronized (sequencersLock) {
-            return new LegacySmpsDriverSnapshot(
-                    captureLogicalState(),
-                    requireStandalonePhysical().captureSynthSnapshot(),
-                    requireStandalonePhysical()
-                            .selectedDacDataForSnapshot());
-        }
     }
 
     private SmpsDriverSnapshot captureLogicalState() {
@@ -1675,28 +1558,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                 }
             }
         }
-    }
-
-    public void restoreLegacySnapshot(
-            LegacySmpsDriverSnapshot snapshot) {
-        restoreLegacySnapshot(
-                snapshot, SmpsDriverSnapshot.liveReferences());
-    }
-
-    public void restoreLegacySnapshot(
-            LegacySmpsDriverSnapshot snapshot,
-            SmpsDriverSnapshot.DependencyResolver resolver) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        Objects.requireNonNull(resolver, "resolver");
-        SmpsDriverSnapshot logical = snapshot.logical();
-        List<SmpsDriverSnapshot.SequencerEntry> entries =
-                logical.sequencers();
-        List<ResolvedSequencerDependencies> resolved =
-                resolveSequencerDependencies(entries, resolver);
-        restoreLogicalState(logical, entries, resolved);
-        restoreLiveDacDataReference(snapshot.liveDacReference());
-        restoreSynthSnapshot(snapshot.physical());
-        observeLifecycle(SmpsDriverServiceObserver.LifecycleKind.RESTORE);
     }
 
     private static List<ResolvedSequencerDependencies> resolveSequencerDependencies(
@@ -1997,16 +1858,72 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                 SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
     }
 
-    @Override
-    public int read(short[] buffer) {
-        return read(buffer, buffer.length);
+    /**
+     * Advances direct-read logical cadence while a separate owner renders the
+     * physical frames. Presentation never calls this compatibility boundary.
+     */
+    public int readDirect(
+            short[] buffer,
+            int length,
+            DirectPcmRenderer renderer) {
+        Objects.requireNonNull(buffer, "buffer");
+        Objects.requireNonNull(renderer, "renderer");
+        if (length < 0 || length > buffer.length || (length & 1) != 0) {
+            throw new IllegalArgumentException(
+                    "length must be an even count within the target buffer");
+        }
+        return readMode == ReadMode.HYBRID
+                ? readDirectHybrid(buffer, length, renderer)
+                : readDirectSampleAccurate(buffer, length, renderer);
     }
 
-    @Override
-    public int read(short[] buffer, int length) {
-        return readMode == ReadMode.HYBRID
-                ? readHybrid(buffer, length)
-                : readSampleAccurate(buffer, length);
+    private int readDirectSampleAccurate(
+            short[] buffer, int length, DirectPcmRenderer renderer) {
+        int frames = length / 2;
+        synchronized (sequencersLock) {
+            for (int frame = 0; frame < frames; frame++) {
+                advanceSequencersBatch(1);
+                removeCompletedSequencers();
+                renderer.render(buffer, frame, 1);
+            }
+        }
+        return length;
+    }
+
+    private int readDirectHybrid(
+            short[] buffer, int length, DirectPcmRenderer renderer) {
+        int frames = length / 2;
+        hybridChunkCountForTesting = 0;
+        synchronized (sequencersLock) {
+            int frameIndex = 0;
+            while (frameIndex < frames) {
+                if (requiresSampleAccurateFallback()) {
+                    renderDirectSample(buffer, frameIndex++, renderer);
+                    continue;
+                }
+                int safeChunk = computeSafeChunkSamples(
+                        frames - frameIndex);
+                if (safeChunk < MIN_BATCH_SAMPLES) {
+                    renderDirectSample(buffer, frameIndex++, renderer);
+                    continue;
+                }
+                advanceSequencersBatch(safeChunk);
+                removeCompletedSequencers();
+                renderer.render(buffer, frameIndex, safeChunk);
+                hybridChunkCountForTesting++;
+                frameIndex += safeChunk;
+            }
+        }
+        return length;
+    }
+
+    private void renderDirectSample(
+            short[] buffer,
+            int frameIndex,
+            DirectPcmRenderer renderer) {
+        advanceSequencersBatch(1);
+        removeCompletedSequencers();
+        renderer.render(buffer, frameIndex, 1);
     }
 
     /** Runs one V-blank-owned service for every sequencer in this driver. */
@@ -2083,68 +2000,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
         return null;
     }
 
-    /**
-     * Renders PCM without advancing SMPS track state. Presentation first calls
-     * {@link #serviceOuterFrame()}, then renders the clock-sized packet.
-     */
-    public int renderFramePcm(short[] buffer, int length) {
-        if (length < 0 || length > buffer.length || (length & 1) != 0) {
-            throw new IllegalArgumentException(
-                    "length must be an even count within the target buffer");
-        }
-        synchronized (sequencersLock) {
-            requireStandalonePhysical().renderFrames(buffer, 0, length / 2);
-        }
-        return length;
-    }
-
-    private int readSampleAccurate(short[] buffer, int length) {
-        int frames = length / 2;
-
-        // Per-sample processing is required because sequencer state changes (note events,
-        // instrument changes, etc.) must happen in lockstep with rendering. Batching
-        // breaks audio fidelity because synth state changes mid-batch would be lost.
-        synchronized (sequencersLock) {
-            for (int i = 0; i < frames; i++) {
-                advanceSequencersBatch(1);
-                removeCompletedSequencers();
-
-                requireStandalonePhysical().render(scratchFrameBuf);
-                buffer[i * 2] = scratchFrameBuf[0];
-                buffer[i * 2 + 1] = scratchFrameBuf[1];
-            }
-        }
-        return length;
-    }
-
-    private int readHybrid(short[] buffer, int length) {
-        int frames = length / 2;
-        hybridChunkCountForTesting = 0;
-
-        synchronized (sequencersLock) {
-            int frameIndex = 0;
-            while (frameIndex < frames) {
-                if (requiresSampleAccurateFallback()) {
-                    renderSingleSample(buffer, frameIndex++);
-                    continue;
-                }
-
-                int safeChunk = computeSafeChunkSamples(frames - frameIndex);
-                if (safeChunk < MIN_BATCH_SAMPLES) {
-                    renderSingleSample(buffer, frameIndex++);
-                    continue;
-                }
-
-                advanceSequencersBatch(safeChunk);
-                removeCompletedSequencers();
-                renderChunk(buffer, frameIndex, safeChunk);
-                hybridChunkCountForTesting++;
-                frameIndex += safeChunk;
-            }
-        }
-        return length;
-    }
-
     private boolean requiresSampleAccurateFallback() {
         for (int i = 0; i < sequencers.size(); i++) {
             if (sequencers.get(i).requiresSampleAccurateFallback()) {
@@ -2180,19 +2035,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
         }
     }
 
-    private void renderSingleSample(short[] buffer, int frameIndex) {
-        advanceSequencersBatch(1);
-        removeCompletedSequencers();
-
-        requireStandalonePhysical().render(scratchFrameBuf);
-        buffer[frameIndex * 2] = scratchFrameBuf[0];
-        buffer[frameIndex * 2 + 1] = scratchFrameBuf[1];
-    }
-
-    private void renderChunk(short[] target, int frameOffset, int frames) {
-        requireStandalonePhysical().renderFrames(target, frameOffset, frames);
-    }
-
     private void removeCompletedSequencers() {
         while (!pendingRemovals.isEmpty()) {
             SmpsSequencer seq = pendingRemovals.getFirst();
@@ -2218,7 +2060,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
      * Tool-facing: detaches every sequencer that has completed, releasing its
      * channel locks exactly as the render loop's completion cleanup would.
      * Parity capture hosts advance sequencers directly and never call
-     * {@link #read(short[])}, so they invoke this once per driver tick.
+     * direct-read cadence, so they invoke this once per driver tick.
      */
     public void reapCompletedSequencers() {
         synchronized (sequencersLock) {
@@ -2232,7 +2074,6 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
         }
     }
 
-    @Override
     public boolean isComplete() {
         return sequencers.isEmpty();
     }
@@ -2733,11 +2574,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
     private void silenceFmChannel(int ch) {
         // Directly reset envelope state - this takes effect immediately
         // without needing audio samples to be rendered
-        if (synthesizer instanceof SmpsDriverSessionAccess sessionAccess) {
-            sessionAccess.forceSilenceFmChannel(ch);
-        } else {
-            requireStandalonePhysical().forceSilenceChannel(ch);
-        }
+        forceSilenceChannel(ch);
 
         // Also send Key Off via registers for completeness
         int port = (ch < 3) ? 0 : 1;

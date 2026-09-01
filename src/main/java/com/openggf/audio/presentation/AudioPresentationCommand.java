@@ -143,12 +143,6 @@ public sealed interface AudioPresentationCommand
                                 snapshot.sourcePositionQ32(),
                                 snapshot.sourceStepQ32(), snapshot.gainQ16(),
                                 snapshot.looping(), snapshot.stopped()));
-            } else if (voice instanceof SmpsCompositeVoice composite) {
-                PresentationVoiceSnapshot.Smps snapshot =
-                        (PresentationVoiceSnapshot.Smps) composite.snapshot();
-                descriptor = new SmpsVoiceDescriptor(
-                        snapshot.voiceId(), snapshot.priority(), musicId,
-                        sourceDescriptor, snapshot.maxStereoFrames());
             } else {
                 throw new IllegalArgumentException(
                         "unsupported music presentation voice "

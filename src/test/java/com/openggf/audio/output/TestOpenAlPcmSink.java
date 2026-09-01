@@ -290,10 +290,6 @@ class TestOpenAlPcmSink {
                         return pcm;
                     }
 
-                    @Override public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new AssertionError("unexpected SMPS recreation");
-                    }
                 };
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 new SmpsSfxInstantiation() {

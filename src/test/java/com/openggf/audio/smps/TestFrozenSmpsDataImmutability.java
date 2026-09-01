@@ -4,8 +4,8 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.DecodedPcmCache;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -153,7 +153,8 @@ class TestFrozenSmpsDataImmutability {
                         48_000, SmpsSequencer.Region.NTSC,
                         false, false, false, false, 1,
                         AudioManager.getInstance(),
-                        new DecodedPcmCache(), ignored -> null));
+                        new DecodedPcmCache(), ignored -> null),
+                SmpsSessionTestSupport.installed(48_000));
     }
 
     private static SmpsSequencerConfig indexedConfig() {
@@ -166,10 +167,8 @@ class TestFrozenSmpsDataImmutability {
     private static AbstractSmpsData program(
             AudioPresentationSourceFactory factory,
             AudioPresentationCommand.MusicVoiceEntry entry) {
-        SmpsCompositeVoice voice = factory.recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor)
-                        entry.voiceDescriptor());
-        return voice.driver().firstMusicSequencer().getSmpsData();
+        return ((AudioPresentationCommand.SmpsVoiceDescriptor)
+                entry.voiceDescriptor()).activation().incomingMusic().smpsData();
     }
 
     private static void mutatePublicCopies(AbstractSmpsData frozen) {

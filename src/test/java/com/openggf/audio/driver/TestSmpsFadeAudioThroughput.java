@@ -137,7 +137,7 @@ public class TestSmpsFadeAudioThroughput {
         AbstractSmpsData musicData = loader.loadMusic(MUSIC_EHZ);
         assertNotNull(musicData, "Music data should load");
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         // Intentionally no read-mode override: measure the production default.
 
@@ -199,7 +199,7 @@ public class TestSmpsFadeAudioThroughput {
     private static boolean renderChunks(SmpsDriver driver, short[] buffer, int chunks, int[] chunkPeaks) {
         boolean nonZero = false;
         for (int chunk = 0; chunk < chunks; chunk++) {
-            driver.read(buffer);
+            SmpsDriverTestAccess.read(driver, buffer);
             int peak = 0;
             for (short s : buffer) {
                 int mag = Math.abs(s);

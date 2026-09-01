@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.audio;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -116,10 +117,10 @@ class TestSonic3kRingSfxStereoPan {
     private Render render(int sfxId) {
         AbstractSmpsData data = loader.loadSfx(sfxId);
         assertNotNull(data, () -> "SFX " + Integer.toHexString(sfxId) + " must load from the ROM");
-        SmpsDriver driver = new SmpsDriver(RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         int[] panBits = {-1};
-        driver.setChipWriteObserver(new ChipWriteObserver() {
+        SmpsDriverTestAccess.setChipWriteObserver(driver, new ChipWriteObserver() {
             @Override
             public void onYm2612Write(int port, int register, int value) {
                 if (register >= 0xB4 && register <= 0xB6 && (value & PAN_MASK) != 0) {
@@ -141,7 +142,7 @@ class TestSonic3kRingSfxStereoPan {
         double[] right = new double[MAX_FRAMES];
         int frames = 0;
         while (frames < MAX_FRAMES && !driver.isComplete()) {
-            driver.read(frame, 2);
+            SmpsDriverTestAccess.read(driver, frame, 2);
             left[frames] = frame[0];
             right[frames] = frame[1];
             frames++;

@@ -11,14 +11,16 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioPresentationSessionCommandApplier;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
 import com.openggf.audio.presentation.SmpsAssetKey;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.data.Rom;
@@ -216,8 +218,13 @@ public class TestDonorAudioRouting {
     public void presentationFactoryPreservesDonorRouteAndSequencerConfig() {
         SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
                 new SmpsCoordFlagRuntimeState());
+        SmpsDriverSession session =
+                SmpsSessionTestSupport.installed(48_000);
         AudioPresentationSourceFactory factory =
-                new AudioPresentationSourceFactory(() -> true, handlers);
+                new AudioPresentationSourceFactory(
+                        () -> true, handlers,
+                        AudioPresentationSourceFactory.Settings.defaults(),
+                        session);
         SmpsSequencerConfig donorConfig =
                 new SmpsSequencerConfig.Builder()
                         .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
@@ -231,17 +238,17 @@ public class TestDonorAudioRouting {
                 1, key, 1 << 16, 0x70, 0, 0, 2_048);
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 factory, factory, handlers, ignored -> {
-                });
+                }, session);
 
-        registry.apply(new AudioPresentationCommand.AddSmpsSfx(source));
+        AudioPresentationSessionCommandApplier.apply(
+                session, registry,
+                new AudioPresentationCommand.AddSmpsSfx(source));
 
-        SmpsCompositeVoice voice =
-                (SmpsCompositeVoice) registry.orderedVoiceAt(0);
         assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW,
-                voice.driver().captureSnapshot().sequencers().get(0)
+                session.captureLogicalSnapshot().sequencers().get(0)
                         .config().getTempoMode());
         assertEquals("s2",
-                voice.driver().captureSnapshot().sequencers().get(0)
+                session.captureLogicalSnapshot().sequencers().get(0)
                         .source().donorGameId());
     }
 

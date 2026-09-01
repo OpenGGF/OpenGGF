@@ -60,7 +60,7 @@ class TestS2SfxAdmissionChannelMask {
     void acceptedRingLeftOwnsFm4BeforeMusicFirstService() {
         assumeTrue(loader != null, "Sonic 2 ROM is required");
 
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         SmpsSequencer music = modulatedFm4Music(driver);
         SmpsSequencer.Track musicFm4 = music.trackAt(0);
         driver.addSequencer(music, false);
@@ -101,7 +101,7 @@ class TestS2SfxAdmissionChannelMask {
                 sfxService[0] = false;
             }
         });
-        driver.setChipWriteObserver(new ChipWriteObserver() {
+        SmpsDriverTestAccess.setChipWriteObserver(driver, new ChipWriteObserver() {
             @Override
             public void onYm2612Write(int port, int register, int value) {
                 String write = port + ":" + Integer.toHexString(register)

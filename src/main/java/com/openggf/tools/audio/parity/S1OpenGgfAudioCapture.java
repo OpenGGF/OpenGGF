@@ -1,6 +1,9 @@
 package com.openggf.tools.audio.parity;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -78,10 +81,12 @@ public final class S1OpenGgfAudioCapture {
                     referenceMetadata.cycleStart(), referenceMetadata.period(),
                     referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
                     referenceMetadata.romCrc32());
-            CaptureIterator ticks = new CaptureIterator(song, dacData, contract,
-                    referenceMetadata.terminalRecordCount());
-            AudioParityJsonl.writeNew(output, outputMetadata, ticks);
-            return ticks.result();
+            try (CaptureIterator ticks = new CaptureIterator(
+                    song, dacData, contract,
+                    referenceMetadata.terminalRecordCount())) {
+                AudioParityJsonl.writeNew(output, outputMetadata, ticks);
+                return ticks.result();
+            }
         }
     }
 
@@ -247,7 +252,9 @@ public final class S1OpenGgfAudioCapture {
         }
     }
 
-    static final class CaptureIterator implements Iterator<AudioParityTick>, ChipWriteObserver {
+    static final class CaptureIterator implements Iterator<AudioParityTick>,
+            ChipWriteObserver, AutoCloseable {
+        private final OwnedSmpsAudioStream stream;
         private final SmpsDriver driver;
         private final SmpsSequencer sequencer;
         private final SongContract contract;
@@ -261,7 +268,13 @@ public final class S1OpenGgfAudioCapture {
                 int terminalCount) {
             this.contract = contract;
             this.terminalCount = terminalCount;
-            driver = new SmpsDriver(SAMPLE_RATE);
+            stream = new OwnedSmpsAudioStream(
+                    "s1-parity", 0,
+                    new SmpsPhysicalDevice.Settings(
+                            SAMPLE_RATE, false, false),
+                    LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
+                    ChipWriteObserver.NONE);
+            driver = stream.logicalDriver();
             sequencer = new SmpsSequencer(song, dacData, driver, () -> { },
                     Sonic1SmpsSequencerConfig.CONFIG);
             sequencer.setSampleRate(SAMPLE_RATE);
@@ -269,8 +282,13 @@ public final class S1OpenGgfAudioCapture {
             // The BizHawk epoch begins at S1 InitMusicPlayback. Chip power-on and
             // Java construction precede it; the shipped FixBugs=0 path then performs
             // this exact music-load silence sequence before the first track update.
-            driver.setChipWriteObserver(this);
+            stream.setChipWriteObserver(this);
             initializeS1MusicPlayback(driver, song);
+        }
+
+        @Override
+        public void close() {
+            stream.close();
         }
 
         static void initializeS1MusicPlayback(SmpsDriver driver, AbstractSmpsData song) {

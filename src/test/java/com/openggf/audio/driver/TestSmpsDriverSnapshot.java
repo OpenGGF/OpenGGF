@@ -2,7 +2,6 @@ package com.openggf.audio.driver;
 
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.AudioManager;
-import com.openggf.audio.rewind.LegacySmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -43,10 +42,10 @@ class TestSmpsDriverSnapshot {
                 writes.incrementAndGet();
             }
         };
-        SmpsDriver source = new SmpsDriver(48_000.0, observer);
+        SmpsDriver source = SmpsDriverTestAccess.create(48_000.0, observer);
         source.addSequencer(newSequencer("music", 0x81, source), false);
         SmpsDriverSnapshot memento = source.captureSnapshot();
-        SmpsDriver target = new SmpsDriver(48_000.0, observer);
+        SmpsDriver target = SmpsDriverTestAccess.create(48_000.0, observer);
         writes.set(0);
 
         target.restoreSnapshot(
@@ -389,31 +388,6 @@ class TestSmpsDriverSnapshot {
         SmpsDriverSnapshot after = targetDriver.captureSnapshot();
         assertEquals(before.sequencers().size(), after.sequencers().size());
         assertEquals(before.sequencers().get(0).source(), after.sequencers().get(0).source());
-    }
-
-    @Test
-    void restoreRoundTripsSynthSnapshotAfterLogicalSequencerRestore() {
-        SmpsDriver uninterrupted = configuredDriver();
-        SmpsDriver restored = configuredDriver();
-        primeSynth(uninterrupted);
-        primeSynth(restored);
-
-        uninterrupted.read(new short[74], 74);
-        restored.read(new short[74], 74);
-
-        LegacySmpsDriverSnapshot snapshot =
-                uninterrupted.captureLegacySnapshot();
-        perturbSynth(uninterrupted);
-        short[] expected = new short[192];
-        uninterrupted.read(expected, expected.length);
-
-        perturbSynth(restored);
-        restored.restoreLegacySnapshot(snapshot);
-        perturbSynth(restored);
-        short[] actual = new short[192];
-        restored.read(actual, actual.length);
-
-        assertArrayEquals(expected, actual);
     }
 
     private static SmpsSequencer newSequencer(String name, int id, SmpsDriver driver) {

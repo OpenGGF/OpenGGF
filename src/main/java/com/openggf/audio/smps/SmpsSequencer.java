@@ -23,6 +23,23 @@ import java.util.logging.Logger;
 public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private static final Logger LOGGER = Logger.getLogger(SmpsSequencer.class.getName());
     private static final byte[] ZERO_FM_VOICE = new byte[25];
+    private static final SmpsLogicalWriteTarget DETACHED_WRITE_TARGET =
+            new SmpsLogicalWriteTarget() {
+                @Override public void writeFm(Object source, int port,
+                        int register, int value) { }
+                @Override public void writePsg(Object source, int value) { }
+                @Override public void setInstrument(Object source, int channel,
+                        byte[] voice) { }
+                @Override public void playDac(Object source, int note) { }
+                @Override public void stopDac(Object source) { }
+                @Override public void setDacData(DacData data) { }
+                @Override public void setFmMute(int channel, boolean mute) { }
+                @Override public void setPsgMute(int channel, boolean mute) { }
+                @Override public void setDacInterpolate(boolean interpolate) { }
+                @Override public void silenceAll() { }
+                @Override public void selectDac(
+                        SmpsSourceDescriptor source, DacData data) { }
+            };
     private final AbstractSmpsData smpsData;
     private final MusicRestoreSink audioManager;
     private AbstractSmpsData fallbackVoiceData;
@@ -384,12 +401,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, SmpsSequencerConfig config) {
-        this(smpsData, dacData, new VirtualSynthesizer(), GameServices.audio(), config);
+        this(smpsData, dacData, DETACHED_WRITE_TARGET,
+                SmpsSequencerHost.NONE, GameServices.audio(), config, null,
+                SourceDescriptorTrust.LEGACY_RECOMPUTE);
     }
 
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, MusicRestoreSink audioManager,
             SmpsSequencerConfig config) {
-        this(smpsData, dacData, new VirtualSynthesizer(), audioManager, config);
+        this(smpsData, dacData, DETACHED_WRITE_TARGET,
+                SmpsSequencerHost.NONE, audioManager, config, null,
+                SourceDescriptorTrust.LEGACY_RECOMPUTE);
     }
 
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, Synthesizer synth,

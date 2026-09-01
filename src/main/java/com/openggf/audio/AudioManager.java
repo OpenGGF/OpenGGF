@@ -1036,12 +1036,9 @@ public class AudioManager implements MusicRestoreSink {
                                         "detached staging queue exceeded capacity");
                             });
             long nextVoice = selected.presentation().voices().stream()
-                    .mapToLong(voice -> switch (voice) {
-                        case PresentationVoiceSnapshot.Smps smps ->
-                                smps.voiceId();
-                        case PresentationVoiceSnapshot.Sample sample ->
-                                sample.voiceId();
-                    })
+                    .mapToLong(voice ->
+                            ((PresentationVoiceSnapshot.Sample) voice)
+                                    .voiceId())
                     .max().orElse(0L) + 1L;
             nextVoice = Math.max(
                     nextVoice, selected.presentation().nextVoiceId());

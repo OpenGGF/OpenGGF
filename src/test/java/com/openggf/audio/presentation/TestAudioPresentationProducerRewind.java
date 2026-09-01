@@ -226,11 +226,6 @@ class TestAudioPresentationProducerRewind {
                         return fixture.resolver.resolvePcm(assetId);
                     }
 
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        return fixture.resolver.recreateSmps(snapshot);
-                    }
                 };
         fixture.producer.restore(selected, flaky, true);
 
@@ -366,70 +361,6 @@ class TestAudioPresentationProducerRewind {
                 "a hard history epoch must discard pre-boundary deferred logical state");
     }
 
-    @Test
-    void closeDiscardsPreparedSmpsRestoreWithoutChipWrites() {
-        Fixture fixture = fixture();
-        SmpsDriver source = new SmpsDriver();
-        PresentationVoiceSnapshot.Smps voice =
-                new PresentationVoiceSnapshot.Smps(
-                        1, 0, 0x81,
-                        AudioSourceDescriptor.baseMusic(0x81),
-                        1, source.captureLegacySnapshot());
-        AudioPresentationSnapshot selected =
-                new AudioPresentationSnapshot(
-                        2, List.of(voice),
-                        new AudioPresentationSnapshot.MusicSlotSnapshot(
-                                0x81,
-                                AudioSourceDescriptor.baseMusic(0x81), 1),
-                        List.of(), null, null,
-                        0, 0, 0, 0,
-                        false, false, false, 1, true,
-                        new SmpsCoordFlagRuntimeState.Snapshot(0));
-        AtomicInteger ymWrites = new AtomicInteger();
-        AtomicInteger psgWrites = new AtomicInteger();
-        AudioPresentationDependencyResolver resolver =
-                new AudioPresentationDependencyResolver() {
-                    @Override
-                    public DecodedPcm resolvePcm(String assetId) {
-                        throw new AssertionError("no PCM voice expected");
-                    }
-
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        SmpsDriver driver = new SmpsDriver(
-                                48_000.0, new ChipWriteObserver() {
-                                    @Override
-                                    public void onYm2612Write(
-                                            int port, int register,
-                                            int value) {
-                                        ymWrites.incrementAndGet();
-                                    }
-
-                                    @Override
-                                    public void onPsgWrite(int value) {
-                                        psgWrites.incrementAndGet();
-                                    }
-                                });
-                        return new SmpsCompositeVoice(
-                                snapshot.voiceId(), snapshot.priority(),
-                                snapshot.musicId(),
-                                snapshot.sourceDescriptor(),
-                                snapshot.maxStereoFrames(), driver);
-                    }
-                };
-        fixture.producer.beginReverse(1.0);
-        fixture.producer.prepareRestoreSelection(selected, resolver);
-        ymWrites.set(0);
-        psgWrites.set(0);
-
-        fixture.producer.close();
-        fixture.producer.close();
-
-        assertEquals(0, ymWrites.get());
-        assertEquals(0, psgWrites.get());
-    }
-
     private static Fixture fixture() {
         return fixture(4, 2);
     }
@@ -444,11 +375,6 @@ class TestAudioPresentationProducerRewind {
                         return pcm;
                     }
 
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new AssertionError("no SMPS voice expected");
-                    }
                 };
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 noSmps(), resolver,

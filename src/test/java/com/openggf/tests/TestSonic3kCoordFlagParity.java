@@ -3,17 +3,18 @@ package com.openggf.tests;
 import org.junit.jupiter.api.Test;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationMixer;
+import com.openggf.audio.presentation.AudioPresentationSessionCommandApplier;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
-import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SmpsAssetKey;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -312,11 +313,10 @@ public class TestSonic3kCoordFlagParity {
         fixture.addSfx(continuous, Sonic3kSfx.SLIDE_SKID_LOUD.id);
         fixture.addSfx(continuous, Sonic3kSfx.SLIDE_SKID_LOUD.id);
 
-        SmpsCompositeVoice voice =
-                (SmpsCompositeVoice) fixture.registry.orderedVoiceAt(0);
         assertEquals(1,
-                voice.driver().captureSnapshot().sequencers().size());
-        assertTrue(voice.driver().isContinuousSfxFlagSet());
+                fixture.session.captureLogicalSnapshot().sequencers().size());
+        assertTrue(fixture.session.captureLogicalSnapshot()
+                .continuousSfxFlag());
         assertEquals(2, fixture.state.spindashRevCounter(),
                 "Continuous retrigger does not construct a resetting handler");
     }
@@ -366,29 +366,6 @@ public class TestSonic3kCoordFlagParity {
                 null, null), 0x91);
         fixture.mix();
         assertEquals(4, fixture.state.spindashRevCounter());
-    }
-
-    @Test
-    public void snapshotRecreationUsesPresentationSessionHandlerOwner() {
-        PresentationFixture fixture = presentationFixture();
-        fixture.replaceMusic(createMusicData(
-                2, 0,
-                new byte[] {(byte) 0xE9, (byte) 0xF2},
-                null, null), 0x81);
-        SmpsCompositeVoice original =
-                (SmpsCompositeVoice) fixture.registry.orderedVoiceAt(0);
-        PresentationVoiceSnapshot.Smps snapshot =
-                (PresentationVoiceSnapshot.Smps) original.snapshot();
-
-        SmpsCompositeVoice restored = fixture.factory.recreateSmps(
-                snapshot, SmpsDriverSnapshot.liveReferences());
-
-        assertSame(fixture.handlers.handlerFor("s3k"),
-                restored.driver().captureSnapshot().sequencers().get(0)
-                        .config().getCoordFlagHandler());
-        restored.serviceOuterFrame();
-        restored.mixInto(new long[20_000], 10_000);
-        assertEquals(1, fixture.state.spindashRevCounter());
     }
 
     @Test
@@ -692,13 +669,18 @@ public class TestSonic3kCoordFlagParity {
         SmpsCoordFlagHandlerOwner handlers =
                 new SmpsCoordFlagHandlerOwner(state);
         handlers.register("s3k", Sonic3kCoordFlagHandler::new);
+        SmpsDriverSession session =
+                SmpsSessionTestSupport.installed(48_000);
         AudioPresentationSourceFactory factory =
-                new AudioPresentationSourceFactory(() -> true, handlers);
+                new AudioPresentationSourceFactory(
+                        () -> true, handlers,
+                        AudioPresentationSourceFactory.Settings.defaults(),
+                        session);
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 factory, factory, handlers, ignored -> {
-                });
+                }, session);
         return new PresentationFixture(
-                state, handlers, factory, registry);
+                state, handlers, factory, registry, session);
     }
 
     private static final class PresentationFixture {
@@ -708,6 +690,7 @@ public class TestSonic3kCoordFlagParity {
         final SmpsCoordFlagHandlerOwner handlers;
         final AudioPresentationSourceFactory factory;
         final AudioVoiceRegistry registry;
+        final SmpsDriverSession session;
         private final Map<Sonic3kSfxData, SmpsAssetKey> sfxAssetKeys =
                 new IdentityHashMap<>();
         private long nextVoiceId = 1;
@@ -717,11 +700,13 @@ public class TestSonic3kCoordFlagParity {
                 SmpsCoordFlagRuntimeState state,
                 SmpsCoordFlagHandlerOwner handlers,
                 AudioPresentationSourceFactory factory,
-                AudioVoiceRegistry registry) {
+                AudioVoiceRegistry registry,
+                SmpsDriverSession session) {
             this.state = state;
             this.handlers = handlers;
             this.factory = factory;
             this.registry = registry;
+            this.session = session;
         }
 
         void replaceMusic(Sonic3kSmpsData data, int musicId) {
@@ -732,7 +717,8 @@ public class TestSonic3kCoordFlagParity {
                             Sonic3kSmpsSequencerConfig.CONFIG,
                             AudioSourceDescriptor.baseMusic(musicId),
                             MAX_STEREO_FRAMES);
-            registry.apply(
+            AudioPresentationSessionCommandApplier.apply(
+                    session, registry,
                     new AudioPresentationCommand.ReplaceMusic(music));
         }
 
@@ -744,7 +730,8 @@ public class TestSonic3kCoordFlagParity {
                             Sonic3kSmpsSequencerConfig.CONFIG,
                             AudioSourceDescriptor.baseMusic(musicId),
                             MAX_STEREO_FRAMES);
-            registry.apply(
+            AudioPresentationSessionCommandApplier.apply(
+                    session, registry,
                     new AudioPresentationCommand.PushMusicOverride(music));
         }
 
@@ -756,8 +743,10 @@ public class TestSonic3kCoordFlagParity {
             factory.registerSmpsSfxAsset(
                     key, 0, data, EMPTY_DAC,
                     Sonic3kSmpsSequencerConfig.CONFIG, false);
-            registry.apply(new AudioPresentationCommand.AddSmpsSfx(
-                    factory.resolveSmpsSfx(
+            AudioPresentationSessionCommandApplier.apply(
+                    session, registry,
+                    new AudioPresentationCommand.AddSmpsSfx(
+                            factory.resolveSmpsSfx(
                             nextVoiceId++, key, 1 << 16, 0x70,
                             continuousSfxId,
                             data.getTrackEntries().size(),
@@ -768,8 +757,11 @@ public class TestSonic3kCoordFlagParity {
             registry.beginRendering();
             try {
                 registry.serviceOuterFrame();
-                new AudioPresentationMixer(MAX_STEREO_FRAMES)
-                        .mix(registry, MAX_STEREO_FRAMES);
+                session.serviceForward();
+                short[] smpsPcm = new short[MAX_STEREO_FRAMES * 2];
+                session.renderFrames(smpsPcm, 0, MAX_STEREO_FRAMES);
+                new AudioPresentationMixer(MAX_STEREO_FRAMES).mixPcmVoices(
+                        registry, MAX_STEREO_FRAMES, smpsPcm, 0);
             } finally {
                 registry.endRendering();
             }

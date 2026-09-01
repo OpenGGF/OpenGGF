@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.data.Rom;
 import com.openggf.game.session.EngineContext;
@@ -153,7 +154,7 @@ public class AudioRegressionTest {
         AbstractSmpsData sfxRingData = loader.loadSfx(SFX_RING);
         AbstractSmpsData sfxJumpData = loader.loadSfx(SFX_JUMP);
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
 
@@ -190,7 +191,7 @@ public class AudioRegressionTest {
             }
 
             int toRead = Math.min(buffer.length, current.length - samplesWritten);
-            driver.read(buffer);
+            SmpsDriverTestAccess.read(driver, buffer);
             System.arraycopy(buffer, 0, current, samplesWritten, toRead);
             samplesWritten += toRead;
         }
@@ -283,7 +284,7 @@ public class AudioRegressionTest {
         AbstractSmpsData musicData = loader.loadMusic(MUSIC_EHZ);
         assertNotNull(musicData, "Music data should load");
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
 
         SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
@@ -304,7 +305,7 @@ public class AudioRegressionTest {
 
         AudioBenchmarkMemoryProbe.RunResult result = probe.measureTimedRun(() -> {
             for (int i = 0; i < readCount; i++) {
-                driver.read(buffer);
+                SmpsDriverTestAccess.read(driver, buffer);
                 System.arraycopy(buffer, 0, rendered, samplesWritten[0], buffer.length);
                 samplesWritten[0] += buffer.length;
             }
@@ -333,7 +334,7 @@ public class AudioRegressionTest {
         AbstractSmpsData musicData = loader.loadMusic(MUSIC_EHZ);
         assertNotNull(musicData, "Music data should load");
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
 
         SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
@@ -345,11 +346,11 @@ public class AudioRegressionTest {
 
         // Warm up
         for (int i = 0; i < 100; i++) {
-            driver.read(buffer);
+            SmpsDriverTestAccess.read(driver, buffer);
         }
 
         // Reset for actual benchmark
-        driver = new SmpsDriver(SAMPLE_RATE);
+        driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         seq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSampleRate(SAMPLE_RATE);
@@ -361,19 +362,21 @@ public class AudioRegressionTest {
         int iterations = (int) (SAMPLE_RATE / BUFFER_SIZE);
         AudioBenchmarkMemoryProbe.RunResult memory = probe.measureTimedRun(() -> {
             for (int i = 0; i < iterations; i++) {
-                benchmarkDriver.read(benchmarkBuffer);
+                SmpsDriverTestAccess.read(
+                        benchmarkDriver, benchmarkBuffer);
             }
         });
         long elapsed = memory.elapsedNanos();
 
-        SmpsDriver replayDriver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver replayDriver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         replayDriver.setRegion(SmpsSequencer.Region.NTSC);
         SmpsSequencer replaySeq = new SmpsSequencer(musicData, dacData, replayDriver, Sonic2SmpsSequencerConfig.CONFIG);
         replaySeq.setSampleRate(SAMPLE_RATE);
         replayDriver.addSequencer(replaySeq, false);
         short[] replayBuffer = new short[BUFFER_SIZE * 2];
         AudioBenchmarkMemoryProbe.PeakHeapResult peak = probe.measurePeakHeapBytes(
-                () -> replayDriver.read(replayBuffer),
+                () -> SmpsDriverTestAccess.read(
+                        replayDriver, replayBuffer),
                 iterations
         );
 
@@ -417,7 +420,7 @@ public class AudioRegressionTest {
         AbstractSmpsData musicData = loader.loadMusic(musicId);
         assertNotNull(musicData, "Music data should load for ID 0x" + Integer.toHexString(musicId));
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
 
@@ -440,7 +443,7 @@ public class AudioRegressionTest {
         AbstractSmpsData sfxData = loader.loadSfx(sfxId);
         assertNotNull(sfxData, "SFX data should load for ID 0x" + Integer.toHexString(sfxId));
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
 
@@ -497,7 +500,7 @@ public class AudioRegressionTest {
         int samplesWritten = 0;
         while (samplesWritten < totalSamples) {
             int toRead = Math.min(buffer.length, totalSamples - samplesWritten);
-            driver.read(buffer);
+            SmpsDriverTestAccess.read(driver, buffer);
             System.arraycopy(buffer, 0, audio, samplesWritten, toRead);
             samplesWritten += toRead;
         }
@@ -509,7 +512,7 @@ public class AudioRegressionTest {
         AbstractSmpsData musicData = loader.loadMusic(musicId);
         assertNotNull(musicData, "Music data should load for ID 0x" + Integer.toHexString(musicId));
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(mode);
 
@@ -529,7 +532,7 @@ public class AudioRegressionTest {
         assertNotNull(sfxRingData, "SFX data should load for ID 0x" + Integer.toHexString(SFX_RING));
         assertNotNull(sfxJumpData, "SFX data should load for ID 0x" + Integer.toHexString(SFX_JUMP));
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(mode);
 
@@ -566,7 +569,7 @@ public class AudioRegressionTest {
             }
 
             int toRead = Math.min(buffer.length, totalSamples - samplesWritten);
-            driver.read(buffer);
+            SmpsDriverTestAccess.read(driver, buffer);
             System.arraycopy(buffer, 0, audio, samplesWritten, toRead);
             samplesWritten += toRead;
         }
@@ -703,7 +706,7 @@ public class AudioRegressionTest {
         assertNotNull(blipData, "SFX data should load for BLIP");
         assertNotNull(tallyEndData, "SFX data should load for TALLY_END");
 
-        SmpsDriver driver = new SmpsDriver(SAMPLE_RATE);
+        SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(mode);
 
@@ -742,7 +745,8 @@ public class AudioRegressionTest {
                 tallyEndTriggered = true;
             }
 
-            context.driver().read(context.readBuffers()[i]);
+            SmpsDriverTestAccess.read(
+                    context.driver(), context.readBuffers()[i]);
             if (audioOutput != null) {
                 System.arraycopy(context.readBuffers()[i], 0, audioOutput, samplesWritten, context.plan().readSizes()[i]);
             }
@@ -958,5 +962,4 @@ public class AudioRegressionTest {
         }
     }
 }
-
 

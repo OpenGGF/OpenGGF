@@ -520,11 +520,6 @@ class TestAudioPresentationAllocationBudget {
                         return pcm;
                     }
 
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new AssertionError("no SMPS voice expected");
-                    }
                 };
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 noSmps(), resolver,

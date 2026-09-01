@@ -320,9 +320,6 @@ public final class AudioPresentationSourceFactory
     private final Map<SmpsAssetCatalog.DependencyKey,
             CompatibilityDependencies> compatibilityDependencies =
             new HashMap<>();
-    private final Map<Long, PresentationVoiceSnapshot.Smps> musicBlueprints =
-            new HashMap<>();
-    private final Map<Long, String> musicGameIds = new HashMap<>();
     private final AtomicInteger cacheLookupCount = new AtomicInteger();
     private AudioAdmissionObserver admissionObserver =
             AudioAdmissionObserver.NONE;
@@ -490,24 +487,17 @@ public final class AudioPresentationSourceFactory
         String resolvedGameId = requireGameId(gameId);
         Objects.requireNonNull(descriptor, "descriptor");
         Objects.requireNonNull(source, "source");
-        if (smpsSession != null) {
-            PreparedSmpsMusicActivation activation =
-                    prepareMusicActivation(source);
-            musicGameIds.put(voiceId, resolvedGameId);
-            return new MusicVoiceEntry(
-                    musicId, descriptor,
-                    new AudioPresentationCommand.SmpsVoiceDescriptor(
-                            voiceId, 0, musicId, descriptor,
-                            maxStereoFrames, activation));
+        if (smpsSession == null) {
+            throw new IllegalStateException(
+                    "SMPS presentation requires a session owner");
         }
-        SmpsCompositeVoice voice = buildMusicVoice(
-                musicId, voiceId, descriptor, maxStereoFrames, source,
-                newConfiguredDriver(false, musicOrigin(voiceId, musicId)));
-        PresentationVoiceSnapshot.Smps blueprint =
-                (PresentationVoiceSnapshot.Smps) voice.snapshot();
-        musicBlueprints.put(voiceId, blueprint);
-        musicGameIds.put(voiceId, resolvedGameId);
-        return MusicVoiceEntry.fromVoice(musicId, descriptor, voice);
+        PreparedSmpsMusicActivation activation =
+                prepareMusicActivation(source);
+        return new MusicVoiceEntry(
+                musicId, descriptor,
+                new AudioPresentationCommand.SmpsVoiceDescriptor(
+                        voiceId, 0, musicId, descriptor,
+                        maxStereoFrames, activation));
     }
 
     /**
@@ -523,21 +513,8 @@ public final class AudioPresentationSourceFactory
             SmpsSequencerConfig config,
             AudioSourceDescriptor descriptor,
             int maxStereoFrames) {
-        String resolvedGameId = requireGameId(gameId);
-        Objects.requireNonNull(data, "data");
-        Objects.requireNonNull(dac, "dac");
-        Objects.requireNonNull(config, "config");
-        Objects.requireNonNull(descriptor, "descriptor");
-        LegacySmpsSource source = new LegacySmpsSource(
-                resolvedGameId,
-                data,
-                dac,
-                copyStaticConfig(config),
-                config.getCoordFlagHandler() != null,
-                false);
-        return buildMusicVoice(
-                musicId, voiceId, descriptor, maxStereoFrames, source,
-                newConfiguredDriver(true, musicOrigin(voiceId, musicId)));
+        throw new UnsupportedOperationException(
+                "standalone SMPS presentation voices were removed");
     }
 
     /**
@@ -550,41 +527,6 @@ public final class AudioPresentationSourceFactory
                 requireGameId(gameId),
                 Objects.requireNonNull(config, "config"),
                 config.getCoordFlagHandler() != null);
-    }
-
-    private SmpsCompositeVoice buildMusicVoice(
-            int musicId,
-            long voiceId,
-            AudioSourceDescriptor descriptor,
-            int maxStereoFrames,
-            SmpsAssetCatalog.ProgramEntry source,
-            SmpsDriver driver) {
-        SmpsSequencer sequencer = newSequencer(source, driver);
-        sequencer.setSpeedShoes(settings.speedShoesEnabled());
-        sequencer.setSpeedMultiplier(settings.speedMultiplier());
-        sequencer.setFallbackVoiceData(source.program());
-        driver.addSequencer(sequencer, false);
-
-        SmpsCompositeVoice voice = new SmpsCompositeVoice(
-                voiceId, 0, musicId, descriptor, maxStereoFrames, driver);
-        return voice;
-    }
-
-    private SmpsCompositeVoice buildMusicVoice(
-            int musicId,
-            long voiceId,
-            AudioSourceDescriptor descriptor,
-            int maxStereoFrames,
-            LegacySmpsSource source,
-            SmpsDriver driver) {
-        SmpsSequencer sequencer = newLegacySequencer(source, driver,
-                describeLegacyMusic(descriptor, source.data()));
-        sequencer.setSpeedShoes(settings.speedShoesEnabled());
-        sequencer.setSpeedMultiplier(settings.speedMultiplier());
-        sequencer.setFallbackVoiceData(source.data());
-        driver.addSequencer(sequencer, false);
-        return new SmpsCompositeVoice(
-                voiceId, 0, musicId, descriptor, maxStereoFrames, driver);
     }
 
     public SmpsAssetCatalog.ProgramEntry registerSmpsSfxAsset(
@@ -826,11 +768,8 @@ public final class AudioPresentationSourceFactory
         assertOwnerBoundary();
         cacheLookupCount.incrementAndGet();
         requireCached(source);
-        return new SmpsCompositeVoice(
-                source.standaloneVoiceId(), source.priority(), null, null,
-                source.maxStereoFrames(), newConfiguredDriver(true,
-                        sfxOrigin(source.standaloneVoiceId(),
-                                source.assetKey().sfxId())));
+        throw new UnsupportedOperationException(
+                "standalone SMPS presentation voices were removed");
     }
 
     @Override
@@ -894,53 +833,6 @@ public final class AudioPresentationSourceFactory
                 || driverServiceObserver != SmpsDriverServiceObserver.NONE
                 || chipWriteObserver != ChipWriteObserver.NONE
                 || sfxContentionObserver != SfxContentionObserver.NONE;
-    }
-
-    public SmpsCompositeVoice recreateSmps(
-            PresentationVoiceSnapshot.Smps snapshot,
-            SmpsDriverSnapshot.DependencyResolver dependencies) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        Objects.requireNonNull(dependencies, "dependencies");
-        SmpsDriver driver = newConfiguredDriver(true,
-                snapshot.musicId() != null
-                        ? musicOrigin(snapshot.voiceId(), snapshot.musicId())
-                        : sfxOrigin(snapshot.voiceId(),
-                                restoredSfxSoundId(snapshot)));
-        SmpsCompositeVoice voice = new SmpsCompositeVoice(
-                snapshot.voiceId(), snapshot.priority(),
-                snapshot.musicId(), snapshot.sourceDescriptor(),
-                snapshot.maxStereoFrames(), driver);
-        String voiceGameId = musicGameIds.get(snapshot.voiceId());
-        voice.restore(snapshot, wrappingDependencies(
-                dependencies, voiceGameId));
-        return voice;
-    }
-
-    @Override
-    public SmpsCompositeVoice recreateSmps(
-            PresentationVoiceSnapshot.Smps snapshot) {
-        return recreateSmps(snapshot,
-                SmpsDriverSnapshot.liveReferences());
-    }
-
-    @Override
-    public SmpsCompositeVoice recreateSmps(
-            AudioPresentationCommand.SmpsVoiceDescriptor descriptor) {
-        PresentationVoiceSnapshot.Smps blueprint =
-                musicBlueprints.get(descriptor.voiceId());
-        if (blueprint == null
-                || blueprint.priority() != descriptor.priority()
-                || !Objects.equals(blueprint.musicId(), descriptor.musicId())
-                || !Objects.equals(blueprint.sourceDescriptor(),
-                descriptor.sourceDescriptor())
-                || blueprint.maxStereoFrames()
-                != descriptor.maxStereoFrames()) {
-            throw new IllegalStateException(
-                    "no cached SMPS music for "
-                            + descriptor.sourceDescriptor());
-        }
-        return recreateSmps(blueprint,
-                SmpsDriverSnapshot.liveReferences());
     }
 
     public MusicVoiceEntry fallbackMusic(
@@ -1090,7 +982,7 @@ public final class AudioPresentationSourceFactory
                 settings.audioManager(),
                 source.staticConfig(), source.sourceDescriptor(),
                 SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE);
-        sequencer.setSampleRate(driver.getOutputSampleRate());
+        sequencer.setSampleRate(settings.outputSampleRate());
         sequencer.setFm6DacOff(settings.fm6DacOff());
         return sequencer;
     }
@@ -1164,37 +1056,9 @@ public final class AudioPresentationSourceFactory
                         source.coordFlagHandlerRequired()),
                 descriptor,
                 SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE);
-        sequencer.setSampleRate(driver.getOutputSampleRate());
+        sequencer.setSampleRate(settings.outputSampleRate());
         sequencer.setFm6DacOff(settings.fm6DacOff());
         return sequencer;
-    }
-
-    private SmpsDriver newConfiguredDriver(
-            boolean observed,
-            SmpsDriverServiceObserver.DriverAdmissionOrigin origin) {
-        DiagnosticDispatcher diagnostics = observed
-                ? diagnosticDispatcher()
-                : DiagnosticDispatcher.IMMEDIATE;
-        SmpsDriver driver =
-                new SmpsDriver(settings.outputSampleRate(), observed
-                        ? diagnosticChipWriteObserver(diagnostics)
-                        : ChipWriteObserver.NONE);
-        if (observed) {
-            driver.setDiagnosticIdentity(
-                    new SmpsDriverServiceObserver.DriverIdentity(
-                            allocateDriverOrdinal(), origin));
-            installDiagnosticObservers(driver, diagnostics);
-        }
-        driver.setRegion(settings.region());
-        driver.setDacInterpolate(settings.dacInterpolate());
-        driver.setOutputSampleRate(settings.outputSampleRate());
-        driver.setPsgNoiseShiftOnEveryToggle(
-                settings.psgNoiseShiftEveryToggle());
-        if (observed) {
-            driver.observeLifecycle(
-                    SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED);
-        }
-        return driver;
     }
 
     private DiagnosticDispatcher diagnosticDispatcher() {
@@ -1286,17 +1150,6 @@ public final class AudioPresentationSourceFactory
         return new SmpsDriverServiceObserver.DriverAdmissionOrigin(
                 SmpsDriverServiceObserver.DriverOriginKind.SFX,
                 voiceId, sfxId);
-    }
-
-    private static int restoredSfxSoundId(
-            PresentationVoiceSnapshot.Smps snapshot) {
-        for (SmpsDriverSnapshot.SequencerEntry entry
-                : snapshot.driver().logical().sequencers()) {
-            if (entry.sfx()) {
-                return entry.source().id();
-            }
-        }
-        return -1;
     }
 
     private ChipWriteObserver diagnosticChipWriteObserver(

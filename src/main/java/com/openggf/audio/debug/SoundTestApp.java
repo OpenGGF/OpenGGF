@@ -12,7 +12,11 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
@@ -684,33 +688,37 @@ public final class SoundTestApp {
          * For music, renders for a fixed duration (default 60 seconds).
          */
         private int renderToWav(AbstractSmpsData data, DacData dacSamples, File outputFile, boolean isSfx) throws IOException {
-            // Create a standalone driver for rendering
-            SmpsDriver driver = new SmpsDriver(getOutputSampleRate());
-            driver.setRegion(SmpsSequencer.Region.NTSC);
-            driver.setDacInterpolate(true);
+            double outputRate = getOutputSampleRate();
+            try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
+                    "sound-test", 0,
+                    new SmpsPhysicalDevice.Settings(
+                            outputRate, true, false),
+                    LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
+                    ChipWriteObserver.NONE)) {
+                SmpsDriver driver = stream.logicalDriver();
+                driver.setRegion(SmpsSequencer.Region.NTSC);
 
-            SmpsSequencer seq = new SmpsSequencer(data, dacSamples, driver, seqConfig);
-            seq.setSampleRate(driver.getOutputSampleRate());
-            if (isSfx) {
-                seq.setSfxMode(true);
-            }
-            driver.addSequencer(seq, isSfx);
+                SmpsSequencer seq = new SmpsSequencer(
+                        data, dacSamples, driver, seqConfig);
+                seq.setSampleRate(outputRate);
+                if (isSfx) {
+                    seq.setSfxMode(true);
+                }
+                driver.addSequencer(seq, isSfx);
 
-            // Render parameters
-            int sampleRate = (int) Math.round(driver.getOutputSampleRate());
-            int maxSamples = isSfx ? sampleRate * 10 : sampleRate * 60; // 10s for SFX, 60s for music
-            int bufferSize = 1024;
-            short[] buffer = new short[bufferSize * 2]; // Stereo
+                int sampleRate = (int) Math.round(outputRate);
+                int maxSamples = isSfx ? sampleRate * 10 : sampleRate * 60;
+                int bufferSize = 1024;
+                short[] buffer = new short[bufferSize * 2];
 
-            // Use RandomAccessFile so we can update header after writing
-            try (RandomAccessFile raf = new RandomAccessFile(outputFile, "rw")) {
+                try (RandomAccessFile raf = new RandomAccessFile(outputFile, "rw")) {
                 // Write placeholder header (44 bytes)
                 byte[] header = new byte[44];
                 raf.write(header);
 
                 int totalSamples = 0;
                 while (totalSamples < maxSamples) {
-                    driver.read(buffer);
+                    stream.read(buffer);
 
                     // Write samples as little-endian 16-bit
                     for (int i = 0; i < buffer.length; i++) {
@@ -733,7 +741,8 @@ public final class SoundTestApp {
                 raf.seek(0);
                 writeWavHeader(raf, sampleRate, 2, 16, dataSize);
 
-                return totalSamples;
+                    return totalSamples;
+                }
             }
         }
 

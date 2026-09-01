@@ -290,7 +290,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort().writeFm(port, reg, val);
+            withDirectPort(capability ->
+                    capability.writeFm(port, reg, val));
         }
 
         @Override
@@ -298,7 +299,7 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort().writePsg(val);
+            withDirectPort(port -> port.writePsg(val));
         }
 
         @Override
@@ -307,7 +308,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort().setInstrument(channelId, voice);
+            withDirectPort(port ->
+                    port.setInstrument(channelId, voice));
         }
 
         @Override
@@ -315,7 +317,7 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort().playDac(note);
+            withDirectPort(port -> port.playDac(note));
         }
 
         @Override
@@ -323,7 +325,7 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort().stopDac();
+            withDirectPort(SmpsPhysicalPort::stopDac);
         }
 
         @Override
@@ -341,7 +343,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort().selectDac(new SmpsDacSelection(source, data));
+            withDirectPort(port -> port.selectDac(
+                    new SmpsDacSelection(source, data)));
         }
 
         @Override
@@ -349,7 +352,7 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort().setFmMute(channel, mute);
+            withDirectPort(port -> port.setFmMute(channel, mute));
         }
 
         @Override
@@ -357,7 +360,7 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort().setPsgMute(channel, mute);
+            withDirectPort(port -> port.setPsgMute(channel, mute));
         }
 
         @Override
@@ -365,7 +368,6 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort();
             if (interpolate != profile.settings().dacInterpolate()) {
                 throw new IllegalArgumentException(
                         "session DAC interpolation is profile-owned");
@@ -377,7 +379,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            applyProgram(currentPort(), policy.stopAll());
+            withDirectPort(port -> applyProgram(
+                    port, policy.stopAll()));
         }
 
         @Override
@@ -385,7 +388,22 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (logicalMaterialization) {
                 return;
             }
-            currentPort().forceSilenceFmChannel(channelId);
+            withDirectPort(port ->
+                    port.forceSilenceFmChannel(channelId));
+        }
+
+        private void withDirectPort(
+                Consumer<SmpsPhysicalPort> action) {
+            Consumer<SmpsPhysicalPort> resolved =
+                    Objects.requireNonNull(action, "action");
+            if (openOwner != null) {
+                resolved.accept(currentPort());
+                return;
+            }
+            SmpsDriverSession.this.withPort(driverIdentity, port -> {
+                resolved.accept(port);
+                return null;
+            });
         }
 
         private PortCapability currentPort() {
@@ -401,6 +419,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     private final Thread ownerThread;
     private final Object sessionIdentity = new Object();
     private final SmpsPhysicalDevice device;
+    private final SmpsDriver.DirectPcmRenderer directRenderer;
     private final SmpsPhysicalPolicy policy;
     private final SmpsSessionProfileFingerprint profile;
     private ChipWriteObserver chipWriteObserver;
@@ -470,6 +489,8 @@ public final class SmpsDriverSession implements AutoCloseable {
                         emitChipDiagnostic(new ChipDiagnostic.Psg(value));
                     }
                 });
+        directRenderer = (buffer, frameOffset, frames) ->
+                device.renderFrames(buffer, frameOffset * 2, frames);
     }
 
     /** Creates and initializes the one persistent logical driver. */
@@ -548,6 +569,23 @@ public final class SmpsDriverSession implements AutoCloseable {
             short[] target, int offsetSamples, int stereoFrames) {
         requireInstalled();
         return device.renderFrames(target, offsetSamples, stereoFrames);
+    }
+
+    /** Preserves standalone sample-owned cadence without a driver-owned device. */
+    int readDirect(short[] target, int length) {
+        requireInstalled();
+        return driver.readDirect(target, length, directRenderer);
+    }
+
+    SmpsPhysicalDevice.Snapshot capturePhysicalSnapshotForTesting() {
+        requireActive();
+        return device.captureSnapshot();
+    }
+
+    void restorePhysicalSnapshotForTesting(
+            SmpsPhysicalDevice.Snapshot snapshot, DacData selectedDac) {
+        requireActive();
+        device.restoreSnapshot(snapshot, selectedDac);
     }
 
     public void queueActivation(
