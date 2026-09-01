@@ -14,6 +14,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Complete-run audio producers now consume private bound inputs:** direct
+  Java capture authenticates the same pinned reference installation as the
+  shell route, snapshots the ROM, BK2, run manifest, and complete reference
+  tree before validation, launches TraceChaser with a closed environment, and
+  publishes the completed store only after producer and snapshot cleanup.
 - **Production audio diagnostics now have a deterministic headless boundary:**
   `AudioManager` owns an exclusive transactional observer lease that survives
   backend and presentation rebuilds, while the complete-run tooling records a

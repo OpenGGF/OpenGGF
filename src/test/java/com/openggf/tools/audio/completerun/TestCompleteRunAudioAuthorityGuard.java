@@ -39,6 +39,7 @@ class TestCompleteRunAudioAuthorityGuard {
             completeRunSource("s2/S2CompleteRunOpenGgfProducer.java"),
             completeRunSource("s3k/S3kCompleteRunOpenGgfProducer.java"));
     private static final Set<Path> PERMITTED_REFERENCE_SOURCES = Set.of(
+            completeRunSource("CompleteRunAudioInputSnapshot.java"),
             completeRunSource("TraceChaserAudioProcess.java"),
             completeRunSource("s2/S2CompleteRunReferenceProducer.java"),
             completeRunSource("s2/S2CompleteRunReferenceProjector.java"),

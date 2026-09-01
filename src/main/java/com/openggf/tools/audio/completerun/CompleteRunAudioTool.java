@@ -74,6 +74,7 @@ public final class CompleteRunAudioTool {
                 if (!CompleteRunAudioProducerRegistry.knowsProfile(args[2])) {
                     throw new UsageFailure("unknown fixed producer profile");
                 }
+                CompleteRunAudioProducerRegistry.requireAvailable(args[2], kind);
                 Path rom = existingPlainFile(args[3]);
                 Path bk2 = existingPlainFile(args[4]);
                 Path manifest = existingPlainFile(args[5]);
@@ -179,7 +180,7 @@ public final class CompleteRunAudioTool {
         return path;
     }
 
-    private static void verifyReferenceHome(Path home, CompleteRunAudioProfile profile) throws IOException {
+    static void verifyReferenceHome(Path home, CompleteRunAudioProfile profile) throws IOException {
         Map<CompleteRunAudioTrace.RuntimeArtifact, String> expected = profile.producerRuntimeIdentities()
                 .get(ProducerKind.REFERENCE).artifactSha256();
         String expectedTree = expected.get(CompleteRunAudioTrace.RuntimeArtifact.REFERENCE_INSTALLATION_TREE);

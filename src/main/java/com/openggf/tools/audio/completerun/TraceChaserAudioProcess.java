@@ -7,8 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /** Fixed subprocess boundary for TraceChaser's complete-audio command. */
@@ -23,12 +23,26 @@ public final class TraceChaserAudioProcess {
 
     @FunctionalInterface
     interface ProcessFactory {
-        Process start(List<String> arguments) throws IOException;
+        Process start(Invocation invocation) throws IOException;
+    }
+
+    record Invocation(List<String> arguments, Map<String, String> environment, Path directory) {
+        Invocation {
+            arguments = List.copyOf(arguments);
+            environment = Map.copyOf(environment);
+            Objects.requireNonNull(directory, "process working directory");
+        }
     }
 
     public TraceChaserAudioProcess() {
-        this(arguments -> new ProcessBuilder(arguments)
-                .redirectOutput(ProcessBuilder.Redirect.DISCARD).start());
+        this(invocation -> {
+            ProcessBuilder builder = new ProcessBuilder(invocation.arguments())
+                    .directory(invocation.directory().toFile())
+                    .redirectOutput(ProcessBuilder.Redirect.DISCARD);
+            builder.environment().clear();
+            builder.environment().putAll(invocation.environment());
+            return builder.start();
+        });
     }
 
     TraceChaserAudioProcess(ProcessFactory processFactory) {
@@ -42,10 +56,10 @@ public final class TraceChaserAudioProcess {
 
     public static final class Result implements AutoCloseable {
         private final Path raw;
-        private final Path staging;
+        private final OwnedTemporaryDirectory staging;
         private boolean closed;
 
-        private Result(Path raw, Path staging) {
+        private Result(Path raw, OwnedTemporaryDirectory staging) {
             this.raw = raw;
             this.staging = staging;
         }
@@ -55,7 +69,7 @@ public final class TraceChaserAudioProcess {
         @Override public void close() throws IOException {
             if (closed) return;
             closed = true;
-            deleteTree(staging);
+            staging.delete();
         }
     }
 
@@ -75,8 +89,10 @@ public final class TraceChaserAudioProcess {
                 ? file(referenceHome.resolve(CAPABILITY), "S2 capability fixture") : null;
         Path output = absoluteNew(request.output(), "canonical capture output");
         Path parent = directory(output.getParent(), "canonical capture output parent");
-        Path staging = Files.createTempDirectory(parent, ".audio-reference-");
-        Path raw = staging.resolve("raw.jsonl");
+        OwnedTemporaryDirectory staging = OwnedTemporaryDirectory.create(parent, ".audio-reference-");
+        Path home = Files.createDirectory(staging.path().resolve("home"));
+        Path work = Files.createDirectory(staging.path().resolve("work"));
+        Path raw = staging.path().resolve("raw.jsonl");
 
         List<String> argv = new ArrayList<>();
         argv.add(launcher.toString());
@@ -99,7 +115,9 @@ public final class TraceChaserAudioProcess {
         Thread reader = null;
         BoundedStderr stderr = null;
         try {
-            process = processFactory.start(List.copyOf(argv));
+            process = processFactory.start(new Invocation(argv,
+                    Map.of("PATH", "/usr/bin:/bin", "LC_ALL", "C", "LANG", "C",
+                            "HOME", home.toString()), work));
             stderr = new BoundedStderr(process.getErrorStream());
             reader = Thread.ofVirtual().start(stderr);
             int exit = process.waitFor();
@@ -115,7 +133,7 @@ public final class TraceChaserAudioProcess {
             if (stderr != null && stderr.failure != null && stderr.failure != failure) {
                 failure.addSuppressed(stderr.failure);
             }
-            try { deleteTree(staging); }
+            try { staging.delete(); }
             catch (IOException cleanupFailure) { failure.addSuppressed(cleanupFailure); }
             if (failure instanceof InterruptedException || interrupted) Thread.currentThread().interrupt();
             throw failure;
@@ -193,13 +211,6 @@ public final class TraceChaserAudioProcess {
     private static boolean canonical(Path path) {
         try { return path.equals(path.toRealPath()); }
         catch (IOException missing) { return false; }
-    }
-
-    private static void deleteTree(Path root) throws IOException {
-        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) return;
-        try (var paths = Files.walk(root)) {
-            for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) Files.delete(path);
-        }
     }
 
     private static final class BoundedStderr implements Runnable {

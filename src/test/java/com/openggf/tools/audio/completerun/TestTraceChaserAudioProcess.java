@@ -14,6 +14,7 @@ import java.io.PipedOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -118,7 +119,8 @@ class TestTraceChaserAudioProcess {
 
         Thread worker = Thread.ofPlatform().start(() -> {
             try {
-                new TraceChaserAudioProcess(arguments -> {
+                new TraceChaserAudioProcess(invocation -> {
+                    List<String> arguments = invocation.arguments();
                     child.staging.set(Path.of(arguments.get(arguments.indexOf("--output") + 1)).getParent());
                     return child;
                 }).capture(
@@ -149,6 +151,58 @@ class TestTraceChaserAudioProcess {
                 "capture removed staging before the stderr reader closed");
         assertFalse(hasStagingDirectory(), "capture returned before staging cleanup completed");
         assertFalse(Files.exists(output));
+    }
+
+    @Test
+    void customProcessReceivesOnlyTheFixedEnvironmentAndPrivateWorkingDirectory() throws Exception {
+        Fixture fixture = fixture("isolated-process");
+        Path output = temporary.resolve("isolated-output").toAbsolutePath();
+        AtomicReference<TraceChaserAudioProcess.Invocation> observed = new AtomicReference<>();
+
+        try (var result = new TraceChaserAudioProcess(invocation -> {
+            observed.set(invocation);
+            Path raw = Path.of(invocation.arguments().get(invocation.arguments().indexOf("--output") + 1));
+            Files.writeString(raw, "raw\n");
+            return new CompletedProcess();
+        }).capture(fixture.request(output), TraceChaserAudioProcess.Game.S3K)) {
+            assertEquals("raw\n", Files.readString(result.raw()));
+        }
+
+        var invocation = observed.get();
+        assertEquals(Map.of("PATH", "/usr/bin:/bin", "LC_ALL", "C", "LANG", "C",
+                "HOME", invocation.directory().getParent().resolve("home").toString()),
+                invocation.environment());
+        assertEquals("work", invocation.directory().getFileName().toString());
+        assertFalse(Files.exists(invocation.directory().getParent()),
+                "the private cwd and HOME must be removed with raw staging");
+    }
+
+    @Test
+    void resultCloseNeverDeletesAReplacementAtItsOwnedStagingPath() throws Exception {
+        Fixture fixture = fixture("replacement-safe");
+        Path output = temporary.resolve("replacement-output").toAbsolutePath();
+        TraceChaserAudioProcess.Result result = new TraceChaserAudioProcess(invocation -> {
+            Path raw = Path.of(invocation.arguments().get(invocation.arguments().indexOf("--output") + 1));
+            Files.writeString(raw, "raw\n");
+            return new CompletedProcess();
+        }).capture(fixture.request(output), TraceChaserAudioProcess.Game.S2);
+        Path owned = result.raw().getParent();
+        Path moved = owned.resolveSibling("moved-audio-reference");
+        Files.move(owned, moved);
+        Files.createDirectory(owned);
+        Files.writeString(owned.resolve("foreign-sentinel"), "keep");
+
+        assertThrows(IOException.class, result::close);
+        assertEquals("keep", Files.readString(owned.resolve("foreign-sentinel")));
+
+        deleteForTest(owned);
+        deleteForTest(moved);
+    }
+
+    private static void deleteForTest(Path root) throws IOException {
+        try (var paths = Files.walk(root)) {
+            for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) Files.delete(path);
+        }
     }
 
     private Fixture fixture(String directory) throws IOException {
@@ -190,6 +244,15 @@ class TestTraceChaserAudioProcess {
             return new CompleteRunAudioProducer.Request(ProducerKind.REFERENCE, "profile",
                     rom, movie, runManifest, referenceHome, output);
         }
+    }
+
+    private static final class CompletedProcess extends Process {
+        @Override public OutputStream getOutputStream() { return OutputStream.nullOutputStream(); }
+        @Override public InputStream getInputStream() { return InputStream.nullInputStream(); }
+        @Override public InputStream getErrorStream() { return InputStream.nullInputStream(); }
+        @Override public int waitFor() { return 0; }
+        @Override public int exitValue() { return 0; }
+        @Override public void destroy() { }
     }
 
     private static final class DelayedTerminationProcess extends Process {

@@ -176,6 +176,16 @@ class TestCompleteRunAudioCli {
     }
 
     @Test
+    void directProduceChecksFixedAvailabilityBeforeTouchingAnyCallerPath() {
+        CliResult unavailable = result("produce", "REFERENCE",
+                "s2_rev01_complete_emeralds.v1", "relative-rom", "relative-bk2",
+                "relative-manifest", "relative-reference-home", "relative-output");
+
+        assertEquals(4, unavailable.status());
+        assertTrue(unavailable.error().startsWith("PRODUCER_UNAVAILABLE:"));
+    }
+
+    @Test
     void callerSelectedUnavailableBindingRejectsHostileProfileBeforeValidateOrPublishReadsIt()
             throws Exception {
         Path hostile = Files.createDirectory(temp.resolve("hostile-capture"));

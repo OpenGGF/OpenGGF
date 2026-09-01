@@ -116,7 +116,7 @@ final class CompleteRunAudioProducerRegistry {
     static void capture(Request request) throws Exception {
         Game game = Arrays.stream(Game.values()).filter(value -> value.profileId.equals(request.profileId()))
                 .findFirst().orElseThrow(() -> new IllegalArgumentException("unknown fixed producer profile"));
-        requireAvailable(request.profileId(), request.producerKind());
+        CompleteRunAudioProfile profile = requireAvailable(request.profileId(), request.producerKind());
         String className = request.producerKind() == ProducerKind.REFERENCE
                 ? game.referenceClass : game.engineClass;
         Class<?> type;
@@ -128,8 +128,11 @@ final class CompleteRunAudioProducerRegistry {
         if (!CompleteRunAudioProducer.class.isAssignableFrom(type)) {
             throw new ProducerUnavailableException("fixed producer class has the wrong contract", null);
         }
-        CompleteRunAudioProducer producer = (CompleteRunAudioProducer) type.getDeclaredConstructor().newInstance();
-        producer.capture(request);
+        CompleteRunAudioInputSnapshot.withBoundRequest(request, profile, bound -> {
+            CompleteRunAudioProducer producer =
+                    (CompleteRunAudioProducer) type.getDeclaredConstructor().newInstance();
+            producer.capture(bound);
+        });
     }
 
     static final class ProducerUnavailableException extends Exception {

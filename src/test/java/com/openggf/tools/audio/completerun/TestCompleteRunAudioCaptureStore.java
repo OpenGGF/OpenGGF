@@ -480,7 +480,7 @@ class TestCompleteRunAudioCaptureStore {
         if (count != expected) throw new IllegalStateException("unexpected record count: " + count);
     }
 
-    private static Metadata metadata(int frames) {
+    static Metadata metadata(int frames) {
         int end = 860 + frames;
         CompleteRunFixture fixture = new CompleteRunFixture("0".repeat(40), "1".repeat(8), "2".repeat(64),
                 end, "3".repeat(64), List.of(new ManifestSegment("test", 860, end)), 860, end);
@@ -501,7 +501,7 @@ class TestCompleteRunAudioCaptureStore {
                 ProducerObservationInventory.allObserved());
     }
 
-    private static List<CompleteRunAudioTrace.Record> records(int frames) {
+    static List<CompleteRunAudioTrace.Record> records(int frames) {
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
         NormalizedState state = new NormalizedState(List.of(new StateField("tempo", 1)),
                 List.of(new RoleState(HardwareRole.FM1, false, List.of())));
