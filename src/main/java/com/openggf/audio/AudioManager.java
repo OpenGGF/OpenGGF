@@ -833,6 +833,10 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void playSegaPcm() {
+        playSegaPcmCommand(-1);
+    }
+
+    public void playSegaPcmCommand(int sourceCommandId) {
         BaseAudioSource source = baseAudioSource;
         Rom sourceRom = (Rom) source.rom();
         if (suppressingRewindReplay()
@@ -846,8 +850,8 @@ public class AudioManager implements MusicRestoreSink {
         try {
             byte[] pcm = sourceRom.readBytes(
                     spec.address(), spec.length());
-            mirrorShadowCommand(() ->
-                    shadowResolver.submitRawPcm(pcm, spec.sampleRate()));
+            recordTimelineCommand(new AudioCommand.PlaySegaPcm(
+                    sourceCommandId, pcm, spec.sampleRate()));
         } catch (Exception e) {
             AudioDiagnosticObserverException.rethrowIfPresent(e);
             LOGGER.log(Level.WARNING, "Failed to play SEGA PCM sample", e);
@@ -858,7 +862,42 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        mirrorShadowCommand(() -> shadowResolver.stopRawPcm());
+        recordTimelineCommand(new AudioCommand.StopRawPcm());
+    }
+
+    /** S3K FE: remove raw PCM now and retain one global driver stop. */
+    public void stopSegaPcmAndRetainGlobalStop(int sourceCommandId) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        recordTimelineCommand(
+                new AudioCommand.StopSegaPcmAndRetainGlobalStop(
+                        sourceCommandId));
+    }
+
+    public void retainGlobalStop(int sourceCommandId) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        recordTimelineCommand(
+                new AudioCommand.RetainGlobalStop(sourceCommandId));
+    }
+
+    public void stopSmpsSfx(int sourceCommandId) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        recordTimelineCommand(
+                new AudioCommand.StopSmpsSfx(sourceCommandId));
+    }
+
+    public void recordReferenceLimitation(
+            int sourceCommandId, String reason) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        recordTimelineCommand(new AudioCommand.ReferenceLimitation(
+                sourceCommandId, reason));
     }
 
     public void playStandaloneMusic(
@@ -967,6 +1006,20 @@ public class AudioManager implements MusicRestoreSink {
             case AudioCommand.FadeOutMusic fade -> backend.fadeOutMusic(fade.steps(), fade.delay());
             case AudioCommand.StopMusic ignored -> backend.stopPlayback();
             case AudioCommand.StopAllSfx ignored -> backend.stopAllSfx();
+            case AudioCommand.StopSmpsSfx ignored -> backend.stopAllSfx();
+            case AudioCommand.RetainGlobalStop ignored ->
+                    backend.stopPlayback();
+            case AudioCommand.PlaySegaPcm ignored -> {
+                // The authoritative presentation owns raw SEGA PCM.
+            }
+            case AudioCommand.StopRawPcm ignored -> {
+                // The authoritative presentation owns raw SEGA PCM.
+            }
+            case AudioCommand.StopSegaPcmAndRetainGlobalStop ignored ->
+                    backend.stopPlayback();
+            case AudioCommand.ReferenceLimitation ignored -> {
+                // Explicitly unsupported commands perform no mutation.
+            }
             case AudioCommand.EndMusicOverride end -> backend.endMusicOverride(end.musicId());
             case AudioCommand.RestoreMusic ignored -> backend.restoreMusic();
             case AudioCommand.SetSpeedShoes speed -> backend.setSpeedShoes(speed.enabled());
@@ -1930,6 +1983,12 @@ public class AudioManager implements MusicRestoreSink {
     public boolean playSfx(int sfxId, float pitch) {
         if (suppressingRewindReplay()) {
             return false;
+        }
+        GameAudioProfile profile = baseAudioSource.profile();
+        if (profile != null && profile.handleSystemCommand(sfxId, this)) {
+            requestObserver.onRequested(
+                    AudioRequestObserver.RequestClass.COMMAND, sfxId);
+            return true;
         }
         if (isRingSpeakerToggleRequest(sfxId)) {
             // Mirrors the sound driver's ring-speaker toggle, which keys on

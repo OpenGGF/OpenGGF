@@ -9300,6 +9300,16 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
   dispatch and pumps the native LoadEnemyArt handoff; CNZ signpost pose and
   post-transition control restoration now follow the ROM dispatch order. The
   canonical CNZ timing frontier advances from direct completion #24 to #28.
+- Fix/Audio: S3K's shipped driver command identities now route through the
+  session-owned physical device. E0/E2 retain one exact 84-write global stop,
+  E1/E5 fade, FE stops raw SEGA PCM and retains the same stop transaction, and
+  E4 releases logical SFX ownership without erasing music or raw/sample state.
+  Boot uses the source-verified 85-write program, S1/S2 retain their exact
+  compatibility programs, and speed-shoes pickup/expiry use semantic 8/1
+  tempo multipliers instead of the unrelated E2/E3 sound commands. Exact E3
+  PSG-silence, E4's seven-slot physical walk, and full FF control flow remain
+  explicit follow-up frontiers.
+
 ## Commit-history coverage
 
 The 0.6 ledger was reconciled against the complete `v0.5.20260411..HEAD`

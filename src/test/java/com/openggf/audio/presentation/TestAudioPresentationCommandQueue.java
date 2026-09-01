@@ -20,6 +20,10 @@ import com.openggf.audio.presentation.AudioPresentationCommand.StartSampleSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopAllSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopMusic;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopRawPcm;
+import com.openggf.audio.presentation.AudioPresentationCommand.ReferenceLimitation;
+import com.openggf.audio.presentation.AudioPresentationCommand.RetainGlobalStop;
+import com.openggf.audio.presentation.AudioPresentationCommand.StopRawPcmAndRetainGlobalStop;
+import com.openggf.audio.presentation.AudioPresentationCommand.StopSmpsSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleMute;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleSolo;
 import com.openggf.audio.rewind.AudioCommand;
@@ -293,7 +297,7 @@ class TestAudioPresentationCommandQueue {
                 SetSpeedMultiplier.class.getSimpleName(),
                 ChangeMusicTempo.class.getSimpleName(),
                 ResetRingAlternation.class.getSimpleName())));
-        assertEquals(11, AudioCommand.class.getPermittedSubclasses().length);
+        assertEquals(17, AudioCommand.class.getPermittedSubclasses().length);
     }
 
     @Test
@@ -301,7 +305,10 @@ class TestAudioPresentationCommandQueue {
         Set<Class<?>> expectedRecords = Set.of(
                 ReplaceMusic.class, PushMusicOverride.class, RestoreMusicOverride.class,
                 EndMusicOverride.class, AddSmpsSfx.class, StartSampleSfx.class,
-                ReplaceRawPcm.class, StopRawPcm.class, StopMusic.class, StopAllSfx.class,
+                ReplaceRawPcm.class, StopRawPcm.class,
+                StopRawPcmAndRetainGlobalStop.class,
+                RetainGlobalStop.class, StopMusic.class, StopAllSfx.class,
+                StopSmpsSfx.class, ReferenceLimitation.class,
                 FadeMusic.class, SetVoiceGain.class, SetVoicePitch.class,
                 SetSpeedShoes.class, SetSpeedMultiplier.class, ChangeMusicTempo.class,
                 ResetRingAlternation.class, ToggleMute.class, ToggleSolo.class,

@@ -145,6 +145,24 @@ public final class AudioPresentationCommandResolver {
                     enqueue(new StopMusic());
             case AudioCommand.StopAllSfx ignored ->
                     enqueue(new StopAllSfx());
+            case AudioCommand.StopSmpsSfx stop ->
+                    enqueue(new AudioPresentationCommand.StopSmpsSfx(
+                            stop.sourceCommandId()));
+            case AudioCommand.RetainGlobalStop stop ->
+                    enqueue(new AudioPresentationCommand.RetainGlobalStop(
+                            stop.sourceCommandId()));
+            case AudioCommand.PlaySegaPcm sega ->
+                    submitRawPcm(sega.pcm(), sega.sourceRate());
+            case AudioCommand.StopRawPcm ignored ->
+                    enqueue(new StopRawPcm());
+            case AudioCommand.StopSegaPcmAndRetainGlobalStop stop ->
+                    enqueue(new AudioPresentationCommand
+                            .StopRawPcmAndRetainGlobalStop(
+                            stop.sourceCommandId()));
+            case AudioCommand.ReferenceLimitation limitation ->
+                    enqueue(new AudioPresentationCommand.ReferenceLimitation(
+                            limitation.sourceCommandId(),
+                            limitation.reason()));
             case AudioCommand.EndMusicOverride end ->
                     enqueue(new EndMusicOverride(end.musicId()));
             case AudioCommand.RestoreMusic ignored ->

@@ -6,6 +6,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 
@@ -71,6 +72,11 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     @Override
     public SmpsSequencerConfig getSequencerConfig() {
         return Sonic2SmpsSequencerConfig.CONFIG;
+    }
+
+    @Override
+    public SmpsPhysicalPolicy smpsPhysicalPolicy() {
+        return Sonic2SmpsCompatibilityPolicy.INSTANCE;
     }
 
     @Override

@@ -33,6 +33,42 @@ public sealed interface AudioCommand {
 
     record StopAllSfx() implements AudioCommand {}
 
+    record StopSmpsSfx(int sourceCommandId) implements AudioCommand {}
+
+    record RetainGlobalStop(int sourceCommandId) implements AudioCommand {}
+
+    record PlaySegaPcm(
+            int sourceCommandId, byte[] pcm, int sourceRate)
+            implements AudioCommand {
+        public PlaySegaPcm {
+            pcm = pcm.clone();
+            if (sourceRate <= 0) {
+                throw new IllegalArgumentException(
+                        "sourceRate must be positive");
+            }
+        }
+
+        @Override
+        public byte[] pcm() {
+            return pcm.clone();
+        }
+    }
+
+    record StopRawPcm() implements AudioCommand {}
+
+    record StopSegaPcmAndRetainGlobalStop(int sourceCommandId)
+            implements AudioCommand {}
+
+    record ReferenceLimitation(int sourceCommandId, String reason)
+            implements AudioCommand {
+        public ReferenceLimitation {
+            if (reason == null || reason.isBlank()) {
+                throw new IllegalArgumentException(
+                        "reference limitation reason is required");
+            }
+        }
+    }
+
     record EndMusicOverride(int musicId) implements AudioCommand {}
 
     record RestoreMusic(RestoreCause cause) implements AudioCommand {}

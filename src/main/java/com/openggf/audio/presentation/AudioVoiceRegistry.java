@@ -318,6 +318,14 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             sfxInstantiation.observeLifecycle(
                     SmpsDriverServiceObserver.LifecycleEvent.pcm(
                             SmpsDriverServiceObserver.LifecycleKind.SEGA_PCM_ENTER));
+        } else if (command instanceof AudioPresentationCommand
+                .StopRawPcmAndRetainGlobalStop) {
+            if (stopRawPcm()) {
+                sfxInstantiation.observeLifecycle(
+                        SmpsDriverServiceObserver.LifecycleEvent.pcm(
+                                SmpsDriverServiceObserver.LifecycleKind
+                                        .SEGA_PCM_LEAVE));
+            }
         } else if (command instanceof StopRawPcm) {
             if (stopRawPcm()) {
                 sfxInstantiation.observeLifecycle(
@@ -429,6 +437,12 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             return true;
         }
         if (command instanceof AddSmpsSfx) {
+            return true;
+        }
+        if (command instanceof AudioPresentationCommand.RetainGlobalStop
+                || command instanceof AudioPresentationCommand.StopSmpsSfx
+                || command instanceof AudioPresentationCommand
+                .ReferenceLimitation) {
             return true;
         }
         if (command instanceof StopMusic) {

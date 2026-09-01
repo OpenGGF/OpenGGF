@@ -79,6 +79,14 @@ public final class AudioPresentationSessionCommandApplier {
             session.applyCommand(new SmpsSessionCommand.StopMusic());
         } else if (command instanceof AudioPresentationCommand.StopAllSfx) {
             session.applyCommand(new SmpsSessionCommand.StopAllSfx());
+        } else if (command instanceof AudioPresentationCommand.StopSmpsSfx) {
+            session.applyCommand(new SmpsSessionCommand.StopSmpsSfx());
+        } else if (command
+                instanceof AudioPresentationCommand.RetainGlobalStop) {
+            session.retainGlobalStop();
+        } else if (command instanceof AudioPresentationCommand
+                .StopRawPcmAndRetainGlobalStop) {
+            session.retainGlobalStop();
         } else if (command instanceof AudioPresentationCommand.FadeMusic fade) {
             session.applyCommand(new SmpsSessionCommand.FadeMusic(
                     fade.steps(), fade.delay()));

@@ -19,8 +19,12 @@ public sealed interface AudioPresentationCommand
         AudioPresentationCommand.StartSampleSfx,
         AudioPresentationCommand.ReplaceRawPcm,
         AudioPresentationCommand.StopRawPcm,
+        AudioPresentationCommand.StopRawPcmAndRetainGlobalStop,
+        AudioPresentationCommand.RetainGlobalStop,
         AudioPresentationCommand.StopMusic,
         AudioPresentationCommand.StopAllSfx,
+        AudioPresentationCommand.StopSmpsSfx,
+        AudioPresentationCommand.ReferenceLimitation,
         AudioPresentationCommand.FadeMusic,
         AudioPresentationCommand.SetVoiceGain,
         AudioPresentationCommand.SetVoicePitch,
@@ -201,10 +205,32 @@ public sealed interface AudioPresentationCommand
     record StopRawPcm() implements AudioPresentationCommand {
     }
 
+    record StopRawPcmAndRetainGlobalStop(int sourceCommandId)
+            implements AudioPresentationCommand {
+    }
+
+    record RetainGlobalStop(int sourceCommandId)
+            implements AudioPresentationCommand {
+    }
+
     record StopMusic() implements AudioPresentationCommand {
     }
 
     record StopAllSfx() implements AudioPresentationCommand {
+    }
+
+    record StopSmpsSfx(int sourceCommandId)
+            implements AudioPresentationCommand {
+    }
+
+    record ReferenceLimitation(int sourceCommandId, String reason)
+            implements AudioPresentationCommand {
+        public ReferenceLimitation {
+            if (reason == null || reason.isBlank()) {
+                throw new IllegalArgumentException(
+                        "reference limitation reason is required");
+            }
+        }
     }
 
     record FadeMusic(int steps, int delay) implements AudioPresentationCommand {

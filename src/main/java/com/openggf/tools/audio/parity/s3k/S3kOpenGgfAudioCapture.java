@@ -1,15 +1,17 @@
 package com.openggf.tools.audio.parity.s3k;
 
 import com.openggf.audio.driver.SmpsDriver;
-import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
 import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsChipWrite;
 import com.openggf.audio.session.SmpsPhysicalDevice;
+import com.openggf.audio.session.SmpsWriteProgram;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
+import com.openggf.game.sonic3k.audio.Sonic3kSmpsPhysicalPolicy;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
 import com.openggf.tools.audio.parity.AudioParityChipWrite;
 
@@ -67,7 +69,7 @@ public final class S3kOpenGgfAudioCapture {
                     "s3k-oracle", 0,
                     new SmpsPhysicalDevice.Settings(
                             SAMPLE_RATE, false, false),
-                    LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
+                    Sonic3kSmpsPhysicalPolicy.INSTANCE,
                     ChipWriteObserver.NONE)) {
             SmpsDriver driver = stream.logicalDriver();
             driver.setRegion(SmpsSequencer.Region.NTSC);
@@ -95,11 +97,8 @@ public final class S3kOpenGgfAudioCapture {
             // zStopAllSound followed by the initial driver-variable stores
             // (D:523-551,2460-2521). The reference projector finds completion
             // through zPalDblUpdCounter=5, not through a movie frame.
-            emitS3kStopAllWrites(driver);
-            // zInitAudioDriver jumps into the first idle digital-audio loop,
-            // whose no-sample branch disables DAC once more (D:523-551,
-            // 4267-4415).
-            driver.writeFm(driver, 0, 0x2b, 0x00);
+            applyProgram(driver,
+                    Sonic3kSmpsPhysicalPolicy.INSTANCE.boot());
             S3kAudioTick bootReference = reference.getFirst();
             addTick(ticks, driver, writes, bootReference, corruptWriteTick);
 
@@ -137,28 +136,15 @@ public final class S3kOpenGgfAudioCapture {
         writes.clear();
     }
 
-    /** Exact S&K {@code zStopAllSound} write order (D:2460-2521). */
-    private static void emitS3kStopAllWrites(SmpsDriver driver) {
-        for (int channel : new int[] { 6, 0, 1, 2, 4, 5 }) {
-            int port = (channel & 4) == 0 ? 0 : 1;
-            int offset = channel & 3;
-            for (int register = 0x80; register <= 0x8c; register += 4) {
-                driver.writeFm(driver, port, register + offset, 0xff);
-            }
-            for (int register = 0x40; register <= 0x4c; register += 4) {
-                driver.writeFm(driver, port, register + offset, 0x7f);
-            }
-            driver.writeFm(driver, 0, 0x28, channel);
-            for (int register = 0x90; register <= 0x9c; register += 4) {
-                driver.writeFm(driver, port, register + offset, 0x00);
+    private static void applyProgram(
+            SmpsDriver driver, SmpsWriteProgram program) {
+        for (SmpsChipWrite write : program.writes()) {
+            if (write instanceof SmpsChipWrite.Ym2612 ym) {
+                driver.writeFm(driver, ym.port(), ym.register(), ym.value());
+            } else if (write instanceof SmpsChipWrite.Psg psg) {
+                driver.writePsg(driver, psg.value());
             }
         }
-        driver.writePsg(driver, 0x9f);
-        driver.writePsg(driver, 0xbf);
-        driver.writePsg(driver, 0xdf);
-        driver.writePsg(driver, 0xff);
-        driver.writeFm(driver, 0, 0x2b, 0x00);
-        driver.writeFm(driver, 0, 0x27, 0x00);
     }
 
     private static void dispatch(int request, Sonic3kSmpsLoader loader, DacData dacData,
@@ -210,7 +196,8 @@ public final class S3kOpenGgfAudioCapture {
             // zPlaySegaSound begins with zStopAllSound, then leaves the PCM
             // loop to stream register 2Ah between interrupt services
             // (D:2703-2719,4267-4415).
-            emitS3kStopAllWrites(driver);
+            applyProgram(driver,
+                    Sonic3kSmpsPhysicalPolicy.INSTANCE.stopAll());
             unsupported.add("tick " + ordinal
                     + ": SEGA PCM transport is outside the driver-service oracle");
             return;

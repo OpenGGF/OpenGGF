@@ -612,6 +612,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                     admitSfx(admit.program());
             case SmpsSessionCommand.StopMusic ignored -> stopMusic();
             case SmpsSessionCommand.StopAllSfx ignored -> stopAllSfx();
+            case SmpsSessionCommand.StopSmpsSfx ignored -> stopSmpsSfx();
             case SmpsSessionCommand.PushOverride push ->
                     pushOverride(push.activation());
             case SmpsSessionCommand.SuspendForPcmOverride ignored ->
@@ -1112,6 +1113,21 @@ public final class SmpsDriverSession implements AutoCloseable {
         });
     }
 
+    /**
+     * Implements the state boundary of S3K {@code zStopSFX}: release current
+     * SFX slot ownership without treating it as the engine's broad sample/raw
+     * cleanup operation. The shipped routine's seven-slot conditional
+     * silence/restoration writes remain an explicit parity frontier, so this
+     * logical operation emits no guessed physical writes.
+     */
+    private void stopSmpsSfx() {
+        SmpsDriverSnapshot current = driver.captureSnapshot();
+        restoreLogicalWithoutWrites(filterLogicalSnapshot(
+                current, false, true));
+        driver.observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
+    }
+
     private void pushOverride(
             PreparedSmpsMusicActivation activation) {
         SmpsDriverSnapshot current = driver.captureSnapshot();
@@ -1441,6 +1457,13 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     private static SmpsDriverSnapshot filterLogicalSnapshot(
             SmpsDriverSnapshot current, boolean retainSfx) {
+        return filterLogicalSnapshot(current, retainSfx, retainSfx);
+    }
+
+    private static SmpsDriverSnapshot filterLogicalSnapshot(
+            SmpsDriverSnapshot current,
+            boolean retainSfx,
+            boolean retainContinuousSfxState) {
         List<SmpsDriverSnapshot.SequencerEntry> source =
                 current.sequencers();
         int[] remap = new int[source.size()];
@@ -1455,9 +1478,12 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
         return new SmpsDriverSnapshot(
                 current.region(), current.readMode(),
-                retainSfx ? current.continuousSfxId() : 0,
-                retainSfx && current.continuousSfxFlag(),
-                retainSfx ? current.contSfxLoopCnt() : 0,
+                retainContinuousSfxState
+                        ? current.continuousSfxId() : 0,
+                retainContinuousSfxState
+                        && current.continuousSfxFlag(),
+                retainContinuousSfxState
+                        ? current.contSfxLoopCnt() : 0,
                 current.palUpdateCounter(), retained,
                 remapLocks(current.fmLockSequencerIds(), remap),
                 remapLocks(current.psgLockSequencerIds(), remap));

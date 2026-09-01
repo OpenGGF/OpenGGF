@@ -278,6 +278,51 @@ class TestSmpsDriverSession {
     }
 
     @Test
+    void stopSfxOnlyReleasesOwnershipButPreservesSessionGlobals() {
+        SmpsSessionTestFixtures.RecordingObserver observer =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(observer);
+        session.install();
+        session.queueActivation(activation(70));
+        session.serviceForward();
+        session.applyCommand(new SmpsSessionCommand.SetSpeedMultiplier(8));
+        session.applyCommand(new SmpsSessionCommand.ResetRingAlternation(false));
+        session.applyCommand(new SmpsSessionCommand.AdmitSfx(
+                continuousSfx(0xBC)));
+        session.applyCommand(new SmpsSessionCommand.PushOverride(
+                activation(71)));
+        SmpsDriverSessionSnapshot beforeSession = session.captureSnapshot();
+        SmpsDriverSnapshot beforeLogical = session.captureLogicalSnapshot();
+        observer.clear();
+
+        session.applyCommand(new SmpsSessionCommand.StopSmpsSfx());
+
+        SmpsDriverSessionSnapshot afterSession = session.captureSnapshot();
+        SmpsDriverSnapshot afterLogical = session.captureLogicalSnapshot();
+        assertTrue(afterLogical.sequencers().stream().noneMatch(
+                SmpsDriverSnapshot.SequencerEntry::sfx));
+        assertEquals(beforeLogical.sequencers().stream()
+                        .filter(entry -> !entry.sfx()).toList(),
+                afterLogical.sequencers());
+        assertEquals(beforeLogical.continuousSfxId(),
+                afterLogical.continuousSfxId());
+        assertEquals(beforeLogical.continuousSfxFlag(),
+                afterLogical.continuousSfxFlag());
+        assertEquals(beforeLogical.contSfxLoopCnt(),
+                afterLogical.contSfxLoopCnt());
+        assertEquals(beforeLogical.savedOverrides(),
+                afterLogical.savedOverrides());
+        assertEquals(beforeLogical.pendingService(),
+                afterLogical.pendingService());
+        assertEquals(beforeSession.speedMultiplier(),
+                afterSession.speedMultiplier());
+        assertEquals(beforeSession.selectedDacSource(),
+                afterSession.selectedDacSource());
+        assertTrue(observer.events().isEmpty(),
+                "exact E4 slot-restoration writes remain a named frontier");
+    }
+
+    @Test
     void commandDependencyActivationAndDriverFailuresRollbackOnce() {
         SmpsDriverSession session = SmpsSessionTestFixtures.session(
                 new SmpsSessionTestFixtures.RecordingObserver());
@@ -478,6 +523,58 @@ class TestSmpsDriverSession {
     }
 
     @Test
+    void feTransactionRollsBackRawPcmAndRetainedStopTogether()
+            throws Exception {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = sessionProducer(
+                session, registry, commands);
+        DecodedPcm pcm = factory.registerUnsigned8Mono(
+                "sega/transaction", new byte[] {0, 64, (byte) 0xFF},
+                44_100);
+        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
+                factory.segaPcm(90, pcm)));
+        long rawVoiceId = registry.snapshot().rawPcmVoiceId();
+        commands.submit(
+                new AudioPresentationCommand
+                        .StopRawPcmAndRetainGlobalStop(0xFE),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+        Field renderBuffer = AudioPresentationProducer.class
+                .getDeclaredField("smpsSourcePcm");
+        renderBuffer.setAccessible(true);
+        short[] validBuffer = (short[]) renderBuffer.get(producer);
+        renderBuffer.set(producer, new short[0]);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> producer.present(0, PresentationMode.FORWARD));
+        assertEquals(1, commands.size(),
+                "failed FE remains at the same retry position");
+        assertEquals(rawVoiceId, registry.snapshot().rawPcmVoiceId(),
+                "raw PCM removal must roll back with the driver stop");
+        assertEquals(SmpsPendingGlobalCommand.NONE,
+                session.captureSnapshot().pendingGlobalCommand(),
+                "the retained stop must roll back with raw PCM");
+
+        renderBuffer.set(producer, validBuffer);
+        producer.present(1, PresentationMode.SILENT);
+
+        assertEquals(0, commands.size());
+        assertEquals(null, registry.snapshot().rawPcmVoiceId());
+        assertEquals(SmpsPendingGlobalCommand.STOP_ALL,
+                session.captureSnapshot().pendingGlobalCommand(),
+                "silent FE keeps its physical stop for the next forward service");
+    }
+
+    @Test
     void registryCommitPreparationFailureRetainsTheBatchAndRollsBackSession() {
         AtomicBoolean failPreparation = new AtomicBoolean(true);
         SmpsDriverSession session = SmpsSessionTestFixtures.session(
@@ -623,6 +720,33 @@ class TestSmpsDriverSession {
 
     private static PreparedSmpsMusicActivation activation(int id) {
         return activation(id, false);
+    }
+
+    private static PreparedSmpsSfxProgram continuousSfx(int id) {
+        AudioTestFixtures.StubSmpsData data =
+                new AudioTestFixtures.StubSmpsData("sfx-" + id);
+        data.setId(id);
+        SmpsSourceDescriptor source = new SmpsSourceDescriptor(
+                SmpsSourceDescriptor.Kind.BASE_SFX_ID, id, null, null,
+                data.getZ80StartAddress(), data.getData().length,
+                Arrays.hashCode(data.getData()), false, 7);
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        SmpsDriver detached = new SmpsDriver();
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, SmpsSessionTestFixtures.dac(), detached, detached,
+                AudioManager.getInstance(), config, source,
+                SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE);
+        SmpsSequencerTestAccess.addActiveFmTrack(sequencer, 1);
+        sequencer.setIsSfx(true);
+        return new PreparedSmpsSfxProgram(
+                new SmpsDriverSnapshot.SequencerEntry(
+                        true, source,
+                        SmpsSequencer.SourceDescriptorTrust
+                                .PRECOMPUTED_IMMUTABLE,
+                        null, data, SmpsSessionTestFixtures.dac(),
+                        AudioManager.getInstance(), config,
+                        sequencer.captureSnapshot()),
+                id, 1);
     }
 
     private static PreparedSmpsMusicActivation activationWithDacTrack(
