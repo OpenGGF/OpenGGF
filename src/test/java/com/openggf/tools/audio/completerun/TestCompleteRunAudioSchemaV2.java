@@ -196,11 +196,11 @@ class TestCompleteRunAudioSchemaV2 {
     }
 
     @Test
-    void s2ProductionReferenceNamesTheAuthenticatedCarriedOriginBlocker() {
+    void s2ProductionReferenceNamesImplementedCarriedOriginAndRemainingEvidenceBlocker() {
         UnavailableProducerBinding unavailable = assertInstanceOf(UnavailableProducerBinding.class,
                 S2CompleteRunAudioProfile.profile().producerBindings().get(ProducerKind.REFERENCE));
-        assertTrue(unavailable.reason().contains("pre-row-769"));
-        assertTrue(unavailable.reason().contains("begin row and native ordinal"));
+        assertTrue(unavailable.reason().contains("raw v2 carried-origin evidence is implemented"));
+        assertTrue(unavailable.reason().contains("reviewed duplicate capture"));
     }
 
     private static ComparisonLayerInventory comparedOnly(ComparisonLayer... compared) {
