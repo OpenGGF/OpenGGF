@@ -14,7 +14,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -109,6 +111,30 @@ class TestSmpsPhysicalDevice {
                 device.captureLiveMutation();
         assertThrows(IllegalArgumentException.class,
                 () -> other.rollbackLiveMutation(otherToken));
+    }
+
+    @Test
+    void controlsAndOutputSettingsApplyOncePerSession() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        Object physical = session.physicalIdentityForTesting();
+        SmpsPhysicalDevice.Settings settings =
+                session.captureSnapshot().physical().settings();
+        session.applyChannelMasks(0x15, 0x05);
+        SmpsDriverSessionSnapshot controlled = session.captureSnapshot();
+
+        session.applyCommand(new SmpsSessionCommand.SetSpeedShoes(true));
+        session.applyCommand(new SmpsSessionCommand.SetSpeedMultiplier(2));
+        session.applyCommand(new SmpsSessionCommand.ResetRingAlternation(false));
+
+        assertSame(physical, session.physicalIdentityForTesting());
+        assertEquals(settings,
+                session.captureSnapshot().physical().settings());
+        assertArrayEquals(controlled.physical().synth().ym().mutes(),
+                session.captureSnapshot().physical().synth().ym().mutes());
+        assertArrayEquals(controlled.physical().synth().psg().mutes(),
+                session.captureSnapshot().physical().synth().psg().mutes());
     }
 }
 

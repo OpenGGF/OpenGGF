@@ -1,11 +1,23 @@
 package com.openggf.audio;
 
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
+import com.openggf.audio.presentation.AudioPresentationMixer;
 import com.openggf.audio.presentation.AudioPresentationProducer;
+import com.openggf.audio.presentation.AudioPresentationSessionCommandApplier;
+import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.PcmPresentationVoice;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.SampleBackedVoice;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioKeyframeStore;
+import com.openggf.audio.rewind.LegacySmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsPhysicalDevice;
+import com.openggf.audio.session.SmpsPhysicalPort;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerHost;
 import com.openggf.audio.synth.Synthesizer;
@@ -22,6 +34,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -141,6 +154,131 @@ class TestAudioPresentationArchitectureGuard {
                         .anyMatch(dependency -> dependency.getTargetClass()
                                 .isEquivalentTo(SmpsDriver.class)),
                 "sequencers must reach driver callbacks through SmpsSequencerHost");
+    }
+
+    @Test
+    void sessionBackedPresentationHasNoAuthoritativeCarrierDependency()
+            throws IOException {
+        Set<String> compatibilityTypes = Set.of(
+                SmpsCompositeVoice.class.getName(),
+                PresentationVoiceSnapshot.Smps.class.getName(),
+                LegacySmpsDriverSnapshot.class.getName());
+        JavaClasses authoritative = new ClassFileImporter().importClasses(
+                AudioPresentationProducer.class,
+                AudioPresentationMixer.class,
+                AudioPresentationSnapshot.class,
+                AudioPresentationSessionCommandApplier.class,
+                PcmPresentationVoice.class);
+        List<String> dependencies = authoritative.stream()
+                .flatMap(owner -> owner.getDirectDependenciesFromSelf()
+                        .stream())
+                .filter(dependency -> compatibilityTypes.contains(
+                        dependency.getTargetClass().getFullName()))
+                .map(Dependency::getDescription)
+                .sorted()
+                .toList();
+
+        assertEquals(List.of(), dependencies,
+                "authoritative producer/mixer/snapshot paths must not read "
+                        + "standalone SMPS compatibility carriers");
+        assertTrue(PcmPresentationVoice.class
+                .isAssignableFrom(SampleBackedVoice.class));
+        assertFalse(PcmPresentationVoice.class
+                .isAssignableFrom(SmpsCompositeVoice.class));
+
+        String producer = Files.readString(PRODUCTION_ROOT.resolve(
+                "audio/presentation/AudioPresentationProducer.java"));
+        String sessionMix = compactMethod(producer,
+                "private short[] mixSessionForward(");
+        assertTrue(sessionMix.contains("smpsSession.renderFrames("));
+        assertTrue(sessionMix.contains("mixer.mixPcmVoices("));
+        assertFalse(sessionMix.contains("mixer.mix("));
+
+        String factory = Files.readString(PRODUCTION_ROOT.resolve(
+                "audio/presentation/AudioPresentationSourceFactory.java"));
+        String sessionMusic = compactMethod(factory,
+                "MusicVoiceEntry musicSmpsFromRegistered(");
+        assertTrue(sessionMusic.indexOf("if (smpsSession != null)")
+                        < sessionMusic.indexOf("buildMusicVoice("),
+                "the prepared session activation must return before the "
+                        + "standalone carrier branch");
+
+        String registry = Files.readString(PRODUCTION_ROOT.resolve(
+                "audio/presentation/AudioVoiceRegistry.java"));
+        String apply = compactMethod(registry,
+                "public void apply(AudioPresentationCommand command)");
+        assertTrue(apply.indexOf("hasLegacySmpsCarrier(command)")
+                        < apply.indexOf("applySessionMetadata(command)"),
+                "session commands must reject compatibility carriers before "
+                        + "the authoritative metadata path");
+        String restore = compactMethod(registry,
+                "public PreparedSnapshotRestore prepareSnapshotRestore(");
+        assertTrue(restore.indexOf("validateAuthoritativeSnapshot(snapshot)")
+                        < restore.indexOf("resolver.beginDiagnosticTransaction()"),
+                "carrier snapshots must fail before dependency recreation");
+        String ordered = compactMethod(registry,
+                "private void rebuildOrderedVoices()");
+        assertTrue(ordered.contains(
+                "smpsSession == null && standaloneSmps != null"),
+                "only a null-session compatibility registry may expose the "
+                        + "standalone carrier in its ordered voices");
+    }
+
+    @Test
+    void sessionCompositionStoresNoPortAndOwnsTheOnlyComposedDriverFactory() {
+        Class<?> access = Arrays.stream(
+                        SmpsDriverSession.class.getDeclaredClasses())
+                .filter(type -> type.getSimpleName().equals(
+                        "SmpsSessionSynthesizerAccess"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(List.of(), Arrays.stream(access.getDeclaredFields())
+                .filter(field -> field.getGenericType().getTypeName()
+                        .contains(SmpsPhysicalPort.class.getName()))
+                .map(field -> field.getName() + ":"
+                        + field.getGenericType().getTypeName())
+                .toList(),
+                "session logical access must resolve each ephemeral port "
+                        + "from the current scoped epoch");
+
+        JavaClasses production = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.openggf");
+        List<String> foreignFactories = production.stream()
+                .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner()
+                        .isEquivalentTo(SmpsDriver.class))
+                .filter(call -> call.getName().equals(
+                        "createSessionDriver"))
+                .filter(call -> !call.getOriginOwner()
+                        .isEquivalentTo(SmpsDriverSession.class))
+                .map(JavaMethodCall::getDescription)
+                .sorted()
+                .toList();
+        assertEquals(List.of(), foreignFactories,
+                "only the session composition root may create a driver "
+                        + "without a private chip pair");
+    }
+
+    @Test
+    void logicalSnapshotHasNoPhysicalStateField() {
+        assertEquals(List.of(), Arrays.stream(
+                        SmpsDriverSnapshot.class.getRecordComponents())
+                .filter(component -> component.getType()
+                                == SmpsPhysicalDevice.Snapshot.class
+                        || component.getType().getName().startsWith(
+                                "com.openggf.audio.synth.VirtualSynthesizer"))
+                .map(component -> component.getName() + ":"
+                        + component.getType().getName())
+                .toList());
+    }
+
+    private static String compactMethod(String source, String marker) {
+        String body = methodBody(sanitizedSource(source), marker);
+        if (body == null) {
+            throw new AssertionError("missing guarded method " + marker);
+        }
+        return body.replaceAll("\\s+", " ");
     }
 
     @Test

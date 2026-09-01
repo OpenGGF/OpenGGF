@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsPhysicalPort {
     @Test
-    void staleEpochAndCrossSessionTokensFailBeforeMutation() {
+    void hiddenOutgoingStaleEpochCrossOwnerAndCrossSessionCallsFailBeforeMutation() {
         SmpsSessionTestFixtures.RecordingObserver firstObserver =
                 new SmpsSessionTestFixtures.RecordingObserver();
         SmpsDriverSession session =
@@ -47,7 +47,7 @@ class TestSmpsPhysicalPort {
     }
 
     @Test
-    void admissionRollbackIsBoundedSilentSingleUseAndIdentityBound() {
+    void admissionRollbackIsBoundedAndByteExact() {
         SmpsSessionTestFixtures.RecordingObserver observer =
                 new SmpsSessionTestFixtures.RecordingObserver();
         SmpsDriverSession session = SmpsSessionTestFixtures.session(observer);
@@ -79,6 +79,32 @@ class TestSmpsPhysicalPort {
                 SmpsSessionTestFixtures.owner(3));
         assertThrows(IllegalArgumentException.class,
                 () -> replacement.restoreAdmissionState(staleOwnerToken));
+    }
+
+    @Test
+    void admissionTokenIsSingleUseAndBoundToDeviceEpochOwner() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        SmpsDriverSession other = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        SmpsDriverServiceObserver.DriverIdentity owner =
+                SmpsSessionTestFixtures.owner(40);
+        SmpsPhysicalPort port = session.openTestEpoch(owner);
+        SmpsPhysicalPort.AdmissionToken token =
+                port.captureAdmissionState(1, 1);
+
+        port.restoreAdmissionState(token);
+        assertThrows(IllegalStateException.class,
+                () -> port.restoreAdmissionState(token));
+        SmpsPhysicalPort.AdmissionToken epochBound =
+                port.captureAdmissionState(1, 1);
+        session.closeTestEpoch(port.epoch());
+        SmpsPhysicalPort next = session.openTestEpoch(owner);
+        assertThrows(IllegalArgumentException.class,
+                () -> next.restoreAdmissionState(epochBound));
+        SmpsPhysicalPort otherPort = other.openTestEpoch(owner);
+        assertThrows(IllegalArgumentException.class,
+                () -> otherPort.restoreAdmissionState(epochBound));
     }
 
     @Test

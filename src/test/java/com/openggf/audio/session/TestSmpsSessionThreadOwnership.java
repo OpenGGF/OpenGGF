@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsSessionThreadOwnership {
     @Test
-    void physicalDeviceOffOwnerEntriesFailBeforeMutation()
+    void offOwnerThreadEntryPointsFailBeforeMutation()
             throws InterruptedException {
         SmpsSessionTestFixtures.RecordingObserver observer =
                 new SmpsSessionTestFixtures.RecordingObserver();

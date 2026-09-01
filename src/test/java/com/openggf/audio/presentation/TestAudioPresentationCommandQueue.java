@@ -23,6 +23,8 @@ import com.openggf.audio.presentation.AudioPresentationCommand.StopRawPcm;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleMute;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleSolo;
 import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.session.PreparedSmpsMusicActivation;
+import com.openggf.audio.session.PreparedSmpsSfxProgram;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.RecordComponent;
@@ -331,7 +333,9 @@ class TestAudioPresentationCommandQueue {
             Class<?> type, Set<Class<?>> visited) {
         if (!visited.add(type) || type.isPrimitive() || type.isEnum()
                 || type == String.class || Number.class.isAssignableFrom(type)
-                || type == Boolean.class || type == Character.class) {
+                || type == Boolean.class || type == Character.class
+                || type == PreparedSmpsMusicActivation.class
+                || type == PreparedSmpsSfxProgram.class) {
             return;
         }
         assertFalse(PresentationVoice.class.isAssignableFrom(type), type.getName());

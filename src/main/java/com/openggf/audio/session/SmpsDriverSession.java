@@ -1,15 +1,31 @@
 package com.openggf.audio.session;
 
+import com.openggf.audio.driver.PreparedSfxAdmission;
+import com.openggf.audio.driver.SfxContentionObserver;
+import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.driver.SmpsDriverSessionAccess;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.VirtualSynthesizer;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
+/**
+ * Owner-thread composition root for one persistent logical SMPS driver and
+ * one physical chip pair.
+ */
 public final class SmpsDriverSession implements AutoCloseable {
+    private static final int MAX_OVERRIDES = 128;
+
     public interface DacDependencyResolver {
         DacData resolve(SmpsSourceDescriptor source);
     }
@@ -17,33 +33,119 @@ public final class SmpsDriverSession implements AutoCloseable {
     public record PreparedRestore(
             SmpsDriverSessionSnapshot session,
             SmpsDriverSnapshot logical,
-            DacData resolvedDac) {
+            DacData resolvedDac,
+            List<PreparedSavedOverride> savedOverrides,
+            PreparedPendingService pendingService) {
         public PreparedRestore {
             Objects.requireNonNull(session, "session");
             Objects.requireNonNull(logical, "logical");
+            savedOverrides = List.copyOf(Objects.requireNonNull(
+                    savedOverrides, "savedOverrides"));
+        }
+    }
+
+    public record PreparedSavedOverride(
+            SmpsDriverSnapshot logical,
+            SmpsLogicalTransitionPolicy policy,
+            SmpsDacSelection selectedDac,
+            PreparedPendingService pendingService) {
+        public PreparedSavedOverride {
+            Objects.requireNonNull(logical, "logical");
+            Objects.requireNonNull(policy, "policy");
+        }
+    }
+
+    public record PreparedPendingService(
+            SmpsMusicActivation activation,
+            SmpsWriteProgram firstServiceWrites,
+            SmpsDacSelection selectedDac) {
+        public PreparedPendingService {
+            Objects.requireNonNull(firstServiceWrites,
+                    "firstServiceWrites");
         }
     }
 
     public interface LiveMutationToken {
     }
 
+    private record SavedOverride(
+            SmpsDriverSnapshot logical,
+            SmpsLogicalTransitionPolicy policy,
+            SmpsDacSelection selectedDac,
+            PendingService pendingService) {
+        private SavedOverride {
+            Objects.requireNonNull(logical, "logical");
+            Objects.requireNonNull(policy, "policy");
+        }
+    }
+
+    private record PendingService(
+            SmpsMusicActivation activation,
+            SmpsWriteProgram firstServiceWrites,
+            SmpsDacSelection selectedDac) {
+        private PendingService {
+            Objects.requireNonNull(firstServiceWrites,
+                    "firstServiceWrites");
+        }
+    }
+
+    private sealed interface ChipDiagnostic {
+        void publish(ChipWriteObserver observer);
+
+        record Ym(int port, int register, int value)
+                implements ChipDiagnostic {
+            @Override
+            public void publish(ChipWriteObserver observer) {
+                observer.onYm2612Write(port, register, value);
+            }
+        }
+
+        record Psg(int value) implements ChipDiagnostic {
+            @Override
+            public void publish(ChipWriteObserver observer) {
+                observer.onPsgWrite(value);
+            }
+        }
+    }
+
     private final class SessionLiveMutation implements LiveMutationToken {
         private final Object ownerIdentity;
         private final SmpsPhysicalDevice.LiveMutationToken physical;
+        private final SmpsDriver.LiveCommandMutationToken logical;
+        private final SmpsDriver driverIdentity;
         private final boolean initialized;
         private final SmpsPendingGlobalCommand pendingGlobalCommand;
         private final SmpsSourceDescriptor selectedDacSource;
+        private final PendingService pendingService;
+        private final SavedOverride[] overrides;
+        private final int overrideCount;
+        private final boolean speedShoesEnabled;
+        private final int speedMultiplier;
+        private final boolean ringLeft;
+        private final int diagnosticCount;
         private boolean consumed;
 
         private SessionLiveMutation(
                 SmpsPhysicalDevice.LiveMutationToken physical) {
             ownerIdentity = sessionIdentity;
             this.physical = physical;
+            driverIdentity = driver;
+            logical = driver == null
+                    ? null : driver.captureLiveCommandMutation();
             initialized = SmpsDriverSession.this.initialized;
             pendingGlobalCommand =
                     SmpsDriverSession.this.pendingGlobalCommand;
             selectedDacSource =
                     SmpsDriverSession.this.selectedDacSource;
+            pendingService = SmpsDriverSession.this.pendingService;
+            overrides = Arrays.copyOf(overrideStack,
+                    SmpsDriverSession.this.overrideCount);
+            this.overrideCount = SmpsDriverSession.this.overrideCount;
+            speedShoesEnabled =
+                    SmpsDriverSession.this.speedShoesEnabled;
+            speedMultiplier = SmpsDriverSession.this.speedMultiplier;
+            ringLeft = SmpsDriverSession.this.ringLeft;
+            diagnosticCount = diagnostics.size();
         }
     }
 
@@ -142,12 +244,12 @@ public final class SmpsDriverSession implements AutoCloseable {
         private final SmpsPhysicalDevice ownerDevice;
         private final SmpsDriverServiceObserver.DriverIdentity owner;
         private final long epoch;
-        private final VirtualSynthesizer.SfxAdmissionState physical;
+        private final SmpsPhysicalDevice.AdmissionState physical;
         private boolean consumed;
 
         private AdmissionState(
                 PortCapability capability,
-                VirtualSynthesizer.SfxAdmissionState physical) {
+                SmpsPhysicalDevice.AdmissionState physical) {
             ownerSessionIdentity = sessionIdentity;
             ownerDevice = device;
             owner = capability.owner;
@@ -156,19 +258,162 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
     }
 
+    /** Resolves each logical write against the open epoch; stores no port. */
+    private final class SmpsSessionSynthesizerAccess
+            implements SmpsDriverSessionAccess {
+        @Override
+        public void writeFm(
+                Object source, int port, int reg, int val) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort().writeFm(port, reg, val);
+        }
+
+        @Override
+        public void writePsg(Object source, int val) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort().writePsg(val);
+        }
+
+        @Override
+        public void setInstrument(
+                Object source, int channelId, byte[] voice) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort().setInstrument(channelId, voice);
+        }
+
+        @Override
+        public void playDac(Object source, int note) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort().playDac(note);
+        }
+
+        @Override
+        public void stopDac(Object source) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort().stopDac();
+        }
+
+        @Override
+        public void setDacData(DacData data) {
+            if (logicalMaterialization) {
+                return;
+            }
+            throw new IllegalArgumentException(
+                    "session DAC selection requires a source descriptor");
+        }
+
+        @Override
+        public void selectDac(
+                SmpsSourceDescriptor source, DacData data) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort().selectDac(new SmpsDacSelection(source, data));
+        }
+
+        @Override
+        public void setFmMute(int channel, boolean mute) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort();
+            device.setFmMute(channel, mute);
+        }
+
+        @Override
+        public void setPsgMute(int channel, boolean mute) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort();
+            device.setPsgMute(channel, mute);
+        }
+
+        @Override
+        public void setDacInterpolate(boolean interpolate) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort();
+            if (interpolate != profile.settings().dacInterpolate()) {
+                throw new IllegalArgumentException(
+                        "session DAC interpolation is profile-owned");
+            }
+        }
+
+        @Override
+        public void silenceAll() {
+            if (logicalMaterialization) {
+                return;
+            }
+            applyProgram(currentPort(), policy.stopAll());
+        }
+
+        @Override
+        public void forceSilenceFmChannel(int channelId) {
+            if (logicalMaterialization) {
+                return;
+            }
+            currentPort().forceSilenceFmChannel(channelId);
+        }
+
+        private PortCapability currentPort() {
+            requireActive();
+            if (openOwner == null) {
+                throw new IllegalStateException(
+                        "SMPS logical write occurred outside a scoped epoch");
+            }
+            return new PortCapability(openOwner, openEpoch);
+        }
+    }
+
     private final Thread ownerThread;
     private final Object sessionIdentity = new Object();
     private final SmpsPhysicalDevice device;
     private final SmpsPhysicalPolicy policy;
     private final SmpsSessionProfileFingerprint profile;
+    private ChipWriteObserver chipWriteObserver;
+    private final List<Runnable> diagnostics = new ArrayList<>();
+    private final SavedOverride[] overrideStack =
+            new SavedOverride[MAX_OVERRIDES];
+    private final SmpsDriverServiceObserver.DriverIdentity driverIdentity =
+            new SmpsDriverServiceObserver.DriverIdentity(
+                    0,
+                    SmpsDriverServiceObserver.DriverAdmissionOrigin
+                            .unspecified());
+
+    private SmpsDriver driver;
     private boolean initialized;
     private SmpsPendingGlobalCommand pendingGlobalCommand =
             SmpsPendingGlobalCommand.NONE;
     private SmpsSourceDescriptor selectedDacSource;
+    private PendingService pendingService;
+    private int overrideCount;
+    private boolean speedShoesEnabled;
+    private int speedMultiplier = 1;
+    private boolean ringLeft = true;
     private SmpsDriverServiceObserver.DriverIdentity openOwner;
     private long openEpoch;
     private long nextEpoch;
+    private int serviceInvocationCount;
+    private boolean transactionOpen;
+    private boolean logicalMaterialization;
     private boolean closed;
+    private SmpsDriverServiceObserver driverServiceObserver =
+            SmpsDriverServiceObserver.NONE;
+    private SfxContentionObserver sfxContentionObserver =
+            SfxContentionObserver.NONE;
+    private Consumer<RuntimeException> diagnosticErrorSink = ignored -> { };
 
     public SmpsDriverSession(
             SmpsPhysicalDevice.Settings settings,
@@ -180,6 +425,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                 Objects.requireNonNull(settings, "settings");
         this.policy = Objects.requireNonNull(policy, "policy");
         this.profile = Objects.requireNonNull(profile, "profile");
+        chipWriteObserver = Objects.requireNonNull(observer, "observer");
         if (!resolvedSettings.equals(profile.settings())) {
             throw new IllegalArgumentException(
                     "session settings do not match the profile fingerprint");
@@ -189,12 +435,162 @@ public final class SmpsDriverSession implements AutoCloseable {
                     "physical policy does not match the profile fingerprint");
         }
         device = new SmpsPhysicalDevice(resolvedSettings,
-                Objects.requireNonNull(observer, "observer"));
+                new ChipWriteObserver() {
+                    @Override
+                    public void onYm2612Write(
+                            int port, int register, int value) {
+                        emitChipDiagnostic(
+                                new ChipDiagnostic.Ym(
+                                        port, register, value));
+                    }
+
+                    @Override
+                    public void onPsgWrite(int value) {
+                        emitChipDiagnostic(new ChipDiagnostic.Psg(value));
+                    }
+                });
+    }
+
+    /** Creates and initializes the one persistent logical driver. */
+    public void install() {
+        requireActive();
+        if (driver != null) {
+            throw new IllegalStateException(
+                    "SMPS driver session is already installed");
+        }
+        if (transactionOpen) {
+            throw new IllegalStateException(
+                    "cannot install during a live mutation");
+        }
+        driver = SmpsDriver.createSessionDriver(
+                new SmpsSessionSynthesizerAccess());
+        driver.setDiagnosticIdentity(driverIdentity);
+        installDriverObservers();
+        withPort(driverIdentity, port -> {
+            applyProgram(port, policy.boot());
+            return null;
+        });
+        device.silenceOutput();
+        initialized = true;
+        driver.observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED);
     }
 
     public boolean installed() {
         requireActive();
-        return false;
+        return driver != null;
+    }
+
+    public SmpsServiceOutcome serviceForward() {
+        requireInstalled();
+        serviceInvocationCount++;
+        if (pendingGlobalCommand == SmpsPendingGlobalCommand.STOP_ALL) {
+            pendingService = null;
+            clearOverrides();
+            withPort(driverIdentity, port -> {
+                applyProgram(port, policy.stopAll());
+                return null;
+            });
+            device.silenceOutput();
+            restoreLogicalWithoutWrites(emptyLogicalSnapshot(
+                    driver.captureSnapshot()));
+            pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
+            return SmpsServiceOutcome.GLOBAL_STOP_CONSUMED;
+        }
+
+        PendingService service = pendingService;
+        if (service != null) {
+            withPort(driverIdentity, port -> {
+                if (service.selectedDac() != null) {
+                    port.selectDac(service.selectedDac());
+                }
+                if (service.activation() != null) {
+                    applyProgram(port,
+                            policy.activateMusic(service.activation()));
+                }
+                applyProgram(port,
+                        service.firstServiceWrites());
+                driver.serviceOuterFrame();
+                return null;
+            });
+            pendingService = null;
+        } else {
+            withPort(driverIdentity, port -> {
+                driver.serviceOuterFrame();
+                return null;
+            });
+        }
+        return SmpsServiceOutcome.ORDINARY;
+    }
+
+    public int renderFrames(
+            short[] target, int offsetSamples, int stereoFrames) {
+        requireInstalled();
+        return device.renderFrames(target, offsetSamples, stereoFrames);
+    }
+
+    public void queueActivation(
+            PreparedSmpsMusicActivation activation) {
+        requireInstalled();
+        PreparedSmpsMusicActivation resolved = Objects.requireNonNull(
+                activation, "activation");
+        SmpsLogicalTransitionPolicy.Result transition =
+                resolved.logicalPolicy().prepareMusicStart(
+                        driver.captureSnapshot(),
+                        resolved.incomingMusic());
+        restoreLogicalWithoutWrites(transition.logical());
+        applyCurrentLogicalControls();
+        pendingService = new PendingService(
+                resolved.activation(), transition.firstServiceWrites(),
+                resolved.selectedDac());
+    }
+
+    public void applyCommand(SmpsSessionCommand command) {
+        requireInstalled();
+        Objects.requireNonNull(command, "command");
+        switch (command) {
+            case SmpsSessionCommand.AdmitSfx admit ->
+                    admitSfx(admit.program());
+            case SmpsSessionCommand.StopMusic ignored -> stopMusic();
+            case SmpsSessionCommand.StopAllSfx ignored -> stopAllSfx();
+            case SmpsSessionCommand.PushOverride push ->
+                    pushOverride(push.activation());
+            case SmpsSessionCommand.RestoreOverride ignored ->
+                    restoreOverride();
+            case SmpsSessionCommand.EndOverride end ->
+                    endOverride(end.musicId());
+            case SmpsSessionCommand.FadeMusic fade -> {
+                SmpsSequencer music = driver.firstMusicSequencer();
+                if (music != null) {
+                    withPort(driverIdentity, port -> {
+                        music.triggerFadeOut(fade.steps(), fade.delay());
+                        return null;
+                    });
+                }
+            }
+            case SmpsSessionCommand.SetSpeedMultiplier speed -> {
+                speedMultiplier = speed.multiplier();
+                applyCurrentLogicalControls();
+            }
+            case SmpsSessionCommand.SetSpeedShoes speed -> {
+                speedShoesEnabled = speed.enabled();
+                applyCurrentLogicalControls();
+            }
+            case SmpsSessionCommand.ChangeMusicTempo tempo -> {
+                SmpsSequencer music = driver.firstMusicSequencer();
+                if (music != null) {
+                    music.updateDividingTiming(tempo.dividingTiming());
+                }
+            }
+            case SmpsSessionCommand.ResetRingAlternation reset ->
+                    ringLeft = reset.ringLeft();
+            case SmpsSessionCommand.HardReset ignored -> hardReset();
+        }
+    }
+
+    public void retainGlobalStop() {
+        requireInstalled();
+        pendingGlobalCommand = SmpsPendingGlobalCommand.STOP_ALL;
     }
 
     public SmpsDriverSessionSnapshot captureSnapshot() {
@@ -207,38 +603,250 @@ public final class SmpsDriverSession implements AutoCloseable {
                 device.captureSnapshot());
     }
 
+    /** Captures the one logical driver memento, including override save RAM. */
+    public SmpsDriverSnapshot captureLogicalSnapshot() {
+        requireInstalled();
+        SmpsDriverSnapshot current = driver.captureSnapshot();
+        List<SmpsDriverSnapshot.SavedOverride> saved =
+                new ArrayList<>(overrideCount);
+        for (int index = 0; index < overrideCount; index++) {
+            saved.add(new SmpsDriverSnapshot.SavedOverride(
+                    copyWithSessionState(
+                            overrideStack[index].logical(), List.of(),
+                            snapshotPendingService(
+                                    overrideStack[index]
+                                            .pendingService()))));
+        }
+        return copyWithSessionState(current, saved,
+                snapshotPendingService(pendingService));
+    }
+
+    public PreparedRestore prepareRestore(
+            SmpsDriverSessionSnapshot sessionSnapshot,
+            SmpsDriverSnapshot logicalSnapshot,
+            DacDependencyResolver dependencies) {
+        requireInstalled();
+        SmpsDriverSessionSnapshot resolvedSession =
+                Objects.requireNonNull(sessionSnapshot, "sessionSnapshot");
+        SmpsDriverSnapshot resolvedLogical =
+                Objects.requireNonNull(logicalSnapshot, "logicalSnapshot");
+        DacDependencyResolver resolver =
+                Objects.requireNonNull(dependencies, "dependencies");
+        if (!profile.equals(resolvedSession.profile())) {
+            throw new IllegalArgumentException(
+                    "SMPS session profile fingerprint does not match");
+        }
+        if (!profile.settings().equals(
+                resolvedSession.physical().settings())) {
+            throw new IllegalArgumentException(
+                    "SMPS physical snapshot settings do not match");
+        }
+        validateLogicalSnapshot(resolvedLogical);
+        DacData resolvedDac = resolvedSession.selectedDacSource() == null
+                ? null : Objects.requireNonNull(
+                        resolver.resolve(
+                                resolvedSession.selectedDacSource()),
+                        "resolved DAC dependency");
+        List<PreparedSavedOverride> savedOverrides =
+                new ArrayList<>(resolvedLogical.savedOverrides().size());
+        for (SmpsDriverSnapshot.SavedOverride saved
+                : resolvedLogical.savedOverrides()) {
+            SmpsDacSelection selected = resolveSelectedDac(
+                    saved.logical(), resolver);
+            savedOverrides.add(new PreparedSavedOverride(
+                    saved.logical(), policyForSavedMusic(saved.logical()),
+                    selected, preparePendingService(
+                            saved.logical().pendingService(), resolver)));
+        }
+        PreparedPendingService preparedPending = preparePendingService(
+                resolvedLogical.pendingService(), resolver);
+        return new PreparedRestore(
+                resolvedSession, resolvedLogical, resolvedDac,
+                savedOverrides, preparedPending);
+    }
+
+    public void commitRestore(PreparedRestore restore) {
+        requireInstalled();
+        PreparedRestore resolved = Objects.requireNonNull(
+                restore, "restore");
+        if (!profile.equals(resolved.session().profile())) {
+            throw new IllegalArgumentException(
+                    "prepared restore belongs to another session profile");
+        }
+        restoreLogicalWithoutWrites(resolved.logical());
+        device.restoreSnapshot(
+                resolved.session().physical(), resolved.resolvedDac());
+        initialized = resolved.session().initialized();
+        pendingGlobalCommand =
+                resolved.session().pendingGlobalCommand();
+        selectedDacSource = resolved.session().selectedDacSource();
+        pendingService = materializePendingService(
+                resolved.pendingService());
+        clearOverrides();
+        for (PreparedSavedOverride saved : resolved.savedOverrides()) {
+            if (overrideCount == overrideStack.length) {
+                throw new IllegalArgumentException(
+                        "prepared override stack exceeds session capacity");
+            }
+            overrideStack[overrideCount++] = new SavedOverride(
+                    withoutSessionMetadata(saved.logical()),
+                    saved.policy(), saved.selectedDac(),
+                    materializePendingService(saved.pendingService()));
+        }
+    }
+
     public LiveMutationToken captureLiveMutation() {
         requireActive();
-        return new SessionLiveMutation(device.captureLiveMutation());
+        if (transactionOpen) {
+            throw new IllegalStateException(
+                    "an SMPS session mutation is already active");
+        }
+        transactionOpen = true;
+        try {
+            return new SessionLiveMutation(device.captureLiveMutation());
+        } catch (RuntimeException failure) {
+            transactionOpen = false;
+            throw failure;
+        }
     }
 
     public void commitLiveMutation(LiveMutationToken token) {
         requireActive();
         SessionLiveMutation state = requireLiveMutation(token);
-        if (state.consumed) {
+        requireUnconsumed(state);
+        if (!transactionOpen) {
             throw new IllegalStateException(
-                    "session mutation token has already been consumed");
+                    "SMPS session mutation is not active");
         }
         state.consumed = true;
+        transactionOpen = false;
     }
 
     public void rollbackLiveMutation(LiveMutationToken token) {
         requireActive();
         SessionLiveMutation state = requireLiveMutation(token);
-        if (state.consumed) {
+        requireUnconsumed(state);
+        if (!transactionOpen) {
             throw new IllegalStateException(
-                    "session mutation token has already been consumed");
+                    "SMPS session mutation is not active");
         }
-        device.rollbackLiveMutation(state.physical);
+        RuntimeException primary = null;
+        try {
+            if (state.logical != null) {
+                if (driver != state.driverIdentity) {
+                    throw new IllegalStateException(
+                            "persistent driver identity changed during mutation");
+                }
+                driver.rollbackLiveCommandMutation(state.logical);
+            } else if (driver != null) {
+                throw new IllegalStateException(
+                        "session was installed during a live mutation");
+            }
+        } catch (RuntimeException failure) {
+            primary = failure;
+        }
+        try {
+            device.rollbackLiveMutation(state.physical);
+        } catch (RuntimeException failure) {
+            if (primary == null) {
+                primary = failure;
+            } else {
+                primary.addSuppressed(failure);
+            }
+        }
         initialized = state.initialized;
         pendingGlobalCommand = state.pendingGlobalCommand;
         selectedDacSource = state.selectedDacSource;
+        pendingService = state.pendingService;
+        clearOverrides();
+        System.arraycopy(state.overrides, 0,
+                overrideStack, 0, state.overrideCount);
+        overrideCount = state.overrideCount;
+        speedShoesEnabled = state.speedShoesEnabled;
+        speedMultiplier = state.speedMultiplier;
+        ringLeft = state.ringLeft;
+        truncateDiagnostics(state.diagnosticCount);
         state.consumed = true;
+        transactionOpen = false;
+        if (primary != null) {
+            throw primary;
+        }
+    }
+
+    /** Publishes the committed transaction's diagnostics exactly once. */
+    public void publishCommittedDiagnostics() {
+        requireActive();
+        if (transactionOpen) {
+            throw new IllegalStateException(
+                    "cannot publish diagnostics before commit");
+        }
+        if (diagnostics.isEmpty()) {
+            return;
+        }
+        List<Runnable> committed = List.copyOf(diagnostics);
+        diagnostics.clear();
+        for (Runnable diagnostic : committed) {
+            publishDiagnostic(diagnostic);
+        }
     }
 
     public void applyChannelMasks(int fmMask, int psgMask) {
         requireActive();
         device.applyChannelMasks(fmMask, psgMask);
+    }
+
+    public void setDriverServiceObserver(
+            SmpsDriverServiceObserver observer) {
+        requireActive();
+        driverServiceObserver = Objects.requireNonNull(
+                observer, "observer");
+        if (driver != null) {
+            installDriverObservers();
+        }
+    }
+
+    public void setChipWriteObserver(ChipWriteObserver observer) {
+        requireActive();
+        chipWriteObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    public void setSfxContentionObserver(
+            SfxContentionObserver observer) {
+        requireActive();
+        sfxContentionObserver = Objects.requireNonNull(
+                observer, "observer");
+        if (driver != null) {
+            installDriverObservers();
+        }
+    }
+
+    public void setDiagnosticErrorSink(
+            Consumer<RuntimeException> errorSink) {
+        requireActive();
+        diagnosticErrorSink = Objects.requireNonNull(
+                errorSink, "errorSink");
+    }
+
+    <T> T withPort(
+            SmpsDriverServiceObserver.DriverIdentity owner,
+            Function<SmpsPhysicalPort, T> action) {
+        requireActive();
+        if (openOwner != null) {
+            throw new IllegalStateException(
+                    "an SMPS physical capability epoch is already open");
+        }
+        openOwner = Objects.requireNonNull(owner, "owner");
+        openEpoch = Math.incrementExact(nextEpoch);
+        nextEpoch = openEpoch;
+        PortCapability capability =
+                new PortCapability(openOwner, openEpoch);
+        try {
+            return Objects.requireNonNull(action, "action")
+                    .apply(capability);
+        } finally {
+            openOwner = null;
+            openEpoch = 0;
+        }
     }
 
     SmpsPhysicalPort openTestEpoch(
@@ -264,16 +872,517 @@ public final class SmpsDriverSession implements AutoCloseable {
         openEpoch = 0;
     }
 
+    SmpsDriver logicalDriverForTesting() {
+        requireInstalled();
+        return driver;
+    }
+
+    Object physicalIdentityForTesting() {
+        requireActive();
+        return device.identityForTesting();
+    }
+
+    boolean hasPendingActivation() {
+        requireActive();
+        return pendingService != null
+                && pendingService.activation() != null;
+    }
+
+    int serviceInvocationCountForTesting() {
+        requireActive();
+        return serviceInvocationCount;
+    }
+
+    int renderInvocationCountForTesting() {
+        requireActive();
+        return device.renderInvocationCountForTesting();
+    }
+
+    long renderedStereoFramesForTesting() {
+        requireActive();
+        return device.renderedStereoFramesForTesting();
+    }
+
     @Override
     public void close() {
         requireOwnerThread();
         if (closed) {
             return;
         }
+        if (transactionOpen) {
+            throw new IllegalStateException(
+                    "cannot close during a live mutation");
+        }
         openOwner = null;
         openEpoch = 0;
+        diagnostics.clear();
         device.close();
         closed = true;
+    }
+
+    private void admitSfx(PreparedSmpsSfxProgram program) {
+        PreparedSmpsSfxProgram resolved = Objects.requireNonNull(
+                program, "program");
+        withPort(driverIdentity, port -> {
+            PreparedSfxAdmission extension =
+                    driver.prepareContinuousSfxExtension(
+                            resolved.continuousSfxId(),
+                            resolved.continuousTrackCount());
+            if (extension != null) {
+                driver.commitSfxAdmission(extension);
+                return null;
+            }
+            SmpsSequencer sequencer = materialize(
+                    resolved.incomingSfx());
+            PreparedSfxAdmission admission =
+                    driver.prepareNewSfxAdmission(
+                            sequencer,
+                            resolved.continuousSfxId(),
+                            resolved.continuousTrackCount());
+            sequencer.beginSfxAdmission();
+            driver.commitSfxAdmission(admission);
+            return null;
+        });
+    }
+
+    private SmpsSequencer materialize(
+            SmpsDriverSnapshot.SequencerEntry entry) {
+        SmpsSequencer sequencer = new SmpsSequencer(
+                entry.smpsData(), entry.dacData(),
+                driver, driver, entry.audioManager(), entry.config(),
+                entry.source(), entry.sourceDescriptorTrust());
+        sequencer.restoreSnapshot(entry.snapshot());
+        sequencer.setIsSfx(entry.sfx());
+        if (entry.sfx() && entry.fallbackVoiceSource() == null) {
+            SmpsSequencer music = driver.firstMusicSequencer();
+            if (music != null) {
+                sequencer.setFallbackVoiceData(music.getSmpsData());
+            }
+        }
+        return sequencer;
+    }
+
+    private void stopMusic() {
+        SmpsSequencer music = driver.firstMusicSequencer();
+        if (music != null) {
+            withPort(driverIdentity, port -> {
+                for (SmpsSequencer.Track track : music.getTracks()) {
+                    if (track.overridden) {
+                        continue;
+                    }
+                    switch (track.type) {
+                        case FM -> {
+                            port.forceSilenceFmChannel(track.channelId);
+                            int channel = track.channelId < 3
+                                    ? track.channelId
+                                    : track.channelId + 1;
+                            port.writeFm(0, 0x28, channel);
+                        }
+                        case PSG -> port.writePsg(0x80
+                                | (track.channelId << 5) | 0x1F);
+                        case DAC -> port.stopDac();
+                    }
+                }
+                return null;
+            });
+        }
+        restoreLogicalWithoutWrites(filterLogicalSnapshot(
+                driver.captureSnapshot(), true));
+        pendingService = null;
+        clearOverrides();
+        if (driver.captureSnapshot().sequencers().isEmpty()) {
+            device.silenceOutput();
+        }
+    }
+
+    private void stopAllSfx() {
+        withPort(driverIdentity, port -> {
+            driver.stopAllSfx();
+            return null;
+        });
+        if (driver.firstMusicSequencer() == null) {
+            device.silenceOutput();
+        }
+    }
+
+    private void pushOverride(
+            PreparedSmpsMusicActivation activation) {
+        SmpsDriverSnapshot current = driver.captureSnapshot();
+        int activeMusicId = musicId(current);
+        if (activeMusicId < 0 || activeMusicId == activation.activation()
+                .source().id()) {
+            queueActivation(activation);
+            return;
+        }
+        if (overrideCount == overrideStack.length) {
+            throw new IllegalStateException(
+                    "SMPS music override capacity exhausted");
+        }
+        overrideStack[overrideCount++] = new SavedOverride(
+                current,
+                policyForSavedMusic(current),
+                selectedDacFor(current), pendingService);
+        queueActivation(activation);
+        driver.observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.SAVE);
+    }
+
+    private void restoreOverride() {
+        if (overrideCount == 0) {
+            return;
+        }
+        SavedOverride saved = overrideStack[--overrideCount];
+        overrideStack[overrideCount] = null;
+        if (saved.pendingService() != null) {
+            restoreLogicalWithoutWrites(saved.logical());
+            pendingService = saved.pendingService();
+        } else {
+            SmpsLogicalTransitionPolicy.Result transition =
+                    saved.policy().prepareOverrideRestore(
+                            driver.captureSnapshot(), saved.logical());
+            restoreLogicalWithoutWrites(transition.logical());
+            pendingService = new PendingService(
+                    null, transition.firstServiceWrites(),
+                    saved.selectedDac());
+        }
+        applyCurrentLogicalControls();
+    }
+
+    private void endOverride(int musicId) {
+        SmpsSequencer active = driver.firstMusicSequencer();
+        if (active != null
+                && active.getSourceDescriptor().id() == musicId) {
+            restoreOverride();
+            return;
+        }
+        for (int index = overrideCount - 1; index >= 0; index--) {
+            SmpsDriverSnapshot saved = overrideStack[index].logical();
+            if (musicId(saved) != musicId) {
+                continue;
+            }
+            int remaining = overrideCount - index - 1;
+            if (remaining > 0) {
+                System.arraycopy(overrideStack, index + 1,
+                        overrideStack, index, remaining);
+            }
+            overrideStack[--overrideCount] = null;
+            return;
+        }
+    }
+
+    private void hardReset() {
+        pendingService = null;
+        pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
+        clearOverrides();
+        speedShoesEnabled = false;
+        speedMultiplier = 1;
+        ringLeft = true;
+        restoreLogicalWithoutWrites(emptyLogicalSnapshot(
+                driver.captureSnapshot()));
+        withPort(driverIdentity, port -> {
+            applyProgram(port, policy.boot());
+            return null;
+        });
+        device.silenceOutput();
+        initialized = true;
+        selectedDacSource = null;
+        driver.observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.RESET);
+    }
+
+    private void applyCurrentLogicalControls() {
+        SmpsSequencer music = driver.firstMusicSequencer();
+        if (music != null) {
+            music.setSpeedShoes(speedShoesEnabled);
+            music.setSpeedMultiplier(speedMultiplier);
+        }
+    }
+
+    private void restoreLogicalWithoutWrites(
+            SmpsDriverSnapshot snapshot) {
+        if (logicalMaterialization) {
+            throw new IllegalStateException(
+                    "SMPS logical materialization cannot be nested");
+        }
+        logicalMaterialization = true;
+        try {
+            driver.restoreSnapshot(Objects.requireNonNull(
+                    snapshot, "snapshot"));
+        } finally {
+            logicalMaterialization = false;
+        }
+    }
+
+    private void installDriverObservers() {
+        SmpsDriverServiceObserver service = driverServiceObserver;
+        if (service == SmpsDriverServiceObserver.NONE) {
+            driver.setServiceObserver(SmpsDriverServiceObserver.NONE);
+        } else {
+            driver.setServiceObserver(new SmpsDriverServiceObserver() {
+                @Override
+                public void onServiceBegin(ServiceEvent event) {
+                    emitDiagnostic(() -> service.onServiceBegin(event));
+                }
+
+                @Override
+                public void onServiceEnd(
+                        ServiceEvent event,
+                        SmpsDriverSnapshot snapshot) {
+                    emitDiagnostic(() ->
+                            service.onServiceEnd(event, snapshot));
+                }
+
+                @Override
+                public void onLifecycle(LifecycleEvent event) {
+                    emitDiagnostic(() -> service.onLifecycle(event));
+                }
+            });
+        }
+
+        SfxContentionObserver contention = sfxContentionObserver;
+        if (contention == SfxContentionObserver.NONE) {
+            driver.setSfxContentionObserver(SfxContentionObserver.NONE);
+        } else {
+            driver.setSfxContentionObserver(
+                    new SfxContentionObserver() {
+                        @Override
+                        public void onSfxAdmitted(Admission admission) {
+                            emitDiagnostic(() ->
+                                    contention.onSfxAdmitted(admission));
+                        }
+
+                        @Override
+                        public void onRoleArbitrated(
+                                Arbitration arbitration) {
+                            emitDiagnostic(() ->
+                                    contention.onRoleArbitrated(
+                                            arbitration));
+                        }
+                    });
+        }
+    }
+
+    private void emitChipDiagnostic(ChipDiagnostic event) {
+        emitDiagnostic(() -> event.publish(chipWriteObserver));
+    }
+
+    private void emitDiagnostic(Runnable diagnostic) {
+        if (transactionOpen) {
+            diagnostics.add(diagnostic);
+        } else {
+            publishDiagnostic(diagnostic);
+        }
+    }
+
+    private void publishDiagnostic(Runnable diagnostic) {
+        try {
+            diagnostic.run();
+        } catch (RuntimeException failure) {
+            try {
+                diagnosticErrorSink.accept(failure);
+            } catch (RuntimeException ignored) {
+                // Diagnostic failures cannot influence committed audio state.
+            }
+        }
+    }
+
+    private static void applyProgram(
+            SmpsPhysicalPort port, SmpsWriteProgram program) {
+        for (SmpsChipWrite write : Objects.requireNonNull(
+                program, "program").writes()) {
+            if (write instanceof SmpsChipWrite.Ym2612 ym) {
+                port.writeFm(ym.port(), ym.register(), ym.value());
+            } else if (write instanceof SmpsChipWrite.Psg psg) {
+                port.writePsg(psg.value());
+            }
+        }
+    }
+
+    private SmpsDacSelection selectedDacFor(
+            SmpsDriverSnapshot snapshot) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : snapshot.sequencers()) {
+            if (!entry.sfx() && entry.dacData() != null) {
+                return new SmpsDacSelection(
+                        entry.source(), entry.dacData());
+            }
+        }
+        return null;
+    }
+
+    private static int musicId(SmpsDriverSnapshot snapshot) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : snapshot.sequencers()) {
+            if (!entry.sfx()) {
+                return entry.source().id();
+            }
+        }
+        return -1;
+    }
+
+    private static SmpsLogicalTransitionPolicy policyForSavedMusic(
+            SmpsDriverSnapshot snapshot) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : snapshot.sequencers()) {
+            if (!entry.sfx()) {
+                return SmpsLogicalTransitionPolicies.forConfig(
+                        entry.config());
+            }
+        }
+        throw new IllegalArgumentException(
+                "override save area contains no music program");
+    }
+
+    private static SmpsDacSelection resolveSelectedDac(
+            SmpsDriverSnapshot snapshot,
+            DacDependencyResolver resolver) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : snapshot.sequencers()) {
+            if (!entry.sfx() && entry.dacData() != null) {
+                return new SmpsDacSelection(entry.source(),
+                        Objects.requireNonNull(
+                                resolver.resolve(entry.source()),
+                                "resolved saved-override DAC dependency"));
+            }
+        }
+        return null;
+    }
+
+    private static PreparedPendingService preparePendingService(
+            SmpsDriverSnapshot.PendingService pending,
+            DacDependencyResolver resolver) {
+        if (pending == null) {
+            return null;
+        }
+        SmpsDacSelection selected = pending.selectedDacSource() == null
+                ? null : new SmpsDacSelection(
+                        pending.selectedDacSource(),
+                        Objects.requireNonNull(
+                                resolver.resolve(
+                                        pending.selectedDacSource()),
+                                "resolved pending-service DAC dependency"));
+        return new PreparedPendingService(
+                pending.activation(), pending.firstServiceWrites(),
+                selected);
+    }
+
+    private static PendingService materializePendingService(
+            PreparedPendingService pending) {
+        return pending == null ? null : new PendingService(
+                pending.activation(), pending.firstServiceWrites(),
+                pending.selectedDac());
+    }
+
+    private static SmpsDriverSnapshot.PendingService
+            snapshotPendingService(PendingService pending) {
+        return pending == null ? null
+                : new SmpsDriverSnapshot.PendingService(
+                        pending.activation(),
+                        pending.firstServiceWrites(),
+                        pending.selectedDac() == null
+                                ? null : pending.selectedDac().source());
+    }
+
+    private static SmpsDriverSnapshot withoutSessionMetadata(
+            SmpsDriverSnapshot snapshot) {
+        return copyWithSessionState(snapshot, List.of(), null);
+    }
+
+    private static SmpsDriverSnapshot copyWithSessionState(
+            SmpsDriverSnapshot snapshot,
+            List<SmpsDriverSnapshot.SavedOverride> savedOverrides,
+            SmpsDriverSnapshot.PendingService pendingService) {
+        return new SmpsDriverSnapshot(
+                snapshot.region(), snapshot.readMode(),
+                snapshot.continuousSfxId(),
+                snapshot.continuousSfxFlag(),
+                snapshot.contSfxLoopCnt(), snapshot.palUpdateCounter(),
+                snapshot.sequencers(), snapshot.fmLockSequencerIds(),
+                snapshot.psgLockSequencerIds(), savedOverrides,
+                pendingService);
+    }
+
+    private static SmpsDriverSnapshot emptyLogicalSnapshot(
+            SmpsDriverSnapshot current) {
+        return new SmpsDriverSnapshot(
+                current.region(), current.readMode(),
+                0, false, 0, current.palUpdateCounter(),
+                List.of(), new int[] {-1, -1, -1, -1, -1, -1},
+                new int[] {-1, -1, -1, -1});
+    }
+
+    private static SmpsDriverSnapshot filterLogicalSnapshot(
+            SmpsDriverSnapshot current, boolean retainSfx) {
+        List<SmpsDriverSnapshot.SequencerEntry> source =
+                current.sequencers();
+        int[] remap = new int[source.size()];
+        Arrays.fill(remap, -1);
+        List<SmpsDriverSnapshot.SequencerEntry> retained =
+                new ArrayList<>();
+        for (int index = 0; index < source.size(); index++) {
+            if (source.get(index).sfx() == retainSfx) {
+                remap[index] = retained.size();
+                retained.add(source.get(index));
+            }
+        }
+        return new SmpsDriverSnapshot(
+                current.region(), current.readMode(),
+                retainSfx ? current.continuousSfxId() : 0,
+                retainSfx && current.continuousSfxFlag(),
+                retainSfx ? current.contSfxLoopCnt() : 0,
+                current.palUpdateCounter(), retained,
+                remapLocks(current.fmLockSequencerIds(), remap),
+                remapLocks(current.psgLockSequencerIds(), remap));
+    }
+
+    private static int[] remapLocks(int[] locks, int[] remap) {
+        int[] result = new int[locks.length];
+        Arrays.fill(result, -1);
+        for (int index = 0; index < locks.length; index++) {
+            int prior = locks[index];
+            if (prior >= 0 && prior < remap.length) {
+                result[index] = remap[prior];
+            }
+        }
+        return result;
+    }
+
+    private static void validateLogicalSnapshot(
+            SmpsDriverSnapshot logical) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : logical.sequencers()) {
+            if (entry.sourceDescriptorTrust()
+                    == SmpsSequencer.SourceDescriptorTrust
+                    .PRECOMPUTED_IMMUTABLE) {
+                continue;
+            }
+            SmpsSourceDescriptor actual =
+                    SmpsSourceDescriptor.from(
+                            entry.source().dependencyGeneration(),
+                            entry.smpsData(),
+                            entry.source().dataLength(),
+                            entry.source().dataHash());
+            if (!entry.source().matches(actual)) {
+                throw new IllegalStateException(
+                        "logical snapshot dependency does not match source "
+                                + entry.source());
+            }
+        }
+        for (SmpsDriverSnapshot.SavedOverride saved
+                : logical.savedOverrides()) {
+            validateLogicalSnapshot(saved.logical());
+        }
+    }
+
+    private void clearOverrides() {
+        Arrays.fill(overrideStack, 0, overrideCount, null);
+        overrideCount = 0;
+    }
+
+    private void truncateDiagnostics(int size) {
+        while (diagnostics.size() > size) {
+            diagnostics.removeLast();
+        }
     }
 
     private void requireOpen(PortCapability capability) {
@@ -307,6 +1416,21 @@ public final class SmpsDriverSession implements AutoCloseable {
                     "session mutation token belongs to another session");
         }
         return state;
+    }
+
+    private static void requireUnconsumed(SessionLiveMutation state) {
+        if (state.consumed) {
+            throw new IllegalStateException(
+                    "session mutation token has already been consumed");
+        }
+    }
+
+    private void requireInstalled() {
+        requireActive();
+        if (driver == null) {
+            throw new IllegalStateException(
+                    "SMPS driver session is not installed");
+        }
     }
 
     private void requireActive() {

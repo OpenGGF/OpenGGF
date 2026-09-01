@@ -1,5 +1,8 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.smps.DacData;
+
 public interface AudioPresentationDependencyResolver {
     interface DiagnosticTransaction {
         DiagnosticTransaction NONE = new DiagnosticTransaction() {
@@ -31,6 +34,11 @@ public interface AudioPresentationDependencyResolver {
     }
 
     DecodedPcm resolvePcm(String assetId);
+
+    default DacData resolveDac(SmpsSourceDescriptor source) {
+        throw new IllegalStateException(
+                "no cached DAC dependency for " + source);
+    }
 
     SmpsCompositeVoice recreateSmps(PresentationVoiceSnapshot.Smps snapshot);
 

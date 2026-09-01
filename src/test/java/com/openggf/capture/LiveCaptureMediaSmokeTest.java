@@ -640,9 +640,9 @@ class LiveCaptureMediaSmokeTest {
         AudioPresentationSnapshot admitted =
                 audio.captureLogicalSnapshot().presentation();
         assertNotNull(admitted.activeMusic(), "SMPS music owns the music slot");
-        assertTrue(admitted.voices().stream()
-                        .anyMatch(PresentationVoiceSnapshot.Smps.class::isInstance),
-                "an SMPS composite voice is admitted");
+        assertTrue(admitted.smpsLogical() != null
+                        && !admitted.smpsLogical().sequencers().isEmpty(),
+                "session-owned SMPS state is admitted");
         assertEquals(1, sampleVoiceCount(admitted, "sfx/jump.wav"));
         assertEquals(1, sampleVoiceCount(admitted, "sfx/skid.wav"));
         assertNotNull(admitted.rawPcmVoiceId(), "raw SEGA PCM is admitted");

@@ -15,14 +15,10 @@ import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.SmpsAssetKey;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
-import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.SmpsSequencerConfig;
-import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
-import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -587,22 +583,7 @@ class TestAudioManagerPresentationModes {
 
     private static PreparedProducerRestore prepareObservedProducerRestore(
             AudioPresentationProducer producer) {
-        SmpsDriver source = new SmpsDriver();
-        PresentationVoiceSnapshot.Smps voice =
-                new PresentationVoiceSnapshot.Smps(
-                        1, 0, 0x81,
-                        AudioSourceDescriptor.baseMusic(0x81),
-                        1, source.captureLegacySnapshot());
-        AudioPresentationSnapshot selected =
-                new AudioPresentationSnapshot(
-                        2, List.of(voice),
-                        new AudioPresentationSnapshot.MusicSlotSnapshot(
-                                0x81,
-                                AudioSourceDescriptor.baseMusic(0x81), 1),
-                        List.of(), null, null,
-                        0, 0, 0, 0,
-                        false, false, false, 1, true,
-                        new SmpsCoordFlagRuntimeState.Snapshot(0));
+        AudioPresentationSnapshot selected = producer.snapshot();
         AtomicInteger ymWrites = new AtomicInteger();
         AtomicInteger psgWrites = new AtomicInteger();
         AtomicInteger logicalDiscards = new AtomicInteger();
@@ -634,28 +615,13 @@ class TestAudioManagerPresentationModes {
                     }
 
                     @Override
-                    public SmpsCompositeVoice recreateSmps(
+                    public com.openggf.audio.presentation.SmpsCompositeVoice
+                            recreateSmps(
                             PresentationVoiceSnapshot.Smps snapshot) {
-                        SmpsDriver driver = new SmpsDriver(
-                                48_000.0, new ChipWriteObserver() {
-                                    @Override
-                                    public void onYm2612Write(
-                                            int port, int register,
-                                            int value) {
-                                        ymWrites.incrementAndGet();
-                                    }
-
-                                    @Override
-                                    public void onPsgWrite(int value) {
-                                        psgWrites.incrementAndGet();
-                                    }
-                                });
-                        return new SmpsCompositeVoice(
-                                snapshot.voiceId(), snapshot.priority(),
-                                snapshot.musicId(),
-                                snapshot.sourceDescriptor(),
-                                snapshot.maxStereoFrames(), driver);
+                        throw new AssertionError(
+                                "authoritative snapshot has no SMPS voice");
                     }
+
                 };
         producer.beginReverse(1.0);
         producer.prepareRestoreSelection(selected, resolver);

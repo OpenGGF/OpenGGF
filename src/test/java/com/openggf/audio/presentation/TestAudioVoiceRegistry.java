@@ -310,7 +310,7 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void throwingVoiceIsWarnedAndRemovedAtFrameBoundary() {
+    void logicalSmpsVoiceIsNeverMixedOrFailedByThePcmRegistry() {
         List<String> warnings = new ArrayList<>();
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry registry = registry(instantiation, warnings);
@@ -324,12 +324,13 @@ class TestAudioVoiceRegistry {
                 new AudioPresentationMixer(MAX_STEREO_FRAMES, registry::onVoiceFailure);
 
         registry.beginRendering();
-        mixer.mix(registry, 1);
-        assertEquals(1, registry.orderedVoiceCount());
+        mixer.mixPcmVoices(registry, 1, new short[2], 0);
+        assertEquals(1, registry.orderedVoiceCount(),
+                "Task-6 standalone carrier remains available to direct callers");
         registry.endRendering();
 
-        assertEquals(0, registry.orderedVoiceCount());
-        assertEquals(1, warnings.size());
+        assertEquals(1, registry.orderedVoiceCount());
+        assertEquals(0, warnings.size());
     }
 
     @Test
@@ -427,7 +428,7 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void snapshotRestoreRecreatesNonEmptySmpsDriverNextPacketsExactly() {
+    void standaloneSmpsRestoreCarrierDoesNotEnterAuthoritativePcmMixer() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry original = registry(instantiation, new ArrayList<>());
         SmpsDriver driver = new SmpsDriver();
@@ -449,16 +450,16 @@ class TestAudioVoiceRegistry {
                 .map(PresentationVoiceSnapshot.Smps.class::cast)
                 .findFirst()
                 .orElseThrow();
-        List<short[]> expected = mixPackets(original, 10);
+        List<short[]> expected = mixPcmPackets(original, 10);
 
         AudioVoiceRegistry restored =
                 registry(new RecordingInstantiation(), new ArrayList<>());
         restored.restore(snapshot, new FixtureResolver());
-        List<short[]> actual = mixPackets(restored, 10);
+        List<short[]> actual = mixPcmPackets(restored, 10);
 
         assertFalse(smpsSnapshot.driver().logical().sequencers().isEmpty(),
                 "registry snapshot must preserve a live SMPS sequencer");
-        assertTrue(expected.stream()
+        assertFalse(expected.stream()
                 .flatMapToInt(packet -> {
                     int[] samples = new int[packet.length];
                     for (int index = 0; index < packet.length; index++) {
@@ -467,7 +468,8 @@ class TestAudioVoiceRegistry {
                     return Arrays.stream(samples);
                 })
                 .anyMatch(sample -> sample != 0),
-                "fixture must exercise audible driver state");
+                "standalone logical compatibility state is not rendered by"
+                        + " the authoritative PCM registry mixer");
         for (int packet = 0; packet < expected.size(); packet++) {
             assertArrayEquals(expected.get(packet), actual.get(packet));
         }
@@ -825,7 +827,8 @@ class TestAudioVoiceRegistry {
         registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
                 0x82, AudioSourceDescriptor.baseMusic(0x82),
                 composite(1, 0x82, driver))));
-        PresentationVoice ownerIdentity = registry.orderedVoiceAt(0);
+        assertEquals(1, registry.orderedVoiceCount(),
+                "Task-6 standalone carrier remains available to direct callers");
         List<SmpsSequencer> sequencerIdentities =
                 driver.sequencersForTesting();
         Object registryBefore = JSON.valueToTree(registry.snapshot());
@@ -840,7 +843,7 @@ class TestAudioVoiceRegistry {
 
         assertEquals(registryBefore, JSON.valueToTree(registry.snapshot()),
                 "registry and full driver/synth state roll back exactly");
-        assertSame(ownerIdentity, registry.orderedVoiceAt(0));
+        assertEquals(1, registry.snapshot().activeMusic().voiceId());
         assertSequencerIdentities(sequencerIdentities,
                 driver.sequencersForTesting());
         assertEquals(7, state.spindashRevCounter());
@@ -2078,6 +2081,19 @@ class TestAudioVoiceRegistry {
         List<short[]> packets = new ArrayList<>();
         for (int packet = 0; packet < count; packet++) {
             packets.add(Arrays.copyOf(mixer.mix(registry, 1), 2));
+        }
+        return packets;
+    }
+
+    private static List<short[]> mixPcmPackets(
+            AudioVoiceRegistry registry, int count) {
+        AudioPresentationMixer mixer =
+                new AudioPresentationMixer(MAX_STEREO_FRAMES);
+        List<short[]> packets = new ArrayList<>();
+        short[] sessionPcm = new short[2];
+        for (int packet = 0; packet < count; packet++) {
+            packets.add(Arrays.copyOf(mixer.mixPcmVoices(
+                    registry, 1, sessionPcm, 0), 2));
         }
         return packets;
     }

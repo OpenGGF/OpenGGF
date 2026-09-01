@@ -68,8 +68,9 @@ class TestAudioManagerRuntimeInstallation {
         AudioPresentationSink sinkBefore = presentationSink(audio);
         assertEquals(48_000, sinkBefore.sampleRate());
         var logicalBefore = audio.captureLogicalSnapshot();
-        assertFalse(logicalBefore.presentation().voices().isEmpty(),
-                "precondition: a sounding voice exists before the swap");
+        assertFalse(logicalBefore.presentation().smpsLogical()
+                        .sequencers().isEmpty(),
+                "precondition: sounding SMPS state exists before the swap");
         assertNotNull(logicalBefore.presentation().activeMusic(),
                 "precondition: music is playing before the swap");
 
@@ -128,10 +129,11 @@ class TestAudioManagerRuntimeInstallation {
         var before = audio.captureLogicalSnapshot();
         var producerBefore =
                 AudioManagerTestDiagnostics.producerFingerprint(audio);
-        assertFalse(before.presentation().voices().isEmpty(),
-                "precondition: a sounding voice exists before the failure");
-        assertFalse(producerBefore.voiceIdentities().isEmpty(),
-                "precondition: the producer holds that live voice");
+        assertFalse(before.presentation().smpsLogical()
+                        .sequencers().isEmpty(),
+                "precondition: sounding SMPS state exists before the failure");
+        assertNotNull(producerBefore.smpsSessionIdentity(),
+                "the producer fingerprints its persistent SMPS session");
 
         audio.replaceFailedPresentationSink(
                 new IllegalStateException("speaker device removed"));

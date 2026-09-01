@@ -10,5 +10,14 @@ public record PreparedSmpsSfxProgram(
         int continuousTrackCount) {
     public PreparedSmpsSfxProgram {
         Objects.requireNonNull(incomingSfx, "incomingSfx");
+        if (!incomingSfx.sfx()) {
+            throw new IllegalArgumentException(
+                    "SFX program requires an SFX sequencer");
+        }
+        if ((continuousSfxId & ~0xFF) != 0
+                || (continuousTrackCount & ~0xFF) != 0) {
+            throw new IllegalArgumentException(
+                    "continuous SFX metadata must fit unsigned bytes");
+        }
     }
 }

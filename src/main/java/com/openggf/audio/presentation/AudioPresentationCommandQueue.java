@@ -57,6 +57,28 @@ public final class AudioPresentationCommandQueue {
         drain(applier);
     }
 
+    /**
+     * Applies one immutable batch and consumes it only after every command
+     * succeeds. The presentation producer pairs this with its composite
+     * rollback token, so a failed batch is retryable in full.
+     */
+    public void applyPendingAtomically(
+            Consumer<AudioPresentationCommand> applier) {
+        Objects.requireNonNull(applier, "applier");
+        assertNotRendering();
+        int capturedSize = size;
+        for (int index = 0; index < capturedSize; index++) {
+            applier.accept(entries[index]);
+        }
+        int remaining = size - capturedSize;
+        if (remaining > 0) {
+            System.arraycopy(entries, capturedSize,
+                    entries, 0, remaining);
+        }
+        java.util.Arrays.fill(entries, remaining, size, null);
+        size = remaining;
+    }
+
     public int size() {
         return size;
     }

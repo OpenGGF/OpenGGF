@@ -1,10 +1,28 @@
 package com.openggf.audio.session;
 
+import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.presentation.AudioPresentationDependencyResolver;
+import com.openggf.audio.presentation.AudioPresentationSnapshot;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioVoiceRegistry;
+import com.openggf.audio.presentation.DecodedPcm;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsSessionSnapshot {
@@ -49,5 +67,173 @@ class TestSmpsSessionSnapshot {
                 snapshot.selectedDacSource());
         assertEquals(SmpsSessionTestFixtures.settings(),
                 snapshot.physical().settings());
+    }
+
+    @Test
+    void presentationSnapshotHasOnePhysicalSnapshotAndFingerprint() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(
+                        () -> true, handlers,
+                        AudioPresentationSourceFactory.Settings.defaults(),
+                        session);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+
+        AudioPresentationSnapshot snapshot = registry.snapshot();
+
+        assertSame(session.captureSnapshot().profile(),
+                snapshot.smpsSession().profile());
+        assertEquals(session.captureSnapshot().physical(),
+                snapshot.smpsSession().physical());
+        assertEquals(session.captureLogicalSnapshot(),
+                snapshot.smpsLogical());
+        assertTrue(snapshot.voices().stream().noneMatch(
+                PresentationVoiceSnapshot.Smps.class::isInstance));
+        assertFalse(Arrays.stream(
+                        SmpsDriverSnapshot.class.getRecordComponents())
+                .anyMatch(component -> component.getType()
+                        == SmpsPhysicalDevice.Snapshot.class));
+    }
+
+    @Test
+    void authoritativeRestoreRejectsStandaloneSmpsCarrierBeforeRecreation() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(
+                        () -> true, handlers,
+                        AudioPresentationSourceFactory.Settings.defaults(),
+                        session);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationSnapshot valid = registry.snapshot();
+        PresentationVoiceSnapshot.Smps carrier =
+                new PresentationVoiceSnapshot.Smps(
+                        91, 0, null, null, 4,
+                        new SmpsDriver().captureLegacySnapshot());
+        AudioPresentationSnapshot malformed =
+                new AudioPresentationSnapshot(
+                        valid.nextVoiceId(), List.of(carrier), null,
+                        List.of(), carrier.voiceId(), null,
+                        valid.fmMuteMask(), valid.fmSoloMask(),
+                        valid.psgMuteMask(), valid.psgSoloMask(),
+                        valid.sfxBlocked(), valid.pendingRestore(),
+                        valid.speedShoesEnabled(), valid.speedMultiplier(),
+                        valid.ringLeft(), valid.coordFlagRuntimeState(),
+                        valid.smpsSession(), valid.smpsLogical());
+        AtomicInteger recreations = new AtomicInteger();
+        AudioPresentationDependencyResolver resolver =
+                new AudioPresentationDependencyResolver() {
+                    @Override
+                    public DecodedPcm resolvePcm(String assetId) {
+                        throw new AssertionError("no PCM restore expected");
+                    }
+
+                    @Override
+                    public SmpsCompositeVoice recreateSmps(
+                            PresentationVoiceSnapshot.Smps snapshot) {
+                        recreations.incrementAndGet();
+                        return new SmpsCompositeVoice(
+                                snapshot.voiceId(), snapshot.priority(),
+                                snapshot.musicId(),
+                                AudioSourceDescriptor.baseMusic(0x81),
+                                snapshot.maxStereoFrames(),
+                                new SmpsDriver());
+                    }
+                };
+
+        assertThrows(IllegalArgumentException.class,
+                () -> registry.prepareSnapshotRestore(
+                        malformed, resolver));
+        assertEquals(0, recreations.get(),
+                "authoritative restore must reject compatibility carriers "
+                        + "before consulting their legacy resolver");
+    }
+
+    @Test
+    void prepareCommitDiscardAndFailedRestoreAreWriteFreeAndAtomic() {
+        SmpsSessionTestFixtures.RecordingObserver observer =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(observer);
+        session.install();
+        Object identity = session.logicalDriverForTesting();
+        SmpsPhysicalPort port = session.openTestEpoch(
+                SmpsSessionTestFixtures.owner(31));
+        port.selectDac(new SmpsDacSelection(
+                SmpsSessionTestFixtures.source(32),
+                SmpsSessionTestFixtures.dac()));
+        session.closeTestEpoch(port.epoch());
+        SmpsDriverSessionSnapshot physical = session.captureSnapshot();
+        SmpsDriverSnapshot logical = session.captureLogicalSnapshot();
+        observer.clear();
+
+        SmpsDriverSession.PreparedRestore discarded = session.prepareRestore(
+                physical, logical, ignored -> SmpsSessionTestFixtures.dac());
+        assertTrue(observer.events().isEmpty());
+        assertEquals(logical, session.captureLogicalSnapshot());
+        assertEquals(physical, session.captureSnapshot());
+        assertTrue(discarded.savedOverrides().isEmpty());
+
+        SmpsDriverSession.PreparedRestore committed = session.prepareRestore(
+                physical, logical, ignored -> SmpsSessionTestFixtures.dac());
+        session.commitRestore(committed);
+        assertTrue(observer.events().isEmpty());
+        assertSame(identity, session.logicalDriverForTesting());
+        assertEquals(logical, session.captureLogicalSnapshot());
+        assertEquals(physical, session.captureSnapshot());
+
+        var beforePhysical = SmpsSessionTestFixtures.json(
+                session.captureSnapshot());
+        var beforeLogical = session.captureLogicalSnapshot();
+        assertThrows(IllegalStateException.class,
+                () -> session.prepareRestore(physical, logical,
+                        ignored -> {
+                            throw new IllegalStateException(
+                                    "dependency failed");
+                        }));
+        assertTrue(observer.events().isEmpty());
+        assertEquals(beforePhysical, SmpsSessionTestFixtures.json(
+                session.captureSnapshot()));
+        assertEquals(beforeLogical, session.captureLogicalSnapshot());
+        assertSame(identity, session.logicalDriverForTesting());
+    }
+
+    @Test
+    void staleProfileRestoreFailsBeforeMutation() {
+        SmpsSessionTestFixtures.RecordingObserver observer =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(observer);
+        session.install();
+        SmpsDriverSessionSnapshot current = session.captureSnapshot();
+        SmpsSessionProfileFingerprint stale =
+                new SmpsSessionProfileFingerprint(
+                        current.profile().baseGameId(),
+                        current.profile().sourceGeneration() + 1,
+                        current.profile().physicalPolicyId(),
+                        current.profile().settings());
+        SmpsDriverSessionSnapshot staleSnapshot =
+                new SmpsDriverSessionSnapshot(
+                        current.initialized(), current.pendingGlobalCommand(),
+                        stale, current.selectedDacSource(),
+                        current.physical());
+        var before = SmpsSessionTestFixtures.json(current);
+        observer.clear();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> session.prepareRestore(
+                        staleSnapshot, session.captureLogicalSnapshot(),
+                        ignored -> SmpsSessionTestFixtures.dac()));
+
+        assertTrue(observer.events().isEmpty());
+        assertEquals(before, SmpsSessionTestFixtures.json(
+                session.captureSnapshot()));
     }
 }

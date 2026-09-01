@@ -289,8 +289,25 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
     }
 
     private SmpsDriver(VirtualSynthesizer standalonePhysical) {
+        this(standalonePhysical, standalonePhysical);
+    }
+
+    private SmpsDriver(
+            SmpsLogicalWriteTarget synthesizer,
+            VirtualSynthesizer standalonePhysical) {
         this.standalonePhysical = standalonePhysical;
-        synthesizer = standalonePhysical;
+        this.synthesizer = Objects.requireNonNull(
+                synthesizer, "synthesizer");
+    }
+
+    /**
+     * Composition-root seam for the one session-owned logical driver. This is
+     * the sole construction path which does not allocate a private chip pair.
+     */
+    public static SmpsDriver createSessionDriver(
+            SmpsDriverSessionAccess sessionAccess) {
+        return new SmpsDriver(
+                Objects.requireNonNull(sessionAccess, "sessionAccess"), null);
     }
 
     private VirtualSynthesizer requireStandalonePhysical() {
@@ -314,7 +331,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
     }
 
     protected boolean hasChipWriteObserver() {
-        return requireStandalonePhysical().hasChipWriteObserver();
+        return standalonePhysical != null
+                && standalonePhysical.hasChipWriteObserver();
     }
 
     public VirtualSynthesizer.Snapshot captureSynthSnapshot() {
@@ -677,9 +695,15 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
     }
 
     private boolean hasPotentiallyThrowingAdmissionObserver() {
-        return hasChipWriteObserver()
+        // Session observers are deferred and quarantined by the composite
+        // owner. The session transaction already captures the complete
+        // logical/device rollback state, so allocating the standalone
+        // admission journal would both duplicate that boundary and attempt
+        // to read a private synthesizer this composed driver does not own.
+        return standalonePhysical != null
+                && (hasChipWriteObserver()
                 || sfxContentionObserver != SfxContentionObserver.NONE
-                || serviceObserver != SmpsDriverServiceObserver.NONE;
+                || serviceObserver != SmpsDriverServiceObserver.NONE);
     }
 
     private void commitNewSfxAdmission(PreparedSfxAdmission admission) {
@@ -1418,8 +1442,10 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
                     continuousSfxFlag,
                     contSfxLoopCnt,
                     palUpdateCounter,
-                    captureLiveDacDataReference(),
-                    captureSynthSnapshot());
+                    standalonePhysical == null
+                            ? null : captureLiveDacDataReference(),
+                    standalonePhysical == null
+                            ? null : captureSynthSnapshot());
         }
     }
 
@@ -1486,8 +1512,10 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
             continuousSfxFlag = token.continuousSfxFlag;
             contSfxLoopCnt = token.contSfxLoopCnt;
             palUpdateCounter = token.palUpdateCounter;
-            restoreLiveDacDataReference(token.liveDacDataReference);
-            restoreSynthSnapshot(token.synthSnapshot);
+            if (standalonePhysical != null) {
+                restoreLiveDacDataReference(token.liveDacDataReference);
+                restoreSynthSnapshot(token.synthSnapshot);
+            }
             if (serviceSequencerOrdinals != null) {
                 serviceSequencerOrdinals.keySet().retainAll(sequencers);
             }
@@ -2705,7 +2733,11 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
     private void silenceFmChannel(int ch) {
         // Directly reset envelope state - this takes effect immediately
         // without needing audio samples to be rendered
-        requireStandalonePhysical().forceSilenceChannel(ch);
+        if (synthesizer instanceof SmpsDriverSessionAccess sessionAccess) {
+            sessionAccess.forceSilenceFmChannel(ch);
+        } else {
+            requireStandalonePhysical().forceSilenceChannel(ch);
+        }
 
         // Also send Key Off via registers for completeness
         int port = (ch < 3) ? 0 : 1;

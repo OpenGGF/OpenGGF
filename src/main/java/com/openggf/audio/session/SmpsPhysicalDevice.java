@@ -4,6 +4,7 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.VirtualSynthesizer;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 public final class SmpsPhysicalDevice {
@@ -22,7 +23,8 @@ public final class SmpsPhysicalDevice {
 
     public record Snapshot(
             VirtualSynthesizer.Snapshot synth,
-            Settings settings) {
+            Settings settings,
+            boolean outputSilenced) {
         public Snapshot {
             Objects.requireNonNull(synth, "synth");
             Objects.requireNonNull(settings, "settings");
@@ -30,6 +32,14 @@ public final class SmpsPhysicalDevice {
     }
 
     interface LiveMutationToken {
+    }
+
+    record AdmissionState(
+            VirtualSynthesizer.SfxAdmissionState synth,
+            boolean outputSilenced) {
+        AdmissionState {
+            Objects.requireNonNull(synth, "synth");
+        }
     }
 
     private final class LiveMutationState implements LiveMutationToken {
@@ -51,6 +61,9 @@ public final class SmpsPhysicalDevice {
     private final Object identity = new Object();
     private final Settings settings;
     private final VirtualSynthesizer synth;
+    private int renderInvocationCount;
+    private long renderedStereoFrames;
+    private boolean outputSilenced = true;
     private boolean closed;
 
     SmpsPhysicalDevice(Settings settings, ChipWriteObserver observer) {
@@ -67,8 +80,11 @@ public final class SmpsPhysicalDevice {
 
     void apply(SmpsWriteProgram program) {
         requireActive();
-        for (SmpsChipWrite write : Objects.requireNonNull(
-                program, "program").writes()) {
+        var writes = Objects.requireNonNull(program, "program").writes();
+        if (!writes.isEmpty()) {
+            outputSilenced = false;
+        }
+        for (SmpsChipWrite write : writes) {
             if (write instanceof SmpsChipWrite.Ym2612 ym) {
                 synth.writeFm(this, ym.port(), ym.register(), ym.value());
             } else if (write instanceof SmpsChipWrite.Psg psg) {
@@ -98,12 +114,19 @@ public final class SmpsPhysicalDevice {
                     "target does not contain the requested frame range");
         }
         synth.renderFrames(target, offsetSamples / 2, stereoFrames);
+        if (outputSilenced) {
+            Arrays.fill(target, offsetSamples,
+                    offsetSamples + stereoFrames * 2, (short) 0);
+        }
+        renderInvocationCount++;
+        renderedStereoFrames += stereoFrames;
         return stereoFrames;
     }
 
     Snapshot captureSnapshot() {
         requireActive();
-        return new Snapshot(synth.captureSynthSnapshot(), settings);
+        return new Snapshot(synth.captureSynthSnapshot(), settings,
+                outputSilenced);
     }
 
     void restoreSnapshot(Snapshot snapshot, DacData resolvedDac) {
@@ -115,6 +138,7 @@ public final class SmpsPhysicalDevice {
         }
         synth.restoreSelectedDacData(resolvedDac);
         synth.restoreSynthSnapshot(resolved.synth());
+        outputSilenced = resolved.outputSilenced();
     }
 
     LiveMutationToken captureLiveMutation() {
@@ -132,37 +156,52 @@ public final class SmpsPhysicalDevice {
         }
         synth.restoreSelectedDacData(state.selectedDac);
         synth.restoreSynthSnapshot(state.snapshot.synth());
+        outputSilenced = state.snapshot.outputSilenced();
         state.consumed = true;
     }
 
     void applyChannelMasks(int fmMask, int psgMask) {
         requireActive();
         for (int channel = 0; channel < 6; channel++) {
-            synth.setFmMute(channel, (fmMask & (1 << channel)) != 0);
+            setFmMute(channel, (fmMask & (1 << channel)) != 0);
         }
         for (int channel = 0; channel < 4; channel++) {
-            synth.setPsgMute(channel, (psgMask & (1 << channel)) != 0);
+            setPsgMute(channel, (psgMask & (1 << channel)) != 0);
         }
+    }
+
+    void setFmMute(int channel, boolean mute) {
+        requireActive();
+        synth.setFmMute(channel, mute);
+    }
+
+    void setPsgMute(int channel, boolean mute) {
+        requireActive();
+        synth.setPsgMute(channel, mute);
     }
 
     void writeFm(int port, int register, int value) {
         requireActive();
+        outputSilenced = false;
         synth.writeFm(this, port, register, value);
     }
 
     void writePsg(int value) {
         requireActive();
+        outputSilenced = false;
         synth.writePsg(this, value);
     }
 
     void setInstrument(int channelId, byte[] voice) {
         requireActive();
+        outputSilenced = false;
         synth.setInstrument(this, channelId,
                 Objects.requireNonNull(voice, "voice"));
     }
 
     void playDac(int note) {
         requireActive();
+        outputSilenced = false;
         synth.playDac(this, note);
     }
 
@@ -181,17 +220,24 @@ public final class SmpsPhysicalDevice {
         synth.forceSilenceChannel(channelId);
     }
 
-    VirtualSynthesizer.SfxAdmissionState captureAdmissionState(
-            int fmMask, int psgMask) {
+    void silenceOutput() {
         requireActive();
-        return synth.captureSfxAdmissionState(fmMask, psgMask);
+        outputSilenced = true;
     }
 
-    void restoreAdmissionState(
-            VirtualSynthesizer.SfxAdmissionState state) {
+    AdmissionState captureAdmissionState(
+            int fmMask, int psgMask) {
         requireActive();
-        synth.restoreSfxAdmissionState(
-                Objects.requireNonNull(state, "state"));
+        return new AdmissionState(
+                synth.captureSfxAdmissionState(fmMask, psgMask),
+                outputSilenced);
+    }
+
+    void restoreAdmissionState(AdmissionState state) {
+        requireActive();
+        AdmissionState resolved = Objects.requireNonNull(state, "state");
+        synth.restoreSfxAdmissionState(resolved.synth());
+        outputSilenced = resolved.outputSilenced();
     }
 
     void close() {
@@ -200,6 +246,21 @@ public final class SmpsPhysicalDevice {
             return;
         }
         closed = true;
+    }
+
+    Object identityForTesting() {
+        requireActive();
+        return identity;
+    }
+
+    int renderInvocationCountForTesting() {
+        requireActive();
+        return renderInvocationCount;
+    }
+
+    long renderedStereoFramesForTesting() {
+        requireActive();
+        return renderedStereoFrames;
     }
 
     private LiveMutationState requireLiveMutation(

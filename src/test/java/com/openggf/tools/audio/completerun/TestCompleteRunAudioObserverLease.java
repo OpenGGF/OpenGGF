@@ -53,13 +53,16 @@ class TestCompleteRunAudioObserverLease {
             RowObservation row = lease.finishRow(0, post);
 
             assertEquals(0, boundary.absoluteFrame());
-            assertEquals(1, boundary.observationsBeforeRow().size());
-            RequestObserved startup = (RequestObserved)
-                    boundary.observationsBeforeRow().getFirst();
+            assertTrue(boundary.observationsBeforeRow().size() > 1,
+                    "session boot diagnostics precede the first row");
+            RequestObserved startup = boundary.observationsBeforeRow()
+                    .stream().filter(RequestObserved.class::isInstance)
+                    .map(RequestObserved.class::cast)
+                    .findFirst().orElseThrow();
             RequestObserved frame = (RequestObserved) row.events().getFirst();
             assertEquals(0, startup.ordinal());
             assertEquals(0x81, startup.rawSoundId());
-            assertEquals(1, frame.ordinal());
+            assertEquals(boundary.firstRowEventOrdinal(), frame.ordinal());
             assertEquals(0x82, frame.rawSoundId());
             assertEquals(pre, boundary.logicalSnapshot());
             assertEquals(post, row.logicalSnapshot());
@@ -70,7 +73,8 @@ class TestCompleteRunAudioObserverLease {
     void rowsAreSingleUseSequentialAndImmutable() {
         try (CompleteRunAudioObserverLease lease =
                      CompleteRunAudioObserverLease.acquire(audio)) {
-            lease.beginRow(4, audio.captureLogicalSnapshot());
+            PreRowBoundary firstBoundary = lease.beginRow(
+                    4, audio.captureLogicalSnapshot());
             audio.playMusic(0x81);
             RowObservation first = lease.finishRow(
                     4, audio.captureLogicalSnapshot());
@@ -82,14 +86,17 @@ class TestCompleteRunAudioObserverLease {
             assertThrows(IllegalStateException.class,
                     () -> lease.beginRow(6, audio.captureLogicalSnapshot()));
 
-            lease.beginRow(5, audio.captureLogicalSnapshot());
+            PreRowBoundary secondBoundary = lease.beginRow(
+                    5, audio.captureLogicalSnapshot());
             audio.playMusic(0x82);
             RowObservation second = lease.finishRow(
                     5, audio.captureLogicalSnapshot());
             assertEquals(4, first.absoluteFrame());
             assertEquals(5, second.absoluteFrame());
-            assertEquals(0, first.events().getFirst().ordinal());
-            assertEquals(1, second.events().getFirst().ordinal());
+            assertEquals(firstBoundary.firstRowEventOrdinal(),
+                    first.events().getFirst().ordinal());
+            assertEquals(secondBoundary.firstRowEventOrdinal(),
+                    second.events().getFirst().ordinal());
         }
     }
 
@@ -109,7 +116,8 @@ class TestCompleteRunAudioObserverLease {
     void callbackDomainsShareOneGlobalSourceOrder() {
         try (CompleteRunAudioObserverLease lease =
                      CompleteRunAudioObserverLease.acquire(audio)) {
-            lease.beginRow(0, audio.captureLogicalSnapshot());
+            PreRowBoundary boundary = lease.beginRow(
+                    0, audio.captureLogicalSnapshot());
 
             audio.playMusic(0x81);
             backend.chipWrite.onPsgWrite(0x92);
@@ -127,9 +135,10 @@ class TestCompleteRunAudioObserverLease {
             assertInstanceOf(
                     CompleteRunAudioObserverLease.LifecycleObserved.class,
                     row.events().get(2));
-            assertEquals(0, row.events().get(0).ordinal());
-            assertEquals(1, row.events().get(1).ordinal());
-            assertEquals(2, row.events().get(2).ordinal());
+            long firstOrdinal = boundary.firstRowEventOrdinal();
+            assertEquals(firstOrdinal, row.events().get(0).ordinal());
+            assertEquals(firstOrdinal + 1, row.events().get(1).ordinal());
+            assertEquals(firstOrdinal + 2, row.events().get(2).ordinal());
         }
     }
 

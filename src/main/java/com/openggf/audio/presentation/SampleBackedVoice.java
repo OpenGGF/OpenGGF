@@ -7,7 +7,7 @@ import java.util.Objects;
 /**
  * A deterministic, decoded PCM presentation voice with a Q32.32 source cursor.
  */
-public final class SampleBackedVoice implements PresentationVoice {
+public final class SampleBackedVoice implements PcmPresentationVoice {
     private static final long Q32_ONE = 1L << 32;
     private static final int YM_DAC_GAIN_Q16 = 1 << 14;
 

@@ -313,9 +313,8 @@ public class TestDonorAudioRouting {
         audioManager.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot rewindPoint =
                 audioManager.captureLogicalSnapshot();
-        long firstVoiceId = ((com.openggf.audio.presentation
-                .PresentationVoiceSnapshot.Smps) rewindPoint.presentation()
-                .voices().getFirst()).voiceId();
+        long firstVoiceId = rewindPoint.presentation()
+                .activeMusic().voiceId();
         var first = audioManager.shadowSmpsDriverSnapshotForTesting()
                 .sequencers().getFirst();
         audioManager.update();
@@ -323,9 +322,8 @@ public class TestDonorAudioRouting {
         audioManager.playDonorMusic("s3k", 0x21);
         audioManager.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot repeated = audioManager.captureLogicalSnapshot();
-        long secondVoiceId = ((com.openggf.audio.presentation
-                .PresentationVoiceSnapshot.Smps) repeated.presentation()
-                .voices().getFirst()).voiceId();
+        long secondVoiceId = repeated.presentation()
+                .activeMusic().voiceId();
         var second = audioManager.shadowSmpsDriverSnapshotForTesting()
                 .sequencers().getFirst();
 

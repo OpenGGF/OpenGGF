@@ -5,6 +5,8 @@ import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsServiceOutcome;
+import com.openggf.audio.session.SmpsSessionCommand;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -39,6 +41,7 @@ public final class AudioPresentationProducer {
     private final short[] silence;
     private final short[] reversePcm;
     private final short[] forwardPcm;
+    private final short[] smpsSourcePcm;
     private final AudioPresentationFrameView frameView;
     private final CaptureHandle[] captures =
             new CaptureHandle[MAX_CAPTURE_HANDLES];
@@ -51,8 +54,7 @@ public final class AudioPresentationProducer {
     private PcmHistoryRing.ReverseCursor reverseCursor;
     private AudioPresentationSnapshot selectedRestore;
     private AudioPresentationDependencyResolver selectedRestoreResolver;
-    private AudioVoiceRegistry.PreparedSnapshotRestore
-            preparedSelectedRestore;
+    private PreparedPresentationRestore preparedSelectedRestore;
     private double forwardRate = 1.0;
     private int captureCount;
     private int releaseCrossfadeRemaining;
@@ -64,6 +66,14 @@ public final class AudioPresentationProducer {
     private boolean reverseFrameOutput;
     private boolean hasLastReverseFrame;
     private boolean closed;
+
+    private record PreparedPresentationRestore(
+            AudioVoiceRegistry.PreparedSnapshotRestore registry,
+            SmpsDriverSession.PreparedRestore session) {
+        private PreparedPresentationRestore {
+            Objects.requireNonNull(registry, "registry");
+        }
+    }
 
     public AudioPresentationProducer(
             int sampleRate,
@@ -147,8 +157,14 @@ public final class AudioPresentationProducer {
         silence = new short[maxStereoFrames * CHANNELS];
         reversePcm = new short[maxStereoFrames * CHANNELS];
         forwardPcm = new short[maxStereoFrames * CHANNELS];
+        smpsSourcePcm = new short[Math.multiplyExact(
+                Math.multiplyExact(maxStereoFrames, (int) MAX_FORWARD_RATE),
+                CHANNELS)];
         frameView = new AudioPresentationFrameView(silence);
         this.smpsSession = smpsSession;
+        if (smpsSession != null && !smpsSession.installed()) {
+            smpsSession.install();
+        }
         this.commandApplier =
                 commandApplier != null ? commandApplier : registry::apply;
     }
@@ -166,22 +182,19 @@ public final class AudioPresentationProducer {
             int stereoFrames = clock.samplesForNextFrame();
             short[] pcm;
             if (mode == PresentationMode.FORWARD) {
-                commands.applyPending(commandApplier);
-                registry.beginRendering();
-                try {
-                    registry.serviceOuterFrame();
-                    pcm = forwardRate > 1.0
-                            ? mixForwardResampled(stereoFrames)
-                            : mixer.mix(registry, stereoFrames);
-                } finally {
-                    registry.endRendering();
-                }
+                pcm = smpsSession != null
+                        ? presentSessionForward(stereoFrames)
+                        : presentLegacyForward(stereoFrames);
                 applyReleaseCrossfade(pcm, stereoFrames);
                 if (historyArmed) {
                     history.write(pcm, stereoFrames);
                 }
             } else if (mode == PresentationMode.SILENT) {
-                commands.applyPending(commandApplier);
+                if (smpsSession != null) {
+                    applyPendingSessionCommandsTransactionally();
+                } else {
+                    commands.applyPending(commandApplier);
+                }
                 Arrays.fill(silence, 0, stereoFrames * CHANNELS, (short) 0);
                 pcm = silence;
             } else {
@@ -237,7 +250,7 @@ public final class AudioPresentationProducer {
 
     public void beginReverse(double rate) {
         assertOwnerBoundary();
-        registry.discardPreparedRestore(preparedSelectedRestore);
+        discardPreparedRestore(preparedSelectedRestore);
         preparedSelectedRestore = null;
         selectedRestore = null;
         selectedRestoreResolver = null;
@@ -287,13 +300,13 @@ public final class AudioPresentationProducer {
         }
         if (selectedRestore != null) {
             if (preparedSelectedRestore == null) {
-                preparedSelectedRestore = registry.prepareSnapshotRestore(
+                preparedSelectedRestore = preparePresentationRestore(
                         selectedRestore, selectedRestoreResolver);
             }
-            registry.commitPreparedRestore(preparedSelectedRestore);
+            commitPreparedRestore(preparedSelectedRestore);
         }
         if (stopTransientVoices) {
-            registry.stopTransientVoices();
+            stopTransientVoicesAtomically();
         }
         history.commitReverseCursor(reverseCursor);
         reverseCursor = null;
@@ -314,7 +327,7 @@ public final class AudioPresentationProducer {
         history.clear();
         selectedRestore = null;
         selectedRestoreResolver = null;
-        registry.discardPreparedRestore(preparedSelectedRestore);
+        discardPreparedRestore(preparedSelectedRestore);
         preparedSelectedRestore = null;
         cancelReleaseCrossfade();
     }
@@ -346,6 +359,7 @@ public final class AudioPresentationProducer {
         return new TransactionFingerprint(
                 clock.captureSnapshot(),
                 history.diagnosticSnapshot(),
+                identityFingerprint(smpsSession),
                 List.of(voiceIdentities),
                 reverseCursor != null ? reverseCursor.state() : null,
                 identityFingerprint(selectedRestore),
@@ -370,6 +384,7 @@ public final class AudioPresentationProducer {
     public record TransactionFingerprint(
             AudioFrameClock.Snapshot clock,
             PcmHistoryRing.DiagnosticSnapshot history,
+            IdentityFingerprint smpsSessionIdentity,
             List<IdentityFingerprint> voiceIdentities,
             PcmHistoryRing.CursorState reverseCursor,
             IdentityFingerprint selectedRestoreIdentity,
@@ -442,20 +457,20 @@ public final class AudioPresentationProducer {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
         if (preservePresentation && reverseActive) {
-            registry.discardPreparedRestore(preparedSelectedRestore);
+            discardPreparedRestore(preparedSelectedRestore);
             preparedSelectedRestore = null;
             selectedRestore = snapshot;
             selectedRestoreResolver = resolver;
             return;
         }
-        registry.restore(snapshot, resolver);
+        commitPreparedRestore(preparePresentationRestore(snapshot, resolver));
         if (!preservePresentation) {
             history.clear();
             reverseCursor = null;
             reverseActive = false;
             selectedRestore = null;
             selectedRestoreResolver = null;
-            registry.discardPreparedRestore(preparedSelectedRestore);
+            discardPreparedRestore(preparedSelectedRestore);
             preparedSelectedRestore = null;
             cancelReleaseCrossfade();
         }
@@ -466,7 +481,7 @@ public final class AudioPresentationProducer {
         if (selectedRestore == null || preparedSelectedRestore != null) {
             return;
         }
-        preparedSelectedRestore = registry.prepareSnapshotRestore(
+        preparedSelectedRestore = preparePresentationRestore(
                 selectedRestore, selectedRestoreResolver);
     }
 
@@ -481,9 +496,9 @@ public final class AudioPresentationProducer {
         assertOwnerBoundary();
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
-        AudioVoiceRegistry.PreparedSnapshotRestore prepared =
-                registry.prepareSnapshotRestore(snapshot, resolver);
-        registry.discardPreparedRestore(preparedSelectedRestore);
+        PreparedPresentationRestore prepared =
+                preparePresentationRestore(snapshot, resolver);
+        discardPreparedRestore(preparedSelectedRestore);
         selectedRestore = snapshot;
         selectedRestoreResolver = resolver;
         preparedSelectedRestore = prepared;
@@ -496,10 +511,128 @@ public final class AudioPresentationProducer {
      */
     public void discardPreparedRestoreSelection() {
         assertOwnerBoundary();
-        registry.discardPreparedRestore(preparedSelectedRestore);
+        discardPreparedRestore(preparedSelectedRestore);
         selectedRestore = null;
         selectedRestoreResolver = null;
         preparedSelectedRestore = null;
+    }
+
+    private PreparedPresentationRestore preparePresentationRestore(
+            AudioPresentationSnapshot snapshot,
+            AudioPresentationDependencyResolver resolver) {
+        SmpsDriverSession.PreparedRestore preparedSession = null;
+        if (smpsSession != null) {
+            if (snapshot.smpsSession() == null
+                    || snapshot.smpsLogical() == null) {
+                throw new IllegalArgumentException(
+                        "session presentation restore requires one SMPS "
+                                + "session/logical snapshot pair");
+            }
+            preparedSession = smpsSession.prepareRestore(
+                    snapshot.smpsSession(), snapshot.smpsLogical(),
+                    resolver::resolveDac);
+        }
+        AudioVoiceRegistry.PreparedSnapshotRestore preparedRegistry =
+                registry.prepareSnapshotRestore(snapshot, resolver);
+        return new PreparedPresentationRestore(
+                preparedRegistry, preparedSession);
+    }
+
+    private void commitPreparedRestore(
+            PreparedPresentationRestore restore) {
+        Objects.requireNonNull(restore, "restore");
+        if (smpsSession == null) {
+            registry.commitPreparedRestore(restore.registry());
+            return;
+        }
+        if (restore.session() == null) {
+            throw new IllegalArgumentException(
+                    "prepared restore has no session memento");
+        }
+        SmpsDriverSession.LiveMutationToken sessionMutation =
+                smpsSession.captureLiveMutation();
+        AudioVoiceRegistry.LiveMutationToken registryMutation = null;
+        boolean registryCommitted = false;
+        boolean sessionCommitted = false;
+        try {
+            registryMutation = registry.captureLiveMutation();
+            smpsSession.commitRestore(restore.session());
+            registry.commitPreparedRestoreState(restore.registry());
+            registry.reapplySessionControls();
+            registry.commitLiveMutation(registryMutation);
+            registryCommitted = true;
+            smpsSession.commitLiveMutation(sessionMutation);
+            sessionCommitted = true;
+        } catch (RuntimeException failure) {
+            if (registryMutation != null && !registryCommitted) {
+                try {
+                    registry.rollbackLiveMutation(registryMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            if (!sessionCommitted) {
+                try {
+                    smpsSession.rollbackLiveMutation(sessionMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            throw failure;
+        }
+        try {
+            registry.publishPreparedRestoreDiagnostics(restore.registry());
+        } catch (RuntimeException ignored) {
+            // Observer failures cannot roll back or reject committed audio.
+        }
+        registry.publishCommittedDiagnostics(registryMutation);
+        smpsSession.publishCommittedDiagnostics();
+    }
+
+    private void discardPreparedRestore(
+            PreparedPresentationRestore restore) {
+        if (restore != null) {
+            registry.discardPreparedRestore(restore.registry());
+        }
+    }
+
+    private void stopTransientVoicesAtomically() {
+        if (smpsSession == null) {
+            registry.stopTransientVoices();
+            return;
+        }
+        SmpsDriverSession.LiveMutationToken sessionMutation =
+                smpsSession.captureLiveMutation();
+        AudioVoiceRegistry.LiveMutationToken registryMutation = null;
+        boolean registryCommitted = false;
+        boolean sessionCommitted = false;
+        try {
+            registryMutation = registry.captureLiveMutation();
+            smpsSession.applyCommand(new SmpsSessionCommand.StopAllSfx());
+            registry.stopTransientVoices();
+            registry.commitLiveMutation(registryMutation);
+            registryCommitted = true;
+            smpsSession.commitLiveMutation(sessionMutation);
+            sessionCommitted = true;
+            registry.publishCommittedDiagnostics(registryMutation);
+            smpsSession.publishCommittedDiagnostics();
+        } catch (RuntimeException failure) {
+            if (registryMutation != null && !registryCommitted) {
+                try {
+                    registry.rollbackLiveMutation(registryMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            if (!sessionCommitted) {
+                try {
+                    smpsSession.rollbackLiveMutation(sessionMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            throw failure;
+        }
     }
 
     /**
@@ -511,7 +644,11 @@ public final class AudioPresentationProducer {
      */
     public void applyPendingCommandsAtOwnerBoundary() {
         assertOwnerBoundary();
-        commands.applyPending(commandApplier);
+        if (smpsSession != null) {
+            applyPendingSessionCommandsTransactionally();
+        } else {
+            commands.applyPending(commandApplier);
+        }
     }
 
     public void replaceSink(AudioPresentationSink sink) {
@@ -549,13 +686,13 @@ public final class AudioPresentationProducer {
             }
         }
         captureCount = 0;
-        AudioVoiceRegistry.PreparedSnapshotRestore prepared =
+        PreparedPresentationRestore prepared =
                 preparedSelectedRestore;
         preparedSelectedRestore = null;
         selectedRestore = null;
         selectedRestoreResolver = null;
         try {
-            registry.discardPreparedRestore(prepared);
+            discardPreparedRestore(prepared);
         } finally {
             try {
                 registry.clear();
@@ -573,6 +710,147 @@ public final class AudioPresentationProducer {
                 }
             }
         }
+    }
+
+    private short[] presentLegacyForward(int stereoFrames) {
+        commands.applyPending(commandApplier);
+        registry.beginRendering();
+        try {
+            registry.serviceOuterFrame();
+            return forwardRate > 1.0
+                    ? mixForwardResampled(stereoFrames)
+                    : mixer.mix(registry, stereoFrames);
+        } finally {
+            registry.endRendering();
+        }
+    }
+
+    private short[] presentSessionForward(int stereoFrames) {
+        SmpsDriverSession.LiveMutationToken sessionMutation =
+                smpsSession.captureLiveMutation();
+        AudioVoiceRegistry.LiveMutationToken registryMutation = null;
+        boolean registryCommitted = false;
+        boolean sessionCommitted = false;
+        try {
+            registryMutation = registry.captureLiveMutation();
+            commands.applyPendingAtomically(
+                    this::applyResolvedSessionCommand);
+            registry.beginRendering();
+            SmpsServiceOutcome outcome = smpsSession.serviceForward();
+            if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
+                registry.clearForGlobalStopWithoutWrites();
+            }
+            short[] pcm = forwardRate > 1.0
+                    ? mixSessionForwardResampled(stereoFrames)
+                    : mixSessionForward(stereoFrames);
+            registry.endRendering();
+            registry.commitLiveMutation(registryMutation);
+            registryCommitted = true;
+            smpsSession.commitLiveMutation(sessionMutation);
+            sessionCommitted = true;
+            registry.publishCommittedDiagnostics(registryMutation);
+            smpsSession.publishCommittedDiagnostics();
+            return pcm;
+        } catch (RuntimeException failure) {
+            if (registryMutation != null && !registryCommitted) {
+                try {
+                    registry.rollbackLiveMutation(registryMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            if (!sessionCommitted) {
+                try {
+                    smpsSession.rollbackLiveMutation(sessionMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            throw failure;
+        }
+    }
+
+    private void applyPendingSessionCommandsTransactionally() {
+        SmpsDriverSession.LiveMutationToken sessionMutation =
+                smpsSession.captureLiveMutation();
+        AudioVoiceRegistry.LiveMutationToken registryMutation = null;
+        boolean registryCommitted = false;
+        boolean sessionCommitted = false;
+        try {
+            registryMutation = registry.captureLiveMutation();
+            commands.applyPendingAtomically(
+                    this::applyResolvedSessionCommand);
+            registry.commitLiveMutation(registryMutation);
+            registryCommitted = true;
+            smpsSession.commitLiveMutation(sessionMutation);
+            sessionCommitted = true;
+            registry.publishCommittedDiagnostics(registryMutation);
+            smpsSession.publishCommittedDiagnostics();
+        } catch (RuntimeException failure) {
+            if (registryMutation != null && !registryCommitted) {
+                try {
+                    registry.rollbackLiveMutation(registryMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            if (!sessionCommitted) {
+                try {
+                    smpsSession.rollbackLiveMutation(sessionMutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            throw failure;
+        }
+    }
+
+    private void applyResolvedSessionCommand(
+            AudioPresentationCommand command) {
+        AudioPresentationSessionCommandApplier.apply(
+                smpsSession, registry, command);
+    }
+
+    private short[] mixSessionForward(int stereoFrames) {
+        smpsSession.renderFrames(
+                smpsSourcePcm, 0, stereoFrames);
+        return mixer.mixPcmVoices(
+                registry, stereoFrames, smpsSourcePcm, 0);
+    }
+
+    private short[] mixSessionForwardResampled(int stereoFrames) {
+        if (stereoFrames <= 0) {
+            return forwardPcm;
+        }
+        int sourceFramesNeeded = Math.toIntExact(
+                (long) Math.floor(
+                        (stereoFrames - 1) * forwardRate + 0.5) + 1);
+        smpsSession.renderFrames(
+                smpsSourcePcm, 0, sourceFramesNeeded);
+        int consumedSourceFrames = 0;
+        int outputFrame = 0;
+        while (consumedSourceFrames < sourceFramesNeeded) {
+            int chunkFrames = Math.min(maxStereoFrames,
+                    sourceFramesNeeded - consumedSourceFrames);
+            short[] chunk = mixer.mixPcmVoices(
+                    registry, chunkFrames, smpsSourcePcm,
+                    consumedSourceFrames * CHANNELS);
+            while (outputFrame < stereoFrames) {
+                long picked = (long) Math.floor(
+                        outputFrame * forwardRate + 0.5);
+                if (picked >= consumedSourceFrames + chunkFrames) {
+                    break;
+                }
+                int sourceIndex =
+                        (int) (picked - consumedSourceFrames) * CHANNELS;
+                int targetIndex = outputFrame * CHANNELS;
+                forwardPcm[targetIndex] = chunk[sourceIndex];
+                forwardPcm[targetIndex + 1] = chunk[sourceIndex + 1];
+                outputFrame++;
+            }
+            consumedSourceFrames += chunkFrames;
+        }
+        return forwardPcm;
     }
 
     private AudioPresentationSink requireCompatibleSink(

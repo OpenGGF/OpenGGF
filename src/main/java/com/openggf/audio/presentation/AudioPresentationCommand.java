@@ -2,6 +2,8 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.session.PreparedSmpsMusicActivation;
+import com.openggf.audio.session.PreparedSmpsSfxProgram;
 
 import java.util.Objects;
 
@@ -94,13 +96,27 @@ public sealed interface AudioPresentationCommand
             int priority,
             Integer musicId,
             AudioSourceDescriptor sourceDescriptor,
-            int maxStereoFrames) implements VoiceDescriptor {
+            int maxStereoFrames,
+            PreparedSmpsMusicActivation activation)
+            implements VoiceDescriptor {
         public SmpsVoiceDescriptor {
             Objects.requireNonNull(sourceDescriptor, "sourceDescriptor");
             if (maxStereoFrames < 0) {
                 throw new IllegalArgumentException(
                         "maxStereoFrames must be non-negative");
             }
+        }
+
+        /** Task-6 standalone/tool compatibility constructor. */
+        @Deprecated(forRemoval = true)
+        public SmpsVoiceDescriptor(
+                long voiceId,
+                int priority,
+                Integer musicId,
+                AudioSourceDescriptor sourceDescriptor,
+                int maxStereoFrames) {
+            this(voiceId, priority, musicId, sourceDescriptor,
+                    maxStereoFrames, null);
         }
     }
 
@@ -162,9 +178,18 @@ public sealed interface AudioPresentationCommand
     record EndMusicOverride(int musicId) implements AudioPresentationCommand {
     }
 
-    record AddSmpsSfx(ResolvedSmpsSfxSource source) implements AudioPresentationCommand {
+    record AddSmpsSfx(
+            ResolvedSmpsSfxSource source,
+            PreparedSmpsSfxProgram program)
+            implements AudioPresentationCommand {
         public AddSmpsSfx {
             Objects.requireNonNull(source, "source");
+        }
+
+        /** Task-6 standalone/tool compatibility constructor. */
+        @Deprecated(forRemoval = true)
+        public AddSmpsSfx(ResolvedSmpsSfxSource source) {
+            this(source, null);
         }
     }
 

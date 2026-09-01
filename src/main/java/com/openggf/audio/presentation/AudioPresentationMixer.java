@@ -30,16 +30,56 @@ public final class AudioPresentationMixer {
     }
 
     public short[] mix(PresentationVoiceSource voices, int stereoFrames) {
+        return mixInternal(voices, stereoFrames, null, 0, false);
+    }
+
+    /**
+     * Seeds the mix with the session's sole physical packet and then mixes
+     * only PCM voices. {@code initialOffsetSamples} is an interleaved-sample
+     * offset into the session packet.
+     */
+    public short[] mixPcmVoices(
+            PresentationVoiceSource voices,
+            int stereoFrames,
+            short[] initialPcm,
+            int initialOffsetSamples) {
+        return mixInternal(voices, stereoFrames,
+                Objects.requireNonNull(initialPcm, "initialPcm"),
+                initialOffsetSamples, true);
+    }
+
+    private short[] mixInternal(
+            PresentationVoiceSource voices,
+            int stereoFrames,
+            short[] initialPcm,
+            int initialOffsetSamples,
+            boolean pcmOnly) {
         if (stereoFrames < 0 || stereoFrames > maxStereoFrames) {
             throw new IllegalArgumentException("stereoFrames outside declared capacity");
         }
         Objects.requireNonNull(voices, "voices");
         int samples = stereoFrames * 2;
-        Arrays.fill(accumulation, 0, samples, 0L);
+        if (initialPcm == null) {
+            Arrays.fill(accumulation, 0, samples, 0L);
+        } else {
+            if (initialOffsetSamples < 0
+                    || initialOffsetSamples + (long) samples
+                            > initialPcm.length) {
+                throw new IllegalArgumentException(
+                        "initial PCM does not contain the requested range");
+            }
+            for (int sample = 0; sample < samples; sample++) {
+                accumulation[sample] =
+                        initialPcm[initialOffsetSamples + sample];
+            }
+        }
 
         int voiceCount = voices.orderedVoiceCount();
         for (int voiceIndex = 0; voiceIndex < voiceCount; voiceIndex++) {
             PresentationVoice voice = voices.orderedVoiceAt(voiceIndex);
+            if (pcmOnly && !(voice instanceof PcmPresentationVoice)) {
+                continue;
+            }
             Arrays.fill(voiceScratch, 0, samples, 0L);
             try {
                 voice.mixInto(voiceScratch, stereoFrames);

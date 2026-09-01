@@ -599,15 +599,8 @@ class TestLiveRewindManagerAudioCleanup {
         assertEquals(AudioSourceDescriptor.baseMusic(musicId),
                 snapshot.presentation().activeMusic()
                         .sourceDescriptor());
-        assertTrue(snapshot.presentation().voices().stream()
-                        .filter(com.openggf.audio.presentation
-                                .PresentationVoiceSnapshot.Smps.class
-                                ::isInstance)
-                        .map(com.openggf.audio.presentation
-                                .PresentationVoiceSnapshot.Smps.class
-                                ::cast)
-                        .anyMatch(voice -> hasSfxSource(
-                                voice.driver().logical(), sfxId)),
+        assertTrue(hasSfxSource(
+                        snapshot.presentation().smpsLogical(), sfxId),
                 "producer snapshot must retain source-bearing SFX "
                         + Integer.toHexString(sfxId));
     }

@@ -11,6 +11,7 @@ import java.util.Objects;
  * Adapts one complete SMPS driver to the presentation mixer without separating
  * its music and SFX sequencers. Channel arbitration remains owned by the driver.
  */
+@Deprecated(forRemoval = true)
 public final class SmpsCompositeVoice implements PresentationVoice {
     private final long voiceId;
     private final int priority;

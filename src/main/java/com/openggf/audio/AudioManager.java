@@ -36,12 +36,12 @@ import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.AudioPresentationSessionCommandApplier;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SmpsAssetKey;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.OpenAlPcmSink;
@@ -980,9 +980,11 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     /**
-     * Replays one logical command into a detached presentation registry.
-     * The live shadow and its rewind/history cursor remain untouched until
-     * the manager-owned dual restore commits at the selected target.
+     * Replays one logical command into detached presentation metadata and a
+     * transactionally borrowed view of the one persistent SMPS session. The
+     * session is rolled back byte-for-byte after the staged snapshot is
+     * captured, so the live shadow and its rewind/history cursor remain
+     * untouched until the manager-owned dual restore commits at release.
      */
     private void stageDeferredPresentationCommand(AudioCommand command) {
         if (command == null) {
@@ -1008,6 +1010,8 @@ public class AudioManager implements MusicRestoreSink {
         AudioPresentationDependencyResolver.DiagnosticTransaction
                 stagingDiagnostics =
                 shadowFactory.beginDiagnosticTransaction();
+        SmpsDriverSession.LiveMutationToken sessionMutation = null;
+        RuntimeException primaryFailure = null;
         try {
             stagedRegistry.restore(selected.presentation(), shadowFactory);
             String[] resolutionFailure = new String[1];
@@ -1045,7 +1049,23 @@ public class AudioManager implements MusicRestoreSink {
                         "Presentation rewind command resolution failed: "
                                 + resolutionFailure[0]);
             }
-            stagedCommands.applyPending(stagedRegistry::apply);
+            if (selected.presentation().smpsSession() == null
+                    || selected.presentation().smpsLogical() == null) {
+                throw new IllegalArgumentException(
+                        "held-rewind staging requires one SMPS session/logical "
+                                + "snapshot pair");
+            }
+            SmpsDriverSession.PreparedRestore preparedSession =
+                    shadowSmpsSession.prepareRestore(
+                            selected.presentation().smpsSession(),
+                            selected.presentation().smpsLogical(),
+                            shadowFactory::resolveDac);
+            sessionMutation = shadowSmpsSession.captureLiveMutation();
+            shadowSmpsSession.commitRestore(preparedSession);
+            stagedCommands.applyPendingAtomically(commandToApply ->
+                    AudioPresentationSessionCommandApplier.apply(
+                            shadowSmpsSession, stagedRegistry,
+                            commandToApply));
             AudioPresentationSnapshot staged = stagedRegistry.snapshot();
             boolean stagedManagerRingLeft =
                     managerRingAfter(selected.ringLeft(), command);
@@ -1057,18 +1077,34 @@ public class AudioManager implements MusicRestoreSink {
                     staged,
                     selected.donorGameIds(),
                     selected.donorBindings());
+        } catch (RuntimeException failure) {
+            primaryFailure = failure;
+            throw failure;
         } finally {
             try {
-                stagedRegistry.clear();
+                if (sessionMutation != null) {
+                    shadowSmpsSession.rollbackLiveMutation(
+                            sessionMutation);
+                }
+            } catch (RuntimeException rollbackFailure) {
+                if (primaryFailure != null) {
+                    primaryFailure.addSuppressed(rollbackFailure);
+                } else {
+                    throw rollbackFailure;
+                }
             } finally {
                 try {
-                    stagingDiagnostics.endPreparation();
+                    stagedRegistry.clear();
                 } finally {
                     try {
-                        stagingDiagnostics.discard();
+                        stagingDiagnostics.endPreparation();
                     } finally {
-                        presentationCoordFlagHandlers.state()
-                                .restore(liveCoord);
+                        try {
+                            stagingDiagnostics.discard();
+                        } finally {
+                            presentationCoordFlagHandlers.state()
+                                    .restore(liveCoord);
+                        }
                     }
                 }
             }
@@ -1532,13 +1568,7 @@ public class AudioManager implements MusicRestoreSink {
 
     SmpsDriverSnapshot shadowSmpsDriverSnapshotForTesting() {
         ensureShadowPresentation();
-        for (int index = 0; index < shadowRegistry.orderedVoiceCount(); index++) {
-            if (shadowRegistry.orderedVoiceAt(index)
-                    instanceof SmpsCompositeVoice composite) {
-                return composite.driver().captureSnapshot();
-            }
-        }
-        return null;
+        return shadowSmpsSession.captureLogicalSnapshot();
     }
 
     AudioPresentationSourceFactory shadowFactoryForTesting() {

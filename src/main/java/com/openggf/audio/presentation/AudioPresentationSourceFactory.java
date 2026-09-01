@@ -17,11 +17,18 @@ import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.PreparedSmpsMusicActivation;
+import com.openggf.audio.session.PreparedSmpsSfxProgram;
+import com.openggf.audio.session.SmpsDacSelection;
+import com.openggf.audio.session.SmpsLogicalTransitionPolicies;
+import com.openggf.audio.session.SmpsMusicActivation;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSequencerHost;
 import com.openggf.audio.synth.ChipWriteObserver;
 
 import java.io.IOException;
@@ -33,6 +40,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 /**
  * Builds presentation-owned audio sources before rendering begins.
@@ -43,6 +51,38 @@ import java.util.function.BooleanSupplier;
  */
 public final class AudioPresentationSourceFactory
         implements SmpsSfxInstantiation, AudioPresentationDependencyResolver {
+
+    private static final SmpsLogicalWriteTarget DETACHED_WRITE_TARGET =
+            new SmpsLogicalWriteTarget() {
+                @Override public void writeFm(
+                        Object source, int port, int reg, int val) {
+                }
+                @Override public void writePsg(Object source, int val) {
+                }
+                @Override public void setInstrument(
+                        Object source, int channelId, byte[] voice) {
+                }
+                @Override public void playDac(Object source, int note) {
+                }
+                @Override public void stopDac(Object source) {
+                }
+                @Override public void setDacData(DacData data) {
+                }
+                @Override public void selectDac(
+                        SmpsSourceDescriptor source, DacData data) {
+                }
+                @Override public void setFmMute(
+                        int channel, boolean mute) {
+                }
+                @Override public void setPsgMute(
+                        int channel, boolean mute) {
+                }
+                @Override public void setDacInterpolate(
+                        boolean interpolate) {
+                }
+                @Override public void silenceAll() {
+                }
+            };
 
     @FunctionalInterface
     public interface WavAssets {
@@ -145,7 +185,7 @@ public final class AudioPresentationSourceFactory
             Objects.requireNonNull(callback, "callback");
             switch (state) {
                 case PREPARING, DEFERRED -> callbacks.add(callback);
-                case COMMITTED -> callback.run();
+                case COMMITTED -> publishDiagnostic(callback);
                 case DISCARDED -> {
                     // Provisional voices remain bound here while being stopped.
                 }
@@ -162,7 +202,19 @@ public final class AudioPresentationSourceFactory
             List<Runnable> deferred = List.copyOf(callbacks);
             callbacks.clear();
             for (Runnable callback : deferred) {
+                publishDiagnostic(callback);
+            }
+        }
+
+        private void publishDiagnostic(Runnable callback) {
+            try {
                 callback.run();
+            } catch (RuntimeException failure) {
+                try {
+                    diagnosticErrorSink.accept(failure);
+                } catch (RuntimeException ignored) {
+                    // Diagnostics cannot influence committed audio state.
+                }
             }
         }
 
@@ -281,6 +333,7 @@ public final class AudioPresentationSourceFactory
     private ChipWriteObserver chipWriteObserver = ChipWriteObserver.NONE;
     private SfxContentionObserver sfxContentionObserver =
             SfxContentionObserver.NONE;
+    private Consumer<RuntimeException> diagnosticErrorSink = ignored -> { };
     private long nextServiceOrdinal;
     private long nextDriverInstanceOrdinal;
     private DeferredDiagnosticRoot activeDiagnosticRoot;
@@ -323,6 +376,9 @@ public final class AudioPresentationSourceFactory
     public void setDriverServiceObserver(
             SmpsDriverServiceObserver observer) {
         driverServiceObserver = Objects.requireNonNull(observer, "observer");
+        if (smpsSession != null) {
+            smpsSession.setDriverServiceObserver(observer);
+        }
     }
 
     public void setSfxAdmissionPolicy(
@@ -332,11 +388,25 @@ public final class AudioPresentationSourceFactory
 
     public void setChipWriteObserver(ChipWriteObserver observer) {
         chipWriteObserver = Objects.requireNonNull(observer, "observer");
+        if (smpsSession != null) {
+            smpsSession.setChipWriteObserver(observer);
+        }
     }
 
     public void setSfxContentionObserver(
             SfxContentionObserver observer) {
         sfxContentionObserver = Objects.requireNonNull(observer, "observer");
+        if (smpsSession != null) {
+            smpsSession.setSfxContentionObserver(observer);
+        }
+    }
+
+    public void setDiagnosticErrorSink(
+            Consumer<RuntimeException> errorSink) {
+        diagnosticErrorSink = Objects.requireNonNull(errorSink, "errorSink");
+        if (smpsSession != null) {
+            smpsSession.setDiagnosticErrorSink(errorSink);
+        }
     }
 
     @Override
@@ -420,6 +490,16 @@ public final class AudioPresentationSourceFactory
         String resolvedGameId = requireGameId(gameId);
         Objects.requireNonNull(descriptor, "descriptor");
         Objects.requireNonNull(source, "source");
+        if (smpsSession != null) {
+            PreparedSmpsMusicActivation activation =
+                    prepareMusicActivation(source);
+            musicGameIds.put(voiceId, resolvedGameId);
+            return new MusicVoiceEntry(
+                    musicId, descriptor,
+                    new AudioPresentationCommand.SmpsVoiceDescriptor(
+                            voiceId, 0, musicId, descriptor,
+                            maxStereoFrames, activation));
+        }
         SmpsCompositeVoice voice = buildMusicVoice(
                 musicId, voiceId, descriptor, maxStereoFrames, source,
                 newConfiguredDriver(false, musicOrigin(voiceId, musicId)));
@@ -725,6 +805,22 @@ public final class AudioPresentationSourceFactory
     }
 
     @Override
+    public PreparedSmpsSfxProgram prepareCached(
+            ResolvedSmpsSfxSource source) {
+        assertOwnerBoundary();
+        cacheLookupCount.incrementAndGet();
+        SmpsAssetCatalog.ProgramEntry cached = requireCached(source);
+        SmpsSequencer sequencer = detachedSequencer(cached);
+        sequencer.setSfxMode(true);
+        sequencer.setPitch(source.pitchQ16() / 65_536.0f);
+        sequencer.setSfxPriority(source.priority());
+        sequencer.setSpecialSfx(cached.specialSfx());
+        return new PreparedSmpsSfxProgram(
+                sequencerEntry(sequencer, true, cached, null),
+                source.continuousSfxId(), source.trackCount());
+    }
+
+    @Override
     public SmpsCompositeVoice instantiateStandaloneCached(
             ResolvedSmpsSfxSource source) {
         assertOwnerBoundary();
@@ -901,6 +997,18 @@ public final class AudioPresentationSourceFactory
         return pcm;
     }
 
+    @Override
+    public DacData resolveDac(SmpsSourceDescriptor source) {
+        SmpsAssetCatalog.ProgramEntry cached =
+                sourcesByDescriptor.get(Objects.requireNonNull(
+                        source, "source"));
+        if (cached == null) {
+            throw new IllegalStateException(
+                    "no cached DAC dependency for " + source);
+        }
+        return cached.dac();
+    }
+
     public DecodedPcm registerUnsigned8Mono(
             String assetId, byte[] pcm, int sourceRate) {
         return settings.pcmCache().registerUnsigned8Mono(
@@ -985,6 +1093,63 @@ public final class AudioPresentationSourceFactory
         sequencer.setSampleRate(driver.getOutputSampleRate());
         sequencer.setFm6DacOff(settings.fm6DacOff());
         return sequencer;
+    }
+
+    private PreparedSmpsMusicActivation prepareMusicActivation(
+            SmpsAssetCatalog.ProgramEntry source) {
+        SmpsSequencer sequencer = detachedSequencer(source);
+        sequencer.setSpeedShoes(settings.speedShoesEnabled());
+        sequencer.setSpeedMultiplier(settings.speedMultiplier());
+        sequencer.setFallbackVoiceData(source.program());
+        SmpsDriverSnapshot.SequencerEntry entry = sequencerEntry(
+                sequencer, false, source, source.sourceDescriptor());
+        int fmDacTrackCount = 0;
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            SmpsSequencer.TrackType type = sequencer.trackAt(index).type;
+            if (type == SmpsSequencer.TrackType.FM
+                    || type == SmpsSequencer.TrackType.DAC) {
+                fmDacTrackCount++;
+            }
+        }
+        return new PreparedSmpsMusicActivation(
+                new SmpsMusicActivation(
+                        source.sourceDescriptor(), fmDacTrackCount),
+                entry,
+                SmpsLogicalTransitionPolicies.forConfig(
+                        source.staticConfig()),
+                new SmpsDacSelection(
+                        source.sourceDescriptor(), source.dac()));
+    }
+
+    private SmpsSequencer detachedSequencer(
+            SmpsAssetCatalog.ProgramEntry source) {
+        SmpsSequencer sequencer = new SmpsSequencer(
+                source.program(), source.dac(),
+                DETACHED_WRITE_TARGET, SmpsSequencerHost.NONE,
+                settings.audioManager(), source.staticConfig(),
+                source.sourceDescriptor(),
+                SmpsSequencer.SourceDescriptorTrust
+                        .PRECOMPUTED_IMMUTABLE);
+        sequencer.setSampleRate(settings.outputSampleRate());
+        sequencer.setFm6DacOff(settings.fm6DacOff());
+        sequencer.setRegion(settings.region());
+        return sequencer;
+    }
+
+    private static SmpsDriverSnapshot.SequencerEntry sequencerEntry(
+            SmpsSequencer sequencer,
+            boolean sfx,
+            SmpsAssetCatalog.ProgramEntry source,
+            SmpsSourceDescriptor fallbackVoiceSource) {
+        return new SmpsDriverSnapshot.SequencerEntry(
+                sfx,
+                source.sourceDescriptor(),
+                SmpsSequencer.SourceDescriptorTrust
+                        .PRECOMPUTED_IMMUTABLE,
+                fallbackVoiceSource,
+                source.program(), source.dac(),
+                sequencer.getAudioManager(), source.staticConfig(),
+                sequencer.captureSnapshot());
     }
 
     private SmpsSequencer newLegacySequencer(

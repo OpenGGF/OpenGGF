@@ -602,12 +602,8 @@ class AudioManagerCaptureModeTest {
 
     private static boolean hasSmpsVoice(
             AudioPresentationSnapshot presentation) {
-        for (PresentationVoiceSnapshot voice : presentation.voices()) {
-            if (voice instanceof PresentationVoiceSnapshot.Smps) {
-                return true;
-            }
-        }
-        return false;
+        return presentation.smpsLogical() != null
+                && !presentation.smpsLogical().sequencers().isEmpty();
     }
 
     private static byte[] rampPcm(int length) {
