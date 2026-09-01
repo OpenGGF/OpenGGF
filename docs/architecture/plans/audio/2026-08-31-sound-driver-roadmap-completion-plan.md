@@ -143,6 +143,27 @@ independent execution, comparison, and acceptance. Both producers share identity
 runtime state. Rollback is removal of producer bindings: the existing unavailable profiles and
 diagnostic tools remain usable without changing gameplay behavior.
 
+## Current execution checkpoint (2026-09-01)
+
+- Tasks 1-6 have production implementations on
+  `feature/ai-sound-driver-roadmap-completion`: comparison-layer schema, closed TraceChaser
+  producer command, reference projectors, BK2 cursor, production headless runner/observer lease,
+  and v2 OpenGGF capture reducer. Focused review fixes and authority guards are integrated.
+- Task 7 remains deliberately fail-closed where independent artifact attestation or producer
+  identity is unavailable. The rejected unbound S3K Java v2 consumer was removed from production
+  bytecode; a green synthetic path is not publication authority.
+- S2 first-divergence work fixed source-owned admission ownership and PSG3 hardware writes. S1
+  music remains `MATCH (14,690 ticks)` and S1 SFX remains
+  `MATCH (1,967 ticks, 8 dispatches)`.
+- S3K stop/boot exploration exposed a runtime architecture defect: presentation currently models
+  several independently rendered YM2612/PSG pairs, so a global ROM command cannot have one stable
+  physical owner. The reviewed decision is
+  `docs/architecture/designs/audio/2026-09-01-session-owned-smps-physical-device-design.md`.
+- Before Task 8 can make a source-correct S3K global-command change, execute
+  `docs/architecture/plans/audio/2026-09-01-session-owned-smps-physical-device-implementation-plan.md`
+  Tasks 1-8. That subplan is an architecture prerequisite, not a replacement for the six-stage
+  producer/consumer roadmap. Its Task 9 returns here to authenticated first-divergence work.
+
 ## Feature design
 
 - `ComparisonLayerInventory` declares `ROW_LAG`, `REQUESTS`, `DECISIONS`, `SERVICES`, `STATE`,
@@ -509,6 +530,10 @@ metadata remains test-only.
 - [ ] Commit as `feat(audio): enable fixed S2 and S3K parity producers`.
 
 ### Task 8: Execute comparisons and advance first divergences
+
+**Architecture prerequisite:** complete and verify Tasks 1-8 of
+`2026-09-01-session-owned-smps-physical-device-implementation-plan.md`. Do not re-land the
+rejected per-voice S3K stop emitter or advance the frontier on the old multi-device model.
 
 **Files:**
 
