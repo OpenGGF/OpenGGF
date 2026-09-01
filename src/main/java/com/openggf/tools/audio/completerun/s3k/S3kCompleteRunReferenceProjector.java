@@ -48,6 +48,7 @@ public final class S3kCompleteRunReferenceProjector {
             hook(6, 2, 652, HookAction.POP_END_AT_PC, 0, 5),
             hook(7, 2, 4814, HookAction.PUSH_BEGIN, 2, 0),
             hook(8, 2, 4934, HookAction.POP_END_AT_PC, 0, 2));
+    private static final Map<Integer, ManifestHook> SUBMISSION_HOOKS = submissionHooks();
 
     private enum HookAction {
         PUSH_BEGIN, POP_END_AT_PC, TAIL_POP_PUSH, DIRECT_PARENT_PROMOTION, OBSERVATION_MARKER
@@ -61,6 +62,15 @@ public final class S3kCompleteRunReferenceProjector {
                 token, sourceCpu, pc, action, serviceKind, expectedKind));
     }
 
+    private static Map<Integer, ManifestHook> submissionHooks() {
+        Map<Integer, ManifestHook> result = new LinkedHashMap<>(S3K_HOOKS);
+        result.put(27, new ManifestHook(27, 2, 0x1358,
+                HookAction.PUSH_BEGIN, 13, 8));
+        result.put(28, new ManifestHook(28, 2, 0x1374,
+                HookAction.POP_END_AT_PC, 0, 13));
+        return Map.copyOf(result);
+    }
+
     public record Projection(List<CompleteRunAudioTrace.Record> records) {
         public Projection { records = List.copyOf(records); }
     }
@@ -69,6 +79,13 @@ public final class S3kCompleteRunReferenceProjector {
         S3kCompleteRunAssetCatalog catalog = S3kCompleteRunAssetCatalog.load(rom);
         Transaction transaction = new Transaction(catalog);
         S3kCompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, transaction);
+        return transaction.result();
+    }
+
+    Projection projectSubmissionV2PrefixForTesting(Path raw, Path rom) throws IOException {
+        S3kCompleteRunAssetCatalog catalog = S3kCompleteRunAssetCatalog.load(rom);
+        Transaction transaction = new Transaction(catalog, null, null, true, true);
+        S3kCompleteRunReferenceRawAdapter.scanSubmissionV2PrefixForTesting(raw, transaction);
         return transaction.result();
     }
 
@@ -140,6 +157,8 @@ public final class S3kCompleteRunReferenceProjector {
         private final CompleteRunAudioCaptureStore.Writer writer;
         private final CompleteRunAudioTrace.NativeCapabilitySummary capability;
         private final boolean retainNativeDiagnostics;
+        private final boolean projectSubmissions;
+        private final Map<Integer, ManifestHook> manifestHooks;
         private boolean started;
         private boolean committed;
         private int ymPort0Latch;
@@ -151,16 +170,28 @@ public final class S3kCompleteRunReferenceProjector {
         private final Map<Long, ObservedService> servicesByBegin = new LinkedHashMap<>();
         private ObservedService resetService;
         private int nextToken;
+        private long nextRequestOrdinal;
 
-        private Transaction(S3kCompleteRunAssetCatalog catalog) { this(catalog, null, null, true); }
+        private Transaction(S3kCompleteRunAssetCatalog catalog) {
+            this(catalog, null, null, true, false);
+        }
 
         private Transaction(S3kCompleteRunAssetCatalog catalog, CompleteRunAudioCaptureStore.Writer writer,
                 CompleteRunAudioTrace.NativeCapabilitySummary capability,
                 boolean retainNativeDiagnostics) {
+            this(catalog, writer, capability, retainNativeDiagnostics, false);
+        }
+
+        private Transaction(S3kCompleteRunAssetCatalog catalog,
+                CompleteRunAudioCaptureStore.Writer writer,
+                CompleteRunAudioTrace.NativeCapabilitySummary capability,
+                boolean retainNativeDiagnostics, boolean projectSubmissions) {
             this.catalog = catalog;
             this.writer = writer;
             this.capability = capability;
             this.retainNativeDiagnostics = retainNativeDiagnostics;
+            this.projectSubmissions = projectSubmissions;
+            manifestHooks = projectSubmissions ? SUBMISSION_HOOKS : S3K_HOOKS;
         }
 
         @Override public void begin() { started = true; }
@@ -212,10 +243,24 @@ public final class S3kCompleteRunReferenceProjector {
             CompleteRunAudioTrace.FrameNativeDiagnostics nativeDiagnostics = retainNativeDiagnostics
                     ? frameDiagnostics(value.row(), frameCoordinateBase, nextEventCoordinate, completed)
                     : null;
+            List<CompleteRunAudioTrace.Request> requests = projectSubmissions
+                    ? requests(value.submissions()) : null;
             append(new CompleteRunAudioTrace.Frame(value.row(), segment(value.row()), null,
-                    null, null, null, null, chips, nativeDiagnostics));
+                    requests, null, null, null, chips, nativeDiagnostics));
             java.util.stream.Stream.concat(completed.stream(), liveServices.stream()).distinct()
                     .forEach(ObservedService::clearFrameEvidence);
+        }
+
+        private List<CompleteRunAudioTrace.Request> requests(
+                List<S3kCompleteRunReferenceRawAdapter.RawSubmission> submissions) {
+            List<CompleteRunAudioTrace.Request> result = new ArrayList<>(submissions.size());
+            for (var submission : submissions) {
+                var identity = S3kNativeSoundResolver.resolveNativeId(submission.request());
+                result.add(new CompleteRunAudioTrace.Request(nextRequestOrdinal++,
+                        identity.ownerClass(), identity.contentKey(), identity.nativeId(),
+                        "zMusicNumber", null));
+            }
+            return List.copyOf(result);
         }
 
         @Override public void cutoff(S3kCompleteRunReferenceRawAdapter.RawBoundary value) throws IOException {
@@ -594,7 +639,7 @@ public final class S3kCompleteRunReferenceProjector {
             var event = observed.event();
             ObservedService service = snapshotOwner(event, events, index);
             int length = switch (event.subject()) {
-                case 1 -> 8192;
+                case 1 -> projectSubmissions ? 1 : 8192;
                 case 2 -> 1;
                 default -> throw new IllegalArgumentException("S3K raw snapshot range is unknown");
             };
@@ -744,8 +789,8 @@ public final class S3kCompleteRunReferenceProjector {
                     && begin.serviceKind() == hook.serviceKind();
         }
 
-        private static ManifestHook requireManifestHook(int token) {
-            ManifestHook hook = S3K_HOOKS.get(token);
+        private ManifestHook requireManifestHook(int token) {
+            ManifestHook hook = manifestHooks.get(token);
             if (hook == null) {
                 throw new IllegalArgumentException(
                         "S3K raw hook token is not declared by reviewed service manifest");
@@ -924,7 +969,7 @@ public final class S3kCompleteRunReferenceProjector {
                 case 5 -> "BootstrapPsgInit"; case 6 -> "DriverInit"; case 7 -> "DpcmIteration";
                 case 8 -> "SegaPcmIteration"; case 9 -> "DigitalAudioDispatch";
                 case 10 -> "SegaPcmDispatch"; case 11 -> "UpdateEverything";
-                case 12 -> "UpdateMusic";
+                case 12 -> "UpdateMusic"; case 13 -> "MusicMailboxSubmission";
                 default -> throw new IllegalArgumentException("unknown S3K native service kind");
             };
         }

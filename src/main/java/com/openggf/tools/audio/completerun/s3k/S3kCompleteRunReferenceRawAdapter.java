@@ -20,11 +20,14 @@ import java.util.Set;
 /** Strict streaming reader for the game-owned headless S3K raw staging contract. */
 public final class S3kCompleteRunReferenceRawAdapter {
     public static final String SCHEMA = "openggf.s3k-complete-run-audio-raw.v1";
+    static final String SUBMISSION_SCHEMA = "openggf.s3k-complete-run-audio-raw.v2";
     private static final String ROM_SHA1 = "cfbf98c36c776677290a872547ac47c53d2761d6";
     private static final String BK2_SHA256 =
             "aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc";
     private static final String MANIFEST_SHA256 =
             "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0";
+    private static final String SUBMISSION_MANIFEST_SHA256 =
+            "a1736a1ec5e279299f15177192eefc737efbbe4d046d3260a942f7cb3074a16c";
     private static final int MAX_LINE_CHARACTERS = 16 * 1024 * 1024;
     private static final int MAX_EVENTS = 65_536;
     private static final BigInteger MAX_U64 = BigInteger.ONE.shiftLeft(64).subtract(BigInteger.ONE);
@@ -61,12 +64,20 @@ public final class S3kCompleteRunReferenceRawAdapter {
         @Override public byte[] driverState() { return driverState.clone(); }
     }
 
-    public record RawFrame(int row, boolean lag, byte[] driverState, List<RawEvent> events) {
+    public record RawFrame(int row, boolean lag, byte[] driverState, List<RawEvent> events,
+            List<RawSubmission> submissions) {
         public RawFrame {
             driverState = driverState.clone();
             events = List.copyOf(events);
+            submissions = List.copyOf(submissions);
         }
         @Override public byte[] driverState() { return driverState.clone(); }
+    }
+
+    public record RawSubmission(int serviceToken, int parentToken, long beginOrdinal,
+            long endOrdinal, long beginPc, long endPc, int beginHookToken,
+            int endHookToken, List<Integer> mailboxBytes, int request) {
+        public RawSubmission { mailboxBytes = List.copyOf(mailboxBytes); }
     }
 
     public record RawEvent(long ordinal, int serviceToken, int parentToken, long pc,
@@ -98,21 +109,27 @@ public final class S3kCompleteRunReferenceRawAdapter {
             int currentDepth, int hookToken, int sourceCpu, long pc) { }
 
     public static void scan(Path raw, Sink sink) throws IOException {
-        scan(raw, sink, true);
+        scan(raw, sink, true, false);
     }
 
     static void scanPrefixForTesting(Path raw, Sink sink) throws IOException {
-        scan(raw, sink, false);
+        scan(raw, sink, false, false);
     }
 
-    private static void scan(Path raw, Sink sink, boolean requireFull) throws IOException {
+    static void scanSubmissionV2PrefixForTesting(Path raw, Sink sink) throws IOException {
+        scan(raw, sink, false, true);
+    }
+
+    private static void scan(Path raw, Sink sink, boolean requireFull,
+            boolean submissionV2) throws IOException {
         Objects.requireNonNull(raw, "S3K raw staging path");
         Objects.requireNonNull(sink, "S3K raw staging sink");
         boolean transactionStarted = false;
         boolean committed = false;
         try (BufferedReader input = Files.newBufferedReader(raw, StandardCharsets.UTF_8)) {
-            Header header = header(object(requiredLine(input), "metadata"));
-            RawBoundary baseline = boundary(object(requiredLine(input), "baseline"), true);
+            Header header = header(object(requiredLine(input), "metadata"), submissionV2);
+            RawBoundary baseline = boundary(
+                    object(requiredLine(input), "baseline"), true, submissionV2);
             if (baseline.row() != header.firstRow()) {
                 throw invalid("baseline row does not match the pinned first row");
             }
@@ -126,7 +143,7 @@ public final class S3kCompleteRunReferenceRawAdapter {
                 JsonNode value = object(line, "raw record");
                 String type = text(value, "type");
                 if ("cutoff".equals(type)) {
-                    RawBoundary cutoff = boundary(value, false);
+                    RawBoundary cutoff = boundary(value, false, submissionV2);
                     if (cutoff.exclusiveEnd() != expected) {
                         throw invalid("cutoff does not follow the contiguous raw rows");
                     }
@@ -143,7 +160,7 @@ public final class S3kCompleteRunReferenceRawAdapter {
                     committed = true;
                     return;
                 }
-                RawFrame frame = frame(value);
+                RawFrame frame = frame(value, submissionV2);
                 if (frame.row() != expected || expected >= header.exclusiveEnd()) {
                     throw invalid("S3K raw frame rows are not contiguous and in range");
                 }
@@ -161,7 +178,30 @@ public final class S3kCompleteRunReferenceRawAdapter {
         }
     }
 
-    private static Header header(JsonNode value) {
+    private static Header header(JsonNode value, boolean submissionV2) {
+        if (submissionV2) {
+            exact(value, "type", "schema", "rom_sha1", "service_manifest_sha256",
+                    "first_row", "exclusive_end", "state_start", "state_exclusive_end",
+                    "authority");
+            require(text(value, "type").equals("metadata"),
+                    "first raw record is not metadata");
+            require(text(value, "schema").equals(SUBMISSION_SCHEMA),
+                    "S3K submission raw schema is not the unbound v2 contract");
+            require(text(value, "authority").equals("UNBOUND_TEST_ONLY"),
+                    "S3K submission raw authority is not explicitly unbound");
+            require(text(value, "rom_sha1").equals(ROM_SHA1),
+                    "S3K submission raw ROM identity changed");
+            require(text(value, "service_manifest_sha256")
+                            .equals(SUBMISSION_MANIFEST_SHA256),
+                    "S3K submission raw service-manifest identity changed");
+            int first = integer(value, "first_row");
+            int end = integer(value, "exclusive_end");
+            int stateStart = integer(value, "state_start");
+            int stateEnd = integer(value, "state_exclusive_end");
+            require(first == 0 && end == 1 && stateStart == 0x1c00 && stateEnd == 0x2000,
+                    "S3K unbound submission interval or driver-state range changed");
+            return new Header(first, end, stateStart, stateEnd);
+        }
         exact(value, "type", "schema", "rom_sha1", "bk2_sha256",
                 "service_manifest_sha256", "first_row", "exclusive_end",
                 "state_start", "state_exclusive_end");
@@ -180,7 +220,8 @@ public final class S3kCompleteRunReferenceRawAdapter {
         return new Header(first, end, stateStart, stateEnd);
     }
 
-    private static RawBoundary boundary(JsonNode value, boolean baseline) {
+    private static RawBoundary boundary(JsonNode value, boolean baseline,
+            boolean submissionV2) {
         if (baseline) {
             exact(value, "type", "row", "state_hex", "ym_port0_latch", "ym_port1_latch",
                     "native_arm_epoch", "native_armed", "active_services", "pending_descendants");
@@ -194,15 +235,29 @@ public final class S3kCompleteRunReferenceRawAdapter {
         int end = baseline ? -1 : integer(value, "exclusive_end");
         RawBoundary result = new RawBoundary(row, end, state(value), unsignedByte(value, "ym_port0_latch"),
                 unsignedByte(value, "ym_port1_latch"), nonNegativeLong(value, "native_arm_epoch"),
-                bool(value, "native_armed"), serviceJson(value, "active_services", 8),
-                serviceJson(value, "pending_descendants", MAX_EVENTS));
-        if (baseline) {
+                bool(value, "native_armed"),
+                serviceJson(value, "active_services", 8, submissionV2),
+                serviceJson(value, "pending_descendants", MAX_EVENTS, submissionV2));
+        if (baseline && submissionV2) {
+            require(result.ymPort0Latch() == 0 && result.ymPort1Latch() == 0,
+                    "S3K unbound submission baseline YM latches changed");
+            require(result.nativeArmEpoch() == 0 && result.nativeArmed(),
+                    "S3K unbound submission baseline native state changed");
+            require(result.activeServices().isEmpty() && result.pendingDescendants().isEmpty(),
+                    "S3K unbound submission baseline frontier is not empty");
+        } else if (baseline) {
             require(result.ymPort0Latch() == 0x28 && result.ymPort1Latch() == 0xa1,
                     "S3K raw baseline YM latches changed");
             require(result.nativeArmEpoch() == 1 && result.nativeArmed(),
                     "S3K raw baseline native arm proof changed");
             require(result.activeServices().isEmpty() && result.pendingDescendants().isEmpty(),
                     "S3K raw baseline frontier is not empty");
+        } else if (submissionV2) {
+            require(result.nativeArmed() && result.nativeArmEpoch() == 0,
+                    "S3K unbound submission cutoff native state changed");
+            require(result.activeServices().stream().noneMatch(RawService::complete)
+                            && result.pendingDescendants().stream().allMatch(RawService::complete),
+                    "S3K unbound submission cutoff lifecycle partition changed");
         } else {
             require(result.nativeArmed() && result.nativeArmEpoch() >= 1,
                     "S3K raw cutoff lost its native arm proof");
@@ -213,8 +268,10 @@ public final class S3kCompleteRunReferenceRawAdapter {
         return result;
     }
 
-    private static RawFrame frame(JsonNode value) {
-        exact(value, "type", "row", "lag", "state_hex", "events");
+    private static RawFrame frame(JsonNode value, boolean submissionV2) {
+        if (submissionV2) exact(value, "type", "row", "lag", "state_hex", "events",
+                "submissions");
+        else exact(value, "type", "row", "lag", "state_hex", "events");
         require(text(value, "type").equals("frame"), "unknown S3K raw record type");
         JsonNode source = value.get("events");
         require(source != null && source.isArray() && source.size() <= MAX_EVENTS,
@@ -259,11 +316,99 @@ public final class S3kCompleteRunReferenceRawAdapter {
             events.add(new RawEvent(ordinal, unsignedWord(event, "service_token"),
                     unsignedWord(event, "parent_token"), unsignedInt(event, "pc"),
                     unsignedWord(event, "subject"), unsignedWord(event, "offset"),
-                    kind, serviceKind(event, "service_kind"),
+                    kind, serviceKind(event, "service_kind", submissionV2),
                     depth(event, "depth"), sourceCpu, payloadLength,
                     valueByte, flags, reserved, payload));
         }
-        return new RawFrame(integer(value, "row"), bool(value, "lag"), state(value), events);
+        List<RawSubmission> submissions = submissionV2
+                ? submissions(value.get("submissions"), events) : List.of();
+        return new RawFrame(integer(value, "row"), bool(value, "lag"), state(value),
+                events, submissions);
+    }
+
+    private static List<RawSubmission> submissions(JsonNode source, List<RawEvent> events) {
+        require(source != null && source.isArray() && source.size() <= MAX_EVENTS,
+                "S3K raw submission list is not bounded");
+        List<RawSubmission> result = new ArrayList<>(source.size());
+        Set<Integer> tokens = new HashSet<>();
+        long previousBegin = -1;
+        for (JsonNode value : source) {
+            exact(value, "service_token", "parent_token", "begin_ordinal", "end_ordinal",
+                    "begin_pc", "end_pc", "begin_hook_token", "end_hook_token",
+                    "mailbox_hex", "request");
+            int token = nonZeroWord(value, "service_token");
+            int parent = nonZeroWord(value, "parent_token");
+            long begin = nonNegativeLong(value, "begin_ordinal");
+            long end = nonNegativeLong(value, "end_ordinal");
+            require(tokens.add(token), "S3K raw submission service token is duplicated");
+            require(begin > previousBegin, "S3K raw submissions are not in native begin order");
+            previousBegin = begin;
+            require(end > begin && end < events.size(),
+                    "S3K raw submission native interval is outside its frame");
+            long beginPc = unsignedInt(value, "begin_pc");
+            long endPc = unsignedInt(value, "end_pc");
+            int beginHook = unsignedWord(value, "begin_hook_token");
+            int endHook = unsignedWord(value, "end_hook_token");
+            require(beginPc == 0x1358 && endPc == 0x1374
+                            && beginHook == 27 && endHook == 28,
+                    "S3K raw submission Play_Music boundary changed");
+            String mailbox = text(value, "mailbox_hex");
+            require(mailbox.matches("[0-9a-f]{2}"),
+                    "S3K raw submission mailbox is not exact lowercase byte hex");
+            List<Integer> bytes = List.of(Integer.parseInt(mailbox, 0, 2, 16));
+            int request = unsignedByte(value, "request");
+            require(request == bytes.getFirst(),
+                    "S3K raw submission request differs from its mailbox evidence");
+            requireSubmissionEvents(events, token, parent, begin, end, bytes);
+            result.add(new RawSubmission(token, parent, begin, end, beginPc, endPc,
+                    beginHook, endHook, bytes, request));
+        }
+        long declaredBegins = events.stream()
+                .filter(event -> event.kind() == 1 && event.serviceKind() == 13).count();
+        long declaredEnds = events.stream()
+                .filter(event -> event.kind() == 2 && event.serviceKind() == 13).count();
+        require(declaredBegins == result.size() && declaredEnds == result.size(),
+                "S3K raw submission inventory is not exact");
+        return List.copyOf(result);
+    }
+
+    private static void requireSubmissionEvents(List<RawEvent> events, int token, int parent,
+            long beginOrdinal, long endOrdinal, List<Integer> bytes) {
+        require(endOrdinal == beginOrdinal + 4,
+                "S3K raw submission snapshot interval is not the bounded native shape");
+        RawEvent begin = events.get(Math.toIntExact(beginOrdinal));
+        RawEvent start = events.get(Math.toIntExact(beginOrdinal + 1));
+        RawEvent chunk = events.get(Math.toIntExact(beginOrdinal + 2));
+        RawEvent finish = events.get(Math.toIntExact(beginOrdinal + 3));
+        RawEvent end = events.get(Math.toIntExact(endOrdinal));
+        require(begin.kind() == 1 && begin.serviceToken() == token
+                        && begin.parentToken() == parent && begin.serviceKind() == 13
+                        && begin.depth() == 1 && begin.sourceCpu() == 2
+                        && begin.pc() == 0x1358 && begin.subject() == 27,
+                "S3K raw submission begin evidence changed");
+        require(start.kind() == 5 && chunk.kind() == 6 && finish.kind() == 7
+                        && start.serviceToken() == token && chunk.serviceToken() == token
+                        && finish.serviceToken() == token
+                        && start.subject() == 2 && chunk.subject() == 2 && finish.subject() == 2
+                        && start.offset() == 0 && start.payloadLength() == 0
+                        && chunk.offset() == 0 && chunk.payloadLength() == 1
+                        && finish.offset() == 1 && finish.payloadLength() == 0
+                        && start.sourceCpu() == 2 && chunk.sourceCpu() == 2
+                        && finish.sourceCpu() == 2
+                        && start.pc() == 0x1374 && chunk.pc() == 0x1374
+                        && finish.pc() == 0x1374,
+                "S3K raw submission snapshot evidence changed");
+        BigInteger expectedPayload = BigInteger.valueOf(bytes.getFirst());
+        require(chunk.payload().equals(expectedPayload),
+                "S3K raw submission mailbox bytes differ from native snapshot evidence");
+        require(end.kind() == 2 && end.serviceToken() == token
+                        && end.parentToken() == parent && end.serviceKind() == 13
+                        && end.depth() == 1 && end.sourceCpu() == 2
+                        && end.pc() == 0x1374 && end.subject() == 28,
+                "S3K raw submission completion evidence changed");
+        require(events.subList(Math.toIntExact(endOrdinal + 1), events.size()).stream()
+                        .anyMatch(event -> event.kind() == 1 && event.serviceKind() == 12),
+                "S3K raw submission is not ordered before following UpdateMusic consumption");
     }
 
     private static byte[] state(JsonNode value) {
@@ -276,7 +421,8 @@ public final class S3kCompleteRunReferenceRawAdapter {
         return bytes;
     }
 
-    private static List<RawService> serviceJson(JsonNode value, String field, int maximum) {
+    private static List<RawService> serviceJson(JsonNode value, String field, int maximum,
+            boolean submissionV2) {
         JsonNode array = value.get(field);
         require(array != null && array.isArray() && array.size() <= maximum,
                 "S3K raw boundary service list is not bounded");
@@ -287,7 +433,7 @@ public final class S3kCompleteRunReferenceRawAdapter {
                     "current_depth", "begin_coordinate", "end_coordinate", "begin_pc", "end_pc",
                     "begin_hook_token", "end_hook_token", "begin_source_cpu", "cancelled", "complete",
                     "chips", "snapshots", "ancestry_transitions");
-            int kind = serviceKind(service, "kind");
+            int kind = serviceKind(service, "kind", submissionV2);
             int beginHookToken = unsignedWord(service, "begin_hook_token");
             int sourceCpu = integer(service, "begin_source_cpu");
             long beginPc = unsignedInt(service, "begin_pc");
@@ -476,10 +622,10 @@ public final class S3kCompleteRunReferenceRawAdapter {
         return result;
     }
 
-    private static int serviceKind(JsonNode value, String field) {
+    private static int serviceKind(JsonNode value, String field, boolean submissionV2) {
         int result = unsignedByte(value, field);
         require(result == 0 || result == 1 || result == 2 || result == 3
-                        || (result >= 5 && result <= 12),
+                        || (result >= 5 && result <= (submissionV2 ? 13 : 12)),
                 "S3K raw " + field + " is outside the reviewed S3K manifest");
         return result;
     }
