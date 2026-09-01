@@ -1,6 +1,8 @@
 package com.openggf.tests;
 
 import com.openggf.camera.Camera;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.game.GameServices;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -8,6 +10,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.FireCurtainStage;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
@@ -205,6 +208,37 @@ public class TestS3kAiz1FireCurtainHeadless {
         assertTrue(state.active(), "Render state should be active");
         assertTrue(state.coverHeightPx() > 0, "Cover height should be > 0, got " + state.coverHeightPx());
         assertEquals(FireCurtainStage.AIZ1_RISING, state.stage(), "Stage should be AIZ1_RISING");
+    }
+
+    @Test
+    public void fireTransitionRestoresLevelMusicAfterMinibossEscapeTimer()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.playMusic(Sonic3kMusic.MINIBOSS.id);
+        audio.presentFrame(PresentationMode.SILENT);
+
+        LevelManager levelManager = GameServices.level();
+        var currentAct = LevelManager.class.getDeclaredField("currentAct");
+        currentAct.setAccessible(true);
+        currentAct.setInt(levelManager, 1);
+        levelManager.setApparentAct(0);
+
+        Sonic3kAIZEvents events = getAizEvents();
+        var timer = Sonic3kAIZEvents.class
+                .getDeclaredField("fireMusicRestoreTimer");
+        timer.setAccessible(true);
+        timer.setInt(events, 0);
+        var advance = Sonic3kAIZEvents.class
+                .getDeclaredMethod("advanceFireMusicRestore");
+        advance.setAccessible(true);
+        advance.invoke(events);
+        audio.presentFrame(PresentationMode.SILENT);
+
+        assertNotNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
+                "the escape timer must leave level music active");
+        assertEquals(Sonic3kMusic.AIZ1.id,
+                audio.captureLogicalSnapshot().presentation().activeMusic().musicId(),
+                "Restore_LevelMusic must use apparent AIZ1 while AIZ2 resources are loaded");
     }
 
     @Test

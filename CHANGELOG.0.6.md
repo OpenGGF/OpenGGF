@@ -446,9 +446,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 - **AIZ miniboss music now follows the retail escape boundary:** the `$120`
   `AIZMinibossCutscene_Escape` countdown is owned by persistent AIZ event state,
-  survives the AIZ1-to-AIZ2 reload, and restores level music only when the ROM
-  timer expires. The transition no longer starts AIZ1 music eagerly, so the
-  visual fire outro and trace-synchronised progression remain intact.
+  survives the AIZ1-to-AIZ2 reload, and explicitly starts the apparent AIZ1
+  track only when the ROM timer expires, even though AIZ2 resources are loaded.
+  This models `Restore_LevelMusic`'s `Apparent_zone_and_act` playlist lookup
+  instead of the loaded act or the unrelated temporary-override restore API,
+  preventing the broad audio rollback from leaving the miniboss track stopped
+  after the curtain. The transition no longer starts AIZ1 music eagerly, so
+  the visual fire outro and trace-synchronised progression remain intact.
 
 - *Superseded: the coordinator and session manifests were removed; CI and
   release jobs use static target-local report and artifact paths.*
