@@ -34,10 +34,13 @@ class TestSmpsAssetCatalog {
     }
 
     @Test
-    void immutableConfigCopyPreservesAdmissionTimeSfxOwnership() {
+    void immutableConfigCopyPreservesSfxAdmissionPolicies() {
         SmpsSequencerConfig source = new SmpsSequencerConfig.Builder()
                 .sfxChannelOwnershipMode(
                         SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
+                .psg3SfxAdmissionWriteMode(
+                        SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
+                                .SILENCE_TONE_AND_NOISE)
                 .build();
 
         SmpsSequencerConfig copy =
@@ -45,6 +48,10 @@ class TestSmpsAssetCatalog {
 
         assertEquals(SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION,
                 copy.getSfxChannelOwnershipMode());
+        assertEquals(
+                SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
+                        .SILENCE_TONE_AND_NOISE,
+                copy.getPsg3SfxAdmissionWriteMode());
     }
 
     @Test

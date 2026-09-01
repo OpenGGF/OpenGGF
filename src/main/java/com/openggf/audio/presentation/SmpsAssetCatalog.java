@@ -465,6 +465,8 @@ final class SmpsAssetCatalog {
                 .advancePsgEnvelopeOnRest(source.isAdvancePsgEnvelopeOnRest())
                 .writeFmPanOnNote(source.isWriteFmPanOnNote())
                 .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
+                .psg3SfxAdmissionWriteMode(
+                        source.getPsg3SfxAdmissionWriteMode())
                 .sfxChannelOwnershipMode(
                         source.getSfxChannelOwnershipMode())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())

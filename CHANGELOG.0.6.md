@@ -17,10 +17,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 - **Sonic 2 sound effects now reserve their channels at admission:** the
   shipped driver marks each affected music slot overridden while it loads the
   SFX header, before its music-first update pass. OpenGGF now installs those
-  prepared FM/PSG claims atomically without emitting chip writes, so a newly
-  admitted FM4 effect cannot leak one music frequency update before its first
-  SFX service; hidden music modulation continues and the channel restores when
-  the effect ends.
+  prepared FM/PSG claims atomically, so a newly admitted FM4 effect cannot leak
+  one music frequency update before its first SFX service; hidden music
+  modulation continues and the channel restores when the effect ends. PSG3
+  admission independently emits the shipped driver's explicit `$DF/$FF`
+  tone-and-noise silence pair.
 - **Complete-run audio producers now consume private bound inputs:** direct
   Java capture authenticates the same pinned reference installation as the
   shell route, snapshots the ROM, BK2, run manifest, and complete reference

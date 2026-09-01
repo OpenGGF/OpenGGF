@@ -598,7 +598,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsSequencer owner = admission.displacedOwners[action];
             track.active = false;
             forgetSfxClaim(owner, track);
-            if (!ownsAtAdmission) {
+            if (!ownsAtAdmission
+                    && !isReplacedByExplicitPsg3AdmissionPair(
+                            sequencer, track)) {
                 owner.stopNote(track);
             }
             int channel = track.channelId;
@@ -632,10 +634,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (sequencer.trackCount() > 0) {
             removeInactiveSfxSequencers(admission);
         }
-        if (killedPsg3Track && !ownsAtAdmission) {
+        if (killedPsg3Track && !hasExplicitPsg3AdmissionPair(sequencer)) {
             writeRawPsg(0xDF);
             writeRawPsg(0xFF);
         }
+        writeConfiguredPsg3AdmissionPair(sequencer);
         writeS1Psg3AdmissionPair(sequencer);
 
         sequencers.add(sequencer);
@@ -730,15 +733,47 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 != SmpsSequencerConfig.PsgSfxTakeoverMode.S1_PSG3_SILENCE_PAIR) {
             return;
         }
+        // S1 Sound_PlaySFX writes these while loading cPSG3, before the
+        // track's first UpdateMusic service (SD:1038-1044). PSG1/2 have
+        // no corresponding admission write.
+        writePsg3AdmissionPairIfDeclared(sequencer);
+    }
+
+    private void writeConfiguredPsg3AdmissionPair(
+            SmpsSequencer sequencer) {
+        if (sequencer.getConfig().getPsg3SfxAdmissionWriteMode()
+                != SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
+                        .SILENCE_TONE_AND_NOISE) {
+            return;
+        }
+        writePsg3AdmissionPairIfDeclared(sequencer);
+    }
+
+    private boolean hasExplicitPsg3AdmissionPair(
+            SmpsSequencer sequencer) {
+        return sequencer.getConfig().getPsg3SfxAdmissionWriteMode()
+                        == SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
+                                .SILENCE_TONE_AND_NOISE
+                || sequencer.getConfig().getPsgSfxTakeoverMode()
+                        == SmpsSequencerConfig.PsgSfxTakeoverMode
+                                .S1_PSG3_SILENCE_PAIR;
+    }
+
+    private boolean isReplacedByExplicitPsg3AdmissionPair(
+            SmpsSequencer sequencer, SmpsSequencer.Track displacedTrack) {
+        return displacedTrack.type == SmpsSequencer.TrackType.PSG
+                && displacedTrack.channelId == 2
+                && hasExplicitPsg3AdmissionPair(sequencer);
+    }
+
+    private void writePsg3AdmissionPairIfDeclared(
+            SmpsSequencer sequencer) {
         for (int index = 0; index < sequencer.trackCount(); index++) {
             SmpsSequencer.Track track = sequencer.trackAt(index);
             if (track.type != SmpsSequencer.TrackType.PSG
                     || track.channelId != 2) {
                 continue;
             }
-            // S1 Sound_PlaySFX writes these while loading cPSG3, before the
-            // track's first UpdateMusic service (SD:1038-1044). PSG1/2 have
-            // no corresponding admission write.
             writeRawPsg(0xDF);
             writeRawPsg(0xFF);
             return;

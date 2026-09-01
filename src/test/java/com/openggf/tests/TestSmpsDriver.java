@@ -220,8 +220,10 @@ public class TestSmpsDriver {
 
         // SFX-A's track should be deactivated
         assertFalse(sfxA.getTracks().get(0).active, "SFX-A's PSG2 track should be deactivated");
-        // SFX-A's lock should be released (SFX-B hasn't written yet)
-        assertNull(driver.getPsgLock(2), "PSG2 lock should be released after conflict resolution");
+        // S2 installs the replacement's playback-control ownership while
+        // admitting its header, before that track produces a chip write.
+        assertEquals(sfxB, driver.getPsgLock(2),
+                "SFX-B should own PSG2 immediately after admission");
         // SFX-A should be removed entirely (all tracks inactive)
         assertEquals(1, driver.getSequencerCount(), "SFX-A should be removed (all tracks dead)");
         assertEquals(1, driver.getSfxSequencerCount(), "Only SFX-B in sfxSequencers");
@@ -250,9 +252,26 @@ public class TestSmpsDriver {
         driver.rawPsgWrites.clear();
         driver.addSequencer(sfxNew, true);
 
-        // ROM lines 2221-2228: replacing PSG3 SFX should silence both tone2 and noise
-        assertTrue(driver.rawPsgWrites.contains(0xDF), "Should silence PSG3 (0xDF)");
-        assertTrue(driver.rawPsgWrites.contains(0xFF), "Should silence noise channel (0xFF)");
+        // ROM .sfxinitpsg: admitting PSG3 silences both tone2 and noise.
+        assertEquals(List.of(0xDF, 0xFF), driver.rawPsgWrites);
+    }
+
+    @Test
+    public void testPsg3SfxSilencesToneAndNoiseWithoutDisplacedOwner() {
+        SpyDriver driver = new SpyDriver();
+        AbstractSmpsData dummyData = new Sonic2SmpsData(new byte[100]);
+        dummyData.setId(0xCD);
+        DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
+        SmpsSequencer sfx = new SmpsSequencer(
+                dummyData, dummyDac, driver,
+                Sonic2SmpsSequencerConfig.CONFIG);
+        sfx.addTrack(createTrack(SmpsSequencer.TrackType.PSG, 2));
+
+        driver.addSequencer(sfx, true);
+
+        // zPlaySound .sfxinitpsg emits the pair from the admitted C0 header;
+        // it does not depend on there being an older PSG3 owner.
+        assertEquals(List.of(0xDF, 0xFF), driver.rawPsgWrites);
     }
 
     @Test

@@ -97,6 +97,14 @@ public final class SmpsSequencerConfig {
         S1_PSG3_SILENCE_PAIR
     }
 
+    /** Visible PSG writes emitted while admitting a declared PSG3 SFX track. */
+    public enum Psg3SfxAdmissionWriteMode {
+        /** Admission changes no PSG register state. */
+        NONE,
+        /** Silence tone 3 and noise with the PSG writes {@code DF, FF}. */
+        SILENCE_TONE_AND_NOISE
+    }
+
     /** When an accepted SFX program takes ownership of its declared channels. */
     public enum SfxChannelOwnershipMode {
         /** Compatibility behavior: the program's first chip write takes ownership. */
@@ -177,6 +185,7 @@ public final class SmpsSequencerConfig {
     private final boolean writeFmPanOnNote;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
     private final PsgSfxTakeoverMode psgSfxTakeoverMode;
+    private final Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode;
     private final SfxChannelOwnershipMode sfxChannelOwnershipMode;
     private final FmSfxReleaseMode fmSfxReleaseMode;
     private final PsgSfxReleaseMode psgSfxReleaseMode;
@@ -221,6 +230,7 @@ public final class SmpsSequencerConfig {
         this.writeFmPanOnNote = b.writeFmPanOnNote;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
+        this.psg3SfxAdmissionWriteMode = b.psg3SfxAdmissionWriteMode;
         this.sfxChannelOwnershipMode = b.sfxChannelOwnershipMode;
         this.fmSfxReleaseMode = b.fmSfxReleaseMode;
         this.psgSfxReleaseMode = b.psgSfxReleaseMode;
@@ -344,6 +354,10 @@ public final class SmpsSequencerConfig {
         return psgSfxTakeoverMode;
     }
 
+    public Psg3SfxAdmissionWriteMode getPsg3SfxAdmissionWriteMode() {
+        return psg3SfxAdmissionWriteMode;
+    }
+
     public SfxChannelOwnershipMode getSfxChannelOwnershipMode() {
         return sfxChannelOwnershipMode;
     }
@@ -456,6 +470,8 @@ public final class SmpsSequencerConfig {
         private boolean writeFmPanOnNote = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
         private PsgSfxTakeoverMode psgSfxTakeoverMode = PsgSfxTakeoverMode.FORCE_SILENCE;
+        private Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode =
+                Psg3SfxAdmissionWriteMode.NONE;
         private SfxChannelOwnershipMode sfxChannelOwnershipMode =
                 SfxChannelOwnershipMode.FIRST_WRITE;
         private FmSfxReleaseMode fmSfxReleaseMode = FmSfxReleaseMode.LEGACY_FULL_RESTORE;
@@ -494,6 +510,7 @@ public final class SmpsSequencerConfig {
         public Builder writeFmPanOnNote(boolean val) { writeFmPanOnNote = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder psgSfxTakeoverMode(PsgSfxTakeoverMode val) { psgSfxTakeoverMode = val; return this; }
+        public Builder psg3SfxAdmissionWriteMode(Psg3SfxAdmissionWriteMode val) { psg3SfxAdmissionWriteMode = val; return this; }
         public Builder sfxChannelOwnershipMode(SfxChannelOwnershipMode val) { sfxChannelOwnershipMode = val; return this; }
         public Builder fmSfxReleaseMode(FmSfxReleaseMode val) { fmSfxReleaseMode = val; return this; }
         public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }
@@ -519,6 +536,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(palUpdateMode, "palUpdateMode");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
             Objects.requireNonNull(psgSfxTakeoverMode, "psgSfxTakeoverMode");
+            Objects.requireNonNull(psg3SfxAdmissionWriteMode, "psg3SfxAdmissionWriteMode");
             Objects.requireNonNull(sfxChannelOwnershipMode, "sfxChannelOwnershipMode");
             Objects.requireNonNull(fmSfxReleaseMode, "fmSfxReleaseMode");
             Objects.requireNonNull(psgSfxReleaseMode, "psgSfxReleaseMode");

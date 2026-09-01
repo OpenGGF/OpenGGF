@@ -75,6 +75,25 @@ class TestS1SfxTakeoverOrder {
     }
 
     @Test
+    void sonic1Psg3ReplacementDoesNotDuplicateTheAdmissionSilencePair() {
+        SmpsDriver driver = new SmpsDriver();
+        RecordingObserver observer = new RecordingObserver();
+        driver.setChipWriteObserver(observer);
+        SmpsSequencer oldSfx = sequencer(
+                driver, Sonic1SmpsSequencerConfig.CONFIG, 0xC0, 0xC1);
+        SmpsSequencer replacement = sequencer(
+                driver, Sonic1SmpsSequencerConfig.CONFIG, 0xC0, 0xC2);
+        driver.addSequencer(oldSfx, true);
+        driver.writePsg(oldSfx, 0xC0);
+        observer.events.clear();
+
+        driver.addSequencer(replacement, true);
+
+        assertEquals(List.of("PSG:DF", "PSG:FF"), observer.events,
+                "S1's explicit PSG3 header pair is the sole admission write");
+    }
+
+    @Test
     void psg3SfxOwnershipAlsoSuppressesMusicNoiseLatches() {
         SmpsDriver driver = new SmpsDriver();
         RecordingObserver observer = new RecordingObserver();
@@ -113,7 +132,13 @@ class TestS1SfxTakeoverOrder {
 
     private static SmpsSequencer sequencer(
             SmpsDriver driver, SmpsSequencerConfig config, int channelMask) {
-        return new SmpsSequencer(new SingleTrackSfxData(channelMask), AudioTestFixtures.EMPTY_DAC,
+        return sequencer(driver, config, channelMask, 0xC1);
+    }
+
+    private static SmpsSequencer sequencer(
+            SmpsDriver driver, SmpsSequencerConfig config,
+            int channelMask, int id) {
+        return new SmpsSequencer(new SingleTrackSfxData(channelMask, id), AudioTestFixtures.EMPTY_DAC,
                 driver, () -> {}, config);
     }
 
@@ -121,9 +146,9 @@ class TestS1SfxTakeoverOrder {
             implements SmpsSfxData {
         private final int channelMask;
 
-        private SingleTrackSfxData(int channelMask) {
+        private SingleTrackSfxData(int channelMask, int id) {
             super(new byte[] {0, (byte) 0xF2}, 0);
-            setId(0xC1);
+            setId(id);
             this.channelMask = channelMask;
         }
 

@@ -68,6 +68,11 @@ public final class Sonic2SmpsSequencerConfig {
                 .tempoOnFirstTick(true)
                 .sfxChannelOwnershipMode(
                         SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
+                // zPlaySound .sfxinitpsg writes DF then FF while loading any
+                // C0/PSG3 SFX header (sd:2208-2220), independent of ownership.
+                .psg3SfxAdmissionWriteMode(
+                        SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
+                                .SILENCE_TONE_AND_NOISE)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
                 .build();
     }
