@@ -30,6 +30,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_1)
 class TestSfxRenderToolEntryPoints {
+    private static final int FM_SFX_ID = 0xB1;
+    private static final int PSG_SFX_ID = 0xA0;
+    private static final int RATE = 8_000;
+    private static final int RENDER_CAP_FRAMES = RATE;
+
     @TempDir
     Path outputDirectory;
 
@@ -38,16 +43,26 @@ class TestSfxRenderToolEntryPoints {
         File rom = RomTestUtils.ensureSonic1RomAvailable();
         assertNotNull(rom);
 
-        FmSfxRenderTool.main(arguments(rom, outputDirectory));
+        FmSfxRenderTool.main(arguments(rom, outputDirectory, FM_SFX_ID));
 
-        assertStereoPcm(outputDirectory.resolve("s1-sfx-a0-mix.wav"));
-        assertStereoPcm(outputDirectory.resolve("s1-sfx-a0-fm.wav"));
-        assertTrue(Files.readString(outputDirectory.resolve(
-                "s1-sfx-a0-ym-writes.txt")).startsWith("# game=s1"));
+        assertStereoPcm(outputDirectory.resolve("s1-sfx-b1-mix.wav"));
+        Path fmOnly = outputDirectory.resolve("s1-sfx-b1-fm.wav");
+        assertStereoPcm(fmOnly);
+        assertTrue(Arrays.stream(toInts(readPcm(fmOnly)))
+                .anyMatch(sample -> sample != 0),
+                "FM-only output must contain a real rendered signal");
+        String ymLog = Files.readString(outputDirectory.resolve(
+                "s1-sfx-b1-ym-writes.txt"));
+        assertTrue(ymLog.lines().skip(1).findAny().isPresent(),
+                "FM fixture must issue real YM2612 writes");
+        assertTrue(ymLog.lines().findFirst().orElseThrow()
+                        .contains("complete=true"),
+                "FM fixture must complete rather than hit the render cap");
+        int frames = frameCount(ymLog);
         assertArrayEquals(readPcm(outputDirectory.resolve(
-                        "s1-sfx-a0-mix.wav")),
-                renderTenAdapterPackets(rom),
-                "tool one-frame reads and ten adapter packets must agree");
+                        "s1-sfx-b1-mix.wav")),
+                renderAdapterPackets(rom, FM_SFX_ID, frames),
+                "tool one-frame reads and packeted adapter reads must agree");
     }
 
     @Test
@@ -55,23 +70,41 @@ class TestSfxRenderToolEntryPoints {
         File rom = RomTestUtils.ensureSonic1RomAvailable();
         assertNotNull(rom);
 
-        PsgSfxRenderTool.main(arguments(rom, outputDirectory));
+        PsgSfxRenderTool.main(arguments(rom, outputDirectory, PSG_SFX_ID));
 
         assertStereoPcm(outputDirectory.resolve("s1-a0-mix.wav"));
-        assertStereoPcm(outputDirectory.resolve("s1-a0-psg.wav"));
-        assertTrue(Files.readString(outputDirectory.resolve(
-                "s1-a0-psg-writes.txt")).startsWith("# game=s1"));
+        Path psgOnly = outputDirectory.resolve("s1-a0-psg.wav");
+        assertStereoPcm(psgOnly);
+        assertTrue(Arrays.stream(toInts(readPcm(psgOnly)))
+                .anyMatch(sample -> sample != 0),
+                "PSG-only output must contain a real rendered signal");
+        String psgLog = Files.readString(outputDirectory.resolve(
+                "s1-a0-psg-writes.txt"));
+        assertTrue(psgLog.lines().skip(1).findAny().isPresent(),
+                "PSG fixture must issue real SN76489 writes");
+        assertTrue(frameCount(psgLog) < RENDER_CAP_FRAMES,
+                "PSG fixture must complete rather than hit the render cap");
     }
 
-    private static String[] arguments(File rom, Path output) {
+    private static String[] arguments(File rom, Path output, int sfxId) {
         return new String[] {
                 "--game", "s1",
                 "--rom", rom.getAbsolutePath(),
-                "--sfx", "A0",
+                "--sfx", Integer.toHexString(sfxId),
                 "--out", output.toString(),
-                "--rate", "8000",
-                "--max-seconds", "0.12"
+                "--rate", Integer.toString(RATE),
+                "--max-seconds", "1"
         };
+    }
+
+    private static int frameCount(String writeLog) {
+        String header = writeLog.lines().findFirst().orElseThrow();
+        for (String field : header.split(" ")) {
+            if (field.startsWith("frames=")) {
+                return Integer.parseInt(field.substring("frames=".length()));
+            }
+        }
+        throw new AssertionError("write log has no frame count: " + header);
     }
 
     private static void assertStereoPcm(Path wavPath) throws Exception {
@@ -87,34 +120,36 @@ class TestSfxRenderToolEntryPoints {
         }
     }
 
-    private static short[] renderTenAdapterPackets(File romFile)
-            throws Exception {
+    private static short[] renderAdapterPackets(
+            File romFile, int sfxId, int frames) throws Exception {
         Rom rom = new Rom();
         assertTrue(rom.open(romFile.getAbsolutePath()));
         Sonic1SmpsLoader loader = new Sonic1SmpsLoader(rom);
         try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                 "fm-render", 0,
-                new SmpsPhysicalDevice.Settings(8_000, false, false),
+                new SmpsPhysicalDevice.Settings(RATE, false, false),
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                 ChipWriteObserver.NONE)) {
             SmpsDriver driver = stream.logicalDriver();
             driver.setRegion(SmpsSequencer.Region.NTSC);
             SmpsSequencer sequencer = new SmpsSequencer(
-                    loader.loadSfx(0xA0), loader.loadDacData(), driver,
+                    loader.loadSfx(sfxId), loader.loadDacData(), driver,
                     () -> { }, Sonic1SmpsSequencerConfig.CONFIG);
-            sequencer.setSampleRate(8_000);
+            sequencer.setSampleRate(RATE);
             sequencer.setSfxMode(true);
             driver.addSequencer(sequencer, true);
 
-            short[] rendered = new short[960 * 2];
-            for (int packet = 0; packet < 10; packet++) {
-                short[] pcm = new short[96 * 2];
-                stream.read(pcm);
-                System.arraycopy(pcm, 0, rendered, packet * pcm.length,
-                        pcm.length);
+            short[] rendered = new short[frames * 2];
+            int offset = 0;
+            while (offset < rendered.length) {
+                int packetLength = Math.min(96 * 2,
+                        rendered.length - offset);
+                short[] packet = new short[packetLength];
+                stream.read(packet, packetLength);
+                System.arraycopy(packet, 0, rendered, offset,
+                        packetLength);
+                offset += packetLength;
             }
-            assertTrue(Arrays.stream(toInts(rendered))
-                    .anyMatch(sample -> sample != 0));
             return rendered;
         }
     }

@@ -2,6 +2,13 @@ package com.openggf.audio.debug;
 
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.data.Rom;
+import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
+import com.openggf.game.sonic1.audio.smps.Sonic1SmpsLoader;
+import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -12,8 +19,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSoundTestWavExport {
+    private static final int SFX_SPRING = 0xB1;
+
     @TempDir
     Path outputDirectory;
 
@@ -38,6 +49,48 @@ class TestSoundTestWavExport {
             assertEquals(16, format.getSampleSizeInBits());
             assertEquals(2, format.getChannels());
             assertEquals(37, wav.getFrameLength());
+        }
+    }
+
+    @Nested
+    @RequiresRom(SonicGame.SONIC_1)
+    class RomBackedSfxExport {
+        @Test
+        void renderToWavCompletesRomBackedSfxWithAudiblePcm()
+                throws Exception {
+            var romFile = RomTestUtils.ensureSonic1RomAvailable();
+            assertNotNull(romFile);
+            Rom rom = new Rom();
+            assertTrue(rom.open(romFile.getAbsolutePath()));
+            Sonic1SmpsLoader loader = new Sonic1SmpsLoader(rom);
+            int safetyCap = 8_000;
+            Path output = outputDirectory.resolve("sound-test-sfx.wav");
+            Files.write(output, new byte[16_384]);
+
+            int frames = SoundTestApp.renderToWav(
+                    loader.loadSfx(SFX_SPRING), loader.loadDacData(),
+                    Sonic1SmpsSequencerConfig.CONFIG, output.toFile(), true,
+                    8_000.0, safetyCap);
+
+            assertTrue(frames > 0 && frames < safetyCap,
+                    "ROM-backed SFX must complete before the safety cap");
+            assertEquals(44L + frames * 4L, Files.size(output),
+                    "completed export must truncate stale bytes exactly");
+            assertTrue(hasNonzeroPcm(output),
+                    "completed SFX export must contain rendered audio");
+        }
+    }
+
+    private static boolean hasNonzeroPcm(Path output) throws Exception {
+        try (AudioInputStream wav = AudioSystem.getAudioInputStream(
+                output.toFile())) {
+            byte[] pcm = wav.readAllBytes();
+            for (byte sampleByte : pcm) {
+                if (sampleByte != 0) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
