@@ -1,6 +1,8 @@
 package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -10,9 +12,12 @@ import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +46,9 @@ class TestSmpsAssetCatalog {
                 .psg3SfxAdmissionWriteMode(
                         SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
                                 .SILENCE_TONE_AND_NOISE)
+                .psgSfxTakeoverMode(
+                        SmpsSequencerConfig.PsgSfxTakeoverMode
+                                .S1_PSG3_SILENCE_PAIR)
                 .build();
 
         SmpsSequencerConfig copy =
@@ -52,6 +60,40 @@ class TestSmpsAssetCatalog {
                 SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
                         .SILENCE_TONE_AND_NOISE,
                 copy.getPsg3SfxAdmissionWriteMode());
+        assertEquals(
+                SmpsSequencerConfig.PsgSfxTakeoverMode
+                        .S1_PSG3_SILENCE_PAIR,
+                copy.getPsgSfxTakeoverMode());
+    }
+
+    @Test
+    void copiedSonic1ConfigKeepsOnePsg3PairOnAdmissionAndReplacement() {
+        SmpsSequencerConfig copy = SmpsAssetCatalog.copyConfigWithoutHandler(
+                Sonic1SmpsSequencerConfig.CONFIG);
+        SmpsDriver driver = new SmpsDriver();
+        List<Integer> writes = new ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                writes.add(value);
+            }
+        });
+        SmpsSequencer oldSfx = psg3Sequencer(driver, copy, 0xC1);
+        SmpsSequencer replacement = psg3Sequencer(driver, copy, 0xC2);
+
+        driver.addSequencer(oldSfx, true);
+        assertEquals(List.of(0xDF, 0xFF), writes,
+                "the frozen S1 config must retain its explicit header pair");
+        driver.writePsg(oldSfx, 0xC0);
+        writes.clear();
+
+        driver.addSequencer(replacement, true);
+        assertEquals(List.of(0xDF, 0xFF), writes,
+                "replacement must not add generic cleanup around S1's pair");
     }
 
     @Test
@@ -408,6 +450,30 @@ class TestSmpsAssetCatalog {
                 .fmChannelOrder(new int[] {0})
                 .psgChannelOrder(new int[] {0x80})
                 .build();
+    }
+
+    private static SmpsSequencer psg3Sequencer(
+            SmpsDriver driver, SmpsSequencerConfig config, int id) {
+        return new SmpsSequencer(new Psg3SfxData(id),
+                AudioTestFixtures.EMPTY_DAC, driver, () -> {}, config);
+    }
+
+    private static final class Psg3SfxData extends AbstractSmpsData
+            implements SmpsSfxData {
+        private Psg3SfxData(int id) {
+            super(new byte[] {0, (byte) 0xF2}, 0);
+            setId(id);
+        }
+
+        @Override public int getTickMultiplier() { return 1; }
+        @Override public List<? extends SmpsSfxTrack> getTrackEntries() {
+            return List.of(new SfxTrack(0xC0, 1, 0, 0));
+        }
+        @Override protected void parseHeader() { dividingTiming = 1; tempo = 1; }
+        @Override public byte[] getVoice(int voiceId) { return new byte[25]; }
+        @Override public byte[] getPsgEnvelope(int id) { return null; }
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
     }
 
     private abstract static class CountingData extends AbstractSmpsData {
