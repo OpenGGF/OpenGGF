@@ -1166,6 +1166,8 @@ git commit -m 'refactor(audio): enforce session SMPS ownership'
 - Create: `src/main/java/com/openggf/game/sonic2/audio/Sonic2SmpsCompatibilityPolicy.java`
 - Modify: `src/main/java/com/openggf/game/sonic3k/audio/Sonic3kAudioProfile.java`
 - Modify: `src/main/java/com/openggf/game/sonic3k/audio/Sonic3kSmpsConstants.java`
+- Modify: `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kMonitorObjectInstance.java`
+- Modify: `src/main/java/com/openggf/game/shared/objects/SpeedShoesTimer.java`
 - Modify: `src/main/java/com/openggf/audio/AbstractAudioProfile.java`
 - Modify: `src/main/java/com/openggf/audio/AudioManager.java`
 - Modify: `src/main/java/com/openggf/audio/rewind/AudioCommand.java`
@@ -1186,13 +1188,23 @@ git commit -m 'refactor(audio): enforce session SMPS ownership'
 
 **Interfaces:**
 
-- S3K command constants become source-correct: E2 global stop, E3 PSG mute, E4 SFX-only,
-  FE stop SEGA PCM plus retained global stop. Speed shoes use semantic multipliers 8 and 1 and
-  never route through E2/E3.
+- S3K command constants become source-correct: E0 stop, E1/E5 fade, E2 global stop, E3 PSG
+  silence, E4 state-derived SFX-only stop, and FE stop SEGA PCM plus retained global stop.
+  Commands resolve identically from the music and SFX mailboxes.
+- Speed shoes model the source's direct `zTempoSpeedup` writes of 8/0 as engine-semantic
+  multipliers 8/1 and never route through E2/E3.
 - `Sonic3kSmpsPhysicalPolicy.boot()` returns 85 exact writes.
 - `stopAll()` returns 84 exact writes.
 - S1/S2 compatibility policies preserve the current exact 202-write stop until independently
   source-closed replacements land.
+- E4 is not an immutable physical-policy program: it walks seven live SFX slots and emits
+  state-derived teardown/restoration writes. Its logical session operation preserves music,
+  overrides, tempo/speed state, continuous-SFX globals, ring state, pending activation, selected
+  DAC and raw SEGA PCM. Exact E4 write parity remains a named frontier unless that slot walk and
+  its FM/PSG restoration are ported in full.
+- E3 must never alias speed-off. If its transient four-write PSG-silence behavior is not completed
+  here, expose it as an explicit unsupported/reference-limitation result without false state
+  mutation.
 
 - [ ] **Step 1: Write literal exact-program and command-routing REDs.**
 
@@ -1218,6 +1230,12 @@ git commit -m 'refactor(audio): enforce session SMPS ownership'
 }
 ```
 
+Add REDs proving that E4 is routed from both music and SFX mailboxes, releases only active SFX
+ownership, and preserves continuous-SFX globals, music/override state, speed/tempo, ring state,
+pending activation and raw SEGA PCM. Do not assert one fixed E4 write list. Add source-backed speed
+pickup/expiry REDs for semantic 8/1 with no E2/E3 timeline command, and an E3 RED proving it cannot
+mutate speed or masquerade as a global/SFX stop.
+
 The immutable expected tuple fixture cites S3K `zStopAllSound` in
 `docs/skdisasm/Sound/Z80 Sound Driver.asm` (design anchors D:2460-2521, shipped
 `fix_sndbugs=0`). Assert channel order 6,0,1,2,4,5; PSG `$9F,$BF,$DF,$FF`; YM-I
@@ -1240,11 +1258,16 @@ mvn -Dmse=off \
 
 - [ ] **Step 3: Implement immutable policy programs and source-correct command identities.**
 
-Route FE and E2 to the same retained session command, submitted exactly once. FE removes raw PCM
-immediately. Global stop service emits once even with no logical program, returns
-`GLOBAL_STOP_CONSUMED`, clears every logical save area, and lets the producer transaction clear
-sample/raw state. E4 clears SFX ownership only. Keep E3 a named unresolved PSG-mute frontier if
-the source-owned mutation is not completed in this task; do not map it to speed control.
+Route FE and E2 to the same retained session command, submitted exactly once from either mailbox.
+FE removes raw PCM immediately. Global stop service emits once even with no logical program,
+returns `GLOBAL_STOP_CONSUMED`, clears every logical save area, and lets the producer transaction
+clear sample/raw state. Implement E4 as a distinct logical driver/session operation over current
+SFX ownership; do not reuse broad registry/raw cleanup and do not add it to the immutable physical
+policy. Preserve the source globals and non-SFX state listed above. If the exact seven-slot
+teardown/restoration walk is not ported, record exact E4 writes as the next frontier rather than
+claiming parity. Keep E3 a named unresolved PSG-silence frontier if the source-owned mutation is
+not completed in this task; do not map it to speed control. Route speed pickup/expiry through
+semantic multiplier operations (8/1), not sound-command IDs.
 
 - [ ] **Step 4: Make the oracle use the production policy.**
 
@@ -1271,6 +1294,8 @@ Then run the mandatory S1 music and SFX parity gate block above; require both `M
 git add src/main/java/com/openggf/game/sonic3k/audio \
   src/main/java/com/openggf/game/sonic1/audio/Sonic1SmpsCompatibilityPolicy.java \
   src/main/java/com/openggf/game/sonic2/audio/Sonic2SmpsCompatibilityPolicy.java \
+  src/main/java/com/openggf/game/sonic3k/objects/Sonic3kMonitorObjectInstance.java \
+  src/main/java/com/openggf/game/shared/objects/SpeedShoesTimer.java \
   src/main/java/com/openggf/audio \
   src/main/java/com/openggf/tools/audio/parity/s3k/S3kOpenGgfAudioCapture.java \
   src/test/java/com/openggf/audio/session/ExactWriteProgramFixture.java \
