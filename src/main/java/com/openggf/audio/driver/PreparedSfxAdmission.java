@@ -13,6 +13,8 @@ public final class PreparedSfxAdmission {
     private final SmpsDriver owner;
     private final SmpsSequencer sequencer;
     private final boolean continuousExtension;
+    private final int claimedFmMask;
+    private final int claimedPsgMask;
     private final int affectedFmMask;
     private final int affectedPsgMask;
     private final int continuousSfxId;
@@ -26,6 +28,8 @@ public final class PreparedSfxAdmission {
             SmpsDriver owner,
             SmpsSequencer sequencer,
             boolean continuousExtension,
+            int claimedFmMask,
+            int claimedPsgMask,
             int affectedFmMask,
             int affectedPsgMask,
             int continuousSfxId,
@@ -36,6 +40,8 @@ public final class PreparedSfxAdmission {
         this.owner = owner;
         this.sequencer = sequencer;
         this.continuousExtension = continuousExtension;
+        this.claimedFmMask = claimedFmMask;
+        this.claimedPsgMask = claimedPsgMask;
         this.affectedFmMask = affectedFmMask;
         this.affectedPsgMask = affectedPsgMask;
         this.continuousSfxId = continuousSfxId;
@@ -55,6 +61,14 @@ public final class PreparedSfxAdmission {
 
     public boolean continuousExtension() {
         return continuousExtension;
+    }
+
+    public int claimedFmMask() {
+        return claimedFmMask;
+    }
+
+    public int claimedPsgMask() {
+        return claimedPsgMask;
     }
 
     public int affectedFmMask() {

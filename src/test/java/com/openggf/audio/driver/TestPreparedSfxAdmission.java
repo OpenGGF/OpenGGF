@@ -112,6 +112,126 @@ class TestPreparedSfxAdmission {
     }
 
     @Test
+    void admissionOwnershipTransfersOccupiedAndRetriggeredChannelsWithoutWrites() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencerConfig config = admissionConfig();
+        SmpsSequencer first = sequencer(
+                driver, 0xA0, config, track(0, 1));
+        driver.addSequencer(first, true);
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.add("YM:" + port + ":" + register + ":" + value);
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                writes.add("PSG:" + value);
+            }
+        });
+
+        SmpsSequencer displaced = sequencer(
+                driver, 0xA1, config, track(0, 1));
+        driver.addSequencer(displaced, true);
+
+        assertTrue(writes.isEmpty(),
+                "accepted channel displacement mutates driver RAM only");
+
+        SmpsSequencer retrigger = sequencer(
+                driver, 0xA1, config, track(0, 1));
+        driver.addSequencer(retrigger, true);
+
+        assertTrue(writes.isEmpty(),
+                "same-ID replacement must retain the zero-write admission boundary");
+        assertEquals(List.of(retrigger), driver.sequencersForTesting());
+    }
+
+    @Test
+    void admissionSameIdReplacementReleasesOldOnlyChannelWithoutWrites() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencerConfig config = admissionConfig();
+        SmpsSequencer music = sequencer(
+                driver, 0x81, config(null), track(0, 1), track(1, 2));
+        driver.addSequencer(music, false);
+        SmpsSequencer existing = sequencer(
+                driver, 0xA0, config, track(0, 1));
+        driver.addSequencer(existing, true);
+        assertTrue(music.trackAt(0).overridden);
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.add("YM:" + port + ":" + register + ":" + value);
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                writes.add("PSG:" + value);
+            }
+        });
+        SmpsSequencer replacement = sequencer(
+                driver, 0xA0, config, track(1, 1));
+
+        driver.addSequencer(replacement, true);
+
+        assertTrue(writes.isEmpty(),
+                "old-only ownership is released as driver RAM, not a chip write");
+        assertFalse(music.trackAt(0).overridden,
+                "the dropped role is visible to the next music service");
+        assertTrue(music.trackAt(1).overridden,
+                "the replacement's newly claimed role is already hidden");
+        assertEquals(List.of(music, replacement),
+                driver.sequencersForTesting());
+        assertEquals(List.of(-1, 1, -1, -1, -1, -1),
+                Arrays.stream(driver.captureSnapshot().fmLockSequencerIds())
+                        .boxed().toList(),
+                "the replacement owns only its newly declared channel");
+    }
+
+    @Test
+    void firstWriteDiagnosticsPreferAnInterposedOwnerOverDeferredHistory() {
+        SmpsDriver driver = new SmpsDriver();
+        List<SfxContentionObserver.Admission> admissions = new ArrayList<>();
+        List<SfxContentionObserver.Arbitration> arbitrations = new ArrayList<>();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission admission) {
+                admissions.add(admission);
+            }
+
+            @Override
+            public void onRoleArbitrated(Arbitration arbitration) {
+                arbitrations.add(arbitration);
+            }
+        });
+        SmpsSequencer displacedDac = sequencer(
+                driver, 0xA0, config(null), track(0x16, 1));
+        driver.addSequencer(displacedDac, true);
+        driver.writeFm(displacedDac, 1, 0xA2, 0x22);
+        SmpsSequencer challengerDac = sequencer(
+                driver, 0xA1, config(null), track(0x16, 1));
+        driver.addSequencer(challengerDac, true);
+        SmpsSequencer interposedFm6 = sequencer(
+                driver, 0xA2, config(null), track(5, 1));
+        driver.addSequencer(interposedFm6, true);
+        driver.writeFm(interposedFm6, 1, 0xA2, 0x44);
+        SfxContentionObserver.Source interposedSource = admissions.stream()
+                .map(SfxContentionObserver.Admission::source)
+                .filter(source -> source.descriptor().id() == 0xA2)
+                .findFirst().orElseThrow();
+        arbitrations.clear();
+
+        driver.writeFm(challengerDac, 1, 0xA2, 0x66);
+
+        assertEquals(1, arbitrations.size());
+        assertEquals(interposedSource, arbitrations.getFirst().previousOwner(),
+                "the actual FM6 owner supersedes deferred DAC displacement history");
+        assertFalse(arbitrations.getFirst().acquired(),
+                "the older equal-priority challenger cannot steal from the interposer");
+    }
+
+    @Test
     void mixedFm6DacAndDuplicateNewHeadersStopEachExactConflictOnceInHeaderOrder() {
         OrderedStopDriver driver = new OrderedStopDriver();
         SmpsSequencer existing = sequencer(driver, 0xA0, config(null),
@@ -807,6 +927,13 @@ class TestPreparedSfxAdmission {
     private static SmpsSequencerConfig config(CoordFlagHandler handler) {
         return new SmpsSequencerConfig.Builder()
                 .coordFlagHandler(handler)
+                .build();
+    }
+
+    private static SmpsSequencerConfig admissionConfig() {
+        return new SmpsSequencerConfig.Builder()
+                .sfxChannelOwnershipMode(
+                        SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
                 .build();
     }
 

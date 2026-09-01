@@ -66,6 +66,8 @@ public final class Sonic2SmpsSequencerConfig {
                 // DefDrv.txt's "Tempo1Tick = PlayMusic" claim does not match the
                 // shipped driver and previously skipped the first TempoWait.
                 .tempoOnFirstTick(true)
+                .sfxChannelOwnershipMode(
+                        SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
                 .build();
     }

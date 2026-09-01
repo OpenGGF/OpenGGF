@@ -736,6 +736,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
     }
 
+    /**
+     * Updates the driver-RAM override bit without performing release writes.
+     * Admission-time channel-mask changes are pure ownership mutations in the
+     * shipped driver; the next ordinary music service owns any audible write.
+     */
+    public void setChannelOverriddenWithoutRestore(
+            TrackType type, int channelId, boolean overridden) {
+        for (Track track : tracks) {
+            if (track.type == type && track.channelId == channelId) {
+                track.overridden = overridden;
+            }
+        }
+    }
+
     private void restoreFrequency(Track t) {
         if (t.type == TrackType.PSG) {
             boolean noiseUsesTone2 = t.noiseMode && t.channelId == 2 && (t.psgNoiseParam & 0x03) == 0x03;

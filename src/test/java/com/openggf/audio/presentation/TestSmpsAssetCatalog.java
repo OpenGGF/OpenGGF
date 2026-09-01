@@ -34,6 +34,20 @@ class TestSmpsAssetCatalog {
     }
 
     @Test
+    void immutableConfigCopyPreservesAdmissionTimeSfxOwnership() {
+        SmpsSequencerConfig source = new SmpsSequencerConfig.Builder()
+                .sfxChannelOwnershipMode(
+                        SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
+                .build();
+
+        SmpsSequencerConfig copy =
+                SmpsAssetCatalog.copyConfigWithoutHandler(source);
+
+        assertEquals(SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION,
+                copy.getSfxChannelOwnershipMode());
+    }
+
+    @Test
     void firstRegistrationFreezesOnceAndSameSourceRepeatIsConstantWork() {
         SmpsAssetCatalog catalog = catalog();
         CountingSfxData source = CountingSfxData.sfx(0xA0, 1);
