@@ -1,10 +1,12 @@
 package com.openggf.audio.synth;
 
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLogicalWriteTarget;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
 
 import java.util.Arrays;
 
-public class VirtualSynthesizer implements Synthesizer {
+public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
     private final PsgChip psg;
     private final Ym2612Chip ym;
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
@@ -81,7 +83,7 @@ public class VirtualSynthesizer implements Synthesizer {
     }
 
     /** Returns whether chip writes can currently invoke user code. */
-    protected final boolean hasChipWriteObserver() {
+    public final boolean hasChipWriteObserver() {
         return chipWriteObserverEnabled;
     }
 
@@ -124,13 +126,33 @@ public class VirtualSynthesizer implements Synthesizer {
         ym.setDacData(data);
     }
 
+    @Override
+    public void selectDac(SmpsSourceDescriptor source, DacData data) {
+        // Standalone synthesis has one physical DAC bank, so source
+        // provenance does not affect the selected data.
+        setDacData(data);
+    }
+
+    /**
+     * Returns the identity-bearing DAC bank needed by the combined legacy
+     * driver snapshot without exposing this physical synthesizer itself.
+     */
+    public DacData selectedDacDataForSnapshot() {
+        return ym.liveDacDataReference();
+    }
+
+    /** Restores the identity-bearing DAC bank for a combined legacy snapshot. */
+    public void restoreSelectedDacData(DacData data) {
+        ym.setDacData(data);
+    }
+
     /**
      * Captures the identity-bearing DAC bank selected by a live command.
      * General synth/rewind snapshots intentionally omit this process-local
      * dependency and continue to resolve it through sequencer descriptors.
      */
     protected final DacData captureLiveDacDataReference() {
-        return ym.liveDacDataReference();
+        return selectedDacDataForSnapshot();
     }
 
     /**
@@ -138,7 +160,7 @@ public class VirtualSynthesizer implements Synthesizer {
      * playback fields that resolve their current sample through that bank.
      */
     protected final void restoreLiveDacDataReference(DacData data) {
-        ym.setDacData(data);
+        restoreSelectedDacData(data);
     }
 
     @Override

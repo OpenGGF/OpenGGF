@@ -6,6 +6,7 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.synth.VirtualSynthesizer;
@@ -23,13 +24,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
+public class SmpsDriver implements SmpsLogicalWriteTarget, AudioStream {
     public enum ReadMode {
         SAMPLE_ACCURATE,
         HYBRID
     }
 
     private static final int MIN_BATCH_SAMPLES = 32;
+
+    private final SmpsLogicalWriteTarget synthesizer;
+    private final VirtualSynthesizer standalonePhysical;
 
     private final Object sequencersLock = new Object();
     private final List<SmpsSequencer> sequencers = new ArrayList<>();
@@ -269,16 +273,120 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     public SmpsDriver() {
-        super();
+        this(new VirtualSynthesizer());
     }
 
     public SmpsDriver(double outputSampleRate) {
-        super(outputSampleRate);
+        this(new VirtualSynthesizer(outputSampleRate));
     }
 
     public SmpsDriver(
             double outputSampleRate, ChipWriteObserver observer) {
-        super(outputSampleRate, observer);
+        this(new VirtualSynthesizer(outputSampleRate, observer));
+    }
+
+    private SmpsDriver(VirtualSynthesizer standalonePhysical) {
+        this.standalonePhysical = standalonePhysical;
+        synthesizer = standalonePhysical;
+    }
+
+    private VirtualSynthesizer requireStandalonePhysical() {
+        if (standalonePhysical == null) {
+            throw new IllegalStateException(
+                    "session-backed SMPS driver has no standalone physical synthesizer");
+        }
+        return standalonePhysical;
+    }
+
+    public void setOutputSampleRate(double outputSampleRate) {
+        requireStandalonePhysical().setOutputSampleRate(outputSampleRate);
+    }
+
+    public double getOutputSampleRate() {
+        return requireStandalonePhysical().getOutputSampleRate();
+    }
+
+    public void setChipWriteObserver(ChipWriteObserver observer) {
+        requireStandalonePhysical().setChipWriteObserver(observer);
+    }
+
+    protected boolean hasChipWriteObserver() {
+        return requireStandalonePhysical().hasChipWriteObserver();
+    }
+
+    public VirtualSynthesizer.Snapshot captureSynthSnapshot() {
+        return requireStandalonePhysical().captureSynthSnapshot();
+    }
+
+    public void restoreSynthSnapshot(VirtualSynthesizer.Snapshot snapshot) {
+        requireStandalonePhysical().restoreSynthSnapshot(snapshot);
+    }
+
+    public VirtualSynthesizer.SfxAdmissionState captureSfxAdmissionState(
+            int affectedFmMask, int affectedPsgMask) {
+        return requireStandalonePhysical().captureSfxAdmissionState(
+                affectedFmMask, affectedPsgMask);
+    }
+
+    public void restoreSfxAdmissionState(
+            VirtualSynthesizer.SfxAdmissionState state) {
+        requireStandalonePhysical().restoreSfxAdmissionState(state);
+    }
+
+    @Override
+    public void setDacData(DacData data) {
+        requireStandalonePhysical().setDacData(data);
+    }
+
+    @Override
+    public void selectDac(SmpsSourceDescriptor source, DacData data) {
+        synthesizer.selectDac(Objects.requireNonNull(source, "source"),
+                Objects.requireNonNull(data, "data"));
+    }
+
+    protected DacData captureLiveDacDataReference() {
+        return requireStandalonePhysical().selectedDacDataForSnapshot();
+    }
+
+    protected void restoreLiveDacDataReference(DacData data) {
+        requireStandalonePhysical().restoreSelectedDacData(data);
+    }
+
+    public void setFmMute(int channel, boolean mute) {
+        requireStandalonePhysical().setFmMute(channel, mute);
+    }
+
+    public void setPsgMute(int channel, boolean mute) {
+        requireStandalonePhysical().setPsgMute(channel, mute);
+    }
+
+    public void setDacInterpolate(boolean interpolate) {
+        requireStandalonePhysical().setDacInterpolate(interpolate);
+    }
+
+    public void setPsgNoiseShiftOnEveryToggle(boolean everyToggle) {
+        requireStandalonePhysical().setPsgNoiseShiftOnEveryToggle(everyToggle);
+    }
+
+    public boolean isPsgNoiseShiftOnEveryToggle() {
+        return requireStandalonePhysical().isPsgNoiseShiftOnEveryToggle();
+    }
+
+    @Override
+    public void silenceAll() {
+        requireStandalonePhysical().silenceAll();
+    }
+
+    public void forceSilenceChannel(int channelId) {
+        requireStandalonePhysical().forceSilenceChannel(channelId);
+    }
+
+    public void render(short[] buffer) {
+        requireStandalonePhysical().render(buffer);
+    }
+
+    public void renderFrames(short[] buffer, int frameOffset, int frames) {
+        requireStandalonePhysical().renderFrames(buffer, frameOffset, frames);
     }
 
     /** Installs the disabled-by-default complete-service diagnostic observer. */
@@ -1914,7 +2022,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     "length must be an even count within the target buffer");
         }
         synchronized (sequencersLock) {
-            super.renderFrames(buffer, 0, length / 2);
+            requireStandalonePhysical().renderFrames(buffer, 0, length / 2);
         }
         return length;
     }
@@ -1930,7 +2038,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 advanceSequencersBatch(1);
                 removeCompletedSequencers();
 
-                super.render(scratchFrameBuf);
+                requireStandalonePhysical().render(scratchFrameBuf);
                 buffer[i * 2] = scratchFrameBuf[0];
                 buffer[i * 2 + 1] = scratchFrameBuf[1];
             }
@@ -2005,13 +2113,13 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         advanceSequencersBatch(1);
         removeCompletedSequencers();
 
-        super.render(scratchFrameBuf);
+        requireStandalonePhysical().render(scratchFrameBuf);
         buffer[frameIndex * 2] = scratchFrameBuf[0];
         buffer[frameIndex * 2 + 1] = scratchFrameBuf[1];
     }
 
     private void renderChunk(short[] target, int frameOffset, int frames) {
-        super.renderFrames(target, frameOffset, frames);
+        requireStandalonePhysical().renderFrames(target, frameOffset, frames);
     }
 
     private void removeCompletedSequencers() {
@@ -2216,16 +2324,16 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 reportLockDecision(decision);
 
                 if (fmLocks[ch] == source) {
-                    super.writeFm(source, port, reg, val);
+                    synthesizer.writeFm(source, port, reg, val);
                 }
             } else {
                 if (fmLocks[ch] == null) {
-                    super.writeFm(source, port, reg, val);
+                    synthesizer.writeFm(source, port, reg, val);
                 }
             }
         } else {
             // Global or unmapped
-            super.writeFm(source, port, reg, val);
+            synthesizer.writeFm(source, port, reg, val);
         }
     }
 
@@ -2264,11 +2372,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 reportLockDecision(decision);
 
                 if (psgLocks[ownershipChannel] == source) {
-                    super.writePsg(source, val);
+                    synthesizer.writePsg(source, val);
                 }
             } else {
                 if (psgLocks[ownershipChannel] == null) {
-                    super.writePsg(source, val);
+                    synthesizer.writePsg(source, val);
                 }
             }
         } else {
@@ -2301,17 +2409,17 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     reportLockDecision(decision);
 
                     if (psgLocks[ownershipChannel] == (SmpsSequencer) source) {
-                        super.writePsg(source, val);
+                        synthesizer.writePsg(source, val);
                     }
                 } else {
                     if (psgLocks[ownershipChannel] == null) {
-                        super.writePsg(source, val);
+                        synthesizer.writePsg(source, val);
                     }
                 }
             } else {
                 // Unknown channel (no previous latch from this source), drop or pass?
                 // Pass for safety/compatibility
-                super.writePsg(source, val);
+                synthesizer.writePsg(source, val);
             }
         }
     }
@@ -2351,11 +2459,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 reportLockDecision(decision);
 
                 if (fmLocks[channelId] == source) {
-                    super.setInstrument(source, channelId, voice);
+                    synthesizer.setInstrument(source, channelId, voice);
                 }
             } else {
                 if (fmLocks[channelId] == null) {
-                    super.setInstrument(source, channelId, voice);
+                    synthesizer.setInstrument(source, channelId, voice);
                 }
             }
         }
@@ -2373,7 +2481,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 if (fmLocks[ch] != source && !isSfx(fmLocks[ch])
                         && usesForcedFmTakeover(source)) {
                     silenceFmChannel(5);
-                    super.stopDac(null);
+                    synthesizer.stopDac(null);
                 }
                 fmLocks[ch] = (SmpsSequencer) source;
                 updateOverrides(SmpsSequencer.TrackType.FM, ch, true);
@@ -2381,11 +2489,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             reportLockDecision(decision);
 
             if (fmLocks[ch] == source) {
-                super.playDac(source, note);
+                synthesizer.playDac(source, note);
             }
         } else {
             if (fmLocks[ch] == null) {
-                super.playDac(source, note);
+                synthesizer.playDac(source, note);
             }
         }
     }
@@ -2554,13 +2662,13 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private void silenceFmChannel(int ch) {
         // Directly reset envelope state - this takes effect immediately
         // without needing audio samples to be rendered
-        super.forceSilenceChannel(ch);
+        requireStandalonePhysical().forceSilenceChannel(ch);
 
         // Also send Key Off via registers for completeness
         int port = (ch < 3) ? 0 : 1;
         int hwCh = ch % 3;
         int chVal = (port == 0) ? hwCh : (hwCh + 4);
-        super.writeFm(null, 0, 0x28, 0x00 | chVal);
+        synthesizer.writeFm(null, 0, 0x28, 0x00 | chVal);
     }
 
     /**
@@ -2569,7 +2677,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      * Protected to allow test spy access.
      */
     protected void writeRawPsg(int val) {
-        super.writePsg(null, val);
+        synthesizer.writePsg(null, val);
     }
 
     /**
@@ -2578,7 +2686,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      */
     private void silencePsgChannel(int ch) {
         if (ch >= 0 && ch <= 3) {
-            super.writePsg(null, 0x80 | (ch << 5) | (1 << 4) | 0x0F);
+            synthesizer.writePsg(null, 0x80 | (ch << 5) | (1 << 4) | 0x0F);
         }
     }
 
@@ -2589,10 +2697,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             // Don't release lock here, just stop sound.
             // Lock is released when track ends or channel unused?
             // Actually, stopDac is just stopping sound.
-            super.stopDac(source);
+            synthesizer.stopDac(source);
         } else {
             if (fmLocks[ch] == null) {
-                super.stopDac(source);
+                synthesizer.stopDac(source);
             }
         }
     }

@@ -5,6 +5,9 @@ import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.runtime.AudioFrameClock;
+import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.synth.Synthesizer;
+import com.openggf.audio.synth.VirtualSynthesizer;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -118,6 +121,12 @@ class TestAudioPresentationArchitectureGuard {
             "alSourcei(",
             "AL_LOOPING",
             "AL_PITCH");
+
+    @Test
+    void smpsDriverRemainsTheLogicalSynthesizerWithoutPhysicalInheritance() {
+        assertTrue(Synthesizer.class.isAssignableFrom(SmpsDriver.class));
+        assertFalse(VirtualSynthesizer.class.isAssignableFrom(SmpsDriver.class));
+    }
 
     @Test
     void smpsOwnershipDetectorRejectsRepresentativeHotPathRegressions() {
