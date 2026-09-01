@@ -9306,9 +9306,10 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
   E4 releases logical SFX ownership without erasing music or raw/sample state.
   Boot uses the source-verified 85-write program, S1/S2 retain their exact
   compatibility programs, and speed-shoes pickup/expiry use semantic 8/1
-  tempo multipliers instead of the unrelated E2/E3 sound commands. Exact E3
-  PSG-silence, E4's seven-slot physical walk, and full FF control flow remain
-  explicit follow-up frontiers.
+  tempo multipliers instead of the unrelated E2/E3 sound commands. E3 now
+  emits its exact `9F BF DF FF` PSG-silence program without changing music,
+  SFX ownership, overrides, tempo, or pending service state. E4's seven-slot
+  physical walk and full FF control flow remain explicit follow-up frontiers.
 
 ## Commit-history coverage
 

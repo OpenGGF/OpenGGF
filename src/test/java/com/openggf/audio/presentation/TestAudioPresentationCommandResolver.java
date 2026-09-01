@@ -524,6 +524,7 @@ class TestAudioPresentationCommandResolver {
         fixture.resolver.submit(new AudioCommand.SetSpeedShoes(true));
         fixture.resolver.submit(new AudioCommand.SetSpeedMultiplier(8));
         fixture.resolver.submit(new AudioCommand.ChangeMusicTempo(5));
+        fixture.resolver.submit(new AudioCommand.SilencePsg(0xE3));
 
         List<AudioPresentationCommand> commands = drain(fixture.queue);
         assertEquals(List.of(
@@ -533,7 +534,8 @@ class TestAudioPresentationCommandResolver {
                         AudioPresentationCommand.RestoreMusicOverride.class,
                         AudioPresentationCommand.SetSpeedShoes.class,
                         AudioPresentationCommand.SetSpeedMultiplier.class,
-                        AudioPresentationCommand.ChangeMusicTempo.class),
+                        AudioPresentationCommand.ChangeMusicTempo.class,
+                        AudioPresentationCommand.SilencePsg.class),
                 commands.stream().map(Object::getClass).toList());
     }
 

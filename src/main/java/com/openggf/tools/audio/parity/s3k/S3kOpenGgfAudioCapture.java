@@ -38,8 +38,9 @@ import java.util.Objects;
  *
  * <p>Request dispatch mirrors zPlaySoundByIndex (D:1641-1665): music
  * 01h-32h, credits DCh, SFX 33h-DBh, E0h/E2h/E6h-FEh stop-all, E4h stop-SFX.
- * E1h/E5h fades and E3h PSG-mute are not yet modelled by this capture host
- * and are recorded as unsupported (the tick keeps advancing).
+ * E1h/E5h fades are not yet modelled by this capture host and are recorded
+ * as unsupported (the tick keeps advancing). E3h executes the same
+ * source-owned physical-policy program as production.
  */
 public final class S3kOpenGgfAudioCapture {
     private static final double SAMPLE_RATE = 44_100.0;
@@ -190,7 +191,8 @@ public final class S3kOpenGgfAudioCapture {
             // zFadeOutMusic falls through zHaltDACPSG and always silences all
             // PSG channels on the request service (D:2307-2327). The later
             // 28h-step, six-service fade remains explicitly unsupported here.
-            emitPsgSilence(driver);
+            applyProgram(driver,
+                    Sonic3kSmpsPhysicalPolicy.INSTANCE.silenceAllPsg());
             unsupported.add("tick " + ordinal + ": active music fade for request 0x"
                     + Integer.toHexString(id) + " is not modelled by this capture host");
             return;
@@ -205,19 +207,12 @@ public final class S3kOpenGgfAudioCapture {
             return;
         }
         if (id == S3kAudioParitySchema.CMD_MUTE_PSG) {
-            unsupported.add("tick " + ordinal + ": request 0x" + Integer.toHexString(id)
-                    + " is not modelled by this capture host");
+            applyProgram(driver,
+                    Sonic3kSmpsPhysicalPolicy.INSTANCE.silenceAllPsg());
             return;
         }
         // E0h and E6h-FEh: zStopAllSound (map §4.3).
         stream.stopAll();
-    }
-
-    private static void emitPsgSilence(SmpsDriver driver) {
-        driver.writePsg(driver, 0x9f);
-        driver.writePsg(driver, 0xbf);
-        driver.writePsg(driver, 0xdf);
-        driver.writePsg(driver, 0xff);
     }
 
     private static void verifyRomIdentity(Path path) {

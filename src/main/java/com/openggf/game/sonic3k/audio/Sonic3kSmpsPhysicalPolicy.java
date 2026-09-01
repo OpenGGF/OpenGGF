@@ -39,6 +39,13 @@ public final class Sonic3kSmpsPhysicalPolicy
     }
 
     @Override
+    public SmpsWriteProgram silenceAllPsg() {
+        // Sound/Z80 Sound Driver.asm:zPlaySoundByIndex/zFadeEffects routes
+        // E3h to zPSGSilenceAll, whose four iterations add 20h to 9Fh.
+        return SmpsWriteProgram.SILENCE_ALL_PSG;
+    }
+
+    @Override
     public SmpsWriteProgram activateMusic(SmpsMusicActivation activation) {
         return LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE
                 .activateMusic(activation);

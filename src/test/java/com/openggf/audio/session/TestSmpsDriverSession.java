@@ -29,6 +29,7 @@ import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.data.Rom;
+import com.openggf.game.sonic3k.audio.Sonic3kSmpsPhysicalPolicy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -43,6 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -423,6 +425,160 @@ class TestSmpsDriverSession {
                 afterSession.selectedDacSource());
         assertTrue(observer.events().isEmpty(),
                 "exact E4 slot-restoration writes remain a named frontier");
+    }
+
+    @Test
+    void psgSilenceWritesExactRomProgramWithoutMutatingSessionState() {
+        SmpsSessionTestFixtures.RecordingObserver observer =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsPhysicalPolicy policy = Sonic3kSmpsPhysicalPolicy.INSTANCE;
+        SmpsPhysicalDevice.Settings settings =
+                SmpsSessionTestFixtures.settings();
+        SmpsDriverSession session = new SmpsDriverSession(
+                settings, policy, observer,
+                new SmpsSessionProfileFingerprint(
+                        "s3k", 7, policy.identity(), settings));
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = sessionProducer(
+                session, registry, commands);
+        session.queueActivation(activationWithFmTrack(70));
+        session.serviceForward();
+        session.applyCommand(new SmpsSessionCommand.SetSpeedShoes(true));
+        session.applyCommand(new SmpsSessionCommand.SetSpeedMultiplier(8));
+        session.applyCommand(new SmpsSessionCommand.ResetRingAlternation(false));
+        session.applyCommand(new SmpsSessionCommand.PushOverride(
+                activationWithFmTrack(71)));
+        session.serviceForward();
+        session.applyCommand(new SmpsSessionCommand.AdmitSfx(
+                continuousSfx(0xBC)));
+        SmpsDriverSessionSnapshot beforeSession = session.captureSnapshot();
+        SmpsDriverSnapshot beforeLogical = session.captureLogicalSnapshot();
+        Object physicalIdentity = session.physicalIdentityForTesting();
+        observer.clear();
+        commands.submit(new AudioPresentationCommand.SilencePsg(0xE3),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+
+        producer.present(0, PresentationMode.SILENT);
+
+        assertEquals(List.of(
+                "PSG:9F", "PSG:BF", "PSG:DF", "PSG:FF"),
+                observer.events());
+        assertSame(physicalIdentity, session.physicalIdentityForTesting());
+        SmpsDriverSnapshot afterLogical = session.captureLogicalSnapshot();
+        assertEquals(beforeLogical.sequencers().stream()
+                        .map(SmpsDriverSnapshot.SequencerEntry::source)
+                        .toList(),
+                afterLogical.sequencers().stream()
+                        .map(SmpsDriverSnapshot.SequencerEntry::source)
+                        .toList());
+        assertEquals(beforeLogical.sequencers().stream()
+                        .map(SmpsDriverSnapshot.SequencerEntry::sfx)
+                        .toList(),
+                afterLogical.sequencers().stream()
+                        .map(SmpsDriverSnapshot.SequencerEntry::sfx)
+                        .toList());
+        assertArrayEquals(beforeLogical.fmLockSequencerIds(),
+                afterLogical.fmLockSequencerIds());
+        assertArrayEquals(beforeLogical.psgLockSequencerIds(),
+                afterLogical.psgLockSequencerIds());
+        assertEquals(beforeLogical.savedOverrides().size(),
+                afterLogical.savedOverrides().size());
+        assertEquals(beforeLogical.savedOverrides().getFirst().logical()
+                        .sequencers().getFirst().source(),
+                afterLogical.savedOverrides().getFirst().logical()
+                        .sequencers().getFirst().source());
+        assertEquals(beforeLogical.pendingService(),
+                afterLogical.pendingService());
+        assertEquals(beforeLogical.sequencers().getFirst().snapshot()
+                        .tracks().getFirst().overridden(),
+                afterLogical.sequencers().getFirst().snapshot()
+                        .tracks().getFirst().overridden());
+        assertEquals(beforeLogical.sequencers().getFirst().snapshot()
+                        .dividingTiming(),
+                afterLogical.sequencers().getFirst().snapshot()
+                        .dividingTiming());
+        assertEquals(beforeLogical.sequencers().getFirst().snapshot()
+                        .tempoAccumulator(),
+                afterLogical.sequencers().getFirst().snapshot()
+                        .tempoAccumulator());
+        SmpsDriverSessionSnapshot afterSession = session.captureSnapshot();
+        assertEquals(beforeSession.pendingGlobalCommand(),
+                afterSession.pendingGlobalCommand());
+        assertEquals(beforeSession.selectedDacSource(),
+                afterSession.selectedDacSource());
+        assertEquals(beforeSession.speedShoesEnabled(),
+                afterSession.speedShoesEnabled());
+        assertEquals(beforeSession.speedMultiplier(),
+                afterSession.speedMultiplier());
+        assertEquals(beforeSession.ringLeft(), afterSession.ringLeft());
+
+        observer.clear();
+        producer.present(1, PresentationMode.FORWARD);
+        assertTrue(observer.events().stream().noneMatch(
+                        event -> event.startsWith("PSG:")),
+                "the next service must not emit E3 a second time");
+    }
+
+    @Test
+    void psgSilenceObserverFailureCannotPartiallyApplyOrReplay() {
+        AtomicBoolean failFirstPsg = new AtomicBoolean();
+        AtomicInteger psgCallbacks = new AtomicInteger();
+        SmpsPhysicalPolicy policy = Sonic3kSmpsPhysicalPolicy.INSTANCE;
+        SmpsPhysicalDevice.Settings settings =
+                SmpsSessionTestFixtures.settings();
+        SmpsDriverSession session = new SmpsDriverSession(
+                settings, policy, new com.openggf.audio.synth.ChipWriteObserver() {
+                    @Override
+                    public void onYm2612Write(
+                            int port, int register, int value) {
+                    }
+
+                    @Override
+                    public void onPsgWrite(int value) {
+                        psgCallbacks.incrementAndGet();
+                        if (failFirstPsg.getAndSet(false)) {
+                            throw new IllegalStateException(
+                                    "injected PSG observer failure");
+                        }
+                    }
+                }, new SmpsSessionProfileFingerprint(
+                        "s3k", 7, policy.identity(), settings));
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = sessionProducer(
+                session, registry, commands);
+        psgCallbacks.set(0);
+        failFirstPsg.set(true);
+        commands.submit(new AudioPresentationCommand.SilencePsg(0xE3),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+
+        producer.present(0, PresentationMode.SILENT);
+
+        assertEquals(0, commands.size(),
+                "diagnostic failure follows the committed command");
+        assertEquals(4, psgCallbacks.get(),
+                "one failing observer callback cannot suppress later writes");
+        assertArrayEquals(new int[] {15, 15, 15, 15},
+                session.captureSnapshot().physical().synth().psg()
+                        .attenuations());
+        producer.present(1, PresentationMode.SILENT);
+        assertEquals(4, psgCallbacks.get(),
+                "the committed command must not replay");
     }
 
     @Test

@@ -19,6 +19,9 @@ public sealed interface SmpsSessionCommand {
     record StopSmpsSfx() implements SmpsSessionCommand {
     }
 
+    record SilencePsg() implements SmpsSessionCommand {
+    }
+
     record PushOverride(PreparedSmpsMusicActivation activation)
             implements SmpsSessionCommand {
         public PushOverride {

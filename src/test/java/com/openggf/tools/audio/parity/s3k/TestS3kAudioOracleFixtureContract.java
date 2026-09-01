@@ -121,6 +121,28 @@ class TestS3kAudioOracleFixtureContract {
         assertTrue(report.reference().contains("interrupt services suspended"));
     }
 
+    @Test
+    void engineHostModelsE3WithTheSourceOwnedPsgSilenceProgram() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(),
+                "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> services = new ArrayList<>();
+        S3kAudioReferenceReader.readDriverServices(REFERENCE, services::add);
+        S3kAudioTick template = services.get(1);
+        S3kAudioTick e3 = new S3kAudioTick(
+                template.ordinal(), template.lag(), List.of(0xE3, 0, 0),
+                template.global(), template.tracks(), List.of());
+
+        S3kOpenGgfAudioCapture.CaptureResult engine =
+                S3kOpenGgfAudioCapture.capture(
+                        rom.toPath(), List.of(services.getFirst(), e3), null);
+
+        assertEquals(List.of(0x9F, 0xBF, 0xDF, 0xFF),
+                engine.ticks().get(1).writes().stream()
+                        .map(write -> write.value()).toList());
+        assertTrue(engine.unsupportedRequests().isEmpty());
+    }
+
     private static String sha256(Path path) throws Exception {
         return HexFormat.of().formatHex(
                 MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)));

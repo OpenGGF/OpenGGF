@@ -120,8 +120,7 @@ public abstract class AbstractAudioProfile implements GameAudioProfile {
             return true;
         } else if (soundId == getPsgSilenceCommandId()
                 && getPsgSilenceCommandId() != -1) {
-            manager.recordReferenceLimitation(soundId,
-                    "transient four-write PSG silence is not yet modelled");
+            manager.silencePsg(soundId);
             return true;
         } else if (soundId == getStopSfxCommandId()
                 && getStopSfxCommandId() != -1) {

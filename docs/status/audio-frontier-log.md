@@ -27,6 +27,31 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-02 — S3K E3 PSG-silence product gap closes without moving service 128
+
+- **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
+  `feature/ai-sound-driver-roadmap-completion` from `8952620bf` (Task 9A
+  implementation; commit containing this entry).
+- **Fixture:** no capture or fixture changed. The existing authenticated
+  `s3k-aiz1-intro-reference-v1.jsonl.gz` remains unchanged and does not supply
+  an E3 request.
+- **Command:** focused profile/resolver/queue/session/oracle-host tests:
+  `LUA_BIN=lua5.4 mvn -Dmse=off
+  -Ds3k.rom.path=<absolute-S3K-ROM>
+  '-Dtest=com.openggf.game.sonic3k.audio.TestSonic3kSpeedShoesCommandSemantics,com.openggf.audio.presentation.TestAudioPresentationCommandResolver,com.openggf.audio.presentation.TestAudioPresentationCommandQueue,com.openggf.audio.session.TestSmpsDriverSession#psgSilenceWritesExactRomProgramWithoutMutatingSessionState+psgSilenceObserverFailureCannotPartiallyApplyOrReplay,com.openggf.tools.audio.parity.s3k.TestS3kAudioOracleFixtureContract'
+  test -B`.
+- **Result:** **56 tests pass** with 0 failures, 0 errors, and 0 skips. The
+  production typed route and engine oracle host both execute the immutable
+  `9F BF DF FF` program sourced from `zPlaySoundByIndex` /
+  `zPSGSilenceAll`. The session test retains the physical identity and all
+  logical music/SFX/override/tempo/pending-service state, observes no YM
+  writes, and proves there is no next-service duplicate. Observer failure is
+  quarantined after commit and cannot partially apply or replay E3.
+- **Notes:** this closes the source-backed E3 **product gap only**. It does not
+  move or reinterpret the authenticated comparison. Service **128** remains
+  `REFERENCE_LIMITATION`, `field=producer_input`, because the request consumed
+  while the reference producer suspended interrupt services is unavailable.
+
 ## 2026-09-01 — Override-resume producer stops at `REFERENCE_LIMITATION`
 
 - **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,

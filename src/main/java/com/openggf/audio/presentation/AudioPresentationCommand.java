@@ -24,6 +24,7 @@ public sealed interface AudioPresentationCommand
         AudioPresentationCommand.StopMusic,
         AudioPresentationCommand.StopAllSfx,
         AudioPresentationCommand.StopSmpsSfx,
+        AudioPresentationCommand.SilencePsg,
         AudioPresentationCommand.ReferenceLimitation,
         AudioPresentationCommand.FadeMusic,
         AudioPresentationCommand.SetVoiceGain,
@@ -220,6 +221,10 @@ public sealed interface AudioPresentationCommand
     }
 
     record StopSmpsSfx(int sourceCommandId)
+            implements AudioPresentationCommand {
+    }
+
+    record SilencePsg(int sourceCommandId)
             implements AudioPresentationCommand {
     }
 

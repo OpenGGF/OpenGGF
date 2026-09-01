@@ -15,5 +15,10 @@ public interface SmpsPhysicalPolicy {
 
     SmpsWriteProgram stopAll();
 
+    /** Transiently silences all three tone channels and the noise channel. */
+    default SmpsWriteProgram silenceAllPsg() {
+        return SmpsWriteProgram.SILENCE_ALL_PSG;
+    }
+
     SmpsWriteProgram activateMusic(SmpsMusicActivation activation);
 }

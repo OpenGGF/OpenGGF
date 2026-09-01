@@ -86,7 +86,7 @@ class TestSonic3kSpeedShoesCommandSemantics {
     }
 
     @Test
-    void e3IsAnExplicitReferenceLimitationAndNeverSpeedControl() {
+    void e3RoutesToPsgSilenceAndNeverSpeedControl() {
         AudioManager audio = AudioManager.getInstance();
         audio.setBackend(new NullAudioBackend());
         audio.setAudioProfile(new Sonic3kAudioProfile());
@@ -95,10 +95,13 @@ class TestSonic3kSpeedShoesCommandSemantics {
         assertTrue(audio.playSfx(Sonic3kSmpsConstants.CMD_PSG_SILENCE));
 
         assertEquals(before + 1, audio.commandTimeline().entryCount());
-        AudioCommand.ReferenceLimitation limitation = assertInstanceOf(
-                AudioCommand.ReferenceLimitation.class,
-                audio.commandTimeline().entryAt(before).command());
-        assertEquals(0xE3, limitation.sourceCommandId());
+        AudioCommand command =
+                audio.commandTimeline().entryAt(before).command();
+        assertFalse(command instanceof AudioCommand.ReferenceLimitation,
+                "the shipped E3 command is a supported PSG-silence operation");
+        AudioCommand.SilencePsg silence = assertInstanceOf(
+                AudioCommand.SilencePsg.class, command);
+        assertEquals(0xE3, silence.sourceCommandId());
         assertEquals(1, audio.captureLogicalSnapshot().presentation()
                 .speedMultiplier());
     }

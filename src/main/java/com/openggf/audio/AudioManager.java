@@ -893,6 +893,13 @@ public class AudioManager implements MusicRestoreSink {
                 new AudioCommand.StopSmpsSfx(sourceCommandId));
     }
 
+    public void silencePsg(int sourceCommandId) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        recordTimelineCommand(new AudioCommand.SilencePsg(sourceCommandId));
+    }
+
     public void recordReferenceLimitation(
             int sourceCommandId, String reason) {
         if (suppressingRewindReplay()) {
@@ -1009,6 +1016,9 @@ public class AudioManager implements MusicRestoreSink {
             case AudioCommand.StopMusic ignored -> backend.stopPlayback();
             case AudioCommand.StopAllSfx ignored -> backend.stopAllSfx();
             case AudioCommand.StopSmpsSfx ignored -> backend.stopAllSfx();
+            case AudioCommand.SilencePsg ignored -> {
+                // The authoritative presentation owns physical PSG writes.
+            }
             case AudioCommand.RetainGlobalStop ignored ->
                     {
                         ringLeft = true;

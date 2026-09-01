@@ -148,6 +148,9 @@ public final class AudioPresentationCommandResolver {
             case AudioCommand.StopSmpsSfx stop ->
                     enqueue(new AudioPresentationCommand.StopSmpsSfx(
                             stop.sourceCommandId()));
+            case AudioCommand.SilencePsg silence ->
+                    enqueue(new AudioPresentationCommand.SilencePsg(
+                            silence.sourceCommandId()));
             case AudioCommand.RetainGlobalStop stop ->
                     enqueue(new AudioPresentationCommand.RetainGlobalStop(
                             stop.sourceCommandId()));

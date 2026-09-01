@@ -35,6 +35,8 @@ public sealed interface AudioCommand {
 
     record StopSmpsSfx(int sourceCommandId) implements AudioCommand {}
 
+    record SilencePsg(int sourceCommandId) implements AudioCommand {}
+
     record RetainGlobalStop(int sourceCommandId) implements AudioCommand {}
 
     record PlaySegaPcm(

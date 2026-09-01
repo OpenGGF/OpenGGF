@@ -604,6 +604,11 @@ public final class SmpsDriverSession implements AutoCloseable {
             case SmpsSessionCommand.StopMusic ignored -> stopMusic();
             case SmpsSessionCommand.StopAllSfx ignored -> stopAllSfx();
             case SmpsSessionCommand.StopSmpsSfx ignored -> stopSmpsSfx();
+            case SmpsSessionCommand.SilencePsg ignored ->
+                    withPort(driverIdentity, port -> {
+                        applyProgram(port, policy.silenceAllPsg());
+                        return null;
+                    });
             case SmpsSessionCommand.PushOverride push ->
                     pushOverride(push.activation());
             case SmpsSessionCommand.SuspendForPcmOverride ignored ->

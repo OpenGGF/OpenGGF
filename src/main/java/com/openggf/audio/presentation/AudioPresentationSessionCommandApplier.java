@@ -81,6 +81,8 @@ public final class AudioPresentationSessionCommandApplier {
             session.applyCommand(new SmpsSessionCommand.StopAllSfx());
         } else if (command instanceof AudioPresentationCommand.StopSmpsSfx) {
             session.applyCommand(new SmpsSessionCommand.StopSmpsSfx());
+        } else if (command instanceof AudioPresentationCommand.SilencePsg) {
+            session.applyCommand(new SmpsSessionCommand.SilencePsg());
         } else if (command
                 instanceof AudioPresentationCommand.RetainGlobalStop) {
             session.retainGlobalStop();

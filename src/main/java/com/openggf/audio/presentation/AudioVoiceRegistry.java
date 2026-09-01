@@ -441,6 +441,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
         if (command instanceof AudioPresentationCommand.RetainGlobalStop
                 || command instanceof AudioPresentationCommand.StopSmpsSfx
+                || command instanceof AudioPresentationCommand.SilencePsg
                 || command instanceof AudioPresentationCommand
                 .ReferenceLimitation) {
             return true;

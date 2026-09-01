@@ -24,6 +24,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.ReferenceLimitati
 import com.openggf.audio.presentation.AudioPresentationCommand.RetainGlobalStop;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopRawPcmAndRetainGlobalStop;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopSmpsSfx;
+import com.openggf.audio.presentation.AudioPresentationCommand.SilencePsg;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleMute;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleSolo;
 import com.openggf.audio.rewind.AudioCommand;
@@ -297,7 +298,7 @@ class TestAudioPresentationCommandQueue {
                 SetSpeedMultiplier.class.getSimpleName(),
                 ChangeMusicTempo.class.getSimpleName(),
                 ResetRingAlternation.class.getSimpleName())));
-        assertEquals(17, AudioCommand.class.getPermittedSubclasses().length);
+        assertEquals(18, AudioCommand.class.getPermittedSubclasses().length);
     }
 
     @Test
@@ -308,7 +309,8 @@ class TestAudioPresentationCommandQueue {
                 ReplaceRawPcm.class, StopRawPcm.class,
                 StopRawPcmAndRetainGlobalStop.class,
                 RetainGlobalStop.class, StopMusic.class, StopAllSfx.class,
-                StopSmpsSfx.class, ReferenceLimitation.class,
+                StopSmpsSfx.class, SilencePsg.class,
+                ReferenceLimitation.class,
                 FadeMusic.class, SetVoiceGain.class, SetVoicePitch.class,
                 SetSpeedShoes.class, SetSpeedMultiplier.class, ChangeMusicTempo.class,
                 ResetRingAlternation.class, ToggleMute.class, ToggleSolo.class,
