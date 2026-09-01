@@ -1,6 +1,8 @@
 package com.openggf.audio;
 
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -11,6 +13,11 @@ import java.util.Map;
 public interface GameAudioProfile {
     default String presentationGameId() {
         return "base";
+    }
+
+    /** Physical chip policy owned by this base-game presentation session. */
+    default SmpsPhysicalPolicy smpsPhysicalPolicy() {
+        return LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
     }
 
     default void configurePresentationCoordFlagHandlers(

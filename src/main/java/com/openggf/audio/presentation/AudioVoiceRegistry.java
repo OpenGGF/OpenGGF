@@ -35,6 +35,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.VoiceDescriptor;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.session.SmpsDriverSession;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,6 +92,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private final AudioPresentationDependencyResolver dependencyResolver;
     private final SmpsCoordFlagHandlerOwner coordFlagHandlers;
     private final Consumer<String> warningConsumer;
+    private final SmpsDriverSession smpsSession;
     private final MusicSlot[] overrideStack =
             new MusicSlot[MAX_MUSIC_OVERRIDES];
     private final SampleBackedVoice[] sampleSfx =
@@ -141,7 +143,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }, rejectingDependencyResolver(),
                 new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()),
                 ignored -> {
-                });
+                }, null);
     }
 
     public AudioVoiceRegistry(
@@ -149,7 +151,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             SmpsCoordFlagHandlerOwner coordFlagHandlers,
             Consumer<String> warningConsumer) {
         this(sfxInstantiation, rejectingDependencyResolver(),
-                coordFlagHandlers, warningConsumer);
+                coordFlagHandlers, warningConsumer, null);
     }
 
     public AudioVoiceRegistry(
@@ -157,6 +159,16 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             AudioPresentationDependencyResolver dependencyResolver,
             SmpsCoordFlagHandlerOwner coordFlagHandlers,
             Consumer<String> warningConsumer) {
+        this(sfxInstantiation, dependencyResolver, coordFlagHandlers,
+                warningConsumer, null);
+    }
+
+    public AudioVoiceRegistry(
+            SmpsSfxInstantiation sfxInstantiation,
+            AudioPresentationDependencyResolver dependencyResolver,
+            SmpsCoordFlagHandlerOwner coordFlagHandlers,
+            Consumer<String> warningConsumer,
+            SmpsDriverSession smpsSession) {
         ownerThread = Thread.currentThread();
         this.sfxInstantiation =
                 Objects.requireNonNull(sfxInstantiation, "sfxInstantiation");
@@ -166,6 +178,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 Objects.requireNonNull(coordFlagHandlers, "coordFlagHandlers");
         this.warningConsumer =
                 Objects.requireNonNull(warningConsumer, "warningConsumer");
+        this.smpsSession = smpsSession;
     }
 
     public void apply(AudioPresentationCommand command) {

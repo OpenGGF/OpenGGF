@@ -1,0 +1,30 @@
+package com.openggf.audio.session;
+
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
+
+public interface SmpsPhysicalPort {
+    SmpsDriverServiceObserver.DriverIdentity owner();
+
+    long epoch();
+
+    void writeFm(int port, int register, int value);
+
+    void writePsg(int value);
+
+    void setInstrument(int channelId, byte[] voice);
+
+    void playDac(int note);
+
+    void stopDac();
+
+    void selectDac(SmpsDacSelection selection);
+
+    void forceSilenceFmChannel(int channelId);
+
+    AdmissionToken captureAdmissionState(int fmMask, int psgMask);
+
+    void restoreAdmissionState(AdmissionToken token);
+
+    interface AdmissionToken {
+    }
+}

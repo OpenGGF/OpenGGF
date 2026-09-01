@@ -14,6 +14,11 @@ import com.openggf.audio.rewind.AudioTimelineEntry;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsPhysicalDevice;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsSessionProfileFingerprint;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -191,6 +196,7 @@ public class AudioManager implements MusicRestoreSink {
     private AudioPresentationCommandResolver shadowResolver;
     private AudioVoiceRegistry shadowRegistry;
     private AudioPresentationProducer shadowProducer;
+    private SmpsDriverSession shadowSmpsSession;
     /**
      * Frame rate the live {@link #shadowProducer} was constructed with. The
      * producer owns the presentation clock, so this is the only rate at which
@@ -997,7 +1003,8 @@ public class AudioManager implements MusicRestoreSink {
         AudioVoiceRegistry stagedRegistry = new AudioVoiceRegistry(
                 shadowFactory, shadowFactory, presentationCoordFlagHandlers,
                 warning -> LOGGER.warning(
-                        "Presentation rewind staging: " + warning));
+                        "Presentation rewind staging: " + warning),
+                shadowSmpsSession);
         AudioPresentationDependencyResolver.DiagnosticTransaction
                 stagingDiagnostics =
                 shadowFactory.beginDiagnosticTransaction();
@@ -2849,8 +2856,24 @@ public class AudioManager implements MusicRestoreSink {
                         false, 1, this::restoreShadowMusic,
                         new DecodedPcmCache(),
                         AudioManager.class.getClassLoader()::getResourceAsStream);
+        BaseAudioSource base = baseAudioSource;
+        SmpsPhysicalPolicy physicalPolicy = base.profile() != null
+                ? Objects.requireNonNull(
+                        base.profile().smpsPhysicalPolicy(),
+                        "smpsPhysicalPolicy")
+                : LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
+        SmpsPhysicalDevice.Settings physicalSettings =
+                new SmpsPhysicalDevice.Settings(
+                        sampleRate, tuning.dacInterpolate(),
+                        tuning.psgNoiseShiftEveryToggle());
+        SmpsDriverSession smpsSession = new SmpsDriverSession(
+                physicalSettings, physicalPolicy, chipWriteObserver,
+                new SmpsSessionProfileFingerprint(
+                        baseGameId(base), base.generation(),
+                        physicalPolicy.identity(), physicalSettings));
         shadowFactory = new AudioPresentationSourceFactory(
-                () -> true, presentationCoordFlagHandlers, settings);
+                () -> true, presentationCoordFlagHandlers, settings,
+                smpsSession);
         shadowFactory.setAdmissionObserver(admissionObserver);
         shadowFactory.setDriverServiceObserver(driverServiceObserver);
         shadowFactory.setChipWriteObserver(chipWriteObserver);
@@ -2859,7 +2882,8 @@ public class AudioManager implements MusicRestoreSink {
         shadowCommands = new AudioPresentationCommandQueue();
         shadowRegistry = new AudioVoiceRegistry(shadowFactory, shadowFactory,
                 presentationCoordFlagHandlers,
-                warning -> LOGGER.warning("Presentation shadow: " + warning));
+                warning -> LOGGER.warning("Presentation shadow: " + warning),
+                smpsSession);
         shadowResolver = new AudioPresentationCommandResolver(shadowCommands,
                 shadowFactory, new ShadowSources(maxFrames),
                 warning -> LOGGER.warning("Presentation shadow: " + warning),
@@ -2876,7 +2900,8 @@ public class AudioManager implements MusicRestoreSink {
                 Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
                 Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
                 shadowRegistry, shadowCommands, mixer,
-                sink);
+                sink, smpsSession);
+        shadowSmpsSession = smpsSession;
         shadowFrameRate = frameRate;
         shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
         rebindLiveCaptureAudioHandle(sampleRate);
@@ -2928,6 +2953,7 @@ public class AudioManager implements MusicRestoreSink {
         shadowFrameRate = 0;
         shadowResolver = null;
         shadowRegistry = null;
+        shadowSmpsSession = null;
         shadowCommands = null;
         shadowFactory = null;
         shadowParity = null;

@@ -16,6 +16,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.MusicVoiceEntry;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -259,6 +260,7 @@ public final class AudioPresentationSourceFactory
     private final BooleanSupplier ownerThreadBoundary;
     private final SmpsCoordFlagHandlerOwner coordFlagHandlers;
     private final Settings settings;
+    private final SmpsDriverSession smpsSession;
     private final SmpsAssetCatalog assetCatalog;
     private final Map<SmpsSourceDescriptor, SmpsAssetCatalog.ProgramEntry>
             sourcesByDescriptor =
@@ -288,19 +290,29 @@ public final class AudioPresentationSourceFactory
     public AudioPresentationSourceFactory(
             BooleanSupplier ownerThreadBoundary,
             SmpsCoordFlagHandlerOwner coordFlagHandlers) {
-        this(ownerThreadBoundary, coordFlagHandlers, Settings.defaults());
+        this(ownerThreadBoundary, coordFlagHandlers, Settings.defaults(),
+                null);
     }
 
     public AudioPresentationSourceFactory(
             BooleanSupplier ownerThreadBoundary,
             SmpsCoordFlagHandlerOwner coordFlagHandlers,
             Settings settings) {
+        this(ownerThreadBoundary, coordFlagHandlers, settings, null);
+    }
+
+    public AudioPresentationSourceFactory(
+            BooleanSupplier ownerThreadBoundary,
+            SmpsCoordFlagHandlerOwner coordFlagHandlers,
+            Settings settings,
+            SmpsDriverSession smpsSession) {
         this.ownerThreadBoundary =
                 Objects.requireNonNull(ownerThreadBoundary,
                         "ownerThreadBoundary");
         this.coordFlagHandlers =
                 Objects.requireNonNull(coordFlagHandlers, "coordFlagHandlers");
         this.settings = Objects.requireNonNull(settings, "settings");
+        this.smpsSession = smpsSession;
         assetCatalog = new SmpsAssetCatalog(coordFlagHandlers);
     }
 

@@ -5,8 +5,14 @@ import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
+    public enum Initialization {
+        LEGACY_SILENCE,
+        DEFERRED
+    }
+
     private final PsgChip psg;
     private final Ym2612Chip ym;
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
@@ -39,23 +45,35 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
     private int[] scratchRight = new int[0];
 
     public VirtualSynthesizer() {
-        this(Ym2612Chip.getDefaultOutputRate(), ChipWriteObserver.NONE);
+        this(Ym2612Chip.getDefaultOutputRate(), ChipWriteObserver.NONE,
+                Initialization.LEGACY_SILENCE);
     }
 
     public VirtualSynthesizer(double outputSampleRate) {
-        this(outputSampleRate, ChipWriteObserver.NONE);
+        this(outputSampleRate, ChipWriteObserver.NONE,
+                Initialization.LEGACY_SILENCE);
     }
 
     public VirtualSynthesizer(
             double outputSampleRate, ChipWriteObserver observer) {
+        this(outputSampleRate, observer, Initialization.LEGACY_SILENCE);
+    }
+
+    public VirtualSynthesizer(
+            double outputSampleRate,
+            ChipWriteObserver observer,
+            Initialization initialization) {
         // Clean-room SN76489 core; the FM:PSG balance is set here, not inside the chip.
         this.psg = new PsgChip(outputSampleRate, PsgChip.ChipType.INTEGRATED);
         this.psg.configure(PSG_PREAMP_PERCENT, PSG_PANNING_BOTH);
         this.ym = new Ym2612Chip();
         setChipWriteObserver(observer);
         setOutputSampleRate(outputSampleRate);
-        // Match typical driver init: silence chips on startup to avoid power-on noise.
-        silenceAll();
+        if (Objects.requireNonNull(initialization, "initialization")
+                == Initialization.LEGACY_SILENCE) {
+            // Match typical driver init: silence chips on startup to avoid power-on noise.
+            silenceAll();
+        }
     }
 
     public void setOutputSampleRate(double outputSampleRate) {

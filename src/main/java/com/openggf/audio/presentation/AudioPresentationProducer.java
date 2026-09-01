@@ -4,6 +4,7 @@ import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.session.SmpsDriverSession;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ public final class AudioPresentationProducer {
     private final Consumer<AudioPresentationCommand> commandApplier;
     private final IdentityTokenRegistry diagnosticIdentityTokens =
             new IdentityTokenRegistry();
+    private final SmpsDriverSession smpsSession;
 
     private AudioPresentationSink sink;
     private PcmHistoryRing.ReverseCursor reverseCursor;
@@ -73,7 +75,21 @@ public final class AudioPresentationProducer {
             AudioPresentationMixer mixer,
             AudioPresentationSink sink) {
         this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
-                commands, mixer, sink, null);
+                commands, mixer, sink, null, null);
+    }
+
+    public AudioPresentationProducer(
+            int sampleRate,
+            int frameRate,
+            int historyFrames,
+            int crossfadeFrames,
+            AudioVoiceRegistry registry,
+            AudioPresentationCommandQueue commands,
+            AudioPresentationMixer mixer,
+            AudioPresentationSink sink,
+            SmpsDriverSession smpsSession) {
+        this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
+                commands, mixer, sink, smpsSession, null);
     }
 
     AudioPresentationProducer(
@@ -85,6 +101,21 @@ public final class AudioPresentationProducer {
             AudioPresentationCommandQueue commands,
             AudioPresentationMixer mixer,
             AudioPresentationSink sink,
+            Consumer<AudioPresentationCommand> commandApplier) {
+        this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
+                commands, mixer, sink, null, commandApplier);
+    }
+
+    private AudioPresentationProducer(
+            int sampleRate,
+            int frameRate,
+            int historyFrames,
+            int crossfadeFrames,
+            AudioVoiceRegistry registry,
+            AudioPresentationCommandQueue commands,
+            AudioPresentationMixer mixer,
+            AudioPresentationSink sink,
+            SmpsDriverSession smpsSession,
             Consumer<AudioPresentationCommand> commandApplier) {
         if (sampleRate <= 0) {
             throw new IllegalArgumentException("sampleRate must be positive");
@@ -117,6 +148,7 @@ public final class AudioPresentationProducer {
         reversePcm = new short[maxStereoFrames * CHANNELS];
         forwardPcm = new short[maxStereoFrames * CHANNELS];
         frameView = new AudioPresentationFrameView(silence);
+        this.smpsSession = smpsSession;
         this.commandApplier =
                 commandApplier != null ? commandApplier : registry::apply;
     }
@@ -531,7 +563,13 @@ public final class AudioPresentationProducer {
                 try {
                     history.clear();
                 } finally {
-                    sink.close();
+                    try {
+                        sink.close();
+                    } finally {
+                        if (smpsSession != null) {
+                            smpsSession.close();
+                        }
+                    }
                 }
             }
         }
