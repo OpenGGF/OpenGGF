@@ -27,7 +27,7 @@ class TestS3kCompleteRunOpenGgfProducer {
         Exception failure = assertThrows(Exception.class,
                 () -> new S3kCompleteRunOpenGgfProducer().capture(request));
 
-        assertEquals("OpenGGF complete-run producer identity is not installed",
+        assertEquals("OpenGGF producer artifact attestation trust root is not installed",
                 failure.getMessage());
         assertEquals("keep", Files.readString(output));
     }

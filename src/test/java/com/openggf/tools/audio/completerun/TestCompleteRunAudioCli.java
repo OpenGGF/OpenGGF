@@ -129,7 +129,7 @@ class TestCompleteRunAudioCli {
         CliResult reference = result("producer-kind-status", "REFERENCE",
                 "s2_rev01_complete_emeralds.v1");
         assertEquals(4, reference.status());
-        assertTrue(reference.error().contains("pre-row-769"));
+        assertTrue(reference.error().contains("reviewed duplicate capture"));
 
         assertEquals(2, run("producer-kind-status", "attacker", "s2_rev01_complete_emeralds.v1"));
         assertEquals(2, run("producer-kind-status", "OPENGGF", "attacker.profile"));
