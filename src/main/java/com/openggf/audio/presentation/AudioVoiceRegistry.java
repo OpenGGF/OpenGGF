@@ -427,7 +427,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             for (PresentationVoice voice : recreated) {
                 if (voice != null) {
                     try {
-                        voice.stop();
+                        discardDetachedVoice(voice);
                     } catch (RuntimeException cleanupFailure) {
                         failure.addSuppressed(cleanupFailure);
                     }
@@ -508,24 +508,30 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         try {
             PreparedRestore prepared = restore.voices;
             if (prepared.activeMusic() != null) {
-                prepared.activeMusic().voice().stop();
+                discardDetachedVoice(prepared.activeMusic().voice());
             }
             for (MusicSlot slot : prepared.overrides()) {
-                slot.voice().stop();
+                discardDetachedVoice(slot.voice());
             }
             if (prepared.standaloneSmps() != null) {
-                prepared.standaloneSmps().stop();
+                discardDetachedVoice(prepared.standaloneSmps());
             }
             if (prepared.rawPcm() != null) {
-                prepared.rawPcm().stop();
+                discardDetachedVoice(prepared.rawPcm());
             }
             for (SampleBackedVoice sample : prepared.sampleSfx()) {
                 if (sample != null) {
-                    sample.stop();
+                    discardDetachedVoice(sample);
                 }
             }
         } finally {
             restore.diagnostics.discard();
+        }
+    }
+
+    private static void discardDetachedVoice(PresentationVoice voice) {
+        if (voice instanceof SampleBackedVoice sample) {
+            sample.stop();
         }
     }
 

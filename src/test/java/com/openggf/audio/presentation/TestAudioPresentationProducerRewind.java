@@ -10,12 +10,14 @@ import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
+import com.openggf.audio.synth.ChipWriteObserver;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -365,7 +367,7 @@ class TestAudioPresentationProducerRewind {
     }
 
     @Test
-    void closeDiscardsPreparedRestoreExactlyOnceBeforeRegistryClear() {
+    void closeDiscardsPreparedSmpsRestoreWithoutChipWrites() {
         Fixture fixture = fixture();
         SmpsDriver source = new SmpsDriver();
         PresentationVoiceSnapshot.Smps voice =
@@ -383,8 +385,8 @@ class TestAudioPresentationProducerRewind {
                         0, 0, 0, 0,
                         false, false, false, 1, true,
                         new SmpsCoordFlagRuntimeState.Snapshot(0));
-        AtomicReference<CountingSmpsDriver> recreated =
-                new AtomicReference<>();
+        AtomicInteger ymWrites = new AtomicInteger();
+        AtomicInteger psgWrites = new AtomicInteger();
         AudioPresentationDependencyResolver resolver =
                 new AudioPresentationDependencyResolver() {
                     @Override
@@ -395,9 +397,20 @@ class TestAudioPresentationProducerRewind {
                     @Override
                     public SmpsCompositeVoice recreateSmps(
                             PresentationVoiceSnapshot.Smps snapshot) {
-                        CountingSmpsDriver driver =
-                                new CountingSmpsDriver();
-                        recreated.set(driver);
+                        SmpsDriver driver = new SmpsDriver(
+                                48_000.0, new ChipWriteObserver() {
+                                    @Override
+                                    public void onYm2612Write(
+                                            int port, int register,
+                                            int value) {
+                                        ymWrites.incrementAndGet();
+                                    }
+
+                                    @Override
+                                    public void onPsgWrite(int value) {
+                                        psgWrites.incrementAndGet();
+                                    }
+                                });
                         return new SmpsCompositeVoice(
                                 snapshot.voiceId(), snapshot.priority(),
                                 snapshot.musicId(),
@@ -407,11 +420,14 @@ class TestAudioPresentationProducerRewind {
                 };
         fixture.producer.beginReverse(1.0);
         fixture.producer.prepareRestoreSelection(selected, resolver);
+        ymWrites.set(0);
+        psgWrites.set(0);
 
         fixture.producer.close();
         fixture.producer.close();
 
-        assertEquals(1, recreated.get().stopCalls);
+        assertEquals(0, ymWrites.get());
+        assertEquals(0, psgWrites.get());
     }
 
     private static Fixture fixture() {
@@ -550,13 +566,4 @@ class TestAudioPresentationProducerRewind {
         }
     }
 
-    private static final class CountingSmpsDriver extends SmpsDriver {
-        private int stopCalls;
-
-        @Override
-        public void stopAll() {
-            stopCalls++;
-            super.stopAll();
-        }
-    }
 }
