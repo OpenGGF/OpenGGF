@@ -30,7 +30,7 @@ class TestSmpsSfxConstructionPurity {
     }
 
     @Test
-    void musicConstructionRetainsItsExistingDacInitialization() {
+    void musicConstructionDoesNotSelectDacOrWriteYm() {
         SmpsDriver driver = new SmpsDriver();
         RecordingObserver observer = new RecordingObserver();
         driver.setChipWriteObserver(observer);
@@ -38,7 +38,8 @@ class TestSmpsSfxConstructionPurity {
         new SmpsSequencer(new EmptyMusicData(), AudioTestFixtures.EMPTY_DAC,
                 driver, () -> {}, new SmpsSequencerConfig.Builder().build());
 
-        assertEquals(List.of("YM:0:2B:80"), observer.events);
+        assertEquals(List.of(), observer.events,
+                "music construction must only prepare logical state");
     }
 
     private static final class SingleFmSfxData extends AbstractSmpsData

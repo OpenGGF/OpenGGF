@@ -155,11 +155,11 @@ public class TestRomAudioIntegration {
         LoggingSynth synth = new LoggingSynth();
         SmpsSequencer seq = new SmpsSequencer(data, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        // Check for init write before clearing
+        // Standalone construction prepares logical state only; the driver-owned
+        // admission path performs the DAC-enable write.
         boolean hasInitWrite = synth.fm.stream().anyMatch(cmd -> cmd.contains("2B 80"));
 
-        // Ignore the DAC-enable write emitted during construction so assertions only consider
-        // commands produced by sequencing the ROM data.
+        // Keep assertions scoped to commands produced by sequencing ROM data.
         synth.fm.clear();
         synth.psg.clear();
 
@@ -168,7 +168,8 @@ public class TestRomAudioIntegration {
 
         boolean hasSequencedCommands = !synth.fm.isEmpty() || !synth.psg.isEmpty();
 
-        assertTrue(hasInitWrite, "Sequencer should initialize DAC enable on the FM chip");
+        assertFalse(hasInitWrite,
+                "Standalone sequencer construction must not write the FM chip");
         assertTrue(hasSequencedCommands, "Sequencer should emit FM or PSG commands from the ROM stream");
     }
 
@@ -179,10 +180,16 @@ public class TestRomAudioIntegration {
         LoggingSynth synth = new LoggingSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, dacData, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
+        assertNull(synth.configuredDacData,
+                "Standalone sequencer construction must not select a DAC bank");
+        // Standalone callers retain explicit ownership of physical DAC setup;
+        // the composed driver performs this automatically on music admission.
+        synth.setDacData(dacData);
         short[] buffer = new short[4096];
         seq.read(buffer);
 
-        assertSame(dacData, synth.configuredDacData, "Sequencer should wire ROM DAC data into the synthesizer");
+        assertSame(dacData, synth.configuredDacData,
+                "Explicit standalone DAC selection should retain ROM samples");
         assertTrue(dacData.sampleCount() > 0, "ROM DAC table should expose samples");
         assertNotNull(dacData.mappingForNote(0x81), "ROM DAC table should map drum notes");
     }

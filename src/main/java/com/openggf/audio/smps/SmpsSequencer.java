@@ -2,7 +2,6 @@ package com.openggf.audio.smps;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.MusicRestoreSink;
-import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
@@ -31,7 +30,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private SmpsSourceDescriptor sourceDescriptor;
     private SourceDescriptorTrust sourceDescriptorTrust;
     private final SmpsProgramView programView;
-    private final Synthesizer synth;
+    private final SmpsLogicalWriteTarget synth;
+    private final SmpsSequencerHost host;
     private final SmpsSequencerConfig config;
     private final DacData dacData;
     private final int tempoModBase;
@@ -422,6 +422,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             SmpsSequencerConfig config,
             SmpsSourceDescriptor sourceDescriptor,
             SourceDescriptorTrust sourceDescriptorTrust) {
+        this(smpsData, dacData, standaloneTarget(synth),
+                inferredHost(synth), audioManager, config, sourceDescriptor,
+                sourceDescriptorTrust);
+    }
+
+    public SmpsSequencer(
+            AbstractSmpsData smpsData,
+            DacData dacData,
+            SmpsLogicalWriteTarget synth,
+            SmpsSequencerHost host,
+            MusicRestoreSink audioManager,
+            SmpsSequencerConfig config,
+            SmpsSourceDescriptor sourceDescriptor,
+            SourceDescriptorTrust sourceDescriptorTrust) {
         this.smpsData = Objects.requireNonNull(smpsData, "smpsData");
         this.programView = smpsData;
         this.sourceDescriptorTrust = Objects.requireNonNull(
@@ -434,18 +448,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         this.sourceDescriptor = sourceDescriptor != null
                 ? sourceDescriptor : SmpsSourceDescriptor.from(smpsData);
         this.audioManager = Objects.requireNonNull(audioManager, "audioManager");
-        this.synth = synth;
+        this.synth = Objects.requireNonNull(synth, "synth");
+        this.host = Objects.requireNonNull(host, "host");
         this.config = Objects.requireNonNull(config, "config");
         this.tempoModBase = this.config.getTempoModBase();
         this.dacData = dacData;
-        boolean sfxProgram = smpsData instanceof SmpsSfxData;
-        if (!sfxProgram) {
-            this.synth.setDacData(dacData);
-            // Preserve the existing music-start behavior. Sound_PlaySFX only initializes
-            // track state, so an SFX must not mutate the shared chip before admission.
-            synth.writeFm(this, 0, 0x2B, 0x80);
-        }
-
         dividingTiming = smpsData.getDividingTiming();
         if (dividingTiming == 0) {
             dividingTiming = 1;
@@ -540,6 +547,78 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
             t.dividingTiming = dividingTiming;
             tracks.add(t);
+        }
+    }
+
+    private static SmpsLogicalWriteTarget standaloneTarget(Synthesizer synth) {
+        Objects.requireNonNull(synth, "synth");
+        if (synth instanceof SmpsLogicalWriteTarget target) {
+            return target;
+        }
+        return new StandaloneLogicalWriteTarget(synth);
+    }
+
+    private static SmpsSequencerHost inferredHost(Synthesizer synth) {
+        return synth instanceof SmpsSequencerHost sequencerHost
+                ? sequencerHost : SmpsSequencerHost.NONE;
+    }
+
+    /** Compatibility bridge for standalone callers that provide only a synth. */
+    private record StandaloneLogicalWriteTarget(Synthesizer synth)
+            implements SmpsLogicalWriteTarget {
+        @Override
+        public void writeFm(Object source, int port, int reg, int val) {
+            synth.writeFm(source, port, reg, val);
+        }
+
+        @Override
+        public void writePsg(Object source, int val) {
+            synth.writePsg(source, val);
+        }
+
+        @Override
+        public void setInstrument(Object source, int channelId, byte[] voice) {
+            synth.setInstrument(source, channelId, voice);
+        }
+
+        @Override
+        public void playDac(Object source, int note) {
+            synth.playDac(source, note);
+        }
+
+        @Override
+        public void stopDac(Object source) {
+            synth.stopDac(source);
+        }
+
+        @Override
+        public void setDacData(DacData data) {
+            synth.setDacData(data);
+        }
+
+        @Override
+        public void selectDac(SmpsSourceDescriptor source, DacData data) {
+            synth.setDacData(data);
+        }
+
+        @Override
+        public void setFmMute(int channel, boolean mute) {
+            synth.setFmMute(channel, mute);
+        }
+
+        @Override
+        public void setPsgMute(int channel, boolean mute) {
+            synth.setPsgMute(channel, mute);
+        }
+
+        @Override
+        public void setDacInterpolate(boolean interpolate) {
+            synth.setDacInterpolate(interpolate);
+        }
+
+        @Override
+        public void silenceAll() {
+            synth.silenceAll();
         }
     }
 
@@ -814,7 +893,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     /** Returns whether this sequencer writes to the supplied synthesizer. */
     public boolean isBoundTo(Synthesizer candidate) {
-        return synth == candidate;
+        return synth == candidate
+                || synth instanceof StandaloneLogicalWriteTarget target
+                && target.synth() == candidate;
     }
 
     /**
@@ -833,7 +914,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (!(smpsData instanceof SmpsSfxData)) {
             return;
         }
-        synth.setDacData(dacData);
+        synth.selectDac(sourceDescriptor, dacData);
     }
 
     /** Validates the raw SFX entries retained by the immutable program. */
@@ -1185,22 +1266,18 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void tick(boolean finishSfxTempoFrame) {
-        SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
-                ? smpsDriver : null;
-        SmpsDriverServiceObserver.ServiceEvent service = driver == null
-                ? null : driver.beginSequencerService(this,
+        SmpsDriverServiceObserver.ServiceEvent service =
+                host.beginSequencerService(this,
                         SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
         tickTracks();
         if (finishSfxTempoFrame) {
             finishSfxTempoFrame();
         }
-        if (driver != null) {
-            // A completed track returns its channel during this driver
-            // service, before later fixed-RAM slots run next frame. A wholly
-            // completed sequencer stays owned until completion cleanup.
-            driver.reconcileInactiveSfxTracks(this);
-            driver.endSequencerService(service);
-        }
+        // A completed track returns its channel during this driver service,
+        // before later fixed-RAM slots run next frame. A wholly completed
+        // sequencer stays owned until completion cleanup.
+        host.reconcileInactiveSfxTracks(this);
+        host.endSequencerService(service);
     }
 
     private void finishSfxTempoFrame() {
@@ -1448,15 +1525,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (!fadeState.active) {
             return;
         }
-        SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
-                ? smpsDriver : null;
-        SmpsDriverServiceObserver.ServiceEvent service = driver == null
-                ? null : driver.beginSequencerService(this,
+        SmpsDriverServiceObserver.ServiceEvent service =
+                host.beginSequencerService(this,
                         SmpsDriverServiceObserver.ServiceKind.FADE_STEP);
         processFade();
-        if (driver != null) {
-            driver.endSequencerService(service);
-        }
+        host.endSequencerService(service);
     }
 
     private void processFade() {
@@ -2478,10 +2551,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 // global special-SFX pointer instead of this track's VoicePtr
                 // (SD:2391-2398). A cleared pointer reads zero TL bytes from
                 // the ROM vector area in the shipped image.
-                SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
-                        ? smpsDriver : null;
-                byte[] specialVoice = driver == null ? null
-                        : driver.s1SpecialSfxVoiceForBug(t.voiceId);
+                byte[] specialVoice = host.s1SpecialSfxVoiceForBug(t.voiceId);
                 byte[] zeroAddressVoice = smpsData
                         instanceof ZeroAddressFmVoiceProvider provider
                         ? provider.getZeroAddressFmVoice(t.voiceId) : null;
@@ -3307,22 +3377,22 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public boolean isContinuousSfxFlagSet() {
-        return (synth instanceof SmpsDriver d) && d.isContinuousSfxFlagSet();
+        return host.isContinuousSfxFlagSet();
     }
 
     @Override
     public void clearContinuousSfxId() {
-        if (synth instanceof SmpsDriver d) d.clearContinuousSfxId();
+        host.clearContinuousSfxId();
     }
 
     @Override
     public void clearContinuousSfxFlag() {
-        if (synth instanceof SmpsDriver d) d.clearContinuousSfxFlag();
+        host.clearContinuousSfxFlag();
     }
 
     @Override
     public boolean decrementContSfxLoopCnt() {
-        return (synth instanceof SmpsDriver d) ? d.decrementContSfxLoopCnt() : true;
+        return host.decrementContSfxLoopCnt();
     }
 
     // -----------------------------------------------------------------------

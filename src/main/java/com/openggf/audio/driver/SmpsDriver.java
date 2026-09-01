@@ -9,6 +9,7 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSequencerHost;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.audio.synth.ChipWriteObserver;
 
@@ -24,7 +25,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class SmpsDriver implements SmpsLogicalWriteTarget, AudioStream {
+public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost,
+        AudioStream {
     public enum ReadMode {
         SAMPLE_ACCURATE,
         HYBRID
@@ -345,6 +347,14 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, AudioStream {
     }
 
     protected DacData captureLiveDacDataReference() {
+        return requireStandalonePhysical().selectedDacDataForSnapshot();
+    }
+
+    /**
+     * Exposes only the selected DAC-bank identity to composed-driver test
+     * subclasses; the physical synthesizer itself remains private.
+     */
+    protected DacData selectedDacDataForTesting() {
         return requireStandalonePhysical().selectedDacDataForSnapshot();
     }
 
@@ -1579,7 +1589,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, AudioStream {
                 SmpsSequencer sequencer = new SmpsSequencer(
                         dependency.smpsData(),
                         dependency.dacData(),
-                        this,
+                        this, this,
                         dependency.audioManager(),
                         dependency.config(),
                         entry.source(),
@@ -1817,15 +1827,13 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, AudioStream {
                     writeRawPsg(0xFF); // silence noise channel: 0x80|(3<<5)|(1<<4)|0x0F
                 }
             }
+            selectDac(seq.getSourceDescriptor(), seq.getDacData());
+            writeFm(seq, 0, 0x2B, 0x80);
             sequencers.add(seq);
             if (isSfx) {
                 sfxSequencers.add(seq);
                 sfxSequencersById.put(seq.getSmpsData().getId(), seq);
                 recordSfxClaims(seq);
-                // SFX constructor calls synth.setDacData() which overwrites the music's
-                // DAC sample bank on the shared synthesizer. Restore the music sequencer's
-                // DAC data so donor music (e.g. S3K invincibility) keeps its correct samples.
-                restoreMusicDacData();
                 reportSfxAdmission(seq);
             }
         }
@@ -1866,7 +1874,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, AudioStream {
         for (int i = 0; i < sequencers.size(); i++) {
             SmpsSequencer s = sequencers.get(i);
             if (!isSfx(s) && s.getDacData() != null) {
-                setDacData(s.getDacData());
+                selectDac(s.getSourceDescriptor(), s.getDacData());
                 return;
             }
         }

@@ -34,7 +34,6 @@ import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
-import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.audio.synth.ChipWriteObserver;
 import org.junit.jupiter.api.Test;
 
@@ -1902,17 +1901,7 @@ class TestAudioVoiceRegistry {
     }
 
     private static DacData activeDacData(SmpsDriver driver) {
-        try {
-            Field ymField =
-                    VirtualSynthesizer.class.getDeclaredField("ym");
-            ymField.setAccessible(true);
-            Object ym = ymField.get(driver);
-            Field dacField = ym.getClass().getDeclaredField("dacData");
-            dacField.setAccessible(true);
-            return (DacData) dacField.get(ym);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
+        return ((FailingMutationDriver) driver).activeDacDataForTesting();
     }
 
     private static void primeSynth(SmpsDriver driver) {
@@ -2537,6 +2526,10 @@ class TestAudioVoiceRegistry {
         private boolean failNextStopAllSfx;
         private int stopAllCalls;
         private int commitCalls;
+
+        private DacData activeDacDataForTesting() {
+            return selectedDacDataForTesting();
+        }
 
         private void failNextControl() {
             failNextControl = true;

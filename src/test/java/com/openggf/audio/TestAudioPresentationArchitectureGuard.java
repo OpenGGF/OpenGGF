@@ -6,6 +6,8 @@ import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSequencerHost;
 import com.openggf.audio.synth.Synthesizer;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.tngtech.archunit.core.domain.Dependency;
@@ -126,6 +128,19 @@ class TestAudioPresentationArchitectureGuard {
     void smpsDriverRemainsTheLogicalSynthesizerWithoutPhysicalInheritance() {
         assertTrue(Synthesizer.class.isAssignableFrom(SmpsDriver.class));
         assertFalse(VirtualSynthesizer.class.isAssignableFrom(SmpsDriver.class));
+    }
+
+    @Test
+    void smpsSequencerUsesItsLogicalHostWithoutDependingOnTheDriver() {
+        JavaClasses classes = new ClassFileImporter()
+                .importClasses(SmpsSequencer.class);
+
+        assertTrue(SmpsSequencerHost.class.isInterface());
+        assertFalse(classes.get(SmpsSequencer.class)
+                        .getDirectDependenciesFromSelf().stream()
+                        .anyMatch(dependency -> dependency.getTargetClass()
+                                .isEquivalentTo(SmpsDriver.class)),
+                "sequencers must reach driver callbacks through SmpsSequencerHost");
     }
 
     @Test

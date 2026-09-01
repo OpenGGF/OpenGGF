@@ -146,11 +146,10 @@ class TestAudioDiagnosticObservers {
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         List<String> firstDriverWrites = expectedConstructorSilenceWrites();
-        firstDriverWrites.add("YM:0:2B:80");
         assertEquals(firstDriverWrites, chipWrites,
                 "pre-construction installation must expose constructor"
-                        + " silence before the committed sequencer's"
-                        + " DAC-mode write without leaking blueprint writes");
+                        + " silence without leaking blueprint or prepared"
+                        + " sequencer writes");
         SmpsDriver base = activeDriver();
         assertNotNull(base);
 
@@ -165,9 +164,7 @@ class TestAudioDiagnosticObservers {
         assertNotNull(override);
         assertFalse(base == override);
         List<String> writesThroughOverride = new ArrayList<>(firstDriverWrites);
-        writesThroughOverride.add("YM:0:2B:80");
         writesThroughOverride.addAll(expectedConstructorSilenceWrites());
-        writesThroughOverride.add("YM:0:2B:80");
         assertEquals(writesThroughOverride, chipWrites,
                 "each committed music driver contributes its exact"
                         + " constructor burst in stream order");
@@ -623,11 +620,11 @@ class TestAudioDiagnosticObservers {
 
         List<String> expected = expectedConstructorSilenceWrites();
         expected.add("LIFE:DRIVER_CREATED");
-        expected.add("YM:0:2B:80");
         expected.add("LIFE:RESTORE");
         assertEquals(expected, events,
-                "commit flushes one restored driver's constructor, restore"
-                        + " write, and lifecycle events in original order");
+                "commit flushes one restored driver's constructor and"
+                        + " lifecycle events in original order without"
+                        + " materializing physical sequencer writes");
     }
 
     @Test
