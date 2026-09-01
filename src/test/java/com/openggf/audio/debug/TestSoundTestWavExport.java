@@ -4,6 +4,7 @@ import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
+import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.audio.smps.Sonic1SmpsLoader;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
@@ -23,8 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSoundTestWavExport {
-    private static final int SFX_SPRING = 0xB1;
-
     @TempDir
     Path outputDirectory;
 
@@ -56,7 +55,7 @@ class TestSoundTestWavExport {
     @RequiresRom(SonicGame.SONIC_1)
     class RomBackedSfxExport {
         @Test
-        void renderToWavCompletesRomBackedSfxWithAudiblePcm()
+        void renderToWavCompletesRomBackedElectricSfxWithAudiblePcm()
                 throws Exception {
             var romFile = RomTestUtils.ensureSonic1RomAvailable();
             assertNotNull(romFile);
@@ -68,7 +67,8 @@ class TestSoundTestWavExport {
             Files.write(output, new byte[16_384]);
 
             int frames = SoundTestApp.renderToWav(
-                    loader.loadSfx(SFX_SPRING), loader.loadDacData(),
+                    loader.loadSfx(Sonic1Sfx.ELECTRIC.id),
+                    loader.loadDacData(),
                     Sonic1SmpsSequencerConfig.CONFIG, output.toFile(), true,
                     8_000.0, safetyCap);
 

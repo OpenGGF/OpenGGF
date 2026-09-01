@@ -8,6 +8,7 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
+import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.audio.smps.Sonic1SmpsLoader;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
@@ -30,8 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_1)
 class TestSfxRenderToolEntryPoints {
-    private static final int FM_SFX_ID = 0xB1;
-    private static final int PSG_SFX_ID = 0xA0;
     private static final int RATE = 8_000;
     private static final int RENDER_CAP_FRAMES = RATE;
 
@@ -39,11 +38,13 @@ class TestSfxRenderToolEntryPoints {
     Path outputDirectory;
 
     @Test
-    void fmToolMainWritesPcmWavsAndYmLog() throws Exception {
+    void fmToolMainRendersElectricSfxToPcmWavsAndYmLog()
+            throws Exception {
         File rom = RomTestUtils.ensureSonic1RomAvailable();
         assertNotNull(rom);
 
-        FmSfxRenderTool.main(arguments(rom, outputDirectory, FM_SFX_ID));
+        FmSfxRenderTool.main(arguments(rom, outputDirectory,
+                Sonic1Sfx.ELECTRIC.id));
 
         assertStereoPcm(outputDirectory.resolve("s1-sfx-b1-mix.wav"));
         Path fmOnly = outputDirectory.resolve("s1-sfx-b1-fm.wav");
@@ -61,16 +62,18 @@ class TestSfxRenderToolEntryPoints {
         int frames = frameCount(ymLog);
         assertArrayEquals(readPcm(outputDirectory.resolve(
                         "s1-sfx-b1-mix.wav")),
-                renderAdapterPackets(rom, FM_SFX_ID, frames),
+                renderAdapterPackets(rom, Sonic1Sfx.ELECTRIC.id, frames),
                 "tool one-frame reads and packeted adapter reads must agree");
     }
 
     @Test
-    void psgToolMainWritesPcmWavsAndPsgLog() throws Exception {
+    void psgToolMainRendersJumpSfxToPcmWavsAndPsgLog()
+            throws Exception {
         File rom = RomTestUtils.ensureSonic1RomAvailable();
         assertNotNull(rom);
 
-        PsgSfxRenderTool.main(arguments(rom, outputDirectory, PSG_SFX_ID));
+        PsgSfxRenderTool.main(arguments(rom, outputDirectory,
+                Sonic1Sfx.JUMP.id));
 
         assertStereoPcm(outputDirectory.resolve("s1-a0-mix.wav"));
         Path psgOnly = outputDirectory.resolve("s1-a0-psg.wav");
