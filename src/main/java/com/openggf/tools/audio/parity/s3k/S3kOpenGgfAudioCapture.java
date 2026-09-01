@@ -107,7 +107,7 @@ public final class S3kOpenGgfAudioCapture {
                 int ordinal = referenceTick.ordinal();
                 for (int request : referenceTick.mailbox()) {
                     if (request != 0) {
-                        dispatch(request, loader, dacData, driver, unsupported, ordinal);
+                        dispatch(request, loader, dacData, stream, unsupported, ordinal);
                     }
                 }
                 driver.serviceOuterFrame();
@@ -147,8 +147,10 @@ public final class S3kOpenGgfAudioCapture {
         }
     }
 
-    private static void dispatch(int request, Sonic3kSmpsLoader loader, DacData dacData,
-            SmpsDriver driver, List<String> unsupported, int ordinal) {
+    private static void dispatch(int request, Sonic3kSmpsLoader loader,
+            DacData dacData, OwnedSmpsAudioStream stream,
+            List<String> unsupported, int ordinal) {
+        SmpsDriver driver = stream.logicalDriver();
         int id = request == S3kAudioParitySchema.CREDITS_K ? 0x32 : request;
         if (id >= S3kAudioParitySchema.MUSIC_FIRST && id <= S3kAudioParitySchema.MUSIC_LAST) {
             AbstractSmpsData song = loader.loadMusic(id);
@@ -157,7 +159,8 @@ public final class S3kOpenGgfAudioCapture {
                         + " did not load");
                 return;
             }
-            driver.stopAll(); // zPlayMusic -> zStopAllSound before zBGMLoad (D:1786-1795)
+            // zPlayMusic -> zStopAllSound before zBGMLoad (D:1786-1795).
+            stream.stopAll();
             SmpsSequencer sequencer = new SmpsSequencer(song, dacData, driver, () -> { },
                     Sonic3kSmpsSequencerConfig.CONFIG);
             sequencer.setSampleRate(SAMPLE_RATE);
@@ -196,8 +199,7 @@ public final class S3kOpenGgfAudioCapture {
             // zPlaySegaSound begins with zStopAllSound, then leaves the PCM
             // loop to stream register 2Ah between interrupt services
             // (D:2703-2719,4267-4415).
-            applyProgram(driver,
-                    Sonic3kSmpsPhysicalPolicy.INSTANCE.stopAll());
+            stream.stopAll();
             unsupported.add("tick " + ordinal
                     + ": SEGA PCM transport is outside the driver-service oracle");
             return;
@@ -208,7 +210,7 @@ public final class S3kOpenGgfAudioCapture {
             return;
         }
         // E0h and E6h-FEh: zStopAllSound (map §4.3).
-        driver.stopAll();
+        stream.stopAll();
     }
 
     private static void emitPsgSilence(SmpsDriver driver) {

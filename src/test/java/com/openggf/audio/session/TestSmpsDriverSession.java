@@ -30,6 +30,9 @@ import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -37,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -257,6 +261,78 @@ class TestSmpsDriverSession {
 
         assertEquals(202, firstStopWrites);
         assertEquals(firstStopWrites, observer.events().size());
+    }
+
+    static Stream<Arguments> shippedGlobalStopCommands() {
+        return Stream.of(
+                Arguments.of(0xE0,
+                        new AudioPresentationCommand.RetainGlobalStop(0xE0)),
+                Arguments.of(0xE2,
+                        new AudioPresentationCommand.RetainGlobalStop(0xE2)),
+                Arguments.of(0xFE,
+                        new AudioPresentationCommand
+                                .StopRawPcmAndRetainGlobalStop(0xFE)));
+    }
+
+    @ParameterizedTest(name = "command {0}")
+    @MethodSource("shippedGlobalStopCommands")
+    void shippedGlobalStopResetsControlsAtomicallyAndNextMusicStartsNormal(
+            int sourceCommandId,
+            AudioPresentationCommand stopCommand) throws Exception {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = sessionProducer(
+                session, registry, commands);
+        commands.submit(new AudioPresentationCommand.SetSpeedShoes(true),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+        commands.submit(new AudioPresentationCommand.SetSpeedMultiplier(8),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+        producer.present(0, PresentationMode.SILENT);
+        assertTrue(session.captureSnapshot().speedShoesEnabled());
+        assertEquals(8, session.captureSnapshot().speedMultiplier());
+        assertTrue(registry.snapshot().speedShoesEnabled());
+        assertEquals(8, registry.snapshot().speedMultiplier());
+
+        commands.submit(stopCommand, () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+        Field renderBuffer = AudioPresentationProducer.class
+                .getDeclaredField("smpsSourcePcm");
+        renderBuffer.setAccessible(true);
+        short[] validBuffer = (short[]) renderBuffer.get(producer);
+        renderBuffer.set(producer, new short[0]);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> producer.present(1, PresentationMode.FORWARD));
+        assertEquals(1, commands.size(),
+                "failed command " + sourceCommandId + " must remain queued");
+        assertTrue(session.captureSnapshot().speedShoesEnabled());
+        assertEquals(8, session.captureSnapshot().speedMultiplier());
+        assertTrue(registry.snapshot().speedShoesEnabled());
+        assertEquals(8, registry.snapshot().speedMultiplier());
+
+        renderBuffer.set(producer, validBuffer);
+        producer.present(2, PresentationMode.FORWARD);
+
+        assertEquals(0, commands.size());
+        assertFalse(session.captureSnapshot().speedShoesEnabled());
+        assertEquals(1, session.captureSnapshot().speedMultiplier());
+        assertFalse(registry.snapshot().speedShoesEnabled());
+        assertEquals(1, registry.snapshot().speedMultiplier());
+        session.queueActivation(activation(0x21));
+        var nextMusic = session.captureLogicalSnapshot()
+                .sequencers().getFirst().snapshot();
+        assertFalse(nextMusic.speedShoes());
+        assertEquals(1, nextMusic.speedMultiplier());
     }
 
     @Test

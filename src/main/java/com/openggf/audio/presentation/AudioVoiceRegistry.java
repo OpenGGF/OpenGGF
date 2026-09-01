@@ -702,6 +702,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         java.util.Arrays.fill(sampleSfx, null);
         sampleSfxCount = 0;
         pendingRestore = false;
+        speedShoesEnabled = false;
+        speedMultiplier = 1;
         rebuildOrderedVoices();
     }
 

@@ -4,7 +4,21 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioCommandTimeline;
+import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.timer.Timer;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,10 +26,17 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kSpeedShoesCommandSemantics {
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+    }
+
     @AfterEach
     void tearDown() {
         AudioManager.getInstance().resetState();
         AudioManager.getInstance().setBackend(new NullAudioBackend());
+        SessionManager.clear();
+        GameModuleRegistry.reset();
     }
 
     @Test
@@ -79,15 +100,38 @@ class TestSonic3kSpeedShoesCommandSemantics {
     }
 
     @Test
-    void speedShoesUseSemanticEightAndOneWithoutSystemCommands() {
+    void monitorPickupAndTimerExpiryUseSemanticEightAndOneWithoutSystemCommands() {
         AudioManager audio = AudioManager.getInstance();
         audio.setBackend(new NullAudioBackend());
         audio.setAudioProfile(new Sonic3kAudioProfile());
+        Sonic3kMonitorObjectInstance monitor =
+                new Sonic3kMonitorObjectInstance(
+                        new ObjectSpawn(0x0100, 0x0050,
+                                0x01, 0x04, 0, false, 0));
+        monitor.setServices(new TestObjectServices()
+                .withAudioManager(audio));
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0100, (short) 0x0050);
+        player.setAnimationId(Sonic3kAnimationIds.ROLL);
+        player.setRolling(true);
+        player.setYSpeed((short) 0x05A0);
 
-        audio.setSpeedMultiplier(
-                Sonic3kSmpsConstants.SPEED_MULTIPLIER_ON);
-        audio.setSpeedMultiplier(
-                Sonic3kSmpsConstants.SPEED_MULTIPLIER_OFF);
+        monitor.update(0, player);
+        monitor.onTouchResponse(player,
+                new TouchResponseResult(
+                        0, 0x0E, 0x0E, TouchCategory.SPECIAL),
+                1);
+        for (int frame = 0; frame < 33; frame++) {
+            monitor.update(frame, player);
+        }
+
+        Timer timer = GameServices.timers().getTimerForCode(
+                "SpeedShoes-" + player.getCode());
+        assertTrue(player.hasSpeedShoes());
+        assertTrue(timer != null,
+                "production monitor pickup must register SpeedShoesTimer");
+        assertTrue(timer.perform(),
+                "production timer expiry must complete");
 
         int count = audio.commandTimeline().entryCount();
         AudioCommand.SetSpeedMultiplier on = assertInstanceOf(

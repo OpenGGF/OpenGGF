@@ -53,6 +53,11 @@ public final class OwnedSmpsAudioStream
         session.setChipWriteObserver(observer);
     }
 
+    /** Applies the owning session's exact host-policy global stop. */
+    public void stopAll() {
+        session.applyGlobalStopNow();
+    }
+
     public VirtualSynthesizer.Snapshot captureSynthSnapshotForTesting() {
         return session.capturePhysicalSnapshotForTesting().synth();
     }

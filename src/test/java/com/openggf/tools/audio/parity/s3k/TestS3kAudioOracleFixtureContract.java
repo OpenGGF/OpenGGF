@@ -84,7 +84,7 @@ class TestS3kAudioOracleFixtureContract {
     }
 
     @Test
-    void engineMatchesThroughTheInitialSegaPcmTransportWindow() {
+    void engineUsesProductionStopsThroughTheUnrepresentedPcmExitFrontier() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
         List<S3kAudioTick> services = new ArrayList<>();
@@ -92,12 +92,33 @@ class TestS3kAudioOracleFixtureContract {
 
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(
-                        rom.toPath(), services.subList(0, 51), null);
+                        rom.toPath(), services.subList(0, 260), null);
 
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(
-                        services.subList(0, 51), engine.ticks());
-        assertTrue(report.matches(), report.toHumanText());
+                        services.subList(0, 260), engine.ticks());
+        assertEquals(260, engine.ticks().size());
+        assertEquals(84, engine.ticks().get(49).writes().size(),
+                "FF must use the exact production stop before PCM transport");
+        assertEquals(0xff,
+                engine.ticks().get(49).writes().getFirst().value());
+        assertTrue(engine.ticks().get(138).writes().size() >= 84,
+                "the first music request must begin with the production stop");
+        assertEquals(services.get(138).writes().subList(0, 84),
+                engine.ticks().get(138).writes().subList(0, 84));
+
+        // The recorder cannot sample the FE write while zPlaySEGAPCM has
+        // interrupts disabled (D:4372-4424), so the projected input at the
+        // resumed service is [0,0,0]. Keep this producer-input omission as an
+        // explicit frontier instead of deriving an engine command from the
+        // reference write stream.
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_MISSING,
+                report.kind());
+        assertEquals(128, report.tick());
+        assertEquals(0, report.eventIndex());
+        assertEquals(services.get(128).writes().getFirst().toString(),
+                report.reference());
+        assertEquals("<missing>", report.openggf());
     }
 
     private static String sha256(Path path) throws Exception {

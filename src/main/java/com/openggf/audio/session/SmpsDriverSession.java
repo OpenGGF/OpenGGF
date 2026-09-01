@@ -527,16 +527,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         requireInstalled();
         serviceInvocationCount++;
         if (pendingGlobalCommand == SmpsPendingGlobalCommand.STOP_ALL) {
-            pendingService = null;
-            clearOverrides();
-            withPort(driverIdentity, port -> {
-                applyProgram(port, policy.stopAll());
-                port.silenceOutput();
-                return null;
-            });
-            restoreLogicalWithoutWrites(emptyLogicalSnapshot(
-                    driver.captureSnapshot()));
-            pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
+            applyGlobalStopNow();
             return SmpsServiceOutcome.GLOBAL_STOP_CONSUMED;
         }
 
@@ -653,6 +644,30 @@ public final class SmpsDriverSession implements AutoCloseable {
     public void retainGlobalStop() {
         requireInstalled();
         pendingGlobalCommand = SmpsPendingGlobalCommand.STOP_ALL;
+    }
+
+    /**
+     * Applies the host policy's complete global stop and clears the matching
+     * logical save area at the same physical ownership boundary. Package
+     * access lets the isolated direct-read adapter reuse the production
+     * operation without exposing the physical port or duplicating policy.
+     */
+    void applyGlobalStopNow() {
+        requireInstalled();
+        pendingService = null;
+        clearOverrides();
+        // S3K zStopAllSound clears zTempoSpeedup before silencing channels
+        // (pinned skdisasm D:2460-2521); normalized controls are off / 1x.
+        speedShoesEnabled = false;
+        speedMultiplier = 1;
+        withPort(driverIdentity, port -> {
+            applyProgram(port, policy.stopAll());
+            port.silenceOutput();
+            return null;
+        });
+        restoreLogicalWithoutWrites(emptyLogicalSnapshot(
+                driver.captureSnapshot()));
+        pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
     }
 
     public SmpsDriverSessionSnapshot captureSnapshot() {
