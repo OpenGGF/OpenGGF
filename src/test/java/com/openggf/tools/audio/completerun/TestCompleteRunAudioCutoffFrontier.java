@@ -345,15 +345,15 @@ class TestCompleteRunAudioCutoffFrontier {
     }
 
     @Test
-    void comparatorReportsTheCutoffFrontierBeforeTerminalCounts() {
+    void comparatorReportsBoundaryChipStateBeforeTerminalCounts() {
         CutoffFrontier reference = frontier(List.of(service(1, 0, 0, FrontierServiceState.OPEN, 10)),
                 List.of());
         CutoffFrontier engine = new CutoffFrontier(reference.activeStack(), reference.pendingDescendants(),
                 reference.rawChipEvents(), null,
                 1, 0, STATE);
         var difference = CompleteRunAudioComparator.difference(reference, engine);
-        assertEquals(CompleteRunAudioReport.Kind.CUTOFF_FRONTIER_VALUE, difference.kind());
-        assertEquals("cutoff_frontier", difference.location());
+        assertEquals(CompleteRunAudioReport.Kind.CHIP_EVENT_VALUE, difference.kind());
+        assertEquals("cutoff_frontier.chip_events", difference.location());
     }
 
     @Test

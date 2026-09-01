@@ -46,6 +46,12 @@ public final class S2CompleteRunAudioProfile {
         @Override public CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayerInventory() {
             return comparisonLayers();
         }
+        @Override public Map<CompleteRunAudioTrace.ProducerKind,
+                CompleteRunAudioTrace.ProducerObservationInventory> producerObservationInventories() {
+            var chipsOnly = frameChipsOnly();
+            return Map.of(CompleteRunAudioTrace.ProducerKind.REFERENCE, chipsOnly,
+                    CompleteRunAudioTrace.ProducerKind.OPENGGF, chipsOnly);
+        }
         @Override public Map<CompleteRunAudioTrace.RawAudioRequest,
                 CompleteRunAudioTrace.NativeSoundIdentity> nativeSoundIdentities() { return IDENTITIES; }
         @Override public Map<CompleteRunAudioTrace.ProducerKind,
@@ -54,7 +60,8 @@ public final class S2CompleteRunAudioProfile {
                 CompleteRunAudioTrace.ProducerBinding> producerBindings() {
             return Map.of(
                     CompleteRunAudioTrace.ProducerKind.REFERENCE,
-                    new CompleteRunAudioTrace.UnavailableProducerBinding("Task 2 S2 reference adapter is not installed"),
+                    new CompleteRunAudioTrace.UnavailableProducerBinding(
+                            "S2 raw evidence lacks the authenticated pre-row-769 begin row and native ordinal for carried DPCM"),
                     CompleteRunAudioTrace.ProducerKind.OPENGGF,
                     new CompleteRunAudioTrace.UnavailableProducerBinding("Task 5 S2 OpenGGF producer is not installed"));
         }
@@ -98,25 +105,27 @@ public final class S2CompleteRunAudioProfile {
     }
 
     private static CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayers() {
-        String requestAuthority = "TraceChaser S2 service manifest lacks the approved pre-consumption M68K sndDriverInput observation";
-        String adapter = "S2 complete-run reference adapter is not installed";
-        return new CompleteRunAudioTrace.ComparisonLayerInventory(List.of(
-                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.REQUESTS,
-                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, requestAuthority),
-                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.DECISIONS,
-                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, requestAuthority),
-                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.SERVICES,
-                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, adapter),
-                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.STATE,
-                        CompleteRunAudioTrace.ComparisonLayerStatus.COMPARED, null),
-                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.OWNERSHIP,
-                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, requestAuthority),
-                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.LIFECYCLE,
-                        CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, adapter),
-                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.CHIP_EVENTS,
-                        CompleteRunAudioTrace.ComparisonLayerStatus.COMPARED, null),
-                new CompleteRunAudioTrace.ComparisonLayerClaim(CompleteRunAudioTrace.ComparisonLayer.CUTOFF_FRONTIER,
-                        CompleteRunAudioTrace.ComparisonLayerStatus.COMPARED, null)));
+        String reason = "S2 complete-run producers currently share only frame chip-event evidence";
+        return new CompleteRunAudioTrace.ComparisonLayerInventory(java.util.Arrays.stream(
+                CompleteRunAudioTrace.ComparisonLayer.values()).map(layer ->
+                        new CompleteRunAudioTrace.ComparisonLayerClaim(layer,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS
+                                        ? CompleteRunAudioTrace.ComparisonLayerStatus.COMPARED
+                                        : CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS ? null : reason))
+                .toList());
+    }
+
+    private static CompleteRunAudioTrace.ProducerObservationInventory frameChipsOnly() {
+        String reason = "S2 complete-run projector has no canonical observation for this layer";
+        return new CompleteRunAudioTrace.ProducerObservationInventory(java.util.Arrays.stream(
+                CompleteRunAudioTrace.ComparisonLayer.values()).map(layer ->
+                        new CompleteRunAudioTrace.ProducerObservationClaim(layer,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS
+                                        ? CompleteRunAudioTrace.ObservationStatus.OBSERVED
+                                        : CompleteRunAudioTrace.ObservationStatus.UNOBSERVED,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS ? null : reason))
+                .toList());
     }
 
     private static CompleteRunAudioTrace.CompleteRunFixture fixture() {

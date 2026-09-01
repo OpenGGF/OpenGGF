@@ -15,6 +15,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.IdentityHashMap;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class TestCompleteRunAudioCaptureStore {
+    private static final Map<DriverService, ServiceEvidence> SERVICE_EVIDENCE = new IdentityHashMap<>();
     @TempDir
     Path temp;
 
@@ -285,10 +287,10 @@ class TestCompleteRunAudioCaptureStore {
         NativeDeferredServiceBegin changed = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 40, 41, 12, 13, 2, true, 15, 43);
-        Frame left = new Frame(860, "test", false, List.of(), List.of(), List.of(),
+        Frame left = fullFrame(860, "test", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(), List.of(),
                         List.of(first), List.of()));
-        Frame right = new Frame(860, "test", false, List.of(), List.of(), List.of(),
+        Frame right = fullFrame(860, "test", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(), List.of(),
                         List.of(changed), List.of()));
 
@@ -482,7 +484,7 @@ class TestCompleteRunAudioCaptureStore {
         int end = 860 + frames;
         CompleteRunFixture fixture = new CompleteRunFixture("0".repeat(40), "1".repeat(8), "2".repeat(64),
                 end, "3".repeat(64), List.of(new ManifestSegment("test", 860, end)), 860, end);
-        return new Metadata(SCHEMA, "store.test." + frames, fixture, ProducerKind.OPENGGF,
+        return testMetadata(SCHEMA, "store.test." + frames, fixture, ProducerKind.OPENGGF,
                 new ProducerRuntimeIdentity("OpenGGF", "test", "OpenGGF", "test", "SMPS", "test",
                         Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "4".repeat(64))),
                 new CallbackObserverIdentity("openggf.store.callback.v1"),
@@ -491,13 +493,21 @@ class TestCompleteRunAudioCaptureStore {
                 new StateInventory(List.of("tempo"), List.of("cursor")));
     }
 
+    private static Metadata testMetadata(String schema, String profileId, CompleteRunFixture fixture,
+            ProducerKind producerKind, ProducerRuntimeIdentity runtime, ObserverRuntimeIdentity observer,
+            ObserverProof proof, ChunkPolicy chunks, List<HardwareRole> roles, StateInventory stateInventory) {
+        return new Metadata(schema, profileId, fixture, producerKind, runtime, observer, proof, chunks, roles,
+                stateInventory, ComparisonLayerInventory.allCompared(),
+                ProducerObservationInventory.allObserved());
+    }
+
     private static List<CompleteRunAudioTrace.Record> records(int frames) {
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
         NormalizedState state = new NormalizedState(List.of(new StateField("tempo", 1)),
                 List.of(new RoleState(HardwareRole.FM1, false, List.of())));
         records.add(baseline(state));
         for (int index = 0; index < frames; index++) {
-            records.add(new Frame(860 + index, "test", false, List.of(), List.of()));
+            records.add(fullFrame(860 + index, "test", false, List.of(), List.of()));
         }
         records.add(frontier(state));
         records.add(new Terminal(860 + frames, frames, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -514,13 +524,13 @@ class TestCompleteRunAudioCaptureStore {
                 OwnerOrigin.REQUEST, 0);
         Decision decision = new Decision(0, 0xc0, "sfx.explosion", true, "accepted", 1, 2,
                 List.of(HardwareRole.FM1), List.of(new RoleDecision(HardwareRole.FM1, none, owner)));
-        DriverService service = new DriverService(0, "driver", ServiceCompletion.COMPLETED,
+        DriverService service = testService(0, "driver", ServiceCompletion.COMPLETED,
                 List.of(decision), state,
                 List.of(new YmWrite(0, 0, 0x22, 0x33), new PsgWrite(1, 0x44)));
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
         records.add(baseline(state));
         records.add(new Lifecycle(0, 860, "reset", Map.of("reason", "test"), List.of()));
-        records.add(new Frame(860, "test", false, List.of(request), List.of(service)));
+        records.add(fullFrame(860, "test", false, List.of(request), List.of(service)));
         records.add(frontier(state));
         records.add(new Terminal(861, 1, 1, 1, 1, 1, 1, 1, 0, 0,
                 root(records), semanticRoot(records)));
@@ -572,9 +582,54 @@ class TestCompleteRunAudioCaptureStore {
         return CutoffFrontier.empty(state);
     }
 
+    private static Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
+            List<DriverService> services) {
+        List<Decision> decisions = services.stream().flatMap(service -> evidence(service).decisions().stream())
+                .toList();
+        NormalizedState state = services.isEmpty()
+                ? new NormalizedState(List.of(new StateField("tempo", 1)),
+                        List.of(new RoleState(HardwareRole.FM1, false, List.of())))
+                : evidence(services.getLast()).state();
+        List<ChipEvent> chips = services.stream().flatMap(service -> evidence(service).chips().stream())
+                .sorted(java.util.Comparator.comparingLong(ChipEvent::ordinal)).toList();
+        return new Frame(absoluteFrame, segment, lag, requests, decisions, services, state, chips, null);
+    }
+
+    private static Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
+            List<DriverService> services, List<ChipEvent> chips, FrameNativeDiagnostics diagnostics) {
+        List<Decision> decisions = services.stream().flatMap(service -> evidence(service).decisions().stream())
+                .toList();
+        NormalizedState state = services.isEmpty()
+                ? new NormalizedState(List.of(new StateField("tempo", 1)),
+                        List.of(new RoleState(HardwareRole.FM1, false, List.of())))
+                : evidence(services.getLast()).state();
+        return new Frame(absoluteFrame, segment, lag, requests, decisions, services, state, chips, diagnostics);
+    }
+
+    private static Frame fullFrame(int absoluteFrame, String segment, Boolean lag, List<Request> requests,
+            List<Decision> decisions, List<DriverService> services, NormalizedState state,
+            List<ChipEvent> chips, FrameNativeDiagnostics diagnostics) {
+        return new Frame(absoluteFrame, segment, lag, requests, decisions, services, state, chips, diagnostics);
+    }
+
+    private static ServiceEvidence evidence(DriverService service) {
+        return SERVICE_EVIDENCE.getOrDefault(service,
+                new ServiceEvidence(List.of(), new NormalizedState(List.of(), List.of()), List.of()));
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            List<Decision> decisions, NormalizedState state, List<ChipEvent> chips) {
+        DriverService service = new DriverService(ordinal, kind, completion, null, null, null,
+                ServiceAncestry.root());
+        SERVICE_EVIDENCE.put(service, new ServiceEvidence(List.copyOf(decisions), state, List.copyOf(chips)));
+        return service;
+    }
+
+    private record ServiceEvidence(List<Decision> decisions, NormalizedState state, List<ChipEvent> chips) { }
+
     private static Frame hostileFrame(int row) {
         String segment = entropy(row) + entropy(row ^ 0x5a5a5a5a);
-        if (row % 64 != 0) return new Frame(860 + row, segment, (row & 1) == 0, List.of(), List.of());
+        if (row % 64 != 0) return fullFrame(860 + row, segment, (row & 1) == 0, List.of(), List.of());
         NormalizedState state = new NormalizedState(List.of(new StateField("tempo", row)),
                 List.of(new RoleState(HardwareRole.FM1, true, List.of(new StateField("cursor", row)))));
         Request request = new Request(row, OwnerClass.SFX, "sfx." + segment, row & 0xff, "hostile", row);
@@ -583,11 +638,11 @@ class TestCompleteRunAudioCaptureStore {
                 OwnerOrigin.REQUEST, row);
         Decision decision = new Decision(row, row & 0xff, "sfx." + segment, true, "accepted", row, row + 1,
                 List.of(HardwareRole.FM1), List.of(new RoleDecision(HardwareRole.FM1, none, owner)));
-        DriverService service = new DriverService(row, "hostile." + segment, ServiceCompletion.COMPLETED,
+        DriverService service = testService(row, "hostile." + segment, ServiceCompletion.COMPLETED,
                 List.of(decision), state,
                 List.of(new YmWrite(row * 2L, 0, row & 0xff, (row * 31) & 0xff),
                         new PsgWrite(row * 2L + 1, (row * 17) & 0xff)));
-        return new Frame(860 + row, segment, false, List.of(request), List.of(service));
+        return fullFrame(860 + row, segment, false, List.of(request), List.of(service));
     }
 
     private static String entropy(int row) {

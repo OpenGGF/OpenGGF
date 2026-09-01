@@ -77,7 +77,8 @@ public final class S2CompleteRunReferenceProjector {
                 new CompleteRunAudioTrace.ObserverProof("test-only", "test-only",
                         List.of(new CompleteRunAudioTrace.CallbackProof("projection", 1))),
                 new CompleteRunAudioTrace.ChunkPolicy(4096, "gzip", 0), pinned.hardwareRoles(),
-                pinned.stateInventory(), pinned.comparisonLayerInventory());
+                pinned.stateInventory(), pinned.comparisonLayerInventory(),
+                pinned.producerObservationInventories().get(CompleteRunAudioTrace.ProducerKind.OPENGGF));
     }
 
     private static final class Transaction implements S2CompleteRunReferenceRawAdapter.Sink {
@@ -89,7 +90,6 @@ public final class S2CompleteRunReferenceProjector {
         private boolean committed;
         private int ymPort0Latch;
         private int ymPort1Latch;
-        private long nextServiceOrdinal;
         private long nextChipOrdinal;
 
         private Transaction(S2CompleteRunAssetCatalog catalog) { this(catalog, null, null); }
@@ -109,25 +109,22 @@ public final class S2CompleteRunReferenceProjector {
             if (!value.pendingDescendants().isEmpty()) unsupportedFrontier();
             ymPort0Latch = value.ymPort0Latch();
             ymPort1Latch = value.ymPort1Latch();
-            append(new CompleteRunAudioTrace.Baseline(value.row(), normalize(value.driverState()),
-                    S2CompleteRunAudioProfile.profile().baselineRoleOwners()));
+            append(new CompleteRunAudioTrace.Baseline(value.row(), null, null,
+                    CompleteRunAudioTrace.BoundaryFrontier.unobserved()));
         }
 
         @Override public void frame(S2CompleteRunReferenceRawAdapter.RawFrame value) throws IOException {
             requireStarted();
             List<CompleteRunAudioTrace.ChipEvent> chips = chips(value.events());
-            var state = normalize(value.driverState());
-            var service = new CompleteRunAudioTrace.DriverService(nextServiceOrdinal++, "native-observation",
-                    CompleteRunAudioTrace.ServiceCompletion.COMPLETED, List.of(), state, chips);
-            append(new CompleteRunAudioTrace.Frame(value.row(), segment(value.row()), value.lag(),
-                    List.of(), List.of(service), chips, null));
+            append(new CompleteRunAudioTrace.Frame(value.row(), segment(value.row()), null,
+                    null, null, null, null, chips, null));
         }
 
         @Override public void cutoff(S2CompleteRunReferenceRawAdapter.RawBoundary value) throws IOException {
             requireStarted();
             if (!value.activeServices().isEmpty() || !value.pendingDescendants().isEmpty()) unsupportedFrontier();
-            append(new CompleteRunAudioTrace.CutoffFrontier(List.of(), List.of(), List.of(), null,
-                    value.ymPort0Latch(), value.ymPort1Latch(), normalize(value.driverState())));
+            append(new CompleteRunAudioTrace.CutoffFrontier(null, null, null, null,
+                    null, null, null));
         }
 
         @Override public void commit() throws IOException {

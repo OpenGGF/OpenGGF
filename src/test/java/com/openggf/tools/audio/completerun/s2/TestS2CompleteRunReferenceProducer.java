@@ -2,6 +2,7 @@ package com.openggf.tools.audio.completerun.s2;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -13,6 +14,7 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioTrace;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.EnumMap;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,16 +32,16 @@ class TestS2CompleteRunReferenceProducer {
         CompleteRunAudioTrace.Frame frame = (CompleteRunAudioTrace.Frame) records.get(1);
         CompleteRunAudioTrace.CutoffFrontier cutoff =
                 (CompleteRunAudioTrace.CutoffFrontier) records.get(2);
-        var catalog = S2CompleteRunAssetCatalog.load(rom());
-        assertEquals(S2CompleteRunStateNormalizer.normalizeReference(
-                S2CompleteRunStateDecoder.decode(new byte[8192], catalog), catalog.assets()), baseline.state());
-        assertEquals(baseline.state(), frame.services().getFirst().state());
-        assertEquals(baseline.state(), cutoff.terminalState());
-        assertEquals(List.of(), frame.requests());
-        assertEquals(1, frame.services().size());
-        assertEquals(List.of(), frame.services().getFirst().decisions());
-        assertEquals(List.of(new CompleteRunAudioTrace.PsgWrite(0, 0x44)), frame.rawChipEvents());
-        assertEquals(List.of(), cutoff.rawChipEvents());
+        assertEquals(null, baseline.state());
+        assertEquals(null, baseline.roleOwners());
+        assertEquals(null, frame.lag());
+        assertEquals(null, frame.requests());
+        assertEquals(null, frame.decisions());
+        assertEquals(null, frame.services());
+        assertEquals(null, frame.postRowState());
+        assertEquals(List.of(new CompleteRunAudioTrace.PsgWrite(0, 0x44)), frame.chipEvents());
+        assertEquals(null, cutoff.rawChipEvents());
+        assertEquals(null, cutoff.terminalState());
     }
 
     @Test
@@ -51,10 +53,31 @@ class TestS2CompleteRunReferenceProducer {
         CompleteRunAudioTrace.Frame first = (CompleteRunAudioTrace.Frame) records.get(1);
         CompleteRunAudioTrace.Frame second = (CompleteRunAudioTrace.Frame) records.get(2);
 
-        assertEquals(0, first.services().getFirst().ordinal());
-        assertEquals(1, second.services().getFirst().ordinal());
-        assertEquals(0, first.rawChipEvents().getFirst().ordinal());
-        assertEquals(1, second.rawChipEvents().getFirst().ordinal());
+        assertEquals(null, first.services());
+        assertEquals(null, second.services());
+        assertEquals(0, first.chipEvents().getFirst().ordinal());
+        assertEquals(1, second.chipEvents().getFirst().ordinal());
+    }
+
+    @Test
+    void productionBufferedReferenceCannotValidateOrPublishProjectionWithoutNativeSidecars() throws Exception {
+        Path raw = Files.writeString(temporary.resolve("s2-no-native-sidecars.jsonl"), rawPrefix(false));
+        var projection = new S2CompleteRunReferenceProjector()
+                .projectPrefixForTesting(raw.toAbsolutePath(), rom());
+        CompleteRunAudioTrace.Metadata metadata = unavailableProductionReferenceMetadata();
+        Path output = temporary.resolve("s2-production-capture").toAbsolutePath();
+
+        metadata.validateFixtureProfile(S2CompleteRunAudioProfile.profile());
+        assertInstanceOf(CompleteRunAudioTrace.UnavailableProducerBinding.class,
+                S2CompleteRunAudioProfile.profile().producerBindings()
+                        .get(CompleteRunAudioTrace.ProducerKind.REFERENCE));
+        assertThrows(IllegalArgumentException.class,
+                () -> metadata.validateRuntimeProfile(S2CompleteRunAudioProfile.profile()));
+        IllegalArgumentException missingSidecar = assertThrows(IllegalArgumentException.class,
+                () -> new CompleteRunAudioCaptureStore().writeNew(
+                        output, metadata, projection.records().iterator()));
+        assertTrue(missingSidecar.getMessage().contains("native diagnostics is required"));
+        assertFalse(Files.exists(output));
     }
 
     @Test
@@ -133,6 +156,41 @@ class TestS2CompleteRunReferenceProducer {
             CompleteRunAudioProducer.Request request, Path referenceHome) {
         return new CompleteRunAudioProducer.Request(request.producerKind(), request.profileId(), request.rom(),
                 request.bk2(), request.runManifest(), referenceHome, request.output());
+    }
+
+    private static CompleteRunAudioTrace.Metadata unavailableProductionReferenceMetadata() {
+        var profile = S2CompleteRunAudioProfile.profile();
+        EnumMap<CompleteRunAudioTrace.RuntimeArtifact, String> hashes =
+                new EnumMap<>(CompleteRunAudioTrace.RuntimeArtifact.class);
+        for (CompleteRunAudioTrace.RuntimeArtifact artifact : CompleteRunAudioTrace.RuntimeArtifact.values()) {
+            if (artifact != CompleteRunAudioTrace.RuntimeArtifact.BIZHAWK_OBSERVER_MANAGED_PATCH
+                    && artifact != CompleteRunAudioTrace.RuntimeArtifact.BIZHAWK_OBSERVER_CORES_DLL
+                    && artifact != CompleteRunAudioTrace.RuntimeArtifact.OPENGGF_PRODUCER) {
+                hashes.put(artifact, "a".repeat(64));
+            }
+        }
+        var runtime = new CompleteRunAudioTrace.ProducerRuntimeIdentity(
+                "BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                CompleteRunAudioTrace.ManagedObserverAdapter.REFLECTION, hashes);
+        var observer = new CompleteRunAudioTrace.BufferedNativeObserverIdentity(
+                com.openggf.tools.audio.completerun.CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_ABI_NAME,
+                com.openggf.tools.audio.completerun.CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_ABI_VERSION,
+                com.openggf.tools.audio.completerun.CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_EVENT_SIZE,
+                com.openggf.tools.audio.completerun.CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CONFIG_SIZE,
+                com.openggf.tools.audio.completerun.CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_KIND_SIZE,
+                com.openggf.tools.audio.completerun.CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_HOOK_SIZE,
+                com.openggf.tools.audio.completerun.CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_RANGE_SIZE,
+                com.openggf.tools.audio.completerun.CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CAPACITY,
+                "bizhawk-2.11-gpgx-audio-observer-v3", "gpgx-audio-observer-v3",
+                "0123456789abcdef", "b".repeat(64), "c".repeat(64), true, 1, 0);
+        return new CompleteRunAudioTrace.Metadata(CompleteRunAudioTrace.SCHEMA,
+                profile.id(), profile.fixture(), CompleteRunAudioTrace.ProducerKind.REFERENCE,
+                runtime, observer, new CompleteRunAudioTrace.ObserverProof(
+                        "reference.observer.v1", "native.buffer",
+                        List.of(new CompleteRunAudioTrace.CallbackProof("driver.service", 1))),
+                new CompleteRunAudioTrace.ChunkPolicy(4096, "gzip", 0), profile.hardwareRoles(),
+                profile.stateInventory(), profile.comparisonLayerInventory(),
+                profile.producerObservationInventories().get(CompleteRunAudioTrace.ProducerKind.REFERENCE));
     }
 
     private Path fakeTraceChaser(String body) throws Exception {

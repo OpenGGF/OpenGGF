@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,8 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class TestCompleteRunAudioTrace {
-    private static final String ALL_COMPARED_LAYER_JSON = "\"comparisonLayerInventory\":[{\"layer\":\"REQUESTS\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"DECISIONS\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"SERVICES\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"STATE\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"OWNERSHIP\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"LIFECYCLE\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"CHIP_EVENTS\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"CUTOFF_FRONTIER\",\"status\":\"COMPARED\",\"reason\":null}]";
+    private static final Map<DriverService, ServiceEvidence> SERVICE_EVIDENCE = new IdentityHashMap<>();
+    private static final String ALL_COMPARED_LAYER_JSON = "\"comparisonLayerInventory\":[{\"layer\":\"ROW_LAG\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"REQUESTS\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"DECISIONS\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"SERVICES\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"STATE\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"OWNERSHIP\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"LIFECYCLE\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"FRAME_CHIP_EVENTS\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"BOUNDARY_CHIP_STATE\",\"status\":\"COMPARED\",\"reason\":null},{\"layer\":\"CUTOFF_FRONTIER\",\"status\":\"COMPARED\",\"reason\":null}],\"producerObservationInventory\":[{\"layer\":\"ROW_LAG\",\"status\":\"OBSERVED\",\"reason\":null},{\"layer\":\"REQUESTS\",\"status\":\"OBSERVED\",\"reason\":null},{\"layer\":\"DECISIONS\",\"status\":\"OBSERVED\",\"reason\":null},{\"layer\":\"SERVICES\",\"status\":\"OBSERVED\",\"reason\":null},{\"layer\":\"STATE\",\"status\":\"OBSERVED\",\"reason\":null},{\"layer\":\"OWNERSHIP\",\"status\":\"OBSERVED\",\"reason\":null},{\"layer\":\"LIFECYCLE\",\"status\":\"OBSERVED\",\"reason\":null},{\"layer\":\"FRAME_CHIP_EVENTS\",\"status\":\"OBSERVED\",\"reason\":null},{\"layer\":\"BOUNDARY_CHIP_STATE\",\"status\":\"OBSERVED\",\"reason\":null},{\"layer\":\"CUTOFF_FRONTIER\",\"status\":\"OBSERVED\",\"reason\":null}]";
     @Test
     void nativeDeferredServiceBeginRetainsExactImmutableManagedEvidence() {
         NativeDeferredServiceBegin pending = new NativeDeferredServiceBegin(
@@ -34,13 +36,13 @@ class TestCompleteRunAudioTrace {
         assertThrows(UnsupportedOperationException.class,
                 () -> diagnostics.deferredServiceBegins().clear());
 
-        Frame withDiagnostic = new Frame(3, "deferred", false, List.of(), List.of(), List.of(), diagnostics);
-        Frame withoutDiagnostic = new Frame(3, "deferred", false, List.of(), List.of(), List.of(),
+        Frame withDiagnostic = fullFrame(3, "deferred", false, List.of(), List.of(), List.of(), diagnostics);
+        Frame withoutDiagnostic = fullFrame(3, "deferred", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of()));
         NativeDeferredServiceBegin changed = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 40, 42, 12, 14, 2, false, 0, 0);
-        Frame changedRaw = new Frame(3, "deferred", false, List.of(), List.of(), List.of(),
+        Frame changedRaw = fullFrame(3, "deferred", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(), List.of(),
                         List.of(changed), List.of()));
         assertNotEquals(assertDoesNotThrow(() -> CompleteRunAudioJson.writeRecord(withDiagnostic)),
@@ -69,7 +71,7 @@ class TestCompleteRunAudioTrace {
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 40, 41, 12, 13, 2, true, 14, 42);
         ArrayList<NativeDeferredServiceBegin> callerDeferred = new ArrayList<>(List.of(consumed));
-        Frame consumedFrame = new Frame(3, "deferred", false, List.of(), List.of(), List.of(),
+        Frame consumedFrame = fullFrame(3, "deferred", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(), List.of(),
                         callerDeferred, List.of()));
         String consumedJson = assertDoesNotThrow(() -> CompleteRunAudioJson.writeRecord(consumedFrame));
@@ -141,27 +143,29 @@ class TestCompleteRunAudioTrace {
     @Test
     void frameRawChipInventoryPreservesNestedGlobalOrderWithoutDuplicatingOwnership() {
         NormalizedState state = new NormalizedState(List.of(), List.of());
-        DriverService parent = new DriverService(0, "parent", ServiceCompletion.COMPLETED, List.of(), state,
-                List.of(new PsgWrite(0, 0x90), new PsgWrite(2, 0x92)));
-        DriverService child = new DriverService(1, "child", ServiceCompletion.COMPLETED, List.of(), state,
-                List.of(new PsgWrite(1, 0x91)));
-        Frame frame = new Frame(1, "nested", false, List.of(), List.of(parent, child));
+        DriverService parent = testService(0, "parent", ServiceCompletion.COMPLETED,
+                null, null, null, ServiceAncestry.root());
+        DriverService child = testService(1, "child", ServiceCompletion.COMPLETED,
+                null, null, null, ServiceAncestry.root());
+        Frame frame = fullFrame(1, "nested", false, List.of(), List.of(), List.of(parent, child), state,
+                List.of(new PsgWrite(0, 0x90), new PsgWrite(1, 0x91), new PsgWrite(2, 0x92)), null);
 
         assertEquals(List.of(new PsgWrite(0, 0x90), new PsgWrite(1, 0x91), new PsgWrite(2, 0x92)),
-                frame.rawChipEvents());
+                frame.chipEvents());
         assertEquals(frame, CompleteRunAudioJson.readRecord(assertDoesNotThrow(
                 () -> CompleteRunAudioJson.writeRecord(frame))));
-        assertThrows(IllegalArgumentException.class, () -> new Frame(1, "nested", false, List.of(),
-                List.of(parent, child), List.of(new PsgWrite(0, 0x90), new PsgWrite(2, 0x92)), null));
+        assertThrows(IllegalArgumentException.class, () -> fullFrame(1, "nested", false, List.of(), List.of(),
+                List.of(parent, child), state,
+                List.of(new PsgWrite(0, 0x90), new PsgWrite(2, 0x92), new PsgWrite(1, 0x91)), null));
     }
 
     @Test
     void nativeFrameDiagnosticsRetainTokenTreePcSourceAndExclusiveRawOrder() {
         NormalizedState state = new NormalizedState(List.of(), List.of());
-        DriverService parent = new DriverService(0, "parent", ServiceCompletion.COMPLETED, List.of(), state,
-                List.of(new PsgWrite(0, 0x90), new PsgWrite(2, 0x92)));
-        DriverService child = new DriverService(1, "child", ServiceCompletion.COMPLETED, List.of(), state,
-                List.of(new PsgWrite(1, 0x91)), null,
+        DriverService parent = testService(0, "parent", ServiceCompletion.COMPLETED,
+                null, null, null, ServiceAncestry.root());
+        DriverService child = testService(1, "child", ServiceCompletion.COMPLETED, null,
+                null, null,
                 new ServiceAncestry(new ServiceCoordinate(1, 0), 1,
                         new ServiceCoordinate(1, 0), 1, List.of()));
         FrontierChipEvent first = new FrontierChipEvent(1, 1, "Z80", 0x100, 4, 0, 0x90,
@@ -177,7 +181,7 @@ class TestCompleteRunAudioTrace {
         FrameNativeDiagnostics diagnostics = new FrameNativeDiagnostics(List.of(rawParent, rawChild),
                 List.of(new FrontierOwnedChip(1, 0, first), new FrontierOwnedChip(2, 1, nested),
                         new FrontierOwnedChip(1, 0, resumed)), List.of());
-        Frame frame = new Frame(3, "nested", false, List.of(), List.of(parent, child),
+        Frame frame = fullFrame(3, "nested", false, List.of(), List.of(parent, child),
                 List.of(new PsgWrite(0, 0x90), new PsgWrite(1, 0x91), new PsgWrite(2, 0x92)), diagnostics);
 
         assertEquals(frame, CompleteRunAudioJson.readRecord(assertDoesNotThrow(
@@ -214,9 +218,9 @@ class TestCompleteRunAudioTrace {
         FrameNativeDiagnostics diagnostics = new FrameNativeDiagnostics(
                 List.of(), List.of(), List.of(), List.of(),
                 List.of(beginCorrelation, observationCorrelation, conditionalCorrelation));
-        Frame withDiagnostics = new Frame(3, "observed", false, List.of(), List.of(),
+        Frame withDiagnostics = fullFrame(3, "observed", false, List.of(), List.of(),
                 List.of(), diagnostics);
-        Frame withoutDiagnostics = new Frame(3, "observed", false, List.of(), List.of(),
+        Frame withoutDiagnostics = fullFrame(3, "observed", false, List.of(), List.of(),
                 List.of(), new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of()));
 
         assertEquals(withDiagnostics, CompleteRunAudioJson.readRecord(assertDoesNotThrow(
@@ -266,10 +270,10 @@ class TestCompleteRunAudioTrace {
         ServiceAncestry childAncestry = new ServiceAncestry(
                 parentBegin, 1, null, 0, List.of(semanticPromotion));
         NormalizedState state = new NormalizedState(List.of(), List.of());
-        DriverService semanticParent = new DriverService(0, "dpcm", ServiceCompletion.COMPLETED,
-                List.of(), state, List.of(), null, ServiceAncestry.root());
-        DriverService semanticChild = new DriverService(1, "update", ServiceCompletion.COMPLETED,
-                List.of(), state, List.of(), null,
+        DriverService semanticParent = testService(0, "dpcm", ServiceCompletion.COMPLETED,
+                null, null, null, ServiceAncestry.root());
+        DriverService semanticChild = testService(1, "update", ServiceCompletion.COMPLETED,
+                null,
                 new ServiceCoordinate(5, 0), new ServiceCoordinate(6, 0), childAncestry);
         FrontierService parent = new FrontierService(1, 0, 0, "dpcm",
                 FrontierServiceState.COMPLETED, 5, 0, 0x77, 1, "Z80",
@@ -285,17 +289,17 @@ class TestCompleteRunAudioTrace {
                 List.of(new FrontierOwnedAncestryTransition(2, rawPromotion)));
         FrameNativeDiagnostics childDiagnostics = new FrameNativeDiagnostics(
                 List.of(child), List.of(), List.of(), List.of(), List.of(), List.of());
-        Frame rawParent = new Frame(5, "crossing", false, List.of(),
-                List.of(semanticParent), List.of(), parentDiagnostics);
-        Frame raw = new Frame(6, "crossing", false, List.of(),
-                List.of(semanticChild), List.of(), childDiagnostics);
-        Frame without = new Frame(6, "crossing", false, List.of(),
-                List.of(semanticChild), List.of(), null);
-        DriverService forgedLifetime = new DriverService(1, "update", ServiceCompletion.COMPLETED,
-                List.of(), state, List.of(), null,
+        Frame rawParent = fullFrame(5, "crossing", false, List.of(), List.of(),
+                List.of(semanticParent), state, List.of(), parentDiagnostics);
+        Frame raw = fullFrame(6, "crossing", false, List.of(), List.of(),
+                List.of(semanticChild), state, List.of(), childDiagnostics);
+        Frame without = fullFrame(6, "crossing", false, List.of(), List.of(),
+                List.of(semanticChild), state, List.of(), null);
+        DriverService forgedLifetime = testService(1, "update", ServiceCompletion.COMPLETED,
+                null,
                 new ServiceCoordinate(5, 1), new ServiceCoordinate(6, 1), childAncestry);
-        assertThrows(IllegalArgumentException.class, () -> new Frame(6, "crossing", false,
-                List.of(), List.of(forgedLifetime), List.of(), childDiagnostics));
+        assertThrows(IllegalArgumentException.class, () -> fullFrame(6, "crossing", false,
+                List.of(), List.of(), List.of(forgedLifetime), state, List.of(), childDiagnostics));
 
         assertEquals(rawParent, CompleteRunAudioJson.readRecord(assertDoesNotThrow(
                 () -> CompleteRunAudioJson.writeRecord(rawParent))));
@@ -305,11 +309,11 @@ class TestCompleteRunAudioTrace {
                 assertDoesNotThrow(() -> CompleteRunAudioJson.writeRecord(without)));
         assertEquals(assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(raw)),
                 assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(without)));
-        DriverService changedSemanticChild = new DriverService(1, "update",
-                ServiceCompletion.COMPLETED, List.of(), state, List.of(), null,
+        DriverService changedSemanticChild = testService(1, "update",
+                ServiceCompletion.COMPLETED, null, null, null,
                 new ServiceAncestry(parentBegin, 1, parentBegin, 1, List.of()));
-        Frame changedSemantic = new Frame(5, "crossing", false, List.of(),
-                List.of(semanticParent, changedSemanticChild), List.of(), null);
+        Frame changedSemantic = fullFrame(5, "crossing", false, List.of(), List.of(),
+                List.of(semanticParent, changedSemanticChild), state, List.of(), null);
         assertNotEquals(assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(raw)),
                 assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(changedSemantic)));
         assertThrows(IllegalArgumentException.class, () -> new FrontierService(2, 1, 1, "update",
@@ -326,11 +330,11 @@ class TestCompleteRunAudioTrace {
                 6, 2L, 0x71c4c, 3, List.of(), List.of(), 0, 0,
                 List.of(new NativeAncestryTransition(6, 6, 2, 1, 1, 0, 0, 4, "Z80", 0xac)),
                 childAncestry));
-        assertThrows(IllegalArgumentException.class, () -> new DriverService(1, "update",
-                ServiceCompletion.COMPLETED, List.of(), state, List.of(), null,
+        assertThrows(IllegalArgumentException.class, () -> testService(1, "update",
+                ServiceCompletion.COMPLETED, null,
                 new ServiceCoordinate(5, 3), new ServiceCoordinate(6, 1), childAncestry));
-        assertThrows(IllegalArgumentException.class, () -> new DriverService(1, "update",
-                ServiceCompletion.COMPLETED, List.of(), state, List.of(), null,
+        assertThrows(IllegalArgumentException.class, () -> testService(1, "update",
+                ServiceCompletion.COMPLETED, null,
                 new ServiceCoordinate(5, 1), new ServiceCoordinate(5, 3), childAncestry));
     }
 
@@ -358,8 +362,8 @@ class TestCompleteRunAudioTrace {
     @Test
     void nativeFrameDiagnosticsRepresentResetRootExactlyWithoutARegularHook() {
         NormalizedState state = new NormalizedState(List.of(), List.of());
-        DriverService reset = new DriverService(0, "reset", ServiceCompletion.COMPLETED, List.of(), state,
-                List.of(new PsgWrite(0, 0x9f)));
+        DriverService reset = testService(0, "reset", ServiceCompletion.COMPLETED,
+                null, null, null, ServiceAncestry.root());
         FrontierChipEvent rawWrite = new FrontierChipEvent(1, 1, "RESET", 0, 4, 0, 0x9f,
                 true, null, null);
         FrontierService rawReset = new FrontierService(1, 0, 0, "reset", FrontierServiceState.COMPLETED,
@@ -368,7 +372,7 @@ class TestCompleteRunAudioTrace {
                 List.of(new FrontierOwnedChip(1, rawWrite)), List.of(),
                 List.of(new NativeResetDiagnostic(1, false)));
 
-        Frame frame = new Frame(3, "reset", false, List.of(), List.of(reset),
+        Frame frame = fullFrame(3, "reset", false, List.of(), List.of(reset),
                 List.of(new PsgWrite(0, 0x9f)), diagnostics);
         assertEquals(frame, CompleteRunAudioJson.readRecord(assertDoesNotThrow(
                 () -> CompleteRunAudioJson.writeRecord(frame))));
@@ -564,6 +568,45 @@ class TestCompleteRunAudioTrace {
     }
 
     @Test
+    void nativeBoundaryTopologyIsAuthenticatedWhenBoundaryChipsAreUnobserved() {
+        NormalizedState state = new NormalizedState(List.of(), List.of());
+        FrontierService nativeOpen = new FrontierService(1, 0, 0, "driver",
+                FrontierServiceState.OPEN, 859, 0, 0x38, 1, "Z80",
+                null, null, null, null, List.of(), List.of());
+        CutoffNativeDiagnostics nativeProof = new CutoffNativeDiagnostics(List.of(nativeOpen),
+                List.of(), List.of(), List.of(), 0, false, "f".repeat(64));
+        CutoffService forgedBaseline = new CutoffService(null, -1, 0, "forged",
+                FrontierServiceState.CARRIED_IN_OPEN, 860, 0, null, null, List.of());
+        CutoffService forgedCutoff = new CutoffService(null, -1, 0, "forged",
+                FrontierServiceState.OPEN, 860, 0, null, null, List.of());
+
+        assertThrows(IllegalArgumentException.class, () -> new Baseline(860, state, List.of(),
+                new BoundaryFrontier(List.of(forgedBaseline), List.of(), null,
+                        nativeProof, null, null)));
+        assertThrows(IllegalArgumentException.class, () -> new CutoffFrontier(
+                List.of(forgedCutoff), List.of(), null, nativeProof, null, null, state));
+    }
+
+    @Test
+    void nativeBoundaryChipsAreAuthenticatedWhenServiceTopologyIsUnobserved() {
+        NormalizedState state = new NormalizedState(List.of(), List.of());
+        FrontierChipEvent nativeWrite = new FrontierChipEvent(1, 0, "Z80", 0x100,
+                4, 0, 0x90, true, null, null);
+        FrontierService nativeOpen = new FrontierService(1, 0, 0, "driver",
+                FrontierServiceState.OPEN, 859, 0, 0x38, 1, "Z80",
+                null, null, null, null, List.of(), List.of(nativeWrite));
+        CutoffNativeDiagnostics nativeProof = new CutoffNativeDiagnostics(List.of(nativeOpen),
+                List.of(), List.of(new FrontierOwnedChip(1, nativeWrite)), List.of(),
+                0, false, "f".repeat(64));
+
+        assertThrows(IllegalArgumentException.class, () -> new Baseline(860, state, List.of(),
+                new BoundaryFrontier(null, null, List.of(new PsgWrite(0, 0x91)),
+                        nativeProof, 0, 0)));
+        assertThrows(IllegalArgumentException.class, () -> new CutoffFrontier(
+                null, null, List.of(new PsgWrite(0, 0x91)), nativeProof, 0, 0, state));
+    }
+
+    @Test
     void rejectsSignedOrOutOfRangeChipBytes() {
         assertThrows(IllegalArgumentException.class, () -> new YmWrite(0, -1, 0x22, 0));
         assertThrows(IllegalArgumentException.class, () -> new YmWrite(0, 0, 0x100, 0));
@@ -643,7 +686,7 @@ class TestCompleteRunAudioTrace {
         partial.producerIdentities.remove(ProducerKind.OPENGGF);
         partial.observerRuntimeIdentities.remove(ProducerKind.OPENGGF);
         partial.observerProofs.remove(ProducerKind.OPENGGF);
-        Metadata reference = new Metadata(SCHEMA, partial.id(), partial.fixture(), ProducerKind.REFERENCE,
+        Metadata reference = testMetadata(SCHEMA, partial.id(), partial.fixture(), ProducerKind.REFERENCE,
                 partial.producerIdentities.get(ProducerKind.REFERENCE),
                 partial.observerRuntimeIdentities.get(ProducerKind.REFERENCE),
                 partial.observerProofs.get(ProducerKind.REFERENCE),
@@ -832,6 +875,7 @@ class TestCompleteRunAudioTrace {
     void callbackObserverMetadataHasIndependentCanonicalJsonAndStrictParserGates() throws Exception {
         String canonical = """
                 {"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"OPENGGF","producerRuntimeIdentity":{"producerName":"OpenGGF","producerVersion":"0.6","emulatorName":"OpenGGF","emulatorVersion":"0.6","coreName":"SMPS","coreVersion":"1","observerAdapter":"CALLBACK_ONLY","artifactSha256":{"OPENGGF_PRODUCER":"4444444444444444444444444444444444444444444444444444444444444444"}},"observerRuntimeIdentity":{"kind":"CALLBACK","id":"openggf.callback.v1"},"observerProof":{"observerProfile":"test.observer.v1","callbackSource":"m68k.execute","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
+        canonical = canonical.replace("complete_run_audio.v1", CompleteRunAudioTrace.SCHEMA);
         canonical = canonical.substring(0, canonical.length() - 1) + "," + ALL_COMPARED_LAYER_JSON + "}";
         final String canonicalJson = canonical;
 
@@ -907,7 +951,7 @@ class TestCompleteRunAudioTrace {
                 CompleteRunAudioProfiles.GPGX_AUDIO_CAPABILITY_SHA256);
         artifacts.put(RuntimeArtifact.REFERENCE_INSTALLATION_TREE,
                 CompleteRunAudioProfiles.REFERENCE_INSTALLATION_TREE_SHA256);
-        Metadata metadata = new Metadata(SCHEMA, "test.profile", fixture.fixture, ProducerKind.REFERENCE,
+        Metadata metadata = testMetadata(SCHEMA, "test.profile", fixture.fixture, ProducerKind.REFERENCE,
                 new ProducerRuntimeIdentity("BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
                         ManagedObserverAdapter.REFLECTION, artifacts),
                 new BufferedNativeObserverIdentity(TEST_ABI_NAME, TEST_ABI_VERSION,
@@ -920,10 +964,13 @@ class TestCompleteRunAudioTrace {
                         List.of(new CallbackProof("driver.service", 1))),
                 new ChunkPolicy(4096, "gzip", 0), List.of(HardwareRole.FM1, HardwareRole.PSG1),
                 new StateInventory(List.of("tempo"), List.of("cursor")));
+        assertThrows(IllegalArgumentException.class,
+                () -> metadata.validateObservationShape(fixture.frame(860, List.of(), List.of())));
         String baseCanonical = """
 {"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"REFERENCE","producerRuntimeIdentity":{"producerName":"BizHawk","producerVersion":"2.11","emulatorName":"BizHawk","emulatorVersion":"2.11","coreName":"GPGX","coreVersion":"1.0","observerAdapter":"REFLECTION","artifactSha256":{"BIZHAWK_EXECUTABLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_CORE_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_COMMON_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","WATERBOX_HOST":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE":"e65315743a6a122843907a85314e380eee03fdc06bf0885b44c3dbc3bab88c6d","GPGX_CORE_UNCOMPRESSED":"f57b7a94237653879fb99af197937500a8b591f801f56284b4d2f53ca7ea6b0c","GPGX_OBSERVER_PATCH":"9f49e334ec8a8f73e878b8c1b6b207baabc054e085e7af95e3dd07e77df9280c","GPGX_OBSERVER_SOURCE_BUNDLE":"de73c512b2120f63f064f5e8fd59dee230f0ff50d0debbd648a9112efe18b83b","GPGX_OBSERVER_TOOLCHAIN":"9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521","GPGX_OBSERVER_BUILD_RECIPE":"f419cc73426f1356c30577c04231a0cc3356bdd99bc4760dfba55abecefdf748","GPGX_OBSERVER_IDENTITY":"815bfde02d78fd6caa1b127ddefe7be28cc84d6fdeef5a75cecc31f186f84d86","GPGX_OBSERVER_ADAPTER_SOURCE":"046ab11f4ffaf100651dda49625e14f3b08e54a33f61ed415d039a0d27b9bb93","GPGX_HOST_BRIDGE_SOURCE":"af9da7ed2f08d27c663176f4f1c852504c4a515e437655abb0fd5d20a3364bf1","BIZHAWK_BIZINVOKE_DLL":"8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7","BIZHAWK_BASE_COMMON_DLL":"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"}},"observerRuntimeIdentity":{"kind":"BUFFERED_NATIVE","abiName":"gpgx.audio-trace.v1","abiVersion":4,"eventSize":32,"capacity":65536,"installationId":"bizhawk-2.11-gpgx-audio-observer-v3","coreId":"gpgx-audio-observer-v3","coreBuildId":"cba4d8c88cf968a9","watchMaskSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","serviceManifestSha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","enabled":true,"maximumFrameOccupancy":1,"overflowCount":0},"observerProof":{"observerProfile":"reference.observer.v1","callbackSource":"native.buffer","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
 
-        String canonical = baseCanonical.replace("\"eventSize\":32,",
+        String canonical = baseCanonical.replace("complete_run_audio.v1", CompleteRunAudioTrace.SCHEMA)
+                .replace("\"eventSize\":32,",
                 "\"eventSize\":32,\"configSize\":64,\"kindSize\":16,\"hookSize\":32,\"rangeSize\":16,")
                 .replace(
                 "\"BIZHAWK_BASE_COMMON_DLL\":\"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33\"",
@@ -1064,7 +1111,7 @@ class TestCompleteRunAudioTrace {
                 List.of(new ManifestSegment("green-hill", 860, 862)), 860, 862);
         private final TestProfile profile = new TestProfile("test.profile", fixture,
                 List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo"), List.of("cursor"));
-        private final Metadata metadata = new Metadata("complete_run_audio.v1", "test.profile", fixture,
+        private final Metadata metadata = testMetadata(CompleteRunAudioTrace.SCHEMA, "test.profile", fixture,
                 ProducerKind.OPENGGF, openGgfRuntimeIdentity(), new CallbackObserverIdentity("openggf.callback.v1"),
                 new ObserverProof("test.observer.v1", "m68k.execute",
                         List.of(new CallbackProof("driver.service", 1))),
@@ -1072,7 +1119,7 @@ class TestCompleteRunAudioTrace {
                 new StateInventory(List.of("tempo"), List.of("cursor")));
 
         private Frame frame(int row, List<Request> requests, List<DriverService> services) {
-            return new Frame(row, null, false, requests, services);
+            return fullFrame(row, null, false, requests, services);
         }
 
         private Request request(long ordinal) {
@@ -1080,7 +1127,7 @@ class TestCompleteRunAudioTrace {
         }
 
         private DriverService service(long ordinal) {
-            return new DriverService(ordinal, "driver", ServiceCompletion.COMPLETED, List.of(),
+            return testService(ordinal, "driver", ServiceCompletion.COMPLETED, List.of(),
                     state(List.of(HardwareRole.FM1, HardwareRole.PSG1)), List.of());
         }
 
@@ -1130,6 +1177,79 @@ class TestCompleteRunAudioTrace {
         } catch (Exception failure) {
             throw new IllegalArgumentException("invalid metadata JSON", failure);
         }
+    }
+
+    private static Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
+            List<DriverService> services) {
+        List<Decision> decisions = services.stream().flatMap(service -> evidence(service).decisions().stream())
+                .toList();
+        NormalizedState state = services.isEmpty() ? new NormalizedState(List.of(), List.of())
+                : evidence(services.getLast()).state();
+        List<ChipEvent> chips = services.stream().flatMap(service -> evidence(service).chips().stream())
+                .sorted(java.util.Comparator.comparingLong(ChipEvent::ordinal)).toList();
+        return new Frame(absoluteFrame, segment, lag, requests, decisions, services, state, chips, null);
+    }
+
+    private static Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
+            List<DriverService> services, List<ChipEvent> chips, FrameNativeDiagnostics diagnostics) {
+        List<Decision> decisions = services.stream().flatMap(service -> evidence(service).decisions().stream())
+                .toList();
+        NormalizedState state = services.isEmpty() ? new NormalizedState(List.of(), List.of())
+                : evidence(services.getLast()).state();
+        return new Frame(absoluteFrame, segment, lag, requests, decisions, services, state, chips, diagnostics);
+    }
+
+    private static Frame fullFrame(int absoluteFrame, String segment, Boolean lag, List<Request> requests,
+            List<Decision> decisions, List<DriverService> services, NormalizedState state,
+            List<ChipEvent> chips, FrameNativeDiagnostics diagnostics) {
+        return new Frame(absoluteFrame, segment, lag, requests, decisions, services, state, chips, diagnostics);
+    }
+
+    private static ServiceEvidence evidence(DriverService service) {
+        return SERVICE_EVIDENCE.getOrDefault(service,
+                new ServiceEvidence(List.of(), new NormalizedState(List.of(), List.of()), List.of()));
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            List<Decision> decisions, NormalizedState state, List<ChipEvent> chips) {
+        return testService(ordinal, kind, completion, decisions, state, chips, null, null, null,
+                ServiceAncestry.root());
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            List<Decision> decisions, NormalizedState state, List<ChipEvent> chips, Long carried,
+            ServiceAncestry ancestry) {
+        return testService(ordinal, kind, completion, decisions, state, chips, carried, null, null, ancestry);
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            List<Decision> decisions, NormalizedState state, List<ChipEvent> chips, Long carried,
+            ServiceCoordinate begin, ServiceCoordinate end, ServiceAncestry ancestry) {
+        DriverService service = new DriverService(ordinal, kind, completion, carried, begin, end, ancestry);
+        SERVICE_EVIDENCE.put(service, new ServiceEvidence(List.copyOf(decisions), state, List.copyOf(chips)));
+        return service;
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            Long carried, ServiceCoordinate begin, ServiceCoordinate end, ServiceAncestry ancestry) {
+        return new DriverService(ordinal, kind, completion, carried, begin, end, ancestry);
+    }
+
+    private record ServiceEvidence(List<Decision> decisions, NormalizedState state, List<ChipEvent> chips) { }
+
+    private static Metadata testMetadata(String schema, String profileId, CompleteRunFixture fixture,
+            ProducerKind producerKind, ProducerRuntimeIdentity runtime, ObserverRuntimeIdentity observer,
+            ObserverProof proof, ChunkPolicy chunks, List<HardwareRole> roles, StateInventory stateInventory) {
+        return testMetadata(schema, profileId, fixture, producerKind, runtime, observer, proof, chunks, roles,
+                stateInventory, ComparisonLayerInventory.allCompared(), ProducerObservationInventory.allObserved());
+    }
+
+    private static Metadata testMetadata(String schema, String profileId, CompleteRunFixture fixture,
+            ProducerKind producerKind, ProducerRuntimeIdentity runtime, ObserverRuntimeIdentity observer,
+            ObserverProof proof, ChunkPolicy chunks, List<HardwareRole> roles, StateInventory stateInventory,
+            ComparisonLayerInventory comparisons, ProducerObservationInventory observations) {
+        return new Metadata(schema, profileId, fixture, producerKind, runtime, observer, proof, chunks, roles,
+                stateInventory, comparisons, observations);
     }
 
     private static final class TestProfile implements CompleteRunAudioProfile {
@@ -1195,6 +1315,15 @@ class TestCompleteRunAudioTrace {
         @Override
         public StateInventory stateInventory() {
             return new StateInventory(globalFields, activeRoleFields);
+        }
+
+        @Override public ComparisonLayerInventory comparisonLayerInventory() {
+            return ComparisonLayerInventory.allCompared();
+        }
+
+        @Override public Map<ProducerKind, ProducerObservationInventory> producerObservationInventories() {
+            var all = ProducerObservationInventory.allObserved();
+            return Map.of(ProducerKind.REFERENCE, all, ProducerKind.OPENGGF, all);
         }
 
         @Override

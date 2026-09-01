@@ -94,9 +94,9 @@ GPGX, Lua 5.4 guards, gzip JSONL canonical capture store.
 
 ### Risks and conservative rulings
 
-- The canonical store has no installed S2/S3K captures, so `complete_run_audio.v1` may gain the
-  required inventory field in place. Existing generated v1 test stores are updated atomically;
-  accepting old metadata without an inventory would recreate the ambiguity this work removes.
+- The canonical store has no installed complete-run captures. The prerequisite therefore adopts
+  `complete_run_audio.v2` and rejects v1 rather than accepting metadata without explicit producer
+  observation and shared comparison inventories.
 - A TraceChaser request-observer extension is not part of the initial integration. Current raw
   authority remains service/state/chip-only.
 - If natural power-on replay cannot traverse a mode or special stage, the run reports an explicit
@@ -145,13 +145,30 @@ diagnostic tools remain usable without changing gameplay behavior.
 
 ## Feature design
 
-- `ComparisonLayerInventory` declares `REQUESTS`, `DECISIONS`, `SERVICES`, `STATE`,
-  `OWNERSHIP`, `LIFECYCLE`, `CHIP_EVENTS`, and `CUTOFF_FRONTIER` in canonical enum order.
-- Each layer is `COMPARED` with no reason or `REFERENCE_LIMITATION` with a nonblank reason.
+- `ComparisonLayerInventory` declares `ROW_LAG`, `REQUESTS`, `DECISIONS`, `SERVICES`, `STATE`,
+  `OWNERSHIP`, `LIFECYCLE`, `FRAME_CHIP_EVENTS`, `BOUNDARY_CHIP_STATE`, and `CUTOFF_FRONTIER`
+  in canonical enum order. Each producer separately pins the same ten-layer observed/unobserved
+  inventory.
+- Each comparison layer is `COMPARED` with no reason or `UNAVAILABLE` with a nonblank reason;
+  `COMPARED` requires both producer inventories observed, but observed evidence may deliberately
+  remain unavailable for equality.
 - Decisions cannot be compared when requests are unavailable.
-- Inventory is frozen into the profile and capture metadata and therefore into source identity.
+- A producer may claim ownership observed only when decision and lifecycle carriers are also
+  observed; ownership equality uses their ordered flattened owner-transition projection rather
+  than unavailable decision/lifecycle record grouping.
+- Both inventories are mandatory and frozen into profile/capture metadata and source identity;
+  no constructor or profile default may synthesize all-observed/all-compared claims.
 - Comparator skips unavailable fields/counts but returns `REFERENCE_LIMITATION`, not `MATCH`,
   after all compared layers agree.
+- Nullable frame/boundary fields mean unobserved; non-null empty means observed-empty. Frame owns
+  lag, requests, decisions, services, post-row state, and frame chip events. `DriverService` owns
+  only service semantics/lifetime/ancestry. Admission decisions remain frame-owned because
+  `AudioAdmissionObserver` fires in `AbstractSmpsAudioBackend.playSfxSmps`/`evaluateAdmission`
+  before and independently of `SmpsDriver` service callbacks.
+- Baseline/cutoff service topology, boundary chip state/latches, normalized state, and owners are
+  independently nullable within mandatory envelopes. Buffered-native authentication is validated
+  whenever declared, even when its corresponding semantic layer is unavailable. Native topology
+  and global chip/latch projections prove each present semantic boundary component independently.
 - `Bk2InputCursor` indexes `Bk2Movie.getFrames()` directly, publishes current/previous logical
   input before `GameLoop.step()`, advances after audio presentation, and fails on exhaustion.
 - A scoped observer lease installs append-only observers before startup and removes them in
@@ -186,33 +203,37 @@ diagnostic tools remain usable without changing gameplay behavior.
 
 **Interfaces:**
 
-- Produces: `ComparisonLayer`, `ComparisonLayerStatus`, `ComparisonLayerClaim`,
-  `ComparisonLayerInventory`, `CompleteRunAudioProfile.comparisonLayerInventory()`, and
-  `CompleteRunAudioReport.Kind.REFERENCE_LIMITATION`.
+- Produces: canonical `complete_run_audio.v2`; `ComparisonLayer`, `ComparisonLayerStatus`,
+  `ComparisonLayerClaim`, `ComparisonLayerInventory`, `ProducerObservationClaim`,
+  `ProducerObservationInventory`, both mandatory profile inventories, strict nullable evidence
+  shapes, and `CompleteRunAudioReport.Kind.REFERENCE_LIMITATION`.
 - Consumes: existing strict metadata/profile/store validation.
 
-- [ ] Write RED constructor tests for duplicate, missing, reordered, and invalid dependent claims;
+- [x] Write RED constructor tests for duplicate, missing, reordered, and invalid dependent claims;
   add a metadata round-trip test with literal canonical JSON.
-- [ ] Run
+- [x] Run
   `mvn -Dmse=off "-Dtest=TestCompleteRunAudioTrace,TestCompleteRunAudioCaptureStore" test -B`
   and confirm failures are caused by the absent inventory contract.
-- [ ] Add the immutable inventory types. Provide `ComparisonLayerInventory.allCompared()` for S1
-  and synthetic fixtures. Initially mark S2/S3K `REQUESTS`, `DECISIONS`, `SERVICES`, `OWNERSHIP`,
-  and `LIFECYCLE` unavailable with exact reasons; retain `STATE`, `CHIP_EVENTS`, and
-  `CUTOFF_FRONTIER` as compared only where existing decoder/adapter contracts prove them.
-- [ ] Freeze inventory in `CompleteRunAudioProfiles.FrozenProfile`, append it to metadata JSON,
+- [x] Add immutable shared-comparison and producer-observation inventory types. Initially compare
+  only `FRAME_CHIP_EVENTS` for S2/S3K; every other layer is an explicit limitation for both
+  producers. S1's uninstalled complete-run producers claim no observed layers, while its legacy
+  music/SFX oracle gates remain unchanged.
+- [x] Freeze both inventories in `CompleteRunAudioProfiles.FrozenProfile`, append the selected
+  producer inventory to strict v2 metadata JSON,
   and reject metadata whose inventory differs from its registered profile.
-- [ ] Write RED comparator tests proving engine requests do not mismatch an unavailable reference
+- [x] Write RED comparator tests proving engine requests do not mismatch an unavailable reference
   request layer, equal empty arrays cannot produce `MATCH`, incompatible inventories fail, and a
   real compared-layer mismatch still wins over the limitation result.
-- [ ] Run
+- [x] Run
   `mvn -Dmse=off "-Dtest=TestCompleteRunAudioComparator,TestCompleteRunAudioCli" test -B`
   and confirm the missing behavior fails.
-- [ ] Make frame and terminal comparisons conditional on `COMPARED`. Return
+- [x] Make cross-producer frame/boundary comparisons conditional on `COMPARED`, while retaining
+  producer-local shape/profile/native authentication for observed-but-not-compared evidence. Return
   `REFERENCE_LIMITATION` only when every compared layer is equal; preserve exact first-divergence
   behavior otherwise. Emit inventory through existing source metadata in JSON/text reports.
-- [ ] Run all four focused classes and existing S1/S2/S3K fixture profile tests.
-- [ ] Commit with repository trailers as `feat(audio): declare complete-run comparison layers`.
+- [x] Run all focused classes, existing S1/S2/S3K fixture profile tests, legacy S1 oracle gates,
+  the ordinary relevant suite, and fresh-JVM guards.
+- [x] Commit with repository trailers as `feat(audio): declare complete-run comparison layers`.
 
 ### Task 2: Stable TraceChaser complete-audio producer command
 
@@ -396,6 +417,14 @@ diagnostic tools remain usable without changing gameplay behavior.
 
 ### Task 6: Canonical OpenGGF capture reducer and fixed engine producers
 
+**Revised dependency:** Task 6 consumes the reviewed v2 contract above, not the former bundled
+service model. Its reducer must populate frame-owned admission decisions, post-row state, and chip
+events directly from their production observers even when a row has zero or a different number of
+semantic services. It must select the OPENGGF producer observation inventory explicitly and emit
+null for every unobserved layer; an empty observed list is not a substitute. Task 6 may widen a
+producer inventory only after focused source-backed projection tests, and may not widen shared
+comparison authority by itself.
+
 **Files:**
 
 - Create: `src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioCaptureReducer.java`
@@ -425,6 +454,13 @@ diagnostic tools remain usable without changing gameplay behavior.
 - [ ] Commit as `feat(audio): capture production-owned complete-run audio`.
 
 ### Task 7: Pin fixed identities and enable fresh-CLI execution
+
+**S2 prerequisite:** keep the production REFERENCE binding unavailable until TraceChaser exposes a
+new authenticated raw contract carrying the true pre-row-769 begin row and native ordinal (or an
+equivalent typed carried-in origin) for every boundary service. Strictly validate and project that
+evidence before pinning S2's buffered-native identity/capability. Do not infer the DPCM origin from
+the comparison boundary, weaken strict raw v1 with optional fields, or publish callback provenance.
+The existing OPENGGF/callback prefix-projector metadata is test-only.
 
 **Files:**
 

@@ -33,16 +33,16 @@ class TestS3kCompleteRunReferenceProducer {
         CompleteRunAudioTrace.Frame frame = (CompleteRunAudioTrace.Frame) records.get(1);
         CompleteRunAudioTrace.CutoffFrontier cutoff =
                 (CompleteRunAudioTrace.CutoffFrontier) records.get(2);
-        var catalog = S3kCompleteRunAssetCatalog.load(rom());
-        assertEquals(S3kCompleteRunStateNormalizer.normalizeReference(
-                S3kCompleteRunStateDecoder.decode(new byte[1024], catalog), catalog.assets()), baseline.state());
-        assertEquals(baseline.state(), frame.services().getFirst().state());
-        assertEquals(baseline.state(), cutoff.terminalState());
-        assertEquals(List.of(), frame.requests());
-        assertEquals(1, frame.services().size());
-        assertEquals(List.of(), frame.services().getFirst().decisions());
-        assertEquals(List.of(new CompleteRunAudioTrace.PsgWrite(0, 0x44)), frame.rawChipEvents());
-        assertEquals(List.of(), cutoff.rawChipEvents());
+        assertEquals(null, baseline.state());
+        assertEquals(null, baseline.roleOwners());
+        assertEquals(null, frame.lag());
+        assertEquals(null, frame.requests());
+        assertEquals(null, frame.decisions());
+        assertEquals(null, frame.services());
+        assertEquals(null, frame.postRowState());
+        assertEquals(List.of(new CompleteRunAudioTrace.PsgWrite(0, 0x44)), frame.chipEvents());
+        assertEquals(null, cutoff.rawChipEvents());
+        assertEquals(null, cutoff.terminalState());
     }
 
     @Test
@@ -54,10 +54,10 @@ class TestS3kCompleteRunReferenceProducer {
         CompleteRunAudioTrace.Frame first = (CompleteRunAudioTrace.Frame) records.get(1);
         CompleteRunAudioTrace.Frame second = (CompleteRunAudioTrace.Frame) records.get(2);
 
-        assertEquals(0, first.services().getFirst().ordinal());
-        assertEquals(1, second.services().getFirst().ordinal());
-        assertEquals(0, first.rawChipEvents().getFirst().ordinal());
-        assertEquals(1, second.rawChipEvents().getFirst().ordinal());
+        assertEquals(null, first.services());
+        assertEquals(null, second.services());
+        assertEquals(0, first.chipEvents().getFirst().ordinal());
+        assertEquals(1, second.chipEvents().getFirst().ordinal());
     }
 
     @Test
@@ -78,12 +78,9 @@ class TestS3kCompleteRunReferenceProducer {
         CompleteRunAudioTrace.CutoffFrontier cutoff =
                 (CompleteRunAudioTrace.CutoffFrontier) records.get(2);
 
-        assertEquals(1, cutoff.activeStack().size());
-        assertEquals(4, cutoff.pendingDescendants().size());
-        assertEquals("DpcmIteration", cutoff.activeStack().getFirst().kind());
-        assertEquals(List.of("VInt", "VInt", "VInt", "VInt"),
-                cutoff.pendingDescendants().stream().map(CompleteRunAudioTrace.CutoffService::kind).toList());
-        assertEquals(List.of(new CompleteRunAudioTrace.PsgWrite(0, 0x44)), cutoff.rawChipEvents());
+        assertNull(cutoff.activeStack());
+        assertNull(cutoff.pendingDescendants());
+        assertNull(cutoff.rawChipEvents());
 
         var chip = new CompleteRunAudioTrace.FrontierChipEvent(
                 12, 12, "Z80", 4300, 4, 0, 68, true, null, null);
@@ -137,9 +134,7 @@ class TestS3kCompleteRunReferenceProducer {
                 .map(CompleteRunAudioTrace.FrontierService::token).toList());
         assertEquals(List.of(810, 811), cutoff.nativeDiagnostics().pendingDescendants().stream()
                 .map(CompleteRunAudioTrace.FrontierService::beginFrame).toList());
-        assertEquals(2, cutoff.pendingDescendants().size());
-        assertTrue(cutoff.pendingDescendants().getFirst().beginFrame()
-                < cutoff.pendingDescendants().getLast().beginFrame());
+        assertNull(cutoff.pendingDescendants());
     }
 
     @Test

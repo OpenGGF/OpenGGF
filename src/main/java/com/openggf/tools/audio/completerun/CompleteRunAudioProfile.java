@@ -34,9 +34,10 @@ public interface CompleteRunAudioProfile {
     StateInventory stateInventory();
 
     /** Immutable authority inventory that controls which semantic layers may be compared. */
-    default CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayerInventory() {
-        return CompleteRunAudioTrace.ComparisonLayerInventory.allCompared();
-    }
+    CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayerInventory();
+
+    /** Per-producer canonical observation shape, independent of shared comparison authority. */
+    Map<ProducerKind, CompleteRunAudioTrace.ProducerObservationInventory> producerObservationInventories();
 
     /** Complete native request-to-ROM-content resolution owned by this immutable profile. */
     Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities();

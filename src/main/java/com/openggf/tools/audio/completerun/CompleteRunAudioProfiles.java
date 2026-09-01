@@ -117,6 +117,7 @@ public final class CompleteRunAudioProfiles {
     /** Value snapshot prevents later mutations by a profile factory from changing capture validation. */
     private record FrozenProfile(String id, CompleteRunFixture fixture, List<HardwareRole> hardwareRoles,
             StateInventory stateInventory, CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayerInventory,
+            Map<ProducerKind, CompleteRunAudioTrace.ProducerObservationInventory> producerObservationInventories,
             Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities,
             Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities,
             Map<ProducerKind, CompleteRunAudioTrace.ProducerBinding> producerBindings,
@@ -140,6 +141,9 @@ public final class CompleteRunAudioProfiles {
             stateInventory = new StateInventory(stateInventory.globalFields(), stateInventory.activeRoleFields());
             comparisonLayerInventory = Objects.requireNonNull(comparisonLayerInventory,
                     "profile comparison layer inventory");
+            producerObservationInventories = Map.copyOf(Objects.requireNonNull(producerObservationInventories,
+                    "profile producer observation inventories"));
+            comparisonLayerInventory.validateProducerInventories(producerObservationInventories);
             nativeSoundIdentities = Map.copyOf(nativeSoundIdentities);
             producerRuntimeIdentities = Map.copyOf(producerRuntimeIdentities);
             producerBindings = Map.copyOf(producerBindings);
@@ -253,6 +257,7 @@ public final class CompleteRunAudioProfiles {
                     List.copyOf(fixture.segments()), fixture.firstFrame(), fixture.exclusiveEnd());
             return new FrozenProfile(profile.id(), fixtureCopy, List.copyOf(profile.hardwareRoles()),
                     profile.stateInventory(), profile.comparisonLayerInventory(),
+                    profile.producerObservationInventories(),
                     Map.copyOf(profile.nativeSoundIdentities()),
                     Map.copyOf(profile.producerRuntimeIdentities()), Map.copyOf(profile.producerBindings()), Map.copyOf(profile.observerProofs()),
                     Map.copyOf(profile.observerRuntimeIdentities()),

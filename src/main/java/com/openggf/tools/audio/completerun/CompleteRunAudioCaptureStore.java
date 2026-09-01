@@ -154,6 +154,7 @@ public final class CompleteRunAudioCaptureStore {
         @Override
         public void append(Record record) throws IOException {
             requireOpen();
+            metadata.validateObservationShape(Objects.requireNonNull(record, "complete-run record"));
             if (terminalSeen) {
                 throw new IllegalArgumentException("terminal must be the final complete-run record");
             }
@@ -190,8 +191,8 @@ public final class CompleteRunAudioCaptureStore {
                 if (!baselineSeen || cutoffSeen) {
                     throw new IllegalArgumentException("exactly one cutoff frontier is required after baseline");
                 }
-                cutoffActive = frontier.activeStack().size();
-                cutoffPending = frontier.pendingDescendants().size();
+                cutoffActive = size(frontier.activeStack());
+                cutoffPending = size(frontier.pendingDescendants());
                 cutoffSeen = true;
             } else if (record instanceof Terminal terminal) {
                 if (!baselineSeen || !cutoffSeen) {
@@ -215,14 +216,13 @@ public final class CompleteRunAudioCaptureStore {
         }
 
         private void count(Frame frame) {
-            requests = Math.addExact(requests, frame.requests().size());
-            for (var service : frame.services()) {
-                services = Math.addExact(services, 1);
-                decisions = Math.addExact(decisions, service.decisions().size());
-                for (var event : service.chipEvents()) {
-                    if (event instanceof CompleteRunAudioTrace.YmWrite) ym = Math.addExact(ym, 1);
-                    else psg = Math.addExact(psg, 1);
-                }
+            requests = Math.addExact(requests, size(frame.requests()));
+            services = Math.addExact(services, size(frame.services()));
+            decisions = Math.addExact(decisions, size(frame.decisions()));
+            for (var event : frame.chipEvents() == null ? List.<CompleteRunAudioTrace.ChipEvent>of()
+                    : frame.chipEvents()) {
+                if (event instanceof CompleteRunAudioTrace.YmWrite) ym = Math.addExact(ym, 1);
+                else psg = Math.addExact(psg, 1);
             }
         }
 
@@ -479,6 +479,7 @@ public final class CompleteRunAudioCaptureStore {
 
         void accept(Record record) {
             if (terminal) throw new IllegalArgumentException("records follow terminal");
+            metadata.validateObservationShape(Objects.requireNonNull(record, "complete-run record"));
             if (cutoff && !(record instanceof Terminal)) {
                 throw new IllegalArgumentException("cutoff frontier must be immediately before terminal");
             }
@@ -494,13 +495,12 @@ public final class CompleteRunAudioCaptureStore {
                 currentChunkFrames++;
                 currentChunkEnd = frame.absoluteFrame() + 1;
                 frames++;
-                requests = Math.addExact(requests, frame.requests().size());
-                for (var service : frame.services()) {
-                    services = Math.addExact(services, 1);
-                    decisions = Math.addExact(decisions, service.decisions().size());
-                    for (var event : service.chipEvents()) {
-                        if (event instanceof CompleteRunAudioTrace.YmWrite) ym = Math.addExact(ym, 1); else psg = Math.addExact(psg, 1);
-                    }
+                requests = Math.addExact(requests, size(frame.requests()));
+                services = Math.addExact(services, size(frame.services()));
+                decisions = Math.addExact(decisions, size(frame.decisions()));
+                for (var event : frame.chipEvents() == null ? List.<CompleteRunAudioTrace.ChipEvent>of()
+                        : frame.chipEvents()) {
+                    if (event instanceof CompleteRunAudioTrace.YmWrite) ym = Math.addExact(ym, 1); else psg = Math.addExact(psg, 1);
                 }
             } else if (record instanceof Lifecycle) {
                 if (!baseline) throw new IllegalArgumentException("lifecycle precedes baseline");
@@ -508,8 +508,8 @@ public final class CompleteRunAudioCaptureStore {
             } else if (record instanceof CutoffFrontier value) {
                 if (!baseline || cutoff) throw new IllegalArgumentException("invalid cutoff frontier position");
                 cutoff = true;
-                cutoffActive = value.activeStack().size();
-                cutoffPending = value.pendingDescendants().size();
+                cutoffActive = size(value.activeStack());
+                cutoffPending = size(value.pendingDescendants());
             } else if (record instanceof Terminal value) {
                 if (!baseline || !cutoff) throw new IllegalArgumentException("terminal lacks cutoff frontier");
                 metadata.validateTerminal(value, new CaptureCounts(frames, requests, services, decisions, ym, psg,
@@ -726,6 +726,10 @@ public final class CompleteRunAudioCaptureStore {
     private static String semanticRecordJson(Record record) {
         try { return CompleteRunAudioJson.writeSemanticRecord(record); }
         catch (IOException failure) { throw new IllegalArgumentException("cannot canonicalize record", failure); }
+    }
+
+    private static int size(List<?> values) {
+        return values == null ? 0 : values.size();
     }
 
     private static void update(MessageDigest digest, String record) { digest.update((record + "\n").getBytes(StandardCharsets.UTF_8)); }

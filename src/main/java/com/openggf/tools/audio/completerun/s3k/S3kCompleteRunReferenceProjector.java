@@ -88,7 +88,9 @@ public final class S3kCompleteRunReferenceProjector {
             CompleteRunAudioTrace.NativeCapabilitySummary capability, boolean full) throws IOException {
         S3kCompleteRunAssetCatalog catalog = S3kCompleteRunAssetCatalog.load(rom);
         var writer = new CompleteRunAudioCaptureStore().writeNew(output, metadata);
-        Transaction transaction = new Transaction(catalog, writer, capability);
+        Transaction transaction = new Transaction(catalog, writer, capability,
+                metadata.observerRuntimeIdentity()
+                        instanceof CompleteRunAudioTrace.BufferedNativeObserverIdentity);
         boolean complete = false;
         try {
             if (full) S3kCompleteRunReferenceRawAdapter.scan(raw, transaction);
@@ -128,7 +130,8 @@ public final class S3kCompleteRunReferenceProjector {
                 new CompleteRunAudioTrace.ObserverProof("test-only", "test-only",
                         List.of(new CompleteRunAudioTrace.CallbackProof("projection", 1))),
                 new CompleteRunAudioTrace.ChunkPolicy(4096, "gzip", 0), pinned.hardwareRoles(),
-                pinned.stateInventory(), pinned.comparisonLayerInventory());
+                pinned.stateInventory(), pinned.comparisonLayerInventory(),
+                pinned.producerObservationInventories().get(CompleteRunAudioTrace.ProducerKind.OPENGGF));
     }
 
     private static final class Transaction implements S3kCompleteRunReferenceRawAdapter.Sink {
@@ -136,11 +139,11 @@ public final class S3kCompleteRunReferenceProjector {
         private final List<CompleteRunAudioTrace.Record> staged = new ArrayList<>();
         private final CompleteRunAudioCaptureStore.Writer writer;
         private final CompleteRunAudioTrace.NativeCapabilitySummary capability;
+        private final boolean retainNativeDiagnostics;
         private boolean started;
         private boolean committed;
         private int ymPort0Latch;
         private int ymPort1Latch;
-        private long nextServiceOrdinal;
         private long nextChipOrdinal;
         private long nextEventCoordinate;
         private final List<ObservedService> liveServices = new ArrayList<>();
@@ -149,13 +152,15 @@ public final class S3kCompleteRunReferenceProjector {
         private ObservedService resetService;
         private int nextToken;
 
-        private Transaction(S3kCompleteRunAssetCatalog catalog) { this(catalog, null, null); }
+        private Transaction(S3kCompleteRunAssetCatalog catalog) { this(catalog, null, null, true); }
 
         private Transaction(S3kCompleteRunAssetCatalog catalog, CompleteRunAudioCaptureStore.Writer writer,
-                CompleteRunAudioTrace.NativeCapabilitySummary capability) {
+                CompleteRunAudioTrace.NativeCapabilitySummary capability,
+                boolean retainNativeDiagnostics) {
             this.catalog = catalog;
             this.writer = writer;
             this.capability = capability;
+            this.retainNativeDiagnostics = retainNativeDiagnostics;
         }
 
         @Override public void begin() { started = true; }
@@ -168,14 +173,21 @@ public final class S3kCompleteRunReferenceProjector {
             }
             ymPort0Latch = value.ymPort0Latch();
             ymPort1Latch = value.ymPort1Latch();
-            append(new CompleteRunAudioTrace.Baseline(value.row(), normalize(value.driverState()),
-                    S3kCompleteRunAudioProfile.profile().baselineRoleOwners()));
+            CompleteRunAudioTrace.CutoffNativeDiagnostics diagnostics = retainNativeDiagnostics
+                    ? CompleteRunAudioTrace.CutoffFrontier.fromNative(List.of(), List.of(), List.of(), List.of(),
+                            value.ymPort0Latch(), value.ymPort1Latch(), value.nativeArmEpoch(), value.nativeArmed(),
+                            normalize(value.driverState()), sha256(value.driverState())).nativeDiagnostics()
+                    : null;
+            append(new CompleteRunAudioTrace.Baseline(value.row(), null, null,
+                    new CompleteRunAudioTrace.BoundaryFrontier(
+                            null, null, null, diagnostics, null, null)));
         }
 
         @Override public void frame(S3kCompleteRunReferenceRawAdapter.RawFrame value) throws IOException {
             requireStarted();
             List<CompleteRunAudioTrace.ChipEvent> chips = new ArrayList<>();
             List<ObservedService> completed = new ArrayList<>();
+            long frameCoordinateBase = nextEventCoordinate;
             nextToken = 1;
             for (ObservedService active : liveServices) {
                 while (nextToken == active.token()) nextToken = nextToken(nextToken);
@@ -197,11 +209,13 @@ public final class S3kCompleteRunReferenceProjector {
                     .forEach(service -> servicesByBegin.put(service.begin.coordinate(), service));
             completed.forEach(service -> servicesByBegin.putIfAbsent(service.begin.coordinate(), service));
             nextEventCoordinate = Math.addExact(nextEventCoordinate, value.events().size());
-            var state = normalize(value.driverState());
-            var service = new CompleteRunAudioTrace.DriverService(nextServiceOrdinal++, "native-observation",
-                    CompleteRunAudioTrace.ServiceCompletion.COMPLETED, List.of(), state, chips);
-            append(new CompleteRunAudioTrace.Frame(value.row(), segment(value.row()), value.lag(),
-                    List.of(), List.of(service), chips, null));
+            CompleteRunAudioTrace.FrameNativeDiagnostics nativeDiagnostics = retainNativeDiagnostics
+                    ? frameDiagnostics(value.row(), frameCoordinateBase, nextEventCoordinate, completed)
+                    : null;
+            append(new CompleteRunAudioTrace.Frame(value.row(), segment(value.row()), null,
+                    null, null, null, null, chips, nativeDiagnostics));
+            java.util.stream.Stream.concat(completed.stream(), liveServices.stream()).distinct()
+                    .forEach(ObservedService::clearFrameEvidence);
         }
 
         @Override public void cutoff(S3kCompleteRunReferenceRawAdapter.RawBoundary value) throws IOException {
@@ -226,9 +240,13 @@ public final class S3kCompleteRunReferenceProjector {
                 }
             }
             chips.sort(Comparator.comparingLong(valueChip -> valueChip.event().coordinate()));
-            append(CompleteRunAudioTrace.CutoffFrontier.fromNative(active, pending, chips, snapshots,
+            CompleteRunAudioTrace.CutoffFrontier projected = CompleteRunAudioTrace.CutoffFrontier.fromNative(
+                    active, pending, chips, snapshots,
                     value.ymPort0Latch(), value.ymPort1Latch(), value.nativeArmEpoch(), value.nativeArmed(),
-                    normalize(value.driverState()), sha256(value.driverState())));
+                    normalize(value.driverState()), sha256(value.driverState()));
+            append(new CompleteRunAudioTrace.CutoffFrontier(null, null, null,
+                    retainNativeDiagnostics ? projected.nativeDiagnostics() : null,
+                    null, null, null));
         }
 
         @Override public void commit() throws IOException {
@@ -332,6 +350,75 @@ public final class S3kCompleteRunReferenceProjector {
                     end == null ? null : end.event().ordinal(), end == null ? null : Math.toIntExact(raw.endPc()),
                     end == null ? null : raw.endHookToken(), snapshots, chips, raw.currentParentToken(),
                     raw.currentDepth(), ancestry);
+        }
+
+        private CompleteRunAudioTrace.FrameNativeDiagnostics frameDiagnostics(int frame,
+                long firstCoordinate, long exclusiveCoordinate, List<ObservedService> completed) {
+            List<ObservedService> candidates = java.util.stream.Stream.concat(
+                    completed.stream(), liveServices.stream())
+                    .distinct()
+                    .sorted(Comparator.comparingLong(service -> service.begin.coordinate())).toList();
+            List<ObservedService> retained = candidates;
+            List<CompleteRunAudioTrace.FrontierService> services = retained.stream()
+                    .map(this::frameService).toList();
+            List<CompleteRunAudioTrace.FrontierOwnedChip> chips = new ArrayList<>();
+            List<CompleteRunAudioTrace.FrontierOwnedSnapshot> snapshots = new ArrayList<>();
+            List<CompleteRunAudioTrace.FrontierOwnedAncestryTransition> transitions = new ArrayList<>();
+            List<CompleteRunAudioTrace.NativeResetDiagnostic> resets = new ArrayList<>();
+            for (int serviceIndex = 0; serviceIndex < services.size(); serviceIndex++) {
+                CompleteRunAudioTrace.FrontierService service = services.get(serviceIndex);
+                for (CompleteRunAudioTrace.FrontierChipEvent event : service.chipEvents()) {
+                    if (event.coordinate() >= firstCoordinate && event.coordinate() < exclusiveCoordinate) {
+                        chips.add(new CompleteRunAudioTrace.FrontierOwnedChip(
+                                service.token(), serviceIndex, event));
+                    }
+                }
+                for (CompleteRunAudioTrace.FrontierSnapshot snapshot : service.snapshots()) {
+                    snapshots.add(new CompleteRunAudioTrace.FrontierOwnedSnapshot(
+                            service.token(), serviceIndex, snapshot));
+                }
+                for (CompleteRunAudioTrace.NativeAncestryTransition transition
+                        : service.ancestryTransitions()) {
+                    if (transition.frame() == frame) {
+                        transitions.add(new CompleteRunAudioTrace.FrontierOwnedAncestryTransition(
+                                service.token(), transition));
+                    }
+                }
+                if ("RESET".equals(service.beginSourceCpu())) {
+                    resets.add(new CompleteRunAudioTrace.NativeResetDiagnostic(
+                            service.token(), retained.get(serviceIndex).begin.event().flags() == 1));
+                }
+            }
+            chips.sort(Comparator.comparingLong(owned -> owned.event().coordinate()));
+            return new CompleteRunAudioTrace.FrameNativeDiagnostics(services, chips, snapshots,
+                    resets, List.of(), List.of(), transitions);
+        }
+
+        private CompleteRunAudioTrace.FrontierService frameService(ObservedService observed) {
+            ObservedEvent begin = observed.begin;
+            ObservedEvent end = observed.end;
+            CompleteRunAudioTrace.FrontierServiceState state = end == null
+                    ? CompleteRunAudioTrace.FrontierServiceState.OPEN
+                    : end.event().flags() == 2
+                            ? CompleteRunAudioTrace.FrontierServiceState.RESET_CANCELLED
+                            : CompleteRunAudioTrace.FrontierServiceState.COMPLETED;
+            List<CompleteRunAudioTrace.NativeAncestryTransition> ancestry = observed.transitions.stream()
+                    .map(transition -> new CompleteRunAudioTrace.NativeAncestryTransition(
+                            transition.coordinate(), transition.frame(), transition.event().ordinal(),
+                            transition.previousParent(), transition.previousDepth(),
+                            transition.event().parentToken(), transition.event().depth(),
+                            transition.event().subject(), cpu(transition.event().sourceCpu()),
+                            Math.toIntExact(transition.event().pc()))).toList();
+            return new CompleteRunAudioTrace.FrontierService(observed.token(),
+                    begin.event().parentToken(), begin.event().depth(), kind(observed.kind), state,
+                    begin.frame(), begin.event().ordinal(), Math.toIntExact(begin.event().pc()),
+                    begin.event().sourceCpu() == 3 ? 0 : begin.event().subject(),
+                    cpu(begin.event().sourceCpu()), end == null ? null : end.frame(),
+                    end == null ? null : end.event().ordinal(),
+                    end == null ? null : Math.toIntExact(end.event().pc()),
+                    end == null ? null : end.event().sourceCpu() == 3 ? 0 : end.event().subject(),
+                    observed.frameSnapshots, observed.frameChips, observed.currentParent,
+                    observed.currentDepth, ancestry);
         }
 
         private static ObservedEvent requireEvent(ObservedEvent value, String label) {
@@ -472,6 +559,10 @@ public final class S3kCompleteRunReferenceProjector {
             boolean data = event.subject() == 1 || event.subject() == 3;
             service.chips.addChip(observed.coordinate(), event.ordinal(), event.kind(), event.subject(),
                     event.value(), event.pc(), event.sourceCpu(), data, port, register);
+            service.frameChips.add(new CompleteRunAudioTrace.FrontierChipEvent(
+                    observed.coordinate(), event.ordinal(), cpu(event.sourceCpu()),
+                    Math.toIntExact(event.pc()), event.kind(), event.subject(), event.value(), data,
+                    port, register));
             if (data) {
                 chips.add(new CompleteRunAudioTrace.YmWrite(
                         nextChipOrdinal++, port, register, event.value()));
@@ -492,6 +583,9 @@ public final class S3kCompleteRunReferenceProjector {
             }
             service.chips.addChip(observed.coordinate(), event.ordinal(), event.kind(), 0,
                     event.value(), event.pc(), event.sourceCpu(), true, 0, 0);
+            service.frameChips.add(new CompleteRunAudioTrace.FrontierChipEvent(
+                    observed.coordinate(), event.ordinal(), cpu(event.sourceCpu()),
+                    Math.toIntExact(event.pc()), event.kind(), 0, event.value(), true, null, null));
             chips.add(new CompleteRunAudioTrace.PsgWrite(nextChipOrdinal++, event.value()));
         }
 
@@ -539,6 +633,9 @@ public final class S3kCompleteRunReferenceProjector {
                 }
                 service.snapshots.addSnapshot(snapshot.range, snapshot.sourceCpu,
                         snapshot.pc, snapshot.bytes.toByteArray());
+                service.frameSnapshots.add(new CompleteRunAudioTrace.FrontierSnapshot(
+                        snapshot.range, cpu(snapshot.sourceCpu), Math.toIntExact(snapshot.pc),
+                        unsigned(snapshot.bytes.toByteArray())));
                 service.snapshot = null;
             }
         }
@@ -857,6 +954,8 @@ public final class S3kCompleteRunReferenceProjector {
             private final List<ObservedTransition> transitions = new ArrayList<>();
             private final EvidenceDigest chips = new EvidenceDigest((byte) 1);
             private final EvidenceDigest snapshots = new EvidenceDigest((byte) 2);
+            private final List<CompleteRunAudioTrace.FrontierChipEvent> frameChips = new ArrayList<>();
+            private final List<CompleteRunAudioTrace.FrontierSnapshot> frameSnapshots = new ArrayList<>();
             private SnapshotAssembly snapshot;
             private int rootToken;
 
@@ -869,6 +968,11 @@ public final class S3kCompleteRunReferenceProjector {
             }
 
             private int token() { return begin.event().serviceToken(); }
+
+            private void clearFrameEvidence() {
+                frameChips.clear();
+                frameSnapshots.clear();
+            }
 
             private void sealEvidence() {
                 chips.finish();

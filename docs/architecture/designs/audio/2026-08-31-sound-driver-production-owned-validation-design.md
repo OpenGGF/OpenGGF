@@ -244,28 +244,48 @@ physics/auxiliary paths, hardware timing, and replay descriptors cannot affect c
 
 ### Event contract
 
-The existing game-neutral `complete_run_audio.v1` schema records ordered metadata,
-baseline, frame, lifecycle, and terminal records. Within it, requests, decisions/services,
-normalized state, role ownership, lifecycle transitions, and chip events remain distinct.
+The game-neutral `complete_run_audio.v2` schema records ordered metadata, baseline, frame,
+lifecycle, cutoff, and terminal records. V1 is rejected rather than guessed because no installed
+complete-run store requires migration. Its ten independent semantic layers are `ROW_LAG`,
+`REQUESTS`, `DECISIONS`, `SERVICES`, `STATE`, `OWNERSHIP`, `LIFECYCLE`,
+`FRAME_CHIP_EVENTS`, `BOUNDARY_CHIP_STATE`, and `CUTOFF_FRONTIER`.
 Raw TraceChaser coordinates, service tokens, hook tokens, source PCs, mailbox addresses,
 queue slots, and native ordinals are validated provenance or diagnostics; the canonical
 adapter projects them into producer-neutral frame/service ownership and may not silently
 discard an event it cannot semantically explain.
 
 Every canonical request carries its producer-owned ordinal, request class/native identity,
-source owner, and frame. Decisions correlate the request and carry resolved identity,
-priority/arbitration outcome, and ownership transition. Services carry their source-owned
-kind/order, normalized driver state, role-owner vector, and ordered YM2612/PSG events.
+source owner, and frame. Frame-owned decisions correlate requests and carry resolved identity,
+priority/arbitration outcome, and ownership transition. This follows production:
+`AudioAdmissionObserver` is emitted synchronously by
+`AbstractSmpsAudioBackend.playSfxSmps`/`evaluateAdmission`, before and independently of
+`SmpsDriver` service callbacks. `DriverService` therefore carries only service kind/order,
+completion, lifetime, carry, and ancestry. Post-row state and frame chip events are also owned by
+the frame; none of these fields depends on service cardinality.
 
-The current `CompleteRunAudioReport.Kind` and capture metadata cannot express a layer-scoped
-result: the comparator always compares requests before services and terminal equality
-requires request/decision counts. Before S2/S3K bindings become available, the framework
-must gain a pinned comparison-layer inventory in the profile/capture identity and an
-explicit `REFERENCE_LIMITATION` outcome. That extension determines whether requests,
-decisions, services, state, ownership/lifecycle, and chip writes are required, unavailable,
-or compared. A missing request layer is never represented by equal empty arrays or an
-inferred request `MATCH`. Until this extension lands, absence of request authority remains
-producer unavailability/capture failure rather than a partial `MATCH`.
+Profile identity contains two distinct inventories. The shared comparison inventory authorizes
+cross-producer equality. A producer-specific observation inventory states which canonical fields
+that producer actually observed. `COMPARED` requires both producers to observe the layer, but the
+reverse is deliberately false: both may retain authenticated evidence while comparison remains
+unavailable pending review. Nullable scalar/object/list fields are the only unobserved
+representation; a non-null empty list means observed-empty. Strict constructors and JSON reject
+missing/unknown fields and any observed/present mismatch. Observed decisions require observed
+requests; observed ownership also requires its complete decision and lifecycle carriers so nested
+owner transitions cannot disappear behind an unavailable layer.
+
+Baseline and cutoff envelopes are mandatory while topology, boundary chip events/latches, state,
+and owners remain independently nullable. Buffered-native diagnostics authenticate the observer
+stream independently of semantic comparison availability. Native order, manifest, digest,
+capability, managed/carry completion, and terminal numeric counts are checked whenever that native
+observer is declared; comparison status governs equality only. Each present semantic boundary
+component is correlated independently: topology/lifetime projection ignores chip partitioning,
+while global boundary chips and any native-observable YM address latch are proven without requiring
+semantic topology.
+
+The comparator reports `REFERENCE_LIMITATION` only after every compared layer is equal. A missing
+request or lag layer is never represented by equal empty arrays, inferred `false`, or a partial
+`MATCH`; the first real mismatch still wins. Semantic-digest behavior remains the existing
+all-compared optimization, while numeric terminal counts remain store-integrity evidence.
 
 ## Feasibility gates
 
@@ -425,9 +445,21 @@ TraceChaser's raw staging schemas remain
 `openggf.s3k-complete-run-audio-raw.v1`. The strict OpenGGF adapters validate exact ROM,
 BK2, service-manifest, interval, driver-state range, event ABI, ordinals, ancestry, chip
 writes, baseline, and cutoff before any canonical publication. The canonical consumer
-schema remains `complete_run_audio.v1`; its metadata pins producer kind, runtime/observer
-identity and proof, profile, fixture, capabilities, segment inventory, capture counts, and
-terminal digest. Identity or schema mismatch makes the run invalid before comparison.
+schema is `complete_run_audio.v2`; its metadata pins producer kind, runtime/observer identity and
+proof, profile, fixture, producer observation inventory, shared comparison inventory,
+capabilities, segment inventory, capture counts, and terminal digest. Identity, inventory, or
+schema mismatch makes the run invalid before comparison. Initial S2 and S3K profiles compare only
+`FRAME_CHIP_EVENTS`; all other layers remain explicit limitations and their canonical fields are
+null. The S3K reference projector retains native authentication sidecars without fabricating
+semantic services, state, or admission evidence. S2 production reference publication remains
+unavailable: raw v1 does not carry the source-observed pre-row-769 begin row and ordinal (or an
+equivalent typed carried-in origin) for the live DPCM boundary service, so a buffered-native v2
+store cannot authenticate that carry without invention. Task 7 must first version and strictly
+validate that TraceChaser raw evidence, then pin the S2 native projector identity and capability.
+The callback/OPENGGF metadata used by prefix projector unit tests is only a test seam and cannot
+publish a production REFERENCE store. The uninstalled S1 complete-run profile likewise claims no
+observed complete-run layers; this does not alter the legacy 14,690-tick music and 1,967-row SFX
+oracle gates.
 
 TraceChaser candidates are captured into explicit durable scratch outside both repositories.
 They are never written directly into OpenGGF's fixture tree. OpenGGF's raw adapter and
@@ -476,7 +508,9 @@ The implementation must add or extend tests that prove:
 2. TraceChaser's pinned S2/S3K capture runners and raw sinks produce streams accepted by the
    existing strict OpenGGF adapters, while changed identities, raw events, bounds, states,
    baselines, and cutoff frontiers fail before canonical publication.
-3. The comparison-layer inventory is part of immutable profile/capture identity; the
+3. The shared comparison inventory and producer-specific observation inventory are distinct parts
+   of immutable profile/capture identity; `COMPARED` requires both producers observed, while
+   observed-but-not-compared evidence remains valid and receives producer-local validation. The
    comparator rejects incompatible inventories, cannot report request `MATCH` when the
    reference layer is unavailable, and never treats equal empty arrays as proof. Raw S2/S3K
    streams lacking an approved request event project zero canonical requests/decisions and
