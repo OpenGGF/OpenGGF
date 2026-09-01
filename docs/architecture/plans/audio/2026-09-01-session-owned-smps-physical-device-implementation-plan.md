@@ -1319,13 +1319,37 @@ git commit -m 'fix(audio): apply shipped S3K device commands'
   divergence.
 - Modify in the pinned TraceChaser submodule:
   `bizhawk/probes/s1_complete_run_audio_probe.lua`,
+  `bizhawk/audio/s1_complete_run_audio_contract.lua`,
   `bizhawk-headless/src/Audio/S1CompleteRunAudioReferenceCapture.cs`,
-  `bizhawk-headless/src/Recording/S2CompleteAudioCaptureRunner.cs`, and
-  `bizhawk-headless/src/Recording/S2CompleteAudioRawSink.cs` only as required by the closed
-  producer contract.
-- Create in TraceChaser, only if native-manifest discovery needs it:
-  `bizhawk/probes/s2_override_resume_reachability_probe.lua`, derived from the repository probe
-  template and executed exclusively through `ProbeRuntime`.
+  `bizhawk-headless/src/Recording/S2CompleteAudioCaptureRunner.cs`,
+  `bizhawk-headless/src/Recording/S2CompleteAudioRawSink.cs`,
+  `bizhawk-headless/src/Core/GpgxHost.cs`,
+  `bizhawk-headless/src/Program.cs`, and
+  `bizhawk-headless/fixtures/gpgx-audio-capability-v1.json`.
+- Create in TraceChaser the sole raw-to-fixture route:
+  `bizhawk-headless/src/Recording/OverrideResumeFirstDivergenceExtractor.cs`,
+  `bizhawk-headless/src/Recording/OverrideResumeFirstDivergencePublisher.cs`,
+  `bizhawk-headless/src/Recording/OverrideResumeFirstDivergenceContract.cs`,
+  `bizhawk-headless/run-override-resume-first-divergence-publisher.sh`, and
+  `contracts/audio/override-resume-first-divergence-reference-v1.schema.json`,
+  `contracts/audio/override-resume-first-divergence-metadata-v1.schema.json`, and
+  `contracts/audio/override-resume-first-divergence-attestation-v1.schema.json`.
+- Create in TraceChaser, only when a frozen native service-manifest PC needs a reachability
+  check, `bizhawk/probes/s2_override_resume_reachability_probe.lua`. It is derived from
+  `bizhawk/probes/example_stage_probe.lua`, executed only through `ProbeRuntime`, emits one
+  external diagnostic, and is explicitly not a service/write/PCM/capability/reference producer.
+- Modify/create these TraceChaser RED-test owners before the producer implementation:
+  `bizhawk/audio/s1_complete_run_audio_contract_test.lua`,
+  `testing/test_audio_lua_contracts.py`,
+  `bizhawk-headless/tests/S1CompleteRunAudioReferenceCaptureTests.cs`,
+  `bizhawk-headless/tests/S2CompleteAudioCaptureRunnerTests.cs`,
+  `bizhawk-headless/tests/S2CompleteAudioRawSinkTests.cs`,
+  `bizhawk-headless/tests/S2AudioObserverProfileTests.cs`,
+  `bizhawk-headless/tests/OverrideResumeFirstDivergenceExtractorTests.cs`,
+  `bizhawk-headless/tests/OverrideResumeFirstDivergencePublisherTests.cs`,
+  `bizhawk-headless/tests/GpgxAudioObserverBuildTests.cs`,
+  `bizhawk-headless/tests/NoReplacePublisherTests.cs`,
+  `bizhawk-headless/tests/TraceCliTests.cs`, and `bizhawk-headless/tests/TestMain.cs`.
 - Modify: `src/test/java/com/openggf/audio/session/TestSmpsSessionTransitionMatrix.java`
 - Modify: `src/test/java/com/openggf/audio/TestMusicOverrideRestore.java`
 - Create: `src/test/java/com/openggf/tools/audio/parity/TestS1OverrideResumeAudioOracle.java`
@@ -1388,22 +1412,128 @@ Before S2 capture, require observer identity, ABI 4, 32-byte events, capacity 65
 managed/core/Waterbox hashes, no symlinks, clean first-fault state, no overflow, and the
 SoundDriverLoad arm chain. Pin service-manifest SHA-256
 `ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0` and capability-template
-SHA-256 `f8e8f212b8f920ca42319351934b7a11fff911b7aa3c70be15d4936c262ba568` while separately
-authenticating the built harness executable. Existing static capability fixtures are expected
-assertions, never fresh capture authority.
+SHA-256 `f8e8f212b8f920ca42319351934b7a11fff911b7aa3c70be15d4936c262ba568`. Because Task 8
+changes runner/sink/harness sources, rebuild twice from fresh copies with
+`bizhawk-headless/verify-deterministic-build.sh`, require byte-identical
+`BizHawk.Headless.Gpgx.exe`, and refresh only
+`task8_harness_executable_sha256` in
+`bizhawk-headless/fixtures/gpgx-audio-capability-v1.json` to that executable SHA-256. The
+normalization that excludes this field must still produce the pinned template SHA-256. Run
+`S2AudioObserverProfileTests` once with the stale executable value and require
+`capability executable identity changed`, then with the refreshed value and require success.
+Existing static capability fixtures remain assertion-only; fresh install/build authentication is the
+only capture authority.
 
 Run each producer twice into absent external paths and require byte-identical authoritative raw
 outputs and attestations after excluding only explicitly non-authoritative timestamps. Never commit
 the full S2 raw stream. Fixture publication is an explicit no-overwrite operation after both runs
 validate.
 
-Each metadata sidecar records schema/capture kind; ROM CRC/SHA-1; canonical BK2 relative path,
-SHA-256, row count, and interval; TraceChaser gitlink; ProbeRuntime, probe, contract, producer,
-manifest, BizHawk, GPGX/core, observer, Waterbox, capability-template, and harness identities/hashes
-as applicable; disassembly commit and cited routines; `FixBugs=0`/`FixDriverBugs=0`; exact service
-definition/ordinal/frame; ordered write list and digest; PCM offset, sample rate, channels, format,
-frame count and digest; two raw-capture hashes; normalized record/byte counts; deterministic gzip
-logical/stored hashes; and the exact regenerating command.
+Set `OGGF_REPO_ROOT`, `OGGF_AUDIO_OUTPUT_ROOT`, and `BIZHAWK_HOME` to absolute paths before capture;
+`OGGF_AUDIO_OUTPUT_ROOT` is an external durable directory. These are the exact executable producer
+commands (S1 `run.sh` requires all four absolute roots):
+
+```bash
+export OGGF_REPO_ROOT="$(git rev-parse --show-toplevel)"
+export OGGF_AUDIO_OUTPUT_ROOT=/absolute/durable/override-resume-task8
+export BIZHAWK_HOME=/absolute/fresh-authenticated-bizhawk-2.11
+
+"${OGGF_REPO_ROOT}/tools/tracechaser/bizhawk-headless/run.sh" \
+  --tracechaser-root "${OGGF_REPO_ROOT}/tools/tracechaser" \
+  --input-repository-root "${OGGF_REPO_ROOT}" \
+  --fixture-root "${OGGF_REPO_ROOT}/src/test/resources" \
+  --mode trace \
+  --rom "${OGGF_REPO_ROOT}/s1.gen" \
+  --movie "${OGGF_REPO_ROOT}/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2" \
+  --trace-profile complete_run_audio_reference \
+  --output "${OGGF_AUDIO_OUTPUT_ROOT}/s1/run-1"
+
+"${OGGF_REPO_ROOT}/tools/tracechaser/bizhawk-headless/run-complete-audio.sh" \
+  --complete-audio-game s2 \
+  --rom "${OGGF_REPO_ROOT}/s2.gen" \
+  --movie "${OGGF_REPO_ROOT}/src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2" \
+  --service-manifest "${OGGF_REPO_ROOT}/tools/tracechaser/bizhawk-headless/fixtures/gpgx-audio-service-manifests-v1.json" \
+  --capability "${OGGF_REPO_ROOT}/tools/tracechaser/bizhawk-headless/fixtures/gpgx-audio-capability-v1.json" \
+  --output "${OGGF_AUDIO_OUTPUT_ROOT}/s2/run-1.raw.jsonl"
+```
+
+Repeat both commands with only `run-1`/`run-1.raw.jsonl` changed to `run-2`/`run-2.raw.jsonl`. Run the
+existing S1 probe separately, twice, through its external-output launcher contract; it verifies the
+same ProbeRuntime lifecycle but does not publish a reference:
+
+```bash
+OGGF_INPUT_REPOSITORY_ROOT="${OGGF_REPO_ROOT}" \
+OGGF_WORKDIR="${OGGF_AUDIO_OUTPUT_ROOT}/s1/probe-work-1" \
+OGGF_OUT="${OGGF_AUDIO_OUTPUT_ROOT}/s1/probe-run-1.log" \
+"${OGGF_REPO_ROOT}/tools/tracechaser/bizhawk/run_bizhawk_lua.sh" \
+  "${OGGF_REPO_ROOT}/tools/tracechaser/bizhawk/probes/s1_complete_run_audio_probe.lua" \
+  "${OGGF_REPO_ROOT}/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2" \
+  "${OGGF_REPO_ROOT}/s1.gen"
+```
+
+Repeat that invocation with `probe-work-2` and `probe-run-2.log`; require `cmp` equality of the two
+probe diagnostics, the two S1 raws, the two S2 raws, and their canonical attestations after removing
+only `capture_timestamp_utc`. Record exact host-visible capture PIDs, wait for capture 1 before
+capture 2, and after each require zero task-owned `mono`/`EmuHawk` PIDs. Never commit raw output or
+probe diagnostics.
+
+`OverrideResumeFirstDivergenceExtractor` and `OverrideResumeFirstDivergencePublisher` are the
+**sole** path from two authenticated S1 raw captures and two authenticated S2 raw captures to the four
+committed files listed above. No Java test, shell command, reviewer, or hand-authored JSON may create,
+update, or confer authority on those fixtures; a byte change requires fresh duplicate raw inputs and
+this publisher.
+
+The extractor accepts exactly two regular, non-symlink S1 raw roots containing
+`audio_reference_raw.jsonl` with schema `openggf.s1-complete-run-audio-raw.v1`, exactly two regular,
+non-symlink S2 raw files with schema `openggf.s2-complete-run-audio-raw.v2`, and one attestation per
+raw input with schema `openggf.override-resume-first-divergence-attestation.v1`. It rejects missing,
+extra, duplicate, truncated, non-LF/UTF-8, faulted, overflowed, wrong-ROM, wrong-BK2, wrong interval,
+wrong manifest/capability/installation identity, unordered native ordinal, unordered chip write,
+ambiguous resume boundary, no resume service, or no PCM packet. The published JSONL uses
+`openggf.override-resume-first-divergence-reference.v1`; the strict metadata sidecar uses
+`openggf.override-resume-first-divergence-metadata.v1`. The three listed JSON Schemas forbid unknown
+fields and define those exact inventories.
+
+Selection is semantic, never inferred from a convenient write sequence: the producer must emit the
+source-verified restore request/admission and native service token/ordinal for the first
+`cfFadeInToPrevious` restore following the selected one-up. The extractor selects that one and only one
+service and retains every chip write it owns in increasing native ordinal. S1 is rooted in the existing
+`ProbeRuntime` lifecycle; S2 Lua has no authority and all S2 ownership, CPU/PC provenance, latch state,
+and event order comes from `CompleteRunAudioObserver` / `GpgxAudioObserverAdapter`.
+
+The PCM rule is identical for S1 and S2. Before every native frame advance, drain diagnostic audio and
+reject nonempty carry-over. Call `GpgxHost.AdvanceDiagnosticAudio()` exactly once for the row and drain
+exactly once immediately after `CompleteRunAudioObserver` ends that frame. Choose the first nonempty
+packet drained from the service-containing native frame. Only when that drain is empty, advance exactly
+the first following normal movie row once and choose its first nonempty post-advance drain; no later
+packet is eligible. Serialize that packet as interleaved signed 16-bit stereo little-endian samples
+(`short` L then `short` R), record the native `ISoundProvider` sample rate as an integer, and digest the
+serialized PCM bytes with SHA-256. Do not render engine audio or reconstruct a packet from trace state.
+
+The normalizer parses bounded records, removes only `capture_timestamp_utc` from attestations, requires
+all remaining raw bytes and attestation fields to be byte-identical per game, then writes canonical
+UTF-8 without BOM, LF-terminated JSONL with lexicographic keys, fixed decimal integers, lowercase
+hexadecimal hashes, and deterministic gzip (`mtime=0`, no filename/comment, OS byte 255). It records
+record and byte counts plus logical/stored SHA-256 values. Raw streams and diagnostics remain external
+durable evidence and are never committed. `NoReplacePublisher.StageAll` publishes all four fixtures as
+one transaction, refusing an existing target or link race and leaving no partial final.
+
+Each metadata sidecar records mandatory fields: schema/capture kind/game; ROM CRC-32 and SHA-1;
+canonical BK2 relative path/SHA-256/row count/interval; TraceChaser gitlink; ProbeRuntime path/SHA-256,
+probe path/SHA-256, Lua-contract path/SHA-256, producer path/SHA-256, service-manifest path/SHA-256,
+BizHawk identity, GPGX core hashes, `GpgxAudioObserverAdapter` SHA-256, Waterbox host SHA-256,
+capability-template path/SHA-256, harness executable SHA-256; installed
+`gpgx-audio-observer-source/identity.json` SHA-256, installed
+`gpgx-audio-observer-source/artifact-lock.json` SHA-256, installed
+`gpgx-audio-observer-source/task7-build-recipe.json` SHA-256, installed
+`gpgx-audio-observer-source/source-bundle.tar.zst` SHA-256, and installed
+`gpgx-audio-observer-source/build.log` SHA-256; disassembly commit/cited routines;
+`FixBugs=0` and `FixDriverBugs=0`; literal request/admission/service-token/native-ordinal/frame;
+ordered write list/digest; PCM selection rule/row/offset/sample rate/channels/format/stereo-frame
+count/byte count/digest; both raw hashes, both attestation hashes, normalization counts/hashes,
+gzip counts/hashes, and exact capture/validation/publication commands. S1 writes every S2-only
+installed-observer field as `not-used-by-s1`; S2 writes every S1-only ProbeRuntime/probe/Lua-contract
+field as `not-used-by-s2`. No metadata field is conditional or “as applicable”.
 
 - [ ] **Step 2: Write RED policy, transition, shipped-bug, and exact-oracle tests.**
 
@@ -1435,20 +1565,70 @@ Add REDs that prove:
 - all nine host/donor pairings pass in both transition directions while physical/logical identities
   remain stable.
 
-- [ ] **Step 3: Implement only source-owned transition/resume behavior exposed by the first
-  divergence.**
+Add producer-side REDs before implementation with these exact owners: the existing
+`s1_complete_run_audio_contract_test.lua` and `test_audio_lua_contracts.py` prove the existing
+`s1_complete_run_audio_probe.lua` is ProbeRuntime-owned, observes the one-up restore boundary,
+retains the `FixBugs=0` DAC-disable omission, and cannot publish; `S1CompleteRunAudioReferenceCaptureTests`
+proves exact resumed-service token/ordinal selection, ordered writes, PCM packet selection, fault and
+overflow rejection; `S2CompleteAudioCaptureRunnerTests` and `S2CompleteAudioRawSinkTests` prove the
+row-769 lifecycle continuity, exact selection/order/PCM serialization, stale-priority and PSG-noise
+`FixDriverBugs=0` omissions, and fault/overflow rejection; and
+`OverrideResumeFirstDivergenceExtractorTests` proves strict schemas, duplicate raw/attestation
+identity after timestamp removal, deterministic normalization/gzip, exact packet timing, and every
+ambiguity rejection. `OverrideResumeFirstDivergencePublisherTests`, `NoReplacePublisherTests`, and
+`TraceCliTests` prove the closed CLI accepts exactly two S1 roots, two S2 raws, four attestations, and
+an absent fixture root; emits only the four named outputs atomically; and rejects replacements/link
+races. `S2AudioObserverProfileTests` and `GpgxAudioObserverBuildTests` prove two-build executable
+refresh, stale-capability rejection, refreshed-capability acceptance, installed
+identity/artifact-lock/build-recipe/source-bundle/build-log hash capture, ABI/event-size/capacity,
+source-lock, no-symlink, arm-chain, clean-first-fault, and zero-overflow gates.
 
-No generic refresh write is permitted. Update the game-owned transition policy with the exact
-saved logical fields and first-service operations from the cited routine. S1 source anchors are
+- [ ] **Step 3: Validate duplicate raw evidence and publish only through the closed no-overwrite route.**
+
+Run the named extractor/publisher only after both producer runs, both S1 probe diagnostics, fresh
+install authentication, and every producer RED has passed. It accepts no frame, PC, service, or output
+filename selector: the schemas fix the intervals and the publisher fixes the four final names. This is
+the explicit no-overwrite publication command:
+
+```bash
+"${OGGF_REPO_ROOT}/tools/tracechaser/bizhawk-headless/run-override-resume-first-divergence-publisher.sh" \
+  --tracechaser-root "${OGGF_REPO_ROOT}/tools/tracechaser" \
+  --input-repository-root "${OGGF_REPO_ROOT}" \
+  --s1-raw-1 "${OGGF_AUDIO_OUTPUT_ROOT}/s1/run-1/audio_reference_raw.jsonl" \
+  --s1-attestation-1 "${OGGF_AUDIO_OUTPUT_ROOT}/s1/run-1/override-resume.attestation.json" \
+  --s1-raw-2 "${OGGF_AUDIO_OUTPUT_ROOT}/s1/run-2/audio_reference_raw.jsonl" \
+  --s1-attestation-2 "${OGGF_AUDIO_OUTPUT_ROOT}/s1/run-2/override-resume.attestation.json" \
+  --s2-raw-1 "${OGGF_AUDIO_OUTPUT_ROOT}/s2/run-1.raw.jsonl" \
+  --s2-attestation-1 "${OGGF_AUDIO_OUTPUT_ROOT}/s2/run-1.attestation.json" \
+  --s2-raw-2 "${OGGF_AUDIO_OUTPUT_ROOT}/s2/run-2.raw.jsonl" \
+  --s2-attestation-2 "${OGGF_AUDIO_OUTPUT_ROOT}/s2/run-2.attestation.json" \
+  --fixture-root "${OGGF_REPO_ROOT}/src/test/resources/audio/parity"
+```
+
+The publisher must validate that this fixture root is the requested consumer subtree and all four
+finals are absent before staging. It stages and hard-link publishes exactly the four named fixtures as
+one transaction. A retry against a populated target must fail without changing a byte. Freeze literal
+source service/write/PCM expectations only from returned reference/metadata records, validate all
+three schemas plus every attestation, and stage only these publisher outputs. A manual JSON edit, raw
+copy, inferred assertion, or replacement publication is invalid evidence.
+
+- [ ] **Step 4: Implement only source-owned transition/resume behavior exposed by the approved
+  first divergence.**
+
+This step is hard-blocked until Step 3 has authenticated both duplicate captures, frozen literal
+expectations from the extractor, validated every attestation/schema, and completed first no-overwrite
+publication. No generic refresh write is permitted. Update the game-owned transition policy with the
+exact saved logical fields and first-service operations from the cited routine. S1 source anchors are
 `Sound_PlayBGM` `$071FD2` and `cfFadeInToPrevious` `$072B14` (restore loops `$072B3A`/`$072B66`,
 fade setup `$072B82`/`$072B88`); retain the shipped omission at `$072B24`. S2 source anchors are
 `zPlayMusic` `$073D`, `zInitMusicPlayback` `$0B78`, and `cfFadeInToPrevious` `$0D35`, including its
 nonlocal `$0DB4` completion into `zUpdateDAC`; retain stale saved-priority restoration and omitted
 PSG-noise restoration. If the authenticated native producer cannot observe semantic
-request/admission at the required boundary, publish `REFERENCE_LIMITATION` and stop; never infer a
-match from writes or snapshots.
+request/admission at the required boundary, publish `REFERENCE_LIMITATION` in the Task 8 validation
+record and end Task 8. Do not implement transition behavior, freeze expectations, create references,
+or infer a match from writes, PCM, or snapshots.
 
-- [ ] **Step 4: Run transition matrix, override, S1/S2 oracle, and S1 hard gates.**
+- [ ] **Step 5: Run transition matrix, override, S1/S2 oracle, and S1 hard gates.**
 
 ```bash
 LUA_BIN=lua5.4 mvn -Dmse=off \
@@ -1458,38 +1638,13 @@ LUA_BIN=lua5.4 mvn -Dmse=off \
   test -B
 ```
 
-Then run both override-resume producer commands and the mandatory S1 music/SFX parity gate block;
-require all comparisons to report `MATCH`.
+Run the mandatory S1 music/SFX parity gate block and require all comparisons to report `MATCH`.
+Production implementation is hard-blocked until canonical duplicate captures are authenticated and
+equal, their frozen literal expectations originate from the extractor, every attestation/schema
+validates, and the publisher has successfully made its first no-overwrite publication.
+`REFERENCE_LIMITATION` is the sole alternate terminal state for Task 8.
 
-For the S2 native producer use the closed CLI shape below only after the fresh installation has
-passed its source-lock, build, capability, and real-install checks:
-
-```bash
-BIZHAWK_HOME=/absolute/fresh-authenticated-install \
-tools/tracechaser/bizhawk-headless/run-complete-audio.sh \
-  --complete-audio-game s2 \
-  --rom ${OGGF_REPO_ROOT}/s2.gen \
-  --movie ${OGGF_REPO_ROOT}/src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2 \
-  --service-manifest tools/tracechaser/bizhawk-headless/fixtures/gpgx-audio-service-manifests-v1.json \
-  --capability tools/tracechaser/bizhawk-headless/fixtures/gpgx-audio-capability-v1.json \
-  --output ${OGGF_AUDIO_OUTPUT_ROOT}/s2-override-resume/run-1.raw.jsonl
-```
-
-Run the bounded S1 publisher against its canonical all-emeralds movie:
-
-```bash
-tools/tracechaser/bizhawk-headless/run.sh \
-  --mode trace \
-  --rom ${OGGF_REPO_ROOT}/s1.gen \
-  --movie ${OGGF_REPO_ROOT}/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2 \
-  --output ${OGGF_AUDIO_OUTPUT_ROOT}/s1-override-resume/run-1 \
-  --trace-profile complete_run_audio_reference
-```
-
-Monitor exact host-visible PIDs; require capture 1 to exit before capture 2 starts and finish with
-zero task-owned `mono`/`EmuHawk` processes.
-
-- [ ] **Step 5: Review source closure and fixture provenance, update durable evidence, and commit.**
+- [ ] **Step 6: Review source closure and fixture provenance, update durable evidence, and commit.**
 
 ```bash
 git add src/main/java/com/openggf/audio/session \
