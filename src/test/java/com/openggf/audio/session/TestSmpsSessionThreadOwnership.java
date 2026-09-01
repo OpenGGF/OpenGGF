@@ -25,6 +25,7 @@ class TestSmpsSessionThreadOwnership {
 
         List<Runnable> entries = List.of(
                 () -> device.apply(writes),
+                () -> device.applyTransientPsgSilence(writes),
                 () -> device.renderFrames(new short[2], 0, 1),
                 device::captureSnapshot,
                 () -> device.restoreSnapshot(snapshot, null),
@@ -69,6 +70,8 @@ class TestSmpsSessionThreadOwnership {
                 () -> session.closeTestEpoch(port.epoch()),
                 () -> port.writeFm(0, 0xA0, 0x20),
                 () -> port.writePsg(0x9F),
+                () -> port.applyTransientPsgSilence(
+                        SmpsWriteProgram.SILENCE_ALL_PSG),
                 () -> port.setInstrument(0, new byte[25]),
                 () -> port.selectDac(new SmpsDacSelection(
                         SmpsSessionTestFixtures.source(12),

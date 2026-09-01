@@ -11,6 +11,9 @@ public interface SmpsPhysicalPort {
 
     void writePsg(int value);
 
+    /** Applies a PSG-only transient program without changing the output gate. */
+    void applyTransientPsgSilence(SmpsWriteProgram program);
+
     void setInstrument(int channelId, byte[] voice);
 
     void playDac(int note);

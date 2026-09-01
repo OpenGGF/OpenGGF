@@ -190,6 +190,12 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
 
         @Override
+        public void applyTransientPsgSilence(SmpsWriteProgram program) {
+            requireOpen(this);
+            device.applyTransientPsgSilence(program);
+        }
+
+        @Override
         public void setInstrument(int channelId, byte[] voice) {
             requireOpen(this);
             device.setInstrument(channelId, voice);
@@ -606,7 +612,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             case SmpsSessionCommand.StopSmpsSfx ignored -> stopSmpsSfx();
             case SmpsSessionCommand.SilencePsg ignored ->
                     withPort(driverIdentity, port -> {
-                        applyProgram(port, policy.silenceAllPsg());
+                        port.applyTransientPsgSilence(
+                                policy.silenceAllPsg());
                         return null;
                     });
             case SmpsSessionCommand.PushOverride push ->

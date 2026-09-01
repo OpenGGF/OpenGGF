@@ -1,5 +1,6 @@
 package com.openggf.audio.session;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
@@ -461,6 +462,8 @@ class TestSmpsDriverSession {
         SmpsDriverSessionSnapshot beforeSession = session.captureSnapshot();
         SmpsDriverSnapshot beforeLogical = session.captureLogicalSnapshot();
         Object physicalIdentity = session.physicalIdentityForTesting();
+        assertFalse(beforeSession.physical().outputSilenced(),
+                "active SMPS output starts ungated");
         observer.clear();
         commands.submit(new AudioPresentationCommand.SilencePsg(0xE3),
                 () -> true,
@@ -519,12 +522,64 @@ class TestSmpsDriverSession {
         assertEquals(beforeSession.speedMultiplier(),
                 afterSession.speedMultiplier());
         assertEquals(beforeSession.ringLeft(), afterSession.ringLeft());
+        assertFalse(afterSession.physical().outputSilenced(),
+                "transient E3 must not gate active SMPS output");
 
         observer.clear();
         producer.present(1, PresentationMode.FORWARD);
         assertTrue(observer.events().stream().noneMatch(
                         event -> event.startsWith("PSG:")),
                 "the next service must not emit E3 a second time");
+    }
+
+    @Test
+    void psgSilencePreservesTheInstalledIdleOutputGate() {
+        SmpsSessionTestFixtures.RecordingObserver observer =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsPhysicalPolicy policy = Sonic3kSmpsPhysicalPolicy.INSTANCE;
+        SmpsPhysicalDevice.Settings settings =
+                SmpsSessionTestFixtures.settings();
+        SmpsDriverSession session = new SmpsDriverSession(
+                settings, policy, observer,
+                new SmpsSessionProfileFingerprint(
+                        "s3k", 7, policy.identity(), settings));
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = sessionProducer(
+                session, registry, commands);
+        SmpsDriverSessionSnapshot beforeSession = session.captureSnapshot();
+        JsonNode beforeLogical = SmpsSessionTestFixtures.json(
+                session.captureLogicalSnapshot());
+        Object physicalIdentity = session.physicalIdentityForTesting();
+        assertTrue(beforeSession.physical().outputSilenced(),
+                "an installed idle session starts output-gated");
+        observer.clear();
+        commands.submit(new AudioPresentationCommand.SilencePsg(0xE3),
+                () -> true,
+                producer::applyPendingCommandsAtOwnerBoundary);
+
+        producer.present(0, PresentationMode.SILENT);
+
+        assertEquals(List.of(
+                "PSG:9F", "PSG:BF", "PSG:DF", "PSG:FF"),
+                observer.events());
+        assertSame(physicalIdentity, session.physicalIdentityForTesting());
+        SmpsDriverSessionSnapshot afterSession = session.captureSnapshot();
+        assertTrue(afterSession.physical().outputSilenced(),
+                "transient E3 must not wake an output-gated SMPS device");
+        assertEquals(SmpsSessionTestFixtures.json(beforeSession),
+                SmpsSessionTestFixtures.json(afterSession));
+        assertEquals(beforeLogical, SmpsSessionTestFixtures.json(
+                session.captureLogicalSnapshot()));
+        short[] rendered = new short[128];
+        session.renderFrames(rendered, 0, 64);
+        assertArrayEquals(new short[128], rendered);
     }
 
     @Test

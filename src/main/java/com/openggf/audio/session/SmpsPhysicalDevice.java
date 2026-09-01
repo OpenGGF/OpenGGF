@@ -182,6 +182,25 @@ public final class SmpsPhysicalDevice {
         synth.writePsg(this, value);
     }
 
+    void applyTransientPsgSilence(SmpsWriteProgram program) {
+        requireActive();
+        var writes = Objects.requireNonNull(program, "program").writes();
+        for (SmpsChipWrite write : writes) {
+            if (!(write instanceof SmpsChipWrite.Psg)) {
+                throw new IllegalArgumentException(
+                        "transient PSG silence accepts only PSG writes");
+            }
+        }
+        boolean priorOutputSilenced = outputSilenced;
+        try {
+            for (SmpsChipWrite write : writes) {
+                synth.writePsg(this, ((SmpsChipWrite.Psg) write).value());
+            }
+        } finally {
+            outputSilenced = priorOutputSilenced;
+        }
+    }
+
     void setInstrument(int channelId, byte[] voice) {
         requireActive();
         outputSilenced = false;
