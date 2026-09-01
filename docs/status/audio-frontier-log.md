@@ -27,6 +27,46 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-01 — S3K service 128 is an authenticated producer-input limitation
+
+- **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
+  `feature/ai-sound-driver-roadmap-completion` at `e4f083172`
+  (documentation fix round 3; production comparator/reference evidence is
+  unchanged).
+- **Fixture:** `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz`
+  (unchanged authenticated 5,400-frame reference; projected to 5,286
+  services).
+- **Command:**
+  `LUA_BIN=lua5.4 mvn -Dmse=off
+  -Ds3k.rom.path=${OGGF_REPO_ROOT}/s3k.gen
+  '-Dtest=com.openggf.tools.audio.parity.s3k.TestS3kAudioOracleFixtureContract,com.openggf.tools.audio.parity.s3k.TestS3kAudioParityComparator'
+  test -B`, plus
+  `java -cp target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+  com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare
+  --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz
+  --rom ${OGGF_REPO_ROOT}/s3k.gen --ticks 260 --format json`.
+- **Result:** the 260-service run compares services 0-127, then stops at
+  service/tick **128**, underlying reference event **0** (`YM port 1,
+  register 82h, value FFh`). The typed report is
+  `REFERENCE_LIMITATION`, `field=producer_input`, with
+  `ProducerInputEvidence.Availability.UNAVAILABLE_DURING_PRODUCER_SUSPENSION`
+  and reason `mailbox input was unavailable for the first observable service
+  after reference producer interrupt services suspended`; the CLI exits **5**.
+  This is not an engine divergence and there is no realignment. Ordinary
+  missing-write evidence remains `EVENT_MISSING` and exits **3**; malformed
+  reference/tool failures remain exit **4**.
+- **Notes:** the limitation is selected from the source-owned
+  `zPlaySEGAPCM` interrupt-suspension boundary and the first resumed service,
+  not from a tick number, zone, request guess, or write shape. The exact
+  84-write stop proof remains at service/tick **49** for `FFh`; service/tick
+  **138** (next music activation) still begins with the exact reference
+  84-write stop prefix. S1 hard gates remain `MATCH (14,690 ticks)` for GHZ
+  music and `MATCH (1,967 ticks, 8 dispatches)` for sound-test SFX. Named
+  remaining frontiers are `E3h` PSG-mute limitation, the `E4h` seven-slot
+  conditional physical write/restoration walk, and full `FFh` control-flow
+  parity beyond the implemented 84-write stop/PCM transport (including the
+  producer-side pre-consumption mailbox at service 128).
+
 ## 2026-08-31 — S1 sound-test SFX oracle reaches full MATCH
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,

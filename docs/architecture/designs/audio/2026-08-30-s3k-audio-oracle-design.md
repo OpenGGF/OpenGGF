@@ -32,7 +32,7 @@ native headless GPGX harness rather than the S1 lane's Lua/EmuHawk path
 | Engine capture host (drives `SmpsDriver` with the recorded request timeline) | `S3kOpenGgfAudioCapture` |
 | Engine state normalizer (snapshots → driver-RAM vocabulary) | `S3kAudioStateNormalizer` |
 | Comparator (validation-first, no realignment, first divergence) | `S3kAudioParityComparator` |
-| CLI (`validate` / `compare`, exit 0/2/3/4) | `S3kAudioParityTool` |
+| CLI (`validate` / `compare`, exit 0/2/3/4/5) | `S3kAudioParityTool` |
 | Fixture integrity + break-it tests | `TestS3kAudioOracleFixtureContract`, `TestS3kAudioParityComparator` |
 | Frontier record | `docs/status/audio-frontier-log.md` |
 
@@ -112,13 +112,36 @@ projects boot by the source-owned `zPalDblUpdCounter = 5` completion store and
 then advances one outer-frame driver service per tick, captures chip
 writes via `ChipWriteObserver`, and normalizes
 `SmpsDriverSnapshot`/`SmpsSequencerSnapshot` into the driver-RAM vocabulary.
-Comparison per tick, in order: GATE globals (`zCurrentTempo`,
+Before semantic comparison, the comparator consumes the reference tick's typed
+`ProducerInputEvidence`. An
+`UNAVAILABLE_DURING_PRODUCER_SUSPENSION` value is authenticated producer
+evidence, not a guessed match and not an engine state. It stops comparison at
+that service with `REFERENCE_LIMITATION`; the comparator never realigns to a
+later service. When the evidence is `AVAILABLE`, comparison per tick proceeds
+in order: GATE globals (`zCurrentTempo`,
 `zTempoAccumulator`, `zTempoSpeedup`, `zSpeedupTimeout`), GATE track fields
 for the sixteen fixed slots (nine music, seven SFX, ROM slot order), then the
 ordered Z80-owned write stream. First difference wins; nothing realigns.
 `S3kAudioFieldRegistry` is the executable inventory of which zTrack/global
 bytes are compared and which stay DIAGNOSTIC (unmapped engine coordinate:
 `DataPointer`, modulation phase bytes, `zDACIndex`, fades, queue bytes).
+
+The CLI's machine output is one stable JSON object for `compare --format json`
+(fixed key order; nullable location fields are emitted as JSON `null`):
+
+```json
+{"schema":"openggf.s3k_audio_oracle_report.v1","kind":"REFERENCE_LIMITATION","ticks_compared":128,"tick":128,"role":null,"field":"producer_input","event":null,"reference":"mailbox input was unavailable for the first observable service after reference producer interrupt services suspended","openggf":"<unavailable>"}
+```
+
+The same schema and keys are used for `MATCH` and ordinary mismatch reports;
+`event` is the decoded-write index for an event mismatch and remains `null`
+when the limitation is attached to producer input. Human output uses the
+`S3K audio oracle: REFERENCE_LIMITATION` status. Exit status `0` means all
+compared services matched, `2` is usage, `3` is an ordinary semantic mismatch
+(including an un-evidenced missing write), `4` is an invalid capture or tool
+failure, and `5` is an authenticated reference limitation. Automation must
+therefore accept `5` as a valid, fail-closed comparison outcome rather than
+classifying it as a capture/tool failure.
 
 ## 5. Broken on purpose (evidence)
 
@@ -130,6 +153,17 @@ bytes are compared and which stay DIAGNOSTIC (unmapped engine coordinate:
   `terminal body digest mismatch`, exit 4.
 - One corrupted engine write → `EVENT_VALUE_DIFFERENT` at its exact
   tick/event (`TestS3kAudioParityComparator`, committed).
+
+The 260-service production check (`--ticks 260`) reaches services 0-127 and
+then stops at service/tick **128**. The underlying reference burst is event 0
+(`YM part II 82h = FFh`), but the report is deliberately typed as
+`REFERENCE_LIMITATION`, with `field=producer_input`, because the first service
+after the producer's interrupt-suspension interval carries
+`UNAVAILABLE_DURING_PRODUCER_SUSPENSION` and the exact reason
+`mailbox input was unavailable for the first observable service after
+reference producer interrupt services suspended`. It exits **5**, reports no
+engine divergence, and does not realign to service 129. A synthetic missing
+write without that evidence remains `EVENT_MISSING` and exits **3**.
 
 ## 6. Frontier progression (corrected 2026-08-31)
 
@@ -157,16 +191,29 @@ silence. Service 49's `FFh` command also matches its 84-write stop-all prefix.
 The following `zPlaySEGAPCM` loop clears its flag and disables interrupts for
 100 frame rows; the projection excludes its `2Ah` sample transport and
 `2Bh=80` DAC entry and emits no fictional `zVInt` services during that span.
-The resulting stream has 5,286 services. The first divergence is service 128
-(source frame 242), another stop-all burst whose `FEh` input was written and
-consumed inside the captured frame. The v1 pre-frame mailbox misses that
-boundary, so it cannot authorize the same engine request.
+The resulting stream has 5,286 services. Services 0-127 match in the 260-service
+check. Service 128 (source frame 242) contains another stop-all burst whose
+`FEh` input was written and consumed inside the captured frame. The v1
+pre-frame mailbox misses that boundary, so it cannot authorize the same engine
+request. Because the service carries the authenticated producer-input
+availability reason above, this is `REFERENCE_LIMITATION` (exit 5), not an
+engine divergence; comparison stops there without realignment. The exact
+84-write stop prefix remains proven at service 49 for `FFh` and at service 138
+for the next music activation, so those proofs are retained while this
+producer-input frontier remains open.
 
 ## 7. Known limits and open questions
 
 1. The engine capture host models the immediate PSG-silence edge of fades but
-   not their active-song envelope; PSG-mute (`E3h`) and the SEGA chant (`FFh`)
-   remain unmodelled. Unsupported tails are logged.
+   not their active-song envelope. `E3h` PSG-mute remains an explicit
+   `REFERENCE_LIMITATION`: no speed/global/SFX mutation is performed and its
+   transient four-write parity is not claimed. `E4h` releases logical SFX
+   ownership, but the shipped seven-slot conditional physical write/
+   restoration walk remains the next exact-write frontier. `FFh` owns the
+   implemented 84-write stop prefix and raw SEGA PCM transport exactly once;
+   full shipped `FFh` control-flow parity beyond that transport, including the
+   producer-side pre-consumption mailbox needed at service 128, remains open.
+   Unsupported tails are logged.
    The SEGA PCM transport is intentionally a separate tier; its source loop
    disables interrupts, so transport-only frame rows are not driver services.
    A producer-side pre-consumption mailbox probe is still required for 68k
