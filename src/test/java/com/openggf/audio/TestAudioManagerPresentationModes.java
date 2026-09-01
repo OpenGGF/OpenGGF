@@ -22,6 +22,7 @@ import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
+import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -405,18 +406,36 @@ class TestAudioManagerPresentationModes {
 
     @ParameterizedTest
     @EnumSource(ManagerProducerClosePath.class)
-    void managerLifecycleDiscardsPreparedProducerRestoreExactlyOnce(
+    void managerLifecycleDiscardsPreparedProducerRestoreWriteFreeExactlyOnce(
             ManagerProducerClosePath closePath) throws Exception {
         AudioManager audio = AudioManager.getInstance();
         AudioPresentationProducer producer = shadowProducer(audio);
-        CountingSmpsDriver preparedDriver =
-                prepareCountingProducerRestore(producer);
+        PreparedProducerRestore prepared =
+                prepareObservedProducerRestore(producer);
+        assertTrue(producer.transactionFingerprint()
+                        .preparedSelectedRestoreIdentity().token() != 0,
+                "fixture must hold one prepared logical restore");
 
         closePath.close(audio);
+
+        assertTrue(producer.isClosed());
+        assertEquals(1, prepared.logicalDiscards().get(),
+                "manager lifecycle must discard the prepared token once");
+        assertEquals(0, prepared.ymWrites().get(),
+                "prepared SMPS discard must not silence YM");
+        assertEquals(0, prepared.psgWrites().get(),
+                "prepared SMPS discard must not silence PSG");
+        assertNull(field(AudioManager.class, "shadowProducer").get(audio));
+        assertNull(field(AudioManager.class, "shadowSmpsSession").get(audio));
+
         closePath.close(audio);
 
-        assertEquals(1, preparedDriver.stopCalls,
-                "manager lifecycle must route producer cleanup exactly once");
+        assertEquals(1, prepared.logicalDiscards().get(),
+                "a repeated manager lifecycle call must not consume twice");
+        assertEquals(0, prepared.ymWrites().get());
+        assertEquals(0, prepared.psgWrites().get());
+        assertNull(field(AudioManager.class, "shadowProducer").get(audio));
+        assertNull(field(AudioManager.class, "shadowSmpsSession").get(audio));
     }
 
     @ParameterizedTest
@@ -566,7 +585,7 @@ class TestAudioManagerPresentationModes {
                 AudioManager.class, "shadowProducer").get(audio);
     }
 
-    private static CountingSmpsDriver prepareCountingProducerRestore(
+    private static PreparedProducerRestore prepareObservedProducerRestore(
             AudioPresentationProducer producer) {
         SmpsDriver source = new SmpsDriver();
         PresentationVoiceSnapshot.Smps voice =
@@ -584,10 +603,31 @@ class TestAudioManagerPresentationModes {
                         0, 0, 0, 0,
                         false, false, false, 1, true,
                         new SmpsCoordFlagRuntimeState.Snapshot(0));
-        AtomicReference<CountingSmpsDriver> recreated =
-                new AtomicReference<>();
+        AtomicInteger ymWrites = new AtomicInteger();
+        AtomicInteger psgWrites = new AtomicInteger();
+        AtomicInteger logicalDiscards = new AtomicInteger();
         AudioPresentationDependencyResolver resolver =
                 new AudioPresentationDependencyResolver() {
+                    @Override
+                    public DiagnosticTransaction beginDiagnosticTransaction() {
+                        return new DiagnosticTransaction() {
+                            @Override
+                            public void endPreparation() {
+                            }
+
+                            @Override
+                            public void commit() {
+                                throw new AssertionError(
+                                        "prepared restore must not commit");
+                            }
+
+                            @Override
+                            public void discard() {
+                                logicalDiscards.incrementAndGet();
+                            }
+                        };
+                    }
+
                     @Override
                     public DecodedPcm resolvePcm(String assetId) {
                         throw new AssertionError("no PCM voice expected");
@@ -596,9 +636,20 @@ class TestAudioManagerPresentationModes {
                     @Override
                     public SmpsCompositeVoice recreateSmps(
                             PresentationVoiceSnapshot.Smps snapshot) {
-                        CountingSmpsDriver driver =
-                                new CountingSmpsDriver();
-                        recreated.set(driver);
+                        SmpsDriver driver = new SmpsDriver(
+                                48_000.0, new ChipWriteObserver() {
+                                    @Override
+                                    public void onYm2612Write(
+                                            int port, int register,
+                                            int value) {
+                                        ymWrites.incrementAndGet();
+                                    }
+
+                                    @Override
+                                    public void onPsgWrite(int value) {
+                                        psgWrites.incrementAndGet();
+                                    }
+                                });
                         return new SmpsCompositeVoice(
                                 snapshot.voiceId(), snapshot.priority(),
                                 snapshot.musicId(),
@@ -608,7 +659,10 @@ class TestAudioManagerPresentationModes {
                 };
         producer.beginReverse(1.0);
         producer.prepareRestoreSelection(selected, resolver);
-        return recreated.get();
+        ymWrites.set(0);
+        psgWrites.set(0);
+        return new PreparedProducerRestore(
+                ymWrites, psgWrites, logicalDiscards);
     }
 
     private static DecodedPcmCache presentationPcmCache(
@@ -622,14 +676,10 @@ class TestAudioManagerPresentationModes {
         return settings.pcmCache();
     }
 
-    private static final class CountingSmpsDriver extends SmpsDriver {
-        private int stopCalls;
-
-        @Override
-        public void stopAll() {
-            stopCalls++;
-            super.stopAll();
-        }
+    private record PreparedProducerRestore(
+            AtomicInteger ymWrites,
+            AtomicInteger psgWrites,
+            AtomicInteger logicalDiscards) {
     }
 
     private static final class InspectingBackend extends NullAudioBackend {
