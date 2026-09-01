@@ -1,7 +1,7 @@
 # Complete-run audio parity tools
 
 `run_complete_audio_parity.sh` is the create-new orchestration boundary for the
-`complete_run_audio.v1` capture format. It runs each fixed producer twice,
+`complete_run_audio.v2` capture format. It runs each fixed producer twice,
 requires byte-identical duplicates, validates both captures through the fixed
 `CompleteRunAudioTool` class, and publishes the comparison report as one
 directory. It never deletes or overwrites a run.
@@ -20,19 +20,18 @@ tools/audio/run_complete_audio_parity.sh \
 ```
 
 The producer dispatcher is a closed in-process `S1`/`S2`/`S3K` registry; callers
-cannot replace its class IDs or register implementations. Task 9 reserves the
-three exact profile entries and returns `PRODUCER_UNAVAILABLE` without output
-until each game-specific plan supplies its built-in producer classes. Those
-classes must write a fresh canonical capture directory. Only the reference producer receives the separately installed
-BizHawk home. S2 and S3K producers must serialize their
-immutable cutoff frontier before disabling or discarding observer state; S1
-and S2 still serialize an explicit empty frontier.
-The comparable frontier is producer-neutral: semantic service hierarchy,
-completion state, cutoff-local chip projection, YM latches, and normalized
-terminal state. Buffered BizHawk captures additionally store native
-token/hook/PC/source events, raw range snapshots, arm proof, and the terminal
-Z80 digest in a diagnostics sidecar covered by the storage root but excluded
-from semantic equality. OpenGGF and callback producers must omit that sidecar.
+cannot replace its class IDs or register implementations. Each profile pins
+REFERENCE and OPENGGF independently and returns `PRODUCER_UNAVAILABLE` without
+output for an unpinned kind. Built-in producers must write a fresh canonical
+capture directory. Only the reference producer receives the separately
+installed BizHawk home.
+
+V2 keeps ten evidence layers independent. Each producer declares what it
+observed, while the shared comparison inventory separately declares what may be
+compared. Buffered BizHawk captures additionally store authenticated native
+token/hook/PC/source events and raw snapshots in diagnostics sidecars. OpenGGF
+callback producers omit native sidecars. A null layer is unobserved; a non-null
+empty list is observed-empty.
 Each built-in profile class statically registers its immutable profile; every
 fresh CLI JVM lazily initializes only the profile class fixed in the closed
 dispatcher, so no prior process or mutable registration command is required.
@@ -47,3 +46,7 @@ inside the later built-in producer, never supplied as a replacement command.
 Exit status is `0` for a match, `2` for usage/security refusal, `3` for a valid
 semantic mismatch, and `4` for producer or capture failure. Ambient Java, shell,
 Git, SSH, and dynamic-loader injection variables are rejected.
+
+`producer-status <profile>` remains pair-wide and is what the parity wrapper
+uses. `producer-kind-status <REFERENCE|OPENGGF> <profile>` checks one fixed
+producer independently and reports that binding's exact unavailable reason.

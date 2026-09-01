@@ -110,6 +110,33 @@ class TestCompleteRunAudioCli {
     }
 
     @Test
+    void kindSpecificStatusPreservesPairStatusAndReportsTheExactBindingReason() {
+        CliResult pair = result("producer-status", "s2_rev01_complete_emeralds.v1");
+        assertEquals(4, pair.status());
+        assertTrue(pair.error().contains("fixed producer pair is not installed"));
+
+        CliResult engine = result("producer-kind-status", "OPENGGF",
+                "s2_rev01_complete_emeralds.v1");
+        assertEquals(4, engine.status());
+        assertEquals("", engine.out());
+        assertTrue(engine.error().contains("artifact attestation trust root is not installed"));
+
+        CliResult s3kEngine = result("producer-kind-status", "OPENGGF",
+                "s3k_locked_on_knuckles_superemeralds.v1");
+        assertEquals(4, s3kEngine.status());
+        assertTrue(s3kEngine.error().contains("artifact attestation trust root is not installed"));
+
+        CliResult reference = result("producer-kind-status", "REFERENCE",
+                "s2_rev01_complete_emeralds.v1");
+        assertEquals(4, reference.status());
+        assertTrue(reference.error().contains("pre-row-769"));
+
+        assertEquals(2, run("producer-kind-status", "attacker", "s2_rev01_complete_emeralds.v1"));
+        assertEquals(2, run("producer-kind-status", "OPENGGF", "attacker.profile"));
+        assertEquals(2, run("producer-kind-status", "OPENGGF"));
+    }
+
+    @Test
     void freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput() throws Exception {
         Path java = Path.of(System.getProperty("java.home"), "bin", "java");
         Process process = new ProcessBuilder(java.toString(), "-cp", System.getProperty("java.class.path"),
@@ -120,6 +147,20 @@ class TestCompleteRunAudioCli {
         assertEquals("", new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
         assertTrue(new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8)
                 .startsWith("PRODUCER_UNAVAILABLE:"));
+    }
+
+    @Test
+    void freshJvmReportsOneProducerBindingWithoutClaimingPairAvailability() throws Exception {
+        Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+        Process process = new ProcessBuilder(java.toString(), "-cp", System.getProperty("java.class.path"),
+                CompleteRunAudioTool.class.getName(), "producer-kind-status", "OPENGGF",
+                "s2_rev01_complete_emeralds.v1")
+                .directory(Path.of(".").toFile()).start();
+
+        assertEquals(4, process.waitFor());
+        assertEquals("", new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+        assertTrue(new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8)
+                .contains("artifact attestation trust root is not installed"));
     }
 
     @Test

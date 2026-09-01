@@ -46,6 +46,31 @@ final class CompleteRunAudioProducerRegistry {
                 .orElse(false);
     }
 
+    static boolean isAvailable(String profileId, ProducerKind kind) {
+        try {
+            requireAvailable(profileId, kind);
+            return true;
+        } catch (ProducerUnavailableException | IllegalArgumentException unavailable) {
+            return false;
+        }
+    }
+
+    static CompleteRunAudioProfile requireAvailable(String profileId, ProducerKind kind)
+            throws ProducerUnavailableException {
+        Game game = Arrays.stream(Game.values())
+                .filter(value -> value.profileId.equals(profileId)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("unknown fixed producer profile"));
+        if (!tryLoadProfile(profileId)) {
+            throw new ProducerUnavailableException("fixed producer profile is not installed", null);
+        }
+        CompleteRunAudioProfile profile = requirePinned(profileId, kind);
+        String className = kind == ProducerKind.REFERENCE ? game.referenceClass : game.engineClass;
+        if (!classAvailable(className)) {
+            throw new ProducerUnavailableException(game.name() + " producer is not installed", null);
+        }
+        return profile;
+    }
+
     private static boolean bindingsPinned(String profileId) {
         CompleteRunAudioProfile profile = CompleteRunAudioProfiles.require(profileId);
         return Arrays.stream(ProducerKind.values()).allMatch(kind ->
@@ -91,7 +116,7 @@ final class CompleteRunAudioProducerRegistry {
     static void capture(Request request) throws Exception {
         Game game = Arrays.stream(Game.values()).filter(value -> value.profileId.equals(request.profileId()))
                 .findFirst().orElseThrow(() -> new IllegalArgumentException("unknown fixed producer profile"));
-        requirePinned(request.profileId(), request.producerKind());
+        requireAvailable(request.profileId(), request.producerKind());
         String className = request.producerKind() == ProducerKind.REFERENCE
                 ? game.referenceClass : game.engineClass;
         Class<?> type;

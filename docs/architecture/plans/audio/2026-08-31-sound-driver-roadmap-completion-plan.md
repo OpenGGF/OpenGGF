@@ -455,6 +455,13 @@ comparison authority by itself.
 
 ### Task 7: Pin fixed identities and enable fresh-CLI execution
 
+**OpenGGF prerequisite:** the executable JAR has no independent artifact-attestation trust root.
+Keep S2/S3K `OPENGGF` bindings unavailable with that exact reason until the detached signed-manifest
+contract in
+[the producer attestation design](../../designs/audio/2026-09-01-openggf-producer-artifact-attestation-design.md)
+has real signing custody and an independently provisioned verification key. Do not embed a
+self-referential JAR hash, trust a runtime self-hash, or substitute unsigned build/Git provenance.
+
 **S2 prerequisite:** keep the production REFERENCE binding unavailable until TraceChaser exposes a
 new authenticated raw contract carrying the true pre-row-769 begin row and native ordinal (or an
 equivalent typed carried-in origin) for every boundary service. Strictly validate and project that
@@ -484,6 +491,9 @@ The existing OPENGGF/callback prefix-projector metadata is test-only.
 - [ ] Write RED fresh-JVM CLI tests for `producer-status`, deterministic double production, validate,
   compare, unknown profile, wrong producer kind, changed binary/core/observer/capability hash, and
   output no-replace behavior.
+- [ ] Preserve pair-wide `producer-status` for the full parity wrapper and add
+  `producer-kind-status <kind> <profile>` so an independently pinned OPENGGF producer can be
+  queried while the corresponding REFERENCE producer remains unavailable.
 - [ ] Replace unavailable bindings only with exact reviewed hashes/proofs. Finalize each profile's
   layer inventory from Task 3's projector evidence: a service/ownership/lifecycle layer stays
   unavailable unless its exact cross-producer equivalence was proven. Keep request/decision

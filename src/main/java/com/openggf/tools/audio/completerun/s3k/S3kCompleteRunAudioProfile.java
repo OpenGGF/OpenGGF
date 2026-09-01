@@ -74,7 +74,7 @@ public final class S3kCompleteRunAudioProfile {
                             "reference identity remains unavailable until the read-only run-local BK2 is installed"),
                     CompleteRunAudioTrace.ProducerKind.OPENGGF,
                     new CompleteRunAudioTrace.UnavailableProducerBinding(
-                            "OpenGGF complete-run producer identity is not installed"));
+                            "OpenGGF producer artifact attestation trust root is not installed"));
         }
 
         @Override public Map<CompleteRunAudioTrace.ProducerKind,
