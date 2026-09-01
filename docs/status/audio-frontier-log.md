@@ -62,7 +62,8 @@ defined by `com.openggf.tools.audio.parity`.
   **138** (next music activation) still begins with the exact reference
   84-write stop prefix. S1 hard gates remain `MATCH (14,690 ticks)` for GHZ
   music and `MATCH (1,967 ticks, 8 dispatches)` for sound-test SFX. Named
-  remaining frontiers are `E3h` PSG-mute limitation, the `E4h` seven-slot
+  remaining frontiers are the unsupported `E3h` PSG-mute product gap (not a
+  structured producer-input `REFERENCE_LIMITATION`), the `E4h` seven-slot
   conditional physical write/restoration walk, and full `FFh` control-flow
   parity beyond the implemented 84-write stop/PCM transport (including the
   producer-side pre-consumption mailbox at service 128).

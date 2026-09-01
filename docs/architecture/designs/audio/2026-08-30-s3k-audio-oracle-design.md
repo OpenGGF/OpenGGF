@@ -205,9 +205,12 @@ producer-input frontier remains open.
 ## 7. Known limits and open questions
 
 1. The engine capture host models the immediate PSG-silence edge of fades but
-   not their active-song envelope. `E3h` PSG-mute remains an explicit
-   `REFERENCE_LIMITATION`: no speed/global/SFX mutation is performed and its
-   transient four-write parity is not claimed. `E4h` releases logical SFX
+   not their active-song envelope. `E3h` PSG-mute remains a named unsupported
+   product frontier: the host records a human diagnostic and performs no false
+   speed/global/SFX mutation, but it does not emit the structured
+   producer-input `REFERENCE_LIMITATION` report or claim transient four-write
+   parity. An encountered `E3h` request may therefore lead to an ordinary later
+   mismatch until that engine behavior is implemented. `E4h` releases logical SFX
    ownership, but the shipped seven-slot conditional physical write/
    restoration walk remains the next exact-write frontier. `FFh` owns the
    implemented 84-write stop prefix and raw SEGA PCM transport exactly once;
