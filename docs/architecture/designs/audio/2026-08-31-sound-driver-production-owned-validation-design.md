@@ -440,8 +440,8 @@ output-derived request inference or a policy exception hidden in tooling.
 
 ## Record and publication contract
 
-TraceChaser's raw staging schemas remain
-`openggf.s2-complete-run-audio-raw.v1` and
+TraceChaser's raw staging schemas are
+`openggf.s2-complete-run-audio-raw.v2` and
 `openggf.s3k-complete-run-audio-raw.v1`. The strict OpenGGF adapters validate exact ROM,
 BK2, service-manifest, interval, driver-state range, event ABI, ordinals, ancestry, chip
 writes, baseline, and cutoff before any canonical publication. The canonical consumer
@@ -451,11 +451,14 @@ capabilities, segment inventory, capture counts, and terminal digest. Identity, 
 schema mismatch makes the run invalid before comparison. Initial S2 and S3K profiles compare only
 `FRAME_CHIP_EVENTS`; all other layers remain explicit limitations and their canonical fields are
 null. The S3K reference projector retains native authentication sidecars without fabricating
-semantic services, state, or admission evidence. S2 production reference publication remains
-unavailable: raw v1 does not carry the source-observed pre-row-769 begin row and ordinal (or an
-equivalent typed carried-in origin) for the live DPCM boundary service, so a buffered-native v2
-store cannot authenticate that carry without invention. Task 7 must first version and strictly
-validate that TraceChaser raw evidence, then pin the S2 native projector identity and capability.
+semantic services, state, or admission evidence. S2 raw v2 now requires the source-observed
+pre-row-769 begin row and native ordinal for every boundary service, carries that origin through
+the managed observer's materialization/publication reset, and strictly validates generation
+identity, token reuse, begin ordering, and cutoff continuity before projection. Its projector
+retains baseline/frame/cutoff native sidecars while leaving semantic topology, services, and state
+null. S2 production reference publication nevertheless remains unavailable until a real duplicate
+capture is reviewed and its exact managed executable, native observer, and capability identities
+are installed; this implementation deliberately does not pin the locally rebuilt executable hash.
 The callback/OPENGGF metadata used by prefix projector unit tests is only a test seam and cannot
 publish a production REFERENCE store. The uninstalled S1 complete-run profile likewise claims no
 observed complete-run layers; this does not alter the legacy 14,690-tick music and 1,967-row SFX

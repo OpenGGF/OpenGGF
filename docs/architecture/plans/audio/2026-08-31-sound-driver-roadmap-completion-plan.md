@@ -462,12 +462,13 @@ contract in
 has real signing custody and an independently provisioned verification key. Do not embed a
 self-referential JAR hash, trust a runtime self-hash, or substitute unsigned build/Git provenance.
 
-**S2 prerequisite:** keep the production REFERENCE binding unavailable until TraceChaser exposes a
-new authenticated raw contract carrying the true pre-row-769 begin row and native ordinal (or an
-equivalent typed carried-in origin) for every boundary service. Strictly validate and project that
-evidence before pinning S2's buffered-native identity/capability. Do not infer the DPCM origin from
-the comparison boundary, weaken strict raw v1 with optional fields, or publish callback provenance.
-The existing OPENGGF/callback prefix-projector metadata is test-only.
+**S2 prerequisite status:** TraceChaser and OpenGGF now implement the authenticated raw-v2 contract
+carrying the true pre-row-769 begin row and native ordinal for every boundary service. The strict
+adapter validates and the native-only projector preserves this evidence without inferring the DPCM
+origin or publishing callback provenance. Keep the production REFERENCE binding unavailable until
+a real duplicate capture is independently reviewed and S2's exact buffered-native executable,
+observer, and capability identities are installed. The existing OPENGGF/callback prefix-projector
+metadata remains test-only.
 
 **Files:**
 

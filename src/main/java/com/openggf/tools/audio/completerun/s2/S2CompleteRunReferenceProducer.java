@@ -13,7 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Objects;
 
-/** Reserved fixed S2 reference producer; publication remains unavailable until Task 7. */
+/** Fixed S2 raw-v2 producer; publication awaits reviewed capture and installed identities. */
 public final class S2CompleteRunReferenceProducer implements CompleteRunAudioProducer {
     private static final Path LAUNCHER = Path.of("bizhawk-headless/run-complete-audio.sh");
     private static final Path SERVICE_MANIFEST =
@@ -28,7 +28,8 @@ public final class S2CompleteRunReferenceProducer implements CompleteRunAudioPro
         if (binding instanceof CompleteRunAudioTrace.UnavailableProducerBinding unavailable) {
             throw new IllegalStateException("S2 reference producer is unavailable: " + unavailable.reason());
         }
-        throw new IllegalStateException("S2 reference publication is reserved for Task 7");
+        throw new IllegalStateException(
+                "S2 reference publication awaits reviewed duplicate capture and installed identities");
     }
 
     void capturePipelineForTesting(Request request, CompleteRunAudioTrace.Metadata syntheticMetadata)

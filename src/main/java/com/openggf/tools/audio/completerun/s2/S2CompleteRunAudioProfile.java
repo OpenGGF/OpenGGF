@@ -61,7 +61,7 @@ public final class S2CompleteRunAudioProfile {
             return Map.of(
                     CompleteRunAudioTrace.ProducerKind.REFERENCE,
                     new CompleteRunAudioTrace.UnavailableProducerBinding(
-                            "S2 raw evidence lacks the authenticated pre-row-769 begin row and native ordinal for carried DPCM"),
+                            "S2 raw v2 carried-origin evidence is implemented; reviewed duplicate capture and exact managed executable/capability identities are not installed"),
                     CompleteRunAudioTrace.ProducerKind.OPENGGF,
                     new CompleteRunAudioTrace.UnavailableProducerBinding(
                             "OpenGGF producer artifact attestation trust root is not installed"));

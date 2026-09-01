@@ -60,23 +60,38 @@ class TestS2CompleteRunReferenceProducer {
     }
 
     @Test
-    void productionBufferedReferenceCannotValidateOrPublishProjectionWithoutNativeSidecars() throws Exception {
-        Path raw = Files.writeString(temporary.resolve("s2-no-native-sidecars.jsonl"), rawPrefix(false));
+    void productionReferenceRetainsNativeSidecarsButRemainsUnavailablePendingReviewedIdentity() throws Exception {
+        Path raw = Files.writeString(temporary.resolve("s2-native-sidecars.jsonl"), rawPrefix(false));
         var projection = new S2CompleteRunReferenceProjector()
                 .projectPrefixForTesting(raw.toAbsolutePath(), rom());
         CompleteRunAudioTrace.Metadata metadata = unavailableProductionReferenceMetadata();
         Path output = temporary.resolve("s2-production-capture").toAbsolutePath();
 
         metadata.validateFixtureProfile(S2CompleteRunAudioProfile.profile());
-        assertInstanceOf(CompleteRunAudioTrace.UnavailableProducerBinding.class,
+        var unavailable = assertInstanceOf(CompleteRunAudioTrace.UnavailableProducerBinding.class,
                 S2CompleteRunAudioProfile.profile().producerBindings()
                         .get(CompleteRunAudioTrace.ProducerKind.REFERENCE));
+        assertTrue(unavailable.reason().contains("raw v2 carried-origin evidence is implemented"));
+        assertTrue(unavailable.reason().contains("reviewed duplicate capture"));
+        assertTrue(unavailable.reason().contains("identities are not installed"));
         assertThrows(IllegalArgumentException.class,
                 () -> metadata.validateRuntimeProfile(S2CompleteRunAudioProfile.profile()));
-        IllegalArgumentException missingSidecar = assertThrows(IllegalArgumentException.class,
-                () -> new CompleteRunAudioCaptureStore().writeNew(
-                        output, metadata, projection.records().iterator()));
-        assertTrue(missingSidecar.getMessage().contains("native diagnostics is required"));
+        CompleteRunAudioTrace.Baseline baseline =
+                (CompleteRunAudioTrace.Baseline) projection.records().getFirst();
+        CompleteRunAudioTrace.Frame frame =
+                (CompleteRunAudioTrace.Frame) projection.records().get(1);
+        CompleteRunAudioTrace.CutoffFrontier cutoff =
+                (CompleteRunAudioTrace.CutoffFrontier) projection.records().get(2);
+        assertEquals(700, baseline.frontier().nativeDiagnostics()
+                .activeStack().getFirst().beginFrame());
+        assertEquals(12, baseline.frontier().nativeDiagnostics()
+                .activeStack().getFirst().beginOrdinal());
+        assertEquals(1, frame.nativeDiagnostics().rawChipInventory().size());
+        assertEquals(700, cutoff.nativeDiagnostics().activeStack().getFirst().beginFrame());
+        assertEquals(12, cutoff.nativeDiagnostics().activeStack().getFirst().beginOrdinal());
+        assertEquals(null, baseline.frontier().activeStack());
+        assertEquals(null, frame.services());
+        assertEquals(null, cutoff.activeStack());
         assertFalse(Files.exists(output));
     }
 
@@ -213,7 +228,7 @@ class TestS2CompleteRunReferenceProducer {
 
     private static String rawPrefix(boolean trailing) {
         String state = "00".repeat(8192);
-        String metadata = "{\"type\":\"metadata\",\"schema\":\"openggf.s2-complete-run-audio-raw.v1\","
+        String metadata = "{\"type\":\"metadata\",\"schema\":\"openggf.s2-complete-run-audio-raw.v2\","
                 + "\"rom_sha1\":\"8bca5dcef1af3e00098666fd892dc1c2a76333f9\","
                 + "\"bk2_sha256\":\"e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5\","
                 + "\"service_manifest_sha256\":\"ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0\","
@@ -221,17 +236,20 @@ class TestS2CompleteRunReferenceProducer {
         String baseline = boundary("baseline", "\"row\":769,", state, "[" + dpcm() + "]");
         String frame = "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\""
                 + state + "\",\"events\":[" + psgEvent() + "]}\n";
-        String cutoff = boundary("cutoff", "\"exclusive_end\":770,", state, "[]");
+        String cutoff = boundary("cutoff", "\"exclusive_end\":770,", state,
+                "[" + dpcm("[" + psgChip(0, 0) + "]") + "]");
         return metadata + baseline + frame + cutoff + (trailing ? "{}\n" : "");
     }
 
     private static String twoFramePrefix() {
         String first = rawPrefix(false);
-        String cutoff = boundary("cutoff", "\"exclusive_end\":770,", "00".repeat(8192), "[]");
+        String cutoff = boundary("cutoff", "\"exclusive_end\":770,", "00".repeat(8192),
+                "[" + dpcm("[" + psgChip(0, 0) + "]") + "]");
         String second = "{\"type\":\"frame\",\"row\":770,\"lag\":false,\"state_hex\":\""
                 + "00".repeat(8192) + "\",\"events\":[" + psgEvent() + "]}\n";
         return first.replace(cutoff, second
-                + boundary("cutoff", "\"exclusive_end\":771,", "00".repeat(8192), "[]"));
+                + boundary("cutoff", "\"exclusive_end\":771,", "00".repeat(8192),
+                        "[" + dpcm("[" + psgChip(0, 0) + "," + psgChip(1, 0) + "]") + "]"));
     }
 
     private static List<CompleteRunAudioTrace.Record> records(Path output) throws Exception {
@@ -250,7 +268,18 @@ class TestS2CompleteRunReferenceProducer {
     }
 
     private static String dpcm() {
-        return service(1, 4, 378, 5, "[]");
+        return dpcm("[]");
+    }
+
+    private static String dpcm(String chips) {
+        return service(1, 4, 378, 5, chips);
+    }
+
+    private static String psgChip(int coordinate, int ordinal) {
+        return "{\"coordinate\":" + coordinate + ",\"native_ordinal\":" + ordinal
+                + ",\"event_kind\":4,"
+                + "\"subject\":0,\"value\":68,\"pc\":378,\"source_cpu\":1,"
+                + "\"data\":true,\"port\":0,\"register\":0}";
     }
 
     private static String psgEvent() {
@@ -263,7 +292,8 @@ class TestS2CompleteRunReferenceProducer {
     private static String service(int token, int kind, int pc, int hook, String chips) {
         return "{\"token\":" + token + ",\"parent_token\":0,\"kind\":" + kind
                 + ",\"depth\":0,\"current_parent_token\":0,\"current_depth\":0,"
-                + "\"begin_coordinate\":1,\"end_coordinate\":0,\"begin_pc\":" + pc
+                + "\"begin_coordinate\":1,\"end_coordinate\":0,"
+                + "\"begin_row\":700,\"begin_native_ordinal\":12,\"begin_pc\":" + pc
                 + ",\"end_pc\":0,\"begin_hook_token\":" + hook + ",\"end_hook_token\":0,"
                 + "\"begin_source_cpu\":1,\"cancelled\":false,\"complete\":false,"
                 + "\"chips\":" + chips + ",\"snapshots\":[],\"ancestry_transitions\":[]}";
