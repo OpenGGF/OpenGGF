@@ -97,6 +97,19 @@ class TestSmpsAssetCatalog {
     }
 
     @Test
+    void legacyMusicSessionBuildsItsDescriptorBeforeSequencerConstruction() {
+        CountingMusicData data = CountingMusicData.music(0x81, 1);
+
+        factory().legacyMusicSmps(
+                "base", 0x81, 1, data, dac(1), config(),
+                AudioSourceDescriptor.baseMusic(0x81), 32);
+
+        assertEquals(1, data.dataReads(),
+                "the session descriptor must be materialized once before"
+                        + " sequencer construction, not inferred again");
+    }
+
+    @Test
     void firstRegistrationFreezesOnceAndSameSourceRepeatIsConstantWork() {
         SmpsAssetCatalog catalog = catalog();
         CountingSfxData source = CountingSfxData.sfx(0xA0, 1);

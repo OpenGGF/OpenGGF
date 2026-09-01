@@ -485,8 +485,7 @@ public final class AudioPresentationSourceFactory
             int maxStereoFrames,
             LegacySmpsSource source,
             SmpsDriver driver) {
-        SmpsSequencer sequencer = newLegacySequencer(source, driver);
-        sequencer.setSourceDescriptor(
+        SmpsSequencer sequencer = newLegacySequencer(source, driver,
                 describeLegacyMusic(descriptor, source.data()));
         sequencer.setSpeedShoes(settings.speedShoesEnabled());
         sequencer.setSpeedMultiplier(settings.speedMultiplier());
@@ -977,13 +976,17 @@ public final class AudioPresentationSourceFactory
     }
 
     private SmpsSequencer newLegacySequencer(
-            LegacySmpsSource source, SmpsDriver driver) {
+            LegacySmpsSource source,
+            SmpsDriver driver,
+            SmpsSourceDescriptor descriptor) {
         SmpsSequencer sequencer = new SmpsSequencer(
-                source.data(), source.dac(), driver,
+                source.data(), source.dac(), driver, driver,
                 settings.audioManager(),
                 copyPresentationConfig(
                         source.gameId(), source.staticConfig(),
-                        source.coordFlagHandlerRequired()));
+                        source.coordFlagHandlerRequired()),
+                descriptor,
+                SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE);
         sequencer.setSampleRate(driver.getOutputSampleRate());
         sequencer.setFm6DacOff(settings.fm6DacOff());
         return sequencer;
