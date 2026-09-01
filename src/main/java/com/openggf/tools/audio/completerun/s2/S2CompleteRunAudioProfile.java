@@ -63,7 +63,8 @@ public final class S2CompleteRunAudioProfile {
                     new CompleteRunAudioTrace.UnavailableProducerBinding(
                             "S2 raw evidence lacks the authenticated pre-row-769 begin row and native ordinal for carried DPCM"),
                     CompleteRunAudioTrace.ProducerKind.OPENGGF,
-                    new CompleteRunAudioTrace.UnavailableProducerBinding("Task 5 S2 OpenGGF producer is not installed"));
+                    new CompleteRunAudioTrace.UnavailableProducerBinding(
+                            "OpenGGF complete-run producer identity is not installed"));
         }
         @Override public Map<CompleteRunAudioTrace.ProducerKind,
                 CompleteRunAudioTrace.ObserverProof> observerProofs() { return Map.of(); }

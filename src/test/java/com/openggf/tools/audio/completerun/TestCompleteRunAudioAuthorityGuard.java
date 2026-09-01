@@ -2,7 +2,12 @@ package com.openggf.tools.audio.completerun;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.openggf.tools.audio.completerun.s2.S2CompleteRunOpenGgfProducer;
+import com.openggf.tools.audio.completerun.s3k.S3kCompleteRunOpenGgfProducer;
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
 import java.io.IOException;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -180,6 +185,35 @@ class TestCompleteRunAudioAuthorityGuard {
         assertEquals(List.of(), violations,
                 "authenticated OpenGGF capture sources may consume normal ROM/BK2/run"
                         + " identity, never trace, reference, timing, or direct-load state");
+    }
+
+    @Test
+    void unavailableFixedProducerBodiesAreClosedAtTheBytecodeCallGraph() {
+        assertEquals(List.of(), unavailableBodyViolations(
+                S2CompleteRunOpenGgfProducer.class));
+        assertEquals(List.of(), unavailableBodyViolations(
+                S3kCompleteRunOpenGgfProducer.class));
+        assertEquals(List.of(), unavailableBytecodeViolations(
+                S2CompleteRunOpenGgfProducer.class,
+                "CompleteRunAudioOpenGgfProducerPreflight.requirePinned"));
+        assertEquals(List.of(), unavailableBytecodeViolations(
+                S3kCompleteRunOpenGgfProducer.class,
+                "CompleteRunAudioOpenGgfProducerPreflight.requirePinned"));
+    }
+
+    @Test
+    void unavailableBytecodeGuardRejectsRealAdversarialBodies() {
+        String preflight = "TestCompleteRunAudioAuthorityGuard$FixturePreflight.requirePinned";
+        assertEquals(List.of(), unavailableBytecodeViolations(
+                ValidUnavailableBody.class, preflight));
+        for (Class<?> adversarial : List.of(HelperDelegatingBody.class,
+                ReorderedBody.class, MissingThrowBody.class,
+                ConstructedButNotThrownBody.class, CaughtThrowBody.class,
+                StaticTriggerBody.class, OverloadDecoyBody.class)) {
+            assertEquals(List.of("closed-body-bytecode"),
+                    unavailableBytecodeViolations(adversarial, preflight),
+                    adversarial.getSimpleName());
+        }
     }
 
     @Test
@@ -857,9 +891,246 @@ class TestCompleteRunAudioAuthorityGuard {
         return stripped.toString();
     }
 
+    private static List<String> unavailableBodyViolations(Class<?> producer) {
+        JavaClass owner = new ClassFileImporter().importClasses(producer).get(producer);
+        var capture = owner.getMethods().stream()
+                .filter(method -> method.getName().equals("capture")
+                        && method.getRawParameterTypes().size() == 1
+                        && method.getRawParameterTypes().get(0).isEquivalentTo(
+                                CompleteRunAudioProducer.Request.class))
+                .findFirst().orElseThrow();
+        List<BodyStep> steps = new ArrayList<>();
+        capture.getMethodCallsFromSelf().forEach(call -> steps.add(new BodyStep(
+                call.getSourceCodeLocation().getLineNumber(),
+                call.getTargetOwner().isEquivalentTo(
+                        CompleteRunAudioOpenGgfProducerPreflight.class)
+                                && call.getName().equals("requirePinned")
+                        ? "preflight" : "method",
+                call.getTargetOwner().getName() + "." + call.getName())));
+        capture.getConstructorCallsFromSelf().forEach(call -> steps.add(new BodyStep(
+                call.getSourceCodeLocation().getLineNumber(),
+                call.getTargetOwner().isEquivalentTo(IllegalStateException.class)
+                        ? "throw" : "constructor",
+                call.getTargetOwner().getName())));
+        steps.sort(java.util.Comparator.comparingInt(BodyStep::line));
+        return validateUnavailableBody(steps);
+    }
+
+    private static List<String> unavailableBytecodeViolations(
+            Class<?> producer, String preflightTarget) {
+        try {
+            String classpath = java.util.stream.Stream.of(
+                            TestCompleteRunAudioAuthorityGuard.class,
+                            producer,
+                            CompleteRunAudioOpenGgfProducerPreflight.class)
+                    .map(type -> type.getProtectionDomain().getCodeSource()
+                            .getLocation().getPath())
+                    .distinct().collect(java.util.stream.Collectors.joining(
+                            File.pathSeparator));
+            Path javap = Path.of(System.getProperty("java.home"), "bin", "javap");
+            Process process = new ProcessBuilder(javap.toString(), "-classpath",
+                    classpath, "-c", "-p", producer.getName())
+                    .redirectErrorStream(true).start();
+            String output = new String(process.getInputStream().readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8);
+            if (process.waitFor() != 0) {
+                throw new IllegalStateException("javap failed: " + output);
+            }
+            return validateUnavailableBytecode(captureBytecode(output,
+                    "capture(com.openggf.tools.audio.completerun."
+                            + "CompleteRunAudioProducer$Request)"), preflightTarget);
+        } catch (Exception failure) {
+            throw new IllegalStateException("could not inspect unavailable producer bytecode",
+                    failure);
+        }
+    }
+
+    private static CaptureBytecode captureBytecode(String javap,
+            String exactSignature) {
+        List<Instruction> instructions = new ArrayList<>();
+        boolean capture = false;
+        boolean code = false;
+        boolean exceptionTable = false;
+        Pattern instruction = Pattern.compile("^\\s*\\d+:\\s+([a-z0-9_]+)(.*)$");
+        for (String line : javap.lines().toList()) {
+            if (!capture && line.contains(exactSignature)) {
+                capture = true;
+                continue;
+            }
+            if (capture && !code && line.trim().equals("Code:")) {
+                code = true;
+                continue;
+            }
+            if (!code) continue;
+            if (line.trim().equals("Exception table:")) {
+                exceptionTable = true;
+                continue;
+            }
+            var match = instruction.matcher(line);
+            if (match.matches()) {
+                instructions.add(new Instruction(match.group(1), match.group(2)));
+            } else if (line.isBlank() && !instructions.isEmpty()) {
+                break;
+            }
+        }
+        if (instructions.isEmpty()) {
+            throw new IllegalArgumentException("capture bytecode was not found");
+        }
+        return new CaptureBytecode(List.copyOf(instructions), exceptionTable);
+    }
+
+    private static List<String> validateUnavailableBytecode(
+            CaptureBytecode bytecode, String preflightTarget) {
+        List<Instruction> instructions = bytecode.instructions();
+        int preflight = uniqueInstruction(instructions,
+                value -> value.opcode().startsWith("invoke")
+                        && value.detail().contains(preflightTarget));
+        int construction = uniqueInstruction(instructions,
+                value -> value.opcode().equals("new")
+                        && value.detail().contains("java/lang/IllegalStateException"));
+        int constructor = uniqueInstruction(instructions,
+                value -> value.opcode().equals("invokespecial")
+                        && value.detail().contains("java/lang/IllegalStateException.\"<init>\""));
+        int throwing = uniqueInstruction(instructions,
+                value -> value.opcode().equals("athrow"));
+        boolean unexpectedInvoke = instructions.stream().anyMatch(value ->
+                value.opcode().startsWith("invoke")
+                        && !value.detail().contains(preflightTarget)
+                        && !value.detail().contains(
+                                "java/lang/IllegalStateException.\"<init>\""));
+        boolean controlFlow = bytecode.exceptionTable()
+                || instructions.stream().anyMatch(value ->
+                        value.opcode().endsWith("return")
+                                || value.opcode().startsWith("if")
+                                || value.opcode().startsWith("goto")
+                                || value.opcode().startsWith("jsr")
+                                || value.opcode().contains("switch"));
+        Set<String> allowedOpcodes = Set.of("aload", "aload_1", "ldc", "ldc_w",
+                "invokestatic", "pop", "new", "dup", "invokespecial", "athrow");
+        boolean unexpectedOpcode = instructions.stream()
+                .anyMatch(value -> !allowedOpcodes.contains(value.opcode()));
+        if (preflight < 0 || construction < 0 || constructor < 0 || throwing < 0
+                || !(preflight < construction && construction < constructor
+                        && constructor < throwing)
+                || throwing != instructions.size() - 1
+                || unexpectedInvoke || unexpectedOpcode || controlFlow) {
+            return List.of("closed-body-bytecode");
+        }
+        return List.of();
+    }
+
+    private static int uniqueInstruction(List<Instruction> instructions,
+            java.util.function.Predicate<Instruction> predicate) {
+        int found = -1;
+        for (int index = 0; index < instructions.size(); index++) {
+            if (!predicate.test(instructions.get(index))) continue;
+            if (found >= 0) return -1;
+            found = index;
+        }
+        return found;
+    }
+
+    private static List<String> validateUnavailableBody(List<BodyStep> steps) {
+        if (steps.size() != 2
+                || !"preflight".equals(steps.get(0).kind())
+                || !"throw".equals(steps.get(1).kind())
+                || steps.get(0).line() >= steps.get(1).line()) {
+            return List.of("closed-body-shape");
+        }
+        return List.of();
+    }
+
     private record ForbiddenAuthority(String label, Pattern pattern) { }
 
     private record AuthorityMutation(String source, String expectedLabel) { }
+
+    private record BodyStep(int line, String kind, String target) { }
+
+    private record Instruction(String opcode, String detail) { }
+
+    private record CaptureBytecode(List<Instruction> instructions,
+            boolean exceptionTable) { }
+
+    private static final class FixturePreflight {
+        static void requirePinned() {
+        }
+    }
+
+    private static final class ValidUnavailableBody {
+        void capture(CompleteRunAudioProducer.Request request) {
+            FixturePreflight.requirePinned();
+            throw new IllegalStateException("unavailable");
+        }
+    }
+
+    private static final class HelperDelegatingBody {
+        void capture(CompleteRunAudioProducer.Request request) {
+            FixturePreflight.requirePinned();
+            helper();
+            throw new IllegalStateException("unavailable");
+        }
+        private void helper() {
+        }
+    }
+
+    private static final class ReorderedBody {
+        void capture(CompleteRunAudioProducer.Request request) {
+            IllegalStateException unavailable =
+                    new IllegalStateException("unavailable");
+            FixturePreflight.requirePinned();
+            throw unavailable;
+        }
+    }
+
+    private static final class MissingThrowBody {
+        void capture(CompleteRunAudioProducer.Request request) {
+            FixturePreflight.requirePinned();
+        }
+    }
+
+    private static final class ConstructedButNotThrownBody {
+        void capture(CompleteRunAudioProducer.Request request) {
+            FixturePreflight.requirePinned();
+            new IllegalStateException("unavailable");
+        }
+    }
+
+    private static final class CaughtThrowBody {
+        void capture(CompleteRunAudioProducer.Request request) {
+            try {
+                FixturePreflight.requirePinned();
+                throw new IllegalStateException("unavailable");
+            } catch (IllegalStateException ignored) {
+                // Returning from the unavailable producer is forbidden.
+            }
+        }
+    }
+
+    private static final class ResourceBootstrap {
+        static final Object TRIGGER = new Object();
+    }
+
+    private static final class StaticTriggerBody {
+        void capture(CompleteRunAudioProducer.Request request) {
+            Object ignored = ResourceBootstrap.TRIGGER;
+            FixturePreflight.requirePinned();
+            throw new IllegalStateException("unavailable");
+        }
+    }
+
+    private static final class OverloadDecoyBody {
+        void capture() {
+            FixturePreflight.requirePinned();
+            throw new IllegalStateException("unavailable");
+        }
+
+        void capture(CompleteRunAudioProducer.Request request) {
+            helper();
+        }
+
+        private void helper() {
+        }
+    }
 
     private enum LexicalState {
         CODE,
