@@ -27,6 +27,29 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-01 — Override-resume producer stops at `REFERENCE_LIMITATION`
+
+- **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
+  `feature/ai-sound-driver-roadmap-completion`; TraceChaser producer commits
+  `912fef0a` and `e3fdf73`.
+- **Fixture:** none. The four proposed S1/S2 override-resume files remain
+  absent; no capture or fixture gained authority.
+- **Command:** focused TraceChaser S1, S2, extractor/publisher, CLI, and Lua
+  contract tests plus `verify-deterministic-build.sh`; the locked observer
+  recipe verifier and the reviewed-capability guard were then run as hard
+  authority checks. Exact commands and hashes are recorded in
+  `docs/architecture/validation/audio/2026-09-01-override-resume-reference-limitation.md`.
+- **Result:** `REFERENCE_LIMITATION`, code
+  `FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE`. The current host's
+  `/usr/bin/ar` differs from the locked recipe, the current collector source
+  differs from the pinned capability field that Task 8 is forbidden to
+  refresh, and no current-session two-build observer inputs are configured.
+  A static older install is not fresh capture authority.
+- **Notes:** capture and no-replace staging mechanics are covered, but the
+  mandatory provenance inventory is not yet complete. Task 8 therefore made
+  no Java production change, froze no literal expectation, performed no live
+  capture, and left both S1 hard gates untouched.
+
 ## 2026-09-01 — S3K service 128 is an authenticated producer-input limitation
 
 - **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
