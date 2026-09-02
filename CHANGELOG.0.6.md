@@ -14,6 +14,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **DAC samples no longer play ~9.5 semitones flat with interpolation on:**
+  `audio.dacInterpolate` (previously the shipped default `true`) queued its
+  synthetic DAC write in the slot that gates the real Z80 sample cadence, so
+  every pending write stalled the clock for the bus settle time and stretched
+  drum and voice samples by about 1.7x. Interpolation now writes only when the
+  bus is idle and never stalls the DAC clock, and the option defaults to off.
 - **Speed Shoes once again accelerate music in all three games:** immutable
   SMPS presentation assets now retain their driver cadence mode. This restores
   S3K's native five-music-updates-per-four-VInts speed-up tail; cross-game

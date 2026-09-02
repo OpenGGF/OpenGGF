@@ -2662,11 +2662,14 @@ the discrete DAC.
   the cadence rather than dropping samples. The S2 loader's `baseCycles` of 288
   differs from the 295 that `s2.sounddriver.asm` counts for its own loop; the
   loader value is used as found and is a separate follow-up.
-- **DAC interpolation** (`audio.dacInterpolate`, default on) is a presentation
-  option with no hardware counterpart: between two PCM samples the facade
-  writes a linearly interpolated `0x2A` value once per output frame. The
-  previous core's engine-side DAC high-pass option was removed with the
-  switch-over.
+- **DAC interpolation** (`audio.dacInterpolate`, default off since
+  2026-09-02) is a presentation option with no hardware counterpart: between
+  two PCM samples the facade writes a linearly interpolated `0x2A` value once
+  per output frame, only when the chip bus is idle and the real Z80 cadence
+  cannot reach its next sample before the synthetic write completes; otherwise
+  the frame's interpolation is dropped. It never pauses the sample cadence (an
+  earlier implementation did, stretching samples ~1.7x). The previous core's
+  engine-side DAC high-pass option was removed with the switch-over.
 
 ### Rationale
 
