@@ -202,6 +202,32 @@ class TestSmpsChannelOwnershipProjection {
     }
 
     @Test
+    void allZeroFf05SurvivesDriverSnapshotAndProjectsAsAnAvailableCustomPayload() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer sfx = sequencer(fm3Stream(
+                new byte[] {(byte) 0xFF, 0x05, 0x00, 0x00, 0x00, 0x00,
+                        0x60, 0x7F}), driver);
+        driver.addSequencer(sfx, true);
+        sfx.advanceSamples(20_000);
+
+        S3kE4Projection before = S3kE4Projection.capture(
+                driver.captureOwnershipProjection());
+        driver.restoreSnapshot(driver.captureSnapshot());
+        S3kE4Projection restored = S3kE4Projection.capture(
+                driver.captureOwnershipProjection());
+
+        assertTrue(before.complete());
+        assertTrue(restored.complete());
+        assertEquals(S3kE4Projection.Availability.AVAILABLE,
+                restored.slots().getFirst().availability());
+        S3kE4Projection.S3kE4Track view = restored.slots().getFirst().sfx();
+        assertTrue(view.customSsgEgPresent());
+        assertArrayEquals(new int[4], view.customSsgEgPayload());
+        assertArrayEquals(before.slots().getFirst().sfx().customSsgEgPayload(),
+                view.customSsgEgPayload());
+    }
+
+    @Test
     void fm3SpecialProjectionSurvivesLogicalSnapshotRestore() throws Exception {
         SmpsDriver driver = new SmpsDriver();
         SmpsSequencer music = sequencer(music(0x81), driver);

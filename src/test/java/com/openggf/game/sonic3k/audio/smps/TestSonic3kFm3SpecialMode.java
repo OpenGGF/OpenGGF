@@ -103,11 +103,22 @@ class TestSonic3kFm3SpecialMode {
                 new byte[] {(byte) 0xFE, 1, 2, 3, 4, (byte) 0xF2},
                 new CaptureSynth());
         original.advanceSamples(20_000);
+        SmpsSequencer.Track originalFm3 = onlyTrack(original);
+        originalFm3.customSsgEgPresent = true;
+        originalFm3.customSsgEgPayload[0] = 0x11;
+        originalFm3.customSsgEgPayload[1] = 0x22;
+        originalFm3.customSsgEgPayload[2] = 0x33;
+        originalFm3.customSsgEgPayload[3] = 0x44;
+        originalFm3.customSsgEgPayloadKnown = true;
 
         SmpsSequencer replacement = fmSequencer(2,
                 new byte[] {(byte) 0xF2}, new CaptureSynth());
 
-        assertTrue(onlyTrack(original).fm3SpecialMode);
+        assertTrue(originalFm3.fm3SpecialMode);
+        assertTrue(originalFm3.customSsgEgPresent);
+        assertTrue(originalFm3.customSsgEgPayloadKnown);
+        assertEquals(List.of(0x11, 0x22, 0x33, 0x44),
+                java.util.Arrays.stream(originalFm3.customSsgEgPayload).boxed().toList());
         assertFalse(onlyTrack(replacement).fm3SpecialMode,
                 "reinitialization must use Track's default state rather than leak FM3 mode");
         assertFalse(onlyTrack(replacement).customSsgEgPresent);
@@ -167,8 +178,20 @@ class TestSonic3kFm3SpecialMode {
         assertTrue(fm3.customSsgEgPresent,
                 "all-zero FF05 must remain distinguishable from no FF05 command");
         assertTrue(java.util.Arrays.equals(new int[4], fm3.ssgEg));
+        assertTrue(fm3.customSsgEgPayloadKnown,
+                "all-zero FF05 has an exact source payload, rather than an unknown one");
+        assertTrue(java.util.Arrays.equals(new int[4], fm3.customSsgEgPayload));
         assertEquals(0x47, fm3.pos);
         assertEquals(4, synth.ssgEgWrites);
+
+        var snapshot = sequencer.captureSnapshot();
+        fm3.customSsgEgPayload[0] = 0x7F;
+        fm3.customSsgEgPayloadKnown = false;
+        sequencer.restoreSnapshot(snapshot);
+        SmpsSequencer.Track restored = onlyTrack(sequencer);
+        assertTrue(restored.customSsgEgPresent);
+        assertTrue(restored.customSsgEgPayloadKnown);
+        assertTrue(java.util.Arrays.equals(new int[4], restored.customSsgEgPayload));
     }
 
     @Test
