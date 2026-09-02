@@ -541,9 +541,15 @@ metadata remains test-only.
 
 ### Task 8: Execute comparisons and advance first divergences
 
-**Architecture prerequisite:** complete and verify Tasks 1-8 of
-`2026-09-01-session-owned-smps-physical-device-implementation-plan.md`. Do not re-land the
-rejected per-voice S3K stop emitter or advance the frontier on the old multi-device model.
+**Architecture prerequisite (amended 2026-09-02):** Tasks 1-7 of
+`2026-09-01-session-owned-smps-physical-device-implementation-plan.md` established the
+single session-owned logical driver and physical device needed by the Sonic 2 request
+path. The earlier requirement to finish that subplan's Task 8 before any Task 8 comparison
+is superseded for Sonic 2 Task 8A by
+`docs/architecture/designs/audio/2026-09-02-s2-c0-request-consequences-design.md`.
+The broader session-device and unmeasured S3K command work remains frozen. This amendment
+does not waive or decide the later S3K architecture gate. Do not re-land the rejected
+per-voice S3K stop emitter.
 
 **Files:**
 
@@ -560,6 +566,10 @@ rejected per-voice S3K stop emitter or advance the frontier on the old multi-dev
 - [ ] Run the S2 full command from frame zero against `[769,259590)` and preserve the first report.
   If it stops at the request frontier, retain the honest limitation and execute Task 8A before
   attempting to advance it; never infer the request from the reported consequences.
+  After Task 8A C0-A and Tranche C production wiring are reviewed, Tranche D may run an
+  authenticated `MEASUREMENT_ONLY` comparison. Do not update the frontier from that run.
+  C0-B pause/resume and C0-C header key displacement must pass their separate reviews before
+  an authenticated repeat comparison can be eligible to move the frontier.
 - [ ] Run the S3K Knuckles full command from frame zero against `[810,434417)` and preserve the
   first report. Do not run the Sonic/Tails diagnostic under the Knuckles identity; its separate
   fixed-prefix authority belongs only to Task 8B.
@@ -579,9 +589,12 @@ validation/projection are complete. The unpublished bounded-v2 carrier now close
 strict Java Tranche-A reader independently recomputes that closure through a package-private,
 immutable candidate seam. The candidate remains CLI-unreachable and `production_bound:false`;
 no installed or bound authority, live capture, fixture, profile/comparator availability, or
-comparison authority exists yet. The remaining Java work is split into three sequential reviewed
-tranches: (B) game-owned S2 mailbox/queue mechanism, (C) production wiring plus an independent
-OpenGGF projection, and (D) post-capture authority binding/comparison activation. Tranche A did
+comparison authority exists yet. Tranche B's game-owned S2 mailbox/queue mechanism is complete.
+Before Tranche C production wiring, C0-A makes its consequences transactional. Tranche D then
+runs an authenticated measurement without a frontier claim; C0-B pause/resume and C0-C header
+key displacement follow as separate reviewed tranches before the frontier-eligible repeat.
+The exact ordering and superseding Sonic 2 architecture ruling are in
+`docs/architecture/designs/audio/2026-09-02-s2-c0-request-consequences-design.md`. Tranche A did
 not modify profile, comparator, or engine behavior. This task is still required
 before Task 8 may advance the Sonic 2 comparison past the tick-210 request frontier. Its fixed
 boundary and authority constraints are audited in
