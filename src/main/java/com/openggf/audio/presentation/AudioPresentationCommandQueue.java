@@ -1,6 +1,7 @@
 package com.openggf.audio.presentation;
 
 import java.util.Objects;
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
@@ -180,6 +181,10 @@ public final class AudioPresentationCommandQueue {
 
     public int size() {
         return size;
+    }
+
+    List<AudioPresentationCommand> snapshotCommands() {
+        return List.of(java.util.Arrays.copyOf(entries, size));
     }
 
     private void admitStructural(

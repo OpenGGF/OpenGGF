@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.audio;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.presentation.AudioPresentationForwardService;
 import com.openggf.audio.presentation.AudioRequestService;
+import com.openggf.audio.presentation.AudioPresentationCommandResolver.AppliedOutcome;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,7 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
     private boolean observerLeased;
     private boolean forwardOpen;
     private long nextEventOrdinal = 1;
+    private static final int EXTRA_LIFE_MUSIC = 0x98;
 
     @Override
     public void submitMusic(int nativeRequestId, AudioCommand command) {
@@ -99,6 +101,9 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
         private final Snapshot before;
         private final List<EventTemplate> stagedEvents = new ArrayList<>();
         private boolean serviced;
+        private AudioCommand stagedConsequence;
+        private AppliedOutcome appliedOutcome;
+        private boolean prepared;
         private boolean closed;
 
         private ForwardBoundary(Snapshot before) {
@@ -144,30 +149,77 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
                 AudioCommand consequence = consequence(dispatch);
                 if (consequence != null) {
                     commandSink.accept(consequence);
-                    if (consequence instanceof AudioCommand.PlayMusic) {
-                        // zPlayMusic initializes zAbsVar and loses Queue2 in the shipped
-                        // fixBugs=0 path (s2.sounddriver.asm:2580-2655).
-                        pipeline.onMusicPlaybackInitialized();
-                    } else if (consequence instanceof AudioCommand.StopAllSfx) {
-                        // F8 reaches zStopSoundEffects, whose tail clears SFXPriorityVal
-                        // (s2.sounddriver.asm:2334-2347).
-                        pipeline.onStopAllSfx();
-                    }
+                    stagedConsequence = consequence;
                 }
             }
             pipeline.finishDriverInvocation();
         }
 
         @Override
-        public void commit() {
+        public void applyOutcome(AppliedOutcome outcome) {
             requireOpen();
-            if (!serviced) {
-                throw new IllegalStateException("cannot commit an unserviced Sonic 2 request boundary");
+            if (!serviced || stagedConsequence == null
+                    || appliedOutcome != null
+                    || !stagedConsequence.equals(outcome.request())) {
+                throw new IllegalStateException(
+                        "applied outcome does not belong to this request boundary");
+            }
+            appliedOutcome = Objects.requireNonNull(outcome, "outcome");
+            if (outcome.commands().isEmpty()) {
+                return;
+            }
+            if (stagedConsequence instanceof AudioCommand.PlayMusic music) {
+                // Shipped FixDriverBugs=0 stops SFX before the one-up save;
+                // its misplaced priority clear occurs after the saved value.
+                // s2.sounddriver.asm:1667-1724.
+                if (music.musicId() == EXTRA_LIFE_MUSIC) {
+                    pipeline.onOneUpStarted();
+                } else {
+                    pipeline.onOrdinaryMusicStarted();
+                }
+                pipeline.onMusicPlaybackInitialized();
+            } else if (stagedConsequence instanceof AudioCommand.StopAllSfx) {
+                pipeline.onStopAllSfx();
+            }
+        }
+
+        @Override
+        public void prepareCommit() {
+            requireOpen();
+            if (!serviced || (stagedConsequence != null
+                    && appliedOutcome == null)) {
+                throw new IllegalStateException(
+                        "request boundary consequences are not prepared");
+            }
+            prepared = true;
+        }
+
+        @Override
+        public CommittedReceipt commit() {
+            requireOpen();
+            if (!prepared) {
+                throw new IllegalStateException(
+                        "cannot commit an unprepared Sonic 2 request boundary");
             }
             closed = true;
             forwardOpen = false;
+            List<Event> events = new ArrayList<>(stagedEvents.size());
             for (EventTemplate template : stagedEvents) {
-                Event event = template.materialize(nextEventOrdinal++);
+                events.add(template.materialize(nextEventOrdinal++));
+            }
+            return new CommittedReceipt(events,
+                    appliedOutcome == null ? List.of()
+                            : List.of(appliedOutcome));
+        }
+
+        @Override
+        public void publishDiagnostics(
+                AudioPresentationForwardService.CommittedReceipt receipt) {
+            if (!(receipt instanceof CommittedReceipt selected)) {
+                throw new IllegalArgumentException(
+                        "receipt does not belong to Sonic 2");
+            }
+            for (Event event : selected.events()) {
                 try {
                     observer.accept(event);
                 } catch (RuntimeException ignored) {
@@ -189,6 +241,21 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
                 throw new IllegalStateException("Sonic 2 request boundary is closed");
             }
         }
+    }
+
+    public static final class CommittedReceipt
+            implements AudioPresentationForwardService.CommittedReceipt {
+        private final List<Event> events;
+        private final List<AppliedOutcome> outcomes;
+
+        private CommittedReceipt(
+                List<Event> events, List<AppliedOutcome> outcomes) {
+            this.events = List.copyOf(events);
+            this.outcomes = List.copyOf(outcomes);
+        }
+
+        public List<Event> events() { return events; }
+        public List<AppliedOutcome> outcomes() { return outcomes; }
     }
 
     private static AudioCommand consequence(

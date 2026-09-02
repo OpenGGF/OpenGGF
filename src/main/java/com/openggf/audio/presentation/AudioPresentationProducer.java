@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.rewind.AudioCommandTimeline;
 
 /**
  * Sole outer-frame owner of final PCM cadence, history, rewind, and taps.
@@ -52,6 +53,9 @@ public final class AudioPresentationProducer {
     private final SmpsDriverSession smpsSession;
     private final AudioPresentationForwardService forwardService;
     private final Consumer<AudioCommand> forwardCommandSink;
+    private final AudioPresentationCommandResolver forwardResolver;
+    private final AudioCommandTimeline forwardTimeline;
+    private final AudioPresentationParityProbe forwardParity;
 
     private AudioPresentationSink sink;
     private PcmHistoryRing.ReverseCursor reverseCursor;
@@ -88,7 +92,8 @@ public final class AudioPresentationProducer {
             AudioPresentationMixer mixer,
             AudioPresentationSink sink) {
         this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
-                commands, mixer, sink, null, null, null, null);
+                commands, mixer, sink, null, null, null, null,
+                null, null, null);
     }
 
     public AudioPresentationProducer(
@@ -102,7 +107,8 @@ public final class AudioPresentationProducer {
             AudioPresentationSink sink,
             SmpsDriverSession smpsSession) {
         this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
-                commands, mixer, sink, smpsSession, null, null, null);
+                commands, mixer, sink, smpsSession, null, null, null,
+                null, null, null);
     }
 
     public AudioPresentationProducer(
@@ -119,7 +125,22 @@ public final class AudioPresentationProducer {
             Consumer<AudioCommand> forwardCommandSink) {
         this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
                 commands, mixer, sink, smpsSession, null, forwardService,
-                forwardCommandSink);
+                forwardCommandSink, null, null, null);
+    }
+
+    public AudioPresentationProducer(
+            int sampleRate, int frameRate, int historyFrames,
+            int crossfadeFrames, AudioVoiceRegistry registry,
+            AudioPresentationCommandQueue commands,
+            AudioPresentationMixer mixer, AudioPresentationSink sink,
+            SmpsDriverSession smpsSession,
+            AudioPresentationForwardService forwardService,
+            AudioPresentationCommandResolver forwardResolver,
+            AudioCommandTimeline forwardTimeline,
+            AudioPresentationParityProbe forwardParity) {
+        this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
+                commands, mixer, sink, smpsSession, null, forwardService,
+                null, forwardResolver, forwardTimeline, forwardParity);
     }
 
     AudioPresentationProducer(
@@ -133,7 +154,8 @@ public final class AudioPresentationProducer {
             AudioPresentationSink sink,
             Consumer<AudioPresentationCommand> commandApplier) {
         this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
-                commands, mixer, sink, null, commandApplier, null, null);
+                commands, mixer, sink, null, commandApplier, null, null,
+                null, null, null);
     }
 
     private AudioPresentationProducer(
@@ -148,7 +170,10 @@ public final class AudioPresentationProducer {
             SmpsDriverSession smpsSession,
             Consumer<AudioPresentationCommand> commandApplier,
             AudioPresentationForwardService forwardService,
-            Consumer<AudioCommand> forwardCommandSink) {
+            Consumer<AudioCommand> forwardCommandSink,
+            AudioPresentationCommandResolver forwardResolver,
+            AudioCommandTimeline forwardTimeline,
+            AudioPresentationParityProbe forwardParity) {
         if (sampleRate <= 0) {
             throw new IllegalArgumentException("sampleRate must be positive");
         }
@@ -186,7 +211,17 @@ public final class AudioPresentationProducer {
         this.smpsSession = smpsSession;
         this.forwardService = forwardService;
         this.forwardCommandSink = forwardService == null ? null
-                : Objects.requireNonNull(forwardCommandSink, "forwardCommandSink");
+                : forwardResolver == null
+                ? Objects.requireNonNull(forwardCommandSink,
+                "forwardCommandSink") : null;
+        this.forwardResolver = forwardResolver;
+        this.forwardTimeline = forwardTimeline;
+        this.forwardParity = forwardParity;
+        if (forwardResolver != null) {
+            Objects.requireNonNull(forwardService, "forwardService");
+            Objects.requireNonNull(forwardTimeline, "forwardTimeline");
+            Objects.requireNonNull(forwardParity, "forwardParity");
+        }
         if (smpsSession != null && !smpsSession.installed()) {
             smpsSession.install();
         }
@@ -825,15 +860,39 @@ public final class AudioPresentationProducer {
         boolean commandsCommitted = false;
         AudioPresentationForwardService.ForwardBoundary forwardBoundary = null;
         boolean forwardCommitted = false;
+        AudioPresentationCommandResolver.ResolutionBatch requestBatch = null;
+        AudioPresentationCommandResolver.AppliedOutcome requestOutcome = null;
+        AudioCommandTimeline.PreparedAppend timelineAppend = null;
+        Runnable parityCommit = null;
+        AudioPresentationForwardService.CommittedReceipt requestReceipt = null;
         try {
             if (forwardService != null) {
                 forwardBoundary = forwardService.beginForwardBoundary();
-                forwardBoundary.service(forwardCommandSink);
+                if (forwardResolver == null) {
+                    forwardBoundary.service(forwardCommandSink);
+                } else {
+                    AudioPresentationCommandResolver.ResolutionBatch[] holder =
+                            new AudioPresentationCommandResolver.ResolutionBatch[1];
+                    forwardBoundary.service(command -> {
+                        if (holder[0] != null) {
+                            throw new IllegalStateException(
+                                    "one request boundary produced multiple consequences");
+                        }
+                        holder[0] = forwardResolver.beginResolutionBatch();
+                        holder[0].resolve(command);
+                    });
+                    requestBatch = holder[0];
+                }
             }
             registryMutation = registry.captureLiveMutation();
             commandBatch = commands.capturePendingBatch();
             commands.applyPendingBatch(commandBatch,
                     this::applyResolvedSessionCommand);
+            if (requestBatch != null) {
+                requestOutcome = requestBatch.apply(
+                        this::applyResolvedForwardCommand);
+                forwardBoundary.applyOutcome(requestOutcome);
+            }
             registry.beginRendering();
             SmpsServiceOutcome outcome = smpsSession.serviceForward();
             if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
@@ -845,17 +904,36 @@ public final class AudioPresentationProducer {
             registry.endRendering();
             prepareSessionCommandCommit(
                     commandBatch, registryMutation, sessionMutation);
+            if (requestBatch != null) {
+                requestBatch.prepareCommit();
+                forwardBoundary.prepareCommit();
+                List<AudioCommand> durableRequests =
+                        List.of(requestOutcome.request());
+                timelineAppend = forwardTimeline.prepareAppend(durableRequests);
+                parityCommit = forwardParity.prepareCommandSubmissions(
+                        durableRequests.size());
+            } else if (forwardBoundary != null && forwardResolver != null) {
+                forwardBoundary.prepareCommit();
+            }
             registry.commitLiveMutation(registryMutation);
             registryCommitted = true;
             smpsSession.commitLiveMutation(sessionMutation);
             sessionCommitted = true;
             commands.commitPendingBatch(commandBatch);
             commandsCommitted = true;
+            if (requestBatch != null) {
+                requestBatch.commit();
+                timelineAppend.commit();
+                parityCommit.run();
+            }
             if (forwardBoundary != null) {
-                forwardBoundary.commit();
+                requestReceipt = forwardBoundary.commit();
                 forwardCommitted = true;
             }
             publishSessionDiagnosticsQuarantined(registryMutation);
+            if (requestReceipt != null) {
+                forwardBoundary.publishDiagnostics(requestReceipt);
+            }
             return pcm;
         } catch (RuntimeException failure) {
             if (registryMutation != null && !registryCommitted) {
@@ -886,8 +964,27 @@ public final class AudioPresentationProducer {
                     failure.addSuppressed(rollbackFailure);
                 }
             }
+            if (requestBatch != null) {
+                try {
+                    requestBatch.rollback();
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
             throw failure;
         }
+    }
+
+    private void applyResolvedForwardCommand(
+            AudioCommand request,
+            AudioPresentationCommand resolved) {
+        if (request instanceof AudioCommand.PlayMusic) {
+            // Sonic 2's shipped FixDriverBugs=0 zPlayMusic stops SFX before
+            // the driver-region save/load path (s2.sounddriver.asm:1667-1724).
+            applyResolvedSessionCommand(
+                    new AudioPresentationCommand.StopAllSfx());
+        }
+        applyResolvedSessionCommand(resolved);
     }
 
     private void applyPendingSessionCommandsTransactionally() {

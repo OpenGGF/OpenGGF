@@ -317,7 +317,7 @@ class TestSonic2SoundRequestPipeline {
                 new Sonic2SoundRequestPipeline.SlotState<>(0, null),
                 new Sonic2SoundRequestPipeline.SlotState<>(0, null),
                 new Sonic2SoundRequestPipeline.QueueToPlayState<>(0x80, "not-ready"),
-                0, 0, 0, 0, 0, 0, 0, false));
+                0, 0, 0, 0, 0, 0, 0, false, 0, false));
         assertThrows(IllegalArgumentException.class, () -> new Sonic2SoundRequestPipeline.Snapshot<>(
                 new Sonic2SoundRequestPipeline.SlotState<>(0, null),
                 new Sonic2SoundRequestPipeline.SlotState<>(0, null),
@@ -328,7 +328,7 @@ class TestSonic2SoundRequestPipeline {
                 new Sonic2SoundRequestPipeline.SlotState<>(0, null),
                 new Sonic2SoundRequestPipeline.SlotState<>(0, null),
                 new Sonic2SoundRequestPipeline.QueueToPlayState<>(0x80, null),
-                0, 0, 0, 0, 0, 0, 0x0C, false));
+                0, 0, 0, 0, 0, 0, 0x0C, false, 0, false));
     }
 
     private static Sonic2SoundRequestPipeline<String> pipelineWithRingPriority() {

@@ -18,6 +18,16 @@ import java.util.Set;
 
 /** Session-owned immutable SMPS dependency and program catalog. */
 final class SmpsAssetCatalog {
+    record Snapshot(
+            Map<DependencyKey, DependencyEntry> dependencies,
+            Map<ProgramKey, ProgramEntry> programs,
+            Map<SmpsSourceDescriptor, ProgramEntry> descriptors) {
+        Snapshot {
+            dependencies = Map.copyOf(dependencies);
+            programs = Map.copyOf(programs);
+            descriptors = Map.copyOf(descriptors);
+        }
+    }
     static final class ProgramIdentityConflict extends IllegalStateException {
         private ProgramIdentityConflict(String message) {
             super(message);
@@ -257,6 +267,25 @@ final class SmpsAssetCatalog {
                     "no registered SMPS asset for " + descriptor);
         }
         return entry;
+    }
+
+    Snapshot snapshot() {
+        return new Snapshot(dependencies, programs, descriptors);
+    }
+
+    void restore(Snapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        dependencies.clear();
+        dependencies.putAll(snapshot.dependencies());
+        programs.clear();
+        programs.putAll(snapshot.programs());
+        descriptors.clear();
+        descriptors.putAll(snapshot.descriptors());
+        if (!dependencies.equals(snapshot.dependencies())
+                || !programs.equals(snapshot.programs())
+                || !descriptors.equals(snapshot.descriptors())) {
+            throw new IllegalStateException("SMPS catalog rollback failed");
+        }
     }
 
     static AbstractSmpsData freezeStandalone(AbstractSmpsData source) {

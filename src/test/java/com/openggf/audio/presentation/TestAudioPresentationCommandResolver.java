@@ -215,6 +215,42 @@ class TestAudioPresentationCommandResolver {
     }
 
     @Test
+    void privateResolutionBatchRollsBackCatalogAndVoiceCursorExactly() {
+        Fixture fixture = fixture();
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null);
+
+        var failed = fixture.resolver.beginResolutionBatch();
+        failed.resolve(request);
+        assertEquals(0, fixture.queue.size(),
+                "a request batch must not enter the durable command queue");
+        List<AudioPresentationCommand> firstApplied = new ArrayList<>();
+        var firstOutcome = failed.apply((ignored, command) ->
+                firstApplied.add(command));
+        AddSmpsSfx first = assertInstanceOf(AddSmpsSfx.class,
+                firstOutcome.commands().getFirst());
+        assertEquals(firstApplied, firstOutcome.commands());
+        failed.rollback();
+
+        assertEquals(null, fixture.factory.findRegisteredSmpsSfxAsset(
+                first.source().assetKey(), 0),
+                "a rejected attempt must not publish its ROM program");
+
+        var retry = fixture.resolver.beginResolutionBatch();
+        retry.resolve(request);
+        var replayOutcome = retry.apply((ignored, command) -> { });
+        assertFalse(replayOutcome.commands().isEmpty(), fixture.warnings.toString());
+        AddSmpsSfx replay = assertInstanceOf(AddSmpsSfx.class,
+                replayOutcome.commands().getFirst());
+        assertEquals(first.source().standaloneVoiceId(),
+                replay.source().standaloneVoiceId(),
+                "rollback must restore the resolver allocation cursor");
+        retry.rollback();
+    }
+
+    @Test
     void repeatedDonorSfxLoadsAndMaterializesOnlyOnce() {
         Fixture fixture = fixture();
         AtomicInteger materializations = new AtomicInteger();

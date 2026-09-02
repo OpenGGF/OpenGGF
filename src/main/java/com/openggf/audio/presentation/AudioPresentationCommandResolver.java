@@ -26,6 +26,7 @@ import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.io.IOException;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -38,6 +39,32 @@ import java.util.function.Consumer;
  * SMPS SFX contain only an asset key and primitive metadata.
  */
 public final class AudioPresentationCommandResolver {
+
+    @FunctionalInterface
+    public interface ResolvedCommandApplier {
+        void apply(AudioCommand request,
+                   AudioPresentationCommand resolvedCommand);
+    }
+
+    public static final class AppliedOutcome {
+        private final AudioCommand request;
+        private final List<AudioPresentationCommand> commands;
+
+        private AppliedOutcome(
+                AudioCommand request,
+                List<AudioPresentationCommand> commands) {
+            this.request = Objects.requireNonNull(request, "request");
+            this.commands = List.copyOf(commands);
+        }
+
+        public AudioCommand request() {
+            return request;
+        }
+
+        public List<AudioPresentationCommand> commands() {
+            return commands;
+        }
+    }
 
     public interface Sources {
         SourceAccess sourceFor(
@@ -85,6 +112,100 @@ public final class AudioPresentationCommandResolver {
     private final Consumer<AudioPresentationCommand> synchronousApply;
     private final Runnable synchronousDrain;
     private long nextVoiceId = 1;
+    private ResolutionBatch activeResolutionBatch;
+
+    public final class ResolutionBatch {
+        private final long voiceCursorBefore = nextVoiceId;
+        private final AudioPresentationSourceFactory.ResolutionMutation
+                factoryMutation = factory.beginResolutionMutation();
+        private final AudioPresentationCommandQueue privateCommands =
+                new AudioPresentationCommandQueue();
+        private AudioCommand request;
+        private AppliedOutcome appliedOutcome;
+        private boolean prepared;
+        private boolean closed;
+
+        private ResolutionBatch() {
+        }
+
+        public void resolve(AudioCommand command) {
+            requireOpen();
+            if (request != null) {
+                throw new IllegalStateException(
+                        "a request batch resolves exactly one consequence");
+            }
+            request = Objects.requireNonNull(command, "command");
+            submit(command);
+        }
+
+        public AppliedOutcome apply(ResolvedCommandApplier applier) {
+            requireOpen();
+            Objects.requireNonNull(applier, "applier");
+            if (request == null || appliedOutcome != null) {
+                throw new IllegalStateException(
+                        "resolution batch is not ready to apply");
+            }
+            List<AudioPresentationCommand> resolved =
+                    privateCommands.snapshotCommands();
+            for (AudioPresentationCommand command : resolved) {
+                applier.apply(request, command);
+            }
+            appliedOutcome = new AppliedOutcome(request, resolved);
+            return appliedOutcome;
+        }
+
+        public void prepareCommit() {
+            requireOpen();
+            if (appliedOutcome == null) {
+                throw new IllegalStateException(
+                        "resolution batch has not been applied");
+            }
+            factoryMutation.prepareCommit();
+            prepared = true;
+        }
+
+        public void commit() {
+            requireOpen();
+            if (!prepared) {
+                throw new IllegalStateException(
+                        "resolution batch is not prepared");
+            }
+            factoryMutation.commit();
+            closed = true;
+            activeResolutionBatch = null;
+        }
+
+        public void rollback() {
+            requireOpen();
+            factoryMutation.rollback();
+            nextVoiceId = voiceCursorBefore;
+            closed = true;
+            activeResolutionBatch = null;
+        }
+
+        private void enqueuePrivate(AudioPresentationCommand command) {
+            privateCommands.submit(command, () -> true,
+                    () -> { throw new IllegalStateException(
+                            "private resolution batch exceeded capacity"); });
+        }
+
+        private void requireOpen() {
+            if (closed || activeResolutionBatch != this) {
+                throw new IllegalStateException(
+                        "resolution batch is closed");
+            }
+        }
+    }
+
+    public ResolutionBatch beginResolutionBatch() {
+        if (activeResolutionBatch != null) {
+            throw new IllegalStateException(
+                    "a resolution batch is already active");
+        }
+        ResolutionBatch batch = new ResolutionBatch();
+        activeResolutionBatch = batch;
+        return batch;
+    }
 
     public AudioPresentationCommandResolver(
             AudioPresentationCommandQueue queue,
@@ -450,6 +571,10 @@ public final class AudioPresentationCommandResolver {
     }
 
     private void enqueue(AudioPresentationCommand command) {
+        if (activeResolutionBatch != null) {
+            activeResolutionBatch.enqueuePrivate(command);
+            return;
+        }
         if (synchronousDrain != null) {
             queue.submit(command, ownerThreadBoundary, synchronousDrain);
         } else {

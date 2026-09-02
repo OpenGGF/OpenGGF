@@ -417,7 +417,7 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
     /**
      * Load uncompressed SMPS data directly from ROM.
      * Used for tracks with bit 5 set in their music ID (0x20 mask).
-     * These include: 1-Up (0xB5), Game Over (0xB8), Got an Emerald (0xBA), Credits
+     * These include: 1-Up (0x98), Game Over (0xB8), Got an Emerald (0xBA), Credits
      * (0xBD).
      */
     private AbstractSmpsData loadSmpsUncompressed(int offset, int z80Addr) {

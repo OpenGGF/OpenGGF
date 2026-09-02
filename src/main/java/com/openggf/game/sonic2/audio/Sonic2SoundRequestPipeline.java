@@ -40,6 +40,8 @@ public final class Sonic2SoundRequestPipeline<P> {
     private int spindashPlayingCounter;
     private int spindashExtraFrequencyIndex;
     private boolean spindashActive;
+    private int savedOneUpSfxPriorityValue;
+    private boolean oneUpPlaying;
 
     /** Models {@code PlayMusic}: primary then overwrite fallback ({@code s2.asm:1520-1528}). */
     public void submitMusic(int requestByte, P payload) {
@@ -221,6 +223,14 @@ public final class Sonic2SoundRequestPipeline<P> {
 
     /** Models the post-save 1-up-start clear of the global priority latch. */
     public void onOneUpStarted() {
+        savedOneUpSfxPriorityValue = sfxPriorityValue;
+        oneUpPlaying = true;
+        sfxPriorityValue = 0;
+    }
+
+    public void onOrdinaryMusicStarted() {
+        oneUpPlaying = false;
+        savedOneUpSfxPriorityValue = 0;
         sfxPriorityValue = 0;
     }
 
@@ -243,7 +253,8 @@ public final class Sonic2SoundRequestPipeline<P> {
     public Snapshot<P> snapshot() {
         return new Snapshot<>(music0, sfx0, sfx1, sfx2, music1, queue0, queue1, queue2,
                 queueToPlay, stopMusic, voiceTablePointer, sfxPriorityValue, ringSpeaker, gloopFlag,
-                spindashPlayingCounter, spindashExtraFrequencyIndex, spindashActive);
+                spindashPlayingCounter, spindashExtraFrequencyIndex, spindashActive,
+                savedOneUpSfxPriorityValue, oneUpPlaying);
     }
 
     /** Restores a validated snapshot atomically and without producing an event. */
@@ -268,6 +279,8 @@ public final class Sonic2SoundRequestPipeline<P> {
         spindashPlayingCounter = snapshot.spindashPlayingCounter();
         spindashExtraFrequencyIndex = snapshot.spindashExtraFrequencyIndex();
         spindashActive = snapshot.spindashActive();
+        savedOneUpSfxPriorityValue = snapshot.savedOneUpSfxPriorityValue();
+        oneUpPlaying = snapshot.oneUpPlaying();
     }
 
     private MusicBridgeResult<P> bridgeMusic() {
@@ -445,7 +458,8 @@ public final class Sonic2SoundRequestPipeline<P> {
                               SlotState<P> queue1, SlotState<P> queue2, QueueToPlayState<P> queueToPlay,
                               int stopMusic, int voiceTablePointer, int sfxPriorityValue, int ringSpeaker,
                               int gloopFlag, int spindashPlayingCounter, int spindashExtraFrequencyIndex,
-                              boolean spindashActive) {
+                              boolean spindashActive, int savedOneUpSfxPriorityValue,
+                              boolean oneUpPlaying) {
         public Snapshot {
             requireSlot(music0, "Music0");
             requireSlot(sfx0, "SFX0");
@@ -470,6 +484,8 @@ public final class Sonic2SoundRequestPipeline<P> {
             if (spindashExtraFrequencyIndex > 0x0B) {
                 throw new IllegalArgumentException("spindash frequency index must be 0..11");
             }
+            checkByte(savedOneUpSfxPriorityValue,
+                    "saved one-up SFXPriorityVal");
         }
     }
 

@@ -337,6 +337,55 @@ public final class AudioPresentationSourceFactory
     private final List<DeferredDiagnosticTransaction>
             activeDiagnosticTransactions = new ArrayList<>();
 
+    final class ResolutionMutation {
+        private final SmpsAssetCatalog.Snapshot catalogBefore =
+                assetCatalog.snapshot();
+        private final Map<SmpsAssetCatalog.DependencyKey,
+                CompatibilityDependencies> compatibilityBefore =
+                Map.copyOf(compatibilityDependencies);
+        private final Map<SmpsSourceDescriptor,
+                SmpsAssetCatalog.ProgramEntry> sourcesBefore =
+                Map.copyOf(sourcesByDescriptor);
+        private final DiagnosticTransaction diagnostics =
+                beginDiagnosticTransaction();
+        private boolean prepared;
+        private boolean closed;
+
+        void prepareCommit() {
+            requireOpen();
+            diagnostics.endPreparation();
+            prepared = true;
+        }
+
+        void commit() {
+            requireOpen();
+            if (!prepared) {
+                throw new IllegalStateException(
+                        "resolution mutation is not prepared");
+            }
+            closed = true;
+            diagnostics.commit();
+        }
+
+        void rollback() {
+            requireOpen();
+            assetCatalog.restore(catalogBefore);
+            compatibilityDependencies.clear();
+            compatibilityDependencies.putAll(compatibilityBefore);
+            sourcesByDescriptor.clear();
+            sourcesByDescriptor.putAll(sourcesBefore);
+            diagnostics.discard();
+            closed = true;
+        }
+
+        private void requireOpen() {
+            if (closed) {
+                throw new IllegalStateException(
+                        "resolution mutation is closed");
+            }
+        }
+    }
+
     public AudioPresentationSourceFactory(
             BooleanSupplier ownerThreadBoundary,
             SmpsCoordFlagHandlerOwner coordFlagHandlers) {
@@ -418,6 +467,10 @@ public final class AudioPresentationSourceFactory
                         activeDiagnosticRoot, rootOwner);
         activeDiagnosticTransactions.add(transaction);
         return transaction;
+    }
+
+    ResolutionMutation beginResolutionMutation() {
+        return new ResolutionMutation();
     }
 
     public MusicVoiceEntry musicSmps(

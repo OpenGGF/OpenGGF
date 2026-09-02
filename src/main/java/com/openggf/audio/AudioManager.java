@@ -3144,15 +3144,20 @@ public class AudioManager implements MusicRestoreSink {
             sink = new NoDeviceAudioSink(sampleRate);
             presentationSink = sink;
         }
-        shadowProducer = new AudioPresentationProducer(sampleRate, frameRate,
+        shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
+        shadowProducer = shadowRequestService == null
+                ? new AudioPresentationProducer(sampleRate, frameRate,
+                Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
+                Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
+                shadowRegistry, shadowCommands, mixer, sink, smpsSession)
+                : new AudioPresentationProducer(sampleRate, frameRate,
                 Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
                 Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
                 shadowRegistry, shadowCommands, mixer,
                 sink, smpsSession, shadowRequestService,
-                this::submitForwardRequestCommand);
+                shadowResolver, commandTimeline, shadowParity);
         shadowSmpsSession = smpsSession;
         shadowFrameRate = frameRate;
-        shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
         rebindLiveCaptureAudioHandle(sampleRate);
     }
 
