@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.audio.smps;
 
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsConstants;
@@ -338,6 +339,12 @@ public class TestSonic3kSmpsMetaCommandReachability {
                 assertTrue(start >= 0 && start < bank.length,
                         half.label + " SFX 0x" + hex(id) + " has unresolved track root 0x"
                                 + hex(start));
+                int rawVoiceControl = bank[headerOffset + 5 + trackIndex * 6] & 0xFF;
+                NativeTrackRoot root = new NativeTrackRoot(start,
+                        trackType(rawVoiceControl), rawVoiceControl);
+                assertReachableF3UsesPsg3Noise(root,
+                        inventory(data, true, List.of(start)), bank,
+                        half.label + " SFX 0x" + hex(id));
             }
 
             ControlFlowInventory inventory = inventory(data, true);
@@ -450,12 +457,19 @@ public class TestSonic3kSmpsMetaCommandReachability {
     }
 
     private static ControlFlowInventory inventory(AbstractSmpsData data, boolean strictFullBank) {
+        boolean bankSpace = data instanceof Sonic3kSmpsData s3
+                && s3.getBankData() != null;
+        return inventory(data, strictFullBank, trackStarts(data, bankSpace));
+    }
+
+    private static ControlFlowInventory inventory(AbstractSmpsData data,
+            boolean strictFullBank, List<Integer> starts) {
         byte[] bytes = data.getData();
         boolean bankSpace = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null;
         if (bankSpace) bytes = ((Sonic3kSmpsData) data).getBankData();
         ControlFlowInventory result = new ControlFlowInventory();
         ArrayDeque<Integer> work = new ArrayDeque<>();
-        for (int start : trackStarts(data, bankSpace)) {
+        for (int start : starts) {
             // Zero/foreign pointers are non-track header slots for loader-scoped
             // blobs. A strict full-bank proof must surface them as malformed roots.
             if (start >= 0) {
@@ -493,6 +507,9 @@ public class TestSonic3kSmpsMetaCommandReachability {
             }
             if (command != 0xFF) {
                 result.coordFlags.add(command);
+                if (command == 0xF3) {
+                    result.f3Offsets.add(pos);
+                }
             }
 
             switch (command) {
@@ -536,6 +553,26 @@ public class TestSonic3kSmpsMetaCommandReachability {
             }
         }
         return result;
+    }
+
+    private static void assertReachableF3UsesPsg3Noise(NativeTrackRoot root,
+            ControlFlowInventory inventory, byte[] bank, String label) {
+        assertClosed(inventory, label + " root 0x" + hex(root.offset));
+        for (int commandOffset : inventory.f3Offsets) {
+            assertEquals(SmpsSequencer.TrackType.PSG, root.type,
+                    label + " root 0x" + hex(root.offset)
+                            + " reached F3 from a non-PSG VoiceControl 0x"
+                            + hex(root.rawVoiceControl));
+            assertEquals(0xC0, root.rawVoiceControl,
+                    label + " root 0x" + hex(root.offset)
+                            + " reached F3 from a non-PSG3 VoiceControl");
+            assertTrue(commandOffset + 1 < bank.length,
+                    label + " root 0x" + hex(root.offset)
+                            + " has truncated reachable F3 at 0x" + hex(commandOffset));
+            assertEquals(0xE7, bank[commandOffset + 1] & 0xFF,
+                    label + " root VoiceControl 0x" + hex(root.rawVoiceControl)
+                            + " reachable F3 operand at 0x" + hex(commandOffset));
+        }
     }
 
     private static void addPointerEdge(ControlFlowInventory result, ArrayDeque<Integer> work,
@@ -618,6 +655,14 @@ public class TestSonic3kSmpsMetaCommandReachability {
         return relative >= 0 && relative < data.getData().length ? relative : -1;
     }
 
+    private static SmpsSequencer.TrackType trackType(int rawVoiceControl) {
+        if (rawVoiceControl == 0x10 || rawVoiceControl == 0x16) {
+            return SmpsSequencer.TrackType.DAC;
+        }
+        return (rawVoiceControl & 0x80) != 0
+                ? SmpsSequencer.TrackType.PSG : SmpsSequencer.TrackType.FM;
+    }
+
     private static int parameterLength(int command) {
         return switch (command) {
             case 0xE0, 0xE1, 0xE2, 0xE4, 0xE6, 0xE8, 0xEA, 0xEC, 0xED, 0xEF,
@@ -687,11 +732,16 @@ public class TestSonic3kSmpsMetaCommandReachability {
         }
     }
 
+    private record NativeTrackRoot(int offset, SmpsSequencer.TrackType type,
+            int rawVoiceControl) {
+    }
+
     private static final class ControlFlowInventory {
         private final Set<Integer> reachable = new HashSet<>();
         private final Set<String> frontier = new HashSet<>();
         private final Set<Integer> metaSubcommands = new HashSet<>();
         private final Set<Integer> coordFlags = new HashSet<>();
+        private final Set<Integer> f3Offsets = new HashSet<>();
         private int reachableOffsets;
         private boolean terminalOrCycle;
     }

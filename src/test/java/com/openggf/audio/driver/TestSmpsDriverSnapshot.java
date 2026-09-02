@@ -8,6 +8,7 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSequencerTestAccess;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import org.junit.jupiter.api.Test;
@@ -182,6 +183,9 @@ class TestSmpsDriverSnapshot {
         SmpsSequencer music = newSequencer("music", 0x81, driver);
         SmpsSequencer sfx = newSequencer("sfx", 0xBC, driver);
         sfx.setFallbackVoiceData(music.getSmpsData());
+        SmpsSequencer.Track musicFm3 = SmpsSequencerTestAccess.addActiveFmTrack(
+                music, 2);
+        musicFm3.fm3SpecialMode = true;
 
         driver.addSequencer(music, false);
         PreparedSfxAdmission admission =
@@ -215,6 +219,8 @@ class TestSmpsDriverSnapshot {
         assertEquals(0xBC, restored.continuousSfxId());
         assertTrue(restored.continuousSfxFlag());
         assertEquals(2, restored.contSfxLoopCnt());
+        assertTrue(restored.sequencers().getFirst().snapshot().tracks()
+                .getFirst().fm3SpecialMode());
     }
 
     @Test

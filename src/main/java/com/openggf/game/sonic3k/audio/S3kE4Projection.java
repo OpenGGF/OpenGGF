@@ -60,9 +60,7 @@ public record S3kE4Projection(
                     claim -> !matches(slot, claim.track()));
             Availability availability = ambiguousSfx || ambiguousMusic || malformed
                     ? Availability.UNAVAILABLE_AMBIGUOUS_OR_INVALID
-                    : slot == S3kE4Slot.FM3 && (sfx.isPresent() || music.isPresent())
-                            ? Availability.UNAVAILABLE_FM3_SPECIAL_STATE
-                            : Availability.AVAILABLE;
+                    : Availability.AVAILABLE;
             if (availability != Availability.AVAILABLE) {
                 complete = false;
             }
@@ -101,9 +99,7 @@ public record S3kE4Projection(
 
     public enum Availability {
         AVAILABLE,
-        UNAVAILABLE_AMBIGUOUS_OR_INVALID,
-        /** FM3 PlaybackControl bit zero is not retained by Phase 1. */
-        UNAVAILABLE_FM3_SPECIAL_STATE
+        UNAVAILABLE_AMBIGUOUS_OR_INVALID
     }
 
     /** Native zTracksSFX order and the raw VoiceControl values it represents. */
@@ -168,9 +164,8 @@ public record S3kE4Projection(
      * The subset of track state read by the S3K E4 loop.  playbackFlags is a
      * semantic reconstruction only: raw Z80 byte layout/custom bits are not
      * retained by the engine, and {@link #rawPlaybackFlags()} is therefore
-     * deliberately empty. {@code noiseOrFm3Special} is authoritative only for
-     * PSG noise: occupied FM3 is unavailable because its distinct special-mode
-     * bit is not retained.
+     * deliberately empty. {@code noiseOrFm3Special} is reconstructed from the
+     * retained FM3-special or PSG-noise semantic state, according to the slot.
      */
     public record S3kE4Track(
             SmpsChannelOwnershipProjection.TrackCoordinate coordinate,
@@ -203,8 +198,10 @@ public record S3kE4Projection(
             boolean playing = track.active();
             boolean noAttack = track.tieNext();
             boolean overriding = track.overridden();
-            boolean special = track.type() == SmpsSequencer.TrackType.PSG
-                    && track.noiseMode();
+            boolean special = slot == S3kE4Slot.FM3
+                    ? track.fm3SpecialMode()
+                    : track.type() == SmpsSequencer.TrackType.PSG
+                            && track.noiseMode();
             int flags = (playing ? 0x80 : 0)
                     | (noAttack ? 0x02 : 0)
                     | (overriding ? 0x04 : 0)

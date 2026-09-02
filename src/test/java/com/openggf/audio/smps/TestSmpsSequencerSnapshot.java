@@ -85,6 +85,7 @@ class TestSmpsSequencerSnapshot {
         assertTrue(restoredTrack.modStepInEffect);
         assertTrue(restoredTrack.modEnvStepChanged);
         assertEquals(0x66, restoredTrack.modEnvStepDelta);
+        assertTrue(restoredTrack.fm3SpecialMode);
     }
 
     @Test
@@ -155,6 +156,7 @@ class TestSmpsSequencerSnapshot {
         track.rawFrequency = 0x155;
         track.instrumentId = 6;
         track.noiseMode = true;
+        track.fm3SpecialMode = true;
         track.psgNoiseParam = 7;
         track.decayOffset = 8;
         track.decayTimer = 9;

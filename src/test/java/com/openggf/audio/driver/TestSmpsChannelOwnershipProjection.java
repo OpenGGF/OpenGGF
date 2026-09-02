@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsChannelOwnershipProjection {
@@ -76,13 +75,21 @@ class TestSmpsChannelOwnershipProjection {
         assertFalse(role.sfxClaims().getFirst().track().overridden());
 
         S3kE4Projection e4 = S3kE4Projection.capture(projection);
-        assertFalse(e4.complete(),
-                "FM3 bit zero is a distinct special-mode state that Phase 1 does not retain");
+        assertTrue(e4.complete());
         S3kE4Projection.SlotProjection fm3 = e4.slots().getFirst();
-        assertEquals(S3kE4Projection.Availability.UNAVAILABLE_FM3_SPECIAL_STATE,
-                fm3.availability());
-        assertNull(fm3.sfx());
-        assertNull(fm3.music());
+        assertEquals(S3kE4Projection.Availability.AVAILABLE, fm3.availability());
+        S3kE4Projection.S3kE4Track view = fm3.sfx();
+        assertEquals(0x02, view.canonicalVoiceControl());
+        assertFalse(view.noiseOrFm3Special());
+        assertFalse(view.rawPlaybackFlags().isPresent(),
+                "the engine retains semantic flags, not an invented raw Z80 byte");
+        assertEquals(7, view.voiceId());
+        assertEquals(9, view.volume());
+        assertEquals(0x80, view.pan());
+        assertArrayEquals(new int[] {0, 0x0E, 0, 0}, view.ssgEg());
+        byte[] copied = view.materializedVoice();
+        copied[0] = 99;
+        assertArrayEquals(new byte[] {1, 2, 3}, view.materializedVoice());
     }
 
     @Test
@@ -116,6 +123,30 @@ class TestSmpsChannelOwnershipProjection {
         byte[] copied = psg3.sfx().materializedVoice();
         copied[0] = 99;
         assertArrayEquals(new byte[] {1, 2, 3}, psg3.sfx().materializedVoice());
+    }
+
+    @Test
+    void fm3SpecialProjectionSurvivesLogicalSnapshotRestore() throws Exception {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer music = sequencer(music(0x81), driver);
+        music.addTrack(track(SmpsSequencer.TrackType.FM, 2));
+        SmpsSequencer sfx = sequencer(sfx(0xA0, 0x02), driver);
+        sfx.getTracks().getFirst().fm3SpecialMode = true;
+        driver.addSequencer(music, false);
+        driver.addSequencer(sfx, true);
+
+        S3kE4Projection before = S3kE4Projection.capture(
+                driver.captureOwnershipProjection());
+        driver.restoreSnapshot(driver.captureSnapshot());
+        S3kE4Projection restored = S3kE4Projection.capture(
+                driver.captureOwnershipProjection());
+
+        assertTrue(before.complete());
+        assertTrue(restored.complete());
+        assertTrue(before.slots().getFirst().sfx().noiseOrFm3Special());
+        assertTrue(restored.slots().getFirst().sfx().noiseOrFm3Special());
+        assertEquals(0x01, restored.slots().getFirst().sfx()
+                .canonicalPlaybackFlags() & 0x01);
     }
 
     @Test

@@ -101,6 +101,29 @@ class TestSmpsDriverSession {
     }
 
     @Test
+    void liveRollbackRestoresRetainedFm3SpecialMode() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        SmpsDriver driver = session.logicalDriverForTesting();
+        SmpsSequencer sequencer = new SmpsSequencer(
+                new AudioTestFixtures.StubSmpsData("fm3-special"),
+                AudioTestFixtures.EMPTY_DAC, driver, AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build());
+        SmpsSequencer.Track fm3 = SmpsSequencerTestAccess.addActiveFmTrack(
+                sequencer, 2);
+        fm3.fm3SpecialMode = true;
+        driver.addSequencer(sequencer, false);
+
+        SmpsDriverSession.LiveMutationToken token = session.captureLiveMutation();
+        fm3.fm3SpecialMode = false;
+        session.rollbackLiveMutation(token);
+
+        assertTrue(session.captureLogicalSnapshot().sequencers().getFirst()
+                .snapshot().tracks().getFirst().fm3SpecialMode());
+    }
+
+    @Test
     void multipleLogicalOperationsRenderOnceAndPublishOnePacket() {
         SmpsDriverSession session = SmpsSessionTestFixtures.session(
                 new SmpsSessionTestFixtures.RecordingObserver());

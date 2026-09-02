@@ -357,6 +357,8 @@ public class SmpsSequencer implements CoordFlagContext {
         public int rawFrequency;
         public int instrumentId;
         public boolean noiseMode;
+        /** S3K FM3 PlaybackControl bit 0; distinct from PSG noiseMode. */
+        public boolean fm3SpecialMode;
         public int psgNoiseParam;
         public int decayOffset;
         public int decayTimer;
@@ -3539,7 +3541,8 @@ public class SmpsSequencer implements CoordFlagContext {
                 track.modStepDelta,
                 track.modEnvStepInEffect,
                 track.modEnvStepChanged,
-                track.modEnvStepDelta);
+                track.modEnvStepDelta,
+                track.fm3SpecialMode);
     }
 
     private static Track restoreTrack(SmpsTrackSnapshot snapshot) {
@@ -3628,6 +3631,7 @@ public class SmpsSequencer implements CoordFlagContext {
         track.modEnvStepInEffect = snapshot.modEnvStepInEffect();
         track.modEnvStepChanged = snapshot.modEnvStepChanged();
         track.modEnvStepDelta = snapshot.modEnvStepDelta();
+        track.fm3SpecialMode = snapshot.fm3SpecialMode();
     }
 
     private static byte[] copy(byte[] values) {

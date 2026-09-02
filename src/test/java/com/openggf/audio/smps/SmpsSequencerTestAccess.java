@@ -11,11 +11,12 @@ public final class SmpsSequencerTestAccess {
         sequencer.addTrack(dac);
     }
 
-    public static void addActiveFmTrack(
+    public static SmpsSequencer.Track addActiveFmTrack(
             SmpsSequencer sequencer, int channel) {
         SmpsSequencer.Track fm = new SmpsSequencer.Track(
                 0, SmpsSequencer.TrackType.FM, channel);
         fm.active = true;
         sequencer.addTrack(fm);
+        return fm;
     }
 }

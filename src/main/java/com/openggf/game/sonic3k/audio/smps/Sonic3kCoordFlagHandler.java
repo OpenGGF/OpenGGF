@@ -267,7 +267,12 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
             case 0xF3: // PSG_NOISE (PNOIS_SRES) - set + reset
                 if (t.pos < program.dataLength()) {
                     int noiseVal = program.dataByteAt(t.pos++) & 0xFF;
-                    if (t.type == SmpsSequencer.TrackType.PSG) {
+                    if (t.type == SmpsSequencer.TrackType.FM && t.channelId == 2) {
+                        // FixBugs = 0: cfSetPSGNoise reuses PlaybackControl bit 0.
+                        // On FM3 that bit is the distinct special-mode state;
+                        // it is not PSG noise and produces no new hardware write here.
+                        t.fm3SpecialMode = noiseVal != 0;
+                    } else if (t.type == SmpsSequencer.TrackType.PSG) {
                         ctx.writePsg(0xDF);
                         if (noiseVal == 0) {
                             t.noiseMode = false;
@@ -354,12 +359,14 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xFE: // SPC_FM3 - FM3 special mode (4 params)
                 if (t.pos + 3 < program.dataLength()) {
-                    // Read and discard 4 bytes - FM3 special mode is broken per DefCFlag.txt
-                    int p1 = program.dataByteAt(t.pos++) & 0xFF;
-                    int p2 = program.dataByteAt(t.pos++) & 0xFF;
-                    int p3 = program.dataByteAt(t.pos++) & 0xFF;
-                    int p4 = program.dataByteAt(t.pos++) & 0xFF;
-                    LOGGER.fine("S3K SPC_FM3 (broken): " + p1 + ", " + p2 + ", " + p3 + ", " + p4);
+                    // FixBugs = 0: the shipped handler consumes all four operands
+                    // and sets FM3 PlaybackControl bit 0, but its special-frequency
+                    // path is broken. Retain only the semantic bit: no $27 write,
+                    // frequency write, or corruption emulation belongs in this slice.
+                    t.pos += 4;
+                    if (t.type == SmpsSequencer.TrackType.FM && t.channelId == 2) {
+                        t.fm3SpecialMode = true;
+                    }
                 }
                 return true;
 

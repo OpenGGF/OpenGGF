@@ -82,7 +82,8 @@ public record SmpsTrackSnapshot(
         int modStepDelta,
         boolean modEnvStepInEffect,
         boolean modEnvStepChanged,
-        int modEnvStepDelta) {
+        int modEnvStepDelta,
+        boolean fm3SpecialMode) {
 
     public SmpsTrackSnapshot {
         voiceData = copy(voiceData);
