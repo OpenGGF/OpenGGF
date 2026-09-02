@@ -585,8 +585,10 @@ the tick-210 request frontier. Its fixed boundary and authority constraints are 
   hard implementation gate, not permission to add a general diagnostic-hook surface.
 - Modify the fixed Sonic 2 service manifest/profile, complete-audio runner, raw sink/schema,
   capability, and exact pure C# tests in the pinned `tools/tracechaser` submodule.
-- Create or modify a closed full-run-raw-v3-to-oracle-v2 extractor and its negative tests in the
-  pinned `tools/tracechaser` submodule.
+- Create a closed full-run-raw-v3-to-**new request-aware oracle raw-v2** extractor and its
+  negative tests in the pinned `tools/tracechaser` submodule. The committed bounded EHZ oracle is
+  raw-v1 and remains unchanged; raw-v2 is an explicit successor required to carry transfer
+  evidence rather than an existing fixture format.
 - Modify the Sonic 2 oracle raw stream, comparator reference model, ROM-shaped engine
   mailbox/queue/admission producer, complete-run raw adapter/projector/profile, and focused Java
   tests and authority guards.
@@ -623,9 +625,10 @@ the tick-210 request frontier. Its fixed boundary and authority constraints are 
 - [ ] Pin the fixed request inventory and all manifest, capability-template, harness, correlator,
   count, digest, occupancy, and terminal identities. Retain native hashes/ABI only when the patch is
   byte-identical and freshly reproduced.
-- [ ] Write RED extractor tests, then implement the closed deterministic raw-v3-to-oracle-v2
-  extraction for `[10150,10900)`. Do not revive the environment-gated window capture or derive
-  request values from outcomes.
+- [ ] Write RED extractor tests, then implement the closed deterministic raw-v3-to-new
+  request-aware-oracle-v2 extraction for `[10150,10900)`. Its baseline declares its
+  source-preceding row and folded latch phase; do not revive the environment-gated window capture
+  or derive request values from outcomes.
 - [ ] Write RED Java adapter/oracle/queue/profile/guard tests, then replace the direct at-most-one
   request-per-tick diagnostic shortcut with ROM-shaped source-owned mailbox, transfer, Z80 queue,
   and admission semantics. Keep authenticated reference observations behavior-inert.
