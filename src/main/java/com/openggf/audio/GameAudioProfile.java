@@ -4,6 +4,7 @@ import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
 import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
 import com.openggf.audio.session.SmpsStatefulCommandPolicy;
+import com.openggf.audio.presentation.AudioRequestService;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -12,6 +13,11 @@ import com.openggf.data.Rom;
 import java.util.Map;
 
 public interface GameAudioProfile {
+    /** Optional game-owned raw request front end, created per presentation session. */
+    default AudioRequestService createAudioRequestService() {
+        return null;
+    }
+
     default String presentationGameId() {
         return "base";
     }

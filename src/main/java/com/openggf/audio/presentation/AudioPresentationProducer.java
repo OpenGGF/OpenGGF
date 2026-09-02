@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import com.openggf.audio.rewind.AudioCommand;
 
 /**
  * Sole outer-frame owner of final PCM cadence, history, rewind, and taps.
@@ -49,6 +50,8 @@ public final class AudioPresentationProducer {
     private final IdentityTokenRegistry diagnosticIdentityTokens =
             new IdentityTokenRegistry();
     private final SmpsDriverSession smpsSession;
+    private final AudioPresentationForwardService forwardService;
+    private final Consumer<AudioCommand> forwardCommandSink;
 
     private AudioPresentationSink sink;
     private PcmHistoryRing.ReverseCursor reverseCursor;
@@ -99,7 +102,24 @@ public final class AudioPresentationProducer {
             AudioPresentationSink sink,
             SmpsDriverSession smpsSession) {
         this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
-                commands, mixer, sink, smpsSession, null);
+                commands, mixer, sink, smpsSession, null, null, null);
+    }
+
+    public AudioPresentationProducer(
+            int sampleRate,
+            int frameRate,
+            int historyFrames,
+            int crossfadeFrames,
+            AudioVoiceRegistry registry,
+            AudioPresentationCommandQueue commands,
+            AudioPresentationMixer mixer,
+            AudioPresentationSink sink,
+            SmpsDriverSession smpsSession,
+            AudioPresentationForwardService forwardService,
+            Consumer<AudioCommand> forwardCommandSink) {
+        this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
+                commands, mixer, sink, smpsSession, null, forwardService,
+                forwardCommandSink);
     }
 
     AudioPresentationProducer(
@@ -113,7 +133,7 @@ public final class AudioPresentationProducer {
             AudioPresentationSink sink,
             Consumer<AudioPresentationCommand> commandApplier) {
         this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
-                commands, mixer, sink, null, commandApplier);
+                commands, mixer, sink, null, commandApplier, null, null);
     }
 
     private AudioPresentationProducer(
@@ -126,7 +146,9 @@ public final class AudioPresentationProducer {
             AudioPresentationMixer mixer,
             AudioPresentationSink sink,
             SmpsDriverSession smpsSession,
-            Consumer<AudioPresentationCommand> commandApplier) {
+            Consumer<AudioPresentationCommand> commandApplier,
+            AudioPresentationForwardService forwardService,
+            Consumer<AudioCommand> forwardCommandSink) {
         if (sampleRate <= 0) {
             throw new IllegalArgumentException("sampleRate must be positive");
         }
@@ -162,6 +184,9 @@ public final class AudioPresentationProducer {
                 CHANNELS)];
         frameView = new AudioPresentationFrameView(silence);
         this.smpsSession = smpsSession;
+        this.forwardService = forwardService;
+        this.forwardCommandSink = forwardService == null ? null
+                : Objects.requireNonNull(forwardCommandSink, "forwardCommandSink");
         if (smpsSession != null && !smpsSession.installed()) {
             smpsSession.install();
         }
@@ -798,7 +823,13 @@ public final class AudioPresentationProducer {
         boolean registryCommitted = false;
         boolean sessionCommitted = false;
         boolean commandsCommitted = false;
+        AudioPresentationForwardService.ForwardBoundary forwardBoundary = null;
+        boolean forwardCommitted = false;
         try {
+            if (forwardService != null) {
+                forwardBoundary = forwardService.beginForwardBoundary();
+                forwardBoundary.service(forwardCommandSink);
+            }
             registryMutation = registry.captureLiveMutation();
             commandBatch = commands.capturePendingBatch();
             commands.applyPendingBatch(commandBatch,
@@ -820,6 +851,10 @@ public final class AudioPresentationProducer {
             sessionCommitted = true;
             commands.commitPendingBatch(commandBatch);
             commandsCommitted = true;
+            if (forwardBoundary != null) {
+                forwardBoundary.commit();
+                forwardCommitted = true;
+            }
             publishSessionDiagnosticsQuarantined(registryMutation);
             return pcm;
         } catch (RuntimeException failure) {
@@ -840,6 +875,13 @@ public final class AudioPresentationProducer {
             if (commandBatch != null && !commandsCommitted) {
                 try {
                     commands.rollbackPendingBatch(commandBatch);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            if (forwardBoundary != null && !forwardCommitted) {
+                try {
+                    forwardBoundary.rollback();
                 } catch (RuntimeException rollbackFailure) {
                     failure.addSuppressed(rollbackFailure);
                 }

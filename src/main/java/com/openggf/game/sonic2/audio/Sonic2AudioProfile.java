@@ -7,6 +7,7 @@ import com.openggf.audio.SegaPcmSpec;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.presentation.AudioRequestService;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 
@@ -15,6 +16,11 @@ import java.util.EnumMap;
 import java.util.Map;
 
 public class Sonic2AudioProfile extends AbstractAudioProfile {
+
+    @Override
+    public AudioRequestService createAudioRequestService() {
+        return new Sonic2SoundRequestService();
+    }
 
     private static final Map<GameSound, Integer> SOUND_MAP;
     private static final Map<GameMusic, Integer> MUSIC_MAP;
