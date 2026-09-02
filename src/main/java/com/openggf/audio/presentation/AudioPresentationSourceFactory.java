@@ -350,6 +350,7 @@ public final class AudioPresentationSourceFactory
                 beginDiagnosticTransaction();
         private boolean prepared;
         private boolean closed;
+        private boolean diagnosticsPublished;
 
         void prepareCommit() {
             requireOpen();
@@ -364,6 +365,17 @@ public final class AudioPresentationSourceFactory
                         "resolution mutation is not prepared");
             }
             closed = true;
+        }
+
+        void publishDiagnostics() {
+            if (!closed || !prepared) {
+                throw new IllegalStateException(
+                        "resolution mutation is not committed");
+            }
+            if (diagnosticsPublished) {
+                return;
+            }
+            diagnosticsPublished = true;
             diagnostics.commit();
         }
 

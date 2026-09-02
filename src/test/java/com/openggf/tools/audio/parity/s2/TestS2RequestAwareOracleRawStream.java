@@ -5,7 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openggf.game.sonic2.audio.Sonic2SoundRequestPipeline;
+import com.openggf.game.sonic2.audio.Sonic2SoundRequestService;
+import com.openggf.tests.SessionInvocationExtension;
+import com.openggf.tools.audio.completerun.s2.S2ProductionRequestProjector;
+import com.openggf.tests.trace.runs.S2RequestProjectionBk2TestBridge;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayOutputStream;
@@ -23,6 +29,8 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** Contract tests for the strictly unbound request-aware raw-v2 reader. */
 class TestS2RequestAwareOracleRawStream {
@@ -35,6 +43,66 @@ class TestS2RequestAwareOracleRawStream {
     void requestAwareReaderExistsAsItsOwnV2Authority() {
         assertDoesNotThrow(() -> Class.forName(
                 "com.openggf.tools.audio.parity.s2.S2RequestAwareOracleRawStream"));
+    }
+
+    @Test
+    void disposableComparatorMatchesOnlyCommittedProductionTransfers() throws Exception {
+        Path candidate = temporaryDirectory.resolve("candidate.raw.jsonl");
+        Files.writeString(candidate, windowSourcePayload(true));
+        S2ProductionRequestProjector projector = new S2ProductionRequestProjector();
+        projector.accept(new Sonic2SoundRequestService.Transfer(
+                1, Sonic2SoundRequestPipeline.SourceSlot.SFX1,
+                2, 0xB5, false));
+
+        S2RequestAwareCandidateComparator.Report report =
+                S2RequestAwareCandidateComparator.compare(
+                        candidate, projector, List.of(10_151));
+
+        assertEquals(S2RequestAwareCandidateComparator.Kind.MATCH, report.kind(),
+                report.describe());
+        assertEquals(1, report.comparedTransfers());
+    }
+
+    @Test
+    void disposableComparatorFailsClosedAndBreaksOnProductionMismatch() throws Exception {
+        S2ProductionRequestProjector empty = new S2ProductionRequestProjector();
+        assertEquals(S2RequestAwareCandidateComparator.Kind.INVALID,
+                S2RequestAwareCandidateComparator.compare(
+                        temporaryDirectory.resolve("absent.raw.jsonl"), empty,
+                        List.of()).kind());
+
+        Path candidate = temporaryDirectory.resolve("candidate.raw.jsonl");
+        Files.writeString(candidate, windowSourcePayload(true));
+        assertEquals(S2RequestAwareCandidateComparator.Kind.DIVERGENCE,
+                S2RequestAwareCandidateComparator.compare(
+                        candidate, empty, List.of()).kind());
+        assertEquals(false, Files.exists(Path.of(
+                "src/main/java/com/openggf/tools/audio/parity/s2/"
+                        + "S2RequestAwareCandidateComparator.java")),
+                "the disposable comparator must not enter production bytecode");
+    }
+
+    @Test
+    @ExtendWith(SessionInvocationExtension.class)
+    void realCandidateComparesAgainstIndependentProductionBk2Run() throws Exception {
+        String candidateProperty = System.getProperty("s2.request.candidate.path");
+        String romProperty = System.getProperty("sonic2.rom.path");
+        String bk2Property = System.getProperty("s2.request.bk2.path");
+        assumeTrue(candidateProperty != null && romProperty != null
+                        && bk2Property != null,
+                "explicit candidate, ROM, and BK2 paths are required");
+
+        S2RequestProjectionBk2TestBridge.Capture capture =
+                S2RequestProjectionBk2TestBridge.capture(
+                        Path.of(romProperty), Path.of(bk2Property));
+        S2RequestAwareCandidateComparator.Report report =
+                S2RequestAwareCandidateComparator.compare(
+                        Path.of(candidateProperty), capture.projector(),
+                        capture.requestRows());
+
+        System.out.println("MEASUREMENT_ONLY " + report.describe());
+        assertNotEquals(S2RequestAwareCandidateComparator.Kind.INVALID,
+                report.kind(), report.describe());
     }
 
     @Test
@@ -56,6 +124,22 @@ class TestS2RequestAwareOracleRawStream {
         assertEquals(1, result.frames().getFirst().pcmRecords().size());
         assertThrows(UnsupportedOperationException.class,
                 () -> result.frames().add(result.frames().getFirst()));
+    }
+
+    @Test
+    void windowSourceCandidateUsesOnlyItsFixedMeasurementEntry() throws Exception {
+        Path candidate = temporaryDirectory.resolve("window-source.raw.jsonl");
+        Files.writeString(candidate, windowSourcePayload());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> S2RequestAwareOracleRawStream.scanCandidateForTesting(candidate));
+        assertDoesNotThrow(() -> S2RequestAwareOracleRawStream
+                .scanWindowSourceCandidateForTesting(candidate));
+
+        Path fullSource = temporaryDirectory.resolve("full-source.raw.jsonl");
+        Files.writeString(fullSource, validPayload());
+        assertThrows(IllegalArgumentException.class, () -> S2RequestAwareOracleRawStream
+                .scanWindowSourceCandidateForTesting(fullSource));
     }
 
     @Test
@@ -294,6 +378,18 @@ class TestS2RequestAwareOracleRawStream {
 
     private static String validPayload() {
         return boundedProducerPayload(false);
+    }
+
+    private static String windowSourcePayload() {
+        return windowSourcePayload(false);
+    }
+
+    private static String windowSourcePayload(boolean twoTransfers) {
+        return withRecalculatedClosure(boundedProducerPayload(twoTransfers), records -> {
+            ObjectNode metadata = records.getFirst();
+            metadata.put("source_first_row", 10_150);
+            metadata.put("source_exclusive_end", 10_900);
+        });
     }
 
     /**

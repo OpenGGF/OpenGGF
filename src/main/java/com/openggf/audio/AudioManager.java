@@ -1625,7 +1625,12 @@ public class AudioManager implements MusicRestoreSink {
 
     public void presentFrame(PresentationMode mode) {
         ensureShadowPresentation();
-        shadowProducer.present(commandTimeline.currentFrame(), mode);
+        AudioPresentationProducer.PresentationResult result =
+                shadowProducer.present(commandTimeline.currentFrame(), mode);
+        if (result == AudioPresentationProducer.PresentationResult
+                .REQUEST_REJECTED) {
+            return;
+        }
         audioFrameAdvanced = true;
         shadowParity.presented(mode);
         if (shadowRestoreRequested) {

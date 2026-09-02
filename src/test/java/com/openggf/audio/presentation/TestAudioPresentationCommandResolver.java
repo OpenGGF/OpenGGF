@@ -226,12 +226,10 @@ class TestAudioPresentationCommandResolver {
         failed.resolve(request);
         assertEquals(0, fixture.queue.size(),
                 "a request batch must not enter the durable command queue");
-        List<AudioPresentationCommand> firstApplied = new ArrayList<>();
-        var firstOutcome = failed.apply((ignored, command) ->
-                firstApplied.add(command));
+        var firstOutcome = failed.apply();
         AddSmpsSfx first = assertInstanceOf(AddSmpsSfx.class,
                 firstOutcome.commands().getFirst());
-        assertEquals(firstApplied, firstOutcome.commands());
+        assertFalse(firstOutcome.commands().isEmpty());
         failed.rollback();
 
         assertEquals(null, fixture.factory.findRegisteredSmpsSfxAsset(
@@ -240,7 +238,7 @@ class TestAudioPresentationCommandResolver {
 
         var retry = fixture.resolver.beginResolutionBatch();
         retry.resolve(request);
-        var replayOutcome = retry.apply((ignored, command) -> { });
+        var replayOutcome = retry.apply();
         assertFalse(replayOutcome.commands().isEmpty(), fixture.warnings.toString());
         AddSmpsSfx replay = assertInstanceOf(AddSmpsSfx.class,
                 replayOutcome.commands().getFirst());
@@ -248,6 +246,147 @@ class TestAudioPresentationCommandResolver {
                 replay.source().standaloneVoiceId(),
                 "rollback must restore the resolver allocation cursor");
         retry.rollback();
+    }
+
+    @Test
+    void rollbackRestoresBatchOrdinalWithoutMakingIdentityTransplantable()
+            throws Exception {
+        Fixture fixture = fixture();
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null);
+
+        var rejected = fixture.resolver.beginResolutionBatch();
+        rejected.resolve(request);
+        var rejectedReservation = rejected.reservation();
+        long rejectedOrdinal = reservationOrdinal(rejectedReservation);
+        rejected.rollback();
+
+        var retry = fixture.resolver.beginResolutionBatch();
+        retry.resolve(request);
+        var retryReservation = retry.reservation();
+        assertEquals(rejectedOrdinal, reservationOrdinal(retryReservation),
+                "rollback must restore the batch allocation cursor");
+        assertNotSame(rejectedReservation, retryReservation,
+                "a retry must retain an opaque batch identity");
+        var outcome = retry.apply();
+        assertTrue(outcome.belongsTo(retryReservation));
+        assertFalse(outcome.belongsTo(rejectedReservation),
+                "equal ordinals cannot transplant across batch identities");
+        retry.rollback();
+    }
+
+    private static long reservationOrdinal(
+            AudioPresentationCommandResolver.OutcomeReservation reservation)
+            throws Exception {
+        Field ordinal = reservation.getClass().getDeclaredField("ordinal");
+        ordinal.setAccessible(true);
+        return ordinal.getLong(reservation);
+    }
+
+    @Test
+    void nullAndThrowingMusicReturnTypedFailureWithoutWarningsOrEffects() {
+        for (boolean throwing : List.of(false, true)) {
+            Fixture fixture = fixture();
+            fixture.sources.throwMusic = throwing;
+            AudioCommand.PlayMusic request = new AudioCommand.PlayMusic(
+                    0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null);
+            var rejected = fixture.resolver.beginResolutionBatch();
+
+            assertInstanceOf(AudioPresentationCommandResolver.Failure.class,
+                    rejected.resolve(request));
+            assertEquals(List.of(), fixture.warnings);
+            assertEquals(0, fixture.queue.size());
+            assertEquals(List.of(), fixture.synchronouslyApplied);
+            assertThrows(IllegalStateException.class, rejected::apply);
+            rejected.rollback();
+
+            fixture.sources.throwMusic = false;
+            fixture.sources.baseMusic = music(0x81);
+            var retry = fixture.resolver.beginResolutionBatch();
+            assertInstanceOf(
+                    AudioPresentationCommandResolver.CompleteSuccess.class,
+                    retry.resolve(request));
+            var outcome = retry.apply();
+            assertEquals(2, outcome.commands().size());
+            assertInstanceOf(AudioPresentationCommand.StopAllSfx.class,
+                    outcome.commands().get(0));
+            ReplaceMusic replacement = assertInstanceOf(
+                    ReplaceMusic.class, outcome.commands().get(1));
+            assertEquals(1L,
+                    replacement.music().voiceDescriptor().voiceId());
+            retry.rollback();
+        }
+    }
+
+    @Test
+    void nullAndThrowingOrdinarySfxReturnTypedFailureAndRetryExactly() {
+        for (boolean throwing : List.of(false, true)) {
+            Fixture fixture = fixture();
+            fixture.sources.throwSfx = throwing;
+            AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                    0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                    1.0f, null);
+            var rejected = fixture.resolver.beginResolutionBatch();
+
+            assertInstanceOf(AudioPresentationCommandResolver.Failure.class,
+                    rejected.resolve(request));
+            assertEquals(List.of(), fixture.warnings);
+            assertEquals(0, fixture.queue.size());
+            assertThrows(IllegalStateException.class, rejected::apply);
+            rejected.rollback();
+
+            fixture.sources.throwSfx = false;
+            fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+            var retry = fixture.resolver.beginResolutionBatch();
+            assertInstanceOf(
+                    AudioPresentationCommandResolver.CompleteSuccess.class,
+                    retry.resolve(request));
+            var outcome = retry.apply();
+            AddSmpsSfx replay = assertInstanceOf(
+                    AddSmpsSfx.class, outcome.commands().getFirst());
+            assertEquals(1L, replay.source().standaloneVoiceId());
+            retry.rollback();
+        }
+    }
+
+    @Test
+    void failedRingFallbackNeverPublishesResetWithoutPlayback() {
+        for (boolean throwing : List.of(false, true)) {
+            Fixture fixture = fixture();
+            if (throwing) {
+                fixture.assets.throwing.add("sfx/ring.wav");
+            } else {
+                fixture.assets.malformed.add("sfx/ring.wav");
+            }
+            AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                    -1, "RING_LEFT", AudioCommand.SfxRoute.RING_RESOLVED,
+                    1.0f, null);
+            var rejected = fixture.resolver.beginResolutionBatch();
+
+            assertInstanceOf(AudioPresentationCommandResolver.Failure.class,
+                    rejected.resolve(request));
+            assertEquals(List.of(), fixture.warnings);
+            assertEquals(List.of(), fixture.synchronouslyApplied,
+                    "ring alternation cannot escape without playback");
+            rejected.rollback();
+
+            fixture.assets.throwing.clear();
+            fixture.assets.malformed.clear();
+            var retry = fixture.resolver.beginResolutionBatch();
+            assertInstanceOf(
+                    AudioPresentationCommandResolver.CompleteSuccess.class,
+                    retry.resolve(request));
+            var outcome = retry.apply();
+            assertEquals(2, outcome.commands().size());
+            assertInstanceOf(AudioPresentationCommand.ResetRingAlternation.class,
+                    outcome.commands().get(0));
+            StartSampleSfx playback = assertInstanceOf(
+                    StartSampleSfx.class, outcome.commands().get(1));
+            assertEquals(1L, playback.voice().voiceId());
+            retry.rollback();
+        }
     }
 
     @Test
@@ -1019,6 +1158,16 @@ class TestAudioPresentationCommandResolver {
                 new AudioPresentationCommandResolver(
                         queue, factory, sources, warnings::add,
                         owner::get, synchronouslyApplied::add);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry();
+        int maxFrames = (48_000 + 60 - 1) / 60;
+        AudioPresentationProducer producer = new AudioPresentationProducer(
+                48_000, 60, 48_000, 1, registry,
+                new AudioPresentationCommandQueue(registry::isRendering),
+                new AudioPresentationMixer(maxFrames,
+                        registry::onVoiceFailure),
+                new com.openggf.audio.output.NoDeviceAudioSink(48_000),
+                synchronouslyApplied::add);
+        resolver.bindForwardExecutor(producer);
         return new Fixture(queue, factory, resolver, sources, assets, handlers,
                 session,
                 warnings, owner, synchronouslyApplied);
@@ -1066,6 +1215,8 @@ class TestAudioPresentationCommandResolver {
         int basePriority = 0x70;
         boolean baseSpecial;
         boolean baseContinuous;
+        boolean throwMusic;
+        boolean throwSfx;
         Runnable afterBaseSfxLoad;
         Runnable afterDonorSfxLoad;
 
@@ -1116,12 +1267,20 @@ class TestAudioPresentationCommandResolver {
                         @Override
                         public AbstractSmpsData loadMusic(int musicId) {
                             calls.incrementAndGet();
+                            if (throwMusic) {
+                                throw new IllegalStateException(
+                                        "seeded music source failure");
+                            }
                             return capturedMusic;
                         }
 
                         @Override
                         public AbstractSmpsData loadSfx(int sfxId) {
                             calls.incrementAndGet();
+                            if (throwSfx) {
+                                throw new IllegalStateException(
+                                        "seeded SFX source failure");
+                            }
                             if (capturedSfxCallback != null) {
                                 capturedSfxCallback.run();
                             }
@@ -1167,10 +1326,15 @@ class TestAudioPresentationCommandResolver {
             implements AudioPresentationSourceFactory.WavAssets {
         final AtomicInteger opens = new AtomicInteger();
         final List<String> malformed = new ArrayList<>();
+        final List<String> throwing = new ArrayList<>();
 
         @Override
         public InputStream open(String assetId) {
             opens.incrementAndGet();
+            if (throwing.contains(assetId)) {
+                throw new IllegalStateException(
+                        "seeded fallback source failure");
+            }
             if (malformed.contains(assetId)) {
                 return new ByteArrayInputStream(new byte[] {1, 2, 3});
             }

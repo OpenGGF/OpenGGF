@@ -69,6 +69,7 @@ public final class AudioPresentationProducer {
     private short lastReverseRight;
     private boolean historyArmed;
     private boolean presenting;
+    private boolean typedRequestRejected;
     private boolean reverseActive;
     private boolean reverseFrameOutput;
     private boolean hasLastReverseFrame;
@@ -221,6 +222,7 @@ public final class AudioPresentationProducer {
             Objects.requireNonNull(forwardService, "forwardService");
             Objects.requireNonNull(forwardTimeline, "forwardTimeline");
             Objects.requireNonNull(forwardParity, "forwardParity");
+            forwardResolver.bindForwardExecutor(this);
         }
         if (smpsSession != null && !smpsSession.installed()) {
             smpsSession.install();
@@ -229,7 +231,12 @@ public final class AudioPresentationProducer {
                 commandApplier != null ? commandApplier : registry::apply;
     }
 
-    public void present(long commandFrame, PresentationMode mode) {
+    public enum PresentationResult {
+        COMMITTED,
+        REQUEST_REJECTED
+    }
+
+    public PresentationResult present(long commandFrame, PresentationMode mode) {
         assertOwnerThread();
         assertOpen();
         Objects.requireNonNull(mode, "mode");
@@ -239,12 +246,21 @@ public final class AudioPresentationProducer {
         }
         presenting = true;
         try {
+            AudioFrameClock.Snapshot clockBefore =
+                    mode == PresentationMode.FORWARD
+                            && forwardResolver != null
+                    ? clock.captureSnapshot() : null;
+            typedRequestRejected = false;
             int stereoFrames = clock.samplesForNextFrame();
             short[] pcm;
             if (mode == PresentationMode.FORWARD) {
                 pcm = smpsSession != null
                         ? presentSessionForward(stereoFrames)
                         : presentLegacyForward(stereoFrames);
+                if (typedRequestRejected) {
+                    clock.restoreSnapshot(clockBefore);
+                    return PresentationResult.REQUEST_REJECTED;
+                }
                 applyReleaseCrossfade(pcm, stereoFrames);
                 if (historyArmed) {
                     history.write(pcm, stereoFrames);
@@ -276,6 +292,7 @@ public final class AudioPresentationProducer {
                     capture.onPresentationFrame(frameView);
                 }
             }
+            return PresentationResult.COMMITTED;
         } finally {
             presenting = false;
         }
@@ -851,8 +868,7 @@ public final class AudioPresentationProducer {
     }
 
     private short[] presentSessionForward(int stereoFrames) {
-        SmpsDriverSession.LiveMutationToken sessionMutation =
-                smpsSession.captureLiveMutation();
+        SmpsDriverSession.LiveMutationToken sessionMutation = null;
         AudioVoiceRegistry.LiveMutationToken registryMutation = null;
         AudioPresentationCommandQueue.PendingBatch commandBatch = null;
         boolean registryCommitted = false;
@@ -871,26 +887,57 @@ public final class AudioPresentationProducer {
                 if (forwardResolver == null) {
                     forwardBoundary.service(forwardCommandSink);
                 } else {
+                    AudioPresentationForwardService.ForwardBoundary
+                            activeBoundary = forwardBoundary;
                     AudioPresentationCommandResolver.ResolutionBatch[] holder =
                             new AudioPresentationCommandResolver.ResolutionBatch[1];
+                    AudioPresentationCommandResolver.ResolutionResult[] result =
+                            new AudioPresentationCommandResolver.ResolutionResult[1];
                     forwardBoundary.service(command -> {
                         if (holder[0] != null) {
                             throw new IllegalStateException(
                                     "one request boundary produced multiple consequences");
                         }
-                        holder[0] = forwardResolver.beginResolutionBatch();
-                        holder[0].resolve(command);
+                        AudioPresentationCommandResolver.ResolutionBatch candidate =
+                                forwardResolver.beginResolutionBatch();
+                        holder[0] = candidate;
+                        try {
+                            result[0] = candidate.resolve(command);
+                            if (result[0] instanceof AudioPresentationCommandResolver
+                                    .CompleteSuccess) {
+                                activeBoundary.reserveOutcome(
+                                        candidate.reservation());
+                            }
+                        } catch (RuntimeException failure) {
+                            try {
+                                candidate.rollback();
+                            } catch (RuntimeException rollbackFailure) {
+                                failure.addSuppressed(rollbackFailure);
+                            }
+                            holder[0] = null;
+                            result[0] = null;
+                            throw failure;
+                        }
                     });
                     requestBatch = holder[0];
+                    if (result[0] instanceof AudioPresentationCommandResolver
+                            .Failure) {
+                        requestBatch.rollback();
+                        forwardBoundary.rollback();
+                        Arrays.fill(silence, 0,
+                                stereoFrames * CHANNELS, (short) 0);
+                        typedRequestRejected = true;
+                        return silence;
+                    }
                 }
             }
+            sessionMutation = smpsSession.captureLiveMutation();
             registryMutation = registry.captureLiveMutation();
             commandBatch = commands.capturePendingBatch();
             commands.applyPendingBatch(commandBatch,
                     this::applyResolvedSessionCommand);
             if (requestBatch != null) {
-                requestOutcome = requestBatch.apply(
-                        this::applyResolvedForwardCommand);
+                requestOutcome = requestBatch.apply();
                 forwardBoundary.applyOutcome(requestOutcome);
             }
             registry.beginRendering();
@@ -930,6 +977,9 @@ public final class AudioPresentationProducer {
                 requestReceipt = forwardBoundary.commit();
                 forwardCommitted = true;
             }
+            if (requestBatch != null) {
+                requestBatch.publishDiagnostics(requestReceipt);
+            }
             publishSessionDiagnosticsQuarantined(registryMutation);
             if (requestReceipt != null) {
                 forwardBoundary.publishDiagnostics(requestReceipt);
@@ -943,7 +993,7 @@ public final class AudioPresentationProducer {
                     failure.addSuppressed(rollbackFailure);
                 }
             }
-            if (!sessionCommitted) {
+            if (sessionMutation != null && !sessionCommitted) {
                 try {
                     smpsSession.rollbackLiveMutation(sessionMutation);
                 } catch (RuntimeException rollbackFailure) {
@@ -975,16 +1025,14 @@ public final class AudioPresentationProducer {
         }
     }
 
-    private void applyResolvedForwardCommand(
+    void applyResolvedForwardCommand(
             AudioCommand request,
             AudioPresentationCommand resolved) {
-        if (request instanceof AudioCommand.PlayMusic) {
-            // Sonic 2's shipped FixDriverBugs=0 zPlayMusic stops SFX before
-            // the driver-region save/load path (s2.sounddriver.asm:1667-1724).
-            applyResolvedSessionCommand(
-                    new AudioPresentationCommand.StopAllSfx());
+        if (smpsSession == null) {
+            commandApplier.accept(resolved);
+        } else {
+            applyResolvedSessionCommand(resolved);
         }
-        applyResolvedSessionCommand(resolved);
     }
 
     private void applyPendingSessionCommandsTransactionally() {

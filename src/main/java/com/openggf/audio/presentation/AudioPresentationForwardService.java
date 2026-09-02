@@ -2,6 +2,8 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.presentation.AudioPresentationCommandResolver.AppliedOutcome;
+import com.openggf.audio.presentation.AudioPresentationCommandResolver.OutcomeReservation;
+import com.openggf.audio.presentation.AudioPresentationCommandResolver.OutcomeSeal;
 
 import java.util.function.Consumer;
 
@@ -18,6 +20,8 @@ public interface AudioPresentationForwardService {
     interface ForwardBoundary {
         void service(Consumer<AudioCommand> commandSink);
 
+        void reserveOutcome(OutcomeReservation reservation);
+
         void applyOutcome(AppliedOutcome outcome);
 
         void prepareCommit();
@@ -29,5 +33,7 @@ public interface AudioPresentationForwardService {
         void rollback();
     }
 
-    interface CommittedReceipt { }
+    interface CommittedReceipt {
+        OutcomeSeal sealFor(AppliedOutcome outcome);
+    }
 }

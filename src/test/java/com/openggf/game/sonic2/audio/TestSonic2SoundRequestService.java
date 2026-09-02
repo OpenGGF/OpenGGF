@@ -50,6 +50,34 @@ class TestSonic2SoundRequestService {
 
     }
 
+    @Test
+    void preparedDiagnosticsRemainInvisibleRollbackKeepsOrdinalAndPublishIsOneShot() {
+        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
+        List<Sonic2SoundRequestService.Event> observed = new ArrayList<>();
+        service.addObserver(observed::add);
+        service.submitSound(0x01, sfx(0x01));
+
+        var rejected = service.beginForwardBoundary();
+        rejected.service(ignored -> { });
+        rejected.prepareCommit();
+        assertTrue(observed.isEmpty());
+        rejected.rollback();
+        assertTrue(observed.isEmpty());
+
+        var retry = service.beginForwardBoundary();
+        retry.service(ignored -> { });
+        retry.prepareCommit();
+        var receipt = retry.commit();
+        assertTrue(observed.isEmpty());
+        retry.publishDiagnostics(receipt);
+        List<Sonic2SoundRequestService.Event> once = List.copyOf(observed);
+        assertEquals(1L, once.getFirst().ordinal(),
+                "a rolled-back preparation must not consume an ordinal");
+        retry.publishDiagnostics(receipt);
+        assertEquals(once, observed,
+                "sealed diagnostics must publish at most once");
+    }
+
     private static AudioCommand.PlayMusic music(int id) {
         return new AudioCommand.PlayMusic(id, AudioCommand.MusicRoute.BASE_SMPS, false, null);
     }
