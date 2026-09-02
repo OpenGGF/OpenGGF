@@ -573,9 +573,13 @@ rejected per-voice S3K stop emitter or advance the frontier on the old multi-dev
 
 ### Task 8A: Establish Sonic 2 pre-consumption request authority
 
-**Status:** planned prerequisite; no request capture, fixture, producer binding, or comparison
-authority exists yet. This task is required before Task 8 may advance the Sonic 2 comparison past
-the tick-210 request frontier. Its fixed boundary and authority constraints are audited in
+**Status:** the fixed unbound observer/raw-v3 producer and the candidate-only
+raw-v3-to-request-aware-oracle-v2 extractor are complete. The candidate remains CLI-unreachable
+and `production_bound:false`; no installed or bound authority, live capture, fixture, Java
+consumer, or comparison authority exists yet. The next sequential tranche is the Java
+comparison-only consumer plus the independent ROM-shaped producer. This task is still required
+before Task 8 may advance the Sonic 2 comparison past the tick-210 request frontier. Its fixed
+boundary and authority constraints are audited in
 `docs/architecture/audits/audio/2026-09-02-s2-preconsumption-request-producer-audit.md`.
 
 **Files:**
@@ -612,20 +616,20 @@ the tick-210 request frontier. Its fixed boundary and authority constraints are 
   production behavior owner. Request equality stays unavailable until an independent authenticated
   OpenGGF producer observes equivalent source-owned evidence.
 
-- [ ] Obtain explicit approval for the fixed observer exception and update the pinned TraceChaser
+- [x] Obtain explicit approval for the fixed observer exception and update the pinned TraceChaser
   `AGENTS.md` and `CLAUDE.md` together before implementation. Keep general M68K diagnostic hooks
   prohibited.
-- [ ] Write RED pure C# tests for the fixed hook/opcode, D0/D1/A7 capture, every reviewed active
+- [x] Write RED pure C# tests for the fixed hook/opcode, D0/D1/A7 capture, every reviewed active
   service topology, bounded correlation, orphan/reordered/duplicate/cross-frame/terminal failures,
   and strict raw v3 schema negatives.
-- [ ] Implement exactly one Sonic 2 pre-execution callback at `0x10D6`, correlate it with the next
+- [x] Implement exactly one Sonic 2 pre-execution callback at `0x10D6`, correlate it with the next
   exact action-7 native marker, observe from power-on, and publish only from comparison row 769.
   Add native ordering regression tests; do not change the native patch or ABI unless a separately
   reviewed observer identity family is first approved.
 - [ ] Pin the fixed request inventory and all manifest, capability-template, harness, correlator,
   count, digest, occupancy, and terminal identities. Retain native hashes/ABI only when the patch is
   byte-identical and freshly reproduced.
-- [ ] Write RED extractor tests, then implement the closed deterministic raw-v3-to-new
+- [x] Write RED extractor tests, then implement the closed deterministic raw-v3-to-new
   request-aware-oracle-v2 extraction for `[10150,10900)`. Its baseline declares its
   source-preceding row and folded latch phase; do not revive the environment-gated window capture
   or derive request values from outcomes.
