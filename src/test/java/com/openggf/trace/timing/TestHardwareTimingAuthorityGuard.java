@@ -23,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.fail;
 class TestHardwareTimingAuthorityGuard {
     private static final Path SRC_MAIN = Path.of("src", "main", "java");
     private static final Path SRC_TEST = Path.of("src", "test", "java", "com", "openggf", "trace", "timing");
+    private static final List<Path> UNBOUND_REQUEST_REFERENCE_SOURCES = List.of(
+            Path.of("src/main/java/com/openggf/tools/audio/parity/s2/S2RequestAwareOracleSchema.java"),
+            Path.of("src/main/java/com/openggf/tools/audio/parity/s2/S2RequestAwareOracleRawStream.java"));
     private static final SourceCatalogueLoader SOURCE_CATALOGUES =
             new SourceCatalogueLoader(new FileSystemSourceTreeAccess());
     private static final String TIMING_PACKAGE_PREFIX = "com.openggf.trace.timing";
@@ -90,6 +93,23 @@ class TestHardwareTimingAuthorityGuard {
             "com.openggf.Engine",
             "com.openggf.GameLoop",
             "com.openggf.LevelIterationAdmissionController");
+
+    @Test
+    void unboundRequestReferenceReaderCannotReachHardwareTimingAuthority() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (Path source : UNBOUND_REQUEST_REFERENCE_SOURCES) {
+            assertTrue(Files.isRegularFile(source), "missing request reference source: " + source);
+            String contents = Files.readString(source);
+            if (HARDWARE_TIMING_SERVICE_ACCESS.matcher(contents).find()
+                    || TIMING_PARSER_ACCESS.matcher(contents).find()
+                    || REPLAY_PORT_REFERENCE.matcher(contents).find()
+                    || HARDWARE_TIMING_FILE_LITERAL.matcher(contents).find()) {
+                violations.add(source.toString());
+            }
+        }
+        assertEquals(List.of(), violations,
+                "unbound S2 request evidence must stay outside timing authority");
+    }
 
     @Test
     void sourceCatalogueLoadsTheSameRootOnlyOnce() throws IOException {

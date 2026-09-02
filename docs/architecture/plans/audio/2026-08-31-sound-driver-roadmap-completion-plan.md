@@ -573,11 +573,16 @@ rejected per-voice S3K stop emitter or advance the frontier on the old multi-dev
 
 ### Task 8A: Establish Sonic 2 pre-consumption request authority
 
-**Status:** the fixed unbound observer/raw-v3 producer and the candidate-only
-raw-v3-to-request-aware-oracle-v2 extractor are complete. The candidate remains CLI-unreachable
-and `production_bound:false`; no installed or bound authority, live capture, fixture, Java
-consumer, or comparison authority exists yet. The next sequential tranche is the Java
-comparison-only consumer plus the independent ROM-shaped producer. This task is still required
+**Status:** the fixed unbound observer/raw-v3 producer and the extractor's semantic raw-v3
+validation/projection are complete. The unpublished bounded-v2 carrier now closes over its own
+750-row body and inventories, without copying the five absent-domain full-source claims. Its
+strict Java Tranche-A reader independently recomputes that closure through a package-private,
+immutable candidate seam. The candidate remains CLI-unreachable and `production_bound:false`;
+no installed or bound authority, live capture, fixture, profile/comparator availability, or
+comparison authority exists yet. The remaining Java work is split into three sequential reviewed
+tranches: (B) game-owned S2 mailbox/queue mechanism, (C) production wiring plus an independent
+OpenGGF projection, and (D) post-capture authority binding/comparison activation. Tranche A did
+not modify profile, comparator, or engine behavior. This task is still required
 before Task 8 may advance the Sonic 2 comparison past the tick-210 request frontier. Its fixed
 boundary and authority constraints are audited in
 `docs/architecture/audits/audio/2026-09-02-s2-preconsumption-request-producer-audit.md`.
@@ -610,8 +615,9 @@ boundary and authority constraints are audited in
   state, a live sound pointer, chip writes, audible output, fixture coordinates, or the known
   tick-210 result.
 - Keeps transfer, Z80 queue scan, priority/admission, and playback consequences distinct. Multiple
-  transfers may precede one `zCycleQueue`, and the shipped FixBugs-off slot 3 aliases
-  `VoiceTblPtr`; no layer may collapse these into one direct request per tick.
+  transfers may precede one `zCycleQueue`, and the shipped FixBugs=0 bridge index 3 reads
+  `Music1` (`SoundQueue.SFX0+3`) and writes the low byte of `VoiceTblPtr`; no layer may collapse
+  these into one direct request per tick.
 - Reference requests remain comparison-only. They never call `DriverRequest`, `admitSfx`, or any
   production behavior owner. Request equality stays unavailable until an independent authenticated
   OpenGGF producer observes equivalent source-owned evidence.
@@ -633,6 +639,10 @@ boundary and authority constraints are audited in
   request-aware-oracle-v2 extraction for `[10150,10900)`. Its baseline declares its
   source-preceding row and folded latch phase; do not revive the environment-gated window capture
   or derive request values from outcomes.
+- [x] Close the unpublished bounded-v2 body/inventory evidence and add only the Tranche-A strict,
+  package-private Java candidate reader with its independent producer-shaped closure vector and
+  authority guards. Do not alter raw-v1, any profile/comparator/capture/engine owner, or install
+  a publication/fixture route.
 - [ ] Write RED Java adapter/oracle/queue/profile/guard tests, then replace the direct at-most-one
   request-per-tick diagnostic shortcut with ROM-shaped source-owned mailbox, transfer, Z80 queue,
   and admission semantics. Keep authenticated reference observations behavior-inert.

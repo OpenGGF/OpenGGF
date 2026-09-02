@@ -29,6 +29,9 @@ class TestCompleteRunAudioAuthorityGuard {
             "com.openggf.tools.audio.completerun";
     private static final Path BK2_INPUT_CURSOR = completeRunSource(
             "Bk2InputCursor.java");
+    private static final List<Path> UNBOUND_REQUEST_REFERENCE_SOURCES = List.of(
+            Path.of("src/main/java/com/openggf/tools/audio/parity/s2/S2RequestAwareOracleSchema.java"),
+            Path.of("src/main/java/com/openggf/tools/audio/parity/s2/S2RequestAwareOracleRawStream.java"));
     private static final List<Path> REQUIRED_AUTHENTICATED_SOURCES = List.of(
             BK2_INPUT_CURSOR);
     private static final List<Path> TASK_5_AUTHENTICATED_STAGE = List.of(
@@ -145,6 +148,24 @@ class TestCompleteRunAudioAuthorityGuard {
 
         assertEquals(List.of(), violations,
                 "production behavior must not depend on complete-run tooling");
+    }
+
+    @Test
+    void unboundRequestReferenceReaderCannotEnterCompleteRunAuthority() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (Path source : UNBOUND_REQUEST_REFERENCE_SOURCES) {
+            requirePresent(List.of(source), violations);
+            if (Files.isRegularFile(source)) {
+                inspectForbiddenReference(source, violations);
+                String contents = Files.readString(source);
+                if (contents.contains("com.openggf.tools.audio.completerun")
+                        || contents.contains("CompleteRunAudio")) {
+                    violations.add(source + ":complete-run-authority");
+                }
+            }
+        }
+        assertEquals(List.of(), violations,
+                "unbound S2 request evidence must stay outside complete-run authority");
     }
 
     @Test
