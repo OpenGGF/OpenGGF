@@ -4,20 +4,80 @@ import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
+import com.openggf.game.sonic2.audio.Sonic2SoundRequestPipeline;
+import com.openggf.game.sonic2.audio.Sonic2SoundRequestService;
+import com.openggf.data.Rom;
+import com.openggf.level.rings.RingManager;
+import com.openggf.level.rings.RingSpawn;
+import com.openggf.sprites.playable.Sonic;
+import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic2RequestProductionWiring {
+    private Rom rom;
+
+    @Test
+    void placedRingAcquisitionUsesSecondaryMailboxWhileOrdinaryRawB5UsesPrimary() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new NullAudioBackend());
+        File romFile = RomTestUtils.ensureSonic2RomAvailable();
+        Assumptions.assumeTrue(romFile != null,
+                "Sonic 2 REV01 ROM is required for production request resolution");
+        rom = new Rom();
+        assertTrue(rom.open(romFile.getAbsolutePath()));
+        audio.setRom(rom);
+        List<Sonic2SoundRequestService.Event> observed = new ArrayList<>();
+        Sonic2AudioProfile profile = new Sonic2AudioProfile(observed::add);
+        audio.setAudioProfile(profile);
+        audio.setSoundMap(profile.getSoundMap());
+        RingSpawn spawn = new RingSpawn(100, 100);
+        RingManager rings = new RingManager(List.of(spawn), null, null, null, audio);
+        rings.reset(0);
+
+        assertTrue(rings.collectPlacedRing(spawn,
+                new Sonic("sonic", (short) 100, (short) 100), 0));
+        audio.presentFrame(PresentationMode.FORWARD);
+
+        Sonic2SoundRequestService.Transfer collected = observed.stream()
+                .filter(Sonic2SoundRequestService.Transfer.class::isInstance)
+                .map(Sonic2SoundRequestService.Transfer.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Sonic2SoundRequestPipeline.SourceSlot.SFX1,
+                collected.sourceMailbox());
+        assertEquals(1, collected.physicalSlot());
+        assertEquals(0xB5, collected.rawRequestId());
+
+        observed.clear();
+        assertTrue(audio.playSfx(0xB5));
+        audio.presentFrame(PresentationMode.FORWARD);
+
+        Sonic2SoundRequestService.Transfer raw = observed.stream()
+                .filter(Sonic2SoundRequestService.Transfer.class::isInstance)
+                .map(Sonic2SoundRequestService.Transfer.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Sonic2SoundRequestPipeline.SourceSlot.SFX0,
+                raw.sourceMailbox());
+        assertEquals(0, raw.physicalSlot());
+        assertEquals(0xB5, raw.rawRequestId());
+    }
 
     @AfterEach
     void tearDown() {
         AudioManager.getInstance().resetState();
         AudioManager.getInstance().setBackend(new NullAudioBackend());
+        if (rom != null) {
+            rom.close();
+        }
     }
 
     @Test

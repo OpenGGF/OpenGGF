@@ -1928,6 +1928,14 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void playSfx(GameSound sound, float pitch) {
+        playSfx(sound, pitch, false);
+    }
+
+    public void playSecondarySfx(GameSound sound) {
+        playSfx(sound, 1.0f, true);
+    }
+
+    private void playSfx(GameSound sound, float pitch, boolean secondaryRequest) {
         if (suppressingRewindReplay()) {
             return;
         }
@@ -1938,8 +1946,13 @@ public class AudioManager implements MusicRestoreSink {
             requestObserver.onRequested(sfxRequestClass(rawSoundId), rawSoundId);
             ensureShadowPresentation();
             if (shadowRequestService != null) {
-                shadowRequestService.submitSound(rawSoundId,
-                        commandForNativeRequest(baseAudioSource, rawSoundId));
+                AudioCommand command = commandForNativeRequest(
+                        baseAudioSource, rawSoundId);
+                if (secondaryRequest) {
+                    shadowRequestService.submitSecondarySound(rawSoundId, command);
+                } else {
+                    shadowRequestService.submitSound(rawSoundId, command);
+                }
                 return;
             }
         }

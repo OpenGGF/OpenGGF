@@ -57,6 +57,11 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
                 Sonic2SoundRequestPipeline.SourceSlot.SFX1, nativeRequestId));
     }
 
+    @Override
+    public void submitSecondarySound(int nativeRequestId, AudioCommand command) {
+        submitSound2(nativeRequestId, command);
+    }
+
     public ObserverLease addObserver(Consumer<Event> candidate) {
         Objects.requireNonNull(candidate, "observer");
         if (observerLeased) {
