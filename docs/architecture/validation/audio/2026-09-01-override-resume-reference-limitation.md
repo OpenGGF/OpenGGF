@@ -91,3 +91,30 @@ history scanners pass. All authorised test-run process inventories were empty be
 no BizHawk, EmuHawk, capture, fixture, or Java work occurred. These stronger mechanics do not supply
 the missing fresh authenticated native-GPGX observation or provenance, so the terminal status and
 required continuation above are unchanged.
+
+## TOCTOU review correction round 2 — 2026-09-02
+
+TraceChaser commit `a61450ee10d2a76fd32edfe5c29791404bfe2b20` closes two
+remaining races in the mechanics described above:
+
+1. Closed four-file staging now opens the fixture root once, creates and traverses child directories
+   with fd-relative `mkdirat` / `openat(O_DIRECTORY|O_NOFOLLOW)`, writes and fsyncs every temporary
+   through the resulting directory fd, and retains the root plus final-directory fds through
+   `linkat`. Immediately before the final link it traverses the relative directory again from the
+   anchored root and requires the original directory device, inode, and type. Moving a validated
+   `s1` or `s2` directory and replacing it with a symlink therefore fails before a final is visible;
+   neither staging nor publication follows the replacement path.
+2. Rollback no longer makes a check-then-unlink authority claim. It creates a mode-0700 sibling
+   quarantine and moves a public final there with fd-relative
+   `renameat2(RENAME_NOREPLACE)`. A mismatched entry is restored without replacement; an owned or
+   ownership-uncertain entry remains in quarantine as failure evidence. This deliberately bounded
+   residue is required because Linux provides no atomic unlink-if-this-name-still-has-this-inode
+   operation. The publisher never deletes a competitor substituted after identity verification.
+
+The deterministic adversarial tests passed 1/1 for a validated-directory swap before link and 1/1
+for quarantine replacement after identity verification. The aggregate publisher/no-replace/closed
+CLI filter passed 24/24, the accepted extractor/schema filter remained 15/15, and the exact policy
+suite remained 31/31. Both mandatory scanners, the launcher syntax check, all three schema JSON
+checks, and parent/submodule diff checks passed. Every authorised C# run had empty pre/post
+host-visible Mono/EmuHawk/BizHawk PID inventories. No emulator, capture, fixture, or Java work was
+started, so this correction still does not alter the terminal limitation or continuation gate.
