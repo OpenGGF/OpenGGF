@@ -7,7 +7,8 @@ import java.util.List;
  * Game-owned Sonic 2 sound mailbox, Z80 queue, and pre-dispatch request state.
  *
  * <p>This is deliberately a logical state machine. It accepts only engine-owned payloads and
- * never selects or instantiates a playback owner.</p>
+ * never selects or instantiates a playback owner. Sources: {@code s2.asm:1270-1332,1520-1549}
+ * and {@code s2.sounddriver.asm:1496-1600,2116-2178,2334-2347,2580-2655,3514-3535}.</p>
  */
 public final class Sonic2SoundRequestPipeline<P> {
     private static final int READY = 0x80;
@@ -40,7 +41,7 @@ public final class Sonic2SoundRequestPipeline<P> {
     private int spindashExtraFrequencyIndex;
     private boolean spindashActive;
 
-    /** Models {@code PlayMusic}: primary source slot, then overwrite-only fallback source slot. */
+    /** Models {@code PlayMusic}: primary then overwrite fallback ({@code s2.asm:1520-1528}). */
     public void submitMusic(int requestByte, P payload) {
         SlotState<P> request = request(requestByte, payload);
         if (music0.requestByte() == 0) {
@@ -50,12 +51,12 @@ public final class Sonic2SoundRequestPipeline<P> {
         }
     }
 
-    /** Models {@code PlaySound}'s overwrite-only {@code SFX0} write. */
+    /** Models {@code PlaySound}'s overwrite-only {@code SFX0} ({@code s2.asm:1535-1539}). */
     public void submitSound(int requestByte, P payload) {
         sfx0 = request(requestByte, payload);
     }
 
-    /** Models {@code PlaySound2}'s overwrite-only {@code SFX1} write. */
+    /** Models {@code PlaySound2}'s overwrite-only {@code SFX1} ({@code s2.asm:1546-1549}). */
     public void submitSound2(int requestByte, P payload) {
         sfx1 = request(requestByte, payload);
     }
@@ -72,7 +73,7 @@ public final class Sonic2SoundRequestPipeline<P> {
      *
      * <p>Shipped Sonic 2 builds with {@code fixBugs = 0}. The source's fourth SFX loop iteration
      * reads {@code Music1} and aliases the low byte of {@code VoiceTblPtr}; the fixed branch would
-     * stop at three slots. See {@code docs/s2disasm/s2.asm:sndDriverInput}.</p>
+     * stop at three slots. See {@code docs/s2disasm/s2.asm:1270-1332}.</p>
      */
     public BridgeResult<P> bridge() {
         MusicBridgeResult<P> music = bridgeMusic();
@@ -97,7 +98,10 @@ public final class Sonic2SoundRequestPipeline<P> {
         return new BridgeResult<>(music, transfers);
     }
 
-    /** Runs one {@code zCycleQueue} admission pass, without dispatching a sequencer. */
+    /**
+     * Runs one {@code zCycleQueue} admission pass without a sequencer; scan, clear, priority,
+     * equality and one-result return follow {@code s2.sounddriver.asm:1496-1550}.
+     */
     public CycleResult<P> cycleQueue() {
         if (queueToPlay.requestByte() != READY) {
             return new CycleResult<>(DecisionKind.BUSY, null, List.of());
@@ -145,6 +149,8 @@ public final class Sonic2SoundRequestPipeline<P> {
     /**
      * Releases {@code QueueToPlay} at the ROM dispatch boundary and reports only deterministic
      * request selection. Playback ownership remains {@link DispatchKind#NOT_YET_DISPATCHED}.
+     * Dispatch ranges and command/no-op gaps are {@code s2.sounddriver.asm:1555-1600}; ring,
+     * gloop and spindash transforms are {@code :2116-2178}.
      */
     public DispatchResult<P> dispatchQueuedRequest() {
         QueueToPlayState<P> queued = queueToPlay;
@@ -191,24 +197,24 @@ public final class Sonic2SoundRequestPipeline<P> {
                 queued.payload(), 0);
     }
 
-    /** Models the per-invocation decrement of {@code zSpindashPlayingCounter}. */
+    /** Models the invocation counter paired with {@code s2.sounddriver.asm:2159-2175}. */
     public void finishDriverInvocation() {
         if (spindashPlayingCounter != 0) {
             spindashPlayingCounter--;
         }
     }
 
-    /** Models the {@code F2} SFX-track stop clear of the global priority latch. */
+    /** Models an SFX-track stop priority clear ({@code s2.sounddriver.asm:3514-3535}). */
     public void onSfxTrackStopped() {
         sfxPriorityValue = 0;
     }
 
-    /** Models the {@code F8} stop-all-SFX clear of the global priority latch. */
+    /** Models the F8 stop-all-SFX clear ({@code s2.sounddriver.asm:2344-2347}). */
     public void onStopAllSfx() {
         sfxPriorityValue = 0;
     }
 
-    /** Models {@code zKillSFXPrio} during 1-up or fade-in SFX suppression. */
+    /** Models {@code zKillSFXPrio} ({@code s2.sounddriver.asm:2116-2120,2334-2337}). */
     public void onSfxSuppressedDuringOneUpOrFadeIn() {
         sfxPriorityValue = 0;
     }
@@ -224,7 +230,7 @@ public final class Sonic2SoundRequestPipeline<P> {
      * <p>Shipped {@code fixBugs = 0} fails to preserve {@code Queue2}; the fixed branch backs it
      * up and restores it. The clear of {@code zAbsVar} also drops {@code StopMusic} and the full
      * {@code VoiceTblPtr}; the ordinary music-load path preserves {@code SFXPriorityVal}. See
-     * {@code docs/s2disasm/s2.sounddriver.asm:zInitMusicPlayback}.</p>
+     * {@code docs/s2disasm/s2.sounddriver.asm:2580-2655}.</p>
      */
     public void onMusicPlaybackInitialized() {
         stopMusic = 0;

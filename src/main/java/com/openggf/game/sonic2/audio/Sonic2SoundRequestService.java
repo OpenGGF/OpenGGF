@@ -15,7 +15,9 @@ import java.util.function.Consumer;
  * <p>Requests enter as immutable engine commands. One forward transaction performs the exact
  * {@code sndDriverInput -> zCycleQueue -> zPlaySoundByIndex} ordering, but publishes neither its
  * presentation consequence nor its diagnostic events until the owning presentation transaction
- * commits.</p>
+ * commits. The order and boundaries are source-owned by {@code s2.asm:1270-1332} and
+ * {@code s2.sounddriver.asm:1496-1600}; SFX transforms follow {@code :2116-2178}, and music-load
+ * state clearing follows {@code :2580-2655}.</p>
  */
 public final class Sonic2SoundRequestService implements AudioRequestService {
     private final Sonic2SoundRequestPipeline<PendingRequest> pipeline =

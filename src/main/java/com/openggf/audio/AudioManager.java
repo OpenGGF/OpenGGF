@@ -38,6 +38,7 @@ import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioPresentationSessionCommandApplier;
+import com.openggf.audio.presentation.AudioRequestService;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.PresentationMode;
@@ -198,6 +199,7 @@ public class AudioManager implements MusicRestoreSink {
     private AudioVoiceRegistry shadowRegistry;
     private AudioPresentationProducer shadowProducer;
     private SmpsDriverSession shadowSmpsSession;
+    private AudioRequestService shadowRequestService;
     /**
      * Frame rate the live {@link #shadowProducer} was constructed with. The
      * producer owns the presentation clock, so this is the only rate at which
@@ -1729,6 +1731,14 @@ public class AudioManager implements MusicRestoreSink {
         BaseAudioSource source = baseAudioSource;
         GameAudioProfile profile = source.profile();
         if (profile != null) {
+            ensureShadowPresentation();
+            if (shadowRequestService != null) {
+                shadowRequestService.submitMusic(
+                        musicId, commandForNativeRequest(source, musicId));
+                return;
+            }
+        }
+        if (profile != null) {
             if (profile.handleSystemCommand(musicId, this)) {
                 return;
             }
@@ -1902,6 +1912,12 @@ public class AudioManager implements MusicRestoreSink {
                 : soundMap == null ? null : soundMap.get(sound);
         if (rawSoundId != null) {
             requestObserver.onRequested(sfxRequestClass(rawSoundId), rawSoundId);
+            ensureShadowPresentation();
+            if (shadowRequestService != null) {
+                shadowRequestService.submitSound(rawSoundId,
+                        commandForNativeRequest(baseAudioSource, rawSoundId));
+                return;
+            }
         }
         if (sound == GameSound.RING) {
             playGameSfxResolved(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
@@ -2007,7 +2023,17 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return false;
         }
-        GameAudioProfile profile = baseAudioSource.profile();
+        BaseAudioSource source = baseAudioSource;
+        GameAudioProfile profile = source.profile();
+        if (profile != null) {
+            ensureShadowPresentation();
+            if (shadowRequestService != null) {
+                requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
+                shadowRequestService.submitSound(
+                        sfxId, commandForNativeRequest(source, sfxId, pitch));
+                return true;
+            }
+        }
         if (profile != null && profile.handleSystemCommand(sfxId, this)) {
             requestObserver.onRequested(
                     AudioRequestObserver.RequestClass.COMMAND, sfxId);
@@ -2030,6 +2056,54 @@ public class AudioManager implements MusicRestoreSink {
         }
         requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
         return playBaseSfx(baseAudioSource, sfxId, pitch);
+    }
+
+    private AudioCommand commandForNativeRequest(
+            BaseAudioSource source, int nativeId) {
+        return commandForNativeRequest(source, nativeId, 1.0f);
+    }
+
+    /**
+     * Resolves only immutable production content/route identity; the game-owned request service
+     * still decides whether and when the request dispatches.
+     */
+    private AudioCommand commandForNativeRequest(
+            BaseAudioSource source, int nativeId, float pitch) {
+        GameAudioProfile profile = Objects.requireNonNull(source.profile(), "audio profile");
+        if (nativeId >= 0xA0 && nativeId <= 0xF7) {
+            return new AudioCommand.PlaySfx(nativeId, null,
+                    AudioCommand.SfxRoute.BASE_SMPS_ID, pitch, null);
+        }
+        return switch (nativeId) {
+            case 0xF8 -> new AudioCommand.StopAllSfx();
+            case 0xF9 -> new AudioCommand.FadeOutMusic(0x28, 3);
+            case 0xFA -> segaPcmCommand(source, nativeId);
+            case 0xFB -> new AudioCommand.SetSpeedShoes(true);
+            case 0xFC -> new AudioCommand.SetSpeedShoes(false);
+            case 0xFD -> new AudioCommand.RetainGlobalStop(nativeId);
+            case 0xFE, 0xFF -> new AudioCommand.StopMusic();
+            default -> new AudioCommand.PlayMusic(nativeId,
+                    source.loader() != null
+                            ? AudioCommand.MusicRoute.BASE_SMPS
+                            : AudioCommand.MusicRoute.FALLBACK_WAV,
+                    profile.isMusicOverride(nativeId), null);
+        };
+    }
+
+    private AudioCommand segaPcmCommand(BaseAudioSource source, int commandId) {
+        SegaPcmSpec spec = source.profile().getSegaPcmSpec();
+        Rom sourceRom = (Rom) source.rom();
+        if (spec == null || sourceRom == null) {
+            return new AudioCommand.ReferenceLimitation(
+                    commandId, "SEGA PCM source is unavailable");
+        }
+        try {
+            return new AudioCommand.PlaySegaPcm(commandId,
+                    sourceRom.readBytes(spec.address(), spec.length()), spec.sampleRate());
+        } catch (java.io.IOException unavailable) {
+            return new AudioCommand.ReferenceLimitation(
+                    commandId, "SEGA PCM source could not be read");
+        }
     }
 
     /**
@@ -2919,6 +2993,13 @@ public class AudioManager implements MusicRestoreSink {
         return null;
     }
 
+    /** Publishes one command selected by the optional game-owned request service. */
+    private void submitForwardRequestCommand(AudioCommand command) {
+        shadowResolver.submit(command);
+        commandTimeline.record(command);
+        shadowParity.commandSubmitted();
+    }
+
     private void mirrorShadowCommand(Runnable submission) {
         try {
             ensureShadowPresentation();
@@ -3029,6 +3110,8 @@ public class AudioManager implements MusicRestoreSink {
                 shadowFactory, new ShadowSources(maxFrames),
                 warning -> LOGGER.warning("Presentation shadow: " + warning),
                 () -> true, this::drainShadowCommandsAtOwnerBoundary);
+        shadowRequestService = base.profile() != null
+                ? base.profile().createAudioRequestService() : null;
         AudioPresentationMixer mixer = new AudioPresentationMixer(maxFrames);
         AudioPresentationSink sink = presentationSink != null
                 ? presentationSink : new NoDeviceAudioSink(sampleRate);
@@ -3041,7 +3124,8 @@ public class AudioManager implements MusicRestoreSink {
                 Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
                 Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
                 shadowRegistry, shadowCommands, mixer,
-                sink, smpsSession);
+                sink, smpsSession, shadowRequestService,
+                this::submitForwardRequestCommand);
         shadowSmpsSession = smpsSession;
         shadowFrameRate = frameRate;
         shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
@@ -3103,6 +3187,7 @@ public class AudioManager implements MusicRestoreSink {
         shadowResolver = null;
         shadowRegistry = null;
         shadowSmpsSession = null;
+        shadowRequestService = null;
         shadowCommands = null;
         shadowFactory = null;
         shadowParity = null;

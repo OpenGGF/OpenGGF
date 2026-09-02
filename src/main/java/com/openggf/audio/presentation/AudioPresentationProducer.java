@@ -88,7 +88,7 @@ public final class AudioPresentationProducer {
             AudioPresentationMixer mixer,
             AudioPresentationSink sink) {
         this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
-                commands, mixer, sink, null, null);
+                commands, mixer, sink, null, null, null, null);
     }
 
     public AudioPresentationProducer(
