@@ -567,6 +567,14 @@ of track type** + `cfStopTrack`. For a PSG SFX slot, `zFMSilenceChannel`'s key-o
 (`zKeyOnOff` with `c = VoiceControl` = `80h/A0h/C0h`, `D:2661-2662`) writes
 `28h = 80h/A0h/C0h` — channel code 0 with operator-mask bits set: a **spurious
 partial key-on of FM1**. This is shipped behaviour the engine must emit (GAP §1.3).
+`cfStopTrack` then enters `zGetSFXChannelPointers` while `ix` still names the
+stopped PSG SFX slot: `zSilencePSGChannel` writes `1Fh + VoiceControl`
+(`9Fh/BFh/DFh`) and, when that stopped slot's playback bit 0 is set, `FFh`;
+the surrounding FixBugs=0 path then writes an additional unconditional `FFh`
+(`D:4230-4248,2131-2136`). Only after that does the matching music PSG track
+optionally re-latch its signed retained raw noise operand. This E4 sequence is
+separate from the similarly-shaped stale-`ix`/`FFh` sequence during SFX
+*admission*.
 
 ### (b) State
 
@@ -577,9 +585,12 @@ SFX slots 1DF0-1F40, overridden music slots' bit 2, `zSFXVoiceTblPtr`,
 
 Admission (during the music phase): per track — [PSG only: stale-`ix` silence write +
 `FFh`] + key-off `28h = channel` (FM only) + SSG-EG `90h..9Ch+off = 0` (FM only) +
-possibly `27h = 0`. First note writes on the next frame's SFX pass (§1c). Release
-(during the SFX pass): key-off + [FM: `27h` if FM3, then `B4h`, `B0h`, 20 operator
-bytes, 4 TL bytes for the music voice] + [PSG noise re-latch if applicable].
+possibly `27h = 0`. First note writes on the next frame's SFX pass (§1c). Normal
+release (during the SFX pass): key-off + [FM: `27h` if FM3, then `B4h`, `B0h`, 20
+operator bytes, 4 TL bytes for the music voice] + [PSG noise re-latch if applicable].
+E4 uses the same stop machinery, but each active PSG SFX also emits its raw YM `28h`
+hazard, `1Fh + current SFX VoiceControl`, conditional `FFh` from that stopped SFX
+track, and the FixBugs=0 unconditional `FFh` before any matching music re-latch.
 
 ### (d) Test vectors
 
@@ -608,9 +619,11 @@ with bit-7 TL bytes getting `+Volume` masked to 7 bits (§8). No `A5h/A1h` frequ
 write until the music pass reaches FM5's update.
 
 **TV 6.4 — E4 PSG hazard.** With a PSG1 SFX active, issue `cmd_StopSFX` (`E4h`):
-expected writes include `28h = 80h` — the spurious FM1 partial key-on. An oracle
-asserting "no `28h` write may carry high nibble bits during E4" would be wrong; the
-correct assertion is that this write **is present**.
+expected writes start `28h = 80h`, `9Fh`, `FFh` (or `FFh,FFh` when the stopped
+SFX playback bit 0/noise state is set), then any eligible matching music-noise
+re-latch. `28h = 80h` is the spurious FM1 partial key-on. An oracle asserting
+"no `28h` write may carry high nibble bits during E4" would be wrong; the correct
+assertion is that this write **is present**.
 
 ### (e) Engine today
 
@@ -619,14 +632,15 @@ correct assertion is that this write **is present**.
 host-owned E4 policy captures a complete immutable seven-slot projection before
 the first write, rejects incomplete/ambiguous/raw-state-unavailable projections,
 and then emits the native active-slot walk: FM3..FM6, PSG1..PSG3;
-`zFMSilenceChannel` including the PSG-to-YM `28h` hazard; `cfStopTrack`; and the
-conditional FM voice/SSG-EG or PSG-noise restore. It clears the same SFX claims
-and music override bits only after the physical program commits, without
-rebuilding the driver or resending frequency. This closes the E4 product gap;
-the standalone E3 path and PSG-SFX *admission* stale-`ix`/unconditional-`FFh`
-behaviour remain separate gaps. No authenticated reference request exercises E4,
-so this source-backed closure does not itself move the service-128 producer-input
-limitation or assert a new comparator MATCH.
+`zFMSilenceChannel` including the PSG-to-YM `28h` hazard; the current-SFX PSG
+mute/conditional-`FFh`/unconditional-`FFh` walk in `zGetSFXChannelPointers`;
+`cfStopTrack`; and the conditional FM voice/SSG-EG or PSG-noise restore. It clears
+the same SFX claims and music override bits only after the physical program commits,
+without rebuilding the driver or resending frequency. This source-corrected E4
+candidate remains under review; the standalone E3 path and PSG-SFX *admission*
+stale-`ix`/`FFh` behaviour remain separate gaps. No authenticated reference request
+exercises E4, so it does not itself move the service-128 producer-input limitation
+or assert a new comparator MATCH.
 
 ---
 

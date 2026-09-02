@@ -1200,10 +1200,14 @@ public final class SmpsDriverSession implements AutoCloseable {
                 applyProgram(port, operation.writes());
                 return null;
             });
-            statefulLogicalMutationInterceptorForTesting.run();
             // zStopSFX clears only SFX slot state. Preserve continuous SFX,
             // raw PCM, pending service and all host session controls.
             driver.stopAllSfxWithoutRestoreWrites();
+            // This seam intentionally follows the logical mutation. It proves
+            // the enclosing live-mutation rollback restores both the exact
+            // physical program and the driver/session state before lifecycle
+            // publication commits.
+            statefulLogicalMutationInterceptorForTesting.run();
             if (localTransaction) {
                 prepareLiveMutationCommit(mutation);
                 commitLiveMutation(mutation);

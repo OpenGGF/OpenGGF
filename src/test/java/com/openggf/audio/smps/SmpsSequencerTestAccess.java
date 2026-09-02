@@ -19,4 +19,13 @@ public final class SmpsSequencerTestAccess {
         sequencer.addTrack(fm);
         return fm;
     }
+
+    public static SmpsSequencer.Track addActivePsgTrack(
+            SmpsSequencer sequencer, int channel) {
+        SmpsSequencer.Track psg = new SmpsSequencer.Track(
+                0, SmpsSequencer.TrackType.PSG, channel);
+        psg.active = true;
+        sequencer.addTrack(psg);
+        return psg;
+    }
 }

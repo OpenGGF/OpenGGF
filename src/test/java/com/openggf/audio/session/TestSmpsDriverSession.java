@@ -683,8 +683,38 @@ class TestSmpsDriverSession {
         session.queueActivation(e4MusicFm3(70));
         session.serviceForward();
         session.applyCommand(new SmpsSessionCommand.AdmitSfx(e4SfxFm3(0xBC)));
+        SmpsDriverSessionSnapshot beforeSession = session.captureSnapshot();
         SmpsDriverSnapshot before = session.captureLogicalSnapshot();
+        AtomicBoolean observedCompletedLogicalMutation = new AtomicBoolean();
+        AtomicInteger lifecycle = new AtomicInteger();
+        session.setDriverServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+            }
+
+            @Override
+            public void onServiceEnd(ServiceEvent event,
+                    SmpsDriverSnapshot snapshot) {
+            }
+
+            @Override
+            public void onLifecycle(LifecycleEvent event) {
+                lifecycle.incrementAndGet();
+            }
+        });
         session.setStatefulLogicalMutationInterceptorForTesting(() -> {
+            SmpsDriverSnapshot afterLogicalMutation =
+                    session.captureLogicalSnapshot();
+            boolean sfxReleased = afterLogicalMutation.sequencers().stream()
+                    .noneMatch(SmpsDriverSnapshot.SequencerEntry::sfx);
+            boolean musicReleased = !afterLogicalMutation.sequencers().stream()
+                    .filter(entry -> !entry.sfx()).findFirst().orElseThrow()
+                    .snapshot().tracks().getFirst().overridden();
+            if (!sfxReleased || !musicReleased) {
+                throw new IllegalStateException(
+                        "E4 failure seam ran before logical mutation");
+            }
+            observedCompletedLogicalMutation.set(true);
             throw new IllegalStateException("injected E4 logical failure");
         });
         observer.clear();
@@ -693,7 +723,13 @@ class TestSmpsDriverSession {
                 () -> session.applyCommand(new SmpsSessionCommand.StopSmpsSfx()));
 
         SmpsDriverSnapshot after = session.captureLogicalSnapshot();
+        assertTrue(observedCompletedLogicalMutation.get(),
+                "the injected boundary must follow E4's logical mutation");
+        assertEquals(SmpsSessionTestFixtures.json(beforeSession),
+                SmpsSessionTestFixtures.json(session.captureSnapshot()));
         assertTrue(observer.events().isEmpty());
+        assertEquals(0, lifecycle.get(),
+                "lifecycle publication belongs after the transaction commit");
         assertEquals(before.sequencers().stream()
                         .map(SmpsDriverSnapshot.SequencerEntry::source).toList(),
                 after.sequencers().stream()
@@ -702,6 +738,44 @@ class TestSmpsDriverSession {
                 after.fmLockSequencerIds());
         assertTrue(after.sequencers().stream().anyMatch(
                 SmpsDriverSnapshot.SequencerEntry::sfx));
+        session.close();
+    }
+
+    @Test
+    void s3kE4PsgNoiseWriteFailureUsesThePhysicalPsgCapabilityAndRollsBack() {
+        SmpsSessionTestFixtures.RecordingObserver observer =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsPhysicalPolicy policy = Sonic3kSmpsPhysicalPolicy.INSTANCE;
+        SmpsPhysicalDevice.Settings settings = SmpsSessionTestFixtures.settings();
+        SmpsDriverSession session = new SmpsDriverSession(settings, policy,
+                observer, new SmpsSessionProfileFingerprint("s3k", 7,
+                        policy.identity(), settings,
+                        Sonic3kStatefulCommandPolicy.INSTANCE.identity()),
+                new SmpsDriverSessionConfiguration(
+                        Sonic3kStatefulCommandPolicy.INSTANCE));
+        session.install();
+        session.applyCommand(new SmpsSessionCommand.AdmitSfx(
+                e4SfxPsg3Noise(0xBC)));
+        SmpsDriverSessionSnapshot beforeSession = session.captureSnapshot();
+        AtomicInteger psgWrites = new AtomicInteger();
+        session.setPhysicalWriteInterceptorForTesting(write -> {
+            if (write instanceof SmpsChipWrite.Psg) {
+                psgWrites.incrementAndGet();
+                throw new IllegalStateException("injected E4 PSG failure");
+            }
+        });
+        observer.clear();
+
+        assertThrows(IllegalStateException.class,
+                () -> session.applyCommand(new SmpsSessionCommand.StopSmpsSfx()));
+
+        assertEquals(1, psgWrites.get(),
+                "the failure must be raised by the first physical PSG write");
+        assertEquals(SmpsSessionTestFixtures.json(beforeSession),
+                SmpsSessionTestFixtures.json(session.captureSnapshot()));
+        assertTrue(session.captureLogicalSnapshot().sequencers().stream()
+                .anyMatch(SmpsDriverSnapshot.SequencerEntry::sfx));
+        assertTrue(observer.events().isEmpty());
         session.close();
     }
 
@@ -1209,6 +1283,60 @@ class TestSmpsDriverSession {
     }
 
     @Test
+    void compositeRegistryPreparationFailureRollsBackS3kE4WithoutNestedSessionMutation() {
+        AtomicBoolean failPreparation = new AtomicBoolean(true);
+        SmpsSessionTestFixtures.RecordingObserver observer =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsPhysicalPolicy policy = Sonic3kSmpsPhysicalPolicy.INSTANCE;
+        SmpsPhysicalDevice.Settings settings = SmpsSessionTestFixtures.settings();
+        SmpsDriverSession session = new SmpsDriverSession(settings, policy,
+                observer, new SmpsSessionProfileFingerprint("s3k", 7,
+                        policy.identity(), settings,
+                        Sonic3kStatefulCommandPolicy.INSTANCE.identity()),
+                new SmpsDriverSessionConfiguration(
+                        Sonic3kStatefulCommandPolicy.INSTANCE));
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(factory,
+                resolverWithDiagnostics(factory, () -> {
+                    if (failPreparation.getAndSet(false)) {
+                        throw new IllegalStateException(
+                                "injected registry preparation failure");
+                    }
+                }, () -> { }), handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        AudioPresentationProducer producer = sessionProducer(
+                session, registry, commands);
+        session.applyCommand(new SmpsSessionCommand.AdmitSfx(
+                e4SfxPsg3Noise(0xBC)));
+        SmpsDriverSessionSnapshot before = session.captureSnapshot();
+        observer.clear();
+        commands.submit(new AudioPresentationCommand.StopSmpsSfx(0xE4),
+                () -> true, producer::applyPendingCommandsAtOwnerBoundary);
+
+        assertThrows(IllegalStateException.class,
+                () -> producer.present(0, PresentationMode.SILENT));
+
+        assertEquals(1, commands.size(),
+                "the failed composite must retain its E4 command for retry");
+        assertEquals(SmpsSessionTestFixtures.json(before),
+                SmpsSessionTestFixtures.json(session.captureSnapshot()));
+        assertTrue(session.captureLogicalSnapshot().sequencers().stream()
+                .anyMatch(SmpsDriverSnapshot.SequencerEntry::sfx));
+        assertTrue(observer.events().isEmpty());
+
+        producer.present(1, PresentationMode.SILENT);
+
+        assertEquals(0, commands.size());
+        assertTrue(session.captureLogicalSnapshot().sequencers().stream()
+                .noneMatch(SmpsDriverSnapshot.SequencerEntry::sfx));
+        session.close();
+    }
+
+    @Test
     void diagnosticPublicationFailureCannotRetainOrReplayCommittedBatch() {
         AtomicInteger diagnosticCommits = new AtomicInteger();
         SmpsDriverSession session = SmpsSessionTestFixtures.session(
@@ -1323,6 +1451,41 @@ class TestSmpsDriverSession {
 
     private static PreparedSmpsSfxProgram e4SfxFm3(int id) {
         return continuousSfx(id, 2);
+    }
+
+    private static PreparedSmpsSfxProgram e4SfxPsg3Noise(int id) {
+        AudioTestFixtures.StubSmpsData data =
+                new AudioTestFixtures.StubSmpsData("psg-sfx-" + id);
+        data.setId(id);
+        SmpsSourceDescriptor source = new SmpsSourceDescriptor(
+                SmpsSourceDescriptor.Kind.BASE_SFX_ID, id, null, null,
+                data.getZ80StartAddress(), data.getData().length,
+                Arrays.hashCode(data.getData()), false, 7);
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .sfxChannelOwnershipMode(
+                        SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
+                .build();
+        SmpsDriver detached = new SmpsDriver();
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, SmpsSessionTestFixtures.dac(), detached, detached,
+                AudioManager.getInstance(), config, source,
+                SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE);
+        SmpsSequencer.Track psg = SmpsSequencerTestAccess.addActivePsgTrack(
+                sequencer, 2);
+        psg.noiseMode = true;
+        psg.psgNoiseParam = 7;
+        psg.rawPsgNoise = 0xE7;
+        psg.rawPsgNoiseKnown = true;
+        sequencer.setIsSfx(true);
+        return new PreparedSmpsSfxProgram(
+                new SmpsDriverSnapshot.SequencerEntry(
+                        true, source,
+                        SmpsSequencer.SourceDescriptorTrust
+                                .PRECOMPUTED_IMMUTABLE,
+                        null, data, SmpsSessionTestFixtures.dac(),
+                        AudioManager.getInstance(), config,
+                        sequencer.captureSnapshot()),
+                id, 1);
     }
 
     private static PreparedSmpsSfxProgram continuousSfx(int id, int channel) {

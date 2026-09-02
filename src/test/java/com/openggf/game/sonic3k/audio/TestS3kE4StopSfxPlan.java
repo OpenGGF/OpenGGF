@@ -93,6 +93,23 @@ class TestS3kE4StopSfxPlan {
     }
 
     @Test
+    void fmRestoreCombinesPanAmsAndFmsInItsNativeB4Write() {
+        S3kE4Projection.S3kE4Track sfx = track(
+                S3kE4Projection.S3kE4Slot.FM3, true, false, false,
+                false, 0, null, 0, 0xC0, false, null);
+        S3kE4Projection.S3kE4Track music = trackWithAmsFms(
+                S3kE4Projection.S3kE4Slot.FM3, true, true,
+                new byte[25], 0x80, 2, 5);
+
+        S3kE4StopSfxPlan plan = S3kE4StopSfxPlan.prepare(
+                projection(true, sfx, music));
+
+        assertTrue(plan.accepted());
+        assertEquals(new SmpsChipWrite.Ym2612(0, 0xB6, 0xA5),
+                plan.writes().get(11));
+    }
+
+    @Test
     void psgNoiseRelatchesOnlyTheSignedRawMusicOperandAfterTheYmHazard() {
         S3kE4Projection.S3kE4Track sfx = track(
                 S3kE4Projection.S3kE4Slot.PSG3, true, false, false,
@@ -101,9 +118,60 @@ class TestS3kE4StopSfxPlan {
                 S3kE4Projection.S3kE4Slot.PSG3, true, true, 0xE7);
 
         assertEquals(List.of(new SmpsChipWrite.Ym2612(0, 0x28, 0xC0),
+                        new SmpsChipWrite.Psg(0xDF),
+                        new SmpsChipWrite.Psg(0xFF),
+                        new SmpsChipWrite.Psg(0xFF),
                         new SmpsChipWrite.Psg(0xE7)),
                 S3kE4StopSfxPlan.prepare(projection(true,
                         S3kE4Projection.S3kE4Slot.PSG3, sfx, music)).writes());
+    }
+
+    @ParameterizedTest
+    @MethodSource("psgSlots")
+    void psgStopAlwaysMutesItsOwnSlotAndNoiseAddsOneExtraMute(
+            S3kE4Projection.S3kE4Slot slot) {
+        S3kE4Projection.S3kE4Track normal = track(slot, true, false, false,
+                false, 0, null, 0, 0xC0, false, null);
+        S3kE4Projection.S3kE4Track noise = track(slot, true, false, false,
+                true, 7, null, 0, 0xC0, false, null);
+        int mute = 0x1F + slot.rawVoiceControl();
+
+        assertEquals(List.of(new SmpsChipWrite.Ym2612(0, 0x28,
+                        slot.rawVoiceControl()),
+                        new SmpsChipWrite.Psg(mute),
+                        new SmpsChipWrite.Psg(0xFF)),
+                S3kE4StopSfxPlan.prepare(projection(true, slot, normal, null))
+                        .writes());
+        assertEquals(List.of(new SmpsChipWrite.Ym2612(0, 0x28,
+                        slot.rawVoiceControl()),
+                        new SmpsChipWrite.Psg(mute),
+                        new SmpsChipWrite.Psg(0xFF),
+                        new SmpsChipWrite.Psg(0xFF)),
+                S3kE4StopSfxPlan.prepare(projection(true, slot, noise, null))
+                        .writes());
+    }
+
+    @Test
+    void activePsgSlotsRetainTheirNativeFm3ToPsg3TraversalOrder() {
+        S3kE4Projection.S3kE4Track psg1 = track(
+                S3kE4Projection.S3kE4Slot.PSG1, true, false, false,
+                false, 0, null, 0, 0xC0, false, null);
+        S3kE4Projection.S3kE4Track psg3Noise = track(
+                S3kE4Projection.S3kE4Slot.PSG3, true, false, false,
+                true, 7, null, 0, 0xC0, false, null);
+
+        S3kE4StopSfxPlan plan = S3kE4StopSfxPlan.prepare(
+                psgSlotsProjection(true, psg1, psg3Noise));
+
+        assertTrue(plan.accepted());
+        assertEquals(List.of(new SmpsChipWrite.Ym2612(0, 0x28, 0x80),
+                        new SmpsChipWrite.Psg(0x9F),
+                        new SmpsChipWrite.Psg(0xFF),
+                        new SmpsChipWrite.Ym2612(0, 0x28, 0xC0),
+                        new SmpsChipWrite.Psg(0xDF),
+                        new SmpsChipWrite.Psg(0xFF),
+                        new SmpsChipWrite.Psg(0xFF)),
+                plan.writes());
     }
 
     private static Stream<Arguments> nativeSlotSilencePrograms() {
@@ -131,8 +199,18 @@ class TestS3kE4StopSfxPlan {
         if (slot.trackType() == com.openggf.audio.smps.SmpsSequencer.TrackType.FM) {
             writes.add(new SmpsChipWrite.Ym2612(0, 0x28,
                     slot.rawVoiceControl()));
+        } else {
+            writes.add(new SmpsChipWrite.Psg(0x1F
+                    + slot.rawVoiceControl()));
+            writes.add(new SmpsChipWrite.Psg(0xFF));
         }
         return List.copyOf(writes);
+    }
+
+    private static Stream<S3kE4Projection.S3kE4Slot> psgSlots() {
+        return Stream.of(S3kE4Projection.S3kE4Slot.PSG1,
+                S3kE4Projection.S3kE4Slot.PSG2,
+                S3kE4Projection.S3kE4Slot.PSG3);
     }
 
     private static List<SmpsChipWrite> expectedFm3Writes() {
@@ -190,6 +268,22 @@ class TestS3kE4StopSfxPlan {
         return new S3kE4Projection(complete, slots);
     }
 
+    private static S3kE4Projection psgSlotsProjection(boolean complete,
+            S3kE4Projection.S3kE4Track psg1,
+            S3kE4Projection.S3kE4Track psg3) {
+        List<S3kE4Projection.SlotProjection> slots = new ArrayList<>();
+        for (S3kE4Projection.S3kE4Slot slot
+                : S3kE4Projection.S3kE4Slot.values()) {
+            slots.add(new S3kE4Projection.SlotProjection(slot,
+                    S3kE4Projection.Availability.AVAILABLE,
+                    slot == S3kE4Projection.S3kE4Slot.PSG1 ? psg1
+                            : slot == S3kE4Projection.S3kE4Slot.PSG3
+                                    ? psg3 : null,
+                    null));
+        }
+        return new S3kE4Projection(complete, slots);
+    }
+
     private static S3kE4Projection.S3kE4Track track(
             S3kE4Projection.S3kE4Slot slot, boolean playing,
             boolean noAttack, boolean overriding, boolean special,
@@ -200,8 +294,19 @@ class TestS3kE4StopSfxPlan {
                         slot.ordinal(), false, source()),
                 slot.rawVoiceControl(), playing, noAttack, overriding,
                 special, 0, OptionalInt.empty(), 0, source(), voice,
-                volume, pan, psgNoise, OptionalInt.empty(),
+                volume, pan, 0, 0, psgNoise, OptionalInt.empty(),
                 customSsgEgPayload, customSsgEgPresent);
+    }
+
+    private static S3kE4Projection.S3kE4Track trackWithAmsFms(
+            S3kE4Projection.S3kE4Slot slot, boolean playing,
+            boolean overriding, byte[] voice, int pan, int ams, int fms) {
+        return new S3kE4Projection.S3kE4Track(
+                new SmpsChannelOwnershipProjection.TrackCoordinate(0,
+                        slot.ordinal(), false, source()),
+                slot.rawVoiceControl(), playing, false, overriding,
+                false, 0, OptionalInt.empty(), 0, source(), voice,
+                0, pan, ams, fms, 0, OptionalInt.empty(), null, false);
     }
 
     private static S3kE4Projection.S3kE4Track trackWithRawPsgNoise(
@@ -212,7 +317,7 @@ class TestS3kE4StopSfxPlan {
                         slot.ordinal(), false, source()),
                 slot.rawVoiceControl(), playing, false, overriding,
                 true, 1, OptionalInt.empty(), 0, source(), null,
-                0, 0xC0, rawPsgNoise & 0x0F,
+                0, 0xC0, 0, 0, rawPsgNoise & 0x0F,
                 OptionalInt.of(rawPsgNoise), null, false);
     }
 

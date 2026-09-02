@@ -193,6 +193,8 @@ public record S3kE4Projection(
             byte[] materializedVoice,
             int volume,
             int pan,
+            int ams,
+            int fms,
             int psgNoise,
             OptionalInt rawPsgNoise,
             int[] customSsgEgPayload,
@@ -225,7 +227,8 @@ public record S3kE4Projection(
                     slot.rawVoiceControl(), playing, noAttack, overriding,
                     special, flags, OptionalInt.empty(), track.voiceId(),
                     projection.coordinate().source(), track.voiceData(),
-                    track.volumeOffset(), track.pan(), track.psgNoiseParam(),
+                    track.volumeOffset(), track.pan(), track.ams(), track.fms(),
+                    track.psgNoiseParam(),
                     track.rawPsgNoiseKnown()
                             ? OptionalInt.of(track.rawPsgNoise()) : OptionalInt.empty(),
                     track.customSsgEgPayload(), track.customSsgEgPresent());

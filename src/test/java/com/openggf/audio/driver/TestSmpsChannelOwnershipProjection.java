@@ -56,13 +56,20 @@ class TestSmpsChannelOwnershipProjection {
         declared.voiceId = 7;
         declared.volumeOffset = 9;
         declared.pan = 0x80;
+        declared.ams = 2;
+        declared.fms = 5;
         declared.ssgEg[1] = 0x0E;
         declared.customSsgEgPresent = true;
         declared.customSsgEgPayload[1] = 0x0E;
         declared.customSsgEgPayloadKnown = true;
         driver.addSequencer(music, false);
         driver.addSequencer(sfx, true);
-        driver.restoreSnapshot(driver.captureSnapshot());
+        var snapshot = driver.captureSnapshot();
+        assertEquals(2, snapshot.sequencers().get(1).snapshot().tracks()
+                .getFirst().ams());
+        assertEquals(5, snapshot.sequencers().get(1).snapshot().tracks()
+                .getFirst().fms());
+        driver.restoreSnapshot(snapshot);
 
         SmpsChannelOwnershipProjection projection =
                 driver.captureOwnershipProjection();
@@ -90,6 +97,8 @@ class TestSmpsChannelOwnershipProjection {
         assertEquals(7, view.voiceId());
         assertEquals(9, view.volume());
         assertEquals(0x80, view.pan());
+        assertEquals(2, view.ams());
+        assertEquals(5, view.fms());
         assertArrayEquals(new int[] {0, 0x0E, 0, 0}, view.customSsgEgPayload());
         assertTrue(view.customSsgEgPresent());
         int[] copiedSsgEgPayload = view.customSsgEgPayload();

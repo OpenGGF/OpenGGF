@@ -127,9 +127,20 @@ public record S3kE4StopSfxPlan(boolean accepted,
         // The unchecked zKeyOnOff call is native even for PSG tracks.
         writes.add(new SmpsChipWrite.Ym2612(0, 0x28,
                 slot.rawVoiceControl()));
+        if (slot.trackType() == com.openggf.audio.smps.SmpsSequencer.TrackType.PSG) {
+            // cfStopTrack reaches zGetSFXChannelPointers while ix still names
+            // the stopped SFX track. FixBugs=0 runs zSilencePSGChannel, then
+            // compensates for its broken noise test with an unconditional FF.
+            writes.add(new SmpsChipWrite.Psg(0x1F
+                    + slot.rawVoiceControl()));
+            if (sfx.noiseOrFm3Special()) {
+                writes.add(new SmpsChipWrite.Psg(0xFF));
+            }
+            writes.add(new SmpsChipWrite.Psg(0xFF));
+            return;
+        }
         // cfStopTrack reaches zKeyOffIfActive after the unconditional silence.
-        if (slot.trackType() == com.openggf.audio.smps.SmpsSequencer.TrackType.FM
-                && !sfx.noAttack() && !sfx.overriding()) {
+        if (!sfx.noAttack() && !sfx.overriding()) {
             writes.add(new SmpsChipWrite.Ym2612(0, 0x28,
                     slot.rawVoiceControl()));
         }
@@ -159,7 +170,9 @@ public record S3kE4StopSfxPlan(boolean accepted,
         }
         byte[] voice = music.materializedVoice();
         writes.add(new SmpsChipWrite.Ym2612(port, 0xB4 + channel,
-                music.pan()));
+                (music.pan() & 0xC0)
+                        | ((music.ams() & 0x3) << 4)
+                        | (music.fms() & 0x7)));
         writes.add(new SmpsChipWrite.Ym2612(port, 0xB0 + channel,
                 voice[0] & 0xFF));
         for (int groupIndex = 0;
