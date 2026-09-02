@@ -2,6 +2,7 @@ package com.openggf.audio;
 
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -58,5 +59,31 @@ class TestSonic2RequestProductionWiring {
         audio.playMusic(0x82);
 
         assertEquals(1, audio.commandTimeline().entryCount());
+    }
+
+    @Test
+    void logicalSnapshotRestoresPendingMailboxWork() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new NullAudioBackend());
+        audio.setAudioProfile(new Sonic2AudioProfile());
+        audio.setSoundMap(new Sonic2AudioProfile().getSoundMap());
+
+        assertTrue(audio.playSfx(0xB5));
+        AudioLogicalSnapshot pending = audio.captureLogicalSnapshot();
+
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(1, audio.commandTimeline().entryCount());
+
+        audio.restoreLogicalSnapshot(pending);
+        audio.presentFrame(PresentationMode.FORWARD);
+
+        assertEquals(2, audio.commandTimeline().entryCount(),
+                "restored request work must replay once after the historical command");
+        assertEquals(0xCE, ((AudioCommand.PlaySfx) audio.commandTimeline()
+                .entries().getLast().command()).sfxId());
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(2, audio.commandTimeline().entryCount(),
+                "restored request work must not replay twice");
     }
 }

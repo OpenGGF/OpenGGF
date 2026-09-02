@@ -32,6 +32,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationDependencyResolver;
 import com.openggf.audio.presentation.AudioPresentationCommandQueue;
 import com.openggf.audio.presentation.AudioPresentationCommandResolver;
+import com.openggf.audio.presentation.AudioPresentationForwardService;
 import com.openggf.audio.presentation.AudioPresentationMixer;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
@@ -776,7 +777,9 @@ public class AudioManager implements MusicRestoreSink {
                 commandTimeline.entryCount(),
                 shadowProducer.snapshot(),
                 donorGameIds,
-                donorBindings);
+                donorBindings,
+                shadowRequestService == null
+                        ? null : shadowRequestService.snapshot());
     }
 
     public void restoreLogicalSnapshot(AudioLogicalSnapshot snapshot) {
@@ -795,14 +798,25 @@ public class AudioManager implements MusicRestoreSink {
             AudioLogicalSnapshot snapshot, boolean preservePresentation) {
         AudioPresentationSnapshot previousPresentation =
                 shadowProducer.snapshot();
+        AudioPresentationForwardService.Snapshot previousForwardService =
+                shadowRequestService == null
+                        ? null : shadowRequestService.snapshot();
         boolean previousRingLeft = ringLeft;
         long previousTimelineFrame = commandTimeline.currentFrame();
         int previousTimelineOrder = commandTimeline.nextOrder();
         Map<GameSound, DonorSfxBinding> previousBindings =
                 new EnumMap<>(donorSoundBindings);
         try {
+            if ((shadowRequestService == null)
+                    != (snapshot.forwardServiceSnapshot() == null)) {
+                throw new IllegalArgumentException(
+                        "audio snapshot forward-service ownership differs from the live profile");
+            }
             shadowProducer.restore(snapshot.presentation(), shadowFactory,
                     preservePresentation);
+            if (shadowRequestService != null) {
+                shadowRequestService.restore(snapshot.forwardServiceSnapshot());
+            }
             ringLeft = snapshot.ringLeft();
             commandTimeline.restoreCursor(snapshot.commandTimelineFrame(),
                     snapshot.commandTimelineNextOrder());
@@ -824,6 +838,9 @@ public class AudioManager implements MusicRestoreSink {
             try {
                 shadowProducer.restore(previousPresentation, shadowFactory,
                         preservePresentation);
+                if (shadowRequestService != null) {
+                    shadowRequestService.restore(previousForwardService);
+                }
             } catch (RuntimeException rollbackFailure) {
                 failure.addSuppressed(rollbackFailure);
             }
@@ -1155,7 +1172,8 @@ public class AudioManager implements MusicRestoreSink {
                     selected.commandEntryCount(),
                     staged,
                     selected.donorGameIds(),
-                    selected.donorBindings());
+                    selected.donorBindings(),
+                    selected.forwardServiceSnapshot());
         } catch (RuntimeException failure) {
             primaryFailure = failure;
             throw failure;
@@ -1224,7 +1242,8 @@ public class AudioManager implements MusicRestoreSink {
                 selected.commandEntryCount(),
                 selected.presentation(),
                 selected.donorGameIds(),
-                selected.donorBindings());
+                selected.donorBindings(),
+                selected.forwardServiceSnapshot());
     }
 
     private void replayMusic(AudioCommand.PlayMusic command) {
