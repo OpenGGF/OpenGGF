@@ -2,6 +2,7 @@ package com.openggf.audio.session;
 
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.session.SmpsChipWrite;
 
 import java.lang.reflect.Field;
 
@@ -33,5 +34,11 @@ public final class SmpsSessionTestSupport {
         } catch (ReflectiveOperationException failure) {
             throw new AssertionError(failure);
         }
+    }
+
+    public static void setPhysicalWriteInterceptor(
+            SmpsDriverSession session,
+            java.util.function.Consumer<SmpsChipWrite> interceptor) {
+        session.setPhysicalWriteInterceptorForTesting(interceptor);
     }
 }

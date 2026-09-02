@@ -7,9 +7,43 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic2SoundRequestService {
+
+    @Test
+    void sealedReceiptPublishesItsDiagnosticsAtMostOnce() {
+        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
+        List<Sonic2SoundRequestService.Event> observed = new ArrayList<>();
+        service.addObserver(observed::add);
+        service.submitSound(0xF1, sfx(0xF1));
+
+        var boundary = service.beginForwardBoundary();
+        boundary.service(command -> {
+            throw new AssertionError("F1-F7 cannot produce playback");
+        });
+        boundary.prepareCommit();
+        var receipt = boundary.commit();
+        boundary.publishDiagnostics(receipt);
+        int firstPublication = observed.size();
+        boundary.publishDiagnostics(receipt);
+
+        assertTrue(firstPublication > 0);
+        assertEquals(firstPublication, observed.size());
+    }
+
+    @Test
+    void preparedBoundaryCannotBePreparedTwice() {
+        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
+        service.submitSound(0xF1, sfx(0xF1));
+        var boundary = service.beginForwardBoundary();
+        boundary.service(ignored -> { });
+        boundary.prepareCommit();
+
+        assertThrows(IllegalStateException.class, boundary::prepareCommit);
+        boundary.rollback();
+    }
 
     @Test
     void servicesOneRomOrderedBoundaryAndPublishesNothingBeforeSeal() {

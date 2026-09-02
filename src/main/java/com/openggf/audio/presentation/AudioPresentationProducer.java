@@ -221,6 +221,7 @@ public final class AudioPresentationProducer {
             Objects.requireNonNull(forwardService, "forwardService");
             Objects.requireNonNull(forwardTimeline, "forwardTimeline");
             Objects.requireNonNull(forwardParity, "forwardParity");
+            forwardResolver.bindForwardExecutor(this);
         }
         if (smpsSession != null && !smpsSession.installed()) {
             smpsSession.install();
@@ -868,18 +869,22 @@ public final class AudioPresentationProducer {
         try {
             if (forwardService != null) {
                 forwardBoundary = forwardService.beginForwardBoundary();
+                AudioPresentationForwardService.ForwardBoundary activeBoundary =
+                        forwardBoundary;
                 if (forwardResolver == null) {
-                    forwardBoundary.service(forwardCommandSink);
+                    activeBoundary.service(forwardCommandSink);
                 } else {
                     AudioPresentationCommandResolver.ResolutionBatch[] holder =
                             new AudioPresentationCommandResolver.ResolutionBatch[1];
-                    forwardBoundary.service(command -> {
+                    activeBoundary.service(command -> {
                         if (holder[0] != null) {
                             throw new IllegalStateException(
                                     "one request boundary produced multiple consequences");
                         }
                         holder[0] = forwardResolver.beginResolutionBatch();
                         holder[0].resolve(command);
+                        activeBoundary.reserveOutcome(
+                                holder[0].reservation());
                     });
                     requestBatch = holder[0];
                 }
@@ -889,8 +894,7 @@ public final class AudioPresentationProducer {
             commands.applyPendingBatch(commandBatch,
                     this::applyResolvedSessionCommand);
             if (requestBatch != null) {
-                requestOutcome = requestBatch.apply(
-                        this::applyResolvedForwardCommand);
+                requestOutcome = requestBatch.apply();
                 forwardBoundary.applyOutcome(requestOutcome);
             }
             registry.beginRendering();
@@ -929,6 +933,9 @@ public final class AudioPresentationProducer {
             if (forwardBoundary != null) {
                 requestReceipt = forwardBoundary.commit();
                 forwardCommitted = true;
+            }
+            if (requestBatch != null) {
+                requestBatch.publishDiagnostics(requestReceipt);
             }
             publishSessionDiagnosticsQuarantined(registryMutation);
             if (requestReceipt != null) {
@@ -975,15 +982,9 @@ public final class AudioPresentationProducer {
         }
     }
 
-    private void applyResolvedForwardCommand(
+    void applyResolvedForwardCommand(
             AudioCommand request,
             AudioPresentationCommand resolved) {
-        if (request instanceof AudioCommand.PlayMusic) {
-            // Sonic 2's shipped FixDriverBugs=0 zPlayMusic stops SFX before
-            // the driver-region save/load path (s2.sounddriver.asm:1667-1724).
-            applyResolvedSessionCommand(
-                    new AudioPresentationCommand.StopAllSfx());
-        }
         applyResolvedSessionCommand(resolved);
     }
 

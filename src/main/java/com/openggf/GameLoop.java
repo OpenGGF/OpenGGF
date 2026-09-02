@@ -1554,6 +1554,9 @@ public class GameLoop {
             // belongs to the first frame past the results screen's last
             // sampled row, never to that row itself.
             if (resultsExitPreLevelFadeFramesRemaining < 0) {
+                // Level begins before its counted fade: Sonic 2's loc_3EC4
+                // PlaySound(F9) precedes ClearPLC/Pal_FadeToBlack.
+                levelManager.beginLevelEntry();
                 resultsExitPreLevelFadeFramesRemaining = GameServices.module()
                         .getLevelInitProfile().preLevelFadeOutFrames();
             }

@@ -2,6 +2,7 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.presentation.AudioPresentationCommand.AddSmpsSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.MusicVoiceEntry;
 import com.openggf.audio.presentation.AudioPresentationCommand.PushMusicOverride;
@@ -11,6 +12,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.StartSampleSfx;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.CoordFlagContext;
 import com.openggf.audio.smps.CoordFlagHandler;
@@ -44,6 +46,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -226,12 +229,10 @@ class TestAudioPresentationCommandResolver {
         failed.resolve(request);
         assertEquals(0, fixture.queue.size(),
                 "a request batch must not enter the durable command queue");
-        List<AudioPresentationCommand> firstApplied = new ArrayList<>();
-        var firstOutcome = failed.apply((ignored, command) ->
-                firstApplied.add(command));
+        var firstOutcome = failed.apply();
         AddSmpsSfx first = assertInstanceOf(AddSmpsSfx.class,
                 firstOutcome.commands().getFirst());
-        assertEquals(firstApplied, firstOutcome.commands());
+        assertFalse(firstOutcome.commands().isEmpty());
         failed.rollback();
 
         assertEquals(null, fixture.factory.findRegisteredSmpsSfxAsset(
@@ -240,7 +241,7 @@ class TestAudioPresentationCommandResolver {
 
         var retry = fixture.resolver.beginResolutionBatch();
         retry.resolve(request);
-        var replayOutcome = retry.apply((ignored, command) -> { });
+        var replayOutcome = retry.apply();
         assertFalse(replayOutcome.commands().isEmpty(), fixture.warnings.toString());
         AddSmpsSfx replay = assertInstanceOf(AddSmpsSfx.class,
                 replayOutcome.commands().getFirst());
@@ -248,6 +249,197 @@ class TestAudioPresentationCommandResolver {
                 replay.source().standaloneVoiceId(),
                 "rollback must restore the resolver allocation cursor");
         retry.rollback();
+    }
+
+    @Test
+    void resolutionBatchOwnsExecutionAndCannotAcceptCallerFabrication() {
+        var apply = Arrays.stream(
+                        AudioPresentationCommandResolver.ResolutionBatch.class
+                                .getDeclaredMethods())
+                .filter(method -> method.getName().equals("apply"))
+                .findFirst().orElseThrow();
+
+        assertEquals(0, apply.getParameterCount(),
+                "no caller callback may manufacture an applied outcome");
+        assertTrue(Arrays.stream(
+                        AudioPresentationCommandResolver.AppliedOutcome.class
+                                .getDeclaredConstructors())
+                .allMatch(constructor -> Modifier.isPrivate(
+                        constructor.getModifiers())),
+                "only a resolver-owned batch may mint an applied outcome");
+    }
+
+    @Test
+    void forwardBoundaryRejectsOutcomeFromAnotherBatchOrResolver() {
+        Fixture fixture = fixture();
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null);
+
+        var first = fixture.resolver.beginResolutionBatch();
+        first.resolve(request);
+        var firstOutcome = first.apply();
+        var firstReservation = first.reservation();
+        first.prepareCommit();
+        first.commit();
+
+        var second = fixture.resolver.beginResolutionBatch();
+        second.resolve(request);
+        var secondOutcome = second.apply();
+
+        com.openggf.game.sonic2.audio.Sonic2SoundRequestService service =
+                new com.openggf.game.sonic2.audio.Sonic2SoundRequestService();
+        service.submitSound(request.sfxId(), request);
+        var boundary = service.beginForwardBoundary();
+        AtomicReference<AudioCommand> consequence = new AtomicReference<>();
+        boundary.service(consequence::set);
+        assertEquals(request, consequence.get());
+        boundary.reserveOutcome(firstReservation);
+
+        assertThrows(IllegalStateException.class,
+                () -> boundary.applyOutcome(secondOutcome));
+        boundary.applyOutcome(firstOutcome);
+        boundary.prepareCommit();
+        var receipt = assertInstanceOf(
+                com.openggf.game.sonic2.audio.Sonic2SoundRequestService
+                        .CommittedReceipt.class,
+                boundary.commit());
+        assertSame(firstOutcome, receipt.outcomes().getFirst());
+        second.rollback();
+
+        AudioPresentationCommandResolver otherResolver =
+                new AudioPresentationCommandResolver(
+                        fixture.queue, fixture.factory, fixture.sources,
+                        fixture.warnings::add,
+                        fixture.ownerThreadBoundary::get,
+                        fixture.synchronouslyApplied::add);
+        otherResolver.bindForwardExecutor(fixture.producer);
+        var other = otherResolver.beginResolutionBatch();
+        other.resolve(request);
+        var otherOutcome = other.apply();
+
+        service.submitSound(request.sfxId(), request);
+        var otherBoundary = service.beginForwardBoundary();
+        otherBoundary.service(ignored -> { });
+        var sameResolver = fixture.resolver.beginResolutionBatch();
+        sameResolver.resolve(request);
+        sameResolver.apply();
+        otherBoundary.reserveOutcome(sameResolver.reservation());
+        assertThrows(IllegalStateException.class,
+                () -> otherBoundary.applyOutcome(otherOutcome));
+        sameResolver.rollback();
+        other.rollback();
+        otherBoundary.rollback();
+    }
+
+    @Test
+    void musicOutcomeAndCommittedReceiptContainStopAllSfxInRomOrder() {
+        Fixture fixture = fixture();
+        fixture.sources.baseMusic = music(0x81);
+        AudioCommand.PlayMusic request = new AudioCommand.PlayMusic(
+                0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null);
+        var batch = fixture.resolver.beginResolutionBatch();
+        batch.resolve(request);
+        var outcome = batch.apply();
+
+        assertEquals(2, outcome.commands().size());
+        assertInstanceOf(AudioPresentationCommand.StopAllSfx.class,
+                outcome.commands().get(0));
+        assertInstanceOf(AudioPresentationCommand.ReplaceMusic.class,
+                outcome.commands().get(1));
+
+        var service = new com.openggf.game.sonic2.audio
+                .Sonic2SoundRequestService();
+        service.submitMusic(request.musicId(), request);
+        var boundary = service.beginForwardBoundary();
+        boundary.service(ignored -> { });
+        boundary.reserveOutcome(batch.reservation());
+        boundary.applyOutcome(outcome);
+        batch.prepareCommit();
+        boundary.prepareCommit();
+        batch.commit();
+        var receipt = assertInstanceOf(
+                com.openggf.game.sonic2.audio.Sonic2SoundRequestService
+                        .CommittedReceipt.class,
+                boundary.commit());
+
+        assertEquals(outcome.commands(),
+                receipt.outcomes().getFirst().commands());
+        assertThrows(UnsupportedOperationException.class,
+                () -> receipt.outcomes().getFirst().commands().clear());
+    }
+
+    @Test
+    void resolutionDiagnosticsStayInvisibleUntilExplicitPostSealPublication() {
+        Fixture fixture = fixture();
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        AtomicInteger callbacks = new AtomicInteger();
+        fixture.factory.setAdmissionObserver(ignored ->
+                callbacks.incrementAndGet());
+        fixture.factory.setDriverServiceObserver(
+                new SmpsDriverServiceObserver() {
+                    @Override
+                    public void onLifecycle(
+                            SmpsDriverServiceObserver.LifecycleEvent ignored) {
+                        callbacks.incrementAndGet();
+                    }
+                });
+        AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null);
+
+        var batch = fixture.resolver.beginResolutionBatch();
+        batch.resolve(request);
+        var outcome = batch.apply();
+        assertEquals(0, callbacks.get(),
+                "resolution and execution only prepare diagnostics");
+        batch.prepareCommit();
+        assertEquals(0, callbacks.get(),
+                "prepare must not expose diagnostics");
+        var service = new com.openggf.game.sonic2.audio
+                .Sonic2SoundRequestService();
+        service.submitSound(request.sfxId(), request);
+        var boundary = service.beginForwardBoundary();
+        boundary.service(ignored -> { });
+        boundary.reserveOutcome(batch.reservation());
+        boundary.applyOutcome(outcome);
+        boundary.prepareCommit();
+        batch.commit();
+        assertEquals(0, callbacks.get(),
+                "state commit must remain diagnostically invisible");
+        var receipt = boundary.commit();
+        batch.publishDiagnostics(receipt);
+        int published = callbacks.get();
+        assertTrue(published > 0);
+        batch.publishDiagnostics(receipt);
+        assertEquals(published, callbacks.get(),
+                "post-seal diagnostic publication is one-shot");
+    }
+
+    @Test
+    void rolledBackResolutionPublishesNoDiagnostics() {
+        Fixture fixture = fixture();
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        AtomicInteger callbacks = new AtomicInteger();
+        fixture.factory.setAdmissionObserver(ignored ->
+                callbacks.incrementAndGet());
+        fixture.factory.setDriverServiceObserver(
+                new SmpsDriverServiceObserver() {
+                    @Override
+                    public void onLifecycle(
+                            SmpsDriverServiceObserver.LifecycleEvent ignored) {
+                        callbacks.incrementAndGet();
+                    }
+                });
+        var batch = fixture.resolver.beginResolutionBatch();
+        batch.resolve(new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+
+        batch.rollback();
+
+        assertEquals(0, callbacks.get());
     }
 
     @Test
@@ -1019,8 +1211,18 @@ class TestAudioPresentationCommandResolver {
                 new AudioPresentationCommandResolver(
                         queue, factory, sources, warnings::add,
                         owner::get, synchronouslyApplied::add);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, warnings::add, session);
+        int maxFrames = (48_000 + 60 - 1) / 60;
+        AudioPresentationProducer producer = new AudioPresentationProducer(
+                48_000, 60, 48_000, 1, registry,
+                new AudioPresentationCommandQueue(registry::isRendering),
+                new AudioPresentationMixer(maxFrames,
+                        registry::onVoiceFailure),
+                new NoDeviceAudioSink(48_000), session);
+        resolver.bindForwardExecutor(producer);
         return new Fixture(queue, factory, resolver, sources, assets, handlers,
-                session,
+                session, producer,
                 warnings, owner, synchronouslyApplied);
     }
 
@@ -1032,6 +1234,7 @@ class TestAudioPresentationCommandResolver {
             FakeAssets assets,
             SmpsCoordFlagHandlerOwner handlers,
             SmpsDriverSession session,
+            AudioPresentationProducer producer,
             List<String> warnings,
             AtomicBoolean ownerThreadBoundary,
             List<AudioPresentationCommand> synchronouslyApplied) {

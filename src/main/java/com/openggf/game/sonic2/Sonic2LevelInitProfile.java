@@ -34,6 +34,7 @@ import java.io.IOException;
  *      Design doc: Sonic 2 Level Init Profile (57 steps)</a>
  */
 public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
+    private static final int LEVEL_ENTRY_FADE_OUT_REQUEST = 0xF9;
     /** Fixed length of the s2.asm:5060-5066 title-card leave loop. */
     private static final int TITLE_CARD_LEAVE_LOOP_FRAMES = 25;
 
@@ -68,7 +69,20 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
-        steps.add(3, new InitStep("QueueInitialPlcs",
+        if (!isPreviewCapture(ctx)) {
+            steps.remove(1);
+            steps.add(1, ioStep("ConfigureAudio",
+                    "Configure the S2 request service before Level entry commands",
+                    () -> GameServices.level().configureAudio()));
+            steps.add(2, new InitStep("QueueLevelEntryFadeOut",
+                    "S2 Level loc_3EC4: PlaySound(MusID_FadeOut) before ClearPLC",
+                    () -> GameServices.level().beginLevelEntry()));
+            steps.add(3, ioStep("InitAudio",
+                    "S2 Level: submit the zone playlist after the entry fade-out",
+                    () -> GameServices.level().playLevelMusic(ctx.getLevelIndex())));
+        }
+        int initialPlcIndex = isPreviewCapture(ctx) ? 2 : 5;
+        steps.add(initialPlcIndex, new InitStep("QueueInitialPlcs",
                 "S2 Level: ClearPLC, level-header primary LoadPLC, LoadPLC Std2",
                 () -> queueInitialPlcs(ctx)));
         // Level_ClrRam wipes MiscLevelVariables after the level's LoadPLC calls
@@ -81,7 +95,7 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
         // release offsets, boss explosion offsets -- read a stream shifted by
         // the previous acts' draw count. Keep this S2-owned: S1 has the same
         // rule in its own profile and S3K clears a different range.
-        steps.add(4, new InitStep("ResetRng",
+        steps.add(initialPlcIndex + 1, new InitStep("ResetRng",
                 "S2 Level_ClrRam: clear RNG_seed with MiscLevelVariables",
                 () -> {
                     var rng = GameServices.rngOrNull();
@@ -93,6 +107,15 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             steps.addAll(postLoadAssemblySteps(ctx));
         }
         return List.copyOf(steps);
+    }
+
+    @Override
+    public void beginLevelEntry() {
+        // Level (docs/s2disasm/s2.asm:4753-4765) writes MusID_FadeOut through
+        // PlaySound/Sound_Queue.SFX0 before ClearPLC and Pal_FadeToBlack. The
+        // negative Demo_mode_flag branch skips this only for credits demos;
+        // Sonic 2's credits have no demo-level path in OpenGGF.
+        GameServices.audio().playSfx(LEVEL_ENTRY_FADE_OUT_REQUEST);
     }
 
     private void queueInitialPlcs(LevelLoadContext ctx) {

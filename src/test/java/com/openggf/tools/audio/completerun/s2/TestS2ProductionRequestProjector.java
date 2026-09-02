@@ -4,8 +4,8 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
-import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
+import com.openggf.game.sonic2.audio.Sonic2SoundRequestPipeline;
 import com.openggf.game.sonic2.audio.Sonic2SoundRequestService;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace;
 import org.junit.jupiter.api.AfterEach;
@@ -77,13 +77,20 @@ class TestS2ProductionRequestProjector {
     @Test
     void priorityRejectionProjectsObservedPriorityWithoutRoleOwnership() {
         S2ProductionRequestProjector projector = new S2ProductionRequestProjector();
-        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
-        service.addObserver(projector);
-
-        service.submitSound(0xBF, sfx(0xBF));
-        commit(service);
-        service.submitSound(0xA1, sfx(0xA1));
-        commit(service);
+        projector.accept(new Sonic2SoundRequestService.Transfer(1,
+                Sonic2SoundRequestPipeline.SourceSlot.SFX0, 0, 0xBF, false));
+        projector.accept(new Sonic2SoundRequestService.Decision(2,
+                Sonic2SoundRequestPipeline.QueueSlot.QUEUE0, 0xBF,
+                Sonic2SoundRequestService.DecisionReason.ACCEPTED_PRIORITY,
+                0, 0x7F));
+        projector.accept(new Sonic2SoundRequestService.Dispatch(3, 0xBF, 0xBF,
+                Sonic2SoundRequestPipeline.DispatchKind.NOT_YET_DISPATCHED));
+        projector.accept(new Sonic2SoundRequestService.Transfer(4,
+                Sonic2SoundRequestPipeline.SourceSlot.SFX0, 0, 0xA1, false));
+        projector.accept(new Sonic2SoundRequestService.Decision(5,
+                Sonic2SoundRequestPipeline.QueueSlot.QUEUE0, 0xA1,
+                Sonic2SoundRequestService.DecisionReason.REJECTED_PRIORITY,
+                0x7F, 0x7F));
 
         CompleteRunAudioTrace.Decision rejected = projector.decisions().getLast();
         assertEquals(false, rejected.accepted());
@@ -94,14 +101,4 @@ class TestS2ProductionRequestProjector {
                 "production request events do not claim hardware ownership");
     }
 
-    private static void commit(Sonic2SoundRequestService service) {
-        var boundary = service.beginForwardBoundary();
-        boundary.service(ignored -> { });
-        boundary.commit();
-    }
-
-    private static AudioCommand.PlaySfx sfx(int id) {
-        return new AudioCommand.PlaySfx(id, null,
-                AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null);
-    }
 }

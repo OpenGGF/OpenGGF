@@ -116,6 +116,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private int cachedBgHeightPx;
     Game game;
     GameModule gameModule;
+    private boolean levelEntryBegun;
 
     public Game getGame() {
         return game;
@@ -429,6 +430,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // InitAudio — or a preview capture, which has no InitAudio step — must not
             // leave it latched for the next level, which would start that level silent.
             transitions.setSuppressNextMusicChange(false);
+            levelEntryBegun = false;
         }
     }
 
@@ -465,10 +467,32 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase C/F: Configure audio manager and play level music.
      */
     public void initAudio(int levelIndex) throws IOException {
+        configureAudio();
+        playLevelMusic(levelIndex);
+    }
+
+    /** Establishes the current game's production audio/request service. */
+    public void configureAudio() throws IOException {
         audioManager.setAudioProfile(gameModule.getAudioProfile());
         audioManager.setRom(GameServices.rom().getRom());
         audioManager.setSoundMap(game.getSoundMap());
         audioManager.resetRingSound();
+    }
+
+    /**
+     * Starts one ROM level-entry boundary. Results returns reach it before
+     * their counted fade; the ordered load profile reaches it as fallback.
+     */
+    public void beginLevelEntry() {
+        if (levelEntryBegun) {
+            return;
+        }
+        activeGameModule().getLevelInitProfile().beginLevelEntry();
+        levelEntryBegun = true;
+    }
+
+    /** Submits the level's playlist request after game-owned entry commands. */
+    public void playLevelMusic(int levelIndex) throws IOException {
         if (!transitions.consumeSuppressNextMusicChange()) {
             audioManager.playMusic(game.getMusicId(levelIndex));
         }
