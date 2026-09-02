@@ -275,7 +275,7 @@ Allowed launch profile enums:
 |-----|-----------|------|---------|-------------|
 | `AUDIO_ENABLED` | `audio.enabled` | bool | `true` | Master switch for all audio output (music and SFX). |
 | `REGION` | `audio.region` | string | `"NTSC"` | Hardware region: `"NTSC"` (60 Hz) or `"PAL"` (50 Hz). Affects SMPS tempo timing and DAC sample rates. |
-| `DAC_INTERPOLATE` | `audio.dacInterpolate` | bool | `true` | Apply linear interpolation to DAC (drum) samples. Reduces aliasing noise for a smoother sound. |
+| `DAC_INTERPOLATE` | `audio.dacInterpolate` | bool | `false` | Optional smoothing with no hardware counterpart: `true` writes a linearly interpolated value between DAC (drum) samples when the chip bus is idle. Off by default to preserve the hardware's stepped output; it never changes sample pitch or length. |
 | `AUDIO_INTERNAL_RATE_OUTPUT` | `audio.internalRateOutput` | bool | `false` | Output audio at the YM2612 internal sample rate (~53 kHz) rather than the system rate. Useful for bit-accurate captures; may cause issues on some audio drivers. |
 | `PSG_NOISE_SHIFT_EVERY_TOGGLE` | `audio.psgNoiseShiftEveryToggle` | bool | `true` | PSG noise LFSR clock behaviour. `true` = shift on every polarity toggle (twice the hardware rate, brighter noise); `false` = one shift per rising edge of the noise clock, the documented SN76489 behaviour (darker noise). |
 | `FM6_DAC_OFF` | `audio.fm6DacOff` | bool | `true` | Silence FM channel 6 whenever a DAC note is active. Matches the SMPSPlay parity hack used in Sonic 2; prevents FM bleed audible during percussion. |
@@ -879,7 +879,7 @@ input:
 audio:
   enabled: true   # Enable music and SFX
   region: "NTSC"   # Region for audio timing
-  dacInterpolate: true   # DAC interpolation (smoother sound)
+  dacInterpolate: false   # Optional DAC smoothing (no hardware counterpart); true interpolates between PCM samples
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
   psgNoiseShiftEveryToggle: true   # PSG noise LFSR clock mode: true=shift on every toggle, false=one shift per rising edge (hardware)
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
