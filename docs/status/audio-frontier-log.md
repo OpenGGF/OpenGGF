@@ -56,9 +56,11 @@ defined by `com.openggf.tools.audio.parity`.
 
 - **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
   `feature/ai-sound-driver-roadmap-completion`; TraceChaser producer commits
-  `912fef0a` and `e3fdf73`.
-- **Fixture:** none. The four proposed S1/S2 override-resume files remain
-  absent; no capture or fixture gained authority.
+  `912fef0a`, `e3fdf73`, and mechanics hardening through `a61450ee`.
+- **Fixture:** none. The dedicated
+  `src/test/resources/audio/parity/override-resume-first-divergence-v1/`
+  commit bundle remains absent; its proposed nested S1/S2 members have no
+  independent authority, and no capture or fixture gained authority.
 - **Command:** focused TraceChaser S1, S2, extractor/publisher, CLI, and Lua
   contract tests plus `verify-deterministic-build.sh`; the locked observer
   recipe verifier and the reviewed-capability guard were then run as hard
@@ -70,10 +72,16 @@ defined by `com.openggf.tools.audio.parity`.
   differs from the pinned capability field that Task 8 is forbidden to
   refresh, and no current-session two-build observer inputs are configured.
   A static older install is not fresh capture authority.
-- **Notes:** capture and no-replace staging mechanics are covered, but the
-  mandatory provenance inventory is not yet complete. Task 8 therefore made
-  no Java production change, froze no literal expectation, performed no live
-  capture, and left both S1 hard gates untouched.
+- **Notes:** `a61450ee` hardens fd-relative staging and identity-uncertain
+  quarantine, but it cannot prove nested-path containment when a retained
+  target dirfd is renamed after revalidation, and four sequential `linkat`
+  calls cannot provide one visibility point. The canonical plan now requires
+  private construction of the complete dedicated bundle and one
+  `renameat2(RENAME_NOREPLACE)` commit under an explicit cooperative-lock and
+  namespace-stability precondition. That publisher redesign is required before
+  publication. The mandatory provenance inventory also remains incomplete, so
+  Task 8 made no Java production change, froze no literal expectation,
+  performed no live capture, and left both S1 hard gates untouched.
 
 ## 2026-09-01 — S3K service 128 is an authenticated producer-input limitation
 

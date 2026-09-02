@@ -1323,6 +1323,7 @@ git commit -m 'fix(audio): apply shipped S3K device commands'
   `bizhawk-headless/src/Audio/S1CompleteRunAudioReferenceCapture.cs`,
   `bizhawk-headless/src/Recording/S2CompleteAudioCaptureRunner.cs`,
   `bizhawk-headless/src/Recording/S2CompleteAudioRawSink.cs`,
+  `bizhawk-headless/src/Recording/NoReplacePublisher.cs`,
   `bizhawk-headless/src/Core/GpgxHost.cs`,
   `bizhawk-headless/src/Program.cs`, and
   `bizhawk-headless/fixtures/gpgx-audio-capability-v1.json`.
@@ -1354,9 +1355,11 @@ git commit -m 'fix(audio): apply shipped S3K device commands'
 - Modify: `src/test/java/com/openggf/audio/TestMusicOverrideRestore.java`
 - Create: `src/test/java/com/openggf/tools/audio/parity/TestS1OverrideResumeAudioOracle.java`
 - Create: `src/test/java/com/openggf/tools/audio/parity/s2/TestS2OverrideResumeAudioOracle.java`
-- Create only compressed references and immutable metadata sidecars under
-  `src/test/resources/audio/parity/s1/` and `src/test/resources/audio/parity/s2/`; do not copy,
-  rename, synthesize, or create a second BK2.
+- Create one absent, dedicated commit bundle at
+  `src/test/resources/audio/parity/override-resume-first-divergence-v1/`, containing only the
+  exact nested S1/S2 compressed references and immutable metadata sidecars listed below. The
+  bundle directory is the publication object; its individual leaves are never independently
+  authoritative. Do not copy, rename, synthesize, or create a second BK2.
 - Modify: `docs/status/audio-frontier-log.md` only if an authenticated frontier moves.
 - Add a validation record below `docs/architecture/validation/audio/` when both boundaries are
   source-closed.
@@ -1388,10 +1391,22 @@ inputs are existing canonical movies:
   drains rows 0–768, and resets only publication ownership at row 769; it never resets the
   emulator, driver, YM latches, or service lifecycle.
 
-- `src/test/resources/audio/parity/s1/s1-override-resume-reference.v1.jsonl.gz`
-- `src/test/resources/audio/parity/s1/s1-override-resume-metadata.v1.json`
-- `src/test/resources/audio/parity/s2/s2-override-resume-reference.v1.jsonl.gz`
-- `src/test/resources/audio/parity/s2/s2-override-resume-metadata.v1.json`
+The one public commit object is
+`src/test/resources/audio/parity/override-resume-first-divergence-v1/`, with exactly this
+inventory and no other directory entry:
+
+- `s1/s1-override-resume-reference.v1.jsonl.gz`
+- `s1/s1-override-resume-metadata.v1.json`
+- `s2/s2-override-resume-reference.v1.jsonl.gz`
+- `s2/s2-override-resume-metadata.v1.json`
+
+The future Java consumers therefore load
+`src/test/resources/audio/parity/override-resume-first-divergence-v1/s1/`
+`s1-override-resume-reference.v1.jsonl.gz` plus `s1-override-resume-metadata.v1.json`, and the
+corresponding two `s2/` members. Each consumer treats the bundle directory as the commit object and
+fails closed if the bundle is absent; if either fixed subdirectory or member is missing, extra,
+non-regular, or symlinked; if either schema is invalid; or if the metadata counts, stored/logical
+SHA-256 values, or reference bytes disagree. A leaf outside this exact bundle has no authority.
 
 S1 extends the existing `s1_complete_run_audio_probe.lua`/`ProbeRuntime`, its audio contract, and
 `S1CompleteRunAudioReferenceCapture`; it does not add a second Lua lifecycle. Capture the exact
@@ -1478,10 +1493,10 @@ capture 2, and after each require zero task-owned `mono`/`EmuHawk` PIDs. Never c
 probe diagnostics.
 
 `OverrideResumeFirstDivergenceExtractor` and `OverrideResumeFirstDivergencePublisher` are the
-**sole** path from two authenticated S1 raw captures and two authenticated S2 raw captures to the four
-committed files listed above. No Java test, shell command, reviewer, or hand-authored JSON may create,
-update, or confer authority on those fixtures; a byte change requires fresh duplicate raw inputs and
-this publisher.
+**sole** path from two authenticated S1 raw captures and two authenticated S2 raw captures to the one
+committed bundle and fixed inventory listed above. No Java test, shell command, reviewer, or
+hand-authored JSON may create, update, or confer authority on that bundle or its members; a byte change
+requires fresh duplicate raw inputs and this publisher.
 
 The extractor accepts exactly two regular, non-symlink S1 raw roots containing
 `audio_reference_raw.jsonl` with schema `openggf.s1-complete-run-audio-raw.v1`, exactly two regular,
@@ -1515,8 +1530,54 @@ all remaining raw bytes and attestation fields to be byte-identical per game, th
 UTF-8 without BOM, LF-terminated JSONL with lexicographic keys, fixed decimal integers, lowercase
 hexadecimal hashes, and deterministic gzip (`mtime=0`, no filename/comment, OS byte 255). It records
 record and byte counts plus logical/stored SHA-256 values. Raw streams and diagnostics remain external
-durable evidence and are never committed. `NoReplacePublisher.StageAll` publishes all four fixtures as
-one transaction, refusing an existing target or link race and leaving no partial final.
+durable evidence and are never committed.
+
+Publication is Linux-only and uses the bundle directory as the single commit object. The caller passes
+the trusted absolute repository and fixture-root paths; the publisher requires the fixture root to be
+exactly the existing `src/test/resources/audio/parity` subtree. Starting from an opened `/` directory
+anchor, it strips the leading slash and opens the repository and fixed fixture subtree with `openat2`,
+`O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC`, and
+`RESOLVE_BENEATH|RESOLVE_NO_SYMLINKS`. All supported publishers then take an exclusive advisory
+`flock` on that retained fixture-root fd before inspecting or constructing publication state.
+
+The no-replace protocol is syscall-delimited:
+
+1. Record the retained root's `statx` device, inode, type, and mount identity, require the public
+   basename `override-resume-first-divergence-v1` to be absent with fd-relative no-follow lookup, and
+   create an unpredictable sibling `.override-resume-first-divergence-v1.tmp.<nonce>` with
+   `mkdirat(..., 0700)`. Open that new directory from the retained root fd without following links.
+2. Beneath the private bundle fd, create only mode-0700 `s1` and `s2` directories and the four fixed
+   regular files with fd-relative `mkdirat` and `openat(O_CREAT|O_EXCL|O_NOFOLLOW)`. Fully write and
+   `fsync` each file. No staging operation resolves a caller-supplied nested pathname.
+3. Re-open and validate every staged member from retained directory fds, enumerate the exact two
+   directories and four leaves, recheck types, schemas, counts, and stored/logical hashes, and reject
+   every missing, extra, changed, or symlinked entry. `fsync` the `s1` and `s2` directories and then
+   the private bundle directory.
+4. Re-open the configured fixture root through the original trusted anchor with the same `openat2`
+   constraints; require its `statx` identity to equal the retained root, recheck that the public bundle
+   basename is absent, and revalidate the private bundle identity and complete inventory. These checks
+   detect a namespace change before the commit boundary; they do not claim to pin a pathname against
+   an actor that can rename it after the check.
+5. Commit with exactly one
+   `renameat2(rootFd, privateName, rootFd, "override-resume-first-divergence-v1", RENAME_NOREPLACE)`.
+   Successful return from this syscall is the atomic visibility linearization point: before it, the
+   public bundle is absent; after it, readers can reach the complete fixed inventory. Then `fsync` the
+   retained fixture-root directory to confirm directory-entry durability.
+6. `EEXIST` leaves the pre-existing public bundle byte-for-byte untouched. Any failure before the
+   successful rename leaves the public bundle absent; a private mode-0700 residue is permitted. A
+   failure or crash after successful rename may leave a complete visible commit whose durability is
+   not confirmed until root `fsync`; it must be reported distinctly and never rolled back. No failure
+   path unlinks, quarantines, replaces, or otherwise deletes any public name or competitor entry.
+
+This protocol has an explicit environmental precondition, not a same-credential security claim. All
+publishers must cooperate in the root lock, and the authoritative repository, fixture root, and their
+ancestors must remain namespace-stable and protected from rename and mount mutation for the publication
+and for as long as their pathname is treated as authority. A hostile process with the same credentials
+and permission to rename an authoritative ancestor, move the retained root or committed bundle, or
+mount over a path can act after any successful syscall, including after `renameat2`; Linux
+`openat2`, `statx`, advisory locks, leases, and retained dirfds cannot enforce the pathname contract
+against that actor. Such mutation is outside the supported threat model. There is deliberately no
+claim that four nested names can be independently published atomically.
 
 Each metadata sidecar records mandatory fields: schema/capture kind/game; ROM CRC-32 and SHA-1;
 canonical BK2 relative path/SHA-256/row count/interval; TraceChaser gitlink; ProbeRuntime path/SHA-256,
@@ -1531,7 +1592,10 @@ capability-template path/SHA-256, harness executable SHA-256; installed
 `FixBugs=0` and `FixDriverBugs=0`; literal request/admission/service-token/native-ordinal/frame;
 ordered write list/digest; PCM selection rule/row/offset/sample rate/channels/format/stereo-frame
 count/byte count/digest; both raw hashes, both attestation hashes, normalization counts/hashes,
-gzip counts/hashes, and exact capture/validation/publication commands. S1 writes every S2-only
+gzip counts/hashes; the fixed bundle-relative root and complete member inventory; publication protocol
+version and namespace/lock precondition; and exact capture, validation, and bundle-publication commands,
+including the absolute `--fixture-root`. The successful `renameat2` plus root-`fsync` result is emitted
+as publisher output and is never back-written into the already-fsynced bundle. S1 writes every S2-only
 installed-observer field as `not-used-by-s1`; S2 writes every S1-only ProbeRuntime/probe/Lua-contract
 field as `not-used-by-s2`. No metadata field is conditional or “as applicable”.
 
@@ -1551,8 +1615,13 @@ void incomingMusicOwnsTransitionWithoutReplacingSession(Case testCase) {
 
 The oracle methods are exactly
 `TestS1OverrideResumeAudioOracle.exactFirstServiceAndNextPcmMatch` and
-`TestS2OverrideResumeAudioOracle.exactFirstServiceAndNextPcmMatch`. Each verifies the committed
-reference metadata/hash before comparing the first resumed service writes and next PCM digest.
+`TestS2OverrideResumeAudioOracle.exactFirstServiceAndNextPcmMatch`. Before either leaf is read, a
+shared consumer opens the committed
+`src/test/resources/audio/parity/override-resume-first-divergence-v1/` bundle without following
+links, verifies its exact two-directory/four-file inventory and both schemas, and verifies every
+metadata count and stored/logical hash against the bytes in that same bundle. Both oracles reject the
+whole commit if any member is missing, extra, symlinked, non-regular, or hash-invalid; only then do
+they compare the first resumed service writes and next PCM digest.
 
 Add REDs that prove:
 
@@ -1577,9 +1646,31 @@ row-769 lifecycle continuity, exact selection/order/PCM serialization, stale-pri
 identity after timestamp removal, deterministic normalization/gzip, exact packet timing, and every
 ambiguity rejection. `OverrideResumeFirstDivergencePublisherTests`, `NoReplacePublisherTests`, and
 `TraceCliTests` prove the closed CLI accepts exactly two S1 roots, two S2 raws, four attestations, and
-an absent fixture root; emits only the four named outputs atomically; and rejects replacements/link
-races. `S2AudioObserverProfileTests` and `GpgxAudioObserverBuildTests` prove two-build executable
-refresh, stale-capability rejection, refreshed-capability acceptance, installed
+the existing trusted parity root with an absent fixed bundle. Their deterministic native-fault and
+barrier hooks must prove all of the following before implementation:
+
+- injected failure at every native syscall ordinal before `renameat2` leaves the public bundle absent,
+  permits only a private mode-0700 residue, and never removes a public or competitor name;
+- a symlink in any caller-resolved root component is rejected by `openat2`, and a symlink or unexpected
+  entry at any staged component/member is rejected without publication;
+- two cooperating publishers released concurrently against the same absent bundle serialize on the
+  exclusive root lock, exactly one commits, and the loser receives `EEXIST` without changing the
+  winner's bytes;
+- a reader stopped at the final pre-rename barrier sees no public bundle, while a reader released after
+  successful `renameat2` sees the entire validated inventory on its first lookup; there is no
+  first-leaf/last-leaf visibility interval;
+- killing a child publisher immediately before commit leaves the public bundle absent, while killing it
+  immediately after the successful rename exposes only the complete bundle; a completed root `fsync`
+  is required before the publisher reports durable success;
+- an existing valid or malformed public bundle is never opened for mutation and remains byte-for-byte
+  unchanged, including when `renameat2(RENAME_NOREPLACE)` is the first operation to observe it; and
+- namespace-precondition tests reject relative/wrong roots and detect a root move, replacement, or
+  mount-identity change completed before final revalidation. A separate adversarial test and contract
+  assertion records that a same-credential rename or mount after the last check is unsupported rather
+  than claiming containment that Linux cannot provide.
+
+`S2AudioObserverProfileTests` and `GpgxAudioObserverBuildTests` prove two-build executable refresh,
+stale-capability rejection, refreshed-capability acceptance, installed
 identity/artifact-lock/build-recipe/source-bundle/build-log hash capture, ABI/event-size/capacity,
 source-lock, no-symlink, arm-chain, clean-first-fault, and zero-overflow gates.
 
@@ -1587,8 +1678,9 @@ source-lock, no-symlink, arm-chain, clean-first-fault, and zero-overflow gates.
 
 Run the named extractor/publisher only after both producer runs, both S1 probe diagnostics, fresh
 install authentication, and every producer RED has passed. It accepts no frame, PC, service, or output
-filename selector: the schemas fix the intervals and the publisher fixes the four final names. This is
-the explicit no-overwrite publication command:
+filename or bundle-name selector: the schemas fix the intervals and the publisher fixes the public
+bundle basename and its nested inventory. This is the explicit no-overwrite publication command; the
+absolute `--fixture-root` names the existing parent directory, never the absent final bundle:
 
 ```bash
 "${OGGF_REPO_ROOT}/tools/tracechaser/bizhawk-headless/run-override-resume-first-divergence-publisher.sh" \
@@ -1605,19 +1697,22 @@ the explicit no-overwrite publication command:
   --fixture-root "${OGGF_REPO_ROOT}/src/test/resources/audio/parity"
 ```
 
-The publisher must validate that this fixture root is the requested consumer subtree and all four
-finals are absent before staging. It stages and hard-link publishes exactly the four named fixtures as
-one transaction. A retry against a populated target must fail without changing a byte. Freeze literal
-source service/write/PCM expectations only from returned reference/metadata records, validate all
-three schemas plus every attestation, and stage only these publisher outputs. A manual JSON edit, raw
-copy, inferred assertion, or replacement publication is invalid evidence.
+The publisher must validate that this fixture root is the requested consumer subtree, take its
+cooperative exclusive lock, and require the one fixed final bundle to be absent before private
+construction. It publishes that complete directory with the single no-replace rename protocol above.
+A retry against a populated bundle must fail without opening it for mutation or changing a byte.
+Freeze literal source service/write/PCM expectations only from records returned inside the committed
+bundle, validate all three schemas plus every attestation and the exact bundle inventory, and stage
+only that publisher-created directory. A manual JSON edit, raw copy, inferred assertion, leaf-wise
+publication, or replacement publication is invalid evidence.
 
 - [ ] **Step 4: Implement only source-owned transition/resume behavior exposed by the approved
   first divergence.**
 
 This step is hard-blocked until Step 3 has authenticated both duplicate captures, frozen literal
-expectations from the extractor, validated every attestation/schema, and completed first no-overwrite
-publication. No generic refresh write is permitted. Update the game-owned transition policy with the
+expectations from the extractor, validated every attestation/schema, and completed the first durable
+no-replace bundle commit and consumer validation. No generic refresh write is permitted. Update the
+game-owned transition policy with the
 exact saved logical fields and first-service operations from the cited routine. S1 source anchors are
 `Sound_PlayBGM` `$071FD2` and `cfFadeInToPrevious` `$072B14` (restore loops `$072B3A`/`$072B66`,
 fade setup `$072B82`/`$072B88`); retain the shipped omission at `$072B24`. S2 source anchors are
@@ -1641,7 +1736,8 @@ LUA_BIN=lua5.4 mvn -Dmse=off \
 Run the mandatory S1 music/SFX parity gate block and require all comparisons to report `MATCH`.
 Production implementation is hard-blocked until canonical duplicate captures are authenticated and
 equal, their frozen literal expectations originate from the extractor, every attestation/schema
-validates, and the publisher has successfully made its first no-overwrite publication.
+validates, and the publisher has successfully completed and root-fsynced its first no-replace bundle
+commit and both Java consumers accept the complete commit object.
 `REFERENCE_LIMITATION` is the sole alternate terminal state for Task 8.
 
 - [ ] **Step 6: Review source closure and fixture provenance, update durable evidence, and commit.**

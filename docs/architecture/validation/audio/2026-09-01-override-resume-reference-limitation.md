@@ -64,8 +64,8 @@ A later task must first restore the exact locked observer build trust roots and 
 fresh-copy reproduction inputs, reconcile the capability source identity without weakening the
 pinned-template rule, and complete the mandatory provenance schemas/validator. Only then may it
 run the two serial S1 captures, two serial S2 native captures, two ProbeRuntime diagnostics,
-duplicate equality checks, and the first four-file no-replace publication. Java transition or
-resume behaviour remains hard-blocked until all of those steps succeed.
+duplicate equality checks, and the first dedicated-bundle no-replace publication. Java transition
+or resume behaviour remains hard-blocked until all of those steps succeed.
 
 ## Independent mechanics review — 2026-09-02
 
@@ -92,18 +92,18 @@ no BizHawk, EmuHawk, capture, fixture, or Java work occurred. These stronger mec
 the missing fresh authenticated native-GPGX observation or provenance, so the terminal status and
 required continuation above are unchanged.
 
-## TOCTOU review correction round 2 — 2026-09-02
+## TOCTOU review hardening round 2 — 2026-09-02
 
-TraceChaser commit `a61450ee10d2a76fd32edfe5c29791404bfe2b20` closes two
-remaining races in the mechanics described above:
+TraceChaser commit `a61450ee10d2a76fd32edfe5c29791404bfe2b20` hardened two
+previously identified race windows in the mechanics described above:
 
 1. Closed four-file staging now opens the fixture root once, creates and traverses child directories
    with fd-relative `mkdirat` / `openat(O_DIRECTORY|O_NOFOLLOW)`, writes and fsyncs every temporary
    through the resulting directory fd, and retains the root plus final-directory fds through
    `linkat`. Immediately before the final link it traverses the relative directory again from the
    anchored root and requires the original directory device, inode, and type. Moving a validated
-   `s1` or `s2` directory and replacing it with a symlink therefore fails before a final is visible;
-   neither staging nor publication follows the replacement path.
+   `s1` or `s2` directory and replacing it with a symlink before that revalidation therefore fails;
+   staging and the fresh traversal do not follow the replacement path.
 2. Rollback no longer makes a check-then-unlink authority claim. It creates a mode-0700 sibling
    quarantine and moves a public final there with fd-relative
    `renameat2(RENAME_NOREPLACE)`. A mismatched entry is restored without replacement; an owned or
@@ -118,3 +118,41 @@ suite remained 31/31. Both mandatory scanners, the launcher syntax check, all th
 checks, and parent/submodule diff checks passed. Every authorised C# run had empty pre/post
 host-visible Mono/EmuHawk/BizHawk PID inventories. No emulator, capture, fixture, or Java work was
 started, so this correction still does not alter the terminal limitation or continuation gate.
+
+## Atomic publication contract correction — 2026-09-02
+
+A later review found that the preceding round's conclusion was too broad. Commit `a61450ee` does
+materially harden fd-relative staging, detects a directory replacement completed before its final
+identity check, and avoids deleting an identity-uncertain competitor during quarantine. It does not
+prove either nested-path containment or four-name atomic publication:
+
+1. After the fresh traversal and identity check succeed but before `linkat`, a same-credential actor
+   with rename authority can move the retained target directory outside `fixtureRoot`. The retained
+   fd still names that moved inode, so `linkat` can make the final visible in the moved-old directory.
+   A later `statx` check merely moves this race window; `openat2` constrains one lookup and does not
+   pin the resulting inode to its original pathname.
+2. Four successful `linkat` calls have four distinct visibility points. Readers can observe a
+   nonempty proper subset, and a later quarantine or rollback cannot make those earlier observations
+   atomic. The safe quarantine rule prevents competitor deletion but cannot turn sequential links
+   into one transaction.
+
+The prior plan and mechanics review claimed no partial final and rejection of directory/link races
+without declaring cooperative writers or namespace-stable ancestors. The counterexample is therefore
+valid against that stated contract rather than an unrelated stronger model. The replacement design's
+environmental precondition below is an explicit contract amendment; it was not enforced by
+`a61450ee`.
+
+The canonical Task 8 plan therefore retracts the four-file transaction claim. Publication must be
+redesigned as one absent dedicated bundle directory, fully built and fsynced under a private sibling
+name and committed with one `renameat2(RENAME_NOREPLACE)` followed by fixture-root `fsync`. The one
+successful rename is the only visibility linearization point; existing commits are untouched and
+precommit failures may leave only private residue, with no public rollback deletion.
+
+That replacement contract also states its necessary environmental precondition. Supported publishers
+cooperate in an exclusive fixture-root lock, and the authoritative root and ancestors remain protected
+and namespace-stable. Linux cannot stop a hostile same-credential actor with rename or mount authority
+from moving the root, an ancestor, or the committed bundle after any successful syscall; that stronger
+threat is explicitly unsupported rather than presented as solved by revalidation. The bundle publisher,
+its deterministic race/fault tests, and bundle-aware Java consumers must be implemented and reviewed
+before any publication. No capture, fixture, or Java change occurred here, and
+`REFERENCE_LIMITATION` remains unchanged.
