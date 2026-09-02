@@ -130,6 +130,7 @@ final class S2RequestAwareOracleRawStream {
         byte[] baselineBytes = lines.next("baseline");
         Baseline baseline = parseBaseline(parse(baselineBytes, "baseline"));
         evidence.body(baselineBytes);
+        YmLatches latches = new YmLatches(baseline.ymPort0Latch(), baseline.ymPort1Latch());
         List<Frame> frames = new ArrayList<>(S2RequestAwareOracleSchema.EXCLUSIVE_END
                 - S2RequestAwareOracleSchema.FIRST_ROW);
         long previousGlobalOrdinal = -1;
@@ -140,7 +141,7 @@ final class S2RequestAwareOracleRawStream {
             byte[] frameBytes = lines.next("frame");
             JsonNode frameRecord = parse(frameBytes, "frame");
             Frame frame = parseFrame(frameRecord, row,
-                    previousGlobalOrdinal);
+                    previousGlobalOrdinal, latches);
             if (!frame.requestTransfers().isEmpty()) {
                 previousGlobalOrdinal = frame.requestTransfers().getLast().sourceGlobalOrdinal();
             }
@@ -225,7 +226,8 @@ final class S2RequestAwareOracleRawStream {
                 unsignedByte(value, "ym_port1_latch"));
     }
 
-    private static Frame parseFrame(JsonNode value, int row, long previousGlobalOrdinal) {
+    private static Frame parseFrame(JsonNode value, int row, long previousGlobalOrdinal,
+            YmLatches latches) {
         exact(value, "frame", "type", "row", "lag", "state_hex", "events",
                 "override_resume", "pcm", "request_transfers");
         require("frame".equals(text(value, "type")) && integer(value, "row") == row,
@@ -235,6 +237,7 @@ final class S2RequestAwareOracleRawStream {
         List<ObservedEnvelope> pcm = parsePcm(value.get("pcm"), row);
         List<RequestTransfer> transfers = parseTransfers(array(value, "request_transfers"), row,
                 events, previousGlobalOrdinal);
+        validateOverrideCorrelations(value.get("override_resume"), events, latches);
         return new Frame(row, bool(value, "lag"), state(value), events, override, pcm, transfers);
     }
 
@@ -365,16 +368,86 @@ final class S2RequestAwareOracleRawStream {
                         && bool(value, "restores_saved_priority")
                         && !bool(value, "restores_psg_noise") && integer(value, "frame") == row,
                 "override resume identity differs");
-        for (JsonNode write : array(value, "writes")) {
-            exact(write, "override write", "native_ordinal", "event_kind", "subject", "value",
-                    "pc", "source_cpu", "data", "port", "register");
-            unsignedInt(write, "native_ordinal"); unsignedByte(write, "event_kind");
-            unsignedByte(write, "subject"); unsignedByte(write, "value");
-            unsignedInt(write, "pc"); unsignedByte(write, "source_cpu"); bool(write, "data");
-            unsignedByte(write, "port"); unsignedByte(write, "register");
-        }
+        require(unsignedShort(value, "service_token") != 0,
+                "override resume service token differs");
+        unsignedInt(value, "service_begin_ordinal");
+        unsignedInt(value, "native_ordinal");
         require(!array(value, "writes").isEmpty(), "override resume has no writes");
         return List.of(new ObservedEnvelope(compact(value)));
+    }
+
+    /**
+     * Validates only correlations the bounded rows retain. Service begin lifecycle/coordinates are
+     * deliberately absent, whereas the completion event, native write ordinals, and YM latches are
+     * carried in this same bounded body.
+     */
+    private static void validateOverrideCorrelations(JsonNode overrideValue,
+            List<NativeEvent> events, YmLatches latches) {
+        if (overrideValue == null || overrideValue.isNull()) {
+            latches.fold(events);
+            return;
+        }
+        int serviceToken = unsignedShort(overrideValue, "service_token");
+        long completionOrdinal = unsignedInt(overrideValue, "native_ordinal");
+        NativeEvent completion = null;
+        for (NativeEvent event : events) {
+            if (event.kind() != 2 || event.subject() != 23 || event.pc() != 0x0db4
+                    || event.serviceToken() != serviceToken || event.serviceKind() != 9
+                    || event.sourceCpu() != 1) continue;
+            require(completion == null, "override resume completion is ambiguous");
+            completion = event;
+        }
+        require(completion != null && completion.ordinal() == completionOrdinal,
+                "override resume completion differs");
+
+        List<JsonNode> writes = new ArrayList<>();
+        long previousOrdinal = -1;
+        for (JsonNode write : array(overrideValue, "writes")) {
+            exact(write, "override write", "native_ordinal", "event_kind", "subject", "value",
+                    "pc", "source_cpu", "data", "port", "register");
+            long ordinal = unsignedInt(write, "native_ordinal");
+            require(ordinal > previousOrdinal, "override resume write order differs");
+            previousOrdinal = ordinal;
+            int kind = unsignedByte(write, "event_kind");
+            int subject = unsignedByte(write, "subject");
+            long pc = unsignedInt(write, "pc");
+            int sourceCpu = unsignedByte(write, "source_cpu");
+            unsignedByte(write, "value");
+            bool(write, "data"); unsignedByte(write, "port"); unsignedByte(write, "register");
+            require((kind == 3 && subject <= 3 || kind == 4 && subject == 0)
+                            && sourceCpu >= 1 && sourceCpu <= 3
+                            && (sourceCpu != 1 || pc <= 0xffff)
+                            && (sourceCpu != 2 || pc <= 0xff_ffff)
+                            && (sourceCpu != 3 || pc == 0),
+                    "override resume write identity differs");
+            writes.add(write);
+        }
+
+        int writeIndex = 0;
+        for (NativeEvent event : events) {
+            if (writeIndex < writes.size()
+                && unsignedInt(writes.get(writeIndex), "native_ordinal") == event.ordinal()) {
+                validateOverrideWrite(writes.get(writeIndex++), event, serviceToken, latches);
+            }
+            latches.fold(event);
+        }
+        require(writeIndex == writes.size(), "override resume write differs");
+    }
+
+    private static void validateOverrideWrite(JsonNode write, NativeEvent event, int serviceToken,
+            YmLatches latches) {
+        int kind = unsignedByte(write, "event_kind");
+        int subject = unsignedByte(write, "subject");
+        require((kind == 3 || kind == 4) && event.kind() == kind
+                        && event.subject() == subject
+                        && event.value() == unsignedByte(write, "value")
+                        && event.pc() == unsignedInt(write, "pc")
+                        && event.sourceCpu() == unsignedByte(write, "source_cpu")
+                        && event.serviceToken() == serviceToken && event.serviceKind() == 9
+                        && bool(write, "data") == (kind == 4 || subject == 1 || subject == 3)
+                        && unsignedByte(write, "port") == (subject < 2 ? 0 : 1)
+                        && unsignedByte(write, "register") == latches.registerFor(subject),
+                "override resume write differs");
     }
 
     private static List<ObservedEnvelope> parsePcm(JsonNode value, int row) {
@@ -382,9 +455,11 @@ final class S2RequestAwareOracleRawStream {
         if (value.isNull()) return List.of();
         exact(value, "PCM", "selection", "row", "offset", "sample_rate", "channels", "format",
                 "stereo_frames", "byte_count", "pcm_hex", "sha256");
-        require(("service_frame".equals(text(value, "selection"))
-                        || "following_row".equals(text(value, "selection")))
-                        && integer(value, "row") == row && integer(value, "offset") >= 0
+        String selection = text(value, "selection");
+        int offset = integer(value, "offset");
+        require((("service_frame".equals(selection) && offset == 0)
+                        || ("following_row".equals(selection) && offset == 1))
+                        && integer(value, "row") == row
                         && integer(value, "sample_rate") == 44_100 && integer(value, "channels") == 2
                         && "s16le-interleaved-stereo".equals(text(value, "format")),
                 "PCM identity differs");
@@ -397,7 +472,7 @@ final class S2RequestAwareOracleRawStream {
         } catch (ArithmeticException exception) {
             throw invalid("PCM frame count overflows", exception);
         }
-        require(frames >= 0 && byteCount >= 0 && byteCount == expectedByteCount
+        require(frames > 0 && byteCount >= 0 && byteCount == expectedByteCount
                         && byteCount <= S2RequestAwareOracleSchema.MAX_LINE_BYTES / 2
                         && hex.length() == byteCount * 2, "PCM shape differs");
         String expected = text(value, "sha256");
@@ -419,6 +494,35 @@ final class S2RequestAwareOracleRawStream {
                         && integer(value, "exclusive_end") == S2RequestAwareOracleSchema.EXCLUSIVE_END,
                 "cutoff boundary differs");
         evidence.verify(value);
+    }
+
+    /** Folded exactly as the raw-v3 producer derives FM write register values. */
+    private static final class YmLatches {
+        private int port0;
+        private int port1;
+
+        YmLatches(int port0, int port1) {
+            this.port0 = port0;
+            this.port1 = port1;
+        }
+
+        int registerFor(int subject) {
+            return subject < 2 ? port0 : port1;
+        }
+
+        void fold(List<NativeEvent> events) {
+            for (NativeEvent event : events) fold(event);
+        }
+
+        void fold(NativeEvent event) {
+            if (event.kind() == 8) {
+                port0 = 0;
+                port1 = 0;
+            } else if (event.kind() == 3) {
+                if (event.subject() == 0) port0 = event.value();
+                else if (event.subject() == 2) port1 = event.value();
+            }
+        }
     }
 
     /** Self-contained bounded output accounting; it never consults raw-v3 provenance. */

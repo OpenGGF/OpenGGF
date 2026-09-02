@@ -1,8 +1,13 @@
 package com.openggf.tools.audio.parity.s2;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.NullNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +17,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** Contract tests for the strictly unbound request-aware raw-v2 reader. */
 class TestS2RequestAwareOracleRawStream {
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     @TempDir
     Path temporaryDirectory;
@@ -43,7 +50,7 @@ class TestS2RequestAwareOracleRawStream {
         assertEquals(3, transfer.physicalSlot(), "slot three remains a literal shipped slot");
         assertEquals(0x10d6, transfer.pc());
         assertEquals(0x1234, transfer.a7());
-        assertEquals(2, result.frames().getFirst().eventRecords().size());
+        assertEquals(3, result.frames().getFirst().eventRecords().size());
         assertEquals(1, result.frames().getFirst().overrideResumeRecords().size());
         assertEquals(1, result.frames().getFirst().pcmRecords().size());
         assertThrows(UnsupportedOperationException.class,
@@ -65,8 +72,8 @@ class TestS2RequestAwareOracleRawStream {
 
     @Test
     void rejectsAReusedOrMismatchedNativeMarker() throws Exception {
-        String payload = validPayload().replace("\"a7\":\"4660\",\"native_ordinal\":1,\"source_cpu\":2",
-                "\"a7\":\"4660\",\"native_ordinal\":2,\"source_cpu\":2");
+        String payload = validPayload().replace("\"a7\":\"4660\",\"native_ordinal\":2,\"source_cpu\":2",
+                "\"a7\":\"4660\",\"native_ordinal\":1,\"source_cpu\":2");
 
         assertThrows(IllegalArgumentException.class, () -> read(payload));
     }
@@ -187,6 +194,74 @@ class TestS2RequestAwareOracleRawStream {
                 "\"pcm_hex\":\"00000000\"", "\"pcm_hex\":\"00000001\"")));
     }
 
+    @Test
+    void rejectsSelfConsistentOverrideScalarRangeViolations() throws Exception {
+        for (Consumer<ObjectNode> mutation : List.<Consumer<ObjectNode>>of(
+                override -> override.put("service_token", 65_536),
+                override -> override.put("service_begin_ordinal", -1),
+                override -> override.put("native_ordinal", 0x1_0000_0000L))) {
+            assertThrows(IllegalArgumentException.class, () -> read(
+                    withRecalculatedClosure(validPayload(), records -> mutation.accept(override(records)))));
+        }
+    }
+
+    @Test
+    void rejectsSelfConsistentOverrideCompletionAndWriteCorrelationViolations() throws Exception {
+        for (Consumer<List<ObjectNode>> mutation : List.<Consumer<List<ObjectNode>>>of(
+                records -> override(records).put("native_ordinal", 0),
+                records -> ((ObjectNode) firstFrame(records).withArray("events").get(1))
+                        .put("service_token", 4),
+                records -> ((ObjectNode) firstFrame(records).withArray("events").get(1))
+                        .put("pc", 0x0db5),
+                records -> ((ObjectNode) firstFrame(records).withArray("events").get(0))
+                        .put("service_token", 4),
+                records -> ((ObjectNode) firstFrame(records).withArray("events").get(0))
+                        .put("service_kind", 0),
+                records -> ((ObjectNode) override(records).withArray("writes").get(0))
+                        .put("value", 0x23),
+                records -> ((ObjectNode) override(records).withArray("writes").get(0))
+                        .put("event_kind", 4),
+                records -> ((ObjectNode) override(records).withArray("writes").get(0))
+                        .put("subject", 1),
+                records -> ((ObjectNode) override(records).withArray("writes").get(0))
+                        .put("pc", 513),
+                records -> ((ObjectNode) override(records).withArray("writes").get(0))
+                        .put("source_cpu", 2),
+                records -> ((ObjectNode) override(records).withArray("writes").get(0))
+                        .put("data", true),
+                records -> ((ObjectNode) override(records).withArray("writes").get(0))
+                        .put("port", 1),
+                records -> ((ObjectNode) override(records).withArray("writes").get(0))
+                        .put("register", 1),
+                records -> ((ObjectNode) override(records).withArray("writes").get(0))
+                        .put("native_ordinal", 1))) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> read(withRecalculatedClosure(validPayload(), mutation)));
+        }
+    }
+
+    @Test
+    void rejectsSelfConsistentPcmSelectionOffsetAndZeroFrameViolations() throws Exception {
+        String serviceFrameOffset = withRecalculatedClosure(validPayload(), records -> firstFrame(records)
+                .withObject("pcm").put("offset", 1));
+        assertThrows(IllegalArgumentException.class, () -> read(serviceFrameOffset));
+
+        String followingRowPayload = followingRowPcmPayload();
+        assertDoesNotThrow(() -> read(followingRowPayload));
+        String followingRowOffset = withRecalculatedClosure(followingRowPayload, records -> records.get(3)
+                .withObject("pcm").put("offset", 0));
+        assertThrows(IllegalArgumentException.class, () -> read(followingRowOffset));
+
+        String zeroFrames = withRecalculatedClosure(validPayload(), records -> {
+            ObjectNode pcm = firstFrame(records).withObject("pcm");
+            pcm.put("stereo_frames", 0);
+            pcm.put("byte_count", 0);
+            pcm.put("pcm_hex", "");
+            pcm.put("sha256", sha256(new byte[0]));
+        });
+        assertThrows(IllegalArgumentException.class, () -> read(zeroFrames));
+    }
+
     private S2RequestAwareOracleRawStream.Result read(String payload) throws IOException {
         Path input = temporaryDirectory.resolve("candidate.raw.jsonl");
         Files.writeString(input, payload);
@@ -206,6 +281,18 @@ class TestS2RequestAwareOracleRawStream {
         return boundedProducerPayload(false);
     }
 
+    private static String followingRowPcmPayload() {
+        return withRecalculatedClosure(validPayload(), records -> {
+            ObjectNode firstPcm = firstFrame(records).withObject("pcm").deepCopy();
+            firstFrame(records).set("pcm", NullNode.getInstance());
+            ObjectNode following = records.get(3);
+            firstPcm.put("selection", "following_row");
+            firstPcm.put("row", 10_151);
+            firstPcm.put("offset", 1);
+            following.set("pcm", firstPcm);
+        });
+    }
+
     private static String boundedProducerPayload(boolean twoTransfers) {
         String zeroState = "00".repeat(8_192);
         String terminalState = "01" + "00".repeat(8_191);
@@ -222,23 +309,26 @@ class TestS2RequestAwareOracleRawStream {
                 + "\"payload_before_cutoff\":\"bounded-jsonl-before-cutoff-bytes-v1\"}}";
         String baseline = "{\"type\":\"baseline\",\"row\":10150,\"source_preceding_row\":10149,"
                 + "\"state_hex\":\"" + zeroState + "\",\"ym_port0_latch\":0,\"ym_port1_latch\":0}";
-        String baseEvent = "{\"ordinal\":0,\"service_token\":0,\"parent_token\":0,\"pc\":0,"
-                + "\"subject\":0,\"offset\":0,\"kind\":1,\"service_kind\":0,\"depth\":0,"
-                + "\"source_cpu\":2,\"payload_length\":0,\"value\":0,\"flags\":0,\"reserved\":0,\"payload\":\"0\"}";
-        String markerEvent = "{\"ordinal\":1,\"service_token\":0,\"parent_token\":0,\"pc\":4310,"
+        String baseEvent = "{\"ordinal\":0,\"service_token\":3,\"parent_token\":1,\"pc\":512,"
+                + "\"subject\":0,\"offset\":0,\"kind\":3,\"service_kind\":9,\"depth\":2,"
+                + "\"source_cpu\":1,\"payload_length\":0,\"value\":34,\"flags\":0,\"reserved\":0,\"payload\":\"0\"}";
+        String completionEvent = "{\"ordinal\":1,\"service_token\":3,\"parent_token\":1,\"pc\":3508,"
+                + "\"subject\":23,\"offset\":0,\"kind\":2,\"service_kind\":9,\"depth\":2,"
+                + "\"source_cpu\":1,\"payload_length\":0,\"value\":0,\"flags\":0,\"reserved\":0,\"payload\":\"0\"}";
+        String markerEvent = "{\"ordinal\":2,\"service_token\":0,\"parent_token\":0,\"pc\":4310,"
                 + "\"subject\":24,\"offset\":0,\"kind\":10,\"service_kind\":0,\"depth\":0,"
                 + "\"source_cpu\":2,\"payload_length\":4,\"value\":3,\"flags\":0,\"reserved\":0,\"payload\":\"4660\"}";
         String override = "{\"request\":\"cfFadeInToPrevious\",\"admission\":\"native_service_completion\","
-                + "\"request_pc\":3381,\"pc\":3508,\"service_token\":0,\"service_begin_ordinal\":0,"
+                + "\"request_pc\":3381,\"pc\":3508,\"service_token\":3,\"service_begin_ordinal\":1,"
                 + "\"native_ordinal\":1,\"frame\":10150,\"fix_driver_bugs\":0,"
-                + "\"restores_saved_priority\":true,\"restores_psg_noise\":false,\"writes\":[{\"native_ordinal\":1,"
-                + "\"event_kind\":3,\"subject\":1,\"value\":0,\"pc\":3508,\"source_cpu\":2,"
-                + "\"data\":true,\"port\":0,\"register\":0}]}";
+                + "\"restores_saved_priority\":true,\"restores_psg_noise\":false,\"writes\":[{\"native_ordinal\":0,"
+                + "\"event_kind\":3,\"subject\":0,\"value\":34,\"pc\":512,\"source_cpu\":1,"
+                + "\"data\":false,\"port\":0,\"register\":0}]}";
         String pcm = "{\"selection\":\"service_frame\",\"row\":10150,\"offset\":0,\"sample_rate\":44100,"
                 + "\"channels\":2,\"format\":\"s16le-interleaved-stereo\",\"stereo_frames\":1,"
                 + "\"byte_count\":4,\"pcm_hex\":\"00000000\",\"sha256\":\"df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119\"}";
         String transfer = "{\"row\":10150,\"order\":0,\"global_transfer_ordinal\":17,\"request\":181,\"slot\":3,"
-                + "\"pc\":4310,\"a7\":\"4660\",\"native_ordinal\":1,\"source_cpu\":2,\"service_token\":0,"
+                + "\"pc\":4310,\"a7\":\"4660\",\"native_ordinal\":2,\"source_cpu\":2,\"service_token\":0,"
                 + "\"service_kind\":0,\"depth\":0,\"active_service_owner\":{\"token\":0,\"kind\":0,\"depth\":0}}";
         String secondMarker = "{\"ordinal\":0,\"service_token\":0,\"parent_token\":0,\"pc\":4310,"
                 + "\"subject\":24,\"offset\":0,\"kind\":10,\"service_kind\":0,\"depth\":0,"
@@ -251,7 +341,7 @@ class TestS2RequestAwareOracleRawStream {
             String state = row == 10_899 ? terminalState : zeroState;
             if (row == 10_150) {
                 frames.add("{\"type\":\"frame\",\"row\":10150,\"lag\":false,\"state_hex\":\""
-                        + state + "\",\"events\":[" + baseEvent + ',' + markerEvent + "],\"override_resume\":"
+                        + state + "\",\"events\":[" + baseEvent + ',' + completionEvent + ',' + markerEvent + "],\"override_resume\":"
                         + override + ",\"pcm\":" + pcm + ",\"request_transfers\":[" + transfer + "]}");
             } else if (twoTransfers && row == 10_151) {
                 frames.add("{\"type\":\"frame\",\"row\":10151,\"lag\":false,\"state_hex\":\""
@@ -263,17 +353,18 @@ class TestS2RequestAwareOracleRawStream {
             }
         }
         byte[] body = bytes(baseline + '\n' + String.join("\n", frames) + '\n');
-        String allEvents = baseEvent + '\n' + markerEvent + '\n'
+        String baseEvents = baseEvent + '\n' + completionEvent + '\n';
+        String allEvents = baseEvents + markerEvent + '\n'
                 + (twoTransfers ? secondMarker + '\n' : "");
         String markers = markerEvent + '\n' + (twoTransfers ? secondMarker + '\n' : "");
         String transfers = transfer + '\n' + (twoTransfers ? secondTransfer + '\n' : "");
         int markerCount = twoTransfers ? 2 : 1;
         String cutoff = "{\"type\":\"cutoff\",\"exclusive_end\":10900,\"frame_count\":750,"
-                + "\"base_event_count\":1,\"all_event_count\":" + (1 + markerCount)
+                + "\"base_event_count\":2,\"all_event_count\":" + (2 + markerCount)
                 + ",\"marker_event_count\":" + markerCount + ","
                 + "\"request_transfer_count\":" + markerCount
                 + ",\"override_resume_count\":1,\"pcm_count\":1,"
-                + "\"max_request_occupancy\":1,\"base_event_sha256\":\"" + sha256(bytes(baseEvent + '\n'))
+                + "\"max_request_occupancy\":1,\"base_event_sha256\":\"" + sha256(bytes(baseEvents))
                 + "\",\"all_event_sha256\":\"" + sha256(bytes(allEvents))
                 + "\",\"marker_event_sha256\":\"" + sha256(bytes(markers))
                 + "\",\"request_transfer_sha256\":\"" + sha256(bytes(transfers))
@@ -292,6 +383,115 @@ class TestS2RequestAwareOracleRawStream {
 
     private static byte[] hexBytes(String value) {
         return HexFormat.of().parseHex(value);
+    }
+
+    /** Re-emits every bounded claim after an adversarial mutation, never retaining stale closure data. */
+    private static String withRecalculatedClosure(String payload,
+            Consumer<List<ObjectNode>> mutation) {
+        List<ObjectNode> records = new ArrayList<>();
+        for (String line : payload.split("\\n")) {
+            if (!line.isEmpty()) records.add(object(line));
+        }
+        mutation.accept(records);
+        ObjectNode metadata = records.getFirst();
+        ObjectNode cutoff = records.getLast();
+        ByteArrayOutputStream body = new ByteArrayOutputStream();
+        ByteArrayOutputStream base = new ByteArrayOutputStream();
+        ByteArrayOutputStream all = new ByteArrayOutputStream();
+        ByteArrayOutputStream markers = new ByteArrayOutputStream();
+        ByteArrayOutputStream transfers = new ByteArrayOutputStream();
+        ByteArrayOutputStream overrides = new ByteArrayOutputStream();
+        ByteArrayOutputStream pcm = new ByteArrayOutputStream();
+        long baseCount = 0;
+        long allCount = 0;
+        long markerCount = 0;
+        long transferCount = 0;
+        long overrideCount = 0;
+        long pcmCount = 0;
+        int maxOccupancy = 0;
+        for (int index = 1; index < records.size() - 1; index++) {
+            ObjectNode record = records.get(index);
+            append(body, record);
+            if (!"frame".equals(record.path("type").asText())) continue;
+            for (JsonNode event : record.withArray("events")) {
+                append(all, event);
+                allCount++;
+                if (marker(event)) {
+                    append(markers, event);
+                    markerCount++;
+                } else {
+                    append(base, event);
+                    baseCount++;
+                }
+            }
+            maxOccupancy = Math.max(maxOccupancy, record.withArray("request_transfers").size());
+            for (JsonNode transfer : record.withArray("request_transfers")) {
+                append(transfers, transfer);
+                transferCount++;
+            }
+            JsonNode override = record.get("override_resume");
+            if (override != null && !override.isNull()) {
+                append(overrides, override);
+                overrideCount++;
+            }
+            JsonNode pcmValue = record.get("pcm");
+            if (pcmValue != null && !pcmValue.isNull()) {
+                append(pcm, pcmValue);
+                pcmCount++;
+            }
+        }
+        cutoff.put("frame_count", records.size() - 3);
+        cutoff.put("base_event_count", baseCount);
+        cutoff.put("all_event_count", allCount);
+        cutoff.put("marker_event_count", markerCount);
+        cutoff.put("request_transfer_count", transferCount);
+        cutoff.put("override_resume_count", overrideCount);
+        cutoff.put("pcm_count", pcmCount);
+        cutoff.put("max_request_occupancy", maxOccupancy);
+        cutoff.put("base_event_sha256", sha256(base.toByteArray()));
+        cutoff.put("all_event_sha256", sha256(all.toByteArray()));
+        cutoff.put("marker_event_sha256", sha256(markers.toByteArray()));
+        cutoff.put("request_transfer_sha256", sha256(transfers.toByteArray()));
+        cutoff.put("override_resume_sha256", sha256(overrides.toByteArray()));
+        cutoff.put("pcm_sha256", sha256(pcm.toByteArray()));
+        cutoff.put("body_byte_count", body.size());
+        cutoff.put("body_sha256", sha256(body.toByteArray()));
+        cutoff.put("terminal_state_sha256", sha256(hexBytes(records.get(records.size() - 2)
+                .path("state_hex").asText())));
+        ByteArrayOutputStream prefix = new ByteArrayOutputStream();
+        append(prefix, metadata);
+        prefix.writeBytes(body.toByteArray());
+        cutoff.put("payload_before_cutoff_sha256", sha256(prefix.toByteArray()));
+        StringBuilder result = new StringBuilder();
+        for (ObjectNode record : records) result.append(record).append('\n');
+        return result.toString();
+    }
+
+    private static ObjectNode override(List<ObjectNode> records) {
+        return (ObjectNode) firstFrame(records).get("override_resume");
+    }
+
+    private static ObjectNode firstFrame(List<ObjectNode> records) {
+        return records.get(2);
+    }
+
+    private static ObjectNode object(String line) {
+        try {
+            return (ObjectNode) JSON.readTree(line);
+        } catch (IOException exception) {
+            throw new IllegalStateException("test payload is not JSON", exception);
+        }
+    }
+
+    private static boolean marker(JsonNode value) {
+        return value.path("kind").asInt() == 10 && value.path("value").asInt() == 3
+                && value.path("pc").asInt() == S2RequestAwareOracleSchema.REQUEST_PC
+                && value.path("subject").asInt()
+                        == S2RequestAwareOracleSchema.REQUEST_MARKER_TOKEN;
+    }
+
+    private static void append(ByteArrayOutputStream output, JsonNode value) {
+        output.writeBytes(bytes(value + "\n"));
     }
 
     private static String sha256(byte[] value) {
