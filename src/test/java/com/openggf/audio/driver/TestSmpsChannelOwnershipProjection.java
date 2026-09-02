@@ -17,9 +17,34 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsChannelOwnershipProjection {
+    private static final List<S3kE4SlotExpectation> E4_SLOT_LAYOUT = List.of(
+            new S3kE4SlotExpectation(S3kE4Projection.S3kE4Slot.FM3, 2, 0x02),
+            new S3kE4SlotExpectation(S3kE4Projection.S3kE4Slot.FM4, 3, 0x04),
+            new S3kE4SlotExpectation(S3kE4Projection.S3kE4Slot.FM5, 4, 0x05),
+            new S3kE4SlotExpectation(S3kE4Projection.S3kE4Slot.FM6, 5, 0x06),
+            new S3kE4SlotExpectation(S3kE4Projection.S3kE4Slot.PSG1, 0, 0x80),
+            new S3kE4SlotExpectation(S3kE4Projection.S3kE4Slot.PSG2, 1, 0xA0),
+            new S3kE4SlotExpectation(S3kE4Projection.S3kE4Slot.PSG3, 2, 0xC0));
+
+    @Test
+    void nativeE4SlotTableHasExactChannelAndVoiceControlValues() {
+        List<S3kE4Projection.S3kE4Slot> slots = List.of(
+                S3kE4Projection.S3kE4Slot.values());
+
+        assertEquals(E4_SLOT_LAYOUT.size(), slots.size());
+        for (int index = 0; index < E4_SLOT_LAYOUT.size(); index++) {
+            S3kE4SlotExpectation expected = E4_SLOT_LAYOUT.get(index);
+            S3kE4Projection.S3kE4Slot actual = slots.get(index);
+            assertEquals(expected.slot(), actual);
+            assertEquals(expected.channel(), actual.channel());
+            assertEquals(expected.rawVoiceControl(), actual.rawVoiceControl());
+        }
+    }
+
     @Test
     void activeDeclaredSfxClaimIsProjectedBeforeItAcquiresAnyWriteLock()
             throws Exception {
@@ -51,27 +76,46 @@ class TestSmpsChannelOwnershipProjection {
         assertFalse(role.sfxClaims().getFirst().track().overridden());
 
         S3kE4Projection e4 = S3kE4Projection.capture(projection);
-        assertTrue(e4.complete());
-        assertEquals(List.of(S3kE4Projection.S3kE4Slot.FM3,
-                        S3kE4Projection.S3kE4Slot.FM4,
-                        S3kE4Projection.S3kE4Slot.FM5,
-                        S3kE4Projection.S3kE4Slot.FM6,
-                        S3kE4Projection.S3kE4Slot.PSG1,
-                        S3kE4Projection.S3kE4Slot.PSG2,
-                        S3kE4Projection.S3kE4Slot.PSG3),
-                e4.slots().stream().map(S3kE4Projection.SlotProjection::slot)
-                        .toList());
-        S3kE4Projection.S3kE4Track view = e4.slots().getFirst().sfx();
-        assertEquals(0x02, view.canonicalVoiceControl());
-        assertFalse(view.rawPlaybackFlags().isPresent(),
+        assertFalse(e4.complete(),
+                "FM3 bit zero is a distinct special-mode state that Phase 1 does not retain");
+        S3kE4Projection.SlotProjection fm3 = e4.slots().getFirst();
+        assertEquals(S3kE4Projection.Availability.UNAVAILABLE_FM3_SPECIAL_STATE,
+                fm3.availability());
+        assertNull(fm3.sfx());
+        assertNull(fm3.music());
+    }
+
+    @Test
+    void psgNoiseProjectionRetainsPsgNoiseSemantics() throws Exception {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer sfx = sequencer(sfx(0xA0, 0xC0), driver);
+        SmpsSequencer.Track declared = sfx.getTracks().getFirst();
+        declared.noiseMode = true;
+        declared.psgNoiseParam = 0x07;
+        declared.voiceData = new byte[] {1, 2, 3};
+        declared.voiceId = 7;
+        declared.volumeOffset = 9;
+        declared.pan = 0x80;
+        declared.ssgEg[1] = 0x0E;
+        driver.addSequencer(sfx, true);
+
+        S3kE4Projection.SlotProjection psg3 = S3kE4Projection.capture(
+                driver.captureOwnershipProjection()).slots().getLast();
+
+        assertEquals(S3kE4Projection.Availability.AVAILABLE, psg3.availability());
+        assertTrue(psg3.sfx().noiseOrFm3Special());
+        assertEquals(0x01, psg3.sfx().canonicalPlaybackFlags() & 0x01);
+        assertEquals(0x07, psg3.sfx().psgNoise());
+        assertEquals(0xC0, psg3.sfx().canonicalVoiceControl());
+        assertFalse(psg3.sfx().rawPlaybackFlags().isPresent(),
                 "the engine retains semantic flags, not an invented raw Z80 byte");
-        assertEquals(7, view.voiceId());
-        assertEquals(9, view.volume());
-        assertEquals(0x80, view.pan());
-        assertArrayEquals(new int[] {0, 0x0E, 0, 0}, view.ssgEg());
-        byte[] copied = view.materializedVoice();
+        assertEquals(7, psg3.sfx().voiceId());
+        assertEquals(9, psg3.sfx().volume());
+        assertEquals(0x80, psg3.sfx().pan());
+        assertArrayEquals(new int[] {0, 0x0E, 0, 0}, psg3.sfx().ssgEg());
+        byte[] copied = psg3.sfx().materializedVoice();
         copied[0] = 99;
-        assertArrayEquals(new byte[] {1, 2, 3}, view.materializedVoice());
+        assertArrayEquals(new byte[] {1, 2, 3}, psg3.sfx().materializedVoice());
     }
 
     @Test
@@ -162,5 +206,11 @@ class TestSmpsChannelOwnershipProjection {
         Sonic3kSfxData result = new Sonic3kSfxData(data, 0, 0, 0);
         result.setId(id);
         return result;
+    }
+
+    private record S3kE4SlotExpectation(
+            S3kE4Projection.S3kE4Slot slot,
+            int channel,
+            int rawVoiceControl) {
     }
 }
