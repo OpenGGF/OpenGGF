@@ -1545,10 +1545,16 @@ none resolved from memory:
    unverified. Keep the derivation, keep the question.
 6. **`cmd_StopSEGA` residue** (`FEh` → stop-all next update): harmless by
    inspection, unconfirmed by trace (§14.4).
-7. **`F3` on FM1-3 music tracks**: the shipped guard tests `VoiceControl` bit 2, so
-   an FM1-3 track executing `F3` would set its bit 0 (= FM3 special mode for FM3).
-   The 33/36 users appear to be PSG-only by macro placement; not audited byte by
-   byte.
+7. **`F3` on FM1-3 music tracks — resolved.** The ROM-backed per-root fixed-point
+   audit in `TestSonic3kSmpsMetaCommandReachability` walks every resolved S&K and
+   standalone-S3 DAC/FM and PSG music root against its source bank. Every reachable
+   shipped `F3` has operand `E7h` and comes from a PSG `VoiceControl` of `80h`,
+   `A0h`, or `C0h`; no DAC/FM root (`16h`, `00h`, `01h`, `02h`, `04h`, `05h`,
+   `06h`) reaches it. This deliberately records the byte-audited result rather than
+   inferring PSG3 from macro placement: S&K music `1Dh` reaches `F3 E7h` from PSG1
+   (`80h`, bank offset `72FBh`). `cfSetPSGNoise` still has the shipped `VoiceControl`
+   bit-2 guard, so the retained FM3 bit remains necessary for arbitrary/synthetic
+   streams even though the shipped music audit closes that route.
 8. **Exact YM/PSG write timing within an update**: out of scope for the
    per-invocation oracle (GAP §1.2 #25); the existing
    `2026-08-22-s3k-ym-write-timing-calculation.md` covers the cycle tier.

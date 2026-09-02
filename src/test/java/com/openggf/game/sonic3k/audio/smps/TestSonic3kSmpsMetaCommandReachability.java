@@ -58,6 +58,14 @@ public class TestSonic3kSmpsMetaCommandReachability {
     private static final int S3_SFX_BANK_ROM = Sonic3kSmpsConstants.S3_ROM_OFFSET_IN_COMBINED
             + Sonic3kSmpsConstants.SFX_BANK_BASE;
     private static final int SK_ADDITIONAL_LOAD_ADDRESS = Sonic3kSmpsConstants.Z80_GENERAL_PTR_LIST;
+    // zTracks DAC/FM then PSG channel-RAM order for S3K music headers.
+    private static final int[] MUSIC_FM_VOICE_CONTROLS = {0x16, 0x00, 0x01, 0x02,
+            0x04, 0x05, 0x06};
+    private static final int[] MUSIC_PSG_VOICE_CONTROLS = {0x80, 0xA0, 0xC0};
+    private static final Set<Integer> SHIPPED_PSG_F3_VOICE_CONTROLS =
+            Set.of(0x80, 0xA0, 0xC0);
+    private static final Set<Integer> FM_OR_DAC_VOICE_CONTROLS =
+            Set.of(0x16, 0x00, 0x01, 0x02, 0x04, 0x05, 0x06);
 
     private enum NativeDispatch {
         MUSIC_CREDITS,
@@ -91,6 +99,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
             assertNotNull(data, "Missing S&K music stream 0x" + hex(id));
             ControlFlowInventory inventory = inventory(data);
             assertClosed(inventory, "S&K music 0x" + hex(id));
+            assertMusicRootsUseShippedPsgNoise(data, "S&K music 0x" + hex(id));
             assertNoMusicMetaPair(data, id, "S&K");
             metaSubcommands.addAll(inventory.metaSubcommands);
             coordFlags.addAll(inventory.coordFlags);
@@ -103,6 +112,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
             assertNotNull(data, "Missing S3 music stream 0x" + hex(id));
             ControlFlowInventory inventory = inventory(data);
             assertClosed(inventory, "S3 music 0x" + hex(id));
+            assertMusicRootsUseShippedPsgNoise(data, "S3 music 0x" + hex(id));
             assertNoMusicMetaPair(data, id, "S3");
             metaSubcommands.addAll(inventory.metaSubcommands);
             coordFlags.addAll(inventory.coordFlags);
@@ -247,6 +257,40 @@ public class TestSonic3kSmpsMetaCommandReachability {
         assertFalse(bankEnd.frontier.isEmpty(), "bank-end falloff must remain an unexplored frontier");
     }
 
+    @Test
+    void skMusic1dUsesTheShippedPsg1F3Root() {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(TestEnvironment.currentRom());
+        AbstractSmpsData data = loader.loadMusic(0x1D);
+        assertNotNull(data, "S&K music 0x1D must resolve through the loader");
+        assertTrue(data instanceof Sonic3kSmpsData,
+                "S&K music 0x1D must retain native S3K bank coordinates");
+        Sonic3kSmpsData music = (Sonic3kSmpsData) data;
+        NativeTrackRoot psg1 = musicTrackRoots(music, "S&K music 0x1D").stream()
+                .filter(root -> root.rawVoiceControl == 0x80)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "S&K music 0x1D must retain a PSG1/0x80 root"));
+        assertEquals(0x72FB, psg1.offset,
+                "S&K music 0x1D PSG1/0x80 root bank offset");
+        ControlFlowInventory inventory = inventory(music, false, List.of(psg1.offset));
+        assertFalse(inventory.f3Offsets.isEmpty(),
+                "S&K music 0x1D PSG1 root must reach F3");
+        assertReachableF3UsesShippedPsgNoise(psg1, inventory, music.getBankData(),
+                "S&K music 0x1D");
+    }
+
+    @Test
+    void perRootF3AuditRejectsFm3EvenWithTheShippedNoiseOperand() {
+        Sonic3kSfxData data = syntheticSfx(new byte[] {(byte) 0xF3, (byte) 0xE7,
+                (byte) 0xF2});
+        NativeTrackRoot fm3 = new NativeTrackRoot(0x20, SmpsSequencer.TrackType.FM, 0x02);
+        assertThrows(AssertionError.class,
+                () -> assertReachableF3UsesShippedPsgNoise(fm3,
+                        inventory(data, true, List.of(fm3.offset)), data.getData(),
+                        "mutated FM3 F3 root"),
+                "a matching operand must not make an FM3 F3 root look like PSG noise");
+    }
+
     private static void assertControlFlowEdges(int command, int commandLength,
             int fallThrough, boolean hasFallThrough) {
         byte[] stream = new byte[commandLength];
@@ -342,7 +386,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
                 int rawVoiceControl = bank[headerOffset + 5 + trackIndex * 6] & 0xFF;
                 NativeTrackRoot root = new NativeTrackRoot(start,
                         trackType(rawVoiceControl), rawVoiceControl);
-                assertReachableF3UsesPsg3Noise(root,
+                assertReachableF3UsesShippedPsgNoise(root,
                         inventory(data, true, List.of(start)), bank,
                         half.label + " SFX 0x" + hex(id));
             }
@@ -555,24 +599,77 @@ public class TestSonic3kSmpsMetaCommandReachability {
         return result;
     }
 
-    private static void assertReachableF3UsesPsg3Noise(NativeTrackRoot root,
+    private static void assertReachableF3UsesShippedPsgNoise(NativeTrackRoot root,
             ControlFlowInventory inventory, byte[] bank, String label) {
-        assertClosed(inventory, label + " root 0x" + hex(root.offset));
+        assertClosed(inventory, label + " root 0x" + hexWord(root.offset));
         for (int commandOffset : inventory.f3Offsets) {
-            assertEquals(SmpsSequencer.TrackType.PSG, root.type,
-                    label + " root 0x" + hex(root.offset)
-                            + " reached F3 from a non-PSG VoiceControl 0x"
-                            + hex(root.rawVoiceControl));
-            assertEquals(0xC0, root.rawVoiceControl,
-                    label + " root 0x" + hex(root.offset)
-                            + " reached F3 from a non-PSG3 VoiceControl");
             assertTrue(commandOffset + 1 < bank.length,
-                    label + " root 0x" + hex(root.offset)
-                            + " has truncated reachable F3 at 0x" + hex(commandOffset));
+                    label + " root 0x" + hexWord(root.offset)
+                            + " has truncated reachable F3 at 0x" + hexWord(commandOffset));
             assertEquals(0xE7, bank[commandOffset + 1] & 0xFF,
                     label + " root VoiceControl 0x" + hex(root.rawVoiceControl)
-                            + " reachable F3 operand at 0x" + hex(commandOffset));
+                            + " reachable F3 operand at 0x" + hexWord(commandOffset));
+            assertEquals(SmpsSequencer.TrackType.PSG, root.type,
+                    label + " root 0x" + hexWord(root.offset)
+                            + " reached F3 from a non-PSG VoiceControl 0x"
+                            + hex(root.rawVoiceControl));
+            assertTrue(SHIPPED_PSG_F3_VOICE_CONTROLS.contains(root.rawVoiceControl),
+                    label + " root 0x" + hexWord(root.offset)
+                            + " reached F3 from an unsupported PSG VoiceControl 0x"
+                            + hex(root.rawVoiceControl));
+            assertFalse(FM_OR_DAC_VOICE_CONTROLS.contains(root.rawVoiceControl),
+                    label + " root 0x" + hexWord(root.offset)
+                            + " reached F3 from FM/DAC VoiceControl 0x"
+                            + hex(root.rawVoiceControl));
         }
+    }
+
+    private static void assertMusicRootsUseShippedPsgNoise(AbstractSmpsData data,
+            String label) {
+        assertTrue(data instanceof Sonic3kSmpsData,
+                label + " must retain native S3K bank coordinates");
+        Sonic3kSmpsData music = (Sonic3kSmpsData) data;
+        byte[] bank = music.getBankData();
+        assertNotNull(bank, label + " must retain its source bank for root attribution");
+        for (NativeTrackRoot root : musicTrackRoots(music, label)) {
+            // Keep this inventory per root: a pooled walk loses the source
+            // VoiceControl that determines whether F3 is FM3-special or PSG noise.
+            assertReachableF3UsesShippedPsgNoise(root,
+                    inventory(music, false, List.of(root.offset)), bank, label);
+        }
+    }
+
+    private static List<NativeTrackRoot> musicTrackRoots(Sonic3kSmpsData music,
+            String label) {
+        boolean bankSpace = music.getBankData() != null;
+        assertTrue(bankSpace, label + " must retain its full Z80 bank");
+        List<NativeTrackRoot> roots = new ArrayList<>();
+        int[] fmPointers = music.getFmPointers();
+        assertTrue(fmPointers.length <= MUSIC_FM_VOICE_CONTROLS.length,
+                label + " declares more DAC/FM roots than zTracks supports");
+        for (int index = 0; index < fmPointers.length; index++) {
+            addMusicTrackRoot(roots, fmPointers[index], MUSIC_FM_VOICE_CONTROLS[index],
+                    music, bankSpace, label + " DAC/FM index " + index);
+        }
+        int[] psgPointers = music.getPsgPointers();
+        assertTrue(psgPointers.length <= MUSIC_PSG_VOICE_CONTROLS.length,
+                label + " declares more PSG roots than zTracks supports");
+        for (int index = 0; index < psgPointers.length; index++) {
+            addMusicTrackRoot(roots, psgPointers[index], MUSIC_PSG_VOICE_CONTROLS[index],
+                    music, bankSpace, label + " PSG index " + index);
+        }
+        return roots;
+    }
+
+    private static void addMusicTrackRoot(List<NativeTrackRoot> roots, int pointer,
+            int rawVoiceControl, Sonic3kSmpsData music, boolean bankSpace, String label) {
+        if (pointer <= 0) {
+            return;
+        }
+        int offset = resolvePointer(pointer, music, bankSpace);
+        assertTrue(offset >= 0, label + " pointer 0x" + hexWord(pointer)
+                + " must resolve in its source bank");
+        roots.add(new NativeTrackRoot(offset, trackType(rawVoiceControl), rawVoiceControl));
     }
 
     private static void addPointerEdge(ControlFlowInventory result, ArrayDeque<Integer> work,
