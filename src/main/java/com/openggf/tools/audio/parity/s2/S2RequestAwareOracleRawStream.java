@@ -130,7 +130,6 @@ final class S2RequestAwareOracleRawStream {
         byte[] baselineBytes = lines.next("baseline");
         Baseline baseline = parseBaseline(parse(baselineBytes, "baseline"));
         evidence.body(baselineBytes);
-        YmLatches latches = new YmLatches(baseline.ymPort0Latch(), baseline.ymPort1Latch());
         List<Frame> frames = new ArrayList<>(S2RequestAwareOracleSchema.EXCLUSIVE_END
                 - S2RequestAwareOracleSchema.FIRST_ROW);
         long previousGlobalOrdinal = -1;
@@ -140,8 +139,7 @@ final class S2RequestAwareOracleRawStream {
                 row < S2RequestAwareOracleSchema.EXCLUSIVE_END; row++) {
             byte[] frameBytes = lines.next("frame");
             JsonNode frameRecord = parse(frameBytes, "frame");
-            Frame frame = parseFrame(frameRecord, row,
-                    previousGlobalOrdinal, latches);
+            Frame frame = parseFrame(frameRecord, row, previousGlobalOrdinal);
             if (!frame.requestTransfers().isEmpty()) {
                 previousGlobalOrdinal = frame.requestTransfers().getLast().sourceGlobalOrdinal();
             }
@@ -226,8 +224,7 @@ final class S2RequestAwareOracleRawStream {
                 unsignedByte(value, "ym_port1_latch"));
     }
 
-    private static Frame parseFrame(JsonNode value, int row, long previousGlobalOrdinal,
-            YmLatches latches) {
+    private static Frame parseFrame(JsonNode value, int row, long previousGlobalOrdinal) {
         exact(value, "frame", "type", "row", "lag", "state_hex", "events",
                 "override_resume", "pcm", "request_transfers");
         require("frame".equals(text(value, "type")) && integer(value, "row") == row,
@@ -237,7 +234,7 @@ final class S2RequestAwareOracleRawStream {
         List<ObservedEnvelope> pcm = parsePcm(value.get("pcm"), row);
         List<RequestTransfer> transfers = parseTransfers(array(value, "request_transfers"), row,
                 events, previousGlobalOrdinal);
-        validateOverrideCorrelations(value.get("override_resume"), events, latches);
+        validateOverrideCompletion(value.get("override_resume"), events);
         return new Frame(row, bool(value, "lag"), state(value), events, override, pcm, transfers);
     }
 
@@ -372,21 +369,19 @@ final class S2RequestAwareOracleRawStream {
                 "override resume service token differs");
         unsignedInt(value, "service_begin_ordinal");
         unsignedInt(value, "native_ordinal");
-        require(!array(value, "writes").isEmpty(), "override resume has no writes");
+        JsonNode writes = array(value, "writes");
+        require(!writes.isEmpty(), "override resume has no writes");
+        for (JsonNode write : writes) validateOverrideWriteShape(write);
         return List.of(new ObservedEnvelope(compact(value)));
     }
 
     /**
-     * Validates only correlations the bounded rows retain. Service begin lifecycle/coordinates are
-     * deliberately absent, whereas the completion event, native write ordinals, and YM latches are
-     * carried in this same bounded body.
+     * Only the completion is a same-row correlation. The bounded write records deliberately omit
+     * their coordinates/rows, so ownership and YM address-latch derivation remain source-only.
      */
-    private static void validateOverrideCorrelations(JsonNode overrideValue,
-            List<NativeEvent> events, YmLatches latches) {
-        if (overrideValue == null || overrideValue.isNull()) {
-            latches.fold(events);
-            return;
-        }
+    private static void validateOverrideCompletion(JsonNode overrideValue,
+            List<NativeEvent> events) {
+        if (overrideValue == null || overrideValue.isNull()) return;
         int serviceToken = unsignedShort(overrideValue, "service_token");
         long completionOrdinal = unsignedInt(overrideValue, "native_ordinal");
         NativeEvent completion = null;
@@ -399,55 +394,28 @@ final class S2RequestAwareOracleRawStream {
         }
         require(completion != null && completion.ordinal() == completionOrdinal,
                 "override resume completion differs");
-
-        List<JsonNode> writes = new ArrayList<>();
-        long previousOrdinal = -1;
-        for (JsonNode write : array(overrideValue, "writes")) {
-            exact(write, "override write", "native_ordinal", "event_kind", "subject", "value",
-                    "pc", "source_cpu", "data", "port", "register");
-            long ordinal = unsignedInt(write, "native_ordinal");
-            require(ordinal > previousOrdinal, "override resume write order differs");
-            previousOrdinal = ordinal;
-            int kind = unsignedByte(write, "event_kind");
-            int subject = unsignedByte(write, "subject");
-            long pc = unsignedInt(write, "pc");
-            int sourceCpu = unsignedByte(write, "source_cpu");
-            unsignedByte(write, "value");
-            bool(write, "data"); unsignedByte(write, "port"); unsignedByte(write, "register");
-            require((kind == 3 && subject <= 3 || kind == 4 && subject == 0)
-                            && sourceCpu >= 1 && sourceCpu <= 3
-                            && (sourceCpu != 1 || pc <= 0xffff)
-                            && (sourceCpu != 2 || pc <= 0xff_ffff)
-                            && (sourceCpu != 3 || pc == 0),
-                    "override resume write identity differs");
-            writes.add(write);
-        }
-
-        int writeIndex = 0;
-        for (NativeEvent event : events) {
-            if (writeIndex < writes.size()
-                && unsignedInt(writes.get(writeIndex), "native_ordinal") == event.ordinal()) {
-                validateOverrideWrite(writes.get(writeIndex++), event, serviceToken, latches);
-            }
-            latches.fold(event);
-        }
-        require(writeIndex == writes.size(), "override resume write differs");
     }
 
-    private static void validateOverrideWrite(JsonNode write, NativeEvent event, int serviceToken,
-            YmLatches latches) {
+    private static void validateOverrideWriteShape(JsonNode write) {
+        exact(write, "override write", "native_ordinal", "event_kind", "subject", "value",
+                "pc", "source_cpu", "data", "port", "register");
+        unsignedInt(write, "native_ordinal");
         int kind = unsignedByte(write, "event_kind");
         int subject = unsignedByte(write, "subject");
-        require((kind == 3 || kind == 4) && event.kind() == kind
-                        && event.subject() == subject
-                        && event.value() == unsignedByte(write, "value")
-                        && event.pc() == unsignedInt(write, "pc")
-                        && event.sourceCpu() == unsignedByte(write, "source_cpu")
-                        && event.serviceToken() == serviceToken && event.serviceKind() == 9
-                        && bool(write, "data") == (kind == 4 || subject == 1 || subject == 3)
-                        && unsignedByte(write, "port") == (subject < 2 ? 0 : 1)
-                        && unsignedByte(write, "register") == latches.registerFor(subject),
-                "override resume write differs");
+        long pc = unsignedInt(write, "pc");
+        int sourceCpu = unsignedByte(write, "source_cpu");
+        unsignedByte(write, "value");
+        boolean data = bool(write, "data");
+        int port = unsignedByte(write, "port");
+        unsignedByte(write, "register");
+        require((kind == 3 && subject <= 3 || kind == 4 && subject == 0)
+                        && sourceCpu >= 1 && sourceCpu <= 3
+                        && (sourceCpu != 1 || pc <= 0xffff)
+                        && (sourceCpu != 2 || pc <= 0xff_ffff)
+                        && (sourceCpu != 3 || pc == 0)
+                        && data == (kind == 4 || subject == 1 || subject == 3)
+                        && port == (subject < 2 ? 0 : 1),
+                "override resume write shape differs");
     }
 
     private static List<ObservedEnvelope> parsePcm(JsonNode value, int row) {
@@ -494,35 +462,6 @@ final class S2RequestAwareOracleRawStream {
                         && integer(value, "exclusive_end") == S2RequestAwareOracleSchema.EXCLUSIVE_END,
                 "cutoff boundary differs");
         evidence.verify(value);
-    }
-
-    /** Folded exactly as the raw-v3 producer derives FM write register values. */
-    private static final class YmLatches {
-        private int port0;
-        private int port1;
-
-        YmLatches(int port0, int port1) {
-            this.port0 = port0;
-            this.port1 = port1;
-        }
-
-        int registerFor(int subject) {
-            return subject < 2 ? port0 : port1;
-        }
-
-        void fold(List<NativeEvent> events) {
-            for (NativeEvent event : events) fold(event);
-        }
-
-        void fold(NativeEvent event) {
-            if (event.kind() == 8) {
-                port0 = 0;
-                port1 = 0;
-            } else if (event.kind() == 3) {
-                if (event.subject() == 0) port0 = event.value();
-                else if (event.subject() == 2) port1 = event.value();
-            }
-        }
     }
 
     /** Self-contained bounded output accounting; it never consults raw-v3 provenance. */

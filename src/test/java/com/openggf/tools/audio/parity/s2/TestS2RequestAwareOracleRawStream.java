@@ -2,6 +2,7 @@ package com.openggf.tools.audio.parity.s2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ class TestS2RequestAwareOracleRawStream {
         assertEquals(3, transfer.physicalSlot(), "slot three remains a literal shipped slot");
         assertEquals(0x10d6, transfer.pc());
         assertEquals(0x1234, transfer.a7());
-        assertEquals(3, result.frames().getFirst().eventRecords().size());
+        assertEquals(4, result.frames().getFirst().eventRecords().size());
         assertEquals(1, result.frames().getFirst().overrideResumeRecords().size());
         assertEquals(1, result.frames().getFirst().pcmRecords().size());
         assertThrows(UnsupportedOperationException.class,
@@ -71,9 +72,14 @@ class TestS2RequestAwareOracleRawStream {
     }
 
     @Test
+    void acceptsCoordinateLessCarriedServiceWritesWithRepeatedNativeOrdinals() throws Exception {
+        assertDoesNotThrow(() -> read(carriedServicePayloadWithRepeatedNativeOrdinals()));
+    }
+
+    @Test
     void rejectsAReusedOrMismatchedNativeMarker() throws Exception {
-        String payload = validPayload().replace("\"a7\":\"4660\",\"native_ordinal\":2,\"source_cpu\":2",
-                "\"a7\":\"4660\",\"native_ordinal\":1,\"source_cpu\":2");
+        String payload = validPayload().replace("\"a7\":\"4660\",\"native_ordinal\":3,\"source_cpu\":2",
+                "\"a7\":\"4660\",\"native_ordinal\":2,\"source_cpu\":2");
 
         assertThrows(IllegalArgumentException.class, () -> read(payload));
     }
@@ -206,37 +212,49 @@ class TestS2RequestAwareOracleRawStream {
     }
 
     @Test
-    void rejectsSelfConsistentOverrideCompletionAndWriteCorrelationViolations() throws Exception {
+    void rejectsSelfConsistentOverrideCompletionCorrelationViolations() throws Exception {
         for (Consumer<List<ObjectNode>> mutation : List.<Consumer<List<ObjectNode>>>of(
                 records -> override(records).put("native_ordinal", 0),
-                records -> ((ObjectNode) firstFrame(records).withArray("events").get(1))
+                records -> ((ObjectNode) firstFrame(records).withArray("events").get(2))
                         .put("service_token", 4),
-                records -> ((ObjectNode) firstFrame(records).withArray("events").get(1))
+                records -> ((ObjectNode) firstFrame(records).withArray("events").get(2))
                         .put("pc", 0x0db5),
-                records -> ((ObjectNode) firstFrame(records).withArray("events").get(0))
-                        .put("service_token", 4),
-                records -> ((ObjectNode) firstFrame(records).withArray("events").get(0))
+                records -> ((ObjectNode) firstFrame(records).withArray("events").get(2))
                         .put("service_kind", 0),
-                records -> ((ObjectNode) override(records).withArray("writes").get(0))
-                        .put("value", 0x23),
-                records -> ((ObjectNode) override(records).withArray("writes").get(0))
-                        .put("event_kind", 4),
-                records -> ((ObjectNode) override(records).withArray("writes").get(0))
-                        .put("subject", 1),
-                records -> ((ObjectNode) override(records).withArray("writes").get(0))
-                        .put("pc", 513),
-                records -> ((ObjectNode) override(records).withArray("writes").get(0))
-                        .put("source_cpu", 2),
-                records -> ((ObjectNode) override(records).withArray("writes").get(0))
-                        .put("data", true),
-                records -> ((ObjectNode) override(records).withArray("writes").get(0))
-                        .put("port", 1),
-                records -> ((ObjectNode) override(records).withArray("writes").get(0))
-                        .put("register", 1),
-                records -> ((ObjectNode) override(records).withArray("writes").get(0))
-                        .put("native_ordinal", 1))) {
+                records -> ((ObjectNode) firstFrame(records).withArray("events").get(2))
+                        .put("source_cpu", 2))) {
             assertThrows(IllegalArgumentException.class,
                     () -> read(withRecalculatedClosure(validPayload(), mutation)));
+        }
+    }
+
+    @Test
+    void rejectsSelfConsistentOverrideWriteShapeViolations() throws Exception {
+        for (Consumer<ObjectNode> mutation : List.<Consumer<ObjectNode>>of(
+                write -> write.remove("register"),
+                write -> write.put("unexpected", 0),
+                write -> write.put("native_ordinal", "0"),
+                write -> write.put("native_ordinal", -1),
+                write -> write.put("event_kind", 5),
+                write -> write.put("subject", 4),
+                write -> write.put("data", true),
+                write -> write.put("port", 1),
+                write -> write.put("source_cpu", 0),
+                write -> write.put("pc", 0x1_0000),
+                write -> write.put("register", 256))) {
+            assertThrows(IllegalArgumentException.class, () -> read(withRecalculatedClosure(
+                    validPayload(), records -> mutation.accept(firstWrite(records)))));
+        }
+    }
+
+    @Test
+    void allowsUncorrelatedOverrideWriteValueRegisterAndOrdinalMutations() throws Exception {
+        for (Consumer<ObjectNode> mutation : List.<Consumer<ObjectNode>>of(
+                write -> write.put("value", 0x23),
+                write -> write.put("register", 0x22),
+                write -> write.put("native_ordinal", 2))) {
+            assertDoesNotThrow(() -> read(withRecalculatedClosure(
+                    validPayload(), records -> mutation.accept(firstWrite(records)))));
         }
     }
 
@@ -293,6 +311,24 @@ class TestS2RequestAwareOracleRawStream {
         });
     }
 
+    private static String carriedServicePayloadWithRepeatedNativeOrdinals() {
+        return withRecalculatedClosure(validPayload(), records -> {
+            ArrayNode events = firstFrame(records).withArray("events");
+            ObjectNode completion = ((ObjectNode) events.get(2)).deepCopy();
+            ObjectNode marker = ((ObjectNode) events.get(3)).deepCopy();
+            completion.put("ordinal", 0);
+            marker.put("ordinal", 1);
+            events.removeAll();
+            events.add(completion);
+            events.add(marker);
+            override(records).put("native_ordinal", 0);
+            ArrayNode writes = override(records).withArray("writes");
+            ((ObjectNode) writes.get(1)).put("native_ordinal", 0);
+            ((ObjectNode) firstFrame(records).withArray("request_transfers").get(0))
+                    .put("native_ordinal", 1);
+        });
+    }
+
     private static String boundedProducerPayload(boolean twoTransfers) {
         String zeroState = "00".repeat(8_192);
         String terminalState = "01" + "00".repeat(8_191);
@@ -312,23 +348,28 @@ class TestS2RequestAwareOracleRawStream {
         String baseEvent = "{\"ordinal\":0,\"service_token\":3,\"parent_token\":1,\"pc\":512,"
                 + "\"subject\":0,\"offset\":0,\"kind\":3,\"service_kind\":9,\"depth\":2,"
                 + "\"source_cpu\":1,\"payload_length\":0,\"value\":34,\"flags\":0,\"reserved\":0,\"payload\":\"0\"}";
-        String completionEvent = "{\"ordinal\":1,\"service_token\":3,\"parent_token\":1,\"pc\":3508,"
+        String psgEvent = "{\"ordinal\":1,\"service_token\":3,\"parent_token\":1,\"pc\":513,"
+                + "\"subject\":0,\"offset\":0,\"kind\":4,\"service_kind\":9,\"depth\":2,"
+                + "\"source_cpu\":1,\"payload_length\":0,\"value\":159,\"flags\":0,\"reserved\":0,\"payload\":\"0\"}";
+        String completionEvent = "{\"ordinal\":2,\"service_token\":3,\"parent_token\":1,\"pc\":3508,"
                 + "\"subject\":23,\"offset\":0,\"kind\":2,\"service_kind\":9,\"depth\":2,"
                 + "\"source_cpu\":1,\"payload_length\":0,\"value\":0,\"flags\":0,\"reserved\":0,\"payload\":\"0\"}";
-        String markerEvent = "{\"ordinal\":2,\"service_token\":0,\"parent_token\":0,\"pc\":4310,"
+        String markerEvent = "{\"ordinal\":3,\"service_token\":0,\"parent_token\":0,\"pc\":4310,"
                 + "\"subject\":24,\"offset\":0,\"kind\":10,\"service_kind\":0,\"depth\":0,"
                 + "\"source_cpu\":2,\"payload_length\":4,\"value\":3,\"flags\":0,\"reserved\":0,\"payload\":\"4660\"}";
         String override = "{\"request\":\"cfFadeInToPrevious\",\"admission\":\"native_service_completion\","
                 + "\"request_pc\":3381,\"pc\":3508,\"service_token\":3,\"service_begin_ordinal\":1,"
-                + "\"native_ordinal\":1,\"frame\":10150,\"fix_driver_bugs\":0,"
+                + "\"native_ordinal\":2,\"frame\":10150,\"fix_driver_bugs\":0,"
                 + "\"restores_saved_priority\":true,\"restores_psg_noise\":false,\"writes\":[{\"native_ordinal\":0,"
                 + "\"event_kind\":3,\"subject\":0,\"value\":34,\"pc\":512,\"source_cpu\":1,"
-                + "\"data\":false,\"port\":0,\"register\":0}]}";
+                + "\"data\":false,\"port\":0,\"register\":0},{\"native_ordinal\":1,"
+                + "\"event_kind\":4,\"subject\":0,\"value\":159,\"pc\":513,\"source_cpu\":1,"
+                + "\"data\":true,\"port\":0,\"register\":0}]}";
         String pcm = "{\"selection\":\"service_frame\",\"row\":10150,\"offset\":0,\"sample_rate\":44100,"
                 + "\"channels\":2,\"format\":\"s16le-interleaved-stereo\",\"stereo_frames\":1,"
                 + "\"byte_count\":4,\"pcm_hex\":\"00000000\",\"sha256\":\"df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119\"}";
         String transfer = "{\"row\":10150,\"order\":0,\"global_transfer_ordinal\":17,\"request\":181,\"slot\":3,"
-                + "\"pc\":4310,\"a7\":\"4660\",\"native_ordinal\":2,\"source_cpu\":2,\"service_token\":0,"
+                + "\"pc\":4310,\"a7\":\"4660\",\"native_ordinal\":3,\"source_cpu\":2,\"service_token\":0,"
                 + "\"service_kind\":0,\"depth\":0,\"active_service_owner\":{\"token\":0,\"kind\":0,\"depth\":0}}";
         String secondMarker = "{\"ordinal\":0,\"service_token\":0,\"parent_token\":0,\"pc\":4310,"
                 + "\"subject\":24,\"offset\":0,\"kind\":10,\"service_kind\":0,\"depth\":0,"
@@ -341,7 +382,7 @@ class TestS2RequestAwareOracleRawStream {
             String state = row == 10_899 ? terminalState : zeroState;
             if (row == 10_150) {
                 frames.add("{\"type\":\"frame\",\"row\":10150,\"lag\":false,\"state_hex\":\""
-                        + state + "\",\"events\":[" + baseEvent + ',' + completionEvent + ',' + markerEvent + "],\"override_resume\":"
+                        + state + "\",\"events\":[" + baseEvent + ',' + psgEvent + ',' + completionEvent + ',' + markerEvent + "],\"override_resume\":"
                         + override + ",\"pcm\":" + pcm + ",\"request_transfers\":[" + transfer + "]}");
             } else if (twoTransfers && row == 10_151) {
                 frames.add("{\"type\":\"frame\",\"row\":10151,\"lag\":false,\"state_hex\":\""
@@ -353,14 +394,14 @@ class TestS2RequestAwareOracleRawStream {
             }
         }
         byte[] body = bytes(baseline + '\n' + String.join("\n", frames) + '\n');
-        String baseEvents = baseEvent + '\n' + completionEvent + '\n';
+        String baseEvents = baseEvent + '\n' + psgEvent + '\n' + completionEvent + '\n';
         String allEvents = baseEvents + markerEvent + '\n'
                 + (twoTransfers ? secondMarker + '\n' : "");
         String markers = markerEvent + '\n' + (twoTransfers ? secondMarker + '\n' : "");
         String transfers = transfer + '\n' + (twoTransfers ? secondTransfer + '\n' : "");
         int markerCount = twoTransfers ? 2 : 1;
         String cutoff = "{\"type\":\"cutoff\",\"exclusive_end\":10900,\"frame_count\":750,"
-                + "\"base_event_count\":2,\"all_event_count\":" + (2 + markerCount)
+                + "\"base_event_count\":3,\"all_event_count\":" + (3 + markerCount)
                 + ",\"marker_event_count\":" + markerCount + ","
                 + "\"request_transfer_count\":" + markerCount
                 + ",\"override_resume_count\":1,\"pcm_count\":1,"
@@ -469,6 +510,10 @@ class TestS2RequestAwareOracleRawStream {
 
     private static ObjectNode override(List<ObjectNode> records) {
         return (ObjectNode) firstFrame(records).get("override_resume");
+    }
+
+    private static ObjectNode firstWrite(List<ObjectNode> records) {
+        return (ObjectNode) override(records).withArray("writes").get(0);
     }
 
     private static ObjectNode firstFrame(List<ObjectNode> records) {
