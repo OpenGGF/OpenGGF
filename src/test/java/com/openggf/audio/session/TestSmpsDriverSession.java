@@ -438,7 +438,8 @@ class TestSmpsDriverSession {
         SmpsDriverSession session = new SmpsDriverSession(
                 settings, policy, observer,
                 new SmpsSessionProfileFingerprint(
-                        "s3k", 7, policy.identity(), settings));
+                        "s3k", 7, policy.identity(), settings),
+                SmpsDriverSessionConfiguration.DEFAULT);
         SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
                 new SmpsCoordFlagRuntimeState());
         AudioPresentationSourceFactory factory = sessionFactory(
@@ -542,7 +543,8 @@ class TestSmpsDriverSession {
         SmpsDriverSession session = new SmpsDriverSession(
                 settings, policy, observer,
                 new SmpsSessionProfileFingerprint(
-                        "s3k", 7, policy.identity(), settings));
+                        "s3k", 7, policy.identity(), settings),
+                SmpsDriverSessionConfiguration.DEFAULT);
         SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
                 new SmpsCoordFlagRuntimeState());
         AudioPresentationSourceFactory factory = sessionFactory(
@@ -605,7 +607,8 @@ class TestSmpsDriverSession {
                         }
                     }
                 }, new SmpsSessionProfileFingerprint(
-                        "s3k", 7, policy.identity(), settings));
+                        "s3k", 7, policy.identity(), settings),
+                SmpsDriverSessionConfiguration.DEFAULT);
         SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
                 new SmpsCoordFlagRuntimeState());
         AudioPresentationSourceFactory factory = sessionFactory(
@@ -752,7 +755,8 @@ class TestSmpsDriverSession {
                 physicalSettings, policy,
                 new SmpsSessionTestFixtures.RecordingObserver(),
                 new SmpsSessionProfileFingerprint(
-                        "test", 7, policy.identity(), physicalSettings));
+                        "test", 7, policy.identity(), physicalSettings),
+                SmpsDriverSessionConfiguration.DEFAULT);
         SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
                 new SmpsCoordFlagRuntimeState());
         AudioPresentationSourceFactory.Settings settings =

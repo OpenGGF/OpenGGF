@@ -44,7 +44,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestSonic3kSmpsMetaCommandReachability {
 
-    private static final Set<Integer> TARGET_META_SUBCOMMANDS = Set.of(0x01, 0x02, 0x03);
+    // FF01..03 are source-only paths whose raw state is not retained by the
+    // Phase-1 E4 projection.  A shipped reachability result would require a
+    // different projection contract; it must not be reconstructed from Java
+    // track fields.
+    private static final Set<Integer> UNRETAINED_META_SUBCOMMANDS = Set.of(0x01, 0x02, 0x03);
     private static final int NATIVE_SFX_LAST_ID = 0xDF;
     private static final int NATIVE_SFX_COUNT = NATIVE_SFX_LAST_ID - Sonic3kSfx.ID_BASE + 1;
     private static final int Z80_BANK_SIZE = 0x8000;
@@ -78,6 +82,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
         Rom rom = TestEnvironment.currentRom();
         Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(rom);
         Set<Integer> metaSubcommands = new HashSet<>();
+        Set<Integer> coordFlags = new HashSet<>();
 
         int skMusicCount = 0;
         for (int id = 0x01; id <= 0x33; id++) {
@@ -87,6 +92,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
             assertClosed(inventory, "S&K music 0x" + hex(id));
             assertNoMusicMetaPair(data, id, "S&K");
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
             skMusicCount++;
         }
 
@@ -98,6 +104,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
             assertClosed(inventory, "S3 music 0x" + hex(id));
             assertNoMusicMetaPair(data, id, "S3");
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
             s3MusicCount++;
         }
 
@@ -108,6 +115,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
             ControlFlowInventory inventory = inventory(data);
             assertClosed(inventory, "SFX 0x" + hex(id));
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
             skSfxCount++;
         }
 
@@ -118,14 +126,17 @@ public class TestSonic3kSmpsMetaCommandReachability {
                 "The inventory must observe a live FF00 tempo command");
         assertTrue(metaSubcommands.contains(0x07),
                 "The inventory must observe the live SFX FF07 command");
-        assertFalse(metaSubcommands.stream().anyMatch(TARGET_META_SUBCOMMANDS::contains),
+        assertFalse(metaSubcommands.stream().anyMatch(UNRETAINED_META_SUBCOMMANDS::contains),
                 () -> "Loader-scoped stream set reached an unimplemented meta command: " + metaSubcommands);
+        assertFalse(coordFlags.contains(0xFE),
+                "loader-scoped shipped streams reached FM3-special state that Phase 1 does not retain");
     }
 
     @Test
     void nativeSkAndS3SfxTablesCoverEveryEntryAndCloseFullBanks() throws IOException {
         Rom rom = TestEnvironment.currentRom();
         Set<Integer> metaSubcommands = new HashSet<>();
+        Set<Integer> coordFlags = new HashSet<>();
 
         NativeSfxBank sk = readNativeSfxBank(rom, NativeHalf.SK, readSkAdditionalData(rom),
                 Sonic3kSmpsConstants.Z80_SFX_PTR_LIST - SK_ADDITIONAL_LOAD_ADDRESS,
@@ -175,12 +186,16 @@ public class TestSonic3kSmpsMetaCommandReachability {
 
         for (ControlFlowInventory inventory : sk.inventories.values()) {
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
         }
         for (ControlFlowInventory inventory : s3.inventories.values()) {
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
         }
-        assertFalse(metaSubcommands.stream().anyMatch(TARGET_META_SUBCOMMANDS::contains),
+        assertFalse(metaSubcommands.stream().anyMatch(UNRETAINED_META_SUBCOMMANDS::contains),
                 () -> "Native SFX banks reached an unimplemented meta command: " + metaSubcommands);
+        assertFalse(coordFlags.contains(0xFE),
+                "native shipped SFX banks reached FM3-special state that Phase 1 does not retain");
     }
 
     @Test
@@ -313,6 +328,9 @@ public class TestSonic3kSmpsMetaCommandReachability {
             result.trackCounts.put(id, declaredTrackCount);
             for (int trackIndex = 0; trackIndex < tracks.size(); trackIndex++) {
                 SmpsSfxData.SmpsSfxTrack track = tracks.get(trackIndex);
+                assertEquals(0x80, bank[headerOffset + 4 + trackIndex * 6] & 0xFF,
+                        half.label + " SFX 0x" + hex(id)
+                                + " playbackFlags must be the shipped playing bit");
                 int rawTrackPointer = readLe16(bank, headerOffset + 6 + trackIndex * 6);
                 assertRawTrackRoot(rawTrackPointer, track.pointer(),
                         half.label + " SFX 0x" + hex(id));
@@ -473,6 +491,9 @@ public class TestSonic3kSmpsMetaCommandReachability {
                 enqueue(result, work, next, bytes.length, "note");
                 continue;
             }
+            if (command != 0xFF) {
+                result.coordFlags.add(command);
+            }
 
             switch (command) {
                 case 0xE3, 0xF2, 0xF9 -> result.terminalOrCycle = true;
@@ -614,7 +635,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
             if ((bytes[pos] & 0xFF) != 0xFF) continue;
             int sub = bytes[pos + 1] & 0xFF;
             int blobOffset = pos;
-            assertFalse(TARGET_META_SUBCOMMANDS.contains(sub),
+            assertFalse(UNRETAINED_META_SUBCOMMANDS.contains(sub),
                     () -> table + " music 0x" + hex(id) + " contains FF" + hex(sub)
                             + " at blob offset 0x" + Integer.toHexString(blobOffset));
         }
@@ -670,6 +691,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
         private final Set<Integer> reachable = new HashSet<>();
         private final Set<String> frontier = new HashSet<>();
         private final Set<Integer> metaSubcommands = new HashSet<>();
+        private final Set<Integer> coordFlags = new HashSet<>();
         private int reachableOffsets;
         private boolean terminalOrCycle;
     }

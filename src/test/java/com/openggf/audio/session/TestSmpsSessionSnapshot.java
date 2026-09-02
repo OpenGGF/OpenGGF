@@ -37,7 +37,8 @@ class TestSmpsSessionSnapshot {
         SmpsSessionTestFixtures.RecordingObserver observer =
                 new SmpsSessionTestFixtures.RecordingObserver();
         SmpsDriverSession session = new SmpsDriverSession(
-                settings, policy, observer, profile);
+                settings, policy, observer, profile,
+                SmpsDriverSessionConfiguration.DEFAULT);
 
         SmpsDriverSessionSnapshot snapshot = session.captureSnapshot();
 

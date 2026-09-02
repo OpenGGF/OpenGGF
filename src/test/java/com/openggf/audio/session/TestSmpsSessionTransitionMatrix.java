@@ -52,7 +52,8 @@ class TestSmpsSessionTransitionMatrix {
                         host.name(), 19, physicalPolicy.identity(), settings);
         SmpsDriverSession session = new SmpsDriverSession(
                 settings, physicalPolicy,
-                new SmpsSessionTestFixtures.RecordingObserver(), fingerprint);
+                new SmpsSessionTestFixtures.RecordingObserver(), fingerprint,
+                SmpsDriverSessionConfiguration.DEFAULT);
         session.install();
         Object device = session.physicalIdentityForTesting();
         SmpsDriver driver = session.logicalDriverForTesting();

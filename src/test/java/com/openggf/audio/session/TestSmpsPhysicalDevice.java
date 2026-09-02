@@ -154,7 +154,8 @@ final class SmpsSessionTestFixtures {
         SmpsPhysicalDevice.Settings settings = settings();
         return new SmpsDriverSession(settings, policy, observer,
                 new SmpsSessionProfileFingerprint(
-                        "test", 7, policy.identity(), settings));
+                        "test", 7, policy.identity(), settings),
+                SmpsDriverSessionConfiguration.DEFAULT);
     }
 
     static SmpsDriverServiceObserver.DriverIdentity owner(long ordinal) {

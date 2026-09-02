@@ -122,7 +122,8 @@ class TestSmpsPhysicalPolicy {
         SmpsSessionTestFixtures.RecordingObserver observer =
                 new SmpsSessionTestFixtures.RecordingObserver();
         SmpsDriverSession session = new SmpsDriverSession(
-                settings, host, observer, fingerprint);
+                settings, host, observer, fingerprint,
+                SmpsDriverSessionConfiguration.DEFAULT);
 
         session.install();
         SmpsDriver logical = session.logicalDriverForTesting();

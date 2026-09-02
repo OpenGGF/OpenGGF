@@ -25,6 +25,8 @@ public final class OwnedSmpsAudioStream
         outputSampleRate = resolvedSettings.outputSampleRate();
         SmpsPhysicalPolicy resolvedPolicy =
                 Objects.requireNonNull(physicalPolicy, "physicalPolicy");
+        SmpsDriverSessionConfiguration configuration =
+                SmpsDriverSessionConfiguration.DEFAULT;
         session = new SmpsDriverSession(
                 resolvedSettings,
                 resolvedPolicy,
@@ -33,7 +35,9 @@ public final class OwnedSmpsAudioStream
                         Objects.requireNonNull(baseGameId, "baseGameId"),
                         sourceGeneration,
                         resolvedPolicy.identity(),
-                        resolvedSettings));
+                        resolvedSettings,
+                        configuration.statefulCommandPolicy().identity()),
+                configuration);
         session.install();
     }
 

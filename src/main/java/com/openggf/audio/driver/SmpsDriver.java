@@ -9,6 +9,8 @@ import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSequencerHost;
+import com.openggf.audio.rewind.SmpsSequencerSnapshot;
+import com.openggf.audio.rewind.SmpsTrackSnapshot;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,6 +19,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1417,6 +1420,86 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
 
     public SmpsDriverSnapshot captureSnapshot() {
         return captureLogicalState();
+    }
+
+    /**
+     * Captures immutable logical channel ownership without consulting routing
+     * locks or touching the chip.  SFX occupancy is derived from active track
+     * declarations, which is the state a ROM-shaped command can actually
+     * inspect before a track has produced its first hardware write.
+     */
+    public SmpsChannelOwnershipProjection captureOwnershipProjection() {
+        synchronized (sequencersLock) {
+            Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                    List<SmpsChannelOwnershipProjection.TrackProjection>>
+                    sfx = new LinkedHashMap<>();
+            Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                    List<SmpsChannelOwnershipProjection.TrackProjection>>
+                    music = new LinkedHashMap<>();
+            for (int sequencerIndex = 0;
+                    sequencerIndex < sequencers.size(); sequencerIndex++) {
+                SmpsSequencer sequencer = sequencers.get(sequencerIndex);
+                boolean sfxSequencer = isSfx(sequencer);
+                SmpsSequencerSnapshot snapshot = sequencer.captureSnapshot();
+                for (int trackIndex = 0;
+                        trackIndex < snapshot.tracks().size(); trackIndex++) {
+                    SmpsTrackSnapshot track = snapshot.tracks().get(trackIndex);
+                    if (sfxSequencer && !track.active()) {
+                        continue;
+                    }
+                    SmpsChannelOwnershipProjection.PhysicalChannel channel =
+                            normalizedChannel(track);
+                    SmpsChannelOwnershipProjection.TrackProjection projection =
+                            new SmpsChannelOwnershipProjection.TrackProjection(
+                                    new SmpsChannelOwnershipProjection.TrackCoordinate(
+                                            sequencerIndex, trackIndex,
+                                            sfxSequencer,
+                                            sequencer.getSourceDescriptor()),
+                                    track);
+                    (sfxSequencer ? sfx : music).computeIfAbsent(channel,
+                            ignored -> new ArrayList<>()).add(projection);
+                }
+            }
+            Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                    SmpsChannelOwnershipProjection.RoleOwnership> roles =
+                    new LinkedHashMap<>();
+            for (SmpsChannelOwnershipProjection.PhysicalChannel channel
+                    : unionChannels(sfx, music)) {
+                roles.put(channel,
+                        new SmpsChannelOwnershipProjection.RoleOwnership(
+                                channel,
+                                sfx.getOrDefault(channel, List.of()),
+                                music.getOrDefault(channel, List.of())));
+            }
+            return new SmpsChannelOwnershipProjection(roles);
+        }
+    }
+
+    private static List<SmpsChannelOwnershipProjection.PhysicalChannel>
+            unionChannels(
+                    Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                            List<SmpsChannelOwnershipProjection.TrackProjection>> first,
+                    Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                            List<SmpsChannelOwnershipProjection.TrackProjection>> second) {
+        LinkedHashSet<SmpsChannelOwnershipProjection.PhysicalChannel> channels =
+                new LinkedHashSet<>(first.keySet());
+        channels.addAll(second.keySet());
+        return List.copyOf(channels);
+    }
+
+    private static SmpsChannelOwnershipProjection.PhysicalChannel
+            normalizedChannel(SmpsTrackSnapshot track) {
+        SmpsChannelOwnershipProjection.Bus bus = switch (track.type()) {
+            case FM -> SmpsChannelOwnershipProjection.Bus.FM;
+            case PSG -> SmpsChannelOwnershipProjection.Bus.PSG;
+            // DAC occupies its own normalized role.  Its sequencer-local FM6
+            // storage coordinate is retained in TrackProjection instead.
+            case DAC -> SmpsChannelOwnershipProjection.Bus.DAC;
+        };
+        int channel = track.type() == SmpsSequencer.TrackType.DAC
+                ? 0 : track.channelId();
+        return new SmpsChannelOwnershipProjection.PhysicalChannel(bus,
+                channel);
     }
 
     private SmpsDriverSnapshot captureLogicalState() {

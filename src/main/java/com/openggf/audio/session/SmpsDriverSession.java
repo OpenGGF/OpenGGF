@@ -428,6 +428,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     private final SmpsDriver.DirectPcmRenderer directRenderer;
     private final SmpsPhysicalPolicy policy;
     private final SmpsSessionProfileFingerprint profile;
+    private final SmpsDriverSessionConfiguration configuration;
     private ChipWriteObserver chipWriteObserver;
     private final List<Runnable> diagnostics = new ArrayList<>();
     private final SavedOverride[] overrideStack =
@@ -465,12 +466,15 @@ public final class SmpsDriverSession implements AutoCloseable {
             SmpsPhysicalDevice.Settings settings,
             SmpsPhysicalPolicy policy,
             ChipWriteObserver observer,
-            SmpsSessionProfileFingerprint profile) {
+            SmpsSessionProfileFingerprint profile,
+            SmpsDriverSessionConfiguration configuration) {
         ownerThread = Thread.currentThread();
         SmpsPhysicalDevice.Settings resolvedSettings =
                 Objects.requireNonNull(settings, "settings");
         this.policy = Objects.requireNonNull(policy, "policy");
         this.profile = Objects.requireNonNull(profile, "profile");
+        this.configuration = Objects.requireNonNull(configuration,
+                "configuration");
         chipWriteObserver = Objects.requireNonNull(observer, "observer");
         if (!resolvedSettings.equals(profile.settings())) {
             throw new IllegalArgumentException(
@@ -479,6 +483,11 @@ public final class SmpsDriverSession implements AutoCloseable {
         if (!policy.identity().equals(profile.physicalPolicyId())) {
             throw new IllegalArgumentException(
                     "physical policy does not match the profile fingerprint");
+        }
+        if (!configuration.statefulCommandPolicy().identity().equals(
+                profile.statefulCommandPolicyId())) {
+            throw new IllegalArgumentException(
+                    "stateful-command policy does not match the profile fingerprint");
         }
         device = new SmpsPhysicalDevice(resolvedSettings,
                 new ChipWriteObserver() {
@@ -527,6 +536,20 @@ public final class SmpsDriverSession implements AutoCloseable {
     public boolean installed() {
         requireActive();
         return driver != null;
+    }
+
+    /**
+     * Captures the host-owned stateful-command input and asks the configured
+     * policy to prepare an operation.  Phase 1 operations are inert; command
+     * dispatch intentionally remains on its established path.
+     */
+    public SmpsStatefulCommandOperation prepareStatefulCommand(
+            SmpsSessionCommand command) {
+        requireInstalled();
+        return configuration.statefulCommandPolicy().prepare(
+                new SmpsStatefulCommandOperation.Input(
+                        Objects.requireNonNull(command, "command"),
+                        driver.captureOwnershipProjection()));
     }
 
     public SmpsServiceOutcome serviceForward() {

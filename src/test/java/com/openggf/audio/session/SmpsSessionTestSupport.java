@@ -19,7 +19,8 @@ public final class SmpsSessionTestSupport {
         SmpsDriverSession session = new SmpsDriverSession(
                 settings, policy, ChipWriteObserver.NONE,
                 new SmpsSessionProfileFingerprint(
-                        "test", 0, policy.identity(), settings));
+                        "test", 0, policy.identity(), settings),
+                SmpsDriverSessionConfiguration.DEFAULT);
         session.install();
         return session;
     }

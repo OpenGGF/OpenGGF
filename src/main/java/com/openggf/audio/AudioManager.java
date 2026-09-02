@@ -16,6 +16,7 @@ import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
 import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsDriverSessionConfiguration;
 import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
 import com.openggf.audio.session.SmpsSessionProfileFingerprint;
@@ -2999,11 +3000,16 @@ public class AudioManager implements MusicRestoreSink {
                 new SmpsPhysicalDevice.Settings(
                         sampleRate, tuning.dacInterpolate(),
                         tuning.psgNoiseShiftEveryToggle());
+        SmpsDriverSessionConfiguration sessionConfiguration =
+                SmpsDriverSessionConfiguration.DEFAULT;
         SmpsDriverSession smpsSession = new SmpsDriverSession(
                 physicalSettings, physicalPolicy, chipWriteObserver,
                 new SmpsSessionProfileFingerprint(
                         baseGameId(base), base.generation(),
-                        physicalPolicy.identity(), physicalSettings));
+                        physicalPolicy.identity(), physicalSettings,
+                        sessionConfiguration.statefulCommandPolicy()
+                                .identity()),
+                sessionConfiguration);
         shadowFactory = new AudioPresentationSourceFactory(
                 () -> true, presentationCoordFlagHandlers, settings,
                 smpsSession);
