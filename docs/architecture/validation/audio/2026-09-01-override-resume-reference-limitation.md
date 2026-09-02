@@ -146,7 +146,10 @@ The canonical Task 8 plan therefore retracts the four-file transaction claim. Pu
 redesigned as one absent dedicated bundle directory, fully built and fsynced under a private sibling
 name and committed with one `renameat2(RENAME_NOREPLACE)` followed by fixture-root `fsync`. The one
 successful rename is the only visibility linearization point; existing commits are untouched and
-precommit failures may leave only private residue, with no public rollback deletion.
+before that rename the publisher creates or modifies no public name. A precommit failure may leave
+private residue; the target stays absent only if no other actor creates it, and any competitor remains
+untouched. A post-rename root-`fsync` failure leaves a complete, never-rolled-back bundle with the
+distinct `committed but durability unconfirmed` result.
 
 That replacement contract also states its necessary environmental precondition. Supported publishers
 cooperate in an exclusive fixture-root lock, and the authoritative root and ancestors remain protected

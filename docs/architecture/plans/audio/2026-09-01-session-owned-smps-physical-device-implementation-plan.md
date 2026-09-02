@@ -1498,10 +1498,10 @@ committed bundle and fixed inventory listed above. No Java test, shell command, 
 hand-authored JSON may create, update, or confer authority on that bundle or its members; a byte change
 requires fresh duplicate raw inputs and this publisher.
 
-The extractor accepts exactly two regular, non-symlink S1 raw roots containing
-`audio_reference_raw.jsonl` with schema `openggf.s1-complete-run-audio-raw.v1`, exactly two regular,
-non-symlink S2 raw files with schema `openggf.s2-complete-run-audio-raw.v2`, and one attestation per
-raw input with schema `openggf.override-resume-first-divergence-attestation.v1`. It rejects missing,
+The extractor accepts exactly two regular, non-symlink S1 raw files with schema
+`openggf.s1-complete-run-audio-raw.v1`, exactly two regular, non-symlink S2 raw files with schema
+`openggf.s2-complete-run-audio-raw.v2`, and one attestation per raw input with schema
+`openggf.override-resume-first-divergence-attestation.v1`. It rejects missing,
 extra, duplicate, truncated, non-LF/UTF-8, faulted, overflowed, wrong-ROM, wrong-BK2, wrong interval,
 wrong manifest/capability/installation identity, unordered native ordinal, unordered chip write,
 ambiguous resume boundary, no resume service, or no PCM packet. The published JSONL uses
@@ -1547,8 +1547,9 @@ The no-replace protocol is syscall-delimited:
    create an unpredictable sibling `.override-resume-first-divergence-v1.tmp.<nonce>` with
    `mkdirat(..., 0700)`. Open that new directory from the retained root fd without following links.
 2. Beneath the private bundle fd, create only mode-0700 `s1` and `s2` directories and the four fixed
-   regular files with fd-relative `mkdirat` and `openat(O_CREAT|O_EXCL|O_NOFOLLOW)`. Fully write and
-   `fsync` each file. No staging operation resolves a caller-supplied nested pathname.
+   regular files with fd-relative `mkdirat` and
+   `openat(O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0600)`. Fully write and `fsync` each file.
+   No staging operation resolves a caller-supplied nested pathname.
 3. Re-open and validate every staged member from retained directory fds, enumerate the exact two
    directories and four leaves, recheck types, schemas, counts, and stored/logical hashes, and reject
    every missing, extra, changed, or symlinked entry. `fsync` the `s1` and `s2` directories and then
@@ -1563,11 +1564,14 @@ The no-replace protocol is syscall-delimited:
    Successful return from this syscall is the atomic visibility linearization point: before it, the
    public bundle is absent; after it, readers can reach the complete fixed inventory. Then `fsync` the
    retained fixture-root directory to confirm directory-entry durability.
-6. `EEXIST` leaves the pre-existing public bundle byte-for-byte untouched. Any failure before the
-   successful rename leaves the public bundle absent; a private mode-0700 residue is permitted. A
-   failure or crash after successful rename may leave a complete visible commit whose durability is
-   not confirmed until root `fsync`; it must be reported distinctly and never rolled back. No failure
-   path unlinks, quarantines, replaces, or otherwise deletes any public name or competitor entry.
+6. `EEXIST` leaves the pre-existing public bundle byte-for-byte untouched. Before a successful rename,
+   the publisher creates or modifies no public name, so a pre-success failure, including a non-`EEXIST`
+   `renameat2` failure, produces no publisher-created public result. The target remains absent only if
+   no other actor creates it; any competitor-created target remains untouched, and a private mode-0700
+   residue is permitted. A root-`fsync` failure or crash after successful rename leaves a complete
+   visible commit whose durability is not confirmed; the publisher returns the distinct
+   `committed but durability unconfirmed` result and never rolls the bundle back. No failure path
+   unlinks, quarantines, replaces, or otherwise deletes any public name or competitor entry.
 
 This protocol has an explicit environmental precondition, not a same-credential security claim. All
 publishers must cooperate in the root lock, and the authoritative repository, fixture root, and their
@@ -1645,12 +1649,14 @@ row-769 lifecycle continuity, exact selection/order/PCM serialization, stale-pri
 `OverrideResumeFirstDivergenceExtractorTests` proves strict schemas, duplicate raw/attestation
 identity after timestamp removal, deterministic normalization/gzip, exact packet timing, and every
 ambiguity rejection. `OverrideResumeFirstDivergencePublisherTests`, `NoReplacePublisherTests`, and
-`TraceCliTests` prove the closed CLI accepts exactly two S1 roots, two S2 raws, four attestations, and
-the existing trusted parity root with an absent fixed bundle. Their deterministic native-fault and
-barrier hooks must prove all of the following before implementation:
+`TraceCliTests` prove the closed CLI accepts exactly two S1 raw files, two S2 raw files, four
+attestations, and the existing trusted parity root with an absent fixed bundle. Their deterministic
+native-fault and barrier hooks must prove all of the following before implementation:
 
-- injected failure at every native syscall ordinal before `renameat2` leaves the public bundle absent,
-  permits only a private mode-0700 residue, and never removes a public or competitor name;
+- injected failure at every native syscall ordinal before `renameat2`, plus every modeled non-`EEXIST`
+  `renameat2` failure, produces no publisher-created public result; the target remains absent when no
+  other actor creates it, every competitor-created target remains untouched, and only a private
+  mode-0700 residue is permitted from the failed publisher;
 - a symlink in any caller-resolved root component is rejected by `openat2`, and a symlink or unexpected
   entry at any staged component/member is rejected without publication;
 - two cooperating publishers released concurrently against the same absent bundle serialize on the
@@ -1662,6 +1668,9 @@ barrier hooks must prove all of the following before implementation:
 - killing a child publisher immediately before commit leaves the public bundle absent, while killing it
   immediately after the successful rename exposes only the complete bundle; a completed root `fsync`
   is required before the publisher reports durable success;
+- injected fixture-root `fsync` failure after successful rename leaves the complete bundle visible and
+  unchanged, performs no rollback, and returns the distinct `committed but durability unconfirmed`
+  result rather than either durable success or precommit failure;
 - an existing valid or malformed public bundle is never opened for mutation and remains byte-for-byte
   unchanged, including when `renameat2(RENAME_NOREPLACE)` is the first operation to observe it; and
 - namespace-precondition tests reject relative/wrong roots and detect a root move, replacement, or
