@@ -1,5 +1,7 @@
 package com.openggf.tools.audio.parity;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
@@ -48,7 +50,30 @@ public final class OverrideResumeReferenceBundle {
             "publication_protocol", "namespace_lock_precondition");
     private static final Set<String> REFERENCE_FIELDS = Set.of(
             "schema", "game", "boundary", "pcm");
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final Set<String> S1_BOUNDARY_FIELDS = Set.of(
+            "type", "request", "admission", "request_frame", "admission_frame",
+            "frame", "pc", "service_token", "native_ordinal", "fix_bugs",
+            "writes_dac_disable_zero", "writes");
+    private static final Set<String> S2_BOUNDARY_FIELDS = Set.of(
+            "request", "admission", "request_pc", "pc", "service_token",
+            "service_begin_ordinal", "native_ordinal", "frame", "fix_driver_bugs",
+            "restores_saved_priority", "restores_psg_noise", "writes");
+    private static final Set<String> WRITE_FIELDS = Set.of(
+            "native_ordinal", "event_kind", "subject", "value", "pc", "source_cpu",
+            "data", "port", "register");
+    private static final Set<String> S1_PCM_FIELDS = Set.of(
+            "type", "selection", "row", "offset", "sample_rate", "channels", "format",
+            "stereo_frames", "byte_count", "pcm_hex", "sha256");
+    private static final Set<String> S2_PCM_FIELDS = Set.of(
+            "selection", "row", "offset", "sample_rate", "channels", "format",
+            "stereo_frames", "byte_count", "pcm_hex", "sha256");
+    private static final String NAMESPACE_STABILITY_PRECONDITION =
+            "All publishers cooperate through the exclusive fixture-root lock; "
+                    + "the authoritative root and ancestors remain namespace-stable and "
+                    + "protected from rename and mount mutation. Same-credential rename "
+                    + "and mount mutation after validation is unsupported.";
+    private static final ObjectMapper JSON = new ObjectMapper(JsonFactory.builder()
+            .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build());
     private static final int MAX_MEMBER_BYTES = 1024 * 1024;
 
     record GameReference(byte[] logicalBytes, JsonNode reference, JsonNode metadata) {
@@ -165,9 +190,10 @@ public final class OverrideResumeReferenceBundle {
         requireText(reference, "schema",
                 "openggf.override-resume-first-divergence-reference.v1");
         requireText(reference, "game", game);
-        if (!reference.path("boundary").isObject() || !reference.path("pcm").isObject()) {
-            throw new InvalidBundleException(game + " reference payload is incomplete");
-        }
+        JsonNode boundary = requireObject(reference, "boundary");
+        JsonNode pcm = requireObject(reference, "pcm");
+        validateBoundary(game, boundary);
+        validatePcm(game, boundary, pcm);
 
         requireExactFields(metadata, METADATA_FIELDS, game + " metadata");
         requireText(metadata, "schema",
@@ -177,24 +203,130 @@ public final class OverrideResumeReferenceBundle {
                 "src/test/resources/audio/parity/" + BUNDLE_NAME);
         requireText(metadata, "publication_protocol",
                 "linux-atomic-bundle-rename-noreplace-v1");
-        if (metadata.path("namespace_lock_precondition").asText().isBlank()) {
-            throw new InvalidBundleException("namespace/lock precondition is absent");
-        }
+        requireText(metadata, "namespace_lock_precondition",
+                NAMESPACE_STABILITY_PRECONDITION);
+        requirePositiveLong(metadata, "raw_byte_count");
         List<String> inventory = new ArrayList<>();
-        metadata.path("bundle_member_inventory").forEach(
-                member -> inventory.add(member.asText()));
+        JsonNode inventoryNode = metadata.get("bundle_member_inventory");
+        if (inventoryNode == null || !inventoryNode.isArray()) {
+            throw new InvalidBundleException("metadata bundle inventory is not an array");
+        }
+        for (JsonNode member : inventoryNode) {
+            if (!member.isTextual()) {
+                throw new InvalidBundleException("metadata bundle inventory is not textual");
+            }
+            inventory.add(member.textValue());
+        }
         if (!inventory.equals(EXACT_INVENTORY)) {
             throw new InvalidBundleException("metadata bundle inventory is not exact");
         }
-        if (metadata.path("record_count").asInt(-1) != 1
-                || metadata.path("logical_byte_count").asLong(-1) != logical.length
-                || metadata.path("stored_byte_count").asLong(-1) != stored.length
-                || !metadata.path("logical_sha256").asText().equals(digest(logical))
-                || !metadata.path("stored_sha256").asText().equals(digest(stored))) {
+        if (requireInt(metadata, "record_count") != 1
+                || requirePositiveLong(metadata, "logical_byte_count") != logical.length
+                || requirePositiveLong(metadata, "stored_byte_count") != stored.length
+                || !requireDigest(metadata, "logical_sha256").equals(digest(logical))
+                || !requireDigest(metadata, "stored_sha256").equals(digest(stored))) {
             throw new InvalidBundleException(game + " count or digest metadata disagrees");
         }
         requireDigestPair(metadata.path("raw_sha256"), "raw_sha256");
         requireDigestPair(metadata.path("attestation_sha256"), "attestation_sha256");
+    }
+
+    private static void validateBoundary(String game, JsonNode boundary)
+            throws InvalidBundleException {
+        requireExactFields(boundary, game.equals("s1")
+                ? S1_BOUNDARY_FIELDS : S2_BOUNDARY_FIELDS, game + " boundary");
+        requireText(boundary, "request", "cfFadeInToPrevious");
+        requireNonNegativeInt(boundary, "frame");
+        JsonNode writes = boundary.get("writes");
+        if (writes == null || !writes.isArray() || writes.isEmpty()) {
+            throw new InvalidBundleException(game + " resumed service owns no writes");
+        }
+        long previous = -1;
+        for (JsonNode write : writes) {
+            requireExactFields(write, WRITE_FIELDS, game + " write");
+            long ordinal = requirePositiveLong(write, "native_ordinal");
+            if (ordinal <= previous) {
+                throw new InvalidBundleException(game + " chip writes are unordered");
+            }
+            previous = ordinal;
+            requireNonNegativeInt(write, "event_kind");
+            requireNonNegativeInt(write, "subject");
+            requireRange(write, "value", 0, 255);
+            requireNonNegativeInt(write, "pc");
+            requireNonNegativeInt(write, "source_cpu");
+            requireBoolean(write, "data");
+            requireRange(write, "port", 0, 1);
+            requireRange(write, "register", 0, 255);
+        }
+        if (game.equals("s1")) {
+            requireText(boundary, "type", "override_resume");
+            requireText(boundary, "admission", "native_restore_entry");
+            requireNonNegativeInt(boundary, "request_frame");
+            requireNonNegativeInt(boundary, "admission_frame");
+            requireEqualInt(boundary, "pc", 0x72B14);
+            requirePositiveLong(boundary, "service_token");
+            requirePositiveLong(boundary, "native_ordinal");
+            requireEqualInt(boundary, "fix_bugs", 0);
+            if (requireBoolean(boundary, "writes_dac_disable_zero")) {
+                throw new InvalidBundleException("S1 FixBugs=0 invented YM $2B=$00");
+            }
+            return;
+        }
+        requireText(boundary, "admission", "native_service_completion");
+        requireEqualInt(boundary, "request_pc", 0x0D35);
+        requireEqualInt(boundary, "pc", 0x0DB4);
+        requirePositiveLong(boundary, "service_token");
+        requirePositiveLong(boundary, "service_begin_ordinal");
+        requirePositiveLong(boundary, "native_ordinal");
+        requireEqualInt(boundary, "fix_driver_bugs", 0);
+        if (!requireBoolean(boundary, "restores_saved_priority")
+                || requireBoolean(boundary, "restores_psg_noise")) {
+            throw new InvalidBundleException("S2 FixDriverBugs=0 restore semantics changed");
+        }
+    }
+
+    private static void validatePcm(String game, JsonNode boundary, JsonNode pcm)
+            throws IOException {
+        requireExactFields(pcm, game.equals("s1") ? S1_PCM_FIELDS : S2_PCM_FIELDS,
+                game + " PCM");
+        if (game.equals("s1")) {
+            requireText(pcm, "type", "native_pcm_packet");
+        }
+        String selection = requireString(pcm, "selection");
+        int offset = requireInt(pcm, "offset");
+        if (!(selection.equals("service_frame") && offset == 0)
+                && !(selection.equals("following_row") && offset == 1)) {
+            throw new InvalidBundleException("PCM packet timing is outside the exact eligible rows");
+        }
+        int row = requireNonNegativeInt(pcm, "row");
+        int expectedRow;
+        try {
+            expectedRow = Math.addExact(requireInt(boundary, "frame"), offset);
+        } catch (ArithmeticException failure) {
+            throw new InvalidBundleException("PCM row overflows", failure);
+        }
+        if (row != expectedRow) {
+            throw new InvalidBundleException("PCM row identity changed");
+        }
+        requireEqualInt(pcm, "sample_rate", 44100);
+        requireEqualInt(pcm, "channels", 2);
+        requireText(pcm, "format", "s16le-interleaved-stereo");
+        int frames = requirePositiveInt(pcm, "stereo_frames");
+        int byteCount = requireInt(pcm, "byte_count");
+        String hex = requireString(pcm, "pcm_hex");
+        byte[] pcmBytes = parseLowerHex(hex, "PCM bytes");
+        int expectedBytes;
+        try {
+            expectedBytes = Math.multiplyExact(frames, 4);
+        } catch (ArithmeticException failure) {
+            throw new InvalidBundleException("PCM frame count overflows", failure);
+        }
+        if (byteCount != expectedBytes || pcmBytes.length != byteCount) {
+            throw new InvalidBundleException("PCM packet byte/frame inventory is inconsistent");
+        }
+        if (!requireDigest(pcm, "sha256").equals(digest(pcmBytes))) {
+            throw new InvalidBundleException("PCM digest identity changed");
+        }
     }
 
     private static void requireDigestPair(JsonNode value, String label)
@@ -209,9 +341,105 @@ public final class OverrideResumeReferenceBundle {
         }
     }
 
+    private static String requireDigest(JsonNode object, String field)
+            throws InvalidBundleException {
+        String value = requireString(object, field);
+        if (!value.matches("[0-9a-f]{64}")) {
+            throw new InvalidBundleException(field + " is not a lowercase SHA-256 digest");
+        }
+        return value;
+    }
+
+    private static byte[] parseLowerHex(String value, String label)
+            throws InvalidBundleException {
+        if (!value.matches("(?:[0-9a-f]{2})+")) {
+            throw new InvalidBundleException(label + " is not nonempty even lowercase hex");
+        }
+        return HexFormat.of().parseHex(value);
+    }
+
+    private static JsonNode requireObject(JsonNode object, String field)
+            throws InvalidBundleException {
+        JsonNode value = object.get(field);
+        if (value == null || !value.isObject()) {
+            throw new InvalidBundleException(field + " is not an object");
+        }
+        return value;
+    }
+
+    private static String requireString(JsonNode object, String field)
+            throws InvalidBundleException {
+        JsonNode value = object.get(field);
+        if (value == null || !value.isTextual() || value.textValue().isEmpty()) {
+            throw new InvalidBundleException(field + " is not a nonempty string");
+        }
+        return value.textValue();
+    }
+
+    private static int requireInt(JsonNode object, String field)
+            throws InvalidBundleException {
+        JsonNode value = object.get(field);
+        if (value == null || !value.isIntegralNumber() || !value.canConvertToInt()) {
+            throw new InvalidBundleException(field + " is not an exact integer");
+        }
+        return value.intValue();
+    }
+
+    private static int requireNonNegativeInt(JsonNode object, String field)
+            throws InvalidBundleException {
+        int value = requireInt(object, field);
+        if (value < 0) {
+            throw new InvalidBundleException(field + " must be nonnegative");
+        }
+        return value;
+    }
+
+    private static int requirePositiveInt(JsonNode object, String field)
+            throws InvalidBundleException {
+        int value = requireInt(object, field);
+        if (value < 1) {
+            throw new InvalidBundleException(field + " must be positive");
+        }
+        return value;
+    }
+
+    private static long requirePositiveLong(JsonNode object, String field)
+            throws InvalidBundleException {
+        JsonNode value = object.get(field);
+        if (value == null || !value.isIntegralNumber() || !value.canConvertToLong()
+                || value.longValue() < 1) {
+            throw new InvalidBundleException(field + " must be a positive exact integer");
+        }
+        return value.longValue();
+    }
+
+    private static void requireEqualInt(JsonNode object, String field, int expected)
+            throws InvalidBundleException {
+        if (requireInt(object, field) != expected) {
+            throw new InvalidBundleException(field + " identity changed");
+        }
+    }
+
+    private static void requireRange(JsonNode object, String field, int minimum, int maximum)
+            throws InvalidBundleException {
+        int value = requireInt(object, field);
+        if (value < minimum || value > maximum) {
+            throw new InvalidBundleException(field + " is out of range");
+        }
+    }
+
+    private static boolean requireBoolean(JsonNode object, String field)
+            throws InvalidBundleException {
+        JsonNode value = object.get(field);
+        if (value == null || !value.isBoolean()) {
+            throw new InvalidBundleException(field + " is not a boolean");
+        }
+        return value.booleanValue();
+    }
+
     private static void requireText(JsonNode object, String field, String expected)
             throws InvalidBundleException {
-        if (!object.path(field).isTextual() || !object.path(field).asText().equals(expected)) {
+        if (!requireString(object, field).equals(expected)) {
             throw new InvalidBundleException(field + " is invalid");
         }
     }

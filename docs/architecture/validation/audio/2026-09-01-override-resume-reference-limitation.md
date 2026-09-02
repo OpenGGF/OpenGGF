@@ -192,7 +192,11 @@ model non-`EEXIST` rename failure and post-rename root-fsync failure, serialize
 two cooperating publishers, replace trusted/staged directories before final
 revalidation, race a competitor at the rename boundary, observe both sides of
 the visibility barrier, and kill child publishers immediately before and after
-commit. The implementation tests create only synthetic scratch bundles. No
+commit. A separate adversarial test moves the retained fixture root after the
+last revalidation and before `renameat2`; the commit then appears in the moved
+old root rather than the replacement path. That outcome is executable evidence
+for the declared unsupported same-credential namespace mutation, not a claim of
+containment. The implementation tests create only synthetic scratch bundles. No
 BizHawk, EmuHawk, GPGX capture, raw evidence, canonical fixture, comparator
 authority, or Java production behavior was started or changed.
 
@@ -211,3 +215,39 @@ closed schemas parsed with `jq`. The Java commit-object consumer and named
 limitation oracles passed 6/6. Fresh-JVM guards passed 12/12 TraceChaser-boundary,
 69/69 architectural-source, and 96/96 build-tooling tests after the exact
 non-floating gitlink pins were updated to the committed producer revision.
+
+## Independent review remediation — 2026-09-02
+
+TraceChaser commit `98b4afaf91bb799a6b79aee22625b14c33113e66`
+closes three further independent-review gaps without changing publication
+authority. The reference schema now discriminates at the top level by game:
+S1 has its exact boundary and requires PCM `type: native_pcm_packet`, while S2
+has its distinct exact boundary and forbids that member. Cross-game boundary
+and PCM shapes and the missing/extra `type` cases are executable negatives.
+
+The Java commit-object reader now performs the same complete fail-closed
+validation as the producer: duplicate JSON keys are rejected; every metadata,
+boundary, write, and PCM member has an exact inventory and strict node type;
+numeric ranges, write order, PCM timing/size/digest relationships, raw byte
+count, and the literal namespace precondition are checked without coercion.
+The synthetic reader tests contain complete valid S1 and S2 contracts rather
+than empty nested objects.
+
+Finally, `renameat2` and every `fsync` return their result and captured `errno`
+through an injectable native adapter. Tests now execute the actual non-`EEXIST`
+rename failure branch and the post-rename root-fsync result branch instead of
+throwing before either call site. The after-last-revalidation root-move test
+observes publication through the retained moved-root fd and absence at the
+replacement configured pathname, explicitly demonstrating why that
+same-credential mutation remains outside the supported threat model.
+
+Verification was 32/32 extractor/atomic-publisher tests and 36/36 broader
+publisher/closed-CLI tests, with empty host-visible
+Mono/EmuHawk/BizHawk/GPGX inventories before and after every authorised Mono
+run. The 31/31 policy tests, both mandatory scanners, launcher syntax, and all
+three schema parses passed. The strict Java reader plus both limitation oracles
+passed 11/11; fresh-JVM guards passed 12/12 TraceChaser-boundary, 69/69
+architectural-source, and 96/96 build-tooling tests. No emulator, capture, raw
+evidence, canonical fixture, or comparator-authority action occurred, so
+`REFERENCE_LIMITATION` and
+`FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE` remain unchanged.
