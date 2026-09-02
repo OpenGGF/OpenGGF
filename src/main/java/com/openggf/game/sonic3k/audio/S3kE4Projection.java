@@ -58,7 +58,11 @@ public record S3kE4Projection(
             boolean ambiguousMusic = role.musicTracks().size() > 1;
             boolean malformed = role.sfxClaims().stream().anyMatch(
                     claim -> !matches(slot, claim.track()));
-            Availability availability = ambiguousSfx || ambiguousMusic || malformed
+            boolean missingRawState = sfx.map(track -> !hasRequiredRawState(track.track()))
+                    .orElse(false)
+                    || music.map(track -> !hasRequiredRawState(track.track()))
+                    .orElse(false);
+            Availability availability = ambiguousSfx || ambiguousMusic || malformed || missingRawState
                     ? Availability.UNAVAILABLE_AMBIGUOUS_OR_INVALID
                     : Availability.AVAILABLE;
             if (availability != Availability.AVAILABLE) {
@@ -95,6 +99,10 @@ public record S3kE4Projection(
     private static boolean matches(S3kE4Slot slot, SmpsTrackSnapshot track) {
         return track.type() == slot.trackType()
                 && track.channelId() == slot.channel();
+    }
+
+    private static boolean hasRequiredRawState(SmpsTrackSnapshot track) {
+        return !track.noiseMode() || track.rawPsgNoiseKnown();
     }
 
     public enum Availability {
@@ -166,6 +174,8 @@ public record S3kE4Projection(
      * retained by the engine, and {@link #rawPlaybackFlags()} is therefore
      * deliberately empty. {@code noiseOrFm3Special} is reconstructed from the
      * retained FM3-special or PSG-noise semantic state, according to the slot.
+     * The raw PSG-noise byte is exposed only when an executed F3 command
+     * retained it; callers must not reconstruct it from {@code psgNoise}.
      */
     public record S3kE4Track(
             SmpsChannelOwnershipProjection.TrackCoordinate coordinate,
@@ -182,10 +192,13 @@ public record S3kE4Projection(
             int volume,
             int pan,
             int psgNoise,
-            int[] ssgEg) {
+            OptionalInt rawPsgNoise,
+            int[] ssgEg,
+            boolean customSsgEgPresent) {
         public S3kE4Track {
             Objects.requireNonNull(coordinate, "coordinate");
             Objects.requireNonNull(rawPlaybackFlags, "rawPlaybackFlags");
+            Objects.requireNonNull(rawPsgNoise, "rawPsgNoise");
             Objects.requireNonNull(voiceSource, "voiceSource");
             materializedVoice = copy(materializedVoice);
             ssgEg = copy(ssgEg);
@@ -211,7 +224,9 @@ public record S3kE4Projection(
                     special, flags, OptionalInt.empty(), track.voiceId(),
                     projection.coordinate().source(), track.voiceData(),
                     track.volumeOffset(), track.pan(), track.psgNoiseParam(),
-                    track.ssgEg());
+                    track.rawPsgNoiseKnown()
+                            ? OptionalInt.of(track.rawPsgNoise()) : OptionalInt.empty(),
+                    track.ssgEg(), track.customSsgEgPresent());
         }
 
         @Override

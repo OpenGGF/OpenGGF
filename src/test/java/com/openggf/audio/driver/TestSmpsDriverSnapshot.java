@@ -186,6 +186,7 @@ class TestSmpsDriverSnapshot {
         SmpsSequencer.Track musicFm3 = SmpsSequencerTestAccess.addActiveFmTrack(
                 music, 2);
         musicFm3.fm3SpecialMode = true;
+        musicFm3.customSsgEgPresent = true;
 
         driver.addSequencer(music, false);
         PreparedSfxAdmission admission =
@@ -221,6 +222,8 @@ class TestSmpsDriverSnapshot {
         assertEquals(2, restored.contSfxLoopCnt());
         assertTrue(restored.sequencers().getFirst().snapshot().tracks()
                 .getFirst().fm3SpecialMode());
+        assertTrue(restored.sequencers().getFirst().snapshot().tracks()
+                .getFirst().customSsgEgPresent());
     }
 
     @Test

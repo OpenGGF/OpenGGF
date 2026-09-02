@@ -628,7 +628,8 @@ class TestS1AudioStateNormalizer {
                 modCurrentDelta, modEnabled, modEnabled, detune, 0, null, 0, 0, 0, false,
                 false, 0, instrumentId, false, 0, 0, 0, null, envPos, 0, false, false,
                 null, 0, 0, false, 0, false, new int[0], false,
-                false, false, 0, false, false, 0, false);
+                false, false, 0, false, false, 0, false,
+                false, 0, false);
     }
 
     private static List<Integer> toInts(JsonNode array) {

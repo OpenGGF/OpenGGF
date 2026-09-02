@@ -101,7 +101,7 @@ class TestSmpsDriverSession {
     }
 
     @Test
-    void liveRollbackRestoresRetainedFm3SpecialMode() {
+    void liveRollbackRestoresRetainedS3kE4PrerequisiteState() {
         SmpsDriverSession session = SmpsSessionTestFixtures.session(
                 new SmpsSessionTestFixtures.RecordingObserver());
         session.install();
@@ -113,14 +113,18 @@ class TestSmpsDriverSession {
         SmpsSequencer.Track fm3 = SmpsSequencerTestAccess.addActiveFmTrack(
                 sequencer, 2);
         fm3.fm3SpecialMode = true;
+        fm3.customSsgEgPresent = true;
         driver.addSequencer(sequencer, false);
 
         SmpsDriverSession.LiveMutationToken token = session.captureLiveMutation();
         fm3.fm3SpecialMode = false;
+        fm3.customSsgEgPresent = false;
         session.rollbackLiveMutation(token);
 
-        assertTrue(session.captureLogicalSnapshot().sequencers().getFirst()
-                .snapshot().tracks().getFirst().fm3SpecialMode());
+        var restored = session.captureLogicalSnapshot().sequencers().getFirst()
+                .snapshot().tracks().getFirst();
+        assertTrue(restored.fm3SpecialMode());
+        assertTrue(restored.customSsgEgPresent());
     }
 
     @Test

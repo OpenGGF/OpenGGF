@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -111,6 +112,61 @@ class TestSonic3kFm3SpecialMode {
                 "reinitialization must use Track's default state rather than leak FM3 mode");
     }
 
+    @Test
+    void psgF3MustRetainTheExactRawOperandSeparatelyFromItsNormalizedRegister() {
+        CaptureSynth synth = new CaptureSynth();
+        SmpsSequencer sequencer = psgSequencer(2,
+                new byte[] {(byte) 0xF3, 0x15, (byte) 0xF2}, synth);
+
+        sequencer.advanceSamples(20_000);
+
+        SmpsSequencer.Track psg3 = onlyTrack(sequencer);
+        assertEquals(0x15, psg3.rawPsgNoise,
+                "the exact source operand must survive independently of the normalized PSG register");
+        assertTrue(psg3.rawPsgNoiseKnown);
+        assertEquals(0x05, psg3.psgNoiseParam,
+                "normalised PSG behaviour remains independent of the retained byte");
+        assertEquals(List.of(0xDF, 0xE5, 0xFF, 0xFF), synth.psgWriteValues,
+                "F3 keeps its existing writes, including the terminal F2 cleanup");
+        assertEquals(0x43, psg3.pos);
+    }
+
+    @Test
+    void psgF3ZeroRetainsTheExplicitResetOperand() {
+        CaptureSynth synth = new CaptureSynth();
+        SmpsSequencer sequencer = psgSequencer(2,
+                new byte[] {(byte) 0xF3, 0x00, (byte) 0xF2}, synth);
+
+        sequencer.advanceSamples(20_000);
+
+        SmpsSequencer.Track psg3 = onlyTrack(sequencer);
+        assertFalse(psg3.noiseMode);
+        assertEquals(0, psg3.psgNoiseParam);
+        assertEquals(0, psg3.rawPsgNoise);
+        assertTrue(psg3.rawPsgNoiseKnown,
+                "zero is an executed reset byte, not an absent raw value");
+        assertEquals(List.of(0xDF, 0xFF, 0xDF, 0xDF), synth.psgWriteValues,
+                "the retained reset byte must not alter existing F2 cleanup writes");
+        assertEquals(0x43, psg3.pos);
+    }
+
+    @Test
+    void allZeroFf05MustStillBeDistinguishableFromNoCustomSsgEgCommand() {
+        CaptureSynth synth = new CaptureSynth();
+        SmpsSequencer sequencer = fmSequencer(2,
+                new byte[] {(byte) 0xFF, 0x05, 0x00, 0x00, 0x00, 0x00,
+                        (byte) 0xF2}, synth);
+
+        sequencer.advanceSamples(20_000);
+
+        SmpsSequencer.Track fm3 = onlyTrack(sequencer);
+        assertTrue(fm3.customSsgEgPresent,
+                "all-zero FF05 must remain distinguishable from no FF05 command");
+        assertTrue(java.util.Arrays.equals(new int[4], fm3.ssgEg));
+        assertEquals(0x47, fm3.pos);
+        assertEquals(4, synth.ssgEgWrites);
+    }
+
     private static SmpsSequencer fmSequencer(int channel, byte[] stream,
             CaptureSynth synth) {
         byte[] data = new byte[0x100];
@@ -119,6 +175,19 @@ class TestSonic3kFm3SpecialMode {
         data[4] = 1;
         data[5] = (byte) 0x80;
         setLe16(data, 0x06 + headerIndex * 4, 0x40);
+        System.arraycopy(stream, 0, data, 0x40, stream.length);
+        return new SmpsSequencer(new Sonic3kSmpsData(data, 0), EMPTY_DAC,
+                synth, Sonic3kSmpsSequencerConfig.CONFIG);
+    }
+
+    private static SmpsSequencer psgSequencer(int channel, byte[] stream,
+            CaptureSynth synth) {
+        byte[] data = new byte[0x100];
+        data[2] = 0; // DAC/FM channel count
+        data[3] = (byte) (channel + 1);
+        data[4] = 1;
+        data[5] = (byte) 0x80;
+        setLe16(data, 0x06 + channel * 6, 0x40);
         System.arraycopy(stream, 0, data, 0x40, stream.length);
         return new SmpsSequencer(new Sonic3kSmpsData(data, 0), EMPTY_DAC,
                 synth, Sonic3kSmpsSequencerConfig.CONFIG);
@@ -137,10 +206,13 @@ class TestSonic3kFm3SpecialMode {
     private static final class CaptureSynth extends VirtualSynthesizer {
         private int psgWrites;
         private int fm3ModeWrites;
+        private int ssgEgWrites;
+        private final java.util.ArrayList<Integer> psgWriteValues = new java.util.ArrayList<>();
 
         @Override
         public void writePsg(Object source, int value) {
             psgWrites++;
+            psgWriteValues.add(value & 0xFF);
             super.writePsg(source, value);
         }
 
@@ -148,6 +220,9 @@ class TestSonic3kFm3SpecialMode {
         public void writeFm(Object source, int port, int register, int value) {
             if ((register & 0xFF) == 0x27) {
                 fm3ModeWrites++;
+            }
+            if ((register & 0xFF) >= 0x90 && (register & 0xFF) < 0xA0) {
+                ssgEgWrites++;
             }
             super.writeFm(source, port, register, value);
         }

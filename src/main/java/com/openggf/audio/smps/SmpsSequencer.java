@@ -360,6 +360,10 @@ public class SmpsSequencer implements CoordFlagContext {
         /** S3K FM3 PlaybackControl bit 0; distinct from PSG noiseMode. */
         public boolean fm3SpecialMode;
         public int psgNoiseParam;
+        /** Exact unsigned S3K cfSetPSGNoise operand retained for zStopPSGTrack. */
+        public int rawPsgNoise;
+        /** Whether {@link #rawPsgNoise} came from an executed PSG F3 command. */
+        public boolean rawPsgNoiseKnown;
         public int decayOffset;
         public int decayTimer;
         // PSG Volume Envelope
@@ -377,6 +381,8 @@ public class SmpsSequencer implements CoordFlagContext {
         public boolean forceRefresh;
         // SSG-EG per-operator state (S3K FF 05), preserved across track restoration.
         public final int[] ssgEg = new int[4];
+        /** S3K HaveSSGEGFlag: FF05 occurred, including the all-zero payload. */
+        public boolean customSsgEgPresent;
         // DAC mute state for fade-in
         public boolean dacMuted;
 
@@ -3542,7 +3548,10 @@ public class SmpsSequencer implements CoordFlagContext {
                 track.modEnvStepInEffect,
                 track.modEnvStepChanged,
                 track.modEnvStepDelta,
-                track.fm3SpecialMode);
+                track.fm3SpecialMode,
+                track.customSsgEgPresent,
+                track.rawPsgNoise,
+                track.rawPsgNoiseKnown);
     }
 
     private static Track restoreTrack(SmpsTrackSnapshot snapshot) {
@@ -3632,6 +3641,9 @@ public class SmpsSequencer implements CoordFlagContext {
         track.modEnvStepChanged = snapshot.modEnvStepChanged();
         track.modEnvStepDelta = snapshot.modEnvStepDelta();
         track.fm3SpecialMode = snapshot.fm3SpecialMode();
+        track.customSsgEgPresent = snapshot.customSsgEgPresent();
+        track.rawPsgNoise = snapshot.rawPsgNoise();
+        track.rawPsgNoiseKnown = snapshot.rawPsgNoiseKnown();
     }
 
     private static byte[] copy(byte[] values) {

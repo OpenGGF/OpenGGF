@@ -83,7 +83,10 @@ public record SmpsTrackSnapshot(
         boolean modEnvStepInEffect,
         boolean modEnvStepChanged,
         int modEnvStepDelta,
-        boolean fm3SpecialMode) {
+        boolean fm3SpecialMode,
+        boolean customSsgEgPresent,
+        int rawPsgNoise,
+        boolean rawPsgNoiseKnown) {
 
     public SmpsTrackSnapshot {
         voiceData = copy(voiceData);

@@ -57,6 +57,7 @@ class TestSmpsChannelOwnershipProjection {
         declared.volumeOffset = 9;
         declared.pan = 0x80;
         declared.ssgEg[1] = 0x0E;
+        declared.customSsgEgPresent = true;
         driver.addSequencer(music, false);
         driver.addSequencer(sfx, true);
 
@@ -87,6 +88,7 @@ class TestSmpsChannelOwnershipProjection {
         assertEquals(9, view.volume());
         assertEquals(0x80, view.pan());
         assertArrayEquals(new int[] {0, 0x0E, 0, 0}, view.ssgEg());
+        assertTrue(view.customSsgEgPresent());
         byte[] copied = view.materializedVoice();
         copied[0] = 99;
         assertArrayEquals(new byte[] {1, 2, 3}, view.materializedVoice());
@@ -99,6 +101,8 @@ class TestSmpsChannelOwnershipProjection {
         SmpsSequencer.Track declared = sfx.getTracks().getFirst();
         declared.noiseMode = true;
         declared.psgNoiseParam = 0x07;
+        declared.rawPsgNoise = 0xE7;
+        declared.rawPsgNoiseKnown = true;
         declared.voiceData = new byte[] {1, 2, 3};
         declared.voiceId = 7;
         declared.volumeOffset = 9;
@@ -106,6 +110,9 @@ class TestSmpsChannelOwnershipProjection {
         declared.ssgEg[1] = 0x0E;
         driver.addSequencer(sfx, true);
 
+        S3kE4Projection before = S3kE4Projection.capture(
+                driver.captureOwnershipProjection());
+        driver.restoreSnapshot(driver.captureSnapshot());
         S3kE4Projection.SlotProjection psg3 = S3kE4Projection.capture(
                 driver.captureOwnershipProjection()).slots().getLast();
 
@@ -113,6 +120,10 @@ class TestSmpsChannelOwnershipProjection {
         assertTrue(psg3.sfx().noiseOrFm3Special());
         assertEquals(0x01, psg3.sfx().canonicalPlaybackFlags() & 0x01);
         assertEquals(0x07, psg3.sfx().psgNoise());
+        assertEquals(0xE7, psg3.sfx().rawPsgNoise().orElseThrow());
+        assertEquals(before.slots().getLast().sfx().rawPsgNoise(),
+                psg3.sfx().rawPsgNoise(),
+                "raw PSG state must survive the driver's donor-capable snapshot path");
         assertEquals(0xC0, psg3.sfx().canonicalVoiceControl());
         assertFalse(psg3.sfx().rawPlaybackFlags().isPresent(),
                 "the engine retains semantic flags, not an invented raw Z80 byte");
@@ -123,6 +134,27 @@ class TestSmpsChannelOwnershipProjection {
         byte[] copied = psg3.sfx().materializedVoice();
         copied[0] = 99;
         assertArrayEquals(new byte[] {1, 2, 3}, psg3.sfx().materializedVoice());
+    }
+
+    @Test
+    void noiseProjectionFailsClosedWhenTheRequiredRawPsgByteIsUnavailable()
+            throws Exception {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer sfx = sequencer(sfx(0xA0, 0xC0), driver);
+        SmpsSequencer.Track psg3 = sfx.getTracks().getFirst();
+        psg3.noiseMode = true;
+        psg3.psgNoiseParam = 0x07;
+        // A synthetic semantic-only track must not be allowed to invent the
+        // distinct zTrack.PSGNoise byte needed by the future E4 restore loop.
+        driver.addSequencer(sfx, true);
+
+        S3kE4Projection projection = S3kE4Projection.capture(
+                driver.captureOwnershipProjection());
+
+        assertFalse(projection.complete());
+        assertEquals(S3kE4Projection.Availability.UNAVAILABLE_AMBIGUOUS_OR_INVALID,
+                projection.slots().getLast().availability());
+        assertEquals(null, projection.slots().getLast().sfx());
     }
 
     @Test

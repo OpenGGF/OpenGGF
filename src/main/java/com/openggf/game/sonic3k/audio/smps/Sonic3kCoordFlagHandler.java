@@ -273,6 +273,10 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                         // it is not PSG noise and produces no new hardware write here.
                         t.fm3SpecialMode = noiseVal != 0;
                     } else if (t.type == SmpsSequencer.TrackType.PSG) {
+                        // FixBugs = 0 cfSetPSGNoise stores the exact command byte
+                        // in zTrack.PSGNoise before interpreting zero/nonzero.
+                        t.rawPsgNoise = noiseVal;
+                        t.rawPsgNoiseKnown = true;
                         ctx.writePsg(0xDF);
                         if (noiseVal == 0) {
                             t.noiseMode = false;
@@ -598,6 +602,9 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                         int hwCh = t.channelId;
                         int port = (hwCh < 3) ? 0 : 1;
                         int ch = hwCh % 3;
+                        // FixBugs = 0 cfSetSSGEG sets HaveSSGEGFlag before
+                        // retaining its four bytes, including an all-zero payload.
+                        t.customSsgEgPresent = true;
                         // Read and store SSG-EG values for persistence across track restoration.
                         t.ssgEg[0] = program.dataByteAt(t.pos++) & 0xFF;
                         t.ssgEg[1] = program.dataByteAt(t.pos++) & 0xFF;
