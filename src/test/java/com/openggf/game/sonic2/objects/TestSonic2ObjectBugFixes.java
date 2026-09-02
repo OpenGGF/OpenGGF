@@ -10,6 +10,7 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
@@ -1039,7 +1040,8 @@ class TestSonic2ObjectBugFixes {
 
         InOrder order = inOrder(tails);
         order.verify(tails).move((short) 0, (short) 0x0198);
-        order.verify(tails).applyHurt(0x0C40);
+        order.verify(tails).applyHurt(0x0C40, DamageCause.SPIKE);
+        verify(tails, never()).applyHurt(0x0C40);
         verify(objectManager, never()).getPreContactYSpeed();
     }
 
