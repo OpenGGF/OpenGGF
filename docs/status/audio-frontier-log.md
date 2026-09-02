@@ -82,6 +82,14 @@ defined by `com.openggf.tools.audio.parity`.
   publication. The mandatory provenance inventory also remains incomplete, so
   Task 8 made no Java production change, froze no literal expectation,
   performed no live capture, and left both S1 hard gates untouched.
+  The subsequent atomic-bundle implementation replaces those four links with
+  private exact-inventory construction and one directory
+  `renameat2(RENAME_NOREPLACE)` under the documented cooperative lock and
+  namespace-stability precondition. Bundle-aware Java consumers now reject an
+  absent or invalid commit object without consulting legacy leaves. This moves
+  no audio frontier: the fresh authenticated native-GPGX and complete
+  provenance gates remain unavailable, no fixture was published, and the same
+  `REFERENCE_LIMITATION` code remains authoritative.
 
 ## 2026-09-01 — S3K service 128 is an authenticated producer-input limitation
 

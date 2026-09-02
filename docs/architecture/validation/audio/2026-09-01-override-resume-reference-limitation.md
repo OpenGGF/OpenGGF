@@ -159,3 +159,55 @@ threat is explicitly unsupported rather than presented as solved by revalidation
 its deterministic race/fault tests, and bundle-aware Java consumers must be implemented and reviewed
 before any publication. No capture, fixture, or Java change occurred here, and
 `REFERENCE_LIMITATION` remains unchanged.
+
+## Atomic bundle mechanics implementation — 2026-09-02
+
+The retracted four-leaf transaction has now been replaced in the pinned
+TraceChaser producer by the accepted one-directory commit protocol. The
+publisher opens the repository, TraceChaser submodule, and fixed consumer
+parity root beneath a retained `/` anchor with
+`openat2(RESOLVE_BENEATH|RESOLVE_NO_SYMLINKS)`, locks the retained root fd,
+constructs a private mode-0700 sibling with exact mode-0700 `s1`/`s2`
+directories and four mode-0600 leaves, and uses only fd-relative creation,
+writes, reopen validation, enumeration, and fsync. It records and revalidates
+root and staged directory device/inode/type/mount identities. The only public
+operation is one `renameat2(RENAME_NOREPLACE)` of the complete bundle, followed
+by root fsync. It performs no public rollback: a post-rename root-fsync failure
+returns the distinct committed-but-durability-unconfirmed result and leaves the
+complete bundle visible; precommit failure may leave only a private mode-0700
+residue. An existing or racing competitor remains untouched.
+
+The closed metadata contract now identifies the fixed bundle-relative root,
+exact four-member inventory, `linux-atomic-bundle-rename-noreplace-v1`
+protocol, and cooperative-lock/namespace-stability precondition. The Java
+consumer opens only that bundle commit object through secure directory streams,
+rejects missing, extra, symlinked, non-regular, wrong-schema, wrong-inventory,
+or digest/count-mismatched members, and has no legacy leaf fallback. The named
+S1 and S2 oracle tests continue to terminate with
+`FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE` while the bundle is
+absent.
+
+Deterministic native tests inject every recorded precommit syscall ordinal,
+model non-`EEXIST` rename failure and post-rename root-fsync failure, serialize
+two cooperating publishers, replace trusted/staged directories before final
+revalidation, race a competitor at the rename boundary, observe both sides of
+the visibility barrier, and kill child publishers immediately before and after
+commit. The implementation tests create only synthetic scratch bundles. No
+BizHawk, EmuHawk, GPGX capture, raw evidence, canonical fixture, comparator
+authority, or Java production behavior was started or changed.
+
+These mechanics remove the atomic-publication design blocker recorded above;
+they do not supply the missing fresh native-GPGX authority, complete provenance
+inventory, duplicate captures, or authenticated S1/S2 expectations. The
+terminal status therefore remains `REFERENCE_LIMITATION`, code
+`FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE`.
+
+Implementation verification was 28/28 extractor/atomic-publisher tests and
+34/34 broader publisher/closed-CLI tests, with empty host-visible
+Mono/EmuHawk/BizHawk/GPGX process inventories before and after every authorised
+Mono run. The repository and reachable-history scanners both passed; their
+policy unit suite passed 31/31; the launcher passed `bash -n`; and all three
+closed schemas parsed with `jq`. The Java commit-object consumer and named
+limitation oracles passed 6/6. Fresh-JVM guards passed 12/12 TraceChaser-boundary,
+69/69 architectural-source, and 96/96 build-tooling tests after the exact
+non-floating gitlink pins were updated to the committed producer revision.
