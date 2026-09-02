@@ -42,6 +42,10 @@ class TestS2RequestReferenceAuthorityGuard {
         assertFalse(java.lang.reflect.Modifier.isPublic(S2RequestAwareOracleRawStream.class
                 .getDeclaredMethod("scanCandidateForTesting", Path.class).getModifiers()),
                 "the only input-opening seam must stay package-private");
+        assertFalse(java.lang.reflect.Modifier.isPublic(S2RequestAwareOracleRawStream.class
+                .getDeclaredMethod("scanWindowSourceCandidateForTesting", Path.class)
+                .getModifiers()),
+                "the measurement-only window entry must stay package-private");
         assertEquals(List.of(), java.util.Arrays.stream(
                         S2RequestAwareOracleRawStream.class.getDeclaredMethods())
                 .filter(method -> java.lang.reflect.Modifier.isPublic(method.getModifiers()))

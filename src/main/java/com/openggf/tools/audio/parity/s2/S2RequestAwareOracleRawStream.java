@@ -21,8 +21,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -113,18 +115,29 @@ final class S2RequestAwareOracleRawStream {
      * hence no production path may open it. Tests can exercise only this closed seam.
      */
     static Result scanCandidateForTesting(Path candidate) throws IOException {
+        return scanCandidate(candidate, SourceIdentity.FULL_CAPTURE);
+    }
+
+    /** Fixed measurement-only entry for extractor output whose source is already windowed. */
+    static Result scanWindowSourceCandidateForTesting(Path candidate) throws IOException {
+        return scanCandidate(candidate, SourceIdentity.WINDOW_CAPTURE);
+    }
+
+    private static Result scanCandidate(Path candidate, SourceIdentity expected)
+            throws IOException {
         Objects.requireNonNull(candidate, "candidate");
         try (InputStream input = Files.newInputStream(candidate)) {
-            return scan(input);
+            return scan(input, expected);
         }
     }
 
-    private static Result scan(InputStream input) throws IOException {
+    private static Result scan(InputStream input, SourceIdentity expected)
+            throws IOException {
         MessageDigest digest = sha256();
         StrictLines lines = new StrictLines(input, digest);
         byte[] metadataBytes = lines.next("metadata");
         JsonNode metadata = parse(metadataBytes, "metadata");
-        validateMetadata(metadata);
+        validateMetadata(metadata, expected);
         BoundedEvidence evidence = new BoundedEvidence();
         evidence.payloadPrefix(metadataBytes);
         byte[] baselineBytes = lines.next("baseline");
@@ -133,13 +146,15 @@ final class S2RequestAwareOracleRawStream {
         List<Frame> frames = new ArrayList<>(S2RequestAwareOracleSchema.EXCLUSIVE_END
                 - S2RequestAwareOracleSchema.FIRST_ROW);
         long previousGlobalOrdinal = -1;
+        ServiceTopology serviceTopology = new ServiceTopology();
         int overrideRow = -1;
         int pcmRow = -1;
         for (int row = S2RequestAwareOracleSchema.FIRST_ROW;
                 row < S2RequestAwareOracleSchema.EXCLUSIVE_END; row++) {
             byte[] frameBytes = lines.next("frame");
             JsonNode frameRecord = parse(frameBytes, "frame");
-            Frame frame = parseFrame(frameRecord, row, previousGlobalOrdinal);
+            Frame frame = parseFrame(frameRecord, row, previousGlobalOrdinal,
+                    serviceTopology);
             if (!frame.requestTransfers().isEmpty()) {
                 previousGlobalOrdinal = frame.requestTransfers().getLast().sourceGlobalOrdinal();
             }
@@ -166,7 +181,7 @@ final class S2RequestAwareOracleRawStream {
         return new Result(baseline, frames, HexFormat.of().formatHex(digest.digest()));
     }
 
-    private static void validateMetadata(JsonNode value) {
+    private static void validateMetadata(JsonNode value, SourceIdentity expected) {
         exact(value, "metadata", "type", "schema", "rom_sha1", "bk2_sha256",
                 "service_manifest_sha256", "first_row", "exclusive_end", "state_start",
                 "state_exclusive_end", "source_schema", "source_first_row",
@@ -190,9 +205,9 @@ final class S2RequestAwareOracleRawStream {
                 "bounded metadata shape differs");
         require(S2RequestAwareOracleSchema.SOURCE_SCHEMA.equals(text(value, "source_schema"))
                         && integer(value, "source_first_row")
-                                == S2RequestAwareOracleSchema.SOURCE_FIRST_ROW
+                                == expected.firstRow
                         && integer(value, "source_exclusive_end")
-                                == S2RequestAwareOracleSchema.SOURCE_EXCLUSIVE_END,
+                                == expected.exclusiveEnd,
                 "source identity differs");
         require(S2RequestAwareOracleSchema.REQUEST_TRANSFER_SCHEMA.equals(
                 text(value, "request_transfer_schema")), "request transfer schema differs");
@@ -211,6 +226,21 @@ final class S2RequestAwareOracleRawStream {
                 "bounded digest domains differ");
     }
 
+    private enum SourceIdentity {
+        FULL_CAPTURE(S2RequestAwareOracleSchema.SOURCE_FIRST_ROW,
+                S2RequestAwareOracleSchema.SOURCE_EXCLUSIVE_END),
+        WINDOW_CAPTURE(S2RequestAwareOracleSchema.FIRST_ROW,
+                S2RequestAwareOracleSchema.EXCLUSIVE_END);
+
+        private final int firstRow;
+        private final int exclusiveEnd;
+
+        SourceIdentity(int firstRow, int exclusiveEnd) {
+            this.firstRow = firstRow;
+            this.exclusiveEnd = exclusiveEnd;
+        }
+    }
+
     private static Baseline parseBaseline(JsonNode value) {
         exact(value, "baseline", "type", "row", "source_preceding_row", "state_hex",
                 "ym_port0_latch", "ym_port1_latch");
@@ -224,7 +254,8 @@ final class S2RequestAwareOracleRawStream {
                 unsignedByte(value, "ym_port1_latch"));
     }
 
-    private static Frame parseFrame(JsonNode value, int row, long previousGlobalOrdinal) {
+    private static Frame parseFrame(JsonNode value, int row, long previousGlobalOrdinal,
+            ServiceTopology serviceTopology) {
         exact(value, "frame", "type", "row", "lag", "state_hex", "events",
                 "override_resume", "pcm", "request_transfers");
         require("frame".equals(text(value, "type")) && integer(value, "row") == row,
@@ -234,6 +265,7 @@ final class S2RequestAwareOracleRawStream {
         List<ObservedEnvelope> pcm = parsePcm(value.get("pcm"), row);
         List<RequestTransfer> transfers = parseTransfers(array(value, "request_transfers"), row,
                 events, previousGlobalOrdinal);
+        serviceTopology.validate(events);
         validateOverrideCompletion(value.get("override_resume"), events);
         return new Frame(row, bool(value, "lag"), state(value), events, override, pcm, transfers);
     }
@@ -287,10 +319,7 @@ final class S2RequestAwareOracleRawStream {
             require(unsignedByte(value, "request") != 0
                             && integer(value, "slot") >= 0 && integer(value, "slot") <= 3
                             && unsignedInt(value, "pc") == S2RequestAwareOracleSchema.REQUEST_PC
-                            && unsignedByte(value, "source_cpu") == 2
-                            && unsignedShort(value, "service_token") == 0
-                            && unsignedByte(value, "service_kind") == 0
-                            && unsignedByte(value, "depth") == 0,
+                            && unsignedByte(value, "source_cpu") == 2,
                     "request transfer identity differs");
             ActiveServiceOwner owner = parseOwner(value.get("active_service_owner"));
             require(owner.token() == unsignedShort(value, "service_token")
@@ -300,7 +329,10 @@ final class S2RequestAwareOracleRawStream {
             long a7 = a7(value);
             require(nativeOrdinal >= 0 && nativeOrdinal < events.size()
                             && consumedMarkers.add(nativeOrdinal)
-                            && isExactMarker(events.get(nativeOrdinal), a7),
+                            && isExactMarker(events.get(nativeOrdinal), a7,
+                                    unsignedShort(value, "service_token"),
+                                    unsignedByte(value, "service_kind"),
+                                    unsignedByte(value, "depth")),
                     "request transfer marker differs");
             previousGlobal = global;
             previousNative = nativeOrdinal;
@@ -324,24 +356,91 @@ final class S2RequestAwareOracleRawStream {
                 unsignedByte(value, "depth"));
     }
 
-    private static boolean isExactMarker(NativeEvent value, long a7) {
-        return isStructuralMarker(value) && value.payload() == a7;
+    private static boolean isExactMarker(NativeEvent value, long a7,
+            int serviceToken, int serviceKind, int depth) {
+        return isStructuralMarker(value) && value.payload() == a7
+                && value.serviceToken() == serviceToken
+                && value.serviceKind() == serviceKind
+                && value.depth() == depth;
     }
 
     private static boolean isStructuralMarker(NativeEvent value) {
         return value.kind() == 10 && value.value() == 3
                 && value.pc() == S2RequestAwareOracleSchema.REQUEST_PC
-                && value.subject() == S2RequestAwareOracleSchema.REQUEST_MARKER_TOKEN
-                && value.sourceCpu() == 2 && value.serviceToken() == 0
-                && value.parentToken() == 0 && value.serviceKind() == 0 && value.depth() == 0
+                && (value.subject() == S2RequestAwareOracleSchema.REQUEST_MARKER_TOKEN
+                        || value.subject()
+                                == S2RequestAwareOracleSchema.REQUEST_SERVICE_MARKER_TOKEN)
+                && value.sourceCpu() == 2
                 && value.payloadLength() == 4 && value.offset() == 0
                 && value.flags() == 0 && value.reserved() == 0;
     }
 
     private static boolean looksLikeMarker(NativeEvent value) {
         return value.subject() == S2RequestAwareOracleSchema.REQUEST_MARKER_TOKEN
+                || value.subject()
+                        == S2RequestAwareOracleSchema.REQUEST_SERVICE_MARKER_TOKEN
                 || value.kind() == 10 && value.value() == 3
                         && value.pc() == S2RequestAwareOracleSchema.REQUEST_PC;
+    }
+
+    private record ServiceOwner(int parentToken, int kind, int depth) {
+    }
+
+    /** Mirrors the bounded native service stack used to authenticate token 25. */
+    private static final class ServiceTopology {
+        private final Map<Integer, ServiceOwner> active = new HashMap<>();
+
+        private void validate(List<NativeEvent> events) {
+            for (NativeEvent event : events) {
+                if (event.kind() == 1 && event.serviceToken() != 0) {
+                    ServiceOwner owner = new ServiceOwner(event.parentToken(),
+                            event.serviceKind(), event.depth());
+                    require(active.put(event.serviceToken(), owner) == null,
+                            "service lifecycle token is already active");
+                }
+                if (looksLikeMarker(event)) {
+                    validateMarker(event);
+                }
+                if (event.kind() == 2 && event.serviceToken() != 0) {
+                    ServiceOwner owner = active.get(event.serviceToken());
+                    if (owner != null) {
+                        require(owner.equals(new ServiceOwner(event.parentToken(),
+                                        event.serviceKind(), event.depth())),
+                                "service lifecycle completion differs");
+                        active.remove(event.serviceToken());
+                    }
+                }
+            }
+        }
+
+        private void validateMarker(NativeEvent marker) {
+            require(isStructuralMarker(marker),
+                    "near request marker differs from the fixed native shape");
+            if (marker.subject() == S2RequestAwareOracleSchema.REQUEST_MARKER_TOKEN) {
+                require(marker.serviceToken() == 0 && marker.parentToken() == 0
+                                && marker.serviceKind() == 0 && marker.depth() == 0,
+                        "root request marker has a service owner");
+                return;
+            }
+            require(marker.serviceToken() != 0 && marker.serviceKind() == 3,
+                    "service request marker owner differs");
+            ServiceOwner owner = active.get(marker.serviceToken());
+            require(owner != null
+                            && owner.equals(new ServiceOwner(marker.parentToken(),
+                                    marker.serviceKind(), marker.depth())),
+                    "service request marker is outside its active lifecycle");
+            if (marker.depth() == 0) {
+                require(marker.parentToken() == 0,
+                        "root service request marker has a parent");
+                return;
+            }
+            require(marker.depth() == 1 && marker.parentToken() != 0,
+                    "nested service request marker topology differs");
+            ServiceOwner parent = active.get(marker.parentToken());
+            require(parent != null && parent.kind() == 4 && parent.depth() == 0
+                            && parent.parentToken() == 0,
+                    "nested service request marker parent is not an active kind-4 root");
+        }
     }
 
     private static long a7(JsonNode value) {

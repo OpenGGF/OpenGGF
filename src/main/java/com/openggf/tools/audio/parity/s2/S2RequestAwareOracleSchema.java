@@ -25,6 +25,7 @@ final class S2RequestAwareOracleSchema {
     /** The fixed pre-execution instruction at {@link #REQUEST_PC}: move.b D0,$09(A1,D1.w). */
     public static final String REQUEST_OPCODE = "13801009";
     public static final int REQUEST_MARKER_TOKEN = 24;
+    public static final int REQUEST_SERVICE_MARKER_TOKEN = 25;
     public static final int MAX_LINE_BYTES = 1 << 20;
 
     private S2RequestAwareOracleSchema() {

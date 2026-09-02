@@ -218,6 +218,9 @@ public final class AudioPresentationProducer {
         this.forwardTimeline = forwardTimeline;
         this.forwardParity = forwardParity;
         if (forwardResolver != null) {
+            forwardResolver.bindForwardExecutor(this);
+        }
+        if (forwardResolver != null) {
             Objects.requireNonNull(forwardService, "forwardService");
             Objects.requireNonNull(forwardTimeline, "forwardTimeline");
             Objects.requireNonNull(forwardParity, "forwardParity");
@@ -871,6 +874,8 @@ public final class AudioPresentationProducer {
                 if (forwardResolver == null) {
                     forwardBoundary.service(forwardCommandSink);
                 } else {
+                    AudioPresentationForwardService.ForwardBoundary
+                            activeBoundary = forwardBoundary;
                     AudioPresentationCommandResolver.ResolutionBatch[] holder =
                             new AudioPresentationCommandResolver.ResolutionBatch[1];
                     forwardBoundary.service(command -> {
@@ -878,8 +883,19 @@ public final class AudioPresentationProducer {
                             throw new IllegalStateException(
                                     "one request boundary produced multiple consequences");
                         }
-                        holder[0] = forwardResolver.beginResolutionBatch();
-                        holder[0].resolve(command);
+                        AudioPresentationCommandResolver.ResolutionBatch
+                                candidate = forwardResolver
+                                        .beginResolutionBatch();
+                        holder[0] = candidate;
+                        try {
+                            candidate.resolve(command);
+                            activeBoundary.reserveOutcome(
+                                    candidate.reservation());
+                        } catch (RuntimeException failure) {
+                            candidate.rollback();
+                            holder[0] = null;
+                            throw failure;
+                        }
                     });
                     requestBatch = holder[0];
                 }
@@ -889,8 +905,7 @@ public final class AudioPresentationProducer {
             commands.applyPendingBatch(commandBatch,
                     this::applyResolvedSessionCommand);
             if (requestBatch != null) {
-                requestOutcome = requestBatch.apply(
-                        this::applyResolvedForwardCommand);
+                requestOutcome = requestBatch.apply();
                 forwardBoundary.applyOutcome(requestOutcome);
             }
             registry.beginRendering();
@@ -929,6 +944,9 @@ public final class AudioPresentationProducer {
             if (forwardBoundary != null) {
                 requestReceipt = forwardBoundary.commit();
                 forwardCommitted = true;
+            }
+            if (requestBatch != null) {
+                requestBatch.publishDiagnostics(requestReceipt);
             }
             publishSessionDiagnosticsQuarantined(registryMutation);
             if (requestReceipt != null) {
@@ -975,16 +993,14 @@ public final class AudioPresentationProducer {
         }
     }
 
-    private void applyResolvedForwardCommand(
+    void applyResolvedForwardCommand(
             AudioCommand request,
             AudioPresentationCommand resolved) {
-        if (request instanceof AudioCommand.PlayMusic) {
-            // Sonic 2's shipped FixDriverBugs=0 zPlayMusic stops SFX before
-            // the driver-region save/load path (s2.sounddriver.asm:1667-1724).
-            applyResolvedSessionCommand(
-                    new AudioPresentationCommand.StopAllSfx());
+        if (smpsSession == null) {
+            commandApplier.accept(resolved);
+        } else {
+            applyResolvedSessionCommand(resolved);
         }
-        applyResolvedSessionCommand(resolved);
     }
 
     private void applyPendingSessionCommandsTransactionally() {

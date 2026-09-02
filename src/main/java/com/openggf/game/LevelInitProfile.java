@@ -117,6 +117,15 @@ public interface LevelInitProfile {
     }
 
     /**
+     * Begins the ROM's level-entry routine before any counted pre-load fade.
+     * A direct load invokes the same hook from its ordered profile as a
+     * fallback; the level manager makes both paths one logical boundary.
+     */
+    default void beginLevelEntry() {
+        // Games without work before their level-entry fade have no action.
+    }
+
+    /**
      * Counted {@code WaitForVBlank} rows the game's {@code Level:} routine
      * spends between its last un-timed load step and the first iteration of
      * the level main loop.

@@ -11,6 +11,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.StartSampleSfx;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.CoordFlagContext;
 import com.openggf.audio.smps.CoordFlagHandler;
@@ -226,12 +227,10 @@ class TestAudioPresentationCommandResolver {
         failed.resolve(request);
         assertEquals(0, fixture.queue.size(),
                 "a request batch must not enter the durable command queue");
-        List<AudioPresentationCommand> firstApplied = new ArrayList<>();
-        var firstOutcome = failed.apply((ignored, command) ->
-                firstApplied.add(command));
+        var firstOutcome = failed.apply();
         AddSmpsSfx first = assertInstanceOf(AddSmpsSfx.class,
                 firstOutcome.commands().getFirst());
-        assertEquals(firstApplied, firstOutcome.commands());
+        assertFalse(firstOutcome.commands().isEmpty());
         failed.rollback();
 
         assertEquals(null, fixture.factory.findRegisteredSmpsSfxAsset(
@@ -240,7 +239,7 @@ class TestAudioPresentationCommandResolver {
 
         var retry = fixture.resolver.beginResolutionBatch();
         retry.resolve(request);
-        var replayOutcome = retry.apply((ignored, command) -> { });
+        var replayOutcome = retry.apply();
         assertFalse(replayOutcome.commands().isEmpty(), fixture.warnings.toString());
         AddSmpsSfx replay = assertInstanceOf(AddSmpsSfx.class,
                 replayOutcome.commands().getFirst());
@@ -248,6 +247,129 @@ class TestAudioPresentationCommandResolver {
                 replay.source().standaloneVoiceId(),
                 "rollback must restore the resolver allocation cursor");
         retry.rollback();
+    }
+
+    @Test
+    void privateMusicBatchPreparesCompleteRomOrderedPairBeforeApplication() {
+        Fixture fixture = fixture();
+        fixture.sources.baseMusic = music(0x81);
+        AudioCommand.PlayMusic request = new AudioCommand.PlayMusic(
+                0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null);
+        var batch = fixture.resolver.beginResolutionBatch();
+
+        batch.resolve(request);
+        var outcome = batch.apply();
+
+        assertEquals(2, outcome.commands().size());
+        assertInstanceOf(AudioPresentationCommand.StopAllSfx.class,
+                outcome.commands().get(0));
+        assertInstanceOf(ReplaceMusic.class, outcome.commands().get(1));
+        batch.rollback();
+    }
+
+    @Test
+    void rejectedMusicLoadCreatesNoOutcomeAndRetryReusesExactCursor() {
+        Fixture fixture = fixture();
+        AudioCommand.PlayMusic request = new AudioCommand.PlayMusic(
+                0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null);
+        var rejected = fixture.resolver.beginResolutionBatch();
+
+        assertThrows(IllegalStateException.class,
+                () -> rejected.resolve(request));
+        assertEquals(List.of(), fixture.synchronouslyApplied);
+        assertEquals(0, fixture.queue.size());
+        rejected.rollback();
+
+        fixture.sources.baseMusic = music(0x81);
+        var retry = fixture.resolver.beginResolutionBatch();
+        retry.resolve(request);
+        var outcome = retry.apply();
+        ReplaceMusic music = assertInstanceOf(
+                ReplaceMusic.class, outcome.commands().get(1));
+        assertEquals(1L, music.music().voiceDescriptor().voiceId(),
+                "rejected preparation must restore the allocation cursor");
+        retry.rollback();
+    }
+
+    @Test
+    void requestBatchExposesNoCallerSuppliedExecutionCallback() {
+        var apply = Arrays.stream(
+                        AudioPresentationCommandResolver.ResolutionBatch.class
+                                .getDeclaredMethods())
+                .filter(method -> method.getName().equals("apply"))
+                .findFirst().orElseThrow();
+
+        assertEquals(0, apply.getParameterCount());
+        assertTrue(Arrays.stream(
+                        AudioPresentationCommandResolver.AppliedOutcome.class
+                                .getDeclaredConstructors())
+                .allMatch(constructor -> Modifier.isPrivate(
+                        constructor.getModifiers())));
+    }
+
+    @Test
+    void requestBoundaryRejectsEqualOutcomeFromAnotherBatch() {
+        Fixture fixture = fixture();
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null);
+        var first = fixture.resolver.beginResolutionBatch();
+        first.resolve(request);
+        var firstReservation = first.reservation();
+        first.apply();
+        first.rollback();
+        var second = fixture.resolver.beginResolutionBatch();
+        second.resolve(request);
+        var secondOutcome = second.apply();
+
+        var service = new com.openggf.game.sonic2.audio
+                .Sonic2SoundRequestService();
+        service.submitSound(request.sfxId(), request);
+        var boundary = service.beginForwardBoundary();
+        boundary.service(ignored -> { });
+        boundary.reserveOutcome(firstReservation);
+
+        assertThrows(IllegalStateException.class,
+                () -> boundary.applyOutcome(secondOutcome));
+        boundary.rollback();
+        second.rollback();
+    }
+
+    @Test
+    void sealedReceiptRetainsTheCompleteImmutableMusicPair() {
+        Fixture fixture = fixture();
+        fixture.sources.baseMusic = music(0x81);
+        AudioCommand.PlayMusic request = new AudioCommand.PlayMusic(
+                0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null);
+        var batch = fixture.resolver.beginResolutionBatch();
+        batch.resolve(request);
+        var outcome = batch.apply();
+        var service = new com.openggf.game.sonic2.audio
+                .Sonic2SoundRequestService();
+        service.submitMusic(request.musicId(), request);
+        var boundary = service.beginForwardBoundary();
+        boundary.service(ignored -> { });
+        boundary.reserveOutcome(batch.reservation());
+        boundary.applyOutcome(outcome);
+        batch.prepareCommit();
+        boundary.prepareCommit();
+        batch.commit();
+        var receipt = assertInstanceOf(
+                com.openggf.game.sonic2.audio.Sonic2SoundRequestService
+                        .CommittedReceipt.class,
+                boundary.commit());
+
+        assertEquals(outcome.commands(),
+                receipt.outcomes().getFirst().commands());
+        assertInstanceOf(AudioPresentationCommand.StopAllSfx.class,
+                receipt.outcomes().getFirst().commands().get(0));
+        assertInstanceOf(ReplaceMusic.class,
+                receipt.outcomes().getFirst().commands().get(1));
+        assertThrows(UnsupportedOperationException.class,
+                () -> receipt.outcomes().getFirst().commands().clear());
+        assertDoesNotThrow(() -> batch.publishDiagnostics(receipt));
+        assertDoesNotThrow(() -> batch.publishDiagnostics(receipt));
     }
 
     @Test
@@ -1019,6 +1141,16 @@ class TestAudioPresentationCommandResolver {
                 new AudioPresentationCommandResolver(
                         queue, factory, sources, warnings::add,
                         owner::get, synchronouslyApplied::add);
+        int maxFrames = (48_000 + 60 - 1) / 60;
+        AudioVoiceRegistry registry = new AudioVoiceRegistry();
+        AudioPresentationProducer producer = new AudioPresentationProducer(
+                48_000, 60, 48_000, 1, registry,
+                new AudioPresentationCommandQueue(registry::isRendering),
+                new AudioPresentationMixer(maxFrames,
+                        registry::onVoiceFailure),
+                new NoDeviceAudioSink(48_000),
+                synchronouslyApplied::add);
+        resolver.bindForwardExecutor(producer);
         return new Fixture(queue, factory, resolver, sources, assets, handlers,
                 session,
                 warnings, owner, synchronouslyApplied);

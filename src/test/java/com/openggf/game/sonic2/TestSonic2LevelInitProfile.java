@@ -1,7 +1,13 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.game.LevelLoadContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tools.audio.completerun.s2.S2ProductionRequestProjector;
 
 import com.openggf.game.InitStep;
 import com.openggf.game.StaticFixup;
@@ -84,9 +90,60 @@ public class TestSonic2LevelInitProfile {
     @Test
     public void levelLoadStepsContainsInitialPlcStepWithoutPostLoad() {
         List<InitStep> steps = profile.levelLoadSteps(new com.openggf.game.LevelLoadContext());
-        assertEquals(14, steps.size());
+        assertEquals(16, steps.size());
         assertEquals("InitGameModule", steps.get(0).name());
-        assertEquals("InitBackgroundRenderer", steps.get(13).name());
+        assertEquals("ConfigureAudio", steps.get(1).name());
+        assertEquals("QueueLevelEntryFadeOut", steps.get(2).name());
+        assertEquals("InitAudio", steps.get(3).name());
+        assertEquals("InitBackgroundRenderer", steps.get(15).name());
+    }
+
+    @Test
+    public void levelEntryTransfersFadeOutThroughPlaySoundBeforeLaterRequests() {
+        S2ProductionRequestProjector projector = new S2ProductionRequestProjector();
+        Sonic2AudioProfile audioProfile = new Sonic2AudioProfile(projector);
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new NullAudioBackend());
+        audio.setAudioProfile(audioProfile);
+        audio.setSoundMap(audioProfile.getSoundMap());
+
+        List<InitStep> steps = profile.levelLoadSteps(new LevelLoadContext());
+        int entryRequestIndex = stepIndex(steps, "QueueLevelEntryFadeOut");
+        assertTrue(stepIndex(steps, "ConfigureAudio") < entryRequestIndex,
+                "the production request service must exist before PlaySound writes SFX0");
+        assertTrue(entryRequestIndex < stepIndex(steps, "InitAudio"),
+                "Level-entry fade-out precedes the later level-music request");
+        assertTrue(entryRequestIndex < stepIndex(steps, "QueueInitialPlcs"),
+                "Level-entry PlaySound must precede ClearPLC and the initial PLC loads");
+
+        steps.get(entryRequestIndex).execute();
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(1, projector.requests().size());
+        assertEquals(0xF9, projector.requests().getFirst().nativeId());
+        assertEquals(0, projector.requests().getFirst().queueSlot(),
+                "PlaySound writes Sound_Queue.SFX0");
+
+        steps.get(entryRequestIndex).execute();
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(1, projector.requests().size(),
+                "the same level-entry boundary publishes F9 exactly once");
+
+        assertTrue(audio.playSfx(0xA0));
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of(0xF9, 0xA0), projector.requests().stream()
+                .map(request -> request.nativeId()).toList(),
+                "the route-independent Level entry request must stay ahead of later SFX");
+    }
+
+    private static int stepIndex(List<InitStep> steps, String name) {
+        for (int i = 0; i < steps.size(); i++) {
+            if (name.equals(steps.get(i).name())) {
+                return i;
+            }
+        }
+        fail("Missing level-load step: " + name);
+        return -1;
     }
 
     @Test
@@ -95,37 +152,39 @@ public class TestSonic2LevelInitProfile {
         ctx.setIncludePostLoadAssembly(true);
         List<InitStep> steps = profile.levelLoadSteps(ctx);
 
-        assertEquals(21, steps.size());
+        assertEquals(23, steps.size());
 
         // Original 12 ROM-aligned resource loading steps
         // (InitObjectManager + InitCameraBounds merged into InitObjectSystem)
         assertEquals("InitGameModule", steps.get(0).name());
-        assertEquals("InitAudio", steps.get(1).name());
-        assertEquals("LoadLevelData", steps.get(2).name());
-        assertEquals("QueueInitialPlcs", steps.get(3).name());
+        assertEquals("ConfigureAudio", steps.get(1).name());
+        assertEquals("QueueLevelEntryFadeOut", steps.get(2).name());
+        assertEquals("InitAudio", steps.get(3).name());
+        assertEquals("LoadLevelData", steps.get(4).name());
+        assertEquals("QueueInitialPlcs", steps.get(5).name());
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("QueueInitialPlcs")),
                 "S2 Level must queue its ROM primary, Std2, and selected life PLC before title-card admission");
         // Level_ClrRam zeroes RNG_seed after the level's LoadPLC calls
         // (docs/s2disasm/s2.asm:4802-4809).
-        assertEquals("ResetRng", steps.get(4).name());
-        assertEquals("InitAnimatedContent", steps.get(5).name());
-        assertEquals("InitObjectSystem", steps.get(6).name());
-        assertEquals("InitGameplayState", steps.get(7).name());
-        assertEquals("InitRings", steps.get(8).name());
-        assertEquals("InitZoneFeatures", steps.get(9).name());
-        assertEquals("InitArt", steps.get(10).name());
-        assertEquals("InitPlayerAndCheckpoint", steps.get(11).name());
-        assertEquals("InitWater", steps.get(12).name());
-        assertEquals("InitBackgroundRenderer", steps.get(13).name());
+        assertEquals("ResetRng", steps.get(6).name());
+        assertEquals("InitAnimatedContent", steps.get(7).name());
+        assertEquals("InitObjectSystem", steps.get(8).name());
+        assertEquals("InitGameplayState", steps.get(9).name());
+        assertEquals("InitRings", steps.get(10).name());
+        assertEquals("InitZoneFeatures", steps.get(11).name());
+        assertEquals("InitArt", steps.get(12).name());
+        assertEquals("InitPlayerAndCheckpoint", steps.get(13).name());
+        assertEquals("InitWater", steps.get(14).name());
+        assertEquals("InitBackgroundRenderer", steps.get(15).name());
 
         // 7 post-load assembly steps (14-20)
-        assertEquals("RestoreCheckpoint", steps.get(14).name());
-        assertEquals("SpawnPlayer", steps.get(15).name());
-        assertEquals("ResetPlayerState", steps.get(16).name());
-        assertEquals("InitCamera", steps.get(17).name());
-        assertEquals("InitLevelEvents", steps.get(18).name());
-        assertEquals("SpawnSidekick", steps.get(19).name());
-        assertEquals("RequestTitleCard", steps.get(20).name());
+        assertEquals("RestoreCheckpoint", steps.get(16).name());
+        assertEquals("SpawnPlayer", steps.get(17).name());
+        assertEquals("ResetPlayerState", steps.get(18).name());
+        assertEquals("InitCamera", steps.get(19).name());
+        assertEquals("InitLevelEvents", steps.get(20).name());
+        assertEquals("SpawnSidekick", steps.get(21).name());
+        assertEquals("RequestTitleCard", steps.get(22).name());
     }
 
     @Test

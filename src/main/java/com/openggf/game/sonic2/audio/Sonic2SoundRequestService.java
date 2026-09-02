@@ -4,6 +4,8 @@ import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.presentation.AudioPresentationForwardService;
 import com.openggf.audio.presentation.AudioRequestService;
 import com.openggf.audio.presentation.AudioPresentationCommandResolver.AppliedOutcome;
+import com.openggf.audio.presentation.AudioPresentationCommandResolver.OutcomeReservation;
+import com.openggf.audio.presentation.AudioPresentationCommandResolver.OutcomeSeal;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -102,9 +104,13 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
         private final List<EventTemplate> stagedEvents = new ArrayList<>();
         private boolean serviced;
         private AudioCommand stagedConsequence;
+        private OutcomeReservation outcomeReservation;
         private AppliedOutcome appliedOutcome;
         private boolean prepared;
         private boolean closed;
+        private CommittedReceipt committedReceipt;
+        private long preparedNextEventOrdinal;
+        private boolean diagnosticsPublished;
 
         private ForwardBoundary(Snapshot before) {
             this.before = before;
@@ -148,11 +154,23 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
                         dispatch.selectedRequestByte(), dispatch.kind()));
                 AudioCommand consequence = consequence(dispatch);
                 if (consequence != null) {
-                    commandSink.accept(consequence);
                     stagedConsequence = consequence;
+                    commandSink.accept(consequence);
                 }
             }
             pipeline.finishDriverInvocation();
+        }
+
+        @Override
+        public void reserveOutcome(OutcomeReservation reservation) {
+            requireOpen();
+            if (!serviced || stagedConsequence == null
+                    || outcomeReservation != null) {
+                throw new IllegalStateException(
+                        "request boundary cannot reserve this outcome");
+            }
+            outcomeReservation = Objects.requireNonNull(reservation,
+                    "reservation");
         }
 
         @Override
@@ -160,11 +178,13 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
             requireOpen();
             if (!serviced || stagedConsequence == null
                     || appliedOutcome != null
-                    || !stagedConsequence.equals(outcome.request())) {
+                    || outcomeReservation == null
+                    || !Objects.requireNonNull(outcome, "outcome")
+                            .belongsTo(outcomeReservation)) {
                 throw new IllegalStateException(
                         "applied outcome does not belong to this request boundary");
             }
-            appliedOutcome = Objects.requireNonNull(outcome, "outcome");
+            appliedOutcome = outcome;
             if (outcome.commands().isEmpty()) {
                 return;
             }
@@ -186,11 +206,27 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
         @Override
         public void prepareCommit() {
             requireOpen();
+            if (prepared) {
+                throw new IllegalStateException(
+                        "Sonic 2 request boundary was already prepared");
+            }
             if (!serviced || (stagedConsequence != null
-                    && appliedOutcome == null)) {
+                    && (outcomeReservation == null
+                            || appliedOutcome == null))) {
                 throw new IllegalStateException(
                         "request boundary consequences are not prepared");
             }
+            List<Event> events = new ArrayList<>(stagedEvents.size());
+            long ordinal = nextEventOrdinal;
+            for (EventTemplate template : stagedEvents) {
+                events.add(template.materialize(ordinal++));
+            }
+            committedReceipt = new CommittedReceipt(events,
+                    appliedOutcome == null ? List.of()
+                            : List.of(appliedOutcome),
+                    appliedOutcome == null ? null
+                            : appliedOutcome.seal(outcomeReservation));
+            preparedNextEventOrdinal = ordinal;
             prepared = true;
         }
 
@@ -203,22 +239,22 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
             }
             closed = true;
             forwardOpen = false;
-            List<Event> events = new ArrayList<>(stagedEvents.size());
-            for (EventTemplate template : stagedEvents) {
-                events.add(template.materialize(nextEventOrdinal++));
-            }
-            return new CommittedReceipt(events,
-                    appliedOutcome == null ? List.of()
-                            : List.of(appliedOutcome));
+            nextEventOrdinal = preparedNextEventOrdinal;
+            return committedReceipt;
         }
 
         @Override
         public void publishDiagnostics(
                 AudioPresentationForwardService.CommittedReceipt receipt) {
-            if (!(receipt instanceof CommittedReceipt selected)) {
+            if (!(receipt instanceof CommittedReceipt selected)
+                    || selected != committedReceipt) {
                 throw new IllegalArgumentException(
                         "receipt does not belong to Sonic 2");
             }
+            if (diagnosticsPublished) {
+                return;
+            }
+            diagnosticsPublished = true;
             for (Event event : selected.events()) {
                 try {
                     observer.accept(event);
@@ -247,15 +283,24 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
             implements AudioPresentationForwardService.CommittedReceipt {
         private final List<Event> events;
         private final List<AppliedOutcome> outcomes;
+        private final OutcomeSeal outcomeSeal;
 
         private CommittedReceipt(
-                List<Event> events, List<AppliedOutcome> outcomes) {
+                List<Event> events, List<AppliedOutcome> outcomes,
+                OutcomeSeal outcomeSeal) {
             this.events = List.copyOf(events);
             this.outcomes = List.copyOf(outcomes);
+            this.outcomeSeal = outcomeSeal;
         }
 
         public List<Event> events() { return events; }
         public List<AppliedOutcome> outcomes() { return outcomes; }
+
+        @Override
+        public OutcomeSeal sealFor(AppliedOutcome outcome) {
+            return outcomes.stream().anyMatch(candidate -> candidate == outcome)
+                    ? outcomeSeal : null;
+        }
     }
 
     private static AudioCommand consequence(

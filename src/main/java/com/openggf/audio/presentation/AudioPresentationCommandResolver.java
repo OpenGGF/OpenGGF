@@ -40,21 +40,31 @@ import java.util.function.Consumer;
  */
 public final class AudioPresentationCommandResolver {
 
-    @FunctionalInterface
-    public interface ResolvedCommandApplier {
-        void apply(AudioCommand request,
-                   AudioPresentationCommand resolvedCommand);
+    public static final class OutcomeReservation {
+        private final Object resolverIdentity;
+        private final Object batchIdentity;
+        private final long ordinal;
+
+        private OutcomeReservation(Object resolverIdentity,
+                Object batchIdentity, long ordinal) {
+            this.resolverIdentity = resolverIdentity;
+            this.batchIdentity = batchIdentity;
+            this.ordinal = ordinal;
+        }
     }
 
     public static final class AppliedOutcome {
         private final AudioCommand request;
         private final List<AudioPresentationCommand> commands;
+        private final OutcomeReservation reservation;
 
         private AppliedOutcome(
-                AudioCommand request,
-                List<AudioPresentationCommand> commands) {
+                AudioCommand request, List<AudioPresentationCommand> commands,
+                OutcomeReservation reservation) {
             this.request = Objects.requireNonNull(request, "request");
             this.commands = List.copyOf(commands);
+            this.reservation = Objects.requireNonNull(reservation,
+                    "reservation");
         }
 
         public AudioCommand request() {
@@ -63,6 +73,33 @@ public final class AudioPresentationCommandResolver {
 
         public List<AudioPresentationCommand> commands() {
             return commands;
+        }
+
+        public boolean belongsTo(OutcomeReservation expected) {
+            return reservation == expected
+                    && reservation.resolverIdentity == expected.resolverIdentity
+                    && reservation.batchIdentity == expected.batchIdentity
+                    && reservation.ordinal == expected.ordinal;
+        }
+
+        public OutcomeSeal seal(OutcomeReservation expected) {
+            if (!belongsTo(expected)) {
+                throw new IllegalArgumentException(
+                        "reservation does not own this outcome");
+            }
+            return new OutcomeSeal(this, expected);
+        }
+    }
+
+    /** Unforgeable proof that the owning request boundary sealed an outcome. */
+    public static final class OutcomeSeal {
+        private final AppliedOutcome outcome;
+        private final OutcomeReservation reservation;
+
+        private OutcomeSeal(AppliedOutcome outcome,
+                OutcomeReservation reservation) {
+            this.outcome = outcome;
+            this.reservation = reservation;
         }
     }
 
@@ -112,14 +149,20 @@ public final class AudioPresentationCommandResolver {
     private final Consumer<AudioPresentationCommand> synchronousApply;
     private final Runnable synchronousDrain;
     private long nextVoiceId = 1;
+    private long nextBatchOrdinal = 1;
+    private final Object resolverIdentity = new Object();
+    private AudioPresentationProducer forwardExecutor;
     private ResolutionBatch activeResolutionBatch;
 
-    public final class ResolutionBatch {
+    final class ResolutionBatch {
         private final long voiceCursorBefore = nextVoiceId;
         private final AudioPresentationSourceFactory.ResolutionMutation
                 factoryMutation = factory.beginResolutionMutation();
         private final AudioPresentationCommandQueue privateCommands =
                 new AudioPresentationCommandQueue();
+        private final OutcomeReservation reservation =
+                new OutcomeReservation(resolverIdentity, new Object(),
+                        nextBatchOrdinal++);
         private AudioCommand request;
         private AppliedOutcome appliedOutcome;
         private boolean prepared;
@@ -128,7 +171,7 @@ public final class AudioPresentationCommandResolver {
         private ResolutionBatch() {
         }
 
-        public void resolve(AudioCommand command) {
+        void resolve(AudioCommand command) {
             requireOpen();
             if (request != null) {
                 throw new IllegalStateException(
@@ -136,25 +179,51 @@ public final class AudioPresentationCommandResolver {
             }
             request = Objects.requireNonNull(command, "command");
             submit(command);
+            if (command instanceof AudioCommand.PlayMusic
+                    && privateCommands.size() == 0) {
+                throw new IllegalStateException(
+                        "request consequence could not be resolved");
+            }
         }
 
-        public AppliedOutcome apply(ResolvedCommandApplier applier) {
+        OutcomeReservation reservation() {
             requireOpen();
-            Objects.requireNonNull(applier, "applier");
+            return reservation;
+        }
+
+        AppliedOutcome apply() {
+            requireOpen();
             if (request == null || appliedOutcome != null) {
                 throw new IllegalStateException(
                         "resolution batch is not ready to apply");
             }
-            List<AudioPresentationCommand> resolved =
-                    privateCommands.snapshotCommands();
-            for (AudioPresentationCommand command : resolved) {
-                applier.apply(request, command);
+            List<AudioPresentationCommand> resolved;
+            if (request instanceof AudioCommand.PlayMusic) {
+                // Shipped FixDriverBugs=0 zPlayMusic stops SFX before
+                // saving/loading the music driver region
+                // (s2.sounddriver.asm:1667-1724).
+                java.util.ArrayList<AudioPresentationCommand> musicPair =
+                        new java.util.ArrayList<>();
+                musicPair.add(new StopAllSfx());
+                musicPair.addAll(privateCommands.snapshotCommands());
+                resolved = List.copyOf(musicPair);
+            } else {
+                resolved = privateCommands.snapshotCommands();
             }
-            appliedOutcome = new AppliedOutcome(request, resolved);
+            AudioPresentationProducer executor = forwardExecutor;
+            if (executor == null) {
+                throw new IllegalStateException(
+                        "resolution batch has no production executor");
+            }
+            for (AudioPresentationCommand command : resolved) {
+                executor.applyResolvedForwardCommand(request, command);
+            }
+            appliedOutcome = new AppliedOutcome(request, resolved,
+                    reservation);
             return appliedOutcome;
         }
 
-        public void prepareCommit() {
+        void prepareCommit() {
             requireOpen();
             if (appliedOutcome == null) {
                 throw new IllegalStateException(
@@ -164,7 +233,7 @@ public final class AudioPresentationCommandResolver {
             prepared = true;
         }
 
-        public void commit() {
+        void commit() {
             requireOpen();
             if (!prepared) {
                 throw new IllegalStateException(
@@ -175,7 +244,23 @@ public final class AudioPresentationCommandResolver {
             activeResolutionBatch = null;
         }
 
-        public void rollback() {
+        void publishDiagnostics(
+                AudioPresentationForwardService.CommittedReceipt receipt) {
+            if (!closed || appliedOutcome == null) {
+                throw new IllegalStateException(
+                        "resolution batch is not committed");
+            }
+            OutcomeSeal seal = receipt == null ? null
+                    : receipt.sealFor(appliedOutcome);
+            if (seal == null || seal.outcome != appliedOutcome
+                    || seal.reservation != reservation) {
+                throw new IllegalArgumentException(
+                        "receipt does not seal this resolution outcome");
+            }
+            factoryMutation.publishDiagnostics();
+        }
+
+        void rollback() {
             requireOpen();
             factoryMutation.rollback();
             nextVoiceId = voiceCursorBefore;
@@ -197,7 +282,7 @@ public final class AudioPresentationCommandResolver {
         }
     }
 
-    public ResolutionBatch beginResolutionBatch() {
+    ResolutionBatch beginResolutionBatch() {
         if (activeResolutionBatch != null) {
             throw new IllegalStateException(
                     "a resolution batch is already active");
@@ -205,6 +290,15 @@ public final class AudioPresentationCommandResolver {
         ResolutionBatch batch = new ResolutionBatch();
         activeResolutionBatch = batch;
         return batch;
+    }
+
+    void bindForwardExecutor(AudioPresentationProducer executor) {
+        Objects.requireNonNull(executor, "executor");
+        if (forwardExecutor != null && forwardExecutor != executor) {
+            throw new IllegalStateException(
+                    "resolver already has a production executor");
+        }
+        forwardExecutor = executor;
     }
 
     public AudioPresentationCommandResolver(
