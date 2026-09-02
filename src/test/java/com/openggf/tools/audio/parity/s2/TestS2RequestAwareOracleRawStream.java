@@ -248,6 +248,12 @@ class TestS2RequestAwareOracleRawStream {
     }
 
     @Test
+    void rejectsSelfConsistentPsgOverrideRegisterMutation() throws Exception {
+        assertThrows(IllegalArgumentException.class, () -> read(withRecalculatedClosure(
+                validPayload(), records -> psgWrite(records).put("register", 34))));
+    }
+
+    @Test
     void allowsUncorrelatedOverrideWriteValueRegisterAndOrdinalMutations() throws Exception {
         for (Consumer<ObjectNode> mutation : List.<Consumer<ObjectNode>>of(
                 write -> write.put("value", 0x23),
@@ -514,6 +520,10 @@ class TestS2RequestAwareOracleRawStream {
 
     private static ObjectNode firstWrite(List<ObjectNode> records) {
         return (ObjectNode) override(records).withArray("writes").get(0);
+    }
+
+    private static ObjectNode psgWrite(List<ObjectNode> records) {
+        return (ObjectNode) override(records).withArray("writes").get(1);
     }
 
     private static ObjectNode firstFrame(List<ObjectNode> records) {

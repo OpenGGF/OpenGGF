@@ -407,14 +407,16 @@ final class S2RequestAwareOracleRawStream {
         unsignedByte(write, "value");
         boolean data = bool(write, "data");
         int port = unsignedByte(write, "port");
-        unsignedByte(write, "register");
+        int register = unsignedByte(write, "register");
         require((kind == 3 && subject <= 3 || kind == 4 && subject == 0)
                         && sourceCpu >= 1 && sourceCpu <= 3
                         && (sourceCpu != 1 || pc <= 0xffff)
                         && (sourceCpu != 2 || pc <= 0xff_ffff)
                         && (sourceCpu != 3 || pc == 0)
                         && data == (kind == 4 || subject == 1 || subject == 3)
-                        && port == (subject < 2 ? 0 : 1),
+                        && port == (subject < 2 ? 0 : 1)
+                        // Kind-4 producer WriteRecords serialize their default register byte (zero).
+                        && (kind != 4 || register == 0),
                 "override resume write shape differs");
     }
 
