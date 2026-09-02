@@ -180,12 +180,15 @@ public final class SmpsDriverSession implements AutoCloseable {
         @Override
         public void writeFm(int port, int register, int value) {
             requireOpen(this);
+            beforePhysicalWrite(new SmpsChipWrite.Ym2612(port, register,
+                    value));
             device.writeFm(port, register, value);
         }
 
         @Override
         public void writePsg(int value) {
             requireOpen(this);
+            beforePhysicalWrite(new SmpsChipWrite.Psg(value));
             device.writePsg(value);
         }
 
@@ -461,6 +464,9 @@ public final class SmpsDriverSession implements AutoCloseable {
     private SfxContentionObserver sfxContentionObserver =
             SfxContentionObserver.NONE;
     private Consumer<RuntimeException> diagnosticErrorSink = ignored -> { };
+    private Consumer<SmpsChipWrite> physicalWriteInterceptorForTesting =
+            ignored -> { };
+    private Runnable statefulLogicalMutationInterceptorForTesting = () -> { };
 
     public SmpsDriverSession(
             SmpsPhysicalDevice.Settings settings,
@@ -538,11 +544,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         return driver != null;
     }
 
-    /**
-     * Captures the host-owned stateful-command input and asks the configured
-     * policy to prepare an operation.  Phase 1 operations are inert; command
-     * dispatch intentionally remains on its established path.
-     */
+    /** Captures one lock-held host-owned stateful-command input. */
     public SmpsStatefulCommandOperation prepareStatefulCommand(
             SmpsSessionCommand command) {
         requireInstalled();
@@ -632,7 +634,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                     admitSfx(admit.program());
             case SmpsSessionCommand.StopMusic ignored -> stopMusic();
             case SmpsSessionCommand.StopAllSfx ignored -> stopAllSfx();
-            case SmpsSessionCommand.StopSmpsSfx ignored -> stopSmpsSfx();
+            case SmpsSessionCommand.StopSmpsSfx stop -> stopSmpsSfx(stop);
             case SmpsSessionCommand.SilencePsg ignored ->
                     withPort(driverIdentity, port -> {
                         port.applyTransientPsgSilence(
@@ -962,6 +964,20 @@ public final class SmpsDriverSession implements AutoCloseable {
         chipWriteObserver = Objects.requireNonNull(observer, "observer");
     }
 
+    void setPhysicalWriteInterceptorForTesting(
+            Consumer<SmpsChipWrite> interceptor) {
+        requireActive();
+        physicalWriteInterceptorForTesting = Objects.requireNonNull(
+                interceptor, "interceptor");
+    }
+
+    void setStatefulLogicalMutationInterceptorForTesting(
+            Runnable interceptor) {
+        requireActive();
+        statefulLogicalMutationInterceptorForTesting = Objects.requireNonNull(
+                interceptor, "interceptor");
+    }
+
     public void setSfxContentionObserver(
             SfxContentionObserver observer) {
         requireActive();
@@ -1166,15 +1182,43 @@ public final class SmpsDriverSession implements AutoCloseable {
         });
     }
 
-    /**
-     * Implements the state boundary of S3K {@code zStopSFX}: release current
-     * SFX slot ownership without treating it as the engine's broad sample/raw
-     * cleanup operation. The shipped routine's seven-slot conditional
-     * silence/restoration writes remain an explicit parity frontier, so this
-     * logical operation emits no guessed physical writes.
-     */
-    private void stopSmpsSfx() {
-        driver.stopAllSfxWithoutRestoreWrites();
+    /** Applies a prepared host operation without donor/game-name dispatch. */
+    private void stopSmpsSfx(SmpsSessionCommand.StopSmpsSfx command) {
+        SmpsStatefulCommandOperation operation = prepareStatefulCommand(command);
+        if (!operation.handled()) {
+            driver.stopAllSfxWithoutRestoreWrites();
+            return;
+        }
+        if (operation.rejected()) {
+            return;
+        }
+        boolean localTransaction = !transactionOpen;
+        LiveMutationToken mutation = localTransaction
+                ? captureLiveMutation() : null;
+        try {
+            withPort(driverIdentity, port -> {
+                applyProgram(port, operation.writes());
+                return null;
+            });
+            statefulLogicalMutationInterceptorForTesting.run();
+            // zStopSFX clears only SFX slot state. Preserve continuous SFX,
+            // raw PCM, pending service and all host session controls.
+            driver.stopAllSfxWithoutRestoreWrites();
+            if (localTransaction) {
+                prepareLiveMutationCommit(mutation);
+                commitLiveMutation(mutation);
+                publishCommittedDiagnostics();
+            }
+        } catch (RuntimeException failure) {
+            if (localTransaction) {
+                try {
+                    rollbackLiveMutation(mutation);
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            throw failure;
+        }
     }
 
     private void pushOverride(
@@ -1357,6 +1401,10 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     private void emitChipDiagnostic(ChipDiagnostic event) {
         emitDiagnostic(() -> event.publish(chipWriteObserver));
+    }
+
+    private void beforePhysicalWrite(SmpsChipWrite write) {
+        physicalWriteInterceptorForTesting.accept(write);
     }
 
     private void emitDiagnostic(Runnable diagnostic) {

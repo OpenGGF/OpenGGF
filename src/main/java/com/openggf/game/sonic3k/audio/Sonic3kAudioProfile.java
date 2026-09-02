@@ -8,6 +8,7 @@ import com.openggf.audio.SegaPcmSpec;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsStatefulCommandPolicy;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import com.openggf.data.Rom;
@@ -103,6 +104,11 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     @Override
     public SmpsPhysicalPolicy smpsPhysicalPolicy() {
         return Sonic3kSmpsPhysicalPolicy.INSTANCE;
+    }
+
+    @Override
+    public SmpsStatefulCommandPolicy smpsStatefulCommandPolicy() {
+        return Sonic3kStatefulCommandPolicy.INSTANCE;
     }
 
     @Override

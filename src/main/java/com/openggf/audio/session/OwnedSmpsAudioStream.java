@@ -20,13 +20,25 @@ public final class OwnedSmpsAudioStream
             SmpsPhysicalDevice.Settings settings,
             SmpsPhysicalPolicy physicalPolicy,
             ChipWriteObserver observer) {
+        this(baseGameId, sourceGeneration, settings, physicalPolicy, observer,
+                SmpsDriverSessionConfiguration.DEFAULT);
+    }
+
+    /** Creates a direct-read session with its host-owned command policy. */
+    public OwnedSmpsAudioStream(
+            String baseGameId,
+            long sourceGeneration,
+            SmpsPhysicalDevice.Settings settings,
+            SmpsPhysicalPolicy physicalPolicy,
+            ChipWriteObserver observer,
+            SmpsDriverSessionConfiguration configuration) {
         SmpsPhysicalDevice.Settings resolvedSettings =
                 Objects.requireNonNull(settings, "settings");
         outputSampleRate = resolvedSettings.outputSampleRate();
         SmpsPhysicalPolicy resolvedPolicy =
                 Objects.requireNonNull(physicalPolicy, "physicalPolicy");
-        SmpsDriverSessionConfiguration configuration =
-                SmpsDriverSessionConfiguration.DEFAULT;
+        SmpsDriverSessionConfiguration resolvedConfiguration =
+                Objects.requireNonNull(configuration, "configuration");
         session = new SmpsDriverSession(
                 resolvedSettings,
                 resolvedPolicy,
@@ -36,8 +48,8 @@ public final class OwnedSmpsAudioStream
                         sourceGeneration,
                         resolvedPolicy.identity(),
                         resolvedSettings,
-                        configuration.statefulCommandPolicy().identity()),
-                configuration);
+                        resolvedConfiguration.statefulCommandPolicy().identity()),
+                resolvedConfiguration);
         session.install();
     }
 
@@ -62,7 +74,7 @@ public final class OwnedSmpsAudioStream
         session.applyGlobalStopNow();
     }
 
-    /** Applies the owning session's logical S3K {@code zStopSFX} boundary. */
+    /** Applies the owning session's host-policy {@code zStopSFX} boundary. */
     public void stopSmpsSfx() {
         session.applyCommand(new SmpsSessionCommand.StopSmpsSfx());
     }

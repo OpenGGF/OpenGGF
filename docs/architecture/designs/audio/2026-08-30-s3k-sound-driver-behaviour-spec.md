@@ -615,13 +615,18 @@ correct assertion is that this write **is present**.
 ### (e) Engine today
 
 `SmpsDriver.prepareNewSfxAdmission`/`commitSfxAdmission` + per-channel claims
-(`fmLocks`/`psgLocks` semantics, `Track.overridden`) model ownership; release
-"restores instrument/volume/pan/frequency" per the engine map — the frequency resend
-must be checked against this section and removed if present (GAP §1.2 #6, deferred
-item 6). The stale-`ix` PSG write, the unconditional `FFh`, and the E4 FM1 key-on
-hazard are unmodelled (**divergences to record in the comparator as expected-red**).
-S3K's stop-all-SFX-on-BGM-load is a profile behaviour to confirm against
-`AbstractSmpsAudioBackend`'s music-start path.
+(`fmLocks`/`psgLocks` semantics, `Track.overridden`) model ownership. The S3K
+host-owned E4 policy captures a complete immutable seven-slot projection before
+the first write, rejects incomplete/ambiguous/raw-state-unavailable projections,
+and then emits the native active-slot walk: FM3..FM6, PSG1..PSG3;
+`zFMSilenceChannel` including the PSG-to-YM `28h` hazard; `cfStopTrack`; and the
+conditional FM voice/SSG-EG or PSG-noise restore. It clears the same SFX claims
+and music override bits only after the physical program commits, without
+rebuilding the driver or resending frequency. This closes the E4 product gap;
+the standalone E3 path and PSG-SFX *admission* stale-`ix`/unconditional-`FFh`
+behaviour remain separate gaps. No authenticated reference request exercises E4,
+so this source-backed closure does not itself move the service-128 producer-input
+limitation or assert a new comparator MATCH.
 
 ---
 
@@ -1479,7 +1484,7 @@ reaches, with the shipped behaviour the engine must model:
 | 2542-2544 | extra `zPSGSilenceAll` at pause (every pause) | §12 TV 12.1 |
 | 2705-2716 | SEGA does not clear mailboxes/queue → `FEh` residue (every chime) | §14.4e |
 | 2754-2756 | DAC restore `or 84h` shape (every 1-up restore) | §13 |
-| 3089-3094 | E3 silences FM regardless of type — the FM1 key-on hazard (E4 on PSG SFX) | **missing** (§6e) |
+| 3089-3094 | E3 silences FM regardless of type — the FM1 key-on hazard (E4 on PSG SFX) | modelled by the complete S3K E4 host operation; standalone E3 remains missing (§6e) |
 | 3445-3447, 3461-3462 | `unk_1C15/18` writes in `cfStopTrack` (every SFX end) | `not-compared` |
 | 3542-3573 | F3 shipped guard/order (33 songs / 36 SFX) | equivalent for shipped placements (§10) |
 | 3718-3720 | continuous flag re-clear (every non-retriggered FC) | same |
@@ -1489,9 +1494,11 @@ reaches, with the shipped behaviour the engine must model:
 | 4236-4244 | `zSilencePSGChannel` bit-0 test — noise not silenced on channel start (every PSG SFX) | part of §6 admission shape |
 
 Unreached-by-shipped-data sites (FM3 special mode `838/885/3813`, SSG-EG upload
-`3985-4016`, `zStopSFX` call-shape `1689`, alt-freq `983/1016`, mod-env fetch
-`1349`/vol-env fetch `4158` beyond the §9 cases, EB/EE/FB/FD/FE flags) need no
-engine branch until custom data is in scope.
+`3985-4016`, alt-freq `983/1016`, mod-env fetch
+`1349`/vol-env fetch `4158` beyond the §9 cases, EB/EE/FB/FD/FE flags) have no
+native-stream parity claim. The E4 operation nevertheless consumes retained
+FM3/SSG-EG state exactly when a supported stream supplies it; unsupported raw
+state remains fail-closed.
 
 ---
 

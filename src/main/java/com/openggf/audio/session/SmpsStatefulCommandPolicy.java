@@ -6,9 +6,9 @@ import java.util.Objects;
  * Host-owned extension point for stateful SMPS commands.
  *
  * <p>Programs describe content; they do not choose host operations.  The
- * session installs this policy from its profile configuration so a future
- * command implementation can consume an immutable projection and return a
- * host operation without inspecting a game name or donor source.
+ * session installs this policy from its profile configuration so a host
+ * command implementation can consume an immutable projection and return an
+ * operation without inspecting a game name or donor source.
  */
 public interface SmpsStatefulCommandPolicy {
     SmpsStatefulCommandPolicy NONE = new SmpsStatefulCommandPolicy() {
@@ -21,8 +21,7 @@ public interface SmpsStatefulCommandPolicy {
     Identity identity();
 
     /**
-     * Phase 1 deliberately has no stateful-command behavior.  The operation
-     * type exists to keep a future host policy out of donor transitions.
+     * Hosts without a stateful operation retain their established behavior.
      */
     default SmpsStatefulCommandOperation prepare(
             SmpsStatefulCommandOperation.Input input) {

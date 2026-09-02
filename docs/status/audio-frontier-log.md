@@ -27,6 +27,26 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-02 — S3K E4 seven-slot stop/restore product gap closes; no oracle move
+
+- **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
+  `feature/ai-sound-driver-roadmap-completion`, candidate over accepted retained
+  S3K E4-state commit `8e0babd09`.
+- **Fixture:** none changed. The authenticated S3K AIZ1 reference has no E4
+  request, so it cannot establish an E4 comparison result.
+- **Command:** `mvn -Dmse=off
+  -Dtest=TestSmpsDriverSession,TestS3kE4StopSfxPlan,TestSmpsStatefulCommandPolicy,TestSmpsPhysicalPolicy
+  test -B`.
+- **Result:** 100 tests pass, 0 failures, 0 errors, 0 skipped. Exact plan tests
+  cover all native E4 slots, the shipped PSG-to-YM `28h` hazard, FM3 `$27`,
+  voice/TL/custom-SSG-EG restore, PSG raw-noise re-latch, no-attack/override
+  conditions, pre-write rejection, every physical-write rollback boundary, and
+  post-program logical-mutation rollback.
+- **Notes:** this is source-backed product closure for `zStopSFX` only. No
+  comparator was run and no `MATCH` is claimed. Service 128 remains the same
+  authenticated `REFERENCE_LIMITATION` (`producer_input`); standalone E3 and
+  PSG-SFX-admission stale-`ix`/`$FF` behaviour are separate frontiers.
+
 ## 2026-09-02 — S3K E3 PSG-silence product gap closes without moving service 128
 
 - **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,

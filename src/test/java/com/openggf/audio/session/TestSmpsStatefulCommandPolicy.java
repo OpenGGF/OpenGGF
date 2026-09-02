@@ -1,6 +1,8 @@
 package com.openggf.audio.session;
 
 import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.game.sonic3k.audio.Sonic3kSmpsPhysicalPolicy;
+import com.openggf.game.sonic3k.audio.Sonic3kStatefulCommandPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -9,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsStatefulCommandPolicy {
     @Test
@@ -80,6 +83,30 @@ class TestSmpsStatefulCommandPolicy {
         assertThrows(IllegalArgumentException.class,
                 () -> session.prepareRestore(incompatible,
                         session.captureLogicalSnapshot(), ignored -> null));
+        session.close();
+    }
+
+    @Test
+    void s3kHostPolicyClaimsE4WhileOtherHostsRemainInert() {
+        SmpsPhysicalPolicy physical = Sonic3kSmpsPhysicalPolicy.INSTANCE;
+        SmpsPhysicalDevice.Settings settings = SmpsSessionTestFixtures.settings();
+        SmpsStatefulCommandPolicy policy = Sonic3kStatefulCommandPolicy.INSTANCE;
+        SmpsDriverSession session = new SmpsDriverSession(settings, physical,
+                ChipWriteObserver.NONE, new SmpsSessionProfileFingerprint(
+                        "s3k-host", 7, physical.identity(), settings,
+                        policy.identity()),
+                new SmpsDriverSessionConfiguration(policy));
+        session.install();
+
+        SmpsStatefulCommandOperation prepared = session.prepareStatefulCommand(
+                new SmpsSessionCommand.StopSmpsSfx());
+
+        assertTrue(prepared.handled());
+        assertFalse(prepared.rejected());
+        assertEquals(SmpsStatefulCommandOperation.Handling.STOP_SMPS_SFX,
+                prepared.handling());
+        assertTrue(prepared.writes().writes().isEmpty(),
+                "an empty seven-slot projection still owns E4 without guessing writes");
         session.close();
     }
 }

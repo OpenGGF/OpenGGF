@@ -14,6 +14,19 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **S3K SMPS E4 now performs the shipped conditional SFX-stop walk:** the
+  S3K host session validates an immutable complete FM3/FM4/FM5/FM6/PSG1/PSG2/
+  PSG3 ownership projection before touching the chip, then follows
+  `zStopSFX`/`cfSilenceStopTrack`/`cfStopTrack` in native order for occupied
+  slots. This includes the retail `FixBugs=0` PSG raw-voice-control write to YM
+  `$28`, FM operator/key-off sequence, FM3 `$27` mode restore, voice/TL/custom
+  SSG-EG restoration, and signed raw PSG-noise re-latch. An incomplete or
+  ambiguous projection emits nothing and changes no logical state; successful
+  completion releases only the existing SFX claims/overrides while preserving
+  continuous SFX, PCM, and session controls. The policy is host-owned and
+  fingerprinted, so S1/S2 retain their existing behaviour and donor content
+  cannot select the S3K operation.
+
 - **Sonic 2 sound effects now reserve their channels at admission:** the
   shipped driver marks each affected music slot overridden while it loads the
   SFX header, before its music-first update pass. OpenGGF now installs those

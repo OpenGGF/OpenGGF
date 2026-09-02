@@ -13,12 +13,12 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * Read-only S3K input for a future {@code cmd_StopSFX (E4h)} operation.
+ * Read-only S3K input for the host-owned {@code cmd_StopSFX (E4h)} operation.
  *
- * <p>This class plans nothing and emits no writes.  It is intentionally
- * derived from the game-agnostic ownership view so Phase 1 does not introduce
- * a second mutable seven-slot table or claim that OpenGGF stores raw Z80 RAM
- * bytes it does not retain.
+ * <p>This class itself plans nothing and emits no writes. It is intentionally
+ * derived from the game-agnostic ownership view so the host operation does not
+ * introduce a second mutable seven-slot table or claim that OpenGGF stores raw
+ * Z80 RAM bytes it does not retain.
  */
 public record S3kE4Projection(
         boolean complete,
@@ -75,8 +75,8 @@ public record S3kE4Projection(
                             ? music.map(S3kE4Track::from).orElse(null) : null));
         }
         // An active SFX declaration outside zTracksSFX_FM3..PSG3 has no
-        // well-defined E4 slot.  Do not silently route it through a nearby
-        // channel; a future operation must fail closed.
+        // well-defined E4 slot. Do not silently route it through a nearby
+        // channel; the host operation must fail closed.
         for (SmpsChannelOwnershipProjection.RoleOwnership role
                 : ownership.roles().values()) {
             if (role.sfxClaims().isEmpty()) {

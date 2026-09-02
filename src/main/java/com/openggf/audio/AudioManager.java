@@ -3001,7 +3001,9 @@ public class AudioManager implements MusicRestoreSink {
                         sampleRate, tuning.dacInterpolate(),
                         tuning.psgNoiseShiftEveryToggle());
         SmpsDriverSessionConfiguration sessionConfiguration =
-                SmpsDriverSessionConfiguration.DEFAULT;
+                new SmpsDriverSessionConfiguration(base.profile() != null
+                        ? base.profile().smpsStatefulCommandPolicy()
+                        : com.openggf.audio.session.SmpsStatefulCommandPolicy.NONE);
         SmpsDriverSession smpsSession = new SmpsDriverSession(
                 physicalSettings, physicalPolicy, chipWriteObserver,
                 new SmpsSessionProfileFingerprint(

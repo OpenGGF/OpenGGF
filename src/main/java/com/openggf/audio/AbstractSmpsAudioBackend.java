@@ -763,7 +763,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                         configService.getBoolean(
                                 SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE)),
                 physicalPolicy,
-                diagnosticChipWriteObserver());
+                diagnosticChipWriteObserver(),
+                new com.openggf.audio.session.SmpsDriverSessionConfiguration(
+                        audioProfile != null
+                                ? audioProfile.smpsStatefulCommandPolicy()
+                                : com.openggf.audio.session
+                                        .SmpsStatefulCommandPolicy.NONE));
         SmpsDriver driver = stream.logicalDriver();
         driver.setDiagnosticIdentity(
                 new SmpsDriverServiceObserver.DriverIdentity(

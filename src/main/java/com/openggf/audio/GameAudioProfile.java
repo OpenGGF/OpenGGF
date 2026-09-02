@@ -3,6 +3,7 @@ package com.openggf.audio;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
 import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsStatefulCommandPolicy;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -18,6 +19,11 @@ public interface GameAudioProfile {
     /** Physical chip policy owned by this base-game presentation session. */
     default SmpsPhysicalPolicy smpsPhysicalPolicy() {
         return LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
+    }
+
+    /** Host-owned stateful SMPS commands; donor programs never select this. */
+    default SmpsStatefulCommandPolicy smpsStatefulCommandPolicy() {
+        return SmpsStatefulCommandPolicy.NONE;
     }
 
     default void configurePresentationCoordFlagHandlers(

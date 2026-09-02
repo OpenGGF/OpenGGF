@@ -113,17 +113,19 @@ class TestSmpsPhysicalPolicy {
             GameAudioProfile donorProfile) {
         SmpsPhysicalPolicy host = hostProfile.smpsPhysicalPolicy();
         SmpsPhysicalPolicy donor = donorProfile.smpsPhysicalPolicy();
+        SmpsStatefulCommandPolicy hostStateful =
+                hostProfile.smpsStatefulCommandPolicy();
         SmpsPhysicalDevice.Settings settings =
                 SmpsSessionTestFixtures.settings();
         SmpsSessionProfileFingerprint fingerprint =
                 new SmpsSessionProfileFingerprint(
                         hostProfile.presentationGameId(), 19,
-                        host.identity(), settings);
+                        host.identity(), settings, hostStateful.identity());
         SmpsSessionTestFixtures.RecordingObserver observer =
                 new SmpsSessionTestFixtures.RecordingObserver();
         SmpsDriverSession session = new SmpsDriverSession(
                 settings, host, observer, fingerprint,
-                SmpsDriverSessionConfiguration.DEFAULT);
+                new SmpsDriverSessionConfiguration(hostStateful));
 
         session.install();
         SmpsDriver logical = session.logicalDriverForTesting();
@@ -157,6 +159,10 @@ class TestSmpsPhysicalPolicy {
                 session.captureSnapshot().profile().physicalPolicyId(),
                 "donor " + donor.identity().value()
                         + " must not replace the host policy");
+        assertEquals(hostStateful.identity(),
+                session.captureSnapshot().profile().statefulCommandPolicyId(),
+                "donor " + donorProfile.presentationGameId()
+                        + " must not replace the host stateful-command policy");
         assertEquals(host.identity().equals(
                         Sonic3kSmpsPhysicalPolicy.INSTANCE.identity())
                         ? 84 : 202,
