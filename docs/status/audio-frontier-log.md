@@ -27,6 +27,29 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S2 request-transfer window MATCH; driver tick frontier unchanged
+
+- **Worktree/branch:** `.worktrees/s2-c0a-replan3`,
+  `bugfix/ai-s2-c0a-replan3`; measured at `7b1442846` plus the reviewed
+  spike-cause diff now committed as `89eab0649`.
+- **Fixture:** two independently extracted, comparison-only raw-v2 candidates
+  for source rows `[10150,10900)`, each SHA-256
+  `a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c`;
+  both remain explicitly unbound (`production_bound:false`).
+- **Command:** `mvn -Dmse=off -Dsonic2.rom.path=<absolute REV01 ROM>
+  -Ds2.request.candidate.path=<candidate-g-or-h raw-v2 JSONL>
+  -Ds2.request.bk2.path=<pinned complete-emeralds BK2>
+  -Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream#realCandidateComparesAgainstIndependentProductionBk2Run
+  test -B`.
+- **Result:** candidate g and candidate h independently reported
+  **`MATCH: 25 production transfers agree`**, exit 0 (one test, no
+  failures/errors/skips). Before the two source-owned fixes, the first
+  divergences were transfer 3 (ring B5 in SFX0 rather than ROM SFX1) and then
+  transfer 20 (CPU Tails spike damage A3 rather than ROM A6).
+- **Notes:** this closes only the bounded pre-consumption request-transfer
+  layer. It does not authenticate the candidates, bind replay authority, or
+  move the downstream S2 SMPS state/write frontier, which remains at tick 210.
+
 ## 2026-09-02 — S3K E4 seven-slot stop/restore source correction under review; no oracle move
 
 - **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
