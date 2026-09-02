@@ -169,6 +169,10 @@ diagnostic tools remain usable without changing gameplay behavior.
   remains `REFERENCE_LIMITATION` / `FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE`.
   Those publication mechanics neither supply fresh native authority nor expose the missing Sonic 2
   request stream. Before Task 8 can advance the S2 tick-210 request frontier, execute Task 8A below.
+- The bounded S3K service-128 diagnostic remains the distinct Sonic/Tails `[0,5400)` identity;
+  it is not the Knuckles `[810,434417)` complete-run lane. Task 8B below plans its missing
+  pre-consumption request authority after Task 8A. Task 8B does not replace, broaden, or relabel
+  the Knuckles production profile.
 
 ## Feature design
 
@@ -557,7 +561,8 @@ rejected per-voice S3K stop emitter or advance the frontier on the old multi-dev
   If it stops at the request frontier, retain the honest limitation and execute Task 8A before
   attempting to advance it; never infer the request from the reported consequences.
 - [ ] Run the S3K Knuckles full command from frame zero against `[810,434417)` and preserve the
-  first report. Do not run the Sonic/Tails diagnostic under the Knuckles identity.
+  first report. Do not run the Sonic/Tails diagnostic under the Knuckles identity; its separate
+  fixed-prefix authority belongs only to Task 8B.
 - [ ] For each product-route or semantic divergence: identify the exact shipped routine/state,
   write and verify a focused RED, implement the minimal source-owned behavior, run GREEN, rerun
   S1 regression gates, then restart comparison from the profile boundary.
@@ -633,6 +638,84 @@ the tick-210 request frontier. Its fixed boundary and authority constraints are 
 - [ ] Only after independent approval, extract the fixed window and install reviewed identities.
   Preserve `REFERENCE_LIMITATION` and do not publish, fabricate, hand-edit, or consume a request
   fixture while fresh authenticated native-GPGX authority remains unavailable.
+
+### Task 8B: Establish S3K Sonic/Tails pre-consumption request authority
+
+**Status:** planned after Task 8A; no request capture, fixture, producer binding, or comparison
+authority exists yet. This task applies only to the Sonic/Tails service-128 diagnostic prefix
+`[0,5400)`. It does not modify or supersede the Knuckles complete-run profile
+`s3k_locked_on_knuckles_superemeralds.v1` or its `[810,434417)` comparison. The exact source,
+identity, topology, and authority constraints are audited in
+`docs/architecture/audits/audio/2026-09-02-s3k-preconsumption-request-producer-audit.md`.
+
+**Files:**
+
+- If policy review classifies this boundary as a third address-filtered observer exception,
+  modify the pinned TraceChaser `AGENTS.md` and `CLAUDE.md` together, after explicit approval,
+  and update their policy tests. The current exactly-two-exception rule is an implementation
+  gate, not implicit authorization.
+- Modify a full fixed S3K service manifest, a distinct Sonic/Tails profile/capability,
+  complete-audio runner, submission raw sink/schema, closed launcher/CLI, and exact native/pure
+  C# tests in the pinned `tools/tracechaser` submodule.
+- Create a closed duplicate-raw-to-bounded-oracle-v2 extractor and its negative tests in the
+  pinned `tools/tracechaser` submodule.
+- Modify the S3K oracle consumer, strict raw adapter/projector/profile, independent production
+  BK2 OpenGGF request observer, comparator projection, and focused Java authority guards.
+- Modify validation records only after fresh authority, duplicate capture, independent review,
+  and explicit publication gates complete. Do not edit the frontier merely because observer
+  code exists.
+
+**Interfaces:**
+
+- Pins `s3k-complete-sonic-tails.bk2`, SHA-256
+  `82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`, its full
+  466,334-row identity, and only the fixed publication prefix `[0,5400)`. It never accepts the
+  Knuckles BK2, hash, interval, capability, or profile.
+- Observes `Play_Music` from exact M68K PC `$1358` / opcode
+  `33fc010000a11100` through PC `$1374` / opcode `33fc000000a11100`, snapshots exactly
+  Z80 RAM `$1C0A..$1C0B` while the bus remains held, and authenticates `$FE` from that source
+  byte. It does not infer a request from source frame 242, service 128, mailbox residue, the
+  84-write stop burst, or SEGA-PCM exit.
+- Uses the existing ABI 4 generic action/service/snapshot mechanics only if native tests prove
+  the real cross-CPU topology. A new native action requires a separately approved ABI/core and
+  full artifact-identity cascade.
+- Keeps reference requests comparison-only. They never dispatch into OpenGGF or select behavior.
+  Request equality remains unavailable until an independent authenticated OpenGGF BK2 producer
+  observes equivalent source-owned evidence through `AudioRequestObserver`.
+
+- [ ] Resolve the TraceChaser policy classification first. If this is a third address-filtered
+  exception, obtain explicit approval and amend both mirrored policy files and tests before any
+  observer implementation. Keep caller-selectable/general diagnostic hooks prohibited.
+- [ ] Write RED native and pure C# tests for exact `$1358`/`$1374` opcodes, kind-8 parent and
+  kind-13 child, one-byte snapshot, native ordering, every declared non-target active-kind
+  alternative, opcode/parent/scheduling faults, bounded state, terminal cleanup, and strict raw
+  schema negatives.
+- [ ] Extend the full production S3K manifest, not the synthetic subset: add range 3 for
+  `$1C0A`, kind 13, `ALLOW_CHILDREN` only on kind 8, the target begin/end pair, and exact
+  non-mutating action-7 alternatives at both watched PCs for root and every other reachable
+  active kind. Prove every visit selects exactly one hook; never accept an
+  unmatched-active-kind fault.
+- [ ] Create the distinct fixed Sonic/Tails profile, capability, and power-on runner. Validate
+  the entire 466,334-row movie identity, begin the sink from `CaptureCutoffFrontier()` before row
+  zero without starting a premature publication epoch, and capture exactly `[0,5400)`.
+- [ ] Add installation verification equivalent to the Sonic 2 gate and pin manifest,
+  capability-template, harness, observer/install, source, count, digest, occupancy, and terminal
+  identities. Retain native core hashes only after fresh locked-source/toolchain reproduction
+  proves byte identity.
+- [ ] Write RED duplicate-extractor tests, then implement the closed two-raw-to-oracle-v2
+  transform. Require exact duplicate attestations and unchanged old-v1 shared projection; add
+  only source-observed request evidence. Reject inferred/hand-inserted `$FE`, disagreement,
+  provenance mismatch, partial output, overwrite, and legacy fallback.
+- [ ] Write RED Java schema, adapter, projection, independent-producer, comparator, and authority
+  guard tests. Keep `S3kOpenGgfAudioCapture`'s reference-mailbox dispatch fenced as
+  fixture-assisted; authenticated comparison must never hydrate from the reference.
+- [ ] Restore fresh native authority and run two serial power-on captures to distinct absent
+  external paths under a closed launcher using `exec mono`, timeout/process-group supervision,
+  and empty exact process inventories before and after each invocation.
+- [ ] Only after independent review and explicit approval, publish a create-new fixture bundle
+  and install reviewed identities. Preserve both `REFERENCE_LIMITATION / producer_input` and
+  `FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE` until every reference and independent
+  OpenGGF gate closes.
 
 ### Task 9: Refresh the six-stage evidence and remaining queue
 
