@@ -21,6 +21,10 @@ class TestS2RequestReferenceAuthorityGuard {
             Path.of("src/main/java/com/openggf/tools/audio/parity/s2/S2AudioOracleComparator.java"),
             Path.of("src/main/java/com/openggf/tools/audio/completerun/s2/S2CompleteRunAudioProfile.java"),
             Path.of("src/main/java/com/openggf/tools/audio/parity/s2/S2OracleEngineCapture.java"));
+    private static final List<Path> MEASUREMENT_SOURCES = List.of(
+            Path.of("src/test/java/com/openggf/tools/audio/parity/s2/S2Bk2DriverOracleComparator.java"),
+            Path.of("src/test/java/com/openggf/tests/trace/runs/S2RequestProjectionBk2Capture.java"),
+            Path.of("src/test/java/com/openggf/tests/trace/runs/S2RequestProjectionBk2TestBridge.java"));
     private static final Pattern FORBIDDEN = Pattern.compile(
             "\\b(?:DriverRequest|ResolvedSmpsSfxSource|Sonic2SoundRequestPipeline|SmpsDriver(?:Session)?|"
                     + "AudioManager|GameServices|HardwareTiming[A-Za-z0-9_]*|AudioPresentationCommand|"
@@ -66,6 +70,17 @@ class TestS2RequestReferenceAuthorityGuard {
                 .filter(path -> read(path).contains("S2RequestAwareOracle"))
                 .map(Path::toString)
                 .toList(), "Tranche A cannot add a profile, comparator, capture, or v1 route");
+    }
+
+    @Test
+    void measurementSeamCannotTurnCandidateTransfersIntoDriverInputs() {
+        Pattern forbiddenInput = Pattern.compile(
+                "\\b(?:DriverRequest|requestTransfers|RequestTransfer)\\b");
+        assertEquals(List.of(), MEASUREMENT_SOURCES.stream()
+                .filter(Files::isRegularFile)
+                .filter(path -> forbiddenInput.matcher(read(path)).find())
+                .map(Path::toString)
+                .toList());
     }
 
     private static String read(Path source) {

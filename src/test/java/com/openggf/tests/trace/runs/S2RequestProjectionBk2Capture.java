@@ -1,14 +1,27 @@
 package com.openggf.tests.trace.runs;
 
 import com.openggf.audio.GameAudioProfile;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManager.DiagnosticObserverHandle;
+import com.openggf.audio.AudioManager.DiagnosticObserverSet;
+import com.openggf.audio.AudioAdmissionObserver;
+import com.openggf.audio.AudioRequestObserver;
+import com.openggf.audio.driver.SfxContentionObserver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
+import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.audio.completerun.s2.S2ProductionRequestProjector;
+import com.openggf.tools.audio.parity.s2.S2OracleRawStream;
+import com.openggf.tools.audio.parity.s2.S2OracleSchema;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,6 +57,7 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                 "repository S2 complete-run BK2");
         S2ProductionRequestProjector projector = new S2ProductionRequestProjector();
         List<Integer> requestRows = new ArrayList<>();
+        ProductionAudioRecorder audioRecorder = new ProductionAudioRecorder();
         int[] productionOutputRow = {-1};
         Sonic2AudioProfile profile = new Sonic2AudioProfile(event -> {
             int row = productionOutputRow[0];
@@ -63,18 +77,159 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
             TestEnvironment.configureGameModuleFixture(
                     new ObservedSonic2Module(profile));
             RomManager.getInstance().setRom(rom);
-            productionOutputRowObserver = row -> productionOutputRow[0] = row;
-            afterProductionStep = () -> GameServices.audio()
-                    .presentFrame(PresentationMode.FORWARD);
-            assertChainReplayThroughSegmentRow(RUN_DIR, DESTINATION_SEGMENT,
-                    EXCLUSIVE_END - DESTINATION_START_ROW);
-            return new S2RequestProjectionBk2TestBridge.Capture(
-                    projector, requestRows);
+            AudioManager audio = GameServices.audio();
+            try (DiagnosticObserverHandle ignored =
+                         audio.acquireDiagnosticObservers(audioRecorder.observers())) {
+                productionOutputRowObserver = row -> {
+                    if (row != productionOutputRow[0]) {
+                        audioRecorder.presentOpenRow(audio);
+                        productionOutputRow[0] = row;
+                        audioRecorder.beginRow(row);
+                    }
+                };
+                afterProductionStep = () -> { };
+                assertChainReplayThroughSegmentRow(RUN_DIR, DESTINATION_SEGMENT,
+                        EXCLUSIVE_END - DESTINATION_START_ROW);
+                audioRecorder.presentOpenRow(audio);
+                return new S2RequestProjectionBk2TestBridge.Capture(
+                        projector, requestRows, audioRecorder.rows());
+            }
         } finally {
             productionOutputRowObserver = row -> { };
             afterProductionStep = () -> { };
             RomManager.getInstance().setRom(null);
             rom.close();
+        }
+    }
+
+    static final class ProductionAudioRecorder {
+        private final List<S2RequestProjectionBk2TestBridge.ProductionAudioRow> rows =
+                new ArrayList<>();
+        private final List<S2OracleRawStream.ChipWrite> writes = new ArrayList<>();
+        private int row = -1;
+        private SmpsDriverSnapshot finalSnapshot;
+        private SmpsDriverServiceObserver.ServiceEvent activeService;
+        private boolean activeUpdateMusicService;
+        private boolean completedDriverService;
+
+        DiagnosticObserverSet observers() {
+            return new DiagnosticObserverSet(
+                    AudioRequestObserver.NONE,
+                    AudioAdmissionObserver.NONE,
+                    new SmpsDriverServiceObserver() {
+                        @Override
+                        public void onServiceBegin(ServiceEvent event) {
+                            if (activeService != null) {
+                                throw new IllegalStateException(
+                                        "driver service observer was re-entered");
+                            }
+                            activeService = event;
+                            activeUpdateMusicService = isUpdateMusic(event);
+                        }
+
+                        @Override
+                        public void onServiceEnd(
+                                ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                            if (activeService == null) {
+                                throw new IllegalStateException(
+                                        "driver service ended without a begin");
+                            }
+                            if (!activeService.equals(event)) {
+                                throw new IllegalStateException(
+                                        "driver service end does not match its begin");
+                            }
+                            if (activeUpdateMusicService) {
+                                if (completedDriverService) {
+                                    throw new IllegalStateException(
+                                            "row completed multiple EHZ music services");
+                                }
+                                finalSnapshot = snapshot;
+                                completedDriverService = true;
+                            }
+                            activeService = null;
+                            activeUpdateMusicService = false;
+                        }
+                    },
+                    new ChipWriteObserver() {
+                        @Override
+                        public void onYm2612Write(
+                                int port, int register, int value) {
+                            if (activeUpdateMusicService) {
+                                writes.add(new S2OracleRawStream.ChipWrite(
+                                        true, port, register, value,
+                                        S2OracleRawStream.ChipWrite
+                                                .SERVICE_UPDATE_MUSIC));
+                            }
+                        }
+
+                        @Override
+                        public void onPsgWrite(int value) {
+                            if (activeUpdateMusicService) {
+                                writes.add(new S2OracleRawStream.ChipWrite(
+                                        false, 0, 0, value,
+                                        S2OracleRawStream.ChipWrite
+                                                .SERVICE_UPDATE_MUSIC));
+                            }
+                        }
+                    },
+                    SfxContentionObserver.NONE);
+        }
+
+        void beginRow(int selectedRow) {
+            if (row >= 0) {
+                throw new IllegalStateException("previous audio row was not closed");
+            }
+            row = selectedRow;
+            writes.clear();
+            finalSnapshot = null;
+            completedDriverService = false;
+        }
+
+        void presentOpenRow(AudioManager audio) {
+            if (row < 0) {
+                return;
+            }
+            audio.presentFrame(PresentationMode.FORWARD);
+            S2RequestProjectionBk2TestBridge.ProductionAudioRow observed =
+                    finishObservedRow();
+            if (observed.row() >= S2OracleSchema.ANCHOR_ROW
+                    && observed.row() < EXCLUSIVE_END) {
+                rows.add(observed);
+            }
+        }
+
+        S2RequestProjectionBk2TestBridge.ProductionAudioRow finishObservedRow() {
+            if (activeService != null) {
+                throw new IllegalStateException("driver service did not complete");
+            }
+            if (row < 0) {
+                throw new IllegalStateException("no audio row is open");
+            }
+            S2RequestProjectionBk2TestBridge.ProductionAudioRow observed =
+                    new S2RequestProjectionBk2TestBridge.ProductionAudioRow(
+                            row, finalSnapshot, writes,
+                            completedDriverService);
+            row = -1;
+            return observed;
+        }
+
+        List<S2RequestProjectionBk2TestBridge.ProductionAudioRow> rows() {
+            if (row >= 0 || activeService != null) {
+                throw new IllegalStateException("audio observation is incomplete");
+            }
+            return List.copyOf(rows);
+        }
+
+        private static boolean isUpdateMusic(
+                SmpsDriverServiceObserver.ServiceEvent event) {
+            return event.kind()
+                            == SmpsDriverServiceObserver.ServiceKind
+                                    .SEQUENCER_TICK
+                    && !event.sequencer().sfx()
+                    && event.sequencer().source().kind()
+                            == SmpsSourceDescriptor.Kind.BASE_MUSIC
+                    && event.sequencer().source().id()
+                            == Sonic2Music.EMERALD_HILL.id;
         }
     }
 
@@ -112,4 +267,3 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
         }
     }
 }
-

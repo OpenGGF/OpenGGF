@@ -106,6 +106,36 @@ class TestS2RequestAwareOracleRawStream {
     }
 
     @Test
+    @ExtendWith(SessionInvocationExtension.class)
+    void realCandidateAndBk2DrivenDriverStateCompare() throws Exception {
+        String candidateProperty = System.getProperty("s2.request.candidate.path");
+        String romProperty = System.getProperty("sonic2.rom.path");
+        String bk2Property = System.getProperty("s2.request.bk2.path");
+        assumeTrue(candidateProperty != null && romProperty != null
+                        && bk2Property != null,
+                "explicit candidate, ROM, and BK2 paths are required");
+
+        S2RequestProjectionBk2TestBridge.Capture capture =
+                S2RequestProjectionBk2TestBridge.capture(
+                        Path.of(romProperty), Path.of(bk2Property));
+        S2RequestAwareCandidateComparator.Report requests =
+                S2RequestAwareCandidateComparator.compare(
+                        Path.of(candidateProperty), capture.projector(),
+                        capture.requestRows());
+        assertEquals(S2RequestAwareCandidateComparator.Kind.MATCH,
+                requests.kind(), requests.describe());
+        assertEquals(25, requests.comparedTransfers(), requests.describe());
+
+        S2AudioOracleComparator.Report driver =
+                S2Bk2DriverOracleComparator.compareAuthenticatedFixture(
+                        TestS2AudioOracleFixture.fixturePath(), capture.audioRows());
+        System.out.println("MEASUREMENT_ONLY " + requests.describe());
+        System.out.println("MEASUREMENT_ONLY " + driver.describe());
+        assertNotEquals(S2AudioOracleComparator.Kind.INVALID,
+                driver.kind(), driver.describe());
+    }
+
+    @Test
     void readsTheExactBoundedCandidateAndPreservesObservedTransfers() throws Exception {
         S2RequestAwareOracleRawStream.Result result = read(validPayload());
 
