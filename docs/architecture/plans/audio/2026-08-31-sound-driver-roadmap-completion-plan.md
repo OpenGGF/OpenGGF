@@ -97,8 +97,10 @@ GPGX, Lua 5.4 guards, gzip JSONL canonical capture store.
 - The canonical store has no installed complete-run captures. The prerequisite therefore adopts
   `complete_run_audio.v2` and rejects v1 rather than accepting metadata without explicit producer
   observation and shared comparison inventories.
-- A TraceChaser request-observer extension is not part of the initial integration. Current raw
-  authority remains service/state/chip-only.
+- The initial integration deliberately retained service/state/chip-only authority. The
+  post-Task8 Sonic 2 request-authority prerequisite below now requires the closed ABI 4
+  action-7/managed-register extension before the S2 comparison may advance beyond its request
+  frontier. That extension is planned, not implemented or authoritative.
 - If natural power-on replay cannot traverse a mode or special stage, the run reports an explicit
   product/route feasibility gap. It does not use trace pacing or direct loading.
 
@@ -163,6 +165,10 @@ diagnostic tools remain usable without changing gameplay behavior.
   `docs/architecture/plans/audio/2026-09-01-session-owned-smps-physical-device-implementation-plan.md`
   Tasks 1-8. That subplan is an architecture prerequisite, not a replacement for the six-stage
   producer/consumer roadmap. Its Task 9 returns here to authenticated first-divergence work.
+- The physical-device subplan now has an atomic bundle implementation, but its terminal status
+  remains `REFERENCE_LIMITATION` / `FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE`.
+  Those publication mechanics neither supply fresh native authority nor expose the missing Sonic 2
+  request stream. Before Task 8 can advance the S2 tick-210 request frontier, execute Task 8A below.
 
 ## Feature design
 
@@ -548,6 +554,8 @@ rejected per-voice S3K stop emitter or advance the frontier on the old multi-dev
   `REFERENCE_LIMITATION` for each complete run.
 
 - [ ] Run the S2 full command from frame zero against `[769,259590)` and preserve the first report.
+  If it stops at the request frontier, retain the honest limitation and execute Task 8A before
+  attempting to advance it; never infer the request from the reported consequences.
 - [ ] Run the S3K Knuckles full command from frame zero against `[810,434417)` and preserve the
   first report. Do not run the Sonic/Tails diagnostic under the Knuckles identity.
 - [ ] For each product-route or semantic divergence: identify the exact shipped routine/state,
@@ -557,6 +565,74 @@ rejected per-voice S3K stop emitter or advance the frontier on the old multi-dev
   comparison/error counts, and first frame/service/field.
 - [ ] Stop only at complete compared-layer equality, an honest reference limitation, or a
   reproducible product gap whose next source-owned RED is recorded. Never realign or skip ahead.
+
+### Task 8A: Establish Sonic 2 pre-consumption request authority
+
+**Status:** planned prerequisite; no request capture, fixture, producer binding, or comparison
+authority exists yet. This task is required before Task 8 may advance the Sonic 2 comparison past
+the tick-210 request frontier. Its fixed boundary and authority constraints are audited in
+`docs/architecture/audits/audio/2026-09-02-s2-preconsumption-request-producer-audit.md`.
+
+**Files:**
+
+- Modify the pinned TraceChaser `AGENTS.md` and `CLAUDE.md` together, after explicit approval, to
+  authorize only the fixed `0x10D6` observation callback. Their current two-exception rule is a
+  hard implementation gate, not permission to add a general diagnostic-hook surface.
+- Modify the fixed Sonic 2 service manifest/profile, complete-audio runner, raw sink/schema,
+  capability, and exact pure C# tests in the pinned `tools/tracechaser` submodule.
+- Create or modify a closed full-run-raw-v3-to-oracle-v2 extractor and its negative tests in the
+  pinned `tools/tracechaser` submodule.
+- Modify the Sonic 2 oracle raw stream, comparator reference model, ROM-shaped engine
+  mailbox/queue/admission producer, complete-run raw adapter/projector/profile, and focused Java
+  tests and authority guards.
+- Modify validation records only after fresh authority and duplicate capture gates complete. Do
+  not edit the frontier or publish a fixture merely because the observation code exists.
+
+**Interfaces:**
+
+- Observes only the exact accepted M68K-to-Z80 transfer before ROM PC `0x10D6` executes opcode
+  bytes `13 80 10 09`: D0.b is the nonzero raw request, D1.w is the actual slot 0 through 3, and
+  A7 is the exact managed/native correlation token.
+- Reuses the reviewed ABI 4 action-7 A7 marker and Sonic 1 managed-register/native-marker pattern.
+  The manifest owns the fixed PC/opcode/token inventory; callers cannot select an observation PC.
+- Publishes an ordered raw `request_transfers` inventory. It does not infer a request from Z80
+  state, a live sound pointer, chip writes, audible output, fixture coordinates, or the known
+  tick-210 result.
+- Keeps transfer, Z80 queue scan, priority/admission, and playback consequences distinct. Multiple
+  transfers may precede one `zCycleQueue`, and the shipped FixBugs-off slot 3 aliases
+  `VoiceTblPtr`; no layer may collapse these into one direct request per tick.
+- Reference requests remain comparison-only. They never call `DriverRequest`, `admitSfx`, or any
+  production behavior owner. Request equality stays unavailable until an independent authenticated
+  OpenGGF producer observes equivalent source-owned evidence.
+
+- [ ] Obtain explicit approval for the fixed observer exception and update the pinned TraceChaser
+  `AGENTS.md` and `CLAUDE.md` together before implementation. Keep general M68K diagnostic hooks
+  prohibited.
+- [ ] Write RED pure C# tests for the fixed hook/opcode, D0/D1/A7 capture, every reviewed active
+  service topology, bounded correlation, orphan/reordered/duplicate/cross-frame/terminal failures,
+  and strict raw v3 schema negatives.
+- [ ] Implement exactly one Sonic 2 pre-execution callback at `0x10D6`, correlate it with the next
+  exact action-7 native marker, observe from power-on, and publish only from comparison row 769.
+  Add native ordering regression tests; do not change the native patch or ABI unless a separately
+  reviewed observer identity family is first approved.
+- [ ] Pin the fixed request inventory and all manifest, capability-template, harness, correlator,
+  count, digest, occupancy, and terminal identities. Retain native hashes/ABI only when the patch is
+  byte-identical and freshly reproduced.
+- [ ] Write RED extractor tests, then implement the closed deterministic raw-v3-to-oracle-v2
+  extraction for `[10150,10900)`. Do not revive the environment-gated window capture or derive
+  request values from outcomes.
+- [ ] Write RED Java adapter/oracle/queue/profile/guard tests, then replace the direct at-most-one
+  request-per-tick diagnostic shortcut with ROM-shaped source-owned mailbox, transfer, Z80 queue,
+  and admission semantics. Keep authenticated reference observations behavior-inert.
+- [ ] Run native self-tests and exact named pure C# non-live tests with empty process inventories
+  before and after every Mono invocation. Then restore locked trust roots and complete the mandatory
+  two-fresh-build native-observer and deterministic managed-harness reproduction gates.
+- [ ] After the authority gates pass, run two serial power-on S2 captures to distinct absent
+  external paths under closed process supervision. Require identical normalized attestations,
+  ordered requests, events, terminal state, cutoff frontier, and digests before independent review.
+- [ ] Only after independent approval, extract the fixed window and install reviewed identities.
+  Preserve `REFERENCE_LIMITATION` and do not publish, fabricate, hand-edit, or consume a request
+  fixture while fresh authenticated native-GPGX authority remains unavailable.
 
 ### Task 9: Refresh the six-stage evidence and remaining queue
 
