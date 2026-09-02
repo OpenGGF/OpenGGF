@@ -14,12 +14,18 @@ import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 public class Sonic2AudioProfile extends AbstractAudioProfile {
 
+    private final Consumer<Sonic2SoundRequestService.Event> requestObserver;
+
     @Override
     public AudioRequestService createAudioRequestService() {
-        return new Sonic2SoundRequestService();
+        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
+        service.addObserver(requestObserver);
+        return service;
     }
 
     private static final Map<GameSound, Integer> SOUND_MAP;
@@ -67,7 +73,15 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     }
 
     public Sonic2AudioProfile() {
+        this(ignored -> { });
+    }
+
+    /** Installs an output-only observer on this profile's production request service. */
+    public Sonic2AudioProfile(
+            Consumer<Sonic2SoundRequestService.Event> requestObserver) {
         super(SOUND_MAP, MUSIC_MAP);
+        this.requestObserver = Objects.requireNonNull(
+                requestObserver, "requestObserver");
     }
 
     @Override
