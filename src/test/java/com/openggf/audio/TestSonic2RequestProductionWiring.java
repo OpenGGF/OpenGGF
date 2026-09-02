@@ -126,4 +126,20 @@ class TestSonic2RequestProductionWiring {
                 .commandTimeline().entries().getFirst().command();
         assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME, command.route());
     }
+
+    @Test
+    void standaloneNamedSfxRetainsImmediateRoute() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new NullAudioBackend());
+        Sonic2AudioProfile profile = new Sonic2AudioProfile();
+        audio.setAudioProfile(profile);
+
+        audio.playSfx("standalone-cue");
+
+        assertEquals(1, audio.commandTimeline().entryCount());
+        assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME,
+                ((AudioCommand.PlaySfx) audio.commandTimeline().entries()
+                        .getFirst().command()).route());
+    }
 }
