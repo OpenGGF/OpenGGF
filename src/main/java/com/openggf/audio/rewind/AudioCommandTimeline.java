@@ -17,6 +17,16 @@ import java.util.Objects;
  * which only advances {@link #firstRetainedEntryIndex()}.
  */
 public final class AudioCommandTimeline {
+    public static final class PreparedAppend {
+        private final List<AudioTimelineEntry> prepared;
+        private final int nextOrder;
+
+        private PreparedAppend(List<AudioTimelineEntry> prepared,
+                int nextOrder) {
+            this.prepared = prepared;
+            this.nextOrder = nextOrder;
+        }
+    }
     private final ArrayList<AudioTimelineEntry> entries = new ArrayList<>();
     private int prunedEntryCount;
     private long currentFrame;
@@ -36,6 +46,24 @@ public final class AudioCommandTimeline {
         AudioTimelineEntry entry = new AudioTimelineEntry(currentFrame, nextOrder++, command);
         entries.add(entry);
         return entry;
+    }
+
+    /** Allocates and validates a durable append while rollback is still possible. */
+    public PreparedAppend prepareAppend(List<AudioCommand> commands) {
+        List<AudioCommand> source = List.copyOf(Objects.requireNonNull(commands, "commands"));
+        entries.ensureCapacity(entries.size() + source.size());
+        List<AudioTimelineEntry> prepared = new ArrayList<>(source.size());
+        int order = nextOrder;
+        for (AudioCommand command : source) {
+            prepared.add(new AudioTimelineEntry(currentFrame, order++, command));
+        }
+        return new PreparedAppend(List.copyOf(prepared), order);
+    }
+
+    /** Commits a previously prepared append without allocating or resolving data. */
+    public void commitPreparedAppend(PreparedAppend append) {
+        entries.addAll(append.prepared);
+        nextOrder = append.nextOrder;
     }
 
     public void discardAfter(long frame) {

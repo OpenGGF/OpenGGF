@@ -337,6 +337,28 @@ public final class AudioPresentationSourceFactory
     private final List<DeferredDiagnosticTransaction>
             activeDiagnosticTransactions = new ArrayList<>();
 
+    /** Restores registration-only state when a private resolver batch is abandoned. */
+    public final class ResolutionTransaction {
+        private final SmpsAssetCatalog.Snapshot catalog = assetCatalog.snapshot();
+        private final Map<SmpsSourceDescriptor, SmpsAssetCatalog.ProgramEntry> sources =
+                Map.copyOf(sourcesByDescriptor);
+        private final Map<SmpsAssetCatalog.DependencyKey, CompatibilityDependencies> dependencies =
+                Map.copyOf(compatibilityDependencies);
+        private boolean closed;
+
+        public void commit() { closed = true; }
+
+        public void rollback() {
+            if (closed) return;
+            assetCatalog.restore(catalog);
+            sourcesByDescriptor.clear();
+            sourcesByDescriptor.putAll(sources);
+            compatibilityDependencies.clear();
+            compatibilityDependencies.putAll(dependencies);
+            closed = true;
+        }
+    }
+
     public AudioPresentationSourceFactory(
             BooleanSupplier ownerThreadBoundary,
             SmpsCoordFlagHandlerOwner coordFlagHandlers) {
@@ -418,6 +440,11 @@ public final class AudioPresentationSourceFactory
                         activeDiagnosticRoot, rootOwner);
         activeDiagnosticTransactions.add(transaction);
         return transaction;
+    }
+
+    public ResolutionTransaction beginResolutionTransaction() {
+        assertOwnerBoundary();
+        return new ResolutionTransaction();
     }
 
     public MusicVoiceEntry musicSmps(

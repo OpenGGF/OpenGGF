@@ -27,9 +27,11 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSequencerTestAccess;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.data.Rom;
+import com.openggf.game.sonic2.audio.Sonic2SoundRequestService;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsPhysicalPolicy;
 import com.openggf.game.sonic3k.audio.Sonic3kStatefulCommandPolicy;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -1189,6 +1192,102 @@ class TestSmpsDriverSession {
 
         assertEquals(0, commands.size());
         assertEquals(4, session.captureSnapshot().speedMultiplier());
+    }
+
+    @Test
+    void failedForwardRequestDefersCommandPublicationAndRestoresItsMailbox()
+            throws Exception {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        Sonic2SoundRequestService requests = new Sonic2SoundRequestService();
+        List<Sonic2SoundRequestService.Event> observed = new ArrayList<>();
+        requests.addObserver(observed::add);
+        List<AudioCommand> published = new ArrayList<>();
+        AudioPresentationProducer producer = new AudioPresentationProducer(
+                44_100, 60, 44_100, 32, registry, commands,
+                new AudioPresentationMixer(735),
+                new NoDeviceAudioSink(44_100), session, requests,
+                published::add);
+        AudioCommand.PlaySfx ringRight = new AudioCommand.PlaySfx(
+                0xB5, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null);
+        requests.submitSound(0xB5, ringRight);
+        Sonic2SoundRequestService.Snapshot before = requests.snapshot();
+        Field renderBuffer = AudioPresentationProducer.class
+                .getDeclaredField("smpsSourcePcm");
+        renderBuffer.setAccessible(true);
+        short[] validBuffer = (short[]) renderBuffer.get(producer);
+        renderBuffer.set(producer, new short[0]);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> producer.present(0, PresentationMode.FORWARD));
+
+        assertEquals(List.of(), published,
+                "a pre-seal failure must not publish a request consequence");
+        assertEquals(List.of(), observed,
+                "a pre-seal failure must not publish request diagnostics");
+        assertEquals(before, requests.snapshot(),
+                "a pre-seal failure must retain the source mailbox exactly");
+        assertEquals(0, commands.size(),
+                "a failed request must not leave a retry command in the durable queue");
+
+        renderBuffer.set(producer, validBuffer);
+        producer.present(1, PresentationMode.FORWARD);
+
+        assertEquals(List.of(new AudioCommand.PlaySfx(
+                0xCE, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null)),
+                published, "the restored mailbox must publish its consequence once");
+        assertEquals(4, observed.size(),
+                "the retried ring request publishes submission, transfer, decision, and dispatch once");
+    }
+
+    @Test
+    void compatibilityForwardConsumerFailurePrecedesTheSessionQueueSeal() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory = sessionFactory(
+                session, handlers);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, ignored -> { }, session);
+        AudioPresentationCommandQueue commands =
+                new AudioPresentationCommandQueue(registry::isRendering);
+        commands.submit(new AudioPresentationCommand.SetSpeedMultiplier(4),
+                () -> true, () -> { });
+        Sonic2SoundRequestService requests = new Sonic2SoundRequestService();
+        AudioCommand.PlaySfx ringRight = new AudioCommand.PlaySfx(
+                0xB5, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null);
+        requests.submitSound(0xB5, ringRight);
+        Sonic2SoundRequestService.Snapshot before = requests.snapshot();
+        AtomicInteger consumerCalls = new AtomicInteger();
+        AudioPresentationProducer producer = new AudioPresentationProducer(
+                44_100, 60, 44_100, 32, registry, commands,
+                new AudioPresentationMixer(735),
+                new NoDeviceAudioSink(44_100), session, requests, command -> {
+                    consumerCalls.incrementAndGet();
+                    throw new IllegalStateException(
+                            "injected compatibility consumer failure");
+                });
+
+        assertThrows(IllegalStateException.class,
+                () -> producer.present(0, PresentationMode.FORWARD));
+
+        assertEquals(1, consumerCalls.get(),
+                "the compatibility consumer must be attempted exactly once before seal");
+        assertEquals(1, commands.size(),
+                "a pre-seal compatibility failure retains the durable queue prefix");
+        assertEquals(1, session.captureSnapshot().speedMultiplier(),
+                "the session mutation must roll back when compatibility preparation fails");
+        assertEquals(before, requests.snapshot(),
+                "the source mailbox must remain retryable after compatibility preparation fails");
     }
 
     @Test

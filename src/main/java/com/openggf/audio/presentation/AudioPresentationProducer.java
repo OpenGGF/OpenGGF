@@ -7,6 +7,7 @@ import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.session.SmpsServiceOutcome;
 import com.openggf.audio.session.SmpsSessionCommand;
+import com.openggf.audio.rewind.AudioCommand;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -14,7 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
-import com.openggf.audio.rewind.AudioCommand;
+import java.util.function.Supplier;
 
 /**
  * Sole outer-frame owner of final PCM cadence, history, rewind, and taps.
@@ -51,7 +52,7 @@ public final class AudioPresentationProducer {
             new IdentityTokenRegistry();
     private final SmpsDriverSession smpsSession;
     private final AudioPresentationForwardService forwardService;
-    private final Consumer<AudioCommand> forwardCommandSink;
+    private final Supplier<ForwardCommandTransaction> forwardCommandTransactions;
 
     private AudioPresentationSink sink;
     private PcmHistoryRing.ReverseCursor reverseCursor;
@@ -76,6 +77,33 @@ public final class AudioPresentationProducer {
         private PreparedPresentationRestore {
             Objects.requireNonNull(registry, "registry");
         }
+    }
+
+    /**
+     * Owns request consequences between game-owned mailbox service and the
+     * enclosing presentation seal. Implementations may prepare commands for
+     * the live session, but must make externally visible publication occur
+     * only from {@link #commit()}.
+     */
+    public interface ForwardCommandTransaction {
+        void stage(AudioCommand command);
+
+        void prepare();
+
+        void applyPreparedCommands(Consumer<AudioPresentationCommand> applier);
+
+        List<AudioCommand> resolvedRequests();
+
+        /** Performs all fallible command-publication preparation pre-seal. */
+        void prepareCommit();
+
+        /** Seals precomputed state only; observers are deliberately excluded. */
+        void commit();
+
+        /** Runs comparison-only diagnostics after the enclosing transaction seals. */
+        void publishDiagnostics();
+
+        void rollback();
     }
 
     public AudioPresentationProducer(
@@ -119,7 +147,25 @@ public final class AudioPresentationProducer {
             Consumer<AudioCommand> forwardCommandSink) {
         this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
                 commands, mixer, sink, smpsSession, null, forwardService,
-                forwardCommandSink);
+                () -> new DeferredForwardCommandTransaction(
+                        forwardCommandSink));
+    }
+
+    public AudioPresentationProducer(
+            int sampleRate,
+            int frameRate,
+            int historyFrames,
+            int crossfadeFrames,
+            AudioVoiceRegistry registry,
+            AudioPresentationCommandQueue commands,
+            AudioPresentationMixer mixer,
+            AudioPresentationSink sink,
+            SmpsDriverSession smpsSession,
+            AudioPresentationForwardService forwardService,
+            Supplier<ForwardCommandTransaction> forwardCommandTransactions) {
+        this(sampleRate, frameRate, historyFrames, crossfadeFrames, registry,
+                commands, mixer, sink, smpsSession, null, forwardService,
+                forwardCommandTransactions);
     }
 
     AudioPresentationProducer(
@@ -144,11 +190,11 @@ public final class AudioPresentationProducer {
             AudioVoiceRegistry registry,
             AudioPresentationCommandQueue commands,
             AudioPresentationMixer mixer,
-            AudioPresentationSink sink,
-            SmpsDriverSession smpsSession,
-            Consumer<AudioPresentationCommand> commandApplier,
-            AudioPresentationForwardService forwardService,
-            Consumer<AudioCommand> forwardCommandSink) {
+                AudioPresentationSink sink,
+                SmpsDriverSession smpsSession,
+                Consumer<AudioPresentationCommand> commandApplier,
+                AudioPresentationForwardService forwardService,
+                Supplier<ForwardCommandTransaction> forwardCommandTransactions) {
         if (sampleRate <= 0) {
             throw new IllegalArgumentException("sampleRate must be positive");
         }
@@ -185,8 +231,9 @@ public final class AudioPresentationProducer {
         frameView = new AudioPresentationFrameView(silence);
         this.smpsSession = smpsSession;
         this.forwardService = forwardService;
-        this.forwardCommandSink = forwardService == null ? null
-                : Objects.requireNonNull(forwardCommandSink, "forwardCommandSink");
+        this.forwardCommandTransactions = forwardService == null ? null
+                : Objects.requireNonNull(forwardCommandTransactions,
+                        "forwardCommandTransactions");
         if (smpsSession != null && !smpsSession.installed()) {
             smpsSession.install();
         }
@@ -820,20 +867,28 @@ public final class AudioPresentationProducer {
                 smpsSession.captureLiveMutation();
         AudioVoiceRegistry.LiveMutationToken registryMutation = null;
         AudioPresentationCommandQueue.PendingBatch commandBatch = null;
-        boolean registryCommitted = false;
-        boolean sessionCommitted = false;
-        boolean commandsCommitted = false;
+        boolean sealed = false;
         AudioPresentationForwardService.ForwardBoundary forwardBoundary = null;
-        boolean forwardCommitted = false;
+        ForwardCommandTransaction forwardCommands = null;
         try {
             if (forwardService != null) {
+                forwardCommands = Objects.requireNonNull(
+                        forwardCommandTransactions.get(),
+                        "forward command transaction");
                 forwardBoundary = forwardService.beginForwardBoundary();
-                forwardBoundary.service(forwardCommandSink);
+                forwardBoundary.service(forwardCommands::stage);
+                forwardCommands.prepare();
             }
             registryMutation = registry.captureLiveMutation();
             commandBatch = commands.capturePendingBatch();
             commands.applyPendingBatch(commandBatch,
                     this::applyResolvedSessionCommand);
+            if (forwardCommands != null) {
+                forwardCommands.applyPreparedCommands(
+                        this::applyResolvedSessionCommand);
+                forwardBoundary.applyPreparedConsequences(
+                        forwardCommands.resolvedRequests());
+            }
             registry.beginRendering();
             SmpsServiceOutcome outcome = smpsSession.serviceForward();
             if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
@@ -845,41 +900,63 @@ public final class AudioPresentationProducer {
             registry.endRendering();
             prepareSessionCommandCommit(
                     commandBatch, registryMutation, sessionMutation);
+            if (forwardCommands != null) {
+                forwardCommands.prepareCommit();
+            }
+            if (forwardBoundary != null) {
+                forwardBoundary.prepareCommit();
+            }
             registry.commitLiveMutation(registryMutation);
-            registryCommitted = true;
             smpsSession.commitLiveMutation(sessionMutation);
-            sessionCommitted = true;
             commands.commitPendingBatch(commandBatch);
-            commandsCommitted = true;
+            if (forwardCommands != null) {
+                forwardCommands.commit();
+            }
             if (forwardBoundary != null) {
                 forwardBoundary.commit();
-                forwardCommitted = true;
             }
+            sealed = true;
             publishSessionDiagnosticsQuarantined(registryMutation);
+            if (forwardCommands != null) {
+                forwardCommands.publishDiagnostics();
+            }
+            if (forwardBoundary != null) {
+                forwardBoundary.publishDiagnostics();
+            }
             return pcm;
         } catch (RuntimeException failure) {
-            if (registryMutation != null && !registryCommitted) {
+            if (sealed) {
+                throw failure;
+            }
+            if (registryMutation != null) {
                 try {
                     registry.rollbackLiveMutation(registryMutation);
                 } catch (RuntimeException rollbackFailure) {
                     failure.addSuppressed(rollbackFailure);
                 }
             }
-            if (!sessionCommitted) {
+            {
                 try {
                     smpsSession.rollbackLiveMutation(sessionMutation);
                 } catch (RuntimeException rollbackFailure) {
                     failure.addSuppressed(rollbackFailure);
                 }
             }
-            if (commandBatch != null && !commandsCommitted) {
+            if (commandBatch != null) {
                 try {
                     commands.rollbackPendingBatch(commandBatch);
                 } catch (RuntimeException rollbackFailure) {
                     failure.addSuppressed(rollbackFailure);
                 }
             }
-            if (forwardBoundary != null && !forwardCommitted) {
+            if (forwardCommands != null) {
+                try {
+                    forwardCommands.rollback();
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+            }
+            if (forwardBoundary != null) {
                 try {
                     forwardBoundary.rollback();
                 } catch (RuntimeException rollbackFailure) {
@@ -961,6 +1038,77 @@ public final class AudioPresentationProducer {
             AudioPresentationCommand command) {
         AudioPresentationSessionCommandApplier.apply(
                 smpsSession, registry, command);
+    }
+
+    private static final class DeferredForwardCommandTransaction
+            implements ForwardCommandTransaction {
+        private final Consumer<AudioCommand> consumer;
+        private final List<AudioCommand> staged = new ArrayList<>();
+        private boolean closed;
+
+        private DeferredForwardCommandTransaction(
+                Consumer<AudioCommand> consumer) {
+            this.consumer = Objects.requireNonNull(consumer,
+                    "forwardCommandSink");
+        }
+
+        @Override
+        public void stage(AudioCommand command) {
+            requireOpen();
+            staged.add(Objects.requireNonNull(command, "command"));
+        }
+
+        @Override
+        public void prepare() {
+            requireOpen();
+        }
+
+        @Override
+        public void applyPreparedCommands(
+                Consumer<AudioPresentationCommand> applier) {
+            requireOpen();
+        }
+
+        @Override
+        public List<AudioCommand> resolvedRequests() {
+            requireOpen();
+            return List.copyOf(staged);
+        }
+
+        @Override
+        public void prepareCommit() {
+            requireOpen();
+            for (AudioCommand command : staged) {
+                consumer.accept(command);
+            }
+        }
+
+        @Override
+        public void commit() {
+            requireOpen();
+            closed = true;
+        }
+
+        @Override
+        public void publishDiagnostics() {
+            // The legacy consumer has no separate diagnostic channel.
+        }
+
+        @Override
+        public void rollback() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            staged.clear();
+        }
+
+        private void requireOpen() {
+            if (closed) {
+                throw new IllegalStateException(
+                        "forward command transaction is closed");
+            }
+        }
     }
 
     private short[] mixSessionForward(int stereoFrames) {

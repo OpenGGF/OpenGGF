@@ -18,6 +18,10 @@ import java.util.Set;
 
 /** Session-owned immutable SMPS dependency and program catalog. */
 final class SmpsAssetCatalog {
+    record Snapshot(Map<DependencyKey, DependencyEntry> dependencies,
+            Map<ProgramKey, ProgramEntry> programs,
+            Map<SmpsSourceDescriptor, ProgramEntry> descriptors) {
+    }
     static final class ProgramIdentityConflict extends IllegalStateException {
         private ProgramIdentityConflict(String message) {
             super(message);
@@ -170,6 +174,20 @@ final class SmpsAssetCatalog {
     SmpsAssetCatalog(SmpsCoordFlagHandlerOwner coordFlagHandlers) {
         this.coordFlagHandlers = Objects.requireNonNull(
                 coordFlagHandlers, "coordFlagHandlers");
+    }
+
+    Snapshot snapshot() {
+        return new Snapshot(Map.copyOf(dependencies), Map.copyOf(programs),
+                Map.copyOf(descriptors));
+    }
+
+    void restore(Snapshot snapshot) {
+        dependencies.clear();
+        dependencies.putAll(snapshot.dependencies());
+        programs.clear();
+        programs.putAll(snapshot.programs());
+        descriptors.clear();
+        descriptors.putAll(snapshot.descriptors());
     }
 
     ProgramEntry register(

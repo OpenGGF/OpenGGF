@@ -26,6 +26,8 @@ import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.io.IOException;
 import java.util.HexFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -85,6 +87,78 @@ public final class AudioPresentationCommandResolver {
     private final Consumer<AudioPresentationCommand> synchronousApply;
     private final Runnable synchronousDrain;
     private long nextVoiceId = 1;
+
+    /** An isolated resolver queue and factory-registration rollback boundary. */
+    public final class ResolutionReservation {
+        private final AudioPresentationSourceFactory.ResolutionTransaction factoryTransaction =
+                factory.beginResolutionTransaction();
+        private final AudioPresentationCommandQueue privateQueue =
+                new AudioPresentationCommandQueue();
+        private final List<String> warnings = new ArrayList<>();
+        private final List<AudioCommand> resolvedRequests = new ArrayList<>();
+        private final AudioPresentationCommandResolver privateResolver;
+        private boolean prepared;
+        private boolean closed;
+
+        private ResolutionReservation() {
+            privateResolver = new AudioPresentationCommandResolver(privateQueue,
+                    factory, sources, warnings::add, ownerThreadBoundary,
+                    ignored -> { });
+            privateResolver.nextVoiceId = nextVoiceId;
+        }
+
+        public void submit(AudioCommand command) {
+            requireOpen();
+            int before = privateQueue.size();
+            privateResolver.submit(command);
+            if (privateQueue.size() > before) {
+                resolvedRequests.add(command);
+            }
+        }
+
+        public void apply(java.util.function.Consumer<AudioPresentationCommand> applier) {
+            requireOpen();
+            privateQueue.applyPendingAtomically(applier);
+        }
+
+        public List<AudioCommand> resolvedRequests() {
+            return List.copyOf(resolvedRequests);
+        }
+
+        public void prepareCommit() {
+            requireOpen();
+            prepared = true;
+        }
+
+        public void commit() {
+            requireOpen();
+            if (!prepared) throw new IllegalStateException("resolver reservation is not prepared");
+            nextVoiceId = privateResolver.nextVoiceId;
+            factoryTransaction.commit();
+            closed = true;
+        }
+
+        public void publishDiagnostics() {
+            for (String warning : warnings) {
+                try { warningConsumer.accept(warning); }
+                catch (RuntimeException ignored) { }
+            }
+        }
+
+        public void rollback() {
+            if (closed) return;
+            factoryTransaction.rollback();
+            closed = true;
+        }
+
+        private void requireOpen() {
+            if (closed) throw new IllegalStateException("resolver reservation is closed");
+        }
+    }
+
+    public ResolutionReservation beginResolutionReservation() {
+        return new ResolutionReservation();
+    }
 
     public AudioPresentationCommandResolver(
             AudioPresentationCommandQueue queue,

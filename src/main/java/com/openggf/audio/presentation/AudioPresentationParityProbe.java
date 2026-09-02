@@ -11,6 +11,16 @@ public final class AudioPresentationParityProbe {
             long commandCount, long historyEpoch) {
     }
 
+    /** A count whose validation completed before the enclosing presentation seal. */
+    public record PreparedCommandSubmission(int count) {
+        public PreparedCommandSubmission {
+            if (count < 0) {
+                throw new IllegalArgumentException(
+                        "command count must be non-negative");
+            }
+        }
+    }
+
     private final AudioFrameClock clock;
     private long presentedFrames;
     private long forwardFrames;
@@ -26,6 +36,17 @@ public final class AudioPresentationParityProbe {
 
     public void commandSubmitted() {
         commandCount++;
+    }
+
+    /** Validates a command increment before the enclosing transaction seals. */
+    public PreparedCommandSubmission prepareCommandSubmission(int count) {
+        return new PreparedCommandSubmission(count);
+    }
+
+    /** Commits a prevalidated count without callbacks or decision work. */
+    public void commitPreparedCommandSubmission(
+            PreparedCommandSubmission submission) {
+        commandCount += submission.count();
     }
 
     public void presented(PresentationMode mode) {

@@ -54,9 +54,11 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -1753,7 +1755,8 @@ public class AudioManager implements MusicRestoreSink {
             ensureShadowPresentation();
             if (shadowRequestService != null) {
                 shadowRequestService.submitMusic(
-                        musicId, commandForNativeRequest(source, musicId));
+                        musicId, commandForNativeMusicRequest(source,
+                                musicId));
                 return;
             }
         }
@@ -2080,6 +2083,24 @@ public class AudioManager implements MusicRestoreSink {
     private AudioCommand commandForNativeRequest(
             BaseAudioSource source, int nativeId) {
         return commandForNativeRequest(source, nativeId, 1.0f);
+    }
+
+    /**
+     * Retains the game-owned music-mailbox provenance before Sonic 2's queue
+     * arbitration sees an overlapping numeric sound id. In particular, the
+     * 1-up request must arrive as an override music consequence so the session
+     * can save the old song, stop SFX, then the request lifecycle can clear the
+     * priority latch in the shipped fixBugs=0 order.
+     */
+    private AudioCommand commandForNativeMusicRequest(
+            BaseAudioSource source, int nativeId) {
+        GameAudioProfile profile = Objects.requireNonNull(source.profile(),
+                "audio profile");
+        return new AudioCommand.PlayMusic(nativeId,
+                source.loader() != null
+                        ? AudioCommand.MusicRoute.BASE_SMPS
+                        : AudioCommand.MusicRoute.FALLBACK_WAV,
+                profile.isMusicOverride(nativeId), null);
     }
 
     /**
@@ -3017,11 +3038,129 @@ public class AudioManager implements MusicRestoreSink {
         return null;
     }
 
-    /** Publishes one command selected by the optional game-owned request service. */
-    private void submitForwardRequestCommand(AudioCommand command) {
-        shadowResolver.submit(command);
-        commandTimeline.record(command);
-        shadowParity.commandSubmitted();
+    /**
+     * Creates the presentation-owned consequence transaction for a game-owned
+     * request boundary. Resolution reaches the current frame's private queue
+     * prefix, while timeline/parity evidence stays private until the enclosing
+     * producer seals registry, session, and command-queue state.
+     */
+    private AudioPresentationProducer.ForwardCommandTransaction
+            beginForwardRequestCommandTransaction() {
+        return new ForwardRequestCommandTransaction(
+                shadowResolver.beginResolutionReservation());
+    }
+
+    private final class ForwardRequestCommandTransaction
+            implements AudioPresentationProducer.ForwardCommandTransaction {
+        private final AudioPresentationCommandResolver.ResolutionReservation
+                reservation;
+        private final List<AudioCommand> staged = new ArrayList<>();
+        private AudioCommandTimeline.PreparedAppend preparedTimeline;
+        private AudioPresentationParityProbe.PreparedCommandSubmission
+                preparedParity;
+        private boolean prepared;
+        private boolean applied;
+        private boolean closed;
+
+        private ForwardRequestCommandTransaction(
+                AudioPresentationCommandResolver.ResolutionReservation
+                        reservation) {
+            this.reservation = Objects.requireNonNull(reservation,
+                    "reservation");
+        }
+
+        @Override
+        public void stage(AudioCommand command) {
+            requireOpen();
+            if (prepared) {
+                throw new IllegalStateException(
+                        "forward request transaction is already prepared");
+            }
+            staged.add(Objects.requireNonNull(command, "command"));
+        }
+
+        @Override
+        public void prepare() {
+            requireOpen();
+            if (prepared) {
+                throw new IllegalStateException(
+                        "forward request transaction is already prepared");
+            }
+            for (AudioCommand command : staged) {
+                reservation.submit(command);
+            }
+            prepared = true;
+        }
+
+        @Override
+        public void applyPreparedCommands(
+                java.util.function.Consumer<AudioPresentationCommand> applier) {
+            requireOpen();
+            if (!prepared || applied) {
+                throw new IllegalStateException(
+                        "forward request transaction is not ready to apply");
+            }
+            reservation.apply(applier);
+            applied = true;
+        }
+
+        @Override
+        public List<AudioCommand> resolvedRequests() {
+            requireOpen();
+            if (!applied) {
+                throw new IllegalStateException(
+                        "forward request transaction has not applied its commands");
+            }
+            return reservation.resolvedRequests();
+        }
+
+        @Override
+        public void prepareCommit() {
+            requireOpen();
+            if (!applied) {
+                throw new IllegalStateException(
+                        "forward request transaction has not applied its commands");
+            }
+            preparedTimeline = commandTimeline.prepareAppend(staged);
+            preparedParity = shadowParity.prepareCommandSubmission(
+                    staged.size());
+            reservation.prepareCommit();
+        }
+
+        @Override
+        public void commit() {
+            requireOpen();
+            if (preparedTimeline == null || preparedParity == null) {
+                throw new IllegalStateException(
+                        "forward request transaction is not prepared to commit");
+            }
+            commandTimeline.commitPreparedAppend(preparedTimeline);
+            shadowParity.commitPreparedCommandSubmission(preparedParity);
+            reservation.commit();
+            closed = true;
+        }
+
+        @Override
+        public void publishDiagnostics() {
+            reservation.publishDiagnostics();
+        }
+
+        @Override
+        public void rollback() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            reservation.rollback();
+            staged.clear();
+        }
+
+        private void requireOpen() {
+            if (closed) {
+                throw new IllegalStateException(
+                        "forward request transaction is closed");
+            }
+        }
     }
 
     private void mirrorShadowCommand(Runnable submission) {
@@ -3149,7 +3288,7 @@ public class AudioManager implements MusicRestoreSink {
                 Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
                 shadowRegistry, shadowCommands, mixer,
                 sink, smpsSession, shadowRequestService,
-                this::submitForwardRequestCommand);
+                this::beginForwardRequestCommandTransaction);
         shadowSmpsSession = smpsSession;
         shadowFrameRate = frameRate;
         shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);

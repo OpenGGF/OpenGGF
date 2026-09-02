@@ -27,7 +27,10 @@ class TestSonic2SoundRequestService {
 
         assertTrue(observed.isEmpty(), "uncommitted events must remain invisible");
         assertEquals(List.of(music(0x82)), commands);
+        transaction.applyPreparedConsequences(commands);
+        transaction.prepareCommit();
         transaction.commit();
+        transaction.publishDiagnostics();
 
         assertEquals(List.of(
                 new Sonic2SoundRequestService.Submission(1,
@@ -66,7 +69,10 @@ class TestSonic2SoundRequestService {
         List<AudioCommand> replayed = new ArrayList<>();
         var retry = service.beginForwardBoundary();
         retry.service(replayed::add);
+        retry.applyPreparedConsequences(replayed);
+        retry.prepareCommit();
         retry.commit();
+        retry.publishDiagnostics();
         assertEquals(List.of(sfx(0xCE)), replayed,
                 "raw B5 must resolve once inside the ROM-owned pipeline");
     }
@@ -117,11 +123,57 @@ class TestSonic2SoundRequestService {
                         && decision.priorityBefore() == 0));
     }
 
+    @Test
+    void preparedReceiptCarriesOnlyAppliedStopAndOneUpLifecycleOutcomes() {
+        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
+        service.submitSound(0xBF, sfx(0xBF));
+        commit(service);
+
+        service.submitSound(0xF8, new AudioCommand.StopAllSfx());
+        List<AudioCommand> stopCommands = new ArrayList<>();
+        var stop = service.beginForwardBoundary();
+        stop.service(stopCommands::add);
+        assertEquals(0x7F, service.snapshot().pipeline().sfxPriorityValue(),
+                "F8 must not clear priority until its presentation command applies");
+        stop.applyPreparedConsequences(stopCommands);
+        stop.prepareCommit();
+        assertEquals(List.of(new Sonic2SoundRequestService.Sonic2RequestOutcome(
+                        new AudioCommand.StopAllSfx(),
+                        Sonic2SoundRequestService.AppliedOutcomeKind.STOP_ALL_SFX)),
+                stop.preparedReceipt().outcomes());
+        assertEquals(0, service.snapshot().pipeline().sfxPriorityValue());
+        stop.commit();
+        stop.publishDiagnostics();
+
+        AudioCommand.PlayMusic oneUp = new AudioCommand.PlayMusic(
+                0xB5, AudioCommand.MusicRoute.BASE_SMPS, true, null);
+        service.submitMusic(0xB5, oneUp);
+        List<AudioCommand> oneUpCommands = new ArrayList<>();
+        var oneUpBoundary = service.beginForwardBoundary();
+        oneUpBoundary.service(oneUpCommands::add);
+        oneUpBoundary.applyPreparedConsequences(oneUpCommands);
+        oneUpBoundary.prepareCommit();
+        assertEquals(List.of(oneUp), oneUpBoundary.preparedReceipt().commands());
+        assertEquals(List.of(
+                        new Sonic2SoundRequestService.Sonic2RequestOutcome(oneUp,
+                                Sonic2SoundRequestService.AppliedOutcomeKind
+                                        .MUSIC_PLAYBACK_INITIALIZED),
+                        new Sonic2SoundRequestService.Sonic2RequestOutcome(oneUp,
+                                Sonic2SoundRequestService.AppliedOutcomeKind
+                                        .ONE_UP_STARTED)),
+                oneUpBoundary.preparedReceipt().outcomes());
+        oneUpBoundary.commit();
+        oneUpBoundary.publishDiagnostics();
+    }
+
     private static List<AudioCommand> commit(Sonic2SoundRequestService service) {
         List<AudioCommand> commands = new ArrayList<>();
         var transaction = service.beginForwardBoundary();
         transaction.service(commands::add);
+        transaction.applyPreparedConsequences(commands);
+        transaction.prepareCommit();
         transaction.commit();
+        transaction.publishDiagnostics();
         return commands;
     }
 

@@ -95,9 +95,13 @@ class TestS2ProductionRequestProjector {
     }
 
     private static void commit(Sonic2SoundRequestService service) {
+        List<AudioCommand> commands = new java.util.ArrayList<>();
         var boundary = service.beginForwardBoundary();
-        boundary.service(ignored -> { });
+        boundary.service(commands::add);
+        boundary.applyPreparedConsequences(commands);
+        boundary.prepareCommit();
         boundary.commit();
+        boundary.publishDiagnostics();
     }
 
     private static AudioCommand.PlaySfx sfx(int id) {

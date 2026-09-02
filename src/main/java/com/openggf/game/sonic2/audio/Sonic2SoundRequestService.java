@@ -27,10 +27,12 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
     private Thread observerOwner;
     private boolean observerLeased;
     private boolean forwardOpen;
+    private boolean publishingDiagnostics;
     private long nextEventOrdinal = 1;
 
     @Override
     public void submitMusic(int nativeRequestId, AudioCommand command) {
+        assertNotPublishingDiagnostics();
         PendingRequest pending = new PendingRequest(nativeRequestId, command);
         Sonic2SoundRequestPipeline.SourceSlot slot =
                 pipeline.snapshot().music0().requestByte() == 0
@@ -42,12 +44,14 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
 
     @Override
     public void submitSound(int nativeRequestId, AudioCommand command) {
+        assertNotPublishingDiagnostics();
         pipeline.submitSound(nativeRequestId, new PendingRequest(nativeRequestId, command));
         pendingSubmissionEvents.add(new SubmissionTemplate(
                 Sonic2SoundRequestPipeline.SourceSlot.SFX0, nativeRequestId));
     }
 
     public void submitSound2(int nativeRequestId, AudioCommand command) {
+        assertNotPublishingDiagnostics();
         pipeline.submitSound2(nativeRequestId, new PendingRequest(nativeRequestId, command));
         pendingSubmissionEvents.add(new SubmissionTemplate(
                 Sonic2SoundRequestPipeline.SourceSlot.SFX1, nativeRequestId));
@@ -66,6 +70,7 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
 
     @Override
     public ForwardBoundary beginForwardBoundary() {
+        assertNotPublishingDiagnostics();
         if (forwardOpen) {
             throw new IllegalStateException("Sonic 2 forward request boundary is already open");
         }
@@ -75,7 +80,8 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
 
     @Override
     public Snapshot snapshot() {
-        return new Snapshot(pipeline.snapshot(), List.copyOf(pendingSubmissionEvents));
+        return new Snapshot(pipeline.snapshot(), List.copyOf(pendingSubmissionEvents),
+                nextEventOrdinal);
     }
 
     @Override
@@ -93,13 +99,21 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
         pipeline.restore(snapshot.pipeline());
         pendingSubmissionEvents.clear();
         pendingSubmissionEvents.addAll(snapshot.pendingSubmissionEvents());
+        nextEventOrdinal = snapshot.nextEventOrdinal();
     }
 
     public final class ForwardBoundary implements AudioPresentationForwardService.ForwardBoundary {
         private final Snapshot before;
         private final List<EventTemplate> stagedEvents = new ArrayList<>();
+        private final List<AudioCommand> stagedCommands = new ArrayList<>();
+        private PreparedSonic2Lifecycle preparedLifecycle;
+        private CommittedSonic2RequestReceipt receipt;
+        private long preparedNextEventOrdinal;
         private boolean serviced;
+        private boolean consequencesApplied;
+        private boolean prepared;
         private boolean closed;
+        private boolean diagnosticsPublished;
 
         private ForwardBoundary(Snapshot before) {
             this.before = before;
@@ -144,36 +158,121 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
                 AudioCommand consequence = consequence(dispatch);
                 if (consequence != null) {
                     commandSink.accept(consequence);
-                    if (consequence instanceof AudioCommand.PlayMusic) {
-                        // zPlayMusic initializes zAbsVar and loses Queue2 in the shipped
-                        // fixBugs=0 path (s2.sounddriver.asm:2580-2655).
-                        pipeline.onMusicPlaybackInitialized();
-                    } else if (consequence instanceof AudioCommand.StopAllSfx) {
-                        // F8 reaches zStopSoundEffects, whose tail clears SFXPriorityVal
-                        // (s2.sounddriver.asm:2334-2347).
-                        pipeline.onStopAllSfx();
-                    }
+                    stagedCommands.add(consequence);
                 }
             }
             pipeline.finishDriverInvocation();
         }
 
         @Override
-        public void commit() {
+        public void applyPreparedConsequences(
+                List<AudioCommand> appliedCommands) {
             requireOpen();
             if (!serviced) {
-                throw new IllegalStateException("cannot commit an unserviced Sonic 2 request boundary");
+                throw new IllegalStateException(
+                        "cannot apply an unserviced Sonic 2 request boundary");
             }
-            closed = true;
-            forwardOpen = false;
-            for (EventTemplate template : stagedEvents) {
-                Event event = template.materialize(nextEventOrdinal++);
-                try {
-                    observer.accept(event);
-                } catch (RuntimeException ignored) {
-                    // Comparison observers cannot reject committed production audio.
+            if (consequencesApplied) {
+                throw new IllegalStateException(
+                        "Sonic 2 request consequences were already applied");
+            }
+            List<Sonic2RequestOutcome> outcomes = new ArrayList<>();
+            for (AudioCommand command : stagedCommands) {
+                if (!appliedCommands.contains(command)) {
+                    // Rejected SFX/musical data never reaches the device; only
+                    // source-owned lifecycle consequences of a resolved command
+                    // are eligible for this transaction.
+                    continue;
+                }
+                if (command instanceof AudioCommand.PlayMusic music) {
+                    // zPlayMusic initializes zAbsVar and loses Queue2 in the shipped
+                    // fixBugs=0 path (s2.sounddriver.asm:2580-2655).
+                    outcomes.add(new Sonic2RequestOutcome(command,
+                            AppliedOutcomeKind.MUSIC_PLAYBACK_INITIALIZED));
+                    if (music.override()) {
+                        // fixBugs=0 preserves the one-up's save-before-stop order;
+                        // The prepared session mutation has already saved/replaced
+                        // the music before this source-owned latch is cleared.
+                        outcomes.add(new Sonic2RequestOutcome(command,
+                                AppliedOutcomeKind.ONE_UP_STARTED));
+                    }
+                } else if (command instanceof AudioCommand.StopAllSfx) {
+                    // F8 reaches zStopSoundEffects, whose tail clears SFXPriorityVal
+                    // (s2.sounddriver.asm:2334-2347).
+                    outcomes.add(new Sonic2RequestOutcome(command,
+                            AppliedOutcomeKind.STOP_ALL_SFX));
                 }
             }
+            preparedLifecycle = new PreparedSonic2Lifecycle(outcomes);
+            preparedLifecycle.apply(pipeline);
+            consequencesApplied = true;
+        }
+
+        @Override
+        public void prepareCommit() {
+            requireOpen();
+            if (!serviced || !consequencesApplied) {
+                throw new IllegalStateException(
+                        "cannot prepare an unapplied Sonic 2 request boundary");
+            }
+            if (prepared) {
+                throw new IllegalStateException(
+                        "Sonic 2 request boundary is already prepared");
+            }
+            List<Event> events = new ArrayList<>(stagedEvents.size());
+            long ordinal = nextEventOrdinal;
+            for (EventTemplate template : stagedEvents) {
+                events.add(template.materialize(ordinal++));
+            }
+            receipt = new CommittedSonic2RequestReceipt(stagedCommands,
+                    preparedLifecycle.outcomes(), events);
+            preparedNextEventOrdinal = ordinal;
+            prepared = true;
+        }
+
+        @Override
+        public void commit() {
+            requireOpen();
+            if (!prepared) {
+                throw new IllegalStateException(
+                        "cannot commit an unprepared Sonic 2 request boundary");
+            }
+            nextEventOrdinal = preparedNextEventOrdinal;
+            closed = true;
+            forwardOpen = false;
+        }
+
+        @Override
+        public void publishDiagnostics() {
+            if (!closed || receipt == null) {
+                throw new IllegalStateException(
+                        "cannot publish an uncommitted Sonic 2 request receipt");
+            }
+            if (diagnosticsPublished) {
+                return;
+            }
+            diagnosticsPublished = true;
+            publishingDiagnostics = true;
+            try {
+                for (Event event : receipt.events()) {
+                    try {
+                        observer.accept(event);
+                    } catch (RuntimeException ignored) {
+                        // Comparison observers cannot reject committed production audio.
+                    }
+                }
+            } finally {
+                publishingDiagnostics = false;
+            }
+        }
+
+        /** Returns the immutable receipt prepared before this boundary sealed. */
+        public CommittedSonic2RequestReceipt preparedReceipt() {
+            if (!prepared || receipt == null) {
+                throw new IllegalStateException(
+                        "Sonic 2 request receipt is not prepared");
+            }
+            return receipt;
         }
 
         @Override
@@ -206,6 +305,13 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
         return command;
     }
 
+    private void assertNotPublishingDiagnostics() {
+        if (publishingDiagnostics) {
+            throw new IllegalStateException(
+                    "Sonic 2 request diagnostics cannot reenter production state");
+        }
+    }
+
     private static DecisionReason reason(Sonic2SoundRequestPipeline.DecisionKind kind) {
         return switch (kind) {
             case PROMOTED_MUSIC -> DecisionReason.PROMOTED_MUSIC;
@@ -227,12 +333,63 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
 
     public record Snapshot(
             Sonic2SoundRequestPipeline.Snapshot<PendingRequest> pipeline,
-            List<EventTemplate> pendingSubmissionEvents)
+            List<EventTemplate> pendingSubmissionEvents,
+            long nextEventOrdinal)
             implements AudioPresentationForwardService.Snapshot {
         public Snapshot {
             Objects.requireNonNull(pipeline, "pipeline");
             pendingSubmissionEvents = List.copyOf(
                     Objects.requireNonNull(pendingSubmissionEvents, "pendingSubmissionEvents"));
+            if (nextEventOrdinal < 1) {
+                throw new IllegalArgumentException(
+                        "nextEventOrdinal must be positive");
+            }
+        }
+    }
+
+    /** Immutable, post-seal-safe record of one applied request consequence. */
+    public record Sonic2RequestOutcome(AudioCommand command,
+                                       AppliedOutcomeKind kind) {
+        public Sonic2RequestOutcome {
+            Objects.requireNonNull(command, "command");
+            Objects.requireNonNull(kind, "kind");
+        }
+    }
+
+    public enum AppliedOutcomeKind {
+        MUSIC_PLAYBACK_INITIALIZED,
+        ONE_UP_STARTED,
+        STOP_ALL_SFX
+    }
+
+    /** Prepared, rollback-covered Sonic 2 driver-byte lifecycle mutation. */
+    private record PreparedSonic2Lifecycle(
+            List<Sonic2RequestOutcome> outcomes) {
+        private PreparedSonic2Lifecycle {
+            outcomes = List.copyOf(Objects.requireNonNull(outcomes,
+                    "outcomes"));
+        }
+
+        private void apply(Sonic2SoundRequestPipeline<PendingRequest> pipeline) {
+            for (Sonic2RequestOutcome outcome : outcomes) {
+                switch (outcome.kind()) {
+                    case MUSIC_PLAYBACK_INITIALIZED ->
+                            pipeline.onMusicPlaybackInitialized();
+                    case ONE_UP_STARTED -> pipeline.onOneUpStarted();
+                    case STOP_ALL_SFX -> pipeline.onStopAllSfx();
+                }
+            }
+        }
+    }
+
+    /** Immutable receipt built before seal and handed only to diagnostic observers afterward. */
+    public record CommittedSonic2RequestReceipt(List<AudioCommand> commands,
+                                                 List<Sonic2RequestOutcome> outcomes,
+                                                 List<Event> events) {
+        public CommittedSonic2RequestReceipt {
+            commands = List.copyOf(Objects.requireNonNull(commands, "commands"));
+            outcomes = List.copyOf(Objects.requireNonNull(outcomes, "outcomes"));
+            events = List.copyOf(Objects.requireNonNull(events, "events"));
         }
     }
 
