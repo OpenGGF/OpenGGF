@@ -145,7 +145,13 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
                 if (consequence != null) {
                     commandSink.accept(consequence);
                     if (consequence instanceof AudioCommand.PlayMusic) {
+                        // zPlayMusic initializes zAbsVar and loses Queue2 in the shipped
+                        // fixBugs=0 path (s2.sounddriver.asm:2580-2655).
                         pipeline.onMusicPlaybackInitialized();
+                    } else if (consequence instanceof AudioCommand.StopAllSfx) {
+                        // F8 reaches zStopSoundEffects, whose tail clears SFXPriorityVal
+                        // (s2.sounddriver.asm:2334-2347).
+                        pipeline.onStopAllSfx();
                     }
                 }
             }

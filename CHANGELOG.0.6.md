@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 2 audio requests now traverse the shipped mailbox and queue order:**
+  base-game music, SFX, and system requests are retained until a forward audio
+  boundary, then bridge, arbitrate, transform, and dispatch through the
+  game-owned REV01 request model. The state is rewindable, ring selection
+  occurs once in the driver path, and output-only tooling can project committed
+  request/decision facts without enabling reference comparison authority.
+
 - **S3K SMPS E4 now performs the shipped conditional SFX-stop walk:** the
   S3K host session validates an immutable complete FM3/FM4/FM5/FM6/PSG1/PSG2/
   PSG3 ownership projection before touching the chip, then follows

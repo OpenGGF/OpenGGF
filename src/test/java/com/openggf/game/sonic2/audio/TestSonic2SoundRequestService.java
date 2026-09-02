@@ -96,6 +96,27 @@ class TestSonic2SoundRequestService {
                 && dispatch.kind() == Sonic2SoundRequestPipeline.DispatchKind.IGNORED_UNDEFINED_ID));
     }
 
+    @Test
+    void stopSfxCommandClearsPriorityBeforeTheNextRequest() {
+        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
+        List<Sonic2SoundRequestService.Event> observed = new ArrayList<>();
+        service.addObserver(observed::add);
+
+        service.submitSound(0xBF, sfx(0xBF));
+        commit(service);
+        service.submitSound(0xF8, new AudioCommand.StopAllSfx());
+        assertEquals(List.of(new AudioCommand.StopAllSfx()), commit(service));
+        service.submitSound(0xA1, sfx(0xA1));
+        commit(service);
+
+        assertTrue(observed.stream().anyMatch(event ->
+                event instanceof Sonic2SoundRequestService.Decision decision
+                        && decision.rawRequestId() == 0xA1
+                        && decision.reason()
+                        == Sonic2SoundRequestService.DecisionReason.ACCEPTED_PRIORITY
+                        && decision.priorityBefore() == 0));
+    }
+
     private static List<AudioCommand> commit(Sonic2SoundRequestService service) {
         List<AudioCommand> commands = new ArrayList<>();
         var transaction = service.beginForwardBoundary();

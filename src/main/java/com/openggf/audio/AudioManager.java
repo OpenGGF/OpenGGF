@@ -2084,7 +2084,12 @@ public class AudioManager implements MusicRestoreSink {
 
     /**
      * Resolves only immutable production content/route identity; the game-owned request service
-     * still decides whether and when the request dispatches.
+     * still decides whether and when the request dispatches. The S2 dispatcher classifies
+     * music/SFX/command ranges and F1-F7 gaps at {@code s2.sounddriver.asm:1555-1600}; its F8-FD
+     * jump table owns the six system consequences in that same range. F9's literal fade values
+     * are loaded by {@code zFadeOutMusic} at {@code :2423-2436}. FE/FF are consumed earlier by
+     * the 68K mailbox bridge at {@code s2.asm:1270-1332}, so their placeholder command is never
+     * submitted to presentation.
      */
     private AudioCommand commandForNativeRequest(
             BaseAudioSource source, int nativeId, float pitch) {
