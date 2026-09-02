@@ -187,6 +187,8 @@ class TestSmpsDriverSnapshot {
                 music, 2);
         musicFm3.fm3SpecialMode = true;
         musicFm3.customSsgEgPresent = true;
+        musicFm3.customSsgEgPayload[0] = 0x22;
+        musicFm3.customSsgEgPayloadKnown = true;
 
         driver.addSequencer(music, false);
         PreparedSfxAdmission admission =
@@ -224,6 +226,10 @@ class TestSmpsDriverSnapshot {
                 .getFirst().fm3SpecialMode());
         assertTrue(restored.sequencers().getFirst().snapshot().tracks()
                 .getFirst().customSsgEgPresent());
+        assertArrayEquals(new int[] {0x22, 0, 0, 0}, restored.sequencers()
+                .getFirst().snapshot().tracks().getFirst().customSsgEgPayload());
+        assertTrue(restored.sequencers().getFirst().snapshot().tracks()
+                .getFirst().customSsgEgPayloadKnown());
     }
 
     @Test

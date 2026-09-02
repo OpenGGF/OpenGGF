@@ -110,6 +110,10 @@ class TestSonic3kFm3SpecialMode {
         assertTrue(onlyTrack(original).fm3SpecialMode);
         assertFalse(onlyTrack(replacement).fm3SpecialMode,
                 "reinitialization must use Track's default state rather than leak FM3 mode");
+        assertFalse(onlyTrack(replacement).customSsgEgPresent);
+        assertFalse(onlyTrack(replacement).customSsgEgPayloadKnown);
+        assertTrue(java.util.Arrays.equals(new int[4],
+                onlyTrack(replacement).customSsgEgPayload));
     }
 
     @Test
@@ -167,10 +171,89 @@ class TestSonic3kFm3SpecialMode {
         assertEquals(4, synth.ssgEgWrites);
     }
 
+    @Test
+    void ff05ThenVoiceSelectionMustNotLoseItsRestorePayload() {
+        CaptureSynth synth = new CaptureSynth();
+        SmpsSequencer sequencer = fmSequencerWithVoice(2,
+                new byte[] {(byte) 0xFF, 0x05, 0x11, 0x22, 0x33, 0x44,
+                        (byte) 0xEF, 0x00, (byte) 0xF2}, synth);
+
+        sequencer.advanceSamples(20_000);
+
+        SmpsSequencer.Track fm3 = onlyTrack(sequencer);
+        assertEquals(List.of(0x11, 0x22, 0x33, 0x44),
+                java.util.Arrays.stream(fm3.customSsgEgPayload).boxed().toList(),
+                "the custom restore bytes need their own state beyond live SSG-EG behavior");
+        assertTrue(java.util.Arrays.equals(new int[4], fm3.ssgEg),
+                "EF keeps its existing live SSG-EG clear behavior");
+        assertTrue(fm3.customSsgEgPayloadKnown);
+        assertTrue(fm3.customSsgEgPresent);
+        assertEquals(4, synth.ssgEgWrites,
+                "the retained restore state must not add a second SSG-EG write pass");
+
+        var snapshot = sequencer.captureSnapshot();
+        fm3.customSsgEgPayload[0] = 0;
+        sequencer.restoreSnapshot(snapshot);
+        assertEquals(List.of(0x11, 0x22, 0x33, 0x44), java.util.Arrays.stream(
+                onlyTrack(sequencer).customSsgEgPayload).boxed().toList());
+    }
+
+    @Test
+    void ordinaryFf06ClearsTheAliasedCustomSsgEgRestorePresence() {
+        CaptureSynth synth = new CaptureSynth();
+        SmpsSequencer sequencer = fmSequencer(2,
+                new byte[] {(byte) 0xFF, 0x05, 0x11, 0x22, 0x33, 0x44,
+                        (byte) 0xFF, 0x06, 0x01, 0x0F, (byte) 0xF2},
+                synth);
+
+        sequencer.advanceSamples(20_000);
+
+        assertFalse(onlyTrack(sequencer).customSsgEgPresent,
+                "positive FMVolEnv overwrites HaveSSGEGFlag and cannot restore FF05 data");
+        assertFalse(onlyTrack(sequencer).customSsgEgPayloadKnown);
+        assertEquals(4, synth.ssgEgWrites,
+                "FF06 must retain the existing FF05 hardware writes without adding SSG-EG output");
+    }
+
+    @Test
+    void highBitFf06RetainsAliasedPresenceButInvalidatesTheFf05Payload() {
+        CaptureSynth synth = new CaptureSynth();
+        SmpsSequencer sequencer = fmSequencer(2,
+                new byte[] {(byte) 0xFF, 0x05, 0x11, 0x22, 0x33, 0x44,
+                        (byte) 0xFF, 0x06, (byte) 0x81, 0x0F, (byte) 0xF2},
+                synth);
+
+        sequencer.advanceSamples(20_000);
+
+        SmpsSequencer.Track fm3 = onlyTrack(sequencer);
+        assertTrue(fm3.customSsgEgPresent);
+        assertFalse(fm3.customSsgEgPayloadKnown,
+                "high-bit FMVolEnv retains the sign flag but overwrites FF05 pointer data");
+        assertTrue(java.util.Arrays.equals(new int[4], fm3.customSsgEgPayload));
+        assertEquals(4, synth.ssgEgWrites,
+                "FF06 must not add a custom SSG-EG write pass");
+    }
+
     private static SmpsSequencer fmSequencer(int channel, byte[] stream,
             CaptureSynth synth) {
+        return fmSequencer(channel, stream, synth, false);
+    }
+
+    private static SmpsSequencer fmSequencerWithVoice(int channel, byte[] stream,
+            CaptureSynth synth) {
+        return fmSequencer(channel, stream, synth, true);
+    }
+
+    private static SmpsSequencer fmSequencer(int channel, byte[] stream,
+            CaptureSynth synth, boolean withVoice) {
         byte[] data = new byte[0x100];
         int headerIndex = channel + 1; // index 0 is DAC in the S3K FM table
+        if (withVoice) {
+            setLe16(data, 0, 0x80);
+            for (int index = 0; index < 25; index++) {
+                data[0x80 + index] = (byte) (index + 1);
+            }
+        }
         data[2] = (byte) (headerIndex + 1);
         data[4] = 1;
         data[5] = (byte) 0x80;

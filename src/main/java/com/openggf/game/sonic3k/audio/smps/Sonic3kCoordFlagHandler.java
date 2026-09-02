@@ -6,10 +6,11 @@ import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsProgramView;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-
-import java.util.logging.Logger;
-import java.util.Objects;
 import com.openggf.game.GameServices;
+
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.logging.Logger;
 
 /**
  * Sonic 3 &amp; Knuckles coordination flag handler.
@@ -605,11 +606,15 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                         // FixBugs = 0 cfSetSSGEG sets HaveSSGEGFlag before
                         // retaining its four bytes, including an all-zero payload.
                         t.customSsgEgPresent = true;
-                        // Read and store SSG-EG values for persistence across track restoration.
-                        t.ssgEg[0] = program.dataByteAt(t.pos++) & 0xFF;
-                        t.ssgEg[1] = program.dataByteAt(t.pos++) & 0xFF;
-                        t.ssgEg[2] = program.dataByteAt(t.pos++) & 0xFF;
-                        t.ssgEg[3] = program.dataByteAt(t.pos++) & 0xFF;
+                        // Retain the exact pointer-backed bytes separately:
+                        // EF may clear live SSG-EG behavior without clearing the
+                        // native custom-restore pointer used by zStopSFX.
+                        for (int operator = 0; operator < 4; operator++) {
+                            int value = program.dataByteAt(t.pos++) & 0xFF;
+                            t.ssgEg[operator] = value;
+                            t.customSsgEgPayload[operator] = value;
+                        }
+                        t.customSsgEgPayloadKnown = true;
                         // zFMInstrumentSSGEGTable traverses 90,98,94,9C.
                         ctx.writeFm(port, 0x90 + ch, t.ssgEg[0]);
                         ctx.writeFm(port, 0x98 + ch, t.ssgEg[1]);
@@ -626,6 +631,13 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 if (t.pos + 1 < program.dataLength()) {
                     int envId = program.dataByteAt(t.pos++) & 0xFF;
                     int opMask = program.dataByteAt(t.pos++) & 0x0F;
+                    // FixBugs = 0 cfFMVolEnv aliases HaveSSGEGFlag and the
+                    // low custom SSG-EG pointer byte. A positive envelope
+                    // clears custom restore; a negative one retains its sign
+                    // but destroys enough of the pointer to reconstruct FF05.
+                    t.customSsgEgPresent = (envId & 0x80) != 0;
+                    Arrays.fill(t.customSsgEgPayload, 0);
+                    t.customSsgEgPayloadKnown = false;
                     if (t.type == SmpsSequencer.TrackType.FM && envId != 0 && opMask != 0) {
                         t.fmVolEnvData = copyPsgEnvelope(program, envId);
                         t.fmVolEnvPos = 0;

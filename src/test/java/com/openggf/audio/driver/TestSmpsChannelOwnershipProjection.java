@@ -58,8 +58,11 @@ class TestSmpsChannelOwnershipProjection {
         declared.pan = 0x80;
         declared.ssgEg[1] = 0x0E;
         declared.customSsgEgPresent = true;
+        declared.customSsgEgPayload[1] = 0x0E;
+        declared.customSsgEgPayloadKnown = true;
         driver.addSequencer(music, false);
         driver.addSequencer(sfx, true);
+        driver.restoreSnapshot(driver.captureSnapshot());
 
         SmpsChannelOwnershipProjection projection =
                 driver.captureOwnershipProjection();
@@ -87,8 +90,11 @@ class TestSmpsChannelOwnershipProjection {
         assertEquals(7, view.voiceId());
         assertEquals(9, view.volume());
         assertEquals(0x80, view.pan());
-        assertArrayEquals(new int[] {0, 0x0E, 0, 0}, view.ssgEg());
+        assertArrayEquals(new int[] {0, 0x0E, 0, 0}, view.customSsgEgPayload());
         assertTrue(view.customSsgEgPresent());
+        int[] copiedSsgEgPayload = view.customSsgEgPayload();
+        copiedSsgEgPayload[1] = 0;
+        assertArrayEquals(new int[] {0, 0x0E, 0, 0}, view.customSsgEgPayload());
         byte[] copied = view.materializedVoice();
         copied[0] = 99;
         assertArrayEquals(new byte[] {1, 2, 3}, view.materializedVoice());
@@ -107,7 +113,6 @@ class TestSmpsChannelOwnershipProjection {
         declared.voiceId = 7;
         declared.volumeOffset = 9;
         declared.pan = 0x80;
-        declared.ssgEg[1] = 0x0E;
         driver.addSequencer(sfx, true);
 
         S3kE4Projection before = S3kE4Projection.capture(
@@ -130,7 +135,6 @@ class TestSmpsChannelOwnershipProjection {
         assertEquals(7, psg3.sfx().voiceId());
         assertEquals(9, psg3.sfx().volume());
         assertEquals(0x80, psg3.sfx().pan());
-        assertArrayEquals(new int[] {0, 0x0E, 0, 0}, psg3.sfx().ssgEg());
         byte[] copied = psg3.sfx().materializedVoice();
         copied[0] = 99;
         assertArrayEquals(new byte[] {1, 2, 3}, psg3.sfx().materializedVoice());
@@ -155,6 +159,46 @@ class TestSmpsChannelOwnershipProjection {
         assertEquals(S3kE4Projection.Availability.UNAVAILABLE_AMBIGUOUS_OR_INVALID,
                 projection.slots().getLast().availability());
         assertEquals(null, projection.slots().getLast().sfx());
+    }
+
+    @Test
+    void customSsgEgProjectionFailsClosedWhenItsExactPayloadIsUnavailable()
+            throws Exception {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer sfx = sequencer(sfx(0xA0, 0x02), driver);
+        SmpsSequencer.Track fm3 = sfx.getTracks().getFirst();
+        fm3.customSsgEgPresent = true;
+        fm3.ssgEg[0] = 0x11;
+        fm3.ssgEg[1] = 0x22;
+        fm3.ssgEg[2] = 0x33;
+        fm3.ssgEg[3] = 0x44;
+        driver.addSequencer(sfx, true);
+
+        S3kE4Projection projection = S3kE4Projection.capture(
+                driver.captureOwnershipProjection());
+
+        assertFalse(projection.complete());
+        assertEquals(S3kE4Projection.Availability.UNAVAILABLE_AMBIGUOUS_OR_INVALID,
+                projection.slots().getFirst().availability());
+        assertEquals(null, projection.slots().getFirst().sfx());
+    }
+
+    @Test
+    void ff05ThenHighBitFf06FailsClosedWithoutExposingTheStalePayload() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer sfx = sequencer(fm3Stream(
+                new byte[] {(byte) 0xFF, 0x05, 0x11, 0x22, 0x33, 0x44,
+                        (byte) 0xFF, 0x06, (byte) 0x81, 0x0F, 0x60, 0x7F}), driver);
+        driver.addSequencer(sfx, true);
+        sfx.advanceSamples(20_000);
+
+        S3kE4Projection projection = S3kE4Projection.capture(
+                driver.captureOwnershipProjection());
+
+        assertFalse(projection.complete());
+        assertEquals(S3kE4Projection.Availability.UNAVAILABLE_AMBIGUOUS_OR_INVALID,
+                projection.slots().getFirst().availability());
+        assertEquals(null, projection.slots().getFirst().sfx());
     }
 
     @Test
@@ -269,6 +313,16 @@ class TestSmpsChannelOwnershipProjection {
         Sonic3kSfxData result = new Sonic3kSfxData(data, 0, 0, 0);
         result.setId(id);
         return result;
+    }
+
+    private static AbstractSmpsData fm3Stream(byte[] stream) {
+        byte[] data = new byte[0x100];
+        data[2] = 4; // DAC plus FM1..FM3
+        data[4] = 1;
+        data[5] = (byte) 0x80;
+        data[0x12] = 0x40; // FM3's fourth 4-byte header entry
+        System.arraycopy(stream, 0, data, 0x40, stream.length);
+        return new Sonic3kSmpsData(data, 0);
     }
 
     private record S3kE4SlotExpectation(

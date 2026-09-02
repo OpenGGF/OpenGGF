@@ -39,6 +39,7 @@ class TestSmpsSequencerSnapshot {
         SmpsSequencerSnapshot snapshot = sequencer.captureSnapshot();
         snapshot.tracks().get(0).loopCounters()[0] = 77;
         snapshot.tracks().get(0).voiceData()[0] = 77;
+        snapshot.tracks().get(0).customSsgEgPayload()[0] = 77;
 
         sequencer.setSpeedShoes(false);
         sequencer.setSpeedMultiplier(1);
@@ -83,6 +84,8 @@ class TestSmpsSequencerSnapshot {
         assertEquals(9, restoredTrack.fmVolEnvData[0]);
         assertEquals(0x22, restoredTrack.ssgEg[0]);
         assertTrue(restoredTrack.customSsgEgPresent);
+        assertArrayEquals(new int[] {0x22, 0, 0, 0}, restoredTrack.customSsgEgPayload);
+        assertTrue(restoredTrack.customSsgEgPayloadKnown);
         assertEquals(0xE7, restoredTrack.rawPsgNoise);
         assertTrue(restoredTrack.rawPsgNoiseKnown);
         assertTrue(restoredTrack.modStepInEffect);
@@ -178,6 +181,8 @@ class TestSmpsSequencerSnapshot {
         track.forceRefresh = true;
         track.ssgEg[0] = 0x22;
         track.customSsgEgPresent = true;
+        track.customSsgEgPayload[0] = 0x22;
+        track.customSsgEgPayloadKnown = true;
         track.dacMuted = true;
         track.modStepInEffect = true;
         track.modStepChanged = true;

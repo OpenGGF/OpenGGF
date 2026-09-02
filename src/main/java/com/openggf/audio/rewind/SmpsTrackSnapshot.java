@@ -85,6 +85,8 @@ public record SmpsTrackSnapshot(
         int modEnvStepDelta,
         boolean fm3SpecialMode,
         boolean customSsgEgPresent,
+        int[] customSsgEgPayload,
+        boolean customSsgEgPayloadKnown,
         int rawPsgNoise,
         boolean rawPsgNoiseKnown) {
 
@@ -97,6 +99,7 @@ public record SmpsTrackSnapshot(
         envData = copy(envData);
         fmVolEnvData = copy(fmVolEnvData);
         ssgEg = copy(ssgEg);
+        customSsgEgPayload = copy(customSsgEgPayload);
     }
 
     private static byte[] copy(byte[] values) {
@@ -145,5 +148,10 @@ public record SmpsTrackSnapshot(
     @Override
     public int[] ssgEg() {
         return copy(ssgEg);
+    }
+
+    @Override
+    public int[] customSsgEgPayload() {
+        return copy(customSsgEgPayload);
     }
 }

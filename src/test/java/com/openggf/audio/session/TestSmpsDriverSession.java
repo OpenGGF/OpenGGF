@@ -114,17 +114,23 @@ class TestSmpsDriverSession {
                 sequencer, 2);
         fm3.fm3SpecialMode = true;
         fm3.customSsgEgPresent = true;
+        fm3.customSsgEgPayload[0] = 0x22;
+        fm3.customSsgEgPayloadKnown = true;
         driver.addSequencer(sequencer, false);
 
         SmpsDriverSession.LiveMutationToken token = session.captureLiveMutation();
         fm3.fm3SpecialMode = false;
         fm3.customSsgEgPresent = false;
+        fm3.customSsgEgPayload[0] = 0;
+        fm3.customSsgEgPayloadKnown = false;
         session.rollbackLiveMutation(token);
 
         var restored = session.captureLogicalSnapshot().sequencers().getFirst()
                 .snapshot().tracks().getFirst();
         assertTrue(restored.fm3SpecialMode());
         assertTrue(restored.customSsgEgPresent());
+        assertArrayEquals(new int[] {0x22, 0, 0, 0}, restored.customSsgEgPayload());
+        assertTrue(restored.customSsgEgPayloadKnown());
     }
 
     @Test

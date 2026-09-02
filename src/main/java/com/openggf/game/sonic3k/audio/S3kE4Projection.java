@@ -102,7 +102,9 @@ public record S3kE4Projection(
     }
 
     private static boolean hasRequiredRawState(SmpsTrackSnapshot track) {
-        return !track.noiseMode() || track.rawPsgNoiseKnown();
+        return (!track.noiseMode() || track.rawPsgNoiseKnown())
+                && (!track.customSsgEgPresent()
+                        || track.customSsgEgPayloadKnown());
     }
 
     public enum Availability {
@@ -193,7 +195,7 @@ public record S3kE4Projection(
             int pan,
             int psgNoise,
             OptionalInt rawPsgNoise,
-            int[] ssgEg,
+            int[] customSsgEgPayload,
             boolean customSsgEgPresent) {
         public S3kE4Track {
             Objects.requireNonNull(coordinate, "coordinate");
@@ -201,7 +203,7 @@ public record S3kE4Projection(
             Objects.requireNonNull(rawPsgNoise, "rawPsgNoise");
             Objects.requireNonNull(voiceSource, "voiceSource");
             materializedVoice = copy(materializedVoice);
-            ssgEg = copy(ssgEg);
+            customSsgEgPayload = copy(customSsgEgPayload);
         }
 
         static S3kE4Track from(
@@ -226,7 +228,7 @@ public record S3kE4Projection(
                     track.volumeOffset(), track.pan(), track.psgNoiseParam(),
                     track.rawPsgNoiseKnown()
                             ? OptionalInt.of(track.rawPsgNoise()) : OptionalInt.empty(),
-                    track.ssgEg(), track.customSsgEgPresent());
+                    track.customSsgEgPayload(), track.customSsgEgPresent());
         }
 
         @Override
@@ -235,8 +237,8 @@ public record S3kE4Projection(
         }
 
         @Override
-        public int[] ssgEg() {
-            return copy(ssgEg);
+        public int[] customSsgEgPayload() {
+            return copy(customSsgEgPayload);
         }
 
         private static S3kE4Slot slotFor(SmpsTrackSnapshot track) {

@@ -383,6 +383,10 @@ public class SmpsSequencer implements CoordFlagContext {
         public final int[] ssgEg = new int[4];
         /** S3K HaveSSGEGFlag: FF05 occurred, including the all-zero payload. */
         public boolean customSsgEgPresent;
+        /** Exact unsigned FF05 operands for S3K's E4 custom SSG-EG restore. */
+        public final int[] customSsgEgPayload = new int[4];
+        /** Whether {@link #customSsgEgPayload} still represents the aliased Z80 pointer. */
+        public boolean customSsgEgPayloadKnown;
         // DAC mute state for fade-in
         public boolean dacMuted;
 
@@ -3550,6 +3554,8 @@ public class SmpsSequencer implements CoordFlagContext {
                 track.modEnvStepDelta,
                 track.fm3SpecialMode,
                 track.customSsgEgPresent,
+                track.customSsgEgPayload,
+                track.customSsgEgPayloadKnown,
                 track.rawPsgNoise,
                 track.rawPsgNoiseKnown);
     }
@@ -3642,6 +3648,8 @@ public class SmpsSequencer implements CoordFlagContext {
         track.modEnvStepDelta = snapshot.modEnvStepDelta();
         track.fm3SpecialMode = snapshot.fm3SpecialMode();
         track.customSsgEgPresent = snapshot.customSsgEgPresent();
+        copyInto(snapshot.customSsgEgPayload(), track.customSsgEgPayload);
+        track.customSsgEgPayloadKnown = snapshot.customSsgEgPayloadKnown();
         track.rawPsgNoise = snapshot.rawPsgNoise();
         track.rawPsgNoiseKnown = snapshot.rawPsgNoiseKnown();
     }
