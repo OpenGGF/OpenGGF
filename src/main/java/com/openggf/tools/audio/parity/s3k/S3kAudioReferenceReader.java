@@ -21,18 +21,35 @@ import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Streaming reader for the v1 S3K oracle reference JSONL (plain or gzip).
+ * Streaming reader for the S3K oracle reference JSONL (plain or gzip), v1 or v2.
  *
  * <p>Validates the metadata row, per-row shape, the terminal tick count and
  * the terminal body SHA-256 (over the raw tick-row bytes) while decoding each
  * RAM snapshot into the fixed sixteen-slot track vocabulary and projecting
  * the CPU-tagged write bus onto Z80-owned driver writes.
+ *
+ * <p>A v1 row is one emulated frame, so {@link #readDriverServices} has to
+ * project frames onto driver services. A v2 row is already one completed
+ * {@code zVInt} service, so that projection is skipped; see
+ * {@link S3kAudioParitySchema} for the difference and why v2 supersedes v1.
  */
 public final class S3kAudioReferenceReader {
     private static final ObjectMapper JSON = new ObjectMapper();
 
+    /**
+     * @param ticks    declared tick count, or -1 when the stream declares it
+     *                 only in its terminal row (v2, where the count is not
+     *                 known when the metadata row is written)
+     * @param frames   movie frames replayed, or -1 when not declared (v1,
+     *                 where the frame count equals the tick count)
+     */
     public record Metadata(String schema, String romSha1, String movieName, String movieSha256,
-            int movieFrameCount, int ticks, String observerCoreSha256) {
+            int movieFrameCount, int ticks, int frames, String observerCoreSha256) {
+
+        /** Whether this stream is one row per completed driver service. */
+        public boolean perService() {
+            return S3kAudioParitySchema.VERSION_V2.equals(schema);
+        }
     }
 
     private S3kAudioReferenceReader() {
@@ -64,7 +81,7 @@ public final class S3kAudioReferenceReader {
                     throw new IllegalArgumentException("unknown row kind: " + kind);
                 }
                 body.update((line + "\n").getBytes(StandardCharsets.UTF_8));
-                S3kAudioTick tick = parseTick(row, ordinal);
+                S3kAudioTick tick = parseTick(row, ordinal, metadata.perService());
                 ordinal++;
                 tickConsumer.accept(tick);
             }
@@ -73,10 +90,16 @@ public final class S3kAudioReferenceReader {
             }
             JsonNode terminalRow = JSON.readTree(terminal);
             if (terminalRow.path("ticks").asInt(-1) != ordinal
-                    || metadata.ticks() != ordinal) {
+                    || metadata.ticks() >= 0 && metadata.ticks() != ordinal) {
                 throw new IllegalArgumentException("terminal tick count mismatch: metadata "
                         + metadata.ticks() + ", terminal " + terminalRow.path("ticks").asInt(-1)
                         + ", observed " + ordinal);
+            }
+            if (metadata.frames() >= 0
+                    && terminalRow.path("frames").asInt(-1) != metadata.frames()) {
+                throw new IllegalArgumentException("terminal frame count mismatch: metadata "
+                        + metadata.frames() + ", terminal "
+                        + terminalRow.path("frames").asInt(-1));
             }
             String expected = terminalRow.path("body_sha256").asText();
             String observed = HexFormat.of().formatHex(body.digest());
@@ -116,6 +139,13 @@ public final class S3kAudioReferenceReader {
     public static Metadata readDriverServices(Path path,
             S3kRequestObservationSidecar requests, Consumer<S3kAudioTick> serviceConsumer) {
         List<S3kAudioTick> frames = new ArrayList<>();
+        Metadata probe = parseMetadataOf(path);
+        if (probe.perService()) {
+            // The v2 producer already emits one row per completed zVInt
+            // service, sampled at the service's own return, so there is no
+            // frame stream left to project and nothing to reattribute.
+            return read(path, serviceConsumer);
+        }
         Metadata metadata = read(path, frames::add);
         int completion = -1;
         for (int index = 0; index < frames.size(); index++) {
@@ -139,9 +169,10 @@ public final class S3kAudioReferenceReader {
             bootWrites.addAll(frames.get(index).writes());
         }
         S3kAudioTick bootCompletion = frames.get(completion);
-        serviceConsumer.accept(new S3kAudioTick(0, bootCompletion.lag(),
-                List.of(0, 0, 0), bootCompletion.global(),
-                bootCompletion.tracks(), bootWrites));
+        serviceConsumer.accept(new S3kAudioTick(0, bootCompletion.frame(),
+                bootCompletion.lag(), List.of(0, 0, 0), bootCompletion.global(),
+                bootCompletion.tracks(), bootWrites,
+                S3kAudioTick.ProducerInputEvidence.available()));
         int ordinal = 1;
         boolean segaPcmSuspended = false;
         for (int index = completion + 1; index < frames.size(); index++) {
@@ -180,9 +211,9 @@ public final class S3kAudioReferenceReader {
                     }
                 }
             }
-            serviceConsumer.accept(new S3kAudioTick(ordinal++, frame.lag(),
-                    mailbox, frame.global(), frame.tracks(), serviceWrites,
-                    inputEvidence));
+            serviceConsumer.accept(new S3kAudioTick(ordinal++, frame.frame(),
+                    frame.lag(), mailbox, frame.global(), frame.tracks(),
+                    serviceWrites, inputEvidence));
             if (mailbox.contains(S3kAudioParitySchema.CMD_SEGA)) {
                 segaPcmSuspended = true;
             }
@@ -196,13 +227,32 @@ public final class S3kAudioReferenceReader {
                         || write.register() == 0x2b && write.value() == 0x80);
     }
 
+    /** Reads only the metadata row, so the stream version can be branched on. */
+    static Metadata parseMetadataOf(Path path) {
+        try (InputStream raw = Files.newInputStream(path);
+                InputStream stream = path.getFileName().toString().endsWith(".gz")
+                        ? new GZIPInputStream(raw) : raw;
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line = reader.readLine();
+            if (line == null) {
+                throw new IllegalArgumentException("reference stream is empty");
+            }
+            return parseMetadata(line);
+        } catch (IOException error) {
+            throw new IllegalArgumentException(
+                    "cannot read S3K oracle reference metadata: " + error.getMessage(), error);
+        }
+    }
+
     static Metadata parseMetadata(String line) throws IOException {
         JsonNode row = JSON.readTree(line);
         if (!row.path("row").asText().equals("metadata")) {
             throw new IllegalArgumentException("first row is not capture metadata");
         }
         String schema = row.path("schema").asText();
-        if (!S3kAudioParitySchema.VERSION.equals(schema)) {
+        if (!S3kAudioParitySchema.VERSION_V1.equals(schema)
+                && !S3kAudioParitySchema.VERSION_V2.equals(schema)) {
             throw new IllegalArgumentException("unknown S3K oracle schema: " + schema);
         }
         String romSha1 = row.path("rom_sha1").asText();
@@ -218,15 +268,25 @@ public final class S3kAudioReferenceReader {
                 row.path("movie").path("name").asText(),
                 row.path("movie").path("sha256").asText(),
                 row.path("movie").path("frame_count").asInt(),
-                row.path("ticks").asInt(),
+                row.path("ticks").asInt(-1),
+                row.path("frames").asInt(-1),
                 row.path("observer_core_zst_sha256").asText());
     }
 
-    private static S3kAudioTick parseTick(JsonNode row, int expectedOrdinal) {
-        int frame = row.path("frame").asInt(-1);
-        if (frame != expectedOrdinal) {
+    private static S3kAudioTick parseTick(JsonNode row, int expectedOrdinal, boolean perService) {
+        // v1 numbers a row by its emulated frame, so the two are the same
+        // value. v2 numbers a row by its service and records separately which
+        // frame that service completed in, because a frame the driver overruns
+        // contributes no row at all.
+        int ordinal = perService ? row.path("tick").asInt(-1) : row.path("frame").asInt(-1);
+        if (ordinal != expectedOrdinal) {
             throw new IllegalArgumentException(
-                    "tick ordinal mismatch: expected " + expectedOrdinal + ", got " + frame);
+                    "tick ordinal mismatch: expected " + expectedOrdinal + ", got " + ordinal);
+        }
+        int frame = row.path("frame").asInt(-1);
+        if (frame < ordinal) {
+            throw new IllegalArgumentException("tick " + ordinal
+                    + " completes in frame " + frame + ", before its own ordinal");
         }
         List<Integer> mailbox = new ArrayList<>(List.of(0, 0, 0));
         JsonNode mailboxNode = row.path("mailbox");
@@ -237,7 +297,7 @@ public final class S3kAudioReferenceReader {
         }
         byte[] ram = HexFormat.of().parseHex(row.path("ram").asText());
         if (ram.length != S3kAudioParitySchema.RAM_WINDOW_END - S3kAudioParitySchema.RAM_WINDOW_START) {
-            throw new IllegalArgumentException("RAM snapshot has wrong length at tick " + frame);
+            throw new IllegalArgumentException("RAM snapshot has wrong length at tick " + ordinal);
         }
         List<AudioParityChipWrite> writes = new ArrayList<>();
         for (JsonNode write : row.path("writes")) {
@@ -247,13 +307,13 @@ public final class S3kAudioReferenceReader {
                 // retains the whole bus, but this is a Z80 driver oracle: the
                 // 68k PSGInitValues bootstrap and other host writes belong to
                 // a separate execution boundary (sonic3k.asm:175-184,260).
-                if (!z80Owned(write, 4, frame)) {
+                if (!z80Owned(write, 4, ordinal)) {
                     continue;
                 }
                 writes.add(AudioParityChipWrite.ym2612(write.get(1).asInt(),
                         write.get(2).asInt(), write.get(3).asInt()));
             } else if (chip.equals("psg")) {
-                if (!z80Owned(write, 2, frame)) {
+                if (!z80Owned(write, 2, ordinal)) {
                     continue;
                 }
                 writes.add(AudioParityChipWrite.psg(write.get(1).asInt()));
@@ -261,16 +321,17 @@ public final class S3kAudioReferenceReader {
                 throw new IllegalArgumentException("unknown chip in write row: " + chip);
             }
         }
-        return new S3kAudioTick(frame, row.path("lag").asBoolean(false), mailbox,
-                decodeGlobals(ram), decodeTracks(ram), writes);
+        return new S3kAudioTick(ordinal, frame, row.path("lag").asBoolean(false), mailbox,
+                decodeGlobals(ram), decodeTracks(ram), writes,
+                S3kAudioTick.ProducerInputEvidence.available());
     }
 
-    private static boolean z80Owned(JsonNode write, int sourceIndex, int frame) {
+    private static boolean z80Owned(JsonNode write, int sourceIndex, int tick) {
         int sourceCpu = write.path(sourceIndex).asInt(-1);
         if (sourceCpu != S3kAudioParitySchema.SOURCE_CPU_Z80
                 && sourceCpu != S3kAudioParitySchema.SOURCE_CPU_M68K) {
             throw new IllegalArgumentException(
-                    "unknown write source CPU " + sourceCpu + " at tick " + frame);
+                    "unknown write source CPU " + sourceCpu + " at tick " + tick);
         }
         return sourceCpu == S3kAudioParitySchema.SOURCE_CPU_Z80;
     }

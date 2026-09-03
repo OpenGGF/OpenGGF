@@ -27,6 +27,116 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S3K reference republished as v2, sampled at the zVInt return; frontier moves to tick 0
+
+- **Context:** `.worktrees/audio-s3k-reference-v2`, branch
+  `feature/ai-s3k-oracle-reference-v2`, with `tools/tracechaser` on
+  `bugfix/ai-s3k-reference-v2` at `8e32d256e`. New producer, new manifest, new
+  fixture and reader support for the v2 schema; no engine change.
+- **Fixture:** `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz`
+  (identity in `s3k-aiz1-intro-metadata-v2.json`): 5,263 driver services over
+  movie frames 0-5399 of the committed `s3k-complete-sonic-tails.bk2` from
+  power-on, 725,898 decoded YM/PSG writes. Two serial captures to separate
+  external roots were byte-identical at
+  `c8174a3f150409bb2511c09b85d511ffd6acd98aff8abc682c1f52f632623f06`.
+- **Command:**
+
+  ```
+  java -cp "target/classes:$(cat target/s3k-oracle.classpath)" \
+    com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare \
+    --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz \
+    --rom <absolute locked-on S3K ROM>
+  ```
+
+- **Result:** `EVENT_EXTRA` at tick 0, field `decoded_write`, event 84,
+  reference `<missing>`, engine `ym2612[port 0, register 0x2b] = 0`.
+- **Result before (against v1):** `TRACK_STATE_MISMATCH` at tick 138, role
+  `MUS_FM1`, field `resting`. That divergence is gone, and it was not an engine
+  defect: the entry below records it as a v1 sampling artefact.
+
+- **What the producer changed.** v1 was captured by the native harness, not a
+  Lua probe. `tools/audio/s3k/S3kAudioOracleReferenceCapture.cs` looped once per
+  video frame and read driver RAM with `host.ReadZ80RamByte` after
+  `host.Advance()` returned, so the snapshot landed wherever the Z80 happened to
+  be. Its declared `sampling: "post_invocation"` only held on frames where the
+  driver was already idle. v2 removes the out-of-band read: a snapshot range
+  covering `1C00h..1FA0h` is attached to the observer's own service-completion
+  hooks, so `emit_completion` captures the window inside the emulated CPU at the
+  completing instruction and delivers it inline and ordered in the event stream.
+  The pinned patch-0001 core already implements this; the S2 manifest has used
+  the same mechanism for its `SoundDriverLoad` image since it was written.
+
+- **Why the boundary is `0084h` and not the end of the music update.** The
+  chosen instruction is the `ret` that ends `zVInt`
+  (`Sound/Z80 Sound Driver.asm`:520; the disassembly's own `;loc_85` comment at
+  :522 pins the address). `zVInt` is the RST 38h target at `0038h`, calls
+  `zUpdateEverything` at `0042h`, and that call returns to `0045h` (:471-482).
+  `0045h` is unusable as a per-interrupt boundary in two ways, both on shipped
+  paths: the PAL double-update jumps back to `.doupdate` at `003Dh` and runs
+  `zUpdateEverything` a second time inside one interrupt (:485-495), and while
+  paused `zPauseUnpause` pops its own return address (:2232-2242) so neither
+  `zUpdateSFXTracks` nor `zUpdateMusic` executes yet `0045h` is still reached.
+  `0084h` is reached exactly once per interrupt. Within the captured window the
+  two differ by one byte, `zPalDblUpdCounter` at `1C04h`. The driver assembles
+  as `SonicDriverVer = 4` (`sonic3k.asm:27`), so the ver-3 PAL tempo bug and the
+  `unk_1C21` write are not present; `fix_sndbugs = 0` throughout (D:16).
+
+- **Tick semantics, stated.** One tick is one completed driver service, not one
+  video frame, and each row names which service it was. Two kinds qualify: the
+  one-shot `DriverInit`, and every `zVInt` return. When an invocation overruns a
+  frame the tick belongs to the service that completed, so a frame may carry no
+  row at all. 5,400 replayed frames yield 5,263 rows. This is the model the S2
+  oracle already uses (see the 2026-08-30 S2 entry on tick recovery). Writes are
+  partitioned by the same boundary, so every write still appears exactly once in
+  stream order: the v2 write count, 725,898, is identical to v1's.
+
+- **The tick-138 frame, directly.** Movie frame 252 is the title-music load. In
+  v2 it produces **no row**: the driver's work runs past the frame boundary and
+  `zVInt` reaches `0084h` during frame 253. The row that covers the load has
+  every music track parsed, with `MUS_FM1` at `PlaybackControl 90h` — the values
+  v1 only reached a frame later. `TestS3kAudioOracleFixtureContractV2` pins both
+  properties.
+
+- **What the new frontier is.** A real engine-side misplacement of one write,
+  now visible because the boot boundary is exact rather than frame-smeared. The
+  ROM's `zStopAllSound` writes YM `2Bh` then `27h` with interrupts disabled
+  throughout (D:2506-2520), and `zInitAudioDriver` only enables interrupts
+  afterwards, at :550, before `jp zPlayDigitalAudio` (:551). So the init's own
+  last write is `27h`, and v2's boot row ends there with 84 writes. The `2Bh`
+  write that follows in the stream is a *different* one: the first instruction
+  block of `zPlayDigitalAudio` (D:4258-4262), which the init jumps into and
+  never returns from. The engine emits that `2Bh` inside its own driver init, so
+  it appears one service early. v1's boot service reported 85 writes because its
+  frame-granular projection swept the whole frame and took that write in, which
+  is why the mismatch was invisible before. **Measurement only; not fixed in
+  this lane.**
+
+- **Break-it evidence.** The comparator reads the reference bytes it claims to:
+  with `zCurrentTempo` at `1C24h` corrupted in tick 0 of a copy of the fixture
+  (`^ 0x55`, terminal digest repaired), the reported divergence changes from the
+  above to `GLOBAL_STATE_MISMATCH` at tick 0, field `currentTempo`,
+  reference `85`, engine `0`.
+
+- **v1 status.** Retained, byte-unmodified, and retired in metadata. Its
+  contract test still passes, so the retired stream remains readable.
+
+- **Regression gates.** All green at this commit. S1 GHZ music oracle
+  **`MATCH (14690 ticks)`** and S1 sound-test SFX oracle **`MATCH (1967 ticks)`**,
+  both via `tools/audio/run_s1_audio_parity.sh` with live capture pairs. S2
+  driver oracle **`MATCH (698 ticks)`**, unchanged. The
+  `com.openggf.tools.audio.parity.**` suite reports 152 passing with 2 skips,
+  the skips being ROM-gated measurements with no supplied sidecar path.
+  `mvn -Dmse=off -Pguards test` reports 607 passing. Two guards failed on the
+  first run and were updated deliberately, not weakened:
+  `TestTraceChaserBoundaryGuard` and `TestBuildToolingGuard` pin the exact
+  `tools/tracechaser` gitlink, which this change advances to `8e32d256e`.
+  TraceChaser's own `repository_policy.py` and `history_audit.py` both PASS.
+
+- **Approval note.** TraceChaser's rule 4 treats installing a canonical fixture
+  as a human-approved step. This fixture is committed to an unmerged branch as
+  the artifact to approve, not merged to `develop`.
+
+
 ## 2026-09-03 — S1 gameplay oracle: tick 629 (reference gap) → tick 618 (real engine divergence), special-SFX dispatch now captured
 
 - **Worktree/branch:** `.worktrees/audio-s1-probe-special`,
