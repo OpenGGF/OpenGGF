@@ -2,6 +2,9 @@ package com.openggf.tests;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameModule;
+import com.openggf.game.LevelInitProfile;
+import com.openggf.audio.AudioManager;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.render.SpecialRenderEffect;
 import com.openggf.game.render.SpecialRenderEffectContext;
@@ -24,6 +27,10 @@ import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestLevelManager {
 
@@ -114,6 +121,33 @@ public class TestLevelManager {
         pendingState.setAccessible(true);
         assertNull(pendingState.get(levelManager),
                 "A failed return load must not apply its respawn table to a later level");
+    }
+
+    @Test
+    public void preparedLevelMusicPublishesOnlyAfterPendingTransitionReleases()
+            throws Exception {
+        LevelManager levelManager = GameServices.level();
+        AudioManager audio = mock(AudioManager.class);
+        GameModule module = mock(GameModule.class);
+        LevelInitProfile profile = mock(LevelInitProfile.class);
+        when(module.getLevelInitProfile()).thenReturn(profile);
+        setField(levelManager, "audioManager", audio);
+        setField(levelManager, "gameModule", module);
+
+        when(profile.isLevelMusicPublicationPending()).thenReturn(true);
+        levelManager.publishPreparedLevelMusic(0x81);
+        verify(audio, never()).playMusic(0x81);
+
+        when(profile.isLevelMusicPublicationPending()).thenReturn(false);
+        levelManager.publishPreparedLevelMusic(0x81);
+        verify(audio).playMusic(0x81);
+    }
+
+    private static void setField(Object target, String name, Object value)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 
     @Nested

@@ -7,9 +7,18 @@ import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.AdmissionResult;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.RejectionReason;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.SmpsAdmissionContext;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.session.PreparedSmpsSfxProgram;
 import java.util.Objects;
 
 public interface SmpsSfxInstantiation {
+    /** Signals that a source resolved earlier is no longer cached at admission. */
+    final class CacheMissException extends IllegalStateException {
+        public CacheMissException(SmpsAssetKey assetKey) {
+            super("SMPS SFX asset cache miss: "
+                    + Objects.requireNonNull(assetKey, "assetKey"));
+        }
+    }
+
     record Admission(
             SmpsAdmissionContext context, AdmissionResult result) {
         public Admission {
@@ -21,11 +30,13 @@ public interface SmpsSfxInstantiation {
     SmpsSequencer instantiateCached(ResolvedSmpsSfxSource source,
                                     SmpsDriver currentOwner);
 
-    /**
-     * Creates an empty standalone composite. The registry applies current
-     * channel controls before constructing and attaching the first sequencer.
-     */
-    SmpsCompositeVoice instantiateStandaloneCached(ResolvedSmpsSfxSource source);
+    /** Prepares a write-free session admission from the immutable cache. */
+    default PreparedSmpsSfxProgram prepareCached(
+            ResolvedSmpsSfxSource source) {
+        throw new IllegalStateException(
+                "no session SMPS SFX preparation for "
+                        + Objects.requireNonNull(source, "source").assetKey());
+    }
 
     /** Evaluates one whole request before any driver or continuous-SFX mutation. */
     default Admission evaluateAdmission(

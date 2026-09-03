@@ -567,6 +567,14 @@ of track type** + `cfStopTrack`. For a PSG SFX slot, `zFMSilenceChannel`'s key-o
 (`zKeyOnOff` with `c = VoiceControl` = `80h/A0h/C0h`, `D:2661-2662`) writes
 `28h = 80h/A0h/C0h` — channel code 0 with operator-mask bits set: a **spurious
 partial key-on of FM1**. This is shipped behaviour the engine must emit (GAP §1.3).
+`cfStopTrack` then enters `zGetSFXChannelPointers` while `ix` still names the
+stopped PSG SFX slot: `zSilencePSGChannel` writes `1Fh + VoiceControl`
+(`9Fh/BFh/DFh`) and, when that stopped slot's playback bit 0 is set, `FFh`;
+the surrounding FixBugs=0 path then writes an additional unconditional `FFh`
+(`D:4230-4248,2131-2136`). Only after that does the matching music PSG track
+optionally re-latch its signed retained raw noise operand. This E4 sequence is
+separate from the similarly-shaped stale-`ix`/`FFh` sequence during SFX
+*admission*.
 
 ### (b) State
 
@@ -577,9 +585,12 @@ SFX slots 1DF0-1F40, overridden music slots' bit 2, `zSFXVoiceTblPtr`,
 
 Admission (during the music phase): per track — [PSG only: stale-`ix` silence write +
 `FFh`] + key-off `28h = channel` (FM only) + SSG-EG `90h..9Ch+off = 0` (FM only) +
-possibly `27h = 0`. First note writes on the next frame's SFX pass (§1c). Release
-(during the SFX pass): key-off + [FM: `27h` if FM3, then `B4h`, `B0h`, 20 operator
-bytes, 4 TL bytes for the music voice] + [PSG noise re-latch if applicable].
+possibly `27h = 0`. First note writes on the next frame's SFX pass (§1c). Normal
+release (during the SFX pass): key-off + [FM: `27h` if FM3, then `B4h`, `B0h`, 20
+operator bytes, 4 TL bytes for the music voice] + [PSG noise re-latch if applicable].
+E4 uses the same stop machinery, but each active PSG SFX also emits its raw YM `28h`
+hazard, `1Fh + current SFX VoiceControl`, conditional `FFh` from that stopped SFX
+track, and the FixBugs=0 unconditional `FFh` before any matching music re-latch.
 
 ### (d) Test vectors
 
@@ -608,20 +619,28 @@ with bit-7 TL bytes getting `+Volume` masked to 7 bits (§8). No `A5h/A1h` frequ
 write until the music pass reaches FM5's update.
 
 **TV 6.4 — E4 PSG hazard.** With a PSG1 SFX active, issue `cmd_StopSFX` (`E4h`):
-expected writes include `28h = 80h` — the spurious FM1 partial key-on. An oracle
-asserting "no `28h` write may carry high nibble bits during E4" would be wrong; the
-correct assertion is that this write **is present**.
+expected writes start `28h = 80h`, `9Fh`, `FFh` (or `FFh,FFh` when the stopped
+SFX playback bit 0/noise state is set), then any eligible matching music-noise
+re-latch. `28h = 80h` is the spurious FM1 partial key-on. An oracle asserting
+"no `28h` write may carry high nibble bits during E4" would be wrong; the correct
+assertion is that this write **is present**.
 
 ### (e) Engine today
 
 `SmpsDriver.prepareNewSfxAdmission`/`commitSfxAdmission` + per-channel claims
-(`fmLocks`/`psgLocks` semantics, `Track.overridden`) model ownership; release
-"restores instrument/volume/pan/frequency" per the engine map — the frequency resend
-must be checked against this section and removed if present (GAP §1.2 #6, deferred
-item 6). The stale-`ix` PSG write, the unconditional `FFh`, and the E4 FM1 key-on
-hazard are unmodelled (**divergences to record in the comparator as expected-red**).
-S3K's stop-all-SFX-on-BGM-load is a profile behaviour to confirm against
-`AbstractSmpsAudioBackend`'s music-start path.
+(`fmLocks`/`psgLocks` semantics, `Track.overridden`) model ownership. The S3K
+host-owned E4 policy captures a complete immutable seven-slot projection before
+the first write, rejects incomplete/ambiguous/raw-state-unavailable projections,
+and then emits the native active-slot walk: FM3..FM6, PSG1..PSG3;
+`zFMSilenceChannel` including the PSG-to-YM `28h` hazard; the current-SFX PSG
+mute/conditional-`FFh`/unconditional-`FFh` walk in `zGetSFXChannelPointers`;
+`cfStopTrack`; and the conditional FM voice/SSG-EG or PSG-noise restore. It clears
+the same SFX claims and music override bits only after the physical program commits,
+without rebuilding the driver or resending frequency. This source-corrected E4
+candidate remains under review; the standalone E3 path and PSG-SFX *admission*
+stale-`ix`/`FFh` behaviour remain separate gaps. No authenticated reference request
+exercises E4, so it does not itself move the service-128 producer-input limitation
+or assert a new comparator MATCH.
 
 ---
 
@@ -1479,7 +1498,7 @@ reaches, with the shipped behaviour the engine must model:
 | 2542-2544 | extra `zPSGSilenceAll` at pause (every pause) | §12 TV 12.1 |
 | 2705-2716 | SEGA does not clear mailboxes/queue → `FEh` residue (every chime) | §14.4e |
 | 2754-2756 | DAC restore `or 84h` shape (every 1-up restore) | §13 |
-| 3089-3094 | E3 silences FM regardless of type — the FM1 key-on hazard (E4 on PSG SFX) | **missing** (§6e) |
+| 3089-3094 | E3 silences FM regardless of type — the FM1 key-on hazard (E4 on PSG SFX) | modelled by the complete S3K E4 host operation; standalone E3 remains missing (§6e) |
 | 3445-3447, 3461-3462 | `unk_1C15/18` writes in `cfStopTrack` (every SFX end) | `not-compared` |
 | 3542-3573 | F3 shipped guard/order (33 songs / 36 SFX) | equivalent for shipped placements (§10) |
 | 3718-3720 | continuous flag re-clear (every non-retriggered FC) | same |
@@ -1489,9 +1508,11 @@ reaches, with the shipped behaviour the engine must model:
 | 4236-4244 | `zSilencePSGChannel` bit-0 test — noise not silenced on channel start (every PSG SFX) | part of §6 admission shape |
 
 Unreached-by-shipped-data sites (FM3 special mode `838/885/3813`, SSG-EG upload
-`3985-4016`, `zStopSFX` call-shape `1689`, alt-freq `983/1016`, mod-env fetch
-`1349`/vol-env fetch `4158` beyond the §9 cases, EB/EE/FB/FD/FE flags) need no
-engine branch until custom data is in scope.
+`3985-4016`, alt-freq `983/1016`, mod-env fetch
+`1349`/vol-env fetch `4158` beyond the §9 cases, EB/EE/FB/FD/FE flags) have no
+native-stream parity claim. The E4 operation nevertheless consumes retained
+FM3/SSG-EG state exactly when a supported stream supplies it; unsupported raw
+state remains fail-closed.
 
 ---
 
@@ -1545,10 +1566,16 @@ none resolved from memory:
    unverified. Keep the derivation, keep the question.
 6. **`cmd_StopSEGA` residue** (`FEh` → stop-all next update): harmless by
    inspection, unconfirmed by trace (§14.4).
-7. **`F3` on FM1-3 music tracks**: the shipped guard tests `VoiceControl` bit 2, so
-   an FM1-3 track executing `F3` would set its bit 0 (= FM3 special mode for FM3).
-   The 33/36 users appear to be PSG-only by macro placement; not audited byte by
-   byte.
+7. **`F3` on FM1-3 music tracks — resolved.** The ROM-backed per-root fixed-point
+   audit in `TestSonic3kSmpsMetaCommandReachability` walks every resolved S&K and
+   standalone-S3 DAC/FM and PSG music root against its source bank. Every reachable
+   shipped `F3` has operand `E7h` and comes from a PSG `VoiceControl` of `80h`,
+   `A0h`, or `C0h`; no DAC/FM root (`16h`, `00h`, `01h`, `02h`, `04h`, `05h`,
+   `06h`) reaches it. This deliberately records the byte-audited result rather than
+   inferring PSG3 from macro placement: S&K music `1Dh` reaches `F3 E7h` from PSG1
+   (`80h`, bank offset `72FBh`). `cfSetPSGNoise` still has the shipped `VoiceControl`
+   bit-2 guard, so the retained FM3 bit remains necessary for arbitrary/synthetic
+   streams even though the shipped music audit closes that route.
 8. **Exact YM/PSG write timing within an update**: out of scope for the
    per-invocation oracle (GAP §1.2 #25); the existing
    `2026-08-22-s3k-ym-write-timing-calculation.md` covers the cycle tier.

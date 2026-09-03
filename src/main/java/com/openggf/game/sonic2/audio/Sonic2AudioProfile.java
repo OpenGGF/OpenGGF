@@ -4,16 +4,30 @@ import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
+import com.openggf.game.audio.SegaPcmRomReader;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.presentation.AudioRequestService;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 public class Sonic2AudioProfile extends AbstractAudioProfile {
+
+    private final Consumer<Sonic2SoundRequestService.Event> requestObserver;
+
+    @Override
+    public AudioRequestService createAudioRequestService() {
+        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
+        service.addObserver(requestObserver);
+        return service;
+    }
 
     private static final Map<GameSound, Integer> SOUND_MAP;
     private static final Map<GameMusic, Integer> MUSIC_MAP;
@@ -60,7 +74,15 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     }
 
     public Sonic2AudioProfile() {
+        this(ignored -> { });
+    }
+
+    /** Installs an output-only observer on this profile's production request service. */
+    public Sonic2AudioProfile(
+            Consumer<Sonic2SoundRequestService.Event> requestObserver) {
         super(SOUND_MAP, MUSIC_MAP);
+        this.requestObserver = Objects.requireNonNull(
+                requestObserver, "requestObserver");
     }
 
     @Override
@@ -71,6 +93,11 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     @Override
     public SmpsSequencerConfig getSequencerConfig() {
         return Sonic2SmpsSequencerConfig.CONFIG;
+    }
+
+    @Override
+    public SmpsPhysicalPolicy smpsPhysicalPolicy() {
+        return Sonic2SmpsCompatibilityPolicy.INSTANCE;
     }
 
     @Override
@@ -114,6 +141,15 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
                 Sonic2SmpsConstants.SEGA_SOUND_ADDR,
                 Sonic2SmpsConstants.SEGA_SOUND_SIZE,
                 Sonic2SmpsConstants.SEGA_SOUND_SAMPLE_RATE);
+    }
+
+    /**
+     * Reads the chant through the runtime-layer ROM reader so the audio layer
+     * never depends on {@code com.openggf.data} for this sample.
+     */
+    @Override
+    public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+        return SegaPcmRomReader.read(rom, getSegaPcmSpec());
     }
 
     @Override

@@ -1,6 +1,9 @@
 package com.openggf.tools.audio.parity;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -67,14 +70,22 @@ public final class S1OpenGgfSfxAudioCapture {
             AudioParityMetadata outputMetadata = AudioParityMetadata.openGgfSfx(
                     referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
                     referenceMetadata.romCrc32());
-            CaptureIterator ticks = new CaptureIterator(loader, song, dacData, contract,
-                    referenceMetadata.terminalRecordCount(), dispatchesByOrdinal);
-            AudioParityJsonl.writeNew(output, outputMetadata, ticks);
-            return new CaptureResult(referenceMetadata.terminalRecordCount(), ticks.dispatchCount);
+            try (CaptureIterator ticks = new CaptureIterator(
+                    loader, song, dacData, contract,
+                    referenceMetadata.terminalRecordCount(),
+                    dispatchesByOrdinal)) {
+                AudioParityJsonl.writeNew(output, outputMetadata, ticks);
+                return new CaptureResult(
+                        referenceMetadata.terminalRecordCount(),
+                        ticks.dispatchCount);
+            }
         }
     }
 
-    private static final class CaptureIterator implements Iterator<AudioParityTick>, ChipWriteObserver {
+    private static final class CaptureIterator
+            implements Iterator<AudioParityTick>, ChipWriteObserver,
+            AutoCloseable {
+        private final OwnedSmpsAudioStream stream;
         private final Sonic1SmpsLoader loader;
         private final AbstractSmpsData song;
         private final DacData dacData;
@@ -98,13 +109,24 @@ public final class S1OpenGgfSfxAudioCapture {
             this.contract = contract;
             this.terminalCount = terminalCount;
             this.dispatchesByOrdinal = dispatchesByOrdinal;
-            driver = new SmpsDriver(SAMPLE_RATE);
+            stream = new OwnedSmpsAudioStream(
+                    "s1-sfx-parity", 0,
+                    new SmpsPhysicalDevice.Settings(
+                            SAMPLE_RATE, false, false),
+                    LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
+                    ChipWriteObserver.NONE);
+            driver = stream.logicalDriver();
             musicSequencer = new SmpsSequencer(song, dacData, driver, () -> { },
                     Sonic1SmpsSequencerConfig.CONFIG);
             musicSequencer.setSampleRate(SAMPLE_RATE);
             driver.addSequencer(musicSequencer, false);
-            driver.setChipWriteObserver(this);
+            stream.setChipWriteObserver(this);
             S1OpenGgfAudioCapture.CaptureIterator.initializeS1MusicPlayback(driver, song);
+        }
+
+        @Override
+        public void close() {
+            stream.close();
         }
 
         private void submitDispatches(List<Integer> dispatches) {
@@ -147,7 +169,7 @@ public final class S1OpenGgfSfxAudioCapture {
             List<Integer> dispatches = dispatchesByOrdinal.getOrDefault(ordinal, List.of());
             submitDispatches(dispatches);
             if (ordinal == 0) {
-                musicSequencer.read(new short[0], 0);
+                musicSequencer.advanceSamples(0);
             } else {
                 // ROM walk order inside one UpdateMusic invocation: music tracks
                 // first, SFX tracks after — the driver's sequencer list preserves

@@ -4,8 +4,10 @@ import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
+import com.openggf.game.audio.SegaPcmRomReader;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.audio.smps.Sonic1SmpsLoader;
 
@@ -82,6 +84,11 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
     }
 
     @Override
+    public SmpsPhysicalPolicy smpsPhysicalPolicy() {
+        return Sonic1SmpsCompatibilityPolicy.INSTANCE;
+    }
+
+    @Override
     public int getSpeedShoesOnCommandId() {
         return Sonic1SmpsConstants.CMD_SPEED_UP;
     }
@@ -127,6 +134,15 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
                 Sonic1SmpsConstants.SEGA_SOUND_ADDR,
                 Sonic1SmpsConstants.SEGA_SOUND_SIZE,
                 Sonic1SmpsConstants.SEGA_SOUND_SAMPLE_RATE);
+    }
+
+    /**
+     * Reads the chant through the runtime-layer ROM reader so the audio layer
+     * never depends on {@code com.openggf.data} for this sample.
+     */
+    @Override
+    public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+        return SegaPcmRomReader.read(rom, getSegaPcmSpec());
     }
 
     /**

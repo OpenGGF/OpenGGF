@@ -12,13 +12,16 @@ public record S3kAudioTick(
         List<Integer> mailbox,
         GlobalState global,
         List<S3kAudioTrackState> tracks,
-        List<AudioParityChipWrite> writes) {
+        List<AudioParityChipWrite> writes,
+        ProducerInputEvidence producerInputEvidence) {
 
     public S3kAudioTick {
         if (ordinal < 0) {
             throw new IllegalArgumentException("ordinal must be non-negative");
         }
         Objects.requireNonNull(global, "global");
+        Objects.requireNonNull(producerInputEvidence,
+                "producerInputEvidence");
         mailbox = List.copyOf(mailbox);
         tracks = List.copyOf(tracks);
         writes = List.copyOf(writes);
@@ -32,6 +35,54 @@ public record S3kAudioTick(
             if (!S3kAudioParitySchema.ROLES.get(index).equals(tracks.get(index).role())) {
                 throw new IllegalArgumentException("fixed role absent or out of order at index " + index);
             }
+        }
+    }
+
+    public S3kAudioTick(
+            int ordinal,
+            boolean lag,
+            List<Integer> mailbox,
+            GlobalState global,
+            List<S3kAudioTrackState> tracks,
+            List<AudioParityChipWrite> writes) {
+        this(ordinal, lag, mailbox, global, tracks, writes,
+                ProducerInputEvidence.available());
+    }
+
+    /** Authenticated availability of the producer input consumed by a service. */
+    public record ProducerInputEvidence(
+            Availability availability,
+            String detail) {
+        public enum Availability {
+            AVAILABLE,
+            UNAVAILABLE_DURING_PRODUCER_SUSPENSION
+        }
+
+        public ProducerInputEvidence {
+            Objects.requireNonNull(availability, "availability");
+            Objects.requireNonNull(detail, "detail");
+            if (availability == Availability.AVAILABLE && !detail.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "available producer input cannot carry a limitation detail");
+            }
+            if (availability != Availability.AVAILABLE && detail.isBlank()) {
+                throw new IllegalArgumentException(
+                        "unavailable producer input requires evidence detail");
+            }
+        }
+
+        public static ProducerInputEvidence available() {
+            return new ProducerInputEvidence(Availability.AVAILABLE, "");
+        }
+
+        public static ProducerInputEvidence unavailable(String detail) {
+            return new ProducerInputEvidence(
+                    Availability.UNAVAILABLE_DURING_PRODUCER_SUSPENSION,
+                    detail);
+        }
+
+        public boolean unavailable() {
+            return availability != Availability.AVAILABLE;
         }
     }
 

@@ -47,11 +47,6 @@ public class TestSonic1AudioPriority {
         List<Integer> rawPsgWrites = new ArrayList<>();
 
         @Override
-        public void render(short[] buffer) {
-            // No-op for synth rendering in unit tests.
-        }
-
-        @Override
         public void writeFm(Object source, int port, int reg, int val) {
             super.writeFm(source, port, reg, val);
         }
@@ -404,5 +399,4 @@ public class TestSonic1AudioPriority {
         }
     }
 }
-
 

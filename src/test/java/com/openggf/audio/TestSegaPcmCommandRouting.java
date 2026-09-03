@@ -7,6 +7,7 @@ import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.data.Rom;
@@ -28,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSegaPcmCommandRouting {
@@ -102,7 +104,8 @@ class TestSegaPcmCommandRouting {
     }
 
     @Test
-    void s3kSegaCommandRoutesToRawPcmAndStopCommandStopsOnlyPcm() throws Exception {
+    void s3kFeStopsRawNowAndConsumesOneRetainedStopOnNextForward()
+            throws Exception {
         Rom rom = GameServices.rom().getRom();
         RecordingBackend backend = new RecordingBackend();
         AudioManager audio = AudioManager.getInstance();
@@ -110,20 +113,72 @@ class TestSegaPcmCommandRouting {
         audio.setAudioProfile(new Sonic3kAudioProfile());
         audio.setRom(rom);
 
+        java.util.List<String> writes = new java.util.ArrayList<>();
+        audio.setChipWriteObserver(new com.openggf.audio.synth.ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.add("ym:" + port + ":" + register + ":" + value);
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                writes.add("psg:" + value);
+            }
+        });
+
+        int before = audio.commandTimeline().entryCount();
         audio.playMusic(Sonic3kSmpsConstants.CMD_SEGA);
+        assertEquals(before + 1, audio.commandTimeline().entryCount());
+        assertInstanceOf(AudioCommand.PlaySegaPcm.class,
+                audio.commandTimeline().entryAt(before).command());
         audio.presentFrame(PresentationMode.SILENT);
         assertNotNull(audio.captureLogicalSnapshot().presentation()
                         .rawPcmVoiceId(),
                 "raw PCM is owned by the unified presentation registry");
-
+        writes.clear();
+        before = audio.commandTimeline().entryCount();
         audio.playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
+        assertEquals(before + 1, audio.commandTimeline().entryCount());
+        assertInstanceOf(AudioCommand.StopSegaPcmAndRetainGlobalStop.class,
+                audio.commandTimeline().entryAt(before).command());
         audio.presentFrame(PresentationMode.SILENT);
         assertNull(audio.captureLogicalSnapshot().presentation()
                         .rawPcmVoiceId(),
-                "raw PCM stop is owned by the unified presentation registry");
+                "FE removes raw PCM at the command boundary");
+        assertEquals(0, writes.size(),
+                "FE submission and silent application emit no driver writes");
+
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(84, writes.size());
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(84, writes.size(),
+                "the retained global stop is consumed exactly once");
 
         assertEquals(0, backend.musicPlayCalls,
                 "the SEGA chant never reaches the source-construction backend");
+    }
+
+    @Test
+    void s3kE4PreservesRawSegaPcmFromEitherMailbox() throws Exception {
+        Rom rom = GameServices.rom().getRom();
+        AudioManager audio = AudioManager.getInstance();
+        audio.setBackend(new NullAudioBackend());
+        audio.setAudioProfile(new Sonic3kAudioProfile());
+        audio.setRom(rom);
+        audio.playMusic(Sonic3kSmpsConstants.CMD_SEGA);
+        audio.presentFrame(PresentationMode.SILENT);
+        boolean ringLeft = audio.captureLogicalSnapshot()
+                .presentation().ringLeft();
+
+        audio.playSfx(Sonic3kSmpsConstants.CMD_STOP_SFX);
+        audio.presentFrame(PresentationMode.SILENT);
+
+        assertNotNull(audio.captureLogicalSnapshot().presentation()
+                .rawPcmVoiceId(),
+                "E4 is SMPS-SFX-only and must preserve raw SEGA PCM");
+        assertEquals(ringLeft, audio.captureLogicalSnapshot()
+                        .presentation().ringLeft(),
+                "E4 must preserve the ring alternation state");
     }
 
     private static final class RecordingBackend extends NullAudioBackend {

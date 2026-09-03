@@ -403,5 +403,28 @@ public class BlipDeltaBuffer {
 
         /** Non-copying view for in-memory restore paths only. Do not mutate. */
         int[] bufferRRef() { return bufferR; }
+
+        @Override
+        public boolean equals(Object candidate) {
+            return candidate instanceof Snapshot other
+                    && factorFp == other.factorFp
+                    && offsetFp == other.offsetFp
+                    && Arrays.equals(bufferL, other.bufferL)
+                    && Arrays.equals(bufferR, other.bufferR)
+                    && size == other.size
+                    && integL == other.integL
+                    && integR == other.integR;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Long.hashCode(factorFp);
+            result = 31 * result + Long.hashCode(offsetFp);
+            result = 31 * result + Arrays.hashCode(bufferL);
+            result = 31 * result + Arrays.hashCode(bufferR);
+            result = 31 * result + Integer.hashCode(size);
+            result = 31 * result + Integer.hashCode(integL);
+            return 31 * result + Integer.hashCode(integR);
+        }
     }
 }

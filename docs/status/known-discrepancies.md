@@ -50,6 +50,8 @@ no discrepancy entry was added or reclassified by the cutover.
 31. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation)
 32. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores)
 33. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration)
+34. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention)
+35. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
 
 ---
 
@@ -2618,6 +2620,51 @@ trace comparator remains deliberately unchanged in this patch.
 **Removal condition.** Give the parent Tornado an exact identity through the child-presence
 tail without slot fitting, compare and close the state-8-and-later rows, then promote the
 Tornado-only warning helper to `Severity.ERROR`.
+
+## S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention
+
+**Location:** `Sonic2SaxmanLoadReadiness`, `SmpsDriverSession`
+
+**ROM reference:** `docs/s2disasm/s2.sounddriver.asm` `zBGMLoad`,
+`zSaxmanDec`, `zInitMusicPlayback`, and `zUpdateMusic`
+
+Sonic 2 decompresses compressed music on the Z80 inside its interrupt service,
+so no music update runs until the decompressor and post-load initialization
+return. OpenGGF derives that readiness from the actual compressed ROM stream
+and the shipped unoptimised Z80 instruction path. For EHZ this is 363,255
+T-states on NTSC: the model predicts the six fully masked rows observed by the
+native driver oracle without using a movie row, song id, or fitted frame count.
+
+The model intentionally omits the sub-frame perturbation from exact 68K
+BUSREQ phase, VDP-DMA contention on bank-window reads, and YM2612 busy-poll
+retries. Those effects require a shared cycle scheduler that OpenGGF does not
+have. Their bounded residual does not cross EHZ's frame-granularity readiness
+boundary, but another compressed stream sufficiently close to a boundary may
+become ready one presentation earlier or later than hardware.
+
+Remove this entry when the engine models the shared 68K/Z80/VDP/YM bus phase
+closely enough for compressed-load readiness to include those stalls directly.
+
+## S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It
+
+**Location:** `AudioManager.playMusic`/`stopMusic`, `AudioPresentationProducer`,
+`Sonic2SoundRequestService`
+
+`AudioManager.playMusic` enters Sonic 2's real mailbox
+(`Sonic2SoundRequestService`, modelling `PlayMusic` at `s2.asm:1520-1528`), but
+`stopMusic` still enqueues directly into the plain presentation command queue.
+While a compressed load blocks mailbox consumption
+(`SmpsDriverSession#blocksForwardRequestConsumption`), the producer holds both
+queues shut and, on release, applies held plain commands before held mailbox
+requests — so a play and a stop issued in the same blocked span are not
+issue-ordered. A faithful fix routes the stop through the mailbox as the
+shipped `MusID_Stop` command (`CmdPtr_Stop` → `zStopSoundAndMusic`,
+`s2.sounddriver.asm:1598,2545`), but that command shares `Music1` with the
+`fixBugs = 0` slot-3 `VoiceTblPtr` alias bug (the unfixed four-iteration SFX
+scan reads `SoundQueue.SFX0+3`, which is `Music1`'s struct offset,
+`s2.asm:1270-1332`, `s2.constants.asm:1879-1885`) — on real hardware a second
+same-frame mailbox write can itself be silently lost this way, so the fix must
+accept that loss rather than paper over it. Deferred; not fixed by this entry.
 
 ## YM2612 Output Scale, Resting Level and DAC Presentation
 

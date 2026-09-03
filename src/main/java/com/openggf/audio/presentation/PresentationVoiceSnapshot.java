@@ -1,15 +1,8 @@
 package com.openggf.audio.presentation;
 
 import com.openggf.audio.rewind.AudioSourceDescriptor;
-import com.openggf.audio.rewind.SmpsDriverSnapshot;
-
 public sealed interface PresentationVoiceSnapshot
-        permits PresentationVoiceSnapshot.Smps, PresentationVoiceSnapshot.Sample {
-
-    record Smps(long voiceId, int priority, Integer musicId,
-                AudioSourceDescriptor sourceDescriptor, int maxStereoFrames,
-                SmpsDriverSnapshot driver) implements PresentationVoiceSnapshot {
-    }
+        permits PresentationVoiceSnapshot.Sample {
 
     record Sample(long voiceId, int priority, String assetId, Integer musicId,
                   AudioSourceDescriptor sourceDescriptor, long sourcePositionQ32,

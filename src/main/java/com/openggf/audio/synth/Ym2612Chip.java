@@ -5,6 +5,7 @@ import com.openggf.audio.synth.nuked.NukedOpn2;
 import com.openggf.audio.synth.nuked.NukedOpn2State;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * YM2612 FM synthesiser: a facade over the Nuked-OPN2 port
@@ -903,6 +904,44 @@ public class Ym2612Chip {
 
         /** Non-copying view for in-memory restore paths only. Do not mutate. */
         boolean[] mutesRef() { return mutes; }
+
+        @Override
+        public boolean equals(Object candidate) {
+            return candidate instanceof Snapshot other
+                    && chipType == other.chipType
+                    && Double.compare(outputRate, other.outputRate) == 0
+                    && Objects.equals(core, other.core)
+                    && frameSumLeft == other.frameSumLeft
+                    && frameSumRight == other.frameSumRight
+                    && Arrays.equals(directFrames, other.directFrames)
+                    && busHold == other.busHold
+                    && Arrays.equals(pendingOps, other.pendingOps)
+                    && queuedAddress == other.queuedAddress
+                    && currentDacSampleId == other.currentDacSampleId
+                    && dacPeriod == other.dacPeriod
+                    && dacIndex == other.dacIndex
+                    && dacAccumulator == other.dacAccumulator
+                    && Double.compare(dacPos, other.dacPos) == 0
+                    && dacPreviousValue == other.dacPreviousValue
+                    && dacPendingValue == other.dacPendingValue
+                    && dacWritePhase == other.dacWritePhase
+                    && dacWriteValue == other.dacWriteValue
+                    && dacInterpolate == other.dacInterpolate
+                    && Arrays.equals(mutes, other.mutes)
+                    && Objects.equals(resampler, other.resampler);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(chipType, outputRate, core,
+                    frameSumLeft, frameSumRight, busHold, queuedAddress,
+                    currentDacSampleId, dacPeriod, dacIndex, dacAccumulator,
+                    dacPos, dacPreviousValue, dacPendingValue, dacWritePhase,
+                    dacWriteValue, dacInterpolate, resampler);
+            result = 31 * result + Arrays.hashCode(directFrames);
+            result = 31 * result + Arrays.hashCode(pendingOps);
+            return 31 * result + Arrays.hashCode(mutes);
+        }
     }
 
     /** See {@link #captureSfxAdmissionState(int)}. */

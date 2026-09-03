@@ -800,6 +800,10 @@ public class GameLoop {
         return paused || userPaused;
     }
 
+    public boolean externalFrameOrInputOwnerActive() {
+        return ExternalFrameOrInputOwnership.active(engineServices);
+    }
+
     /**
      * Updates audio pause state based on combined pause flags.
      * Audio should be paused if either window or user pause is active.
@@ -1067,6 +1071,12 @@ public class GameLoop {
         }
         Runnable productionIteration = () ->
             lifecycleContext.plcFrameLifecycle().runLogicalIteration(
+                    frame -> {
+                        if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
+                            LevelFrameStep.dispatchGameVBlank(
+                                    LevelFrameContext.from(lifecycleContext), frame);
+                        }
+                    },
                     resolveFadeManager()::update, frame -> {
                         activePlcLifecycleFrame = frame;
                         try {
@@ -1550,6 +1560,9 @@ public class GameLoop {
             // belongs to the first frame past the results screen's last
             // sampled row, never to that row itself.
             if (resultsExitPreLevelFadeFramesRemaining < 0) {
+                // Level begins before its counted fade: Sonic 2's loc_3EC4
+                // PlaySound(F9) precedes ClearPLC/Pal_FadeToBlack.
+                levelManager.beginLevelEntry();
                 resultsExitPreLevelFadeFramesRemaining = GameServices.module()
                         .getLevelInitProfile().preLevelFadeOutFrames();
             }
@@ -1852,7 +1865,7 @@ public class GameLoop {
                 levelIterationAdmission.consumeTransitionFreezeRow(
                         playbackDebugManager,
                         levelManager != null ? levelManager.getObjectManager() : null,
-                        LevelFrameContext.from(gameplayMode));
+                        LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame);
             }
         }
 
@@ -1979,7 +1992,7 @@ public class GameLoop {
                 int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
                 for (int tick = 0; tick < vblankTicks; tick++) {
                     LevelFrameStep.serviceHardwareVBlankOnly(
-                            LevelFrameContext.from(gameplayMode));
+                            LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame);
                     // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                     levelManager.getObjectManager().advanceVblaCounter();
                 }
@@ -2006,7 +2019,7 @@ public class GameLoop {
             // when no playback session is active.
             if (levelManager.getObjectManager() != null) {
                 LevelFrameStep.serviceHardwareVBlankOnly(
-                        LevelFrameContext.from(gameplayMode));
+                        LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame);
                 // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                 levelManager.getObjectManager().advanceVblaCounter();
             }
@@ -2703,10 +2716,7 @@ public class GameLoop {
         applyTitleCardControlLock(true);
 
         // Play zone music (ROM: Restore_LevelMusic during title card wait)
-        int zoneMusicId = levelManager.getCurrentLevelMusicId();
-        if (zoneMusicId >= 0) {
-            audioManager.playMusic(zoneMusicId);
-        }
+        levelManager.playCurrentLevelMusic();
 
         // Fade from black — level + zone title card become visible together
         fadeManager.startFadeFromBlack(null);
@@ -3195,11 +3205,7 @@ public class GameLoop {
         }
 
         // Start zone music immediately when title card begins (not at the end)
-        int zoneMusicId = levelManager.getCurrentLevelMusicId();
-        if (zoneMusicId >= 0) {
-            audioManager.playMusic(zoneMusicId);
-            LOGGER.fine("Started zone music at title card: 0x" + Integer.toHexString(zoneMusicId));
-        }
+        levelManager.playCurrentLevelMusic();
 
         // Notify listener of mode change
         if (gameModeChangeListener != null) {

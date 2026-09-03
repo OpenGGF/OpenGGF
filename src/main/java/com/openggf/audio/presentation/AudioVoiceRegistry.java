@@ -2,8 +2,6 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioDiagnosticObserverException;
 import com.openggf.audio.ChannelType;
-import com.openggf.audio.driver.PreparedSfxAdmission;
-import com.openggf.audio.driver.SfxAdmissionMutationJournal;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
@@ -35,6 +33,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.VoiceDescriptor;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.session.SmpsDriverSession;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,12 +59,118 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             PresentationVoice voice) {
     }
 
+    /** Driverless metadata handle for one session-owned music command. */
+    private static final class SmpsMusicHandle
+            implements PresentationVoice {
+        private final long voiceId;
+
+        private SmpsMusicHandle(long voiceId) {
+            this.voiceId = voiceId;
+        }
+
+        @Override public long voiceId() { return voiceId; }
+        @Override public int priority() { return 0; }
+        @Override public void mixInto(
+                long[] accumulation, int stereoFrames) { }
+        @Override public boolean isComplete() { return false; }
+        @Override public void stop() { }
+        @Override public PresentationVoiceSnapshot snapshot() {
+            throw new IllegalStateException(
+                    "session SMPS handles are snapshotted by the session");
+        }
+    }
+
     private record PreparedRestore(
             MusicSlot activeMusic,
             MusicSlot[] overrides,
-            SmpsCompositeVoice standaloneSmps,
             SampleBackedVoice rawPcm,
             SampleBackedVoice[] sampleSfx) {
+    }
+
+    public interface LiveMutationToken {
+    }
+
+    private final class RegistryLiveMutation implements LiveMutationToken {
+        private final AudioVoiceRegistry owner = AudioVoiceRegistry.this;
+        private final MusicSlot activeMusic =
+                AudioVoiceRegistry.this.activeMusic;
+        private final MusicSlot[] overrides = java.util.Arrays.copyOf(
+                AudioVoiceRegistry.this.overrideStack,
+                AudioVoiceRegistry.this.overrideCount);
+        private final SampleBackedVoice rawPcm =
+                AudioVoiceRegistry.this.rawPcm;
+        private final SampleBackedVoice[] sampleSfx =
+                java.util.Arrays.copyOf(
+                        AudioVoiceRegistry.this.sampleSfx,
+                        AudioVoiceRegistry.this.sampleSfxCount);
+        private final PresentationVoice[] voices;
+        private final Object[] voiceStates;
+        private final int overrideCount =
+                AudioVoiceRegistry.this.overrideCount;
+        private final int sampleSfxCount =
+                AudioVoiceRegistry.this.sampleSfxCount;
+        private final int deferredRemovalCount =
+                AudioVoiceRegistry.this.deferredRemovalCount;
+        private final long[] deferredRemovals = java.util.Arrays.copyOf(
+                AudioVoiceRegistry.this.deferredRemovals,
+                AudioVoiceRegistry.this.deferredRemovalCount);
+        private final int completionSweepCount =
+                AudioVoiceRegistry.this.completionSweepCount;
+        private final boolean completionSweepRequired =
+                AudioVoiceRegistry.this.completionSweepRequired;
+        private final boolean rendering =
+                AudioVoiceRegistry.this.rendering;
+        private final boolean sfxBlocked =
+                AudioVoiceRegistry.this.sfxBlocked;
+        private final boolean pendingRestore =
+                AudioVoiceRegistry.this.pendingRestore;
+        private final boolean speedShoesEnabled =
+                AudioVoiceRegistry.this.speedShoesEnabled;
+        private final int speedMultiplier =
+                AudioVoiceRegistry.this.speedMultiplier;
+        private final int fmMuteMask =
+                AudioVoiceRegistry.this.fmMuteMask;
+        private final int fmSoloMask =
+                AudioVoiceRegistry.this.fmSoloMask;
+        private final int psgMuteMask =
+                AudioVoiceRegistry.this.psgMuteMask;
+        private final int psgSoloMask =
+                AudioVoiceRegistry.this.psgSoloMask;
+        private final boolean ringLeft = AudioVoiceRegistry.this.ringLeft;
+        private final long nextVoiceId =
+                AudioVoiceRegistry.this.nextVoiceId;
+        private final int warnedRejectionCount =
+                AudioVoiceRegistry.this.warnedRejectionCount;
+        private final int warnedRejectionCursor =
+                AudioVoiceRegistry.this.warnedRejectionCursor;
+        private final long[] warnedRejectionVoiceIds =
+                AudioVoiceRegistry.this.warnedRejectionVoiceIds.clone();
+        private final SmpsCoordFlagRuntimeState.Snapshot coordState =
+                coordFlagHandlers.state().snapshot();
+        private final AudioPresentationDependencyResolver
+                .DiagnosticTransaction diagnostics;
+        private boolean diagnosticsPublished;
+        private boolean commitPrepared;
+        private boolean consumed;
+
+        private RegistryLiveMutation() {
+            diagnostics = dependencyResolver.beginDiagnosticTransaction();
+            try {
+                voices = allOwnedVoices();
+                voiceStates = new Object[voices.length];
+                for (int index = 0; index < voices.length; index++) {
+                    voiceStates[index] = captureVoiceMutationState(
+                            voices[index]);
+                }
+            } catch (RuntimeException failure) {
+                try {
+                    diagnostics.discard();
+                } catch (RuntimeException discardFailure) {
+                    failure.addSuppressed(discardFailure);
+                }
+                throw failure;
+            }
+        }
     }
 
     public static final class PreparedSnapshotRestore {
@@ -74,6 +179,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         private final AudioPresentationDependencyResolver.DiagnosticTransaction
                 diagnostics;
         private boolean consumed;
+        private boolean diagnosticsPublished;
 
         private PreparedSnapshotRestore(
                 PreparedRestore voices,
@@ -91,6 +197,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private final AudioPresentationDependencyResolver dependencyResolver;
     private final SmpsCoordFlagHandlerOwner coordFlagHandlers;
     private final Consumer<String> warningConsumer;
+    private final SmpsDriverSession smpsSession;
     private final MusicSlot[] overrideStack =
             new MusicSlot[MAX_MUSIC_OVERRIDES];
     private final SampleBackedVoice[] sampleSfx =
@@ -103,7 +210,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             new long[WARNED_REJECTION_CAPACITY];
 
     private MusicSlot activeMusic;
-    private SmpsCompositeVoice standaloneSmps;
     private SampleBackedVoice rawPcm;
     private int overrideCount;
     private int sampleSfxCount;
@@ -124,6 +230,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private int psgSoloMask;
     private boolean ringLeft = true;
     private long nextVoiceId;
+    private boolean liveMutationOpen;
 
     public AudioVoiceRegistry() {
         this(new SmpsSfxInstantiation() {
@@ -133,15 +240,10 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 return null;
             }
 
-            @Override
-            public SmpsCompositeVoice instantiateStandaloneCached(
-                    ResolvedSmpsSfxSource source) {
-                return null;
-            }
         }, rejectingDependencyResolver(),
                 new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()),
                 ignored -> {
-                });
+                }, null);
     }
 
     public AudioVoiceRegistry(
@@ -149,7 +251,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             SmpsCoordFlagHandlerOwner coordFlagHandlers,
             Consumer<String> warningConsumer) {
         this(sfxInstantiation, rejectingDependencyResolver(),
-                coordFlagHandlers, warningConsumer);
+                coordFlagHandlers, warningConsumer, null);
     }
 
     public AudioVoiceRegistry(
@@ -157,6 +259,16 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             AudioPresentationDependencyResolver dependencyResolver,
             SmpsCoordFlagHandlerOwner coordFlagHandlers,
             Consumer<String> warningConsumer) {
+        this(sfxInstantiation, dependencyResolver, coordFlagHandlers,
+                warningConsumer, null);
+    }
+
+    public AudioVoiceRegistry(
+            SmpsSfxInstantiation sfxInstantiation,
+            AudioPresentationDependencyResolver dependencyResolver,
+            SmpsCoordFlagHandlerOwner coordFlagHandlers,
+            Consumer<String> warningConsumer,
+            SmpsDriverSession smpsSession) {
         ownerThread = Thread.currentThread();
         this.sfxInstantiation =
                 Objects.requireNonNull(sfxInstantiation, "sfxInstantiation");
@@ -166,11 +278,21 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 Objects.requireNonNull(coordFlagHandlers, "coordFlagHandlers");
         this.warningConsumer =
                 Objects.requireNonNull(warningConsumer, "warningConsumer");
+        this.smpsSession = smpsSession;
     }
 
     public void apply(AudioPresentationCommand command) {
         assertOwnerBoundary();
         Objects.requireNonNull(command, "command");
+
+        if (hasUnownedSmps(command)) {
+            throw new IllegalArgumentException(
+                    "SMPS presentation requires a session-owned prepared command");
+        }
+        if (smpsSession != null && applySessionMetadata(command)) {
+            rebuildOrderedVoices();
+            return;
+        }
 
         if (command instanceof ReplaceMusic replace) {
             replaceMusic(replace.music());
@@ -189,8 +311,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             }
         } else if (command instanceof EndMusicOverride end) {
             endMusicOverride(end.musicId());
-        } else if (command instanceof AddSmpsSfx add) {
-            addSmpsSfx(add.source());
         } else if (command instanceof StartSampleSfx start) {
             admitSampleSfx(start.voice());
         } else if (command instanceof ReplaceRawPcm replace) {
@@ -198,6 +318,14 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             sfxInstantiation.observeLifecycle(
                     SmpsDriverServiceObserver.LifecycleEvent.pcm(
                             SmpsDriverServiceObserver.LifecycleKind.SEGA_PCM_ENTER));
+        } else if (command instanceof AudioPresentationCommand
+                .StopRawPcmAndRetainGlobalStop) {
+            if (stopRawPcm()) {
+                sfxInstantiation.observeLifecycle(
+                        SmpsDriverServiceObserver.LifecycleEvent.pcm(
+                                SmpsDriverServiceObserver.LifecycleKind
+                                        .SEGA_PCM_LEAVE));
+            }
         } else if (command instanceof StopRawPcm) {
             if (stopRawPcm()) {
                 sfxInstantiation.observeLifecycle(
@@ -237,6 +365,348 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             throw new IllegalArgumentException(
                     "unsupported presentation command " + command.getClass());
         }
+        rebuildOrderedVoices();
+    }
+
+    /** Resolves a cached SFX program after the producer captured rollback. */
+    public com.openggf.audio.session.PreparedSmpsSfxProgram
+            prepareSessionSfx(AddSmpsSfx command) {
+        assertOwnerBoundary();
+        if (smpsSession == null) {
+            throw new IllegalStateException(
+                    "registry has no SMPS session");
+        }
+        ResolvedSmpsSfxSource source = Objects.requireNonNull(
+                command, "command").source();
+        SmpsSfxInstantiation.Admission admission =
+                sfxInstantiation.evaluateAdmission(source, null);
+        if (!admission.result().accepted()) {
+            observeAdmissionQuarantined(admission);
+            warnRejected(source.standaloneVoiceId(),
+                    "SMPS SFX policy rejected " + source.assetKey());
+            return null;
+        }
+        if (sfxBlocked) {
+            observeAdmissionQuarantined(
+                    sfxInstantiation.rejectedAdmission(admission,
+                            SmpsRequestAdmissionPolicy.RejectionReason
+                                    .BLOCKED));
+            warnRejected(source.standaloneVoiceId(),
+                    "SMPS SFX blocked at presentation boundary");
+            return null;
+        }
+        com.openggf.audio.session.PreparedSmpsSfxProgram program;
+        try {
+            program = command.program() != null
+                    ? command.program()
+                    : sfxInstantiation.prepareCached(source);
+        } catch (SmpsSfxInstantiation.CacheMissException cacheMiss) {
+            observeAdmissionQuarantined(
+                    sfxInstantiation.rejectedAdmission(admission,
+                            SmpsRequestAdmissionPolicy.RejectionReason
+                                    .CACHE_MISS));
+            warnRejected(source.standaloneVoiceId(),
+                    "SMPS SFX cache rejected " + source.assetKey());
+            return null;
+        }
+        if (program == null) {
+            observeAdmissionQuarantined(
+                    sfxInstantiation.rejectedAdmission(admission,
+                            SmpsRequestAdmissionPolicy.RejectionReason
+                                    .CACHE_MISS));
+            warnRejected(source.standaloneVoiceId(),
+                    "SMPS SFX cache miss for " + source.assetKey());
+            return null;
+        }
+        observeAdmissionQuarantined(admission);
+        nextVoiceId = Math.max(nextVoiceId,
+                source.standaloneVoiceId() + 1);
+        return program;
+    }
+
+    private boolean applySessionMetadata(
+            AudioPresentationCommand command) {
+        if (command instanceof ReplaceMusic replace
+                && isPreparedSmps(replace.music())) {
+            replaceSessionMusic(replace.music());
+            return true;
+        }
+        if (command instanceof PushMusicOverride push
+                && isPreparedSmps(push.music())) {
+            pushSessionMusic(push.music());
+            return true;
+        }
+        if (command instanceof AddSmpsSfx) {
+            return true;
+        }
+        if (command instanceof AudioPresentationCommand.RetainGlobalStop
+                || command instanceof AudioPresentationCommand.StopSmpsSfx
+                || command instanceof AudioPresentationCommand.SilencePsg
+                || command instanceof AudioPresentationCommand
+                .ReferenceLimitation) {
+            return true;
+        }
+        if (command instanceof StopMusic) {
+            stopMusic();
+            return true;
+        }
+        if (command instanceof StopAllSfx) {
+            stopAllSfx();
+            return true;
+        }
+        if (command instanceof FadeMusic
+                || command instanceof ChangeMusicTempo) {
+            return true;
+        }
+        if (command instanceof SetSpeedShoes speed) {
+            speedShoesEnabled = speed.enabled();
+            return true;
+        }
+        if (command instanceof SetSpeedMultiplier speed) {
+            speedMultiplier = speed.multiplier();
+            return true;
+        }
+        if (command instanceof ResetRingAlternation reset) {
+            ringLeft = reset.ringLeft();
+            return true;
+        }
+        if (command instanceof HardReset) {
+            clear();
+            return true;
+        }
+        return false;
+    }
+
+    boolean hasActiveMusicMetadata() {
+        return activeMusic != null;
+    }
+
+    int activeMusicMetadataId() {
+        return activeMusic == null ? -1 : activeMusic.musicId();
+    }
+
+    boolean activeMusicMetadataUsesSession() {
+        return activeMusic != null
+                && activeMusic.voice() instanceof SmpsMusicHandle;
+    }
+
+    private static boolean isPreparedSmps(MusicVoiceEntry music) {
+        return music.voiceDescriptor() instanceof SmpsVoiceDescriptor smps
+                && smps.activation() != null;
+    }
+
+    private void replaceSessionMusic(MusicVoiceEntry entry) {
+        stopMusic();
+        activeMusic = sessionMusicSlot(entry);
+        noteVoiceId(activeMusic.voice());
+    }
+
+    private void pushSessionMusic(MusicVoiceEntry entry) {
+        if (activeMusic != null
+                && activeMusic.musicId() != entry.musicId()
+                && overrideCount == overrideStack.length) {
+            throw new IllegalStateException(
+                    "music override stack exceeds fixed capacity");
+        }
+        MusicSlot replacement = sessionMusicSlot(entry);
+        if (activeMusic != null
+                && activeMusic.musicId() == entry.musicId()) {
+            activeMusic = replacement;
+        } else {
+            if (activeMusic != null) {
+                overrideStack[overrideCount++] = activeMusic;
+            }
+            activeMusic = replacement;
+        }
+        noteVoiceId(replacement.voice());
+    }
+
+    private void restoreSessionMusic() {
+        if (overrideCount == 0) {
+            pendingRestore = false;
+            return;
+        }
+        activeMusic = overrideStack[--overrideCount];
+        overrideStack[overrideCount] = null;
+        pendingRestore = false;
+    }
+
+    private void endSessionMusic(int musicId) {
+        if (activeMusic != null && activeMusic.musicId() == musicId) {
+            restoreSessionMusic();
+            return;
+        }
+        for (int index = overrideCount - 1; index >= 0; index--) {
+            if (overrideStack[index].musicId() != musicId) {
+                continue;
+            }
+            int remaining = overrideCount - index - 1;
+            if (remaining > 0) {
+                System.arraycopy(overrideStack, index + 1,
+                        overrideStack, index, remaining);
+            }
+            overrideStack[--overrideCount] = null;
+            return;
+        }
+    }
+
+    private static MusicSlot sessionMusicSlot(MusicVoiceEntry entry) {
+        return new MusicSlot(entry.musicId(), entry.sourceDescriptor(),
+                new SmpsMusicHandle(entry.voiceDescriptor().voiceId()));
+    }
+
+    private void observeAdmissionQuarantined(
+            SmpsSfxInstantiation.Admission admission) {
+        try {
+            sfxInstantiation.observeAdmission(admission);
+        } catch (RuntimeException ignored) {
+            // Session diagnostics cannot reject or replay committed audio.
+        }
+    }
+
+    public LiveMutationToken captureLiveMutation() {
+        assertOwnerBoundary();
+        if (liveMutationOpen) {
+            throw new IllegalStateException(
+                    "an audio registry mutation is already active");
+        }
+        liveMutationOpen = true;
+        try {
+            return new RegistryLiveMutation();
+        } catch (RuntimeException failure) {
+            liveMutationOpen = false;
+            throw failure;
+        }
+    }
+
+    public void commitLiveMutation(LiveMutationToken token) {
+        assertOwnerBoundary();
+        RegistryLiveMutation state = requireLiveMutation(token);
+        requireUnconsumed(state);
+        if (!liveMutationOpen) {
+            throw new IllegalStateException(
+                    "audio registry mutation is not active");
+        }
+        if (!state.commitPrepared) {
+            prepareLiveMutationCommit(token);
+        }
+        state.consumed = true;
+        liveMutationOpen = false;
+    }
+
+    /** Runs the only fallible commit work while rollback is still possible. */
+    public void prepareLiveMutationCommit(LiveMutationToken token) {
+        assertOwnerBoundary();
+        RegistryLiveMutation state = requireLiveMutation(token);
+        requireUnconsumed(state);
+        if (!liveMutationOpen) {
+            throw new IllegalStateException(
+                    "audio registry mutation is not active");
+        }
+        if (state.commitPrepared) {
+            throw new IllegalStateException(
+                    "audio registry mutation commit is already prepared");
+        }
+        state.diagnostics.endPreparation();
+        state.commitPrepared = true;
+    }
+
+    /** Publishes diagnostics only after the composite owner committed. */
+    public void publishCommittedDiagnostics(LiveMutationToken token) {
+        assertOwnerBoundary();
+        RegistryLiveMutation state = requireLiveMutation(token);
+        if (!state.consumed) {
+            throw new IllegalStateException(
+                    "registry mutation is not committed");
+        }
+        if (state.diagnosticsPublished) {
+            throw new IllegalStateException(
+                    "registry diagnostics are already published");
+        }
+        state.diagnosticsPublished = true;
+        state.diagnostics.commit();
+    }
+
+    public void rollbackLiveMutation(LiveMutationToken token) {
+        assertOwnerThread();
+        RegistryLiveMutation state = requireLiveMutation(token);
+        requireUnconsumed(state);
+        if (!liveMutationOpen) {
+            throw new IllegalStateException(
+                    "audio registry mutation is not active");
+        }
+        RuntimeException primary = null;
+        try {
+            state.diagnostics.discard();
+        } catch (RuntimeException failure) {
+            primary = failure;
+        }
+        for (int index = state.voices.length - 1; index >= 0; index--) {
+            try {
+                rollbackVoiceMutation(
+                        state.voices[index], state.voiceStates[index]);
+            } catch (RuntimeException failure) {
+                if (primary == null) {
+                    primary = failure;
+                } else {
+                    primary.addSuppressed(failure);
+                }
+            }
+        }
+        activeMusic = state.activeMusic;
+        java.util.Arrays.fill(overrideStack, null);
+        System.arraycopy(state.overrides, 0,
+                overrideStack, 0, state.overrideCount);
+        overrideCount = state.overrideCount;
+        rawPcm = state.rawPcm;
+        java.util.Arrays.fill(sampleSfx, null);
+        System.arraycopy(state.sampleSfx, 0,
+                sampleSfx, 0, state.sampleSfxCount);
+        sampleSfxCount = state.sampleSfxCount;
+        deferredRemovalCount = state.deferredRemovalCount;
+        System.arraycopy(state.deferredRemovals, 0,
+                deferredRemovals, 0, state.deferredRemovalCount);
+        completionSweepCount = state.completionSweepCount;
+        completionSweepRequired = state.completionSweepRequired;
+        rendering = state.rendering;
+        sfxBlocked = state.sfxBlocked;
+        pendingRestore = state.pendingRestore;
+        speedShoesEnabled = state.speedShoesEnabled;
+        speedMultiplier = state.speedMultiplier;
+        fmMuteMask = state.fmMuteMask;
+        fmSoloMask = state.fmSoloMask;
+        psgMuteMask = state.psgMuteMask;
+        psgSoloMask = state.psgSoloMask;
+        ringLeft = state.ringLeft;
+        nextVoiceId = state.nextVoiceId;
+        warnedRejectionCount = state.warnedRejectionCount;
+        warnedRejectionCursor = state.warnedRejectionCursor;
+        System.arraycopy(state.warnedRejectionVoiceIds, 0,
+                warnedRejectionVoiceIds, 0,
+                warnedRejectionVoiceIds.length);
+        coordFlagHandlers.state().restore(state.coordState);
+        rebuildOrderedVoices();
+        state.consumed = true;
+        liveMutationOpen = false;
+        if (primary != null) {
+            throw primary;
+        }
+    }
+
+    /** Clears non-SMPS presentation state after a committed retained stop. */
+    public void clearForGlobalStopWithoutWrites() {
+        assertOwnerThread();
+        activeMusic = null;
+        java.util.Arrays.fill(overrideStack, null);
+        overrideCount = 0;
+        rawPcm = null;
+        java.util.Arrays.fill(sampleSfx, null);
+        sampleSfxCount = 0;
+        pendingRestore = false;
+        speedShoesEnabled = false;
+        speedMultiplier = 1;
+        ringLeft = true;
+        coordFlagHandlers.reset();
         rebuildOrderedVoices();
     }
 
@@ -288,12 +758,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         if (!rendering) {
             throw new IllegalStateException(
                     "outer-frame service requires active voice traversal");
-        }
-        for (int index = 0; index < orderedVoiceCount; index++) {
-            PresentationVoice voice = orderedVoices[index];
-            if (voice instanceof SmpsCompositeVoice composite) {
-                composite.serviceOuterFrame();
-            }
         }
     }
 
@@ -365,7 +829,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         for (int index = 0; index < overrideCount; index++) {
             addMusicSnapshot(voices, overrideStack[index]);
         }
-        addVoiceSnapshot(voices, standaloneSmps, null);
         addVoiceSnapshot(voices, rawPcm, null);
         for (int index = 0; index < sampleSfxCount; index++) {
             addVoiceSnapshot(voices, sampleSfx[index], null);
@@ -381,7 +844,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 voices,
                 activeMusic == null ? null : slotSnapshot(activeMusic),
                 overrides,
-                standaloneSmps == null ? null : standaloneSmps.voiceId(),
                 rawPcm == null ? null : rawPcm.voiceId(),
                 fmMuteMask,
                 fmSoloMask,
@@ -392,7 +854,10 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 speedShoesEnabled,
                 speedMultiplier,
                 ringLeft,
-                coordFlagHandlers.state().snapshot());
+                coordFlagHandlers.state().snapshot(),
+                smpsSession == null ? null : smpsSession.captureSnapshot(),
+                smpsSession == null
+                        ? null : smpsSession.captureLogicalSnapshot());
     }
 
     public void restore(
@@ -407,6 +872,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         assertOwnerBoundary();
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
+        validateAuthoritativeSnapshot(snapshot);
         SmpsCoordFlagRuntimeState.Snapshot previousCoordState =
                 coordFlagHandlers.state().snapshot();
         PresentationVoice[] recreated =
@@ -427,7 +893,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             for (PresentationVoice voice : recreated) {
                 if (voice != null) {
                     try {
-                        voice.stop();
+                        discardDetachedVoice(voice);
                     } catch (RuntimeException cleanupFailure) {
                         failure.addSuppressed(cleanupFailure);
                     }
@@ -453,6 +919,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     public void commitPreparedRestore(PreparedSnapshotRestore restore) {
+        commitPreparedRestoreState(restore);
+        publishPreparedRestoreDiagnostics(restore);
+    }
+
+    void commitPreparedRestoreState(PreparedSnapshotRestore restore) {
         assertOwnerBoundary();
         Objects.requireNonNull(restore, "restore");
         if (restore.consumed) {
@@ -470,7 +941,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             overrideCount = prepared.overrides().length;
             System.arraycopy(prepared.overrides(), 0, overrideStack, 0,
                     overrideCount);
-            standaloneSmps = prepared.standaloneSmps();
             rawPcm = prepared.rawPcm();
             for (SampleBackedVoice sample : prepared.sampleSfx()) {
                 insertSampleSorted(sample);
@@ -496,6 +966,21 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             AudioDiagnosticObserverException.rethrowIfPresent(failure);
             throw failure;
         }
+    }
+
+    void publishPreparedRestoreDiagnostics(
+            PreparedSnapshotRestore restore) {
+        assertOwnerBoundary();
+        Objects.requireNonNull(restore, "restore");
+        if (!restore.consumed) {
+            throw new IllegalStateException(
+                    "presentation restore state is not committed");
+        }
+        if (restore.diagnosticsPublished) {
+            throw new IllegalStateException(
+                    "presentation restore diagnostics already published");
+        }
+        restore.diagnosticsPublished = true;
         restore.diagnostics.commit();
     }
 
@@ -508,20 +993,17 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         try {
             PreparedRestore prepared = restore.voices;
             if (prepared.activeMusic() != null) {
-                prepared.activeMusic().voice().stop();
+                discardDetachedVoice(prepared.activeMusic().voice());
             }
             for (MusicSlot slot : prepared.overrides()) {
-                slot.voice().stop();
-            }
-            if (prepared.standaloneSmps() != null) {
-                prepared.standaloneSmps().stop();
+                discardDetachedVoice(slot.voice());
             }
             if (prepared.rawPcm() != null) {
-                prepared.rawPcm().stop();
+                discardDetachedVoice(prepared.rawPcm());
             }
             for (SampleBackedVoice sample : prepared.sampleSfx()) {
                 if (sample != null) {
-                    sample.stop();
+                    discardDetachedVoice(sample);
                 }
             }
         } finally {
@@ -529,26 +1011,17 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
     }
 
+    private static void discardDetachedVoice(PresentationVoice voice) {
+        if (voice instanceof SampleBackedVoice sample) {
+            sample.stop();
+        }
+    }
+
     private void applyPreparedControls(
             PreparedRestore prepared,
             AudioPresentationSnapshot snapshot) {
-        if (prepared.activeMusic() != null
-                && prepared.activeMusic().voice()
-                instanceof SmpsCompositeVoice composite) {
-            SmpsSequencer sequencer = composite.driver().firstMusicSequencer();
-            if (sequencer != null) {
-                sequencer.setSpeedShoes(snapshot.speedShoesEnabled());
-                sequencer.setSpeedMultiplier(snapshot.speedMultiplier());
-            }
-            applyDriverMasks(composite.driver(), snapshot.fmMuteMask(),
-                    snapshot.fmSoloMask(), snapshot.psgMuteMask(),
-                    snapshot.psgSoloMask());
-        }
-        if (prepared.standaloneSmps() != null) {
-            applyDriverMasks(prepared.standaloneSmps().driver(),
-                    snapshot.fmMuteMask(), snapshot.fmSoloMask(),
-                    snapshot.psgMuteMask(), snapshot.psgSoloMask());
-        }
+        // SMPS controls are restored by the session snapshot; only sample
+        // voices are materialized by this registry.
     }
 
     private PreparedRestore prepareRestore(
@@ -570,16 +1043,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     restoreMusicSlot(slot, recreated, claimed);
         }
 
-        SmpsCompositeVoice preparedStandalone = null;
-        if (snapshot.standaloneSmpsVoiceId() != null) {
-            PresentationVoice voice = claimVoice(
-                    snapshot.standaloneSmpsVoiceId(), recreated, claimed);
-            if (!(voice instanceof SmpsCompositeVoice composite)) {
-                throw new IllegalArgumentException(
-                        "standalone SMPS slot does not reference a composite");
-            }
-            preparedStandalone = composite;
-        }
         SampleBackedVoice preparedRawPcm = null;
         if (snapshot.rawPcmVoiceId() != null) {
             PresentationVoice voice = claimVoice(
@@ -610,8 +1073,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             claimed[index] = true;
         }
         return new PreparedRestore(
-                preparedActive, preparedOverrides, preparedStandalone,
-                preparedRawPcm,
+                preparedActive, preparedOverrides, preparedRawPcm,
                 java.util.Arrays.copyOf(preparedSamples, preparedSampleCount));
     }
 
@@ -619,6 +1081,15 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         assertOwnerBoundary();
         stopAllSfx();
         rebuildOrderedVoices();
+    }
+
+    void reapplySessionControls() {
+        assertOwnerBoundary();
+        if (smpsSession == null) {
+            throw new IllegalStateException(
+                    "registry has no SMPS session controls");
+        }
+        applySessionMasks(fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
     }
 
     public void clear() {
@@ -679,12 +1150,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     && !(voice instanceof SampleBackedVoice)) {
                 throw new IllegalStateException(
                         "sample descriptor recreated as "
-                                + voice.getClass().getName());
-            }
-            if (descriptor instanceof SmpsVoiceDescriptor
-                    && !(voice instanceof SmpsCompositeVoice)) {
-                throw new IllegalStateException(
-                        "SMPS descriptor recreated as "
                                 + voice.getClass().getName());
             }
             return voice;
@@ -802,17 +1267,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             int targetFmSoloMask,
             int targetPsgMuteMask,
             int targetPsgSoloMask) {
-        if (!(music.voice() instanceof SmpsCompositeVoice composite)) {
-            return;
-        }
-        SmpsSequencer sequencer = composite.driver().firstMusicSequencer();
-        if (sequencer != null) {
-            sequencer.setSpeedShoes(targetSpeedShoes);
-            sequencer.setSpeedMultiplier(targetSpeedMultiplier);
-        }
-        applyDriverMasks(composite.driver(),
-                targetFmMuteMask, targetFmSoloMask,
-                targetPsgMuteMask, targetPsgSoloMask);
+        // Sample-backed music has no SMPS controls. Session-owned SMPS music
+        // is applied before this metadata registry is reached.
     }
 
     private void disposeUnpublishedVoice(
@@ -889,265 +1345,26 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     private static Object captureVoiceMutationState(
             PresentationVoice voice) {
-        if (voice instanceof SmpsCompositeVoice composite) {
-            return composite.captureLiveCommandMutation();
+        if (voice instanceof SmpsMusicHandle) {
+            return null;
         }
         return voice.snapshot();
     }
 
     private static void rollbackVoiceMutation(
             PresentationVoice voice, Object rollbackState) {
+        if (voice instanceof SmpsMusicHandle && rollbackState == null) {
+            return;
+        }
         if (voice instanceof SampleBackedVoice sample
                 && rollbackState
                 instanceof PresentationVoiceSnapshot.Sample state) {
             sample.restore(state);
             return;
         }
-        if (voice instanceof SmpsCompositeVoice composite
-                && rollbackState
-                instanceof SmpsCompositeVoice.LiveCommandMutationToken token) {
-            composite.rollbackLiveCommandMutation(token);
-            return;
-        }
         throw new IllegalStateException(
                 "unsupported presentation voice rollback "
                         + voice.getClass().getName());
-    }
-
-    private void addSmpsSfx(ResolvedSmpsSfxSource source) {
-        SmpsCompositeVoice owner = activeMusic != null
-                && activeMusic.voice() instanceof SmpsCompositeVoice composite
-                ? composite : standaloneSmps;
-        SmpsSfxInstantiation.Admission admission =
-                sfxInstantiation.evaluateAdmission(source,
-                        owner != null ? owner.driver() : null);
-        if (!admission.result().accepted()) {
-            sfxInstantiation.observeAdmission(admission);
-            warnRejected(source.standaloneVoiceId(),
-                    "SMPS SFX policy rejected " + source.assetKey());
-            return;
-        }
-        if (sfxBlocked) {
-            sfxInstantiation.observeAdmission(
-                    sfxInstantiation.rejectedAdmission(admission,
-                            SmpsRequestAdmissionPolicy.RejectionReason.BLOCKED));
-            warnRejected(source.standaloneVoiceId(),
-                    "SMPS SFX blocked at presentation boundary");
-            return;
-        }
-        if (owner != null) {
-            AttachedSfxAdmission attached;
-            try {
-                attached = addSmpsSfxToOwner(source, owner);
-            } catch (RuntimeException cacheFailure) {
-                AudioDiagnosticObserverException.rethrowIfPresent(
-                        cacheFailure);
-                if (!(cacheFailure instanceof SfxCacheRejection)) {
-                    throw cacheFailure;
-                }
-                sfxInstantiation.observeAdmission(
-                        sfxInstantiation.rejectedAdmission(admission,
-                                SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
-                warnRejected(source.standaloneVoiceId(),
-                        "SMPS SFX cache rejected " + source.assetKey());
-                return;
-            }
-            try {
-                sfxInstantiation.observeAdmission(attached.attached()
-                        ? admission
-                        : sfxInstantiation.rejectedAdmission(admission,
-                                SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
-            } catch (RuntimeException failure) {
-                restoreAdmissionJournal(attached.journal(), failure);
-                throw failure;
-            }
-            return;
-        }
-
-        SmpsCompositeVoice standalone;
-        try {
-            standalone = sfxInstantiation.instantiateStandaloneCached(source);
-        } catch (RuntimeException cacheFailure) {
-            AudioDiagnosticObserverException.rethrowIfPresent(cacheFailure);
-            sfxInstantiation.observeAdmission(
-                    sfxInstantiation.rejectedAdmission(admission,
-                            SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
-            warnRejected(source.standaloneVoiceId(),
-                    "SMPS SFX cache rejected " + source.assetKey());
-            return;
-        }
-        if (standalone == null) {
-            sfxInstantiation.observeAdmission(
-                    sfxInstantiation.rejectedAdmission(admission,
-                            SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
-            warnRejected(source.standaloneVoiceId(),
-                    "SMPS SFX cache miss for " + source.assetKey());
-            return;
-        }
-        boolean published = false;
-        RuntimeException primaryFailure = null;
-        try {
-            applyDriverMasks(standalone.driver());
-            SmpsSequencer sequencer;
-            try {
-                sequencer = sfxInstantiation.instantiateCached(
-                        source, standalone.driver());
-            } catch (RuntimeException cacheFailure) {
-                AudioDiagnosticObserverException.rethrowIfPresent(
-                        cacheFailure);
-                sfxInstantiation.observeAdmission(
-                        sfxInstantiation.rejectedAdmission(admission,
-                                SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
-                warnRejected(source.standaloneVoiceId(),
-                        "SMPS SFX cache rejected " + source.assetKey());
-                return;
-            }
-            if (sequencer == null) {
-                sfxInstantiation.observeAdmission(
-                        sfxInstantiation.rejectedAdmission(admission,
-                                SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
-                warnRejected(source.standaloneVoiceId(),
-                        "SMPS SFX cache miss for " + source.assetKey());
-                return;
-            }
-            PreparedSfxAdmission preparedAdmission =
-                    standalone.driver().prepareNewSfxAdmission(
-                            sequencer, source.continuousSfxId(),
-                            source.trackCount());
-            SfxAdmissionMutationJournal journal = beginAndCommitSfxAdmission(
-                    standalone.driver(), sequencer, preparedAdmission);
-            standaloneSmps = standalone;
-            noteVoiceId(standalone);
-            published = true;
-            try {
-                sfxInstantiation.observeAdmission(admission);
-            } catch (RuntimeException failure) {
-                restoreAdmissionJournal(journal, failure);
-                standaloneSmps = null;
-                published = false;
-                throw failure;
-            }
-        } catch (RuntimeException failure) {
-            primaryFailure = failure;
-            throw failure;
-        } finally {
-            if (!published) {
-                disposeUnpublishedVoice(standalone, primaryFailure);
-            }
-        }
-    }
-
-    private void rollbackCoordFlagState(
-            SmpsCoordFlagRuntimeState.Snapshot state,
-            RuntimeException primaryFailure) {
-        try {
-            coordFlagHandlers.state().restore(state);
-        } catch (RuntimeException rollbackFailure) {
-            primaryFailure.addSuppressed(rollbackFailure);
-        }
-    }
-
-    private AttachedSfxAdmission addSmpsSfxToOwner(
-            ResolvedSmpsSfxSource source, SmpsCompositeVoice owner) {
-        PreparedSfxAdmission extension =
-                owner.driver().prepareContinuousSfxExtension(
-                        source.continuousSfxId(), source.trackCount());
-        if (extension != null) {
-            SfxAdmissionMutationJournal journal = captureAdmissionJournal(
-                    owner.driver(), extension, null);
-            try {
-                commitAdmission(owner.driver(), extension, journal);
-                return new AttachedSfxAdmission(true, journal);
-            } catch (RuntimeException failure) {
-                restoreAdmissionJournal(journal, failure);
-                throw failure;
-            }
-        }
-        SmpsSequencer sequencer;
-        try {
-            sequencer =
-                    sfxInstantiation.instantiateCached(source, owner.driver());
-        } catch (RuntimeException cacheFailure) {
-            throw new SfxCacheRejection(cacheFailure);
-        }
-        if (sequencer == null) {
-            warnRejected(source.standaloneVoiceId(),
-                    "SMPS SFX cache miss for " + source.assetKey());
-            return new AttachedSfxAdmission(false, null);
-        }
-        PreparedSfxAdmission admission =
-                owner.driver().prepareNewSfxAdmission(
-                        sequencer, source.continuousSfxId(),
-                        source.trackCount());
-        SfxAdmissionMutationJournal journal = beginAndCommitSfxAdmission(
-                owner.driver(), sequencer, admission);
-        return new AttachedSfxAdmission(true, journal);
-    }
-
-    private SfxAdmissionMutationJournal beginAndCommitSfxAdmission(
-            SmpsDriver driver,
-            SmpsSequencer sequencer,
-            PreparedSfxAdmission admission) {
-        SmpsCoordFlagRuntimeState.Snapshot coordState =
-                coordFlagHandlers.state().snapshot();
-        SfxAdmissionMutationJournal journal = captureAdmissionJournal(
-                driver, admission, coordState);
-        try {
-            sequencer.beginSfxAdmission();
-            commitAdmission(driver, admission, journal);
-            return journal;
-        } catch (RuntimeException failure) {
-            if (journal != null) {
-                restoreAdmissionJournal(journal, failure);
-            } else {
-                rollbackCoordFlagState(coordState, failure);
-            }
-            throw failure;
-        }
-    }
-
-    private SfxAdmissionMutationJournal captureAdmissionJournal(
-            SmpsDriver driver,
-            PreparedSfxAdmission admission,
-            SmpsCoordFlagRuntimeState.Snapshot coordState) {
-        if (!sfxInstantiation.hasPotentiallyThrowingObserver()) {
-            return null;
-        }
-        return SfxAdmissionMutationJournal.capture(
-                driver, admission, coordFlagHandlers.state(), coordState);
-    }
-
-    private static void commitAdmission(
-            SmpsDriver driver,
-            PreparedSfxAdmission admission,
-            SfxAdmissionMutationJournal journal) {
-        if (journal != null) {
-            driver.commitSfxAdmissionUnderJournal(admission);
-        } else {
-            driver.commitSfxAdmission(admission);
-        }
-    }
-
-    private static void restoreAdmissionJournal(
-            SfxAdmissionMutationJournal journal,
-            RuntimeException primaryFailure) {
-        if (journal == null) {
-            return;
-        }
-        try {
-            journal.restore();
-        } catch (RuntimeException rollbackFailure) {
-            primaryFailure.addSuppressed(rollbackFailure);
-        }
-    }
-
-    private record AttachedSfxAdmission(
-            boolean attached, SfxAdmissionMutationJournal journal) { }
-
-    private static final class SfxCacheRejection extends RuntimeException {
-        private SfxCacheRejection(RuntimeException cause) {
-            super(cause);
-        }
     }
 
     private void admitSampleSfx(SampleVoiceDescriptor descriptor) {
@@ -1270,13 +1487,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         PresentationVoice[] voices = allOwnedVoices();
         boolean stoppedRawPcm = rawPcm != null;
         mutateVoicesAtomically(() -> {
-            stopOwnedSfx(activeMusic);
-            for (int index = 0; index < overrideCount; index++) {
-                stopOwnedSfx(overrideStack[index]);
-            }
-            if (standaloneSmps != null) {
-                standaloneSmps.driver().stopAllSfx();
-            }
             if (rawPcm != null) {
                 rawPcm.stop();
             }
@@ -1284,7 +1494,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 sampleSfx[index].stop();
             }
         }, voices);
-        standaloneSmps = null;
         rawPcm = null;
         for (int index = 0; index < sampleSfxCount; index++) {
             sampleSfx[index] = null;
@@ -1307,9 +1516,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         for (int index = 0; index < overrideCount; index++) {
             voices[count++] = overrideStack[index].voice();
         }
-        if (standaloneSmps != null) {
-            voices[count++] = standaloneSmps;
-        }
         if (rawPcm != null) {
             voices[count++] = rawPcm;
         }
@@ -1319,20 +1525,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         return java.util.Arrays.copyOf(voices, count);
     }
 
-    private static void stopOwnedSfx(MusicSlot music) {
-        if (music != null
-                && music.voice() instanceof SmpsCompositeVoice composite) {
-            composite.driver().stopAllSfx();
-        }
-    }
-
     private void fadeMusic(int steps, int delay) {
-        SmpsSequencer sequencer = activeMusicSequencer();
-        if (sequencer != null) {
-            mutateVoicesAtomically(
-                    () -> sequencer.triggerFadeOut(steps, delay),
-                    activeMusic.voice());
-        }
+        // Session-owned SMPS fades are applied before registry metadata.
     }
 
     private void setVoiceGain(long voiceId, int gainQ16) {
@@ -1379,30 +1573,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     private void updateActiveMusicSpeed(
             boolean targetSpeedShoes, int targetSpeedMultiplier) {
-        SmpsSequencer sequencer = activeMusicSequencer();
-        if (sequencer != null) {
-            mutateVoicesAtomically(() -> {
-                sequencer.setSpeedShoes(targetSpeedShoes);
-                sequencer.setSpeedMultiplier(targetSpeedMultiplier);
-            }, activeMusic.voice());
-        }
+        // Session-owned SMPS speed controls are applied before metadata.
     }
 
     private void changeMusicTempo(int dividingTiming) {
-        SmpsSequencer sequencer = activeMusicSequencer();
-        if (sequencer != null) {
-            mutateVoicesAtomically(
-                    () -> sequencer.updateDividingTiming(dividingTiming),
-                    activeMusic.voice());
-        }
-    }
-
-    private SmpsSequencer activeMusicSequencer() {
-        if (activeMusic != null
-                && activeMusic.voice() instanceof SmpsCompositeVoice composite) {
-            return composite.driver().firstMusicSequencer();
-        }
-        return null;
+        // Session-owned SMPS tempo controls are applied before metadata.
     }
 
     private void toggleMute(ChannelType type, int channel) {
@@ -1448,46 +1623,27 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             int targetFmSoloMask,
             int targetPsgMuteMask,
             int targetPsgSoloMask) {
-        PresentationVoice active =
-                activeMusic == null ? null : activeMusic.voice();
-        mutateVoicesAtomically(() -> {
-            if (active instanceof SmpsCompositeVoice composite) {
-                applyDriverMasks(composite.driver(), targetFmMuteMask,
-                        targetFmSoloMask, targetPsgMuteMask,
-                        targetPsgSoloMask);
-            }
-            if (standaloneSmps != null) {
-                applyDriverMasks(standaloneSmps.driver(), targetFmMuteMask,
-                        targetFmSoloMask, targetPsgMuteMask,
-                        targetPsgSoloMask);
-            }
-        }, active, standaloneSmps);
+        if (smpsSession != null) {
+            applySessionMasks(targetFmMuteMask, targetFmSoloMask,
+                    targetPsgMuteMask, targetPsgSoloMask);
+            return;
+        }
+        // A registry without a session has no SMPS physical controls.
     }
 
-    private void applyDriverMasks(SmpsDriver driver) {
-        applyDriverMasks(driver, fmMuteMask, fmSoloMask,
-                psgMuteMask, psgSoloMask);
-    }
-
-    private static void applyDriverMasks(
-            SmpsDriver driver,
-            int fmMuteMask,
-            int fmSoloMask,
-            int psgMuteMask,
-            int psgSoloMask) {
-        boolean anySolo = fmSoloMask != 0 || psgSoloMask != 0;
-        for (int channel = 0; channel < 6; channel++) {
-            int bit = 1 << channel;
-            boolean mute = (fmMuteMask & bit) != 0
-                    || (anySolo && (fmSoloMask & bit) == 0);
-            driver.setFmMute(channel, mute);
+    private void applySessionMasks(
+            int fmMute,
+            int fmSolo,
+            int psgMute,
+            int psgSolo) {
+        boolean anySolo = fmSolo != 0 || psgSolo != 0;
+        int effectiveFm = fmMute;
+        int effectivePsg = psgMute;
+        if (anySolo) {
+            effectiveFm |= (~fmSolo) & 0x3F;
+            effectivePsg |= (~psgSolo) & 0x0F;
         }
-        for (int channel = 0; channel < 4; channel++) {
-            int bit = 1 << channel;
-            boolean mute = (psgMuteMask & bit) != 0
-                    || (anySolo && (psgSoloMask & bit) == 0);
-            driver.setPsgMute(channel, mute);
-        }
+        smpsSession.applyChannelMasks(effectiveFm, effectivePsg);
     }
 
     private void deferRemovalInternal(long voiceId) {
@@ -1529,10 +1685,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             activeMusic = null;
             return;
         }
-        if (standaloneSmps != null && standaloneSmps.voiceId() == voiceId) {
-            standaloneSmps = null;
-            return;
-        }
         if (rawPcm != null && rawPcm.voiceId() == voiceId) {
             rawPcm = null;
             return;
@@ -1553,11 +1705,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     private void rebuildOrderedVoices() {
         orderedVoiceCount = 0;
-        if (activeMusic != null) {
+        if (activeMusic != null
+                && (smpsSession == null
+                        || activeMusic.voice()
+                                instanceof PcmPresentationVoice)) {
             orderedVoices[orderedVoiceCount++] = activeMusic.voice();
-        }
-        if (standaloneSmps != null) {
-            orderedVoices[orderedVoiceCount++] = standaloneSmps;
         }
         if (rawPcm != null) {
             orderedVoices[orderedVoiceCount++] = rawPcm;
@@ -1570,6 +1722,37 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
     }
 
+    private boolean hasUnownedSmps(
+            AudioPresentationCommand command) {
+        if (command instanceof AddSmpsSfx) {
+            return smpsSession == null;
+        }
+        MusicVoiceEntry music = switch (command) {
+            case ReplaceMusic replace -> replace.music();
+            case PushMusicOverride push -> push.music();
+            default -> null;
+        };
+        return music != null
+                && music.voiceDescriptor() instanceof SmpsVoiceDescriptor smps
+                && (smpsSession == null || smps.activation() == null);
+    }
+
+    private void validateAuthoritativeSnapshot(
+            AudioPresentationSnapshot snapshot) {
+        if (smpsSession == null) {
+            if (snapshot.smpsSession() != null) {
+                throw new IllegalArgumentException(
+                        "registry without a session cannot restore SMPS state");
+            }
+            return;
+        }
+        if (snapshot.smpsSession() == null
+                || snapshot.smpsLogical() == null) {
+            throw new IllegalArgumentException(
+                    "session-backed restore requires the SMPS snapshot pair");
+        }
+    }
+
     private void stopAndRemoveAllVoices() {
         PresentationVoice[] voices = allOwnedVoices();
         stopVoicesAtomically(voices);
@@ -1578,7 +1761,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             overrideStack[index] = null;
         }
         overrideCount = 0;
-        standaloneSmps = null;
         rawPcm = null;
         for (int index = 0; index < sampleSfxCount; index++) {
             sampleSfx[index] = null;
@@ -1598,7 +1780,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             List<PresentationVoiceSnapshot> voices,
             PresentationVoice voice,
             MusicSlot music) {
-        if (voice == null || containsVoiceId(voices, voice.voiceId())) {
+        if (!(voice instanceof SampleBackedVoice)
+                || containsVoiceId(voices, voice.voiceId())) {
             return;
         }
         PresentationVoiceSnapshot snapshot = voice.snapshot();
@@ -1609,12 +1792,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     music.musicId(), music.sourceDescriptor(),
                     sample.sourcePositionQ32(), sample.sourceStepQ32(),
                     sample.gainQ16(), sample.looping(), sample.stopped());
-        } else if (music != null
-                && snapshot instanceof PresentationVoiceSnapshot.Smps smps) {
-            snapshot = new PresentationVoiceSnapshot.Smps(
-                    smps.voiceId(), smps.priority(), music.musicId(),
-                    music.sourceDescriptor(), smps.maxStereoFrames(),
-                    smps.driver());
         }
         voices.add(snapshot);
     }
@@ -1630,10 +1807,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     }
 
     private static long snapshotVoiceId(PresentationVoiceSnapshot snapshot) {
-        if (snapshot instanceof PresentationVoiceSnapshot.Sample sample) {
-            return sample.voiceId();
-        }
-        return ((PresentationVoiceSnapshot.Smps) snapshot).voiceId();
+        return ((PresentationVoiceSnapshot.Sample) snapshot).voiceId();
     }
 
     private static AudioPresentationSnapshot.MusicSlotSnapshot slotSnapshot(
@@ -1646,24 +1820,12 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private PresentationVoice recreate(
             PresentationVoiceSnapshot snapshot,
             AudioPresentationDependencyResolver resolver) {
-        if (snapshot instanceof PresentationVoiceSnapshot.Sample sample) {
-            DecodedPcm pcm = Objects.requireNonNull(
-                    resolver.resolvePcm(sample.assetId()),
-                    "resolver returned no PCM for " + sample.assetId());
-            return SampleBackedVoice.restore(sample, pcm);
-        }
-        SmpsCompositeVoice composite = Objects.requireNonNull(
-                resolver.recreateSmps((PresentationVoiceSnapshot.Smps) snapshot),
-                "resolver returned no SMPS composite");
-        PresentationVoiceSnapshot.Smps smps =
-                (PresentationVoiceSnapshot.Smps) snapshot;
-        if (composite.voiceId() != smps.voiceId()
-                || composite.snapshot() instanceof PresentationVoiceSnapshot.Smps
-                recreated && recreated.maxStereoFrames() != smps.maxStereoFrames()) {
-            throw new IllegalArgumentException(
-                    "resolver did not honor composite snapshot identity");
-        }
-        return composite;
+        PresentationVoiceSnapshot.Sample sample =
+                (PresentationVoiceSnapshot.Sample) snapshot;
+        DecodedPcm pcm = Objects.requireNonNull(
+                resolver.resolvePcm(sample.assetId()),
+                "resolver returned no PCM for " + sample.assetId());
+        return SampleBackedVoice.restore(sample, pcm);
     }
 
     private MusicSlot restoreMusicSlot(
@@ -1673,10 +1835,24 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         if (slot == null) {
             return null;
         }
+        if (smpsSession != null && isSmpsMusicRoute(
+                slot.sourceDescriptor().route())) {
+            return new MusicSlot(
+                    slot.musicId(), slot.sourceDescriptor(),
+                    new SmpsMusicHandle(slot.voiceId()));
+        }
         PresentationVoice voice =
                 claimVoice(slot.voiceId(), recreated, claimed);
         return new MusicSlot(
                 slot.musicId(), slot.sourceDescriptor(), voice);
+    }
+
+    private static boolean isSmpsMusicRoute(
+            com.openggf.audio.rewind.AudioSourceDescriptor.Route route) {
+        return route == com.openggf.audio.rewind.AudioSourceDescriptor.Route
+                        .BASE_MUSIC_ID
+                || route == com.openggf.audio.rewind.AudioSourceDescriptor.Route
+                        .DONOR_MUSIC_ID;
     }
 
     private static PresentationVoice claimVoice(
@@ -1706,9 +1882,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             if (overrideStack[index].voice().voiceId() == voiceId) {
                 return overrideStack[index].voice();
             }
-        }
-        if (standaloneSmps != null && standaloneSmps.voiceId() == voiceId) {
-            return standaloneSmps;
         }
         if (rawPcm != null && rawPcm.voiceId() == voiceId) {
             return rawPcm;
@@ -1755,6 +1928,24 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
     }
 
+    private RegistryLiveMutation requireLiveMutation(
+            LiveMutationToken token) {
+        if (!(token instanceof AudioVoiceRegistry.RegistryLiveMutation state)
+                || state.owner != this) {
+            throw new IllegalArgumentException(
+                    "registry mutation token belongs to another registry");
+        }
+        return state;
+    }
+
+    private static void requireUnconsumed(
+            RegistryLiveMutation state) {
+        if (state.consumed) {
+            throw new IllegalStateException(
+                    "registry mutation token has already been consumed");
+        }
+    }
+
     private void assertOwnerThread() {
         if (Thread.currentThread() != ownerThread) {
             throw new IllegalStateException(
@@ -1771,12 +1962,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                         "no presentation PCM resolver for " + assetId);
             }
 
-            @Override
-            public SmpsCompositeVoice recreateSmps(
-                    PresentationVoiceSnapshot.Smps snapshot) {
-                throw new IllegalStateException(
-                        "no presentation SMPS snapshot resolver");
-            }
         };
     }
 }

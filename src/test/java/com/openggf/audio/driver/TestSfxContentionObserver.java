@@ -3,6 +3,7 @@ package com.openggf.audio.driver;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.audio.AudioManager;
@@ -21,7 +22,7 @@ class TestSfxContentionObserver {
     @Test
     void serviceIdentityStorageStaysBoundedAcrossThousandsOfLifecycles() {
         // Break caught: append-only diagnostic identities retained every historical SFX.
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         List<Long> tickIdentities = new ArrayList<>();
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
             @Override
@@ -34,14 +35,14 @@ class TestSfxContentionObserver {
 
         for (int iteration = 0; iteration < 1_000; iteration++) {
             driver.addSequencer(oneTickSfx(driver), true);
-            driver.read(new short[2]);
+            SmpsDriverTestAccess.read(driver, new short[2]);
             assertEquals(0, driver.sequencersForTesting().size());
             assertEquals(0, driver.trackedServiceSequencerCountForTesting());
         }
 
         for (int iteration = 0; iteration < 1_000; iteration++) {
             driver.addSequencer(longRunningSfx(driver), true);
-            driver.read(new short[2]);
+            SmpsDriverTestAccess.read(driver, new short[2]);
             assertEquals(1, driver.sequencersForTesting().size());
             assertEquals(1, driver.trackedServiceSequencerCountForTesting(),
                     "same-ID replacement must release the displaced identity");
@@ -52,7 +53,7 @@ class TestSfxContentionObserver {
             driver.restoreSnapshot(rewindPoint);
             assertEquals(0, driver.trackedServiceSequencerCountForTesting(),
                     "snapshot reconstruction starts with no historical identity");
-            driver.read(new short[2]);
+            SmpsDriverTestAccess.read(driver, new short[2]);
             assertEquals(1, driver.sequencersForTesting().size());
             assertEquals(1, driver.trackedServiceSequencerCountForTesting());
         }
@@ -71,10 +72,10 @@ class TestSfxContentionObserver {
 
     @Test
     void disabledServiceObserverAllocatesNoSequencerIdentityStorage() {
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         driver.addSequencer(longRunningSfx(driver), true);
 
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
 
         assertEquals(SmpsDriverServiceObserver.NONE,
                 driver.serviceObserver());
@@ -84,7 +85,7 @@ class TestSfxContentionObserver {
 
     @Test
     void rollbackDropsOnlyProvisionalIdentityAndNeverReusesItsOrdinal() {
-        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsDriver driver = SmpsDriverTestAccess.create(60.0);
         List<SmpsDriverServiceObserver.ServiceEvent> ticks =
                 new ArrayList<>();
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
@@ -96,18 +97,18 @@ class TestSfxContentionObserver {
             }
         });
         driver.addSequencer(longRunningMusic(driver, 0x81), false);
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
         SmpsDriver.LiveCommandMutationToken rollback =
                 driver.captureLiveCommandMutation();
 
         driver.addSequencer(longRunningSfx(driver, 0xA1), true);
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
         assertEquals(2, driver.trackedServiceSequencerCountForTesting());
 
         driver.rollbackLiveCommandMutation(rollback);
         assertEquals(1, driver.trackedServiceSequencerCountForTesting());
         driver.addSequencer(longRunningSfx(driver, 0xA2), true);
-        driver.read(new short[2]);
+        SmpsDriverTestAccess.read(driver, new short[2]);
 
         List<Long> musicIdentities = ticks.stream()
                 .filter(event -> event.sequencer().source().id() == 0x81)
@@ -250,6 +251,98 @@ class TestSfxContentionObserver {
     }
 
     @Test
+    void admissionOwnershipRetainsDisplacedOwnerForFirstRoleDecision() {
+        SmpsDriver driver = new SmpsDriver();
+        List<SfxContentionObserver.Admission> admissions = new ArrayList<>();
+        List<SfxContentionObserver.Arbitration> arbitrations = new ArrayList<>();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission admission) {
+                admissions.add(admission);
+            }
+
+            @Override
+            public void onRoleArbitrated(Arbitration arbitration) {
+                arbitrations.add(arbitration);
+            }
+        });
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .fmChannelOrder(new int[] {2})
+                .sfxChannelOwnershipMode(
+                        SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
+                .build();
+        SmpsSequencer first = realTrackSequencer(
+                "first", 0xA0, driver, config);
+        SmpsSequencer second = realTrackSequencer(
+                "second", 0xA1, driver, config);
+        driver.addSequencer(first, true);
+        first.writeFm(0, 0xA2, 0x22);
+        driver.addSequencer(second, true);
+        second.writeFm(0, 0xA2, 0x44);
+
+        SfxContentionObserver.Source challenger = admissions.get(1).source();
+        SfxContentionObserver.Arbitration decision = arbitrations.stream()
+                .filter(event -> event.challenger().equals(challenger))
+                .findFirst().orElseThrow();
+        assertEquals(admissions.getFirst().source(), decision.previousOwner());
+        assertTrue(decision.acquired());
+    }
+
+    @Test
+    void admissionOwnershipRollbackRetainsDisplacedOwnerForRetriedFirstWrite() {
+        SmpsDriver driver = new SmpsDriver();
+        List<SfxContentionObserver.Admission> admissions = new ArrayList<>();
+        List<SfxContentionObserver.Arbitration> arbitrations = new ArrayList<>();
+        boolean[] failAdmission = {false};
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission admission) {
+                admissions.add(admission);
+                if (failAdmission[0]) {
+                    throw new IllegalStateException("injected admission failure");
+                }
+            }
+
+            @Override
+            public void onRoleArbitrated(Arbitration arbitration) {
+                arbitrations.add(arbitration);
+            }
+        });
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .fmChannelOrder(new int[] {2})
+                .sfxChannelOwnershipMode(
+                        SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
+                .build();
+        SmpsSequencer displaced = realTrackSequencer(
+                "displaced", 0xA0, driver, config);
+        SmpsSequencer challenger = realTrackSequencer(
+                "challenger", 0xA1, driver, config);
+        driver.addSequencer(displaced, true);
+        displaced.writeFm(0, 0xA2, 0x22);
+        SfxContentionObserver.Source displacedSource = admissions.getFirst().source();
+        arbitrations.clear();
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                challenger, 0, 1);
+
+        challenger.beginSfxAdmission();
+        failAdmission[0] = true;
+        assertThrows(IllegalStateException.class,
+                () -> driver.commitSfxAdmission(admission));
+        assertEquals(List.of(displaced), driver.sequencersForTesting(),
+                "failed admission restores the displaced owner");
+
+        failAdmission[0] = false;
+        arbitrations.clear();
+        driver.commitSfxAdmission(admission);
+        challenger.writeFm(0, 0xA2, 0x44);
+
+        assertEquals(1, arbitrations.size());
+        assertEquals(displacedSource, arbitrations.getFirst().previousOwner(),
+                "retry consumes the restored displaced-owner attribution exactly once");
+        assertTrue(arbitrations.getFirst().acquired());
+    }
+
+    @Test
     void rollbackPreservesSurvivingAdmissionIdentityWithoutReusingOrdinals() {
         // Break caught: rollback reidentified a surviving sequencer or reused a reverted admission ordinal.
         SmpsDriver driver = new SmpsDriver();
@@ -308,11 +401,18 @@ class TestSfxContentionObserver {
     }
 
     private static SmpsSequencer realTrackSequencer(String name, int id, SmpsDriver driver) {
+        return realTrackSequencer(name, id, driver,
+                new SmpsSequencerConfig.Builder()
+                        .fmChannelOrder(new int[] {2}).build());
+    }
+
+    private static SmpsSequencer realTrackSequencer(
+            String name, int id, SmpsDriver driver,
+            SmpsSequencerConfig config) {
         AbstractSmpsData data = new SingleFmTrackData(name);
         data.setId(id);
         return new SmpsSequencer(data, AudioTestFixtures.EMPTY_DAC, driver,
-                AudioManager.getInstance(), new SmpsSequencerConfig.Builder()
-                .fmChannelOrder(new int[] {2}).build());
+                AudioManager.getInstance(), config);
     }
 
     private static SmpsSequencer oneTickSfx(SmpsDriver driver) {

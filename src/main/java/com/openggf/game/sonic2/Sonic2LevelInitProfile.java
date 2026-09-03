@@ -8,12 +8,16 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler;
+import com.openggf.game.sonic2.timing.Sonic2PreBgmTimingModel;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.SkippedPresentationPlcLifecycle;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
 
 import java.util.List;
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * Sonic 2 level initialization profile.
@@ -34,6 +38,9 @@ import java.io.IOException;
  *      Design doc: Sonic 2 Level Init Profile (57 steps)</a>
  */
 public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
+    private static final Logger LOGGER = Logger.getLogger(
+            Sonic2LevelInitProfile.class.getName());
+    private static final int LEVEL_ENTRY_FADE_OUT_REQUEST = 0xF9;
     /** Fixed length of the s2.asm:5060-5066 title-card leave loop. */
     private static final int TITLE_CARD_LEAVE_LOOP_FRAMES = 25;
 
@@ -53,22 +60,46 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
 
     private final Sonic2LevelEventManager levelEventManager;
     private final Sonic2PlayerArtModeAuthority playerArtModeAuthority;
+    private final Sonic2LevelMusicScheduler levelMusicScheduler;
+    private boolean priorWaterFlag;
 
     public Sonic2LevelInitProfile(Sonic2LevelEventManager levelEventManager) {
         this(levelEventManager, () -> Sonic2PlayerArtModeAuthority.onePlayer(
-                levelEventManager.getPlayerCharacter()).initialLifePlc());
+                levelEventManager.getPlayerCharacter()).initialLifePlc(),
+                new Sonic2LevelMusicScheduler());
     }
 
     public Sonic2LevelInitProfile(Sonic2LevelEventManager levelEventManager,
                                   Sonic2PlayerArtModeAuthority playerArtModeAuthority) {
+        this(levelEventManager, playerArtModeAuthority,
+                new Sonic2LevelMusicScheduler());
+    }
+
+    public Sonic2LevelInitProfile(Sonic2LevelEventManager levelEventManager,
+                                  Sonic2PlayerArtModeAuthority playerArtModeAuthority,
+                                  Sonic2LevelMusicScheduler levelMusicScheduler) {
         this.levelEventManager = levelEventManager;
         this.playerArtModeAuthority = playerArtModeAuthority;
+        this.levelMusicScheduler = levelMusicScheduler;
     }
 
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
-        steps.add(3, new InitStep("QueueInitialPlcs",
+        if (!isPreviewCapture(ctx)) {
+            steps.remove(1);
+            steps.add(1, ioStep("ConfigureAudio",
+                    "Configure the S2 request service before Level entry commands",
+                    () -> GameServices.level().configureAudio()));
+            steps.add(2, new InitStep("QueueLevelEntryFadeOut",
+                    "S2 Level loc_3EC4: PlaySound(MusID_FadeOut) before ClearPLC",
+                    () -> GameServices.level().beginLevelEntry()));
+            steps.add(3, new InitStep("ScheduleLevelMusic",
+                    "S2 Level load: arm the source-derived Level_PlayBgm boundary",
+                    () -> scheduleLevelMusic(ctx)));
+        }
+        int initialPlcIndex = isPreviewCapture(ctx) ? 2 : 5;
+        steps.add(initialPlcIndex, new InitStep("QueueInitialPlcs",
                 "S2 Level: ClearPLC, level-header primary LoadPLC, LoadPLC Std2",
                 () -> queueInitialPlcs(ctx)));
         // Level_ClrRam wipes MiscLevelVariables after the level's LoadPLC calls
@@ -81,7 +112,7 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
         // release offsets, boss explosion offsets -- read a stream shifted by
         // the previous acts' draw count. Keep this S2-owned: S1 has the same
         // rule in its own profile and S3K clears a different range.
-        steps.add(4, new InitStep("ResetRng",
+        steps.add(initialPlcIndex + 1, new InitStep("ResetRng",
                 "S2 Level_ClrRam: clear RNG_seed with MiscLevelVariables",
                 () -> {
                     var rng = GameServices.rngOrNull();
@@ -93,6 +124,89 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             steps.addAll(postLoadAssemblySteps(ctx));
         }
         return List.copyOf(steps);
+    }
+
+    @Override
+    public void beginLevelEntry() {
+        levelMusicScheduler.cancel();
+        var level = GameServices.levelOrNull();
+        var water = GameServices.waterOrNull();
+        priorWaterFlag = level != null && level.getCurrentLevel() != null
+                && water != null
+                && water.isLiveWaterFlagSet(
+                        level.getRomZoneId(), level.getRomActId());
+        // Level (docs/s2disasm/s2.asm:4753-4765) writes MusID_FadeOut through
+        // PlaySound/Sound_Queue.SFX0 before ClearPLC and Pal_FadeToBlack. The
+        // negative Demo_mode_flag branch skips this only for credits demos;
+        // Sonic 2's credits have no demo-level path in OpenGGF.
+        GameServices.audio().playSfx(LEVEL_ENTRY_FADE_OUT_REQUEST);
+    }
+
+    private void scheduleLevelMusic(LevelLoadContext ctx) {
+        var level = GameServices.levelOrNull();
+        if (level == null) {
+            levelMusicScheduler.cancel();
+            return;
+        }
+        try {
+            var music = level.prepareCurrentLevelMusic();
+            if (music.isEmpty()) {
+                levelMusicScheduler.cancel();
+                return;
+            }
+            var region = Sonic2PreBgmTimingModel.Region.fromConfiguration(
+                    GameServices.configuration().getString(SonicConfiguration.REGION));
+            // The model costs ROM routines that key off Current_Zone /
+            // Current_Act, so it needs the ROM ids, not the zone registry's
+            // progression indices. This step runs before LoadLevelData, so the
+            // loaded Level cannot supply them yet; read the destination pair
+            // from the ROM's own LevelOrder table (s2disasm/s2.asm:28041,
+            // read at s2.asm:27986) the way Sonic2.getZoneAct does.
+            Rom rom = GameServices.rom().getRom();
+            int levelOrderEntry = Sonic2Constants.LEVEL_SELECT_ADDR
+                    + ctx.getLevelIndex() * 2;
+            int romZoneId = Byte.toUnsignedInt(rom.readByte(levelOrderEntry));
+            int romActId = Byte.toUnsignedInt(rom.readByte(levelOrderEntry + 1));
+            var resolution = Sonic2PreBgmTimingModel.resolve(
+                    rom, romZoneId, romActId,
+                    playerArtModeAuthority.initialLifePlc(),
+                    region, priorWaterFlag);
+            if (resolution instanceof Sonic2PreBgmTimingModel.Resolved resolved) {
+                // The engine reaches this seam where the old eager InitAudio
+                // request ran.  The model costs the interrupt-masked body from
+                // ClearScreen through Level_PlayBgm (s2.asm:4767-4911).
+                levelMusicScheduler.arm(music.getAsInt(),
+                        resolved.evidence().terminalRowBucket());
+                return;
+            }
+            var unresolved = (Sonic2PreBgmTimingModel.Unresolved) resolution;
+            levelMusicScheduler.cancel();
+            LOGGER.warning(() -> "Refusing to arm S2 Level_PlayBgm: "
+                    + unresolved.reason());
+        } catch (IOException | RuntimeException failure) {
+            levelMusicScheduler.cancel();
+            LOGGER.warning(() -> "Refusing to arm S2 Level_PlayBgm: "
+                    + failure.getMessage());
+        }
+    }
+
+    @Override
+    public void serviceLevelLoadVBlank() {
+        levelMusicScheduler.serviceVBlank().ifPresent(musicId -> {
+            if (GameServices.levelOrNull() != null) {
+                GameServices.levelOrNull().publishPreparedLevelMusic(musicId);
+            }
+        });
+    }
+
+    @Override
+    public void cancelPendingLevelLoadWork() {
+        levelMusicScheduler.cancel();
+    }
+
+    @Override
+    public boolean isLevelMusicPublicationPending() {
+        return levelMusicScheduler.pending();
     }
 
     private void queueInitialPlcs(LevelLoadContext ctx) {

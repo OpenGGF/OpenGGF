@@ -15,6 +15,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HexFormat;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,6 +32,7 @@ class TestCompleteRunAudioComparator {
     private static final int FIRST_FRAME = 860;
     private static final OwnerRef NONE = new OwnerRef(OwnerClass.NONE, "none", 0,
             OwnerOrigin.NONE, -1);
+    private static final Map<DriverService, ServiceEvidence> SERVICE_EVIDENCE = new IdentityHashMap<>();
 
     @TempDir
     Path temp;
@@ -56,6 +58,742 @@ class TestCompleteRunAudioComparator {
         assertTrue(report.toJson().contains("\"side\":\"ENGINE\""));
         assertTrue(report.toText().contains("reference_rom_sha1=" + "0".repeat(40)));
         assertTrue(report.toText().contains("engine_bk2_sha256=" + "2".repeat(64)));
+    }
+
+    @Test
+    void unavailableRequestAuthorityProducesReferenceLimitationRatherThanAnEmptyArrayMatch() throws Exception {
+        TestProfile profile = profile("comparator.layers." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = limitedLayers(false);
+        CompleteRunAudioProfiles.register(profile);
+        Path reference = writeCapture("limited-reference", profile, ProducerKind.REFERENCE, 1, this::plainFrame);
+        Path engine = writeCapture("limited-engine", profile, ProducerKind.OPENGGF, 1,
+                row -> requestAndDecisionFrame(row, request(0, 0xc0),
+                        decision(0, 1, 2, owner(0, 0xc0)), 0));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertEquals(CompleteRunAudioReport.Kind.REFERENCE_LIMITATION, report.kind(), report.toText());
+        assertTrue(report.toJson().contains("comparisonLayerInventory"));
+    }
+
+    @Test
+    void aComparedStateMismatchWinsOverTheReferenceLimitation() throws Exception {
+        TestProfile profile = profile("comparator.layers-state." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = limitedLayers(true);
+        CompleteRunAudioProfiles.register(profile);
+        Path reference = writeCapture("limited-state-reference", profile, ProducerKind.REFERENCE, 1,
+                row -> fullFrame(FIRST_FRAME + row, "test", false, List.of(),
+                        List.of(service(0, List.of(), List.of(), state(1)))));
+        Path engine = writeCapture("limited-state-engine", profile, ProducerKind.OPENGGF, 1,
+                row -> fullFrame(FIRST_FRAME + row, "test", false, List.of(),
+                        List.of(service(0, List.of(), List.of(), state(2)))));
+
+        assertEquals(CompleteRunAudioReport.Kind.STATE_FIELD_VALUE,
+                CompleteRunAudioComparator.compare(reference, engine).kind());
+    }
+
+    @Test
+    void unavailableLifecycleRowsDoNotShiftFollowingFramesOrEof() throws Exception {
+        TestProfile profile = profile("comparator.layers-lifecycle." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(ComparisonLayer.LIFECYCLE, ComparisonLayerStatus.UNAVAILABLE,
+                "reference lifecycle authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+        List<CompleteRunAudioTrace.Record> reference = List.of(
+                new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()),
+                new Lifecycle(0, FIRST_FRAME, "pulse", Map.of("payload", 1), List.of()), plainFrame(0));
+        List<CompleteRunAudioTrace.Record> engine = List.of(
+                new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()), plainFrame(0));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(
+                writeRecords("lifecycle-reference", metadata(profile, ProducerKind.REFERENCE,
+                        profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), reference),
+                writeRecords("lifecycle-engine", metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)), engine));
+
+        assertEquals(CompleteRunAudioReport.Kind.REFERENCE_LIMITATION, report.kind(), report.toText());
+    }
+
+    @Test
+    void unavailableBaselineOwnershipDoesNotLeakThroughTheCutoffProjection() {
+        ComparisonLayerInventory inventory = layers(ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                "reference ownership authority is unavailable");
+        OwnerRef baselineMusic = new OwnerRef(OwnerClass.MUSIC, "music.81", 0x81,
+                OwnerOrigin.BASELINE, 0);
+        Baseline reference = new Baseline(FIRST_FRAME, state(1),
+                List.of(new RoleOwner(HardwareRole.FM1, NONE)));
+        Baseline engine = new Baseline(FIRST_FRAME, state(1),
+                List.of(new RoleOwner(HardwareRole.FM1, baselineMusic)));
+
+        assertEquals(null, CompleteRunAudioComparator.difference(reference, engine, inventory));
+    }
+
+    @Test
+    void observedOwnershipStillAuthenticatesBaselineAndActiveStateWhenEqualityIsUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-owner-state."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                "reference ownership authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+        List<CompleteRunAudioTrace.Record> records = List.of(
+                new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners()),
+                fullFrame(FIRST_FRAME, "test", false, List.of(),
+                        List.of(service(0, List.of(), List.of(), activeState(1)))));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(
+                writeRecords("owner-state-reference", metadata(profile, ProducerKind.REFERENCE,
+                        profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), records),
+                writeRecords("owner-state-engine", metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)), records));
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void comparedStateInventoryRemainsStrictWhenServicesAndOwnershipAreUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-state-inventory."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(
+                ComparisonLayer.SERVICES, ComparisonLayerStatus.UNAVAILABLE,
+                "reference service authority is unavailable",
+                ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                "reference ownership authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+        NormalizedState wrongInventory = new NormalizedState(
+                List.of(new StateField("wrong", 1)), inactiveRoles());
+        List<CompleteRunAudioTrace.Record> invalid = List.of(
+                new Baseline(FIRST_FRAME, wrongInventory, profile.baselineRoleOwners()),
+                fullFrame(FIRST_FRAME, "test", false, List.of(),
+                        List.of(service(9, List.of(), List.of(), wrongInventory))));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(
+                writeRecords("state-inventory-reference", metadata(profile, ProducerKind.REFERENCE,
+                        profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), invalid),
+                writeCapture("state-inventory-engine", profile, ProducerKind.OPENGGF, 1,
+                        this::plainFrame));
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void observedStateStillValidatesItsInventoryWhenEqualityIsUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-state-unavailable."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(
+                ComparisonLayer.STATE, ComparisonLayerStatus.UNAVAILABLE,
+                "reference state authority is unavailable",
+                ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                "reference ownership authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+        NormalizedState unauthenticatedState = new NormalizedState(
+                List.of(new StateField("unobserved", 9)), inactiveRoles());
+        Baseline baseline = new Baseline(FIRST_FRAME, unauthenticatedState,
+                profile.baselineRoleOwners());
+        Frame frame = fullFrame(FIRST_FRAME, "test", false, List.of(),
+                List.of(service(0, List.of(), List.of(), unauthenticatedState)));
+        CutoffFrontier cutoff = CutoffFrontier.empty(unauthenticatedState);
+
+        Path reference = writeCaptureWithCutoff("state-unavailable-reference", profile,
+                ProducerKind.REFERENCE, baseline, frame, cutoff);
+        Path engine = writeCaptureWithCutoff("state-unavailable-engine", profile,
+                ProducerKind.OPENGGF, baseline, frame, cutoff);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void observedOwnershipStillValidatesDecisionOwnerEffectsWhenEqualityIsUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-decision-owner."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                "reference ownership authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+        Decision unauthenticatedOwners = ownershipDecision(0, true, "accepted",
+                baselineMusic(), NONE);
+
+        Path reference = writeCapture("decision-owner-reference", profile, ProducerKind.REFERENCE, 1,
+                row -> requestAndDecisionFrame(row, request(0, 0xc0), unauthenticatedOwners, 0, state(1)));
+        Path engine = writeCapture("decision-owner-engine", profile, ProducerKind.OPENGGF, 1,
+                row -> requestAndDecisionFrame(row, request(0, 0xc0), unauthenticatedOwners, 0, state(1)));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.OWNER_INVALID);
+    }
+
+    @Test
+    void observedOwnershipStillAuthenticatesDecisionTransitionWhenEqualityIsUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-decision-transition."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                "reference ownership authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+        Decision unauthenticatedTransition = ownershipDecision(0, false, "unobserved",
+                baselineMusic(), NONE);
+
+        Path reference = writeCapture("decision-transition-reference", profile, ProducerKind.REFERENCE, 1,
+                row -> requestAndDecisionFrame(row, request(0, 0xc0), unauthenticatedTransition, 0, state(1)));
+        Path engine = writeCapture("decision-transition-engine", profile, ProducerKind.OPENGGF, 1,
+                row -> requestAndDecisionFrame(row, request(0, 0xc0), unauthenticatedTransition, 0, state(1)));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.OWNERSHIP_TRANSITION_INVALID);
+    }
+
+    @Test
+    void observedOwnershipStillAuthenticatesLifecycleOwnerEffectsWhenEqualityIsUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-lifecycle-owner."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                "reference ownership authority is unavailable");
+        profile.restoreStackPolicy = new RestoreStackPolicy(1, List.of(), null);
+        profile.lifecycleRules = Map.of("save",
+                new LifecycleRule("save", List.of("slot"), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1))));
+        CompleteRunAudioProfiles.register(profile);
+        Lifecycle referenceOwners = new Lifecycle(0, FIRST_FRAME, "save", Map.of("slot", 1),
+                List.of(new LifecycleOwnership(HardwareRole.FM1, baselineMusic(), NONE)));
+        Lifecycle engineOwners = new Lifecycle(0, FIRST_FRAME, "save", Map.of("slot", 1),
+                List.of(new LifecycleOwnership(HardwareRole.FM1, NONE, baselineMusic())));
+        List<CompleteRunAudioTrace.Record> referenceRecords = List.of(
+                new Baseline(FIRST_FRAME, state(1), profile.baselineRoleOwners()),
+                referenceOwners, plainFrame(0));
+        List<CompleteRunAudioTrace.Record> engineRecords = List.of(
+                new Baseline(FIRST_FRAME, state(1), profile.baselineRoleOwners()),
+                engineOwners, plainFrame(0));
+
+        CompleteRunAudioReport ownerReport = CompleteRunAudioComparator.compare(
+                writeRecords("lifecycle-owner-reference", metadata(profile, ProducerKind.REFERENCE,
+                        profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), referenceRecords),
+                writeRecords("lifecycle-owner-engine", metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)), engineRecords));
+
+        assertSemanticFailure(ownerReport, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.OWNER_INVALID);
+
+        List<CompleteRunAudioTrace.Record> wrongDetails = List.of(
+                new Baseline(FIRST_FRAME, state(1), profile.baselineRoleOwners()),
+                new Lifecycle(0, FIRST_FRAME, "save", Map.of(), List.of()), plainFrame(0));
+        CompleteRunAudioReport markerReport = CompleteRunAudioComparator.compare(
+                writeRecords("lifecycle-marker-reference", metadata(profile, ProducerKind.REFERENCE,
+                        profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), wrongDetails),
+                writeRecords("lifecycle-marker-engine", metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)), wrongDetails));
+
+        assertSemanticFailure(markerReport, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+    }
+
+    @Test
+    void comparedOwnershipRetainsLifecycleRecordsWhenLifecycleEqualityIsUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-ownership-without-lifecycle."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(
+                ComparisonLayer.LIFECYCLE, ComparisonLayerStatus.UNAVAILABLE,
+                "lifecycle marker equality is pending review",
+                ComparisonLayer.STATE, ComparisonLayerStatus.UNAVAILABLE,
+                "state equality is irrelevant to ownership alignment");
+        ProducerObservationInventory withoutState = new ProducerObservationInventory(
+                java.util.Arrays.stream(ComparisonLayer.values()).map(layer ->
+                        layer == ComparisonLayer.STATE
+                                ? new ProducerObservationClaim(layer, ObservationStatus.UNOBSERVED,
+                                        "state is outside this ownership-alignment fixture")
+                                : new ProducerObservationClaim(layer, ObservationStatus.OBSERVED, null))
+                        .toList());
+        profile.observationInventories = Map.of(ProducerKind.REFERENCE, withoutState,
+                ProducerKind.OPENGGF, withoutState);
+        profile.hardwareRoles = List.of(HardwareRole.FM1, HardwareRole.FM2);
+        profile.baselineRoleOwners = List.of(new RoleOwner(HardwareRole.FM1, baselineMusic()),
+                new RoleOwner(HardwareRole.FM2, baselineMusic()));
+        profile.lifecycleRules = Map.of("release", new LifecycleRule("release", List.of(),
+                LifecycleOwnershipAction.RELEASE_TO_NONE,
+                List.of(List.of(HardwareRole.FM1), List.of(HardwareRole.FM2))));
+        CompleteRunAudioProfiles.register(profile);
+        Baseline baseline = new Baseline(FIRST_FRAME, null, profile.baselineRoleOwners());
+        List<CompleteRunAudioTrace.Record> reference = List.of(baseline,
+                new Lifecycle(0, FIRST_FRAME, "release", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM1, baselineMusic(), NONE))),
+                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        null, List.of(), null));
+        List<CompleteRunAudioTrace.Record> engine = List.of(baseline,
+                new Lifecycle(0, FIRST_FRAME, "release", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM2, baselineMusic(), NONE))),
+                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        null, List.of(), null));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(
+                writeRecords("ownership-without-lifecycle-reference",
+                        metadata(profile, ProducerKind.REFERENCE,
+                                profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), reference),
+                writeRecords("ownership-without-lifecycle-engine",
+                        metadata(profile, ProducerKind.OPENGGF,
+                                profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)), engine));
+
+        assertEquals(CompleteRunAudioReport.Kind.LIFECYCLE_VALUE, report.kind(), report.toText());
+        assertTrue(report.location().contains("ownership"), report.toText());
+    }
+
+    @Test
+    void observedServiceEnvelopeStillOwnsGlobalOrdinalsWhenEqualityIsUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-service-envelope."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(ComparisonLayer.SERVICES, ComparisonLayerStatus.UNAVAILABLE,
+                "reference service authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+
+        Path reference = writeCapture("service-envelope-reference", profile, ProducerKind.REFERENCE, 1,
+                row -> fullFrame(FIRST_FRAME, "test", false, List.of(),
+                        List.of(service(9, List.of(), List.of(), state(1)))));
+        Path engine = writeCapture("service-envelope-engine", profile, ProducerKind.OPENGGF, 1,
+                row -> fullFrame(FIRST_FRAME, "test", false, List.of(),
+                        List.of(service(9, List.of(), List.of(), state(1)))));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.ORDINAL_INVALID);
+    }
+
+    @Test
+    void observedUncomparedEnvelopesStillClaimSemanticOrdinalsAndIdentity() throws Exception {
+        TestProfile profile = profile("comparator.layers-unavailable-envelopes."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = limitedLayers(false);
+        CompleteRunAudioProfiles.register(profile);
+        Request unauthenticatedRequest = new Request(7, OwnerClass.SFX, "unobserved", 0xfe,
+                "unknown_queue", null);
+        List<CompleteRunAudioTrace.Record> records = List.of(
+                new Baseline(FIRST_FRAME, state(1), profile.baselineRoleOwners()),
+                new Lifecycle(9, FIRST_FRAME, "unobserved", Map.of("raw", 1), List.of()),
+                fullFrame(FIRST_FRAME, "test", false, List.of(unauthenticatedRequest),
+                        List.of(service(9, List.of(), List.of(), state(1)))));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(
+                writeRecords("unavailable-envelopes-reference", metadata(profile, ProducerKind.REFERENCE,
+                        profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), records),
+                writeRecords("unavailable-envelopes-engine", metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)), records));
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.ORDINAL_INVALID);
+    }
+
+    @Test
+    void cutoffProjectionExcludesUnavailableStateAndChipLayers() {
+        ComparisonLayerInventory inventory = layers(
+                ComparisonLayer.STATE, ComparisonLayerStatus.UNAVAILABLE,
+                "reference state authority is unavailable",
+                ComparisonLayer.BOUNDARY_CHIP_STATE, ComparisonLayerStatus.UNAVAILABLE,
+                "reference chip authority is unavailable");
+        CutoffFrontier reference = new CutoffFrontier(
+                List.of(), List.of(), List.of(), null, 1, 2, state(1));
+        CutoffFrontier engine = new CutoffFrontier(
+                List.of(), List.of(), List.of(), null, 3, 4, state(2));
+
+        assertEquals(null, CompleteRunAudioComparator.difference(reference, engine, inventory));
+    }
+
+    @Test
+    void baselineCutoffProjectionExcludesUnavailableChipLayer() {
+        ComparisonLayerInventory inventory = layers(
+                ComparisonLayer.BOUNDARY_CHIP_STATE, ComparisonLayerStatus.UNAVAILABLE,
+                "reference chip authority is unavailable");
+        Baseline reference = new Baseline(FIRST_FRAME, state(1),
+                List.of(new RoleOwner(HardwareRole.FM1, NONE)),
+                BoundaryFrontier.empty());
+        Baseline engine = new Baseline(FIRST_FRAME, state(1),
+                List.of(new RoleOwner(HardwareRole.FM1, NONE)),
+                new BoundaryFrontier(List.of(), List.of(), List.of(), null, 1, 2));
+
+        assertEquals(null, CompleteRunAudioComparator.difference(reference, engine, inventory));
+    }
+
+    @Test
+    void comparedChipLayerStillObservesBaselineLatchesWhenCutoffIsUnavailable() {
+        ComparisonLayerInventory inventory = layers(
+                ComparisonLayer.CUTOFF_FRONTIER, ComparisonLayerStatus.UNAVAILABLE,
+                "reference cutoff-frontier authority is unavailable");
+        Baseline reference = new Baseline(FIRST_FRAME, state(1),
+                List.of(new RoleOwner(HardwareRole.FM1, NONE)),
+                BoundaryFrontier.empty());
+        Baseline engine = new Baseline(FIRST_FRAME, state(1),
+                List.of(new RoleOwner(HardwareRole.FM1, NONE)),
+                new BoundaryFrontier(List.of(), List.of(), List.of(), null, 1, 2));
+
+        assertEquals(CompleteRunAudioReport.Kind.CHIP_EVENT_VALUE,
+                CompleteRunAudioComparator.difference(reference, engine, inventory).kind());
+    }
+
+    @Test
+    void observedBoundaryChipLayerStillAuthenticatesCutoffLatchesWhenEqualityIsUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-cutoff-chip."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(ComparisonLayer.BOUNDARY_CHIP_STATE, ComparisonLayerStatus.UNAVAILABLE,
+                "reference chip authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+        CutoffFrontier unauthenticatedChipState = new CutoffFrontier(
+                List.of(), List.of(), List.of(), null, 1, 2, state(1));
+
+        Path reference = writeCaptureWithCutoff("cutoff-chip-reference", profile,
+                ProducerKind.REFERENCE, plainFrame(0), unauthenticatedChipState);
+        Path engine = writeCaptureWithCutoff("cutoff-chip-engine", profile,
+                ProducerKind.OPENGGF, plainFrame(0), unauthenticatedChipState);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void comparedChipLayerRequiresBufferedCutoffProofWhenTopologyIsUnavailable() throws Exception {
+        TestProfile profile = profile("comparator.layers-cutoff-chip-proof."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.useBufferedReference();
+        profile.comparisonLayers = layers(
+                ComparisonLayer.SERVICES, ComparisonLayerStatus.UNAVAILABLE,
+                "reference service authority is unavailable",
+                ComparisonLayer.CUTOFF_FRONTIER, ComparisonLayerStatus.UNAVAILABLE,
+                "reference cutoff-frontier authority is unavailable");
+        Frame referenceFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of()));
+
+        assertThrows(IllegalArgumentException.class, () -> writeCaptureWithCutoff(
+                "cutoff-chip-proof-reference", profile, ProducerKind.REFERENCE,
+                referenceFrame, CutoffFrontier.empty(state(1))));
+    }
+
+    @Test
+    void comparedChipLayerAppliesCutoffChipPolicyWithoutTopologyAuthority() throws Exception {
+        TestProfile profile = profile("comparator.layers-cutoff-chip-policy."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.comparisonLayers = layers(
+                ComparisonLayer.CUTOFF_FRONTIER, ComparisonLayerStatus.UNAVAILABLE,
+                "reference cutoff-frontier authority is unavailable");
+        CompleteRunAudioProfiles.register(profile);
+        CutoffFrontier wrongLatches = new CutoffFrontier(
+                List.of(), List.of(), List.of(), null, 1, 2, state(1));
+
+        Path reference = writeCaptureWithCutoff("cutoff-chip-policy-reference", profile,
+                ProducerKind.REFERENCE, plainFrame(0), wrongLatches);
+        Path engine = writeCaptureWithCutoff("cutoff-chip-policy-engine", profile,
+                ProducerKind.OPENGGF, plainFrame(0), wrongLatches);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void comparedChipLayerReplaysBufferedLatchesWithoutTopologyAuthority() throws Exception {
+        TestProfile profile = profile("comparator.layers-cutoff-chip-replay."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.useBufferedReference(new FrontierServiceRule("UpdateMusic", FrontierServiceState.COMPLETED,
+                1, "Z80", 0x38, 2, 0x40, List.of()));
+        profile.comparisonLayers = layers(
+                ComparisonLayer.SERVICES, ComparisonLayerStatus.UNAVAILABLE,
+                "reference service authority is unavailable",
+                ComparisonLayer.CUTOFF_FRONTIER, ComparisonLayerStatus.UNAVAILABLE,
+                "reference cutoff-frontier authority is unavailable");
+        ProducerObservationInventory withoutTopology = new ProducerObservationInventory(
+                java.util.Arrays.stream(ComparisonLayer.values())
+                        .map(layer -> layer == ComparisonLayer.CUTOFF_FRONTIER
+                                || layer == ComparisonLayer.SERVICES
+                                ? new ProducerObservationClaim(layer, ObservationStatus.UNOBSERVED,
+                                        "semantic service topology is unavailable")
+                                : new ProducerObservationClaim(layer, ObservationStatus.OBSERVED, null))
+                        .toList());
+        profile.observationInventories = Map.of(ProducerKind.REFERENCE, withoutTopology,
+                ProducerKind.OPENGGF, withoutTopology);
+        FrontierChipEvent address = new FrontierChipEvent(100, 1, "Z80", 0x39,
+                3, 0, 0x22, false, 0, 0x22);
+        FrontierService nativeService = new FrontierService(1, 0, 0, "UpdateMusic",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x38, 1, "Z80",
+                FIRST_FRAME, 2L, 0x40, 2, List.of(), List.of(address));
+        BoundaryFrontier semanticBaseline = new BoundaryFrontier(
+                null, null, List.of(), null, 0, 0);
+        Baseline referenceBaseline = new Baseline(FIRST_FRAME, state(1), profile.baselineRoleOwners(),
+                new BoundaryFrontier(null, null, List.of(),
+                        new CutoffNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
+                                0, false, "f".repeat(64)), 0x22, 0));
+        Baseline engineBaseline = new Baseline(FIRST_FRAME, state(1), profile.baselineRoleOwners(),
+                semanticBaseline);
+        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), null,
+                state(1), List.of(), new FrameNativeDiagnostics(List.of(nativeService),
+                        List.of(new FrontierOwnedChip(1, address)), List.of()));
+        CutoffNativeDiagnostics nativeCutoff = new CutoffNativeDiagnostics(List.of(), List.of(),
+                List.of(), List.of(),
+                0, false, "f".repeat(64));
+        CutoffFrontier referenceCutoff = new CutoffFrontier(null, null, List.of(),
+                nativeCutoff, 0, 0, state(1));
+        CompleteRunAudioProfiles.register(profile);
+
+        Path reference = writeCaptureWithCutoff("cutoff-chip-replay-reference", profile,
+                ProducerKind.REFERENCE, referenceBaseline, referenceFrame, referenceCutoff);
+        Path engine = writeCaptureWithCutoff("cutoff-chip-replay-engine", profile,
+                ProducerKind.OPENGGF, engineBaseline,
+                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), null,
+                        state(1), List.of(), null),
+                new CutoffFrontier(null, null, List.of(), null, 0, 0, state(1)));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        assertEquals("native YM latch replay disagrees with the terminal cutoff",
+                report.validationDetail());
+    }
+
+    @Test
+    void bufferedAuthenticationRemainsExactWhenEverySemanticCutoffLayerIsUnobserved() throws Exception {
+        TestProfile profile = profile("comparator.layers-native-only-cutoff."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.useBufferedReference();
+        profile.comparisonLayers = limitedLayers(false);
+        ProducerObservationInventory chipFramesOnly = new ProducerObservationInventory(
+                java.util.Arrays.stream(ComparisonLayer.values())
+                        .map(layer -> layer == ComparisonLayer.FRAME_CHIP_EVENTS
+                                ? new ProducerObservationClaim(layer, ObservationStatus.OBSERVED, null)
+                                : new ProducerObservationClaim(layer, ObservationStatus.UNOBSERVED,
+                                        "semantic evidence is unavailable in this chips-only fixture"))
+                        .toList());
+        profile.observationInventories = Map.of(ProducerKind.REFERENCE, chipFramesOnly,
+                ProducerKind.OPENGGF, chipFramesOnly);
+        CompleteRunAudioProfiles.register(profile);
+
+        CutoffNativeDiagnostics validNative = new CutoffNativeDiagnostics(List.of(), List.of(),
+                List.of(), List.of(), 0, false, "f".repeat(64));
+        Baseline referenceBaseline = new Baseline(FIRST_FRAME, null, null,
+                new BoundaryFrontier(null, null, null, validNative, null, null));
+        Frame referenceFrame = new Frame(FIRST_FRAME, "test", null, null, null, null,
+                null, List.of(), new FrameNativeDiagnostics(List.of(), List.of(), List.of()));
+        CutoffFrontier referenceCutoff = new CutoffFrontier(null, null, null,
+                validNative, null, null, null);
+        Baseline engineBaseline = new Baseline(FIRST_FRAME, null, null, BoundaryFrontier.unobserved());
+        Frame engineFrame = new Frame(FIRST_FRAME, "test", null, null, null, null,
+                null, List.of(), null);
+        CutoffFrontier engineCutoff = new CutoffFrontier(null, null, null,
+                null, null, null, null);
+
+        Path reference = writeCaptureWithCutoff("native-only-cutoff-reference", profile,
+                ProducerKind.REFERENCE, referenceBaseline, referenceFrame, referenceCutoff);
+        Path engine = writeCaptureWithCutoff("native-only-cutoff-engine", profile,
+                ProducerKind.OPENGGF, engineBaseline, engineFrame, engineCutoff);
+
+        CompleteRunAudioReport valid = CompleteRunAudioComparator.compare(reference, engine);
+        assertEquals(CompleteRunAudioReport.Kind.REFERENCE_LIMITATION, valid.kind(), valid.toText());
+
+        CutoffNativeDiagnostics wrongDigest = new CutoffNativeDiagnostics(List.of(), List.of(),
+                List.of(), List.of(), 0, false, "e".repeat(64));
+        Path invalid = writeCaptureWithCutoff("native-only-cutoff-wrong-digest", profile,
+                ProducerKind.REFERENCE, referenceBaseline, referenceFrame,
+                new CutoffFrontier(null, null, null, wrongDigest, null, null, null));
+        CompleteRunAudioReport rejected = CompleteRunAudioComparator.compare(invalid, engine);
+        assertSemanticFailure(rejected, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void comparedGlobalChipStreamIgnoresUnavailableServicePartition() {
+        ComparisonLayerInventory inventory = layers(
+                ComparisonLayer.SERVICES, ComparisonLayerStatus.UNAVAILABLE,
+                "reference service authority is unavailable");
+        ChipEvent first = new YmWrite(0, 0, 0x22, 1);
+        ChipEvent second = new YmWrite(1, 0, 0x22, 2);
+        Frame reference = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(
+                service(0, List.of(), List.of(first), state(1)),
+                service(1, List.of(), List.of(second), state(1))), List.of(first, second), null);
+        Frame engine = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(
+                service(0, List.of(), List.of(second), state(1)),
+                service(1, List.of(), List.of(first), state(1))), List.of(first, second), null);
+
+        assertEquals(null, CompleteRunAudioComparator.difference(reference, engine, inventory));
+    }
+
+    @Test
+    void unavailableLifecycleStillEnforcesFixtureAndSourceCoordinates() throws Exception {
+        TestProfile outsideProfile = profile("comparator.layers-lifecycle-coordinate."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        outsideProfile.comparisonLayers = layers(
+                ComparisonLayer.LIFECYCLE, ComparisonLayerStatus.UNAVAILABLE,
+                "reference lifecycle authority is unavailable");
+        CompleteRunAudioProfiles.register(outsideProfile);
+        List<CompleteRunAudioTrace.Record> outside = List.of(
+                new Baseline(FIRST_FRAME, state(1), outsideProfile.baselineRoleOwners()),
+                plainFrame(0),
+                new Lifecycle(0, FIRST_FRAME + 1, "unobserved", Map.of(), List.of()));
+        CompleteRunAudioReport outsideReport = CompleteRunAudioComparator.compare(
+                writeCapture("lifecycle-coordinate-reference", outsideProfile,
+                        ProducerKind.REFERENCE, 1, this::plainFrame),
+                writeRecords("lifecycle-coordinate-engine", metadata(outsideProfile, ProducerKind.OPENGGF,
+                        outsideProfile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)), outside));
+
+        assertSemanticFailure(outsideReport, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+
+        TestProfile orderProfile = profile("comparator.layers-lifecycle-source-order."
+                + PROFILE_SEQUENCE.incrementAndGet(), 2);
+        orderProfile.comparisonLayers = layers(
+                ComparisonLayer.LIFECYCLE, ComparisonLayerStatus.UNAVAILABLE,
+                "reference lifecycle authority is unavailable");
+        CompleteRunAudioProfiles.register(orderProfile);
+        List<CompleteRunAudioTrace.Record> regressing = List.of(
+                new Baseline(FIRST_FRAME, state(1), orderProfile.baselineRoleOwners()),
+                new Lifecycle(0, FIRST_FRAME + 1, "unobserved", Map.of(), List.of()),
+                plainFrame(0), plainFrame(1));
+        CompleteRunAudioReport orderReport = CompleteRunAudioComparator.compare(
+                writeCapture("lifecycle-source-reference", orderProfile,
+                        ProducerKind.REFERENCE, 2, this::plainFrame),
+                writeRecords("lifecycle-source-engine", metadata(orderProfile, ProducerKind.OPENGGF,
+                        orderProfile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)), regressing));
+
+        assertSemanticFailure(orderReport, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+    }
+
+    @Test
+    void observedButUncomparedDecisionAndLifecycleOwnershipReceiveProducerLocalValidation() throws Exception {
+        TestProfile decisionProfile = profile("comparator.observed-uncompared-decision."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        decisionProfile.comparisonLayers = layers(
+                ComparisonLayer.DECISIONS, ComparisonLayerStatus.UNAVAILABLE,
+                "comparison authority is pending review");
+        CompleteRunAudioProfiles.register(decisionProfile);
+        Request request = request(0, 0xc0);
+        Decision valid = decision(0, null, 1, owner(0, 0xc0));
+        Decision malformed = new Decision(0, 0xfe, "unapproved", true, "accepted",
+                null, 1, List.of(HardwareRole.FM1), List.of(new RoleDecision(
+                        HardwareRole.FM1, NONE, owner(0, 0xc0))));
+        Path validReference = writeCapture("observed-uncompared-decision-reference", decisionProfile,
+                ProducerKind.REFERENCE, 1,
+                ignored -> requestAndDecisionFrame(0, request, valid, 0, activeState(1)));
+        Path malformedEngine = writeCapture("observed-uncompared-decision-engine", decisionProfile,
+                ProducerKind.OPENGGF, 1,
+                ignored -> requestAndDecisionFrame(0, request, malformed, 0, activeState(1)));
+
+        CompleteRunAudioReport decisionReport = CompleteRunAudioComparator.compare(
+                validReference, malformedEngine);
+        assertSemanticFailure(decisionReport, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.RESOLUTION_INVALID);
+
+        TestProfile ownershipProfile = profile("comparator.observed-uncompared-ownership."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        ownershipProfile.comparisonLayers = layers(
+                ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                "comparison authority is pending review");
+        CompleteRunAudioProfiles.register(ownershipProfile);
+        List<CompleteRunAudioTrace.Record> malformedOwnership = List.of(
+                new Baseline(FIRST_FRAME, state(1), ownershipProfile.baselineRoleOwners()),
+                new Lifecycle(0, FIRST_FRAME, "pulse", Map.of("payload", 1),
+                        List.of(new LifecycleOwnership(HardwareRole.FM1, NONE, owner(0, 0xc0)))),
+                plainFrame(0));
+        CompleteRunAudioReport ownershipReport = CompleteRunAudioComparator.compare(
+                writeCapture("observed-uncompared-ownership-reference", ownershipProfile,
+                        ProducerKind.REFERENCE, 1, this::plainFrame),
+                writeRecords("observed-uncompared-ownership-engine",
+                        metadata(ownershipProfile, ProducerKind.OPENGGF,
+                                ownershipProfile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
+                        malformedOwnership));
+        assertSemanticFailure(ownershipReport, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+    }
+
+    @Test
+    void comparedStatesCannotBeLostBehindUnavailableServiceCardinality() {
+        ComparisonLayerInventory inventory = layers(ComparisonLayer.SERVICES, ComparisonLayerStatus.UNAVAILABLE,
+                "reference service authority is unavailable");
+        Frame reference = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(
+                service(0, List.of(), List.of(), state(1)), service(1, List.of(), List.of(), state(2))));
+        Frame engine = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(
+                service(0, List.of(), List.of(), state(1))));
+
+        assertEquals(CompleteRunAudioReport.Kind.STATE_FIELD_VALUE,
+                CompleteRunAudioComparator.difference(reference, engine, inventory).kind());
+    }
+
+    @Test
+    void comparedServiceProjectionExcludesUnavailableNestedLayers() {
+        ComparisonLayerInventory inventory = layers(ComparisonLayer.DECISIONS, ComparisonLayerStatus.UNAVAILABLE,
+                "reference decision authority is unavailable",
+                ComparisonLayer.STATE, ComparisonLayerStatus.UNAVAILABLE, "reference state authority is unavailable",
+                ComparisonLayer.FRAME_CHIP_EVENTS, ComparisonLayerStatus.UNAVAILABLE,
+                "reference chip authority is unavailable");
+        DriverService reference = service(0, List.of(decision(0, 1, 2, owner(0, 0xc0))),
+                List.of(new YmWrite(0, 0, 0x22, 1)), state(1));
+        DriverService engine = service(0, List.of(decision(0, 2, 3, owner(0, 0xc1))),
+                List.of(new YmWrite(0, 0, 0x22, 2)), state(2));
+
+        assertEquals(null, CompleteRunAudioComparator.difference(
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(reference)),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(engine)), inventory));
+    }
+
+    @Test
+    void comparedServicesDetectEveryServiceOwnedFieldWithoutNestedAuthority() {
+        ComparisonLayerInventory inventory = layers(ComparisonLayer.DECISIONS, ComparisonLayerStatus.UNAVAILABLE,
+                "reference decision authority is unavailable",
+                ComparisonLayer.STATE, ComparisonLayerStatus.UNAVAILABLE, "reference state authority is unavailable",
+                ComparisonLayer.FRAME_CHIP_EVENTS, ComparisonLayerStatus.UNAVAILABLE,
+                "reference chip authority is unavailable");
+        ServiceCoordinate begin = new ServiceCoordinate(FIRST_FRAME, 0);
+        ServiceCoordinate end = new ServiceCoordinate(FIRST_FRAME + 1, 0);
+        DriverService reference = testService(0, "driver", ServiceCompletion.COMPLETED,
+                List.of(decision(0, 1, 2, owner(0, 0xc0))), state(1), List.of(new YmWrite(0, 0, 0x22, 1)),
+                1L, begin, end, ServiceAncestry.root());
+        List<ServiceFieldCase> cases = List.of(
+                new ServiceFieldCase("completion", testService(0, "driver", ServiceCompletion.RESET_CANCELLED,
+                        List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2), List.of(new YmWrite(0, 0, 0x22, 2)),
+                        1L, begin, end, ServiceAncestry.root())),
+                new ServiceFieldCase("carried_boundary_ordinal", testService(0, "driver",
+                        ServiceCompletion.COMPLETED, List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2),
+                        List.of(new YmWrite(0, 0, 0x22, 2)), 2L, begin, end, ServiceAncestry.root())),
+                new ServiceFieldCase("begin_coordinate", testService(0, "driver", ServiceCompletion.COMPLETED,
+                        List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2), List.of(new YmWrite(0, 0, 0x22, 2)),
+                        1L, new ServiceCoordinate(FIRST_FRAME, 1), end, ServiceAncestry.root())),
+                new ServiceFieldCase("end_coordinate", testService(0, "driver", ServiceCompletion.COMPLETED,
+                        List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2), List.of(new YmWrite(0, 0, 0x22, 2)),
+                        1L, begin, new ServiceCoordinate(FIRST_FRAME + 2, 0), ServiceAncestry.root())),
+                new ServiceFieldCase("ancestry", testService(0, "driver", ServiceCompletion.COMPLETED,
+                        List.of(decision(0, 2, 3, owner(0, 0xc1))), state(2), List.of(new YmWrite(0, 0, 0x22, 2)),
+                        1L, begin, end, new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME - 1, 0), 1,
+                                new ServiceCoordinate(FIRST_FRAME - 1, 0), 1, List.of()))));
+
+        for (ServiceFieldCase mutation : cases) {
+            CompleteRunAudioComparator.Difference difference = CompleteRunAudioComparator.difference(
+                    fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(reference)),
+                    fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(mutation.actual())), inventory);
+
+            assertNotNull(difference, mutation.field());
+            assertEquals(CompleteRunAudioReport.Kind.SERVICE_VALUE, difference.kind(), mutation.field());
+            assertEquals("frame.services[0]." + mutation.field(), difference.location(), mutation.field());
+        }
+    }
+
+    @Test
+    void incompatibleInventoriesFailBeforeAnySemanticComparison() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("inventory-reference", profile, ProducerKind.REFERENCE, 1, this::plainFrame);
+        Metadata incompatible = testMetadata(SCHEMA, profile.id(), profile.fixture(), ProducerKind.OPENGGF,
+                profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF),
+                profile.observerRuntimeIdentities().get(ProducerKind.OPENGGF),
+                profile.observerProofs().get(ProducerKind.OPENGGF), new ChunkPolicy(CHUNK_FRAME_ROWS, "gzip", 0),
+                profile.hardwareRoles(), profile.stateInventory(), layers(ComparisonLayer.LIFECYCLE,
+                        ComparisonLayerStatus.UNAVAILABLE, "reference lifecycle authority is unavailable"),
+                ProducerObservationInventory.allObserved());
+        Path engine = writeCapture("inventory-engine", incompatible, 1, this::plainFrame);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.METADATA_PROFILE_MISMATCH);
     }
 
     @Test
@@ -89,14 +827,14 @@ class TestCompleteRunAudioComparator {
         assertEquals(CompleteRunAudioJson.writeSemanticRecord(expected),
                 CompleteRunAudioJson.writeSemanticRecord(actual));
 
-        DriverService carriedCompletion = new DriverService(0, "UpdateMusic",
+        DriverService carriedCompletion = testService(0, "UpdateMusic",
                 ServiceCompletion.COMPLETED, List.of(), state, List.of(), 0L);
-        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame engineFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(carriedCompletion));
         FrontierService nativeCompletion = new FrontierService(1, 0, 0, "UpdateMusic",
                 FrontierServiceState.COMPLETED, FIRST_FRAME - 1, 0, 0x71b4c, 1, "M68K",
                 FIRST_FRAME, 0L, 0x71c4c, 2, List.of(), List.of());
-        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame referenceFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(carriedCompletion), List.of(),
                 new FrameNativeDiagnostics(List.of(nativeCompletion), List.of(), List.of()));
         Path referenceCapture = writeCapture("baseline-frontier-reference",
@@ -111,12 +849,12 @@ class TestCompleteRunAudioComparator {
         assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
         assertNotEquals(report.reference().rootDigest(), report.engine().rootDigest());
 
-        DriverService wrongLink = new DriverService(0, "UpdateMusic", ServiceCompletion.COMPLETED,
+        DriverService wrongLink = testService(0, "UpdateMusic", ServiceCompletion.COMPLETED,
                 List.of(), state, List.of(), 1L);
         Path wrongEngine = writeCapture("baseline-frontier-wrong-link",
                 metadata(profile, ProducerKind.OPENGGF,
                         profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
-                actual, 1, ignored -> new Frame(FIRST_FRAME, "test", false, List.of(), List.of(wrongLink)));
+                actual, 1, ignored -> fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(wrongLink)));
         assertSemanticFailure(CompleteRunAudioComparator.compare(referenceCapture, wrongEngine),
                 CompleteRunAudioReport.Side.ENGINE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
@@ -134,12 +872,12 @@ class TestCompleteRunAudioComparator {
                 FrontierServiceState.CARRIED_IN_OPEN, FIRST_FRAME, 1, null, null, List.of());
         Baseline nested = new Baseline(FIRST_FRAME, state, owners,
                 new BoundaryFrontier(List.of(outer, inner), List.of(), List.of(), null, 0, 0));
-        DriverService outerFirst = new DriverService(0, "UpdateMusic",
+        DriverService outerFirst = testService(0, "UpdateMusic",
                 ServiceCompletion.COMPLETED, List.of(), state, List.of(), 0L);
         Path wrongReleaseOrder = writeCapture("baseline-frontier-outer-first",
                 metadata(profile, ProducerKind.OPENGGF,
                         profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
-                nested, 1, ignored -> new Frame(FIRST_FRAME, "test", false, List.of(),
+                nested, 1, ignored -> fullFrame(FIRST_FRAME, "test", false, List.of(),
                         List.of(outerFirst)));
         assertSemanticFailure(CompleteRunAudioComparator.compare(referenceCapture, wrongReleaseOrder),
                 CompleteRunAudioReport.Side.ENGINE,
@@ -172,17 +910,17 @@ class TestCompleteRunAudioComparator {
         Baseline engineBaseline = new Baseline(FIRST_FRAME, state, profile.baselineRoleOwners(),
                 new BoundaryFrontier(List.of(carried), List.of(), List.of(), null, 0x22, 0));
         YmWrite semanticWrite = new YmWrite(0, 0, 0x22, 7);
-        DriverService completion = new DriverService(0, "UpdateMusic", ServiceCompletion.COMPLETED,
+        DriverService completion = testService(0, "UpdateMusic", ServiceCompletion.COMPLETED,
                 List.of(), state, List.of(semanticWrite), 0L);
         FrontierChipEvent regressing = new FrontierChipEvent(99, 0, "M68K", 0x71c4c,
                 3, 1, 7, true, 0, 0x22);
         FrontierService nativeCompletion = new FrontierService(1, 0, 0, "UpdateMusic",
                 FrontierServiceState.COMPLETED, FIRST_FRAME - 1, 0, 0x71b4c, 1, "M68K",
                 FIRST_FRAME, 0L, 0x71c4c, 2, List.of(), List.of(regressing));
-        Frame badReferenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(completion),
+        Frame badReferenceFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(completion),
                 List.of(semanticWrite), new FrameNativeDiagnostics(List.of(nativeCompletion),
                         List.of(new FrontierOwnedChip(1, regressing)), List.of()));
-        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(completion));
+        Frame engineFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(completion));
 
         Path reference = writeCapture("baseline-chip-order-reference",
                 metadata(profile, ProducerKind.REFERENCE,
@@ -204,10 +942,10 @@ class TestCompleteRunAudioComparator {
         NormalizedState state = baselineState(profile);
         Path reference = writeCapture("ordinary-service-reference", profile, ProducerKind.REFERENCE,
                 1, this::plainFrame);
-        DriverService impossibleLink = new DriverService(0, "UpdateMusic",
+        DriverService impossibleLink = testService(0, "UpdateMusic",
                 ServiceCompletion.COMPLETED, List.of(), state, List.of(), 0L);
         Path engine = writeCapture("ordinary-service-carried-link", profile, ProducerKind.OPENGGF,
-                1, ignored -> new Frame(FIRST_FRAME, "test", false, List.of(),
+                1, ignored -> fullFrame(FIRST_FRAME, "test", false, List.of(),
                         List.of(impossibleLink)));
 
         assertSemanticFailure(CompleteRunAudioComparator.compare(reference, engine),
@@ -283,9 +1021,9 @@ class TestCompleteRunAudioComparator {
                 List.of(), List.of(rawWrite));
         FrameNativeDiagnostics diagnostics = new FrameNativeDiagnostics(List.of(rawService),
                 List.of(new FrontierOwnedChip(1, rawWrite)), List.of());
-        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(semantic),
+        Frame referenceFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(semantic),
                 List.of(new PsgWrite(0, 0x9f)), diagnostics);
-        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(semantic));
+        Frame engineFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(semantic));
 
         Path reference = writeCapture("buffered-reference", profile, ProducerKind.REFERENCE, 1,
                 ignored -> referenceFrame);
@@ -298,20 +1036,16 @@ class TestCompleteRunAudioComparator {
         assertNotEquals(readAll(reference).get(1), readAll(engine).get(1));
 
         CutoffFrontier semanticOnly = CutoffFrontier.empty(state);
-        Path missingReferenceDiagnostics = writeCaptureWithCutoff("missing-reference-cutoff-diagnostics",
-                profile, ProducerKind.REFERENCE, referenceFrame, semanticOnly);
-        CompleteRunAudioReport missing = CompleteRunAudioComparator.compare(missingReferenceDiagnostics, engine);
-        assertSemanticFailure(missing, CompleteRunAudioReport.Side.REFERENCE,
-                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        assertThrows(IllegalArgumentException.class, () -> writeCaptureWithCutoff(
+                "missing-reference-cutoff-diagnostics", profile, ProducerKind.REFERENCE,
+                referenceFrame, semanticOnly));
 
         CutoffFrontier unexpectedNative = new CutoffFrontier(List.of(), List.of(), List.of(),
                 new CutoffNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
                         0, false, "f".repeat(64)), 0, 0, state);
-        Path engineWithDiagnostics = writeCaptureWithCutoff("engine-with-cutoff-diagnostics",
-                profile, ProducerKind.OPENGGF, engineFrame, unexpectedNative);
-        CompleteRunAudioReport unexpected = CompleteRunAudioComparator.compare(reference, engineWithDiagnostics);
-        assertSemanticFailure(unexpected, CompleteRunAudioReport.Side.ENGINE,
-                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        assertThrows(IllegalArgumentException.class, () -> writeCaptureWithCutoff(
+                "engine-with-cutoff-diagnostics", profile, ProducerKind.OPENGGF,
+                engineFrame, unexpectedNative));
     }
 
     @Test
@@ -348,16 +1082,16 @@ class TestCompleteRunAudioComparator {
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 3, 0x71b82, 78, "M68K",
                 FIRST_FRAME, 5L, 0x71c4c, 79, List.of(), List.of());
         DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
-        DriverService semanticConsumed = new DriverService(1, "consumed",
+        DriverService semanticConsumed = testService(1, "consumed",
                 ServiceCompletion.COMPLETED, List.of(), state(1), List.of(), null,
                 new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
                         new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
-        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame referenceFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker, semanticConsumed), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
                         List.of(), List.of(marker1, marker2, consumeBegin, consumedEnd),
                         List.of(deferred), List.of()));
-        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame engineFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker, semanticConsumed));
 
         Path reference = writeCapture("deferred-reference", profile, ProducerKind.REFERENCE, 1,
@@ -368,7 +1102,7 @@ class TestCompleteRunAudioComparator {
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
         assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
 
-        Frame missingDiagnostic = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame missingDiagnostic = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker, semanticConsumed), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
                         List.of(), List.of(marker1, marker2, consumeBegin, consumedEnd), List.of()));
@@ -382,7 +1116,7 @@ class TestCompleteRunAudioComparator {
                 consumeBegin.events());
         NativeManagedCorrelation markerlessEnd = new NativeManagedCorrelation(1,
                 consumedEnd.events());
-        Frame missingMarkers = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame missingMarkers = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker, semanticConsumed), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
                         List.of(), List.of(markerlessBegin, markerlessEnd), List.of(deferred), List.of()));
@@ -394,7 +1128,7 @@ class TestCompleteRunAudioComparator {
 
         NativeManagedCorrelation missingBeginEnd = new NativeManagedCorrelation(2,
                 consumedEnd.events());
-        Frame missingConsumeProof = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame missingConsumeProof = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker, semanticConsumed), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
                         List.of(), List.of(marker1, marker2, missingBeginEnd),
@@ -409,7 +1143,7 @@ class TestCompleteRunAudioComparator {
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 coordinateBase + 1, coordinateBase + 2, 1, 2, 2,
                 true, 15, coordinateBase + 3);
-        Frame forgedConsume = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame forgedConsume = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker, semanticConsumed), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
                         List.of(), List.of(marker1, marker2, consumeBegin, consumedEnd),
@@ -423,7 +1157,7 @@ class TestCompleteRunAudioComparator {
         NativeManagedCorrelation changedMarker = new NativeManagedCorrelation(1, List.of(
                 new NativeManagedEvent(coordinateBase + 2, 2, "M68K", 0x71b4e,
                         10, 4, 13, 0, 6, 0, 77, true)));
-        Frame changedIdentity = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame changedIdentity = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker, semanticConsumed), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
                         List.of(), List.of(marker1, changedMarker, consumeBegin, consumedEnd),
@@ -438,7 +1172,7 @@ class TestCompleteRunAudioComparator {
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 coordinateBase + 1, coordinateBase + 2, 1, 2, 2,
                 true, 14, coordinateBase + 4);
-        Frame shiftedConsume = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame shiftedConsume = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker, semanticConsumed), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
                         List.of(), List.of(marker1, marker2, consumeBegin, consumedEnd),
@@ -465,7 +1199,7 @@ class TestCompleteRunAudioComparator {
         FrontierService oldRoot = new FrontierService(15, 0, 0, "consumed",
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 7, 0x71b4c, 77, "M68K",
                 FIRST_FRAME, 9L, 0x71c4c, 79, List.of(), List.of());
-        Frame oldReleaseFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame oldReleaseFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker,
                         service(1, List.of(), List.of(), state(1), "consumed")), List.of(),
                 new FrameNativeDiagnostics(List.of(oldBlocker, oldRoot), List.of(), List.of(),
@@ -518,16 +1252,16 @@ class TestCompleteRunAudioComparator {
                     FIRST_FRAME, 7L, 0x71c4c, 79, List.of(), List.of());
             DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
             DriverService semanticSuccessor = service(1, List.of(), List.of(), state(1), successorName);
-            DriverService semanticChild = new DriverService(2, "consumed",
+            DriverService semanticChild = testService(2, "consumed",
                     ServiceCompletion.COMPLETED, List.of(), state(1), List.of(), null,
                     new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 2), 1,
                             new ServiceCoordinate(FIRST_FRAME, 2), 1, List.of()));
-            Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+            Frame referenceFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                     List.of(semanticBlocker, semanticSuccessor, semanticChild), List.of(),
                     new FrameNativeDiagnostics(List.of(blocker, successor, child), List.of(), List.of(),
                             List.of(), List.of(marker, consumeBegin, consumeEnd),
                             List.of(deferred), List.of()));
-            Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+            Frame engineFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                     List.of(semanticBlocker, semanticSuccessor, semanticChild));
 
             Path reference = writeCapture("deferred-transfer-reference-" + successorKind, profile,
@@ -543,12 +1277,12 @@ class TestCompleteRunAudioComparator {
             NativeDeferredServiceBegin staleOwner = new NativeDeferredServiceBegin(
                     13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                     base + 1, base + 1, 1, 1, 1, true, 21, base + 5);
-            Frame staleOwnerFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+            Frame staleOwnerFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                     List.of(semanticBlocker, semanticSuccessor), List.of(),
                     new FrameNativeDiagnostics(List.of(blocker, successor), List.of(), List.of(),
                             List.of(), List.of(marker, consumeUnderOrigin),
                             List.of(staleOwner), List.of()));
-            Frame engineOwnerFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+            Frame engineOwnerFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                     staleOwnerFrame.services());
             Path staleOwnerCapture = writeCapture(
                     "deferred-transfer-stale-origin-" + successorKind, profile,
@@ -567,7 +1301,7 @@ class TestCompleteRunAudioComparator {
             NativeDeferredServiceBegin colliding = new NativeDeferredServiceBegin(
                     13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                     base + 1, base + 1, 1, 1, 1, true, 21, base + 4);
-            Frame collidingFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+            Frame collidingFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                     List.of(semanticBlocker, semanticSuccessor), List.of(),
                     new FrameNativeDiagnostics(List.of(blocker, successor), List.of(), List.of(),
                             List.of(), List.of(marker, collidingConsume),
@@ -599,7 +1333,7 @@ class TestCompleteRunAudioComparator {
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 coordinateBase + 1, coordinateBase + 1, 1, 1, 1,
                 false, 0, 0);
-        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+        Frame referenceFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
                         List.of(marker), List.of(pending), List.of()));
         Frame engineFrame = plainFrame(0);
@@ -659,11 +1393,11 @@ class TestCompleteRunAudioComparator {
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
                 FIRST_FRAME, 3L, 0x77, 11, List.of(), List.of());
         DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
-        Frame transfer = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame transfer = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticBlocker), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker), List.of(), List.of(), List.of(),
                         List.of(marker), List.of(pending), List.of()));
-        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(semanticBlocker));
+        Frame engineFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(semanticBlocker));
         FrontierService successor = new FrontierService(20, 0, 0, "dpcm",
                 FrontierServiceState.OPEN, FIRST_FRAME, 4, 0x77, 11, "Z80",
                 null, null, null, null, List.of(), List.of());
@@ -738,7 +1472,7 @@ class TestCompleteRunAudioComparator {
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 coordinateBase + 1, coordinateBase + 1, 1, 1, 1,
                 true, 14, coordinateBase + 2);
-        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+        Frame referenceFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
                         List.of(marker, consumeBegin), List.of(consumed), List.of()));
         Frame engineFrame = plainFrame(0);
@@ -790,7 +1524,7 @@ class TestCompleteRunAudioComparator {
         NativeManagedCorrelation consumeBegin = new NativeManagedCorrelation(1, List.of(
                 new NativeManagedEvent(firstBase + 2, 2, "M68K", 0x71b82,
                         1, 0, 14, 13, 4, 1, 78, true)));
-        Frame consumeFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+        Frame consumeFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
                         List.of(marker, consumeBegin), List.of(consumed), List.of()));
         FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
@@ -803,16 +1537,16 @@ class TestCompleteRunAudioComparator {
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 2, 0x71b82, 78, "M68K",
                 FIRST_FRAME + 1, 1L, 0x71c4c, 79, List.of(), List.of());
         DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
-        DriverService semanticChild = new DriverService(1, "consumed", ServiceCompletion.COMPLETED,
+        DriverService semanticChild = testService(1, "consumed", ServiceCompletion.COMPLETED,
                 List.of(), state(1), List.of(), null,
                 new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
                         new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
-        Frame completionFrame = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+        Frame completionFrame = fullFrame(FIRST_FRAME + 1, "test", false, List.of(),
                 List.of(semanticBlocker, semanticChild), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, child), List.of(), List.of(), List.of(),
                         List.of(consumedEnd)));
         Frame engineConsume = plainFrame(0);
-        Frame engineCompletion = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+        Frame engineCompletion = fullFrame(FIRST_FRAME + 1, "test", false, List.of(),
                 completionFrame.services());
 
         Path reference = writeCapture("deferred-crossframe-reference", profile,
@@ -831,7 +1565,7 @@ class TestCompleteRunAudioComparator {
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
 
-        Frame duplicateConsumeFrame = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+        Frame duplicateConsumeFrame = fullFrame(FIRST_FRAME + 1, "test", false, List.of(),
                 completionFrame.services(), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, child), List.of(), List.of(), List.of(),
                         List.of(consumedEnd), List.of(consumed), List.of()));
@@ -870,7 +1604,7 @@ class TestCompleteRunAudioComparator {
         FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
                 FIRST_FRAME, 3L, tailPc, tailHook, List.of(), List.of());
-        Frame transfer = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame transfer = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(service(0, List.of(), List.of(), state(1), "blocker")), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker), List.of(), List.of(), List.of(),
                         List.of(marker), List.of(pending), List.of()));
@@ -890,16 +1624,16 @@ class TestCompleteRunAudioComparator {
                 FrontierServiceState.COMPLETED, FIRST_FRAME + 1, 2, 0x71b82, 78, "M68K",
                 FIRST_FRAME + 1, 4L, 0x71c4c, 79, List.of(), List.of());
         DriverService semanticSuccessor = service(1, List.of(), List.of(), state(1), successorName);
-        DriverService semanticChild = new DriverService(2, "consumed", ServiceCompletion.COMPLETED,
+        DriverService semanticChild = testService(2, "consumed", ServiceCompletion.COMPLETED,
                 List.of(), state(1), List.of(), null,
                 new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
                         new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
-        Frame release = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+        Frame release = fullFrame(FIRST_FRAME + 1, "test", false, List.of(),
                 List.of(semanticSuccessor, semanticChild), List.of(),
                 new FrameNativeDiagnostics(List.of(successor, child), List.of(), List.of(), List.of(),
                         List.of(childBegin, childEnd), List.of(consumed), List.of()));
-        Frame engineTransfer = new Frame(FIRST_FRAME, "test", false, List.of(), transfer.services());
-        Frame engineRelease = new Frame(FIRST_FRAME + 1, "test", false, List.of(), release.services());
+        Frame engineTransfer = fullFrame(FIRST_FRAME, "test", false, List.of(), transfer.services());
+        Frame engineRelease = fullFrame(FIRST_FRAME + 1, "test", false, List.of(), release.services());
 
         Path reference = writeCapture("deferred-transfer-crossframe-reference-" + successorKind, profile,
                 ProducerKind.REFERENCE, 2, row -> row == 0 ? transfer : release);
@@ -911,7 +1645,7 @@ class TestCompleteRunAudioComparator {
         FrontierService nonAdjacentSuccessor = new FrontierService(20, 0, 0, successorName,
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 5, tailPc, tailHook, "Z80",
                 FIRST_FRAME + 1, 6L, tailPc + 0x35, tailHook + 20, List.of(), List.of());
-        Frame malformedRelease = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+        Frame malformedRelease = fullFrame(FIRST_FRAME + 1, "test", false, List.of(),
                 List.of(semanticSuccessor, semanticChild), List.of(),
                 new FrameNativeDiagnostics(List.of(nonAdjacentSuccessor, child), List.of(), List.of(),
                         List.of(), List.of(childBegin, childEnd), List.of(consumed), List.of()));
@@ -927,7 +1661,7 @@ class TestCompleteRunAudioComparator {
         NativeDeferredServiceBegin collidingPending = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 firstBase + 1, firstBase + 1, 1, 1, 1, false, 0, 0);
-        Frame collidingTransfer = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame collidingTransfer = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 transfer.services(), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker), List.of(), List.of(), List.of(),
                         List.of(marker, collidingTailSlot), List.of(collidingPending), List.of()));
@@ -940,11 +1674,11 @@ class TestCompleteRunAudioComparator {
         assertEquals("retained tail service collides with another native raw event",
                 collisionReport.validationDetail());
 
-        Frame danglingConsume = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+        Frame danglingConsume = fullFrame(FIRST_FRAME + 1, "test", false, List.of(),
                 List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
                         List.of(childBegin), List.of(consumed), List.of()));
-        Frame engineDanglingConsume = new Frame(FIRST_FRAME + 1, "test", false, List.of(), List.of());
+        Frame engineDanglingConsume = fullFrame(FIRST_FRAME + 1, "test", false, List.of(), List.of());
         Path dangling = writeCapture("deferred-transfer-crossframe-dangling-" + successorKind,
                 profile, ProducerKind.REFERENCE, 2,
                 row -> row == 0 ? transfer : danglingConsume);
@@ -1003,17 +1737,17 @@ class TestCompleteRunAudioComparator {
                 FIRST_FRAME, 4L, 0x71c4c, 79, List.of(), List.of(), 20, 1, List.of(),
                 new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
                         new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
-        DriverService semanticSuccessor = new DriverService(0, "dpcm", ServiceCompletion.COMPLETED,
+        DriverService semanticSuccessor = testService(0, "dpcm", ServiceCompletion.COMPLETED,
                 List.of(), state(1), List.of(), 0L);
-        DriverService semanticChild = new DriverService(1, "consumed", ServiceCompletion.COMPLETED,
+        DriverService semanticChild = testService(1, "consumed", ServiceCompletion.COMPLETED,
                 List.of(), state(1), List.of(), null,
                 new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
                         new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
-        Frame release = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame release = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(semanticSuccessor, semanticChild), List.of(),
                 new FrameNativeDiagnostics(List.of(releasedSuccessor, child), List.of(), List.of(),
                         List.of(), List.of(begin, end), List.of(consumed), List.of()));
-        Frame engineRelease = new Frame(FIRST_FRAME, "test", false, List.of(), release.services());
+        Frame engineRelease = fullFrame(FIRST_FRAME, "test", false, List.of(), release.services());
         Baseline engineBaseline = new Baseline(FIRST_FRAME, state(1), profile.baselineRoleOwners(),
                 new BoundaryFrontier(List.of(carriedSuccessor), List.of(), List.of(), null, 0, 0));
 
@@ -1079,13 +1813,13 @@ class TestCompleteRunAudioComparator {
         FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
                 FIRST_FRAME + 2, 2L, 0x77, 11, List.of(), List.of());
-        Frame pendingFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+        Frame pendingFrame = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
                         List.of(marker), List.of(pending), List.of()));
         NativeManagedCorrelation consumeBegin = new NativeManagedCorrelation(0, List.of(
                 new NativeManagedEvent(consumeBase + 1, 1, "M68K", 0x71b82,
                         1, 0, 14, 13, 4, 1, 78, true)));
-        Frame consumeFrame = new Frame(FIRST_FRAME + 1, "test", false, List.of(), List.of(), List.of(),
+        Frame consumeFrame = fullFrame(FIRST_FRAME + 1, "test", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
                         List.of(consumeBegin), List.of(consumed), List.of()));
         NativeManagedCorrelation consumedEnd = new NativeManagedCorrelation(0, List.of(
@@ -1095,17 +1829,17 @@ class TestCompleteRunAudioComparator {
                 FrontierServiceState.COMPLETED, FIRST_FRAME + 1, 1, 0x71b82, 78, "M68K",
                 FIRST_FRAME + 2, 1L, 0x71c4c, 79, List.of(), List.of());
         DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
-        DriverService semanticChild = new DriverService(1, "consumed", ServiceCompletion.COMPLETED,
+        DriverService semanticChild = testService(1, "consumed", ServiceCompletion.COMPLETED,
                 List.of(), state(1), List.of(), null,
                 new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
                         new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
-        Frame completionFrame = new Frame(FIRST_FRAME + 2, "test", false, List.of(),
+        Frame completionFrame = fullFrame(FIRST_FRAME + 2, "test", false, List.of(),
                 List.of(semanticBlocker, semanticChild), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, child), List.of(), List.of(), List.of(),
                         List.of(consumedEnd)));
         Frame enginePending = plainFrame(0);
         Frame engineConsume = plainFrame(1);
-        Frame engineCompletion = new Frame(FIRST_FRAME + 2, "test", false, List.of(),
+        Frame engineCompletion = fullFrame(FIRST_FRAME + 2, "test", false, List.of(),
                 List.of(semanticBlocker, semanticChild));
 
         Path reference = writeCapture("deferred-consume-frame", profile,
@@ -1126,7 +1860,7 @@ class TestCompleteRunAudioComparator {
         NativeManagedCorrelation regressedEnd = new NativeManagedCorrelation(0, List.of(
                 new NativeManagedEvent(consumeBase + 1, 1, "M68K", 0x71c4c,
                         2, 0, 14, 13, 4, 1, 79, true)));
-        Frame regressionFrame = new Frame(FIRST_FRAME + 2, "test", false, List.of(),
+        Frame regressionFrame = fullFrame(FIRST_FRAME + 2, "test", false, List.of(),
                 List.of(semanticBlocker, semanticChild), List.of(),
                 new FrameNativeDiagnostics(List.of(blocker, child), List.of(), List.of(), List.of(),
                         List.of(regressedEnd)));
@@ -1140,7 +1874,7 @@ class TestCompleteRunAudioComparator {
         FrontierService reset = new FrontierService(15, 0, 0, "reset",
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 2, 0, 0, "RESET",
                 FIRST_FRAME, 3L, 0, 0, List.of(), List.of());
-        Frame resetPending = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame resetPending = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(service(0, List.of(), List.of(), state(1), "reset")), List.of(),
                 new FrameNativeDiagnostics(List.of(reset), List.of(), List.of(),
                         List.of(new NativeResetDiagnostic(15, false)), List.of(marker),
@@ -1178,7 +1912,7 @@ class TestCompleteRunAudioComparator {
         Frame beginFrame = bufferedFrame(0, List.of(), List.of(), begin);
         Frame endFrame = bufferedFrame(1, List.of(semantic), List.of(rawService), end);
         Frame engineBegin = plainFrame(0);
-        Frame engineEnd = new Frame(FIRST_FRAME + 1, "test", false, List.of(), List.of(semantic));
+        Frame engineEnd = fullFrame(FIRST_FRAME + 1, "test", false, List.of(), List.of(semantic));
 
         Path reference = writeCapture("crossframe-reference", profile, ProducerKind.REFERENCE, 2,
                 row -> row == 0 ? beginFrame : endFrame);
@@ -1226,7 +1960,7 @@ class TestCompleteRunAudioComparator {
                 });
         Path lateEngine = writeCapture("crossframe-late-engine", wrongEndProfile,
                 ProducerKind.OPENGGF, 3, row -> row == 2
-                        ? new Frame(FIRST_FRAME + 2, "test", false, List.of(), List.of(semantic))
+                        ? fullFrame(FIRST_FRAME + 2, "test", false, List.of(), List.of(semantic))
                         : plainFrame(row));
         assertSemanticFailure(CompleteRunAudioComparator.compare(wrongEnd, lateEngine),
                 CompleteRunAudioReport.Side.REFERENCE,
@@ -1295,9 +2029,9 @@ class TestCompleteRunAudioComparator {
         ServiceAncestry ancestry = new ServiceAncestry(parentCoordinate, 1, null, 0,
                 List.of(new ServiceAncestryTransition(
                         parentCoordinate, 1, null, 0, FIRST_FRAME, 3)));
-        DriverService parentSemantic = new DriverService(0, "dpcm", ServiceCompletion.COMPLETED,
+        DriverService parentSemantic = testService(0, "dpcm", ServiceCompletion.COMPLETED,
                 List.of(), state, List.of(), null, ServiceAncestry.root());
-        DriverService childSemantic = new DriverService(1, "driver", ServiceCompletion.COMPLETED,
+        DriverService childSemantic = testService(1, "driver", ServiceCompletion.COMPLETED,
                 List.of(), state, List.of(), null,
                 new ServiceCoordinate(FIRST_FRAME, 0),
                 new ServiceCoordinate(FIRST_FRAME + 1, 0), ancestry);
@@ -1316,15 +2050,15 @@ class TestCompleteRunAudioComparator {
         NativeManagedCorrelation end = new NativeManagedCorrelation(0, List.of(
                 new NativeManagedEvent(4, 0, "M68K", 0x71c4c,
                         2, 0, 2, 0, 4, 0, 13, true)));
-        Frame referenceParent = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame referenceParent = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(parentSemantic), List.of(), new FrameNativeDiagnostics(
                         List.of(parent), List.of(), List.of(), List.of(), List.of(begin),
                         List.of(new FrontierOwnedAncestryTransition(2, promotion))));
-        Frame referenceChild = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+        Frame referenceChild = fullFrame(FIRST_FRAME + 1, "test", false, List.of(),
                 List.of(childSemantic), List.of(), new FrameNativeDiagnostics(
                         List.of(child), List.of(), List.of(), List.of(), List.of(end), List.of()));
-        Frame engineParent = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(parentSemantic));
-        Frame engineChild = new Frame(FIRST_FRAME + 1, "test", false, List.of(), List.of(childSemantic));
+        Frame engineParent = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(parentSemantic));
+        Frame engineChild = fullFrame(FIRST_FRAME + 1, "test", false, List.of(), List.of(childSemantic));
 
         Path reference = writeCapture("promotion-reference", profile, ProducerKind.REFERENCE, 2,
                 row -> row == 0 ? referenceParent : referenceChild);
@@ -1333,7 +2067,7 @@ class TestCompleteRunAudioComparator {
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
         assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
 
-        Frame missingProofParent = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame missingProofParent = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(parentSemantic), List.of(), new FrameNativeDiagnostics(
                         List.of(parent), List.of(), List.of(), List.of(), List.of(begin), List.of()));
         Path missingProof = writeCapture("promotion-missing-proof", profile, ProducerKind.REFERENCE, 2,
@@ -1342,7 +2076,7 @@ class TestCompleteRunAudioComparator {
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
 
-        Frame wrongOwnerParent = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame wrongOwnerParent = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(parentSemantic), List.of(), new FrameNativeDiagnostics(
                         List.of(parent), List.of(), List.of(), List.of(), List.of(begin),
                         List.of(new FrontierOwnedAncestryTransition(3, promotion))));
@@ -1421,15 +2155,16 @@ class TestCompleteRunAudioComparator {
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 7, 0, 0, "RESET",
                 FIRST_FRAME, 8L, 0, 0, List.of(), List.of());
         FrameNativeDiagnostics diagnostics = new FrameNativeDiagnostics(List.of(ordinary, resetRoot, powerRoot),
-                List.of(new FrontierOwnedChip(1, beforeAddress), new FrontierOwnedChip(1, beforeData),
-                        new FrontierOwnedChip(7, afterData)), List.of(),
+                List.of(new FrontierOwnedChip(1, 0, beforeAddress),
+                        new FrontierOwnedChip(1, 0, beforeData),
+                        new FrontierOwnedChip(7, 1, afterData)), List.of(),
                 List.of(new NativeResetDiagnostic(7, false), new NativeResetDiagnostic(8, true)));
-        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+        Frame referenceFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
                 List.of(service(0, List.of(), List.of(new YmWrite(0, 0, 0x2a, 0x7f)), state(1), "driver"),
                         reset, power), List.of(new YmWrite(0, 0, 0x2a, 0x7f),
                                 new YmWrite(1, 0, 0, 0x33)), diagnostics);
-        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
-                referenceFrame.services(), referenceFrame.rawChipEvents(), null);
+        Frame engineFrame = fullFrame(FIRST_FRAME, "test", false, List.of(),
+                referenceFrame.services(), referenceFrame.chipEvents(), null);
         Lifecycle lifecycle = new Lifecycle(0, FIRST_FRAME, "reset", Map.of("service_ordinal", 1L), List.of());
         Lifecycle powerLifecycle = new Lifecycle(1, FIRST_FRAME, "power",
                 Map.of("service_ordinal", 2L), List.of());
@@ -1448,8 +2183,8 @@ class TestCompleteRunAudioComparator {
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
         Path wrongPower = writeSequence("reset-wrong-power", profile, ProducerKind.REFERENCE,
-                List.of(new Frame(FIRST_FRAME, "test", false, List.of(), referenceFrame.services(),
-                                referenceFrame.rawChipEvents(), new FrameNativeDiagnostics(
+                List.of(fullFrame(FIRST_FRAME, "test", false, List.of(), referenceFrame.services(),
+                                referenceFrame.chipEvents(), new FrameNativeDiagnostics(
                                         diagnostics.services(), diagnostics.rawChipInventory(),
                                         diagnostics.rawSnapshotInventory(),
                                         List.of(new NativeResetDiagnostic(7, true),
@@ -1516,11 +2251,14 @@ class TestCompleteRunAudioComparator {
                 this::plainFrame);
         Path engine = writeCapture("engine", engineProfile, ProducerKind.OPENGGF, 3,
                 row -> row == 1 ? requestAndDecisionFrame(row, request(0, 0xc0),
-                        decision(0, 1, 2, owner(0, 0xc0)), 0) : plainFrame(row));
+                        decision(0, 1, 2, owner(0, 0xc0)), 0)
+                        : row > 1 ? fullFrame(FIRST_FRAME + row, "test", false,
+                                List.of(), List.of(), List.of(), activeState(1), List.of(), null)
+                                : plainFrame(row));
 
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
 
-        assertEquals(CompleteRunAudioReport.Kind.METADATA_IDENTITY, report.kind());
+        assertEquals(CompleteRunAudioReport.Kind.METADATA_IDENTITY, report.kind(), report.toText());
         assertEquals(-1, report.frame());
         assertEquals("metadata.profile_id", report.location());
     }
@@ -1545,22 +2283,22 @@ class TestCompleteRunAudioComparator {
 
         assertBothDirections(CompleteRunAudioReport.Kind.REQUEST_MISSING,
                 CompleteRunAudioReport.Kind.REQUEST_EXTRA,
-                new Frame(FIRST_FRAME, "test", false, List.of(request), List.of()),
-                new Frame(FIRST_FRAME, "test", false, List.of(), List.of()));
+                fullFrame(FIRST_FRAME, "test", false, List.of(request), List.of()),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of()));
         assertBothDirections(CompleteRunAudioReport.Kind.SERVICE_MISSING,
                 CompleteRunAudioReport.Kind.SERVICE_EXTRA,
-                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(empty)),
-                new Frame(FIRST_FRAME, "test", false, List.of(), List.of()));
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(empty)),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of()));
         assertBothDirections(CompleteRunAudioReport.Kind.DECISION_MISSING,
                 CompleteRunAudioReport.Kind.DECISION_EXTRA,
-                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(rich)),
-                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(
-                        service(0, List.of(), rich.chipEvents(), state(1)))));
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(rich)),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(
+                        service(0, List.of(), evidence(rich).chipEvents(), state(1)))));
         assertBothDirections(CompleteRunAudioReport.Kind.CHIP_EVENT_MISSING,
                 CompleteRunAudioReport.Kind.CHIP_EVENT_EXTRA,
-                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(rich)),
-                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(
-                        service(0, rich.decisions(), List.of(), state(1)))));
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(rich)),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(
+                        service(0, evidence(rich).decisions(), List.of(), state(1)))));
     }
 
     @Test
@@ -1569,8 +2307,8 @@ class TestCompleteRunAudioComparator {
         Request b1 = request(1, 0xc1);
         Request b0 = request(0, 0xc1);
         Request a1 = request(1, 0xc0);
-        Frame referenceOrder = new Frame(FIRST_FRAME, "test", false, List.of(a0, b1), List.of());
-        Frame engineOrder = new Frame(FIRST_FRAME, "test", false, List.of(b0, a1), List.of());
+        Frame referenceOrder = fullFrame(FIRST_FRAME, "test", false, List.of(a0, b1), List.of());
+        Frame engineOrder = fullFrame(FIRST_FRAME, "test", false, List.of(b0, a1), List.of());
         assertEquals(CompleteRunAudioReport.Kind.REQUEST_ORDER,
                 CompleteRunAudioComparator.difference(referenceOrder, engineOrder).kind());
 
@@ -1631,8 +2369,8 @@ class TestCompleteRunAudioComparator {
 
     @Test
     void nullableSegmentAndPriorityFieldsStillProduceTypedDifferences() {
-        Frame noSegment = new Frame(FIRST_FRAME, null, false, List.of(), List.of());
-        Frame segment = new Frame(FIRST_FRAME, "test", false, List.of(), List.of());
+        Frame noSegment = fullFrame(FIRST_FRAME, null, false, List.of(), List.of());
+        Frame segment = fullFrame(FIRST_FRAME, "test", false, List.of(), List.of());
         assertEquals(CompleteRunAudioReport.Kind.FRAME_VALUE,
                 CompleteRunAudioComparator.difference(noSegment, segment).kind());
 
@@ -1652,8 +2390,8 @@ class TestCompleteRunAudioComparator {
         DriverService engineSecond = service(1, List.of(), List.of(), state(1), "music");
         assertEquals(CompleteRunAudioReport.Kind.SERVICE_ORDER,
                 CompleteRunAudioComparator.difference(
-                        new Frame(FIRST_FRAME, "test", false, List.of(), List.of(referenceFirst, referenceSecond)),
-                        new Frame(FIRST_FRAME, "test", false, List.of(), List.of(engineFirst, engineSecond))).kind());
+                        fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(referenceFirst, referenceSecond)),
+                        fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(engineFirst, engineSecond))).kind());
 
         Decision a = decisionForKey(0, "sfx.a");
         Decision b = decisionForKey(1, "sfx.b");
@@ -1683,9 +2421,9 @@ class TestCompleteRunAudioComparator {
 
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
 
-        assertEquals(CompleteRunAudioReport.Kind.DECISION_EXTRA, report.kind());
+        assertEquals(CompleteRunAudioReport.Kind.DECISION_EXTRA, report.kind(), report.toText());
         assertEquals(958, report.frame());
-        assertEquals("frame.services[0].decisions[0]", report.location());
+        assertEquals("frame.decisions[0]", report.location());
     }
 
     @Test
@@ -1695,20 +2433,22 @@ class TestCompleteRunAudioComparator {
             if (row == 12) return requestAndDecisionFrame(row, request(0, 0xc0),
                     decision(0, 1, 2, owner(0, 0xc0)), 0);
             if (row == 24) return chipFrame(row, 1, 0x33);
-            return plainFrame(row);
+            return row > 12 ? fullFrame(FIRST_FRAME + row, "test", false,
+                    List.of(), List.of(), List.of(), activeState(1), List.of(), null) : plainFrame(row);
         };
         IntFunction<Frame> engineFrames = row -> {
             if (row == 12) return requestAndDecisionFrame(row, request(0, 0xc1),
                     decision(0, 1, 2, owner(0, 0xc1)), 0);
             if (row == 24) return chipFrame(row, 1, 0x99);
-            return plainFrame(row);
+            return row > 12 ? fullFrame(FIRST_FRAME + row, "test", false,
+                    List.of(), List.of(), List.of(), activeState(1), List.of(), null) : plainFrame(row);
         };
         Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 30, referenceFrames);
         Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 30, engineFrames);
 
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
 
-        assertEquals(CompleteRunAudioReport.Kind.REQUEST_VALUE, report.kind());
+        assertEquals(CompleteRunAudioReport.Kind.REQUEST_VALUE, report.kind(), report.toText());
         assertEquals(FIRST_FRAME + 12, report.frame());
         assertEquals(8, report.referenceContext().before().size());
         assertEquals(8, report.referenceContext().after().size());
@@ -1862,7 +2602,7 @@ class TestCompleteRunAudioComparator {
         Decision invalid = decision(99, 1, 2, owner(99, 0xc0));
         Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, this::plainFrame);
         Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2,
-                row -> row == 0 ? new Frame(FIRST_FRAME, "test", false, List.of(),
+                row -> row == 0 ? fullFrame(FIRST_FRAME, "test", false, List.of(),
                         List.of(service(0, List.of(invalid), List.of(), state(1)))) : plainFrame(row));
 
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
@@ -2068,7 +2808,7 @@ class TestCompleteRunAudioComparator {
                 lifecycle(1, 0, "release", music, NONE),
                 plainFrame(0),
                 lifecycle(2, 1, "restore", NONE, music),
-                new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+                fullFrame(FIRST_FRAME + 1, "test", false, List.of(),
                         List.of(service(0, List.of(), List.of(), activeState(1)))));
 
         assertLifecycleMatch(profile, records, "save-release-restore");
@@ -2100,14 +2840,16 @@ class TestCompleteRunAudioComparator {
                         new LifecycleOwnership(HardwareRole.FM1, music, music))),
                 new Lifecycle(1, FIRST_FRAME, "restore", Map.of(), List.of(
                         new LifecycleOwnership(HardwareRole.FM1, music, music))),
-                plainFrame(0));
+                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        active, List.of(), null));
         List<CompleteRunAudioTrace.Record> engineRecords = List.of(
                 new Baseline(FIRST_FRAME, active, profile.baselineRoleOwners),
                 new Lifecycle(0, FIRST_FRAME, "save", Map.of(), List.of(
                         new LifecycleOwnership(HardwareRole.FM2, music, music))),
                 new Lifecycle(1, FIRST_FRAME, "restore", Map.of(), List.of(
                         new LifecycleOwnership(HardwareRole.FM2, music, music))),
-                plainFrame(0));
+                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        active, List.of(), null));
         Path reference = writeRecords("lifecycle-role-reference", metadata(profile,
                 ProducerKind.REFERENCE, profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)),
                 referenceRecords);
@@ -2149,7 +2891,8 @@ class TestCompleteRunAudioComparator {
                 new Lifecycle(1, FIRST_FRAME, "restore", Map.of(), List.of(
                         new LifecycleOwnership(HardwareRole.FM1, music, music),
                         new LifecycleOwnership(HardwareRole.FM2, music, music))),
-                plainFrame(0));
+                new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        active, List.of(), null));
         assertLifecycleMatch(profile, allRoles, "exact-all-lifecycle-roles");
 
         List<CompleteRunAudioTrace.Record> omittedRole = List.of(
@@ -2241,7 +2984,9 @@ class TestCompleteRunAudioComparator {
         CompleteRunAudioProfiles.register(profile);
         List<CompleteRunAudioTrace.Record> omittedRestore = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
-                lifecycle(0, 0, "save", music, music), plainFrame(0));
+                lifecycle(0, 0, "save", music, music),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        activeState(1), List.of(), null));
 
         assertInvalidLifecycleCapture(profile, omittedRestore, "omitted-lifecycle-restore",
                 CompleteRunAudioComparator.ValidationException.Kind.RESTORE_STACK_INVALID);
@@ -2261,7 +3006,9 @@ class TestCompleteRunAudioComparator {
         CompleteRunAudioProfiles.register(profile);
         List<CompleteRunAudioTrace.Record> records = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
-                lifecycle(0, 0, "save", music, music), plainFrame(0));
+                lifecycle(0, 0, "save", music, music),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        activeState(1), List.of(), null));
 
         assertLifecycleMatch(profile, records, "allowed-terminal-restore-stack");
     }
@@ -2329,7 +3076,7 @@ class TestCompleteRunAudioComparator {
         List<CompleteRunAudioTrace.Record> records = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
                 lifecycle(0, 0, "reset", music, NONE),
-                new Frame(FIRST_FRAME, "test", false, List.of(),
+                fullFrame(FIRST_FRAME, "test", false, List.of(),
                         List.of(service(0, List.of(), List.of(), state(1)))));
 
         assertLifecycleMatch(profile, records, "release-reset");
@@ -2347,11 +3094,15 @@ class TestCompleteRunAudioComparator {
         List<CompleteRunAudioTrace.Record> referenceRecords = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
                 lifecycle(0, 0, "save", music, music),
-                lifecycle(1, 0, "restore", music, music), plainFrame(0));
+                lifecycle(1, 0, "restore", music, music),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        activeState(1), List.of(), null));
         List<CompleteRunAudioTrace.Record> engineRecords = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
                 new Lifecycle(0, FIRST_FRAME, "noop", Map.of(), List.of()),
-                new Lifecycle(1, FIRST_FRAME, "noop", Map.of(), List.of()), plainFrame(0));
+                new Lifecycle(1, FIRST_FRAME, "noop", Map.of(), List.of()),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        activeState(1), List.of(), null));
         Path reference = writeRecords("noop-reference", metadata(profile, ProducerKind.REFERENCE,
                 profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), referenceRecords);
         Path engine = writeRecords("noop-engine", metadata(profile, ProducerKind.OPENGGF,
@@ -2436,9 +3187,12 @@ class TestCompleteRunAudioComparator {
         Metadata engineMetadata = metadata(profile, ProducerKind.OPENGGF,
                 profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
         Path reference = writeCapture("terminal-lifecycle-reference", referenceMetadata, 1,
-                this::plainFrame);
+                row -> fullFrame(FIRST_FRAME + row, "test", false, List.of(), List.of(), List.of(),
+                        activeState(1), List.of(), null));
         Path engine = writeRecords("terminal-lifecycle-engine", engineMetadata, List.of(
-                new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners), plainFrame(0),
+                new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
+                fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                        activeState(1), List.of(), null),
                 lifecycle(0, 0, "reset", music, NONE)));
 
         assertSemanticFailure(CompleteRunAudioComparator.compare(reference, engine),
@@ -2454,7 +3208,7 @@ class TestCompleteRunAudioComparator {
         Path capacityReference = writeCapture("capacity-reference", capacityProfile,
                 ProducerKind.REFERENCE, 1, this::plainFrame);
         Path overCapacity = writeCapture("over-capacity", capacityProfile, ProducerKind.OPENGGF, 1,
-                row -> new Frame(FIRST_FRAME, "test", false, requests, List.of()));
+                row -> fullFrame(FIRST_FRAME, "test", false, requests, List.of()));
 
         assertSemanticFailure(CompleteRunAudioComparator.compare(capacityReference, overCapacity),
                 CompleteRunAudioReport.Side.ENGINE,
@@ -2509,11 +3263,11 @@ class TestCompleteRunAudioComparator {
         TestProfile profile = registerProfile(frames, List.of(
                 new ManifestSegment("first", FIRST_FRAME, FIRST_FRAME + 1),
                 new ManifestSegment("second", FIRST_FRAME + 3, FIRST_FRAME + 4)));
-        IntFunction<Frame> valid = row -> new Frame(FIRST_FRAME + row,
+        IntFunction<Frame> valid = row -> fullFrame(FIRST_FRAME + row,
                 row == 0 ? "first" : row == 3 ? "second" : null, false, List.of(), List.of());
         Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, frames, valid);
         Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, frames,
-                row -> new Frame(FIRST_FRAME + row, row == 0 || row == 1 ? "first"
+                row -> fullFrame(FIRST_FRAME + row, row == 0 || row == 1 ? "first"
                         : row == 3 ? "second" : null, false, List.of(), List.of()));
 
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
@@ -2649,7 +3403,9 @@ class TestCompleteRunAudioComparator {
         Metadata engineMetadata = metadata(profile, ProducerKind.OPENGGF,
                 profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
         Path reference = writeCapture(name + "-reference", referenceMetadata,
-                profile.fixture().exclusiveEnd() - FIRST_FRAME, this::plainFrame);
+                profile.fixture().exclusiveEnd() - FIRST_FRAME,
+                row -> new Frame(FIRST_FRAME + row, "test", false,
+                        List.of(), List.of(), List.of(), baselineState(profile), List.of(), null));
         Path engine = writeRecords(name + "-engine", engineMetadata, invalid);
         assertSemanticFailure(CompleteRunAudioComparator.compare(reference, engine),
                 CompleteRunAudioReport.Side.ENGINE, kind);
@@ -2664,9 +3420,9 @@ class TestCompleteRunAudioComparator {
 
     private static void assertSemanticFailure(CompleteRunAudioReport report, CompleteRunAudioReport.Side side,
             CompleteRunAudioComparator.ValidationException.Kind kind) {
-        assertEquals(CompleteRunAudioReport.Kind.CAPTURE_FAILURE, report.kind());
-        assertEquals(side, report.failureSide());
-        assertEquals(kind, report.validationKind());
+        assertEquals(CompleteRunAudioReport.Kind.CAPTURE_FAILURE, report.kind(), report.toText());
+        assertEquals(side, report.failureSide(), report.toText());
+        assertEquals(kind, report.validationKind(), report.toText());
     }
 
     private TestProfile registerProfile(int frames) {
@@ -2703,6 +3459,49 @@ class TestCompleteRunAudioComparator {
         return new TestProfile(id, fixture);
     }
 
+    private static ComparisonLayerInventory limitedLayers(boolean compareState) {
+        return new ComparisonLayerInventory(List.of(
+                new ComparisonLayerClaim(ComparisonLayer.ROW_LAG, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference lag authority is unavailable"),
+                new ComparisonLayerClaim(ComparisonLayer.REQUESTS, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference lacks pre-consumption request authority"),
+                new ComparisonLayerClaim(ComparisonLayer.DECISIONS, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference lacks pre-consumption request authority"),
+                new ComparisonLayerClaim(ComparisonLayer.SERVICES, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference service authority is unavailable"),
+                new ComparisonLayerClaim(ComparisonLayer.STATE,
+                        compareState ? ComparisonLayerStatus.COMPARED : ComparisonLayerStatus.UNAVAILABLE,
+                        compareState ? null : "reference state authority is unavailable"),
+                new ComparisonLayerClaim(ComparisonLayer.OWNERSHIP, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference lacks decision ownership authority"),
+                new ComparisonLayerClaim(ComparisonLayer.LIFECYCLE, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference lifecycle authority is unavailable"),
+                new ComparisonLayerClaim(ComparisonLayer.FRAME_CHIP_EVENTS, ComparisonLayerStatus.COMPARED, null),
+                new ComparisonLayerClaim(ComparisonLayer.BOUNDARY_CHIP_STATE,
+                        ComparisonLayerStatus.UNAVAILABLE,
+                        "reference boundary-chip authority is unavailable"),
+                new ComparisonLayerClaim(ComparisonLayer.CUTOFF_FRONTIER, ComparisonLayerStatus.UNAVAILABLE,
+                        "reference cutoff-frontier authority is unavailable")));
+    }
+
+    private static ComparisonLayerInventory layers(Object... changes) {
+        List<ComparisonLayerClaim> claims = new ArrayList<>(ComparisonLayerInventory.allCompared().claims());
+        for (int index = 0; index < changes.length; index += 3) {
+            ComparisonLayer layer = (ComparisonLayer) changes[index];
+            claims.set(layer.ordinal(), new ComparisonLayerClaim(layer, (ComparisonLayerStatus) changes[index + 1],
+                    (String) changes[index + 2]));
+        }
+        if (claims.get(ComparisonLayer.REQUESTS.ordinal()).status() == ComparisonLayerStatus.UNAVAILABLE) {
+            claims.set(ComparisonLayer.DECISIONS.ordinal(), new ComparisonLayerClaim(ComparisonLayer.DECISIONS,
+                    ComparisonLayerStatus.UNAVAILABLE, "request authority is unavailable"));
+        }
+        if (claims.get(ComparisonLayer.DECISIONS.ordinal()).status() == ComparisonLayerStatus.UNAVAILABLE) {
+            claims.set(ComparisonLayer.OWNERSHIP.ordinal(), new ComparisonLayerClaim(ComparisonLayer.OWNERSHIP,
+                    ComparisonLayerStatus.UNAVAILABLE, "decision authority is unavailable"));
+        }
+        return new ComparisonLayerInventory(claims);
+    }
+
     private Path writeCapture(String name, TestProfile profile, ProducerKind kind, int frames,
             IntFunction<Frame> framesFactory) throws Exception {
         return writeCapture(name, metadata(profile, kind, profile.producerRuntimeIdentities().get(kind)),
@@ -2712,9 +3511,7 @@ class TestCompleteRunAudioComparator {
     private Path writeCapture(String name, Metadata metadata, int frames, IntFunction<Frame> framesFactory)
             throws Exception {
         CompleteRunAudioProfile profile = CompleteRunAudioProfiles.require(metadata.profileId());
-        return writeCapture(name, metadata,
-                new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()),
-                frames, framesFactory);
+        return writeCapture(name, metadata, defaultBaseline(metadata, profile), frames, framesFactory);
     }
 
     private Path writeCapture(String name, Metadata metadata, Baseline baseline, int frames,
@@ -2747,9 +3544,9 @@ class TestCompleteRunAudioComparator {
 
     private Path writeCaptureWithCutoff(String name, TestProfile profile, ProducerKind kind,
             Frame frame, CutoffFrontier cutoff) throws Exception {
+        Metadata metadata = metadata(profile, kind, profile.producerRuntimeIdentities().get(kind));
         return writeCaptureWithCutoff(name, profile, kind,
-                new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()),
-                frame, cutoff);
+                defaultBaseline(metadata, profile), frame, cutoff);
     }
 
     private Path writeCaptureWithCutoff(String name, TestProfile profile, ProducerKind kind,
@@ -2777,11 +3574,11 @@ class TestCompleteRunAudioComparator {
             List<CompleteRunAudioTrace.Record> body) throws Exception {
         Metadata metadata = metadata(profile, kind, profile.producerRuntimeIdentities().get(kind));
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
-        records.add(new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()));
+        records.add(defaultBaseline(metadata, profile));
         records.addAll(body);
         CutoffFrontier cutoff = CutoffFrontier.empty(body.stream()
                 .filter(Frame.class::isInstance).map(Frame.class::cast).toList().getLast()
-                .services().getLast().state());
+                .postRowState());
         if (kind == ProducerKind.REFERENCE
                 && metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity) {
             cutoff = new CutoffFrontier(List.of(), List.of(), List.of(),
@@ -2801,6 +3598,16 @@ class TestCompleteRunAudioComparator {
         Path output = temp.resolve(name);
         new CompleteRunAudioCaptureStore().writeNew(output, metadata, records.iterator());
         return output;
+    }
+
+    private static Baseline defaultBaseline(Metadata metadata, CompleteRunAudioProfile profile) {
+        BoundaryFrontier frontier = BoundaryFrontier.empty();
+        if (metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity) {
+            frontier = new BoundaryFrontier(List.of(), List.of(), List.of(),
+                    new CutoffNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
+                            0, false, "f".repeat(64)), 0, 0);
+        }
+        return new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners(), frontier);
     }
 
     private Path writeRecords(String name, Metadata metadata, List<CompleteRunAudioTrace.Record> records)
@@ -2826,7 +3633,7 @@ class TestCompleteRunAudioComparator {
                 long current = cursor++;
                 if (current == 0) return baseline(state(1));
                 if (current == 2L * frames + 1) return CutoffFrontier.empty(
-                        entropyFrame(frames - 1).services().getFirst().state());
+                        entropyFrame(frames - 1).postRowState());
                 if (current == 2L * frames + 2) {
                     return new Terminal(FIRST_FRAME + frames, frames, frames, frames, frames,
                             frames, frames, frames, 0, 0, digest, semanticDigest);
@@ -2848,7 +3655,7 @@ class TestCompleteRunAudioComparator {
                 update(digest, entropyLifecycle(row, frames), semantic);
                 update(digest, entropyFrame(row), semantic);
             }
-            update(digest, CutoffFrontier.empty(entropyFrame(frames - 1).services().getFirst().state()), semantic);
+            update(digest, CutoffFrontier.empty(entropyFrame(frames - 1).postRowState()), semantic);
             return HexFormat.of().formatHex(digest.digest());
         } catch (Exception failure) {
             throw new AssertionError(failure);
@@ -2868,9 +3675,11 @@ class TestCompleteRunAudioComparator {
         List<ChipEvent> chipEvents = List.of(
                 new YmWrite(2L * row, row & 1, (row >>> 1) & 0xff, (row * 73) & 0xff),
                 new PsgWrite(2L * row + 1, (row * 151) & 0xff));
-        return new Frame(FIRST_FRAME + row, "test", (row & 1) != 0, List.of(request),
-                List.of(service(row, List.of(decision), chipEvents, state,
-                        "driver." + Integer.toUnsignedString(row * 0x9e3779b9, 16))));
+        DriverService service = new DriverService(row,
+                "driver." + Integer.toUnsignedString(row * 0x9e3779b9, 16),
+                ServiceCompletion.COMPLETED, null, null, null, ServiceAncestry.root());
+        return new Frame(FIRST_FRAME + row, "test", (row & 1) != 0,
+                List.of(request), List.of(decision), List.of(service), state, chipEvents, null);
     }
 
     private static Lifecycle entropyLifecycle(int row, int frames) {
@@ -2890,7 +3699,7 @@ class TestCompleteRunAudioComparator {
                         requestAndDecisionFrame(frames - 1, request(frames - 1, 0xc0),
                                 ownershipDecision(frames - 1, true, "accepted",
                                         frames == 1 ? NONE : owner(frames - 2L, 0xc0),
-                                        owner(frames - 1L, 0xc0)), frames - 1).services().getFirst().state());
+                                        owner(frames - 1L, 0xc0)), frames - 1).postRowState());
                 if (row == frames + 1) {
                     return new Terminal(FIRST_FRAME + frames, frames, frames, frames, frames,
                             0, 0, 0, "a".repeat(64));
@@ -2979,61 +3788,63 @@ class TestCompleteRunAudioComparator {
 
     private static Metadata metadata(TestProfile profile, ProducerKind kind,
             ProducerRuntimeIdentity runtime) {
-        return new Metadata(SCHEMA, profile.id(), profile.fixture(), kind, runtime,
+        return testMetadata(SCHEMA, profile.id(), profile.fixture(), kind, runtime,
                 profile.observerRuntimeIdentities().get(kind),
                 new ObserverProof(kind == ProducerKind.REFERENCE ? "reference.test.v1" : "openggf.test.v1",
                         kind == ProducerKind.REFERENCE ? "m68k.execute" : "java.observer",
                         List.of(new CallbackProof("driver.service", 1))),
                 new ChunkPolicy(CHUNK_FRAME_ROWS, "gzip", 0), profile.hardwareRoles(),
-                profile.stateInventory());
+                profile.stateInventory(), profile.comparisonLayerInventory(),
+                profile.producerObservationInventories().get(kind));
     }
 
     private Frame shiftedAdmissionFrame(int row, Decision admission, int admissionRow) {
         List<Request> requests = row == 0 ? List.of(request(0, 0xc0)) : List.of();
         if (row == 98 || row == 99) {
             long serviceOrdinal = row - 98;
-            return new Frame(FIRST_FRAME + row, "test", false, requests,
+            return fullFrame(FIRST_FRAME + row, "test", false, requests,
                     List.of(service(serviceOrdinal, row == admissionRow ? List.of(admission) : List.of(),
                             List.of(), row >= admissionRow ? activeState(1) : state(1))));
         }
-        return new Frame(FIRST_FRAME + row, "test", false, requests, List.of());
+        return fullFrame(FIRST_FRAME + row, "test", false, requests, List.of(), List.of(),
+                row >= admissionRow ? activeState(1) : state(1), List.of(), null);
     }
 
     private Frame plainFrame(int row) {
-        return new Frame(FIRST_FRAME + row, "test", false, List.of(), List.of());
+        return fullFrame(FIRST_FRAME + row, "test", false, List.of(), List.of());
     }
 
     private static Frame bufferedFrame(int row, List<DriverService> semanticServices,
             List<FrontierService> nativeServices, NativeManagedCorrelation... correlations) {
-        return new Frame(FIRST_FRAME + row, "test", false, List.of(), semanticServices, List.of(),
+        return fullFrame(FIRST_FRAME + row, "test", false, List.of(), semanticServices, List.of(),
                 new FrameNativeDiagnostics(nativeServices, List.of(), List.of(), List.of(),
                         List.of(correlations)));
     }
 
     private static Frame requestFrame(int row, Request request) {
-        return new Frame(FIRST_FRAME + row, "test", false, List.of(request), List.of());
+        return fullFrame(FIRST_FRAME + row, "test", false, List.of(request), List.of());
     }
 
     private static Frame requestAndDecisionFrame(int row, Request request, Decision decision,
             long serviceOrdinal) {
-        return new Frame(FIRST_FRAME + row, "test", false, List.of(request),
+        return fullFrame(FIRST_FRAME + row, "test", false, List.of(request),
                 List.of(service(serviceOrdinal, List.of(decision), List.of(), activeState(1))));
     }
 
     private static Frame requestAndDecisionFrame(int row, Request request, Decision decision,
             long serviceOrdinal, NormalizedState state) {
-        return new Frame(FIRST_FRAME + row, "test", false, List.of(request),
+        return fullFrame(FIRST_FRAME + row, "test", false, List.of(request),
                 List.of(service(serviceOrdinal, List.of(decision), List.of(), state)));
     }
 
     private static Frame chipFrame(int row, int serviceOrdinal, int value) {
-        return new Frame(FIRST_FRAME + row, "test", false, List.of(),
+        return fullFrame(FIRST_FRAME + row, "test", false, List.of(),
                 List.of(service(serviceOrdinal, List.of(),
                         List.of(new YmWrite(0, 0, 0x22, value)), activeState(1))));
     }
 
     private static Frame frame(DriverService service) {
-        return new Frame(FIRST_FRAME, "test", false, List.of(), List.of(service));
+        return fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(service));
     }
 
     private static Request request(long ordinal, int nativeId) {
@@ -3089,6 +3900,72 @@ class TestCompleteRunAudioComparator {
                 OwnerOrigin.REQUEST, requestOrdinal);
     }
 
+    private static Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
+            List<DriverService> services) {
+        return fullFrame(absoluteFrame, segment, lag, requests, services, frameChips(services), null);
+    }
+
+    private static Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
+            List<DriverService> services, List<ChipEvent> chips, FrameNativeDiagnostics diagnostics) {
+        List<Decision> decisions = services.stream().flatMap(service -> evidence(service).decisions().stream())
+                .toList();
+        NormalizedState postRowState = services.isEmpty() ? state(1)
+                : evidence(services.getLast()).state();
+        return new Frame(absoluteFrame, segment, lag, requests, decisions, services, postRowState, chips,
+                diagnostics);
+    }
+
+    private static Frame fullFrame(int absoluteFrame, String segment, Boolean lag, List<Request> requests,
+            List<Decision> decisions, List<DriverService> services, NormalizedState postRowState,
+            List<ChipEvent> chips, FrameNativeDiagnostics diagnostics) {
+        return new Frame(absoluteFrame, segment, lag, requests, decisions, services, postRowState, chips,
+                diagnostics);
+    }
+
+    private static List<ChipEvent> frameChips(List<DriverService> services) {
+        return services.stream().flatMap(service -> evidence(service).chipEvents().stream())
+                .sorted(java.util.Comparator.comparingLong(ChipEvent::ordinal)).toList();
+    }
+
+    private static ServiceEvidence evidence(DriverService service) {
+        return SERVICE_EVIDENCE.getOrDefault(service, new ServiceEvidence(List.of(), state(1), List.of()));
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            List<Decision> decisions, NormalizedState state, List<ChipEvent> chips) {
+        return testService(ordinal, kind, completion, decisions, state, chips, null, null, null,
+                ServiceAncestry.root());
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            List<Decision> decisions, NormalizedState state, List<ChipEvent> chips, Long carriedBoundaryOrdinal) {
+        return testService(ordinal, kind, completion, decisions, state, chips, carriedBoundaryOrdinal,
+                null, null, ServiceAncestry.root());
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            List<Decision> decisions, NormalizedState state, List<ChipEvent> chips, Long carriedBoundaryOrdinal,
+            ServiceAncestry ancestry) {
+        return testService(ordinal, kind, completion, decisions, state, chips, carriedBoundaryOrdinal,
+                null, null, ancestry);
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            List<Decision> decisions, NormalizedState state, List<ChipEvent> chips, Long carriedBoundaryOrdinal,
+            ServiceCoordinate beginCoordinate, ServiceCoordinate endCoordinate, ServiceAncestry ancestry) {
+        DriverService service = new DriverService(ordinal, kind, completion, carriedBoundaryOrdinal,
+                beginCoordinate, endCoordinate, ancestry);
+        SERVICE_EVIDENCE.put(service, new ServiceEvidence(List.copyOf(decisions), state, List.copyOf(chips)));
+        return service;
+    }
+
+    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+            Long carriedBoundaryOrdinal, ServiceCoordinate beginCoordinate, ServiceCoordinate endCoordinate,
+            ServiceAncestry ancestry) {
+        return new DriverService(ordinal, kind, completion, carriedBoundaryOrdinal,
+                beginCoordinate, endCoordinate, ancestry);
+    }
+
     private static DriverService service(long ordinal, List<Decision> decisions, List<ChipEvent> chipEvents,
             NormalizedState state) {
         return service(ordinal, decisions, chipEvents, state, "driver");
@@ -3096,7 +3973,18 @@ class TestCompleteRunAudioComparator {
 
     private static DriverService service(long ordinal, List<Decision> decisions, List<ChipEvent> chipEvents,
             NormalizedState state, String kind) {
-        return new DriverService(ordinal, kind, ServiceCompletion.COMPLETED, decisions, state, chipEvents);
+        return testService(ordinal, kind, ServiceCompletion.COMPLETED, decisions, state, chipEvents);
+    }
+
+    private record ServiceFieldCase(String field, DriverService actual) { }
+    private record ServiceEvidence(List<Decision> decisions, NormalizedState state, List<ChipEvent> chipEvents) { }
+
+    private static Metadata testMetadata(String schema, String profileId, CompleteRunFixture fixture,
+            ProducerKind producerKind, ProducerRuntimeIdentity runtime, ObserverRuntimeIdentity observer,
+            ObserverProof proof, ChunkPolicy chunks, List<HardwareRole> roles, StateInventory stateInventory,
+            ComparisonLayerInventory comparisons, ProducerObservationInventory observations) {
+        return new Metadata(schema, profileId, fixture, producerKind, runtime, observer, proof, chunks, roles,
+                stateInventory, comparisons, observations);
     }
 
     private static NormalizedState state(int tempo) {
@@ -3133,19 +4021,17 @@ class TestCompleteRunAudioComparator {
         for (CompleteRunAudioTrace.Record record : records) {
             if (record instanceof Frame frame) {
                 frames++;
-                requests += frame.requests().size();
-                for (DriverService service : frame.services()) {
-                    services++;
-                    decisions += service.decisions().size();
-                    for (ChipEvent event : service.chipEvents()) {
-                        if (event instanceof YmWrite) ym++; else psg++;
-                    }
+                requests += frame.requests() == null ? 0 : frame.requests().size();
+                services += frame.services() == null ? 0 : frame.services().size();
+                decisions += frame.decisions() == null ? 0 : frame.decisions().size();
+                for (ChipEvent event : frame.chipEvents() == null ? List.<ChipEvent>of() : frame.chipEvents()) {
+                    if (event instanceof YmWrite) ym++; else psg++;
                 }
             } else if (record instanceof Lifecycle) {
                 lifecycles++;
             } else if (record instanceof CutoffFrontier frontier) {
-                cutoffActive = frontier.activeStack().size();
-                cutoffPending = frontier.pendingDescendants().size();
+                cutoffActive = frontier.activeStack() == null ? 0 : frontier.activeStack().size();
+                cutoffPending = frontier.pendingDescendants() == null ? 0 : frontier.pendingDescendants().size();
             }
         }
         return new Terminal(exclusiveEnd, frames, requests, services, decisions, ym, psg, lifecycles,
@@ -3155,7 +4041,7 @@ class TestCompleteRunAudioComparator {
     private static CutoffFrontier emptyFrontier(List<CompleteRunAudioTrace.Record> records) {
         for (int index = records.size() - 1; index >= 0; index--) {
             if (records.get(index) instanceof Frame frame && !frame.services().isEmpty()) {
-                return CutoffFrontier.empty(frame.services().getLast().state());
+                return CutoffFrontier.empty(frame.postRowState());
             }
             if (records.get(index) instanceof Baseline baseline) {
                 return CutoffFrontier.empty(baseline.state());
@@ -3215,6 +4101,10 @@ class TestCompleteRunAudioComparator {
                 0, 0, 0, false, "f".repeat(64), CutoffFrontierPolicy.capabilityDigest(
                         CutoffFrontier.empty(new NormalizedState(List.of(), List.of()))), null);
         private Map<ProducerKind, NativeCapabilitySummary> capabilities = Map.of();
+        private ComparisonLayerInventory comparisonLayers = ComparisonLayerInventory.allCompared();
+        private Map<ProducerKind, ProducerObservationInventory> observationInventories = Map.of(
+                ProducerKind.REFERENCE, ProducerObservationInventory.allObserved(),
+                ProducerKind.OPENGGF, ProducerObservationInventory.allObserved());
 
         private TestProfile(String id, CompleteRunFixture fixture) {
             this.id = id;
@@ -3277,6 +4167,10 @@ class TestCompleteRunAudioComparator {
         @Override public List<HardwareRole> hardwareRoles() { return hardwareRoles; }
         @Override public StateInventory stateInventory() {
             return new StateInventory(List.of("tempo"), List.of("cursor"));
+        }
+        @Override public ComparisonLayerInventory comparisonLayerInventory() { return comparisonLayers; }
+        @Override public Map<ProducerKind, ProducerObservationInventory> producerObservationInventories() {
+            return observationInventories;
         }
         @Override public Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities() {
             return Map.of(

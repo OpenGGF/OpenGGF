@@ -37,7 +37,9 @@ public enum Sonic2Music {
     ACT_CLEAR(0x97, "Stage Clear"),
     INVINCIBILITY(0x99, "Invincibility"),
     HIDDEN_PALACE(0x9B, "Hidden Palace Zone"),
-    EXTRA_LIFE(0xB5, "1-Up"),
+    // zMusIDPtr_ExtraLife / MusID_ExtraLife in the shipped REV01 table
+    // (s2.constants.asm:856); 0xB5 is the distinct right-ring SFX.
+    EXTRA_LIFE(0x98, "1-Up"),
     GAME_OVER(0xB8, "Game Over"),
     GOT_EMERALD(0xBA, "Got an Emerald"),
     CREDITS(0xBD, "Credits"),

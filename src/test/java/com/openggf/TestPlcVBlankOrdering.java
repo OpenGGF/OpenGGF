@@ -22,12 +22,45 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestPlcVBlankOrdering {
+
+    @Test
+    void canonicalFrameStepDispatchesGameOwnedVBlankExactlyOnce() {
+        AtomicInteger dispatched = new AtomicInteger();
+        com.openggf.game.LevelInitProfile profile =
+                (com.openggf.game.LevelInitProfile) Proxy.newProxyInstance(
+                        getClass().getClassLoader(),
+                        new Class<?>[]{com.openggf.game.LevelInitProfile.class},
+                        (proxy, method, args) -> {
+                            if (method.getName().equals("serviceLevelLoadVBlank")) {
+                                dispatched.incrementAndGet();
+                            }
+                            return switch (method.getReturnType().getName()) {
+                                case "boolean" -> false;
+                                case "int" -> 0;
+                                default -> null;
+                            };
+                        });
+        GameModule module = mock(GameModule.class);
+        when(module.getLevelInitProfile()).thenReturn(profile);
+        var coordinator = new PlcFrameLifecycleCoordinator((PlcLifecycleService) null);
+        var frame = coordinator.latchBeforeFadeUpdate();
+
+        LevelFrameStep.executeHardwareTimedObjectScan(
+                context(module, new ArrayList<>()), frame,
+                PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
+        frame.finish();
+
+        assertEquals(1, dispatched.get(),
+                "the canonical frame step must own game-specific VBlank work");
+    }
 
     @Test
     void ordinaryLevelServicesPlcBeforeEventsAndObjects() {

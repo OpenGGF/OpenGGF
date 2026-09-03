@@ -52,6 +52,15 @@ public final class S3kCompleteRunAudioProfile {
         @Override public CompleteRunAudioTrace.CompleteRunFixture fixture() { return FIXTURE; }
         @Override public List<CompleteRunAudioTrace.HardwareRole> hardwareRoles() { return ROLES; }
         @Override public CompleteRunAudioTrace.StateInventory stateInventory() { return INVENTORY; }
+        @Override public CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayerInventory() {
+            return comparisonLayers();
+        }
+        @Override public Map<CompleteRunAudioTrace.ProducerKind,
+                CompleteRunAudioTrace.ProducerObservationInventory> producerObservationInventories() {
+            var chipsOnly = frameChipsOnly();
+            return Map.of(CompleteRunAudioTrace.ProducerKind.REFERENCE, chipsOnly,
+                    CompleteRunAudioTrace.ProducerKind.OPENGGF, chipsOnly);
+        }
         @Override public Map<CompleteRunAudioTrace.RawAudioRequest,
                 CompleteRunAudioTrace.NativeSoundIdentity> nativeSoundIdentities() { return IDENTITIES; }
         @Override public Map<CompleteRunAudioTrace.ProducerKind,
@@ -62,10 +71,11 @@ public final class S3kCompleteRunAudioProfile {
             return Map.of(
                     CompleteRunAudioTrace.ProducerKind.REFERENCE,
                     new CompleteRunAudioTrace.UnavailableProducerBinding(
-                            "reference identity remains unavailable until the read-only run-local BK2 is installed"),
+                            "exact reference runtime, observer, and capability identities "
+                                    + "are not installed and active"),
                     CompleteRunAudioTrace.ProducerKind.OPENGGF,
                     new CompleteRunAudioTrace.UnavailableProducerBinding(
-                            "OpenGGF complete-run producer identity is not installed"));
+                            "OpenGGF producer artifact attestation trust root is not installed"));
         }
 
         @Override public Map<CompleteRunAudioTrace.ProducerKind,
@@ -108,6 +118,30 @@ public final class S3kCompleteRunAudioProfile {
                     "one_up_restore", new CompleteRunAudioTrace.LifecycleRule("one_up_restore", List.of(),
                             CompleteRunAudioTrace.LifecycleOwnershipAction.RESTORE_SAVED, List.of(ROLES)));
         }
+    }
+
+    private static CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayers() {
+        String reason = "S3K complete-run producers currently share only frame chip-event evidence";
+        return new CompleteRunAudioTrace.ComparisonLayerInventory(java.util.Arrays.stream(
+                CompleteRunAudioTrace.ComparisonLayer.values()).map(layer ->
+                        new CompleteRunAudioTrace.ComparisonLayerClaim(layer,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS
+                                        ? CompleteRunAudioTrace.ComparisonLayerStatus.COMPARED
+                                        : CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS ? null : reason))
+                .toList());
+    }
+
+    private static CompleteRunAudioTrace.ProducerObservationInventory frameChipsOnly() {
+        String reason = "S3K complete-run projector has no canonical observation for this layer";
+        return new CompleteRunAudioTrace.ProducerObservationInventory(java.util.Arrays.stream(
+                CompleteRunAudioTrace.ComparisonLayer.values()).map(layer ->
+                        new CompleteRunAudioTrace.ProducerObservationClaim(layer,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS
+                                        ? CompleteRunAudioTrace.ObservationStatus.OBSERVED
+                                        : CompleteRunAudioTrace.ObservationStatus.UNOBSERVED,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS ? null : reason))
+                .toList());
     }
 
     private static CompleteRunAudioTrace.CompleteRunFixture fixtureContract() {

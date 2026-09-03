@@ -49,6 +49,15 @@ public final class CompleteRunAudioTool {
                 }
                 return SUCCESS;
             }
+            if (args.length == 3 && "producer-kind-status".equals(args[0])) {
+                ProducerKind kind = producer(args[1]);
+                safeIdentifier(args[2], "profile ID");
+                if (!CompleteRunAudioProducerRegistry.knowsProfile(args[2])) {
+                    throw new UsageFailure("unknown fixed producer profile");
+                }
+                CompleteRunAudioProducerRegistry.requireAvailable(args[2], kind);
+                return SUCCESS;
+            }
             if (args.length == 3 && "verify-reference-home".equals(args[0])) {
                 Path home = existingPlainDirectory(args[1]);
                 safeIdentifier(args[2], "profile ID");
@@ -65,6 +74,7 @@ public final class CompleteRunAudioTool {
                 if (!CompleteRunAudioProducerRegistry.knowsProfile(args[2])) {
                     throw new UsageFailure("unknown fixed producer profile");
                 }
+                CompleteRunAudioProducerRegistry.requireAvailable(args[2], kind);
                 Path rom = existingPlainFile(args[3]);
                 Path bk2 = existingPlainFile(args[4]);
                 Path manifest = existingPlainFile(args[5]);
@@ -106,7 +116,7 @@ public final class CompleteRunAudioTool {
                 if (report.kind() == Kind.MATCH) return SUCCESS;
                 return report.kind() == Kind.CAPTURE_FAILURE ? CAPTURE_FAILURE : MISMATCH;
             }
-            throw new UsageFailure("usage: validate|publish|compare");
+            throw new UsageFailure("usage: producer-status|producer-kind-status|produce|validate|publish|compare");
         } catch (CompleteRunAudioProducerRegistry.ProducerUnavailableException unavailable) {
             error.println("PRODUCER_UNAVAILABLE: " + unavailable.getMessage());
             return CAPTURE_FAILURE;
@@ -170,7 +180,7 @@ public final class CompleteRunAudioTool {
         return path;
     }
 
-    private static void verifyReferenceHome(Path home, CompleteRunAudioProfile profile) throws IOException {
+    static void verifyReferenceHome(Path home, CompleteRunAudioProfile profile) throws IOException {
         Map<CompleteRunAudioTrace.RuntimeArtifact, String> expected = profile.producerRuntimeIdentities()
                 .get(ProducerKind.REFERENCE).artifactSha256();
         String expectedTree = expected.get(CompleteRunAudioTrace.RuntimeArtifact.REFERENCE_INSTALLATION_TREE);

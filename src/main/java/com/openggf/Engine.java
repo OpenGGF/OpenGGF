@@ -113,6 +113,7 @@ public class Engine {
 	private final GraphicsManager graphicsManager;
 	private final AudioManager audioManager;
 	private boolean audioBackendInitialized;
+	private boolean configuredHeadlessSession;
 	private final RomManager romManager;
 	private final RomDetectionService romDetectionService;
 	private final CrossGameFeatureProvider crossGameFeatureProvider;
@@ -192,6 +193,12 @@ public class Engine {
 	}
 
 	record PauseIndicatorPlacement(int x, int y) {
+	}
+
+	enum ConfiguredStartupBranch {
+		LEGAL_DISCLAIMER,
+		MASTER_TITLE,
+		GAME
 	}
 
 	enum LiveCapturePresentationState {
@@ -567,26 +574,7 @@ public class Engine {
 		}
 		snapWindowToIntegerScale();
 
-		// === Check legal disclaimer / master title screen before Phase 2 ===
-		boolean showLegalDisclaimer = configService.getBoolean(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP);
-		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
-
-		if (showLegalDisclaimer) {
-			legalDisclaimerScreen = new com.openggf.game.LegalDisclaimerScreen(
-					graphicsManager.getFadeManager());
-			legalDisclaimerScreen.initialize();
-			gameLoop.setGameMode(GameMode.LEGAL_DISCLAIMER);
-			// master title (if enabled) or Phase 2 init is deferred to
-			// exitLegalDisclaimer once the user dismisses the screen.
-		} else if (masterTitleOnStartup) {
-			masterTitleScreen = createMasterTitleScreen();
-			masterTitleScreen.initialize();
-			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
-			// Skip Phase 2 entirely - will be called on game selection
-		} else {
-			// === PHASE 2: ROM loading, sprites, audio, level ===
-			initializeGame();
-		}
+		initializeConfiguredStartup();
 
 		// Eagerly initialize debug renderer resources before the main loop starts.
 		if (debugViewEnabled) {
@@ -601,6 +589,129 @@ public class Engine {
 		}
 
 		lastFrameTime = System.nanoTime();
+	}
+
+	/**
+	 * Initializes the ordinary configured startup graph without creating a
+	 * window, GL context, or audio device. The caller owns both supplied
+	 * instances; this seam only installs them and executes the same startup
+	 * branch used by {@link #init()}. The configured session remains owned by
+	 * the caller if startup throws, so {@link #closeConfiguredHeadlessSession()}
+	 * must run from the caller's cleanup scope.
+	 */
+	public void initializeConfiguredHeadlessSession(
+			InputHandler input, com.openggf.audio.AudioBackend backend) {
+		Objects.requireNonNull(input, "input");
+		Objects.requireNonNull(backend, "backend");
+		if (configuredHeadlessSession) {
+			throw new IllegalStateException(
+					"a configured headless session is already active");
+		}
+		setInputHandler(input);
+		audioManager.setBackend(backend);
+		if (!audioManager.hasInstalledBackend(backend)) {
+			setInputHandler(null);
+			throw new IllegalStateException(
+					"the supplied headless audio backend was not installed");
+		}
+		audioBackendInitialized = true;
+		configuredHeadlessSession = true;
+		initializeConfiguredStartup();
+	}
+
+	/** Idempotent no-platform teardown for {@link #initializeConfiguredHeadlessSession}. */
+	public void closeConfiguredHeadlessSession() {
+		if (!configuredHeadlessSession) {
+			return;
+		}
+		Throwable failure = cleanupConfiguredHeadlessResources();
+		failure = releaseConfiguredHeadlessInput(failure);
+		if (failure != null) {
+			rethrowConfiguredHeadlessCleanupFailure(failure);
+		}
+		audioBackendInitialized = false;
+		configuredHeadlessSession = false;
+	}
+
+	private Throwable cleanupConfiguredHeadlessResources() {
+		Throwable failure = null;
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, liveCaptureController::close);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, SessionManager::clear);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, audioManager::clearDonorAudio);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, crossGameFeatureProvider::resetState);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, gameLoop::closePresence);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, audioManager::resetState);
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, audioManager::destroy);
+		return failure;
+	}
+
+	private Throwable releaseConfiguredHeadlessInput(Throwable failure) {
+		InputHandler installedInput = inputHandler;
+		if (installedInput != null) {
+			failure = appendConfiguredHeadlessCleanupFailure(
+					failure, installedInput::clearLogicalOverride);
+		}
+		return appendConfiguredHeadlessCleanupFailure(
+				failure, () -> setInputHandler(null));
+	}
+
+	private static Throwable appendConfiguredHeadlessCleanupFailure(
+			Throwable aggregate, Runnable cleanup) {
+		try {
+			cleanup.run();
+		} catch (RuntimeException | Error failure) {
+			if (aggregate == null) {
+				return failure;
+			}
+			aggregate.addSuppressed(failure);
+		}
+		return aggregate;
+	}
+
+	private static void rethrowConfiguredHeadlessCleanupFailure(
+			Throwable failure) {
+		if (failure instanceof RuntimeException runtimeFailure) {
+			throw runtimeFailure;
+		}
+		throw (Error) failure;
+	}
+
+	static ConfiguredStartupBranch resolveConfiguredStartupBranch(
+			SonicConfigurationService configuration) {
+		Objects.requireNonNull(configuration, "configuration");
+		if (configuration.getBoolean(
+				SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP)) {
+			return ConfiguredStartupBranch.LEGAL_DISCLAIMER;
+		}
+		if (configuration.getBoolean(
+				SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP)) {
+			return ConfiguredStartupBranch.MASTER_TITLE;
+		}
+		return ConfiguredStartupBranch.GAME;
+	}
+
+	private void initializeConfiguredStartup() {
+		switch (resolveConfiguredStartupBranch(configService)) {
+			case LEGAL_DISCLAIMER -> {
+				legalDisclaimerScreen = new LegalDisclaimerScreen(
+						graphicsManager.getFadeManager());
+				legalDisclaimerScreen.initialize();
+				gameLoop.setGameMode(GameMode.LEGAL_DISCLAIMER);
+			}
+			case MASTER_TITLE -> {
+				masterTitleScreen = createMasterTitleScreen();
+				masterTitleScreen.initialize();
+				gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+			}
+			case GAME -> initializeGame();
+		}
 	}
 
 	private void refreshDisplayPalettes() {
@@ -1907,7 +2018,7 @@ public class Engine {
 	 * Tests drive the same placement after every simulation/modal branch that
 	 * {@link #display()} uses in production.
 	 */
-	static void presentOuterAudioFrame(
+	public static void presentOuterAudioFrame(
 			GameLoop loop,
 			boolean modalPicker,
 			boolean frameStepRequested) {

@@ -1,10 +1,18 @@
 package com.openggf.audio.synth;
 
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLogicalWriteTarget;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
 
 import java.util.Arrays;
+import java.util.Objects;
 
-public class VirtualSynthesizer implements Synthesizer {
+public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
+    public enum Initialization {
+        LEGACY_SILENCE,
+        DEFERRED
+    }
+
     private final PsgChip psg;
     private final Ym2612Chip ym;
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
@@ -37,23 +45,35 @@ public class VirtualSynthesizer implements Synthesizer {
     private int[] scratchRight = new int[0];
 
     public VirtualSynthesizer() {
-        this(Ym2612Chip.getDefaultOutputRate(), ChipWriteObserver.NONE);
+        this(Ym2612Chip.getDefaultOutputRate(), ChipWriteObserver.NONE,
+                Initialization.LEGACY_SILENCE);
     }
 
     public VirtualSynthesizer(double outputSampleRate) {
-        this(outputSampleRate, ChipWriteObserver.NONE);
+        this(outputSampleRate, ChipWriteObserver.NONE,
+                Initialization.LEGACY_SILENCE);
     }
 
     public VirtualSynthesizer(
             double outputSampleRate, ChipWriteObserver observer) {
+        this(outputSampleRate, observer, Initialization.LEGACY_SILENCE);
+    }
+
+    public VirtualSynthesizer(
+            double outputSampleRate,
+            ChipWriteObserver observer,
+            Initialization initialization) {
         // Clean-room SN76489 core; the FM:PSG balance is set here, not inside the chip.
         this.psg = new PsgChip(outputSampleRate, PsgChip.ChipType.INTEGRATED);
         this.psg.configure(PSG_PREAMP_PERCENT, PSG_PANNING_BOTH);
         this.ym = new Ym2612Chip();
         setChipWriteObserver(observer);
         setOutputSampleRate(outputSampleRate);
-        // Match typical driver init: silence chips on startup to avoid power-on noise.
-        silenceAll();
+        if (Objects.requireNonNull(initialization, "initialization")
+                == Initialization.LEGACY_SILENCE) {
+            // Match typical driver init: silence chips on startup to avoid power-on noise.
+            silenceAll();
+        }
     }
 
     public void setOutputSampleRate(double outputSampleRate) {
@@ -81,7 +101,7 @@ public class VirtualSynthesizer implements Synthesizer {
     }
 
     /** Returns whether chip writes can currently invoke user code. */
-    protected final boolean hasChipWriteObserver() {
+    public final boolean hasChipWriteObserver() {
         return chipWriteObserverEnabled;
     }
 
@@ -124,13 +144,33 @@ public class VirtualSynthesizer implements Synthesizer {
         ym.setDacData(data);
     }
 
+    @Override
+    public void selectDac(SmpsSourceDescriptor source, DacData data) {
+        // Standalone synthesis has one physical DAC bank, so source
+        // provenance does not affect the selected data.
+        setDacData(data);
+    }
+
+    /**
+     * Returns the identity-bearing DAC bank needed by the combined legacy
+     * driver snapshot without exposing this physical synthesizer itself.
+     */
+    public DacData selectedDacDataForSnapshot() {
+        return ym.liveDacDataReference();
+    }
+
+    /** Restores the identity-bearing DAC bank for a combined legacy snapshot. */
+    public void restoreSelectedDacData(DacData data) {
+        ym.setDacData(data);
+    }
+
     /**
      * Captures the identity-bearing DAC bank selected by a live command.
      * General synth/rewind snapshots intentionally omit this process-local
      * dependency and continue to resolve it through sequencer descriptors.
      */
     protected final DacData captureLiveDacDataReference() {
-        return ym.liveDacDataReference();
+        return selectedDacDataForSnapshot();
     }
 
     /**
@@ -138,7 +178,7 @@ public class VirtualSynthesizer implements Synthesizer {
      * playback fields that resolve their current sample through that bank.
      */
     protected final void restoreLiveDacDataReference(DacData data) {
-        ym.setDacData(data);
+        restoreSelectedDacData(data);
     }
 
     @Override

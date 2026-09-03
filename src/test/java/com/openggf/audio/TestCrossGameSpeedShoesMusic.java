@@ -1,7 +1,6 @@
 package com.openggf.audio;
 
 import com.openggf.audio.presentation.PresentationMode;
-import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -56,19 +55,27 @@ class TestCrossGameSpeedShoesMusic {
         verifyS3kFrameMultiplier();
     }
 
+    /**
+     * S3K has no speed-up/slow-down sound command: the 68k writes
+     * {@code zTempoSpeedup} in Z80 RAM directly (sonic3k.asm:1519), and the
+     * driver's E2h/E3h entries are {@code zStopAllSound} and
+     * {@code zPSGSilenceAll} (Sound/Z80 Sound Driver.asm:1669-1670). The
+     * engine models that direct write as {@link AudioManager#setSpeedMultiplier}
+     * with the profile's {@code FRAME_MULTIPLY} value.
+     */
     @Test
-    void s3kNativeCommandDrivesTheOuterFrameSpeedupTail() {
+    void s3kDirectSpeedupWriteDrivesTheOuterFrameSpeedupTail() {
         int musicId = 0x01;
         installMusic(
                 musicId,
-                Sonic3kSmpsConstants.CMD_SPEED_UP,
-                Sonic3kSmpsConstants.CMD_SLOW_DOWN,
+                -1,
+                -1,
                 GameAudioProfile.SpeedMode.FRAME_MULTIPLY,
                 Sonic3kSmpsSequencerConfig.CONFIG);
         audio.playMusic(musicId);
         audio.presentFrame(PresentationMode.SILENT);
 
-        audio.playMusic(Sonic3kSmpsConstants.CMD_SPEED_UP);
+        audio.setSpeedMultiplier(Sonic3kSmpsConstants.SPEED_MULTIPLIER_ON);
         audio.presentFrame(PresentationMode.FORWARD);
 
         assertEquals(6, musicSequencer().speedupTimeout(),
@@ -102,8 +109,8 @@ class TestCrossGameSpeedShoesMusic {
         int musicId = 0x01;
         installMusic(
                 musicId,
-                Sonic3kSmpsConstants.CMD_SPEED_UP,
-                Sonic3kSmpsConstants.CMD_SLOW_DOWN,
+                -1,
+                -1,
                 GameAudioProfile.SpeedMode.FRAME_MULTIPLY,
                 Sonic3kSmpsSequencerConfig.CONFIG);
 
@@ -111,11 +118,13 @@ class TestCrossGameSpeedShoesMusic {
         audio.presentFrame(PresentationMode.SILENT);
         assertEquals(1, musicSequencer().speedMultiplier());
 
-        audio.playMusic(Sonic3kSmpsConstants.CMD_SPEED_UP);
+        // Direct zTempoSpeedup write (sonic3k.asm:1519); see the S3K test above.
+        audio.setSpeedMultiplier(Sonic3kSmpsConstants.SPEED_MULTIPLIER_ON);
         audio.presentFrame(PresentationMode.SILENT);
-        assertEquals(8, musicSequencer().speedMultiplier());
+        assertEquals(Sonic3kSmpsConstants.SPEED_MULTIPLIER_ON,
+                musicSequencer().speedMultiplier());
 
-        audio.playMusic(Sonic3kSmpsConstants.CMD_SLOW_DOWN);
+        audio.setSpeedMultiplier(Sonic3kSmpsConstants.SPEED_MULTIPLIER_OFF);
         audio.presentFrame(PresentationMode.SILENT);
         assertEquals(1, musicSequencer().speedMultiplier());
     }
@@ -182,13 +191,8 @@ class TestCrossGameSpeedShoesMusic {
     }
 
     private SmpsSequencerSnapshot musicSequencer() {
-        PresentationVoiceSnapshot.Smps voice = audio.captureLogicalSnapshot()
-                .presentation().voices().stream()
-                .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
-                .map(PresentationVoiceSnapshot.Smps.class::cast)
-                .findFirst()
-                .orElseThrow();
-        return voice.driver().sequencers().stream()
+        return audio.captureLogicalSnapshot().presentation().smpsLogical()
+                .sequencers().stream()
                 .filter(entry -> !entry.sfx())
                 .findFirst()
                 .orElseThrow()

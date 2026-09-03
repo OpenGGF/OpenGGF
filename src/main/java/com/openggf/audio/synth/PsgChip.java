@@ -1,6 +1,7 @@
 package com.openggf.audio.synth;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * SN76489-family programmable sound generator, modelled as the Sega-integrated
@@ -518,6 +519,42 @@ public class PsgChip {
         @Override
         public int[] emittedRight() {
             return emittedRight.clone();
+        }
+
+        @Override
+        public boolean equals(Object candidate) {
+            return candidate instanceof Snapshot other
+                    && Double.compare(sampleRate, other.sampleRate) == 0
+                    && chipType == other.chipType
+                    && noiseShiftOnEveryToggle
+                            == other.noiseShiftOnEveryToggle
+                    && preamp == other.preamp
+                    && panning == other.panning
+                    && Arrays.equals(mutes, other.mutes)
+                    && Arrays.equals(tonePeriods, other.tonePeriods)
+                    && Arrays.equals(attenuations, other.attenuations)
+                    && noiseControl == other.noiseControl
+                    && latch == other.latch
+                    && Arrays.equals(counters, other.counters)
+                    && Arrays.equals(polarities, other.polarities)
+                    && lfsr == other.lfsr
+                    && Arrays.equals(emittedLeft, other.emittedLeft)
+                    && Arrays.equals(emittedRight, other.emittedRight)
+                    && Objects.equals(blip, other.blip);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(sampleRate, chipType,
+                    noiseShiftOnEveryToggle, preamp, panning, noiseControl,
+                    latch, lfsr, blip);
+            result = 31 * result + Arrays.hashCode(mutes);
+            result = 31 * result + Arrays.hashCode(tonePeriods);
+            result = 31 * result + Arrays.hashCode(attenuations);
+            result = 31 * result + Arrays.hashCode(counters);
+            result = 31 * result + Arrays.hashCode(polarities);
+            result = 31 * result + Arrays.hashCode(emittedLeft);
+            return 31 * result + Arrays.hashCode(emittedRight);
         }
     }
 

@@ -3,11 +3,11 @@ package com.openggf.audio;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.presentation.AudioPresentationCommandQueue;
 import com.openggf.audio.presentation.AudioPresentationCommandResolver;
+import com.openggf.audio.presentation.AudioPresentationSessionCommandApplier;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.SmpsAssetKey;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -17,6 +17,8 @@ import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import com.sun.management.ThreadMXBean;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -143,6 +145,8 @@ class TestSmpsSfxAdmissionAllocation {
         SmpsCoordFlagHandlerOwner handlers =
                 new SmpsCoordFlagHandlerOwner(
                         new SmpsCoordFlagRuntimeState());
+        SmpsDriverSession session =
+                SmpsSessionTestSupport.installed(48_000);
         AudioPresentationSourceFactory factory =
                 new AudioPresentationSourceFactory(
                         () -> true, handlers,
@@ -150,14 +154,15 @@ class TestSmpsSfxAdmissionAllocation {
                                 48_000, SmpsSequencer.Region.NTSC,
                                 false, false, false, false, 1,
                                 AudioManager.getInstance(),
-                                new DecodedPcmCache(), ignored -> null));
+                                new DecodedPcmCache(), ignored -> null),
+                        session);
         AudioPresentationCommandQueue queue =
                 new AudioPresentationCommandQueue();
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 factory, factory, handlers,
                 warning -> {
                     throw new AssertionError(warning);
-                });
+                }, session);
         AudioPresentationCommandResolver.Sources sources =
                 new AudioPresentationCommandResolver.Sources() {
                     @Override
@@ -182,7 +187,7 @@ class TestSmpsSfxAdmissionAllocation {
                             throw new AssertionError(warning);
                         }, () -> true, registry::apply);
         Fixture fixture = new Fixture(
-                resolver, queue, registry, loader,
+                resolver, queue, registry, session, loader,
                 musicCounter, sfxCounter,
                 sfxProgramBytes, dacBytes, musicTracks);
         fixture.submitMusic();
@@ -378,6 +383,7 @@ class TestSmpsSfxAdmissionAllocation {
         private final AudioPresentationCommandResolver resolver;
         private final AudioPresentationCommandQueue queue;
         private final AudioVoiceRegistry registry;
+        private final SmpsDriverSession session;
         private final CountingLoader loader;
         private final MaterializationCounter musicCounter;
         private final MaterializationCounter sfxCounter;
@@ -390,6 +396,7 @@ class TestSmpsSfxAdmissionAllocation {
                 AudioPresentationCommandResolver resolver,
                 AudioPresentationCommandQueue queue,
                 AudioVoiceRegistry registry,
+                SmpsDriverSession session,
                 CountingLoader loader,
                 MaterializationCounter musicCounter,
                 MaterializationCounter sfxCounter,
@@ -399,6 +406,7 @@ class TestSmpsSfxAdmissionAllocation {
             this.resolver = resolver;
             this.queue = queue;
             this.registry = registry;
+            this.session = session;
             this.loader = loader;
             this.musicCounter = musicCounter;
             this.sfxCounter = sfxCounter;
@@ -411,24 +419,22 @@ class TestSmpsSfxAdmissionAllocation {
             resolver.submit(new AudioCommand.PlayMusic(
                     MUSIC_ID, AudioCommand.MusicRoute.BASE_SMPS,
                     false, null));
-            queue.applyPending(registry::apply);
+            queue.applyPending(command ->
+                    AudioPresentationSessionCommandApplier.apply(
+                            session, registry, command));
         }
 
         private void trigger() {
             resolver.submit(new AudioCommand.PlaySfx(
                     SFX_ID, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
                     1.0f, null));
-            queue.applyPending(registry::apply);
-        }
-
-        private SmpsCompositeVoice musicVoice() {
-            assertEquals(1, registry.orderedVoiceCount(),
-                    "one composite voice owns music and SFX");
-            return (SmpsCompositeVoice) registry.orderedVoiceAt(0);
+            queue.applyPending(command ->
+                    AudioPresentationSessionCommandApplier.apply(
+                            session, registry, command));
         }
 
         private SmpsDriver driver() {
-            return musicVoice().driver();
+            return SmpsSessionTestSupport.logicalDriver(session);
         }
 
         private SmpsSequencer liveSfx() {
@@ -451,8 +457,9 @@ class TestSmpsSfxAdmissionAllocation {
         }
 
         private void assertFixedLiveTopology() {
-            assertEquals(1, registry.orderedVoiceCount(),
-                    "live voice count for " + description());
+            assertEquals(0, registry.orderedVoiceCount(),
+                    "session SMPS must not occupy an ordered PCM slot for "
+                            + description());
             assertEquals(2, driver().sequencersForTesting().size(),
                     "one music plus one replacement SFX for "
                             + description());

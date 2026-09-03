@@ -134,11 +134,8 @@ class TestSoundTestPresentationHost {
             host.playSfx(persistentS3kSfx(0xBC), fixture.dac(), 1.0f);
             host.presentFrame();
             var sequencers = host.managerForTesting()
-                    .captureLogicalSnapshot().presentation().voices().stream()
-                    .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
-                    .map(PresentationVoiceSnapshot.Smps.class::cast)
-                    .flatMap(voice -> voice.driver().sequencers().stream())
-                    .toList();
+                    .captureLogicalSnapshot().presentation().smpsLogical()
+                    .sequencers();
             assertEquals(2, sequencers.size());
             var musicHandler = sequencers.get(0)
                     .config().getCoordFlagHandler();
@@ -160,11 +157,8 @@ class TestSoundTestPresentationHost {
             assertEquals(7, owner.state().spindashRevCounter());
             assertEquals(owner, presentationOwner(host.managerForTesting()));
             var recreatedSequencers = host.managerForTesting()
-                    .captureLogicalSnapshot().presentation().voices().stream()
-                    .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
-                    .map(PresentationVoiceSnapshot.Smps.class::cast)
-                    .flatMap(voice -> voice.driver().sequencers().stream())
-                    .toList();
+                    .captureLogicalSnapshot().presentation().smpsLogical()
+                    .sequencers();
             assertEquals(2, recreatedSequencers.size());
             assertSame(owner.handlerFor("s3k"),
                     recreatedSequencers.get(0).config()

@@ -15,6 +15,7 @@ public final class CompleteRunAudioReport {
 
     public enum Kind {
         MATCH,
+        REFERENCE_LIMITATION,
         CAPTURE_FAILURE,
         METADATA_IDENTITY,
         RECORD_SHAPE,
@@ -153,12 +154,12 @@ public final class CompleteRunAudioReport {
                 || validationDetail != null) {
             throw new IllegalArgumentException("only capture failures carry validation fields");
         }
-        if (kind == Kind.MATCH && (frame != -1 || location != null || referenceValue != null
+        if ((kind == Kind.MATCH || kind == Kind.REFERENCE_LIMITATION) && (frame != -1 || location != null || referenceValue != null
                 || engineValue != null || referenceContext.current() != null
                 || engineContext.current() != null || !referenceContext.before().isEmpty()
                 || !referenceContext.after().isEmpty() || !engineContext.before().isEmpty()
                 || !engineContext.after().isEmpty())) {
-            throw new IllegalArgumentException("MATCH report must not carry mismatch data");
+            throw new IllegalArgumentException("successful comparison report must not carry mismatch data");
         }
     }
 
@@ -213,7 +214,7 @@ public final class CompleteRunAudioReport {
             out.append("failure_source=").append(escape(failureSource)).append('\n');
             out.append("validation_kind=").append(validationKind).append('\n');
             if (validationDetail != null) out.append("validation_detail=").append(escape(validationDetail)).append('\n');
-        } else if (kind != Kind.MATCH) {
+        } else if (kind != Kind.MATCH && kind != Kind.REFERENCE_LIMITATION) {
             out.append("frame=").append(frame).append('\n');
             out.append("location=").append(escape(location)).append('\n');
             out.append("reference_value=").append(escape(referenceValue)).append('\n');

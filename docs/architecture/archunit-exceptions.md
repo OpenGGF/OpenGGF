@@ -29,6 +29,13 @@ target rather than walking back the assertion.
 | Rule | Baseline | Target | Trigger |
 |------|----------|--------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 209 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+
+2026-09-03: the two `AudioManager -> Rom.readBytes` SEGA-boot PCM edges were
+solved and the frozen entry pruned. `GameAudioProfile.loadSegaPcm(Object)` now
+declares the read and the per-game profiles perform it through
+`com.openggf.game.audio.SegaPcmRomReader`, which lives in the runtime layer and
+may depend on `com.openggf.data`. The rule description keeps its original
+baseline wording because the freeze store is keyed by that text.
 | `shared_layers_do_not_depend_on_game_specific_packages` | 9 | 0 | Master-title ROM preview mapping moves behind provider contracts (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
 

@@ -6,7 +6,9 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
-import com.openggf.audio.synth.VirtualSynthesizer;
+import com.openggf.audio.smps.SmpsLoadReadiness;
+import com.openggf.audio.session.SmpsMusicActivation;
+import com.openggf.audio.session.SmpsWriteProgram;
 
 import java.util.Arrays;
 import java.util.List;
@@ -22,7 +24,8 @@ public record SmpsDriverSnapshot(
         List<SequencerEntry> sequencers,
         int[] fmLockSequencerIds,
         int[] psgLockSequencerIds,
-        VirtualSynthesizer.Snapshot synthSnapshot) {
+        List<SavedOverride> savedOverrides,
+        PendingService pendingService) {
 
     public SmpsDriverSnapshot {
         Objects.requireNonNull(region, "region");
@@ -30,6 +33,40 @@ public record SmpsDriverSnapshot(
         sequencers = List.copyOf(sequencers);
         fmLockSequencerIds = Arrays.copyOf(fmLockSequencerIds, fmLockSequencerIds.length);
         psgLockSequencerIds = Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
+        savedOverrides = List.copyOf(Objects.requireNonNull(
+                savedOverrides, "savedOverrides"));
+    }
+
+    public SmpsDriverSnapshot(
+            SmpsSequencer.Region region,
+            SmpsDriver.ReadMode readMode,
+            int continuousSfxId,
+            boolean continuousSfxFlag,
+            int contSfxLoopCnt,
+            int palUpdateCounter,
+            List<SequencerEntry> sequencers,
+            int[] fmLockSequencerIds,
+            int[] psgLockSequencerIds,
+            List<SavedOverride> savedOverrides) {
+        this(region, readMode, continuousSfxId, continuousSfxFlag,
+                contSfxLoopCnt, palUpdateCounter, sequencers,
+                fmLockSequencerIds, psgLockSequencerIds, savedOverrides,
+                null);
+    }
+
+    public SmpsDriverSnapshot(
+            SmpsSequencer.Region region,
+            SmpsDriver.ReadMode readMode,
+            int continuousSfxId,
+            boolean continuousSfxFlag,
+            int contSfxLoopCnt,
+            int palUpdateCounter,
+            List<SequencerEntry> sequencers,
+            int[] fmLockSequencerIds,
+            int[] psgLockSequencerIds) {
+        this(region, readMode, continuousSfxId, continuousSfxFlag,
+                contSfxLoopCnt, palUpdateCounter, sequencers,
+                fmLockSequencerIds, psgLockSequencerIds, List.of());
     }
 
     public SmpsDriverSnapshot(
@@ -51,22 +88,7 @@ public record SmpsDriverSnapshot(
                 sequencers,
                 fmLockSequencerIds,
                 psgLockSequencerIds,
-                null);
-    }
-
-    public SmpsDriverSnapshot(
-            SmpsSequencer.Region region,
-            SmpsDriver.ReadMode readMode,
-            int continuousSfxId,
-            boolean continuousSfxFlag,
-            int contSfxLoopCnt,
-            List<SequencerEntry> sequencers,
-            int[] fmLockSequencerIds,
-            int[] psgLockSequencerIds,
-            VirtualSynthesizer.Snapshot synthSnapshot) {
-        this(region, readMode, continuousSfxId, continuousSfxFlag,
-                contSfxLoopCnt, 5, sequencers, fmLockSequencerIds,
-                psgLockSequencerIds, synthSnapshot);
+                List.of());
     }
 
     @Override
@@ -77,6 +99,33 @@ public record SmpsDriverSnapshot(
     @Override
     public int[] psgLockSequencerIds() {
         return Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
+    }
+
+    @Override
+    public boolean equals(Object candidate) {
+        return candidate instanceof SmpsDriverSnapshot other
+                && region == other.region
+                && readMode == other.readMode
+                && continuousSfxId == other.continuousSfxId
+                && continuousSfxFlag == other.continuousSfxFlag
+                && contSfxLoopCnt == other.contSfxLoopCnt
+                && palUpdateCounter == other.palUpdateCounter
+                && sequencers.equals(other.sequencers)
+                && Arrays.equals(fmLockSequencerIds,
+                        other.fmLockSequencerIds)
+                && Arrays.equals(psgLockSequencerIds,
+                        other.psgLockSequencerIds)
+                && savedOverrides.equals(other.savedOverrides)
+                && Objects.equals(pendingService, other.pendingService);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(region, readMode, continuousSfxId,
+                continuousSfxFlag, contSfxLoopCnt, palUpdateCounter,
+                sequencers, savedOverrides, pendingService);
+        result = 31 * result + Arrays.hashCode(fmLockSequencerIds);
+        return 31 * result + Arrays.hashCode(psgLockSequencerIds);
     }
 
     public interface DependencyResolver {
@@ -111,6 +160,42 @@ public record SmpsDriverSnapshot(
                 return entry.config();
             }
         };
+    }
+
+    /** Logical-only RAM save area retained by a temporary music override. */
+    public record SavedOverride(SmpsDriverSnapshot logical) {
+        public SavedOverride {
+            Objects.requireNonNull(logical, "logical");
+        }
+    }
+
+    /** Deferred physical activation/reassertion for the next real service. */
+    public record PendingService(
+            SmpsMusicActivation activation,
+            SmpsDriverSnapshot readyLogical,
+            SmpsWriteProgram firstServiceWrites,
+            SmpsSourceDescriptor selectedDacSource,
+            String readinessProvenance,
+            long remainingTStates,
+            SmpsLoadReadiness.Context readinessContext) {
+        public PendingService(
+                SmpsMusicActivation activation,
+                SmpsWriteProgram firstServiceWrites,
+                SmpsSourceDescriptor selectedDacSource) {
+            this(activation, null, firstServiceWrites, selectedDacSource,
+                    SmpsLoadReadiness.immediatePlan().provenance(
+                            new SmpsLoadReadiness.Context(
+                                    SmpsSequencer.Region.NTSC, false)),
+                    0, new SmpsLoadReadiness.Context(
+                            SmpsSequencer.Region.NTSC, false));
+        }
+        public PendingService {
+            Objects.requireNonNull(firstServiceWrites,
+                    "firstServiceWrites");
+            Objects.requireNonNull(readinessProvenance,
+                    "readinessProvenance");
+            Objects.requireNonNull(readinessContext, "readinessContext");
+        }
     }
 
     public record SequencerEntry(

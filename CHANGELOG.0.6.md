@@ -14,6 +14,58 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 2 level music now starts on the shipped level-entry cadence:** the
+  game-owned timing profile derives pre-BGM work from ROM data, including
+  title-card and PLC paths, region, prior live water state, and Saxman load
+  cost. Level-entry VBlanks and the load-completion boundary are rewind-stable,
+  and EHZ driver parity now matches through 266 completed updates without
+  trace-fed gameplay state.
+
+- **Sonic 2 audio requests now traverse the shipped mailbox and queue order:**
+  base-game music, SFX, and system requests are retained until a forward audio
+  boundary, then bridge, arbitrate, transform, and dispatch through the
+  game-owned REV01 request model. The state is rewindable, ring selection
+  occurs once in the driver path, and output-only tooling can project committed
+  request/decision facts without enabling reference comparison authority.
+
+- **S3K SMPS E4 now performs the shipped conditional SFX-stop walk:** the
+  S3K host session validates an immutable complete FM3/FM4/FM5/FM6/PSG1/PSG2/
+  PSG3 ownership projection before touching the chip, then follows
+  `zStopSFX`/`cfSilenceStopTrack`/`cfStopTrack` in native order for occupied
+  slots. This includes the retail `FixBugs=0` PSG raw-voice-control write to YM
+  `$28`, its native PSG mute/conditional-and-unconditional `$FF` sequence, FM
+  operator/key-off sequence, FM3 `$27` mode restore, voice/TL/custom SSG-EG
+  restoration, AMS/FMS-aware `$B4` restoration, and signed raw PSG-noise re-latch.
+  An incomplete or
+  ambiguous projection emits nothing and changes no logical state; successful
+  completion releases only the existing SFX claims/overrides while preserving
+  continuous SFX, PCM, and session controls. The policy is host-owned and
+  fingerprinted, so S1/S2 retain their existing behaviour and donor content
+  cannot select the S3K operation.
+
+- **Sonic 2 sound effects now reserve their channels at admission:** the
+  shipped driver marks each affected music slot overridden while it loads the
+  SFX header, before its music-first update pass. OpenGGF now installs those
+  prepared FM/PSG claims atomically, so a newly admitted FM4 effect cannot leak
+  one music frequency update before its first SFX service; hidden music
+  modulation continues and the channel restores when the effect ends. PSG3
+  admission independently emits the shipped driver's explicit `$DF/$FF`
+  tone-and-noise silence pair.
+- **Complete-run audio producers now consume private bound inputs:** direct
+  Java capture authenticates the same pinned reference installation as the
+  shell route, snapshots the ROM, BK2, run manifest, and complete reference
+  tree before validation, launches TraceChaser with a closed environment, and
+  publishes the completed store only after producer and snapshot cleanup.
+- **Production audio diagnostics now have a deterministic headless boundary:**
+  `AudioManager` owns an exclusive transactional observer lease that survives
+  backend and presentation rebuilds, while the complete-run tooling records a
+  globally ordered, bounded stream of immutable request, service, chip-write,
+  and contention observations. `Engine` exposes the same configured startup
+  branch to a caller-supplied no-device backend and input handler, captures
+  exact logical audio snapshots at row boundaries, and tears down gameplay and
+  audio ownership without creating a GLFW window or OpenAL device. The ordinary
+  outer-frame audio presentation remains the sole cadence owner.
+
 - **DAC samples no longer play ~9.5 semitones flat with interpolation on:**
   `audio.dacInterpolate` (previously the shipped default `true`) queued its
   synthetic DAC write in the slot that gates the real Z80 sample cadence, so
@@ -9293,6 +9345,17 @@ The active 0.6 prerelease line is focused on S3K vertical-slice parity, trace-dr
   dispatch and pumps the native LoadEnemyArt handoff; CNZ signpost pose and
   post-transition control restoration now follow the ROM dispatch order. The
   canonical CNZ timing frontier advances from direct completion #24 to #28.
+- Fix/Audio: S3K's shipped driver command identities now route through the
+  session-owned physical device. E0/E2 retain one exact 84-write global stop,
+  E1/E5 fade, FE stops raw SEGA PCM and retains the same stop transaction, and
+  E4 releases logical SFX ownership without erasing music or raw/sample state.
+  Boot uses the source-verified 85-write program, S1/S2 retain their exact
+  compatibility programs, and speed-shoes pickup/expiry use semantic 8/1
+  tempo multipliers instead of the unrelated E2/E3 sound commands. E3 now
+  emits its exact `9F BF DF FF` PSG-silence program without changing music,
+  SFX ownership, overrides, tempo, or pending service state. E4's seven-slot
+  physical walk and full FF control flow remain explicit follow-up frontiers.
+
 ## Commit-history coverage
 
 The 0.6 ledger was reconciled against the complete `v0.5.20260411..HEAD`

@@ -263,6 +263,12 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 2 sound driver parity:** the engine's SMPS driver now matches the
+  recorded hardware driver over the full EHZ reference window (698 updates)
+  with every sound request transfer agreeing, driven from the same BK2 movie.
+  Level music starts on the shipped level-entry cadence, SFX release and PSG
+  override semantics follow the Z80 driver, and Sonic 2 requests travel the
+  ROM's mailbox and queue order.
 - **DAC sample pitch:** optional DAC interpolation no longer stalls the
   sample clock (it played drums about 9.5 semitones flat when enabled), and
   the option now defaults to off.

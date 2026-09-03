@@ -115,7 +115,15 @@ public class SpeedShoesTimer extends AbstractTimer {
         var audioManager = sprite.currentAudioManager();
         GameAudioProfile audioProfile = audioManager.getAudioProfile();
         if (audioProfile != null) {
-            audioManager.playMusic(audioProfile.getSpeedShoesOffCommandId());
+            if (audioProfile.getSpeedMode()
+                    == GameAudioProfile.SpeedMode.FRAME_MULTIPLY) {
+                // S3K expiry writes zero to zTempoSpeedup. The engine's
+                // normalized normal-speed multiplier is one.
+                audioManager.setSpeedMultiplier(1);
+            } else {
+                audioManager.playMusic(
+                        audioProfile.getSpeedShoesOffCommandId());
+            }
         }
         return true;
     }

@@ -10,7 +10,6 @@ import com.openggf.audio.presentation.DecodedPcm;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
@@ -147,10 +146,14 @@ class TestAudioPresentationSnapshotParity {
         AudioTestFixtures.StubSmpsData music =
                 new AudioTestFixtures.StubSmpsData("target-music");
         music.setId(0x81);
+        AudioTestFixtures.StubSmpsData disturbedMusic =
+                new AudioTestFixtures.StubSmpsData("disturbed-music");
+        disturbedMusic.setId(0x82);
         AudioTestFixtures.StubSmpsData sfx =
                 new AudioTestFixtures.StubSmpsData("target-sfx");
         sfx.setId(0xA0);
         loader.musicResults.put(0x81, music);
+        loader.musicResults.put(0x82, disturbedMusic);
         loader.sfxResults.put(0xA0, sfx);
         com.openggf.audio.smps.SmpsSequencerConfig config =
                 new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
@@ -179,6 +182,7 @@ class TestAudioPresentationSnapshotParity {
         audio.beginCommandTimelineFrame(12);
         audio.setSpeedShoes(false);
         audio.setSpeedMultiplier(1);
+        audio.playMusic(0x82);
         audio.playSfx(GameSound.RING);
         audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot disturbed = audio.captureLogicalSnapshot();
@@ -188,16 +192,16 @@ class TestAudioPresentationSnapshotParity {
         assertPresentationLogicalEquals(
                 disturbed.presentation(),
                 audio.captureLogicalSnapshot().presentation());
-        PresentationVoiceSnapshot.Smps stagedMusic =
-                (PresentationVoiceSnapshot.Smps) audio
-                        .deferredReverseLogicalSnapshotForTesting()
-                        .presentation().voices().getFirst();
+        com.openggf.audio.rewind.SmpsDriverSnapshot stagedLogical = audio
+                .deferredReverseLogicalSnapshotForTesting()
+                .presentation().smpsLogical();
+        assertNotNull(stagedLogical);
         assertEquals(List.of(
                         com.openggf.audio.rewind.SmpsSourceDescriptor.Kind
                                 .BASE_MUSIC,
                         com.openggf.audio.rewind.SmpsSourceDescriptor.Kind
                                 .BASE_SFX_ID),
-                stagedMusic.driver().sequencers().stream()
+                stagedLogical.sequencers().stream()
                         .map(entry -> entry.source().kind()).toList());
         assertTrue(audio.commitDeferredReverseLogicalRestore());
         audio.endReverseAudioPresentation();
@@ -207,7 +211,12 @@ class TestAudioPresentationSnapshotParity {
                 actual.presentation().activeMusic());
         assertTrue(actual.presentation().speedShoesEnabled());
         assertEquals(3, actual.presentation().speedMultiplier());
-        assertEquals(1, actual.presentation().voices().size(),
+        assertEquals(0, actual.presentation().voices().size(),
+                "session-owned SMPS state is not a presentation voice");
+        assertTrue(actual.presentation().smpsLogical().sequencers().stream()
+                .noneMatch(
+                        com.openggf.audio.rewind.SmpsDriverSnapshot
+                                .SequencerEntry::sfx),
                 "reverse release removes replayed transient SFX");
         assertEquals(expected.ringLeft(), actual.ringLeft());
     }
@@ -264,12 +273,8 @@ class TestAudioPresentationSnapshotParity {
                 audio.captureLogicalSnapshot().presentation();
         assertEquals(AudioSourceDescriptor.baseMusic(0x81),
                 released.activeMusic().sourceDescriptor());
-        assertFalse(released.voices().stream()
-                .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
-                .map(PresentationVoiceSnapshot.Smps.class::cast)
-                .flatMap(voice -> voice.driver().sequencers().stream())
-                .anyMatch(com.openggf.audio.rewind.SmpsDriverSnapshot
-                        .SequencerEntry::sfx));
+        assertTrue(released.voices().isEmpty(),
+                "session SMPS state must not use ordered voice carriers");
         assertTrue(released.speedShoesEnabled());
         assertEquals(3, released.speedMultiplier());
     }
@@ -673,10 +678,10 @@ class TestAudioPresentationSnapshotParity {
             // in TestAudioVoiceRegistry.
             assertTrue(boundary.presentation().overrideStack().isEmpty());
             assertNotNull(boundary.presentation().rawPcmVoiceId());
-            assertTrue(boundary.presentation().voices().stream()
-                    .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
-                    .map(PresentationVoiceSnapshot.Smps.class::cast)
-                    .flatMap(voice -> voice.driver().sequencers().stream())
+            assertNotNull(boundary.presentation().smpsSession());
+            assertNotNull(boundary.presentation().smpsLogical());
+            assertTrue(boundary.presentation().smpsLogical().sequencers()
+                    .stream()
                     .anyMatch(
                             com.openggf.audio.rewind.SmpsDriverSnapshot
                                     .SequencerEntry::sfx));
@@ -685,27 +690,6 @@ class TestAudioPresentationSnapshotParity {
             int[] packetSizes = new int[10];
             short[][] actualPackets = new short[10][];
 
-            AudioPresentationSourceFactory referenceFactory =
-                    audio.shadowFactoryForTesting();
-            AudioVoiceRegistry reference = new AudioVoiceRegistry(
-                    referenceFactory, referenceFactory,
-                    new SmpsCoordFlagHandlerOwner(
-                            new SmpsCoordFlagRuntimeState()),
-                    warning -> {
-                        throw new AssertionError(warning);
-                    });
-            reference.restore(
-                    boundary.presentation(), referenceFactory);
-            assertPresentationSnapshotExactly(
-                    boundary.presentation(), reference.snapshot());
-            AudioPresentationMixer referenceMixer =
-                    new AudioPresentationMixer(
-                            capture.maxStereoFramesPerPacket());
-            AudioFrameClock referenceClock =
-                    new AudioFrameClock(44_101, 60);
-            for (int frame = 0; frame < 120; frame++) {
-                referenceClock.samplesForNextFrame();
-            }
             for (int frame = 0; frame < 10; frame++) {
                 audio.beginCommandTimelineFrame(120 + frame);
                 audio.presentFrame(PresentationMode.FORWARD);
@@ -719,25 +703,9 @@ class TestAudioPresentationSnapshotParity {
                         "capture must preserve each producer packet exactly");
                 actualPackets[frame] = java.util.Arrays.copyOf(
                         packet, packetSizes[frame] * 2);
-                int referenceFrames =
-                        referenceClock.samplesForNextFrame();
-                assertEquals(referenceFrames, packetSizes[frame]);
-                reference.beginRendering();
-                short[] referencePcm;
-                try {
-                    reference.serviceOuterFrame();
-                    referencePcm = java.util.Arrays.copyOf(
-                            referenceMixer.mix(reference, referenceFrames),
-                            referenceFrames * 2);
-                } finally {
-                    reference.endRendering();
-                }
-                assertArrayEquals(
-                        referencePcm,
-                        actualPackets[frame],
-                        "manager producer PCM must match independently "
-                                + "reconstructed source-bearing state");
             }
+            AudioPresentationSnapshot expectedAfterTen =
+                    audio.captureLogicalSnapshot().presentation();
             assertEquals(7_350,
                     capture.totalStereoFrames() - before);
             assertArrayEquals(
@@ -745,9 +713,6 @@ class TestAudioPresentationSnapshotParity {
                             735, 735, 735, 735, 735},
                     packetSizes);
             assertEquals(10, capture.clockSnapshot().remainder());
-            assertPresentationSnapshotExactly(
-                    audio.captureLogicalSnapshot().presentation(),
-                    reference.snapshot());
 
             audio.presentationCoordFlagHandlersForTesting().state()
                     .setSpindashRevCounter(55);
@@ -756,6 +721,19 @@ class TestAudioPresentationSnapshotParity {
                             .spindashRevCounter(),
                     audio.presentationCoordFlagHandlersForTesting().state()
                             .spindashRevCounter());
+            for (int frame = 0; frame < 10; frame++) {
+                audio.beginCommandTimelineFrame(130 + frame);
+                audio.presentFrame(PresentationMode.FORWARD);
+                assertEquals(packetSizes[frame],
+                        capture.drainPresentationFrame(packet));
+                assertArrayEquals(actualPackets[frame],
+                        java.util.Arrays.copyOf(
+                                packet, packetSizes[frame] * 2),
+                        "restoring the one session/logical memento must "
+                                + "reproduce the next PCM packet");
+            }
+            assertPresentationLogicalEquals(expectedAfterTen,
+                    audio.captureLogicalSnapshot().presentation());
         }
     }
 
@@ -770,11 +748,6 @@ class TestAudioPresentationSnapshotParity {
                         throw new AssertionError("no SFX SMPS expected");
                     }
 
-                    @Override
-                    public SmpsCompositeVoice instantiateStandaloneCached(
-                            com.openggf.audio.presentation.ResolvedSmpsSfxSource source) {
-                        throw new AssertionError("no SFX SMPS expected");
-                    }
                 },
                 resolver,
                 new SmpsCoordFlagHandlerOwner(
@@ -826,8 +799,6 @@ class TestAudioPresentationSnapshotParity {
             AudioPresentationSnapshot actual) {
         assertEquals(expected.activeMusic(), actual.activeMusic());
         assertEquals(expected.overrideStack(), actual.overrideStack());
-        assertEquals(expected.standaloneSmpsVoiceId(),
-                actual.standaloneSmpsVoiceId());
         assertEquals(expected.rawPcmVoiceId(), actual.rawPcmVoiceId());
         assertEquals(expected.fmMuteMask(), actual.fmMuteMask());
         assertEquals(expected.fmSoloMask(), actual.fmSoloMask());
@@ -846,25 +817,8 @@ class TestAudioPresentationSnapshotParity {
             PresentationVoiceSnapshot left = expected.voices().get(index);
             PresentationVoiceSnapshot right = actual.voices().get(index);
             assertEquals(left.getClass(), right.getClass());
-            if (left instanceof PresentationVoiceSnapshot.Smps leftSmps
-                    && right instanceof PresentationVoiceSnapshot.Smps
-                            rightSmps) {
-                assertEquals(leftSmps.voiceId(), rightSmps.voiceId());
-                assertEquals(leftSmps.musicId(), rightSmps.musicId());
-                assertEquals(leftSmps.sourceDescriptor(),
-                        rightSmps.sourceDescriptor());
-                assertEquals(leftSmps.driver().continuousSfxId(),
-                        rightSmps.driver().continuousSfxId());
-                assertEquals(leftSmps.driver().sequencers().stream()
-                                .map(entry -> entry.source()).toList(),
-                        rightSmps.driver().sequencers().stream()
-                                .map(entry -> entry.source()).toList());
-            } else if (left instanceof PresentationVoiceSnapshot.Sample
-                    leftSample
-                    && right instanceof PresentationVoiceSnapshot.Sample
-                            rightSample) {
-                assertEquals(leftSample, rightSample);
-            }
+            assertEquals((PresentationVoiceSnapshot.Sample) left,
+                    (PresentationVoiceSnapshot.Sample) right);
         }
     }
 
@@ -873,15 +827,6 @@ class TestAudioPresentationSnapshotParity {
             AudioPresentationSnapshot actual) {
         assertPresentationLogicalEquals(expected, actual);
         assertEquals(expected.nextVoiceId(), actual.nextVoiceId());
-        for (int index = 0; index < expected.voices().size(); index++) {
-            if (expected.voices().get(index)
-                    instanceof PresentationVoiceSnapshot.Smps left
-                    && actual.voices().get(index)
-                    instanceof PresentationVoiceSnapshot.Smps right) {
-                assertDriverSnapshotExactly(
-                        left.driver(), right.driver());
-            }
-        }
     }
 
     private static void assertDriverSnapshotExactly(
@@ -916,8 +861,6 @@ class TestAudioPresentationSnapshotParity {
                     right.fallbackVoiceSource());
             assertDeepSnapshotEquals(left.snapshot(), right.snapshot());
         }
-        assertDeepSnapshotEquals(expected.synthSnapshot(),
-                actual.synthSnapshot());
     }
 
     private static void assertReleaseStateExactly(
@@ -1103,11 +1046,6 @@ class TestAudioPresentationSnapshotParity {
                 return pcm;
             }
 
-            @Override
-            public SmpsCompositeVoice recreateSmps(
-                    PresentationVoiceSnapshot.Smps snapshot) {
-                throw new AssertionError("no SMPS voice expected");
-            }
         };
     }
 

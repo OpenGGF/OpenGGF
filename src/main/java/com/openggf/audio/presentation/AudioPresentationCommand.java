@@ -2,6 +2,8 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.session.PreparedSmpsMusicActivation;
+import com.openggf.audio.session.PreparedSmpsSfxProgram;
 
 import java.util.Objects;
 
@@ -17,8 +19,13 @@ public sealed interface AudioPresentationCommand
         AudioPresentationCommand.StartSampleSfx,
         AudioPresentationCommand.ReplaceRawPcm,
         AudioPresentationCommand.StopRawPcm,
+        AudioPresentationCommand.StopRawPcmAndRetainGlobalStop,
+        AudioPresentationCommand.RetainGlobalStop,
         AudioPresentationCommand.StopMusic,
         AudioPresentationCommand.StopAllSfx,
+        AudioPresentationCommand.StopSmpsSfx,
+        AudioPresentationCommand.SilencePsg,
+        AudioPresentationCommand.ReferenceLimitation,
         AudioPresentationCommand.FadeMusic,
         AudioPresentationCommand.SetVoiceGain,
         AudioPresentationCommand.SetVoicePitch,
@@ -94,7 +101,9 @@ public sealed interface AudioPresentationCommand
             int priority,
             Integer musicId,
             AudioSourceDescriptor sourceDescriptor,
-            int maxStereoFrames) implements VoiceDescriptor {
+            int maxStereoFrames,
+            PreparedSmpsMusicActivation activation)
+            implements VoiceDescriptor {
         public SmpsVoiceDescriptor {
             Objects.requireNonNull(sourceDescriptor, "sourceDescriptor");
             if (maxStereoFrames < 0) {
@@ -102,6 +111,7 @@ public sealed interface AudioPresentationCommand
                         "maxStereoFrames must be non-negative");
             }
         }
+
     }
 
     record MusicVoiceEntry(int musicId, AudioSourceDescriptor sourceDescriptor,
@@ -127,12 +137,6 @@ public sealed interface AudioPresentationCommand
                                 snapshot.sourcePositionQ32(),
                                 snapshot.sourceStepQ32(), snapshot.gainQ16(),
                                 snapshot.looping(), snapshot.stopped()));
-            } else if (voice instanceof SmpsCompositeVoice composite) {
-                PresentationVoiceSnapshot.Smps snapshot =
-                        (PresentationVoiceSnapshot.Smps) composite.snapshot();
-                descriptor = new SmpsVoiceDescriptor(
-                        snapshot.voiceId(), snapshot.priority(), musicId,
-                        sourceDescriptor, snapshot.maxStereoFrames());
             } else {
                 throw new IllegalArgumentException(
                         "unsupported music presentation voice "
@@ -162,9 +166,18 @@ public sealed interface AudioPresentationCommand
     record EndMusicOverride(int musicId) implements AudioPresentationCommand {
     }
 
-    record AddSmpsSfx(ResolvedSmpsSfxSource source) implements AudioPresentationCommand {
+    record AddSmpsSfx(
+            ResolvedSmpsSfxSource source,
+            PreparedSmpsSfxProgram program)
+            implements AudioPresentationCommand {
         public AddSmpsSfx {
             Objects.requireNonNull(source, "source");
+        }
+
+        /** Task-6 standalone/tool compatibility constructor. */
+        @Deprecated(forRemoval = true)
+        public AddSmpsSfx(ResolvedSmpsSfxSource source) {
+            this(source, null);
         }
     }
 
@@ -193,10 +206,36 @@ public sealed interface AudioPresentationCommand
     record StopRawPcm() implements AudioPresentationCommand {
     }
 
+    record StopRawPcmAndRetainGlobalStop(int sourceCommandId)
+            implements AudioPresentationCommand {
+    }
+
+    record RetainGlobalStop(int sourceCommandId)
+            implements AudioPresentationCommand {
+    }
+
     record StopMusic() implements AudioPresentationCommand {
     }
 
     record StopAllSfx() implements AudioPresentationCommand {
+    }
+
+    record StopSmpsSfx(int sourceCommandId)
+            implements AudioPresentationCommand {
+    }
+
+    record SilencePsg(int sourceCommandId)
+            implements AudioPresentationCommand {
+    }
+
+    record ReferenceLimitation(int sourceCommandId, String reason)
+            implements AudioPresentationCommand {
+        public ReferenceLimitation {
+            if (reason == null || reason.isBlank()) {
+                throw new IllegalArgumentException(
+                        "reference limitation reason is required");
+            }
+        }
     }
 
     record FadeMusic(int steps, int delay) implements AudioPresentationCommand {

@@ -27,6 +27,316 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S2 driver oracle reaches full MATCH over the 698-tick window
+
+- **Context:** `.worktrees/s2-tick0-land`, branch `bugfix/ai-s2-level-playbgm-land`,
+  on top of `810dbc039`. No fixture, candidate, comparator or alignment was
+  changed.
+- **Fixture:** the authenticated S2 driver oracle payload behind
+  `TestS2AudioOracleFixture.fixturePath()`, driven by
+  `sonic-2-sonic-tails-complete-emeralds.bk2` against the S2 World REV01 ROM
+  (SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`).
+- **Command:** the same invocation as the entry below.
+- **Result before:** `S2 driver oracle: DIVERGENCE at tick 557 (movie row 10759),
+  field writes.count: expected=4 actual=5 [20 of 698 ticks divergent]`.
+- **Result after:** **`S2 driver oracle: MATCH (698 ticks)`**.
+  `MATCH: 25 production transfers agree` is unchanged.
+- **Notes:** the remaining extras were PSG attenuation bytes `0xf2`, `0xf4`,
+  `0xf6`, `0xf8`, `0xfa`, `0xff` — a music PSG3 volume envelope ramping to
+  silence on the noise channel. SFX `0xC1` Explosion is requested at movie row
+  10759 and declares `cFM5` plus `cPSG3`, and the reference's PSG3
+  `playbackControl` byte moves `0x80` to `0x84` on that exact row, so the ROM
+  holds the track SFX-overridden for the whole span. The engine installs that
+  override on the correct row; logging the transitions shows PSG channel 2
+  flipping to overridden at row 10759. The defect was that the PSG branch of
+  `SmpsSequencer.refreshVolume` consulted only the rest bit and never the
+  override bit, so the envelope kept writing behind the override.
+
+  All three drivers agree here, so this is a universal correction rather than a
+  per-game one. S2 `zPSGUpdateVol` does `and 6` over the rest and override bits
+  and returns (`s2.sounddriver.asm:1305-1308`); S1 `SetPSGVolume` tests the two
+  bits separately (`s1.sounddriver.asm:1965-1969`); S3K reaches the same outcome
+  one level up, where `zUpdatePSGTrack` returns on bit 2 before both the
+  frequency pair and the volume tail (skdisasm `Sound/Z80 Sound
+  Driver.asm:4079-4081`). In each case the flutter or envelope index still
+  advances behind the suppressed write, which is why the gate belongs at the
+  write and not at the envelope step.
+- **Regression gates:** S1 GHZ music oracle `MATCH (14690 ticks)` and S1
+  sound-test SFX oracle `MATCH (1967 ticks)`, both exit 0. The S1, S2, S3K and
+  shared audio packages report 1,943 tests with the same five pre-existing
+  failures as the entry below and no new ones.
+  `TestSmpsFadeAudioThroughput` passes.
+
+## 2026-09-03 — S2 ROM SFX-release semantics advance the driver frontier to tick 557
+
+- **Context:** `.worktrees/s2-tick0-land`, branch `bugfix/ai-s2-level-playbgm-land`,
+  base `3c54967f7`. No fixture, candidate, comparator or alignment was changed.
+- **Fixture:** the authenticated S2 driver oracle payload behind
+  `TestS2AudioOracleFixture.fixturePath()`, driven by
+  `sonic-2-sonic-tails-complete-emeralds.bk2` against the S2 World REV01 ROM
+  (SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`).
+- **Command:**
+
+  ```
+  LUA_BIN=lua5.4 mvn -Dmse=off \
+    '-Dsonic2.rom.path=<absolute S2 REV01 ROM>' \
+    '-Ds2.request.bk2.path=<absolute complete-emeralds BK2>' \
+    '-Ds2.request.candidate.path=<absolute s2-request-window.oracle-raw-v2.jsonl>' \
+    '-Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare' \
+    test -B
+  ```
+
+- **Result before:** `S2 driver oracle: DIVERGENCE at tick 266 (movie row 10468),
+  field writes.count: expected=2 actual=4 [107 of 698 ticks divergent]`.
+- **Result after:** `S2 driver oracle: DIVERGENCE at tick 557 (movie row 10759),
+  field writes.count: expected=4 actual=5 [20 of 698 ticks divergent]`.
+  `MATCH: 25 production transfers agree` is unchanged.
+- **Notes:** every one of the 107 divergent ticks was the engine emitting extra
+  writes and none was a missing write. At tick 266 the extras were an
+  `A4`/`A0` frequency pair on FM4 continuing a modulation ramp the reference
+  never emits. Decoding the reference's own `playbackControl` byte for the FM4
+  music slot showed `0x9c` through movie row 10466 and `0x9a` from row 10467:
+  the SFX-override bit clears and the **rest** bit sets in the same transition.
+  That is `cfStopTrack`'s FM SFX tail, `s2.sounddriver.asm:3548-3553`, which does
+  `res 2` / `set 1` and restores only the voice through `zSetVoiceMusic`; it
+  sends no key-off, no pan rewrite and no frequency resend.
+  `zStopPSGSFXTrack` (`:3581-3589`) is the same shape. Leaving the released
+  music track at rest is what keeps `zDoModulation` returning early
+  (`:989-991`), so the channel stays silent until its next note.
+
+  Two changes were needed. `Sonic2SmpsSequencerConfig` now declares
+  `ROM_VOICE_RESTORE` / `ROM_REST_RESTORE`, the modes S1 already declared for
+  the identical routine. That alone changed nothing, because
+  `SmpsAssetCatalog.copyBuilder` rebuilds every sequencer config for the
+  presentation path and silently dropped five configured settings:
+  `fmSfxReleaseMode`, `psgSfxReleaseMode`, `sfxTrackWalkMode`,
+  `fmVolumeVoiceBankMode` and `palUpdateMode`. Every sequencer built through
+  the catalog therefore reverted to the legacy full-restore behaviour,
+  including S1's. Completing the copy is what delivered the fix.
+
+  One test asserted the behaviour the ROM contradicts.
+  `TestS2SfxAdmissionChannelMask.acceptedRingLeftOwnsFm4BeforeMusicFirstService`
+  ended by requiring that restored music resume FM4 frequency output after the
+  SFX releases the channel. Its final assertion now states the ROM's outcome
+  instead, that the released track is at rest and no `A4`/`A0` pair is resent,
+  with the routine cited. That class was green before this change and red with
+  it, and is the only test the change moved.
+- **Regression gates:** S1 GHZ music oracle `MATCH (14690 ticks)` and S1
+  sound-test SFX oracle `MATCH (1967 ticks)`, both exit 0, captured and
+  compared with `S1AudioParityTool` against the committed references. The audio
+  test packages report 1,889 tests with five failures, all reproduced red at
+  the base commit with this change reverted, or structurally unreachable from
+  it: `TestSonic2RequestProductionWiring` (3) and `TestAudioPresentationBoundary`
+  (1) were confirmed by a control run, and
+  `TestAudioPresentationArchitectureGuard` (1) reads a fixed list of seven
+  production files that includes neither file changed here.
+
+## 2026-09-03 — S2 source-owned level-entry timing advances driver frontier to tick 266
+
+- **Context:** landed on `bugfix/ai-s2-level-playbgm-land` from
+  `.worktrees/s2-tick0-land`, base `7f5067b23`; no fixture or comparator
+  semantics changed. The tranche was reviewed before landing and four defects
+  were fixed on this branch: the level-music schedule was resolving the timing
+  model against the zone registry's progression index instead of the ROM
+  zone/act pair, which was correct only for EHZ; the title-card lifecycle
+  serviced a second hardware `VINT_SERVICE` boundary per frame; the rewind
+  registry adapter-count assertions were not updated for the new scheduler;
+  and `LevelManager` grew against its size ratchet.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off
+  '-Dsonic2.rom.path=$REPO/s2.gen'
+  '-Ds2.request.bk2.path=$REPO/docs/BizHawk-2.11-linux-x64/Movies/sonic-2-sonic-tails-complete-emeralds.bk2'
+  '-Ds2.request.candidate.path=$CAPTURES/s2-native-authority-live-evidence-20260902/coincident-extract-g-final/s2-request-window.oracle-raw-v2.jsonl'
+  '-Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare'
+  test -B`.
+- **Result:** request transfer **MATCH (25/25)**. The driver frontier advances
+  from tick 0 to **tick 266 (movie row 10468)**, `writes.count`, expected 2,
+  actual 4; 107 of 698 ticks diverge.
+- **Evidence:** `Level_PlayBgm` publishes EHZ once at row 10195. The ROM-data
+  Saxman cost produces exactly six `LOAD_PENDING` rows (10195-10200), then a
+  distinct `SERVICE_IN_FLIGHT` boundary at 10201 with no committed snapshot;
+  update 0 commits at 10202 (`tempoAccumulator=0x3c`) and ordinary update 1 at
+  10203 (`0xda`). Thus the previous tick-0 state and write fields all match,
+  while the six-row readiness movement remains exactly the source-derived
+  `0x58` to `0xa4` shift rather than absorbing the completion boundary.
+- **Cross-checks at landing:** S1 GHZ music oracle **MATCH (14690 ticks)** and
+  S1 sound-test SFX oracle **MATCH (1967 ticks, 8 dispatches)**, both exit 0.
+  No `*TraceReplay` class changed result against base `7f5067b23`, and
+  `TestS2CompleteEmeraldRunChain` is unchanged. The S2 driver comparison is
+  `MEASUREMENT_ONLY`; the asserting companion is
+  `TestS2RequestAwareOracleRawStream#levelPlayBgmPublishesEmeraldHillOnceAtTheNativeLoadBoundary`.
+
+## 2026-09-03 — S2 Level_PlayBgm tranche frozen after two Critical reviews
+
+- **Critical 1 — omitted and trace-coupled service:** `f7373c1cb` advanced the pending request from `ObjectManager`'s object-visible VBlank clock.
+  Normal pre-player title-card VBlanks did not advance that clock, while trace-bootstrap-selected object passes could advance it.
+  The tranche froze rather than treating the row-10195 comparator result as proof of a production-owned dispatch.
+- **Critical 2 — duplicate service:** fix wave `248b03ed6` added a title-card service edge alongside `LevelFrameStep`'s existing VINT edge.
+  Playable title-card leave rows consequently serviced the scheduler twice; the test covered only the pre-player predicate-false arm.
+  The re-review failed, so `bugfix/ai-s2-c0a-replan3` is preserved as non-merge evidence and the clean replan restarts at `b8b23a8fd`.
+
+## 2026-09-03 — S2 request-transfer window MATCH; driver tick frontier unchanged
+
+- **Worktree/branch:** `.worktrees/s2-c0a-replan3`,
+  `bugfix/ai-s2-c0a-replan3`; measured at `7b1442846` plus the reviewed
+  spike-cause diff now committed as `89eab0649`.
+- **Fixture:** two independently extracted, comparison-only raw-v2 candidates
+  for source rows `[10150,10900)`, each SHA-256
+  `a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c`;
+  both remain explicitly unbound (`production_bound:false`).
+- **Command:** `mvn -Dmse=off -Dsonic2.rom.path=<absolute REV01 ROM>
+  -Ds2.request.candidate.path=<candidate-g-or-h raw-v2 JSONL>
+  -Ds2.request.bk2.path=<pinned complete-emeralds BK2>
+  -Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream#realCandidateComparesAgainstIndependentProductionBk2Run
+  test -B`.
+- **Result:** candidate g and candidate h independently reported
+  **`MATCH: 25 production transfers agree`**, exit 0 (one test, no
+  failures/errors/skips). Before the two source-owned fixes, the first
+  divergences were transfer 3 (ring B5 in SFX0 rather than ROM SFX1) and then
+  transfer 20 (CPU Tails spike damage A3 rather than ROM A6). The reviewed
+  observer-only same-BK2 comparison at `89bdb6eb9` then reported
+  **DIVERGENCE at tick 0 (movie row 10202)**, `global.tempoTimeout`, expected
+  `0x3c`, actual `0x58`; 698 of 698 ticks diverged.
+- **Notes:** the raw-v2 candidates remain comparison-only and supply no driver
+  input; requests arise from the BK2-driven engine. This does not authenticate
+  the candidates or bind replay authority. It supersedes the old tick-210
+  music-only-host result: that host supplied no SFX requests, whereas the
+  same-BK2 observer measures the production request path.
+
+  At `3045e716d`, the S2 compressed-load readiness model cost the actual EHZ
+  bank-2 Saxman path at 363,255 Z80 T-states (363,283 on the enabled PAL
+  path). It predicted exactly six fully masked presentation rows and moved the
+  same-BK2 tick-0 value from `0x58` to **`0xa4`**, no further. The remaining
+  `0xa4` versus `0x3c` mismatch is the separately measured early Music0
+  request: OpenGGF submits EHZ at row 10184, while native initialization is
+  bounded to the row 10194→10195 boundary.
+
+## 2026-09-02 — S3K E4 seven-slot stop/restore source correction under review; no oracle move
+
+- **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
+  `feature/ai-sound-driver-roadmap-completion`, candidate over accepted retained
+  S3K E4-state commit `8e0babd09`.
+- **Fixture:** none changed. The authenticated S3K AIZ1 reference has no E4
+  request, so it cannot establish an E4 comparison result.
+- **Command:** `mvn -Dmse=off
+  -Dtest=TestSmpsDriverSession,TestS3kE4StopSfxPlan,TestSmpsStatefulCommandPolicy,TestSmpsPhysicalPolicy
+  test -B`.
+- **Result:** the earlier candidate omitted `cfStopTrack`'s E4-local
+  `zGetSFXChannelPointers` PSG sequence. The corrected plan now covers, in native
+  order, the raw YM `$28` hazard, `1Fh + current SFX VoiceControl`, the stopped-SFX
+  bit-0 conditional `$FF`, the FixBugs=0 unconditional `$FF`, and then an eligible
+  signed music-noise re-latch; it also retains AMS/FMS for the music `$B4` restore.
+  Exact direct and composite rollback tests cover physical PSG failures and the
+  post-logical-mutation/pre-publication boundary.
+- **Notes:** this entry records a source correction, not a product-frontier closure.
+  No comparator was run and no `MATCH` is claimed. Service 128 remains the same
+  authenticated `REFERENCE_LIMITATION` (`producer_input`); standalone E3 and
+  PSG-SFX-admission stale-`ix`/`$FF` behaviour are separate frontiers.
+
+## 2026-09-02 — S3K E3 PSG-silence product gap closes without moving service 128
+
+- **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
+  `feature/ai-sound-driver-roadmap-completion` from `8952620bf` (Task 9A
+  implementation; commit containing this entry).
+- **Fixture:** no capture or fixture changed. The existing authenticated
+  `s3k-aiz1-intro-reference-v1.jsonl.gz` remains unchanged and does not supply
+  an E3 request.
+- **Command:** focused profile/resolver/queue/session/oracle-host tests:
+  `LUA_BIN=lua5.4 mvn -Dmse=off
+  -Ds3k.rom.path=<absolute-S3K-ROM>
+  '-Dtest=com.openggf.game.sonic3k.audio.TestSonic3kSpeedShoesCommandSemantics,com.openggf.audio.presentation.TestAudioPresentationCommandResolver,com.openggf.audio.presentation.TestAudioPresentationCommandQueue,com.openggf.audio.session.TestSmpsDriverSession#psgSilenceWritesExactRomProgramWithoutMutatingSessionState+psgSilenceObserverFailureCannotPartiallyApplyOrReplay,com.openggf.tools.audio.parity.s3k.TestS3kAudioOracleFixtureContract'
+  test -B`.
+- **Result:** **56 tests pass** with 0 failures, 0 errors, and 0 skips. The
+  production typed route and engine oracle host both execute the immutable
+  `9F BF DF FF` program sourced from `zPlaySoundByIndex` /
+  `zPSGSilenceAll`. The session test retains the physical identity and all
+  logical music/SFX/override/tempo/pending-service state, observes no YM
+  writes, and proves there is no next-service duplicate. Observer failure is
+  quarantined after commit and cannot partially apply or replay E3.
+- **Notes:** this closes the source-backed E3 **product gap only**. It does not
+  move or reinterpret the authenticated comparison. Service **128** remains
+  `REFERENCE_LIMITATION`, `field=producer_input`, because the request consumed
+  while the reference producer suspended interrupt services is unavailable.
+
+## 2026-09-01 — Override-resume producer stops at `REFERENCE_LIMITATION`
+
+- **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
+  `feature/ai-sound-driver-roadmap-completion`; TraceChaser producer commits
+  `912fef0a`, `e3fdf73`, and mechanics hardening through `a61450ee`.
+- **Fixture:** none. The dedicated
+  `src/test/resources/audio/parity/override-resume-first-divergence-v1/`
+  commit bundle remains absent; its proposed nested S1/S2 members have no
+  independent authority, and no capture or fixture gained authority.
+- **Command:** focused TraceChaser S1, S2, extractor/publisher, CLI, and Lua
+  contract tests plus `verify-deterministic-build.sh`; the locked observer
+  recipe verifier and the reviewed-capability guard were then run as hard
+  authority checks. Exact commands and hashes are recorded in
+  `docs/architecture/validation/audio/2026-09-01-override-resume-reference-limitation.md`.
+- **Result:** `REFERENCE_LIMITATION`, code
+  `FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE`. The current host's
+  `/usr/bin/ar` differs from the locked recipe, the current collector source
+  differs from the pinned capability field that Task 8 is forbidden to
+  refresh, and no current-session two-build observer inputs are configured.
+  A static older install is not fresh capture authority.
+- **Notes:** `a61450ee` hardens fd-relative staging and identity-uncertain
+  quarantine, but it cannot prove nested-path containment when a retained
+  target dirfd is renamed after revalidation, and four sequential `linkat`
+  calls cannot provide one visibility point. The canonical plan now requires
+  private construction of the complete dedicated bundle and one
+  `renameat2(RENAME_NOREPLACE)` commit under an explicit cooperative-lock and
+  namespace-stability precondition. That publisher redesign is required before
+  publication. The mandatory provenance inventory also remains incomplete, so
+  Task 8 made no Java production change, froze no literal expectation,
+  performed no live capture, and left both S1 hard gates untouched.
+  The subsequent atomic-bundle implementation replaces those four links with
+  private exact-inventory construction and one directory
+  `renameat2(RENAME_NOREPLACE)` under the documented cooperative lock and
+  namespace-stability precondition. Bundle-aware Java consumers now reject an
+  absent or invalid commit object without consulting legacy leaves. This moves
+  no audio frontier: the fresh authenticated native-GPGX and complete
+  provenance gates remain unavailable, no fixture was published, and the same
+  `REFERENCE_LIMITATION` code remains authoritative.
+
+## 2026-09-01 — S3K service 128 is an authenticated producer-input limitation
+
+- **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
+  `feature/ai-sound-driver-roadmap-completion` at `e4f083172`
+  (documentation fix round 3; production comparator/reference evidence is
+  unchanged).
+- **Fixture:** `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz`
+  (unchanged authenticated 5,400-frame reference; projected to 5,286
+  services).
+- **Command:**
+  `LUA_BIN=lua5.4 mvn -Dmse=off
+  -Ds3k.rom.path=${OGGF_REPO_ROOT}/s3k.gen
+  '-Dtest=com.openggf.tools.audio.parity.s3k.TestS3kAudioOracleFixtureContract,com.openggf.tools.audio.parity.s3k.TestS3kAudioParityComparator'
+  test -B`, plus
+  `java -cp target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
+  com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare
+  --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz
+  --rom ${OGGF_REPO_ROOT}/s3k.gen --ticks 260 --format json`.
+- **Result:** the 260-service run compares services 0-127, then stops at
+  service/tick **128**, underlying reference event **0** (`YM port 1,
+  register 82h, value FFh`). The typed report is
+  `REFERENCE_LIMITATION`, `field=producer_input`, with
+  `ProducerInputEvidence.Availability.UNAVAILABLE_DURING_PRODUCER_SUSPENSION`
+  and reason `mailbox input was unavailable for the first observable service
+  after reference producer interrupt services suspended`; the CLI exits **5**.
+  This is not an engine divergence and there is no realignment. Ordinary
+  missing-write evidence remains `EVENT_MISSING` and exits **3**; malformed
+  reference/tool failures remain exit **4**.
+- **Notes:** the limitation is selected from the source-owned
+  `zPlaySEGAPCM` interrupt-suspension boundary and the first resumed service,
+  not from a tick number, zone, request guess, or write shape. The exact
+  84-write stop proof remains at service/tick **49** for `FFh`; service/tick
+  **138** (next music activation) still begins with the exact reference
+  84-write stop prefix. S1 hard gates remain `MATCH (14,690 ticks)` for GHZ
+  music and `MATCH (1,967 ticks, 8 dispatches)` for sound-test SFX. Named
+  remaining frontiers are the unsupported `E3h` PSG-mute product gap (not a
+  structured producer-input `REFERENCE_LIMITATION`), the `E4h` seven-slot
+  conditional physical write/restoration walk, and full `FFh` control-flow
+  parity beyond the implemented 84-write stop/PCM transport (including the
+  producer-side pre-consumption mailbox at service 128).
+
 ## 2026-08-31 — S1 sound-test SFX oracle reaches full MATCH
 
 - **Worktree/branch:** `.worktrees/sdre2-cadence-resume`,

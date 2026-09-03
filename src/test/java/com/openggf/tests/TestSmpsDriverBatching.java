@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -37,17 +38,6 @@ public class TestSmpsDriverBatching {
     }
 
     @Test
-    public void renderChunkKeepsLargerScratchBufferWhenRenderingSmallerChunk() throws Exception {
-        SmpsDriver driver = new SmpsDriver();
-        short[] originalScratch = new short[64];
-        setChunkScratch(driver, originalScratch);
-
-        invokeRenderChunk(driver, new short[32], 0, 16);
-
-        assertSame(originalScratch, chunkScratch(driver));
-    }
-
-    @Test
     public void hybridMode_usesChunkRenderingForSteadySequence() {
         SmpsDriver driver = newDriver(SmpsDriver.ReadMode.HYBRID);
         SmpsSequencer seq = newSequencer(driver, steadyScript());
@@ -55,7 +45,7 @@ public class TestSmpsDriverBatching {
         assertFalse(seq.requiresSampleAccurateFallback());
 
         driver.addSequencer(seq, false);
-        driver.read(new short[4096]);
+        SmpsDriverTestAccess.read(driver, new short[4096]);
 
         assertTrue(driver.getHybridChunkCountForTesting() > 0);
     }
@@ -77,12 +67,12 @@ public class TestSmpsDriverBatching {
         driver.addSequencer(newSequencer(driver, script), false);
 
         short[] buffer = new short[sampleCount];
-        driver.read(buffer);
+        SmpsDriverTestAccess.read(driver, buffer);
         return buffer;
     }
 
     private static SmpsDriver newDriver(SmpsDriver.ReadMode readMode) {
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(44_100);
         driver.setReadModeForTesting(readMode);
         return driver;
     }

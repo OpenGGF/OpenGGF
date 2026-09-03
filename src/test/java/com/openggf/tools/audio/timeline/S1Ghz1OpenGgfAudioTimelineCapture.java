@@ -16,9 +16,7 @@ import com.openggf.audio.AudioRequestObserver;
 import com.openggf.audio.driver.SfxContentionObserver;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
-import com.openggf.audio.presentation.AudioVoiceRegistry;
-import com.openggf.audio.presentation.PresentationVoice;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioTimelineEntry;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
@@ -380,10 +378,8 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             for (S1GameplayAudioTimeline.HardwareRole role : S1GameplayAudioTimeline.HardwareRole.values()) {
                 owners.put(role, presentedMusic);
             }
-            for (var voice : presentation.voices()) {
-                if (voice instanceof com.openggf.audio.presentation.PresentationVoiceSnapshot.Smps smps) {
-                    applyLocks(smps.driver(), owners);
-                }
+            if (presentation.smpsLogical() != null) {
+                applyLocks(presentation.smpsLogical(), owners);
             }
             effectiveOwners.putAll(owners);
             return new S1GameplayAudioTimeline.OwnerVector(owners.get(FM3), owners.get(FM4), owners.get(FM5),
@@ -469,19 +465,21 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
 
         private void installOnLiveDrivers() {
             try {
-                Field field = AudioManager.class.getDeclaredField("shadowRegistry");
-                field.setAccessible(true);
-                AudioVoiceRegistry registry = (AudioVoiceRegistry) field.get(GameServices.audio());
-                if (registry == null) {
+                Field sessionField = AudioManager.class
+                        .getDeclaredField("shadowSmpsSession");
+                sessionField.setAccessible(true);
+                SmpsDriverSession session = (SmpsDriverSession)
+                        sessionField.get(GameServices.audio());
+                if (session == null) {
                     return;
                 }
-                for (int index = 0; index < registry.orderedVoiceCount(); index++) {
-                    PresentationVoice voice = registry.orderedVoiceAt(index);
-                    if (voice instanceof SmpsCompositeVoice composite
-                            && !observedDrivers.contains(composite.driver())) {
-                        composite.driver().setSfxContentionObserver(this);
-                        observedDrivers.add(composite.driver());
-                    }
+                Field driverField = SmpsDriverSession.class
+                        .getDeclaredField("driver");
+                driverField.setAccessible(true);
+                SmpsDriver driver = (SmpsDriver) driverField.get(session);
+                if (!observedDrivers.contains(driver)) {
+                    driver.setSfxContentionObserver(this);
+                    observedDrivers.add(driver);
                 }
             } catch (ReflectiveOperationException failure) {
                 throw new IllegalStateException("audio presentation registry seam moved", failure);

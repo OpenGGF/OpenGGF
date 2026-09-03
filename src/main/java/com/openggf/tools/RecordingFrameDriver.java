@@ -194,6 +194,12 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             boolean deferRecordedPauseEntry) {
         var gameplayMode = SessionManager.getCurrentGameplayMode();
         return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+                frame -> {
+                    if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
+                        LevelFrameStep.dispatchGameVBlank(
+                                LevelFrameContext.from(gameplayMode), frame);
+                    }
+                },
                 gameplayMode.getFadeManager()::update,
                 frame -> stepFrame(snapshot, beforeGameplay, frame, deferRecordedPauseEntry));
     }

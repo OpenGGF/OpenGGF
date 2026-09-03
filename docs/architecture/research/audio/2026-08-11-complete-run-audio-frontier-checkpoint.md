@@ -195,12 +195,13 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   asks the native headless test to transactionally capture the four-record raw
   row-810 prefix to a fresh temporary path, reads it through the strict raw
   adapter, and invokes decoder, normalizer, and profile for both boundary and
-  frame state. It reads the canonical ROM and `_movies` BK2 in place and does
-  not create a fixture copy. That proof also corrected an initially too-short driver-data
+  frame state. The historical proof read the canonical ROM and `_movies` BK2
+  in place. The authenticated movie is now also installed as an independent
+  ordinary file beside the run manifest. That proof also corrected an initially too-short driver-data
   hypothesis: `Size_of_Snd_driver2_guess` reserves compressed ROM space, while
   the installed Z80 tables occupy `$1300..$1BFF` under the source guard at
   `Sound/Z80 Sound Driver.asm:5305-5307`. Central integration must now supply
-  the pinned producer/runtime proofs and the run-local BK2 before a fixed Java
+  the pinned producer/runtime proofs before a fixed Java
   reference producer may write a canonical store. There is no published
   capture, and the profile's reference binding remains `UNAVAILABLE`.
 
@@ -214,19 +215,20 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   failure aborts the entire result. The exact row-810 gate now enters through
   this preflight and proves boundary row 810, one frame, 34 raw events, and the
   empty prefix cutoff. The preflight cannot write a canonical store and reports
-  five explicit unsatisfied dependencies: native events still need
+  four explicit unsatisfied dependencies: native events still need
   source-owned request/decision/service/lifecycle semantics; global native
   coordinates still need producer-neutral row/ordinal projection for the real
   one-active/four-pending cutoff; reference runtime/observer/capability policy
-  remains centrally unpinned; the manifest-declared run-local BK2 is still
-  absent; and row-810 ownership still needs prepublication derivation. All nine
+  remains centrally unpinned; and row-810 ownership still needs prepublication
+  derivation. The manifest-declared run-local BK2 is now installed and
+  authenticated. All nine
   music roles are active at row 810 while the placeholder profile owners are
   `NONE`, which the shared comparator correctly rejects. Post-row-810 raw events
   cannot reconstruct which pre-epoch requests own those live tracks, so the
   preflight exposes `BASELINE_OWNERSHIP_PREPUBLICATION` rather than fabricating
   identities. No runtime hash is inferred, no raw event is silently omitted
-  from a fabricated canonical frame, and the `_movies` BK2 remains read-only
-  in place.
+  from a fabricated canonical frame. The historical `_movies` BK2 remains
+  read-only in place and is no longer the production input path.
 
 This role/union applicability is derived from
 `docs/skdisasm/Sound/Z80 Sound Driver.asm:25-98`. In particular, the source
@@ -235,10 +237,9 @@ pointer and stack region (`:92-95`); the F7/F8 handlers use an unchecked index
 from `$28` (`:3249`, `:3615`), and F8/F9 partition the live return stack through
 `StackPointer` (`:3649-3677`).
 
-The S3K profile cannot become publication-capable until central integration
-provides the read-only run-local movie at
+The read-only run-local movie is now present at
 `src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/s3k-knuckles-complete-superemeralds.bk2`.
-It must be the existing pinned movie byte-for-byte, SHA-256
+It is an independent ordinary copy of the existing pinned movie, SHA-256
 `aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`;
 capture and publication must never rewrite it. Central Tasks 3 and 6 must also
 install the actual reference and OpenGGF producer runtime/observer identities,
@@ -248,9 +249,9 @@ profile through the closed dispatcher without a caller first loading
 `S3kCompleteRunAudioProfile`; the game-local unit test does not authorize
 publishing on its own.
 
-Both row-810 proofs deliberately read the canonical `_movies` BK2 in place. They
-did not copy, rename, or symlink that read-only input into the absent run-local
-path. The raw-adapter proof used the ABI-v3 durable BizHawk home
+Both historical row-810 proofs deliberately read the canonical `_movies` BK2
+in place. The manifest-local ordinary copy was installed later and was not an
+input to those proofs. The raw-adapter proof used the ABI-v3 durable BizHawk home
 `$AUDIO_CROSSING_LIFETIME/target/audio-parity/native/crossing-install-final2-a`.
 The decoder/normalizer/profile gate used the current action-9 install at
 `.worktrees/audio-conditional-promotion/target/audio-parity/native/action9-install-a`.

@@ -145,12 +145,13 @@ final class LevelIterationAdmissionController {
     void consumeTransitionFreezeRow(
             PlaybackDebugManager playback,
             ObjectManager objects,
-            LevelFrameContext context) {
+            LevelFrameContext context,
+            com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame frame) {
         if (!playback.observerHasUnconsumedRecordedRows()) {
             return;
         }
         if (objects != null) {
-            LevelFrameStep.serviceHardwareVBlankOnly(context);
+            LevelFrameStep.serviceHardwareVBlankOnly(context, frame);
             // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank
             // invariant on ObjectManager.vblaCounter.
             objects.advanceVblaCounter();

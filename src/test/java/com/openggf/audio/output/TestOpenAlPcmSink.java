@@ -10,7 +10,6 @@ import com.openggf.audio.presentation.DecodedPcm;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
 import com.openggf.audio.presentation.SampleBackedVoice;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.presentation.SmpsSfxInstantiation;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.driver.SmpsDriver;
@@ -290,10 +289,6 @@ class TestOpenAlPcmSink {
                         return pcm;
                     }
 
-                    @Override public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new AssertionError("unexpected SMPS recreation");
-                    }
                 };
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 new SmpsSfxInstantiation() {
@@ -303,11 +298,6 @@ class TestOpenAlPcmSink {
                         return null;
                     }
 
-                    @Override public SmpsCompositeVoice
-                    instantiateStandaloneCached(
-                            ResolvedSmpsSfxSource ignored) {
-                        return null;
-                    }
                 },
                 resolver,
                 new SmpsCoordFlagHandlerOwner(

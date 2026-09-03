@@ -1,6 +1,10 @@
 package com.openggf.audio;
 
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsStatefulCommandPolicy;
+import com.openggf.audio.presentation.AudioRequestService;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -9,8 +13,23 @@ import com.openggf.data.Rom;
 import java.util.Map;
 
 public interface GameAudioProfile {
+    /** Optional game-owned raw request front end, created per presentation session. */
+    default AudioRequestService createAudioRequestService() {
+        return null;
+    }
+
     default String presentationGameId() {
         return "base";
+    }
+
+    /** Physical chip policy owned by this base-game presentation session. */
+    default SmpsPhysicalPolicy smpsPhysicalPolicy() {
+        return LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
+    }
+
+    /** Host-owned stateful SMPS commands; donor programs never select this. */
+    default SmpsStatefulCommandPolicy smpsStatefulCommandPolicy() {
+        return SmpsStatefulCommandPolicy.NONE;
     }
 
     default void configurePresentationCoordFlagHandlers(
@@ -159,6 +178,23 @@ public interface GameAudioProfile {
      * game has no command-driven SEGA PCM path.
      */
     default SegaPcmSpec getSegaPcmSpec() {
+        return null;
+    }
+
+    /**
+     * Reads this game's boot SEGA PCM chant out of the active ROM value.
+     *
+     * <p>The audio layer owns the request but not the ROM read: the per-game
+     * profiles live in the runtime layer, which may depend on
+     * {@code com.openggf.data}, so they supply the bytes and keep the audio
+     * services free of ROM edges.
+     *
+     * @param rom the active ROM value as the audio layer holds it
+     * @return the sample bytes, or {@code null} when this game has no
+     *         command-driven SEGA PCM path or the ROM is unavailable
+     * @throws java.io.IOException if the described ROM span cannot be read
+     */
+    default byte[] loadSegaPcm(Object rom) throws java.io.IOException {
         return null;
     }
 

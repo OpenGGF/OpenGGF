@@ -6,6 +6,7 @@ import com.openggf.game.rules.DynamicArtDmaServiceModel;
 
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -129,11 +130,24 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
      */
     public <T> T runLogicalIteration(
             Runnable fadeUpdate, Function<PlcLifecycleFrame, T> iteration) {
+        return runLogicalIteration(frame -> { }, fadeUpdate, iteration);
+    }
+
+    /**
+     * Runs the physical-VBlank dispatch before fade callbacks may arm work.
+     * Work created by a completion callback therefore cannot consume the
+     * boundary that completed the fade.
+     */
+    public <T> T runLogicalIteration(
+            Consumer<PlcLifecycleFrame> beforeFadeVBlank,
+            Runnable fadeUpdate, Function<PlcLifecycleFrame, T> iteration) {
+        Objects.requireNonNull(beforeFadeVBlank, "beforeFadeVBlank");
         Objects.requireNonNull(fadeUpdate, "fadeUpdate");
         Objects.requireNonNull(iteration, "iteration");
         PlcLifecycleFrame frame = latchBeforeFadeUpdate();
         Throwable primaryFailure = null;
         try {
+            beforeFadeVBlank.accept(frame);
             fadeUpdate.run();
             if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
                 frame.prepareAfterLoop(PlcLifecyclePhase.PALETTE_FADE);
@@ -178,9 +192,9 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         Objects.requireNonNull(fadeUpdate, "fadeUpdate");
         Objects.requireNonNull(iteration, "iteration");
         if (activeFrame != null && !activeFrame.finished) {
-            if (activeFrame.owner != null) {
+            if (activeFrame.owner != null || activeFrame.gameVblankDispatched) {
                 throw new IllegalStateException(
-                        "a replayed PLC lifecycle frame cannot replace a claimed frame");
+                        "a replayed PLC lifecycle frame cannot replace a consumed frame");
             }
             // The outer runLogicalIteration() finally remains responsible for
             // its token, so it observes the finished state and does not finish
@@ -434,6 +448,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         private boolean prepared;
         private boolean finished;
         private boolean consumedHeldLoopTailPreparation;
+        private boolean gameVblankDispatched;
 
         private PlcLifecycleFrame(PlcLifecycleService service) {
             this.service = service;
@@ -537,6 +552,18 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
 
         public boolean isOwnedBy(PlcLifecyclePhase phase) {
             return owner == phase;
+        }
+
+        /** Runs game-owned VBlank work once, independently of PLC ownership. */
+        public boolean dispatchGameVBlank(Runnable dispatch) {
+            requireOpen();
+            Objects.requireNonNull(dispatch, "dispatch");
+            if (gameVblankDispatched) {
+                return false;
+            }
+            gameVblankDispatched = true;
+            dispatch.run();
+            return true;
         }
 
         /** Whether this represented iteration's loop-tail work belongs to a later closure. */

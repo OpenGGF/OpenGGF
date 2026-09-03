@@ -1,10 +1,25 @@
 package com.openggf.audio;
 
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
+import com.openggf.audio.presentation.AudioPresentationMixer;
 import com.openggf.audio.presentation.AudioPresentationProducer;
+import com.openggf.audio.presentation.AudioPresentationSessionCommandApplier;
+import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.PcmPresentationVoice;
+import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.SampleBackedVoice;
 import com.openggf.audio.rewind.AudioKeyframeStore;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.AudioFrameClock;
+import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsPhysicalDevice;
+import com.openggf.audio.session.SmpsPhysicalPort;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSequencerHost;
+import com.openggf.audio.synth.Synthesizer;
+import com.openggf.audio.synth.VirtualSynthesizer;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -16,8 +31,12 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +48,7 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioPresentationArchitectureGuard {
@@ -120,6 +140,182 @@ class TestAudioPresentationArchitectureGuard {
             "AL_PITCH");
 
     @Test
+    void smpsDriverRemainsTheLogicalSynthesizerWithoutPhysicalInheritance() {
+        assertTrue(Synthesizer.class.isAssignableFrom(SmpsDriver.class));
+        assertFalse(VirtualSynthesizer.class.isAssignableFrom(SmpsDriver.class));
+    }
+
+    @Test
+    void smpsSequencerUsesItsLogicalHostWithoutDependingOnTheDriver() {
+        JavaClasses classes = new ClassFileImporter()
+                .importClasses(SmpsSequencer.class);
+
+        assertTrue(SmpsSequencerHost.class.isInterface());
+        assertFalse(classes.get(SmpsSequencer.class)
+                        .getDirectDependenciesFromSelf().stream()
+                        .anyMatch(dependency -> dependency.getTargetClass()
+                                .isEquivalentTo(SmpsDriver.class)),
+                "sequencers must reach driver callbacks through SmpsSequencerHost");
+    }
+
+    @Test
+    void sessionBackedPresentationHasNoAuthoritativeCarrierDependency()
+            throws IOException {
+        Set<String> compatibilityTypes = Set.of(
+                "com.openggf.audio.presentation.SmpsCompositeVoice");
+        JavaClasses authoritative = new ClassFileImporter().importClasses(
+                AudioPresentationProducer.class,
+                AudioPresentationMixer.class,
+                AudioPresentationSnapshot.class,
+                AudioPresentationSessionCommandApplier.class,
+                PcmPresentationVoice.class);
+        List<String> dependencies = authoritative.stream()
+                .flatMap(owner -> owner.getDirectDependenciesFromSelf()
+                        .stream())
+                .filter(dependency -> compatibilityTypes.contains(
+                        dependency.getTargetClass().getFullName()))
+                .map(Dependency::getDescription)
+                .sorted()
+                .toList();
+
+        assertEquals(List.of(), dependencies,
+                "authoritative producer/mixer/snapshot paths must not read "
+                        + "standalone SMPS compatibility carriers");
+        assertTrue(PcmPresentationVoice.class
+                .isAssignableFrom(SampleBackedVoice.class));
+        assertThrows(ClassNotFoundException.class, () -> Class.forName(
+                "com.openggf.audio.presentation.SmpsCompositeVoice"));
+
+        String producer = Files.readString(PRODUCTION_ROOT.resolve(
+                "audio/presentation/AudioPresentationProducer.java"));
+        String sessionMix = compactMethod(producer,
+                "private short[] mixSessionForward(");
+        assertTrue(sessionMix.contains("smpsSession.renderFrames("));
+        assertTrue(sessionMix.contains("mixer.mixPcmVoices("));
+        assertFalse(sessionMix.contains("mixer.mix("));
+
+        String factory = Files.readString(PRODUCTION_ROOT.resolve(
+                "audio/presentation/AudioPresentationSourceFactory.java"));
+        String sessionMusic = compactMethod(factory,
+                "MusicVoiceEntry musicSmpsFromRegistered(");
+        assertTrue(sessionMusic.contains("if (smpsSession == null)"));
+        assertTrue(sessionMusic.contains("prepareMusicActivation(source)"));
+        assertFalse(sessionMusic.contains("SmpsCompositeVoice"));
+
+        String registry = Files.readString(PRODUCTION_ROOT.resolve(
+                "audio/presentation/AudioVoiceRegistry.java"));
+        String apply = compactMethod(registry,
+                "public void apply(AudioPresentationCommand command)");
+        assertTrue(apply.indexOf("hasUnownedSmps(command)")
+                        < apply.indexOf("applySessionMetadata(command)"),
+                "session commands must reject compatibility carriers before "
+                        + "the authoritative metadata path");
+        String restore = compactMethod(registry,
+                "public PreparedSnapshotRestore prepareSnapshotRestore(");
+        assertTrue(restore.indexOf("validateAuthoritativeSnapshot(snapshot)")
+                        < restore.indexOf("resolver.beginDiagnosticTransaction()"),
+                "carrier snapshots must fail before dependency recreation");
+        assertFalse(registry.contains("standaloneSmps"));
+    }
+
+    @Test
+    void sessionCompositionStoresNoPortAndOwnsTheOnlyComposedDriverFactory() {
+        Class<?> access = Arrays.stream(
+                        SmpsDriverSession.class.getDeclaredClasses())
+                .filter(type -> type.getSimpleName().equals(
+                        "SmpsSessionSynthesizerAccess"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(List.of(), Arrays.stream(access.getDeclaredFields())
+                .filter(field -> field.getGenericType().getTypeName()
+                        .contains(SmpsPhysicalPort.class.getName()))
+                .map(field -> field.getName() + ":"
+                        + field.getGenericType().getTypeName())
+                .toList(),
+                "session logical access must resolve each ephemeral port "
+                        + "from the current scoped epoch");
+
+        JavaClasses production = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.openggf");
+        List<String> foreignFactories = production.stream()
+                .flatMap(owner -> owner.getMethodCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner()
+                        .isEquivalentTo(SmpsDriver.class))
+                .filter(call -> call.getName().equals(
+                        "createSessionDriver"))
+                .filter(call -> !call.getOriginOwner()
+                        .isEquivalentTo(SmpsDriverSession.class))
+                .map(JavaMethodCall::getDescription)
+                .sorted()
+                .toList();
+        assertEquals(List.of(), foreignFactories,
+                "only the session composition root may create a driver "
+                        + "without a private chip pair");
+    }
+
+    @Test
+    void logicalSnapshotHasNoPhysicalStateField() {
+        assertEquals(List.of(), Arrays.stream(
+                        SmpsDriverSnapshot.class.getRecordComponents())
+                .filter(component -> component.getType()
+                                == SmpsPhysicalDevice.Snapshot.class
+                        || component.getType().getName().startsWith(
+                                "com.openggf.audio.synth.VirtualSynthesizer"))
+                .map(component -> component.getName() + ":"
+                        + component.getType().getName())
+                .toList());
+    }
+
+    @Test
+    void presentationCannotConstructPrivateChipPairsOrStorePhysicalPorts()
+            throws IOException {
+        String presentation = Files.walk(PRODUCTION_ROOT.resolve(
+                        "audio/presentation"))
+                .filter(path -> path.toString().endsWith(".java"))
+                .sorted()
+                .map(path -> {
+                    try {
+                        return Files.readString(path);
+                    } catch (IOException failure) {
+                        throw new IllegalStateException(failure);
+                    }
+                })
+                .reduce("", String::concat);
+        assertFalse(presentation.contains("new VirtualSynthesizer"));
+        assertFalse(presentation.matches(
+                "(?s).*new\\s+SmpsDriver\\s*\\(.*"));
+        assertEquals(List.of(), Arrays.stream(SmpsDriver.class
+                        .getDeclaredFields())
+                .filter(field -> field.getType()
+                        == SmpsPhysicalPort.class)
+                .map(field -> field.getName() + ":"
+                        + field.getType().getName())
+                .toList());
+    }
+
+    @Test
+    void logicalSnapshotsAndVoicesCannotRenderOrOwnPhysicalState() {
+        assertEquals(List.of(), Arrays.stream(
+                        SmpsDriverSnapshot.class.getRecordComponents())
+                .filter(component -> component.getType()
+                        == VirtualSynthesizer.Snapshot.class)
+                .map(component -> component.getName() + ":"
+                        + component.getType().getName())
+                .toList());
+        assertThrows(ClassNotFoundException.class, () -> Class.forName(
+                "com.openggf.audio.presentation.SmpsCompositeVoice"));
+    }
+
+    private static String compactMethod(String source, String marker) {
+        String body = methodBody(sanitizedSource(source), marker);
+        if (body == null) {
+            throw new AssertionError("missing guarded method " + marker);
+        }
+        return body.replaceAll("\\s+", " ");
+    }
+
+    @Test
     void smpsOwnershipDetectorRejectsRepresentativeHotPathRegressions() {
         Map<String, String> sources = representativeSafeSmpsSources();
         sources.put("audio/smps/DacData.java",
@@ -154,7 +350,7 @@ class TestAudioPresentationArchitectureGuard {
                 "freshSource/copyDac @ audio/presentation/AudioPresentationSourceFactory.java",
                 "load before lookup @ audio/presentation/AudioPresentationCommandResolver.java",
                 "load before lookup @ audio/AudioManager.java",
-                "observer-free registry snapshot @ audio/presentation/AudioVoiceRegistry.java",
+                "retired registry SMPS owner method @ audio/presentation/AudioVoiceRegistry.java",
                 "warmed descriptor materialization @ audio/presentation/AudioPresentationSourceFactory.java",
                 "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
                 smpsOwnershipViolations(sources));
@@ -309,7 +505,7 @@ class TestAudioPresentationArchitectureGuard {
                         + "private final void captureHelper() throws IOException { "
                         + "captureLiveCommandMutation(); }");
         assertTrue(smpsOwnershipViolations(registryMutation).contains(
-                "observer-free registry snapshot @ "
+                "retired registry SMPS owner method @ "
                         + "audio/presentation/AudioVoiceRegistry.java"));
     }
 
@@ -398,7 +594,7 @@ class TestAudioPresentationArchitectureGuard {
                     registry);
 
             assertTrue(smpsOwnershipViolations(sources).contains(
-                    "observer-free registry snapshot @ "
+                    "retired registry SMPS owner method @ "
                             + "audio/presentation/AudioVoiceRegistry.java"),
                     registry);
         }
@@ -519,8 +715,7 @@ class TestAudioPresentationArchitectureGuard {
                 "private Object resolveSmpsSfxCommand() { "
                         + "factory.findRegisteredSmpsSfxAsset(); "
                         + "return loader.load(); }");
-        sources.put("audio/presentation/AudioVoiceRegistry.java",
-                "private void addSmpsSfxToOwner() {}");
+        sources.put("audio/presentation/AudioVoiceRegistry.java", "");
         sources.put("audio/driver/SmpsDriver.java",
                 "public void commitSfxAdmission() { Object state = "
                         + "hasChipWriteObserver() "
@@ -623,12 +818,8 @@ class TestAudioPresentationArchitectureGuard {
 
         String registrySource = sanitizedSource(source(sources,
                 "audio/presentation/AudioVoiceRegistry.java"));
-        String registry = requiredMethodBody(registrySource,
-                "addSmpsSfxToOwner(",
-                "audio/presentation/AudioVoiceRegistry.java", violations);
-        if (registry != null && !observerSafeReachable(
-                registrySource, "addSmpsSfxToOwner", false)) {
-            violations.add("observer-free registry snapshot @ "
+        if (methodBody(registrySource, "addSmpsSfxToOwner(") != null) {
+            violations.add("retired registry SMPS owner method @ "
                     + "audio/presentation/AudioVoiceRegistry.java");
         }
 
@@ -673,12 +864,55 @@ class TestAudioPresentationArchitectureGuard {
         boolean delegatedGameSoundClassification = marker.contains(
                 "playSfx(GameSound sound, float pitch)")
                 && body != null
-                && body.contains("playGameSfxResolved(");
-        if (body != null && !body.contains(ownerCall)
+                && classifiesThroughDelegate(source, body,
+                        "playGameSfxResolved(");
+        if (body != null
+                && !classifiesThroughDelegate(source, body, ownerCall)
                 && !delegatedGameSoundClassification) {
             violations.add("classification bypass " + marker + " @ " + path);
         }
     }
+
+    /**
+     * True when the entry point performs the classification call itself or
+     * forwards to a private overload that does.
+     *
+     * <p>A public entry point is allowed to share its body with a sibling
+     * request shape by delegating to one private overload -- the S2 secondary
+     * request route does exactly that. What the guard protects is that the
+     * classification owner is still called before the request leaves the
+     * manager, so the search follows local calls rather than reading only the
+     * entry point's own text.
+     */
+    private static boolean classifiesThroughDelegate(
+            String source, String body, String ownerCall) {
+        Map<MethodSignature, String> methods = methodBodies(source);
+        Set<String> visited = new HashSet<>();
+        Deque<String> pending = new ArrayDeque<>();
+        pending.push(body);
+        int inspected = 0;
+        while (!pending.isEmpty() && inspected++ < CLASSIFICATION_HOP_LIMIT) {
+            String current = pending.pop();
+            if (current.contains(ownerCall)) {
+                return true;
+            }
+            for (String method : methodNames(methods)) {
+                if (!visited.add(method)) {
+                    continue;
+                }
+                if (localCallPattern(method).matcher(current).find()) {
+                    for (Map.Entry<MethodSignature, String> target
+                            : methodsNamed(methods, method)) {
+                        pending.push(target.getValue());
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Bounds the delegation walk so the guard cannot run away on a cycle. */
+    private static final int CLASSIFICATION_HOP_LIMIT = 64;
 
     private static String requiredMethodBody(
             String source, String marker, String path,
@@ -723,7 +957,38 @@ class TestAudioPresentationArchitectureGuard {
                         new HashSet<>(Set.of(root.getKey()))).valid());
     }
 
+    /**
+     * Memo for {@link #inspectLookupOrder}. The walk expands every local call
+     * at every call site, so the same (body, seen, cycle-cut) state is
+     * re-derived thousands of times over the manager's call graph; the result
+     * is a pure function of that state, so caching it is behaviour-preserving.
+     */
+    private record LookupState(String body, boolean lookupSeen,
+            Set<MethodSignature> activeMethods) {
+    }
+
+    private static final Map<LookupState, LookupInspection> LOOKUP_MEMO =
+            new HashMap<>();
+
     private static LookupInspection inspectLookupOrder(
+            String body,
+            Map<MethodSignature, String> methods,
+            Set<String> relevantMethods,
+            boolean lookupSeen,
+            Set<MethodSignature> activeMethods) {
+        LookupState state = new LookupState(body, lookupSeen,
+                Set.copyOf(activeMethods));
+        LookupInspection memoised = LOOKUP_MEMO.get(state);
+        if (memoised != null) {
+            return memoised;
+        }
+        LookupInspection computed = computeLookupOrder(
+                body, methods, relevantMethods, lookupSeen, activeMethods);
+        LOOKUP_MEMO.put(state, computed);
+        return computed;
+    }
+
+    private static LookupInspection computeLookupOrder(
             String body,
             Map<MethodSignature, String> methods,
             Set<String> relevantMethods,
@@ -974,9 +1239,18 @@ class TestAudioPresentationArchitectureGuard {
         }
     }
 
+    /**
+     * Cache of the per-method call patterns. The lookup-order walk re-scans the
+     * same method names across thousands of body fragments, and recompiling
+     * these patterns each time dominated the guard's runtime.
+     */
+    private static final Map<String, Pattern> LOCAL_CALL_PATTERNS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private static Pattern localCallPattern(String method) {
-        return Pattern.compile("(?<![A-Za-z0-9_.$])(?:this\\s*\\.\\s*)?"
-                + Pattern.quote(method) + "\\s*\\(");
+        return LOCAL_CALL_PATTERNS.computeIfAbsent(method, name ->
+                Pattern.compile("(?<![A-Za-z0-9_.$])(?:this\\s*\\.\\s*)?"
+                        + Pattern.quote(name) + "\\s*\\("));
     }
 
     private static Map<MethodSignature, String> methodBodies(String source) {
@@ -1050,18 +1324,33 @@ class TestAudioPresentationArchitectureGuard {
         return new String(elided);
     }
 
+    /**
+     * Per-method-map caches. {@code methodNames} and {@code methodsNamed} are
+     * called once per inspected body fragment over an unchanging map, so the
+     * repeated stream scans were pure overhead.
+     */
+    private static final Map<Map<MethodSignature, String>, Set<String>>
+            METHOD_NAME_CACHE = new java.util.IdentityHashMap<>();
+    private static final Map<Map<MethodSignature, String>,
+            Map<String, List<Map.Entry<MethodSignature, String>>>>
+            METHODS_NAMED_CACHE = new java.util.IdentityHashMap<>();
+
     private static Set<String> methodNames(
             Map<MethodSignature, String> methods) {
-        Set<String> names = new HashSet<>();
-        methods.keySet().forEach(method -> names.add(method.name()));
-        return names;
+        return METHOD_NAME_CACHE.computeIfAbsent(methods, source -> {
+            Set<String> names = new HashSet<>();
+            source.keySet().forEach(method -> names.add(method.name()));
+            return names;
+        });
     }
 
     private static List<Map.Entry<MethodSignature, String>> methodsNamed(
             Map<MethodSignature, String> methods, String name) {
-        return methods.entrySet().stream()
-                .filter(entry -> entry.getKey().name().equals(name))
-                .toList();
+        return METHODS_NAMED_CACHE
+                .computeIfAbsent(methods, source -> new HashMap<>())
+                .computeIfAbsent(name, wanted -> methods.entrySet().stream()
+                        .filter(entry -> entry.getKey().name().equals(wanted))
+                        .toList());
     }
 
     private static String bracedBody(String source, int open) {

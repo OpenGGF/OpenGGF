@@ -211,7 +211,8 @@ class TestUnifiedAudioPresentationIntegration {
 
         AudioPresentationSnapshot admitted = presentationSnapshot();
         assertNotNull(admitted.activeMusic(), "SMPS music owns the music slot");
-        assertTrue(hasSmpsVoice(admitted), "an SMPS composite voice is admitted");
+        assertTrue(hasSmpsVoice(admitted),
+                "session-owned SMPS music is admitted");
         assertEquals(1, sampleVoiceCount("sfx/jump.wav"));
         assertEquals(1, sampleVoiceCount("sfx/skid.wav"));
         assertNotNull(admitted.rawPcmVoiceId(), "raw SEGA PCM is admitted");
@@ -713,8 +714,9 @@ class TestUnifiedAudioPresentationIntegration {
     }
 
     private static boolean hasSmpsVoice(AudioPresentationSnapshot snapshot) {
-        return snapshot.voices().stream()
-                .anyMatch(PresentationVoiceSnapshot.Smps.class::isInstance);
+        return snapshot.smpsLogical() != null
+                && snapshot.smpsLogical().sequencers().stream()
+                .anyMatch(entry -> !entry.sfx());
     }
 
     private AudioPresentationSink presentationSink() {
@@ -904,5 +906,8 @@ class TestUnifiedAudioPresentationIntegration {
             return Map.of(GameMusic.SPECIAL_STAGE, SPECIAL_STAGE_MUSIC);
         }
         @Override public SegaPcmSpec getSegaPcmSpec() { return spec; }
+        @Override public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+            return com.openggf.game.audio.SegaPcmRomReader.read(rom, getSegaPcmSpec());
+        }
     }
 }

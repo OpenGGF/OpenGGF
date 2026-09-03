@@ -17,6 +17,123 @@ class TestS2CompleteRunReferenceRawAdapter {
     @TempDir Path temporary;
 
     @Test
+    void rejectsRawV1BeforeOpeningTheSinkTransaction() throws Exception {
+        Path raw = temporary.resolve("v1.jsonl");
+        String state = "00".repeat(8192);
+        Files.writeString(raw, metadata().replace("raw.v2", "raw.v1")
+                + boundary("baseline", "\"row\":769,", state)
+                + boundary("cutoff", "\"exclusive_end\":769,", state));
+        var sink = new RecordingSink();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, sink));
+        assertEquals(0, sink.beginCalls);
+    }
+
+    @Test
+    void preservesAndValidatesCarriedServiceGenerationOrigins() throws Exception {
+        Path accepted = temporary.resolve("origin.jsonl");
+        String state = "00".repeat(8192);
+        String baseline = boundary("baseline", "\"row\":769,", state);
+        String cutoff = boundary("cutoff", "\"exclusive_end\":769,", state)
+                .replace("\"active_services\":[]",
+                        "\"active_services\":[" + dpcmService() + "]");
+        Files.writeString(accepted, metadata() + baseline + cutoff);
+        var sink = new RecordingSink();
+
+        S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(accepted, sink);
+
+        var carried = sink.baseline.activeServices().getFirst();
+        assertEquals(700, carried.beginRow());
+        assertEquals(12, carried.beginNativeOrdinal());
+
+        for (String changed : List.of(
+                baseline.replace("\"begin_row\":700", "\"begin_row\":769"),
+                baseline.replace("\"begin_native_ordinal\":12",
+                        "\"begin_native_ordinal\":65536"),
+                cutoff.replace("\"begin_row\":700", "\"begin_row\":701"))) {
+            Path invalid = temporary.resolve("bad-origin-" + Math.abs(changed.hashCode()) + ".jsonl");
+            Files.writeString(invalid, metadata()
+                    + (changed.startsWith("{\"type\":\"baseline\"") ? changed : baseline)
+                    + (changed.startsWith("{\"type\":\"cutoff\"") ? changed : cutoff));
+            assertThrows(IllegalArgumentException.class,
+                    () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(
+                            invalid, new RecordingSink()));
+        }
+    }
+
+    @Test
+    void rejectsDuplicateReorderedAndMutatedCutoffGenerationEvidence() throws Exception {
+        String state = "00".repeat(8192);
+        String firstChild = completedVintService(769, 0, 9);
+        String secondChild = completedMusicService();
+        String frames = "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\""
+                + state + "\",\"events\":[" + vintBegin(0) + ","
+                + musicBegin(1) + ","
+                + snapshotTransaction(2, 3, 2, 9, 2, 1, 331, 2) + ","
+                + musicEnd(5) + ","
+                + snapshotTransaction(6, 2, 1, 3, 1, 1, 231, 2) + ","
+                + vintEnd(9) + "]}\n";
+        String cutoff = boundary("cutoff", "\"exclusive_end\":770,", state)
+                .replace("\"active_services\":[]",
+                        "\"active_services\":[" + dpcmService() + "]");
+        String prefix = metadata() + boundary("baseline", "\"row\":769,", state) + frames;
+        Path accepted = temporary.resolve("ordered-cutoff-inventory.jsonl");
+        Files.writeString(accepted, prefix + cutoff.replace("\"pending_descendants\":[]",
+                "\"pending_descendants\":[" + firstChild + "," + secondChild + "]"));
+        S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(accepted, new RecordingSink());
+
+        for (String pending : List.of(
+                firstChild + "," + firstChild,
+                secondChild + "," + firstChild)) {
+            Path invalid = temporary.resolve("bad-cutoff-inventory-" + Math.abs(pending.hashCode()) + ".jsonl");
+            Files.writeString(invalid, prefix + cutoff.replace("\"pending_descendants\":[]",
+                            "\"pending_descendants\":[" + pending + "]"));
+            assertThrows(IllegalArgumentException.class,
+                    () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(
+                            invalid, new RecordingSink()));
+        }
+
+        String mutatedBeginHook = boundary("cutoff", "\"exclusive_end\":769,", state)
+                .replace("\"active_services\":[]",
+                        "\"active_services\":[" + dpcmService()
+                                .replace("\"begin_hook_token\":5",
+                                        "\"begin_hook_token\":13") + "]");
+        Path mutated = temporary.resolve("bad-cutoff-begin-hook.jsonl");
+        Files.writeString(mutated, metadata() + boundary("baseline", "\"row\":769,", state)
+                + mutatedBeginHook);
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(
+                        mutated, new RecordingSink()));
+
+        String forgedChip = cutoff.replace("\"chips\":[]",
+                "\"chips\":[{\"coordinate\":0,\"native_ordinal\":0,"
+                        + "\"event_kind\":4,\"subject\":0,\"value\":68,"
+                        + "\"pc\":378,\"source_cpu\":1,\"data\":true,"
+                        + "\"port\":0,\"register\":0}]")
+                .replace("\"pending_descendants\":[]",
+                        "\"pending_descendants\":[" + firstChild + "," + secondChild + "]");
+        Path forgedChipPath = temporary.resolve("bad-cutoff-chip.jsonl");
+        Files.writeString(forgedChipPath, prefix + forgedChip);
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(
+                        forgedChipPath, new RecordingSink()));
+
+        for (String forged : List.of(
+                firstChild.replace("\"end_pc\":231", "\"end_pc\":271")
+                        .replace("\"end_hook_token\":3", "\"end_hook_token\":4")
+                        .replace("\"pc\":231", "\"pc\":271"),
+                firstChild.replace("\"bytes_hex\":\"ff\"", "\"bytes_hex\":\"ee\""))) {
+            Path invalid = temporary.resolve("bad-cutoff-evidence-" + Math.abs(forged.hashCode()) + ".jsonl");
+            Files.writeString(invalid, prefix + cutoff.replace("\"pending_descendants\":[]",
+                    "\"pending_descendants\":[" + forged + "," + secondChild + "]"));
+            assertThrows(IllegalArgumentException.class,
+                    () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(
+                            invalid, new RecordingSink()));
+        }
+    }
+
+    @Test
     void streamsPinnedRawRowsWithoutBufferingOrLosingUnsignedPayload() throws Exception {
         Path raw = temporary.resolve("raw.jsonl");
         String state = "00".repeat(8192);
@@ -259,7 +376,9 @@ class TestS2CompleteRunReferenceRawAdapter {
         String state = "00".repeat(8192);
         Files.writeString(raw, metadata()
                 + boundary("baseline", "\"row\":769,", state)
-                + boundary("cutoff", "\"exclusive_end\":769,", state));
+                + boundary("cutoff", "\"exclusive_end\":769,", state)
+                    .replace("\"active_services\":[]",
+                            "\"active_services\":[" + dpcmService() + "]"));
         var sink = new RecordingSink();
 
         S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, sink);
@@ -278,15 +397,15 @@ class TestS2CompleteRunReferenceRawAdapter {
                 + boundary("baseline", "\"row\":769,", state)
                 + boundary("cutoff", "\"exclusive_end\":769,", state)
                     .replace("\"active_services\":[]",
-                            "\"active_services\":[" + service() + "]"));
+                            "\"active_services\":[" + dpcmService() + "]"));
         var sink = new RecordingSink();
 
         S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, sink);
 
         var service = sink.cutoff.activeServices().getFirst();
         assertEquals(1, service.token());
-        assertEquals(3, service.kind());
-        assertEquals(56, service.beginPc());
+        assertEquals(4, service.kind());
+        assertEquals(378, service.beginPc());
         assertEquals(0, service.chips().size());
         assertEquals(0, service.snapshots().size());
         assertEquals(0, service.ancestryTransitions().size());
@@ -296,7 +415,7 @@ class TestS2CompleteRunReferenceRawAdapter {
     void parsesTypedChipAndSnapshotEvidenceLosslessly() throws Exception {
         Path raw = temporary.resolve("typed-frontier.jsonl");
         String state = "00".repeat(8192);
-        String typed = service()
+        String typed = dpcmService()
                 .replace("\"chips\":[]", "\"chips\":[{\"coordinate\":7,"
                         + "\"native_ordinal\":8,\"event_kind\":3,\"subject\":1,"
                         + "\"value\":42,\"pc\":56,\"source_cpu\":1,\"data\":true,"
@@ -305,6 +424,7 @@ class TestS2CompleteRunReferenceRawAdapter {
                         + "\"source_cpu\":1,\"pc\":56,\"bytes_hex\":\"ab\"}]");
         Files.writeString(raw, metadata()
                 + boundary("baseline", "\"row\":769,", state)
+                    .replace(dpcmService(), typed)
                 + boundary("cutoff", "\"exclusive_end\":769,", state)
                     .replace("\"active_services\":[]", "\"active_services\":[" + typed + "]"));
         var sink = new RecordingSink();
@@ -318,23 +438,27 @@ class TestS2CompleteRunReferenceRawAdapter {
     }
 
     @Test
-    void acceptsOnlyTheNativeResetServicesExactAbsentBeginSourceShape() throws Exception {
+    void rejectsCompletedResetAsCutoffPendingEvenWithExactAbsentBeginSourceShape() throws Exception {
         Path raw = temporary.resolve("reset-frontier.jsonl");
         String state = "00".repeat(8192);
         Files.writeString(raw, metadata()
                 + boundary("baseline", "\"row\":769,", state)
-                + boundary("cutoff", "\"exclusive_end\":769,", state)
+                + "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\""
+                + state + "\",\"events\":[" + resetBegin(1, 0) + ","
+                + snapshotTransaction(1, 1, 0, 4, 0, 3, 0, 2) + ","
+                + resetCancellation(4) + ","
+                + snapshotTransaction(5, 9, 0, 1, 0, 3, 0, 2) + ","
+                + resetEnd(8, 0) + "]}\n"
+                + boundary("cutoff", "\"exclusive_end\":770,", state)
                     .replace("\"pending_descendants\":[]",
-                            "\"pending_descendants\":[" + resetService() + "]"));
-        var sink = new RecordingSink();
-
-        S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, sink);
-
-        var reset = sink.cutoff.pendingDescendants().getFirst();
-        assertEquals(1, reset.kind());
-        assertEquals(0, reset.beginSourceCpu());
-        assertEquals(0, reset.beginPc());
-        assertEquals(0, reset.beginHookToken());
+                            "\"pending_descendants\":[" + resetService()
+                                    .replace("\"begin_coordinate\":1", "\"begin_coordinate\":0")
+                                    .replace("\"begin_row\":700", "\"begin_row\":769")
+                                    .replace("\"begin_native_ordinal\":12",
+                                            "\"begin_native_ordinal\":0") + "]"));
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(
+                        raw, new RecordingSink()));
     }
 
     @Test
@@ -408,7 +532,7 @@ class TestS2CompleteRunReferenceRawAdapter {
     }
 
     private static String metadata() {
-        return "{\"type\":\"metadata\",\"schema\":\"openggf.s2-complete-run-audio-raw.v1\","
+        return "{\"type\":\"metadata\",\"schema\":\"openggf.s2-complete-run-audio-raw.v2\","
                 + "\"rom_sha1\":\"8bca5dcef1af3e00098666fd892dc1c2a76333f9\","
                 + "\"bk2_sha256\":\"e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5\","
                 + "\"service_manifest_sha256\":\"ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0\","
@@ -565,6 +689,7 @@ class TestS2CompleteRunReferenceRawAdapter {
         return "{\"token\":1,\"parent_token\":0,\"kind\":3,\"depth\":0,"
                 + "\"current_parent_token\":0,\"current_depth\":0,"
                 + "\"begin_coordinate\":1,\"end_coordinate\":0,"
+                + "\"begin_row\":700,\"begin_native_ordinal\":12,"
                 + "\"begin_pc\":56,\"end_pc\":0,\"begin_hook_token\":1,"
                 + "\"end_hook_token\":0,\"begin_source_cpu\":1,"
                 + "\"cancelled\":false,\"complete\":false,\"chips\":[],"
@@ -581,14 +706,86 @@ class TestS2CompleteRunReferenceRawAdapter {
         return "{\"token\":9,\"parent_token\":0,\"kind\":1,\"depth\":0,"
                 + "\"current_parent_token\":0,\"current_depth\":0,"
                 + "\"begin_coordinate\":1,\"end_coordinate\":2,"
+                + "\"begin_row\":700,\"begin_native_ordinal\":12,"
                 + "\"begin_pc\":0,\"end_pc\":0,\"begin_hook_token\":0,"
                 + "\"end_hook_token\":0,\"begin_source_cpu\":0,"
                 + "\"cancelled\":false,\"complete\":true,\"chips\":[],"
                 + "\"snapshots\":[],\"ancestry_transitions\":[]}";
     }
 
+    private static String completedVintService(int row, long beginCoordinate, long endCoordinate) {
+        return service()
+                .replace("\"token\":1", "\"token\":2")
+                .replace("\"parent_token\":0", "\"parent_token\":1")
+                .replace("\"depth\":0", "\"depth\":1")
+                .replace("\"current_parent_token\":0", "\"current_parent_token\":1")
+                .replace("\"current_depth\":0", "\"current_depth\":1")
+                .replace("\"begin_coordinate\":1", "\"begin_coordinate\":" + beginCoordinate)
+                .replace("\"end_coordinate\":0", "\"end_coordinate\":" + endCoordinate)
+                .replace("\"begin_row\":700", "\"begin_row\":" + row)
+                .replace("\"begin_native_ordinal\":12", "\"begin_native_ordinal\":0")
+                .replace("\"begin_hook_token\":1", "\"begin_hook_token\":2")
+                .replace("\"end_pc\":0", "\"end_pc\":231")
+                .replace("\"end_hook_token\":0", "\"end_hook_token\":3")
+                .replace("\"complete\":false", "\"complete\":true")
+                .replace("\"snapshots\":[]", "\"snapshots\":[{\"range_id\":2,"
+                        + "\"source_cpu\":1,\"pc\":231,\"bytes_hex\":\"ff\"}]");
+    }
+
+    private static String vintBegin(int ordinal) {
+        return "{" + event()
+                .replace("\"ordinal\":0", "\"ordinal\":" + ordinal)
+                .replace("\"pc\":4660", "\"pc\":56")
+                .replace("\"subject\":1", "\"subject\":2")
+                .replace("\"kind\":6", "\"kind\":1")
+                .replace("\"service_kind\":2", "\"service_kind\":3")
+                .replace("\"payload_length\":8", "\"payload_length\":0")
+                .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"") + "}";
+    }
+
+    private static String vintEnd(int ordinal) {
+        return vintBegin(ordinal)
+                .replace("\"pc\":56", "\"pc\":231")
+                .replace("\"subject\":2", "\"subject\":3")
+                .replace("\"kind\":1", "\"kind\":2");
+    }
+
+    private static String musicBegin(int ordinal) {
+        return vintBegin(ordinal)
+                .replace("\"service_token\":2", "\"service_token\":3")
+                .replace("\"parent_token\":1", "\"parent_token\":2")
+                .replace("\"pc\":56", "\"pc\":272")
+                .replace("\"subject\":2", "\"subject\":21")
+                .replace("\"service_kind\":3", "\"service_kind\":9")
+                .replace("\"depth\":1", "\"depth\":2");
+    }
+
+    private static String musicEnd(int ordinal) {
+        return musicBegin(ordinal)
+                .replace("\"pc\":272", "\"pc\":331")
+                .replace("\"subject\":21", "\"subject\":22")
+                .replace("\"kind\":1", "\"kind\":2");
+    }
+
+    private static String completedMusicService() {
+        return completedVintService(769, 1, 5)
+                .replace("\"begin_native_ordinal\":0", "\"begin_native_ordinal\":1")
+                .replace("\"token\":2", "\"token\":3")
+                .replace("\"parent_token\":1", "\"parent_token\":2")
+                .replace("\"kind\":3", "\"kind\":9")
+                .replace("\"depth\":1", "\"depth\":2")
+                .replace("\"current_parent_token\":1", "\"current_parent_token\":2")
+                .replace("\"current_depth\":1", "\"current_depth\":2")
+                .replace("\"begin_pc\":56", "\"begin_pc\":272")
+                .replace("\"end_pc\":231", "\"end_pc\":331")
+                .replace("\"begin_hook_token\":2", "\"begin_hook_token\":21")
+                .replace("\"end_hook_token\":3", "\"end_hook_token\":22")
+                .replace("\"pc\":231", "\"pc\":331");
+    }
+
     private static final class RecordingSink implements S2CompleteRunReferenceRawAdapter.Sink {
         private S2CompleteRunReferenceRawAdapter.Header header;
+        private S2CompleteRunReferenceRawAdapter.RawBoundary baseline;
         private final List<S2CompleteRunReferenceRawAdapter.RawFrame> frames = new ArrayList<>();
         private S2CompleteRunReferenceRawAdapter.RawBoundary cutoff;
         private int beginCalls;
@@ -596,13 +793,14 @@ class TestS2CompleteRunReferenceRawAdapter {
         private int abortCalls;
         @Override public void begin() { beginCalls++; }
         @Override public void header(S2CompleteRunReferenceRawAdapter.Header value) { header = value; }
-        @Override public void baseline(S2CompleteRunReferenceRawAdapter.RawBoundary value) { }
+        @Override public void baseline(S2CompleteRunReferenceRawAdapter.RawBoundary value) { baseline = value; }
         @Override public void frame(S2CompleteRunReferenceRawAdapter.RawFrame value) { frames.add(value); }
         @Override public void cutoff(S2CompleteRunReferenceRawAdapter.RawBoundary value) { cutoff = value; }
         @Override public void commit() { commitCalls++; }
         @Override public void abort() {
             abortCalls++;
             header = null;
+            baseline = null;
             frames.clear();
             cutoff = null;
         }

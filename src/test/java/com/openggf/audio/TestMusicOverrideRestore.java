@@ -14,7 +14,9 @@ import java.util.Arrays;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The 1-up jingle is the only music that interrupts the current song and
@@ -178,6 +180,60 @@ class TestMusicOverrideRestore {
         assertNothingSaved();
     }
 
+    @Test
+    void fallbackPcmOverrideSuspendsAndRestoresSmpsMusic() {
+        AudioTestFixtures.StubSmpsLoader loader =
+                new AudioTestFixtures.StubSmpsLoader();
+        loader.musicResults.put(LEVEL_MUSIC,
+                smpsMusic("smps-zone", LEVEL_MUSIC));
+        installMixedProfile(loader);
+        registerFallbackMusic(EXTRA_LIFE_MUSIC);
+
+        play(LEVEL_MUSIC);
+        assertNotNull(AudioManagerTestDiagnostics
+                .primeAdmittedSmpsMusic(audio));
+        assertFalse(snapshot().smpsSession().physical().outputSilenced(),
+                "precondition: the SMPS device is producing output");
+
+        play(EXTRA_LIFE_MUSIC);
+        assertEquals(EXTRA_LIFE_MUSIC, activeMusicId());
+        assertNoSmpsMusic();
+        assertTrue(snapshot().smpsSession().physical().outputSilenced(),
+                "a PCM foreground must silence the suspended SMPS music");
+
+        restore();
+        assertEquals(LEVEL_MUSIC, activeMusicId());
+        assertSmpsMusic(LEVEL_MUSIC);
+        assertNothingSaved();
+    }
+
+    @Test
+    void smpsOverrideStopsBeforeRestoringFallbackPcmMusic() {
+        AudioTestFixtures.StubSmpsLoader loader =
+                new AudioTestFixtures.StubSmpsLoader();
+        loader.musicResults.put(EXTRA_LIFE_MUSIC,
+                smpsMusic("smps-jingle", EXTRA_LIFE_MUSIC));
+        installMixedProfile(loader);
+        registerFallbackMusic(LEVEL_MUSIC);
+
+        play(LEVEL_MUSIC);
+        assertNoSmpsMusic();
+
+        play(EXTRA_LIFE_MUSIC);
+        assertSmpsMusic(EXTRA_LIFE_MUSIC);
+        assertNotNull(AudioManagerTestDiagnostics
+                .primeAdmittedSmpsMusic(audio));
+        assertFalse(snapshot().smpsSession().physical().outputSilenced(),
+                "precondition: the SMPS override is producing output");
+
+        restore();
+        assertEquals(LEVEL_MUSIC, activeMusicId());
+        assertNoSmpsMusic();
+        assertTrue(snapshot().smpsSession().physical().outputSilenced(),
+                "restoring PCM must stop and silence the SMPS override");
+        assertNothingSaved();
+    }
+
     private void play(int musicId) {
         audio.playMusic(musicId);
         audio.presentFrame(PresentationMode.SILENT);
@@ -186,6 +242,53 @@ class TestMusicOverrideRestore {
     private void restore() {
         audio.restoreMusic();
         audio.presentFrame(PresentationMode.SILENT);
+    }
+
+    private void installMixedProfile(
+            AudioTestFixtures.StubSmpsLoader loader) {
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader) {
+            @Override
+            public SmpsSequencerConfig getSequencerConfig() {
+                return new SmpsSequencerConfig.Builder().build();
+            }
+
+            @Override
+            public int getExtraLifeMusicId() {
+                return EXTRA_LIFE_MUSIC;
+            }
+        });
+        audio.setRom(new Rom());
+    }
+
+    private void registerFallbackMusic(int musicId) {
+        AudioManagerTestDiagnostics.registerFallbackSfxAsset(audio,
+                "music/" + Integer.toHexString(musicId).toUpperCase()
+                        + ".wav",
+                new byte[SAMPLE_RATE], SAMPLE_RATE);
+    }
+
+    private static AudioTestFixtures.StubSmpsData smpsMusic(
+            String name, int musicId) {
+        AudioTestFixtures.StubSmpsData music =
+                new AudioTestFixtures.StubSmpsData(name);
+        music.setId(musicId);
+        return music;
+    }
+
+    private void assertNoSmpsMusic() {
+        assertTrue(snapshot().smpsLogical().sequencers().stream()
+                        .noneMatch(entry -> !entry.sfx()),
+                "no session-owned SMPS music may remain active");
+    }
+
+    private void assertSmpsMusic(int musicId) {
+        int actual = snapshot().smpsLogical().sequencers().stream()
+                .filter(entry -> !entry.sfx())
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "no session-owned SMPS music is active"))
+                .source().id();
+        assertEquals(musicId, actual);
     }
 
     private int activeMusicId() {

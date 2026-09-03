@@ -9,6 +9,7 @@ import java.util.EnumMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -93,6 +94,17 @@ class TestAudioManagerRawRingRequestAlternation {
         audio.playSfx(RING_RIGHT_ID);
 
         assertEquals(List.of("SFX:33"), observations);
+    }
+
+    @Test
+    void retainedGlobalStopResetsTheManagerOwnedAlternation() {
+        assertTrue(audio.playSfx(RING_RIGHT_ID));
+        assertFalse(audio.captureLogicalSnapshot().ringLeft());
+
+        audio.retainGlobalStop(0xE2);
+
+        assertTrue(audio.captureLogicalSnapshot().ringLeft(),
+                "zStopAllSound clears zRingSpeaker at the logical command boundary");
     }
 
     private List<Integer> playedIds() {

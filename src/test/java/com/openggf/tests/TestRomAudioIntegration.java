@@ -74,7 +74,7 @@ public class TestRomAudioIntegration {
         // Run enough frames to cover early percussion passages
         short[] buffer = new short[4096];
         for (int i = 0; i < 32; i++) {
-            seq.read(buffer);
+            seq.advanceSamples(buffer.length);
         }
 
         boolean hasNoiseLatch = synth.psg.stream().anyMatch(v -> (v & 0xF0) == 0xE0);
@@ -127,7 +127,7 @@ public class TestRomAudioIntegration {
                 Sonic2SmpsSequencerConfig.CONFIG);
         short[] buffer = new short[4096];
         for (int i = 0; i < 50; i++) {
-            seq.read(buffer);
+            seq.advanceSamples(buffer.length);
         }
         assertTrue(seq.isComplete() || seq.getSamplesUntilNextTempoFrame() > 0,
                 "Sequencer should keep a live tempo schedule after playback, not deadlock");
@@ -141,7 +141,7 @@ public class TestRomAudioIntegration {
         short[][] frames = new short[iterations][];
         short[] buffer = new short[4096];
         for (int i = 0; i < iterations; i++) {
-            seq.read(buffer);
+            seq.advanceSamples(buffer.length);
             frames[i] = buffer.clone();
         }
         return frames;
@@ -155,20 +155,21 @@ public class TestRomAudioIntegration {
         LoggingSynth synth = new LoggingSynth();
         SmpsSequencer seq = new SmpsSequencer(data, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        // Check for init write before clearing
+        // Standalone construction prepares logical state only; the driver-owned
+        // admission path performs the DAC-enable write.
         boolean hasInitWrite = synth.fm.stream().anyMatch(cmd -> cmd.contains("2B 80"));
 
-        // Ignore the DAC-enable write emitted during construction so assertions only consider
-        // commands produced by sequencing the ROM data.
+        // Keep assertions scoped to commands produced by sequencing ROM data.
         synth.fm.clear();
         synth.psg.clear();
 
         short[] buffer = new short[4096];
-        seq.read(buffer);
+        seq.advanceSamples(buffer.length);
 
         boolean hasSequencedCommands = !synth.fm.isEmpty() || !synth.psg.isEmpty();
 
-        assertTrue(hasInitWrite, "Sequencer should initialize DAC enable on the FM chip");
+        assertFalse(hasInitWrite,
+                "Standalone sequencer construction must not write the FM chip");
         assertTrue(hasSequencedCommands, "Sequencer should emit FM or PSG commands from the ROM stream");
     }
 
@@ -179,10 +180,16 @@ public class TestRomAudioIntegration {
         LoggingSynth synth = new LoggingSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, dacData, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
+        assertNull(synth.configuredDacData,
+                "Standalone sequencer construction must not select a DAC bank");
+        // Standalone callers retain explicit ownership of physical DAC setup;
+        // the composed driver performs this automatically on music admission.
+        synth.setDacData(dacData);
         short[] buffer = new short[4096];
-        seq.read(buffer);
+        seq.advanceSamples(buffer.length);
 
-        assertSame(dacData, synth.configuredDacData, "Sequencer should wire ROM DAC data into the synthesizer");
+        assertSame(dacData, synth.configuredDacData,
+                "Explicit standalone DAC selection should retain ROM samples");
         assertTrue(dacData.sampleCount() > 0, "ROM DAC table should expose samples");
         assertNotNull(dacData.mappingForNote(0x81), "ROM DAC table should map drum notes");
     }
@@ -192,8 +199,10 @@ public class TestRomAudioIntegration {
         AbstractSmpsData data = loader.loadMusic(0x82);
         DacData dac = loader.loadDacData();
 
-        com.openggf.audio.driver.SmpsDriver bulkDriver = new com.openggf.audio.driver.SmpsDriver();
-        com.openggf.audio.driver.SmpsDriver singleFrameDriver = new com.openggf.audio.driver.SmpsDriver();
+        com.openggf.audio.driver.SmpsDriver bulkDriver =
+                com.openggf.audio.driver.SmpsDriverTestAccess.create(44_100);
+        com.openggf.audio.driver.SmpsDriver singleFrameDriver =
+                com.openggf.audio.driver.SmpsDriverTestAccess.create(44_100);
         bulkDriver.addSequencer(new SmpsSequencer(data, dac, bulkDriver, Sonic2SmpsSequencerConfig.CONFIG), false);
         singleFrameDriver.addSequencer(new SmpsSequencer(data, dac, singleFrameDriver, Sonic2SmpsSequencerConfig.CONFIG), false);
 
@@ -201,9 +210,11 @@ public class TestRomAudioIntegration {
         short[] expected = new short[1024];
         short[] frame = new short[2];
 
-        bulkDriver.read(actual);
+        com.openggf.audio.driver.SmpsDriverTestAccess.read(
+                bulkDriver, actual);
         for (int i = 0; i < expected.length / 2; i++) {
-            singleFrameDriver.read(frame);
+            com.openggf.audio.driver.SmpsDriverTestAccess.read(
+                    singleFrameDriver, frame);
             expected[i * 2] = frame[0];
             expected[i * 2 + 1] = frame[1];
         }

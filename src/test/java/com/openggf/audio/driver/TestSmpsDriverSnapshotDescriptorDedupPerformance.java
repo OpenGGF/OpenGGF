@@ -7,7 +7,6 @@ import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
 import com.openggf.audio.presentation.SmpsAssetKey;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
@@ -18,6 +17,7 @@ import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import com.sun.management.ThreadMXBean;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -227,10 +227,8 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
             InstantiationFixture fixture) {
         SmpsSequencer firstSfx = fixture.instantiateSfx();
         SmpsSequencer secondSfx = fixture.instantiateSfx();
-        SmpsSequencer firstMusic = fixture.instantiateMusic()
-                .driver().firstMusicSequencer();
-        SmpsSequencer secondMusic = fixture.instantiateMusic()
-                .driver().firstMusicSequencer();
+        SmpsSequencer firstMusic = fixture.instantiateMusic();
+        SmpsSequencer secondMusic = fixture.instantiateMusic();
 
         assertSame(fixture.sfxDescriptor, firstSfx.getSourceDescriptor());
         assertSame(fixture.sfxDescriptor, secondSfx.getSourceDescriptor());
@@ -314,8 +312,7 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
                 0,
                 entries,
                 fmLocks,
-                psgLocks,
-                fixture.driver.captureSynthSnapshot());
+                psgLocks);
     }
 
     private static Fixture fixture() {
@@ -347,7 +344,8 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
                                 48_000, SmpsSequencer.Region.NTSC,
                                 false, false, false, false, 1,
                                 AudioManager.getInstance(),
-                                new DecodedPcmCache(), ignored -> null));
+                                new DecodedPcmCache(), ignored -> null),
+                        SmpsSessionTestSupport.installed(48_000));
         DacData dac = new DacData(Map.of(), Map.of(), 288);
         SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
                 .fmChannelOrder(new int[] {0})
@@ -375,10 +373,8 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
         AudioPresentationCommand.SmpsVoiceDescriptor musicBlueprint =
                 (AudioPresentationCommand.SmpsVoiceDescriptor)
                         musicEntry.voiceDescriptor();
-        SmpsCompositeVoice firstMusic = factory.recreateSmps(
-                musicBlueprint);
-        SmpsSourceDescriptor musicDescriptor = firstMusic.driver()
-                .firstMusicSequencer().getSourceDescriptor();
+        SmpsSourceDescriptor musicDescriptor = musicBlueprint.activation()
+                .incomingMusic().source();
         sfx.resetDataReads();
         music.resetDataReads();
         return new InstantiationFixture(
@@ -511,8 +507,17 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
             return factory.instantiateCached(resolvedSfx, sfxOwner);
         }
 
-        private SmpsCompositeVoice instantiateMusic() {
-            return factory.recreateSmps(musicBlueprint);
+        private SmpsSequencer instantiateMusic() {
+            SmpsDriverSnapshot.SequencerEntry entry =
+                    musicBlueprint.activation().incomingMusic();
+            SmpsDriver owner = new SmpsDriver();
+            SmpsSequencer sequencer = new SmpsSequencer(
+                    entry.smpsData(), entry.dacData(), owner, owner,
+                    entry.audioManager(), entry.config(), entry.source(),
+                    entry.sourceDescriptorTrust());
+            sequencer.restoreSnapshot(entry.snapshot());
+            owner.addSequencer(sequencer, false);
+            return sequencer;
         }
     }
 

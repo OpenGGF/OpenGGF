@@ -602,11 +602,6 @@ class TestAudioPresentationProducer {
                         return pcm;
                     }
 
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new AssertionError("no SMPS voice expected");
-                    }
                 };
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 noSmps(), resolver,
@@ -634,11 +629,6 @@ class TestAudioPresentationProducer {
                 throw new AssertionError("no SMPS SFX expected");
             }
 
-            @Override
-            public SmpsCompositeVoice instantiateStandaloneCached(
-                    ResolvedSmpsSfxSource source) {
-                throw new AssertionError("no SMPS SFX expected");
-            }
         };
     }
 
@@ -662,11 +652,6 @@ class TestAudioPresentationProducer {
                         throw new AssertionError("unexpected PCM " + assetId);
                     }
 
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new AssertionError("no SMPS voice expected");
-                    }
                 };
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 noSmps(), resolver,

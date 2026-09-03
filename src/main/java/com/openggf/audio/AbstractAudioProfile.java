@@ -41,11 +41,31 @@ public abstract class AbstractAudioProfile implements GameAudioProfile {
         return -1;
     }
 
+    /** Optional second sound ID routed to the same fade routine. */
+    protected int getAlternateFadeOutCommandId() {
+        return -1;
+    }
+
     /**
      * Returns the sound ID that stops all audio, or {@code -1} if this game
      * does not route stop-all through {@code playMusic()} dispatch.
      */
     protected int getStopAllCommandId() {
+        return -1;
+    }
+
+    /** Optional out-of-table stop ID routed to the global-stop routine. */
+    protected int getStopCommandId() {
+        return -1;
+    }
+
+    /** Optional command that transiently silences PSG. */
+    protected int getPsgSilenceCommandId() {
+        return -1;
+    }
+
+    /** Optional command that releases only SMPS SFX ownership. */
+    protected int getStopSfxCommandId() {
         return -1;
     }
 
@@ -86,17 +106,31 @@ public abstract class AbstractAudioProfile implements GameAudioProfile {
      */
     @Override
     public boolean handleSystemCommand(int soundId, AudioManager manager) {
-        if (soundId == getFadeOutCommandId() && getFadeOutCommandId() != -1) {
+        if ((soundId == getFadeOutCommandId()
+                && getFadeOutCommandId() != -1)
+                || (soundId == getAlternateFadeOutCommandId()
+                && getAlternateFadeOutCommandId() != -1)) {
             executeFadeOut(manager);
             return true;
-        } else if (soundId == getStopAllCommandId() && getStopAllCommandId() != -1) {
-            manager.stopMusic();
+        } else if ((soundId == getStopAllCommandId()
+                && getStopAllCommandId() != -1)
+                || (soundId == getStopCommandId()
+                && getStopCommandId() != -1)) {
+            manager.retainGlobalStop(soundId);
+            return true;
+        } else if (soundId == getPsgSilenceCommandId()
+                && getPsgSilenceCommandId() != -1) {
+            manager.silencePsg(soundId);
+            return true;
+        } else if (soundId == getStopSfxCommandId()
+                && getStopSfxCommandId() != -1) {
+            manager.stopSmpsSfx(soundId);
             return true;
         } else if (soundId == getSegaCommandId() && getSegaCommandId() != -1) {
-            manager.playSegaPcm();
+            manager.playSegaPcmCommand(soundId);
             return true;
         } else if (soundId == getStopSegaCommandId() && getStopSegaCommandId() != -1) {
-            manager.stopSegaPcm();
+            manager.stopSegaPcmAndRetainGlobalStop(soundId);
             return true;
         }
         return false;

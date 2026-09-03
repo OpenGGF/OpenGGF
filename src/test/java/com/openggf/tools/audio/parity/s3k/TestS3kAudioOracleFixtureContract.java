@@ -81,10 +81,12 @@ class TestS3kAudioOracleFixtureContract {
         assertEquals(0, boot.writes().getLast().value());
         assertEquals(List.of(0xe1, 0, 0), services.get(1).mailbox(),
                 "the first ordinary zVInt consumes the request left pending during boot");
+        assertTrue(services.get(128).producerInputEvidence().unavailable(),
+                "the projector must retain its authenticated suspended-input evidence");
     }
 
     @Test
-    void engineMatchesThroughTheInitialSegaPcmTransportWindow() {
+    void engineUsesProductionStopsThroughTheUnrepresentedPcmExitFrontier() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
         List<S3kAudioTick> services = new ArrayList<>();
@@ -92,12 +94,53 @@ class TestS3kAudioOracleFixtureContract {
 
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(
-                        rom.toPath(), services.subList(0, 51), null);
+                        rom.toPath(), services.subList(0, 260), null);
 
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(
-                        services.subList(0, 51), engine.ticks());
-        assertTrue(report.matches(), report.toHumanText());
+                        services.subList(0, 260), engine.ticks());
+        assertEquals(260, engine.ticks().size());
+        assertEquals(84, engine.ticks().get(49).writes().size(),
+                "FF must use the exact production stop before PCM transport");
+        assertEquals(0xff,
+                engine.ticks().get(49).writes().getFirst().value());
+        assertTrue(engine.ticks().get(138).writes().size() >= 84,
+                "the first music request must begin with the production stop");
+        assertEquals(services.get(138).writes().subList(0, 84),
+                engine.ticks().get(138).writes().subList(0, 84));
+
+        // The recorder cannot sample the FE write while zPlaySEGAPCM has
+        // interrupts disabled (D:4372-4424), so the projected input at the
+        // resumed service is [0,0,0]. Keep this producer-input omission as an
+        // explicit frontier instead of deriving an engine command from the
+        // reference write stream.
+        assertEquals(S3kAudioParityComparator.Report.Kind.REFERENCE_LIMITATION,
+                report.kind());
+        assertEquals(128, report.tick());
+        assertEquals("producer_input", report.field());
+        assertTrue(report.reference().contains("interrupt services suspended"));
+    }
+
+    @Test
+    void engineHostModelsE3WithTheSourceOwnedPsgSilenceProgram() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(),
+                "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> services = new ArrayList<>();
+        S3kAudioReferenceReader.readDriverServices(REFERENCE, services::add);
+        S3kAudioTick template = services.get(1);
+        S3kAudioTick e3 = new S3kAudioTick(
+                template.ordinal(), template.lag(), List.of(0xE3, 0, 0),
+                template.global(), template.tracks(), List.of());
+
+        S3kOpenGgfAudioCapture.CaptureResult engine =
+                S3kOpenGgfAudioCapture.capture(
+                        rom.toPath(), List.of(services.getFirst(), e3), null);
+
+        assertEquals(List.of(0x9F, 0xBF, 0xDF, 0xFF),
+                engine.ticks().get(1).writes().stream()
+                        .map(write -> write.value()).toList());
+        assertTrue(engine.unsupportedRequests().isEmpty());
     }
 
     private static String sha256(Path path) throws Exception {

@@ -32,7 +32,11 @@ class TestS2NativeSoundResolver {
         assertEquals(0x0fd48d, nativeSound.romStart());
         assertEquals(0x0fd57a, nativeSound.romEndExclusive());
         assertEquals(0x98, nativeSound.nativeId());
-        assertEquals(0xb5, engineSound.engineApiId());
+        // MusID_ExtraLife is 98 (s2disasm/s2.constants.asm:856) and B5 is
+        // SndID_Ring / SndID_RingRight (s2.constants.asm:896-897), so the
+        // engine id for the 1-up jingle is 98 here as well; the two spaces
+        // coincide for this entry.
+        assertEquals(0x98, engineSound.engineApiId());
     }
 
     @Test

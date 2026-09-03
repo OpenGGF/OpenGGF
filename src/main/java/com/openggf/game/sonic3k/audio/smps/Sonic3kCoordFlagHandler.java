@@ -6,10 +6,11 @@ import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsProgramView;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-
-import java.util.logging.Logger;
-import java.util.Objects;
 import com.openggf.game.GameServices;
+
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.logging.Logger;
 
 /**
  * Sonic 3 &amp; Knuckles coordination flag handler.
@@ -267,7 +268,16 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
             case 0xF3: // PSG_NOISE (PNOIS_SRES) - set + reset
                 if (t.pos < program.dataLength()) {
                     int noiseVal = program.dataByteAt(t.pos++) & 0xFF;
-                    if (t.type == SmpsSequencer.TrackType.PSG) {
+                    if (t.type == SmpsSequencer.TrackType.FM && t.channelId == 2) {
+                        // FixBugs = 0: cfSetPSGNoise reuses PlaybackControl bit 0.
+                        // On FM3 that bit is the distinct special-mode state;
+                        // it is not PSG noise and produces no new hardware write here.
+                        t.fm3SpecialMode = noiseVal != 0;
+                    } else if (t.type == SmpsSequencer.TrackType.PSG) {
+                        // FixBugs = 0 cfSetPSGNoise stores the exact command byte
+                        // in zTrack.PSGNoise before interpreting zero/nonzero.
+                        t.rawPsgNoise = noiseVal;
+                        t.rawPsgNoiseKnown = true;
                         ctx.writePsg(0xDF);
                         if (noiseVal == 0) {
                             t.noiseMode = false;
@@ -354,12 +364,14 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xFE: // SPC_FM3 - FM3 special mode (4 params)
                 if (t.pos + 3 < program.dataLength()) {
-                    // Read and discard 4 bytes - FM3 special mode is broken per DefCFlag.txt
-                    int p1 = program.dataByteAt(t.pos++) & 0xFF;
-                    int p2 = program.dataByteAt(t.pos++) & 0xFF;
-                    int p3 = program.dataByteAt(t.pos++) & 0xFF;
-                    int p4 = program.dataByteAt(t.pos++) & 0xFF;
-                    LOGGER.fine("S3K SPC_FM3 (broken): " + p1 + ", " + p2 + ", " + p3 + ", " + p4);
+                    // FixBugs = 0: the shipped handler consumes all four operands
+                    // and sets FM3 PlaybackControl bit 0, but its special-frequency
+                    // path is broken. Retain only the semantic bit: no $27 write,
+                    // frequency write, or corruption emulation belongs in this slice.
+                    t.pos += 4;
+                    if (t.type == SmpsSequencer.TrackType.FM && t.channelId == 2) {
+                        t.fm3SpecialMode = true;
+                    }
                 }
                 return true;
 
@@ -591,11 +603,18 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                         int hwCh = t.channelId;
                         int port = (hwCh < 3) ? 0 : 1;
                         int ch = hwCh % 3;
-                        // Read and store SSG-EG values for persistence across track restoration.
-                        t.ssgEg[0] = program.dataByteAt(t.pos++) & 0xFF;
-                        t.ssgEg[1] = program.dataByteAt(t.pos++) & 0xFF;
-                        t.ssgEg[2] = program.dataByteAt(t.pos++) & 0xFF;
-                        t.ssgEg[3] = program.dataByteAt(t.pos++) & 0xFF;
+                        // FixBugs = 0 cfSetSSGEG sets HaveSSGEGFlag before
+                        // retaining its four bytes, including an all-zero payload.
+                        t.customSsgEgPresent = true;
+                        // Retain the exact pointer-backed bytes separately:
+                        // EF may clear live SSG-EG behavior without clearing the
+                        // native custom-restore pointer used by zStopSFX.
+                        for (int operator = 0; operator < 4; operator++) {
+                            int value = program.dataByteAt(t.pos++) & 0xFF;
+                            t.ssgEg[operator] = value;
+                            t.customSsgEgPayload[operator] = value;
+                        }
+                        t.customSsgEgPayloadKnown = true;
                         // zFMInstrumentSSGEGTable traverses 90,98,94,9C.
                         ctx.writeFm(port, 0x90 + ch, t.ssgEg[0]);
                         ctx.writeFm(port, 0x98 + ch, t.ssgEg[1]);
@@ -612,6 +631,13 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 if (t.pos + 1 < program.dataLength()) {
                     int envId = program.dataByteAt(t.pos++) & 0xFF;
                     int opMask = program.dataByteAt(t.pos++) & 0x0F;
+                    // FixBugs = 0 cfFMVolEnv aliases HaveSSGEGFlag and the
+                    // low custom SSG-EG pointer byte. A positive envelope
+                    // clears custom restore; a negative one retains its sign
+                    // but destroys enough of the pointer to reconstruct FF05.
+                    t.customSsgEgPresent = (envId & 0x80) != 0;
+                    Arrays.fill(t.customSsgEgPayload, 0);
+                    t.customSsgEgPayloadKnown = false;
                     if (t.type == SmpsSequencer.TrackType.FM && envId != 0 && opMask != 0) {
                         t.fmVolEnvData = copyPsgEnvelope(program, envId);
                         t.fmVolEnvPos = 0;

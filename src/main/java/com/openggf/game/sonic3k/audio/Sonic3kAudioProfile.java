@@ -5,8 +5,11 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
+import com.openggf.game.audio.SegaPcmRomReader;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsStatefulCommandPolicy;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import com.openggf.data.Rom;
@@ -100,13 +103,23 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
+    public SmpsPhysicalPolicy smpsPhysicalPolicy() {
+        return Sonic3kSmpsPhysicalPolicy.INSTANCE;
+    }
+
+    @Override
+    public SmpsStatefulCommandPolicy smpsStatefulCommandPolicy() {
+        return Sonic3kStatefulCommandPolicy.INSTANCE;
+    }
+
+    @Override
     public int getSpeedShoesOnCommandId() {
-        return Sonic3kSmpsConstants.CMD_SPEED_UP;
+        return -1;
     }
 
     @Override
     public int getSpeedShoesOffCommandId() {
-        return Sonic3kSmpsConstants.CMD_SLOW_DOWN;
+        return -1;
     }
 
     @Override
@@ -140,8 +153,28 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
+    protected int getAlternateFadeOutCommandId() {
+        return Sonic3kSmpsConstants.CMD_FADE_OUT_ALT;
+    }
+
+    @Override
     protected int getStopAllCommandId() {
         return Sonic3kSmpsConstants.CMD_STOP_ALL;
+    }
+
+    @Override
+    protected int getStopCommandId() {
+        return Sonic3kSmpsConstants.CMD_STOP;
+    }
+
+    @Override
+    protected int getPsgSilenceCommandId() {
+        return Sonic3kSmpsConstants.CMD_PSG_SILENCE;
+    }
+
+    @Override
+    protected int getStopSfxCommandId() {
+        return Sonic3kSmpsConstants.CMD_STOP_SFX;
     }
 
     @Override
@@ -160,6 +193,15 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
                 Sonic3kSmpsConstants.SEGA_SOUND_ADDR,
                 Sonic3kSmpsConstants.SEGA_SOUND_SIZE,
                 Sonic3kSmpsConstants.SEGA_SOUND_SAMPLE_RATE);
+    }
+
+    /**
+     * Reads the chant through the runtime-layer ROM reader so the audio layer
+     * never depends on {@code com.openggf.data} for this sample.
+     */
+    @Override
+    public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+        return SegaPcmRomReader.read(rom, getSegaPcmSpec());
     }
 
     /** S3K fade-out uses delay 6 instead of the S1/S2 default delay 3. */
@@ -189,6 +231,6 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
 
     @Override
     public int getSpeedMultiplierValue() {
-        return 0x08; // Standard speed shoes: 125% speed
+        return Sonic3kSmpsConstants.SPEED_MULTIPLIER_ON;
     }
 }

@@ -73,9 +73,8 @@ class TestShadowAudioPresentationRouting {
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot rewindPoint = audio.captureLogicalSnapshot();
-        long firstVoiceId = ((com.openggf.audio.presentation
-                .PresentationVoiceSnapshot.Smps) rewindPoint.presentation()
-                .voices().getFirst()).voiceId();
+        long firstVoiceId = rewindPoint.presentation()
+                .activeMusic().voiceId();
         SmpsDriverSnapshot.SequencerEntry first =
                 audio.shadowSmpsDriverSnapshotForTesting()
                         .sequencers().getFirst();
@@ -84,9 +83,8 @@ class TestShadowAudioPresentationRouting {
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot repeated = audio.captureLogicalSnapshot();
-        long secondVoiceId = ((com.openggf.audio.presentation
-                .PresentationVoiceSnapshot.Smps) repeated.presentation()
-                .voices().getFirst()).voiceId();
+        long secondVoiceId = repeated.presentation()
+                .activeMusic().voiceId();
         SmpsDriverSnapshot.SequencerEntry second =
                 audio.shadowSmpsDriverSnapshotForTesting()
                         .sequencers().getFirst();
@@ -408,5 +406,8 @@ class TestShadowAudioPresentationRouting {
         @Override public int getDrowningMusicId() { return -1; }
         @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
         @Override public SegaPcmSpec getSegaPcmSpec() { return spec; }
+        @Override public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+            return com.openggf.game.audio.SegaPcmRomReader.read(rom, getSegaPcmSpec());
+        }
     }
 }

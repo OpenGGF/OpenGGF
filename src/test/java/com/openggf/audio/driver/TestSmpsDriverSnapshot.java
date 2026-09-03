@@ -8,13 +8,52 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSequencerTestAccess;
+import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.synth.VirtualSynthesizer;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestSmpsDriverSnapshot {
+
+    @Test
+    void logicalSnapshotContainsNoPhysicalSynthState() {
+        assertTrue(Arrays.stream(
+                        SmpsDriverSnapshot.class.getRecordComponents())
+                .noneMatch(component -> component.getType()
+                        == VirtualSynthesizer.Snapshot.class));
+    }
+
+    @Test
+    void resolvingLogicalMementoEmitsNoChipWrites() {
+        AtomicInteger writes = new AtomicInteger();
+        ChipWriteObserver observer = new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.incrementAndGet();
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                writes.incrementAndGet();
+            }
+        };
+        SmpsDriver source = SmpsDriverTestAccess.create(48_000.0, observer);
+        source.addSequencer(newSequencer("music", 0x81, source), false);
+        SmpsDriverSnapshot memento = source.captureSnapshot();
+        SmpsDriver target = SmpsDriverTestAccess.create(48_000.0, observer);
+        writes.set(0);
+
+        target.restoreSnapshot(
+                memento, SmpsDriverSnapshot.liveReferences());
+
+        assertEquals(0, writes.get());
+    }
 
     @Test
     void precomputedTrustRequiresAnExplicitDescriptor() {
@@ -144,6 +183,12 @@ class TestSmpsDriverSnapshot {
         SmpsSequencer music = newSequencer("music", 0x81, driver);
         SmpsSequencer sfx = newSequencer("sfx", 0xBC, driver);
         sfx.setFallbackVoiceData(music.getSmpsData());
+        SmpsSequencer.Track musicFm3 = SmpsSequencerTestAccess.addActiveFmTrack(
+                music, 2);
+        musicFm3.fm3SpecialMode = true;
+        musicFm3.customSsgEgPresent = true;
+        musicFm3.customSsgEgPayload[0] = 0x22;
+        musicFm3.customSsgEgPayloadKnown = true;
 
         driver.addSequencer(music, false);
         PreparedSfxAdmission admission =
@@ -177,6 +222,14 @@ class TestSmpsDriverSnapshot {
         assertEquals(0xBC, restored.continuousSfxId());
         assertTrue(restored.continuousSfxFlag());
         assertEquals(2, restored.contSfxLoopCnt());
+        assertTrue(restored.sequencers().getFirst().snapshot().tracks()
+                .getFirst().fm3SpecialMode());
+        assertTrue(restored.sequencers().getFirst().snapshot().tracks()
+                .getFirst().customSsgEgPresent());
+        assertArrayEquals(new int[] {0x22, 0, 0, 0}, restored.sequencers()
+                .getFirst().snapshot().tracks().getFirst().customSsgEgPayload());
+        assertTrue(restored.sequencers().getFirst().snapshot().tracks()
+                .getFirst().customSsgEgPayloadKnown());
     }
 
     @Test
@@ -350,30 +403,6 @@ class TestSmpsDriverSnapshot {
         SmpsDriverSnapshot after = targetDriver.captureSnapshot();
         assertEquals(before.sequencers().size(), after.sequencers().size());
         assertEquals(before.sequencers().get(0).source(), after.sequencers().get(0).source());
-    }
-
-    @Test
-    void restoreRoundTripsSynthSnapshotAfterLogicalSequencerRestore() {
-        SmpsDriver uninterrupted = configuredDriver();
-        SmpsDriver restored = configuredDriver();
-        primeSynth(uninterrupted);
-        primeSynth(restored);
-
-        uninterrupted.read(new short[74], 74);
-        restored.read(new short[74], 74);
-
-        SmpsDriverSnapshot snapshot = uninterrupted.captureSnapshot();
-        perturbSynth(uninterrupted);
-        short[] expected = new short[192];
-        uninterrupted.read(expected, expected.length);
-
-        perturbSynth(restored);
-        restored.restoreSnapshot(snapshot);
-        perturbSynth(restored);
-        short[] actual = new short[192];
-        restored.read(actual, actual.length);
-
-        assertArrayEquals(expected, actual);
     }
 
     private static SmpsSequencer newSequencer(String name, int id, SmpsDriver driver) {

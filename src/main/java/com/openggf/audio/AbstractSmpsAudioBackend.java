@@ -4,7 +4,10 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsPhysicalDevice;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -67,6 +70,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     protected AudioStream sfxStream;
     private SmpsSequencer currentSmps;
     private SmpsDriver smpsDriver;
+    private OwnedSmpsAudioStream smpsStream;
 
     private static class MusicState {
         final AudioStream stream;
@@ -83,6 +87,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             this.musicId = musicId;
             this.descriptor = descriptor;
         }
+    }
+
+    private record OwnedMusic(
+            OwnedSmpsAudioStream stream,
+            SmpsDriver driver,
+            SmpsSequencer sequencer) {
     }
 
     private final Deque<MusicState> musicStack = new ArrayDeque<>();
@@ -304,10 +314,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     if (smpsDriver != null) {
                         smpsDriver.stopAllSfx();
                     }
-                    if (sfxStream instanceof SmpsDriver sfxDriver) {
-                        sfxDriver.stopAll();
-                    }
-                    sfxStream = null;
+                    closeStandaloneSfxStream();
                 }
                 sfxBlocked = true;
             }
@@ -325,6 +332,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             currentStream = null;
             currentSmps = null;
             smpsDriver = null;
+            smpsStream = null;
         } else {
             stopStream();
             // Stop music source if playing wav
@@ -334,25 +342,23 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             // but SFX played before any music was active use a separate sfxStream SmpsDriver.
             // Without this, the sfxStream persists indefinitely.
             synchronized (streamLock) {
-                if (sfxStream instanceof SmpsDriver sfxDriver) {
-                    sfxDriver.stopAll();
-                }
-                sfxStream = null;
+                closeStandaloneSfxStream();
             }
         }
 
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
-        SmpsCompositeVoice legacyMusic = createLegacyMusic(
+        OwnedMusic legacyMusic = createLegacyMusic(
                 data, dacData, requireSmpsConfig(), musicDescriptor);
         smpsDriver = legacyMusic.driver();
-        SmpsSequencer seq = smpsDriver.firstMusicSequencer();
+        smpsStream = legacyMusic.stream();
+        SmpsSequencer seq = legacyMusic.sequencer();
         currentSmps = seq;
         currentMusicId = musicId;
         currentMusicDescriptor = musicDescriptor;
 
         updateSynthesizerConfig();
         synchronized (streamLock) {
-            currentStream = smpsDriver;
+            currentStream = smpsStream;
         }
         startStream();
     }
@@ -375,10 +381,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     if (smpsDriver != null) {
                         smpsDriver.stopAllSfx();
                     }
-                    if (sfxStream instanceof SmpsDriver sfxDriver) {
-                        sfxDriver.stopAll();
-                    }
-                    sfxStream = null;
+                    closeStandaloneSfxStream();
                 }
                 sfxBlocked = true;
             }
@@ -391,30 +394,29 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             currentStream = null;
             currentSmps = null;
             smpsDriver = null;
+            smpsStream = null;
         } else {
             stopStream();
             hookStopAndClearMusicSource();
             clearMusicStack();
             synchronized (streamLock) {
-                if (sfxStream instanceof SmpsDriver sfxDriver) {
-                    sfxDriver.stopAll();
-                }
-                sfxStream = null;
+                closeStandaloneSfxStream();
             }
         }
 
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
-        SmpsCompositeVoice legacyMusic = createLegacyMusic(
+        OwnedMusic legacyMusic = createLegacyMusic(
                 data, dacData, effectiveConfig, musicDescriptor);
         smpsDriver = legacyMusic.driver();
-        SmpsSequencer seq = smpsDriver.firstMusicSequencer();
+        smpsStream = legacyMusic.stream();
+        SmpsSequencer seq = legacyMusic.sequencer();
         currentSmps = seq;
         currentMusicId = musicId;
         currentMusicDescriptor = musicDescriptor;
 
         updateSynthesizerConfig();
         synchronized (streamLock) {
-            currentStream = smpsDriver;
+            currentStream = smpsStream;
         }
         startStream();
     }
@@ -491,12 +493,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         int contTrackCount = data.getChannels() + data.getPsgChannels();
         if (isContinuous) {
             SmpsDriver targetDriver = null;
-            if (smpsDriver != null && currentStream == smpsDriver) {
+            if (smpsDriver != null && currentStream == smpsStream) {
                 targetDriver = smpsDriver;
             } else {
                 synchronized (streamLock) {
-                    if (sfxStream instanceof SmpsDriver) {
-                        targetDriver = (SmpsDriver) sfxStream;
+                    if (sfxStream instanceof OwnedSmpsAudioStream owned) {
+                        targetDriver = owned.logicalDriver();
                     }
                 }
             }
@@ -507,14 +509,14 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             }
         }
 
-        if (smpsDriver != null && currentStream == smpsDriver) {
+        if (smpsDriver != null && currentStream == smpsStream) {
             // Mix into current driver
             if (isContinuous) {
                 smpsDriver.startContinuousSfx(data.getId(), contTrackCount);
             }
             SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, effectiveConfig);
             seq.setSourceDescriptor(describeSmpsSource(null, data, true));
-            seq.setSampleRate(smpsDriver.getOutputSampleRate());
+            seq.setSampleRate(smpsStream.outputSampleRate());
             seq.setFm6DacOff(fm6DacOff);
             seq.setSfxMode(true);
             seq.setPitch(pitch);
@@ -528,25 +530,25 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             // Standalone SFX driver
             synchronized (streamLock) {
                 SmpsDriver sfxDriver;
-                if (sfxStream instanceof SmpsDriver) {
-                    sfxDriver = (SmpsDriver) sfxStream;
+                OwnedSmpsAudioStream ownedSfx;
+                if (sfxStream instanceof OwnedSmpsAudioStream existing) {
+                    ownedSfx = existing;
+                    sfxDriver = existing.logicalDriver();
                 } else {
-                    sfxDriver = newConfiguredSmpsDriver(
+                    ownedSfx = newConfiguredSmpsStream(
                             driverOrigin(
                                     SmpsDriverServiceObserver.DriverOriginKind.SFX,
                                     data.getId()));
-                    sfxDriver.setDacInterpolate(dacInterpolate);
-                    sfxStream = sfxDriver;
-                    applyUserMasks(sfxDriver, hasAnyUserSolo());
+                    sfxDriver = ownedSfx.logicalDriver();
+                    sfxStream = ownedSfx;
+                    applyUserMasks(ownedSfx, hasAnyUserSolo());
                 }
-                sfxDriver.setOutputSampleRate(getSmpsOutputRate());
-                applyPsgNoiseConfig(sfxDriver);
                 if (isContinuous) {
                     sfxDriver.startContinuousSfx(data.getId(), contTrackCount);
                 }
                 SmpsSequencer seq = new SmpsSequencer(data, dacData, sfxDriver, effectiveConfig);
                 seq.setSourceDescriptor(describeSmpsSource(null, data, true));
-                seq.setSampleRate(sfxDriver.getOutputSampleRate());
+                seq.setSampleRate(ownedSfx.outputSampleRate());
                 seq.setFm6DacOff(fm6DacOff);
                 seq.setSfxMode(true);
                 seq.setPitch(pitch);
@@ -577,6 +579,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         if (smpsDriver != null) {
             smpsDriver.stopAll();
             smpsDriver = null;
+        }
+        if (smpsStream != null) {
+            smpsStream.close();
+            smpsStream = null;
         }
         currentMusicId = -1;
         currentMusicDescriptor = null;
@@ -612,6 +618,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             currentStream = savedState.stream;
             currentSmps = savedState.smps;
             smpsDriver = savedState.driver;
+            smpsStream = (OwnedSmpsAudioStream) savedState.stream;
             currentMusicId = savedState.musicId;
             currentMusicDescriptor = savedState.descriptor;
             updateSynthesizerConfig();
@@ -646,11 +653,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         boolean internalRate = configService.getBoolean(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT);
         // Use device's native sample rate to avoid OpenAL resampling - our BlipResampler handles it
         return internalRate ? Ym2612Chip.getInternalRate() : getDeviceSampleRate();
-    }
-
-    protected void applyPsgNoiseConfig(SmpsDriver driver) {
-        boolean everyToggle = configService.getBoolean(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE);
-        driver.setPsgNoiseShiftOnEveryToggle(everyToggle);
     }
 
     /**
@@ -692,10 +694,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                     smpsDriver != null
                             ? smpsDriver.sequencersForTesting()
                             : List.of(),
-                    sfxStream instanceof SmpsDriver driver
-                            ? driver.captureSnapshot() : null,
-                    sfxStream instanceof SmpsDriver driver
-                            ? driver.sequencersForTesting()
+                    sfxStream instanceof OwnedSmpsAudioStream owned
+                            ? owned.logicalDriver().captureSnapshot() : null,
+                    sfxStream instanceof OwnedSmpsAudioStream owned
+                            ? owned.logicalDriver().sequencersForTesting()
                             : List.of(),
                     maskOf(fmUserMutes), maskOf(fmUserSolos),
                     maskOf(psgUserMutes), maskOf(psgUserSolos));
@@ -744,20 +746,37 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
     }
 
-    private SmpsDriver newConfiguredSmpsDriver(
+    private OwnedSmpsAudioStream newConfiguredSmpsStream(
             SmpsDriverServiceObserver.DriverAdmissionOrigin origin) {
-        SmpsDriver driver = new SmpsDriver(
-                getSmpsOutputRate(), diagnosticChipWriteObserver());
+        double sampleRate = getSmpsOutputRate();
+        SmpsPhysicalPolicy physicalPolicy = audioProfile != null
+                ? audioProfile.smpsPhysicalPolicy()
+                : LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
+        OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
+                audioProfile != null
+                        ? audioProfile.presentationGameId() : "base",
+                0,
+                new SmpsPhysicalDevice.Settings(
+                        sampleRate,
+                        configService.getBoolean(
+                                SonicConfiguration.DAC_INTERPOLATE),
+                        configService.getBoolean(
+                                SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE)),
+                physicalPolicy,
+                diagnosticChipWriteObserver(),
+                new com.openggf.audio.session.SmpsDriverSessionConfiguration(
+                        audioProfile != null
+                                ? audioProfile.smpsStatefulCommandPolicy()
+                                : com.openggf.audio.session
+                                        .SmpsStatefulCommandPolicy.NONE));
+        SmpsDriver driver = stream.logicalDriver();
         driver.setDiagnosticIdentity(
                 new SmpsDriverServiceObserver.DriverIdentity(
                         nextDriverInstanceOrdinal++, origin));
         installDiagnosticObservers(driver);
-        driver.setDacInterpolate(configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE));
-        driver.setOutputSampleRate(getSmpsOutputRate());
-        applyPsgNoiseConfig(driver);
         driver.observeLifecycle(
                 SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED);
-        return driver;
+        return stream;
     }
 
     private void installDiagnosticObservers(SmpsDriver driver) {
@@ -852,15 +871,16 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 admissionObserver.onDecision(decision));
     }
 
-    private SmpsCompositeVoice createLegacyMusic(
+    private OwnedMusic createLegacyMusic(
             AbstractSmpsData data,
             DacData dacData,
             SmpsSequencerConfig sequencerConfig,
             AudioSourceDescriptor descriptor) {
-        SmpsDriver driver = newConfiguredSmpsDriver(
+        OwnedSmpsAudioStream stream = newConfiguredSmpsStream(
                 driverOrigin(
                         SmpsDriverServiceObserver.DriverOriginKind.MUSIC,
                         data.getId()));
+        SmpsDriver driver = stream.logicalDriver();
         driver.setRegion("PAL".equalsIgnoreCase(
                 configService.getString(SonicConfiguration.REGION))
                 ? SmpsSequencer.Region.PAL
@@ -869,16 +889,14 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 data, dacData, driver, sequencerConfig);
         sequencer.setSourceDescriptor(
                 describeSmpsSource(descriptor, data, false));
-        sequencer.setSampleRate(driver.getOutputSampleRate());
+        sequencer.setSampleRate(stream.outputSampleRate());
         sequencer.setSpeedShoes(speedShoesEnabled);
         sequencer.setSpeedMultiplier(speedMultiplier);
         sequencer.setFm6DacOff(configService.getBoolean(
                 SonicConfiguration.FM6_DAC_OFF));
         sequencer.setFallbackVoiceData(data);
         driver.addSequencer(sequencer, false);
-        return new SmpsCompositeVoice(
-                0, 0, data.getId(), descriptor,
-                STREAM_BUFFER_SIZE, driver);
+        return new OwnedMusic(stream, driver, sequencer);
     }
 
     private SmpsSequencerConfig legacySequencerConfig(
@@ -923,10 +941,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             currentMusicDescriptor = null;
             clearMusicStack();
             // Also stop any playing SFX to prevent them persisting across level transitions
-            if (sfxStream instanceof SmpsDriver sfxDriver) {
-                sfxDriver.stopAll();
-            }
-            sfxStream = null;
+            closeStandaloneSfxStream();
         }
         // Stop and cleanup WAV-based SFX sources
         hookStopAndDeleteWavSfxSources();
@@ -1033,12 +1048,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private void updateSynthesizerConfig() {
         boolean anySolo = hasAnyUserSolo();
 
-        if (smpsDriver != null) {
-            applyUserMasks(smpsDriver, anySolo);
+        if (smpsStream != null) {
+            applyUserMasks(smpsStream, anySolo);
         }
-        if (sfxStream instanceof SmpsDriver sfxDriver
-                && sfxDriver != smpsDriver) {
-            applyUserMasks(sfxDriver, anySolo);
+        if (sfxStream instanceof OwnedSmpsAudioStream ownedSfx
+                && ownedSfx != smpsStream) {
+            applyUserMasks(ownedSfx, anySolo);
         }
     }
 
@@ -1056,7 +1071,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         return false;
     }
 
-    private void applyUserMasks(SmpsDriver driver, boolean anySolo) {
+    private void applyUserMasks(
+            OwnedSmpsAudioStream stream, boolean anySolo) {
+        int fmMask = 0;
         for (int channel = 0; channel < fmUserMutes.length; channel++) {
             boolean muted = fmUserMutes[channel];
             if (fmUserSolos[channel]) {
@@ -1064,8 +1081,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             } else if (anySolo) {
                 muted = true;
             }
-            driver.setFmMute(channel, muted);
+            if (muted) {
+                fmMask |= 1 << channel;
+            }
         }
+        int psgMask = 0;
         for (int channel = 0; channel < psgUserMutes.length; channel++) {
             boolean muted = psgUserMutes[channel];
             if (psgUserSolos[channel]) {
@@ -1073,8 +1093,11 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             } else if (anySolo) {
                 muted = true;
             }
-            driver.setPsgMute(channel, muted);
+            if (muted) {
+                psgMask |= 1 << channel;
+            }
         }
+        stream.applyChannelMasks(fmMask, psgMask);
     }
 
     private static int maskOf(boolean[] values) {
@@ -1125,6 +1148,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     }
 
     private void clearMusicStack() {
+        for (MusicState state : musicStack) {
+            state.driver.stopAll();
+            ((OwnedSmpsAudioStream) state.stream).close();
+        }
         musicStack.clear();
         pendingRestore = false;
         sfxBlocked = false;  // Unblock SFX when stack is cleared (e.g., level transition)
@@ -1137,6 +1164,8 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         for (Iterator<MusicState> iterator = musicStack.iterator(); iterator.hasNext();) {
             MusicState state = iterator.next();
             if (state.musicId == musicId) {
+                state.driver.stopAll();
+                ((OwnedSmpsAudioStream) state.stream).close();
                 iterator.remove();
                 return true;
             }
@@ -1181,6 +1210,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     @Override
     public void destroy() {
+        stopPlayback();
         hookDestroyDevice();
     }
 
@@ -1192,11 +1222,16 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
         // Stop standalone SFX stream (used when SFX played before any music started)
         synchronized (streamLock) {
-            if (sfxStream instanceof SmpsDriver sfxDriver) {
-                sfxDriver.stopAll();
-            }
-            sfxStream = null;
+            closeStandaloneSfxStream();
         }
+    }
+
+    private void closeStandaloneSfxStream() {
+        if (sfxStream instanceof OwnedSmpsAudioStream owned) {
+            owned.logicalDriver().stopAll();
+            owned.close();
+        }
+        sfxStream = null;
     }
 
     @Override

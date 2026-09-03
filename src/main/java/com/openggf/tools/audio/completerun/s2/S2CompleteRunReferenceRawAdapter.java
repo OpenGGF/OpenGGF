@@ -20,7 +20,7 @@ import java.util.Set;
 
 /** Strict streaming reader for the game-owned headless S2 raw staging contract. */
 public final class S2CompleteRunReferenceRawAdapter {
-    public static final String SCHEMA = "openggf.s2-complete-run-audio-raw.v1";
+    public static final String SCHEMA = "openggf.s2-complete-run-audio-raw.v2";
     private static final String ROM_SHA1 = "8bca5dcef1af3e00098666fd892dc1c2a76333f9";
     private static final String BK2_SHA256 =
             "e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5";
@@ -76,6 +76,7 @@ public final class S2CompleteRunReferenceRawAdapter {
 
     public record RawService(int token, int parentToken, int kind, int depth,
             int currentParentToken, int currentDepth, long beginCoordinate, long endCoordinate,
+            int beginRow, long beginNativeOrdinal,
             long beginPc, long endPc, int beginHookToken, int endHookToken, int beginSourceCpu,
             boolean cancelled, boolean complete, List<RawChip> chips,
             List<RawSnapshot> snapshots, List<RawAncestryTransition> ancestryTransitions) {
@@ -122,6 +123,7 @@ public final class S2CompleteRunReferenceRawAdapter {
             sink.header(header);
             sink.baseline(baseline);
             FrameValidator frameValidator = new FrameValidator(baseline.activeServices());
+            OriginLedger originLedger = new OriginLedger(header.firstRow(), baseline);
             int expected = header.firstRow();
             while (true) {
                 String line = requiredLine(input);
@@ -140,6 +142,7 @@ public final class S2CompleteRunReferenceRawAdapter {
                         throw invalid("full S2 raw cutoff frontier is not empty");
                     }
                     if (boundedLine(input) != null) throw invalid("raw records follow the cutoff");
+                    originLedger.validateCutoff(cutoff);
                     sink.cutoff(cutoff);
                     sink.commit();
                     committed = true;
@@ -149,6 +152,7 @@ public final class S2CompleteRunReferenceRawAdapter {
                 if (frame.row() != expected || expected >= header.exclusiveEnd()) {
                     throw invalid("S2 raw frame rows are not contiguous and in range");
                 }
+                originLedger.observe(frame);
                 sink.frame(frame);
                 expected++;
             }
@@ -292,7 +296,8 @@ public final class S2CompleteRunReferenceRawAdapter {
         for (JsonNode service : array) {
             require(service.isObject(), "S2 raw boundary service is not an object");
             exact(service, "token", "parent_token", "kind", "depth", "current_parent_token",
-                    "current_depth", "begin_coordinate", "end_coordinate", "begin_pc", "end_pc",
+                    "current_depth", "begin_coordinate", "end_coordinate", "begin_row",
+                    "begin_native_ordinal", "begin_pc", "end_pc",
                     "begin_hook_token", "end_hook_token", "begin_source_cpu", "cancelled", "complete",
                     "chips", "snapshots", "ancestry_transitions");
             int kind = serviceKind(service, "kind");
@@ -323,6 +328,10 @@ public final class S2CompleteRunReferenceRawAdapter {
             boolean complete = bool(service, "complete");
             boolean cancelled = bool(service, "cancelled");
             long beginCoordinate = nonNegativeLong(service, "begin_coordinate");
+            int beginRow = integer(service, "begin_row");
+            long beginNativeOrdinal = nonNegativeLong(service, "begin_native_ordinal");
+            require(beginRow >= 0 && beginNativeOrdinal < MAX_EVENTS,
+                    "S2 raw frontier service begin origin is outside ABI v4 bounds");
             long endCoordinate = nonNegativeLong(service, "end_coordinate");
             int endHookToken = unsignedWord(service, "end_hook_token");
             require(!resetService || (parentToken == 0 && serviceDepth == 0
@@ -339,6 +348,7 @@ public final class S2CompleteRunReferenceRawAdapter {
             RawService parsed = new RawService(nonZeroWord(service, "token"),
                     parentToken, kind, serviceDepth,
                     currentParentToken, currentDepth, beginCoordinate, endCoordinate,
+                    beginRow, beginNativeOrdinal,
                     beginPc, endPc, beginHookToken, endHookToken,
                     sourceCpu, cancelled, complete,
                     chips(service.get("chips")), snapshots(service.get("snapshots")),
@@ -600,6 +610,235 @@ public final class S2CompleteRunReferenceRawAdapter {
                             && completionSource(service.endHookToken()) == service.beginSourceCpu()
                             && completionPc(service.endHookToken()) == service.endPc(),
                     "S2 raw frontier completion is not a pinned S2 hook");
+    }
+
+    /** Exact generation ledger joining boundary sidecars to observed ABI-v4 begin events. */
+    private static final class OriginLedger {
+        private final int firstRow;
+        private final Map<Integer, Generation> active = new java.util.LinkedHashMap<>();
+        private final Map<Origin, Generation> generations = new java.util.LinkedHashMap<>();
+        private final List<Generation> pending = new ArrayList<>();
+        private int ymPort0Latch;
+        private int ymPort1Latch;
+        private long nextCoordinate;
+
+        private OriginLedger(int firstRow, RawBoundary baseline) {
+            this.firstRow = firstRow;
+            ymPort0Latch = baseline.ymPort0Latch();
+            ymPort1Latch = baseline.ymPort1Latch();
+            Origin prior = null;
+            for (RawService service : baseline.activeServices()) {
+                Origin origin = Origin.of(service);
+                require(origin.row() < firstRow,
+                        "S2 raw baseline service origin is not before the comparison boundary");
+                require(prior == null || prior.compareTo(origin) < 0,
+                        "S2 raw baseline service origins are not in begin order");
+                Generation generation = Generation.fromBoundary(service);
+                require(active.putIfAbsent(service.token(), generation) == null
+                                && generations.putIfAbsent(origin, generation) == null,
+                        "S2 raw baseline service generation is duplicated");
+                prior = origin;
+            }
+            require(baseline.pendingDescendants().isEmpty(),
+                    "S2 raw baseline pending generation is unsupported");
+        }
+
+        private void observe(RawFrame frame) {
+            for (RawEvent event : frame.events()) {
+                if (event.kind() == 1 || event.kind() == 8) {
+                    Origin origin = new Origin(frame.row(), event.ordinal());
+                    Generation parent = event.parentToken() == 0
+                            ? null : active.get(event.parentToken());
+                    Generation generation = new Generation(event.serviceToken(), event.parentToken(),
+                            event.serviceKind(), event.depth(), origin,
+                            Math.addExact(nextCoordinate, event.ordinal()),
+                            Math.toIntExact(event.pc()), event.kind() == 8 ? 0 : event.subject(),
+                            event.sourceCpu(), parent == null ? event.serviceToken() : parent.rootToken,
+                            false);
+                    require(active.putIfAbsent(event.serviceToken(), generation) == null,
+                            "S2 raw service token was reused while its prior generation remained active");
+                    require(generations.putIfAbsent(origin, generation) == null,
+                            "S2 raw service begin origin is duplicated");
+                    if (event.kind() == 8) ymPort0Latch = ymPort1Latch = 0;
+                } else if (event.kind() == 3 || event.kind() == 4) {
+                    Generation generation = requireActive(event.serviceToken());
+                    int port = event.kind() == 4 ? 0 : event.subject() >>> 1;
+                    int register = event.kind() == 4 ? 0
+                            : port == 0 ? ymPort0Latch : ymPort1Latch;
+                    generation.chips.add(new RawChip(
+                            Math.addExact(nextCoordinate, event.ordinal()), event.ordinal(), event.kind(),
+                            event.subject(), event.value(), event.pc(), event.sourceCpu(),
+                            event.kind() == 4 || (event.subject() & 1) != 0, port, register));
+                    if (event.kind() == 3 && (event.subject() & 1) == 0) {
+                        if (port == 0) ymPort0Latch = event.value();
+                        else ymPort1Latch = event.value();
+                    }
+                } else if (event.kind() == 5) {
+                    requireActive(event.serviceToken()).beginSnapshot(event);
+                } else if (event.kind() == 6) {
+                    requireActive(event.serviceToken()).appendSnapshot(event);
+                } else if (event.kind() == 7) {
+                    requireActive(event.serviceToken()).endSnapshot(event);
+                } else if (event.kind() == 2 || event.kind() == 9) {
+                    Generation generation = active.remove(event.serviceToken());
+                    require(generation != null,
+                            "S2 raw service completion has no active generation");
+                    generation.complete(Math.addExact(nextCoordinate, event.ordinal()), event);
+                    if (active.containsKey(generation.rootToken)) pending.add(generation);
+                    else pending.removeIf(value -> value.rootToken == generation.rootToken);
+                }
+            }
+            nextCoordinate = Math.addExact(nextCoordinate, frame.events().size());
+        }
+
+        private Generation requireActive(int token) {
+            Generation generation = active.get(token);
+            require(generation != null, "S2 raw evidence has no active service generation");
+            return generation;
+        }
+
+        private void validateCutoff(RawBoundary cutoff) {
+            require(cutoff.activeServices().size() == active.size(),
+                    "S2 raw cutoff active generation count changed");
+            int index = 0;
+            for (Generation generation : active.values()) {
+                require(generation.matches(cutoff.activeServices().get(index++), false),
+                        "S2 raw cutoff does not continue the same active generation");
+            }
+            List<Generation> expectedPending = pending.stream()
+                    .sorted(java.util.Comparator.comparing(value -> value.origin))
+                    .toList();
+            require(cutoff.pendingDescendants().size() == expectedPending.size(),
+                    "S2 raw cutoff pending generation count changed");
+            for (int pendingIndex = 0; pendingIndex < expectedPending.size(); pendingIndex++) {
+                require(expectedPending.get(pendingIndex).matches(
+                                cutoff.pendingDescendants().get(pendingIndex), true),
+                        "S2 raw cutoff pending service order or identity changed");
+            }
+        }
+    }
+
+    private record Origin(int row, long ordinal) implements Comparable<Origin> {
+        private static Origin of(RawService service) {
+            return new Origin(service.beginRow(), service.beginNativeOrdinal());
+        }
+        @Override public int compareTo(Origin other) {
+            int rowOrder = Integer.compare(row, other.row);
+            return rowOrder != 0 ? rowOrder : Long.compare(ordinal, other.ordinal);
+        }
+    }
+
+    private static final class Generation {
+        private final int token, parentToken, kind, depth, beginPc, beginHookToken,
+                beginSourceCpu, rootToken;
+        private final Origin origin;
+        private final long coordinate;
+        private final List<RawChip> chips = new ArrayList<>();
+        private final List<RawSnapshot> snapshots = new ArrayList<>();
+        private SnapshotLedger snapshot;
+        private long endCoordinate;
+        private long endPc;
+        private int endHookToken;
+        private boolean cancelled;
+        private boolean complete;
+
+        private Generation(int token, int parentToken, int kind, int depth,
+                Origin origin, long coordinate, int beginPc, int beginHookToken,
+                int beginSourceCpu, int rootToken, boolean complete) {
+            this.token = token;
+            this.parentToken = parentToken;
+            this.kind = kind;
+            this.depth = depth;
+            this.origin = origin;
+            this.coordinate = coordinate;
+            this.beginPc = beginPc;
+            this.beginHookToken = beginHookToken;
+            this.beginSourceCpu = beginSourceCpu;
+            this.rootToken = rootToken;
+            this.complete = complete;
+        }
+
+        private static Generation fromBoundary(RawService service) {
+            Generation generation = new Generation(service.token(), service.parentToken(), service.kind(),
+                    service.depth(), Origin.of(service), service.beginCoordinate(),
+                    Math.toIntExact(service.beginPc()), service.beginHookToken(),
+                    service.beginSourceCpu(), service.token(), service.complete());
+            generation.endCoordinate = service.endCoordinate();
+            generation.endPc = service.endPc();
+            generation.endHookToken = service.endHookToken();
+            generation.cancelled = service.cancelled();
+            generation.chips.addAll(service.chips());
+            generation.snapshots.addAll(service.snapshots());
+            return generation;
+        }
+
+        private void beginSnapshot(RawEvent event) {
+            snapshot = new SnapshotLedger(event.subject(), event.sourceCpu(), event.pc());
+        }
+
+        private void appendSnapshot(RawEvent event) {
+            for (int index = 0; index < event.payloadLength(); index++) {
+                snapshot.bytes.write(event.payload().shiftRight(index * 8).byteValue());
+            }
+        }
+
+        private void endSnapshot(RawEvent event) {
+            snapshots.add(new RawSnapshot(snapshot.rangeId, snapshot.sourceCpu,
+                    snapshot.pc, snapshot.bytes.toByteArray()));
+            snapshot = null;
+        }
+
+        private void complete(long coordinate, RawEvent event) {
+            endCoordinate = coordinate;
+            endPc = event.pc();
+            endHookToken = event.kind() == 9 || event.flags() == 2 ? 0 : event.subject();
+            cancelled = event.flags() == 2;
+            complete = true;
+        }
+
+        private boolean matches(RawService service, boolean requireComplete) {
+            return token == service.token() && parentToken == service.parentToken()
+                    && kind == service.kind() && depth == service.depth()
+                    && origin.equals(Origin.of(service)) && coordinate == service.beginCoordinate()
+                    && beginPc == service.beginPc() && beginHookToken == service.beginHookToken()
+                    && beginSourceCpu == service.beginSourceCpu()
+                    && parentToken == service.currentParentToken()
+                    && depth == service.currentDepth()
+                    && endCoordinate == service.endCoordinate() && endPc == service.endPc()
+                    && endHookToken == service.endHookToken()
+                    && cancelled == service.cancelled()
+                    && sameChips(chips, service.chips())
+                    && sameSnapshots(snapshots, service.snapshots())
+                    && service.ancestryTransitions().isEmpty()
+                    && (!requireComplete || complete && service.complete());
+        }
+
+        private static boolean sameChips(List<RawChip> expected, List<RawChip> actual) {
+            return expected.equals(actual);
+        }
+
+        private static boolean sameSnapshots(List<RawSnapshot> expected, List<RawSnapshot> actual) {
+            if (expected.size() != actual.size()) return false;
+            for (int index = 0; index < expected.size(); index++) {
+                RawSnapshot left = expected.get(index);
+                RawSnapshot right = actual.get(index);
+                if (left.rangeId() != right.rangeId() || left.sourceCpu() != right.sourceCpu()
+                        || left.pc() != right.pc()
+                        || !java.util.Arrays.equals(left.bytes(), right.bytes())) return false;
+            }
+            return true;
+        }
+    }
+
+    private static final class SnapshotLedger {
+        private final int rangeId, sourceCpu;
+        private final long pc;
+        private final java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        private SnapshotLedger(int rangeId, int sourceCpu, long pc) {
+            this.rangeId = rangeId;
+            this.sourceCpu = sourceCpu;
+            this.pc = pc;
+        }
     }
 
     private static int beginKind(int hook) {

@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -56,7 +57,11 @@ public final class HeadlessStateTeardownExtension
         if (testClass == null || testClass.getEnclosingClass() != null) {
             return;
         }
-        TestEnvironment.resetAll();
+        try {
+            TestEnvironment.resetAll();
+        } finally {
+            SmpsDriverTestAccess.closeAll();
+        }
     }
 
     /**

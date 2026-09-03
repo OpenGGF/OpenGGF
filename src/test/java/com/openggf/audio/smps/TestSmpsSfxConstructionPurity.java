@@ -2,43 +2,37 @@ package com.openggf.audio.smps;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverTestAccess;
 import com.openggf.audio.synth.ChipWriteObserver;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class TestSmpsSfxConstructionPurity {
-    private static final ObjectMapper JSON = new ObjectMapper();
-
     @Test
     void constructingFmSfxDoesNotMutateSharedSynthBeforeAdmission() {
-        SmpsDriver driver = new SmpsDriver();
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
-        var before = JSON.valueToTree(driver.captureSynthSnapshot());
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000, observer);
 
         new SmpsSequencer(new SingleFmSfxData(), AudioTestFixtures.EMPTY_DAC,
                 driver, () -> {}, new SmpsSequencerConfig.Builder().build());
 
         assertEquals(List.of(), observer.events,
                 "SFX construction must not write DAC enable, voice, or pan registers");
-        assertEquals(before, JSON.valueToTree(driver.captureSynthSnapshot()),
-                "SFX construction must leave live chip state unchanged");
     }
 
     @Test
-    void musicConstructionRetainsItsExistingDacInitialization() {
-        SmpsDriver driver = new SmpsDriver();
+    void musicConstructionDoesNotSelectDacOrWriteYm() {
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000, observer);
 
         new SmpsSequencer(new EmptyMusicData(), AudioTestFixtures.EMPTY_DAC,
                 driver, () -> {}, new SmpsSequencerConfig.Builder().build());
 
-        assertEquals(List.of("YM:0:2B:80"), observer.events);
+        assertEquals(List.of(), observer.events,
+                "music construction must only prepare logical state");
     }
 
     private static final class SingleFmSfxData extends AbstractSmpsData
