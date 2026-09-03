@@ -351,7 +351,13 @@ class TestS3kCompleteRunReferenceProducer {
     @Test
     void fixedProducerRejectsEveryMismatchedTypedRequestBeforePublication() throws Exception {
         S3kCompleteRunReferenceProducer producer = new S3kCompleteRunReferenceProducer();
-        CompleteRunAudioProducer.Request valid = validRequest(temporary.resolve("output").toAbsolutePath());
+        // tools/tracechaser is an optional submodule that ordinary builds do
+        // not initialise, so an uninitialised checkout made validate() reject
+        // this request on the missing launcher long before the ordering this
+        // test is about.
+        CompleteRunAudioProducer.Request valid = withReferenceHome(
+                validRequest(temporary.resolve("output").toAbsolutePath()),
+                fakeTraceChaser("exit 23\n"));
 
         assertThrows(IllegalArgumentException.class, () -> producer.capture(new CompleteRunAudioProducer.Request(
                 CompleteRunAudioTrace.ProducerKind.OPENGGF, valid.profileId(), valid.rom(), valid.bk2(),
@@ -376,6 +382,28 @@ class TestS3kCompleteRunReferenceProducer {
         Files.delete(valid.output());
         assertThrows(IllegalStateException.class, () -> producer.capture(valid));
         assertFalse(Files.exists(valid.output()));
+    }
+
+    private static CompleteRunAudioProducer.Request withReferenceHome(
+            CompleteRunAudioProducer.Request request, Path referenceHome) {
+        return new CompleteRunAudioProducer.Request(request.producerKind(),
+                request.profileId(), request.rom(), request.bk2(),
+                request.runManifest(), referenceHome, request.output());
+    }
+
+    /** Minimal TraceChaser tree carrying only what validate() requires. */
+    private Path fakeTraceChaser(String body) throws Exception {
+        Path root = Files.createTempDirectory(temporary, "tracechaser-")
+                .toAbsolutePath();
+        Path tool = Files.createDirectories(root.resolve("bizhawk-headless"));
+        Path fixtures = Files.createDirectories(tool.resolve("fixtures"));
+        Path launcher = Files.writeString(
+                tool.resolve("run-complete-audio.sh"), "#!/bin/sh\n" + body);
+        launcher.toFile().setExecutable(true, true);
+        Files.writeString(
+                fixtures.resolve("gpgx-audio-service-manifests-v1.json"),
+                "manifest");
+        return root;
     }
 
     private CompleteRunAudioProducer.Request validRequest(Path output) {

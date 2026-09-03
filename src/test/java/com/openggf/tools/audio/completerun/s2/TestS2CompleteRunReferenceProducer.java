@@ -107,7 +107,14 @@ class TestS2CompleteRunReferenceProducer {
     @Test
     void fixedProducerRejectsEveryMismatchedTypedRequestBeforePublication() throws Exception {
         S2CompleteRunReferenceProducer producer = new S2CompleteRunReferenceProducer();
-        CompleteRunAudioProducer.Request valid = validRequest(temporary.resolve("output").toAbsolutePath());
+        // tools/tracechaser is an optional submodule that ordinary builds do
+        // not initialise, so an uninitialised checkout made validate() reject
+        // this request on the missing launcher long before the ordering this
+        // test is about. Use the same synthetic TraceChaser tree the sibling
+        // pipeline tests use.
+        CompleteRunAudioProducer.Request valid = withReferenceHome(
+                validRequest(temporary.resolve("output").toAbsolutePath()),
+                fakeTraceChaser("exit 23\n"));
 
         assertThrows(IllegalArgumentException.class, () -> producer.capture(new CompleteRunAudioProducer.Request(
                 CompleteRunAudioTrace.ProducerKind.OPENGGF, valid.profileId(), valid.rom(), valid.bk2(),
