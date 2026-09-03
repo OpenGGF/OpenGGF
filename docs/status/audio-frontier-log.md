@@ -27,6 +27,90 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S3K driver oracle: tick 0 → tick 50; the DAC loop's entry write leaves the driver init
+
+- **Context:** `.worktrees/audio-s3k-tick0`, branch `bugfix/ai-s3k-oracle-tick0`,
+  from `develop` at `2415a3ad0`. Engine fix, no fixture change.
+- **Fixture:** `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz`.
+- **Command:**
+
+  ```
+  java -cp "target/classes:$(cat target/s3k-oracle.classpath)" \
+    com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare \
+    --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz \
+    --rom <absolute locked-on S3K ROM>
+  ```
+
+- **Result before:** `EVENT_EXTRA` at tick 0, field `decoded_write`, event 84,
+  reference `<missing>`, engine `ym2612[port 0, register 0x2b] = 0`.
+- **Result after:** `EVENT_MISSING` at tick 50, field `decoded_write`, event 0,
+  reference `ym2612[port 0, register 0x2b] = 128`, engine `<missing>`.
+
+- **The routine.** `zInitAudioDriver` calls `zStopAllSound`, whose last two
+  writes are 2Bh then 27h with interrupts disabled (`Sound/Z80 Sound
+  Driver.asm`:2506-2520), stores its driver variables, runs `ei`, and then
+  `jp zPlayDigitalAudio` (:550-551) — it never returns. `zPlayDigitalAudio`
+  opens with `di / ld a,2Bh / ld c,0 / call zWriteFMI` (:4256-4260). That 2Bh
+  therefore belongs to the window the first `zVInt` return closes, not to the
+  init. `Sonic3kSmpsPhysicalPolicy.boot()` had appended it as an 85th boot
+  write, with a comment saying so.
+
+- **The change.** `SmpsPhysicalPolicy` gains an `enterDacIdleLoop()` program,
+  empty by default. S3K's policy returns the single 2Bh=0 write and its
+  `boot()` is now exactly `stopAll()`'s 84 writes. `SmpsDriverSession` applies
+  the entry program immediately after `boot()` at both install and hard-reset
+  sites, so the physical device sees the same ordered stream it saw before. The
+  S3K oracle host applies it after recording the boot tick, so the write opens
+  tick 1 — matching the reference, whose tick 1 also opens with 2Bh=0. S1 and
+  S2 delegate `boot()` to `LegacyCompatibilitySmpsPhysicalPolicy` and do not
+  override the new method, so their write streams are byte-unchanged;
+  `TestSmpsPhysicalPolicy` now pins that emptiness.
+
+- **What the new frontier is, and why it is not a driver bug.** Tick 49 carries
+  request `FFh`, the SEGA chant. `zPlaySEGAPCM` (:4372-4424) runs with `di` for
+  its whole duration: it writes 2Bh=80h to enable the DAC, then one 2Ah write
+  per byte of `SEGA_PCM` until the sample is exhausted or `cmd_StopSEGA`
+  arrives. Because interrupts are masked throughout, the entire transport lands
+  in a single service window — reference tick 50 carries 24,113 writes, against
+  `SEGA_SOUND_SIZE = 0x5E2F` (24,111) in `Sonic3kSmpsConstants`. The engine
+  produces none of them: it renders the chant as a presentation-layer PCM voice
+  (`AudioPresentationSourceFactory.segaPcm` /
+  `SampleBackedVoice.rawSegaPcm`), entirely outside the SMPS logical driver.
+  The oracle host records this as an unsupported request rather than
+  fabricating a stream. Closing it is an engine change — moving the chant into
+  the driver as a Z80-faithful 2Ah transport — that touches presentation,
+  rewind and all three games' SEGA screens, so it is subsystem work, not a
+  first-divergence fix. Emitting the writes in the capture host alone would
+  make the oracle agree with itself while the driver still does nothing.
+
+- **What the wall is worth, measured.** A throwaway, uncommitted host patch
+  emitted the transport exactly as the ROM writes it — 2Bh=80h, then one 2Ah
+  write per byte of `SEGA_PCM` read through `Sonic3kAudioProfile.loadSegaPcm`,
+  then the 2Bh=0 that `zPlayDigitalAudio` writes when `.done` jumps back into
+  it (:4422, :4256-4260). That reproduces the reference row's 24,113 writes
+  exactly and moves the frontier from tick 50 to **tick 128**, the PCM-exit
+  service. So the transport needs no fitted quantity: its length is
+  `SEGA_PCM.size` and its brackets are two entry blocks already cited above.
+  What it needs is an owner. The patch was reverted rather than landed because
+  emitting the stream from the capture host would make the oracle agree with
+  itself while the engine's driver still produces nothing; the work belongs in
+  the driver, alongside the presentation voice that currently plays the chant.
+
+- **Tick 138 not reached.** The v1 tick-138 sampling artefact could not be
+  re-checked past the tick-50 wall in this lane. The probe above stops at tick
+  128, still short of 138, so nothing measured here says whether the v1
+  artefact is gone.
+
+- **Regression gates.** S2 driver oracle `MATCH (698 ticks)`, unchanged. The
+  `com.openggf.tools.audio.parity.**` and `com.openggf.audio.session.**` suites
+  are green. Three tests that pinned the old placement were updated, not
+  weakened: the v2 contract's boundary assertion now pins the corrected
+  placement on both sides (it previously documented itself as "the assertion to
+  move" when the engine stopped owning the write), and two v1 contract
+  assertions now record the retired stream's frame-smeared boot row as the
+  artefact it is.
+
+
 ## 2026-09-03 — S1 gameplay oracle: tick 933 → 1759, a normal SFX silences a special one without stopping it
 
 - **Worktree/branch:** `.worktrees/audio-s1-special-frontier`,

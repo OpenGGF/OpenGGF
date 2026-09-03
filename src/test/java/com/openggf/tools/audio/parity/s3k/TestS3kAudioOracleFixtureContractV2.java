@@ -159,18 +159,15 @@ class TestS3kAudioOracleFixtureContractV2 {
      * The live oracle comparison, so v2 is the stream CI actually compares
      * against, and the current frontier is pinned rather than only logged.
      *
-     * <p>The engine emits YM 2Bh inside its own driver init. In the ROM that
-     * write is not the init's: {@code zStopAllSound} writes 2Bh then 27h with
-     * interrupts disabled (skdisasm Sound/Z80 Sound Driver.asm:2506-2520), so
-     * 27h is the last write the init makes, and the 2Bh that follows is the
-     * first instruction block of {@code zPlayDigitalAudio} (:4258-4262), which
-     * the init jumps into at :551 and never returns from. v1 could not see this
-     * because its frame-granular projection swept the whole boot frame and took
-     * that write into the boot service. Measurement only: when the engine's
-     * driver init stops owning that write, this assertion is the one to move.
+     * <p>{@code zStopAllSound} writes 2Bh then 27h with interrupts disabled
+     * (skdisasm Sound/Z80 Sound Driver.asm:2506-2520), so 27h is the last write
+     * the init makes. The 2Bh that follows is the first instruction block of
+     * {@code zPlayDigitalAudio} (:4256-4260), which the init jumps into at :551
+     * and never returns from, so it opens the window the first {@code zVInt}
+     * return closes. This pins that placement on both sides of the boundary.
      */
     @Test
-    void theEngineEmitsTheMainLoopDacDisableInsideItsOwnDriverInit() {
+    void theDacLoopEntryWriteOpensTheServiceAfterTheDriverInit() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
         List<S3kAudioTick> services = readAll().subList(0, 8);
@@ -180,13 +177,18 @@ class TestS3kAudioOracleFixtureContractV2 {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(services, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_EXTRA, report.kind());
-        assertEquals(0, report.tick());
-        assertEquals("decoded_write", report.field());
         assertEquals(84, services.getFirst().writes().size(),
                 "the reference boot row ends where the driver init ends");
-        assertEquals(0x2b, engine.ticks().getFirst().writes().get(84).register(),
-                "the engine's extra boot write is the main loop's DAC disable");
+        assertEquals(84, engine.ticks().getFirst().writes().size(),
+                "the engine's init must end at zStopAllSound's 27h");
+        assertEquals(0x27, engine.ticks().getFirst().writes().getLast().register());
+        assertEquals(0x2b, engine.ticks().get(1).writes().getFirst().register(),
+                "the DAC loop's entry write opens the next service");
+        assertEquals(0, engine.ticks().get(1).writes().getFirst().value());
+        assertEquals(services.get(1).writes().getFirst(),
+                engine.ticks().get(1).writes().getFirst());
+        assertNotEquals(S3kAudioParityComparator.Report.Kind.EVENT_EXTRA,
+                report.kind(), "the boot service must no longer carry an extra write");
     }
 
     /**

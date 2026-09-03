@@ -109,16 +109,20 @@ class TestS3kAudioOracleFixtureContract {
         assertEquals(services.get(138).writes().subList(0, 84),
                 engine.ticks().get(138).writes().subList(0, 84));
 
-        // The recorder cannot sample the FE write while zPlaySEGAPCM has
-        // interrupts disabled (D:4372-4424), so the projected input at the
-        // resumed service is [0,0,0]. Keep this producer-input omission as an
-        // explicit frontier instead of deriving an engine command from the
-        // reference write stream.
-        assertEquals(S3kAudioParityComparator.Report.Kind.REFERENCE_LIMITATION,
+        // v1's frame-granular projection swept the whole boot frame, so its
+        // boot row carries zPlayDigitalAudio's entry 2Bh (D:4256-4260) as an
+        // 85th write. zInitAudioDriver's own last write is zStopAllSound's 27h
+        // (D:2513-2519,550-551), so the engine now closes the init service
+        // before that write and v1's boot row is one write long. This is the
+        // retired stream's sampling artefact seen from the engine side, not a
+        // driver defect; v2 is the live comparison.
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_MISSING,
                 report.kind());
-        assertEquals(128, report.tick());
-        assertEquals("producer_input", report.field());
-        assertTrue(report.reference().contains("interrupt services suspended"));
+        assertEquals(0, report.tick());
+        assertEquals("decoded_write", report.field());
+        assertEquals(85, services.getFirst().writes().size(),
+                "the retired v1 boot row absorbed the DAC loop's entry write");
+        assertEquals(0x2b, services.getFirst().writes().get(84).register());
     }
 
     @Test
@@ -137,9 +141,13 @@ class TestS3kAudioOracleFixtureContract {
                 S3kOpenGgfAudioCapture.capture(
                         rom.toPath(), List.of(services.getFirst(), e3), null);
 
-        assertEquals(List.of(0x9F, 0xBF, 0xDF, 0xFF),
+        // Tick 1 opens with zPlayDigitalAudio's entry DAC disable, which the
+        // init reaches by jp and therefore does not own (D:550-551,4256-4260),
+        // followed by zPSGSilenceAll's four writes.
+        assertEquals(List.of(0x00, 0x9F, 0xBF, 0xDF, 0xFF),
                 engine.ticks().get(1).writes().stream()
                         .map(write -> write.value()).toList());
+        assertEquals(0x2b, engine.ticks().get(1).writes().getFirst().register());
         assertTrue(engine.unsupportedRequests().isEmpty());
     }
 

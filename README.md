@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K driver init ends where the ROM's does:** the DAC idle loop's entry
+  write now opens the first interrupt window instead of the init service,
+  moving the S3K oracle from tick 0 to tick 50, the SEGA chant, whose PCM
+  transport the driver does not yet own.
 - **Sonic 1 special sound effects follow the driver:** the Green Hill waterfall
   now waits for a busy channel, restores its own voice on release, is walked
   after the normal effect slots, and survives a normal effect taking its channel,
