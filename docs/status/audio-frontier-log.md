@@ -27,6 +27,40 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K oracle: cfSetVoice releases the envelope first; tick 138 event 87 -> 151
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick138`,
+  `bugfix/ai-s3k-oracle-tick138`, on top of the entry below.
+- **Command:** unchanged from the entry below, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 138, event 87, reference
+  `ym2612 port 0 register 80h = 0FFh` against engine `port 0 register 0B4h = 0C0h`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 138, event 151, reference
+  `ym2612 port 0 register 28h = 0F1h` against engine `port 0 register 0B5h = 0C0h`.
+  The whole of the first FM track now agrees, write for write, through its
+  voice upload and its key-off, as does the second track's voice upload.
+- **What the ROM does.** S3K's `cfSetVoice` calls `zSetMaxRelRate` for any
+  non-PSG track before it even reads the voice index, writing 0FFh to
+  80h + operator for all four operators so D1L is minimum and RR maximum
+  (Sound/Z80 Sound Driver.asm:3444-3447, 2675-2698). `zWriteFMIorII` drops those
+  writes when PlaybackControl bit 2 marks the track as SFX-overridden
+  (:2701-2709). S1 `cfSetVoice` (s1.sounddriver.asm:2313-2360) and S2
+  `cfSetVoice` (s2.sounddriver.asm:3271-3293) make no such call, so the release
+  lives in the S3K coordination-flag handler rather than in shared code.
+- **No constant was introduced.** The register base, the four-operator stride,
+  the channel offset and the suppression condition all come from the listing.
+- **Next, and it is already diagnosed.** The engine writes the track's
+  AMS/FMS/pan between the note frequency and its key-on, but S3K's note path is
+  `zFMSendFreq` then `zFMNoteOn` and writes only 0A4h and 0A0h (:780-782,
+  :815-871). The pan reaches the chip from the voice upload instead.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`; the S1 gameplay v3 and run-2 oracles and the S2 driver
+  oracle `MATCH (698 ticks)` all pass inside a single run of the
+  `com.openggf.tools.audio.parity` and `com.openggf.audio` packages,
+  `TestSmpsFadeAudioThroughput` and the four S3K keep-green classes: 2,097
+  tests, 0 failures, 0 skips.
+
+
 ## 2026-09-04 - S3K oracle: the post-load first update grows its DAC prefix; tick 138 event 85 -> 87
 
 - **Worktree/branch:** `.worktrees/audio-s3k-tick138`,

@@ -209,6 +209,25 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xEF: // INSTRUMENT (INS_C_FMP) - load voice/instrument
                 if (t.pos < program.dataLength()) {
+                    // cfSetVoice releases the channel's envelope before it even
+                    // reads the voice index: for any non-PSG track it calls
+                    // zSetMaxRelRate, which writes 0FFh to 80h + operator for
+                    // all four operators, setting D1L to minimum and RR to
+                    // maximum (skdisasm Sound/Z80 Sound Driver.asm:3444-3447,
+                    // 2675-2698). zWriteFMIorII drops the write when
+                    // PlaybackControl bit 2 says SFX is overriding the track
+                    // (:2701-2709). Neither S1 cfSetVoice
+                    // (s1.sounddriver.asm:2313-2360) nor S2 cfSetVoice
+                    // (s2.sounddriver.asm:3271-3293) does this, which is why it
+                    // lives in the S3K handler.
+                    if (t.type != SmpsSequencer.TrackType.PSG && !t.overridden) {
+                        int port = (t.channelId < 3) ? 0 : 1;
+                        int channelOffset = t.channelId % 3;
+                        for (int operator = 0; operator < 4; operator++) {
+                            ctx.writeFm(port,
+                                    0x80 + (operator * 4) + channelOffset, 0xFF);
+                        }
+                    }
                     int voiceId = program.dataByteAt(t.pos++) & 0xFF;
                     ctx.loadVoice(t, voiceId);
                 }
