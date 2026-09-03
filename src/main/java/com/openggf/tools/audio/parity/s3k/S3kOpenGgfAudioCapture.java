@@ -3,6 +3,8 @@ package com.openggf.tools.audio.parity.s3k;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.session.OwnedSmpsAudioStream;
 import com.openggf.audio.session.SmpsChipWrite;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.session.SmpsMusicActivation;
 import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.session.SmpsSegaPcmTransport;
 import com.openggf.audio.session.SmpsWriteProgram;
@@ -202,6 +204,18 @@ public final class S3kOpenGgfAudioCapture {
             }
             // zPlayMusic -> zStopAllSound before zBGMLoad (D:1786-1795).
             stream.stopAll();
+            // zBGMLoad's own first hardware write, 0B6h=0C0h through port 1
+            // (D:1811-1816), before either track loop runs. Production reaches
+            // the same program through SmpsDriverSession's activation hook.
+            // The ROM's order: zBGMLoad's own 0B6h write comes after the bank
+            // switch and before either track loop, so it precedes every write
+            // the track set makes (D:1811-1856). iy+2 is the FM+DAC track
+            // count the loop is driven by, which is what the activation
+            // carries.
+            applyProgram(driver, Sonic3kSmpsPhysicalPolicy.INSTANCE
+                    .activateMusic(new SmpsMusicActivation(
+                            SmpsSourceDescriptor.baseMusic(song),
+                            song.getFmPointers().length)));
             SmpsSequencer sequencer = new SmpsSequencer(song, dacData, driver, () -> { },
                     Sonic3kSmpsSequencerConfig.CONFIG);
             sequencer.setSampleRate(SAMPLE_RATE);

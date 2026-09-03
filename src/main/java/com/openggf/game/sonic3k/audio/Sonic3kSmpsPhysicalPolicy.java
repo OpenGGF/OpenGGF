@@ -9,6 +9,7 @@ import com.openggf.audio.session.SmpsWriteProgram;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /** Shipped Sonic 3 &amp; Knuckles Z80 physical-device policy. */
@@ -22,6 +23,7 @@ public final class Sonic3kSmpsPhysicalPolicy
     private static final SmpsWriteProgram STOP_ALL = stopAllProgram();
     private static final SmpsWriteProgram BOOT = STOP_ALL;
     private static final SmpsWriteProgram DAC_IDLE_ENTRY = dacIdleEntryProgram();
+    private static final SmpsWriteProgram BGM_LOAD = bgmLoadProgram();
     private static final SmpsSegaPcmTransport SEGA_PCM = segaPcmTransportProgram();
 
     private Sonic3kSmpsPhysicalPolicy() {
@@ -61,8 +63,24 @@ public final class Sonic3kSmpsPhysicalPolicy
 
     @Override
     public SmpsWriteProgram activateMusic(SmpsMusicActivation activation) {
-        return LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE
-                .activateMusic(activation);
+        Objects.requireNonNull(activation, "activation");
+        return BGM_LOAD;
+    }
+
+    private static SmpsWriteProgram bgmLoadProgram() {
+        // Sound/Z80 Sound Driver.asm:zBGMLoad. Between the song bank switch
+        // and the track loops it writes exactly one hardware register
+        // (:1811-1816): 0B6h through the port 1 address/data pair, value 0C0h,
+        // the default panning with only stereo L and R enabled. 0B6h on port 1
+        // is FM6's AMS/FMS/panning, the channel FM6/DAC shares, and the load
+        // resets it unconditionally for every song.
+        //
+        // The legacy activation this replaces wrote 2Bh=80h instead. zBGMLoad
+        // never touches 2Bh; DAC enable belongs to zPlayDigitalAudio and the
+        // DAC track update, which the engine already drives (SmpsDriver's own
+        // 2Bh=80h on a DAC note), so nothing loses the DAC by this change.
+        return new SmpsWriteProgram(
+                List.of(new SmpsChipWrite.Ym2612(1, 0xB6, 0xC0)));
     }
 
     private static SmpsSegaPcmTransport segaPcmTransportProgram() {

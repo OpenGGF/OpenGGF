@@ -15,7 +15,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
@@ -143,8 +145,14 @@ public final class S3kAudioReferenceReader {
         if (probe.perService()) {
             // The v2 producer already emits one row per completed zVInt
             // service, sampled at the service's own return, so there is no
-            // frame stream left to project and nothing to reattribute.
-            return read(path, serviceConsumer);
+            // frame stream left to project and nothing to reattribute. Its
+            // mailbox is sampled at frame entry, though, so a request the 68k
+            // stores after that sample and the driver consumes before the next
+            // one is invisible; the sidecar supplies those, and only those.
+            List<S3kAudioTick> services = new ArrayList<>();
+            Metadata metadata = read(path, services::add);
+            resolveSidecarRequests(services, requests).forEach(serviceConsumer);
+            return metadata;
         }
         Metadata metadata = read(path, frames::add);
         int completion = -1;
@@ -219,6 +227,124 @@ public final class S3kAudioReferenceReader {
             }
         }
         return metadata;
+    }
+
+    /**
+     * Attributes each source-observed mailbox request to the service that
+     * consumed it, for a per-service (v2) stream.
+     *
+     * <p>The ROM decides this, not the fixture. {@code zVInt} does not read the
+     * 68k mailbox at the interrupt: it calls {@code zUpdateEverything}, which
+     * runs {@code zPauseUnpause} and {@code zUpdateSFXTracks}, then
+     * {@code zUpdateMusic}'s {@code TempoWait} and both fade handlers, and only
+     * then loads {@code zMusicNumber} and hands it to {@code zFillSoundQueue}
+     * (skdisasm Sound/Z80 Sound Driver.asm:653-701, :2628-2643). So a 68k store
+     * is consumed by the first service whose {@code zUpdateMusic} read follows
+     * it, which can be the service already running in the row of the store.
+     *
+     * <p>The stream's own frame-entry mailbox samples say which service that
+     * was, with no measured quantity and no frame arithmetic beyond the row
+     * identity the sidecar carries:
+     *
+     * <ul>
+     *   <li>Let {@code N} be the first service completing after row {@code R}.
+     *   <li>If {@code N} completes in row {@code R + 1} and its entry sample
+     *       carries a request, the store survived row {@code R}, so
+     *       {@code N} consumed it and the reference already supplies it. The
+     *       sidecar adds nothing and is cross-checked against it.
+     *   <li>If {@code N} completes in row {@code R + 1} and its entry sample is
+     *       clear, the store did not survive row {@code R}: the service that
+     *       was running in row {@code R} read it. That is the last service
+     *       completing at or before row {@code R}.
+     *   <li>Otherwise row {@code R + 1} completes no service at all, so no
+     *       entry sample can settle it. {@code N} is the service spanning row
+     *       {@code R + 1}; its read follows the store, and it consumed it.
+     * </ul>
+     *
+     * <p>The supplied value is the mailbox byte and nothing else. It carries no
+     * compared value, and the movie row it came from never reaches the engine
+     * host or the comparator.
+     */
+    static List<S3kAudioTick> resolveSidecarRequests(
+            List<S3kAudioTick> services, S3kRequestObservationSidecar requests) {
+        if (requests.size() == 0 || services.isEmpty()) {
+            return services;
+        }
+        int[] frames = new int[services.size()];
+        for (int index = 0; index < services.size(); index++) {
+            frames[index] = services.get(index).frame();
+        }
+        Map<Integer, Integer> supplied = new LinkedHashMap<>();
+        for (Map.Entry<Integer, Integer> observation : requests.observations().entrySet()) {
+            int row = observation.getKey();
+            int request = observation.getValue();
+            int next = firstServiceAfter(frames, row);
+            if (next < 0) {
+                // The window ends before any service could consume it.
+                continue;
+            }
+            int consumer;
+            if (frames[next] == row + 1) {
+                if (services.get(next).mailbox().stream().anyMatch(value -> value != 0)) {
+                    if (!services.get(next).mailbox().contains(request)) {
+                        throw new IllegalArgumentException(
+                                "source-observed request 0x" + Integer.toHexString(request)
+                                        + " at movie row " + row + " disagrees with the reference's"
+                                        + " own frame-entry mailbox "
+                                        + services.get(next).mailbox());
+                    }
+                    continue;
+                }
+                consumer = next - 1;
+                if (consumer < 0 || frames[consumer] != row) {
+                    throw new IllegalArgumentException(
+                            "no service was running in movie row " + row
+                                    + " to consume its observed request");
+                }
+            } else {
+                consumer = next;
+            }
+            Integer previous = supplied.put(consumer, request);
+            if (previous != null) {
+                throw new IllegalArgumentException(
+                        "two observed requests resolve to service " + consumer);
+            }
+        }
+        if (supplied.isEmpty()) {
+            return services;
+        }
+        List<S3kAudioTick> resolved = new ArrayList<>(services.size());
+        for (int index = 0; index < services.size(); index++) {
+            S3kAudioTick service = services.get(index);
+            Integer request = supplied.get(index);
+            if (request == null) {
+                resolved.add(service);
+                continue;
+            }
+            if (service.mailbox().stream().anyMatch(value -> value != 0)) {
+                throw new IllegalArgumentException(
+                        "service " + index + " already carries a sampled mailbox");
+            }
+            resolved.add(new S3kAudioTick(service.ordinal(), service.frame(), service.lag(),
+                    List.of(request, 0, 0), service.global(), service.tracks(), service.writes(),
+                    service.producerInputEvidence()));
+        }
+        return resolved;
+    }
+
+    /** Index of the first service completing strictly after {@code row}. */
+    private static int firstServiceAfter(int[] frames, int row) {
+        int low = 0;
+        int high = frames.length;
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            if (frames[middle] > row) {
+                high = middle;
+            } else {
+                low = middle + 1;
+            }
+        }
+        return low < frames.length ? low : -1;
     }
 
     private static boolean isPcmTransportWrite(AudioParityChipWrite write) {
