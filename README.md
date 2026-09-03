@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K oracle reference sampling diagnosed:** the AIZ1 v1 reference samples
+  driver RAM mid-invocation on music-load frames, so its tick-138 state is a
+  truncated update rather than an engine divergence; the next S3K reference
+  must be sampled at the driver's return from the vertical interrupt.
 - **Sonic 1 gameplay oracle records special sound effects:** the gameplay
   probe now captures `Sound_PlaySpecial` dispatches alongside normal SFX, and
   the v2 reference (81 live dispatches) exercises the engine's special-SFX
