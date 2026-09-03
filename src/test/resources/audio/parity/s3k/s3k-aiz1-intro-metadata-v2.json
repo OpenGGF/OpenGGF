@@ -36,5 +36,15 @@
   "capture_command": "OGGF_BIZHAWK_STOCK=<stock 2.11> OGGF_OBSERVER_CORE=<lock-matching gpgx.wbx.zst> OGGF_WORKDIR=<scratch> OGGF_OUT=<out.jsonl> tools/audio/run_s3k_audio_oracle_reference_v2.sh",
   "duplicate_capture": "two serial captures to separate external roots were byte-identical at sha256 c8174a3f150409bb2511c09b85d511ffd6acd98aff8abc682c1f52f632623f06",
   "postprocess": "gzip -9 -n out.jsonl",
-  "boot_boundary": "the DriverInit row carries 84 Z80 writes, ending at ym port 0 register 27h. v1's frame-granular projection reported 85 for its boot service because it swept the whole frame, taking in the 2Bh write that the first vertical interrupt actually owns."
+  "boot_boundary": "the DriverInit row carries 84 Z80 writes, ending at ym port 0 register 27h. v1's frame-granular projection reported 85 for its boot service because it swept the whole frame, taking in the 2Bh write that the first vertical interrupt actually owns.",
+  "frame_shape": {
+    "frames": 5400,
+    "ticks": 5263,
+    "zero_service_frames": 137,
+    "zero_service_pre_install": 14,
+    "zero_service_pre_install_range": "movie frames 0-13, before the 68k has loaded the driver",
+    "zero_service_overrun": 123,
+    "double_service_frames": 0,
+    "note": "A zero-service frame is one the driver's work ran past, so the Z80 misses that frame's vertical interrupt and zVInt reaches its return in a later frame. Movie frame 252, the title-music load, is one. The longest contiguous block begins at frame 64 and is zPlaySEGAPCM, which disables interrupts for its whole transport. double_service_frames is 0 across this window: 0084h is reached once per interrupt, and the movie is NTSC so the PAL double-update path never runs."
+  }
 }

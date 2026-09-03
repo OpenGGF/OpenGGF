@@ -296,7 +296,8 @@ defined by `com.openggf.tools.audio.parity`.
   both via `tools/audio/run_s1_audio_parity.sh` with live capture pairs. S2
   driver oracle **`MATCH (698 ticks)`**, unchanged. The
   `com.openggf.tools.audio.parity.**` suite reports 152 passing with 2 skips,
-  the skips being ROM-gated measurements with no supplied sidecar path.
+  the skips being ROM-gated measurements with no supplied sidecar path (155
+  passing after the frame-isolation and frame-shape guards were added).
   `mvn -Dmse=off -Pguards test` reports 607 passing. Two guards failed on the
   first run and were updated deliberately, not weakened:
   `TestTraceChaserBoundaryGuard` and `TestBuildToolingGuard` pin the exact
@@ -306,6 +307,34 @@ defined by `com.openggf.tools.audio.parity`.
 - **Approval note.** TraceChaser's rule 4 treats installing a canonical fixture
   as a human-approved step. This fixture is committed to an unmerged branch as
   the artifact to approve, not merged to `develop`.
+
+- **Window frame shape**, recorded in the fixture metadata so a later reader
+  knows what to expect. Of 5,400 replayed frames, 137 complete no service: 14
+  before the 68k has loaded the driver, and 123 the driver's work runs past, so
+  the Z80 misses that frame's vertical interrupt. Movie frame 252 is one of the
+  123. The longest contiguous block starts at frame 64 and is `zPlaySEGAPCM`,
+  which disables interrupts for its whole transport. **No frame completes two
+  services**: `0084h` is reached once per interrupt, and this movie is NTSC so
+  the PAL double-update never runs.
+
+- **The `frame` field is provenance, never an input.** It exists so a divergence
+  can name the movie frame a service completed in. The engine host and the
+  comparator never read it — verified by perturbation rather than inspection, in
+  `TestS3kAudioOracleFixtureContractV2`: rewriting every reference frame to
+  `frame + 9000` leaves both the engine capture and the comparison bit-for-bit
+  unchanged, while the same guard fails loudly when a real engine input (the
+  mailbox) is perturbed instead. The engine host runs exactly one service per
+  reference tick.
+
+- **The pinned shared manifest is untouched.** The oracle boundary lives in a new
+  file, `fixtures/gpgx-audio-service-manifest-s3k-oracle-v2.json`. The TraceChaser
+  commit adds that one file and changes nothing else, so
+  `fixtures/gpgx-audio-service-manifests-v1.json` still hashes to
+  `ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0`, byte-identical
+  to the previous gitlink. `GpgxZ80AudioCapabilityTests`' capability lock hashes
+  that shared file and the harness tests name their manifests by exact filename
+  with no directory enumeration, so nothing in this lane reaches the lock and no
+  regeneration is needed.
 
 
 ## 2026-09-03 — S1 gameplay oracle: tick 629 (reference gap) → tick 618 (real engine divergence), special-SFX dispatch now captured

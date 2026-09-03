@@ -270,7 +270,8 @@ traces.
 - **S3K driver oracle reference v2:** the AIZ1 reference is now sampled by
   the observer core at the driver's `zVInt` return, one tick per completed
   service (5,263 ticks over 5,400 frames, 725,898 writes), from two byte-identical
-  captures; the first divergence is a single init write at tick 0.
+  captures, with the frame shape recorded and the frame field proven
+  provenance-only; the first divergence is a single init write at tick 0.
 - **S3K oracle reference sampling diagnosed:** the AIZ1 v1 reference samples
   driver RAM mid-invocation on music-load frames, so its tick-138 state is a
   truncated update rather than an engine divergence; the next S3K reference
