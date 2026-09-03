@@ -27,6 +27,47 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — the S2 request-window candidate is published as a committed fixture
+
+- **Context:** `.worktrees/audio-s2-fixture-publish`, branch
+  `bugfix/ai-s2-request-fixture-publish`, on top of `feb9ea267`. No comparator,
+  alignment, or engine behaviour changed; the payload is the captured bytes,
+  gzipped and unmodified.
+- **Fixture:** new —
+  `src/test/resources/audio/parity/s2/s2-request-window-w10150-10900.raw-v2.jsonl.gz`
+  (gz SHA-256 `be8ab87f45499fcf5db0aee5613d699f56d79d5d6a8ffacbbfbe21592ab95c15`,
+  expanded SHA-256 `a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c`,
+  750 rows over `[10150,10900)`, 25 request transfers), with the provenance
+  sidecar `s2-request-window-w10150-10900.metadata.json`. Driven by
+  `sonic-2-sonic-tails-complete-emeralds.bk2` against the S2 World REV01 ROM
+  (SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`). Two independent captures
+  (`coincident-extract-g-final` and `-h-final`) hash-match, which is the Task 8A
+  duplicate-capture gate; human approval to publish was granted 2026-09-03.
+- **Command:**
+
+  ```
+  LUA_BIN=lua5.4 mvn -Dmse=off \
+    '-Dsonic2.rom.path=<absolute S2 REV01 ROM>' \
+    '-Ds2.request.bk2.path=<absolute complete-emeralds BK2>' \
+    '-Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream' \
+    test -B
+  ```
+
+  `-Ds2.request.candidate.path=<absolute candidate>` still overrides the
+  committed payload; the run was made both ways.
+- **Result:** unchanged in both directions —
+  `S2 unbound request candidate: MATCH: 25 production transfers agree` and
+  `S2 driver oracle: MATCH (698 ticks)`. 24 tests, 0 failures, 0 skips, exit 0
+  with the property and without it.
+- **Notes:** publication installs a comparison reference only. `production_bound`
+  stays false, the reader stays package-private and CLI-unreachable, the
+  comparator stays a disposable test-only owner, and request equality remains a
+  reference limitation. `TestS2RequestWindowFixture` pins both digests and the
+  parsed window shape, so a drifted byte fails before any comparison can quietly
+  change meaning. Widening and second-recording work is planned in
+  `docs/architecture/plans/audio/2026-09-03-multi-recording-oracle-roadmap.md`.
+
+
 ## 2026-09-03 — S2 driver oracle reaches full MATCH over the 698-tick window
 
 - **Context:** `.worktrees/s2-tick0-land`, branch `bugfix/ai-s2-level-playbgm-land`,

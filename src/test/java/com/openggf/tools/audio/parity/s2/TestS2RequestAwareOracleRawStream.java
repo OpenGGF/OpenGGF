@@ -87,19 +87,18 @@ class TestS2RequestAwareOracleRawStream {
     @Test
     @ExtendWith(SessionInvocationExtension.class)
     void realCandidateComparesAgainstIndependentProductionBk2Run() throws Exception {
-        String candidateProperty = System.getProperty("s2.request.candidate.path");
         String romProperty = System.getProperty("sonic2.rom.path");
         String bk2Property = System.getProperty("s2.request.bk2.path");
-        assumeTrue(candidateProperty != null && romProperty != null
-                        && bk2Property != null,
-                "explicit candidate, ROM, and BK2 paths are required");
+        assumeTrue(romProperty != null && bk2Property != null,
+                "explicit ROM and BK2 paths are required");
+        Path candidate = resolveCandidate();
 
         S2RequestProjectionBk2TestBridge.Capture capture =
                 S2RequestProjectionBk2TestBridge.capture(
                         Path.of(romProperty), Path.of(bk2Property));
         S2RequestAwareCandidateComparator.Report report =
                 S2RequestAwareCandidateComparator.compare(
-                        Path.of(candidateProperty), capture.projector(),
+                        candidate, capture.projector(),
                         capture.requestRows());
 
         System.out.println("MEASUREMENT_ONLY " + report.describe());
@@ -110,19 +109,18 @@ class TestS2RequestAwareOracleRawStream {
     @Test
     @ExtendWith(SessionInvocationExtension.class)
     void realCandidateAndBk2DrivenDriverStateCompare() throws Exception {
-        String candidateProperty = System.getProperty("s2.request.candidate.path");
         String romProperty = System.getProperty("sonic2.rom.path");
         String bk2Property = System.getProperty("s2.request.bk2.path");
-        assumeTrue(candidateProperty != null && romProperty != null
-                        && bk2Property != null,
-                "explicit candidate, ROM, and BK2 paths are required");
+        assumeTrue(romProperty != null && bk2Property != null,
+                "explicit ROM and BK2 paths are required");
+        Path candidate = resolveCandidate();
 
         S2RequestProjectionBk2TestBridge.Capture capture =
                 S2RequestProjectionBk2TestBridge.capture(
                         Path.of(romProperty), Path.of(bk2Property));
         S2RequestAwareCandidateComparator.Report requests =
                 S2RequestAwareCandidateComparator.compare(
-                        Path.of(candidateProperty), capture.projector(),
+                        candidate, capture.projector(),
                         capture.requestRows());
         assertEquals(S2RequestAwareCandidateComparator.Kind.MATCH,
                 requests.kind(), requests.describe());
@@ -175,6 +173,22 @@ class TestS2RequestAwareOracleRawStream {
                         .filter(entry -> !entry.sfx()).findFirst().orElseThrow()
                         .snapshot().tempoAccumulator() & 0xff)
                 .toList());
+    }
+
+    /**
+     * The candidate this measurement reads: the committed request-window
+     * fixture by default, or an explicit {@code -Ds2.request.candidate.path}
+     * override for an unpublished capture. The committed payload is stored
+     * gzipped, so it is expanded into the per-test temporary directory; the
+     * strict reader's own input seam stays a plain bounded JSONL path. The
+     * fixture is comparison-only and hydrates no engine state.
+     */
+    private Path resolveCandidate() throws IOException {
+        String candidateProperty = System.getProperty("s2.request.candidate.path");
+        if (candidateProperty != null) {
+            return Path.of(candidateProperty);
+        }
+        return TestS2RequestWindowFixture.expandCommittedCandidate(temporaryDirectory);
     }
 
     @Test
