@@ -20,6 +20,11 @@
       "file": "s1-soundtest-sfx.bk2",
       "sha256": "3da775e4fdd3770e9687e178b6a11922873d1021a2013565ebe842451a7a33a2",
       "input_rows": 2791
+    },
+    {
+      "file": "../../../traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2",
+      "sha256": "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b",
+      "input_rows": 225101
     }
   ],
   "references": [
@@ -48,6 +53,20 @@
       "epoch_open_frame": 823,
       "recorder_probe": "tools/audio/probes/s1_audio_sfx_parity_probe.lua",
       "capture_command": "OGGF_OUT=<external>/reference-sfx.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_audio_sfx_parity_probe.lua src/test/resources/audio/parity/s1/s1-soundtest-sfx.bk2 <s1-rev01.gen>"
+    },
+    {
+      "file": "s1-gameplay-ghz1-reference.v1.jsonl.gz",
+      "capture": "s1_gameplay_ghz1_driver_reference",
+      "movie": "../../../traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2",
+      "uncompressed_sha256": "c7d58e8721f240efc65074b39d2da876a9ea86002f0d8302f4a43873507dc40e",
+      "uncompressed_bytes": 20157475,
+      "terminal_record_count": 2343,
+      "cycle_start": 0,
+      "period": 0,
+      "epoch_open_frame": 656,
+      "capture_end_frame": 3000,
+      "recorder_probe": "tools/audio/probes/s1_gameplay_driver_parity_probe.lua",
+      "capture_command": "OGGF_OUT=<external>/reference-gameplay.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_gameplay_driver_parity_probe.lua src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2 <s1-rev01.gen>"
     }
   ]
 }

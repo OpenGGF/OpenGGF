@@ -12,8 +12,11 @@ usage() {
 Usage: tools/audio/run_s1_audio_parity.sh [options]
 
 Options:
-  --mode music|sfx     capture pair to run (default: music — the pinned GHZ movie;
-                       sfx runs the sound-test SFX movie and probe)
+  --mode music|sfx|gameplay
+                       capture pair to run (default: music — the pinned GHZ movie;
+                       sfx runs the sound-test SFX movie and probe; gameplay runs
+                       a bounded power-on-through-GHZ1 window of the pinned
+                       complete-run movie sonic1-complete-withemeralds.bk2)
   --rom PATH           Sonic 1 World REV01 .gen (otherwise discover at repository root)
   --movie PATH         pinned sound-test BK2 fixture (default: the mode's committed BK2)
   --bizhawk-home PATH  BizHawk 2.11 Linux x64 installation (or BIZHAWK_HOME)
@@ -74,7 +77,10 @@ case "$MODE" in
 	sfx)
 		PROBE="$REPO/tools/audio/probes/s1_audio_sfx_parity_probe.lua"
 		DEFAULT_MOVIE="$REPO/src/test/resources/audio/parity/s1/s1-soundtest-sfx.bk2" ;;
-	*) echo "Argument error: --mode must be music or sfx" >&2; usage >&2; exit "$EXIT_USAGE" ;;
+	gameplay)
+		PROBE="$REPO/tools/audio/probes/s1_gameplay_driver_parity_probe.lua"
+		DEFAULT_MOVIE="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2" ;;
+	*) echo "Argument error: --mode must be music, sfx, or gameplay" >&2; usage >&2; exit "$EXIT_USAGE" ;;
 esac
 [ -n "$MOVIE_PATH" ] || MOVIE_PATH=$DEFAULT_MOVIE
 [ -f "$PROBE" ] || fail "consumer probe is missing: $PROBE"

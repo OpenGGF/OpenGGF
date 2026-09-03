@@ -231,6 +231,234 @@ defined by `com.openggf.tools.audio.parity`.
   S2 and S3K service manifests` fails on both trees). The 11 new
   `S3kPreconsumptionRequestProfile` cases pass.
 
+## 2026-09-03 — S1 gameplay oracle stops at tick 629: the fixture records no special-SFX dispatch
+
+- **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
+  `bugfix/ai-s1-gameplay-frontier`, at `6c788b4fe`. Measurement only; no engine
+  change accompanies this entry.
+- **Result:** MISMATCH, `TRACK_STATE_MISMATCH`, tick 629, role FM4, field
+  `overridden` — reference true, engine false.
+- **Diagnosis — a reference limitation, not an engine defect.** Tick 583
+  dispatches `sfx_Spring` (`0xCC`) onto FM4 and tick 593 dispatches a ring
+  (`0xB5`, resolved to the left-speaker `0xCE`) onto the same channel. `SndCE`
+  is three notes totalling `$24` ticks, so it ends exactly at tick 629, and
+  both streams agree write-for-write up to that point.
+  `cfStopTrack` (`docs/s1disasm/s1.sounddriver.asm:2489-2563`) then chooses
+  where to hand FM4 back. Its FM4 case first tests
+  `v_spcsfx_fm4_track.PlaybackControl` (`:2510-2515`): when a **special** SFX is
+  playing it restores `v_special_voice_ptr` into the special track and never
+  touches the music track, so the music FM4 override bit survives. Only the
+  fall-through `.getpointer` path (`:2519-2528`) reaches the music track and
+  clears bit 2.
+  The reference keeps the music FM4 override set at ticks 629-631, so the ROM
+  took the special-SFX branch. Ticks 630 and 631 confirm it: their FM4
+  frequency and key-on writes land *after* that invocation's music PSG writes,
+  which the music FM walk (`:214-221`) precedes, so they come from the
+  special-SFX section (`:243-247`).
+- **Why the engine cannot follow.** GHZ's special SFX reaches the driver
+  through `Sound_PlaySpecial` (`:1105`), a separate entry point with its own
+  track slots. The fixture's per-tick `dispatches` array records only
+  `Sound_PlaySFX` calls, and `raw_state.tracks` carries the ten music slots
+  only — neither the special-SFX admission nor its track state is captured. The
+  replay host has no data from which to admit that sound, so the engine
+  correctly releases FM4 to music where the ROM releases it to a special SFX
+  the fixture never mentions. `voice_selector` is `0x40` on every tick and is
+  not evidence either way: `UpdateMusic` stores it unconditionally before the
+  special-SFX section (`:243`).
+- **What would move it:** a re-capture whose probe also records
+  `Sound_PlaySpecial` dispatches and the two special-SFX track slots, published
+  through the fixture contract. That is capture work, not engine work.
+- **Gates at this commit:** S1 sound-test music MATCH (14,690 ticks) and SFX
+  MATCH (1,967 ticks); the audio packages, `TestSmpsFadeAudioThroughput` and
+  the S2 driver oracle run 2,470 tests with 0 failures.
+
+## 2026-09-03 — S1 gameplay oracle: tick 316 → 629 (SFX walks fixed RAM slots)
+
+- **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
+  `bugfix/ai-s1-gameplay-frontier`, on top of `2ba02dbad`.
+- **Fixture and command:** unchanged from the entry below.
+- **Result before:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 316, event 3 —
+  reference YM2612 port 1 register `0xB0` value 4, engine PSG `0x87`.
+- **Result after:** MISMATCH, `TRACK_STATE_MISMATCH`, tick 629, role FM4,
+  field `overridden` — reference true, engine false.
+- **What moved, part one — the walk.** S1 `UpdateMusic` has no per-sound SFX
+  service. It walks one fixed array of SFX track slots, SFX FM3..FM5
+  (`docs/s1disasm/s1.sounddriver.asm:222-231`) then SFX PSG1..PSG3
+  (`:233-241`), with no notion of which sound owns a slot. So two live sounds
+  interleave by channel, not by admission order: at tick 316 a ring on FM4 is
+  serviced before the jump still holding PSG1, though the jump started
+  fourteen invocations earlier. The engine serviced each SFX sequencer whole,
+  in admission order. `SmpsDriver` now walks the SFX slots itself when every
+  live SFX program declares `SfxTrackWalkMode.CHANNEL_RAM_ORDER` (S1 only),
+  driving each sequencer's tracks through a new begin/tick/finish pass.
+- **What moved, part two — the release.** With the walk in place the frontier
+  landed at tick 562, where a finishing FM5 SFX restored the music voice after
+  the SFX PSG1 slot instead of before it. `cfStopTrack` (`:2489-2563`) hands
+  the channel back from inside the finishing track's own slot service, whether
+  or not the sound has other tracks still playing; the engine deferred the
+  release of a wholly finished sound to end-of-frame completion cleanup. The
+  slot walk now reconciles the finishing slot inline, through a new
+  `SmpsSequencerHost.reconcileFinishedSfxSlot`. Non-coordinated games keep the
+  previous deferral. No constant was introduced.
+- **New frontier:** tick 629, the reference still has the music FM4 track
+  overridden where the engine has released it — an override-lifetime question,
+  not an ordering one.
+- **Gates held:** S1 sound-test music MATCH (14,690 ticks) and SFX MATCH
+  (1,967 ticks); the audio packages plus `TestSmpsFadeAudioThroughput` and the
+  S2 driver oracle run 2,470 tests with 0 failures.
+
+## 2026-09-03 — S1 gameplay oracle: tick 302 → 316 (SFX admission owns its channels)
+
+- **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
+  `bugfix/ai-s1-gameplay-frontier` from `develop` at `2229b5b7c`.
+- **Fixture:** `src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v1.jsonl.gz`
+  (2,343 ticks, 70 dispatches).
+- **Command:**
+
+  ```
+  java -cp target/classes:<deps> com.openggf.tools.audio.parity.S1AudioParityTool \
+      capture --repo <worktree> --run-root <external run root> \
+      --reference <run root>/reference.jsonl --rom <abs S1 REV01 ROM> \
+      --output <run root>/openggf.jsonl --capture gameplay
+  java -cp target/classes:<deps> com.openggf.tools.audio.parity.S1AudioParityTool \
+      compare --repo <worktree> --run-root <external run root> \
+      --reference <run root>/reference.jsonl --openggf <run root>/openggf.jsonl \
+      --human-report <run root>/report.txt --json-report <run root>/report.json
+  ```
+
+- **Result before:** MISMATCH, `EVENT_EXTRA`, tick 302, event 0 — engine PSG
+  write `0x92` (PSG1 volume 2) with no reference counterpart.
+- **Result after:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 316, event 3 —
+  reference YM2612 port 1 register `0xB0` value 4, engine PSG `0x87`.
+- **What moved:** tick 302 dispatches `sfx_Jump` (`0xA0`), which loads a PSG1
+  track. `Sound_PlaySFX`'s header loader sets `PlaybackControl` bit 2 on the
+  displaced *music* track while loading each SFX track — `.sfx_loadloop` for FM
+  (`docs/s1disasm/s1.sounddriver.asm:1029`) and `.sfxinitpsg` for PSG
+  (`:1037`) — and it is reached from `PlaySoundID` at the top of `UpdateMusic`
+  (`:202`), before that same invocation's DAC/FM/PSG music walk (`:208-227`).
+  So the music PSG1 track is already overridden on the admitting invocation and
+  emits nothing, even though the SFX track has written no register yet. The
+  engine had S1 on `SfxChannelOwnershipMode.FIRST_WRITE`, so the music track
+  still emitted its volume byte. S1 now uses `ADMISSION`, the mode S2 already
+  derived from the identical `zPlaySound` shape. No constant was introduced.
+- **New frontier:** tick 316 dispatches `sfx_Ring` (`0xB5`) onto FM4 while the
+  jump SFX still holds PSG1. `UpdateMusic` walks the *fixed SFX RAM slots* —
+  SFX FM3..FM5 (`:222-231`) then SFX PSG1..PSG3 (`:233-241`) — so the ring's
+  FM4 writes precede the jump's PSG1 writes. The engine services SFX
+  sequencer-by-sequencer in admission order, so the jump's PSG1 writes come
+  first. Same writes, wrong order.
+- **Gates held:** `run_s1_audio_parity.sh --mode music` MATCH (14,690 ticks);
+  `--mode sfx` MATCH (1,967 ticks); S2
+  `TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare`
+  passes.
+
+## 2026-09-03 — S1 gains a second audio oracle, sourced from real gameplay
+
+- **Worktree/branch:** `.worktrees/audio-s1-complete-oracle`,
+  `feature/ai-s1-complete-run-oracle` from `develop` at `feb9ea267`.
+- **Fixture (new):** `src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v1.jsonl.gz`
+  — the committed complete-run movie `sonic1-complete-withemeralds.bk2`
+  (`src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/`, SHA-256
+  `f2e817936d…`, 225,101 input rows), captured from power-on through frame
+  3,000 (2,343 driver invocations, epoch opens at frame 656 on the real GHZ1
+  BGM dispatch — 341 dormant invocations precede it, title/SEGA/menu, unlike
+  the two sound-test movies' shared 514) by a new probe,
+  `tools/audio/probes/s1_gameplay_driver_parity_probe.lua` (a
+  movie/window-specific variant of the committed `s1_audio_sfx_parity_probe.lua`,
+  same shape: driver-RAM-derived track state plus ordered YM/PSG bus writes,
+  one record per `UpdateMusic` invocation, plus a `dispatches` array of any
+  `Sound_PlaySFX` calls the invocation made). 70 real SFX dispatches
+  (jump/ring/spring/etc., not a scripted list) are captured in this window.
+  Two BizHawk captures are byte-identical
+  (SHA-256 `c7d58e8721f240ef…`, both runs).
+- **Command:** `tools/audio/run_s1_audio_parity.sh --mode gameplay --rom
+  <absolute SHA-1-verified S1 REV01 ROM> --bizhawk-home <BizHawk 2.11 Linux
+  x64> --output-root <external run root>`.
+- **Result:** **MISMATCH**, first divergence **tick 302, `EVENT_EXTRA`, event
+  0** — the engine emits an extra PSG write (`0x92`) that the reference does
+  not have. Pinned by `TestS1GameplayAudioDriverOracle.currentFrontierIsTheFirstDivergence`
+  (ROM-gated, `-Dsonic1.rom.path=`). Not investigated in this lane (measurement
+  only, per the brief); a future lane should chase the ROM routine that owns
+  this write before changing engine behaviour.
+- **Broken on purpose before trusting the comparison** (project rule): flipping
+  one YM2612 register-40 write value in tick 0 of a temp copy of the reference
+  is reported at tick 0 by
+  `TestS1GameplayAudioDriverOracle.corruptingTheReferenceIsDetectedAtTheCorruptedTick`.
+- **Existing S1 sound-test gates unchanged:** `run_s1_audio_parity.sh --mode
+  music` still reports **MATCH (14,690 ticks)**; `--mode sfx` still reports
+  **MATCH (1,967 ticks)** — both re-run against the unchanged committed
+  fixtures in this worktree to confirm this lane's shared-code changes
+  (`AudioParitySchema`/`AudioParityMetadata`/`AudioParityJsonl`/
+  `AudioParityComparator`/`S1AudioParityTool` gained a third `gameplay`
+  capture kind alongside `music`/`sfx`) did not regress them.
+- **Notes:** the capture window is bounded to frame 3,000, not the originally
+  planned ~5,000 (see `docs/architecture/plans/audio/2026-08-09-s1-ghz1-
+  gameplay-audio-timeline-plan.md`'s [860,4975) window, which this frontier
+  deliberately overlaps): BizHawk's headless client consistently
+  self-terminates (clean process exit 0, no Lua error surfaced to its own
+  console output even with `OGGF_TRACE_QUIET=0`, no native crash signal) at
+  frame 3,219 of this specific movie when driven through
+  `tools/tracechaser/bizhawk/run_bizhawk_lua.sh`'s established launch shape —
+  a boundary the two short sound-test movies (≤2,791 rows) never previously
+  reached through this launcher. The cause was not isolated: diagnostic
+  `pcall` wrapping around every `invocationLifecycle` entry/close transition
+  in the probe never fired, and the movie's own input transcript has nothing
+  unusual at that row (`|..|...R....|........|`, plain held-right input, no
+  reset/power marker). 3,000 stays safely inside the frames that reliably
+  complete; a future lane investigating the launcher itself (not this
+  worktree's scope) could recover the fuller window.
+  Also fixed in this lane, filed as a separate `fix(tools):` commit per
+  instruction: `run_s1_ghz1_gameplay_audio_timeline.sh` (the unrelated,
+  never-executed S1 GHZ1 gameplay-audio *timeline* framework —
+  `S1GameplayAudioTimeline*`, a different, semantic-decision capture shape
+  from this driver-register oracle) was missing `OGGF_INPUT_REPOSITORY_ROOT`
+  in its `capture_reference` call, so `run_bizhawk_lua.sh` aborted before
+  BizHawk ever launched. That one-line fix is necessary but insufficient: the
+  script's hardcoded in-repo `OUTPUT_ROOT` is separately rejected by
+  `output_policy.py`'s external-output-root requirement, so that tool remains
+  unexercised end-to-end; see `tools/audio/README.md`.
+
+## 2026-09-03 — the S2 request-window candidate is published as a committed fixture
+
+- **Context:** `.worktrees/audio-s2-fixture-publish`, branch
+  `bugfix/ai-s2-request-fixture-publish`, on top of `feb9ea267`. No comparator,
+  alignment, or engine behaviour changed; the payload is the captured bytes,
+  gzipped and unmodified.
+- **Fixture:** new —
+  `src/test/resources/audio/parity/s2/s2-request-window-w10150-10900.raw-v2.jsonl.gz`
+  (gz SHA-256 `be8ab87f45499fcf5db0aee5613d699f56d79d5d6a8ffacbbfbe21592ab95c15`,
+  expanded SHA-256 `a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c`,
+  750 rows over `[10150,10900)`, 25 request transfers), with the provenance
+  sidecar `s2-request-window-w10150-10900.metadata.json`. Driven by
+  `sonic-2-sonic-tails-complete-emeralds.bk2` against the S2 World REV01 ROM
+  (SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`). Two independent captures
+  (`coincident-extract-g-final` and `-h-final`) hash-match, which is the Task 8A
+  duplicate-capture gate; human approval to publish was granted 2026-09-03.
+- **Command:**
+
+  ```
+  LUA_BIN=lua5.4 mvn -Dmse=off \
+    '-Dsonic2.rom.path=<absolute S2 REV01 ROM>' \
+    '-Ds2.request.bk2.path=<absolute complete-emeralds BK2>' \
+    '-Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream' \
+    test -B
+  ```
+
+  `-Ds2.request.candidate.path=<absolute candidate>` still overrides the
+  committed payload; the run was made both ways.
+- **Result:** unchanged in both directions —
+  `S2 unbound request candidate: MATCH: 25 production transfers agree` and
+  `S2 driver oracle: MATCH (698 ticks)`. 24 tests, 0 failures, 0 skips, exit 0
+  with the property and without it.
+- **Notes:** publication installs a comparison reference only. `production_bound`
+  stays false, the reader stays package-private and CLI-unreachable, the
+  comparator stays a disposable test-only owner, and request equality remains a
+  reference limitation. `TestS2RequestWindowFixture` pins both digests and the
+  parsed window shape, so a drifted byte fails before any comparison can quietly
+  change meaning. Widening and second-recording work is planned in
+  `docs/architecture/plans/audio/2026-09-03-multi-recording-oracle-roadmap.md`.
+
+
 ## 2026-09-03 — S2 driver oracle reaches full MATCH over the 698-tick window
 
 - **Context:** `.worktrees/s2-tick0-land`, branch `bugfix/ai-s2-level-playbgm-land`,

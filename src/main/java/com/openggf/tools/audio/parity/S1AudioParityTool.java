@@ -109,14 +109,14 @@ public final class S1AudioParityTool {
         verifyDigest(rom, "SHA-1", AudioParitySchema.S1_REV01_SHA1,
                 "audio parity requires the pinned S1 World REV01 ROM");
 
-        boolean sfxCapture = sfxCapture(options);
+        CaptureKind kind = captureKind(options);
         Path movie = normalizedRequired(options, "movie");
         verifyRegular(movie, "pinned BK2 movie");
-        verifyDigest(movie, "SHA-256",
-                sfxCapture ? AudioParitySchema.SFX_BK2_SHA256 : AudioParitySchema.BK2_SHA256,
-                sfxCapture
-                        ? "BK2 movie does not match the pinned s1-soundtest-sfx.bk2 identity"
-                        : "BK2 movie does not match the pinned s1-soundtest-ghz.bk2 identity");
+        verifyDigest(movie, "SHA-256", expectedMovieSha256(kind), switch (kind) {
+            case SFX -> "BK2 movie does not match the pinned s1-soundtest-sfx.bk2 identity";
+            case GAMEPLAY -> "BK2 movie does not match the pinned sonic1-complete-withemeralds.bk2 identity";
+            case MUSIC -> "BK2 movie does not match the pinned s1-soundtest-ghz.bk2 identity";
+        });
 
         Path bizhawk = normalizedRequired(options, "bizhawk-home");
         Path emuHawk = bizhawk.resolve("EmuHawk.exe");
@@ -143,10 +143,11 @@ public final class S1AudioParityTool {
         Path reference = existingRunChild(runRoot, normalizedRequired(options, "reference"), "reference");
         Path rom = normalizedRequired(options, "rom");
         Path output = newRunChild(runRoot, normalizedRequired(options, "output"), "capture output");
-        if (sfxCapture(options)) {
+        CaptureKind kind = captureKind(options);
+        if (kind == CaptureKind.SFX || kind == CaptureKind.GAMEPLAY) {
             S1OpenGgfSfxAudioCapture.CaptureResult result =
                     S1OpenGgfSfxAudioCapture.capture(reference, rom, output);
-            out.println("OpenGGF SFX capture: " + output + " (" + result.recordCount()
+            out.println("OpenGGF " + kind + " capture: " + output + " (" + result.recordCount()
                     + " ticks, " + result.dispatchCount() + " dispatches)");
             return EXIT_MATCH;
         }
@@ -156,12 +157,23 @@ public final class S1AudioParityTool {
         return EXIT_MATCH;
     }
 
-    private static boolean sfxCapture(Map<String, String> options) {
+    private enum CaptureKind { MUSIC, SFX, GAMEPLAY }
+
+    private static CaptureKind captureKind(Map<String, String> options) {
         String kind = options.getOrDefault("capture", "music");
         return switch (kind) {
-            case "music" -> false;
-            case "sfx" -> true;
-            default -> throw new UsageException("--capture must be music or sfx");
+            case "music" -> CaptureKind.MUSIC;
+            case "sfx" -> CaptureKind.SFX;
+            case "gameplay" -> CaptureKind.GAMEPLAY;
+            default -> throw new UsageException("--capture must be music, sfx, or gameplay");
+        };
+    }
+
+    private static String expectedMovieSha256(CaptureKind kind) {
+        return switch (kind) {
+            case MUSIC -> AudioParitySchema.BK2_SHA256;
+            case SFX -> AudioParitySchema.SFX_BK2_SHA256;
+            case GAMEPLAY -> AudioParitySchema.GAMEPLAY_BK2_SHA256;
         };
     }
 

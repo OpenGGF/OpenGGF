@@ -263,6 +263,18 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 1 SFX channel ownership follows the driver:** sound effects claim
+  their music channels at admission and the driver walks its fixed SFX slots in
+  channel-RAM order, moving the gameplay oracle from update 302 to 629, where
+  the reference's special-SFX dispatches are not yet captured.
+- **Second Sonic 1 audio oracle from real gameplay:** a duplicate-captured
+  reference from the complete-run movie (power-on through early Green Hill,
+  2,343 driver updates, 70 live sound effects) now sits beside the sound-test
+  oracles, with its first divergence pinned at update 302.
+- **Committed Sonic 2 request-window fixture:** the driver-oracle gate now
+  runs from a published, duplicate-captured reference in the repository rather
+  than a scratch capture, and the next audio roadmap (S3K request authority,
+  wider windows, two recordings per game) is recorded under the audio plans.
 - **Sonic 2 sound driver parity:** the engine's SMPS driver now matches the
   recorded hardware driver over the full EHZ reference window (698 updates)
   with every sound request transfer agreeing, driven from the same BK2 movie.
