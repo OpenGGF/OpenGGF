@@ -83,6 +83,12 @@ public final class Sonic1SmpsSequencerConfig {
                 // except the explicit PSG3 DF/FF pair in its own load path.
                 .psgSfxTakeoverMode(
                         SmpsSequencerConfig.PsgSfxTakeoverMode.S1_PSG3_SILENCE_PAIR)
+                // Sound_PlaySpecial's tail (SD:1183-1191) writes a second PSG
+                // pair when the normal SFX PSG3 slot is already playing, built
+                // from the stale d4 its own load loop left behind.
+                .specialSfxPsg3SilenceMode(
+                        SmpsSequencerConfig.SpecialSfxPsg3SilenceMode
+                                .S1_STALE_VOICE_CONTROL_PAIR)
                 // Sound_PlaySFX's header loader sets PlaybackControl bit 2 on
                 // the displaced MUSIC track while loading each SFX track --
                 // .sfx_loadloop for FM (SD:1029) and .sfxinitpsg for PSG
