@@ -83,8 +83,23 @@ defined by `com.openggf.tools.audio.parity`.
   first-divergence fix. Emitting the writes in the capture host alone would
   make the oracle agree with itself while the driver still does nothing.
 
+- **What the wall is worth, measured.** A throwaway, uncommitted host patch
+  emitted the transport exactly as the ROM writes it — 2Bh=80h, then one 2Ah
+  write per byte of `SEGA_PCM` read through `Sonic3kAudioProfile.loadSegaPcm`,
+  then the 2Bh=0 that `zPlayDigitalAudio` writes when `.done` jumps back into
+  it (:4422, :4256-4260). That reproduces the reference row's 24,113 writes
+  exactly and moves the frontier from tick 50 to **tick 128**, the PCM-exit
+  service. So the transport needs no fitted quantity: its length is
+  `SEGA_PCM.size` and its brackets are two entry blocks already cited above.
+  What it needs is an owner. The patch was reverted rather than landed because
+  emitting the stream from the capture host would make the oracle agree with
+  itself while the engine's driver still produces nothing; the work belongs in
+  the driver, alongside the presentation voice that currently plays the chant.
+
 - **Tick 138 not reached.** The v1 tick-138 sampling artefact could not be
-  re-checked past the tick-50 wall in this lane.
+  re-checked past the tick-50 wall in this lane. The probe above stops at tick
+  128, still short of 138, so nothing measured here says whether the v1
+  artefact is gone.
 
 - **Regression gates.** S2 driver oracle `MATCH (698 ticks)`, unchanged. The
   `com.openggf.tools.audio.parity.**` and `com.openggf.audio.session.**` suites
