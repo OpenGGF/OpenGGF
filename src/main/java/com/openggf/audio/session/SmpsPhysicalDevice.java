@@ -78,6 +78,10 @@ public final class SmpsPhysicalDevice {
                 settings.psgNoiseShiftEveryToggle());
     }
 
+    double outputSampleRate() {
+        return settings.outputSampleRate();
+    }
+
     void apply(SmpsWriteProgram program) {
         requireActive();
         var writes = Objects.requireNonNull(program, "program").writes();

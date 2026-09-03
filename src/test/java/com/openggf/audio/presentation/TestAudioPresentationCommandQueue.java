@@ -348,7 +348,7 @@ class TestAudioPresentationCommandQueue {
 
         queue.submit(StartSampleSfx.fromVoice(sample), () -> true, ignored -> {
         });
-        queue.submit(ReplaceRawPcm.fromVoice(raw), () -> true, ignored -> {
+        queue.submit(ReplaceRawPcm.fromVoice(raw, new byte[] {0}), () -> true, ignored -> {
         });
         queue.submit(new ReplaceMusic(music), () -> true, ignored -> {
         });

@@ -1210,7 +1210,7 @@ class TestSmpsDriverSession {
                 "sega/transaction", new byte[] {0, 64, (byte) 0xFF},
                 44_100);
         registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                factory.segaPcm(90, pcm)));
+                factory.segaPcm(90, pcm), new byte[] {0}));
         long rawVoiceId = registry.snapshot().rawPcmVoiceId();
         commands.submit(
                 new AudioPresentationCommand

@@ -162,6 +162,94 @@ defined by `com.openggf.tools.audio.parity`.
   `AudioParitySchema` pins one gameplay capture kind, movie, and launch
   invocation count. Both are contract work, and neither was attempted here.
 
+## 2026-09-03 — S3K driver oracle: tick 50 → tick 128; the driver owns the SEGA PCM transport
+
+- **Context:** `.worktrees/audio-s3k-sega-pcm`, branch
+  `feature/ai-s3k-sega-pcm-transport`, from `develop` at `1f3d670bb`. Engine
+  change plus the matching capture-host dispatch; no fixture change.
+- **Fixture:** `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz`.
+- **Command:**
+
+  ```
+  java -cp "target/classes:$(cat target/s3k-oracle.classpath)" \
+    com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare \
+    --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz \
+    --rom <absolute locked-on S3K ROM>
+  ```
+
+- **Result before:** `EVENT_MISSING` at tick 50, field `decoded_write`, event 0,
+  reference `ym2612[port 0, register 0x2b] = 128`, engine `<missing>`; the run
+  also logged `tick 49: SEGA PCM transport is outside the driver-service
+  oracle` as an unsupported request.
+- **Result after:** `EVENT_MISSING` at tick 128, field `decoded_write`, event 0,
+  reference `ym2612[port 1, register 0x82] = 255`, engine `<missing>`. The SEGA
+  request is no longer unsupported; the five remaining unsupported requests are
+  the `E1h` fades, unchanged.
+
+- **The routines.** `zPlaySegaSound` calls `zStopAllSound`, sets
+  `PlaySegaPCMFlag` and returns without reaching the loop
+  (`Sound/Z80 Sound Driver.asm`:2703-2719), so the request's own service carries
+  only the 84-write stop. The DAC idle loop reads the flag on its next pass and
+  jumps into `zPlaySEGAPCM` (:4265-4267), which runs under `di` for its whole
+  duration (:4372-4424): `2Bh = 80h`, one latch of `2Ah`, then one byte of
+  `SEGA_PCM` per loop iteration until the sample ends or `cmd_StopSEGA` appears
+  in `zMusicNumber`. Leaving the loop re-enters `zPlayDigitalAudio`, whose entry
+  writes `2Bh = 0` (:4422, :4256-4260). `SonicDriverVer` is 4 for S&K
+  (`sonic3k.asm:27`), so the `SonicDriverVer==3` queue work in that routine is
+  assembled out. The byte cadence is the ROM's own macro,
+  `pcmLoopCounterBase(sampleRate, 105)` (`sonic3k.macros.asm:270-271`) with
+  `Z80_Clock = Master_Clock/15` (`sonic3k.constants.asm:202-204`): 12 loop
+  iterations, 248 Z80 cycles per sample byte. No constant here was measured
+  from the fixture.
+
+- **The change.** `SmpsPhysicalPolicy` gains an optional `segaPcmTransport()`,
+  described by the new `SmpsSegaPcmTransport` record (enter block, data
+  port/register, exit block, sample rate, loop base cycles) which also computes
+  the ROM's loop counter and can emit the whole transport as one
+  `SmpsWriteProgram`. Only S3K's policy supplies one. `SmpsDriverSession` runs
+  it: `beginSegaPcmTransport` writes the DAC enable, `serviceForward` returns
+  the new `SEGA_PCM_TRANSPORT` outcome and runs no update while the loop holds
+  the bus, `renderFrames` sends one sample byte every 248 Z80 cycles of
+  rendered time, and the exit block is written when the sample ends or a
+  requested stop is reached at a byte boundary. Rendering therefore comes from
+  the chip's own DAC. `AudioVoiceRegistry` routes `ReplaceRawPcm` to the
+  transport when the session's policy owns it and to the presentation voice
+  otherwise, so S1 and S2 SEGA screens are byte-unchanged; their equivalent
+  routines (`s2.sounddriver.asm:1603-1652`, `s1disasm/sound/z80.asm:187-206`)
+  are the same shape and can adopt the vocabulary later. A muted frame still
+  advances the loop, so a silent presentation cannot park the driver inside it.
+  Rewind: the loop position, accumulator, stop flag and sample bytes are in
+  `SmpsDriverSessionSnapshot` and in the per-frame live mutation, covered by
+  `TestSmpsSegaPcmTransport`.
+
+- **What the new frontier is.** Tick 128 is the reference's post-transport
+  stop-all burst with an empty mailbox — the same pre-consumption 68k-to-Z80
+  mailbox limitation recorded on 2026-08-31 and typed as
+  `REFERENCE_LIMITATION` / `producer_input` for the v1 stream on 2026-09-01.
+  The v2 stream is per-service and is read verbatim, so that classification is
+  not applied on this path and the tool reports an ordinary `EVENT_MISSING`.
+  Nothing in the reference authorises an engine request here: inferring
+  `cmd_StopSEGA` from the shape of the burst is exactly the inference the
+  earlier entry refused. Moving this frontier needs either a pre-consumption
+  mailbox probe in the producer or the v2 reader learning the same suspension
+  boundary the v1 reader knows. Both are reference-side work, not a driver fix.
+
+- **Gates at this commit.** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, run as `S1AudioParityTool capture` + `compare` against
+  the committed references in an external run root. S1 gameplay oracle
+  `TestS1GameplayAudioDriverOracle` green at its pinned frontier. S2
+  `TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare`
+  reports `MATCH (698 ticks)`. `com.openggf.audio.**`,
+  `com.openggf.tools.audio.parity.**`, `com.openggf.game.sonic3k.audio.**` and
+  `TestSmpsFadeAudioThroughput` run 2,083 tests with 0 failures and 0 errors.
+  The four S3K keep-green classes run 55 tests, 0 failures.
+
+- **Tests that changed, and why.** Three tests pinned the chant as a
+  presentation voice on S3K (`TestSegaPcmCommandRouting` twice,
+  `TestSoundTestPresentationHost` once). They now pin the driver-owned
+  mechanism instead — the DAC enable, the sample bytes on the physical stream,
+  and the DAC disable on exit — rather than asserting less.
+
 
 ## 2026-09-03 — S1 gameplay oracle reaches full MATCH: the special-SFX voice pointer outlives its sound
 

@@ -80,7 +80,8 @@ failed.
 | [ ] | Pause/resume while FM6/DAC and PSG are active | FM6/DAC remains live under the S3K pause policy; PSG silence and FM pan restore match retail | |
 | [ ] | Trigger first and repeated 1-up while speed-up is active | Jingle runs at normal speed, displaced speed state returns, and native FM-only fade-back is audible | |
 | [ ] | Start fade-out while DAC, PSG, and FM are active | DAC/PSG stop immediately; only FM performs the 40-step delayed fade | |
-| [ ] | Let the boot SEGA chant play, then stop or skip it | StopAll exclusivity, YM2612 DAC rendering, no simultaneous SMPS mix, and no discarded-owner restore | |
+| [ ] | Let the boot SEGA chant play, then stop or skip it | StopAll exclusivity, YM2612 DAC rendering, no simultaneous SMPS mix, and no discarded-owner restore | Retest required after the S3K chant moved into the driver's own `zPlaySEGAPCM` transport |
+| [ ] | S3K only: let the chant run to its end, and separately skip it early, then confirm the title music starts | Chant pitch and length come from the ROM's 248-cycle loop; the driver leaves the loop and resumes services in both cases | New row for the driver-owned transport |
 | [ ] | Run locked-on PAL playback through at least two repeat boundaries | Driver-global sixth-VInt full repeat includes SFX, music, fade, and speed tails without dephasing | Retest pending after the driver-global PAL repeat correction |
 | [ ] | Enter a Blue Sphere stage while speed shoes are active | Special-stage music starts at normal tempo; the outgoing level fade is unchanged | Retest pending after the entry-boundary fix |
 | [x] | Collect several special-stage rings | Retail Z80 `zRingSpeaker` alternates left and right output | User listening pass, 2026-08-21 |

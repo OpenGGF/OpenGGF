@@ -817,7 +817,7 @@ class TestAudioVoiceRegistry {
     }
 
     private static ReplaceRawPcm raw(SampleBackedVoice voice) {
-        return ReplaceRawPcm.fromVoice(voice);
+        return ReplaceRawPcm.fromVoice(voice, new byte[] {0});
     }
 
     private static DecodedPcm pcm(String asset, int... samples) {

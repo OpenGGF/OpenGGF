@@ -1,6 +1,7 @@
 package com.openggf.audio.session;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public interface SmpsPhysicalPolicy {
     record Identity(String value) {
@@ -28,6 +29,19 @@ public interface SmpsPhysicalPolicy {
      */
     default SmpsWriteProgram enterDacIdleLoop() {
         return SmpsWriteProgram.EMPTY;
+    }
+
+    /**
+     * The driver's blocking SEGA PCM transport, when the driver owns it.
+     *
+     * <p>S3K streams the chant itself in {@code zPlaySEGAPCM}
+     * (Sound/Z80 Sound Driver.asm:4372-4424), so its policy describes the
+     * transport and the session plays it through the chip's DAC. A policy
+     * that returns {@link Optional#empty()} keeps whatever mechanism its
+     * game already uses for the SEGA screen.</p>
+     */
+    default Optional<SmpsSegaPcmTransport> segaPcmTransport() {
+        return Optional.empty();
     }
 
     /** ROM work performed when a non-immediate music load begins. */

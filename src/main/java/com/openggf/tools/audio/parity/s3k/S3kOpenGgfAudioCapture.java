@@ -4,12 +4,14 @@ import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.session.OwnedSmpsAudioStream;
 import com.openggf.audio.session.SmpsChipWrite;
 import com.openggf.audio.session.SmpsPhysicalDevice;
+import com.openggf.audio.session.SmpsSegaPcmTransport;
 import com.openggf.audio.session.SmpsWriteProgram;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.data.Rom;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsPhysicalPolicy;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
@@ -108,12 +110,26 @@ public final class S3kOpenGgfAudioCapture {
             applyProgram(driver,
                     Sonic3kSmpsPhysicalPolicy.INSTANCE.enterDacIdleLoop());
 
+            boolean[] segaPending = new boolean[1];
             for (int index = 1; index < reference.size(); index++) {
                 S3kAudioTick referenceTick = reference.get(index);
                 int ordinal = referenceTick.ordinal();
+                if (segaPending[0]) {
+                    // zPlaySegaSound only sets PlaySegaPCMFlag and returns
+                    // (D:2703-2719); the DAC idle loop reads it on the next
+                    // pass and jumps into zPlaySEGAPCM (D:4265-4267), which
+                    // then holds the bus under di for the whole sample
+                    // (D:4372-4424). The transport is therefore the whole of
+                    // the service window after the request's own.
+                    segaPending[0] = false;
+                    applyProgram(driver, segaPcmProgram(rom));
+                    addTick(ticks, driver, writes, referenceTick, corruptWriteTick);
+                    continue;
+                }
                 for (int request : referenceTick.mailbox()) {
                     if (request != 0) {
-                        dispatch(request, loader, dacData, stream, unsupported, ordinal);
+                        dispatch(request, loader, dacData, stream, unsupported,
+                                ordinal, segaPending);
                     }
                 }
                 driver.serviceOuterFrame();
@@ -153,9 +169,28 @@ public final class S3kOpenGgfAudioCapture {
         }
     }
 
+    /**
+     * The ROM's SEGA transport for the pinned ROM's own {@code SEGA_PCM}
+     * bytes, read through the S3K profile's loader like any other runtime
+     * asset.
+     */
+    private static SmpsWriteProgram segaPcmProgram(Rom rom) {
+        SmpsSegaPcmTransport transport = Sonic3kSmpsPhysicalPolicy.INSTANCE
+                .segaPcmTransport()
+                .orElseThrow(() -> new IllegalStateException(
+                        "S3K policy no longer owns the SEGA PCM transport"));
+        try {
+            return transport.program(
+                    new Sonic3kAudioProfile().loadSegaPcm(rom));
+        } catch (IOException error) {
+            throw new IllegalStateException(
+                    "cannot read SEGA PCM from the verified S3K ROM", error);
+        }
+    }
+
     private static void dispatch(int request, Sonic3kSmpsLoader loader,
             DacData dacData, OwnedSmpsAudioStream stream,
-            List<String> unsupported, int ordinal) {
+            List<String> unsupported, int ordinal, boolean[] segaPending) {
         SmpsDriver driver = stream.logicalDriver();
         int id = request == S3kAudioParitySchema.CREDITS_K ? 0x32 : request;
         if (id >= S3kAudioParitySchema.MUSIC_FIRST && id <= S3kAudioParitySchema.MUSIC_LAST) {
@@ -203,12 +238,11 @@ public final class S3kOpenGgfAudioCapture {
             return;
         }
         if (id == S3kAudioParitySchema.CMD_SEGA) {
-            // zPlaySegaSound begins with zStopAllSound, then leaves the PCM
-            // loop to stream register 2Ah between interrupt services
-            // (D:2703-2719,4267-4415).
+            // zPlaySegaSound calls zStopAllSound, sets PlaySegaPCMFlag and
+            // returns without reaching the loop (D:2703-2719), so this
+            // service carries only the stop; the transport is the next one.
             stream.stopAll();
-            unsupported.add("tick " + ordinal
-                    + ": SEGA PCM transport is outside the driver-service oracle");
+            segaPending[0] = true;
             return;
         }
         if (id == S3kAudioParitySchema.CMD_MUTE_PSG) {

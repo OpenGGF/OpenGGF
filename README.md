@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K SEGA chant is played by the driver:** the Sonic 3 & Knuckles session
+  now runs `zPlaySEGAPCM`'s blocking DAC transport itself (one byte per 248 Z80
+  cycles, interrupts held), replacing the presentation-layer sample for that
+  game; the S3K oracle moves from tick 50 to 128.
 - **Sonic 1 gameplay driver oracle is a full match:** normal sound effects now
   read the special-effect voice bank the shipped driver's `SendVoiceTL` bug
   points them at, closing the last divergence; the engine matches the
