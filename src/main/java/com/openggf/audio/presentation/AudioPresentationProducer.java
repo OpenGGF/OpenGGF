@@ -70,6 +70,14 @@ public final class AudioPresentationProducer {
     private boolean historyArmed;
     private boolean presenting;
     private boolean typedRequestRejected;
+    /**
+     * Stable applier identity handed to the forward resolver. Keeping the
+     * reference here means the resolver publishes resolved commands through a
+     * function this producer owns rather than through a producer reference,
+     * which keeps AudioManager the only entry point into the producer type.
+     */
+    private final AudioPresentationCommandResolver.ResolvedCommandApplier
+            forwardCommandApplier = this::applyResolvedForwardCommand;
     private boolean reverseActive;
     private boolean reverseFrameOutput;
     private boolean hasLastReverseFrame;
@@ -222,7 +230,7 @@ public final class AudioPresentationProducer {
             Objects.requireNonNull(forwardService, "forwardService");
             Objects.requireNonNull(forwardTimeline, "forwardTimeline");
             Objects.requireNonNull(forwardParity, "forwardParity");
-            forwardResolver.bindForwardExecutor(this);
+            forwardResolver.bindForwardExecutor(forwardCommandApplier);
         }
         if (smpsSession != null && !smpsSession.installed()) {
             smpsSession.install();

@@ -41,6 +41,18 @@ import java.util.function.Consumer;
  */
 public final class AudioPresentationCommandResolver {
 
+    /**
+     * Applies one resolved command on behalf of the production presentation
+     * owner. The owner supplies the implementation, so the resolver publishes
+     * outcomes without holding a reference to the producer itself and the
+     * AudioManager-only producer entry-point boundary stays intact.
+     */
+    @FunctionalInterface
+    public interface ResolvedCommandApplier {
+        void apply(AudioCommand request,
+                   AudioPresentationCommand resolvedCommand);
+    }
+
     public sealed interface ResolutionResult
             permits CompleteSuccess, Failure {
         AudioCommand request();
@@ -179,7 +191,7 @@ public final class AudioPresentationCommandResolver {
     private long nextVoiceId = 1;
     private long nextBatchOrdinal = 1;
     private final Object resolverIdentity = new Object();
-    private AudioPresentationProducer forwardExecutor;
+    private ResolvedCommandApplier forwardExecutor;
     private ResolutionBatch activeResolutionBatch;
 
     final class ResolutionBatch {
@@ -240,13 +252,13 @@ public final class AudioPresentationCommandResolver {
                 throw new IllegalStateException(
                         "failed resolution cannot be applied");
             }
-            AudioPresentationProducer executor = forwardExecutor;
+            ResolvedCommandApplier executor = forwardExecutor;
             if (executor == null) {
                 throw new IllegalStateException(
                         "resolution batch has no production executor");
             }
             for (AudioPresentationCommand command : success.commands) {
-                executor.applyResolvedForwardCommand(request, command);
+                executor.apply(request, command);
             }
             appliedOutcome = new AppliedOutcome(request, success.commands,
                     reservation);
@@ -348,7 +360,7 @@ public final class AudioPresentationCommandResolver {
         return batch;
     }
 
-    void bindForwardExecutor(AudioPresentationProducer executor) {
+    void bindForwardExecutor(ResolvedCommandApplier executor) {
         Objects.requireNonNull(executor, "executor");
         if (forwardExecutor != null && forwardExecutor != executor) {
             throw new IllegalStateException(

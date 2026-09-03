@@ -1195,7 +1195,7 @@ class TestAudioPresentationCommandResolver {
                         registry::onVoiceFailure),
                 new com.openggf.audio.output.NoDeviceAudioSink(48_000),
                 synchronouslyApplied::add);
-        resolver.bindForwardExecutor(producer);
+        resolver.bindForwardExecutor(producer::applyResolvedForwardCommand);
         return new Fixture(queue, factory, resolver, sources, assets, handlers,
                 session,
                 warnings, owner, synchronouslyApplied);
