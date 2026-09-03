@@ -27,6 +27,177 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S1 gameplay oracle: tick 933 → 1759, a normal SFX silences a special one without stopping it
+
+- **Worktree/branch:** `.worktrees/audio-s1-special-frontier`,
+  `bugfix/ai-s1-special-sfx-frontier`, on top of `8d001b3f0`.
+- **Fixture and command:** unchanged from the entries below.
+- **Result before:** MISMATCH, `TRACK_STATE_MISMATCH`, tick 933, role FM4,
+  field `overridden` — reference true, engine false.
+- **Result after:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 1759, event 0,
+  field `decoded_write` — reference YM2612 port 1 register 76 value 132, engine
+  value 4.
+- **What the divergence was.** The ring admitted at tick 911 took FM4 from the
+  waterfall and the engine deactivated the waterfall's track to do it. When the
+  ring finished at 933 there was no special SFX left to hand the channel back
+  to, so FM4 returned to music and the music override cleared. The reference
+  keeps it set: the waterfall was still playing all along.
+- **The ROM routine.** `Sound_PlaySFX` loads its own tracks and then tests the
+  SFX track it just wrote: with FM4 in use it sets bit 2, 'SFX is overriding',
+  on `v_spcsfx_fm4_track` (`docs/s1disasm/s1.sounddriver.asm:1072-1074`), and
+  PSG3 the same way (`:1077-1079`). It never clears the special track's playing
+  bit. The special SFX keeps advancing silently and gets the channel back
+  through `cfStopTrack`, which is the release edge the commit two below added.
+- **The engine change.** The admission-time displacement scan now skips any
+  pairing of one special and one normal SFX in either direction, not just the
+  special-admits-over-normal direction, and `overrideIncumbentSpecialSfx` marks
+  the incumbent special track overridden when a normal SFX takes its channel.
+  Together with the earlier `yieldsToIncumbentSfx` this makes the two sound
+  classes coexist the way the ROM's separate track RAM does.
+- **The next divergence.** Tick 1759 differs on an FM4 operator total-level
+  write, 132 against 4. That is a volume difference inside the special SFX
+  rather than a channel-ownership one, so it is a fresh line of enquiry.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, both exit 0. The audio packages plus
+  `TestSmpsFadeAudioThroughput` run 2,481 tests with 0 failures and 11 skips,
+  which includes the S2 driver oracle at `MATCH (698 ticks)`. The ordinary
+  suite with all three ROM paths runs 16,356 tests with 0 failures and 20
+  skips, and the separate `-Pguards` invocation runs 607 with 0 failures. The
+  S3K oracle was not re-run, for the reason recorded three entries below.
+
+## 2026-09-03 — S1 gameplay oracle: tick 641 → 933, the special-SFX slots walk last
+
+- **Worktree/branch:** `.worktrees/audio-s1-special-frontier`,
+  `bugfix/ai-s1-special-sfx-frontier`, on top of `4eedcbbb0`.
+- **Fixture and command:** unchanged from the entries below.
+- **Result before:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 641.
+- **Result after:** MISMATCH, `TRACK_STATE_MISMATCH`, tick 933, role FM4,
+  field `overridden` — reference true, engine false.
+- **What the divergence was.** Tick 641 emitted the same 35 writes on both
+  sides in a different order. The engine serviced the waterfall's three FM4
+  writes first and the ring's FM5 voice load after; the reference does the
+  reverse.
+- **The ROM routine.** Special-SFX tracks live in their own RAM block straight
+  after the SFX block (`docs/s1disasm/s1.sounddriver.ram.asm:98-105`), and
+  `UpdateMusic` walks them after every normal SFX slot: SFX FM3..FM5
+  (`s1.sounddriver.asm:243-250`), SFX PSG1..PSG3 (`:252-256`), then the two
+  special slots, FM4 then PSG3 (`:258-268`). A normal SFX admitted later is
+  still serviced before a special SFX already playing, whatever channels they
+  hold. The driver's slot walk sorted purely by channel, so the special FM4
+  track sorted ahead of a normal SFX on FM5.
+- **The engine change.** `SmpsSequencer.sfxSlotWalkOrder` takes the sequencer's
+  special-SFX flag and offsets special tracks past every normal SFX slot,
+  keeping FM before PSG within the special block as the ROM does.
+- **The next divergence.** At tick 933 a ring finishes on FM4 and the engine
+  releases the channel to music, clearing the music override, where the ROM
+  hands it back to the special track. `Sound_PlaySFX` marks the special track
+  overridden rather than stopping it (`:1072-1074` for FM4, `:1077-1079` for
+  PSG3), so the waterfall is still playing there; the engine deactivates the
+  special track when a normal SFX takes its channel, which is the mirror of
+  the admission-time bug fixed two commits below. That is the next target.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, both exit 0. The audio packages plus
+  `TestSmpsFadeAudioThroughput` run 2,481 tests with 0 failures and 11 skips,
+  which includes the S2 driver oracle at `MATCH (698 ticks)`. The S3K oracle
+  was not re-run, for the reason recorded two entries below.
+
+## 2026-09-03 — S1 gameplay oracle: tick 629 → 641, cfStopTrack hands FM4 to the special track
+
+- **Worktree/branch:** `.worktrees/audio-s1-special-frontier`,
+  `bugfix/ai-s1-special-sfx-frontier`, on top of `39776b1af`.
+- **Fixture and command:** unchanged from the entry below.
+- **Result before:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 629 — reference
+  YM2612 port 1 register 176 value 56, engine value 44.
+- **Result after:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 641. Ticks 629
+  through 640 now agree write-for-write, including the waterfall's repeating
+  FM4 frequency and key-on writes.
+- **What the divergence was.** At tick 629 the ring SFX finishes on FM4 and the
+  engine restored the *music* voice, value 44. The reference loads value 56,
+  the waterfall's own voice.
+- **The ROM routine.** `cfStopTrack`'s FM4 case tests
+  `v_spcsfx_fm4_track`'s PlaybackControl before anything else
+  (`docs/s1disasm/s1.sounddriver.asm:2512-2517`). With a special SFX playing it
+  points at the special track and at `v_special_voice_ptr`, the special SFX's
+  own voice table, then falls into `.gotpointer` (`:2529-2533`): clear the
+  track's 'SFX overriding' bit, set 'track at rest', reload its current voice.
+  The music track is never reached, so the music override bit survives the
+  release. PSG3 takes the same shape through `.getpsgptr` (`:2540-2547`,
+  restore at `:2554-2556`).
+- **The engine change.** `SmpsDriver.waitingSpecialSfx` finds a special SFX with
+  an active track on a channel a normal SFX is releasing. When one is waiting,
+  the release hands the lock to it and clears the override on *its* track
+  instead of on music, which reloads its own voice through the existing
+  `ROM_VOICE_RESTORE` path. The admission-time yield added in the commit below
+  now also marks the yielding special SFX's own track overridden, which is the
+  bit `Sound_PlaySpecial` sets at `:1180-1182` and `:1185-1187` and what makes
+  the release edge exist.
+- **The next divergence.** Tick 641 dispatches a ring while the waterfall holds
+  FM4. The reference loads that ring's voice on FM5 (port 1 register 177) and a
+  second ring on FM4 at tick 642; the engine emits only the waterfall's
+  continuation and nothing for the ring. That is the next lane's target.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, both exit 0. S2
+  `TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare`
+  `MATCH (698 ticks)`. The audio packages plus `TestSmpsFadeAudioThroughput`
+  run 2,481 tests with 0 failures and 11 skips. The S3K oracle was not re-run,
+  for the reason recorded in the entry below.
+
+## 2026-09-03 — S1 gameplay oracle: tick 618 → 629, a special SFX no longer steals a busy channel
+
+- **Worktree/branch:** `.worktrees/audio-s1-special-frontier`,
+  `bugfix/ai-s1-special-sfx-frontier`, on top of `234f1f606`.
+- **Fixture:** `src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v2.jsonl.gz`,
+  unchanged. Gate `TestS1GameplayAudioDriverOracle`.
+- **Command:**
+
+  ```
+  LUA_BIN=lua5.4 mvn -Dmse=off -Dsonic1.rom.path=<absolute S1 REV01 .gen> \
+    -Dtest=com.openggf.tools.audio.parity.TestS1GameplayAudioDriverOracle test -B
+  ```
+
+- **Result before:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 618, event 3,
+  field `decoded_write` — reference `<missing>`, engine YM2612 port 1 register
+  176 (`0xB0`, feedback/algorithm) value 56.
+- **Result after:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 629 — reference
+  YM2612 port 1 register 176 value 56, engine value 44.
+- **What the divergence was.** Tick 618 dispatches the GHZ waterfall
+  (`$D0`) through `Sound_PlaySpecial` while the ring SFX admitted at tick 593
+  is still playing on FM4. The engine took FM4 from the ring at admission and
+  played the waterfall's first note immediately: the whole 28-write voice load
+  and key-on at tick 618. The reference emits nothing on FM4 until tick 629,
+  where the ring's `cfStopTrack` finally hands the channel over.
+- **The ROM routine.** `Sound_PlaySpecial`
+  (`docs/s1disasm/s1.sounddriver.asm:1117`) initialises only the `v_spcsfx_*`
+  slots. It sets bit 2 on the *music* slot as `Sound_PlaySFX` does (`:1146` for
+  FM4, `:1153` for PSG3), but it never writes `v_sfx_fm4_track` or
+  `v_sfx_psg3_track`. When those normal-SFX tracks are already playing it
+  instead sets bit 2 on its own special track (`:1180-1182` and `:1185-1187`),
+  so the special SFX advances its timing silently. The channel changes hands
+  only in `cfStopTrack`'s special-track branch (`:2514-2518`), which is exactly
+  the mechanism the earlier tick-629 entry below described from the other side.
+- **The engine change.** `SmpsDriver` gained one predicate,
+  `yieldsToIncumbentSfx`, applied at both admission-time sites that were
+  taking the channel: the displacement scan in `prepareNewSfxAdmission` and
+  the ownership install in `installPreparedSfxChannelOwnership`. A special SFX
+  no longer displaces or relocks a channel held by a normal SFX. The music
+  override bit is still set, because the ROM sets it unconditionally. This is
+  the admission-time counterpart of the precedence `shouldStealLock` already
+  applied per write; no new game-name or zone branch was introduced, and only
+  S1's profile ever sets the special-SFX flag.
+- **The next divergence.** At tick 629 both sides now emit a voice load on the
+  same tick, but load different voices: the reference's `cfStopTrack` FM4
+  branch takes `v_special_voice_ptr` and applies it to the special track
+  (`:2514-2521`), while the engine restores the music voice on release. That is
+  the next lane's target.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, both exit 0, run as `S1AudioParityTool capture` +
+  `compare` against the committed v1 references. S2
+  `TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare`
+  `MATCH (698 ticks)`. The S3K oracle was not re-run: its command needs an
+  external request sidecar that is not present in this worktree, and no S3K
+  path can reach the changed code, since the special-SFX flag is set only by
+  S1's audio profile.
+
 ## 2026-09-03 — S3K reference republished as v2, sampled at the zVInt return; frontier moves to tick 0
 
 - **Context:** `.worktrees/audio-s3k-reference-v2`, branch

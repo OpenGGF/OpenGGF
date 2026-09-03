@@ -1303,10 +1303,24 @@ public class SmpsSequencer implements CoordFlagContext {
         slotWalkService = null;
     }
 
-    /** The fixed SFX RAM slot this track occupies, for the driver's walk. */
-    public static int sfxSlotWalkOrder(Track track) {
-        return sfxTrackRamOrder(track);
+    /**
+     * The fixed SFX RAM slot this track occupies, for the driver's walk.
+     *
+     * <p>Special-SFX tracks live in their own RAM block straight after the SFX
+     * block (`v_spcsfx_track_ram`, s1.sounddriver.ram.asm:98-105), and
+     * {@code UpdateMusic} walks them after every normal SFX slot: SFX FM3..FM5
+     * (s1.sounddriver.asm:243-250) then SFX PSG1..PSG3 (:252-256), then the two
+     * special slots, FM4 followed by PSG3 (:258-268). So a normal SFX admitted
+     * later is still serviced before a special SFX already playing, whatever
+     * channels they hold.
+     */
+    public static int sfxSlotWalkOrder(Track track, boolean specialSfx) {
+        return sfxTrackRamOrder(track)
+                + (specialSfx ? SPECIAL_SFX_SLOT_WALK_BASE : 0);
     }
+
+    /** Slot-walk offset of the special-SFX RAM block past every SFX slot. */
+    private static final int SPECIAL_SFX_SLOT_WALK_BASE = 32;
 
     private void finishSfxTempoFrame() {
         maxTicks--;

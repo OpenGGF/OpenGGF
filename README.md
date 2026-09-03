@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 1 special sound effects follow the driver:** the Green Hill waterfall
+  now waits for a busy channel, restores its own voice on release, is walked
+  after the normal effect slots, and survives a normal effect taking its channel,
+  moving the gameplay oracle from update 618 to 1,759.
 - **S3K driver oracle reference v2:** the AIZ1 reference is now sampled by
   the observer core at the driver's `zVInt` return, one tick per completed
   service (5,263 ticks over 5,400 frames, 725,898 writes), from two byte-identical
