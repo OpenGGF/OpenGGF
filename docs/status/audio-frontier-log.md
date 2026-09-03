@@ -55,6 +55,14 @@ defined by `com.openggf.tools.audio.parity`.
   music-only-host result: that host supplied no SFX requests, whereas the
   same-BK2 observer measures the production request path.
 
+  At `3045e716d`, the S2 compressed-load readiness model cost the actual EHZ
+  bank-2 Saxman path at 363,255 Z80 T-states (363,283 on the enabled PAL
+  path). It predicted exactly six fully masked presentation rows and moved the
+  same-BK2 tick-0 value from `0x58` to **`0xa4`**, no further. The remaining
+  `0xa4` versus `0x3c` mismatch is the separately measured early Music0
+  request: OpenGGF submits EHZ at row 10184, while native initialization is
+  bounded to the row 10194→10195 boundary.
+
 ## 2026-09-02 — S3K E4 seven-slot stop/restore source correction under review; no oracle move
 
 - **Worktree/branch:** `.worktrees/sound-driver-roadmap-completion`,
