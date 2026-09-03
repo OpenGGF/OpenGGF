@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 2 level music now starts on the shipped level-entry cadence:** the
+  game-owned timing profile derives pre-BGM work from ROM data, including
+  title-card and PLC paths, region, prior live water state, and Saxman load
+  cost. Level-entry VBlanks and the load-completion boundary are rewind-stable,
+  and EHZ driver parity now matches through 266 completed updates without
+  trace-fed gameplay state.
+
 - **Sonic 2 audio requests now traverse the shipped mailbox and queue order:**
   base-game music, SFX, and system requests are retained until a forward audio
   boundary, then bridge, arbitrate, transform, and dispatch through the

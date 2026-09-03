@@ -417,6 +417,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
         } catch (Exception e) {
             discardInitialProcessSpritesLifecycle();
+            activeGameModule().getLevelInitProfile().cancelPendingLevelLoadWork();
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
             if (cause instanceof IOException ioe) {
@@ -427,7 +428,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             throw new IOException("Failed to load level due to unexpected error.", e);
         } finally {
             // The suppress flag belongs to this load only. A load that fails before
-            // InitAudio — or a preview capture, which has no InitAudio step — must not
+            // ScheduleLevelMusic — or a preview capture, which has no music step — must not
             // leave it latched for the next level, which would start that level silent.
             transitions.setSuppressNextMusicChange(false);
             levelEntryBegun = false;
@@ -484,18 +485,30 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * their counted fade; the ordered load profile reaches it as fallback.
      */
     public void beginLevelEntry() {
-        if (levelEntryBegun) {
-            return;
-        }
-        activeGameModule().getLevelInitProfile().beginLevelEntry();
-        levelEntryBegun = true;
+        levelEntryBegun = LevelMusicCoordinator.beginEntry(levelEntryBegun,
+                activeGameModule().getLevelInitProfile());
     }
 
     /** Submits the level's playlist request after game-owned entry commands. */
     public void playLevelMusic(int levelIndex) throws IOException {
-        if (!transitions.consumeSuppressNextMusicChange()) {
-            audioManager.playMusic(game.getMusicId(levelIndex));
-        }
+        LevelMusicCoordinator.prepare(game, transitions, levelIndex)
+                .ifPresent(this::publishPreparedLevelMusic);
+    }
+
+    /** Resolves the selected zone/act's playlist entry without publishing it. */
+    public java.util.OptionalInt prepareCurrentLevelMusic() throws IOException {
+        return LevelMusicCoordinator.prepareCurrent(game, transitions, resolveLevelData());
+    }
+
+    /** Re-publishes the current level request through the canonical owner. */
+    public void playCurrentLevelMusic() {
+        publishPreparedLevelMusic(getCurrentLevelMusicId());
+    }
+
+    /** Publishes a request the active game profile has released. */
+    public void publishPreparedLevelMusic(int musicId) {
+        LevelMusicCoordinator.publish(audioManager, musicId,
+                activeGameModule().getLevelInitProfile());
     }
 
     /**
@@ -2623,16 +2636,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Returns -1 if no level is loaded or music ID cannot be determined.
      */
     public int getCurrentLevelMusicId() {
-        if (game == null || levels == null || levels.isEmpty()) {
-            return -1;
-        }
-        try {
-            int levelIdx = levels.get(currentZone).get(currentAct).getLevelIndex();
-            return game.getMusicId(levelIdx);
-        } catch (Exception e) {
-            LOGGER.warning("Failed to get music ID for current level: " + e.getMessage());
-            return -1;
-        }
+        return LevelMusicCoordinator.currentMusicId(
+                game, levels, currentZone, currentAct, LOGGER);
     }
 
     public Collection<ObjectSpawn> getActiveObjectSpawns() {

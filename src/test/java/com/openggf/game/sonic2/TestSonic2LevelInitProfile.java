@@ -9,6 +9,10 @@ import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.data.Rom;
+import com.openggf.level.LevelData;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.timing.Sonic2PreBgmTimingModel;
 import com.openggf.tools.audio.completerun.s2.S2ProductionRequestProjector;
 
 import com.openggf.game.InitStep;
@@ -100,8 +104,59 @@ public class TestSonic2LevelInitProfile {
         assertEquals("InitGameModule", steps.get(0).name());
         assertEquals("ConfigureAudio", steps.get(1).name());
         assertEquals("QueueLevelEntryFadeOut", steps.get(2).name());
-        assertEquals("InitAudio", steps.get(3).name());
+        assertEquals("ScheduleLevelMusic", steps.get(3).name(),
+                "the timing model must capture prior live state before load mutations");
+        assertEquals("LoadLevelData", steps.get(4).name());
         assertEquals("InitBackgroundRenderer", steps.get(15).name());
+    }
+
+    @Test
+    public void scheduledLevelMusicResolvesTheRomZoneNotTheProgressionIndex()
+            throws Exception {
+        // Chemical Plant is progression index 1 in Sonic2ZoneRegistry but ROM
+        // zone 0x0D. ScheduleLevelMusic must resolve the timing model with the
+        // ROM pair, because the model indexes the ROM level-data directory and
+        // branches on Current_Zone/Current_Act. Feeding it the progression
+        // index reads another zone's PLC and title-card data and silently
+        // drops the CPZ act 2 water arm.
+        audioRom = new Rom();
+        assertTrue(audioRom.open(RomTestUtils.ensureSonic2RomAvailable()
+                .getAbsolutePath()));
+
+        int cpz2LevelIndex = LevelData.CHEMICAL_PLANT_2.getLevelIndex();
+        int entry = Sonic2Constants.LEVEL_SELECT_ADDR + cpz2LevelIndex * 2;
+        int romZoneId = Byte.toUnsignedInt(audioRom.readByte(entry));
+        int romActId = Byte.toUnsignedInt(audioRom.readByte(entry + 1));
+        assertEquals(Sonic2ZoneConstants.ROM_ZONE_CPZ, romZoneId,
+                "the ROM LevelOrder table must supply CPZ's ROM zone id");
+        assertEquals(1, romActId);
+        assertNotEquals(romZoneId, 1,
+                "the ROM zone id and the progression index must not coincide, "
+                        + "otherwise this test cannot detect the confusion");
+
+        var resolved = assertInstanceOf(Sonic2PreBgmTimingModel.Resolved.class,
+                Sonic2PreBgmTimingModel.resolve(audioRom, romZoneId, romActId,
+                        java.util.OptionalInt.empty(),
+                        Sonic2PreBgmTimingModel.Region.NTSC, false));
+        assertEquals(Sonic2PreBgmTimingModel.WaterPath.CPZ,
+                resolved.evidence().levelEntry().waterPath(),
+                "CPZ act 2 must select the underwater arm");
+
+        // The same call with the progression index resolves a different zone's
+        // work, so the confusion is silent rather than an error. The terminal
+        // bucket is a whole row and can coincide by chance, so assert the
+        // modelled work instead of the countdown it happens to land on.
+        var wrong = assertInstanceOf(Sonic2PreBgmTimingModel.Resolved.class,
+                Sonic2PreBgmTimingModel.resolve(audioRom, 1, romActId,
+                        java.util.OptionalInt.empty(),
+                        Sonic2PreBgmTimingModel.Region.NTSC, false));
+        assertEquals(Sonic2PreBgmTimingModel.WaterPath.NONE,
+                wrong.evidence().levelEntry().waterPath(),
+                "the progression index silently drops CPZ's underwater arm");
+        assertNotEquals(
+                resolved.evidence().levelEntry().plcCalls(),
+                wrong.evidence().levelEntry().plcCalls(),
+                "the progression index walks another zone's PLC queue");
     }
 
     @Test
@@ -122,7 +177,7 @@ public class TestSonic2LevelInitProfile {
         int entryRequestIndex = stepIndex(steps, "QueueLevelEntryFadeOut");
         assertTrue(stepIndex(steps, "ConfigureAudio") < entryRequestIndex,
                 "the production request service must exist before PlaySound writes SFX0");
-        assertTrue(entryRequestIndex < stepIndex(steps, "InitAudio"),
+        assertTrue(entryRequestIndex < stepIndex(steps, "ScheduleLevelMusic"),
                 "Level-entry fade-out precedes the later level-music request");
         assertTrue(entryRequestIndex < stepIndex(steps, "QueueInitialPlcs"),
                 "Level-entry PlaySound must precede ClearPLC and the initial PLC loads");
@@ -169,7 +224,7 @@ public class TestSonic2LevelInitProfile {
         assertEquals("InitGameModule", steps.get(0).name());
         assertEquals("ConfigureAudio", steps.get(1).name());
         assertEquals("QueueLevelEntryFadeOut", steps.get(2).name());
-        assertEquals("InitAudio", steps.get(3).name());
+        assertEquals("ScheduleLevelMusic", steps.get(3).name());
         assertEquals("LoadLevelData", steps.get(4).name());
         assertEquals("QueueInitialPlcs", steps.get(5).name());
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("QueueInitialPlcs")),

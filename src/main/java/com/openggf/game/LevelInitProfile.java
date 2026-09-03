@@ -126,6 +126,25 @@ public interface LevelInitProfile {
     }
 
     /**
+     * Services game-owned work for one physical vertical interrupt during
+     * level entry or gameplay. The canonical caller is {@code LevelFrameStep};
+     * profiles must not attach this work to object dispatch.
+     */
+    default void serviceLevelLoadVBlank() {
+        // Games without deferred level-entry work have no action.
+    }
+
+    /** Cancels prepared work when a level-entry boundary is abandoned. */
+    default void cancelPendingLevelLoadWork() {
+        // Games without deferred level-entry work have no action.
+    }
+
+    /** Whether this profile owns a not-yet-published level-music request. */
+    default boolean isLevelMusicPublicationPending() {
+        return false;
+    }
+
+    /**
      * Counted {@code WaitForVBlank} rows the game's {@code Level:} routine
      * spends between its last un-timed load step and the first iteration of
      * the level main loop.

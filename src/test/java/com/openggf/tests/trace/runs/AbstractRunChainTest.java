@@ -3,6 +3,8 @@ package com.openggf.tests.trace.runs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.openggf.GameLoop;
+import com.openggf.LevelFrameContext;
+import com.openggf.LevelFrameStep;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
@@ -4829,8 +4831,24 @@ abstract class AbstractRunChainTest {
      * owns no gameplay state.
      */
     private void serviceLagRowVint() {
-        var objectManager = GameServices.level().getObjectManager();
-        objectManager.initVblaCounter(objectManager.getVblaCounter() + 1);
+        GameplayModeContext gameplayMode =
+                SessionManager.getCurrentGameplayMode();
+        serviceLagRowVint(
+                LevelFrameContext.from(gameplayMode),
+                gameplayMode.plcFrameLifecycle(),
+                GameServices.level().getObjectManager());
+    }
+
+    static void serviceLagRowVint(
+            LevelFrameContext context,
+            com.openggf.game.resources.PlcFrameLifecycleCoordinator lifecycle,
+            com.openggf.level.objects.ObjectManager objectManager) {
+        lifecycle.runSuppressedLagIteration(frame -> {
+            LevelFrameStep.serviceVBlankOnly(
+                    context, frame, PlcLifecyclePhase.LAG);
+            objectManager.initVblaCounter(objectManager.getVblaCounter() + 1);
+            return null;
+        });
     }
 
     /**

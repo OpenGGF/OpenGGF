@@ -92,7 +92,8 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                         EXCLUSIVE_END - DESTINATION_START_ROW);
                 audioRecorder.presentOpenRow(audio);
                 return new S2RequestProjectionBk2TestBridge.Capture(
-                        projector, requestRows, audioRecorder.rows());
+                        projector, requestRows, audioRecorder.rows(),
+                        audioRecorder.publicAudioRequests());
             }
         } finally {
             productionOutputRowObserver = row -> { };
@@ -106,6 +107,8 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
         private final List<S2RequestProjectionBk2TestBridge.ProductionAudioRow> rows =
                 new ArrayList<>();
         private final List<S2OracleRawStream.ChipWrite> writes = new ArrayList<>();
+        private final List<S2RequestProjectionBk2TestBridge.PublicAudioRequest>
+                publicAudioRequests = new ArrayList<>();
         private int row = -1;
         private SmpsDriverSnapshot finalSnapshot;
         private SmpsDriverServiceObserver.ServiceEvent activeService;
@@ -114,7 +117,11 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
 
         DiagnosticObserverSet observers() {
             return new DiagnosticObserverSet(
-                    AudioRequestObserver.NONE,
+                    (requestClass, rawSoundId) -> {
+                        publicAudioRequests.add(
+                                new S2RequestProjectionBk2TestBridge.PublicAudioRequest(
+                                        row, requestClass, rawSoundId));
+                    },
                     AudioAdmissionObserver.NONE,
                     new SmpsDriverServiceObserver() {
                         @Override
@@ -218,6 +225,11 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                 throw new IllegalStateException("audio observation is incomplete");
             }
             return List.copyOf(rows);
+        }
+
+        List<S2RequestProjectionBk2TestBridge.PublicAudioRequest>
+                publicAudioRequests() {
+            return List.copyOf(publicAudioRequests);
         }
 
         private static boolean isUpdateMusic(

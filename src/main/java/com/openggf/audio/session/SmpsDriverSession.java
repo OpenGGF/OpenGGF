@@ -608,8 +608,17 @@ public final class SmpsDriverSession implements AutoCloseable {
 
         PendingService service = pendingService;
         if (service != null) {
-            if (!service.readiness().advanceOnePresentation()) {
-                return SmpsServiceOutcome.LOAD_PENDING;
+            if (!service.readiness().ready()) {
+                if (!service.readiness().advanceOnePresentation()) {
+                    return SmpsServiceOutcome.LOAD_PENDING;
+                }
+                // A non-immediate load is one synchronous driver invocation.
+                // Reaching zero during this presentation means that invocation
+                // is still in flight; the next service boundary atomically
+                // commits its built-in first update instead of dispatching a
+                // second update. S2 zBGMLoad returns into zUpdateMusic in the
+                // same zUpdateEverything pass (s2.sounddriver.asm:1738-2006).
+                return SmpsServiceOutcome.SERVICE_IN_FLIGHT;
             }
             if (service.logical() != null) {
                 restoreLogicalWithoutWrites(service.logical());
@@ -1125,7 +1134,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     public boolean blocksForwardRequestConsumption() {
         requireInstalled();
         return pendingService != null
-                && !pendingService.readiness().ready();
+                && !pendingService.plan.immediate();
     }
 
     int serviceInvocationCountForTesting() {

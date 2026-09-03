@@ -11,6 +11,7 @@ import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler;
 import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,13 @@ class TestS1S2PlcSessionOwnership {
         sonic2.createGame(new Rom());
         Sonic2PlcService s2Service = sonic2.getGameService(Sonic2PlcService.class);
         assertFalse(s2Service.isBusy(), "the next session must start with an empty PLC FIFO");
-        assertSingleAdapter(sonic2, s2Service);
+        assertEquals(2, sonic2.rewindAdapters().size());
+        assertSame(s2Service, sonic2.rewindAdapters().get(0));
+        var scheduler = sonic2.rewindAdapters().get(1);
+        assertTrue(scheduler
+                instanceof Sonic2LevelMusicScheduler);
+        assertSame(scheduler, sonic2.rewindAdapters().get(1),
+                "the session must retain one scheduler identity");
 
         s2Service.restore(nonEmptySnapshot());
         assertEquals(nonEmptySnapshot(), s2Service.capture());
@@ -68,6 +75,8 @@ class TestS1S2PlcSessionOwnership {
         Sonic2GameModule module = new Sonic2GameModule();
         GameplayModeContext context = attachedBeforeGameCreation(module);
         assertFalse(context.getRewindRegistry().capture().containsKey(Sonic2PlcService.REWIND_KEY));
+        assertTrue(context.getRewindRegistry().capture()
+                .containsKey(Sonic2LevelMusicScheduler.REWIND_KEY));
 
         module.createGame(new Rom());
         context.registerLevelAdapters(context.getLevelManager());

@@ -151,10 +151,13 @@ public final class LevelFrameStep {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
         }
+        dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
     }
 
-    public static void serviceHardwareVBlankOnly(LevelFrameContext context) {
+    public static void serviceHardwareVBlankOnly(
+            LevelFrameContext context, PlcLifecycleFrame frame) {
+        dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
     }
 
@@ -191,6 +194,7 @@ public final class LevelFrameStep {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
         }
+        dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
         objectScan.run();
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
@@ -233,6 +237,7 @@ public final class LevelFrameStep {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
         }
+        dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
@@ -547,6 +552,20 @@ public final class LevelFrameStep {
                 context.runtimeArtCoordinator(),
                 context.hardwareTiming(),
                 context.hardwareTimingBoundaryObserver());
+    }
+
+    /** Dispatches game-owned VBlank work once for this physical lifecycle token. */
+    public static void dispatchGameVBlank(
+            LevelFrameContext context, PlcLifecycleFrame frame) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(frame, "frame");
+        frame.dispatchGameVBlank(() -> {
+            var module = context.gameModule();
+            var profile = module != null ? module.getLevelInitProfile() : null;
+            if (profile != null) {
+                profile.serviceLevelLoadVBlank();
+            }
+        });
     }
 
     private static void startPendingInLevelTitleCard(

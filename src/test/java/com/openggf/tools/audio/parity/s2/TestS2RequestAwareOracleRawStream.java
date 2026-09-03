@@ -30,6 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** Contract tests for the strictly unbound request-aware raw-v2 reader. */
@@ -133,6 +135,46 @@ class TestS2RequestAwareOracleRawStream {
         System.out.println("MEASUREMENT_ONLY " + driver.describe());
         assertNotEquals(S2AudioOracleComparator.Kind.INVALID,
                 driver.kind(), driver.describe());
+    }
+
+    @Test
+    @ExtendWith(SessionInvocationExtension.class)
+    void levelPlayBgmPublishesEmeraldHillOnceAtTheNativeLoadBoundary()
+            throws Exception {
+        String romProperty = System.getProperty("sonic2.rom.path");
+        String bk2Property = System.getProperty("s2.request.bk2.path");
+        assumeTrue(romProperty != null && bk2Property != null,
+                "explicit ROM and BK2 paths are required");
+
+        S2RequestProjectionBk2TestBridge.Capture capture =
+                S2RequestProjectionBk2TestBridge.capture(
+                        Path.of(romProperty), Path.of(bk2Property));
+        assertEquals(List.of(10_195), capture.publicAudioRequests().stream()
+                .filter(request -> request.requestClass()
+                        == com.openggf.audio.AudioRequestObserver.RequestClass.MUSIC)
+                .filter(request -> request.nativeId() == 0x81)
+                .filter(request -> request.row() >= 10_150
+                        && request.row() < 10_900)
+                .map(S2RequestProjectionBk2TestBridge.PublicAudioRequest::row)
+                .toList(),
+                "Level_PlayBgm must publish EHZ exactly once at the ROM boundary");
+
+        var completionWindow = capture.audioRows().stream()
+                .filter(row -> row.row() >= 10_201 && row.row() <= 10_203)
+                .toList();
+        assertEquals(List.of(false, true, true), completionWindow.stream()
+                .map(S2RequestProjectionBk2TestBridge.ProductionAudioRow
+                        ::completedDriverService)
+                .toList(),
+                "row 10201 is in flight; update0 completes on 10202 and "
+                        + "ordinary service resumes on 10203");
+        assertNull(completionWindow.getFirst().snapshot(),
+                "the in-flight row has no committed driver service snapshot");
+        assertEquals(List.of(0x3c, 0xda), completionWindow.subList(1, 3).stream()
+                .map(row -> row.snapshot().sequencers().stream()
+                        .filter(entry -> !entry.sfx()).findFirst().orElseThrow()
+                        .snapshot().tempoAccumulator() & 0xff)
+                .toList());
     }
 
     @Test

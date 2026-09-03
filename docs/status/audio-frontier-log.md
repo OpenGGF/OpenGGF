@@ -27,6 +27,40 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S2 source-owned level-entry timing advances driver frontier to tick 266
+
+- **Context:** landed on `bugfix/ai-s2-level-playbgm-land` from
+  `.worktrees/s2-tick0-land`, base `7f5067b23`; no fixture or comparator
+  semantics changed. The tranche was reviewed before landing and four defects
+  were fixed on this branch: the level-music schedule was resolving the timing
+  model against the zone registry's progression index instead of the ROM
+  zone/act pair, which was correct only for EHZ; the title-card lifecycle
+  serviced a second hardware `VINT_SERVICE` boundary per frame; the rewind
+  registry adapter-count assertions were not updated for the new scheduler;
+  and `LevelManager` grew against its size ratchet.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off
+  '-Dsonic2.rom.path=$REPO/s2.gen'
+  '-Ds2.request.bk2.path=$REPO/docs/BizHawk-2.11-linux-x64/Movies/sonic-2-sonic-tails-complete-emeralds.bk2'
+  '-Ds2.request.candidate.path=$CAPTURES/s2-native-authority-live-evidence-20260902/coincident-extract-g-final/s2-request-window.oracle-raw-v2.jsonl'
+  '-Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare'
+  test -B`.
+- **Result:** request transfer **MATCH (25/25)**. The driver frontier advances
+  from tick 0 to **tick 266 (movie row 10468)**, `writes.count`, expected 2,
+  actual 4; 107 of 698 ticks diverge.
+- **Evidence:** `Level_PlayBgm` publishes EHZ once at row 10195. The ROM-data
+  Saxman cost produces exactly six `LOAD_PENDING` rows (10195-10200), then a
+  distinct `SERVICE_IN_FLIGHT` boundary at 10201 with no committed snapshot;
+  update 0 commits at 10202 (`tempoAccumulator=0x3c`) and ordinary update 1 at
+  10203 (`0xda`). Thus the previous tick-0 state and write fields all match,
+  while the six-row readiness movement remains exactly the source-derived
+  `0x58` to `0xa4` shift rather than absorbing the completion boundary.
+- **Cross-checks at landing:** S1 GHZ music oracle **MATCH (14690 ticks)** and
+  S1 sound-test SFX oracle **MATCH (1967 ticks, 8 dispatches)**, both exit 0.
+  No `*TraceReplay` class changed result against base `7f5067b23`, and
+  `TestS2CompleteEmeraldRunChain` is unchanged. The S2 driver comparison is
+  `MEASUREMENT_ONLY`; the asserting companion is
+  `TestS2RequestAwareOracleRawStream#levelPlayBgmPublishesEmeraldHillOnceAtTheNativeLoadBoundary`.
+
 ## 2026-09-03 — S2 Level_PlayBgm tranche frozen after two Critical reviews
 
 - **Critical 1 — omitted and trace-coupled service:** `f7373c1cb` advanced the pending request from `ObjectManager`'s object-visible VBlank clock.

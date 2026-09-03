@@ -65,7 +65,7 @@ final class Sonic2SaxmanLoadReadiness implements SmpsLoadReadiness {
 
     @Override
     public Work resume(Context context, long remainingTStates) {
-        if (remainingTStates <= 0
+        if (remainingTStates < 0
                 || remainingTStates > minimumTStates(context)) {
             throw new IllegalArgumentException(
                     "invalid remaining Saxman work");

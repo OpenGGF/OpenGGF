@@ -3,6 +3,7 @@ package com.openggf.audio.session;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -15,6 +16,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -25,6 +27,63 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsSessionTransitionMatrix {
+
+    @Test
+    void delayedLoadCrossingBecomesOneRewindableInFlightService() {
+        SmpsSessionTestFixtures.RecordingObserver writes =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(writes);
+        List<Long> serviceEnds = new ArrayList<>();
+        session.setDriverServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceEnd(ServiceEvent event,
+                    SmpsDriverSnapshot snapshot) {
+                serviceEnds.add(event.ordinal());
+            }
+        });
+        session.install();
+        PreparedSmpsMusicActivation base = activation(
+                0x81, SourcePolicy.S2, false);
+        session.queueActivation(new PreparedSmpsMusicActivation(
+                base.activation(), base.incomingMusic(), base.logicalPolicy(),
+                base.selectedDac(), twoPresentationReadiness()));
+        int loadSilenceWrites = writes.events().size();
+
+        assertEquals(SmpsServiceOutcome.LOAD_PENDING,
+                session.serviceForward());
+        assertEquals(SmpsServiceOutcome.SERVICE_IN_FLIGHT,
+                session.serviceForward());
+        assertTrue(session.hasPendingActivation());
+        assertEquals(0, session.captureLogicalSnapshot()
+                .pendingService().remainingTStates());
+        assertEquals(loadSilenceWrites, writes.events().size());
+        assertTrue(serviceEnds.isEmpty());
+
+        SmpsDriverSessionSnapshot readyPhysical = session.captureSnapshot();
+        SmpsDriverSnapshot readyInFlight = session.captureLogicalSnapshot();
+        assertEquals(SmpsServiceOutcome.ORDINARY, session.serviceForward());
+        assertFalse(session.hasPendingActivation());
+        assertFalse(serviceEnds.isEmpty());
+        int endsAfterFirstService = serviceEnds.size();
+
+        SmpsDriverSession.PreparedRestore restore = session.prepareRestore(
+                readyPhysical, readyInFlight,
+                new SmpsDriverSession.DacDependencyResolver() {
+                    @Override public com.openggf.audio.smps.DacData resolve(
+                            SmpsSourceDescriptor source) {
+                        return base.selectedDac().data();
+                    }
+
+                    @Override public SmpsLoadReadiness resolveReadiness(
+                            SmpsSourceDescriptor source) {
+                        return twoPresentationReadiness();
+                    }
+                });
+        session.commitRestore(restore);
+        assertEquals(SmpsServiceOutcome.ORDINARY, session.serviceForward());
+        assertEquals(endsAfterFirstService * 2, serviceEnds.size(),
+                "restoring READY_IN_FLIGHT must replay exactly one first service");
+    }
     private enum SourcePolicy {
         S1(true), S2(false), S3K(false);
 
@@ -148,6 +207,10 @@ class TestSmpsSessionTransitionMatrix {
         assertEquals(SmpsServiceOutcome.LOAD_PENDING, session.serviceForward());
         assertTrue(session.blocksForwardRequestConsumption());
         assertTrue(session.captureLogicalSnapshot().sequencers().isEmpty());
+        assertEquals(SmpsServiceOutcome.SERVICE_IN_FLIGHT,
+                session.serviceForward());
+        assertTrue(session.blocksForwardRequestConsumption());
+        assertTrue(session.captureLogicalSnapshot().sequencers().isEmpty());
         assertEquals(SmpsServiceOutcome.ORDINARY, session.serviceForward());
         assertFalse(session.blocksForwardRequestConsumption());
         assertFalse(session.hasPendingActivation());
@@ -173,6 +236,8 @@ class TestSmpsSessionTransitionMatrix {
         session.rollbackLiveMutation(mutation);
 
         assertEquals(SmpsServiceOutcome.LOAD_PENDING,
+                session.serviceForward());
+        assertEquals(SmpsServiceOutcome.SERVICE_IN_FLIGHT,
                 session.serviceForward());
         assertEquals(SmpsServiceOutcome.ORDINARY,
                 session.serviceForward());
@@ -210,6 +275,8 @@ class TestSmpsSessionTransitionMatrix {
         session.commitRestore(restore);
 
         assertEquals(SmpsServiceOutcome.LOAD_PENDING,
+                session.serviceForward());
+        assertEquals(SmpsServiceOutcome.SERVICE_IN_FLIGHT,
                 session.serviceForward());
         assertEquals(SmpsServiceOutcome.ORDINARY,
                 session.serviceForward());
