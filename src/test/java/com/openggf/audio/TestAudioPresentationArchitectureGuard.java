@@ -31,9 +31,12 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -861,12 +864,55 @@ class TestAudioPresentationArchitectureGuard {
         boolean delegatedGameSoundClassification = marker.contains(
                 "playSfx(GameSound sound, float pitch)")
                 && body != null
-                && body.contains("playGameSfxResolved(");
-        if (body != null && !body.contains(ownerCall)
+                && classifiesThroughDelegate(source, body,
+                        "playGameSfxResolved(");
+        if (body != null
+                && !classifiesThroughDelegate(source, body, ownerCall)
                 && !delegatedGameSoundClassification) {
             violations.add("classification bypass " + marker + " @ " + path);
         }
     }
+
+    /**
+     * True when the entry point performs the classification call itself or
+     * forwards to a private overload that does.
+     *
+     * <p>A public entry point is allowed to share its body with a sibling
+     * request shape by delegating to one private overload -- the S2 secondary
+     * request route does exactly that. What the guard protects is that the
+     * classification owner is still called before the request leaves the
+     * manager, so the search follows local calls rather than reading only the
+     * entry point's own text.
+     */
+    private static boolean classifiesThroughDelegate(
+            String source, String body, String ownerCall) {
+        Map<MethodSignature, String> methods = methodBodies(source);
+        Set<String> visited = new HashSet<>();
+        Deque<String> pending = new ArrayDeque<>();
+        pending.push(body);
+        int inspected = 0;
+        while (!pending.isEmpty() && inspected++ < CLASSIFICATION_HOP_LIMIT) {
+            String current = pending.pop();
+            if (current.contains(ownerCall)) {
+                return true;
+            }
+            for (String method : methodNames(methods)) {
+                if (!visited.add(method)) {
+                    continue;
+                }
+                if (localCallPattern(method).matcher(current).find()) {
+                    for (Map.Entry<MethodSignature, String> target
+                            : methodsNamed(methods, method)) {
+                        pending.push(target.getValue());
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Bounds the delegation walk so the guard cannot run away on a cycle. */
+    private static final int CLASSIFICATION_HOP_LIMIT = 64;
 
     private static String requiredMethodBody(
             String source, String marker, String path,
@@ -911,7 +957,38 @@ class TestAudioPresentationArchitectureGuard {
                         new HashSet<>(Set.of(root.getKey()))).valid());
     }
 
+    /**
+     * Memo for {@link #inspectLookupOrder}. The walk expands every local call
+     * at every call site, so the same (body, seen, cycle-cut) state is
+     * re-derived thousands of times over the manager's call graph; the result
+     * is a pure function of that state, so caching it is behaviour-preserving.
+     */
+    private record LookupState(String body, boolean lookupSeen,
+            Set<MethodSignature> activeMethods) {
+    }
+
+    private static final Map<LookupState, LookupInspection> LOOKUP_MEMO =
+            new HashMap<>();
+
     private static LookupInspection inspectLookupOrder(
+            String body,
+            Map<MethodSignature, String> methods,
+            Set<String> relevantMethods,
+            boolean lookupSeen,
+            Set<MethodSignature> activeMethods) {
+        LookupState state = new LookupState(body, lookupSeen,
+                Set.copyOf(activeMethods));
+        LookupInspection memoised = LOOKUP_MEMO.get(state);
+        if (memoised != null) {
+            return memoised;
+        }
+        LookupInspection computed = computeLookupOrder(
+                body, methods, relevantMethods, lookupSeen, activeMethods);
+        LOOKUP_MEMO.put(state, computed);
+        return computed;
+    }
+
+    private static LookupInspection computeLookupOrder(
             String body,
             Map<MethodSignature, String> methods,
             Set<String> relevantMethods,
@@ -1162,9 +1239,18 @@ class TestAudioPresentationArchitectureGuard {
         }
     }
 
+    /**
+     * Cache of the per-method call patterns. The lookup-order walk re-scans the
+     * same method names across thousands of body fragments, and recompiling
+     * these patterns each time dominated the guard's runtime.
+     */
+    private static final Map<String, Pattern> LOCAL_CALL_PATTERNS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private static Pattern localCallPattern(String method) {
-        return Pattern.compile("(?<![A-Za-z0-9_.$])(?:this\\s*\\.\\s*)?"
-                + Pattern.quote(method) + "\\s*\\(");
+        return LOCAL_CALL_PATTERNS.computeIfAbsent(method, name ->
+                Pattern.compile("(?<![A-Za-z0-9_.$])(?:this\\s*\\.\\s*)?"
+                        + Pattern.quote(name) + "\\s*\\("));
     }
 
     private static Map<MethodSignature, String> methodBodies(String source) {
@@ -1238,18 +1324,33 @@ class TestAudioPresentationArchitectureGuard {
         return new String(elided);
     }
 
+    /**
+     * Per-method-map caches. {@code methodNames} and {@code methodsNamed} are
+     * called once per inspected body fragment over an unchanging map, so the
+     * repeated stream scans were pure overhead.
+     */
+    private static final Map<Map<MethodSignature, String>, Set<String>>
+            METHOD_NAME_CACHE = new java.util.IdentityHashMap<>();
+    private static final Map<Map<MethodSignature, String>,
+            Map<String, List<Map.Entry<MethodSignature, String>>>>
+            METHODS_NAMED_CACHE = new java.util.IdentityHashMap<>();
+
     private static Set<String> methodNames(
             Map<MethodSignature, String> methods) {
-        Set<String> names = new HashSet<>();
-        methods.keySet().forEach(method -> names.add(method.name()));
-        return names;
+        return METHOD_NAME_CACHE.computeIfAbsent(methods, source -> {
+            Set<String> names = new HashSet<>();
+            source.keySet().forEach(method -> names.add(method.name()));
+            return names;
+        });
     }
 
     private static List<Map.Entry<MethodSignature, String>> methodsNamed(
             Map<MethodSignature, String> methods, String name) {
-        return methods.entrySet().stream()
-                .filter(entry -> entry.getKey().name().equals(name))
-                .toList();
+        return METHODS_NAMED_CACHE
+                .computeIfAbsent(methods, source -> new HashMap<>())
+                .computeIfAbsent(name, wanted -> methods.entrySet().stream()
+                        .filter(entry -> entry.getKey().name().equals(wanted))
+                        .toList());
     }
 
     private static String bracedBody(String source, int open) {
