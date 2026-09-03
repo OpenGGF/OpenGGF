@@ -116,8 +116,9 @@ class TestSonic2UnifiedAudioPresentationRomIntegration {
 
         // Title.
         audio.playMusic(Sonic2Music.TITLE.id);
-        assertTrue(presentUntilAudible(fixture),
-                "ROM title music must reach the final presentation packet");
+        assertTrue(presentUntilAudibleAndActive(fixture, Sonic2Music.TITLE.id),
+                "ROM title music must become the active track and reach the"
+                        + " final presentation packet");
 
         // Rings, twice, so both sides of the ROM's left/right alternation run.
         // The music slot is emptied first so a non-zero packet in this phase is
@@ -154,8 +155,52 @@ class TestSonic2UnifiedAudioPresentationRomIntegration {
                 "the special stage must initialize from ROM data");
         assertTrue(audio.playMusic(GameMusic.SPECIAL_STAGE),
                 "the module must map GameMusic.SPECIAL_STAGE");
-        assertTrue(presentUntilAudible(fixture),
-                "ROM special stage music must reach the final packet");
+        assertTrue(presentUntilAudibleAndActive(fixture, Sonic2Music.SPECIAL_STAGE.id),
+                "ROM special stage music must become the active track and"
+                        + " reach the final packet");
+    }
+
+    /**
+     * Steps real outer frames until the presentation producer's active music
+     * slot is the requested track AND its presented packet carries non-zero
+     * final PCM.
+     *
+     * <p>A Sonic 2 {@code playMusic} call for a track not already resident
+     * enters the real mailbox ({@code Sonic2SoundRequestService}) and cannot
+     * be dispatched until any in-flight Saxman decompression for the
+     * previous or a concurrent track releases it ({@code
+     * SmpsDriverSession#blocksForwardRequestConsumption}, modelling {@code
+     * s2.sounddriver.asm}'s {@code zPlayMusic}/{@code zSaxmanDec}). Until
+     * that dispatch happens, the producer keeps rendering whatever was
+     * already playing, so a bare non-zero-packet check can pass on the
+     * previous track and prove nothing about the one just requested. This
+     * also asserts the recorder/speaker packet identity {@link
+     * #presentUntilAudible} does, on every stepped frame.
+     */
+    private boolean presentUntilAudibleAndActive(
+            HeadlessTestFixture fixture, int expectedMusicId) {
+        boolean ready = false;
+        short[] speakerPacket = new short[speaker.maxStereoFramesPerPacket() * 2];
+        short[] recordedPacket =
+                new short[recording.maxStereoFramesPerPacket() * 2];
+        for (int frame = 0; frame < MAX_FRAMES_PER_PHASE && !ready; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            Arrays.fill(speakerPacket, (short) 0);
+            Arrays.fill(recordedPacket, (short) 0);
+            int speakerFrames = speaker.drainPresentationFrame(speakerPacket);
+            int recordedFrames =
+                    recording.drainPresentationFrame(recordedPacket);
+            assertEquals(speakerFrames, recordedFrames,
+                    "speaker and recorder are clocked to the same packet");
+            assertArrayEquals(speakerPacket, recordedPacket,
+                    "speaker and recorder must receive identical copies of one"
+                            + " producer packet at frame " + frame);
+            var activeMusic = audio.captureLogicalSnapshot().presentation().activeMusic();
+            boolean isRequestedTrack =
+                    activeMusic != null && activeMusic.musicId() == expectedMusicId;
+            ready = isRequestedTrack && !allZero(speakerPacket);
+        }
+        return ready;
     }
 
     /**
