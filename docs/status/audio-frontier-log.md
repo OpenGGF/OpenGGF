@@ -27,6 +27,110 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S2 driver oracle reaches full MATCH over the 698-tick window
+
+- **Context:** `.worktrees/s2-tick0-land`, branch `bugfix/ai-s2-level-playbgm-land`,
+  on top of `810dbc039`. No fixture, candidate, comparator or alignment was
+  changed.
+- **Fixture:** the authenticated S2 driver oracle payload behind
+  `TestS2AudioOracleFixture.fixturePath()`, driven by
+  `sonic-2-sonic-tails-complete-emeralds.bk2` against the S2 World REV01 ROM
+  (SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`).
+- **Command:** the same invocation as the entry below.
+- **Result before:** `S2 driver oracle: DIVERGENCE at tick 557 (movie row 10759),
+  field writes.count: expected=4 actual=5 [20 of 698 ticks divergent]`.
+- **Result after:** **`S2 driver oracle: MATCH (698 ticks)`**.
+  `MATCH: 25 production transfers agree` is unchanged.
+- **Notes:** the remaining extras were PSG attenuation bytes `0xf2`, `0xf4`,
+  `0xf6`, `0xf8`, `0xfa`, `0xff` — a music PSG3 volume envelope ramping to
+  silence on the noise channel. SFX `0xC1` Explosion is requested at movie row
+  10759 and declares `cFM5` plus `cPSG3`, and the reference's PSG3
+  `playbackControl` byte moves `0x80` to `0x84` on that exact row, so the ROM
+  holds the track SFX-overridden for the whole span. The engine installs that
+  override on the correct row; logging the transitions shows PSG channel 2
+  flipping to overridden at row 10759. The defect was that the PSG branch of
+  `SmpsSequencer.refreshVolume` consulted only the rest bit and never the
+  override bit, so the envelope kept writing behind the override.
+
+  All three drivers agree here, so this is a universal correction rather than a
+  per-game one. S2 `zPSGUpdateVol` does `and 6` over the rest and override bits
+  and returns (`s2.sounddriver.asm:1305-1308`); S1 `SetPSGVolume` tests the two
+  bits separately (`s1.sounddriver.asm:1965-1969`); S3K reaches the same outcome
+  one level up, where `zUpdatePSGTrack` returns on bit 2 before both the
+  frequency pair and the volume tail (skdisasm `Sound/Z80 Sound
+  Driver.asm:4079-4081`). In each case the flutter or envelope index still
+  advances behind the suppressed write, which is why the gate belongs at the
+  write and not at the envelope step.
+- **Regression gates:** S1 GHZ music oracle `MATCH (14690 ticks)` and S1
+  sound-test SFX oracle `MATCH (1967 ticks)`, both exit 0. The S1, S2, S3K and
+  shared audio packages report 1,943 tests with the same five pre-existing
+  failures as the entry below and no new ones.
+  `TestSmpsFadeAudioThroughput` passes.
+
+## 2026-09-03 — S2 ROM SFX-release semantics advance the driver frontier to tick 557
+
+- **Context:** `.worktrees/s2-tick0-land`, branch `bugfix/ai-s2-level-playbgm-land`,
+  base `3c54967f7`. No fixture, candidate, comparator or alignment was changed.
+- **Fixture:** the authenticated S2 driver oracle payload behind
+  `TestS2AudioOracleFixture.fixturePath()`, driven by
+  `sonic-2-sonic-tails-complete-emeralds.bk2` against the S2 World REV01 ROM
+  (SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`).
+- **Command:**
+
+  ```
+  LUA_BIN=lua5.4 mvn -Dmse=off \
+    '-Dsonic2.rom.path=<absolute S2 REV01 ROM>' \
+    '-Ds2.request.bk2.path=<absolute complete-emeralds BK2>' \
+    '-Ds2.request.candidate.path=<absolute s2-request-window.oracle-raw-v2.jsonl>' \
+    '-Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare' \
+    test -B
+  ```
+
+- **Result before:** `S2 driver oracle: DIVERGENCE at tick 266 (movie row 10468),
+  field writes.count: expected=2 actual=4 [107 of 698 ticks divergent]`.
+- **Result after:** `S2 driver oracle: DIVERGENCE at tick 557 (movie row 10759),
+  field writes.count: expected=4 actual=5 [20 of 698 ticks divergent]`.
+  `MATCH: 25 production transfers agree` is unchanged.
+- **Notes:** every one of the 107 divergent ticks was the engine emitting extra
+  writes and none was a missing write. At tick 266 the extras were an
+  `A4`/`A0` frequency pair on FM4 continuing a modulation ramp the reference
+  never emits. Decoding the reference's own `playbackControl` byte for the FM4
+  music slot showed `0x9c` through movie row 10466 and `0x9a` from row 10467:
+  the SFX-override bit clears and the **rest** bit sets in the same transition.
+  That is `cfStopTrack`'s FM SFX tail, `s2.sounddriver.asm:3548-3553`, which does
+  `res 2` / `set 1` and restores only the voice through `zSetVoiceMusic`; it
+  sends no key-off, no pan rewrite and no frequency resend.
+  `zStopPSGSFXTrack` (`:3581-3589`) is the same shape. Leaving the released
+  music track at rest is what keeps `zDoModulation` returning early
+  (`:989-991`), so the channel stays silent until its next note.
+
+  Two changes were needed. `Sonic2SmpsSequencerConfig` now declares
+  `ROM_VOICE_RESTORE` / `ROM_REST_RESTORE`, the modes S1 already declared for
+  the identical routine. That alone changed nothing, because
+  `SmpsAssetCatalog.copyBuilder` rebuilds every sequencer config for the
+  presentation path and silently dropped five configured settings:
+  `fmSfxReleaseMode`, `psgSfxReleaseMode`, `sfxTrackWalkMode`,
+  `fmVolumeVoiceBankMode` and `palUpdateMode`. Every sequencer built through
+  the catalog therefore reverted to the legacy full-restore behaviour,
+  including S1's. Completing the copy is what delivered the fix.
+
+  One test asserted the behaviour the ROM contradicts.
+  `TestS2SfxAdmissionChannelMask.acceptedRingLeftOwnsFm4BeforeMusicFirstService`
+  ended by requiring that restored music resume FM4 frequency output after the
+  SFX releases the channel. Its final assertion now states the ROM's outcome
+  instead, that the released track is at rest and no `A4`/`A0` pair is resent,
+  with the routine cited. That class was green before this change and red with
+  it, and is the only test the change moved.
+- **Regression gates:** S1 GHZ music oracle `MATCH (14690 ticks)` and S1
+  sound-test SFX oracle `MATCH (1967 ticks)`, both exit 0, captured and
+  compared with `S1AudioParityTool` against the committed references. The audio
+  test packages report 1,889 tests with five failures, all reproduced red at
+  the base commit with this change reverted, or structurally unreachable from
+  it: `TestSonic2RequestProductionWiring` (3) and `TestAudioPresentationBoundary`
+  (1) were confirmed by a control run, and
+  `TestAudioPresentationArchitectureGuard` (1) reads a fixed list of seven
+  production files that includes neither file changed here.
+
 ## 2026-09-03 — S2 source-owned level-entry timing advances driver frontier to tick 266
 
 - **Context:** landed on `bugfix/ai-s2-level-playbgm-land` from
