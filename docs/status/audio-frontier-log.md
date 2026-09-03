@@ -27,6 +27,127 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S1 gameplay oracle stops at tick 629: the fixture records no special-SFX dispatch
+
+- **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
+  `bugfix/ai-s1-gameplay-frontier`, at `6c788b4fe`. Measurement only; no engine
+  change accompanies this entry.
+- **Result:** MISMATCH, `TRACK_STATE_MISMATCH`, tick 629, role FM4, field
+  `overridden` — reference true, engine false.
+- **Diagnosis — a reference limitation, not an engine defect.** Tick 583
+  dispatches `sfx_Spring` (`0xCC`) onto FM4 and tick 593 dispatches a ring
+  (`0xB5`, resolved to the left-speaker `0xCE`) onto the same channel. `SndCE`
+  is three notes totalling `$24` ticks, so it ends exactly at tick 629, and
+  both streams agree write-for-write up to that point.
+  `cfStopTrack` (`docs/s1disasm/s1.sounddriver.asm:2489-2563`) then chooses
+  where to hand FM4 back. Its FM4 case first tests
+  `v_spcsfx_fm4_track.PlaybackControl` (`:2510-2515`): when a **special** SFX is
+  playing it restores `v_special_voice_ptr` into the special track and never
+  touches the music track, so the music FM4 override bit survives. Only the
+  fall-through `.getpointer` path (`:2519-2528`) reaches the music track and
+  clears bit 2.
+  The reference keeps the music FM4 override set at ticks 629-631, so the ROM
+  took the special-SFX branch. Ticks 630 and 631 confirm it: their FM4
+  frequency and key-on writes land *after* that invocation's music PSG writes,
+  which the music FM walk (`:214-221`) precedes, so they come from the
+  special-SFX section (`:243-247`).
+- **Why the engine cannot follow.** GHZ's special SFX reaches the driver
+  through `Sound_PlaySpecial` (`:1105`), a separate entry point with its own
+  track slots. The fixture's per-tick `dispatches` array records only
+  `Sound_PlaySFX` calls, and `raw_state.tracks` carries the ten music slots
+  only — neither the special-SFX admission nor its track state is captured. The
+  replay host has no data from which to admit that sound, so the engine
+  correctly releases FM4 to music where the ROM releases it to a special SFX
+  the fixture never mentions. `voice_selector` is `0x40` on every tick and is
+  not evidence either way: `UpdateMusic` stores it unconditionally before the
+  special-SFX section (`:243`).
+- **What would move it:** a re-capture whose probe also records
+  `Sound_PlaySpecial` dispatches and the two special-SFX track slots, published
+  through the fixture contract. That is capture work, not engine work.
+- **Gates at this commit:** S1 sound-test music MATCH (14,690 ticks) and SFX
+  MATCH (1,967 ticks); the audio packages, `TestSmpsFadeAudioThroughput` and
+  the S2 driver oracle run 2,470 tests with 0 failures.
+
+## 2026-09-03 — S1 gameplay oracle: tick 316 → 629 (SFX walks fixed RAM slots)
+
+- **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
+  `bugfix/ai-s1-gameplay-frontier`, on top of `2ba02dbad`.
+- **Fixture and command:** unchanged from the entry below.
+- **Result before:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 316, event 3 —
+  reference YM2612 port 1 register `0xB0` value 4, engine PSG `0x87`.
+- **Result after:** MISMATCH, `TRACK_STATE_MISMATCH`, tick 629, role FM4,
+  field `overridden` — reference true, engine false.
+- **What moved, part one — the walk.** S1 `UpdateMusic` has no per-sound SFX
+  service. It walks one fixed array of SFX track slots, SFX FM3..FM5
+  (`docs/s1disasm/s1.sounddriver.asm:222-231`) then SFX PSG1..PSG3
+  (`:233-241`), with no notion of which sound owns a slot. So two live sounds
+  interleave by channel, not by admission order: at tick 316 a ring on FM4 is
+  serviced before the jump still holding PSG1, though the jump started
+  fourteen invocations earlier. The engine serviced each SFX sequencer whole,
+  in admission order. `SmpsDriver` now walks the SFX slots itself when every
+  live SFX program declares `SfxTrackWalkMode.CHANNEL_RAM_ORDER` (S1 only),
+  driving each sequencer's tracks through a new begin/tick/finish pass.
+- **What moved, part two — the release.** With the walk in place the frontier
+  landed at tick 562, where a finishing FM5 SFX restored the music voice after
+  the SFX PSG1 slot instead of before it. `cfStopTrack` (`:2489-2563`) hands
+  the channel back from inside the finishing track's own slot service, whether
+  or not the sound has other tracks still playing; the engine deferred the
+  release of a wholly finished sound to end-of-frame completion cleanup. The
+  slot walk now reconciles the finishing slot inline, through a new
+  `SmpsSequencerHost.reconcileFinishedSfxSlot`. Non-coordinated games keep the
+  previous deferral. No constant was introduced.
+- **New frontier:** tick 629, the reference still has the music FM4 track
+  overridden where the engine has released it — an override-lifetime question,
+  not an ordering one.
+- **Gates held:** S1 sound-test music MATCH (14,690 ticks) and SFX MATCH
+  (1,967 ticks); the audio packages plus `TestSmpsFadeAudioThroughput` and the
+  S2 driver oracle run 2,470 tests with 0 failures.
+
+## 2026-09-03 — S1 gameplay oracle: tick 302 → 316 (SFX admission owns its channels)
+
+- **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
+  `bugfix/ai-s1-gameplay-frontier` from `develop` at `2229b5b7c`.
+- **Fixture:** `src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v1.jsonl.gz`
+  (2,343 ticks, 70 dispatches).
+- **Command:**
+
+  ```
+  java -cp target/classes:<deps> com.openggf.tools.audio.parity.S1AudioParityTool \
+      capture --repo <worktree> --run-root <external run root> \
+      --reference <run root>/reference.jsonl --rom <abs S1 REV01 ROM> \
+      --output <run root>/openggf.jsonl --capture gameplay
+  java -cp target/classes:<deps> com.openggf.tools.audio.parity.S1AudioParityTool \
+      compare --repo <worktree> --run-root <external run root> \
+      --reference <run root>/reference.jsonl --openggf <run root>/openggf.jsonl \
+      --human-report <run root>/report.txt --json-report <run root>/report.json
+  ```
+
+- **Result before:** MISMATCH, `EVENT_EXTRA`, tick 302, event 0 — engine PSG
+  write `0x92` (PSG1 volume 2) with no reference counterpart.
+- **Result after:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 316, event 3 —
+  reference YM2612 port 1 register `0xB0` value 4, engine PSG `0x87`.
+- **What moved:** tick 302 dispatches `sfx_Jump` (`0xA0`), which loads a PSG1
+  track. `Sound_PlaySFX`'s header loader sets `PlaybackControl` bit 2 on the
+  displaced *music* track while loading each SFX track — `.sfx_loadloop` for FM
+  (`docs/s1disasm/s1.sounddriver.asm:1029`) and `.sfxinitpsg` for PSG
+  (`:1037`) — and it is reached from `PlaySoundID` at the top of `UpdateMusic`
+  (`:202`), before that same invocation's DAC/FM/PSG music walk (`:208-227`).
+  So the music PSG1 track is already overridden on the admitting invocation and
+  emits nothing, even though the SFX track has written no register yet. The
+  engine had S1 on `SfxChannelOwnershipMode.FIRST_WRITE`, so the music track
+  still emitted its volume byte. S1 now uses `ADMISSION`, the mode S2 already
+  derived from the identical `zPlaySound` shape. No constant was introduced.
+- **New frontier:** tick 316 dispatches `sfx_Ring` (`0xB5`) onto FM4 while the
+  jump SFX still holds PSG1. `UpdateMusic` walks the *fixed SFX RAM slots* —
+  SFX FM3..FM5 (`:222-231`) then SFX PSG1..PSG3 (`:233-241`) — so the ring's
+  FM4 writes precede the jump's PSG1 writes. The engine services SFX
+  sequencer-by-sequencer in admission order, so the jump's PSG1 writes come
+  first. Same writes, wrong order.
+- **Gates held:** `run_s1_audio_parity.sh --mode music` MATCH (14,690 ticks);
+  `--mode sfx` MATCH (1,967 ticks); S2
+  `TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare`
+  passes.
+
 ## 2026-09-03 — S1 gains a second audio oracle, sourced from real gameplay
 
 - **Worktree/branch:** `.worktrees/audio-s1-complete-oracle`,

@@ -51,17 +51,17 @@ class TestS1GameplayAudioDriverOracle {
 
         AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
 
-        // Pinned frontier as of the 2026-09-03 capture (see
-        // docs/status/audio-frontier-log.md): the engine emits one extra PSG
-        // write at tick 302 that the reference does not have. This is a
-        // measurement pin, not an expectation that the engine is correct --
-        // when this frontier moves, update both this assertion and the
-        // frontier log entry together with the ROM routine that explains it.
+        // Pinned frontier (see docs/status/audio-frontier-log.md): at tick 629
+        // the reference still has the music FM4 track overridden where the
+        // engine has already released it. This is a measurement pin, not an
+        // expectation that the engine is correct -- when this frontier moves,
+        // update both this assertion and the frontier log entry together with
+        // the ROM routine that explains it.
         assertNotEquals(AudioParityReport.Kind.MATCH, report.kind(),
                 "gameplay oracle is expected to diverge at the pinned frontier; "
                         + "if it now matches, the frontier moved forward and this pin is stale");
-        assertEquals(AudioParityReport.Kind.EVENT_EXTRA, report.kind());
-        assertEquals(302, report.tickOrdinal());
+        assertEquals(AudioParityReport.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(629, report.tickOrdinal());
     }
 
     /**

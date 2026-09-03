@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 1 SFX channel ownership follows the driver:** sound effects claim
+  their music channels at admission and the driver walks its fixed SFX slots in
+  channel-RAM order, moving the gameplay oracle from update 302 to 629, where
+  the reference's special-SFX dispatches are not yet captured.
 - **Second Sonic 1 audio oracle from real gameplay:** a duplicate-captured
   reference from the complete-run movie (power-on through early Green Hill,
   2,343 driver updates, 70 live sound effects) now sits beside the sound-test

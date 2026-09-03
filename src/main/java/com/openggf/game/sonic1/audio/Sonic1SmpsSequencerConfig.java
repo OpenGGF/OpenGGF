@@ -83,6 +83,16 @@ public final class Sonic1SmpsSequencerConfig {
                 // except the explicit PSG3 DF/FF pair in its own load path.
                 .psgSfxTakeoverMode(
                         SmpsSequencerConfig.PsgSfxTakeoverMode.S1_PSG3_SILENCE_PAIR)
+                // Sound_PlaySFX's header loader sets PlaybackControl bit 2 on
+                // the displaced MUSIC track while loading each SFX track --
+                // .sfx_loadloop for FM (SD:1029) and .sfxinitpsg for PSG
+                // (SD:1037) -- and it is reached from PlaySoundID at the top of
+                // UpdateMusic (SD:202), before the DAC/FM/PSG music walk
+                // (SD:208-227). So the music track is already overridden on the
+                // very invocation that admits the SFX, and emits no chip write
+                // of its own, even though the SFX track has written nothing yet.
+                .sfxChannelOwnershipMode(
+                        SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
                 // cfStopTrack (SD:2489-2563): the completed SFX already sent
                 // its note-off. FM restores voice/pan at rest; PSG clears the
                 // override at rest and only re-latches noise when applicable.

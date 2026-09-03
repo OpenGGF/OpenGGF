@@ -13,6 +13,7 @@ import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsTrackSnapshot;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -2086,6 +2087,10 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
     }
 
     private void serviceSequencers(boolean sfx) {
+        if (sfx && usesChannelRamOrderSfxWalk()) {
+            serviceSfxByChannelRamOrder();
+            return;
+        }
         int size = sequencers.size();
         for (int index = 0; index < size; index++) {
             SmpsSequencer sequencer = sequencers.get(index);
@@ -2098,6 +2103,81 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             }
         }
     }
+
+    private boolean usesChannelRamOrderSfxWalk() {
+        for (int index = 0; index < sequencers.size(); index++) {
+            SmpsSequencer sequencer = sequencers.get(index);
+            if (!isSfx(sequencer)) {
+                continue;
+            }
+            if (sequencer.getConfig().getSfxTrackWalkMode()
+                    != SmpsSequencerConfig.SfxTrackWalkMode.CHANNEL_RAM_ORDER) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Services every live SFX program by walking the fixed SFX track slots.
+     *
+     * <p>S1 {@code UpdateMusic} owns one array of SFX track slots and walks it
+     * in RAM order -- SFX FM3..FM5 (s1.sounddriver.asm:222-231) then SFX
+     * PSG1..PSG3 (:233-241) -- with no notion of which sound owns a slot. So
+     * when a second sound is admitted while the first is still playing, their
+     * tracks interleave by channel rather than by admission order: a ring on
+     * FM4 is serviced before a still-playing jump on PSG1, even though the jump
+     * started fourteen invocations earlier.
+     */
+    private void serviceSfxByChannelRamOrder() {
+        List<SmpsSequencer> pass = null;
+        List<SlotWalkEntry> walk = null;
+        int size = sequencers.size();
+        for (int index = 0; index < size; index++) {
+            SmpsSequencer sequencer = sequencers.get(index);
+            if (!isSfx(sequencer)) {
+                continue;
+            }
+            if (pass == null) {
+                pass = new ArrayList<>();
+            }
+            pass.add(sequencer);
+            for (SmpsSequencer.Track track : sequencer.beginSfxSlotWalkPass()) {
+                if (walk == null) {
+                    walk = new ArrayList<>();
+                }
+                walk.add(new SlotWalkEntry(
+                        SmpsSequencer.sfxSlotWalkOrder(track), walk.size(),
+                        sequencer, track));
+            }
+        }
+        if (pass == null) {
+            return;
+        }
+        if (walk != null) {
+            walk.sort(SLOT_WALK_ORDER);
+            for (int index = 0; index < walk.size(); index++) {
+                SlotWalkEntry entry = walk.get(index);
+                entry.sequencer().tickSfxSlotWalkTrack(entry.track());
+            }
+        }
+        for (int index = 0; index < pass.size(); index++) {
+            SmpsSequencer sequencer = pass.get(index);
+            sequencer.finishSfxSlotWalkPass();
+            if (sequencer.isComplete()) {
+                pendingRemovals.add(sequencer);
+            }
+        }
+    }
+
+    private record SlotWalkEntry(
+            int slot, int arrival, SmpsSequencer sequencer,
+            SmpsSequencer.Track track) {
+    }
+
+    private static final Comparator<SlotWalkEntry> SLOT_WALK_ORDER =
+            Comparator.comparingInt(SlotWalkEntry::slot)
+                    .thenComparingInt(SlotWalkEntry::arrival);
 
     private SmpsSequencer firstMusicSequencerLocked() {
         for (int index = 0; index < sequencers.size(); index++) {
@@ -2253,7 +2333,18 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
 
     /** Releases stopped tracks while their sibling SFX tracks remain active. */
     public void reconcileInactiveSfxTracks(SmpsSequencer sequencer) {
-        if (!isSfx(sequencer) || sequencer.isComplete()) {
+        reconcileInactiveSfxTracks(sequencer, false);
+    }
+
+    @Override
+    public void reconcileFinishedSfxSlot(SmpsSequencer sequencer) {
+        reconcileInactiveSfxTracks(sequencer, true);
+    }
+
+    private void reconcileInactiveSfxTracks(
+            SmpsSequencer sequencer, boolean includeCompleted) {
+        if (!isSfx(sequencer)
+                || (!includeCompleted && sequencer.isComplete())) {
             return;
         }
         for (int index = 0; index < sequencer.trackCount(); index++) {
