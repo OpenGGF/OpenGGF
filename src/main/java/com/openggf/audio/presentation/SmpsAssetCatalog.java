@@ -506,6 +506,7 @@ final class SmpsAssetCatalog {
                 .fmChannelOrder(source.getFmChannelOrder())
                 .psgChannelOrder(source.getPsgChannelOrder())
                 .tempoMode(source.getTempoMode())
+                .palUpdateMode(source.getPalUpdateMode())
                 .coordFlagParamOverrides(
                         source.getCoordFlagParamOverrides())
                 .applyModOnNote(source.isApplyModOnNote())
@@ -523,6 +524,10 @@ final class SmpsAssetCatalog {
                         source.getPsg3SfxAdmissionWriteMode())
                 .sfxChannelOwnershipMode(
                         source.getSfxChannelOwnershipMode())
+                .fmSfxReleaseMode(source.getFmSfxReleaseMode())
+                .psgSfxReleaseMode(source.getPsgSfxReleaseMode())
+                .sfxTrackWalkMode(source.getSfxTrackWalkMode())
+                .fmVolumeVoiceBankMode(source.getFmVolumeVoiceBankMode())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
                 .volMode(source.getVolMode())
                 .psgEnvCmd80(source.getPsgEnvCmd80())

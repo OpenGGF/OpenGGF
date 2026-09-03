@@ -74,6 +74,21 @@ public final class Sonic2SmpsSequencerConfig {
                         SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
                                 .SILENCE_TONE_AND_NOISE)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80)
+                // cfStopTrack's FM SFX tail (s2.sounddriver.asm:3548-3553) clears
+                // the override bit and SETS the rest bit, then restores only the
+                // music voice through zSetVoiceMusic. It sends no key-off, no
+                // pan/AMS/FMS rewrite and no frequency resend; the SFX track's own
+                // zFMNoteOff already silenced the channel. Leaving the music track
+                // at rest is what keeps zDoModulation returning early
+                // (s2.sounddriver.asm:989-991), so a released channel stays silent
+                // until its next note instead of resuming modulation.
+                .fmSfxReleaseMode(
+                        SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE)
+                // zStopPSGSFXTrack (s2.sounddriver.asm:3581-3589) is the same
+                // shape: clear the override, set rest, and re-latch PSG noise only
+                // for the PSG3 noise track.
+                .psgSfxReleaseMode(
+                        SmpsSequencerConfig.PsgSfxReleaseMode.ROM_REST_RESTORE)
                 .build();
     }
 

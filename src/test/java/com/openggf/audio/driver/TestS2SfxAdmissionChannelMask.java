@@ -152,10 +152,16 @@ class TestS2SfxAdmissionChannelMask {
         assertFalse(musicFm4.overridden,
                 "CE completion must release FM4 back to music");
 
+        assertTrue(musicFm4.resting,
+                "cfStopTrack's FM SFX tail sets the released music track at rest "
+                        + "(s2.sounddriver.asm:3548-3553: res 2, set 1)");
+
         musicFm4FrequencyWrites.clear();
         driver.serviceOuterFrame();
-        assertFalse(musicFm4FrequencyWrites.isEmpty(),
-                "restored music must resume FM4 frequency output from its advanced state");
+        assertTrue(musicFm4FrequencyWrites.isEmpty(),
+                "the released track stays at rest, so zDoModulation returns before "
+                        + "zFMUpdateFreq (s2.sounddriver.asm:989-991) and no A4/A0 pair "
+                        + "is resent until the track's next note");
     }
 
     private static SmpsSequencer modulatedFm4Music(SmpsDriver driver) {
