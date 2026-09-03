@@ -71,6 +71,20 @@ class TestSonic2RequestProductionWiring {
         assertEquals(0xB5, raw.rawRequestId());
     }
 
+    /**
+     * Installs the Sonic 2 ROM. The S2 pipeline resolves a request against its
+     * ROM-backed sample and rejects the whole request when the sample cannot
+     * be read, so a mailbox test without a ROM observes nothing at all.
+     */
+    private void installRom(AudioManager audio) {
+        File romFile = RomTestUtils.ensureSonic2RomAvailable();
+        Assumptions.assumeTrue(romFile != null,
+                "Sonic 2 REV01 ROM is required for production request resolution");
+        rom = new Rom();
+        assertTrue(rom.open(romFile.getAbsolutePath()));
+        audio.setRom(rom);
+    }
+
     @AfterEach
     void tearDown() {
         AudioManager.getInstance().resetState();
@@ -85,6 +99,7 @@ class TestSonic2RequestProductionWiring {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
+        installRom(audio);
         audio.setAudioProfile(new Sonic2AudioProfile());
         audio.setSoundMap(new Sonic2AudioProfile().getSoundMap());
 
@@ -126,6 +141,7 @@ class TestSonic2RequestProductionWiring {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
+        installRom(audio);
         audio.setAudioProfile(new Sonic2AudioProfile());
         audio.setSoundMap(new Sonic2AudioProfile().getSoundMap());
 
@@ -152,6 +168,7 @@ class TestSonic2RequestProductionWiring {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
+        installRom(audio);
         Sonic2AudioProfile profile = new Sonic2AudioProfile();
         audio.setAudioProfile(profile);
         audio.setSoundMap(profile.getSoundMap());

@@ -1761,7 +1761,7 @@ public class AudioManager implements MusicRestoreSink {
             ensureShadowPresentation();
             if (shadowRequestService != null) {
                 shadowRequestService.submitMusic(
-                        musicId, commandForNativeRequest(source, musicId));
+                        musicId, commandForNativeMusicRequest(source, musicId));
                 return;
             }
         }
@@ -2114,11 +2114,35 @@ public class AudioManager implements MusicRestoreSink {
      */
     private AudioCommand commandForNativeRequest(
             BaseAudioSource source, int nativeId, float pitch) {
-        GameAudioProfile profile = Objects.requireNonNull(source.profile(), "audio profile");
+        Objects.requireNonNull(source.profile(), "audio profile");
         if (nativeId >= 0xA0 && nativeId <= 0xF7) {
             return new AudioCommand.PlaySfx(nativeId, null,
                     AudioCommand.SfxRoute.BASE_SMPS_ID, pitch, null);
         }
+        return commandForMusicOrSystemRequest(source, nativeId);
+    }
+
+    /**
+     * Classifies a request the caller already knows is music.
+     *
+     * <p>The engine's Sonic 2 music ids are not the ROM's native ids: the ROM
+     * stops at MusID__End = A0 (s2disasm/s2.constants.asm:865), while
+     * GAME_OVER (B8), GOT_EMERALD (BA), CREDITS (BD) and UNDERWATER (DC) sit
+     * above it, inside the A0..F7 span the native classifier treats as sound
+     * effects. Routing playMusic through that branch published the drowning
+     * countdown as SndID_Fire (s2.constants.asm:931) instead of music, so the
+     * music ingress skips the sound branch and classifies directly.
+     */
+    private AudioCommand commandForNativeMusicRequest(
+            BaseAudioSource source, int musicId) {
+        Objects.requireNonNull(source.profile(), "audio profile");
+        return commandForMusicOrSystemRequest(source, musicId);
+    }
+
+    private AudioCommand commandForMusicOrSystemRequest(
+            BaseAudioSource source, int nativeId) {
+        GameAudioProfile profile = Objects.requireNonNull(
+                source.profile(), "audio profile");
         return switch (nativeId) {
             case 0xF8 -> new AudioCommand.StopAllSfx();
             case 0xF9 -> new AudioCommand.FadeOutMusic(0x28, 3);

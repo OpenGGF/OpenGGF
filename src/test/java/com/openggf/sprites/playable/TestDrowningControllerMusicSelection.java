@@ -43,6 +43,10 @@ class TestDrowningControllerMusicSelection {
 
     @AfterEach
     void tearDown() {
+        if (openedRom != null) {
+            openedRom.close();
+            openedRom = null;
+        }
         AudioManager audioManager = AudioManager.getInstance();
         audioManager.setBackend(new NullAudioBackend());
         audioManager.resetState();
@@ -57,10 +61,33 @@ class TestDrowningControllerMusicSelection {
         );
     }
 
+    private com.openggf.data.Rom openedRom;
+
+    /**
+     * Sonic 2 resolves a request against its ROM-backed sample before the
+     * driver publishes it, and rejects the whole request when no ROM is
+     * installed, so this parameter needs the real ROM to reach the request at
+     * all. The other two profiles publish at ingress and need nothing.
+     */
+    private void installRomIfRequired(GameAudioProfile profile,
+            AudioManager audioManager) {
+        if (!(profile instanceof Sonic2AudioProfile)) {
+            return;
+        }
+        java.io.File romFile = com.openggf.tests.RomTestUtils
+                .ensureSonic2RomAvailable();
+        org.junit.jupiter.api.Assumptions.assumeTrue(romFile != null,
+                "Sonic 2 REV01 ROM is required to resolve an S2 request");
+        openedRom = new com.openggf.data.Rom();
+        assertTrue(openedRom.open(romFile.getAbsolutePath()));
+        audioManager.setRom(openedRom);
+    }
+
     @ParameterizedTest(name = "{2} drowning music")
     @MethodSource("drowningMusicProvider")
     void drowningMusicMatchesProfile(GameAudioProfile profile, int expectedMusicId, String label) {
         AudioManager audioManager = AudioManager.getInstance();
+        installRomIfRequired(profile, audioManager);
         audioManager.setAudioProfile(profile);
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.activeGameplayMode();
@@ -75,6 +102,12 @@ class TestDrowningControllerMusicSelection {
         for (int i = 0; i < updatesToTriggerMusic; i++) {
             controller.update();
         }
+        // Sonic 2 writes requests to the driver mailbox at ingress and turns
+        // them into commands at the forward presentation boundary; the other
+        // two profiles publish immediately and are unaffected by the extra
+        // boundary.
+        audioManager.presentFrame(
+                com.openggf.audio.presentation.PresentationMode.FORWARD);
 
         var musicCommands = musicCommands(audioManager);
         assertEquals(1, musicCommands.size(),

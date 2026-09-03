@@ -205,6 +205,11 @@ public class TestTitleScreenAudioRegression {
         for (int i = 0; i < 900; i++) {
             title.update(input);
             input.update();
+            // S2 requests are written to the driver mailbox at ingress and only
+            // become commands at the frame's forward presentation boundary, so
+            // the loop has to present the way the game loop does.
+            audioManager.presentFrame(
+                    com.openggf.audio.presentation.PresentationMode.FORWARD);
         }
 
         long musicCommands = audioManager.commandTimeline().entries().stream()
