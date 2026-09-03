@@ -149,6 +149,15 @@ capture_reference() {
 		"$LAUNCHER" "$PROBE" "$MOVIE_PATH" "$ROM_PATH" >"$log" 2>&1; then
 		return 1
 	fi
+	# BizHawk's Lua host exits the client before a probe error can propagate, so
+	# a failed probe looks like a clean exit 0. The probes append any hook
+	# failure to this sidecar first; surface it instead of reporting a short
+	# capture as a parity result.
+	if [ -s "$output.error" ]; then
+		echo "probe reported a hook failure:" >&2
+		cat -- "$output.error" >&2
+		return 1
+	fi
 	[ -s "$output" ]
 }
 

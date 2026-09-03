@@ -43,6 +43,38 @@ public final class AudioParitySchema {
      * see docs/status/audio-frontier-log.md for the measurement.
      */
     public static final int GAMEPLAY_BK2_LAUNCH_INVOCATIONS = 341;
+    /**
+     * One pinned gameplay BK2, by the SHA-256 of the movie archive itself.
+     *
+     * @param inputRows the movie's input-row count
+     * @param launchInvocations dormant UpdateMusic invocations before this
+     *     movie's own GHZ1 BGM dispatch, which is a property of its title and
+     *     menu play, not of the driver
+     */
+    public record GameplayMovie(int inputRows, int launchInvocations) {
+    }
+
+    /** SHA-256 of the second pinned gameplay movie, a different complete run of the same ROM. */
+    public static final String GAMEPLAY2_BK2_SHA256 =
+            "f744c814d8e00d6c367f7fe83bb663cab123b5a4ed385a320d71b74d63146bde";
+    public static final int GAMEPLAY2_BK2_INPUT_ROWS = 195_493;
+    /**
+     * This movie's own title/SEGA/menu prefix is shorter than the first
+     * gameplay movie's, so it reaches the GHZ1 BGM dispatch after fewer
+     * dormant invocations. Pinned from the authenticated capture; see
+     * docs/status/audio-frontier-log.md for the measurement.
+     */
+    public static final int GAMEPLAY2_BK2_LAUNCH_INVOCATIONS = 269;
+    /**
+     * Every BK2 the gameplay capture kind accepts. The oracle's bar is any
+     * BK2, not one BK2, so a gameplay reference is identified by which pinned
+     * movie it came from rather than by a single hard-coded digest.
+     */
+    public static final Map<String, GameplayMovie> GAMEPLAY_MOVIES = Map.of(
+            GAMEPLAY_BK2_SHA256,
+            new GameplayMovie(GAMEPLAY_BK2_INPUT_ROWS, GAMEPLAY_BK2_LAUNCH_INVOCATIONS),
+            GAMEPLAY2_BK2_SHA256,
+            new GameplayMovie(GAMEPLAY2_BK2_INPUT_ROWS, GAMEPLAY2_BK2_LAUNCH_INVOCATIONS));
     public static final int MAX_INVOCATIONS = 36_000;
     public static final String METADATA_TYPE = "capture_metadata";
     public static final String TICK_TYPE = "tick";

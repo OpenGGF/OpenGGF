@@ -9,12 +9,27 @@
 -- Sound_PlaySFX dispatch after that epoch (jump, ring, spring, etc. -- real
 -- player input, not a scripted SFX list) is recorded on the invocation it
 -- happened in (the "dispatches" array), which is the request-sequence input
--- contract the engine-side capture replays. The capture is bounded to a
--- fixed frame budget from power-on (CAPTURE_END_FRAME below), not movie end
--- -- the pinned movie covers the entire game and running it to completion
--- would produce a multi-gigabyte capture for no additional oracle value.
--- There is no recurrence proof: the capture ends deterministically at the
--- frame budget (cycle_start 0, period 0), like the sound-test SFX capture.
+-- contract the engine-side capture replays. The window closes at the first
+-- post-epoch music dispatch (see WINDOW END below), with a frame budget
+-- (CAPTURE_END_FRAME) as a secondary bound -- never movie end, since the
+-- pinned movie covers the entire game and running it to completion would
+-- produce a multi-gigabyte capture for no additional oracle value. There is
+-- no recurrence proof: the capture ends deterministically (cycle_start 0,
+-- period 0), like the sound-test SFX capture.
+--
+-- WINDOW END. This oracle is single-song by construction: the reference's
+-- track state is normalized against one song's ROM asset range
+-- (GHZ_ASSET_BASE/GHZ_ASSET_END), and the engine-side host
+-- (S1OpenGgfSfxAudioCapture) drives exactly one music sequencer, loaded from
+-- the epoch song. A second music request therefore ends the comparable
+-- window: the ROM reloads driver RAM with a different song's tracks
+-- (Sound_PlayBGM -> InitMusicPlayback, s1.sounddriver.asm:1498-1502) and
+-- every subsequent tick would be normalized against the wrong asset range.
+-- The invocation that carries the music request is itself discarded, because
+-- the ROM has already swapped songs by the time that invocation walks its
+-- tracks. Widening past this boundary is not a probe change: it needs a
+-- multi-song oracle contract on both sides (a per-tick asset range in the
+-- stream, and a music-sequencer swap in the engine host).
 --
 -- Derived from the consumer-side s1_audio_driver_parity_probe.lua
 -- (gitlink 9e51ff79e7a5) with one fix: the pc_manifest fallback read its
@@ -61,24 +76,24 @@ local SOUND_PLAY_SFX = 0x721C6
 -- lookup, "subi.b #spec__First,d7" against $D0).
 local SOUND_PLAY_SPECIAL = 0x7230C
 -- sonic1-complete-withemeralds.bk2 (SHA-256 f2e81793...) has 225,101 input
--- rows covering the entire pinned complete run; see EXPECTED_MOVIE_SHA256.
-local EXPECTED_MOVIE_ROWS = 225101
--- Fixed frame budget from power-on, not movie end (see header comment). This
--- is deliberately close to the never-executed S1 GHZ1 gameplay-audio timeline
--- plan's [860,4975) window (docs/architecture/plans/audio/2026-08-09-s1-ghz1-
--- gameplay-audio-timeline-plan.md) so both efforts describe the same span of
--- real play, though that plan's own tool remains unexercised (see
--- tools/audio/README.md).
--- 3000, not the originally planned 5000: BizHawk's headless client
--- consistently self-terminates (clean process exit 0, no Lua error, no
--- native crash signal) at frame 3219/invocation ordinal 2561 of this longer
--- movie -- a boundary the short sound-test movies (<=2791 rows) never
--- reached through this same launcher. The cause was not isolated (not a
--- Lua assertion -- diagnostic pcall wrapping around every invocation-
--- lifecycle transition never fired; not tied to any special input row in
--- the movie's own transcript). 3000 stays safely inside the frames that
--- reliably complete.
-local CAPTURE_END_FRAME = 3000
+-- rows covering the entire pinned complete run; see ACCEPTED_MOVIES.
+-- Secondary bound only: a frame budget from power-on, never movie end (see
+-- the header). The window normally closes earlier, at the first post-epoch
+-- music request. The span this describes still overlaps the never-executed S1
+-- GHZ1 gameplay-audio timeline plan's [860,4975) window
+-- (docs/architecture/plans/audio/2026-08-09-s1-ghz1-gameplay-audio-timeline-
+-- plan.md), though that plan's own tool remains unexercised (see
+-- tools/audio/README.md). The v2 fixture stopped at 3000 because
+-- the capture appeared to self-terminate at frame 3219 (clean process exit
+-- 0, no Lua error). That was this probe: the shared lifecycle's acceptBgm
+-- raises "music $XX accepted after capture epoch" on any post-epoch music
+-- request, and probe_runtime's hook wrapper calls finish() -- which runs
+-- client.exit() -- before re-raising, so BizHawk left before the error
+-- reached anyone. Frame 3219 is the movie's GHZ1 invincibility monitor
+-- dispatching bgm_Invincible ($87, _Constants.asm:344). That is now the
+-- defined window end (see WINDOW END above), and hook errors are written to
+-- the capture's .error sidecar before the client exits.
+local CAPTURE_END_FRAME = 20000
 local CYCLE_SOUND_QUEUE = 0x71F02
 local PLAY_SOUND_ID = 0x71F4C
 local VALIDATE_ONLY = os.getenv("OGGF_AUDIO_CALLBACK_VALIDATE_ONLY") == "1"
@@ -86,7 +101,19 @@ local FORCE_PC_MANIFEST = os.getenv("OGGF_AUDIO_FORCE_PC_MANIFEST") == "1"
 local CAPTURE_DEBUG = os.getenv("OGGF_AUDIO_CAPTURE_DEBUG") == "1"
 local EXPECTED_ROM_SHA1 = "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b"
 local EXPECTED_ROM_CRC32 = "afe05eee"
-local EXPECTED_MOVIE_SHA256 = "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b"
+-- Every gameplay movie this probe will record, keyed by the SHA-256 the
+-- launcher computed over the exact BK2 it handed EmuHawk (the caller cannot
+-- substitute a claimed digest). Two different complete runs of the same ROM,
+-- by different routes: the oracle's bar is any BK2, not one BK2, so a second
+-- source is a second independent check on the same driver code rather than a
+-- longer look at the same inputs. Both must open on GHZ1 for the epoch below
+-- ($81) and for the engine host's single GHZ music sequencer.
+local ACCEPTED_MOVIES = {
+    -- sonic1-complete-withemeralds.bk2
+    ["f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b"] = {rows = 225101},
+    -- src/test/resources/traces/s1/_movies/s1-complete-run.bk2
+    ["f744c814d8e00d6c367f7fe83bb663cab123b5a4ed385a320d71b74d63146bde"] = {rows = 195493}
+}
 local EXPECTED_MOVIE_OPAQUE_HASH = "09DADB5071EB35050067A32462E39C5F"
 local GHZ_ASSET_BASE = 0x745DC
 local GHZ_ASSET_END = 0x74D44
@@ -275,17 +302,22 @@ local function verifyIdentity()
     assert(gameinfo.getromname() == "Sonic The Hedgehog (W) (REV01) [!]",
         "BizHawk ROM name does not identify S1 World REV01")
     assert(movie.isloaded(), "pinned S1 complete-run BK2 must be loaded")
-    assert(movie.length() == EXPECTED_MOVIE_ROWS,
-        "pinned S1 complete-run BK2 must have 225,101 input rows")
+    local launcherSha256 = assert(os.getenv("OGGF_BIZHAWK_MOVIE_SHA256"),
+        "run_bizhawk_lua must supply the actual BK2 SHA-256"):lower()
+    local accepted = ACCEPTED_MOVIES[launcherSha256]
+    assert(accepted, "BK2 is not one of this probe's pinned S1 gameplay movies: " .. launcherSha256)
+    assert(movie.length() == accepted.rows,
+        "pinned S1 complete-run BK2 does not have its recorded input-row count")
     local header = movie.getheader()
     assert(header.Core == "Genplus-gx", "S1 parity BK2 must select Genesis Plus GX")
     assert(header.emuVersion == "Version 2.11", "S1 parity BK2 must select BizHawk 2.11")
     assert(header.GameName == "Sonic The Hedgehog (W) (REV01) [!]", "S1 parity BK2 game mismatch")
     assert(header.SHA1 == EXPECTED_MOVIE_OPAQUE_HASH, "S1 parity BK2 opaque identity mismatch")
+    -- The pin is the ACCEPTED_MOVIES membership assert above, not a
+    -- self-comparison: this only re-validates the digest's shape before it
+    -- goes into the capture metadata.
     local movieSha256 = AudioContract.requireSha256(
-        assert(os.getenv("OGGF_BIZHAWK_MOVIE_SHA256"),
-            "run_bizhawk_lua must supply the actual BK2 SHA-256"),
-        EXPECTED_MOVIE_SHA256, "launcher BK2")
+        launcherSha256, launcherSha256, "launcher BK2")
     return rom, movieSha256
 end
 
@@ -597,7 +629,31 @@ local function closeCapturedInvocation(context)
 end
 
 local hooks = {}
-local function addHook(hook) hooks[#hooks + 1] = hook end
+-- probe_runtime's hook wrapper calls finish() (client.exit()) before it
+-- re-raises, so a hook error would otherwise leave BizHawk as a clean exit 0
+-- with nothing recorded anywhere. Every hook error is appended to the
+-- capture's ".error" sidecar first; run_s1_audio_parity.sh reports it.
+local function recordHookFailure(name, failure)
+    local path = os.getenv("OGGF_OUT")
+    if not path then return end
+    local sidecar = io.open(path .. ".error", "a")
+    if not sidecar then return end
+    sidecar:write(string.format("hook %s failed at frame %d: %s\n",
+        tostring(name), emu.framecount(), tostring(failure)))
+    sidecar:close()
+end
+
+local function addHook(hook)
+    local inner = hook.callback
+    hook.callback = function(...)
+        local ok, failure = pcall(inner, ...)
+        if not ok then
+            recordHookFailure(hook.name, failure)
+            error(failure, 0)
+        end
+    end
+    hooks[#hooks + 1] = hook
+end
 
 local function finishValidationInvocation(context)
     local stream = finishInitialStreams()
@@ -682,6 +738,20 @@ addHook({
     address = SOUND_PLAY_BGM,
     callback = function(context)
         local soundId = (emu.getregister("M68K D7") or 0) & 0xFF
+        if invocationLifecycle:isArmed() then
+            -- A second music request ends the single-song window (see WINDOW
+            -- END in the header). The shared contract's acceptBgm treats this
+            -- as contamination and raises; here it is the defined boundary, so
+            -- the window is closed before that raise can happen. The
+            -- in-flight invocation is dropped: the ROM has already swapped
+            -- songs and its remaining track walk belongs to the new song.
+            if not VALIDATE_ONLY and not emitted then
+                assert(#records > 0, "music changed before any invocation was captured")
+                emitted = true
+                emitCapture(context)
+            end
+            return
+        end
         local action = invocationLifecycle:acceptBgm(soundId)
         if action == "arm_tick_zero" then
             validation.epochReached = true
