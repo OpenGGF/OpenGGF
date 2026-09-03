@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 1 gameplay oracle records special sound effects:** the gameplay
+  probe now captures `Sound_PlaySpecial` dispatches alongside normal SFX, and
+  the v2 reference (81 live dispatches) exercises the engine's special-SFX
+  driver path for the first time, pinning its first divergence at update 618.
 - **Sonic 3 & Knuckles music requests observed at the source:** the pinned
   TraceChaser observer now reads the `Play_Music` mailbox while the Z80 is
   stopped, supplying the request the AIZ1 oracle was missing; the driver

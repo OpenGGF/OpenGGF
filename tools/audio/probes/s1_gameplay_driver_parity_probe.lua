@@ -47,6 +47,19 @@ local UPDATE_MUSIC_RETURN = 0x71C4C
 local PLAY_SEGA_RETURN = 0x71FD0
 local SOUND_PLAY_BGM = 0x71FD2
 local SOUND_PLAY_SFX = 0x721C6
+-- Sound_PlaySpecial entry (s1.sounddriver.asm:1117, "Sound_D0toDF"): the
+-- shipped FixBugs=0 dispatch in PlaySoundID (s1.sounddriver.asm:699-706)
+-- routes ids $D0-$DF here directly -- a separate branch from Sound_PlaySFX,
+-- not a fallthrough -- so a hook on SOUND_PLAY_SFX alone never observes a
+-- special SFX request (e.g. the GHZ waterfall, id $D0). Confirmed by opcode
+-- match: both routines open with the identical "tst.b
+-- SMPS_RAM.f_1up_playing(a6)" (4a2e0027); RomOffsetFinder's reported offset
+-- for this label is stale (verified by re-deriving PlaySoundID's SOUND_PLAY_SFX
+-- offset the same way and finding it also wrong), so this address was found
+-- by scanning for the opcode after Sound_PlaySFX and checking the following
+-- bytes decode to the known Sound_PlaySpecial body (Go_SpecSoundIndex table
+-- lookup, "subi.b #spec__First,d7" against $D0).
+local SOUND_PLAY_SPECIAL = 0x7230C
 -- sonic1-complete-withemeralds.bk2 (SHA-256 f2e81793...) has 225,101 input
 -- rows covering the entire pinned complete run; see EXPECTED_MOVIE_SHA256.
 local EXPECTED_MOVIE_ROWS = 225101
@@ -130,7 +143,10 @@ end
 
 local dispatchManifest = {
     -- Sound_PlaySFX entry: tst.b SMPS_RAM.f_1up_playing(a6)
-    {address = SOUND_PLAY_SFX, expectedOpcode = "4a2e0027"}
+    {address = SOUND_PLAY_SFX, expectedOpcode = "4a2e0027"},
+    -- Sound_PlaySpecial entry: tst.b SMPS_RAM.f_1up_playing(a6) (same field,
+    -- same opcode -- see the SOUND_PLAY_SPECIAL comment above)
+    {address = SOUND_PLAY_SPECIAL, expectedOpcode = "4a2e0027"}
 }
 
 local function verifyOpcodeSites(sites, label)
@@ -691,6 +707,32 @@ addHook({
             string.format("Sound_PlaySFX dispatched a non-normal-SFX id $%02X", soundId))
         assert(invocationLifecycle:isActive() and currentDispatches ~= nil,
             "SFX dispatched outside a captured UpdateMusic invocation")
+        currentDispatches[#currentDispatches + 1] = soundId
+    end
+})
+
+addHook({
+    name = "s1_audio_special_sfx_dispatch",
+    address = SOUND_PLAY_SPECIAL,
+    callback = function()
+        if not invocationLifecycle:isArmed() then return end
+        local soundId = (emu.getregister("M68K D7") or 0) & 0xFF
+        -- Shipped FixBugs=0 range check (s1.sounddriver.asm:699-706,
+        -- "spec__Last+$10" -- checks $D0-$DF though only $D0 (Waterfall) has
+        -- a real Go_SpecSoundIndex entry; anything else here would already
+        -- have crashed the ROM before reaching this hook, so the range is
+        -- asserted defensively rather than narrowed to $D0 -- see
+        -- CLAUDE.md's FixBugs guidance).
+        assert(soundId >= 0xD0 and soundId <= 0xDF,
+            string.format("Sound_PlaySpecial dispatched a non-special-SFX id $%02X", soundId))
+        assert(invocationLifecycle:isActive() and currentDispatches ~= nil,
+            "special SFX dispatched outside a captured UpdateMusic invocation")
+        -- Recorded into the same flat "dispatches" array as normal SFX: the
+        -- id alone already disambiguates special SFX ($D0-$DF, above
+        -- Sonic1Sfx.NORMAL_ID_MAX) from normal SFX ($A0-$CF) on the reader
+        -- side (Sonic1AudioProfile.isSpecialSfx), so no new schema field is
+        -- needed for the replay host to route this through the driver's
+        -- special-SFX sequencer mode.
         currentDispatches[#currentDispatches + 1] = soundId
     end
 })

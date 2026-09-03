@@ -15,12 +15,21 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * ROM-gated, comparison-only oracle for the S1 gameplay driver reference
- * fixture ({@code s1-gameplay-ghz1-reference.v1.jsonl.gz}) -- the first S1
+ * fixture ({@code s1-gameplay-ghz1-reference.v2.jsonl.gz}) -- the first S1
  * audio oracle sourced from a real playthrough (the pinned complete-run movie
  * {@code sonic1-complete-withemeralds.bk2}, power-on through early GHZ1 play)
  * rather than a scripted sound-test movie. See
  * {@code src/test/resources/audio/parity/s1/fixture-manifest.json} for the
  * fixture's capture provenance.
+ *
+ * <p>v2 supersedes v1: the recorder probe
+ * ({@code tools/audio/probes/s1_gameplay_driver_parity_probe.lua}) gained a
+ * second dispatch hook at {@code Sound_PlaySpecial}
+ * (docs/s1disasm/s1.sounddriver.asm:1117), so the fixture now records the
+ * GHZ waterfall special-SFX dispatch that v1 could not see -- v1's frontier
+ * at tick 629 was a reference limitation, not an engine defect (see
+ * docs/status/audio-frontier-log.md, 2026-09-03 entries). v1's bytes remain
+ * committed, unmodified, for provenance; it is retired, not deleted.
  *
  * <p>This test never hydrates engine or gameplay state from the fixture; it
  * only replays the reference's own request/dispatch sequence through the real
@@ -34,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  */
 class TestS1GameplayAudioDriverOracle {
     private static final Path REFERENCE = Path.of(
-            "src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v1.jsonl.gz");
+            "src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v2.jsonl.gz");
 
     @TempDir
     Path temp;
@@ -51,17 +60,20 @@ class TestS1GameplayAudioDriverOracle {
 
         AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
 
-        // Pinned frontier (see docs/status/audio-frontier-log.md): at tick 629
-        // the reference still has the music FM4 track overridden where the
-        // engine has already released it. This is a measurement pin, not an
-        // expectation that the engine is correct -- when this frontier moves,
-        // update both this assertion and the frontier log entry together with
-        // the ROM routine that explains it.
+        // Pinned frontier (see docs/status/audio-frontier-log.md, 2026-09-03):
+        // with the special-SFX dispatch now in the fixture, tick 618 is the
+        // first tick where the engine's admitted special-SFX sequencer emits
+        // a write the real driver's Sound_PlaySpecial run did not (an extra
+        // YM2612 port 1 register 0xB0 write) -- an actual engine divergence in
+        // the driver's special-SFX handling, not a reference gap. This is a
+        // measurement pin, not an expectation that the engine is correct --
+        // when this frontier moves, update both this assertion and the
+        // frontier log entry together with the ROM routine that explains it.
         assertNotEquals(AudioParityReport.Kind.MATCH, report.kind(),
                 "gameplay oracle is expected to diverge at the pinned frontier; "
                         + "if it now matches, the frontier moved forward and this pin is stale");
-        assertEquals(AudioParityReport.Kind.TRACK_STATE_MISMATCH, report.kind());
-        assertEquals(629, report.tickOrdinal());
+        assertEquals(AudioParityReport.Kind.EVENT_VALUE_DIFFERENT, report.kind());
+        assertEquals(618, report.tickOrdinal());
     }
 
     /**

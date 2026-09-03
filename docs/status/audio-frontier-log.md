@@ -27,6 +27,80 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S1 gameplay oracle: tick 629 (reference gap) → tick 618 (real engine divergence), special-SFX dispatch now captured
+
+- **Worktree/branch:** `.worktrees/audio-s1-probe-special`,
+  `feature/ai-s1-gameplay-probe-special`, on top of `dea9404e4`. Measurement
+  only for the frontier move itself; the probe/capture-host changes that make
+  the new tick observable are a small, mechanical routing fix (see below), not
+  a driver-behaviour fix.
+- **What changed — the probe.** `Sound_PlaySFX` (`docs/s1disasm/s1.sounddriver.asm:977`,
+  PC `$721C6`) and `Sound_PlaySpecial` (`:1117`, "Sound_D0toDF") are two
+  disjoint entry points reached directly from `PlaySoundID`'s shipped
+  (`FixBugs = 0`) dispatch (`:690-706`): normal SFX ($A0-$CF) branches to
+  `Sound_PlaySFX`, special SFX ($D0-$DF checked, though only $D0/Waterfall has
+  a real `Go_SpecSoundIndex` entry -- anything else would already have crashed
+  the ROM) branches directly to `Sound_PlaySpecial`. The v1 probe
+  (`tools/audio/probes/s1_gameplay_driver_parity_probe.lua`) hooked only
+  `Sound_PlaySFX`, so it never observed a `Sound_PlaySpecial` call -- the GHZ
+  waterfall dispatch was invisible to the fixture. `Sound_PlaySpecial`'s PC
+  ($7230C) was not obtainable from `RomOffsetFinder --game s1 find
+  Sound_PlaySpecial` (it returned a stale/wrong offset -- cross-checked by
+  re-deriving the already-known-good `Sound_PlaySFX` address the same way and
+  finding it also wrong by a non-constant delta); the address was instead
+  found by scanning the ROM for the opcode both routines share as their first
+  instruction (`tst.b SMPS_RAM.f_1up_playing(a6)` = `4a2e0027`, byte-verified
+  against v_fadeout_counter/f_fadein_flag tests and the `Go_SpecSoundIndex`
+  table lookup that follows). The probe now hooks both PCs, asserting
+  `$A0-$CF` at the `Sound_PlaySFX` site and `$D0-$DF` at the `Sound_PlaySpecial`
+  site (the shipped-bug range, not narrowed to `$D0` -- see CLAUDE.md's
+  `FixBugs` guidance) and appending either into the same flat per-tick
+  `dispatches` array. **No schema change**: a recorded id's own value (>=
+  `Sonic1Sfx.NORMAL_ID_MAX + 1`, i.e. `Sonic1AudioProfile.isSpecialSfx`)
+  already disambiguates a special-SFX dispatch from a normal one, so a new
+  field would have been redundant.
+- **What changed — the replay host.** `S1OpenGgfSfxAudioCapture` (the shared
+  host this oracle and the committed SFX oracle both use) unconditionally
+  called `sequencer.setSpecialSfx(false)`. It now calls
+  `sequencer.setSpecialSfx(profile.isSpecialSfx(soundId))` -- the engine's
+  `SmpsSequencer`/`Sonic1SmpsLoader` already fully supported special-SFX
+  loading and playback (`loadSfx` already redirected internally via
+  `loadSpecialSfx`); the host just never asked for it.
+- **Recapture.** `tools/audio/run_s1_audio_parity.sh --mode gameplay`
+  (unchanged launcher, same movie/window: power-on through frame 3,000 of
+  `sonic1-complete-withemeralds.bk2`). Two BizHawk captures byte-identical and
+  two OpenGGF replay captures byte-identical (both checked by the launcher
+  before it proceeds, `cmp -s`); uncompressed reference SHA-256
+  `c8fe427155e405c234162152f23f74c941dcef24d9d9952984db63cf3c028ac7`
+  (20,157,508 bytes, 2,343 ticks, **81 dispatches** vs v1's 70 -- the 11 new
+  ones are all `Sound_PlaySpecial` calls to id `$D0`, GHZ waterfall).
+  Published as `s1-gameplay-ghz1-reference.v2.jsonl.gz`; v1 retained
+  unmodified (retired, not deleted -- see
+  `src/test/resources/audio/parity/s1/fixture-manifest.json`).
+- **Result:** **MISMATCH**, `EVENT_VALUE_DIFFERENT`, tick 618, event 3, field
+  `decoded_write` -- reference `<missing>`, engine
+  `AudioParityChipWrite[chip=ym2612, port=1, register=176(0xB0), value=56]`.
+  This is a **real engine divergence**, not a reference gap: the engine's
+  admitted special-SFX sequencer emits an FM frequency write the real ROM's
+  `Sound_PlaySpecial` run at this tick did not. Not investigated in this lane
+  (measurement only, per the brief); a future lane should chase
+  `s1.sounddriver.asm`'s special-SFX track service (`:1117` onward,
+  `cfStopTrack`'s special-track branch at `:2510-2515`) before changing engine
+  behaviour. The old tick-629 divergence (music FM4 override surviving past a
+  special-SFX release) no longer reproduces as the first divergence because
+  the new frontier at 618 is strictly earlier in the same window.
+- **Break-on-purpose evidence:** flipping one YM2612 register-40 write value
+  in tick 0 of a temp copy of the v2 reference is reported at tick 0 by
+  `TestS1GameplayAudioDriverOracle.corruptingTheReferenceIsDetectedAtTheCorruptedTick`
+  (still green against v2, confirming the comparison is live, not vacuous).
+- **Gates at this commit:** `run_s1_audio_parity.sh --mode music` MATCH
+  (14,690 ticks); `--mode sfx` MATCH (1,967 ticks); `--mode gameplay` reports
+  the mismatch above (exit 3, expected); S2
+  `TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare`
+  MATCH (698 ticks); `com.openggf.tools.audio.parity.**` 136 tests, 0
+  failures, 4 skipped (unrelated missing S3K/other optional inputs);
+  `-Pguards` green.
+
 ## 2026-09-03 — S3K DAC frequency pinned; frontier reaches the FM track-parse phase
 
 - **Context:** `.worktrees/audio-s3k-observer`, branch

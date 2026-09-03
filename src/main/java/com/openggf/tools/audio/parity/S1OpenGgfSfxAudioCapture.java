@@ -155,7 +155,13 @@ public final class S1OpenGgfSfxAudioCapture {
                 sequencer.setSampleRate(SAMPLE_RATE);
                 sequencer.setSfxMode(true);
                 sequencer.setSfxPriority(profile.getSfxPriority(soundId));
-                sequencer.setSpecialSfx(false);
+                // A recorded id >= NORMAL_ID_MAX+1 came through the probe's
+                // Sound_PlaySpecial hook (s1_gameplay_driver_parity_probe.lua),
+                // not Sound_PlaySFX -- the ROM dispatches these through a
+                // separate routine (s1.sounddriver.asm:1117) with its own
+                // admission gates (1-up / fadeout / fadein checks). The id
+                // alone disambiguates the two dispatch entries.
+                sequencer.setSpecialSfx(profile.isSpecialSfx(soundId));
                 sequencer.setFallbackVoiceData(song);
                 driver.addSequencer(sequencer, true);
                 dispatchCount++;
