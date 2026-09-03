@@ -417,8 +417,14 @@ public final class AudioParityJsonl {
         // both see the same 514 dormant UpdateMusic invocations before the GHZ
         // capture epoch. The complete-run gameplay movie has its own real
         // title/SEGA/menu prefix before the GHZ1 BGM dispatch, pinned separately.
-        int expectedLaunchInvocations = gameplay
-                ? AudioParitySchema.GAMEPLAY_BK2_LAUNCH_INVOCATIONS : 514;
+        ObjectNode movieNode = object(details.get("movie"), "movie");
+        AudioParitySchema.GameplayMovie gameplayMovie = gameplay
+                ? AudioParitySchema.GAMEPLAY_MOVIES.get(text(movieNode, "archive_sha256"))
+                : null;
+        if (gameplay && gameplayMovie == null) {
+            throw invalid("gameplay reference names a BK2 that is not a pinned S1 gameplay movie");
+        }
+        int expectedLaunchInvocations = gameplay ? gameplayMovie.launchInvocations() : 514;
         if (integer(details, "launch_update_music_invocations") != expectedLaunchInvocations) {
             throw invalid("reference launch_update_music_invocations must match the pinned BK2 transport");
         }
@@ -429,13 +435,16 @@ public final class AudioParityJsonl {
                 (sfx || gameplay) ? AudioParitySchema.SFX_GATING_GLOBAL_FIELDS
                         : AudioParitySchema.GATING_GLOBAL_FIELDS,
                 AudioParitySchema.GATING_TRACK_FIELDS);
-        ObjectNode movie = object(details.get("movie"), "movie");
+        ObjectNode movie = movieNode;
         Set<String> fields = Set.of("archive_sha256", "core", "emulator", "game", "input_rows",
                 "opaque_header_hash");
         exactFields(movie, fields, fields, "movie");
-        String expectedSha = gameplay ? AudioParitySchema.GAMEPLAY_BK2_SHA256
+        // A gameplay reference names which pinned movie it came from, so its
+        // digest is checked by membership above rather than against one
+        // hard-coded value; the row count still has to match that movie.
+        String expectedSha = gameplay ? text(movie, "archive_sha256")
                 : sfx ? AudioParitySchema.SFX_BK2_SHA256 : AudioParitySchema.BK2_SHA256;
-        int expectedRows = gameplay ? AudioParitySchema.GAMEPLAY_BK2_INPUT_ROWS
+        int expectedRows = gameplay ? gameplayMovie.inputRows()
                 : sfx ? AudioParitySchema.SFX_BK2_INPUT_ROWS : AudioParitySchema.BK2_INPUT_ROWS;
         String expectedOpaque = gameplay ? AudioParitySchema.GAMEPLAY_BK2_OPAQUE_HASH
                 : sfx ? AudioParitySchema.SFX_BK2_OPAQUE_HASH : AudioParitySchema.BK2_OPAQUE_HASH;

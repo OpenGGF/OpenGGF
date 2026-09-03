@@ -112,11 +112,21 @@ public final class S1AudioParityTool {
         CaptureKind kind = captureKind(options);
         Path movie = normalizedRequired(options, "movie");
         verifyRegular(movie, "pinned BK2 movie");
-        verifyDigest(movie, "SHA-256", expectedMovieSha256(kind), switch (kind) {
-            case SFX -> "BK2 movie does not match the pinned s1-soundtest-sfx.bk2 identity";
-            case GAMEPLAY -> "BK2 movie does not match the pinned sonic1-complete-withemeralds.bk2 identity";
-            case MUSIC -> "BK2 movie does not match the pinned s1-soundtest-ghz.bk2 identity";
-        });
+        if (kind == CaptureKind.GAMEPLAY) {
+            // The gameplay kind accepts more than one pinned complete run, so
+            // the check is membership rather than a single digest.
+            String actual = digest(movie, "SHA-256");
+            if (!AudioParitySchema.GAMEPLAY_MOVIES.containsKey(actual)) {
+                throw new IllegalArgumentException(
+                        "BK2 movie is not one of the pinned S1 gameplay movies (observed " + actual + ")");
+            }
+        } else {
+            verifyDigest(movie, "SHA-256", expectedMovieSha256(kind), switch (kind) {
+                case SFX -> "BK2 movie does not match the pinned s1-soundtest-sfx.bk2 identity";
+                case MUSIC -> "BK2 movie does not match the pinned s1-soundtest-ghz.bk2 identity";
+                case GAMEPLAY -> throw new IllegalStateException("gameplay is handled above");
+            });
+        }
 
         Path bizhawk = normalizedRequired(options, "bizhawk-home");
         Path emuHawk = bizhawk.resolve("EmuHawk.exe");
@@ -169,11 +179,12 @@ public final class S1AudioParityTool {
         };
     }
 
+    /** Single-digest kinds only; GAMEPLAY accepts any movie in {@code GAMEPLAY_MOVIES}. */
     private static String expectedMovieSha256(CaptureKind kind) {
         return switch (kind) {
             case MUSIC -> AudioParitySchema.BK2_SHA256;
             case SFX -> AudioParitySchema.SFX_BK2_SHA256;
-            case GAMEPLAY -> AudioParitySchema.GAMEPLAY_BK2_SHA256;
+            case GAMEPLAY -> throw new IllegalStateException("gameplay accepts several pinned movies");
         };
     }
 

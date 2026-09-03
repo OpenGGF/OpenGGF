@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 1 gameplay oracle widened and doubled:** the GHZ1 window now runs
+  to its real boundary (2,562 updates, MATCH), ending where the invincibility
+  theme replaces the song, and a second recording from a different complete
+  run (5,257 updates) pins a new first divergence at update 1,906.
 - **S3K SEGA chant is played by the driver:** the Sonic 3 & Knuckles session
   now runs `zPlaySEGAPCM`'s blocking DAC transport itself (one byte per 248 Z80
   cycles, interrupts held), replacing the presentation-layer sample for that
