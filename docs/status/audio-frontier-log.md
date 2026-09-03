@@ -27,6 +27,76 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S3K tick 138 is a mid-update reference snapshot, not an engine gap
+
+- **Context:** `.worktrees/audio-s3k-frontier`, branch
+  `bugfix/ai-s3k-oracle-frontier` on `128a8864e`. No engine, tool, comparator
+  or fixture code changed; this entry records a measurement and its cause.
+- **Command:**
+
+  ```
+  java -cp "target/classes:$(cat target/s3k-oracle.classpath)" \
+    com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare \
+    --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz \
+    --requests <external>/s3k-request-observations.json \
+    --rom <absolute locked-on S3K ROM>
+  ```
+
+- **Result:** unchanged. `TRACK_STATE_MISMATCH` at tick 138, role `MUS_FM1`,
+  field `resting`, reference `false`, engine `true`.
+- **Diagnosis — the reference row is a partially executed driver update.**
+  Tick 138 is movie frame 252, the frame that consumes the title-music request
+  `25h`. The reference's own RAM snapshot for that tick is internally
+  inconsistent with any completed `zUpdateMusic` pass:
+
+  - `MUS_DAC` has parsed: `DurationTimeout` `06`, `SavedDAC` `86`, its data
+    pointer advanced past the song header.
+  - `MUS_FM1` is mid-`zGetNextNote`: `DurationTimeout` is `00`, so the note
+    timer already ran (`zTrackRunTimer` under `fix_sndbugs = 0`,
+    `Sound/Z80 Sound Driver.asm:1102-1107`), and `VoiceIndex` is already `4`,
+    so a coordination flag in the track stream was already handled. But the
+    track's data pointer is still the header value `F8BEh`, because
+    `zFinishTrackUpdate` had not yet written it back, and the rest bit is
+    still clear.
+  - `MUS_FM2` through `MUS_PSG3` are untouched at their post-init
+    `DurationTimeout` of `01`, the value `zZeroFillTrackRAM` writes
+    (`Sound/Z80 Sound Driver.asm:2181-2196`).
+
+  That is a strict prefix of the update order `zUpdateMusic` uses: FM6/DAC
+  first, then `zSongFM1` onwards through `zTrackUpdLoop`
+  (`Sound/Z80 Sound Driver.asm:703-742`). All seven music loads in the fixture
+  show the same shape, each truncated at a different point in that same order:
+  frame 252 stops inside FM1, frame 619 inside FM2, frame 877 inside FM1,
+  frame 3969 inside the DAC track, and frames 1619, 2145 and 5166 stop before
+  any track ran. A prefix of the ROM's own iteration order, cut at a varying
+  point, is the signature of the Z80 being halted part-way through the
+  invocation, not of any per-track rule.
+
+- **Why this is not an engine defect.** The ROM loads music inside
+  `zUpdateMusic`: `zCycleSoundQueue` reaches `zPlayMusic` and `zBGMLoad`
+  (`Sound/Z80 Sound Driver.asm:658-703`, `1717-1885`) and then falls straight
+  into `.update_music` in the same pass, which is exactly what the engine
+  does. The engine's tick-138 state equals the reference's tick-139 state, so
+  the engine is executing the right pass; the reference simply sampled the
+  driver before it finished. There is no ROM rule that makes the DAC track
+  parse on the load frame and the FM tracks parse on the next one: the
+  fixture's own loads contradict any such rule.
+
+- **Verdict: reference limitation of the v1 capture, at the frame-boundary
+  sampling point.** The stream's metadata declares `sampling:
+  "post_invocation"`, but on frames where the driver's work overruns the Z80's
+  available execution the sampled RAM is mid-invocation. Modelling it engine
+  side would need a per-row value naming the track the update was cut at,
+  which is a value, not a scheduling outcome, and so is outside the
+  hardware-timing trace contract. The fix belongs in the observer: sample
+  driver RAM when the driver returns from `zVInt`, or record the halt so a
+  truncated tick can be recognised as such. Until then the S3K oracle cannot
+  advance past its first music load.
+
+- **Regression gates:** not re-run. This entry changes no engine, tool or
+  fixture code, so the gates recorded in the entry below still stand.
+
+
 ## 2026-09-03 — S3K DAC frequency pinned; frontier reaches the FM track-parse phase
 
 - **Context:** `.worktrees/audio-s3k-observer`, branch
