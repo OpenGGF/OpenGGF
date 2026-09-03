@@ -131,7 +131,8 @@ JSON_REPORT="$RUN_DIR/parity-report.json"
 capture_reference() {
 	local output=$1 log=$2 staging
 	staging=$(/usr/bin/mktemp "$RUN_DIR/reference.XXXXXXXX.staging") || return 1
-	if ! "${SAFE_ENV[@]}" BIZHAWK_HOME="$BIZHAWK_DIR" MONO_BIN="$MONO_SYSTEM_BIN" OGGF_OUT="$staging" "$LAUNCHER" "$PROBE" "$MOVIE" "$ROM_PATH" >"$log" 2>&1; then
+	if ! "${SAFE_ENV[@]}" BIZHAWK_HOME="$BIZHAWK_DIR" MONO_BIN="$MONO_SYSTEM_BIN" OGGF_OUT="$staging" \
+		OGGF_INPUT_REPOSITORY_ROOT="$REPO" "$LAUNCHER" "$PROBE" "$MOVIE" "$ROM_PATH" >"$log" 2>&1; then
 		"${SAFE_ENV[@]}" "${JAVA_TOOL[@]}" discard-reference --repo "$REPO" --run-root "$RUN_DIR" --staging "$staging" >/dev/null 2>&1 || true
 		return 1
 	fi

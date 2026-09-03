@@ -50,3 +50,13 @@ Git, SSH, and dynamic-loader injection variables are rejected.
 `producer-status <profile>` remains pair-wide and is what the parity wrapper
 uses. `producer-kind-status <REFERENCE|OPENGGF> <profile>` checks one fixed
 producer independently and reports that binding's exact unavailable reason.
+
+`run_s1_ghz1_gameplay_audio_timeline.sh` has never been exercised end-to-end:
+its hardcoded in-repo `OUTPUT_ROOT` is rejected by TraceChaser's
+`output_policy.py`, which requires probe output to live outside both source
+trees (the script's own usage text says this, but it never exposes an
+external `--output-root` to satisfy it). Fixing that needs a review of
+`S1GameplayAudioTimelineTool`'s validate/publish-reference contract, not a
+one-line change; it is out of scope here. The S1 gameplay driver oracle
+(`run_s1_audio_parity.sh --mode gameplay`) is the separate, working path for
+gameplay-sourced S1 audio capture.
