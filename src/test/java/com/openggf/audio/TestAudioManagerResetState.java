@@ -1160,6 +1160,12 @@ public class TestAudioManagerResetState {
         public SegaPcmSpec getSegaPcmSpec() {
             return new SegaPcmSpec(0x20, 1, 8_000);
         }
+
+        @Override
+        public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+            return com.openggf.game.audio.SegaPcmRomReader.read(
+                    rom, getSegaPcmSpec());
+        }
     }
 
     private static final class RecordingRom extends Rom {

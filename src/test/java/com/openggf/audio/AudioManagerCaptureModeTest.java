@@ -656,5 +656,8 @@ class AudioManagerCaptureModeTest {
         @Override public int getDrowningMusicId() { return -1; }
         @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
         @Override public SegaPcmSpec getSegaPcmSpec() { return spec; }
+        @Override public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+            return com.openggf.game.audio.SegaPcmRomReader.read(rom, getSegaPcmSpec());
+        }
     }
 }

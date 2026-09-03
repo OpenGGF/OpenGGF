@@ -906,5 +906,8 @@ class TestUnifiedAudioPresentationIntegration {
             return Map.of(GameMusic.SPECIAL_STAGE, SPECIAL_STAGE_MUSIC);
         }
         @Override public SegaPcmSpec getSegaPcmSpec() { return spec; }
+        @Override public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+            return com.openggf.game.audio.SegaPcmRomReader.read(rom, getSegaPcmSpec());
+        }
     }
 }
