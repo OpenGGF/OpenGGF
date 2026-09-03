@@ -758,6 +758,25 @@ public class AudioManager implements MusicRestoreSink {
         commandTimeline.pruneBefore(entryIndex);
     }
 
+    /**
+     * The ring left/right alternation callers should observe. A game whose
+     * request service owns dispatch-time alternation (Sonic 2's
+     * {@code zPlaySound_CheckRing}) reports its own value; {@code ringLeft}
+     * never advances for such a game, since {@link #playSfx} hands ring
+     * requests straight to the mailbox and returns before its own
+     * caller-side toggle. Other games have no request service, so {@code
+     * ringLeft} stays the sole source of truth for them.
+     */
+    private boolean currentRingLeft() {
+        if (shadowRequestService != null) {
+            Boolean serviceRingLeft = shadowRequestService.ringLeft();
+            if (serviceRingLeft != null) {
+                return serviceRingLeft;
+            }
+        }
+        return ringLeft;
+    }
+
     public AudioLogicalSnapshot captureLogicalSnapshot() {
         ensureShadowPresentation();
         Set<String> donorGameIds = new LinkedHashSet<>();
@@ -771,7 +790,7 @@ public class AudioManager implements MusicRestoreSink {
         }
 
         return new AudioLogicalSnapshot(
-                ringLeft,
+                currentRingLeft(),
                 commandTimeline.currentFrame(),
                 commandTimeline.nextOrder(),
                 commandTimeline.entryCount(),

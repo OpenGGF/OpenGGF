@@ -87,6 +87,18 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
         return new Snapshot(pipeline.snapshot(), List.copyOf(pendingSubmissionEvents));
     }
 
+    /**
+     * The mailbox's own ring-speaker alternation ({@code ringSpeaker},
+     * toggled at dispatch by {@code zPlaySound_CheckRing},
+     * {@code s2.sounddriver.asm:2127-2135}). {@code ringSpeaker == 0} selects
+     * the left-side id next, matching the presentation snapshot's
+     * {@code ringLeft} polarity (both default to "left next").
+     */
+    @Override
+    public Boolean ringLeft() {
+        return pipeline.snapshot().ringSpeaker() == 0;
+    }
+
     @Override
     public void restore(AudioPresentationForwardService.Snapshot snapshot) {
         if (!(snapshot instanceof Snapshot selected)) {

@@ -129,19 +129,24 @@ class TestSonic2UnifiedAudioPresentationRomIntegration {
                 "stopping the music must actually silence the final packet");
         boolean ringLeftBefore = audio.captureLogicalSnapshot().ringLeft();
         audio.playSfx(GameSound.RING);
-        assertEquals(!ringLeftBefore, audio.captureLogicalSnapshot().ringLeft(),
-                "the first ring must consume one side of the alternation");
         assertTrue(presentUntilAudible(fixture),
                 "the first ROM ring SFX must reach the final packet on its own");
+        // Sonic 2's mailbox toggles the ring alternation at dispatch
+        // (zPlaySound_CheckRing, s2.sounddriver.asm:2127-2135), not at
+        // submit, so the flip is only observable once the request has
+        // actually been serviced — after presenting, not right after
+        // playSfx.
+        assertEquals(!ringLeftBefore, audio.captureLogicalSnapshot().ringLeft(),
+                "the first ring must consume one side of the alternation");
 
         audio.stopAllSfx();
         assertTrue(presentUntilSilent(fixture),
                 "stopping SFX must actually silence the final packet");
         audio.playSfx(GameSound.RING);
-        assertEquals(ringLeftBefore, audio.captureLogicalSnapshot().ringLeft(),
-                "the second ring must restore the alternation");
         assertTrue(presentUntilAudible(fixture),
                 "the second ROM ring SFX must reach the final packet on its own");
+        assertEquals(ringLeftBefore, audio.captureLogicalSnapshot().ringLeft(),
+                "the second ring must restore the alternation");
 
         // Special stage.
         audio.stopAllSfx();
