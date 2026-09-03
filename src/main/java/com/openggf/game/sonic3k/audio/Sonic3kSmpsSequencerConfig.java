@@ -61,6 +61,8 @@ public final class Sonic3kSmpsSequencerConfig {
                 // post-rest envelope step is selected independently.
                 .advancePsgEnvelopeOnRest(false)
                 .writeFmPanOnNote(true)
+                .dacNoteKeysOffFm6AndRestoresFm3(true)
+                .enableDacOnSequencerStart(false)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80)
                 .volMode(SmpsSequencerConfig.VolMode.BIT7)
                 .psgEnvCmd80(SmpsSequencerConfig.PsgEnvCmd80.RESET)

@@ -183,6 +183,8 @@ public final class SmpsSequencerConfig {
     private final boolean direct68kDriver;
     private final boolean advancePsgEnvelopeOnRest;
     private final boolean writeFmPanOnNote;
+    private final boolean dacNoteKeysOffFm6AndRestoresFm3;
+    private final boolean enableDacOnSequencerStart;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
     private final PsgSfxTakeoverMode psgSfxTakeoverMode;
     private final Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode;
@@ -228,6 +230,8 @@ public final class SmpsSequencerConfig {
         this.direct68kDriver = b.direct68kDriver;
         this.advancePsgEnvelopeOnRest = b.advancePsgEnvelopeOnRest;
         this.writeFmPanOnNote = b.writeFmPanOnNote;
+        this.dacNoteKeysOffFm6AndRestoresFm3 = b.dacNoteKeysOffFm6AndRestoresFm3;
+        this.enableDacOnSequencerStart = b.enableDacOnSequencerStart;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
         this.psg3SfxAdmissionWriteMode = b.psg3SfxAdmissionWriteMode;
@@ -344,6 +348,22 @@ public final class SmpsSequencerConfig {
     /** Whether FM note preparation repeats the track's current pan register. */
     public boolean isWriteFmPanOnNote() {
         return writeFmPanOnNote;
+    }
+
+    /**
+     * Whether starting a DAC sample also keys off the shared FM6 channel and
+     * restores FM3 to normal mode, as the S3K Z80 driver's DAC track does.
+     */
+    public boolean isDacNoteKeysOffFm6AndRestoresFm3() {
+        return dacNoteKeysOffFm6AndRestoresFm3;
+    }
+
+    /**
+     * Whether admitting a sequencer also enables the YM2612 DAC (2Bh = 80h).
+     * The Z80 drivers do not: their DAC transport owns that register.
+     */
+    public boolean isEnableDacOnSequencerStart() {
+        return enableDacOnSequencerStart;
     }
 
     public FmSfxTakeoverMode getFmSfxTakeoverMode() {
@@ -468,6 +488,8 @@ public final class SmpsSequencerConfig {
         private boolean direct68kDriver = false;
         private boolean advancePsgEnvelopeOnRest = true;
         private boolean writeFmPanOnNote = false;
+        private boolean dacNoteKeysOffFm6AndRestoresFm3 = false;
+        private boolean enableDacOnSequencerStart = true;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
         private PsgSfxTakeoverMode psgSfxTakeoverMode = PsgSfxTakeoverMode.FORCE_SILENCE;
         private Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode =
@@ -508,6 +530,8 @@ public final class SmpsSequencerConfig {
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder advancePsgEnvelopeOnRest(boolean val) { advancePsgEnvelopeOnRest = val; return this; }
         public Builder writeFmPanOnNote(boolean val) { writeFmPanOnNote = val; return this; }
+        public Builder dacNoteKeysOffFm6AndRestoresFm3(boolean val) { dacNoteKeysOffFm6AndRestoresFm3 = val; return this; }
+        public Builder enableDacOnSequencerStart(boolean val) { enableDacOnSequencerStart = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder psgSfxTakeoverMode(PsgSfxTakeoverMode val) { psgSfxTakeoverMode = val; return this; }
         public Builder psg3SfxAdmissionWriteMode(Psg3SfxAdmissionWriteMode val) { psg3SfxAdmissionWriteMode = val; return this; }

@@ -544,7 +544,17 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.keyOffset = (byte) programView.fmKeyOffsetAt(i);
                 t.volumeOffset = programView.fmVolumeOffsetAt(i);
                 t.dividingTiming = dividingTiming;
-                loadVoice(t, 0); // default instrument
+                // No driver uploads an instrument when a song loads: S3K
+                // zBGMLoad's FM/DAC loop only calls zInitFMDACTrack, which
+                // writes track RAM and zeroes the FM instrument index
+                // (skdisasm Sound/Z80 Sound Driver.asm:1837-1856, 2171-2199),
+                // and its single chip write between the bank switch and the
+                // track loops is 0B6h (:1811-1816). S2 zBGMLoad defers to
+                // zInitMusicPlayback (s2.sounddriver.asm:1738-1739) and S1 uses
+                // InitMusicPlayback (s1.sounddriver.asm:1486-1545); neither
+                // sends a voice either. The voice reaches the YM2612 only from
+                // the track's own SetVoice, so select it without refreshing.
+                selectVoice(t, 0); // default instrument, track RAM only
                 tracks.add(t);
             }
         }
@@ -2137,6 +2147,14 @@ public class SmpsSequencer implements CoordFlagContext {
         return PSG_FREQ_TABLE_68K;
     }
 
+    /**
+     * YM2612 register 28h channel-select value for a driver channel slot, the
+     * low three bits of the track's VoiceControl byte (bit 2 selects part II).
+     */
+    private static int keyOnOffChannelSelect(int channelId) {
+        return channelId < 3 ? channelId : (channelId % 3) + 4;
+    }
+
     private boolean shouldPreventNoteAttack(Track t) {
         // We model the driver's note-on-prevent bit with tieNext.
         // On SMPS Z80 this is the HOLD bit, and on SMPS 68k this maps to AT-REST.
@@ -2267,6 +2285,27 @@ public class SmpsSequencer implements CoordFlagContext {
         }
 
         if (t.type == TrackType.DAC) {
+            if (config.isDacNoteKeysOffFm6AndRestoresFm3()) {
+                // The S3K Z80 driver's DAC track shares FM6, so starting a
+                // sample first kills the FM note on that channel and puts FM3
+                // back into normal mode: zUpdateDACTrack calls zKeyOffIfActive
+                // then zFM3NormalMode before queuing the sample
+                // (skdisasm Sound/Z80 Sound Driver.asm:2897-2898).
+                // zKeyOffIfActive writes nothing when PlaybackControl bit 1
+                // ("do not attack next note") or bit 2 ("SFX overriding this
+                // track") is set (:3338-3341); otherwise zKeyOff sends 28h with
+                // the track's VoiceControl byte, which zFMDACInitBytes gives as
+                // 6 for the DAC/FM6 track (:3348-3358, :1897).
+                // zFM3NormalMode is called unconditionally and writes 27h = 0
+                // (:2511-2521). S1 DACUpdateTrack
+                // (s1.sounddriver.asm:277-331) and S2 zDACUpdateTrack
+                // (s2.sounddriver.asm:759-816) make neither call, so this stays
+                // off for those games.
+                if (!preventAttack && !t.overridden) {
+                    synth.writeFm(this, 0, 0x28, keyOnOffChannelSelect(t.channelId));
+                }
+                synth.writeFm(this, 0, 0x27, 0x00);
+            }
             // Skip DAC playback if muted during fade-in
             if (!t.dacMuted) {
                 synth.playDac(this, t.note);

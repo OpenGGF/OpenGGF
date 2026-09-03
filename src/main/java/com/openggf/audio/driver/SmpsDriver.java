@@ -1940,7 +1940,14 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 }
             }
             selectDac(seq.getSourceDescriptor(), seq.getDacData());
-            writeFm(seq, 0, 0x2B, 0x80);
+            if (seq.getConfig().isEnableDacOnSequencerStart()) {
+                // The S3K Z80 driver never enables the DAC when a song loads:
+                // zPlayDigitalAudio disables it on entry and only writes
+                // 2Bh = 80h from its idle loop, after zDACIndex goes non-zero
+                // and outside the V-int service that queued the sample
+                // (skdisasm Sound/Z80 Sound Driver.asm:4256-4275).
+                writeFm(seq, 0, 0x2B, 0x80);
+            }
             sequencers.add(seq);
             if (isSfx) {
                 sfxSequencers.add(seq);

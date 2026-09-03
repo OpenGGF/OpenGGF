@@ -27,6 +27,55 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K oracle: the post-load first update grows its DAC prefix; tick 138 event 85 -> 87
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick138`,
+  `bugfix/ai-s3k-oracle-tick138`, over `develop` at `a05287cef`.
+- **Command:**
+  `java -cp "target/classes:$(cat target/cp.txt)"
+  com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare
+  --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz
+  --requests src/test/resources/audio/parity/s3k/s3k-aiz1-intro-requests-v1.json
+  --rom <absolute locked-on S3K ROM>`, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 138, event 85, reference
+  `ym2612 port 0 register 28h = 6` against engine `port 0 register 0B4h = 0C0h`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 138, event 87, reference
+  `ym2612 port 0 register 80h = 0FFh` against engine `port 0 register 0B4h = 0C0h`.
+  Events 85 and 86 now agree: the DAC track's key-off of FM6 and its FM3
+  normal-mode restore.
+- **What the ROM does, and it is three separate facts.** After `zBGMLoad`'s one
+  0B6h write the next writes belong to the same service's `zUpdateMusic` pass,
+  which updates `zSongFM6_DAC` before the FM/PSG loop
+  (Sound/Z80 Sound Driver.asm:717-723). That DAC pass calls `zKeyOffIfActive`
+  and then `zFM3NormalMode` before queuing the sample (:2897-2898), producing
+  28h = 6 and 27h = 0; `zKeyOffIfActive` writes nothing when PlaybackControl bit
+  1 or 2 is set (:3338-3341), and the 6 is the DAC track's VoiceControl byte
+  from `zFMDACInitBytes` (:1897). Neither S1 `DACUpdateTrack`
+  (s1.sounddriver.asm:277-331) nor S2 `zDACUpdateTrack`
+  (s2.sounddriver.asm:759-816) makes either call, so the behaviour is selected
+  by a sequencer-config flag rather than added to every game.
+  Separately, no driver uploads an instrument when a song loads: `zBGMLoad`'s
+  FM/DAC loop only calls `zInitFMDACTrack`, which writes track RAM (:1837-1856,
+  :2171-2199), and S1/S2 reach the same state through `InitMusicPlayback`
+  (s1.sounddriver.asm:1486-1545, s2.sounddriver.asm:1738-1739). The engine was
+  refreshing voice 0 onto the chip for every FM track at load, so it now selects
+  the voice into track RAM only. And the DAC enable is not a load event either:
+  `zPlayDigitalAudio` disables the DAC on entry and writes 2Bh = 80h from its
+  idle loop once `zDACIndex` goes non-zero (:4256-4275), which is why the
+  reference carries that write as tick 139's first event, not tick 138's.
+  Admitting a sequencer no longer enables the DAC under the S3K config.
+- **No constant was introduced.** All three changes remove or add a write whose
+  presence and position are stated by the listing; none was measured from the
+  fixture.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)` through `S1AudioParityTool capture` + `compare`; the S1
+  gameplay v3 and run-2 oracles pass at their pinned lines; the S2 driver oracle
+  `MATCH (698 ticks)`; the `com.openggf.tools.audio.parity` and
+  `com.openggf.audio` packages, `TestSmpsFadeAudioThroughput` and the four S3K
+  keep-green classes run 2,097 tests with 0 failures.
+
+
 ## 2026-09-03 — a second S1 gameplay source, and it diverges where the first does not
 
 - **Worktree/branch:** `.worktrees/audio-s1-widen`,

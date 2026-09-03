@@ -189,9 +189,10 @@ class TestS3kOracleRequestSidecarWiring {
     /**
      * The live frontier, pinned rather than only logged. Supplying the request
      * carries the comparison through the whole post-SEGA stop-all burst and the
-     * title-music load's own driver state; what remains is the first write of
-     * the load's track cadence, where the ROM's first {@code zUpdateMusic} pass
-     * over the new song keys off FM6 before the engine's first track write.
+     * title-music load's own driver state, and now through that load's DAC-track
+     * prefix as well. What remains is the first write of the first FM track's
+     * voice change, where {@code cfSetVoice} calls {@code zSetMaxRelRate} before
+     * uploading the instrument.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -205,8 +206,8 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
         assertEquals(TITLE_MUSIC_TICK, report.tick());
-        assertEquals(85, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=40, value=6]",
+        assertEquals(87, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=128, value=255]",
                 report.reference());
     }
 
