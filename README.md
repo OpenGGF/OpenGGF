@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **DAC sample pitch:** optional DAC interpolation no longer stalls the
+  sample clock (it played drums about 9.5 semitones flat when enabled), and
+  the option now defaults to off.
 - **S3K temporary-music restoration:** extra-life completion now preserves its
   fade-to-previous request through the presentation boundary, while the AIZ1
   miniboss escape restores the current level track directly.

@@ -669,7 +669,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.DISPLAY_SHADER_PREVIOUS_KEY, GLFW_KEY_LEFT_BRACKET);
 		putDefaultKey(SonicConfiguration.DISPLAY_SHADER_PICKER_KEY, GLFW_KEY_BACKSLASH);
 		putDefault(SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE, "PRESENTATION");
-		putDefault(SonicConfiguration.DAC_INTERPOLATE, true);
+		putDefault(SonicConfiguration.DAC_INTERPOLATE, false);
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
 		putDefault(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, false);

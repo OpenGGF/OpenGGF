@@ -65,6 +65,18 @@ This file contains the complete 0.6 development snapshot history carried forward
   exact logical audio snapshots at row boundaries, and tears down gameplay and
   audio ownership without creating a GLFW window or OpenAL device. The ordinary
   outer-frame audio presentation remains the sole cadence owner.
+
+- **DAC samples no longer play ~9.5 semitones flat with interpolation on:**
+  `audio.dacInterpolate` (previously the shipped default `true`) queued its
+  synthetic DAC write in the slot that gates the real Z80 sample cadence, so
+  every pending write stalled the clock for the bus settle time and stretched
+  drum and voice samples by about 1.7x. Interpolation now writes only when the
+  bus is idle and never stalls the DAC clock, and the option defaults to off.
+- **Speed Shoes once again accelerate music in all three games:** immutable
+  SMPS presentation assets now retain their driver cadence mode. This restores
+  S3K's native five-music-updates-per-four-VInts speed-up tail; cross-game
+  coverage also verifies that S1/S2 tempo swaps and each game's return to
+  normal cadence remain intact when the power-up expires.
 - **Sonic 1 sound effects now match the shipped REV01 driver oracle:** all
   1,967 sound-test ticks match across jump, skid, splash, ring, ring-loss,
   hurt, push, and signpost effects over GHZ music. The engine now follows the
@@ -497,9 +509,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 - **AIZ miniboss music now follows the retail escape boundary:** the `$120`
   `AIZMinibossCutscene_Escape` countdown is owned by persistent AIZ event state,
-  survives the AIZ1-to-AIZ2 reload, and restores level music only when the ROM
-  timer expires. The transition no longer starts AIZ1 music eagerly, so the
-  visual fire outro and trace-synchronised progression remain intact.
+  survives the AIZ1-to-AIZ2 reload, and explicitly starts the apparent AIZ1
+  track only when the ROM timer expires, even though AIZ2 resources are loaded.
+  This models `Restore_LevelMusic`'s `Apparent_zone_and_act` playlist lookup
+  instead of the loaded act or the unrelated temporary-override restore API,
+  preventing the broad audio rollback from leaving the miniboss track stopped
+  after the curtain. The transition no longer starts AIZ1 music eagerly, so
+  the visual fire outro and trace-synchronised progression remain intact.
 
 - *Superseded: the coordinator and session manifests were removed; CI and
   release jobs use static target-local report and artifact paths.*

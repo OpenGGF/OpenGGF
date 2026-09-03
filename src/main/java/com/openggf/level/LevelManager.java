@@ -2443,6 +2443,19 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 game, levels, currentZone, currentAct, LOGGER);
     }
 
+    /**
+     * Gets the music selected by the ROM's {@code Apparent_zone_and_act}.
+     * This intentionally differs from {@link #getCurrentLevelMusicId()} during
+     * seamless transitions such as AIZ's fire curtain, where AIZ2 resources
+     * are loaded while the apparent act remains AIZ1.
+     */
+    public int getApparentLevelMusicId() {
+        if (gameModule == null) {
+            return -1;
+        }
+        return gameModule.getZoneRegistry().getMusicId(currentZone, apparentAct);
+    }
+
     public Collection<ObjectSpawn> getActiveObjectSpawns() {
         if (objectManager == null) {
             return List.of();

@@ -725,7 +725,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         fireMusicRestoreTimer--;
         if (fireMusicRestoreTimer < 0) {
-            audio().restoreMusic();
+            int levelMusicId = levelManager().getApparentLevelMusicId();
+            if (levelMusicId >= 0) {
+                // ROM AIZMinibossCutscene_Escape calls Restore_LevelMusic,
+                // which derives the track from Apparent_zone_and_act;
+                // restoreMusic() only unwinds a temporary saved-song slot.
+                audio().playMusic(levelMusicId);
+            }
             fireMusicRestoreTimer = -1;
         }
     }

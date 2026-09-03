@@ -75,7 +75,8 @@ import java.util.Objects;
  * {@link #dacPeriod(int, int)}). When {@link #setDacInterpolate(boolean)} is
  * on, the staircase between two PCM samples is additionally refined by a
  * linearly interpolated {@code 0x2A} write once per output frame; this is a
- * presentation option with no hardware counterpart. Internally scheduled DAC
+ * presentation option with no hardware counterpart, and it never alters the
+ * sample cadence (see {@link #serviceDac(int)}). Internally scheduled DAC
  * writes are not reported to the observer. {@code 0x2B} (DAC enable) is left
  * to the sequencer and to the core.
  *
@@ -190,6 +191,13 @@ public class Ym2612Chip {
     /** The DAC accumulator counts in {@code 1 / DAC_TICK_UNITS} of an internal cycle. */
     private static final int DAC_TICK_UNITS = FM_CYCLES_PER_Z80_CYCLE_DENOMINATOR * DAC_SAMPLES_PER_BYTE;
     private static final int DAC_REGISTER = 0x2A;
+    /**
+     * Cadence headroom a synthetic interpolated write needs so that it has
+     * fully settled (address strobe, its hold, data strobe, its hold) before
+     * the real Z80 cadence can present its next sample.
+     */
+    private static final int SYNTHETIC_WRITE_UNITS =
+            DAC_TICK_UNITS * (ADDRESS_SETTLE_CYCLES + DATA_SETTLE_CYCLES + 2);
     private static final int NO_DAC_VALUE = -1;
 
     private final NukedOpn2 core = new NukedOpn2();
@@ -229,7 +237,7 @@ public class Ym2612Chip {
     private int dacPendingValue = NO_DAC_VALUE;
     private int dacWritePhase;
     private int dacWriteValue;
-    private boolean dacInterpolate = true;
+    private boolean dacInterpolate = false;
 
     /** Constructs a reset chip at {@link #getDefaultOutputRate()}; nothing global is touched. */
     public Ym2612Chip() {
@@ -548,6 +556,16 @@ public class Ym2612Chip {
      * strobes when the bus is free. While a value is waiting for the bus the
      * cadence pauses, as the Z80 loop pauses while it cannot reach the chip;
      * samples are never dropped.
+     *
+     * <p>Only real Z80 sample writes may occupy {@link #dacPendingValue}, the
+     * slot that gates the cadence. The optional interpolated write is
+     * synthetic and is never deferred: it is started only when the bus is
+     * idle, no real sample is waiting, and the cadence cannot reach its next
+     * sample before the synthetic write has fully settled; otherwise this
+     * frame's interpolation is dropped. An earlier implementation queued the
+     * synthetic value in the gating slot, which paused the Z80 clock for the
+     * bus settle time on every frame and stretched samples ~1.7x (about 9.5
+     * semitones flat, measured 2026-09-02).
      */
     private void serviceDac(int cycle) {
         if (dacSampleId != NO_DAC_VALUE && dacPendingValue == NO_DAC_VALUE) {
@@ -561,15 +579,6 @@ public class Ym2612Chip {
                     dacPendingValue = value;
                     dacPreviousValue = value;
                     dacIndex++;
-                }
-            } else if (dacInterpolate && cycle == 0 && dacPreviousValue != NO_DAC_VALUE) {
-                int next = dacSampleAt(dacIndex);
-                if (next != NO_DAC_VALUE) {
-                    int interpolated = dacPreviousValue
-                            + (int) (((long) (next - dacPreviousValue) * dacAccumulator) / dacPeriod);
-                    if (interpolated != dacWriteValue) {
-                        dacPendingValue = interpolated;
-                    }
                 }
             }
         }
@@ -586,6 +595,20 @@ public class Ym2612Chip {
             dacPendingValue = NO_DAC_VALUE;
             dacWritePhase = 1;
             busHold = ADDRESS_SETTLE_CYCLES;
+        } else if (dacInterpolate && cycle == 0 && dacSampleId != NO_DAC_VALUE
+                && dacPreviousValue != NO_DAC_VALUE
+                && dacAccumulator + SYNTHETIC_WRITE_UNITS < dacPeriod) {
+            int next = dacSampleAt(dacIndex);
+            if (next != NO_DAC_VALUE) {
+                int interpolated = dacPreviousValue
+                        + (int) (((long) (next - dacPreviousValue) * dacAccumulator) / dacPeriod);
+                if (interpolated != dacWriteValue) {
+                    core.write(0, DAC_REGISTER);
+                    dacWriteValue = interpolated;
+                    dacWritePhase = 1;
+                    busHold = ADDRESS_SETTLE_CYCLES;
+                }
+            }
         }
     }
 

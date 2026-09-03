@@ -368,6 +368,12 @@ public interface ObjectServices {
      */
     int getCurrentLevelMusicId();
 
+    /** Returns the track selected by ROM {@code Apparent_zone_and_act}. */
+    default int getApparentLevelMusicId() {
+        LevelManager manager = levelManager();
+        return manager != null ? manager.getApparentLevelMusicId() : -1;
+    }
+
     /**
      * Searches the level's foreground tilemap for a pattern within a radius.
      *
