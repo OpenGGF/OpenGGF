@@ -27,6 +27,51 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S1 gameplay oracle: tick 302 → 316 (SFX admission owns its channels)
+
+- **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
+  `bugfix/ai-s1-gameplay-frontier` from `develop` at `2229b5b7c`.
+- **Fixture:** `src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v1.jsonl.gz`
+  (2,343 ticks, 70 dispatches).
+- **Command:**
+
+  ```
+  java -cp target/classes:<deps> com.openggf.tools.audio.parity.S1AudioParityTool \
+      capture --repo <worktree> --run-root <external run root> \
+      --reference <run root>/reference.jsonl --rom <abs S1 REV01 ROM> \
+      --output <run root>/openggf.jsonl --capture gameplay
+  java -cp target/classes:<deps> com.openggf.tools.audio.parity.S1AudioParityTool \
+      compare --repo <worktree> --run-root <external run root> \
+      --reference <run root>/reference.jsonl --openggf <run root>/openggf.jsonl \
+      --human-report <run root>/report.txt --json-report <run root>/report.json
+  ```
+
+- **Result before:** MISMATCH, `EVENT_EXTRA`, tick 302, event 0 — engine PSG
+  write `0x92` (PSG1 volume 2) with no reference counterpart.
+- **Result after:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 316, event 3 —
+  reference YM2612 port 1 register `0xB0` value 4, engine PSG `0x87`.
+- **What moved:** tick 302 dispatches `sfx_Jump` (`0xA0`), which loads a PSG1
+  track. `Sound_PlaySFX`'s header loader sets `PlaybackControl` bit 2 on the
+  displaced *music* track while loading each SFX track — `.sfx_loadloop` for FM
+  (`docs/s1disasm/s1.sounddriver.asm:1029`) and `.sfxinitpsg` for PSG
+  (`:1037`) — and it is reached from `PlaySoundID` at the top of `UpdateMusic`
+  (`:202`), before that same invocation's DAC/FM/PSG music walk (`:208-227`).
+  So the music PSG1 track is already overridden on the admitting invocation and
+  emits nothing, even though the SFX track has written no register yet. The
+  engine had S1 on `SfxChannelOwnershipMode.FIRST_WRITE`, so the music track
+  still emitted its volume byte. S1 now uses `ADMISSION`, the mode S2 already
+  derived from the identical `zPlaySound` shape. No constant was introduced.
+- **New frontier:** tick 316 dispatches `sfx_Ring` (`0xB5`) onto FM4 while the
+  jump SFX still holds PSG1. `UpdateMusic` walks the *fixed SFX RAM slots* —
+  SFX FM3..FM5 (`:222-231`) then SFX PSG1..PSG3 (`:233-241`) — so the ring's
+  FM4 writes precede the jump's PSG1 writes. The engine services SFX
+  sequencer-by-sequencer in admission order, so the jump's PSG1 writes come
+  first. Same writes, wrong order.
+- **Gates held:** `run_s1_audio_parity.sh --mode music` MATCH (14,690 ticks);
+  `--mode sfx` MATCH (1,967 ticks); S2
+  `TestS2RequestAwareOracleRawStream#realCandidateAndBk2DrivenDriverStateCompare`
+  passes.
+
 ## 2026-09-03 — S1 gains a second audio oracle, sourced from real gameplay
 
 - **Worktree/branch:** `.worktrees/audio-s1-complete-oracle`,
