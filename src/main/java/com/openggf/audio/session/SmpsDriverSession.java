@@ -136,6 +136,37 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
     }
 
+    /**
+     * One in-flight run of the driver's own SEGA PCM transport.
+     *
+     * <p>S3K's {@code zPlaySEGAPCM} (Sound/Z80 Sound Driver.asm:4372-4424)
+     * holds the bus with interrupts disabled and sends one sample byte per
+     * loop iteration, so this state is the Z80's position in that loop: the
+     * next byte, the elapsed part of the current byte's delay, and whether
+     * {@code cmd_StopSEGA} has been seen.</p>
+     */
+    private static final class SegaPcmTransport {
+        private final SmpsSegaPcmTransport transport;
+        private final byte[] pcm;
+        private int cursor;
+        private long cycleAccumulator;
+        private boolean stopRequested;
+
+        private SegaPcmTransport(
+                SmpsSegaPcmTransport transport, byte[] pcm) {
+            this.transport = transport;
+            this.pcm = pcm;
+        }
+
+        private SegaPcmTransport copy() {
+            SegaPcmTransport copy = new SegaPcmTransport(transport, pcm);
+            copy.cursor = cursor;
+            copy.cycleAccumulator = cycleAccumulator;
+            copy.stopRequested = stopRequested;
+            return copy;
+        }
+    }
+
     private sealed interface ChipDiagnostic {
         void publish(ChipWriteObserver observer);
 
@@ -169,6 +200,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         private final boolean speedShoesEnabled;
         private final int speedMultiplier;
         private final boolean ringLeft;
+        private final SegaPcmTransport segaPcmTransport;
         private final int diagnosticCount;
         private boolean commitPrepared;
         private boolean consumed;
@@ -194,6 +226,10 @@ public final class SmpsDriverSession implements AutoCloseable {
                     SmpsDriverSession.this.speedShoesEnabled;
             speedMultiplier = SmpsDriverSession.this.speedMultiplier;
             ringLeft = SmpsDriverSession.this.ringLeft;
+            segaPcmTransport =
+                    SmpsDriverSession.this.segaPcmTransport == null
+                            ? null
+                            : SmpsDriverSession.this.segaPcmTransport.copy();
             diagnosticCount = diagnostics.size();
         }
     }
@@ -496,6 +532,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     private boolean speedShoesEnabled;
     private int speedMultiplier = 1;
     private boolean ringLeft = true;
+    private SegaPcmTransport segaPcmTransport;
     private SmpsDriverServiceObserver.DriverIdentity openOwner;
     private long openEpoch;
     private long nextEpoch;
@@ -605,6 +642,13 @@ public final class SmpsDriverSession implements AutoCloseable {
     public SmpsServiceOutcome serviceForward() {
         requireInstalled();
         serviceInvocationCount++;
+        if (segaPcmTransport != null) {
+            // zPlaySEGAPCM runs under di for its whole duration
+            // (Sound/Z80 Sound Driver.asm:4372-4424), so every V-int that
+            // falls inside the transport is missed: no update runs and the
+            // 68k's queued requests stay in zMusicNumber until the loop ends.
+            return SmpsServiceOutcome.SEGA_PCM_TRANSPORT;
+        }
         if (pendingGlobalCommand == SmpsPendingGlobalCommand.STOP_ALL) {
             applyGlobalStopNow();
             return SmpsServiceOutcome.GLOBAL_STOP_CONSUMED;
@@ -654,7 +698,142 @@ public final class SmpsDriverSession implements AutoCloseable {
     public int renderFrames(
             short[] target, int offsetSamples, int stereoFrames) {
         requireInstalled();
-        return device.renderFrames(target, offsetSamples, stereoFrames);
+        if (segaPcmTransport == null) {
+            return device.renderFrames(target, offsetSamples, stereoFrames);
+        }
+        return renderSegaPcmTransport(target, offsetSamples, stereoFrames);
+    }
+
+    /**
+     * Whether the driver itself owns the SEGA chant on this profile.
+     *
+     * <p>A policy that describes the transport plays it through the chip's
+     * DAC; one that does not leaves the SEGA screen to whatever mechanism
+     * its game already uses.</p>
+     */
+    public boolean ownsSegaPcmTransport() {
+        return policy.segaPcmTransport().isPresent();
+    }
+
+    /**
+     * Enters the driver's SEGA PCM loop with {@code pcm}.
+     *
+     * <p>The ROM reaches the loop one pass later than the request:
+     * {@code zPlaySegaSound} only sets {@code PlaySegaPCMFlag} and returns
+     * (Sound/Z80 Sound Driver.asm:2703-2719); the DAC idle loop reads the
+     * flag on its next pass and jumps into {@code zPlaySEGAPCM}
+     * (:4265-4267). The enter block is written here so the transport's first
+     * write opens the window the caller's next service closes.</p>
+     */
+    public void beginSegaPcmTransport(byte[] pcm) {
+        requireInstalled();
+        byte[] sample = Objects.requireNonNull(pcm, "pcm").clone();
+        SmpsSegaPcmTransport transport = policy.segaPcmTransport()
+                .orElseThrow(() -> new IllegalStateException(
+                        "this SMPS profile does not own the SEGA PCM"
+                                + " transport"));
+        if (segaPcmTransport != null) {
+            endSegaPcmTransport();
+        }
+        segaPcmTransport = new SegaPcmTransport(transport, sample);
+        // The ROM's loop writes its byte first and takes the djnz delay
+        // afterwards (Sound/Z80 Sound Driver.asm:4400-4413), so the first
+        // sample is due the moment the loop is entered.
+        segaPcmTransport.cycleAccumulator = segaPcmByteCost(transport);
+        withPort(driverIdentity, port -> {
+            applyProgram(port, transport.enter());
+            return null;
+        });
+    }
+
+    /**
+     * Presents {@code cmd_StopSEGA} to the running transport. The ROM's loop
+     * compares {@code zMusicNumber} once per byte and breaks at that
+     * boundary (Sound/Z80 Sound Driver.asm:4394-4397), so the stop takes
+     * effect at the next sample, not mid-byte.
+     */
+    public void requestSegaPcmTransportStop() {
+        requireInstalled();
+        if (segaPcmTransport != null) {
+            segaPcmTransport.stopRequested = true;
+        }
+    }
+
+    /** Whether a SEGA PCM transport currently holds the driver. */
+    public boolean segaPcmTransportActive() {
+        requireActive();
+        return segaPcmTransport != null;
+    }
+
+    /**
+     * Renders while the transport holds the bus, presenting one sample byte
+     * every {@link SmpsSegaPcmTransport#z80CyclesPerByte()} Z80 cycles of
+     * rendered time. The bytes are ordinary physical writes, so the chip's
+     * DAC renders them exactly as it renders the driver's own.
+     */
+    /** One sample byte's loop cost, in Z80 cycles times output frames. */
+    private long segaPcmByteCost(SmpsSegaPcmTransport transport) {
+        return (long) transport.z80CyclesPerByte()
+                * (long) Math.round(device.outputSampleRate());
+    }
+
+    private int renderSegaPcmTransport(
+            short[] target, int offsetSamples, int stereoFrames) {
+        int rendered = 0;
+        while (rendered < stereoFrames && segaPcmTransport != null) {
+            SegaPcmTransport active = segaPcmTransport;
+            long cyclesPerByte = segaPcmByteCost(active.transport);
+            if (active.cycleAccumulator >= cyclesPerByte) {
+                active.cycleAccumulator -= cyclesPerByte;
+                advanceSegaPcmTransport(active);
+                continue;
+            }
+            long remainingCycles = cyclesPerByte - active.cycleAccumulator;
+            int framesUntilByte = (int) Math.min(stereoFrames - rendered,
+                    Math.max(1L, (remainingCycles
+                            + SmpsSegaPcmTransport.Z80_CLOCK_HZ - 1)
+                            / SmpsSegaPcmTransport.Z80_CLOCK_HZ));
+            device.renderFrames(target, offsetSamples + rendered * 2,
+                    framesUntilByte);
+            active.cycleAccumulator += (long) framesUntilByte
+                    * SmpsSegaPcmTransport.Z80_CLOCK_HZ;
+            rendered += framesUntilByte;
+        }
+        if (rendered < stereoFrames) {
+            device.renderFrames(target, offsetSamples + rendered * 2,
+                    stereoFrames - rendered);
+            rendered = stereoFrames;
+        }
+        return rendered;
+    }
+
+    /** Sends one sample byte, or leaves the loop at its ROM exit condition. */
+    private void advanceSegaPcmTransport(SegaPcmTransport active) {
+        if (active.stopRequested || active.cursor >= active.pcm.length) {
+            endSegaPcmTransport();
+            return;
+        }
+        int value = active.pcm[active.cursor++] & 0xFF;
+        SmpsSegaPcmTransport transport = active.transport;
+        withPort(driverIdentity, port -> {
+            port.writeFm(transport.dataPort(), transport.dataRegister(),
+                    value);
+            return null;
+        });
+    }
+
+    /**
+     * Leaves the loop. {@code .done} jumps back into
+     * {@code zPlayDigitalAudio} (Sound/Z80 Sound Driver.asm:4422,
+     * :4256-4260), whose entry write disables the DAC again.
+     */
+    private void endSegaPcmTransport() {
+        SegaPcmTransport active = segaPcmTransport;
+        segaPcmTransport = null;
+        withPort(driverIdentity, port -> {
+            applyProgram(port, active.transport.exit());
+            return null;
+        });
     }
 
     /** Preserves standalone sample-owned cadence without a driver-owned device. */
@@ -796,6 +975,12 @@ public final class SmpsDriverSession implements AutoCloseable {
                 speedShoesEnabled,
                 speedMultiplier,
                 ringLeft,
+                segaPcmTransport == null ? null
+                        : new SmpsSegaPcmTransportSnapshot(
+                                segaPcmTransport.pcm,
+                                segaPcmTransport.cursor,
+                                segaPcmTransport.cycleAccumulator,
+                                segaPcmTransport.stopRequested),
                 device.captureSnapshot());
     }
 
@@ -882,6 +1067,8 @@ public final class SmpsDriverSession implements AutoCloseable {
         speedShoesEnabled = resolved.session().speedShoesEnabled();
         speedMultiplier = resolved.session().speedMultiplier();
         ringLeft = resolved.session().ringLeft();
+        segaPcmTransport = materializeSegaPcmTransport(
+                resolved.session().segaPcmTransport());
         pendingService = materializePendingService(
                 resolved.pendingService());
         clearOverrides();
@@ -987,6 +1174,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         speedShoesEnabled = state.speedShoesEnabled;
         speedMultiplier = state.speedMultiplier;
         ringLeft = state.ringLeft;
+        segaPcmTransport = state.segaPcmTransport;
         truncateDiagnostics(state.diagnosticCount);
         state.consumed = true;
         transactionOpen = false;
@@ -1614,6 +1802,24 @@ public final class SmpsDriverSession implements AutoCloseable {
                 pending.firstServiceWrites(), selected,
                 readiness,
                 pending.readinessContext(), pending.remainingTStates());
+    }
+
+    /** Rebuilds an in-flight transport from a restored session snapshot. */
+    private SegaPcmTransport materializeSegaPcmTransport(
+            SmpsSegaPcmTransportSnapshot snapshot) {
+        if (snapshot == null) {
+            return null;
+        }
+        SegaPcmTransport restored = new SegaPcmTransport(
+                policy.segaPcmTransport().orElseThrow(
+                        () -> new IllegalArgumentException(
+                                "restored SEGA PCM transport does not belong"
+                                        + " to this SMPS profile")),
+                snapshot.pcm());
+        restored.cursor = snapshot.cursor();
+        restored.cycleAccumulator = snapshot.cycleAccumulator();
+        restored.stopRequested = snapshot.stopRequested();
+        return restored;
     }
 
     private static PendingService materializePendingService(

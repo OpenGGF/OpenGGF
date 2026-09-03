@@ -279,6 +279,16 @@ public final class AudioPresentationProducer {
                 } else {
                     commands.applyPending(commandApplier);
                 }
+                if (smpsSession != null
+                        && smpsSession.segaPcmTransportActive()) {
+                    // The Z80's PCM loop is not silence-aware: it runs to its
+                    // end or its stop request either way (Sound/Z80 Sound
+                    // Driver.asm:4372-4424). Advancing it here keeps a muted
+                    // frame from parking the driver inside the loop; the
+                    // rendered bytes are discarded with the frame.
+                    smpsSession.renderFrames(
+                            smpsSourcePcm, 0, stereoFrames);
+                }
                 Arrays.fill(silence, 0, stereoFrames * CHANNELS, (short) 0);
                 pcm = silence;
             } else {

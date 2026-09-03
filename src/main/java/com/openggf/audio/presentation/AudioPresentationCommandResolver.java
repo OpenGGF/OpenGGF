@@ -493,7 +493,7 @@ public final class AudioPresentationCommandResolver {
         DecodedPcm registered = factory.registerUnsigned8Mono(
                 assetId, source, sourceRate);
         enqueue(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                factory.segaPcm(allocateVoiceId(), registered)));
+                factory.segaPcm(allocateVoiceId(), registered), source));
     }
 
     public void stopRawPcm() {

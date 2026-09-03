@@ -314,20 +314,29 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         } else if (command instanceof StartSampleSfx start) {
             admitSampleSfx(start.voice());
         } else if (command instanceof ReplaceRawPcm replace) {
-            replaceRawPcm(replace.voice());
+            // A driver whose policy owns zPlaySEGAPCM streams the chant
+            // itself (Sound/Z80 Sound Driver.asm:4372-4424); the prepared
+            // presentation voice is then not the mechanism, and would double
+            // the chant against the chip's own DAC output.
+            if (smpsSession != null && smpsSession.ownsSegaPcmTransport()) {
+                stopRawPcm();
+                smpsSession.beginSegaPcmTransport(replace.pcm());
+            } else {
+                replaceRawPcm(replace.voice());
+            }
             sfxInstantiation.observeLifecycle(
                     SmpsDriverServiceObserver.LifecycleEvent.pcm(
                             SmpsDriverServiceObserver.LifecycleKind.SEGA_PCM_ENTER));
         } else if (command instanceof AudioPresentationCommand
                 .StopRawPcmAndRetainGlobalStop) {
-            if (stopRawPcm()) {
+            if (stopRawPcmOrTransport()) {
                 sfxInstantiation.observeLifecycle(
                         SmpsDriverServiceObserver.LifecycleEvent.pcm(
                                 SmpsDriverServiceObserver.LifecycleKind
                                         .SEGA_PCM_LEAVE));
             }
         } else if (command instanceof StopRawPcm) {
-            if (stopRawPcm()) {
+            if (stopRawPcmOrTransport()) {
                 sfxInstantiation.observeLifecycle(
                         SmpsDriverServiceObserver.LifecycleEvent.pcm(
                                 SmpsDriverServiceObserver.LifecycleKind.SEGA_PCM_LEAVE));
@@ -1448,6 +1457,18 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 disposeUnpublishedVoice(voice, primaryFailure);
             }
         }
+    }
+
+    /**
+     * Presents {@code cmd_StopSEGA} to a driver-owned transport, or stops the
+     * presentation voice, whichever is playing the chant.
+     */
+    private boolean stopRawPcmOrTransport() {
+        if (smpsSession != null && smpsSession.segaPcmTransportActive()) {
+            smpsSession.requestSegaPcmTransportStop();
+            return true;
+        }
+        return stopRawPcm();
     }
 
     private boolean stopRawPcm() {

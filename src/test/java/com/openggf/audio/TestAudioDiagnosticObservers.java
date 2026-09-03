@@ -1402,7 +1402,7 @@ class TestAudioDiagnosticObservers {
         assertThrows(AudioDiagnosticObserverException.class,
                 () -> registry.apply(
                         AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                                pcmVoice)));
+                                pcmVoice, new byte[] {0})));
         assertNotNull(registry.snapshot().rawPcmVoiceId(),
                 "PCM callback follows the actual registry mutation");
     }

@@ -14,6 +14,15 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **The Sonic 3&K "SEGA" chant now comes out of the emulated sound chip:**
+  it used to be played as a plain sample alongside the music driver, which is
+  not how the original does it. The original's sound chip program takes over
+  the machine and feeds the chant to the chip one sample at a time, missing
+  every interrupt until it finishes or is stopped. The engine now does the
+  same, so the chant is produced by the same hardware path as the rest of the
+  game's audio and behaves like the original when it is cut short. Sonic 1 and
+  Sonic 2 keep their existing SEGA screens for now.
+
 - **The Sonic 1 waterfall no longer cuts in over a sound effect already
   playing:** Green Hill's waterfall loop shares the FM4 channel with ordinary
   sound effects such as rings and springs. It used to seize that channel the

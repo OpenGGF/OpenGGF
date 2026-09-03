@@ -176,7 +176,7 @@ class TestAudioManagerPresentationModes {
         registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
                 SampleBackedVoice.oneShot(4, 0,
                         registeredPcm(audio, "raw"),
-                        48_000, 1.0f, 1.0f)));
+                        48_000, 1.0f, 1.0f), new byte[] {0}));
         audio.beginReverseAudioPresentation();
 
         audio.afterRewindRestore(7,
@@ -547,7 +547,7 @@ class TestAudioManagerPresentationModes {
         commands.submit(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
                         SampleBackedVoice.oneShot(6, 0,
                                 registeredPcm(audio, "queued-raw"),
-                                48_000, 1.0f, 1.0f)),
+                                48_000, 1.0f, 1.0f), new byte[] {0}),
                 () -> true, registry::apply);
 
         audio.afterRewindRestore(7, policy);
@@ -575,7 +575,7 @@ class TestAudioManagerPresentationModes {
         registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
                 SampleBackedVoice.oneShot(4, 0,
                         registeredPcm(audio, "raw"),
-                        48_000, 1.0f, 1.0f)));
+                        48_000, 1.0f, 1.0f), new byte[] {0}));
         audio.setRewindHistoryArmed(true);
         audio.presentFrame(PresentationMode.FORWARD);
     }
