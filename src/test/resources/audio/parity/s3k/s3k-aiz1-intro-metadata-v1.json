@@ -23,5 +23,12 @@
     "manifest": "fixtures/gpgx-audio-service-manifests-v1.json (game s3k)"
   },
   "capture_command": "OGGF_BIZHAWK_STOCK=<stock 2.11> OGGF_OBSERVER_CORE=<lock-matching gpgx.wbx.zst> OGGF_WORKDIR=<scratch> OGGF_OUT=<out.jsonl> tools/audio/run_s3k_audio_oracle_reference.sh",
-  "postprocess": "gzip -9 -n out.jsonl"
+  "postprocess": "gzip -9 -n out.jsonl",
+  "status": {
+    "state": "retired",
+    "retired_on": "2026-09-03",
+    "superseded_by": "s3k-aiz1-intro-reference-v2.jsonl.gz",
+    "reason": "this stream declares sampling post_invocation but reads driver RAM out of band after the emulated frame advances, so a frame whose driver work overruns it records a strict prefix of zUpdateMusic's track-iteration order, truncated at a varying point. Movie frame 252, the title-music load, is such a frame; it is what stalled the oracle at tick 138.",
+    "retained_for": "provenance. The fixture bytes are unmodified and still readable; TestS3kAudioOracleFixtureContract continues to gate them. It is not the comparison source."
+  }
 }
