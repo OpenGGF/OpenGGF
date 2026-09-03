@@ -17,6 +17,19 @@ public interface SmpsSequencerHost {
 
     void reconcileInactiveSfxTracks(SmpsSequencer sequencer);
 
+    /**
+     * Releases the channels of any inactive SFX track, including those of a
+     * sequencer whose every track has now finished.
+     *
+     * <p>Used by the driver-coordinated SFX slot walk: S1 {@code cfStopTrack}
+     * hands a channel back to music from inside the finishing track's own slot
+     * service (s1.sounddriver.asm:2489-2563), whether or not the sound has
+     * other tracks still playing.
+     */
+    default void reconcileFinishedSfxSlot(SmpsSequencer sequencer) {
+        reconcileInactiveSfxTracks(sequencer);
+    }
+
     byte[] s1SpecialSfxVoiceForBug(int voiceId);
 
     boolean isContinuousSfxFlagSet();

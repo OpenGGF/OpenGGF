@@ -1061,6 +1061,12 @@ public class SmpsSequencer implements CoordFlagContext {
      * The ROM drivers enter from V-blank; PCM packet size must not decide when
      * this state transition occurs (S1 SD:147, S2 sd:399, S3K D:470-481).
      */
+    // Driver-coordinated SFX slot walk (SfxTrackWalkMode.CHANNEL_RAM_ORDER).
+    private boolean slotWalkPassOpen;
+    private boolean slotWalkTracksPending;
+    private boolean slotWalkFinishSfxTempoFrame;
+    private SmpsDriverServiceObserver.ServiceEvent slotWalkService;
+
     public void serviceOuterFrame() {
         if (!primed) {
             primeFirstService();
@@ -1225,6 +1231,16 @@ public class SmpsSequencer implements CoordFlagContext {
         SmpsDriverServiceObserver.ServiceEvent service =
                 host.beginSequencerService(this,
                         SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
+        if (slotWalkPassOpen) {
+            // The driver is walking the fixed SFX track slots across every live
+            // SFX program; this sequencer's own tracks are run from there, in
+            // slot order, and this pass's tail is deferred to
+            // finishSfxSlotWalkPass().
+            slotWalkService = service;
+            slotWalkFinishSfxTempoFrame = finishSfxTempoFrame;
+            slotWalkTracksPending = true;
+            return;
+        }
         tickTracks();
         if (finishSfxTempoFrame) {
             finishSfxTempoFrame();
@@ -1234,6 +1250,62 @@ public class SmpsSequencer implements CoordFlagContext {
         // sequencer stays owned until completion cleanup.
         host.reconcileInactiveSfxTracks(this);
         host.endSequencerService(service);
+    }
+
+    /**
+     * Opens a driver-coordinated SFX slot-walk pass and runs this sequencer's
+     * per-frame bookkeeping without walking its tracks.
+     *
+     * <p>S1 {@code UpdateMusic} has no per-sound SFX service: it walks a fixed
+     * array of SFX track slots -- FM3..FM5 (s1.sounddriver.asm:222-231) then
+     * PSG1..PSG3 (:233-241) -- so when two sounds are live their tracks
+     * interleave by channel, not by which sound started first. The driver
+     * therefore drives the walk itself; see {@link
+     * com.openggf.audio.smps.SmpsSequencerConfig.SfxTrackWalkMode}.
+     *
+     * @return the tracks this sequencer contributes to the walk, in slot order,
+     *         or an empty list when this frame runs no track walk
+     */
+    public List<Track> beginSfxSlotWalkPass() {
+        slotWalkPassOpen = true;
+        slotWalkTracksPending = false;
+        slotWalkService = null;
+        serviceOuterFrame();
+        return slotWalkTracksPending ? tracks : List.of();
+    }
+
+    /** Runs one track of a driver-coordinated SFX slot-walk pass. */
+    public void tickSfxSlotWalkTrack(Track track) {
+        if (!slotWalkTracksPending) {
+            return;
+        }
+        tickTrack(track);
+        // cfStopTrack restores the music voice from inside the finishing
+        // track's own slot service (s1.sounddriver.asm:2489-2563), so the
+        // channel returns to music before the walk reaches a later slot --
+        // not after the whole pass, and not deferred to completion cleanup
+        // when the finishing track was the sound's last one.
+        host.reconcileFinishedSfxSlot(this);
+    }
+
+    /** Closes a driver-coordinated SFX slot-walk pass and runs its tail. */
+    public void finishSfxSlotWalkPass() {
+        slotWalkPassOpen = false;
+        if (!slotWalkTracksPending) {
+            return;
+        }
+        slotWalkTracksPending = false;
+        if (slotWalkFinishSfxTempoFrame) {
+            finishSfxTempoFrame();
+        }
+        host.reconcileInactiveSfxTracks(this);
+        host.endSequencerService(slotWalkService);
+        slotWalkService = null;
+    }
+
+    /** The fixed SFX RAM slot this track occupies, for the driver's walk. */
+    public static int sfxSlotWalkOrder(Track track) {
+        return sfxTrackRamOrder(track);
     }
 
     private void finishSfxTempoFrame() {
@@ -1248,8 +1320,14 @@ public class SmpsSequencer implements CoordFlagContext {
 
     private void tickTracks() {
         for (Track t : tracks) {
+            tickTrack(t);
+        }
+    }
+
+    private void tickTrack(Track t) {
+        {
             if (!t.active)
-                continue;
+                return;
             // Note: In SMPS, overridden tracks continue to process (tick) in the
             // background,
             // but their output is blocked (or overwritten) by the SFX.
@@ -1265,7 +1343,7 @@ public class SmpsSequencer implements CoordFlagContext {
                             // after note-off, the rest of this track update is skipped.
                             stopNote(t);
                             t.resting = true;
-                            continue;
+                            return;
                         }
                     } else if (t.fill > 0 && (t.scaledDuration - t.duration) >= t.fill) {
                         stopNote(t);
@@ -1283,7 +1361,7 @@ public class SmpsSequencer implements CoordFlagContext {
                             && t.modEnabled) {
                         applyModulation(t);
                     }
-                    continue;
+                    return;
                 }
             }
 

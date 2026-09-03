@@ -51,19 +51,17 @@ class TestS1GameplayAudioDriverOracle {
 
         AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
 
-        // Pinned frontier (see docs/status/audio-frontier-log.md): at tick 316
-        // the engine emits the still-playing jump SFX's PSG1 writes before the
-        // newly admitted ring SFX's FM4 writes, where UpdateMusic walks the
-        // fixed SFX RAM slots -- FM3..FM5 then PSG1..PSG3 -- across every live
-        // SFX (SD:222-247). This is a measurement pin, not an expectation that
-        // the engine is correct -- when this frontier moves, update both this
-        // assertion and the frontier log entry together with the ROM routine
-        // that explains it.
+        // Pinned frontier (see docs/status/audio-frontier-log.md): at tick 629
+        // the reference still has the music FM4 track overridden where the
+        // engine has already released it. This is a measurement pin, not an
+        // expectation that the engine is correct -- when this frontier moves,
+        // update both this assertion and the frontier log entry together with
+        // the ROM routine that explains it.
         assertNotEquals(AudioParityReport.Kind.MATCH, report.kind(),
                 "gameplay oracle is expected to diverge at the pinned frontier; "
                         + "if it now matches, the frontier moved forward and this pin is stale");
-        assertEquals(AudioParityReport.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(316, report.tickOrdinal());
+        assertEquals(AudioParityReport.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(629, report.tickOrdinal());
     }
 
     /**

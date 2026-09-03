@@ -27,6 +27,41 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S1 gameplay oracle: tick 316 → 629 (SFX walks fixed RAM slots)
+
+- **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
+  `bugfix/ai-s1-gameplay-frontier`, on top of `2ba02dbad`.
+- **Fixture and command:** unchanged from the entry below.
+- **Result before:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 316, event 3 —
+  reference YM2612 port 1 register `0xB0` value 4, engine PSG `0x87`.
+- **Result after:** MISMATCH, `TRACK_STATE_MISMATCH`, tick 629, role FM4,
+  field `overridden` — reference true, engine false.
+- **What moved, part one — the walk.** S1 `UpdateMusic` has no per-sound SFX
+  service. It walks one fixed array of SFX track slots, SFX FM3..FM5
+  (`docs/s1disasm/s1.sounddriver.asm:222-231`) then SFX PSG1..PSG3
+  (`:233-241`), with no notion of which sound owns a slot. So two live sounds
+  interleave by channel, not by admission order: at tick 316 a ring on FM4 is
+  serviced before the jump still holding PSG1, though the jump started
+  fourteen invocations earlier. The engine serviced each SFX sequencer whole,
+  in admission order. `SmpsDriver` now walks the SFX slots itself when every
+  live SFX program declares `SfxTrackWalkMode.CHANNEL_RAM_ORDER` (S1 only),
+  driving each sequencer's tracks through a new begin/tick/finish pass.
+- **What moved, part two — the release.** With the walk in place the frontier
+  landed at tick 562, where a finishing FM5 SFX restored the music voice after
+  the SFX PSG1 slot instead of before it. `cfStopTrack` (`:2489-2563`) hands
+  the channel back from inside the finishing track's own slot service, whether
+  or not the sound has other tracks still playing; the engine deferred the
+  release of a wholly finished sound to end-of-frame completion cleanup. The
+  slot walk now reconciles the finishing slot inline, through a new
+  `SmpsSequencerHost.reconcileFinishedSfxSlot`. Non-coordinated games keep the
+  previous deferral. No constant was introduced.
+- **New frontier:** tick 629, the reference still has the music FM4 track
+  overridden where the engine has released it — an override-lifetime question,
+  not an ordering one.
+- **Gates held:** S1 sound-test music MATCH (14,690 ticks) and SFX MATCH
+  (1,967 ticks); the audio packages plus `TestSmpsFadeAudioThroughput` and the
+  S2 driver oracle run 2,470 tests with 0 failures.
+
 ## 2026-09-03 — S1 gameplay oracle: tick 302 → 316 (SFX admission owns its channels)
 
 - **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
