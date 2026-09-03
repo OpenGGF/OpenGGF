@@ -87,12 +87,15 @@ public final class AudioParityJsonl {
             }
             AudioParityMetadata metadata = parseMetadata(metadataLine);
             boolean referenceCapture = metadata.capture().equals(AudioParitySchema.REFERENCE_CAPTURE)
-                    || metadata.capture().equals(AudioParitySchema.SFX_REFERENCE_CAPTURE);
+                    || metadata.capture().equals(AudioParitySchema.SFX_REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE);
             String expectedRawBusSource = referenceCapture
                     ? text(object(metadata.details().get("callback_contract"), "callback_contract"), "source")
                     : null;
             boolean sfxCapture = metadata.capture().equals(AudioParitySchema.SFX_REFERENCE_CAPTURE)
-                    || metadata.capture().equals(AudioParitySchema.SFX_OPENGGF_CAPTURE);
+                    || metadata.capture().equals(AudioParitySchema.SFX_OPENGGF_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE);
             String line;
             int expectedOrdinal = 0;
             while ((line = input.readLine()) != null) {
@@ -398,36 +401,44 @@ public final class AudioParityJsonl {
 
     private static void validateMetadataDetails(String capture, ObjectNode details) {
         if (capture.equals(AudioParitySchema.OPENGGF_CAPTURE)
-                || capture.equals(AudioParitySchema.SFX_OPENGGF_CAPTURE)) {
+                || capture.equals(AudioParitySchema.SFX_OPENGGF_CAPTURE)
+                || capture.equals(AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE)) {
             if (!details.isEmpty()) {
                 throw invalid("OpenGGF capture metadata cannot contain reference movie/callback fields");
             }
             return;
         }
         boolean sfx = capture.equals(AudioParitySchema.SFX_REFERENCE_CAPTURE);
+        boolean gameplay = capture.equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE);
         Set<String> referenceFields = Set.of("callback_contract", "diagnostic_fields", "gating_fields",
                 "launch_update_music_invocations", "movie");
         exactFields(details, referenceFields, referenceFields, "reference metadata");
-        // Both pinned movies share the full pre-epoch input prefix, so both see the
-        // same 514 dormant UpdateMusic invocations before the GHZ capture epoch.
-        if (integer(details, "launch_update_music_invocations") != 514) {
+        // The two sound-test movies share the full pre-epoch input prefix, so
+        // both see the same 514 dormant UpdateMusic invocations before the GHZ
+        // capture epoch. The complete-run gameplay movie has its own real
+        // title/SEGA/menu prefix before the GHZ1 BGM dispatch, pinned separately.
+        int expectedLaunchInvocations = gameplay
+                ? AudioParitySchema.GAMEPLAY_BK2_LAUNCH_INVOCATIONS : 514;
+        if (integer(details, "launch_update_music_invocations") != expectedLaunchInvocations) {
             throw invalid("reference launch_update_music_invocations must match the pinned BK2 transport");
         }
         validateCallbackContract(object(details.get("callback_contract"), "callback_contract"));
         validateFieldInventory(details, "diagnostic_fields", AudioParitySchema.DIAGNOSTIC_GLOBAL_FIELDS,
                 AudioParitySchema.DIAGNOSTIC_TRACK_FIELDS);
         validateFieldInventory(details, "gating_fields",
-                sfx ? AudioParitySchema.SFX_GATING_GLOBAL_FIELDS
+                (sfx || gameplay) ? AudioParitySchema.SFX_GATING_GLOBAL_FIELDS
                         : AudioParitySchema.GATING_GLOBAL_FIELDS,
                 AudioParitySchema.GATING_TRACK_FIELDS);
         ObjectNode movie = object(details.get("movie"), "movie");
         Set<String> fields = Set.of("archive_sha256", "core", "emulator", "game", "input_rows",
                 "opaque_header_hash");
         exactFields(movie, fields, fields, "movie");
-        String expectedSha = sfx ? AudioParitySchema.SFX_BK2_SHA256 : AudioParitySchema.BK2_SHA256;
-        int expectedRows = sfx ? AudioParitySchema.SFX_BK2_INPUT_ROWS : AudioParitySchema.BK2_INPUT_ROWS;
-        String expectedOpaque = sfx ? AudioParitySchema.SFX_BK2_OPAQUE_HASH
-                : AudioParitySchema.BK2_OPAQUE_HASH;
+        String expectedSha = gameplay ? AudioParitySchema.GAMEPLAY_BK2_SHA256
+                : sfx ? AudioParitySchema.SFX_BK2_SHA256 : AudioParitySchema.BK2_SHA256;
+        int expectedRows = gameplay ? AudioParitySchema.GAMEPLAY_BK2_INPUT_ROWS
+                : sfx ? AudioParitySchema.SFX_BK2_INPUT_ROWS : AudioParitySchema.BK2_INPUT_ROWS;
+        String expectedOpaque = gameplay ? AudioParitySchema.GAMEPLAY_BK2_OPAQUE_HASH
+                : sfx ? AudioParitySchema.SFX_BK2_OPAQUE_HASH : AudioParitySchema.BK2_OPAQUE_HASH;
         if (!text(movie, "archive_sha256").equals(expectedSha)
                 || !text(movie, "core").equals(AudioParitySchema.BK2_CORE)
                 || !text(movie, "emulator").equals(AudioParitySchema.BK2_EMULATOR)

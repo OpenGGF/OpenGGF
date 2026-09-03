@@ -28,6 +28,21 @@ public final class AudioParitySchema {
     public static final int BK2_LAUNCH_INVOCATIONS = 514;
     /** The SFX movie reuses the music movie's full 989-row launch prefix, so the same count. */
     public static final int SFX_BK2_LAUNCH_INVOCATIONS = 514;
+    /** Gameplay capture pair: the pinned complete-run movie through early GHZ1 play. */
+    public static final String GAMEPLAY_REFERENCE_CAPTURE = "s1_gameplay_ghz1_driver_reference";
+    public static final String GAMEPLAY_OPENGGF_CAPTURE = "s1_gameplay_ghz1_driver_openggf";
+    public static final String GAMEPLAY_BK2_SHA256 =
+            "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b";
+    public static final int GAMEPLAY_BK2_INPUT_ROWS = 225_101;
+    public static final String GAMEPLAY_BK2_OPAQUE_HASH = BK2_OPAQUE_HASH;
+    /**
+     * Dormant UpdateMusic invocations before the real GHZ1 BGM dispatch in the
+     * complete-run movie's title/SEGA/menu prefix, distinct from the sound-test
+     * movies' shared 514 because this is real title-screen/menu play rather than
+     * an immediate sound-test selection. Pinned from the authenticated capture;
+     * see docs/status/audio-frontier-log.md for the measurement.
+     */
+    public static final int GAMEPLAY_BK2_LAUNCH_INVOCATIONS = 341;
     public static final int MAX_INVOCATIONS = 36_000;
     public static final String METADATA_TYPE = "capture_metadata";
     public static final String TICK_TYPE = "tick";

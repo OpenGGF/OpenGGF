@@ -46,8 +46,10 @@ public final class S1OpenGgfSfxAudioCapture {
         Objects.requireNonNull(romPath, "romPath");
         Objects.requireNonNull(output, "output");
         AudioParityMetadata referenceMetadata = S1OpenGgfAudioCapture.readReferenceMetadata(reference);
-        if (!AudioParitySchema.SFX_REFERENCE_CAPTURE.equals(referenceMetadata.capture())) {
-            throw new IllegalArgumentException("reference stream is not a BizHawk S1 SFX capture");
+        boolean gameplay = AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE.equals(referenceMetadata.capture());
+        if (!gameplay && !AudioParitySchema.SFX_REFERENCE_CAPTURE.equals(referenceMetadata.capture())) {
+            throw new IllegalArgumentException(
+                    "reference stream is not a BizHawk S1 SFX or gameplay capture");
         }
 
         Map<Integer, List<Integer>> dispatchesByOrdinal = new HashMap<>();
@@ -67,9 +69,13 @@ public final class S1OpenGgfSfxAudioCapture {
                     "S1 DAC data is absent from the verified ROM");
             S1OpenGgfAudioCapture.SongContract contract = S1OpenGgfAudioCapture.inspectGhz(rom, song);
 
-            AudioParityMetadata outputMetadata = AudioParityMetadata.openGgfSfx(
-                    referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
-                    referenceMetadata.romCrc32());
+            AudioParityMetadata outputMetadata = gameplay
+                    ? AudioParityMetadata.openGgfGameplay(
+                            referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
+                            referenceMetadata.romCrc32())
+                    : AudioParityMetadata.openGgfSfx(
+                            referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
+                            referenceMetadata.romCrc32());
             try (CaptureIterator ticks = new CaptureIterator(
                     loader, song, dacData, contract,
                     referenceMetadata.terminalRecordCount(),
