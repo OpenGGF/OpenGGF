@@ -42,7 +42,8 @@ class TestS1S2PlcSessionOwnership {
         sonic2.createGame(new Rom());
         Sonic2PlcService s2Service = sonic2.getGameService(Sonic2PlcService.class);
         assertFalse(s2Service.isBusy(), "the next session must start with an empty PLC FIFO");
-        assertSingleAdapter(sonic2, s2Service);
+        assertEquals(2, sonic2.rewindAdapters().size());
+        assertSame(s2Service, sonic2.rewindAdapters().getFirst());
 
         s2Service.restore(nonEmptySnapshot());
         assertEquals(nonEmptySnapshot(), s2Service.capture());

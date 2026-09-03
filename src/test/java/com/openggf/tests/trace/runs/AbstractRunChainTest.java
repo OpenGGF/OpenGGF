@@ -4830,7 +4830,7 @@ abstract class AbstractRunChainTest {
      */
     private void serviceLagRowVint() {
         var objectManager = GameServices.level().getObjectManager();
-        objectManager.initVblaCounter(objectManager.getVblaCounter() + 1);
+        objectManager.advanceVblaCounter();
     }
 
     /**

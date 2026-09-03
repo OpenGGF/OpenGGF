@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openggf.audio.AudioRequestObserver;
 import com.openggf.game.sonic2.audio.Sonic2SoundRequestPipeline;
 import com.openggf.game.sonic2.audio.Sonic2SoundRequestService;
 import com.openggf.tests.SessionInvocationExtension;
@@ -133,6 +134,30 @@ class TestS2RequestAwareOracleRawStream {
         System.out.println("MEASUREMENT_ONLY " + driver.describe());
         assertNotEquals(S2AudioOracleComparator.Kind.INVALID,
                 driver.kind(), driver.describe());
+    }
+
+    @Test
+    @ExtendWith(SessionInvocationExtension.class)
+    void levelPlayBgmPublishesEmeraldHillAtTheNativeLoadBoundary()
+            throws Exception {
+        String romProperty = System.getProperty("sonic2.rom.path");
+        String bk2Property = System.getProperty("s2.request.bk2.path");
+        assumeTrue(romProperty != null && bk2Property != null,
+                "explicit ROM and BK2 paths are required");
+
+        S2RequestProjectionBk2TestBridge.Capture capture =
+                S2RequestProjectionBk2TestBridge.capture(
+                        Path.of(romProperty), Path.of(bk2Property));
+
+        assertEquals(List.of(10_195), capture.publicAudioRequests().stream()
+                .filter(request -> request.requestClass()
+                        == AudioRequestObserver.RequestClass.MUSIC)
+                .filter(request -> request.nativeId() == 0x81)
+                .filter(request -> request.row() >= 0)
+                .map(S2RequestProjectionBk2TestBridge.PublicAudioRequest::row)
+                .distinct()
+                .toList(),
+                "Level_PlayBgm publishes EHZ after the ROM-owned level load");
     }
 
     @Test

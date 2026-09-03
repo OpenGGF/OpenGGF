@@ -112,7 +112,7 @@ public class ObjectManager {
      * rows service the V-int in the ROM but do not tick here. See
      * {@code docs/status/known-discrepancies.md}.
      */
-    private int vblaCounter;
+    private final VBlankClock vblaCounter = new VBlankClock();
     private boolean updating;
     private final InitialObjectDispatchController initialDispatch =
             new InitialObjectDispatchController(this);
@@ -836,7 +836,7 @@ public class ObjectManager {
     }
 
     int vblaCounter() {
-        return vblaCounter;
+        return vblaCounter.value();
     }
 
     SolidCheckpointBatch processManualSolidCheckpoint(
@@ -2844,7 +2844,7 @@ public class ObjectManager {
      * Initializes the VBla frame counter to match ROM's v_vbla_byte at trace start.
      */
     public void initVblaCounter(int initialValue) {
-        this.vblaCounter = initialValue;
+        vblaCounter.initialize(initialValue);
     }
 
     /**
@@ -2859,14 +2859,14 @@ public class ObjectManager {
      * from {@link #update}; V-blank-only rows must call this directly.
      */
     public void advanceVblaCounter() {
-        this.vblaCounter++;
+        vblaCounter.advance(objectServices);
     }
 
     /**
      * Returns the current VBla counter value.
      */
     public int getVblaCounter() {
-        return vblaCounter;
+        return vblaCounter.value();
     }
 
     /**
@@ -4110,7 +4110,7 @@ public class ObjectManager {
                         bits,
                         slots,
                         frameCounter,
-                        vblaCounter,
+                        vblaCounter.value(),
                         currentExecSlot,
                         slotAllocator.peakSlotCount(),
                         bucketsDirty,
@@ -4185,7 +4185,7 @@ public class ObjectManager {
                 // 2. Restore scalar counters and slot occupancy
                 slotAllocator.restoreFromLongArray(s.usedSlotsBits());
                 frameCounter = s.frameCounter();
-                vblaCounter = s.vblaCounter();
+                vblaCounter.initialize(s.vblaCounter());
                 currentExecSlot = s.currentExecSlot();
                 slotAllocator.restorePeakSlotCount(s.peakSlotCount());
                 bucketsDirty = s.bucketsDirty();

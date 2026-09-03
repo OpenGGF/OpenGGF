@@ -27,11 +27,11 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
-## 2026-09-03 — S2 request-transfer window MATCH; driver tick frontier unchanged
+## 2026-09-03 — S2 Level_PlayBgm reaches the native row; driver frontier moves
 
 - **Worktree/branch:** `.worktrees/s2-c0a-replan3`,
-  `bugfix/ai-s2-c0a-replan3`; measured at `7b1442846` plus the reviewed
-  spike-cause diff now committed as `89eab0649`.
+  `bugfix/ai-s2-c0a-replan3`; request-placement measurement at `b8b23a8fd`
+  plus the level-load scheduling candidate.
 - **Fixture:** two independently extracted, comparison-only raw-v2 candidates
   for source rows `[10150,10900)`, each SHA-256
   `a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c`;
@@ -59,9 +59,22 @@ defined by `com.openggf.tools.audio.parity`.
   bank-2 Saxman path at 363,255 Z80 T-states (363,283 on the enabled PAL
   path). It predicted exactly six fully masked presentation rows and moved the
   same-BK2 tick-0 value from `0x58` to **`0xa4`**, no further. The remaining
-  `0xa4` versus `0x3c` mismatch is the separately measured early Music0
-  request: OpenGGF submits EHZ at row 10184, while native initialization is
-  bounded to the row 10194→10195 boundary.
+  `0xa4` versus `0x3c` mismatch was the separately measured early Music0
+  request: OpenGGF submitted EHZ at row 10184, while native initialization
+  reaches the row 10194→10195 boundary.
+
+  The independent level-load owner now costs the actual ROM title-card
+  Nemesis branches (586,852 VRAM and 644,978 RAM MC68000 clocks) and the named
+  surrounding source blocks, for 1,323,238 CPU clocks. Exact NTSC ratios and
+  H40 transfer-rate bounds put `Level_PlayBgm` wholly in bucket 11
+  (11.3254..11.6083 rows); CPZ2, ARZ and HPZ water arms remain in that bucket.
+  The production request is consequently published on row **10195**, and both
+  independent candidates still report **`MATCH: 25 production transfers
+  agree`**. The combined comparison now first diverges at tick **0** (movie
+  row **10202**), `global.tempoTimeout`, expected `0x3c`, actual **`0xda`**
+  (698/698 ticks divergent). This is the honest post-placement driver
+  frontier, not tick-0 closure. `TestS2CompleteEmeraldRunChain` retains its
+  recorded 12-axis set with no new axis.
 
 ## 2026-09-02 — S3K E4 seven-slot stop/restore source correction under review; no oracle move
 

@@ -1,5 +1,6 @@
 package com.openggf.tests.trace.runs;
 
+import com.openggf.audio.AudioRequestObserver;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.tools.audio.parity.s2.S2OracleRawStream;
 import com.openggf.tools.audio.completerun.s2.S2ProductionRequestProjector;
@@ -14,11 +15,19 @@ public final class S2RequestProjectionBk2TestBridge {
 
     public record Capture(
             S2ProductionRequestProjector projector, List<Integer> requestRows,
-            List<ProductionAudioRow> audioRows) {
+            List<ProductionAudioRow> audioRows,
+            List<PublicAudioRequest> publicAudioRequests) {
         public Capture {
             requestRows = List.copyOf(requestRows);
             audioRows = List.copyOf(audioRows);
+            publicAudioRequests = List.copyOf(publicAudioRequests);
         }
+    }
+
+    /** Public numeric request observed at the production API boundary. */
+    public record PublicAudioRequest(
+            int row, AudioRequestObserver.RequestClass requestClass,
+            int nativeId) {
     }
 
     /** Immutable observation emitted after one committed production row. */

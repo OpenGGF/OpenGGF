@@ -100,8 +100,10 @@ public class TestSonic2LevelInitProfile {
         assertEquals("InitGameModule", steps.get(0).name());
         assertEquals("ConfigureAudio", steps.get(1).name());
         assertEquals("QueueLevelEntryFadeOut", steps.get(2).name());
-        assertEquals("InitAudio", steps.get(3).name());
-        assertEquals("InitBackgroundRenderer", steps.get(15).name());
+        assertEquals("LoadLevelData", steps.get(3).name());
+        assertEquals("QueueInitialPlcs", steps.get(4).name());
+        assertEquals("InitBackgroundRenderer", steps.get(14).name());
+        assertEquals("ScheduleLevelMusic", steps.get(15).name());
     }
 
     @Test
@@ -122,7 +124,7 @@ public class TestSonic2LevelInitProfile {
         int entryRequestIndex = stepIndex(steps, "QueueLevelEntryFadeOut");
         assertTrue(stepIndex(steps, "ConfigureAudio") < entryRequestIndex,
                 "the production request service must exist before PlaySound writes SFX0");
-        assertTrue(entryRequestIndex < stepIndex(steps, "InitAudio"),
+        assertTrue(entryRequestIndex < stepIndex(steps, "ScheduleLevelMusic"),
                 "Level-entry fade-out precedes the later level-music request");
         assertTrue(entryRequestIndex < stepIndex(steps, "QueueInitialPlcs"),
                 "Level-entry PlaySound must precede ClearPLC and the initial PLC loads");
@@ -169,23 +171,23 @@ public class TestSonic2LevelInitProfile {
         assertEquals("InitGameModule", steps.get(0).name());
         assertEquals("ConfigureAudio", steps.get(1).name());
         assertEquals("QueueLevelEntryFadeOut", steps.get(2).name());
-        assertEquals("InitAudio", steps.get(3).name());
-        assertEquals("LoadLevelData", steps.get(4).name());
-        assertEquals("QueueInitialPlcs", steps.get(5).name());
+        assertEquals("LoadLevelData", steps.get(3).name());
+        assertEquals("QueueInitialPlcs", steps.get(4).name());
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("QueueInitialPlcs")),
                 "S2 Level must queue its ROM primary, Std2, and selected life PLC before title-card admission");
         // Level_ClrRam zeroes RNG_seed after the level's LoadPLC calls
         // (docs/s2disasm/s2.asm:4802-4809).
-        assertEquals("ResetRng", steps.get(6).name());
-        assertEquals("InitAnimatedContent", steps.get(7).name());
-        assertEquals("InitObjectSystem", steps.get(8).name());
-        assertEquals("InitGameplayState", steps.get(9).name());
-        assertEquals("InitRings", steps.get(10).name());
-        assertEquals("InitZoneFeatures", steps.get(11).name());
-        assertEquals("InitArt", steps.get(12).name());
-        assertEquals("InitPlayerAndCheckpoint", steps.get(13).name());
-        assertEquals("InitWater", steps.get(14).name());
-        assertEquals("InitBackgroundRenderer", steps.get(15).name());
+        assertEquals("ResetRng", steps.get(5).name());
+        assertEquals("InitAnimatedContent", steps.get(6).name());
+        assertEquals("InitObjectSystem", steps.get(7).name());
+        assertEquals("InitGameplayState", steps.get(8).name());
+        assertEquals("InitRings", steps.get(9).name());
+        assertEquals("InitZoneFeatures", steps.get(10).name());
+        assertEquals("InitArt", steps.get(11).name());
+        assertEquals("InitPlayerAndCheckpoint", steps.get(12).name());
+        assertEquals("InitWater", steps.get(13).name());
+        assertEquals("InitBackgroundRenderer", steps.get(14).name());
+        assertEquals("ScheduleLevelMusic", steps.get(15).name());
 
         // 7 post-load assembly steps (14-20)
         assertEquals("RestoreCheckpoint", steps.get(16).name());

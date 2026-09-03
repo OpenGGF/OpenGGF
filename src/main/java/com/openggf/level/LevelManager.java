@@ -417,6 +417,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
         } catch (Exception e) {
             discardInitialProcessSpritesLifecycle();
+            activeGameModule().getLevelInitProfile().cancelPendingLevelLoadWork();
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
             if (cause instanceof IOException ioe) {
@@ -468,7 +469,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void initAudio(int levelIndex) throws IOException {
         configureAudio();
-        playLevelMusic(levelIndex);
+        prepareLevelMusic(levelIndex).ifPresent(audioManager::playMusic);
     }
 
     /** Establishes the current game's production audio/request service. */
@@ -491,11 +492,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         levelEntryBegun = true;
     }
 
-    /** Submits the level's playlist request after game-owned entry commands. */
-    public void playLevelMusic(int levelIndex) throws IOException {
-        if (!transitions.consumeSuppressNextMusicChange()) {
-            audioManager.playMusic(game.getMusicId(levelIndex));
-        }
+    /** Resolves and consumes a real playlist request without publishing it. */
+    public java.util.OptionalInt prepareLevelMusic(int levelIndex) throws IOException {
+        return LevelMusicRequestResolver.prepare(transitions, game, levelIndex);
     }
 
     /**
@@ -2623,7 +2622,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Returns -1 if no level is loaded or music ID cannot be determined.
      */
     public int getCurrentLevelMusicId() {
-        if (game == null || levels == null || levels.isEmpty()) {
+        if (game == null || levels == null || levels.isEmpty()
+                || activeGameModule().getLevelInitProfile().isLevelMusicPublicationPending()) {
             return -1;
         }
         try {

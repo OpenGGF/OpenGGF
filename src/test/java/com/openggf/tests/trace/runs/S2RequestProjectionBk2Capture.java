@@ -57,6 +57,8 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                 "repository S2 complete-run BK2");
         S2ProductionRequestProjector projector = new S2ProductionRequestProjector();
         List<Integer> requestRows = new ArrayList<>();
+        List<S2RequestProjectionBk2TestBridge.PublicAudioRequest>
+                publicAudioRequests = new ArrayList<>();
         ProductionAudioRecorder audioRecorder = new ProductionAudioRecorder();
         int[] productionOutputRow = {-1};
         Sonic2AudioProfile profile = new Sonic2AudioProfile(event -> {
@@ -79,7 +81,11 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
             RomManager.getInstance().setRom(rom);
             AudioManager audio = GameServices.audio();
             try (DiagnosticObserverHandle ignored =
-                         audio.acquireDiagnosticObservers(audioRecorder.observers())) {
+                         audio.acquireDiagnosticObservers(audioRecorder.observers(
+                                 (requestClass, nativeId) -> publicAudioRequests.add(
+                                         new S2RequestProjectionBk2TestBridge.PublicAudioRequest(
+                                                 productionOutputRow[0],
+                                                 requestClass, nativeId))))) {
                 productionOutputRowObserver = row -> {
                     if (row != productionOutputRow[0]) {
                         audioRecorder.presentOpenRow(audio);
@@ -92,7 +98,8 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                         EXCLUSIVE_END - DESTINATION_START_ROW);
                 audioRecorder.presentOpenRow(audio);
                 return new S2RequestProjectionBk2TestBridge.Capture(
-                        projector, requestRows, audioRecorder.rows());
+                        projector, requestRows, audioRecorder.rows(),
+                        publicAudioRequests);
             }
         } finally {
             productionOutputRowObserver = row -> { };
@@ -113,8 +120,12 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
         private boolean completedDriverService;
 
         DiagnosticObserverSet observers() {
+            return observers(AudioRequestObserver.NONE);
+        }
+
+        DiagnosticObserverSet observers(AudioRequestObserver requestObserver) {
             return new DiagnosticObserverSet(
-                    AudioRequestObserver.NONE,
+                    requestObserver,
                     AudioAdmissionObserver.NONE,
                     new SmpsDriverServiceObserver() {
                         @Override

@@ -125,6 +125,21 @@ public interface LevelInitProfile {
         // Games without work before their level-entry fade have no action.
     }
 
+    /** Services game-owned work whose source routine advances on a V-blank. */
+    default void serviceLevelLoadVBlank() {
+        // Games without an asynchronous level-load owner have no work.
+    }
+
+    /** Cancels work prepared by an abandoned or reset level-load boundary. */
+    default void cancelPendingLevelLoadWork() {
+        // Games without an asynchronous level-load owner have no work.
+    }
+
+    /** Whether the profile still owns a prepared level-music publication. */
+    default boolean isLevelMusicPublicationPending() {
+        return false;
+    }
+
     /**
      * Counted {@code WaitForVBlank} rows the game's {@code Level:} routine
      * spends between its last un-timed load step and the first iteration of
