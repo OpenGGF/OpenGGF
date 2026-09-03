@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Committed Sonic 2 request-window fixture:** the driver-oracle gate now
+  runs from a published, duplicate-captured reference in the repository rather
+  than a scratch capture, and the next audio roadmap (S3K request authority,
+  wider windows, two recordings per game) is recorded under the audio plans.
 - **Sonic 2 sound driver parity:** the engine's SMPS driver now matches the
   recorded hardware driver over the full EHZ reference window (698 updates)
   with every sound request transfer agreeing, driven from the same BK2 movie.

@@ -587,9 +587,15 @@ per-voice S3K stop emitter.
 validation/projection are complete. The unpublished bounded-v2 carrier now closes over its own
 750-row body and inventories, without copying the five absent-domain full-source claims. Its
 strict Java Tranche-A reader independently recomputes that closure through a package-private,
-immutable candidate seam. The candidate remains CLI-unreachable and `production_bound:false`;
-no installed or bound authority, live capture, fixture, profile/comparator availability, or
-comparison authority exists yet. Tranche B's game-owned S2 mailbox/queue mechanism is complete.
+immutable candidate seam. The candidate remains CLI-unreachable and `production_bound:false`. **The
+duplicate-capture gate is met and, with explicit human approval on 2026-09-03, the bounded
+window is published** as
+`src/test/resources/audio/parity/s2/s2-request-window-w10150-10900.raw-v2.jsonl.gz` with its
+metadata sidecar; `TestS2RequestAwareOracleRawStream` now defaults to it and keeps
+`-Ds2.request.candidate.path` as an override. Publication installs a committed comparison
+reference only: no producer binding, profile, or CLI route exists, `production_bound` stays
+false, the reader stays package-private, and request equality remains a reference limitation
+until an independent authenticated OpenGGF producer observes equivalent source-owned evidence. Tranche B's game-owned S2 mailbox/queue mechanism is complete.
 Before Tranche C production wiring, C0-A makes its consequences transactional. Tranche D then
 runs an authenticated measurement without a frontier claim; C0-B pause/resume and C0-C header
 key displacement follow as separate reviewed tranches before the frontier-eligible repeat.
@@ -665,9 +671,14 @@ boundary and authority constraints are audited in
 - [ ] After the authority gates pass, run two serial power-on S2 captures to distinct absent
   external paths under closed process supervision. Require identical normalized attestations,
   ordered requests, events, terminal state, cutoff frontier, and digests before independent review.
-- [ ] Only after independent approval, extract the fixed window and install reviewed identities.
+- [x] Only after independent approval, extract the fixed window and install reviewed identities.
   Preserve `REFERENCE_LIMITATION` and do not publish, fabricate, hand-edit, or consume a request
   fixture while fresh authenticated native-GPGX authority remains unavailable.
+  Done 2026-09-03: two independent captures agree at SHA-256
+  `a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c`, the payload is committed
+  gzipped with its reviewed identities in a metadata sidecar, and the window is byte-identical to
+  the captured bytes. Follow-on widening and second-recording work is planned in
+  [2026-09-03-multi-recording-oracle-roadmap.md](2026-09-03-multi-recording-oracle-roadmap.md).
 
 ### Task 8B: Establish S3K Sonic/Tails pre-consumption request authority
 
