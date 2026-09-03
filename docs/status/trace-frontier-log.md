@@ -115063,3 +115063,40 @@ The other three death arms remain coordinates only.
   No frontier moved and no green trace regressed.
 - Same tree: `-Pguards` 550 tests / 0 failures / 0 errors; ordinary suite
   14,896 tests / 0 failures / 0 errors / 18 skipped (absolute ROM paths).
+
+## 2026-09-04 - S2 driver-oracle coverage widened past its single window
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`
+  over `develop` at `1e128d0d6`.
+- Four new bounded request-aware candidates were captured and published beside
+  the original `w10150-10900` window: `w10900-11650` and `w11650-12400` continue
+  the complete run's EHZ1 segment, `w13650-14400` spans the EHZ1 exit into the
+  second special stage at movie row 13712, and `cpz-w2700-3450` comes from the
+  committed CPZ level-select recording, a different route and a different music
+  epoch. Every window was captured twice on two independently built installs
+  and extracted twice; both raw captures and both extractions were
+  byte-identical in all four cases.
+- Producer control: rebuilding the disposable live producer and recapturing the
+  original window reproduced the published raw-v3 digest
+  `dd8b427d4a9a407102be83442d04dd21ddebebe6c3c7f72a3e453b479f870f05` and, after
+  extraction, the published payload digest
+  `a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c` with the
+  published capability and attestation digests, so the new windows come from a
+  producer proven byte-identical to the one that made the first fixture.
+- Command: `mvn -Dmse=off -Dtest=TestS2WidenedRequestOracle
+  -Dsonic2.rom.path=<abs>/s2.gen -Ds2.request.bk2.path=<abs>/src/test/resources/
+  traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2
+  test`.
+- Result per window. `w10150-10900`: MATCH, 25 production transfers.
+  `w10900-11650`: **MATCH, 52 production transfers** - the oracle holds a full
+  750 rows past its previous horizon. `w11650-12400`: **DIVERGENCE at transfer
+  21**, movie row 12132, where the recording's next request is SFX `$A0` and the
+  engine's is SFX `$B5` at row 12114. That is the new S2 request frontier.
+- `w13650-14400` and `cpz-w2700-3450` are published and their payload integrity
+  is gated, but neither has an engine-side comparison yet: the run-chain harness
+  replays only within one segment, so it reaches neither the special-stage
+  segment nor the CPZ level-select recording.
+- Same tree: the existing gate `TestS2RequestAwareOracleRawStream` still reports
+  the request MATCH of 25 and the driver-oracle **MATCH (698 ticks)**; the audio
+  parity suite ran 161 tests with 0 failures and 2 skips; `-Pguards` ran 607
+  tests with 0 failures and 0 errors.

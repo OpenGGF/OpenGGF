@@ -28,6 +28,25 @@ final class S2RequestAwareOracleSchema {
     public static final int REQUEST_SERVICE_MARKER_TOKEN = 25;
     public static final int MAX_LINE_BYTES = 1 << 20;
 
+    /**
+     * One published bounded candidate: the recording it was cut from and the
+     * exact movie rows it covers. Every field is an identity the strict reader
+     * matches exactly, so widening to another interval or another recording
+     * stays a pinned match rather than a relaxed one.
+     */
+    record Window(String name, String bk2Sha256, int firstRow, int exclusiveEnd,
+            int sourceFirstRow, int sourceExclusiveEnd) {
+        Window {
+            if (firstRow < 0 || exclusiveEnd <= firstRow) {
+                throw new IllegalArgumentException("window is not a valid interval");
+            }
+        }
+    }
+
+    /** The originally published EHZ-reload window, and the default everywhere. */
+    static final Window CONTROL = new Window("w10150-10900", BK2_SHA256,
+            FIRST_ROW, EXCLUSIVE_END, SOURCE_FIRST_ROW, SOURCE_EXCLUSIVE_END);
+
     private S2RequestAwareOracleSchema() {
     }
 }
