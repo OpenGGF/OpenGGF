@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K driver init ends where the ROM's does:** the DAC idle loop's entry
+  write now opens the first interrupt window instead of the init service,
+  moving the S3K oracle from tick 0 to tick 50, the SEGA chant, whose PCM
+  transport the driver does not yet own.
 - **Sonic 1 special sound effects follow the driver:** the Green Hill waterfall
   now waits for a busy channel, restores its own voice on release, is walked
   after the normal effect slots, and survives a normal effect taking its channel,
@@ -270,7 +274,8 @@ traces.
 - **S3K driver oracle reference v2:** the AIZ1 reference is now sampled by
   the observer core at the driver's `zVInt` return, one tick per completed
   service (5,263 ticks over 5,400 frames, 725,898 writes), from two byte-identical
-  captures; the first divergence is a single init write at tick 0.
+  captures, with the frame shape recorded and the frame field proven
+  provenance-only; the first divergence is a single init write at tick 0.
 - **S3K oracle reference sampling diagnosed:** the AIZ1 v1 reference samples
   driver RAM mid-invocation on music-load frames, so its tick-138 state is a
   truncated update rather than an engine divergence; the next S3K reference

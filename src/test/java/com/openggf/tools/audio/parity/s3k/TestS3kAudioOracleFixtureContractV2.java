@@ -159,18 +159,15 @@ class TestS3kAudioOracleFixtureContractV2 {
      * The live oracle comparison, so v2 is the stream CI actually compares
      * against, and the current frontier is pinned rather than only logged.
      *
-     * <p>The engine emits YM 2Bh inside its own driver init. In the ROM that
-     * write is not the init's: {@code zStopAllSound} writes 2Bh then 27h with
-     * interrupts disabled (skdisasm Sound/Z80 Sound Driver.asm:2506-2520), so
-     * 27h is the last write the init makes, and the 2Bh that follows is the
-     * first instruction block of {@code zPlayDigitalAudio} (:4258-4262), which
-     * the init jumps into at :551 and never returns from. v1 could not see this
-     * because its frame-granular projection swept the whole boot frame and took
-     * that write into the boot service. Measurement only: when the engine's
-     * driver init stops owning that write, this assertion is the one to move.
+     * <p>{@code zStopAllSound} writes 2Bh then 27h with interrupts disabled
+     * (skdisasm Sound/Z80 Sound Driver.asm:2506-2520), so 27h is the last write
+     * the init makes. The 2Bh that follows is the first instruction block of
+     * {@code zPlayDigitalAudio} (:4256-4260), which the init jumps into at :551
+     * and never returns from, so it opens the window the first {@code zVInt}
+     * return closes. This pins that placement on both sides of the boundary.
      */
     @Test
-    void theEngineEmitsTheMainLoopDacDisableInsideItsOwnDriverInit() {
+    void theDacLoopEntryWriteOpensTheServiceAfterTheDriverInit() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
         List<S3kAudioTick> services = readAll().subList(0, 8);
@@ -180,13 +177,82 @@ class TestS3kAudioOracleFixtureContractV2 {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(services, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_EXTRA, report.kind());
-        assertEquals(0, report.tick());
-        assertEquals("decoded_write", report.field());
         assertEquals(84, services.getFirst().writes().size(),
                 "the reference boot row ends where the driver init ends");
-        assertEquals(0x2b, engine.ticks().getFirst().writes().get(84).register(),
-                "the engine's extra boot write is the main loop's DAC disable");
+        assertEquals(84, engine.ticks().getFirst().writes().size(),
+                "the engine's init must end at zStopAllSound's 27h");
+        assertEquals(0x27, engine.ticks().getFirst().writes().getLast().register());
+        assertEquals(0x2b, engine.ticks().get(1).writes().getFirst().register(),
+                "the DAC loop's entry write opens the next service");
+        assertEquals(0, engine.ticks().get(1).writes().getFirst().value());
+        assertEquals(services.get(1).writes().getFirst(),
+                engine.ticks().get(1).writes().getFirst());
+        assertNotEquals(S3kAudioParityComparator.Report.Kind.EVENT_EXTRA,
+                report.kind(), "the boot service must no longer carry an extra write");
+    }
+
+    /**
+     * The frame field is provenance, never an input. It exists so a divergence
+     * can name the movie frame a service completed in; it must not reach the
+     * engine host or the comparator, because a per-row movie frame steering
+     * engine behaviour would make the reference an input rather than a
+     * comparison. Proven by perturbation rather than by inspection: rewriting
+     * every frame to a value that cannot be a real one must leave both the
+     * engine capture and the comparison bit-for-bit unchanged.
+     */
+    @Test
+    void theFrameFieldNeverReachesTheEngineHostOrTheComparator() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> honest = readAll().subList(0, 8);
+        List<S3kAudioTick> perturbed = new ArrayList<>();
+        for (S3kAudioTick tick : honest) {
+            perturbed.add(new S3kAudioTick(tick.ordinal(), tick.frame() + 9_000, tick.lag(),
+                    tick.mailbox(), tick.global(), tick.tracks(), tick.writes(),
+                    tick.producerInputEvidence()));
+        }
+
+        S3kOpenGgfAudioCapture.CaptureResult fromHonest =
+                S3kOpenGgfAudioCapture.capture(rom.toPath(), honest, null);
+        S3kOpenGgfAudioCapture.CaptureResult fromPerturbed =
+                S3kOpenGgfAudioCapture.capture(rom.toPath(), perturbed, null);
+
+        assertEquals(honest.size(), fromHonest.ticks().size(),
+                "the engine host runs exactly one service per reference tick");
+        assertEquals(fromHonest.ticks(), fromPerturbed.ticks(),
+                "the engine capture must not depend on the reference's movie frames");
+        assertEquals(
+                S3kAudioParityComparator.compare(honest, fromHonest.ticks()),
+                S3kAudioParityComparator.compare(perturbed, fromPerturbed.ticks()),
+                "the comparison must not depend on the reference's movie frames");
+    }
+
+    /**
+     * The window's frame shape, so a later reader knows what to expect of it.
+     * 137 frames complete no service: 14 before the 68k has loaded the driver,
+     * and 123 the driver's work runs past. No frame completes two, because
+     * 0084h is reached once per interrupt and this movie is NTSC, so the PAL
+     * double-update never runs.
+     */
+    @Test
+    void theWindowsFrameShapeMatchesItsMetadata() throws Exception {
+        JsonNode shape = new ObjectMapper().readTree(METADATA.toFile()).path("frame_shape");
+        List<S3kAudioTick> ticks = readAll();
+        int frames = shape.path("frames").asInt();
+
+        int[] perFrame = new int[frames];
+        ticks.forEach(tick -> perFrame[tick.frame()]++);
+        int zero = 0;
+        int doubled = 0;
+        for (int count : perFrame) {
+            if (count == 0) zero++;
+            if (count > 1) doubled++;
+        }
+        assertEquals(shape.path("ticks").asInt(), ticks.size());
+        assertEquals(shape.path("zero_service_frames").asInt(), zero);
+        assertEquals(shape.path("double_service_frames").asInt(), doubled);
+        assertEquals(shape.path("zero_service_pre_install").asInt(), ticks.getFirst().frame(),
+                "every frame before the first service is a pre-install frame");
     }
 
     private static List<S3kAudioTick> readAll() {

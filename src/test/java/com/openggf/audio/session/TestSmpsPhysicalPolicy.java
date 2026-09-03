@@ -48,11 +48,13 @@ class TestSmpsPhysicalPolicy {
         assertEquals(new SmpsChipWrite.Ym2612(0, 0x27, 0x00),
                 expectedStop84.getLast());
         assertEquals(expectedStop84, policy.stopAll().writes());
-        assertEquals(85, policy.boot().writes().size());
-        assertEquals(expectedStop84,
-                policy.boot().writes().subList(0, 84));
-        assertEquals(new SmpsChipWrite.Ym2612(0, 0x2B, 0x00),
-                policy.boot().writes().getLast());
+        // zInitAudioDriver's last write is zStopAllSound's 27h; it then jumps
+        // into zPlayDigitalAudio and never returns (Sound/Z80 Sound
+        // Driver.asm:550-551), so that loop's 2Bh is a separate program.
+        assertEquals(84, policy.boot().writes().size());
+        assertEquals(expectedStop84, policy.boot().writes());
+        assertEquals(List.of(new SmpsChipWrite.Ym2612(0, 0x2B, 0x00)),
+                policy.enterDacIdleLoop().writes());
         assertFalse(policy.boot().writes().stream().anyMatch(write ->
                 write instanceof SmpsChipWrite.Ym2612 ym
                         && ym.register() == 0x2A));
@@ -92,6 +94,12 @@ class TestSmpsPhysicalPolicy {
                 Sonic1SmpsCompatibilityPolicy.INSTANCE.boot());
         assertEquals(legacy,
                 Sonic2SmpsCompatibilityPolicy.INSTANCE.boot());
+        // S1 and S2 have no zPlayDigitalAudio-style entry block modelled here,
+        // so the S3K boundary correction leaves their physical stream alone.
+        assertEquals(List.of(),
+                Sonic1SmpsCompatibilityPolicy.INSTANCE.enterDacIdleLoop().writes());
+        assertEquals(List.of(),
+                Sonic2SmpsCompatibilityPolicy.INSTANCE.enterDacIdleLoop().writes());
     }
 
     static Stream<Arguments> hostDonorPairings() {

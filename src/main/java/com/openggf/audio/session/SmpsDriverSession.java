@@ -575,6 +575,10 @@ public final class SmpsDriverSession implements AutoCloseable {
         installDriverObservers();
         withPort(driverIdentity, port -> {
             applyProgram(port, policy.boot());
+            // zInitAudioDriver jumps into zPlayDigitalAudio and never returns
+            // (Sound/Z80 Sound Driver.asm:550-551), so the loop's entry writes
+            // follow the init immediately on the physical device.
+            applyProgram(port, policy.enterDacIdleLoop());
             port.silenceOutput();
             return null;
         });
@@ -1409,6 +1413,10 @@ public final class SmpsDriverSession implements AutoCloseable {
                 driver.captureSnapshot()));
         withPort(driverIdentity, port -> {
             applyProgram(port, policy.boot());
+            // zInitAudioDriver jumps into zPlayDigitalAudio and never returns
+            // (Sound/Z80 Sound Driver.asm:550-551), so the loop's entry writes
+            // follow the init immediately on the physical device.
+            applyProgram(port, policy.enterDacIdleLoop());
             port.silenceOutput();
             return null;
         });
