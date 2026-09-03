@@ -40,7 +40,8 @@ defined by `com.openggf.tools.audio.parity`.
   -Ds2.request.candidate.path=<candidate-g-or-h raw-v2 JSONL>
   -Ds2.request.bk2.path=<pinned complete-emeralds BK2>
   -Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream#realCandidateComparesAgainstIndependentProductionBk2Run
-  test -B`.
+  test -B`; the exact publication-row guard ran with the same identities and
+  `-Dtest=com.openggf.tools.audio.parity.s2.TestS2RequestAwareOracleRawStream#levelPlayBgmPublishesEmeraldHillAtTheNativeLoadBoundary`.
 - **Result:** candidate g and candidate h independently reported
   **`MATCH: 25 production transfers agree`**, exit 0 (one test, no
   failures/errors/skips). Before the two source-owned fixes, the first
@@ -65,9 +66,10 @@ defined by `com.openggf.tools.audio.parity`.
 
   The independent level-load owner now costs the actual ROM title-card
   Nemesis branches (586,852 VRAM and 644,978 RAM MC68000 clocks) and the named
-  surrounding source blocks, for 1,323,238 CPU clocks. Exact NTSC ratios and
+  surrounding source blocks, including the native `LoadPLC` free-slot walks,
+  for 1,323,466 CPU clocks. Exact NTSC ratios and
   H40 transfer-rate bounds put `Level_PlayBgm` wholly in bucket 11
-  (11.3254..11.6083 rows); CPZ2, ARZ and HPZ water arms remain in that bucket.
+  (11.3272..11.6101 rows); CPZ2, ARZ and HPZ water arms remain in that bucket.
   The production request is consequently published on row **10195**, and both
   independent candidates still report **`MATCH: 25 production transfers
   agree`**. The combined comparison now first diverges at tick **0** (movie

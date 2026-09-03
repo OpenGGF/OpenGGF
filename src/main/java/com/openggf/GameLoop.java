@@ -2711,9 +2711,7 @@ public class GameLoop {
 
         // Play zone music (ROM: Restore_LevelMusic during title card wait)
         int zoneMusicId = levelManager.getCurrentLevelMusicId();
-        if (zoneMusicId >= 0) {
-            audioManager.playMusic(zoneMusicId);
-        }
+        if (zoneMusicId >= 0 && !GameServices.module().getLevelInitProfile().isLevelMusicPublicationPending()) audioManager.playMusic(zoneMusicId);
 
         // Fade from black — level + zone title card become visible together
         fadeManager.startFadeFromBlack(null);
@@ -3203,7 +3201,7 @@ public class GameLoop {
 
         // Start zone music immediately when title card begins (not at the end)
         int zoneMusicId = levelManager.getCurrentLevelMusicId();
-        if (zoneMusicId >= 0) {
+        if (zoneMusicId >= 0 && !GameServices.module().getLevelInitProfile().isLevelMusicPublicationPending()) {
             audioManager.playMusic(zoneMusicId);
             LOGGER.fine("Started zone music at title card: 0x" + Integer.toHexString(zoneMusicId));
         }

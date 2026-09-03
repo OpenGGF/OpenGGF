@@ -158,6 +158,12 @@ public final class LevelFrameStep {
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
     }
 
+    /** Advances only game-owned level-load work on one known production V-int. */
+    public static void serviceLevelLoadVBlankOnly(LevelFrameContext context) {
+        Objects.requireNonNull(context, "context").gameModule()
+                .getLevelInitProfile().serviceLevelLoadVBlank();
+    }
+
     /**
      * Services only the module-queue boundary represented by a suppressed
      * held-counter row. The ROM still runs this loop-tail boundary even though
@@ -541,6 +547,9 @@ public final class LevelFrameStep {
             LevelFrameContext context, HardwareServiceBoundary boundary) {
         if (context == null) {
             throw new NullPointerException("context");
+        }
+        if (boundary == HardwareServiceBoundary.VINT_SERVICE) {
+            serviceLevelLoadVBlankOnly(context);
         }
         HardwareBoundaryDispatch.serviceBoundary(
                 boundary,

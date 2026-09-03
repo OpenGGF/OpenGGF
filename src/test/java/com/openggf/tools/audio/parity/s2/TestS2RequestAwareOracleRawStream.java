@@ -153,9 +153,9 @@ class TestS2RequestAwareOracleRawStream {
                 .filter(request -> request.requestClass()
                         == AudioRequestObserver.RequestClass.MUSIC)
                 .filter(request -> request.nativeId() == 0x81)
-                .filter(request -> request.row() >= 0)
+                .filter(request -> request.row() >= 10_150
+                        && request.row() < 10_900)
                 .map(S2RequestProjectionBk2TestBridge.PublicAudioRequest::row)
-                .distinct()
                 .toList(),
                 "Level_PlayBgm publishes EHZ after the ROM-owned level load");
     }

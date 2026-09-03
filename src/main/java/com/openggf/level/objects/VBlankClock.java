@@ -1,7 +1,7 @@
 package com.openggf.level.objects;
 
 /**
- * Owns the object-visible VBlank counter and its game-profile service edge.
+ * Owns only the object-visible VBlank counter.
  */
 final class VBlankClock {
     private int value;
@@ -14,10 +14,7 @@ final class VBlankClock {
         value = initialValue;
     }
 
-    void advance(ObjectServices services) {
+    void advance() {
         value++;
-        if (services != null && services.gameModule() != null) {
-            services.gameModule().getLevelInitProfile().serviceLevelLoadVBlank();
-        }
     }
 }

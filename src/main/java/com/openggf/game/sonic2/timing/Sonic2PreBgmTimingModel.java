@@ -35,7 +35,6 @@ public final class Sonic2PreBgmTimingModel {
     private static final int PALETTE_POINTERS = 0x2782;
 
     private static final int NTSC_MASTER_CLOCKS_PER_SCANLINE = 3_420;
-    private static final int NTSC_SCANLINES = 262;
     private static final int M68K_MASTER_DIVISOR = 7;
     private static final int Z80_MASTER_DIVISOR = 15;
 
@@ -44,14 +43,18 @@ public final class Sonic2PreBgmTimingModel {
     private static final int H40_VBLANK_68K_TO_VDP_BYTES_PER_LINE = 205;
     private static final int H40_ACTIVE_FILL_BYTES_PER_LINE = 17;
     private static final int H40_VBLANK_FILL_BYTES_PER_LINE = 204;
-    private static final int NTSC_ACTIVE_SCANLINES = 226;
     private static final int VDP_FIFO_BYTES = 8; // four 16-bit FIFO entries
 
     private Sonic2PreBgmTimingModel() {
     }
 
     public static Evidence analyze(Rom rom, int zoneId, int actId,
-                                   OptionalInt initialLifePlc) throws IOException {
+                                   OptionalInt initialLifePlc,
+                                   TimingRegion region,
+                                   boolean priorWaterFlag) throws IOException {
+        if (region == null) {
+            throw new IllegalArgumentException("Sonic 2 timing region is required");
+        }
         int zoneCount = (Sonic2Constants.ART_LOAD_CUES_ADDR - Sonic2Constants.LEVEL_DATA_DIR)
                 / Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
         if (zoneId < 0 || zoneId >= zoneCount) {
@@ -65,9 +68,10 @@ public final class Sonic2PreBgmTimingModel {
                 Destination.RAM);
         LevelEntryWork level = analyzeLevelEntry(
                 rom, zoneId, actId, initialLifePlc);
-        CpuWork cpu = cpuWork(vram, ram, level, initialLifePlc.isPresent());
-        DeviceBounds devices = deviceBounds(level);
-        double cpuRows = m68kClocksToRows(cpu.totalClocks());
+        CpuWork cpu = cpuWork(vram, ram, level, initialLifePlc.isPresent(),
+                region, priorWaterFlag);
+        DeviceBounds devices = deviceBounds(level, region, priorWaterFlag);
+        double cpuRows = m68kClocksToRows(cpu.totalClocks(), region);
         double lowerRows = cpuRows + devices.minimumRows();
         double upperRows = cpuRows + devices.maximumRows();
         int lowerBucket = (int) Math.floor(lowerRows);
@@ -95,9 +99,23 @@ public final class Sonic2PreBgmTimingModel {
         int letterOffset = Byte.toUnsignedInt(rom.readByte(TITLE_LETTER_OFFSET_TABLE + zoneId));
         int letterCursor = TITLE_LETTER_LISTS + letterOffset;
         int titleLongWrites = 0;
+        int titleDescriptorGroups = 0;
         while ((rom.readByte(letterCursor) & 0x80) == 0) {
             titleLongWrites += Byte.toUnsignedInt(rom.readByte(letterCursor + 1)) * 8;
+            titleDescriptorGroups++;
             letterCursor += 2;
+        }
+
+        int plcQueueSlotsWalked = 0;
+        int occupied = 0; // ClearPLC immediately precedes these calls.
+        if (zonePlcs[0] != 0) {
+            plcQueueSlotsWalked += occupied;
+            occupied += primaryEntries;
+        }
+        plcQueueSlotsWalked += occupied;
+        occupied += standardEntries;
+        if (initialLifePlc.isPresent()) {
+            plcQueueSlotsWalked += occupied;
         }
 
         WaterPath waterPath;
@@ -120,9 +138,9 @@ public final class Sonic2PreBgmTimingModel {
         // the two clearRAM calls each include the erroneous extra longword.
         // Level_ClrRam (s2.asm:4806-4817) likewise takes its retail over-clear.
         return new LevelEntryWork(List.of(0x40, 0x1000, 0x1000),
-                161, 257, titleLongWrites,
+                161, 257, letterOffset, titleDescriptorGroups, titleLongWrites,
                 (zonePlcs[0] == 0 ? 0 : 1) + 1 + (initialLifePlc.isPresent() ? 1 : 0),
-                primaryEntries + standardEntries + lifeEntries,
+                primaryEntries + standardEntries + lifeEntries, plcQueueSlotsWalked,
                 2_730, 640, waterPath, underwaterPaletteLongwords);
     }
 
@@ -135,7 +153,8 @@ public final class Sonic2PreBgmTimingModel {
 
     private static CpuWork cpuWork(NemesisWork vram, NemesisWork ram,
                                    LevelEntryWork level,
-                                   boolean lifePlc) {
+                                   boolean lifePlc, TimingRegion region,
+                                   boolean priorWaterFlag) {
         // Named source blocks, all in standard MC68000 clocks. The variable
         // LoadPLC term follows s2.asm:2060-2088: 176 clocks per call plus 42
         // per copied six-byte entry. 308 is Level's one-player selection path
@@ -143,7 +162,11 @@ public final class Sonic2PreBgmTimingModel {
         // the additional Player_mode branch before the third call.
         int initialPlcs = 308
                 + (level.plcCalls() * 176)
-                + (level.plcEntries() * 42);
+                + (level.plcEntries() * 42)
+                // LoadPLC .findFreeSpaceLoop (s2.asm:2071-2076): every
+                // occupied six-byte descriptor executes TST.L, untaken BEQ,
+                // ADDQ and BRA before the final free-slot test.
+                + (level.plcQueueSlotsWalked() * 38);
 
         // s2.asm:4772-4911 after the LoadPLC bodies. Each source block remains
         // visible here instead of collapsing the path into a fitted subtotal:
@@ -158,13 +181,13 @@ public final class Sonic2PreBgmTimingModel {
 
         int waterConditional = waterConditionalClocks(level);
         return new CpuWork(
-                finalVintClocks(),
+                vintFadeClocks(region),
                 finalFadeTailClocks(),
                 levelEntryToClearScreenClocks(),
                 clearScreenClocks(level),
                 vram.totalClocks() + ram.totalClocks()
                         + loadTitleCardCallerClocks(level),
-                pendingLagVintClocks(),
+                pendingLagVintClocks(region, priorWaterFlag),
                 initialPlcs,
                 playerModeAndThirdPlcBranch,
                 laterClearRam,
@@ -215,7 +238,7 @@ public final class Sonic2PreBgmTimingModel {
                 + (waterPaletteTail - noWaterPaletteTail);
     }
 
-    private static int finalVintClocks() {
+    private static int vintFadeClocks(TimingRegion region) {
         // V_Int/VintRet + Vint_Fade at s2.asm:486-510,1068-1071;
         // Do_ControllerPal/ReadJoypads and the three DMA command setups at
         // s2.asm:1153-1180,1361-1381; empty ProcessDPLC at s2.asm:2202-2208.
@@ -223,7 +246,8 @@ public final class Sonic2PreBgmTimingModel {
         int callDoControllerPal = 18;
         int fadeHintWriteAndEmptyProcessDplc = 16 + 12 + 12 + 10 + 16;
         return vIntEnvelopeControllerAndDmaSetups
-                + callDoControllerPal + fadeHintWriteAndEmptyProcessDplc;
+                + callDoControllerPal + fadeHintWriteAndEmptyProcessDplc
+                + (region == TimingRegion.PAL ? palDelayClocks() : 0);
     }
 
     private static int finalFadeTailClocks() {
@@ -258,30 +282,51 @@ public final class Sonic2PreBgmTimingModel {
         // LoadTitleCard at s2.asm:29207-29250: 940 straight-line/letter-list
         // clocks plus MOVE.L/DBF's 30-clock taken path for each ROM-derived
         // title longword.
-        return 940L + 30L * level.titleVdpLongWrites();
+        // The fixed wrapper/terminator is 506 clocks. Each two-byte title
+        // descriptor executes the branch/setup path plus the back-edge (62),
+        // while its ROM-derived longword count owns the copy loop (30 each).
+        return 506L + 62L * level.titleDescriptorGroups()
+                + 30L * level.titleVdpLongWrites();
     }
 
-    private static int pendingLagVintClocks() {
+    private static int pendingLagVintClocks(TimingRegion region,
+                                            boolean priorWaterFlag) {
         // V_Int -> Vint0_noWater -> VintRet at s2.asm:486-510,586-642. The
         // 640-byte transfer stall is separately bounded by deviceBounds; this
         // subtotal is only the CPU branch and DMA-register setup work.
         int vIntEnvelopeAndReturn = 518;
         int noWaterVscrollAndGuards = 190;
         int spriteDmaSetupAndSoundHandoff = 380;
-        return vIntEnvelopeAndReturn + noWaterVscrollAndGuards
-                + spriteDmaSetupAndSoundHandoff;
+        int palDelay = region == TimingRegion.PAL ? palDelayClocks() : 0;
+        if (!priorWaterFlag) {
+            return vIntEnvelopeAndReturn + noWaterVscrollAndGuards
+                    + spriteDmaSetupAndSoundHandoff + palDelay;
+        }
+        // Vint_Lag .isInLevelMode takes the previous live Water_flag before
+        // Level_ClrRam/Level_InitWater can establish the destination level.
+        // The water arm uploads one 128-byte CRAM palette and omits the
+        // fixBugs=0 640-byte sprite DMA (s2.asm:548-585 versus 586-642).
+        int waterPaletteAndSoundHandoff = 646;
+        return vIntEnvelopeAndReturn + waterPaletteAndSoundHandoff + palDelay;
     }
 
-    private static DeviceBounds deviceBounds(LevelEntryWork level) {
+    private static int palDelayClocks() {
+        // Graphics_Flags bit 6 arm: MOVE.W #$700,D0 then 0x701 DBF iterations.
+        return 8 + (0x700 * 10) + 14;
+    }
+
+    private static DeviceBounds deviceBounds(LevelEntryWork level,
+                                             TimingRegion region,
+                                             boolean priorWaterFlag) {
         // The Vint_Level immediately before the final fade anchor uploads the
         // 128-byte palette, 640-byte sprite table and 896-byte H-scroll table
         // (s2.asm:1005-1045). At H40 V-blank throughput the transfers consume
         // their byte length/rate; two extra scanlines bound command alignment.
         int priorVintBytes = 128 + 640 + 896;
         double priorVintMinimum = scanlinesToRows(
-                (double) priorVintBytes / H40_VBLANK_68K_TO_VDP_BYTES_PER_LINE);
+                (double) priorVintBytes / H40_VBLANK_68K_TO_VDP_BYTES_PER_LINE, region);
         double priorVintMaximum = scanlinesToRows(
-                (double) priorVintBytes / H40_VBLANK_68K_TO_VDP_BYTES_PER_LINE + 2);
+                (double) priorVintBytes / H40_VBLANK_68K_TO_VDP_BYTES_PER_LINE + 2, region);
 
         // ClearScreen's three fills (s2.asm:1458-1484) begin after the final
         // fade V-blank. They consume the 226 active H40 lines, then finish at
@@ -289,21 +334,22 @@ public final class Sonic2PreBgmTimingModel {
         // the three independently programmed fills.
         int fillBytes = level.clearScreenDmaFillBytes().stream()
                 .mapToInt(Integer::intValue).sum();
-        double clearScanlines = NTSC_ACTIVE_SCANLINES
+        double clearScanlines = region.activeScanlines
                 + (double) (fillBytes
-                - NTSC_ACTIVE_SCANLINES * H40_ACTIVE_FILL_BYTES_PER_LINE)
+                - region.activeScanlines * H40_ACTIVE_FILL_BYTES_PER_LINE)
                 / H40_VBLANK_FILL_BYTES_PER_LINE;
-        double clearMinimum = scanlinesToRows(clearScanlines);
+        double clearMinimum = scanlinesToRows(clearScanlines, region);
         double clearMaximum = scanlinesToRows(
-                clearScanlines + level.clearScreenDmaFillBytes().size());
+                clearScanlines + level.clearScreenDmaFillBytes().size(), region);
 
         // The fixBugs=0 Vint0_noWater path uploads the 640-byte sprite table
         // (s2.asm:586-642). Its phase is not distinguishable from level state,
         // so blank and active H40 rates form the conditional bounds.
-        double pendingMinimum = scanlinesToRows((double) level.lagVintSpriteDmaBytes()
-                / H40_VBLANK_68K_TO_VDP_BYTES_PER_LINE);
-        double pendingMaximum = scanlinesToRows((double) level.lagVintSpriteDmaBytes()
-                / H40_ACTIVE_68K_TO_VDP_BYTES_PER_LINE + 1);
+        int pendingBytes = priorWaterFlag ? 128 : level.lagVintSpriteDmaBytes();
+        double pendingMinimum = scanlinesToRows((double) pendingBytes
+                / H40_VBLANK_68K_TO_VDP_BYTES_PER_LINE, region);
+        double pendingMaximum = scanlinesToRows((double) pendingBytes
+                / H40_ACTIVE_68K_TO_VDP_BYTES_PER_LINE + 1, region);
 
         // LoadTitleCard's tight move.l/dbf loop is s2.asm:29231-29247. Each
         // longword supplies four bytes while its standard CPU path spends 30
@@ -316,26 +362,26 @@ public final class Sonic2PreBgmTimingModel {
         double titleCpuScanlines = (double) level.titleVdpLongWrites() * 30
                 * M68K_MASTER_DIVISOR / NTSC_MASTER_CLOCKS_PER_SCANLINE;
         double titleFifoMaximum = scanlinesToRows(
-                Math.max(0.0, titleTransferScanlines - titleCpuScanlines));
+                Math.max(0.0, titleTransferScanlines - titleCpuScanlines), region);
 
         // With no externally stretched WAIT, the bus request can wait at most
         // the remainder of one 23-T-state Z80 instruction.
         double z80Maximum = (double) 23 * Z80_MASTER_DIVISOR
-                / (NTSC_MASTER_CLOCKS_PER_SCANLINE * NTSC_SCANLINES);
+                / (NTSC_MASTER_CLOCKS_PER_SCANLINE * region.scanlines);
         return new DeviceBounds(priorVintMinimum, priorVintMaximum,
                 clearMinimum, clearMaximum,
                 pendingMinimum, pendingMaximum,
                 titleFifoMaximum, z80Maximum);
     }
 
-    private static double m68kClocksToRows(long clocks) {
+    private static double m68kClocksToRows(long clocks, TimingRegion region) {
         // NTSC frame = 3420 master clocks/line * 262 lines; 68000 is master/7.
         return (double) clocks * M68K_MASTER_DIVISOR
-                / (NTSC_MASTER_CLOCKS_PER_SCANLINE * NTSC_SCANLINES);
+                / (NTSC_MASTER_CLOCKS_PER_SCANLINE * region.scanlines);
     }
 
-    private static double scanlinesToRows(double scanlines) {
-        return scanlines / NTSC_SCANLINES;
+    private static double scanlinesToRows(double scanlines, TimingRegion region) {
+        return scanlines / region.scanlines;
     }
 
     private static NemesisWork analyzeNemesis(RomCursor source,
@@ -545,9 +591,12 @@ public final class Sonic2PreBgmTimingModel {
     public record LevelEntryWork(List<Integer> clearScreenDmaFillBytes,
                                  int spriteTableClearLongwords,
                                  int horizontalScrollClearLongwords,
+                                 int titleDescriptorOffset,
+                                 int titleDescriptorGroups,
                                  int titleVdpLongWrites,
                                  int plcCalls,
                                  int plcEntries,
+                                 int plcQueueSlotsWalked,
                                  int laterClearLongwords,
                                  int lagVintSpriteDmaBytes,
                                  WaterPath waterPath,
@@ -559,7 +608,29 @@ public final class Sonic2PreBgmTimingModel {
 
     public enum WaterPath { NONE, CPZ, ARZ, HPZ }
 
-    public record CpuWork(int finalVint,
+    /** Production video standard selected by Graphics_Flags bit 6. */
+    public enum TimingRegion {
+        // Sonic 2 retains the 224-line display mode in both regions; the two
+        // border lines make 226 active-transfer scanlines in the manual's
+        // H40 accounting. PAL extends the frame's blank interval to 313 lines.
+        NTSC(262, 226), PAL(313, 226);
+
+        private final int scanlines;
+        private final int activeScanlines;
+
+        TimingRegion(int scanlines, int activeScanlines) {
+            this.scanlines = scanlines;
+            this.activeScanlines = activeScanlines;
+        }
+
+        public static TimingRegion fromConfiguration(String configured) {
+            if ("NTSC".equalsIgnoreCase(configured)) return NTSC;
+            if ("PAL".equalsIgnoreCase(configured)) return PAL;
+            throw new IllegalArgumentException("Unsupported Sonic 2 timing region: " + configured);
+        }
+    }
+
+    public record CpuWork(int vintFade,
                           int finalFadeReturnAndPalette,
                           int levelEntryToClearScreen,
                           int clearScreen,
@@ -574,7 +645,7 @@ public final class Sonic2PreBgmTimingModel {
                           int paletteLoad,
                           int bgmSelectionAndPlayMusic) {
         public long totalClocks() {
-            return finalVint + finalFadeReturnAndPalette + levelEntryToClearScreen
+            return vintFade + finalFadeReturnAndPalette + levelEntryToClearScreen
                     + clearScreen + loadTitleCard + pendingLagVint + initialPlcs
                     + playerModeAndThirdPlcBranch + laterClearRam + waterGuards
                     + waterConditional + vdpSetup + paletteLoad

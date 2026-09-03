@@ -13,6 +13,7 @@ import java.util.OptionalInt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_2)
@@ -20,7 +21,8 @@ class TestSonic2PreBgmTimingModel {
     @Test
     void derivesBranchExactEhzTitleCardWorkFromRetailRom() throws IOException {
         Sonic2PreBgmTimingModel.Evidence evidence = Sonic2PreBgmTimingModel.analyze(
-                TestEnvironment.currentRom(), 0, 0, OptionalInt.empty());
+                TestEnvironment.currentRom(), 0, 0, OptionalInt.empty(),
+                Sonic2PreBgmTimingModel.TimingRegion.NTSC, false);
 
         assertEquals(new Sonic2PreBgmTimingModel.NemesisWork(
                         752, 6_016, true,
@@ -41,7 +43,8 @@ class TestSonic2PreBgmTimingModel {
     @Test
     void vramAndRamStreamsTakeDifferentRealDecoderBranches() throws IOException {
         Sonic2PreBgmTimingModel.Evidence evidence = Sonic2PreBgmTimingModel.analyze(
-                TestEnvironment.currentRom(), 0, 0, OptionalInt.empty());
+                TestEnvironment.currentRom(), 0, 0, OptionalInt.empty(),
+                Sonic2PreBgmTimingModel.TimingRegion.NTSC, false);
 
         assertNotEquals(evidence.titleCardVram().tableSymbols(),
                 evidence.titleCardRam().tableSymbols());
@@ -54,23 +57,62 @@ class TestSonic2PreBgmTimingModel {
     @Test
     void derivesLevelWorkAndTerminalBucketWithoutAFrameConstant() throws IOException {
         Sonic2PreBgmTimingModel.Evidence evidence = Sonic2PreBgmTimingModel.analyze(
-                TestEnvironment.currentRom(), 0, 0, OptionalInt.empty());
+                TestEnvironment.currentRom(), 0, 0, OptionalInt.empty(),
+                Sonic2PreBgmTimingModel.TimingRegion.NTSC, false);
 
         assertEquals(new Sonic2PreBgmTimingModel.LevelEntryWork(
                         List.of(0x40, 0x1000, 0x1000),
-                        161, 257, 224, 2, 10, 2_730, 640,
+                        161, 257, 0, 7, 224, 2, 10, 6, 2_730, 640,
                         Sonic2PreBgmTimingModel.WaterPath.NONE, 0),
                 evidence.levelEntry());
-        assertEquals(1_323_238, evidence.cpu().totalClocks());
+        assertEquals(1_323_466, evidence.cpu().totalClocks());
         assertEquals(new Sonic2PreBgmTimingModel.CpuWork(
                         1_704, 8_686, 50, 9_722, 1_239_490, 1_088,
-                        1_080, 148, 60_204, 74, 0, 246, 604, 142),
+                        1_308, 148, 60_204, 74, 0, 246, 604, 142),
                 evidence.cpu());
         assertEquals(11, evidence.terminalRowBucket());
         assertTrue(evidence.lowerRows() > 11.3 && evidence.lowerRows() < 11.4,
                 () -> "unexpected lower bound " + evidence.lowerRows());
         assertTrue(evidence.upperRows() > 11.5 && evidence.upperRows() < 11.7,
                 () -> "unexpected upper bound " + evidence.upperRows());
+    }
+
+    @Test
+    void derivesRegionAndPreviousWaterLagBranchesAndFailsClosed() throws IOException {
+        Sonic2PreBgmTimingModel.Evidence ntsc = Sonic2PreBgmTimingModel.analyze(
+                TestEnvironment.currentRom(), 0, 0, OptionalInt.empty(),
+                Sonic2PreBgmTimingModel.TimingRegion.NTSC, false);
+        Sonic2PreBgmTimingModel.Evidence pal = Sonic2PreBgmTimingModel.analyze(
+                TestEnvironment.currentRom(), 0, 0, OptionalInt.empty(),
+                Sonic2PreBgmTimingModel.TimingRegion.PAL, false);
+        Sonic2PreBgmTimingModel.Evidence priorWater = Sonic2PreBgmTimingModel.analyze(
+                TestEnvironment.currentRom(), 0, 0, OptionalInt.empty(),
+                Sonic2PreBgmTimingModel.TimingRegion.NTSC, true);
+
+        assertTrue(pal.cpu().vintFade() > ntsc.cpu().vintFade());
+        assertTrue(pal.cpu().pendingLagVint() > ntsc.cpu().pendingLagVint());
+        assertTrue(priorWater.devices().pendingSpriteMaximumRows()
+                < ntsc.devices().pendingSpriteMaximumRows());
+        assertThrows(IllegalArgumentException.class,
+                () -> Sonic2PreBgmTimingModel.TimingRegion.fromConfiguration("AUTO"));
+    }
+
+    @Test
+    void derivesNonEhzDescriptorsAndLifeQueueWalksFromRetailRom() throws IOException {
+        Sonic2PreBgmTimingModel.Evidence wfz = Sonic2PreBgmTimingModel.analyze(
+                TestEnvironment.currentRom(), Sonic2ZoneConstants.ROM_ZONE_WFZ, 0,
+                OptionalInt.empty(), Sonic2PreBgmTimingModel.TimingRegion.NTSC, false);
+        Sonic2PreBgmTimingModel.Evidence tails = Sonic2PreBgmTimingModel.analyze(
+                TestEnvironment.currentRom(), 0, 0, OptionalInt.of(9),
+                Sonic2PreBgmTimingModel.TimingRegion.NTSC, false);
+
+        assertTrue(wfz.levelEntry().titleDescriptorGroups() > 0);
+        assertTrue(wfz.levelEntry().titleDescriptorOffset() > 0,
+                "WFZ must follow its own Off_TitleCardLetters branch");
+        assertEquals(224, wfz.levelEntry().titleVdpLongWrites());
+        assertEquals(3, tails.levelEntry().plcCalls());
+        assertTrue(tails.levelEntry().plcQueueSlotsWalked()
+                > tails.levelEntry().plcEntries());
     }
 
     @Test
@@ -87,7 +129,8 @@ class TestSonic2PreBgmTimingModel {
                                         Sonic2PreBgmTimingModel.WaterPath expectedPath,
                                         int expectedConditionalClocks) throws IOException {
         Sonic2PreBgmTimingModel.Evidence evidence = Sonic2PreBgmTimingModel.analyze(
-                TestEnvironment.currentRom(), zoneId, actId, OptionalInt.empty());
+                TestEnvironment.currentRom(), zoneId, actId, OptionalInt.empty(),
+                Sonic2PreBgmTimingModel.TimingRegion.NTSC, false);
 
         assertEquals(expectedPath, evidence.levelEntry().waterPath());
         assertEquals(32, evidence.levelEntry().underwaterPaletteLongwords());

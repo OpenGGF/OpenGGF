@@ -42,7 +42,16 @@ final class GameLoopTitleCardLifecycle {
                     LevelFrameContext.from(gameplayMode), frame,
                     PlcLifecyclePhase.LEVEL_TITLE_CARD, titleCard::update);
         } else if (titleCard != null) {
+            // This is a real presented V-blank even though this ROM title-card
+            // loop does not dispatch the ordinary level/object frame body.
+            // Keep asynchronous level-load work on the production V-int edge,
+            // never on ObjectManager's trace-bootstrap-visible counter.
+            gameplayMode.getWorldSession().getGameModule().getLevelInitProfile()
+                    .serviceLevelLoadVBlank();
             titleCard.update();
+        } else {
+            gameplayMode.getWorldSession().getGameModule().getLevelInitProfile()
+                    .serviceLevelLoadVBlank();
         }
 
         if (titleCard == null || titleCard.shouldReleaseControl()) {

@@ -2859,7 +2859,7 @@ public class ObjectManager {
      * from {@link #update}; V-blank-only rows must call this directly.
      */
     public void advanceVblaCounter() {
-        vblaCounter.advance(objectServices);
+        vblaCounter.advance();
     }
 
     /**

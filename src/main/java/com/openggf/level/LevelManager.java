@@ -457,27 +457,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void initGameModule(int levelIndex) throws IOException {
         Rom rom = GameServices.rom().getRom();
-        parallaxManager.load(rom);
-        gameModule = GameServices.module();
-        collisionLayoutYMask = resolveCollisionLayoutYMask();
-        refreshZoneList();
+        parallaxManager.load(rom); gameModule = GameServices.module();
+        collisionLayoutYMask = resolveCollisionLayoutYMask(); refreshZoneList();
         game = gameModule.createGame(rom);
     }
 
     /**
      * Phase C/F: Configure audio manager and play level music.
      */
-    public void initAudio(int levelIndex) throws IOException {
-        configureAudio();
-        prepareLevelMusic(levelIndex).ifPresent(audioManager::playMusic);
-    }
+    public void initAudio(int levelIndex) throws IOException { configureAudio(); playLevelMusic(levelIndex); }
 
     /** Establishes the current game's production audio/request service. */
     public void configureAudio() throws IOException {
-        audioManager.setAudioProfile(gameModule.getAudioProfile());
-        audioManager.setRom(GameServices.rom().getRom());
-        audioManager.setSoundMap(game.getSoundMap());
-        audioManager.resetRingSound();
+        audioManager.setAudioProfile(gameModule.getAudioProfile()); audioManager.setRom(GameServices.rom().getRom());
+        audioManager.setSoundMap(game.getSoundMap()); audioManager.resetRingSound();
     }
 
     /**
@@ -485,24 +478,24 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * their counted fade; the ordered load profile reaches it as fallback.
      */
     public void beginLevelEntry() {
-        if (levelEntryBegun) {
-            return;
-        }
-        activeGameModule().getLevelInitProfile().beginLevelEntry();
-        levelEntryBegun = true;
+        if (levelEntryBegun) return;
+        activeGameModule().getLevelInitProfile().beginLevelEntry(); levelEntryBegun = true;
     }
 
     /** Resolves and consumes a real playlist request without publishing it. */
-    public java.util.OptionalInt prepareLevelMusic(int levelIndex) throws IOException {
-        return LevelMusicRequestResolver.prepare(transitions, game, levelIndex);
+    public java.util.OptionalInt prepareLevelMusic(int levelIndex) throws IOException { return LevelMusicRequestResolver.prepare(transitions, game, levelIndex); }
+
+    /** Publishes the level playlist request unless its game-owned delay already owns it. */
+    public void playLevelMusic(int levelIndex) throws IOException {
+        if (activeGameModule().getLevelInitProfile().isLevelMusicPublicationPending()) return;
+        prepareLevelMusic(levelIndex).ifPresent(audioManager::playMusic);
     }
 
     /**
      * Phase A-C: Initialize game module, configure audio manager, and play level music.
      */
     public void initGameModuleAndAudio(int levelIndex) throws IOException {
-        initGameModule(levelIndex);
-        initAudio(levelIndex);
+        initGameModule(levelIndex); initAudio(levelIndex);
     }
 
     /**
@@ -512,9 +505,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public Level loadLevelData(int levelIndex) throws IOException {
         Level loaded = game.loadLevel(levelIndex);
-        writeCurrentLevel(loaded);
-        rebuildLevelDerivedState();
-        return loaded;
+        writeCurrentLevel(loaded); rebuildLevelDerivedState(); return loaded;
     }
 
     public Level loadLevelData(
@@ -2622,16 +2613,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Returns -1 if no level is loaded or music ID cannot be determined.
      */
     public int getCurrentLevelMusicId() {
-        if (game == null || levels == null || levels.isEmpty()
-                || activeGameModule().getLevelInitProfile().isLevelMusicPublicationPending()) {
-            return -1;
-        }
+        if (game == null || levels == null || levels.isEmpty()) return -1;
         try {
             int levelIdx = levels.get(currentZone).get(currentAct).getLevelIndex();
             return game.getMusicId(levelIdx);
         } catch (Exception e) {
-            LOGGER.warning("Failed to get music ID for current level: " + e.getMessage());
-            return -1;
+            LOGGER.warning("Failed to get music ID for current level: " + e.getMessage()); return -1;
         }
     }
 

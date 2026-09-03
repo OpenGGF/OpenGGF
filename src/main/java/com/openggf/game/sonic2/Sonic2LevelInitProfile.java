@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
@@ -57,6 +58,9 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
     private final Sonic2LevelEventManager levelEventManager;
     private final Sonic2PlayerArtModeAuthority playerArtModeAuthority;
     private final Sonic2LevelMusicScheduler levelMusicScheduler;
+    private Sonic2PreBgmTimingModel.TimingRegion pendingTimingRegion;
+    private boolean pendingPriorWaterFlag;
+    private boolean levelEntryOwnsMusicPublication;
 
     public Sonic2LevelInitProfile(Sonic2LevelEventManager levelEventManager) {
         this(levelEventManager, () -> Sonic2PlayerArtModeAuthority.onePlayer(
@@ -126,6 +130,13 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
     @Override
     public void beginLevelEntry() {
         levelMusicScheduler.cancel();
+        levelEntryOwnsMusicPublication = true;
+        pendingTimingRegion = Sonic2PreBgmTimingModel.TimingRegion.fromConfiguration(
+                GameServices.configuration().getString(SonicConfiguration.REGION));
+        var level = GameServices.levelOrNull();
+        var water = GameServices.waterOrNull();
+        pendingPriorWaterFlag = level != null && water != null
+                && water.hasWater(level.getFeatureZoneId(), level.getFeatureActId());
         // Level (docs/s2disasm/s2.asm:4753-4765) writes MusID_FadeOut through
         // PlaySound/Sound_Queue.SFX0 before ClearPLC and Pal_FadeToBlack. The
         // negative Demo_mode_flag branch skips this only for credits demos;
@@ -138,30 +149,37 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
                 .prepareLevelMusic(ctx.getLevelIndex());
         if (music.isEmpty()) {
             levelMusicScheduler.cancel();
+            levelEntryOwnsMusicPublication = false;
             return;
         }
         int zone = ctx.getLevel().getZoneIndex();
         int act = GameServices.level().getCurrentAct();
         Sonic2PreBgmTimingModel.Evidence timing = Sonic2PreBgmTimingModel.analyze(
                 GameServices.rom().getRom(), zone, act,
-                playerArtModeAuthority.initialLifePlc());
+                playerArtModeAuthority.initialLifePlc(),
+                java.util.Objects.requireNonNull(pendingTimingRegion,
+                        "beginLevelEntry must capture the production video standard"),
+                pendingPriorWaterFlag);
         levelMusicScheduler.arm(music.getAsInt(), timing.terminalRowBucket());
     }
 
     @Override
     public void serviceLevelLoadVBlank() {
-        levelMusicScheduler.serviceVBlank().ifPresent(
-                musicId -> GameServices.audio().playMusic(musicId));
+        levelMusicScheduler.serviceVBlank().ifPresent(musicId -> {
+            GameServices.audio().playMusic(musicId);
+            levelEntryOwnsMusicPublication = false;
+        });
     }
 
     @Override
     public void cancelPendingLevelLoadWork() {
         levelMusicScheduler.cancel();
+        levelEntryOwnsMusicPublication = false;
     }
 
     @Override
     public boolean isLevelMusicPublicationPending() {
-        return levelMusicScheduler.pending();
+        return levelEntryOwnsMusicPublication || levelMusicScheduler.pending();
     }
 
     private void queueInitialPlcs(LevelLoadContext ctx) {
