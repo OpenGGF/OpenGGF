@@ -4,10 +4,12 @@ import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
 import com.openggf.audio.session.SmpsChipWrite;
 import com.openggf.audio.session.SmpsMusicActivation;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsSegaPcmTransport;
 import com.openggf.audio.session.SmpsWriteProgram;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /** Shipped Sonic 3 &amp; Knuckles Z80 physical-device policy. */
 public final class Sonic3kSmpsPhysicalPolicy
@@ -20,6 +22,7 @@ public final class Sonic3kSmpsPhysicalPolicy
     private static final SmpsWriteProgram STOP_ALL = stopAllProgram();
     private static final SmpsWriteProgram BOOT = STOP_ALL;
     private static final SmpsWriteProgram DAC_IDLE_ENTRY = dacIdleEntryProgram();
+    private static final SmpsSegaPcmTransport SEGA_PCM = segaPcmTransportProgram();
 
     private Sonic3kSmpsPhysicalPolicy() {
     }
@@ -45,6 +48,11 @@ public final class Sonic3kSmpsPhysicalPolicy
     }
 
     @Override
+    public Optional<SmpsSegaPcmTransport> segaPcmTransport() {
+        return Optional.of(SEGA_PCM);
+    }
+
+    @Override
     public SmpsWriteProgram silenceAllPsg() {
         // Sound/Z80 Sound Driver.asm:zPlaySoundByIndex/zFadeEffects routes
         // E3h to zPSGSilenceAll, whose four iterations add 20h to 9Fh.
@@ -55,6 +63,25 @@ public final class Sonic3kSmpsPhysicalPolicy
     public SmpsWriteProgram activateMusic(SmpsMusicActivation activation) {
         return LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE
                 .activateMusic(activation);
+    }
+
+    private static SmpsSegaPcmTransport segaPcmTransportProgram() {
+        // Sound/Z80 Sound Driver.asm:zPlaySEGAPCM (:4372-4424). SonicDriverVer
+        // is 4 for S&K (sonic3k.asm:27), so the SonicDriverVer==3 queue work is
+        // assembled out and the loop's writes are exactly: 2Bh=80h, one latch
+        // of 2Ah, then one byte of SEGA_PCM per iteration. Leaving the loop
+        // re-enters zPlayDigitalAudio, which writes 2Bh=0 (:4256-4260).
+        // 105 is the loop's own per-byte cycle cost, the base the ROM's
+        // pcmLoopCounter macro is defined with (sonic3k.macros.asm:270-271).
+        return new SmpsSegaPcmTransport(
+                new SmpsWriteProgram(
+                        List.of(new SmpsChipWrite.Ym2612(0, 0x2B, 0x80))),
+                0,
+                0x2A,
+                new SmpsWriteProgram(
+                        List.of(new SmpsChipWrite.Ym2612(0, 0x2B, 0x00))),
+                Sonic3kSmpsConstants.SEGA_SOUND_SAMPLE_RATE,
+                105);
     }
 
     private static SmpsWriteProgram dacIdleEntryProgram() {

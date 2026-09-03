@@ -78,7 +78,7 @@ class TestSmpsStatefulCommandPolicy {
                         physical.identity(), settings, second.identity()),
                 captured.selectedDacSource(), captured.speedShoesEnabled(),
                 captured.speedMultiplier(), captured.ringLeft(),
-                captured.physical());
+                captured.segaPcmTransport(), captured.physical());
 
         assertThrows(IllegalArgumentException.class,
                 () -> session.prepareRestore(incompatible,

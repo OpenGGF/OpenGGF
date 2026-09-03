@@ -192,14 +192,30 @@ public sealed interface AudioPresentationCommand
         }
     }
 
-    record ReplaceRawPcm(SampleVoiceDescriptor voice)
+    /**
+     * The SEGA chant, carried in both of its realisations.
+     *
+     * <p>A driver whose physical policy owns the ROM's blocking PCM
+     * transport plays {@code pcm} through the chip's DAC; one that does not
+     * plays the prepared presentation voice. The owner that holds the driver
+     * session picks, so the resolver stays free of a backend reference.</p>
+     */
+    record ReplaceRawPcm(SampleVoiceDescriptor voice, byte[] pcm)
             implements AudioPresentationCommand {
         public ReplaceRawPcm {
             Objects.requireNonNull(voice, "voice");
+            pcm = Objects.requireNonNull(pcm, "pcm").clone();
         }
 
-        public static ReplaceRawPcm fromVoice(SampleBackedVoice voice) {
-            return new ReplaceRawPcm(SampleVoiceDescriptor.fromVoice(voice));
+        @Override
+        public byte[] pcm() {
+            return pcm.clone();
+        }
+
+        public static ReplaceRawPcm fromVoice(
+                SampleBackedVoice voice, byte[] pcm) {
+            return new ReplaceRawPcm(
+                    SampleVoiceDescriptor.fromVoice(voice), pcm);
         }
     }
 

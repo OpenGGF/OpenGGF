@@ -30,6 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSegaPcmCommandRouting {
@@ -132,9 +134,18 @@ class TestSegaPcmCommandRouting {
         assertInstanceOf(AudioCommand.PlaySegaPcm.class,
                 audio.commandTimeline().entryAt(before).command());
         audio.presentFrame(PresentationMode.SILENT);
-        assertNotNull(audio.captureLogicalSnapshot().presentation()
+        // S3K's own zPlaySEGAPCM streams the chant (Sound/Z80 Sound
+        // Driver.asm:4372-4424), so the driver holds it rather than the
+        // presentation registry: the DAC enable and the sample bytes are on
+        // the physical stream, and no raw voice exists.
+        assertNull(audio.captureLogicalSnapshot().presentation()
                         .rawPcmVoiceId(),
-                "raw PCM is owned by the unified presentation registry");
+                "the S3K driver owns the chant, not a presentation voice");
+        assertTrue(writes.contains("ym:0:43:128"),
+                "the transport enables the DAC");
+        assertTrue(writes.stream().anyMatch(
+                        write -> write.startsWith("ym:0:42:")),
+                "the transport sends sample bytes to the DAC register");
         writes.clear();
         before = audio.commandTimeline().entryCount();
         audio.playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
@@ -145,8 +156,13 @@ class TestSegaPcmCommandRouting {
         assertNull(audio.captureLogicalSnapshot().presentation()
                         .rawPcmVoiceId(),
                 "FE removes raw PCM at the command boundary");
-        assertEquals(0, writes.size(),
-                "FE submission and silent application emit no driver writes");
+        // The loop breaks at its next sample boundary and re-enters
+        // zPlayDigitalAudio, whose entry disables the DAC (D:4394-4397,
+        // :4422, :4256-4260). Until it does, the masked services run no
+        // update at all, so the stop-all itself is still to come.
+        assertEquals("ym:0:43:0", writes.get(writes.size() - 1),
+                "leaving the loop disables the DAC");
+        writes.clear();
 
         audio.presentFrame(PresentationMode.FORWARD);
         assertEquals(84, writes.size());
@@ -165,17 +181,36 @@ class TestSegaPcmCommandRouting {
         audio.setBackend(new NullAudioBackend());
         audio.setAudioProfile(new Sonic3kAudioProfile());
         audio.setRom(rom);
+        java.util.List<String> writes = new java.util.ArrayList<>();
+        audio.setChipWriteObserver(
+                new com.openggf.audio.synth.ChipWriteObserver() {
+                    @Override
+                    public void onYm2612Write(
+                            int port, int register, int value) {
+                        writes.add("ym:" + port + ":" + register
+                                + ":" + value);
+                    }
+
+                    @Override
+                    public void onPsgWrite(int value) {
+                    }
+                });
         audio.playMusic(Sonic3kSmpsConstants.CMD_SEGA);
         audio.presentFrame(PresentationMode.SILENT);
         boolean ringLeft = audio.captureLogicalSnapshot()
                 .presentation().ringLeft();
 
         audio.playSfx(Sonic3kSmpsConstants.CMD_STOP_SFX);
+        writes.clear();
         audio.presentFrame(PresentationMode.SILENT);
 
-        assertNotNull(audio.captureLogicalSnapshot().presentation()
-                .rawPcmVoiceId(),
-                "E4 is SMPS-SFX-only and must preserve raw SEGA PCM");
+        // E4 is SMPS-SFX-only: it must not reach into the driver's PCM loop,
+        // which keeps sending sample bytes across the frame.
+        assertTrue(writes.stream().anyMatch(
+                        write -> write.startsWith("ym:0:42:")),
+                "E4 must leave the SEGA transport running");
+        assertFalse(writes.contains("ym:0:43:0"),
+                "E4 must not end the SEGA transport");
         assertEquals(ringLeft, audio.captureLogicalSnapshot()
                         .presentation().ringLeft(),
                 "E4 must preserve the ring alternation state");

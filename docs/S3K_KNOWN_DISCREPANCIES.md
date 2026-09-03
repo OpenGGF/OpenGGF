@@ -1480,6 +1480,11 @@ There is no hold, no timer, and no SEGA sound command anywhere in either file.
 holds for `SEGA_HOLD_DURATION = 180` frames, stops the sound and moves to the palette
 transition.
 
+The chant itself is no longer a presentation addition: since 2026-09-03 the sound it plays is the
+ROM's own `zPlaySEGAPCM` transport (`Sound/Z80 Sound Driver.asm:4372-4424`), run by the driver
+through the emulated YM2612 DAC at the ROM's own loop cadence. Only the screen and its hold
+remain engine additions.
+
 **Why this is acceptable.** It is a presentation addition, not a parity gap — there is no ROM
 behaviour being approximated, so there is nothing for the 180 to be wrong against. It affects
 only the pre-title sequence and no gameplay state, and it is skippable by input like the rest of

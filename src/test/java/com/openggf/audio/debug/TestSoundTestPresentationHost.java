@@ -19,12 +19,15 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -90,7 +93,6 @@ class TestSoundTestPresentationHost {
         try (StandaloneAudioPresentationHost host = fixture.host()) {
             host.playMusic(persistentS3kMusic(0x81), fixture.dac());
             host.playSfx(persistentS3kSfx(0xBC), fixture.dac(), 1.0f);
-            submitRawPcm(host.managerForTesting());
             host.toggleMute(ChannelType.FM, 1);
             host.toggleSolo(ChannelType.PSG, 2);
             host.setSpeedShoes(true);
@@ -98,11 +100,36 @@ class TestSoundTestPresentationHost {
 
             var presentation = host.managerForTesting()
                     .captureLogicalSnapshot().presentation();
-            assertTrue(presentation.voices().size() >= 1);
             assertEquals(1 << 1, presentation.fmMuteMask());
             assertEquals(1 << 2, presentation.psgSoloMask());
             assertTrue(presentation.speedShoesEnabled());
-            assertNotNull(presentation.rawPcmVoiceId());
+
+            // S3K's driver owns the SEGA chant itself (Sound/Z80 Sound
+            // Driver.asm:4372-4424), so raw PCM is not a presentation voice
+            // on this profile: it is the driver's own bus-holding transport,
+            // visible as the DAC enable and the sample bytes it writes.
+            List<String> writes = new ArrayList<>();
+            host.managerForTesting().setChipWriteObserver(
+                    new com.openggf.audio.synth.ChipWriteObserver() {
+                        @Override
+                        public void onYm2612Write(
+                                int port, int register, int value) {
+                            writes.add("ym:" + port + ":" + register
+                                    + ":" + value);
+                        }
+
+                        @Override
+                        public void onPsgWrite(int value) {
+                        }
+                    });
+            submitRawPcm(host.managerForTesting());
+            host.presentFrame();
+            assertNull(host.managerForTesting().captureLogicalSnapshot()
+                    .presentation().rawPcmVoiceId());
+            assertTrue(writes.contains("ym:0:43:128"),
+                    "the driver enables the DAC for its own transport");
+            assertTrue(writes.contains("ym:0:42:255"),
+                    "the sample bytes reach the DAC data register");
 
             host.stopPlayback();
             host.presentFrame();

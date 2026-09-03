@@ -12,6 +12,7 @@ public record SmpsDriverSessionSnapshot(
         boolean speedShoesEnabled,
         int speedMultiplier,
         boolean ringLeft,
+        SmpsSegaPcmTransportSnapshot segaPcmTransport,
         SmpsPhysicalDevice.Snapshot physical) {
     public SmpsDriverSessionSnapshot {
         Objects.requireNonNull(pendingGlobalCommand,
