@@ -45,10 +45,15 @@ defined by `com.openggf.tools.audio.parity`.
   **`MATCH: 25 production transfers agree`**, exit 0 (one test, no
   failures/errors/skips). Before the two source-owned fixes, the first
   divergences were transfer 3 (ring B5 in SFX0 rather than ROM SFX1) and then
-  transfer 20 (CPU Tails spike damage A3 rather than ROM A6).
-- **Notes:** this closes only the bounded pre-consumption request-transfer
-  layer. It does not authenticate the candidates, bind replay authority, or
-  move the downstream S2 SMPS state/write frontier, which remains at tick 210.
+  transfer 20 (CPU Tails spike damage A3 rather than ROM A6). The reviewed
+  observer-only same-BK2 comparison at `89bdb6eb9` then reported
+  **DIVERGENCE at tick 0 (movie row 10202)**, `global.tempoTimeout`, expected
+  `0x3c`, actual `0x58`; 698 of 698 ticks diverged.
+- **Notes:** the raw-v2 candidates remain comparison-only and supply no driver
+  input; requests arise from the BK2-driven engine. This does not authenticate
+  the candidates or bind replay authority. It supersedes the old tick-210
+  music-only-host result: that host supplied no SFX requests, whereas the
+  same-BK2 observer measures the production request path.
 
 ## 2026-09-02 — S3K E4 seven-slot stop/restore source correction under review; no oracle move
 
