@@ -89,6 +89,18 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
     private int continuousSfxId;
     private boolean continuousSfxFlag;
     private int contSfxLoopCnt;
+
+    /**
+     * S1 {@code v_special_voice_ptr}: the voice bank of the most recently
+     * dispatched special SFX. {@code Sound_PlaySpecial} is its only writer
+     * (docs/s1disasm/s1.sounddriver.asm:1132), so it outlives the special SFX
+     * that installed it and is cleared only when the driver RAM globals are
+     * wiped -- {@code InitMusicPlayback} (:1498-1502) and {@code StopAllSound}
+     * (:1468-1478). The shipped {@code FixBugs = 0} {@code SendVoiceTL} reads
+     * this pointer for every normal SFX track (:2391-2398), so it must persist
+     * exactly as the ROM's global does rather than track a live sequencer.
+     */
+    private AbstractSmpsData s1SpecialVoicePointer;
     /** Shared Z80 PAL cadence byte: zPALUpdTick / zPalDblUpdCounter. */
     private int palUpdateCounter = 5;
     private long nextSfxAdmissionOrdinal;
@@ -128,6 +140,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         private final boolean continuousSfxFlag;
         private final int contSfxLoopCnt;
         private final int palUpdateCounter;
+        private final AbstractSmpsData s1SpecialVoicePointer;
 
         private LiveCommandMutationToken(
                 SmpsDriver owner,
@@ -148,7 +161,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 int continuousSfxId,
                 boolean continuousSfxFlag,
                 int contSfxLoopCnt,
-                int palUpdateCounter) {
+                int palUpdateCounter,
+                AbstractSmpsData s1SpecialVoicePointer) {
             this.owner = owner;
             this.sequencers = sequencers;
             this.sequencerStates = sequencerStates;
@@ -168,6 +182,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             this.continuousSfxFlag = continuousSfxFlag;
             this.contSfxLoopCnt = contSfxLoopCnt;
             this.palUpdateCounter = palUpdateCounter;
+            this.s1SpecialVoicePointer = s1SpecialVoicePointer;
         }
     }
 
@@ -703,6 +718,11 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         sequencers.add(sequencer);
         sfxSequencers.add(sequencer);
         sfxSequencersById.put(sequencer.getSmpsData().getId(), sequencer);
+        if (sequencer.isSpecialSfx()) {
+            // Sound_PlaySpecial stores the sound's voice pointer into the
+            // driver global (s1.sounddriver.asm:1128-1132).
+            s1SpecialVoicePointer = sequencer.getSmpsData();
+        }
         recordSfxClaims(sequencer);
         installPreparedSfxChannelOwnership(admission, sequencer);
         restoreMusicDacData();
@@ -1424,7 +1444,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
-                    palUpdateCounter);
+                    palUpdateCounter,
+                    s1SpecialVoicePointer);
         }
     }
 
@@ -1491,6 +1512,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             continuousSfxFlag = token.continuousSfxFlag;
             contSfxLoopCnt = token.contSfxLoopCnt;
             palUpdateCounter = token.palUpdateCounter;
+            s1SpecialVoicePointer = token.s1SpecialVoicePointer;
             if (serviceSequencerOrdinals != null) {
                 serviceSequencerOrdinals.keySet().retainAll(sequencers);
             }
@@ -1807,6 +1829,10 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         seq.setRegion(region);
         seq.setIsSfx(false); // Cache isSfx flag on the sequencer for O(1) lookup
         synchronized (sequencersLock) {
+            // InitMusicPlayback clears the driver globals, including
+            // v_special_voice_ptr, before loading a song
+            // (s1.sounddriver.asm:1498-1502).
+            s1SpecialVoicePointer = null;
             // ROM behavior: re-triggering the same SFX replaces the old one.
             // Without this, two sequencers for the same sound compete for the same
             // FM/PSG channels, causing lock ping-pong when priority bit 7 is set
@@ -1987,6 +2013,9 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             continuousSfxId = 0;
             continuousSfxFlag = false;
             contSfxLoopCnt = 0;
+            // StopAllSound clears the driver RAM globals, v_special_voice_ptr
+            // included (s1.sounddriver.asm:1468-1478).
+            s1SpecialVoicePointer = null;
         }
         // Silence hardware (ROM: zFMSilenceAll + zPSGSilenceAll)
         silenceAll();
@@ -2814,13 +2843,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      */
     public byte[] s1SpecialSfxVoiceForBug(int voiceId) {
         synchronized (sequencersLock) {
-            for (SmpsSequencer sequencer : sfxSequencers) {
-                if (!sequencer.isSpecialSfx()) {
-                    continue;
-                }
-                return sequencer.getSmpsData().getVoice(voiceId);
-            }
-            return null;
+            AbstractSmpsData bank = s1SpecialVoicePointer;
+            return bank == null ? null : bank.getVoice(voiceId);
         }
     }
 

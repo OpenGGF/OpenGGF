@@ -116,6 +116,55 @@ defined by `com.openggf.tools.audio.parity`.
   and the DAC disable on exit — rather than asserting less.
 
 
+## 2026-09-03 — S1 gameplay oracle reaches full MATCH: the special-SFX voice pointer outlives its sound
+
+- **Worktree/branch:** `.worktrees/audio-s1-special-frontier-2`,
+  `bugfix/ai-s1-special-sfx-frontier-2`, on top of `4be2f8c9e`.
+- **Fixture and command:** unchanged from the entries below
+  (`s1-gameplay-ghz1-reference.v2.jsonl.gz`, gate
+  `TestS1GameplayAudioDriverOracle`).
+- **Result before:** MISMATCH, `EVENT_VALUE_DIFFERENT`, tick 1759, event 0,
+  field `decoded_write` — reference YM2612 port 1 register 76 (`$4C`, FM4
+  operator 4 total level) value 132, engine value 4.
+- **Result after:** **`MATCH (2343 ticks)`** — the whole reference, end to end.
+- **What the divergence was.** Tick 1746 dispatches the spring SFX (`$CC`) onto
+  FM4. Its own `SetVoice` is correct on both sides. From tick 1759 its
+  `smpsAlterVol` writes run through `SendVoiceTL`, and there the reference adds
+  the track volume to a total-level byte of `$80` where the engine adds it to
+  `$00`. The `$80` belongs to the *waterfall's* voice bank, and the waterfall
+  (`$D0`, last dispatched at tick 1450) had already finished.
+- **The ROM routine.** Under the shipped `FixBugs = 0`, `SendVoiceTL` loads its
+  voice pointer from `SMPS_Track.VoicePtr(a6)`
+  (`docs/s1disasm/s1.sounddriver.asm:2391-2398`), with the disassembly's own
+  `DANGER!` note that this should have been `a5`. `VoicePtr` sits at offset 32
+  in the track struct (`s1.sounddriver.ram.asm:1-30`) and offset 32 in the
+  driver RAM block is `v_special_voice_ptr`
+  (`s1.sounddriver.ram.asm:32-56`), so every normal SFX track reads the special
+  SFX's voice bank. For a *special* track the following `bmi` falls through and
+  the pointer is reloaded correctly (`:2399-2401`), so the bug is confined to
+  normal SFX. `Sound_PlaySpecial` is that global's only writer (`:1128-1132`);
+  nothing clears it when the special SFX ends. It is wiped only when the driver
+  globals are, by `InitMusicPlayback` (`:1498-1502`) and `StopAllSound`
+  (`:1468-1478`).
+- **The engine change.** `SmpsDriver.s1SpecialSfxVoiceForBug` used to scan the
+  live SFX sequencers for a special one, so the aliased bank vanished the moment
+  the waterfall stopped and the fallback zero voice was used instead. The driver
+  now holds `s1SpecialVoicePointer`, latched at special-SFX admission, cleared
+  on music start and on `stopAll`, and carried through the live-command
+  rollback token. That is the ROM global modelled as a global. No constant was
+  introduced and no game-name or zone branch was added; only S1's profile
+  selects `S1_SPECIAL_POINTER_BUG`.
+- **The next frontier.** There is none inside this fixture: the capture is
+  exhausted at 2,343 ticks. Moving further needs a longer or different S1
+  gameplay capture, which is capture work.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, both exit 0, run as `S1AudioParityTool capture` +
+  `compare` against the committed v1 references. The audio packages plus
+  `TestSmpsFadeAudioThroughput` run 2,487 tests with 0 failures and 11 skips,
+  which includes the S2 driver oracle at `MATCH (698 ticks)`. The S3K oracle
+  stays exactly at its pinned line, `EVENT_EXTRA` tick 0 event 84, engine
+  `ym2612[port 0, register 0x2b] = 0` against a missing reference write.
+
 ## 2026-09-03 — S3K driver oracle: tick 0 → tick 50; the DAC loop's entry write leaves the driver init
 
 - **Context:** `.worktrees/audio-s3k-tick0`, branch `bugfix/ai-s3k-oracle-tick0`,

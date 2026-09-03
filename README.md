@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 1 gameplay driver oracle is a full match:** normal sound effects now
+  read the special-effect voice bank the shipped driver's `SendVoiceTL` bug
+  points them at, closing the last divergence; the engine matches the
+  recorded driver over all 2,343 updates of the Green Hill gameplay window.
 - **S3K driver init ends where the ROM's does:** the DAC idle loop's entry
   write now opens the first interrupt window instead of the init service,
   moving the S3K oracle from tick 0 to tick 50, the SEGA chant, whose PCM

@@ -36,9 +36,10 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * {@link com.openggf.audio.driver.SmpsDriver} (via {@link
  * S1OpenGgfSfxAudioCapture}, the same host the committed SFX oracle uses) and
  * compares the resulting driver state. The gameplay oracle is not required to
- * be green: it is measurement, and {@link #currentFrontierIsTheFirstDivergence()}
- * pins the first known divergence so a regression there is visible without
- * papering over it. See docs/status/audio-frontier-log.md for the dated
+ * be green: it is measurement, and {@link #oracleMatchesTheWholeReference()}
+ * pins the current frontier so a regression there is visible without papering
+ * over it. As of 2026-09-03 that frontier is the end of the capture: all 2,343
+ * ticks match. See docs/status/audio-frontier-log.md for the dated
  * measurement this pins.
  */
 class TestS1GameplayAudioDriverOracle {
@@ -49,7 +50,7 @@ class TestS1GameplayAudioDriverOracle {
     Path temp;
 
     @Test
-    void currentFrontierIsTheFirstDivergence() throws Exception {
+    void oracleMatchesTheWholeReference() throws Exception {
         Path rom = requiredRom();
         Path reference = decompress(REFERENCE, temp.resolve("reference.jsonl"));
         Path openGgf = temp.resolve("openggf.jsonl");
@@ -60,21 +61,17 @@ class TestS1GameplayAudioDriverOracle {
 
         AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
 
-        // Pinned frontier (see docs/status/audio-frontier-log.md, 2026-09-03):
-        // the GHZ waterfall special SFX and the normal SFX that share its
-        // channels now coexist the way the ROM's separate track RAM does, in
-        // both directions and across the whole slot walk. Tick 1759 is the next
-        // divergence: an FM4 operator total-level write carries 132 in the
-        // reference and 4 in the engine, a volume difference inside the special
-        // SFX rather than a channel-ownership one. This is a measurement pin,
-        // not an expectation that the engine is correct -- when this frontier
-        // moves, update both this assertion and the frontier log entry together
-        // with the ROM routine that explains it.
-        assertNotEquals(AudioParityReport.Kind.MATCH, report.kind(),
-                "gameplay oracle is expected to diverge at the pinned frontier; "
-                        + "if it now matches, the frontier moved forward and this pin is stale");
-        assertEquals(AudioParityReport.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(1759, report.tickOrdinal());
+        // Frontier gate (see docs/status/audio-frontier-log.md, 2026-09-03):
+        // the last divergence was tick 1759, where the shipped FixBugs = 0
+        // SendVoiceTL reads v_special_voice_ptr for a normal SFX
+        // (docs/s1disasm/s1.sounddriver.asm:2391-2398) after the special SFX
+        // that installed it has finished. With that pointer modelled as the
+        // ROM's persistent global the whole 2,343-tick reference matches. This
+        // assertion is the frontier pin: it moved to MATCH, it was not removed.
+        // If a change makes this red again, record the new first divergence in
+        // the frontier log with the ROM routine that explains it.
+        assertEquals(AudioParityReport.Kind.MATCH, report.kind(), report::toHumanText);
+        assertEquals(2343, report.ticksCompared());
     }
 
     /**
