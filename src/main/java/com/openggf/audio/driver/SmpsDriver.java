@@ -2167,7 +2167,9 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      * when a second sound is admitted while the first is still playing, their
      * tracks interleave by channel rather than by admission order: a ring on
      * FM4 is serviced before a still-playing jump on PSG1, even though the jump
-     * started fourteen invocations earlier.
+     * started fourteen invocations earlier. The two special-SFX slots come
+     * after the whole SFX block (:258-268); see {@link
+     * SmpsSequencer#sfxSlotWalkOrder}.
      */
     private void serviceSfxByChannelRamOrder() {
         List<SmpsSequencer> pass = null;
@@ -2187,7 +2189,9 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                     walk = new ArrayList<>();
                 }
                 walk.add(new SlotWalkEntry(
-                        SmpsSequencer.sfxSlotWalkOrder(track), walk.size(),
+                        SmpsSequencer.sfxSlotWalkOrder(
+                                track, sequencer.isSpecialSfx()),
+                        walk.size(),
                         sequencer, track));
             }
         }

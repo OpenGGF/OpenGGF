@@ -61,20 +61,20 @@ class TestS1GameplayAudioDriverOracle {
         AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
 
         // Pinned frontier (see docs/status/audio-frontier-log.md, 2026-09-03):
-        // the GHZ waterfall special SFX now waits for FM4 through its whole
-        // tick-618 to tick-628 silent stretch, takes the channel over at tick
-        // 629 with its own voice, and plays write-for-write with the reference
-        // through tick 640. Tick 641 is the next divergence: a ring dispatched
-        // there goes to FM5 in the ROM while the engine emits nothing new for
-        // it. This is a measurement pin, not an expectation that the engine is
-        // correct -- when this frontier moves, update both this assertion and
-        // the frontier log entry together with the ROM routine that explains
-        // it.
+        // the GHZ waterfall special SFX now waits for FM4 while another sound
+        // holds it, takes the channel over with its own voice, and is serviced
+        // after every normal SFX slot the way UpdateMusic walks them. Tick 933
+        // is the next divergence: FM4 is released back to music there, clearing
+        // the music override, where the ROM hands it to the special track
+        // again. This is a measurement pin, not an expectation that the engine
+        // is correct -- when this frontier moves, update both this assertion
+        // and the frontier log entry together with the ROM routine that
+        // explains it.
         assertNotEquals(AudioParityReport.Kind.MATCH, report.kind(),
                 "gameplay oracle is expected to diverge at the pinned frontier; "
                         + "if it now matches, the frontier moved forward and this pin is stale");
-        assertEquals(AudioParityReport.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(641, report.tickOrdinal());
+        assertEquals(AudioParityReport.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(933, report.tickOrdinal());
     }
 
     /**
