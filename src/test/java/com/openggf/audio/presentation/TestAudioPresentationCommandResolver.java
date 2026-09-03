@@ -19,6 +19,8 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.LoadedSmpsMusic;
+import com.openggf.audio.smps.SmpsLoadReadiness;
 import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.session.SmpsSessionTestSupport;
@@ -91,6 +93,32 @@ class TestAudioPresentationCommandResolver {
                 ((PushMusicOverride) commands.get(1)).music().sourceDescriptor());
         assertEquals(AudioSourceDescriptor.fallbackMusic(0x71),
                 ((ReplaceMusic) commands.get(2)).music().sourceDescriptor());
+    }
+
+    @Test
+    void donorMusicCannotImportItsLoadReadinessIntoTheHostSession() {
+        Fixture fixture = fixture();
+        fixture.sources.donorMusic = music(0x91);
+        fixture.sources.musicReadiness = new SmpsLoadReadiness() {
+            @Override public boolean immediate() { return false; }
+            @Override public int compressedByteCount() { return 1; }
+            @Override public int workUnitCount() { return 1; }
+            @Override public long minimumTStates(Context context) { return 1; }
+            @Override public Work begin(Context context) {
+                throw new AssertionError("donor readiness must not begin");
+            }
+            @Override public String provenance() { return "poison-donor"; }
+        };
+
+        fixture.resolver.submit(new AudioCommand.PlayMusic(
+                0x91, AudioCommand.MusicRoute.DONOR_SMPS, true, "s2"));
+
+        PushMusicOverride command = assertInstanceOf(
+                PushMusicOverride.class, drain(fixture.queue).getFirst());
+        AudioPresentationCommand.SmpsVoiceDescriptor voice = assertInstanceOf(
+                AudioPresentationCommand.SmpsVoiceDescriptor.class,
+                command.music().voiceDescriptor());
+        assertTrue(voice.activation().readiness().immediate());
     }
 
     @Test
@@ -1216,6 +1244,7 @@ class TestAudioPresentationCommandResolver {
         boolean baseSpecial;
         boolean baseContinuous;
         boolean throwMusic;
+        SmpsLoadReadiness musicReadiness;
         boolean throwSfx;
         Runnable afterBaseSfxLoad;
         Runnable afterDonorSfxLoad;
@@ -1272,6 +1301,16 @@ class TestAudioPresentationCommandResolver {
                                         "seeded music source failure");
                             }
                             return capturedMusic;
+                        }
+
+                        @Override
+                        public LoadedSmpsMusic loadMusicWithReadiness(
+                                int musicId) {
+                            AbstractSmpsData music = loadMusic(musicId);
+                            return music == null ? null : new LoadedSmpsMusic(
+                                    music, musicReadiness == null
+                                            ? SmpsLoadReadiness.immediatePlan()
+                                            : musicReadiness);
                         }
 
                         @Override

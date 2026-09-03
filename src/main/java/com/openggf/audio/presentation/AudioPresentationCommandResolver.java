@@ -20,6 +20,7 @@ import com.openggf.audio.presentation.AudioPresentationCommand.StopRawPcm;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.LoadedSmpsMusic;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -550,11 +551,11 @@ public final class AudioPresentationCommandResolver {
                 factory.findRegisteredSmpsMusicAsset(
                         key, source.dependencyGeneration());
         if (entry == null) {
-            AbstractSmpsData data = Objects.requireNonNull(
-                    loadMusic(source, musicId),
+            LoadedSmpsMusic loaded = Objects.requireNonNull(
+                    loadMusic(route, source, musicId),
                     "loader returned no SMPS data");
             entry = factory.registerSmpsMusicAsset(
-                    key, source.dependencyGeneration(), data,
+                    key, source.dependencyGeneration(), loaded,
                     requireDac(route, source),
                     requireConfig(route, source));
         }
@@ -685,10 +686,14 @@ public final class AudioPresentationCommandResolver {
         AbstractSmpsData load();
     }
 
-    private static AbstractSmpsData loadMusic(
-            SourceAccess source, int musicId) {
-        return source.loader() != null
-                ? source.loader().loadMusic(musicId) : null;
+    private static LoadedSmpsMusic loadMusic(
+            SmpsAssetKey.Route route, SourceAccess source, int musicId) {
+        if (source.loader() == null) {
+            return null;
+        }
+        return route == SmpsAssetKey.Route.BASE_MUSIC
+                ? source.loader().loadMusicWithReadiness(musicId)
+                : LoadedSmpsMusic.immediate(source.loader().loadMusic(musicId));
     }
 
     private static AbstractSmpsData loadSfx(

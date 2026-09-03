@@ -35,6 +35,14 @@ public final class Sonic2SmpsCompatibilityPolicy
     }
 
     @Override
+    public SmpsWriteProgram beginMusicLoad() {
+        // s2.sounddriver.asm zBGMLoad enters zInitMusicPlayback before
+        // OptimiseDriver=0 zSaxmanDec: 6 key-offs, 192 register clears and
+        // four PSG silences. FixDriverBugs=0 is the shipped path.
+        return DELEGATE.stopAll();
+    }
+
+    @Override
     public SmpsWriteProgram activateMusic(SmpsMusicActivation activation) {
         return DELEGATE.activateMusic(activation);
     }

@@ -6,6 +6,7 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsLoadReadiness;
 import com.openggf.audio.session.SmpsMusicActivation;
 import com.openggf.audio.session.SmpsWriteProgram;
 
@@ -171,11 +172,29 @@ public record SmpsDriverSnapshot(
     /** Deferred physical activation/reassertion for the next real service. */
     public record PendingService(
             SmpsMusicActivation activation,
+            SmpsDriverSnapshot readyLogical,
             SmpsWriteProgram firstServiceWrites,
-            SmpsSourceDescriptor selectedDacSource) {
+            SmpsSourceDescriptor selectedDacSource,
+            String readinessProvenance,
+            long remainingTStates,
+            SmpsLoadReadiness.Context readinessContext) {
+        public PendingService(
+                SmpsMusicActivation activation,
+                SmpsWriteProgram firstServiceWrites,
+                SmpsSourceDescriptor selectedDacSource) {
+            this(activation, null, firstServiceWrites, selectedDacSource,
+                    SmpsLoadReadiness.immediatePlan().provenance(
+                            new SmpsLoadReadiness.Context(
+                                    SmpsSequencer.Region.NTSC, false)),
+                    0, new SmpsLoadReadiness.Context(
+                            SmpsSequencer.Region.NTSC, false));
+        }
         public PendingService {
             Objects.requireNonNull(firstServiceWrites,
                     "firstServiceWrites");
+            Objects.requireNonNull(readinessProvenance,
+                    "readinessProvenance");
+            Objects.requireNonNull(readinessContext, "readinessContext");
         }
     }
 

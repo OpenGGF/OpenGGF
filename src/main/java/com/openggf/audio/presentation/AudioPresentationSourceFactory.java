@@ -27,6 +27,7 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.LoadedSmpsMusic;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSequencerHost;
 import com.openggf.audio.synth.ChipWriteObserver;
@@ -656,6 +657,29 @@ public final class AudioPresentationSourceFactory
                 SmpsSfxPlaybackPolicy.defaults(false));
     }
 
+    public SmpsAssetCatalog.ProgramEntry registerSmpsMusicAsset(
+            SmpsAssetKey key,
+            long dependencyGeneration,
+            LoadedSmpsMusic loaded,
+            DacData dac,
+            SmpsSequencerConfig config) {
+        SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
+        validateMusicKey(resolvedKey);
+        Objects.requireNonNull(loaded, "loaded");
+        SmpsAssetCatalog.ProgramEntry entry = assetCatalog.register(
+                new SmpsAssetCatalog.ProgramKey(
+                        resolvedKey, dependencyGeneration),
+                loaded.data(), dac, config,
+                SmpsSfxPlaybackPolicy.defaults(false), loaded.readiness());
+        SmpsAssetCatalog.ProgramEntry previous = sourcesByDescriptor.putIfAbsent(
+                entry.sourceDescriptor(), entry);
+        if (previous != null && previous != entry) {
+            throw new IllegalStateException("SMPS source descriptor collision for "
+                    + entry.sourceDescriptor());
+        }
+        return entry;
+    }
+
     public SmpsAssetCatalog.ProgramEntry findRegisteredSmpsMusicAsset(
             SmpsAssetKey key, long dependencyGeneration) {
         SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
@@ -939,6 +963,18 @@ public final class AudioPresentationSourceFactory
         return cached.dac();
     }
 
+    @Override
+    public com.openggf.audio.smps.SmpsLoadReadiness
+            resolveSmpsLoadReadiness(SmpsSourceDescriptor source) {
+        SmpsAssetCatalog.ProgramEntry cached = sourcesByDescriptor.get(
+                Objects.requireNonNull(source, "source"));
+        if (cached == null) {
+            throw new IllegalStateException(
+                    "no cached SMPS load readiness for " + source);
+        }
+        return cached.readiness();
+    }
+
     public DecodedPcm registerUnsigned8Mono(
             String assetId, byte[] pcm, int sourceRate) {
         return settings.pcmCache().registerUnsigned8Mono(
@@ -1048,7 +1084,8 @@ public final class AudioPresentationSourceFactory
                 SmpsLogicalTransitionPolicies.forConfig(
                         source.staticConfig()),
                 new SmpsDacSelection(
-                        source.sourceDescriptor(), source.dac()));
+                        source.sourceDescriptor(), source.dac()),
+                source.readiness());
     }
 
     private SmpsSequencer detachedSequencer(

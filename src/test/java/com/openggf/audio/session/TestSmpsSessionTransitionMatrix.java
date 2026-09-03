@@ -7,6 +7,8 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsLoadReadiness;
+import com.openggf.game.sonic2.audio.Sonic2SmpsCompatibilityPolicy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -118,6 +120,183 @@ class TestSmpsSessionTransitionMatrix {
         assertSame(logical, actual.logicalDriverForTesting());
         assertEquals(expectedWrites.events(), actualWrites.events());
         assertArrayEquals(expectedPcm, actualPcm);
+    }
+
+    @Test
+    void delayedSonic2MusicSilencesAtLoadStartAndServicesOnlyWhenReady() {
+        SmpsSessionTestFixtures.RecordingObserver writes =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsPhysicalPolicy policy = Sonic2SmpsCompatibilityPolicy.INSTANCE;
+        SmpsPhysicalDevice.Settings settings = SmpsSessionTestFixtures.settings();
+        SmpsDriverSession session = new SmpsDriverSession(
+                settings, policy, writes,
+                new SmpsSessionProfileFingerprint(
+                        "S2", 19, policy.identity(), settings),
+                SmpsDriverSessionConfiguration.DEFAULT);
+        session.install();
+        PreparedSmpsMusicActivation base = activation(
+                0x81, SourcePolicy.S2, false);
+        PreparedSmpsMusicActivation delayed = new PreparedSmpsMusicActivation(
+                base.activation(), base.incomingMusic(), base.logicalPolicy(),
+                base.selectedDac(), twoPresentationReadiness());
+
+        writes.clear();
+        session.queueActivation(delayed);
+        assertEquals(202, writes.events().size());
+        assertTrue(session.blocksForwardRequestConsumption());
+        assertTrue(session.captureLogicalSnapshot().sequencers().isEmpty());
+        assertEquals(SmpsServiceOutcome.LOAD_PENDING, session.serviceForward());
+        assertTrue(session.blocksForwardRequestConsumption());
+        assertTrue(session.captureLogicalSnapshot().sequencers().isEmpty());
+        assertEquals(SmpsServiceOutcome.ORDINARY, session.serviceForward());
+        assertFalse(session.blocksForwardRequestConsumption());
+        assertFalse(session.hasPendingActivation());
+        assertEquals(5, session.captureLogicalSnapshot().palUpdateCounter());
+    }
+
+    @Test
+    void delayedLoadRollbackRestoresExactRemainingWork() {
+        SmpsSessionTestFixtures.RecordingObserver writes =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(writes);
+        session.install();
+        PreparedSmpsMusicActivation base = activation(
+                0x81, SourcePolicy.S2, false);
+        session.queueActivation(new PreparedSmpsMusicActivation(
+                base.activation(), base.incomingMusic(), base.logicalPolicy(),
+                base.selectedDac(), twoPresentationReadiness()));
+
+        SmpsDriverSession.LiveMutationToken mutation =
+                session.captureLiveMutation();
+        assertEquals(SmpsServiceOutcome.LOAD_PENDING,
+                session.serviceForward());
+        session.rollbackLiveMutation(mutation);
+
+        assertEquals(SmpsServiceOutcome.LOAD_PENDING,
+                session.serviceForward());
+        assertEquals(SmpsServiceOutcome.ORDINARY,
+                session.serviceForward());
+    }
+
+    @Test
+    void delayedLoadRewindRestoresExactRemainingWorkAndProvenance() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        PreparedSmpsMusicActivation base = activation(
+                0x81, SourcePolicy.S2, false);
+        SmpsLoadReadiness readiness = twoPresentationReadiness();
+        session.queueActivation(new PreparedSmpsMusicActivation(
+                base.activation(), base.incomingMusic(), base.logicalPolicy(),
+                base.selectedDac(), readiness));
+        SmpsDriverSessionSnapshot sessionSnapshot = session.captureSnapshot();
+        SmpsDriverSnapshot logicalSnapshot =
+                session.captureLogicalSnapshot();
+        assertEquals(SmpsServiceOutcome.LOAD_PENDING,
+                session.serviceForward());
+
+        SmpsDriverSession.PreparedRestore restore = session.prepareRestore(
+                sessionSnapshot, logicalSnapshot,
+                new SmpsDriverSession.DacDependencyResolver() {
+                    @Override public com.openggf.audio.smps.DacData resolve(
+                            SmpsSourceDescriptor source) {
+                        return base.selectedDac().data();
+                    }
+                    @Override public SmpsLoadReadiness resolveReadiness(
+                            SmpsSourceDescriptor source) {
+                        return readiness;
+                    }
+                });
+        session.commitRestore(restore);
+
+        assertEquals(SmpsServiceOutcome.LOAD_PENDING,
+                session.serviceForward());
+        assertEquals(SmpsServiceOutcome.ORDINARY,
+                session.serviceForward());
+    }
+
+    @Test
+    void delayedLoadStartSilenceRollsBackAndRetryPublishesExactlyOnce() {
+        SmpsSessionTestFixtures.RecordingObserver writes =
+                new SmpsSessionTestFixtures.RecordingObserver();
+        SmpsPhysicalPolicy policy = Sonic2SmpsCompatibilityPolicy.INSTANCE;
+        SmpsPhysicalDevice.Settings settings = SmpsSessionTestFixtures.settings();
+        SmpsDriverSession session = new SmpsDriverSession(
+                settings, policy, writes,
+                new SmpsSessionProfileFingerprint(
+                        "S2", 19, policy.identity(), settings),
+                SmpsDriverSessionConfiguration.DEFAULT);
+        session.install();
+        PreparedSmpsMusicActivation base = activation(
+                0x81, SourcePolicy.S2, false);
+        PreparedSmpsMusicActivation delayed = new PreparedSmpsMusicActivation(
+                base.activation(), base.incomingMusic(), base.logicalPolicy(),
+                base.selectedDac(), twoPresentationReadiness());
+        writes.clear();
+
+        SmpsDriverSession.LiveMutationToken rejected =
+                session.captureLiveMutation();
+        session.queueActivation(delayed);
+        session.rollbackLiveMutation(rejected);
+        assertTrue(writes.events().isEmpty());
+        assertFalse(session.blocksForwardRequestConsumption());
+
+        SmpsDriverSession.LiveMutationToken retry =
+                session.captureLiveMutation();
+        session.queueActivation(delayed);
+        session.prepareLiveMutationCommit(retry);
+        session.commitLiveMutation(retry);
+        session.publishCommittedDiagnostics();
+        assertEquals(202, writes.events().size());
+        assertTrue(session.blocksForwardRequestConsumption());
+    }
+
+    @Test
+    void globalStopSupersedesDelayedLoadWithoutActivation() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        PreparedSmpsMusicActivation base = activation(
+                0x81, SourcePolicy.S2, false);
+        session.queueActivation(new PreparedSmpsMusicActivation(
+                base.activation(), base.incomingMusic(), base.logicalPolicy(),
+                base.selectedDac(), twoPresentationReadiness()));
+
+        session.retainGlobalStop();
+
+        assertEquals(SmpsServiceOutcome.GLOBAL_STOP_CONSUMED,
+                session.serviceForward());
+        assertFalse(session.blocksForwardRequestConsumption());
+        assertTrue(session.captureLogicalSnapshot().sequencers().isEmpty());
+    }
+
+    private static SmpsLoadReadiness twoPresentationReadiness() {
+        return new SmpsLoadReadiness() {
+            @Override public boolean immediate() { return false; }
+            @Override public int compressedByteCount() { return 1; }
+            @Override public int workUnitCount() { return 1; }
+            @Override public long minimumTStates(Context context) { return 2; }
+            @Override public String provenance() { return "test-two-step"; }
+            @Override public Work begin(Context context) { return countdown(2); }
+            @Override public Work resume(Context context, long remaining) {
+                return countdown(remaining);
+            }
+        };
+    }
+
+    private static SmpsLoadReadiness.Work countdown(long initial) {
+        return new SmpsLoadReadiness.Work() {
+            private long remaining = initial;
+            @Override public boolean ready() { return remaining == 0; }
+            @Override public boolean advanceOnePresentation() {
+                if (remaining > 0) remaining--;
+                return ready();
+            }
+            @Override public long remainingTStates() { return remaining; }
+            @Override public SmpsLoadReadiness.Work copy() {
+                return countdown(remaining);
+            }
+        };
     }
 
     private static void assertMusicTransition(

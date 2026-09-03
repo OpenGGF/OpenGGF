@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.AbstractSmpsLoader;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.LoadedSmpsMusic;
 import com.openggf.data.Rom;
 import com.openggf.data.compression.DcmDecoder;
 import com.openggf.data.compression.SaxmanDecompressor;
@@ -178,6 +179,12 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
     }
 
     public AbstractSmpsData loadMusic(int musicId) {
+        LoadedSmpsMusic loaded = loadMusicWithReadiness(musicId);
+        return loaded == null ? null : loaded.data();
+    }
+
+    @Override
+    public LoadedSmpsMusic loadMusicWithReadiness(int musicId) {
         int offset = findMusicOffset(musicId);
         if (offset == -1) {
             LOGGER.fine("Music ID " + Integer.toHexString(musicId) + " not in map/flags.");
@@ -186,9 +193,14 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
 
         // The music ID itself contains flags (per Sonic Retro documentation):
         // bit 5 (0x20): Compression - 0=Saxman compressed, 0x20=uncompressed
-        boolean uncompressed = (musicId & 0x20) != 0;
+        boolean uncompressed = (musicId & 0x20) != 0
+                || offset == UNCOMPRESSED_EXTRA_LIFE_ADDR
+                || offset == UNCOMPRESSED_GAME_OVER_ADDR
+                || offset == UNCOMPRESSED_GOT_EMERALD_ADDR
+                || offset == UNCOMPRESSED_CREDITS_ADDR;
 
         AbstractSmpsData data;
+        byte[] compressed = null;
         if (uncompressed) {
             // For uncompressed data, the Z80 address is the low 16 bits of the ROM offset.
             // Per Sonic Retro: Z80 pointers in uncompressed data are bank-relative.
@@ -200,7 +212,8 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
             data = loadSmpsUncompressed(offset, z80Addr);
         } else {
             // Compressed music is decompressed and loaded at Z80 Z80_COMPRESSED_LOAD_ADDR
-            data = loadSmps(offset, Z80_COMPRESSED_LOAD_ADDR);
+            compressed = readCompressedMusic(offset);
+            data = loadSmps(compressed, offset, Z80_COMPRESSED_LOAD_ADDR);
         }
 
         if (data instanceof Sonic2SmpsData) {
@@ -211,7 +224,15 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
             // bit 6 (0x40): disable PAL music speed fix
             data.setPalSpeedupDisabled((musicId & 0x40) != 0);
         }
-        return data;
+        if (data == null) {
+            return null;
+        }
+        return new LoadedSmpsMusic(data, compressed == null
+                ? com.openggf.audio.smps.SmpsLoadReadiness.immediatePlan()
+                : new Sonic2SaxmanLoadReadiness(compressed,
+                        data.getChannels(), data.getPsgChannels(),
+                        (offset & 0x8000) != 0,
+                        data.isPalSpeedupDisabled()));
     }
 
     /**
@@ -405,13 +426,34 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
                 return null;
             }
 
-            byte[] decompressed = decompressor.decompress(compressed, true);
-            LOGGER.info("Decompressed SMPS at " + Integer.toHexString(offset) + ". Size: " + decompressed.length);
-            return new Sonic2SmpsData(decompressed, z80Addr);
+            return loadSmps(compressed, offset, z80Addr);
         } catch (IOException | RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Failed to load SMPS at " + Integer.toHexString(offset), e);
             return null;
         }
+    }
+
+    private byte[] readCompressedMusic(int offset) {
+        try {
+            int size = (rom.readByte(offset) & 0xff)
+                    | ((rom.readByte(offset + 1) & 0xff) << 8);
+            int available = (int) Math.max(0L, rom.getSize() - offset - 2L);
+            return readCompressed(offset, size, available);
+        } catch (IOException failure) {
+            LOGGER.log(Level.SEVERE, "Failed to read compressed music", failure);
+            return null;
+        }
+    }
+
+    private AbstractSmpsData loadSmps(
+            byte[] compressed, int offset, int z80Addr) {
+        if (compressed == null) {
+            return null;
+        }
+        byte[] decompressed = decompressor.decompress(compressed, true);
+        LOGGER.info("Decompressed SMPS at " + Integer.toHexString(offset)
+                + ". Size: " + decompressed.length);
+        return new Sonic2SmpsData(decompressed, z80Addr);
     }
 
     /**

@@ -15,6 +15,11 @@ public interface SmpsPhysicalPolicy {
 
     SmpsWriteProgram stopAll();
 
+    /** ROM work performed when a non-immediate music load begins. */
+    default SmpsWriteProgram beginMusicLoad() {
+        return SmpsWriteProgram.EMPTY;
+    }
+
     /** Transiently silences all three tone channels and the noise channel. */
     default SmpsWriteProgram silenceAllPsg() {
         return SmpsWriteProgram.SILENCE_ALL_PSG;

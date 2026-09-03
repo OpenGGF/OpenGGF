@@ -9,6 +9,7 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsLoadReadiness;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.VirtualSynthesizer;
 
@@ -28,6 +29,11 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     public interface DacDependencyResolver {
         DacData resolve(SmpsSourceDescriptor source);
+
+        default SmpsLoadReadiness resolveReadiness(
+                SmpsSourceDescriptor source) {
+            return SmpsLoadReadiness.immediatePlan();
+        }
     }
 
     public record PreparedRestore(
@@ -59,11 +65,17 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     public record PreparedPendingService(
             SmpsMusicActivation activation,
+            SmpsDriverSnapshot readyLogical,
             SmpsWriteProgram firstServiceWrites,
-            SmpsDacSelection selectedDac) {
+            SmpsDacSelection selectedDac,
+            SmpsLoadReadiness readiness,
+            SmpsLoadReadiness.Context readinessContext,
+            long remainingTStates) {
         public PreparedPendingService {
             Objects.requireNonNull(firstServiceWrites,
                     "firstServiceWrites");
+            Objects.requireNonNull(readiness, "readiness");
+            Objects.requireNonNull(readinessContext, "readinessContext");
         }
     }
 
@@ -83,13 +95,44 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
     }
 
-    private record PendingService(
-            SmpsMusicActivation activation,
-            SmpsWriteProgram firstServiceWrites,
-            SmpsDacSelection selectedDac) {
-        private PendingService {
-            Objects.requireNonNull(firstServiceWrites,
-                    "firstServiceWrites");
+    private static final class PendingService {
+        private final SmpsMusicActivation activation;
+        private final SmpsDriverSnapshot logical;
+        private final SmpsWriteProgram firstServiceWrites;
+        private final SmpsDacSelection selectedDac;
+        private final SmpsLoadReadiness.Work readiness;
+        private final SmpsLoadReadiness plan;
+        private final SmpsLoadReadiness.Context readinessContext;
+
+        private PendingService(
+                SmpsMusicActivation activation,
+                SmpsDriverSnapshot logical,
+                SmpsWriteProgram firstServiceWrites,
+                SmpsDacSelection selectedDac,
+                SmpsLoadReadiness plan,
+                SmpsLoadReadiness.Context readinessContext,
+                SmpsLoadReadiness.Work readiness) {
+            this.activation = activation;
+            this.logical = logical;
+            this.firstServiceWrites = Objects.requireNonNull(
+                    firstServiceWrites, "firstServiceWrites");
+            this.selectedDac = selectedDac;
+            this.readiness = Objects.requireNonNull(readiness, "readiness");
+            this.plan = Objects.requireNonNull(plan, "plan");
+            this.readinessContext = Objects.requireNonNull(
+                    readinessContext, "readinessContext");
+        }
+
+        SmpsMusicActivation activation() { return activation; }
+        SmpsDriverSnapshot logical() { return logical; }
+        SmpsWriteProgram firstServiceWrites() { return firstServiceWrites; }
+        SmpsDacSelection selectedDac() { return selectedDac; }
+        SmpsLoadReadiness.Work readiness() { return readiness; }
+
+        PendingService copy() {
+            return new PendingService(activation, logical,
+                    firstServiceWrites, selectedDac, plan,
+                    readinessContext, readiness.copy());
         }
     }
 
@@ -142,7 +185,8 @@ public final class SmpsDriverSession implements AutoCloseable {
                     SmpsDriverSession.this.pendingGlobalCommand;
             selectedDacSource =
                     SmpsDriverSession.this.selectedDacSource;
-            pendingService = SmpsDriverSession.this.pendingService;
+            pendingService = SmpsDriverSession.this.pendingService == null
+                    ? null : SmpsDriverSession.this.pendingService.copy();
             overrides = Arrays.copyOf(overrideStack,
                     SmpsDriverSession.this.overrideCount);
             this.overrideCount = SmpsDriverSession.this.overrideCount;
@@ -564,6 +608,13 @@ public final class SmpsDriverSession implements AutoCloseable {
 
         PendingService service = pendingService;
         if (service != null) {
+            if (!service.readiness().advanceOnePresentation()) {
+                return SmpsServiceOutcome.LOAD_PENDING;
+            }
+            if (service.logical() != null) {
+                restoreLogicalWithoutWrites(service.logical());
+                applyCurrentLogicalControls();
+            }
             withPort(driverIdentity, port -> {
                 if (service.selectedDac() != null) {
                     port.selectDac(service.selectedDac());
@@ -619,11 +670,25 @@ public final class SmpsDriverSession implements AutoCloseable {
                 resolved.logicalPolicy().prepareMusicStart(
                         driver.captureSnapshot(),
                         resolved.incomingMusic());
-        restoreLogicalWithoutWrites(transition.logical());
-        applyCurrentLogicalControls();
+        SmpsLoadReadiness.Context context = new SmpsLoadReadiness.Context(
+                driver.captureSnapshot().region(), speedShoesEnabled);
+        SmpsLoadReadiness.Work readiness = resolved.readiness().begin(context);
+        if (resolved.readiness().immediate()) {
+            restoreLogicalWithoutWrites(transition.logical());
+            applyCurrentLogicalControls();
+        } else {
+            withPort(driverIdentity, port -> {
+                applyProgram(port, policy.beginMusicLoad());
+                return null;
+            });
+            restoreLogicalWithoutWrites(emptyLogicalSnapshot(
+                    driver.captureSnapshot()));
+        }
         pendingService = new PendingService(
-                resolved.activation(), transition.firstServiceWrites(),
-                resolved.selectedDac());
+                resolved.activation(), resolved.readiness().immediate()
+                        ? null : transition.logical(),
+                transition.firstServiceWrites(), resolved.selectedDac(),
+                resolved.readiness(), context, readiness);
     }
 
     public void applyCommand(SmpsSessionCommand command) {
@@ -1056,6 +1121,13 @@ public final class SmpsDriverSession implements AutoCloseable {
                 && pendingService.activation() != null;
     }
 
+    /** True while ROM-owned load work prevents mailbox/request service. */
+    public boolean blocksForwardRequestConsumption() {
+        requireInstalled();
+        return pendingService != null
+                && !pendingService.readiness().ready();
+    }
+
     int serviceInvocationCountForTesting() {
         requireActive();
         return serviceInvocationCount;
@@ -1283,8 +1355,14 @@ public final class SmpsDriverSession implements AutoCloseable {
                             driver.captureSnapshot(), saved.logical());
             restoreLogicalWithoutWrites(transition.logical());
             pendingService = new PendingService(
-                    null, transition.firstServiceWrites(),
-                    saved.selectedDac());
+                    null, null, transition.firstServiceWrites(),
+                    saved.selectedDac(), SmpsLoadReadiness.immediatePlan(),
+                    new SmpsLoadReadiness.Context(
+                            driver.captureSnapshot().region(),
+                            speedShoesEnabled), SmpsLoadReadiness.immediatePlan()
+                            .begin(new SmpsLoadReadiness.Context(
+                                    driver.captureSnapshot().region(),
+                                    speedShoesEnabled)));
         }
         applyCurrentLogicalControls();
     }
@@ -1506,16 +1584,29 @@ public final class SmpsDriverSession implements AutoCloseable {
                                 resolver.resolve(
                                         pending.selectedDacSource()),
                                 "resolved pending-service DAC dependency"));
+        SmpsLoadReadiness readiness = pending.activation() == null
+                ? SmpsLoadReadiness.immediatePlan()
+                : resolver.resolveReadiness(pending.activation().source());
+        if (!readiness.provenance(pending.readinessContext()).equals(
+                pending.readinessProvenance())) {
+            throw new IllegalStateException(
+                    "SMPS load-readiness provenance mismatch");
+        }
         return new PreparedPendingService(
-                pending.activation(), pending.firstServiceWrites(),
-                selected);
+                pending.activation(), pending.readyLogical(),
+                pending.firstServiceWrites(), selected,
+                readiness,
+                pending.readinessContext(), pending.remainingTStates());
     }
 
     private static PendingService materializePendingService(
             PreparedPendingService pending) {
         return pending == null ? null : new PendingService(
-                pending.activation(), pending.firstServiceWrites(),
-                pending.selectedDac());
+                pending.activation(), pending.readyLogical(),
+                pending.firstServiceWrites(), pending.selectedDac(),
+                pending.readiness(), pending.readinessContext(),
+                pending.readiness().resume(pending.readinessContext(),
+                        pending.remainingTStates()));
     }
 
     private static SmpsDriverSnapshot.PendingService
@@ -1523,9 +1614,13 @@ public final class SmpsDriverSession implements AutoCloseable {
         return pending == null ? null
                 : new SmpsDriverSnapshot.PendingService(
                         pending.activation(),
+                        pending.logical(),
                         pending.firstServiceWrites(),
                         pending.selectedDac() == null
-                                ? null : pending.selectedDac().source());
+                                ? null : pending.selectedDac().source(),
+                        pending.plan.provenance(pending.readinessContext),
+                        pending.readiness().remainingTStates(),
+                        pending.readinessContext);
     }
 
     private static SmpsDriverSnapshot withoutSessionMetadata(

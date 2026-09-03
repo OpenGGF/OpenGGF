@@ -2,6 +2,7 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLoadReadiness;
 
 public interface AudioPresentationDependencyResolver {
     interface DiagnosticTransaction {
@@ -38,6 +39,11 @@ public interface AudioPresentationDependencyResolver {
     default DacData resolveDac(SmpsSourceDescriptor source) {
         throw new IllegalStateException(
                 "no cached DAC dependency for " + source);
+    }
+
+    default SmpsLoadReadiness resolveSmpsLoadReadiness(
+            SmpsSourceDescriptor source) {
+        return SmpsLoadReadiness.immediatePlan();
     }
 
     default PresentationVoice recreateVoice(

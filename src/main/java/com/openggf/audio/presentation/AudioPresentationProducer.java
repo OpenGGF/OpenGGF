@@ -607,7 +607,20 @@ public final class AudioPresentationProducer {
             }
             preparedSession = smpsSession.prepareRestore(
                     snapshot.smpsSession(), snapshot.smpsLogical(),
-                    resolver::resolveDac);
+                    new SmpsDriverSession.DacDependencyResolver() {
+                        @Override
+                        public com.openggf.audio.smps.DacData resolve(
+                                com.openggf.audio.rewind.SmpsSourceDescriptor source) {
+                            return resolver.resolveDac(source);
+                        }
+
+                        @Override
+                        public com.openggf.audio.smps.SmpsLoadReadiness
+                                resolveReadiness(
+                                com.openggf.audio.rewind.SmpsSourceDescriptor source) {
+                            return resolver.resolveSmpsLoadReadiness(source);
+                        }
+                    });
         }
         AudioVoiceRegistry.PreparedSnapshotRestore preparedRegistry =
                 registry.prepareSnapshotRestore(snapshot, resolver);
@@ -881,8 +894,9 @@ public final class AudioPresentationProducer {
         AudioCommandTimeline.PreparedAppend timelineAppend = null;
         Runnable parityCommit = null;
         AudioPresentationForwardService.CommittedReceipt requestReceipt = null;
+        boolean loadBlocked = smpsSession.blocksForwardRequestConsumption();
         try {
-            if (forwardService != null) {
+            if (!loadBlocked && forwardService != null) {
                 forwardBoundary = forwardService.beginForwardBoundary();
                 if (forwardResolver == null) {
                     forwardBoundary.service(forwardCommandSink);
@@ -933,9 +947,11 @@ public final class AudioPresentationProducer {
             }
             sessionMutation = smpsSession.captureLiveMutation();
             registryMutation = registry.captureLiveMutation();
-            commandBatch = commands.capturePendingBatch();
-            commands.applyPendingBatch(commandBatch,
-                    this::applyResolvedSessionCommand);
+            if (!loadBlocked) {
+                commandBatch = commands.capturePendingBatch();
+                commands.applyPendingBatch(commandBatch,
+                        this::applyResolvedSessionCommand);
+            }
             if (requestBatch != null) {
                 requestOutcome = requestBatch.apply();
                 forwardBoundary.applyOutcome(requestOutcome);
@@ -949,8 +965,13 @@ public final class AudioPresentationProducer {
                     ? mixSessionForwardResampled(stereoFrames)
                     : mixSessionForward(stereoFrames);
             registry.endRendering();
-            prepareSessionCommandCommit(
-                    commandBatch, registryMutation, sessionMutation);
+            if (commandBatch != null) {
+                prepareSessionCommandCommit(
+                        commandBatch, registryMutation, sessionMutation);
+            } else {
+                registry.prepareLiveMutationCommit(registryMutation);
+                smpsSession.prepareLiveMutationCommit(sessionMutation);
+            }
             if (requestBatch != null) {
                 requestBatch.prepareCommit();
                 forwardBoundary.prepareCommit();
@@ -966,8 +987,10 @@ public final class AudioPresentationProducer {
             registryCommitted = true;
             smpsSession.commitLiveMutation(sessionMutation);
             sessionCommitted = true;
-            commands.commitPendingBatch(commandBatch);
-            commandsCommitted = true;
+            if (commandBatch != null) {
+                commands.commitPendingBatch(commandBatch);
+                commandsCommitted = true;
+            }
             if (requestBatch != null) {
                 requestBatch.commit();
                 timelineAppend.commit();

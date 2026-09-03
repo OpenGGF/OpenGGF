@@ -8,6 +8,7 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsProgramView;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.smps.SmpsLoadReadiness;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -70,6 +71,7 @@ final class SmpsAssetCatalog {
         private final int trackCount;
         private final SmpsSfxPlaybackPolicy sfxPolicy;
         private final AbstractSmpsData sourceIdentity;
+        private final SmpsLoadReadiness readiness;
 
         private ProgramEntry(
                 AbstractSmpsData program,
@@ -79,7 +81,8 @@ final class SmpsAssetCatalog {
                 int assetId,
                 int trackCount,
                 SmpsSfxPlaybackPolicy sfxPolicy,
-                AbstractSmpsData sourceIdentity) {
+                AbstractSmpsData sourceIdentity,
+                SmpsLoadReadiness readiness) {
             this.program = Objects.requireNonNull(program, "program");
             this.programView = Objects.requireNonNull(
                     programView, "programView");
@@ -92,6 +95,7 @@ final class SmpsAssetCatalog {
             this.sfxPolicy = Objects.requireNonNull(sfxPolicy, "sfxPolicy");
             this.sourceIdentity = Objects.requireNonNull(
                     sourceIdentity, "sourceIdentity");
+            this.readiness = Objects.requireNonNull(readiness, "readiness");
         }
 
         AbstractSmpsData program() {
@@ -129,6 +133,8 @@ final class SmpsAssetCatalog {
         SmpsSfxPlaybackPolicy sfxPolicy() {
             return sfxPolicy;
         }
+
+        SmpsLoadReadiness readiness() { return readiness; }
 
         private boolean hasSourceIdentity(AbstractSmpsData source) {
             return sourceIdentity == source;
@@ -189,7 +195,8 @@ final class SmpsAssetCatalog {
             SmpsSequencerConfig config,
             boolean specialSfx) {
         return register(key, data, dac, config,
-                SmpsSfxPlaybackPolicy.defaults(specialSfx));
+                SmpsSfxPlaybackPolicy.defaults(specialSfx),
+                SmpsLoadReadiness.immediatePlan());
     }
 
     ProgramEntry register(
@@ -198,17 +205,31 @@ final class SmpsAssetCatalog {
             DacData dac,
             SmpsSequencerConfig config,
             SmpsSfxPlaybackPolicy sfxPolicy) {
+        return register(key, data, dac, config, sfxPolicy,
+                SmpsLoadReadiness.immediatePlan());
+    }
+
+    ProgramEntry register(
+            ProgramKey key,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy sfxPolicy,
+            SmpsLoadReadiness readiness) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(data, "data");
         Objects.requireNonNull(dac, "dac");
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(sfxPolicy, "sfxPolicy");
+        Objects.requireNonNull(readiness, "readiness");
 
         ProgramEntry existing = programs.get(key);
         if (existing != null) {
             existing.dependency().requireProvenance(dac, config);
             if (existing.hasSourceIdentity(data)) {
-                if (!existing.sfxPolicy().equals(sfxPolicy)) {
+                if (!existing.sfxPolicy().equals(sfxPolicy)
+                        || !existing.readiness().provenance().equals(
+                                readiness.provenance())) {
                     throw programConflict(key);
                 }
                 return existing;
@@ -219,6 +240,8 @@ final class SmpsAssetCatalog {
                 key.dependencyKey(), dac, config);
         if (existing != null) {
             if (existing.sfxPolicy().equals(sfxPolicy)
+                    && existing.readiness().provenance().equals(
+                            readiness.provenance())
                     && sameProgram(existing.program(), data)) {
                 return existing;
             }
@@ -236,7 +259,8 @@ final class SmpsAssetCatalog {
                 resolveAssetId(key.assetKey(), frozen),
                 frozen.getChannels() + frozen.getPsgChannels(),
                 sfxPolicy,
-                data);
+                data,
+                readiness);
         ProgramEntry descriptorOwner = descriptors.get(descriptor);
         if (descriptorOwner != null
                 && descriptorOwner.dependency() != dependency) {
