@@ -117,7 +117,14 @@ public final class S3kAudioStateNormalizer {
         boolean dac = track.type() == TrackType.DAC;
         Integer frequency;
         if (dac) {
-            frequency = null; // FreqLow doubles as SavedDAC; mapping not pinned.
+            // zTrack offset 0Dh is SavedDAC on a DAC track and FreqLow on an
+            // FM/PSG one; they are the same byte (Sound/Z80 Sound Driver.asm:
+            // 45-56). zUpdateDACTrack_cont stores the raw sample byte there
+            // including bit 7, before the rest check, and reuses it verbatim
+            // when a duration follows without a note (D:2880-2892). The engine
+            // keeps that byte as the track note, so the two agree directly.
+            // FreqHigh at 0Eh is unused by a DAC track and stays zero.
+            frequency = track.note() & 0xff;
         } else if (psg) {
             frequency = track.baseFnum() & 0xffff;
         } else {

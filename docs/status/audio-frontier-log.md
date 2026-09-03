@@ -27,6 +27,44 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S3K DAC frequency pinned; frontier reaches the FM track-parse phase
+
+- **Context:** `.worktrees/audio-s3k-observer`, branch
+  `feature/ai-s3k-request-observer` on `ef8d4bcdb`. No fixture, capture or
+  comparator changed; one normalizer field was pinned.
+- **Command:** the same invocation as the entry below.
+- **Result before:** `TRACK_STATE_MISMATCH` at tick 138, role `MUS_DAC`, field
+  `frequency`, reference 134, engine `null`.
+- **Result after:** `TRACK_STATE_MISMATCH` at tick 138, role `MUS_FM1`, field
+  `resting`, reference `false`, engine `true`.
+- **Notes:** the engine was not missing a DAC track. `S3kAudioStateNormalizer`
+  reported `null` for a DAC track's frequency with the comment that the mapping
+  was not pinned. It is pinned: `SavedDAC` and `FreqLow` are the same `zTrack`
+  byte at offset `0Dh` (`Sound/Z80 Sound Driver.asm:45-56`), and
+  `zUpdateDACTrack_cont` stores the raw sample byte there including bit 7,
+  before the rest check, reusing it verbatim when a duration follows without a
+  note (`D:2880-2892`). The engine already keeps that byte as the track note,
+  so reporting it directly makes the two agree. The reference's 134 is `$86`,
+  a DAC note with bit 7 set. `FreqHigh` at `0Eh` is unused by a DAC track.
+
+  The next divergence is a genuine phase difference, characterised but not
+  fixed. At the frame the title music loads, movie frame 252, the reference has
+  its DAC track parsed (`DurationTimeout` `06`, `SavedDAC` `86`) while `MUS_FM1`
+  is initialised and unparsed (`PlaybackControl` `80`, all note state zero). The
+  FM track first parses on the following frame, 253, where it becomes
+  `PlaybackControl` `90` with `DurationTimeout` `6c`. The engine dispatches the
+  request and runs a full update in the same tick, so it parses every track on
+  the load frame and reports `MUS_FM1` as resting one frame early. Fixing it
+  means modelling where `zPlayMusic` hands off to the first `zUpdateMusic`, and
+  why the DAC track is ahead of the FM tracks by one frame.
+- **Regression gates:** S1 GHZ music oracle **`MATCH (14690 ticks)`** and S1
+  sound-test SFX oracle **`MATCH (1967 ticks)`**, both exit 0. The S2 driver
+  oracle is unchanged at `DIVERGENCE at tick 210 [303 of 698 ticks divergent]`,
+  the same result as before this change. `TestS3kAudioParityComparator`,
+  `TestS3kAudioOracleFixtureContract`, `TestS3kRequestObservationSidecar` and
+  `TestS1AudioStateNormalizer` report 37 passing with one skip, the skip being
+  the ROM-gated measurement when no sidecar path is supplied.
+
 ## 2026-09-03 — S3K oracle advances off the producer-input limitation to tick 138
 
 - **Context:** `.worktrees/audio-s3k-observer`, branch
