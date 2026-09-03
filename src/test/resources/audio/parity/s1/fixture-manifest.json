@@ -25,6 +25,11 @@
       "file": "../../../traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2",
       "sha256": "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b",
       "input_rows": 225101
+    },
+    {
+      "file": "../../../traces/s1/_movies/s1-complete-run.bk2",
+      "sha256": "f744c814d8e00d6c367f7fe83bb663cab123b5a4ed385a320d71b74d63146bde",
+      "input_rows": 195493
     }
   ],
   "references": [
@@ -107,6 +112,28 @@
         "emulator_frame": 3219,
         "last_captured_invocation_frame": 3218
       }
+    },
+    {
+      "file": "s1-gameplay-ghz1-run2-reference.v1.jsonl.gz",
+      "capture": "s1_gameplay_ghz1_driver_reference",
+      "movie": "../../../traces/s1/_movies/s1-complete-run.bk2",
+      "uncompressed_sha256": "0f1059071c4e3cc5536a3207dacea66d4e487ea4304f237824cd64535a1e36a4",
+      "uncompressed_bytes": 44776890,
+      "terminal_record_count": 5257,
+      "cycle_start": 0,
+      "period": 0,
+      "epoch_open_frame": 584,
+      "capture_end_frame": 5840,
+      "recorder_probe": "tools/audio/probes/s1_gameplay_driver_parity_probe.lua",
+      "recorder_probe_note": "second gameplay source, same probe and same window rule as v3 but a different complete run of the same ROM. The probe's ACCEPTED_MOVIES table and AudioParitySchema.GAMEPLAY_MOVIES both name this BK2, so the gameplay capture kind is identified by which pinned movie it came from rather than by one hard-coded digest. 269 dormant UpdateMusic invocations precede this movie's GHZ1 BGM dispatch, against the first movie's 341, because its title and menu play is shorter. 165 SFX and special-SFX dispatches.",
+      "capture_command": "OGGF_OUT=<external>/reference-gameplay.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_gameplay_driver_parity_probe.lua src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2 <s1-rev01.gen>",
+      "provenance": "captured via tools/audio/run_s1_audio_parity.sh --mode gameplay --movie src/test/resources/traces/s1/_movies/s1-complete-run.bk2; two BizHawk captures byte-identical (cmp -s, sha256 0f1059071c4e3cc5536a3207dacea66d4e487ea4304f237824cd64535a1e36a4) and two OpenGGF replay captures byte-identical",
+      "window_end": {
+        "reason": "post_epoch_music_dispatch",
+        "emulator_frame": 5841,
+        "last_captured_invocation_frame": 5840
+      },
+      "measurement": "MISMATCH, first divergence tick 1906 event 0 field decoded_write: reference PSG $1F against engine ym2612[port 0, register 0xA4] = 42. Track state agrees on both sides at that tick. Pinned by TestS1GameplayRun2AudioDriverOracle."
     }
   ]
 }

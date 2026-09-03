@@ -76,8 +76,7 @@ local SOUND_PLAY_SFX = 0x721C6
 -- lookup, "subi.b #spec__First,d7" against $D0).
 local SOUND_PLAY_SPECIAL = 0x7230C
 -- sonic1-complete-withemeralds.bk2 (SHA-256 f2e81793...) has 225,101 input
--- rows covering the entire pinned complete run; see EXPECTED_MOVIE_SHA256.
-local EXPECTED_MOVIE_ROWS = 225101
+-- rows covering the entire pinned complete run; see ACCEPTED_MOVIES.
 -- Secondary bound only: a frame budget from power-on, never movie end (see
 -- the header). The window normally closes earlier, at the first post-epoch
 -- music request. The span this describes still overlaps the never-executed S1
@@ -102,7 +101,19 @@ local FORCE_PC_MANIFEST = os.getenv("OGGF_AUDIO_FORCE_PC_MANIFEST") == "1"
 local CAPTURE_DEBUG = os.getenv("OGGF_AUDIO_CAPTURE_DEBUG") == "1"
 local EXPECTED_ROM_SHA1 = "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b"
 local EXPECTED_ROM_CRC32 = "afe05eee"
-local EXPECTED_MOVIE_SHA256 = "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b"
+-- Every gameplay movie this probe will record, keyed by the SHA-256 the
+-- launcher computed over the exact BK2 it handed EmuHawk (the caller cannot
+-- substitute a claimed digest). Two different complete runs of the same ROM,
+-- by different routes: the oracle's bar is any BK2, not one BK2, so a second
+-- source is a second independent check on the same driver code rather than a
+-- longer look at the same inputs. Both must open on GHZ1 for the epoch below
+-- ($81) and for the engine host's single GHZ music sequencer.
+local ACCEPTED_MOVIES = {
+    -- sonic1-complete-withemeralds.bk2
+    ["f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b"] = {rows = 225101},
+    -- src/test/resources/traces/s1/_movies/s1-complete-run.bk2
+    ["f744c814d8e00d6c367f7fe83bb663cab123b5a4ed385a320d71b74d63146bde"] = {rows = 195493}
+}
 local EXPECTED_MOVIE_OPAQUE_HASH = "09DADB5071EB35050067A32462E39C5F"
 local GHZ_ASSET_BASE = 0x745DC
 local GHZ_ASSET_END = 0x74D44
@@ -291,17 +302,22 @@ local function verifyIdentity()
     assert(gameinfo.getromname() == "Sonic The Hedgehog (W) (REV01) [!]",
         "BizHawk ROM name does not identify S1 World REV01")
     assert(movie.isloaded(), "pinned S1 complete-run BK2 must be loaded")
-    assert(movie.length() == EXPECTED_MOVIE_ROWS,
-        "pinned S1 complete-run BK2 must have 225,101 input rows")
+    local launcherSha256 = assert(os.getenv("OGGF_BIZHAWK_MOVIE_SHA256"),
+        "run_bizhawk_lua must supply the actual BK2 SHA-256"):lower()
+    local accepted = ACCEPTED_MOVIES[launcherSha256]
+    assert(accepted, "BK2 is not one of this probe's pinned S1 gameplay movies: " .. launcherSha256)
+    assert(movie.length() == accepted.rows,
+        "pinned S1 complete-run BK2 does not have its recorded input-row count")
     local header = movie.getheader()
     assert(header.Core == "Genplus-gx", "S1 parity BK2 must select Genesis Plus GX")
     assert(header.emuVersion == "Version 2.11", "S1 parity BK2 must select BizHawk 2.11")
     assert(header.GameName == "Sonic The Hedgehog (W) (REV01) [!]", "S1 parity BK2 game mismatch")
     assert(header.SHA1 == EXPECTED_MOVIE_OPAQUE_HASH, "S1 parity BK2 opaque identity mismatch")
+    -- The pin is the ACCEPTED_MOVIES membership assert above, not a
+    -- self-comparison: this only re-validates the digest's shape before it
+    -- goes into the capture metadata.
     local movieSha256 = AudioContract.requireSha256(
-        assert(os.getenv("OGGF_BIZHAWK_MOVIE_SHA256"),
-            "run_bizhawk_lua must supply the actual BK2 SHA-256"),
-        EXPECTED_MOVIE_SHA256, "launcher BK2")
+        launcherSha256, launcherSha256, "launcher BK2")
     return rom, movieSha256
 end
 

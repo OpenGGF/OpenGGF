@@ -27,6 +27,62 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — a second S1 gameplay source, and it diverges where the first does not
+
+- **Worktree/branch:** `.worktrees/audio-s1-widen`,
+  `feature/ai-s1-oracle-widen`, on top of the v3 entry below.
+- **Why a second recording.** The first gameplay fixture matches end to end,
+  so it can no longer move anything. The oracle's bar is any BK2, not one
+  BK2: a second complete run of the same ROM shares the driver code and the
+  GHZ song and differs only in what the player did, so anything that breaks
+  there and not here is about request sequencing rather than about either
+  movie. No new input was recorded; this uses the already-committed
+  `src/test/resources/traces/s1/_movies/s1-complete-run.bk2` (SHA-256
+  `f744c814d8e0…`, 195,493 input rows), a different complete run from the
+  `sonic1-complete-withemeralds.bk2` the first fixture uses.
+- **What had to change to allow it.** The gameplay capture kind was pinned to
+  one movie digest in three places. The probe now carries an `ACCEPTED_MOVIES`
+  table keyed by the digest the launcher computed over the BK2 it actually
+  handed EmuHawk, and `AudioParitySchema.GAMEPLAY_MOVIES` is the Java side of
+  the same list, so a gameplay reference is identified by *which* pinned movie
+  it came from. Nothing about the window rule, the normalization, or the
+  engine host changed: both fixtures are the same single-song contract over
+  the same GHZ song.
+- **Fixture (new):** `s1-gameplay-ghz1-run2-reference.v1.jsonl.gz`, **5,257
+  ticks**, epoch opens at frame 584 on this movie's GHZ1 BGM dispatch (269
+  dormant invocations before it, against the first movie's 341, because its
+  title and menu play is shorter), window closes at frame 5,841 on the first
+  post-epoch music request, 165 SFX and special-SFX dispatches. Two BizHawk
+  captures byte-identical, uncompressed SHA-256 `0f1059071c4e3cc5…`,
+  44,776,890 bytes; two OpenGGF replay captures byte-identical.
+- **Command:** `tools/audio/run_s1_audio_parity.sh --mode gameplay --movie
+  src/test/resources/traces/s1/_movies/s1-complete-run.bk2 --rom <absolute S1
+  REV01 .gen> --bizhawk-home <BizHawk 2.11 Linux x64> --output-root <external
+  run root>`.
+- **Result:** **MISMATCH**, first divergence **tick 1906, event 0, field
+  `decoded_write`** — the reference's tick opens with two PSG writes, `$1F`
+  then `$3F`, that the engine does not emit at all; the comparator lines the
+  engine's first write (YM2612 port 0 register `$A4` = 42) up against the
+  reference's `$1F`. From the reference's third write onward the two streams
+  agree write for write. Normalized track state agrees on both sides at that
+  tick, on every role, so the gap is in what the driver puts on the bus, not
+  in what it thinks it is playing. Pinned by
+  `TestS1GameplayRun2AudioDriverOracle.currentFrontierIsTheFirstDivergence`
+  (ROM-gated, `-Dsonic1.rom.path=`). Not investigated: this lane is
+  measurement only, and a future lane should find the ROM routine that owns
+  those two writes before changing engine behaviour.
+- **Broken on purpose:** flipping tick 0's first YM2612 register-40 write
+  value in a temp copy of the new fixture is reported at tick 0 by
+  `TestS1GameplayRun2AudioDriverOracle.corruptingTheReferenceIsDetectedAtTheCorruptedTick`,
+  so the tick-1906 line above is a live comparison and not a stale pin.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, both exit 0 through `run_s1_audio_parity.sh`. The S1
+  gameplay v3 oracle stays at `MATCH (2562 ticks)`. The
+  `com.openggf.tools.audio.parity` suite runs green, including the S2 driver
+  oracle at `MATCH (698 ticks)`, and `-Pguards` runs 607 tests with no
+  failures.
+
+
 ## 2026-09-03 — the S1 gameplay capture's "BizHawk self-termination" is the probe; window republished as v3
 
 - **Worktree/branch:** `.worktrees/audio-s1-widen`,
