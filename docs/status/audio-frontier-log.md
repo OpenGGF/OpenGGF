@@ -27,6 +27,61 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S3K request observer reaches the boundary; the reviewed topology does not hold
+
+- **Context:** `.worktrees/audio-s3k-observer`, branch
+  `feature/ai-s3k-request-observer`, on top of `feb9ea267`, with
+  `tools/tracechaser` on `bugfix/ai-s3k-request-observer` at `7dd4cf3`.
+  No fixture, candidate, comparator, profile or engine owner was changed, and
+  no frontier moved.
+- **Fixture:** none. This is a disposable, non-authoritative live smoke, not a
+  parity comparison. The movie is
+  `src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2`
+  (SHA-256 `82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`,
+  466,334 rows) against the locked-on S3K ROM.
+- **Command:** a disposable reflection driver invoking the internal
+  `S3kPreconsumptionRequestCaptureRunner.CaptureRawSmokePrefix` seam over rows
+  `[0,400)` under `timeout --signal=TERM --kill-after=30s 20m mono`, against
+  the 2026-09-02 base observer install
+  (`install-a`, core SHA-256 `fa43fbc7ab2b38e2139c8288d1fc1489ecad353613283d2892a2a26399798b3a`).
+  Output went to an external scratch path; no fixture destination was written.
+- **Result:** exit 0, 400 rows observed and published, **zero mailbox
+  submissions**. Process inventories were empty before and after.
+- **Notes:** two facts in
+  `docs/architecture/audits/audio/2026-09-02-s3k-preconsumption-request-producer-audit.md`
+  do not survive execution.
+
+  First, the bus-release instruction is at `$1370`, not `$1374`. The shipped
+  bytes are `33fc010000a11100` at `$1358`, `0839000000a11100` at `$1360`,
+  `66f6` at `$1368`, `13c000a01c0a` at `$136A`, `33fc000000a11100` at `$1370`
+  and `4e75` at `$1378`. `$1374` falls inside the release instruction's long
+  operand, so it is never an instruction PC and a hook placed there is silently
+  unreachable. The first smoke recorded four `$1358` visits and zero `$1374`
+  visits, which is what exposed it. `$1370` lies strictly inside the approved
+  `$1358..$1374` interval and carries the exact approved opcode.
+
+  Second, the diagnostic `Play_Music` does not run under the SEGA-PCM
+  iteration. With the end hook at `$1370` the four invocations in `[0,400)` are
+  bracketed by matched pairs at rows 13, 62, 242 and 251, and their active
+  kinds are 6 (`DriverInit`), 0 (root), **11 (`UpdateEverything`)** and 0
+  (root). Row 242 is the source frame the service-128 limitation names, and its
+  active kind is 11, not the reviewed kind 8. Because the service stack is
+  shared across CPUs, the parent of an M68K `Play_Music` is whichever Z80
+  service happens to be on top, so no fixed single-parent `PUSH_BEGIN` topology
+  can express this boundary. The kind-13 child therefore never opens and no
+  `$1C0A` snapshot is taken.
+
+  This is the audit's own declared stop condition: the existing exact actions
+  cannot express the topology without a false lifecycle. `REFERENCE_LIMITATION
+  / producer_input` and `FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE`
+  both remain in force, and the service-128 first divergence is unchanged.
+- **Regression gates:** the TraceChaser `S3k` filter reports 143 passing with
+  the two pre-existing failures also present on the pinned baseline `8700dd0`
+  (`Bk2Reader reads the canonical S3K fixture movies` needs
+  `TRACECHASER_TEST_FIXTURE_ROOT`; `GpgxZ80AudioCapabilityTests lock reviewed
+  S2 and S3K service manifests` fails on both trees). The 11 new
+  `S3kPreconsumptionRequestProfile` cases pass.
+
 ## 2026-09-03 — S2 driver oracle reaches full MATCH over the 698-tick window
 
 - **Context:** `.worktrees/s2-tick0-land`, branch `bugfix/ai-s2-level-playbgm-land`,
