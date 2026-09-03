@@ -27,6 +27,72 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S1 gains a second audio oracle, sourced from real gameplay
+
+- **Worktree/branch:** `.worktrees/audio-s1-complete-oracle`,
+  `feature/ai-s1-complete-run-oracle` from `develop` at `feb9ea267`.
+- **Fixture (new):** `src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v1.jsonl.gz`
+  — the committed complete-run movie `sonic1-complete-withemeralds.bk2`
+  (`src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/`, SHA-256
+  `f2e817936d…`, 225,101 input rows), captured from power-on through frame
+  3,000 (2,343 driver invocations, epoch opens at frame 656 on the real GHZ1
+  BGM dispatch — 341 dormant invocations precede it, title/SEGA/menu, unlike
+  the two sound-test movies' shared 514) by a new probe,
+  `tools/audio/probes/s1_gameplay_driver_parity_probe.lua` (a
+  movie/window-specific variant of the committed `s1_audio_sfx_parity_probe.lua`,
+  same shape: driver-RAM-derived track state plus ordered YM/PSG bus writes,
+  one record per `UpdateMusic` invocation, plus a `dispatches` array of any
+  `Sound_PlaySFX` calls the invocation made). 70 real SFX dispatches
+  (jump/ring/spring/etc., not a scripted list) are captured in this window.
+  Two BizHawk captures are byte-identical
+  (SHA-256 `c7d58e8721f240ef…`, both runs).
+- **Command:** `tools/audio/run_s1_audio_parity.sh --mode gameplay --rom
+  <absolute SHA-1-verified S1 REV01 ROM> --bizhawk-home <BizHawk 2.11 Linux
+  x64> --output-root <external run root>`.
+- **Result:** **MISMATCH**, first divergence **tick 302, `EVENT_EXTRA`, event
+  0** — the engine emits an extra PSG write (`0x92`) that the reference does
+  not have. Pinned by `TestS1GameplayAudioDriverOracle.currentFrontierIsTheFirstDivergence`
+  (ROM-gated, `-Dsonic1.rom.path=`). Not investigated in this lane (measurement
+  only, per the brief); a future lane should chase the ROM routine that owns
+  this write before changing engine behaviour.
+- **Broken on purpose before trusting the comparison** (project rule): flipping
+  one YM2612 register-40 write value in tick 0 of a temp copy of the reference
+  is reported at tick 0 by
+  `TestS1GameplayAudioDriverOracle.corruptingTheReferenceIsDetectedAtTheCorruptedTick`.
+- **Existing S1 sound-test gates unchanged:** `run_s1_audio_parity.sh --mode
+  music` still reports **MATCH (14,690 ticks)**; `--mode sfx` still reports
+  **MATCH (1,967 ticks)** — both re-run against the unchanged committed
+  fixtures in this worktree to confirm this lane's shared-code changes
+  (`AudioParitySchema`/`AudioParityMetadata`/`AudioParityJsonl`/
+  `AudioParityComparator`/`S1AudioParityTool` gained a third `gameplay`
+  capture kind alongside `music`/`sfx`) did not regress them.
+- **Notes:** the capture window is bounded to frame 3,000, not the originally
+  planned ~5,000 (see `docs/architecture/plans/audio/2026-08-09-s1-ghz1-
+  gameplay-audio-timeline-plan.md`'s [860,4975) window, which this frontier
+  deliberately overlaps): BizHawk's headless client consistently
+  self-terminates (clean process exit 0, no Lua error surfaced to its own
+  console output even with `OGGF_TRACE_QUIET=0`, no native crash signal) at
+  frame 3,219 of this specific movie when driven through
+  `tools/tracechaser/bizhawk/run_bizhawk_lua.sh`'s established launch shape —
+  a boundary the two short sound-test movies (≤2,791 rows) never previously
+  reached through this launcher. The cause was not isolated: diagnostic
+  `pcall` wrapping around every `invocationLifecycle` entry/close transition
+  in the probe never fired, and the movie's own input transcript has nothing
+  unusual at that row (`|..|...R....|........|`, plain held-right input, no
+  reset/power marker). 3,000 stays safely inside the frames that reliably
+  complete; a future lane investigating the launcher itself (not this
+  worktree's scope) could recover the fuller window.
+  Also fixed in this lane, filed as a separate `fix(tools):` commit per
+  instruction: `run_s1_ghz1_gameplay_audio_timeline.sh` (the unrelated,
+  never-executed S1 GHZ1 gameplay-audio *timeline* framework —
+  `S1GameplayAudioTimeline*`, a different, semantic-decision capture shape
+  from this driver-register oracle) was missing `OGGF_INPUT_REPOSITORY_ROOT`
+  in its `capture_reference` call, so `run_bizhawk_lua.sh` aborted before
+  BizHawk ever launched. That one-line fix is necessary but insufficient: the
+  script's hardcoded in-repo `OUTPUT_ROOT` is separately rejected by
+  `output_policy.py`'s external-output-root requirement, so that tool remains
+  unexercised end-to-end; see `tools/audio/README.md`.
+
 ## 2026-09-03 — the S2 request-window candidate is published as a committed fixture
 
 - **Context:** `.worktrees/audio-s2-fixture-publish`, branch

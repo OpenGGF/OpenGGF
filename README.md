@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Second Sonic 1 audio oracle from real gameplay:** a duplicate-captured
+  reference from the complete-run movie (power-on through early Green Hill,
+  2,343 driver updates, 70 live sound effects) now sits beside the sound-test
+  oracles, with its first divergence pinned at update 302.
 - **Committed Sonic 2 request-window fixture:** the driver-oracle gate now
   runs from a published, duplicate-captured reference in the repository rather
   than a scratch capture, and the next audio roadmap (S3K request authority,
