@@ -819,7 +819,7 @@ public class SmpsSequencer implements CoordFlagContext {
                 int data = reg & 0xF;
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
-                synth.writePsg(this, (reg >> 4) & 0x3F);
+                synth.writePsg(this, psgFrequencyHighByte(reg));
             }
 
             if (t.noiseMode) {
@@ -2155,6 +2155,22 @@ public class SmpsSequencer implements CoordFlagContext {
         return channelId < 3 ? channelId : (channelId % 3) + 4;
     }
 
+    /**
+     * The PSG frequency's second byte. S2 {@code zPSGUpdateFreq} shifts the
+     * 16-bit frequency right by four and masks to six bits
+     * (s2.sounddriver.asm:2827-2843), but S3K {@code zUpdatePSGTrack} ORs the
+     * low byte's high nibble with the whole high byte and rotates the result
+     * right by four, with no mask, so a frequency above 03FFh keeps bit 6
+     * (skdisasm Sound/Z80 Sound Driver.asm:4085-4095).
+     */
+    private int psgFrequencyHighByte(int reg) {
+        if (!config.isPsgFrequencyHighByteNibbleSwap()) {
+            return (reg >> 4) & 0x3F;
+        }
+        int combined = ((reg & 0xF0) | ((reg >> 8) & 0xFF)) & 0xFF;
+        return ((combined >> 4) | (combined << 4)) & 0xFF;
+    }
+
     private boolean shouldPreventNoteAttack(Track t) {
         // We model the driver's note-on-prevent bit with tieNext.
         // On SMPS Z80 this is the HOLD bit, and on SMPS 68k this maps to AT-REST.
@@ -2429,11 +2445,21 @@ public class SmpsSequencer implements CoordFlagContext {
             boolean noiseUsesTone2 = t.noiseMode && t.channelId == 2 && (t.psgNoiseParam & 0x03) == 0x03;
             boolean writeToneFreq = t.channelId < 3 && (!t.noiseMode || noiseUsesTone2);
 
-            if (writeToneFreq) {
+            // S3K zUpdatePSGTrack calls zUpdateFreq and zDoModulation, which
+            // only compute, and then sends the frequency once
+            // (skdisasm Sound/Z80 Sound Driver.asm:4077-4095). S2 genuinely
+            // sends it twice: zPSGDoNoteOn writes it, then zPSGUpdateFreq
+            // writes it again after zDoModulation
+            // (s2.sounddriver.asm:1046-1053).
+            boolean modulationSendsNoteFrequency = t.modEnabled
+                    && config.isApplyModOnNote()
+                    && config.getNoteOnPrevent()
+                            == SmpsSequencerConfig.NoteOnPrevent.HOLD;
+            if (writeToneFreq && !modulationSendsNoteFrequency) {
                 int data = reg & 0xF;
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
-                synth.writePsg(this, (reg >> 4) & 0x3F);
+                synth.writePsg(this, psgFrequencyHighByte(reg));
                 // baseFnum stores detune-free period; modulation applies detune dynamically.
             }
 
@@ -2547,7 +2573,7 @@ public class SmpsSequencer implements CoordFlagContext {
             if (writeToneFreq) {
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | (reg & 0x0F));
-                synth.writePsg(this, (reg >> 4) & 0x3F);
+                synth.writePsg(this, psgFrequencyHighByte(reg));
             }
 
             if (t.customModEnabled && !preventAttack) {
@@ -3131,7 +3157,7 @@ public class SmpsSequencer implements CoordFlagContext {
                 int data = reg & 0xF;
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | data);
-                synth.writePsg(this, (reg >> 4) & 0x3F);
+                synth.writePsg(this, psgFrequencyHighByte(reg));
             }
         }
     }
@@ -3320,9 +3346,19 @@ public class SmpsSequencer implements CoordFlagContext {
         return packed;
     }
 
-    private static int normalizePsgPeriod(int reg) {
+    private int normalizePsgPeriod(int reg) {
         // S1/S2 deliberately use period zero for nMaxPSG noise notes. Preserve the
         // register value here; PsgChip owns the integrated/discrete zero-period rule.
+        if (config.isPsgFrequencyHighByteNibbleSwap()) {
+            // S3K keeps the frequency in a 16-bit register and never masks it:
+            // zUpdateFreq adds the sign-extended detune to the stored word and
+            // zUpdatePSGTrack sends the result straight out
+            // (skdisasm Sound/Z80 Sound Driver.asm:3080-3101, 4077-4095). A word
+            // above 03FFh therefore survives into the second PSG byte. Masking
+            // is invisible on S1/S2 because both mask that byte to six bits
+            // anyway (s2.sounddriver.asm:2835-2842).
+            return reg & 0xFFFF;
+        }
         return reg & 0x3FF;
     }
 

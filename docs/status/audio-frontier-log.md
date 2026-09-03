@@ -27,6 +27,45 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K oracle: the PSG frequency is a whole 16-bit word; tick 138 clears to tick 139
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick138`,
+  `bugfix/ai-s3k-oracle-tick138`, on top of the entry below.
+- **Command:** unchanged, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 138, event 255 of 259,
+  reference `psg 0A0h` against engine `psg 0A3h`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, **tick 139**, event 0, reference
+  `ym2612 port 0 register 2Bh = 80h` against engine `port 1 register 0A4h = 27`.
+  Tick 138 now matches in full: 259 writes, every one of them.
+- **Three PSG facts.** `zUpdatePSGTrack` calls `zUpdateFreq` and `zDoModulation`,
+  which only compute, and then sends the frequency once
+  (Sound/Z80 Sound Driver.asm:4077-4095); S2 genuinely sends it twice, from
+  `zPSGDoNoteOn` and again from `zPSGUpdateFreq`
+  (s2.sounddriver.asm:1046-1053), so the single send is S3K's. The second PSG
+  byte is not a masked shift either: S3K ORs the low byte's high nibble with the
+  whole high byte and rotates right by four with no mask (:4085-4095), where S2
+  masks to six bits (s2.sounddriver.asm:2835-2842). And the frequency itself is
+  never masked: `zUpdateFreq` adds the sign-extended detune to a 16-bit register
+  (:3080-3101), so a word above 03FFh survives into that byte. The engine was
+  masking the period to ten bits, which turned the ROM's 0400h into zero and its
+  0040h second byte into zero. Masking stays on for S1 and S2, where it is
+  invisible because both mask the byte anyway.
+- **No constant was introduced.** Every value here is a register width or a mask
+  read out of the listing.
+- **Next, and it is the write cycle 1 removed on purpose.** `zPlayDigitalAudio`
+  writes 2Bh = 80h from its idle loop, after `zDACIndex` goes non-zero and
+  outside the service that queued the sample (:4265-4275). The capture host
+  models the idle loop already through `enterDacIdleLoop`, so the DAC enable
+  belongs in the window after a service whose DAC track queued a sample.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`; the S1 gameplay v3 and run-2 oracles and the S2 driver
+  oracle `MATCH (698 ticks)` all pass inside one run of the
+  `com.openggf.tools.audio.parity` and `com.openggf.audio` packages,
+  `TestSmpsFadeAudioThroughput` and the four S3K keep-green classes: 2,097
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S3K oracle: the note path sends one frequency and no pan; tick 138 event 151 -> 255
 
 - **Worktree/branch:** `.worktrees/audio-s3k-tick138`,

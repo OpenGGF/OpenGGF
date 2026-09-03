@@ -63,6 +63,7 @@ public final class Sonic3kSmpsSequencerConfig {
                 .writeFmPanOnNote(false)
                 .dacNoteKeysOffFm6AndRestoresFm3(true)
                 .enableDacOnSequencerStart(false)
+                .psgFrequencyHighByteNibbleSwap(true)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80)
                 .volMode(SmpsSequencerConfig.VolMode.BIT7)
                 .psgEnvCmd80(SmpsSequencerConfig.PsgEnvCmd80.RESET)
