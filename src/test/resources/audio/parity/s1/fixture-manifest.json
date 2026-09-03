@@ -66,7 +66,24 @@
       "epoch_open_frame": 656,
       "capture_end_frame": 3000,
       "recorder_probe": "tools/audio/probes/s1_gameplay_driver_parity_probe.lua",
-      "capture_command": "OGGF_OUT=<external>/reference-gameplay.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_gameplay_driver_parity_probe.lua src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2 <s1-rev01.gen>"
+      "capture_command": "OGGF_OUT=<external>/reference-gameplay.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_gameplay_driver_parity_probe.lua src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2 <s1-rev01.gen>",
+      "retired": "superseded by s1-gameplay-ghz1-reference.v2.jsonl.gz -- this probe version has no Sound_PlaySpecial hook, so it cannot observe the GHZ waterfall special-SFX dispatch that starts at tick 583/593 and is required to explain track state from tick 618 onward (see docs/status/audio-frontier-log.md, 2026-09-03 entries). Bytes retained unchanged; do not re-derive from it."
+    },
+    {
+      "file": "s1-gameplay-ghz1-reference.v2.jsonl.gz",
+      "capture": "s1_gameplay_ghz1_driver_reference",
+      "movie": "../../../traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2",
+      "uncompressed_sha256": "c8fe427155e405c234162152f23f74c941dcef24d9d9952984db63cf3c028ac7",
+      "uncompressed_bytes": 20157508,
+      "terminal_record_count": 2343,
+      "cycle_start": 0,
+      "period": 0,
+      "epoch_open_frame": 656,
+      "capture_end_frame": 3000,
+      "recorder_probe": "tools/audio/probes/s1_gameplay_driver_parity_probe.lua",
+      "recorder_probe_note": "probe gained a second dispatch hook at Sound_PlaySpecial (s1.sounddriver.asm:1117, PC $7230C) alongside the existing Sound_PlaySFX hook (PC $721C6); both write into the same flat per-tick 'dispatches' array (schema unchanged -- the id itself, >= 0xD0, already disambiguates a special-SFX dispatch from a normal one). 81 dispatches recorded in this window vs 70 in v1 (11 additional Sound_PlaySpecial calls, all GHZ waterfall id 0xD0).",
+      "capture_command": "OGGF_OUT=<external>/reference-gameplay.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_gameplay_driver_parity_probe.lua src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2 <s1-rev01.gen>",
+      "provenance": "captured via tools/audio/run_s1_audio_parity.sh --mode gameplay; two BizHawk captures byte-identical (cmp -s) and two OpenGGF replay captures byte-identical, both checked by the launcher before it would proceed"
     }
   ]
 }
