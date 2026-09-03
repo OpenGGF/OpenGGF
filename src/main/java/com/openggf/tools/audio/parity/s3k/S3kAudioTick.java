@@ -5,9 +5,17 @@ import com.openggf.tools.audio.parity.AudioParityChipWrite;
 import java.util.List;
 import java.util.Objects;
 
-/** One S3K oracle frame: globals, sixteen track slots, and Z80-owned chip writes. */
+/**
+ * One S3K oracle tick: globals, sixteen track slots, and Z80-owned chip writes.
+ *
+ * <p>{@code ordinal} counts driver services from zero. {@code frame} is the
+ * movie frame the service completed in. Under the v2 stream the two diverge,
+ * because a frame whose driver work overruns it contributes no tick; under v1
+ * they are equal by construction.
+ */
 public record S3kAudioTick(
         int ordinal,
+        int frame,
         boolean lag,
         List<Integer> mailbox,
         GlobalState global,
@@ -18,6 +26,14 @@ public record S3kAudioTick(
     public S3kAudioTick {
         if (ordinal < 0) {
             throw new IllegalArgumentException("ordinal must be non-negative");
+        }
+        if (frame < 0) {
+            throw new IllegalArgumentException("frame must be non-negative");
+        }
+        if (frame < ordinal) {
+            throw new IllegalArgumentException(
+                    "a service cannot complete before its own ordinal: ordinal "
+                            + ordinal + ", frame " + frame);
         }
         Objects.requireNonNull(global, "global");
         Objects.requireNonNull(producerInputEvidence,
@@ -38,6 +54,7 @@ public record S3kAudioTick(
         }
     }
 
+    /** A tick whose service completed in its own frame, with available input. */
     public S3kAudioTick(
             int ordinal,
             boolean lag,
@@ -45,8 +62,21 @@ public record S3kAudioTick(
             GlobalState global,
             List<S3kAudioTrackState> tracks,
             List<AudioParityChipWrite> writes) {
-        this(ordinal, lag, mailbox, global, tracks, writes,
+        this(ordinal, ordinal, lag, mailbox, global, tracks, writes,
                 ProducerInputEvidence.available());
+    }
+
+    /** A tick whose service completed in its own frame. */
+    public S3kAudioTick(
+            int ordinal,
+            boolean lag,
+            List<Integer> mailbox,
+            GlobalState global,
+            List<S3kAudioTrackState> tracks,
+            List<AudioParityChipWrite> writes,
+            ProducerInputEvidence producerInputEvidence) {
+        this(ordinal, ordinal, lag, mailbox, global, tracks, writes,
+                producerInputEvidence);
     }
 
     /** Authenticated availability of the producer input consumed by a service. */

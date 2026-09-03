@@ -5,20 +5,36 @@ import java.util.List;
 /**
  * Versioned constants for the S3K sound-driver oracle interchange.
  *
- * <p>The reference stream is produced by
- * {@code tools/audio/run_s3k_audio_oracle_reference.sh}: one JSONL row per
- * emulated frame. After boot the Z80 driver normally runs from {@code zVInt}
- * once per vertical blank (skdisasm {@code Sound/Z80 Sound Driver.asm}
- * {@code zVInt}); pre-install frames contain no invocation, the boot service
- * crosses frame boundaries, and {@code zPlaySEGAPCM} disables interrupts for
- * its entire transport. Rows carry the pre-frame 68k request mailboxes, the
- * ordered CPU-tagged YM/PSG write stream of the frame, and a post-frame
- * snapshot of driver RAM {@code 1C00h..1FA0h}
- * ({@code zDataStart..zTracksSaveEnd}). The driver projection compares only
- * writes tagged to the Z80; 68k host writes remain authenticated fixture data.
+ * <p>Two stream versions exist. Both carry the 68k request mailboxes, an
+ * ordered CPU-tagged YM/PSG write stream, and a snapshot of driver RAM
+ * {@code 1C00h..1FA0h} ({@code zDataStart..zTracksSaveEnd}). The driver
+ * projection compares only writes tagged to the Z80; 68k host writes remain
+ * authenticated fixture data.
+ *
+ * <p><b>v1</b> ({@code tools/audio/run_s3k_audio_oracle_reference.sh}) emits
+ * one row per emulated frame and samples the RAM with an out-of-band read
+ * after the frame advances. It declares {@code sampling: "post_invocation"},
+ * but that only holds when the Z80 happens to be idle at the frame boundary:
+ * where the driver's work overruns the frame the row holds a strict prefix of
+ * {@code zUpdateMusic}'s track-iteration order, truncated at a varying point.
+ * v1 is retained for provenance and is not the comparison source.
+ *
+ * <p><b>v2</b> ({@code tools/audio/run_s3k_audio_oracle_reference_v2.sh})
+ * emits one row per <em>completed {@code zVInt} service</em>. The RAM is
+ * captured by the observer core as a completion snapshot at the {@code ret}
+ * that ends {@code zVInt} (Z80 PC {@code 0084h}; skdisasm
+ * {@code Sound/Z80 Sound Driver.asm}:520, pinned by the {@code ;loc_85}
+ * comment at :522), so it can never be mid-invocation. A row's {@code frame}
+ * is the movie frame the service completed in; a frame that the driver
+ * overruns contributes no row, so tick ordinals and movie frames diverge.
+ * Writes are partitioned by the same completion boundary, so every write
+ * still appears exactly once and in stream order.
  */
 public final class S3kAudioParitySchema {
-    public static final String VERSION = "openggf.s3k_audio_oracle_reference.v1";
+    /** Retired per-frame stream; see the class javadoc for why it is not compared. */
+    public static final String VERSION_V1 = "openggf.s3k_audio_oracle_reference.v1";
+    /** Live per-service stream sampled at the {@code zVInt} return. */
+    public static final String VERSION_V2 = "openggf.s3k_audio_oracle_reference.v2";
     public static final String S3K_LOCKED_ON_SHA1 = "cfbf98c36c776677290a872547ac47c53d2761d6";
     public static final String S3K_LOCKED_ON_CRC32 = "63522553";
 
