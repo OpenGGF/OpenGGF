@@ -27,6 +27,63 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S3K pre-consumption mailbox observed; request layer still not compared
+
+- **Context:** `.worktrees/audio-s3k-observer`, branch
+  `feature/ai-s3k-request-observer`, with `tools/tracechaser` on
+  `bugfix/ai-s3k-request-observer`. No fixture, comparator, profile or engine
+  owner changed, and **no frontier moved**.
+- **Fixture:** none. This is a disposable live smoke over rows `[0,400)` of
+  `src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2`
+  (SHA-256 `82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`,
+  466,334 rows) against the locked-on S3K ROM, written to an external scratch
+  path. It is not a parity comparison.
+- **Core:** a freshly built observer at ABI 5, decompressed SHA-256
+  `c47e8e1aef25b39d4a947d8d57f77b2680cfb013103315945a48dabc2f4a54b0`, build id
+  `6feee0d1b2ca882b`, installed to a scratch BizHawk home outside the
+  repository. Seven native selftests pass, including the new
+  `snapshot-at-pc-harness`.
+- **Result:** exit 0, 400 rows observed and published, **four mailbox
+  observations**. Process inventories were empty before and after.
+
+  | Row | Active kind at the boundary | Mailbox byte |
+  |---:|---|---|
+  | 13 | 6, DriverInit | `e1` |
+  | 62 | 0, root | `ff` |
+  | 242 | 11, UpdateEverything | `fe` |
+  | 251 | 0, root | `25` |
+
+- **Notes:** row 242 is the source frame the service-128 limitation names, and
+  its byte is `$FE`, `cmd_StopSEGA`. That value is now read from Z80 RAM
+  `$1C0A` while the bus is still held, at the `startZ80` instruction before it
+  executes. It is not inferred from the later stop burst, from SEGA-PCM exit,
+  or from the fixture.
+
+  Two corrections to the 2026-09-02 audit stand. The bus-release instruction is
+  at `$1370`, not `$1374`, which falls inside its long operand and is never an
+  instruction PC. And the boundary is not a child of the SEGA-PCM iteration:
+  the observer's service stack is shared across processors, so the active kind
+  is whichever Z80 service happens to be on top, measured here as kind 6, kind
+  11 and root. That is why the observation is now taken by a
+  parent-independent native action rather than a service push and pop.
+
+  The request layer is still `UNAVAILABLE` for comparison. Authenticating the
+  reference side alone cannot yield `MATCH`: the OpenGGF side must
+  independently observe an equivalent request through its own producer before
+  the layer can be compared. `REFERENCE_LIMITATION / producer_input` remains in
+  force and the first divergence is unchanged at service 128.
+
+  The native build attestation was simplified in the same round, on an explicit
+  human ruling: the host-image trust roots, chained recipe digests, secure
+  runtime and reproduction ritual are replaced by one build script whose
+  provenance is an output rather than a gate. Pinned source commits, pinned
+  clang packages and the patch remain pinned.
+- **Regression gates:** the TraceChaser `S3k` filter reports 143 passing. Four
+  failures across the `S2` and `S3k` filters were present on the pinned
+  baseline; one of them, the observer-installation test, now fails for a new
+  reason because it still pins the retired identity family and has not been
+  moved to the simplified contract.
+
 ## 2026-09-03 — S3K request observer reaches the boundary; the reviewed topology does not hold
 
 - **Context:** `.worktrees/audio-s3k-observer`, branch
