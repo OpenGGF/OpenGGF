@@ -61,19 +61,21 @@ class TestS1GameplayAudioDriverOracle {
         AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
 
         // Pinned frontier (see docs/status/audio-frontier-log.md, 2026-09-03):
-        // with the special-SFX dispatch now in the fixture, tick 618 is the
-        // first tick where the engine's admitted special-SFX sequencer emits
-        // a write the real driver's Sound_PlaySpecial run did not (an extra
-        // YM2612 port 1 register 0xB0 write) -- an actual engine divergence in
-        // the driver's special-SFX handling, not a reference gap. This is a
-        // measurement pin, not an expectation that the engine is correct --
-        // when this frontier moves, update both this assertion and the
-        // frontier log entry together with the ROM routine that explains it.
+        // the special SFX no longer steals FM4 from the normal SFX already
+        // playing on it, so it stays silent from its tick-618 dispatch until
+        // cfStopTrack hands the channel over at tick 629. Tick 629 is now the
+        // first divergence: the ROM's cfStopTrack special-track branch
+        // (docs/s1disasm/s1.sounddriver.asm:2514-2521) reloads the special
+        // SFX's own voice through v_special_voice_ptr, while the engine
+        // restores the music voice. This is a measurement pin, not an
+        // expectation that the engine is correct -- when this frontier moves,
+        // update both this assertion and the frontier log entry together with
+        // the ROM routine that explains it.
         assertNotEquals(AudioParityReport.Kind.MATCH, report.kind(),
                 "gameplay oracle is expected to diverge at the pinned frontier; "
                         + "if it now matches, the frontier moved forward and this pin is stale");
         assertEquals(AudioParityReport.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(618, report.tickOrdinal());
+        assertEquals(629, report.tickOrdinal());
     }
 
     /**
