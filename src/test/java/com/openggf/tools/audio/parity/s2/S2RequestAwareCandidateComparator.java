@@ -35,15 +35,34 @@ final class S2RequestAwareCandidateComparator {
             String contentKey, int nativeId, int physicalSlot, int row) {
     }
 
+    /**
+     * The same comparison for a published window other than the original one,
+     * over an engine capture that spans several windows. Only the rows inside
+     * the window take part; the engine ran exactly as it would have anyway.
+     */
+    static Report compareWindow(Path candidate,
+            S2RequestAwareOracleSchema.Window window,
+            S2ProductionRequestProjector projector, List<Integer> requestRows) {
+        Objects.requireNonNull(window, "window");
+        return compare(candidate, window, projector, requestRows);
+    }
+
     static Report compare(Path candidate, S2ProductionRequestProjector projector,
             List<Integer> requestRows) {
+        return compare(candidate, S2RequestAwareOracleSchema.CONTROL, projector,
+                requestRows);
+    }
+
+    private static Report compare(Path candidate,
+            S2RequestAwareOracleSchema.Window window,
+            S2ProductionRequestProjector projector, List<Integer> requestRows) {
         Objects.requireNonNull(candidate, "candidate");
         Objects.requireNonNull(projector, "projector");
         Objects.requireNonNull(requestRows, "requestRows");
         S2RequestAwareOracleRawStream.Result reference;
         try {
             reference = S2RequestAwareOracleRawStream
-                    .scanWindowSourceCandidateForTesting(candidate);
+                    .scanWindowSourceCandidateForTesting(candidate, window);
         } catch (IOException | RuntimeException failure) {
             return new Report(Kind.INVALID, 0,
                     failure.getClass().getSimpleName() + ": " + failure.getMessage());
@@ -57,10 +76,14 @@ final class S2RequestAwareCandidateComparator {
         }
         List<RequestObservation> actual = new ArrayList<>();
         for (int index = 0; index < projector.requests().size(); index++) {
+            int row = requestRows.get(index);
+            if (row < window.firstRow() || row >= window.exclusiveEnd()) {
+                continue;
+            }
             CompleteRunAudioTrace.Request request = projector.requests().get(index);
             actual.add(new RequestObservation(request.ownerClass(),
                     request.contentKey(), request.nativeId(), request.queueSlot(),
-                    requestRows.get(index)));
+                    row));
         }
         int shared = Math.min(expected.size(), actual.size());
         for (int index = 0; index < shared; index++) {

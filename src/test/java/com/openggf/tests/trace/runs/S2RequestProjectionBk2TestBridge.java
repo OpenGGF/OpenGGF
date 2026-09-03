@@ -43,4 +43,14 @@ public final class S2RequestProjectionBk2TestBridge {
             throws Exception {
         return new S2RequestProjectionBk2Capture().capture(rom, bk2);
     }
+
+    /**
+     * The same capture over another bounded interval of the committed run
+     * chain, for a published window other than the original one.
+     */
+    public static Capture capture(Path rom, Path bk2, int firstRow,
+            int exclusiveEnd) throws Exception {
+        return new S2RequestProjectionBk2Capture()
+                .capture(rom, bk2, firstRow, exclusiveEnd);
+    }
 }

@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 2 request oracle widened:** four new duplicate-captured request
+  windows (EHZ1 continuation, the special-stage transition, and a Chemical
+  Plant level-select route) are committed; the oracle matches all 52 transfers
+  of the next 750 rows and pins a new first divergence at movie row 12,132.
 - **Second Sonic 1 gameplay oracle is a full match:** the shipped
   `Sound_PlaySpecial` silence tail, which writes two stale data bytes instead
   of the intended PSG3 latch pair when a normal PSG3 effect is playing, is now

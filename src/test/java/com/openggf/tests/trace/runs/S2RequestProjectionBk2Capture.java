@@ -51,6 +51,21 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
     S2RequestProjectionBk2TestBridge.Capture capture(
             Path romPath, Path bk2Path)
             throws Exception {
+        return capture(romPath, bk2Path, FIRST_ROW, EXCLUSIVE_END);
+    }
+
+    /**
+     * The same production observation over another bounded interval of the same
+     * committed run chain. The interval only decides which rows are observed and
+     * how far the chain replays; it never changes what the engine does.
+     */
+    S2RequestProjectionBk2TestBridge.Capture capture(
+            Path romPath, Path bk2Path, int firstRow, int exclusiveEnd)
+            throws Exception {
+        if (firstRow < DESTINATION_START_ROW - (DESTINATION_START_ROW - FIRST_ROW)
+                || exclusiveEnd <= firstRow) {
+            throw new IllegalArgumentException("window is not a valid interval");
+        }
         requireIdentity(romPath, "SHA-1", ROM_SHA1, "S2 REV01 ROM");
         requireIdentity(bk2Path, "SHA-256", BK2_SHA256, "S2 complete-run BK2");
         requireIdentity(RUN_BK2, "SHA-256", BK2_SHA256,
@@ -61,7 +76,7 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
         int[] productionOutputRow = {-1};
         Sonic2AudioProfile profile = new Sonic2AudioProfile(event -> {
             int row = productionOutputRow[0];
-            if (row >= FIRST_ROW && row < EXCLUSIVE_END) {
+            if (row >= firstRow && row < exclusiveEnd) {
                 int before = projector.requests().size();
                 projector.accept(event);
                 if (projector.requests().size() > before) {
@@ -89,7 +104,7 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                 };
                 afterProductionStep = () -> { };
                 assertChainReplayThroughSegmentRow(RUN_DIR, DESTINATION_SEGMENT,
-                        EXCLUSIVE_END - DESTINATION_START_ROW);
+                        exclusiveEnd - DESTINATION_START_ROW);
                 audioRecorder.presentOpenRow(audio);
                 return new S2RequestProjectionBk2TestBridge.Capture(
                         projector, requestRows, audioRecorder.rows(),
