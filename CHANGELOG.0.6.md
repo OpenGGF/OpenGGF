@@ -14,6 +14,18 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **The Sonic 1 waterfall no longer cuts in over a sound effect already
+  playing:** Green Hill's waterfall loop shares the FM4 channel with ordinary
+  sound effects such as rings and springs. It used to seize that channel the
+  moment it started, silencing whatever was on it. It now waits, exactly as the
+  original driver does, and becomes audible only when the other sound effect
+  finishes with the channel. When it does take the channel it now plays with its
+  own instrument rather than the music's, so it sounds like the waterfall
+  instead of a stray note of the Green Hill theme. A ring or spring landing on
+  the same channel no longer ends the waterfall outright either: it goes quiet
+  for the length of the other sound and then resumes, which is what the
+  original does.
+
 - **Sonic 3&K audio comparison now reads the music request the driver actually
   received:** the bounded S3K sound-driver oracle stopped early because a
   request written and consumed inside one frame was invisible to the
