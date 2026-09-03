@@ -21,7 +21,10 @@ This file contains the complete 0.6 development snapshot history carried forward
   original driver does, and becomes audible only when the other sound effect
   finishes with the channel. When it does take the channel it now plays with its
   own instrument rather than the music's, so it sounds like the waterfall
-  instead of a stray note of the Green Hill theme.
+  instead of a stray note of the Green Hill theme. A ring or spring landing on
+  the same channel no longer ends the waterfall outright either: it goes quiet
+  for the length of the other sound and then resumes, which is what the
+  original does.
 
 - **Sonic 3&K audio comparison now reads the music request the driver actually
   received:** the bounded S3K sound-driver oracle stopped early because a

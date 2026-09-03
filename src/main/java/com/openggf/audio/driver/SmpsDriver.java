@@ -531,7 +531,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 SmpsSequencer.Track newTrack = sequencer.trackAt(newIndex);
                 SmpsSequencer existing = sfxClaimOwner(newTrack);
                 if (existing != null && existing != replaced
-                        && !yieldsToIncumbentSfx(sequencer, existing)) {
+                        && !specialSfxCoexists(sequencer, existing)) {
                     for (int trackIndex = 0;
                             trackIndex < existing.trackCount(); trackIndex++) {
                         SmpsSequencer.Track track = existing.trackAt(trackIndex);
@@ -739,6 +739,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                         SmpsSequencer.TrackType.FM, channel, true);
                 continue;
             }
+            overrideIncumbentSpecialSfx(
+                    SmpsSequencer.TrackType.FM, channel, sequencer);
             fmLocks[channel] = sequencer;
         }
         int claimedPsgMask = admission.claimedPsgMask();
@@ -752,6 +754,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                         SmpsSequencer.TrackType.PSG, channel, true);
                 continue;
             }
+            overrideIncumbentSpecialSfx(
+                    SmpsSequencer.TrackType.PSG, channel, sequencer);
             psgLocks[channel] = sequencer;
         }
     }
@@ -779,6 +783,40 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             SmpsSequencer challenger, SmpsSequencer incumbent) {
         return incumbent != null && isSfx(incumbent)
                 && challenger.isSpecialSfx() && !incumbent.isSpecialSfx();
+    }
+
+    /**
+     * True when an admitting SFX and an incumbent SFX on a shared channel are
+     * one special and one normal, the pair S1's driver keeps side by side in
+     * separate track RAM instead of one replacing the other.
+     */
+    private boolean specialSfxCoexists(
+            SmpsSequencer challenger, SmpsSequencer incumbent) {
+        return incumbent != null && isSfx(incumbent)
+                && challenger.isSpecialSfx() != incumbent.isSpecialSfx();
+    }
+
+    /**
+     * Silences, without stopping, a special SFX whose channel a normal SFX is
+     * taking at admission.
+     *
+     * <p>{@code Sound_PlaySFX} loads its own tracks and then tests the SFX
+     * track it just wrote: with FM4 in use it sets bit 2, 'SFX is overriding',
+     * on {@code v_spcsfx_fm4_track} (s1.sounddriver.asm:1072-1074), and PSG3
+     * the same way (:1077-1079). It never clears the special track's playing
+     * bit, so the special SFX keeps advancing silently and gets the channel
+     * back through {@code cfStopTrack}; see {@link #waitingSpecialSfx}. This is
+     * the mirror of {@link #yieldsToIncumbentSfx}.
+     */
+    private void overrideIncumbentSpecialSfx(
+            SmpsSequencer.TrackType type, int channel, SmpsSequencer challenger) {
+        SmpsSequencer incumbent = type == SmpsSequencer.TrackType.PSG
+                ? psgLocks[channel] : fmLocks[channel];
+        if (incumbent == null || incumbent == challenger
+                || !incumbent.isSpecialSfx() || challenger.isSpecialSfx()) {
+            return;
+        }
+        incumbent.setChannelOverriddenWithoutRestore(type, channel, true);
     }
 
     private static boolean ownsChannelsAtAdmission(
