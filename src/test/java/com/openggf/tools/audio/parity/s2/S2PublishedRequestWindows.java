@@ -79,13 +79,6 @@ final class S2PublishedRequestWindows {
             "b24c6f9144d8f4fe85316cf7d2a22020b916ec208280ac8001ab18876d3d9137",
             52, 10_900, 11_650);
 
-    /** The next contiguous 750 rows, carrying coverage to movie row 12400. */
-    static final Published EHZ1_CONTINUATION_TWO = complete(
-            "s2-request-window-w11650-12400",
-            "d23d19d6374905da5781224470711cf218be632b0601bf9db8b16e272b8cbe76",
-            "04e9d7e1feb53cd5a2012bcab5813bce6262a9b7ef3bacd93565f8a12008bab0",
-            27, 11_650, 12_400);
-
     /** The rows spanning the EHZ1 exit into the second special stage. */
     static final Published SPECIAL_STAGE_TRANSITION = complete(
             "s2-request-window-w13650-14400",
@@ -105,12 +98,12 @@ final class S2PublishedRequestWindows {
 
     /** Every committed candidate, original window first. */
     static final List<Published> ALL = List.of(CONTROL, EHZ1_CONTINUATION,
-            EHZ1_CONTINUATION_TWO, SPECIAL_STAGE_TRANSITION, CPZ_LOAD);
+            SPECIAL_STAGE_TRANSITION, CPZ_LOAD);
 
     /**
      * The candidates the engine-side request oracle can drive today: those cut
      * from the committed complete run, which the run-chain harness replays.
      */
     static final List<Published> COMPLETE_RUN_WINDOWS = List.of(CONTROL,
-            EHZ1_CONTINUATION, EHZ1_CONTINUATION_TWO, SPECIAL_STAGE_TRANSITION);
+            EHZ1_CONTINUATION, SPECIAL_STAGE_TRANSITION);
 }

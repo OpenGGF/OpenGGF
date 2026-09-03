@@ -115068,12 +115068,15 @@ The other three death arms remain coordinates only.
 
 - Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`
   over `develop` at `1e128d0d6`.
-- Four new bounded request-aware candidates were captured and published beside
-  the original `w10150-10900` window: `w10900-11650` and `w11650-12400` continue
-  the complete run's EHZ1 segment, `w13650-14400` spans the EHZ1 exit into the
+- Three new bounded request-aware candidates are published beside the original
+  `w10150-10900` window: `w10900-11650` continues the complete run's EHZ1
+  segment, `w13650-14400` spans the EHZ1 exit into the
   second special stage at movie row 13712, and `cpz-w2700-3450` comes from the
   committed CPZ level-select recording, a different route and a different music
-  epoch. Every window was captured twice on two independently built installs
+  epoch. A fourth window, `w11650-12400`, was captured and measured but is not
+  published; its result is recorded below and it can be recaptured from the
+  command and the interval named here.
+  Every window was captured twice on two independently built installs
   and extracted twice; both raw captures and both extractions were
   byte-identical in all four cases.
 - Producer control: rebuilding the disposable live producer and recapturing the
@@ -115089,9 +115092,10 @@ The other three death arms remain coordinates only.
   test`.
 - Result per window. `w10150-10900`: MATCH, 25 production transfers.
   `w10900-11650`: **MATCH, 52 production transfers** - the oracle holds a full
-  750 rows past its previous horizon. `w11650-12400`: **DIVERGENCE at transfer
-  21**, movie row 12132, where the recording's next request is SFX `$A0` and the
-  engine's is SFX `$B5` at row 12114. That is the new S2 request frontier.
+  750 rows past its previous horizon. `w11650-12400`, measured but unpublished:
+  **DIVERGENCE at transfer 21**, movie row 12132, where the recording's next
+  request is SFX `$A0` and the engine's is SFX `$B5` at row 12114. That is the
+  new S2 request frontier, and it sits between movie rows 11650 and 12400.
 - `w13650-14400` and `cpz-w2700-3450` are published and their payload integrity
   is gated, but neither has an engine-side comparison yet: the run-chain harness
   replays only within one segment, so it reaches neither the special-stage
@@ -115100,3 +115104,33 @@ The other three death arms remain coordinates only.
   the request MATCH of 25 and the driver-oracle **MATCH (698 ticks)**; the audio
   parity suite ran 161 tests with 0 failures and 2 skips; `-Pguards` ran 607
   tests with 0 failures and 0 errors.
+
+## 2026-09-04 - S2 request-window capture becomes a real command
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
+  TraceChaser branch `bugfix/ai-s2-request-window-producer` at `3166a36`, cut
+  from the pinned head `8e32d25` and pointed at by this branch's gitlink.
+- The bounded S2 request-window producer is now a command rather than a
+  disposable test on an unmerged commit. Capture takes the ROM, the movie and
+  its SHA-256, the service and candidate manifests, the BizHawk installation,
+  the movie-row interval and an absent output path; extraction takes the
+  captured stream, the same interval and an output directory. The raw sink
+  writes the identity of the recording actually opened, and the extractor takes
+  the expected recording identity and bounds instead of constants.
+- Commands: `tools/tracechaser/bizhawk-headless/run-s2-request-window.sh
+  --request-window-mode capture|extract ...`.
+- TraceChaser gates: `S2RequestWindowCommandTests` 4 of 4 pass; the `S2` filter
+  runs 195 passes with three failures that are identical at the pinned head and
+  so predate this branch, one of which is the harness-assembly identity pin that
+  any local rebuild moves. Both policy scanners report PASS on the committed
+  tree.
+- **Open native gap.** Capture cannot run on the shipped observer: the ABI-5
+  install rejects the request candidate manifest at `configure` with status -3,
+  and the only core that hosts this producer is the ABI-4 candidate build, which
+  the pinned-head profile refuses because it requires ABI 5 and an installed
+  `identity.json`. The native addition needed is small and additive - the
+  candidate patch on TraceChaser `69dd536` adds one export and a callback pair
+  and changes no ABI, event layout or existing behaviour - but publishing an
+  ABI-5 core carrying it is a separate native workstream with its own artifact
+  lock and selftests. The published fixtures were captured with the ABI-4
+  candidate core before this command existed.
