@@ -263,6 +263,12 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 3 & Knuckles music requests observed at the source:** the pinned
+  TraceChaser observer now reads the `Play_Music` mailbox while the Z80 is
+  stopped, supplying the request the AIZ1 oracle was missing; the driver
+  comparison moves from an unobservable input at service 128 to a real
+  divergence at update 138. The native observer build is a plain script with
+  recorded provenance, no longer gated on host toolchain hashes.
 - **Sonic 1 SFX channel ownership follows the driver:** sound effects claim
   their music channels at admission and the driver walks its fixed SFX slots in
   channel-RAM order, moving the gameplay oracle from update 302 to 629, where

@@ -27,6 +27,210 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S3K DAC frequency pinned; frontier reaches the FM track-parse phase
+
+- **Context:** `.worktrees/audio-s3k-observer`, branch
+  `feature/ai-s3k-request-observer` on `ef8d4bcdb`. No fixture, capture or
+  comparator changed; one normalizer field was pinned.
+- **Command:** the same invocation as the entry below.
+- **Result before:** `TRACK_STATE_MISMATCH` at tick 138, role `MUS_DAC`, field
+  `frequency`, reference 134, engine `null`.
+- **Result after:** `TRACK_STATE_MISMATCH` at tick 138, role `MUS_FM1`, field
+  `resting`, reference `false`, engine `true`.
+- **Notes:** the engine was not missing a DAC track. `S3kAudioStateNormalizer`
+  reported `null` for a DAC track's frequency with the comment that the mapping
+  was not pinned. It is pinned: `SavedDAC` and `FreqLow` are the same `zTrack`
+  byte at offset `0Dh` (`Sound/Z80 Sound Driver.asm:45-56`), and
+  `zUpdateDACTrack_cont` stores the raw sample byte there including bit 7,
+  before the rest check, reusing it verbatim when a duration follows without a
+  note (`D:2880-2892`). The engine already keeps that byte as the track note,
+  so reporting it directly makes the two agree. The reference's 134 is `$86`,
+  a DAC note with bit 7 set. `FreqHigh` at `0Eh` is unused by a DAC track.
+
+  The next divergence is a genuine phase difference, characterised but not
+  fixed. At the frame the title music loads, movie frame 252, the reference has
+  its DAC track parsed (`DurationTimeout` `06`, `SavedDAC` `86`) while `MUS_FM1`
+  is initialised and unparsed (`PlaybackControl` `80`, all note state zero). The
+  FM track first parses on the following frame, 253, where it becomes
+  `PlaybackControl` `90` with `DurationTimeout` `6c`. The engine dispatches the
+  request and runs a full update in the same tick, so it parses every track on
+  the load frame and reports `MUS_FM1` as resting one frame early. Fixing it
+  means modelling where `zPlayMusic` hands off to the first `zUpdateMusic`, and
+  why the DAC track is ahead of the FM tracks by one frame.
+- **Regression gates:** S1 GHZ music oracle **`MATCH (14690 ticks)`** and S1
+  sound-test SFX oracle **`MATCH (1967 ticks)`**, both exit 0. The S2 driver
+  oracle is unchanged at `DIVERGENCE at tick 210 [303 of 698 ticks divergent]`,
+  the same result as before this change. `TestS3kAudioParityComparator`,
+  `TestS3kAudioOracleFixtureContract`, `TestS3kRequestObservationSidecar` and
+  `TestS1AudioStateNormalizer` report 37 passing with one skip, the skip being
+  the ROM-gated measurement when no sidecar path is supplied.
+
+## 2026-09-03 — S3K oracle advances off the producer-input limitation to tick 138
+
+- **Context:** `.worktrees/audio-s3k-observer`, branch
+  `feature/ai-s3k-request-observer` on `a92b12513`, with `tools/tracechaser` on
+  `bugfix/ai-s3k-request-observer` at `78b8c1e`. No committed fixture,
+  comparator or engine owner changed.
+- **Fixture:** the committed bounded oracle
+  `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz`,
+  unchanged, plus a new external request sidecar supplying driver inputs only.
+- **Command:**
+
+  ```
+  S3kAudioParityTool compare \
+    --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz \
+    --requests <external>/s3k-request-observations.json \
+    --rom <absolute locked-on S3K ROM>
+  ```
+
+- **Result before:** `REFERENCE_LIMITATION`, tick 128, field `producer_input`.
+- **Result after:** **`MISMATCH`, `TRACK_STATE_MISMATCH` at tick 138, role
+  `MUS_DAC`, field `frequency`, reference 134, engine `null`.**
+- **Notes:** the v1 stream samples the mailbox before each invocation, so a
+  request written and consumed inside one frame is invisible to it. Two serial
+  power-on captures of `[0,5400)` observed 14 requests at the `Play_Music`
+  bus-release instruction while the Z80 was stopped. Both captures are
+  byte-identical, SHA-256
+  `2063b558c9b81ba8ccdf487ddb95d9be1bfd7979997be831d0f73bd4164639d3`, and the
+  extractor reduces them to a 14-entry sidecar only when they agree.
+
+  Thirteen of the 14 appear in the committed fixture one frame later, which is
+  exactly where a pre-invocation sample would see them: `e1` at row 13 against
+  fixture frame 14, `ff` at 62 against 63, `25` at 251 against 252, and so on.
+  The fourteenth, `fe` at row 242, has no fixture counterpart at all. That is
+  `cmd_StopSEGA`, written and consumed inside one frame, and it is the input
+  the limitation was reporting as missing. The agreement on the other thirteen
+  is independent corroboration that the observer reads the right byte.
+
+  Supplying it is an input, not a compared value. The oracle already takes its
+  mailbox from the reference, the way the S1 tool plays the GHZ song; the
+  sidecar only supplies a byte the old capture was blind to. The default reader
+  path is untouched and still reports the same limitation at tick 128, pinned
+  by a test.
+
+  The new frontier at tick 138 is a real engine gap: the reference has a music
+  DAC track with a frequency, and the engine has no such track.
+- **Regression gates:** S1 GHZ music oracle **`MATCH (14690 ticks)`** and S1
+  sound-test SFX oracle **`MATCH (1967 ticks)`**, both exit 0. The S2 driver
+  oracle against its committed raw-v1 fixture reports `DIVERGENCE at tick 210
+  [303 of 698 ticks divergent]`, which is its documented pre-request-awareness
+  state; the `MATCH (698 ticks)` recorded on 2026-09-03 is against the
+  unpublished request-aware candidate, and that invocation needs
+  `--ignore-digest` against an external path, which was blocked here.
+  `TestS3kRequestObservationSidecar` passes 11 of 11.
+
+## 2026-09-03 — S3K pre-consumption mailbox observed; request layer still not compared
+
+- **Context:** `.worktrees/audio-s3k-observer`, branch
+  `feature/ai-s3k-request-observer`, with `tools/tracechaser` on
+  `bugfix/ai-s3k-request-observer`. No fixture, comparator, profile or engine
+  owner changed, and **no frontier moved**.
+- **Fixture:** none. This is a disposable live smoke over rows `[0,400)` of
+  `src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2`
+  (SHA-256 `82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`,
+  466,334 rows) against the locked-on S3K ROM, written to an external scratch
+  path. It is not a parity comparison.
+- **Core:** a freshly built observer at ABI 5, decompressed SHA-256
+  `c47e8e1aef25b39d4a947d8d57f77b2680cfb013103315945a48dabc2f4a54b0`, build id
+  `6feee0d1b2ca882b`, installed to a scratch BizHawk home outside the
+  repository. Seven native selftests pass, including the new
+  `snapshot-at-pc-harness`.
+- **Result:** exit 0, 400 rows observed and published, **four mailbox
+  observations**. Process inventories were empty before and after.
+
+  | Row | Active kind at the boundary | Mailbox byte |
+  |---:|---|---|
+  | 13 | 6, DriverInit | `e1` |
+  | 62 | 0, root | `ff` |
+  | 242 | 11, UpdateEverything | `fe` |
+  | 251 | 0, root | `25` |
+
+- **Notes:** row 242 is the source frame the service-128 limitation names, and
+  its byte is `$FE`, `cmd_StopSEGA`. That value is now read from Z80 RAM
+  `$1C0A` while the bus is still held, at the `startZ80` instruction before it
+  executes. It is not inferred from the later stop burst, from SEGA-PCM exit,
+  or from the fixture.
+
+  Two corrections to the 2026-09-02 audit stand. The bus-release instruction is
+  at `$1370`, not `$1374`, which falls inside its long operand and is never an
+  instruction PC. And the boundary is not a child of the SEGA-PCM iteration:
+  the observer's service stack is shared across processors, so the active kind
+  is whichever Z80 service happens to be on top, measured here as kind 6, kind
+  11 and root. That is why the observation is now taken by a
+  parent-independent native action rather than a service push and pop.
+
+  The request layer is still `UNAVAILABLE` for comparison. Authenticating the
+  reference side alone cannot yield `MATCH`: the OpenGGF side must
+  independently observe an equivalent request through its own producer before
+  the layer can be compared. `REFERENCE_LIMITATION / producer_input` remains in
+  force and the first divergence is unchanged at service 128.
+
+  The native build attestation was simplified in the same round, on an explicit
+  human ruling: the host-image trust roots, chained recipe digests, secure
+  runtime and reproduction ritual are replaced by one build script whose
+  provenance is an output rather than a gate. Pinned source commits, pinned
+  clang packages and the patch remain pinned.
+- **Regression gates:** the TraceChaser `S3k` filter reports 143 passing. Four
+  failures across the `S2` and `S3k` filters were present on the pinned
+  baseline; one of them, the observer-installation test, now fails for a new
+  reason because it still pins the retired identity family and has not been
+  moved to the simplified contract.
+
+## 2026-09-03 — S3K request observer reaches the boundary; the reviewed topology does not hold
+
+- **Context:** `.worktrees/audio-s3k-observer`, branch
+  `feature/ai-s3k-request-observer`, on top of `feb9ea267`, with
+  `tools/tracechaser` on `bugfix/ai-s3k-request-observer` at `7dd4cf3`.
+  No fixture, candidate, comparator, profile or engine owner was changed, and
+  no frontier moved.
+- **Fixture:** none. This is a disposable, non-authoritative live smoke, not a
+  parity comparison. The movie is
+  `src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2`
+  (SHA-256 `82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`,
+  466,334 rows) against the locked-on S3K ROM.
+- **Command:** a disposable reflection driver invoking the internal
+  `S3kPreconsumptionRequestCaptureRunner.CaptureRawSmokePrefix` seam over rows
+  `[0,400)` under `timeout --signal=TERM --kill-after=30s 20m mono`, against
+  the 2026-09-02 base observer install
+  (`install-a`, core SHA-256 `fa43fbc7ab2b38e2139c8288d1fc1489ecad353613283d2892a2a26399798b3a`).
+  Output went to an external scratch path; no fixture destination was written.
+- **Result:** exit 0, 400 rows observed and published, **zero mailbox
+  submissions**. Process inventories were empty before and after.
+- **Notes:** two facts in
+  `docs/architecture/audits/audio/2026-09-02-s3k-preconsumption-request-producer-audit.md`
+  do not survive execution.
+
+  First, the bus-release instruction is at `$1370`, not `$1374`. The shipped
+  bytes are `33fc010000a11100` at `$1358`, `0839000000a11100` at `$1360`,
+  `66f6` at `$1368`, `13c000a01c0a` at `$136A`, `33fc000000a11100` at `$1370`
+  and `4e75` at `$1378`. `$1374` falls inside the release instruction's long
+  operand, so it is never an instruction PC and a hook placed there is silently
+  unreachable. The first smoke recorded four `$1358` visits and zero `$1374`
+  visits, which is what exposed it. `$1370` lies strictly inside the approved
+  `$1358..$1374` interval and carries the exact approved opcode.
+
+  Second, the diagnostic `Play_Music` does not run under the SEGA-PCM
+  iteration. With the end hook at `$1370` the four invocations in `[0,400)` are
+  bracketed by matched pairs at rows 13, 62, 242 and 251, and their active
+  kinds are 6 (`DriverInit`), 0 (root), **11 (`UpdateEverything`)** and 0
+  (root). Row 242 is the source frame the service-128 limitation names, and its
+  active kind is 11, not the reviewed kind 8. Because the service stack is
+  shared across CPUs, the parent of an M68K `Play_Music` is whichever Z80
+  service happens to be on top, so no fixed single-parent `PUSH_BEGIN` topology
+  can express this boundary. The kind-13 child therefore never opens and no
+  `$1C0A` snapshot is taken.
+
+  This is the audit's own declared stop condition: the existing exact actions
+  cannot express the topology without a false lifecycle. `REFERENCE_LIMITATION
+  / producer_input` and `FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE`
+  both remain in force, and the service-128 first divergence is unchanged.
+- **Regression gates:** the TraceChaser `S3k` filter reports 143 passing with
+  the two pre-existing failures also present on the pinned baseline `8700dd0`
+  (`Bk2Reader reads the canonical S3K fixture movies` needs
+  `TRACECHASER_TEST_FIXTURE_ROOT`; `GpgxZ80AudioCapabilityTests lock reviewed
+  S2 and S3K service manifests` fails on both trees). The 11 new
+  `S3kPreconsumptionRequestProfile` cases pass.
+
 ## 2026-09-03 — S1 gameplay oracle stops at tick 629: the fixture records no special-SFX dispatch
 
 - **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
