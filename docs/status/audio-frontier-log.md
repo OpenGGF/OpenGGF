@@ -27,6 +27,15 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S2 Level_PlayBgm tranche frozen after two Critical reviews
+
+- **Critical 1 — omitted and trace-coupled service:** `f7373c1cb` advanced the pending request from `ObjectManager`'s object-visible VBlank clock.
+  Normal pre-player title-card VBlanks did not advance that clock, while trace-bootstrap-selected object passes could advance it.
+  The tranche froze rather than treating the row-10195 comparator result as proof of a production-owned dispatch.
+- **Critical 2 — duplicate service:** fix wave `248b03ed6` added a title-card service edge alongside `LevelFrameStep`'s existing VINT edge.
+  Playable title-card leave rows consequently serviced the scheduler twice; the test covered only the pre-player predicate-false arm.
+  The re-review failed, so `bugfix/ai-s2-c0a-replan3` is preserved as non-merge evidence and the clean replan restarts at `b8b23a8fd`.
+
 ## 2026-09-03 — S2 request-transfer window MATCH; driver tick frontier unchanged
 
 - **Worktree/branch:** `.worktrees/s2-c0a-replan3`,
