@@ -263,6 +263,11 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K request sidecar published and wired:** the fourteen source-observed
+  mailbox writes are a committed comparison-only fixture the v2 oracle resolves
+  against completed services; PSG tracks keep the ROM's AMS/FMS default and
+  music activation emits `zBGMLoad`'s single register write, moving the S3K
+  oracle from tick 128 to 138.
 - **Sonic 1 gameplay oracle widened and doubled:** the GHZ1 window now runs
   to its real boundary (2,562 updates, MATCH), ending where the invincibility
   theme replaces the song, and a second recording from a different complete

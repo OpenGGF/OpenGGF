@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 3&K music now starts with the stereo reset the original performs:**
+  each time the original's sound program loads a song, the very first thing it
+  does is put the shared drum/FM6 channel back to plain left-and-right stereo.
+  The engine had inherited a different write from the older shared driver and
+  never made that reset, so a song could begin with the previous one's panning
+  still on that channel. It now performs the same reset, in the same place.
+
 - **The Sonic 3&K "SEGA" chant now comes out of the emulated sound chip:**
   it used to be played as a plain sample alongside the music driver, which is
   not how the original does it. The original's sound chip program takes over

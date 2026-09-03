@@ -131,8 +131,15 @@ public final class S3kAudioStateNormalizer {
             int freqHigh = ((track.baseBlock() & 0x07) << 3) | ((track.baseFnum() >> 8) & 0x07);
             frequency = (freqHigh << 8) | (track.baseFnum() & 0xff);
         }
-        Integer amsFmsPan = psg ? null
-                : ((track.pan() & 0xc0) | ((track.ams() & 0x03) << 4) | (track.fms() & 0x07));
+        // zTrack.AMSFMSPan (0Ah) is not an FM-only byte. zZeroFillTrackRAM
+        // stores 0C0h into it for every track it initialises (Sound/Z80 Sound
+        // Driver.asm:2181-2198), and zBGMLoad's PSG loop calls it for each PSG
+        // track just as the FM/DAC loop does (:1867-1881). cfPanningAMSFMS
+        // likewise stores the byte for whatever track it is given (:3010-3024).
+        // So a PSG track carries the byte in ROM RAM, the engine's Track holds
+        // the same default, and projecting null here would drop a real field.
+        Integer amsFmsPan =
+                (track.pan() & 0xc0) | ((track.ams() & 0x03) << 4) | (track.fms() & 0x07);
         return new S3kAudioTrackState(role, true,
                 track.overridden(),
                 track.tieNext(),

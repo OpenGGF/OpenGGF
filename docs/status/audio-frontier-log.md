@@ -1942,3 +1942,60 @@ defined by `com.openggf.tools.audio.parity`.
   `TestS3kAudioParityComparator.corruptedWriteIsReportedAtItsEventIndex`.
 - Unmodelled requests this run (logged by the capture host, not silently
   skipped): `E1h` fade-out (7 ticks), `FFh` SEGA chant (1 tick).
+
+## 2026-09-03 - S3K v2 oracle: request sidecar published and wired; frontier 128 -> 138
+
+- Worktree `.worktrees/audio-s3k-sidecar`, branch `feature/ai-s3k-request-sidecar`,
+  over `develop` at `ef8e80703`.
+- Command (all three cycles):
+  `java -cp "target/classes:$(cat target/cp.txt)"
+  com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare
+  --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz
+  --requests src/test/resources/audio/parity/s3k/s3k-aiz1-intro-requests-v1.json
+  --rom <locked-on s3k.gen>`. The committed default is exercised by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- Fixture published: `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-requests-v1.json`,
+  sha256 `d4fc2fae62c667b1da41ba428315ac121e04494836adca15e84e32c8cd696be4`,
+  1,483 bytes, schema `openggf.s3k-preconsumption-request-observations.v1`,
+  `production_bound:false`, 14 observations over movie rows `[0,5400)` from two
+  byte-identical captures (`2063b558c9b81ba8…`). Installed byte-for-byte from the
+  reviewed capture; provenance in the v2 metadata's `request_sidecar` block.
+- Resolution rule (no measured constant, and cross-checked six times). The v2
+  stream samples its mailbox at frame entry, but `zVInt` does not read the
+  mailbox at the interrupt: `zUpdateEverything` runs `zPauseUnpause`,
+  `zUpdateSFXTracks`, `TempoWait` and both fade handlers before `zUpdateMusic`
+  loads `zMusicNumber` for `zFillSoundQueue` (Sound/Z80 Sound Driver.asm:653-701,
+  :2628-2643). So a 68k store can be consumed by the service already running in
+  its own row. The reader resolves row `R` against the first service completing
+  after `R`: if that service completes in row `R+1` its entry sample settles the
+  question, and if the sample is non-empty the reference already supplies the
+  byte and the sidecar adds nothing. Six of the fourteen observations resolve
+  that way and agree byte-for-byte with the reference's own mailbox; a sidecar
+  that disagreed with one would be refused.
+- Cycle 1, tick 128 -> tick 138. Supplying movie row 242's `cmd_StopSEGA` (0FEh)
+  carried the whole 84-write `zStopAllSound` burst. The next divergence was
+  `TRACK_STATE_MISMATCH` at tick 138, `MUS_PSG1.amsFmsPan`, reference `192`
+  against `null`: the S3K normalizer suppressed `zTrack.AMSFMSPan` for PSG
+  tracks. `zZeroFillTrackRAM` stores 0C0h into that byte for every track it
+  initialises (:2181-2198) and `zBGMLoad`'s PSG loop calls it exactly as the
+  FM/DAC loop does (:1867-1881), so the byte is real on a PSG track and the
+  engine already held the same default. Suppression removed.
+- Cycle 2, tick 138 event 84 -> event 85. The remaining divergence was
+  `EVENT_VALUE_DIFFERENT` at tick 138 event 84: reference `ym2612 port 1
+  register 0B6h = 0C0h`, engine `port 0 register 0B4h = 0C0h`. `zBGMLoad` writes
+  exactly one hardware register between the song bank switch and its track loops
+  (:1811-1816), 0B6h through the port 1 address/data pair. S3K was inheriting the
+  legacy activation program's `2Bh=80h` instead, which `zBGMLoad` never writes
+  (DAC enable belongs to the DAC path, which the engine already drives).
+  `Sonic3kSmpsPhysicalPolicy.activateMusic` now returns the ROM's own program.
+- Current frontier: **tick 138, `EVENT_VALUE_DIFFERENT`, event 85**, reference
+  `ym2612 port 0 register 28h = 6` against engine `port 0 register 0B4h = 0C0h`.
+  The ROM's first `zUpdateMusic` pass over the newly loaded song keys off FM6 and
+  runs `zFM3NormalMode` plus a channel silence before its first track register
+  write; the engine begins at its own first track. That is a track-init cadence
+  frontier, not a request one, and is the next target.
+- Perturbation evidence, and it was mutation-checked. Corrupting the sidecar's
+  row-242 value changes the engine capture; rewriting every reference frame to an
+  impossible value leaves both the engine capture and the comparison
+  bit-for-bit unchanged. Replacing the supplied byte with a constant makes
+  exactly the three tests that claim those properties fail, and no others.
