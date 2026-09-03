@@ -23,9 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * <p>The point of a second source is that the bar is any BK2, not one BK2. The
  * two windows share the driver code and the GHZ song and differ only in what
  * the player did, so a divergence that shows up here and not there is about
- * request sequencing rather than about either movie. This one does: the first
- * fixture matches end to end while this one diverges at tick 1,906, where the
- * ROM emits two PSG writes ($1F then $3F) that the engine does not.
+ * request sequencing rather than about either movie. This one did: it diverged
+ * at tick 1,906, where the ROM emits two PSG writes ($1F then $3F) that the
+ * engine did not. Those come from {@code Sound_PlaySpecial}'s
+ * {@code .doneoverride} tail (docs/s1disasm/s1.sounddriver.asm:1183-1191),
+ * which builds a PSG silence pair out of the stale {@code d4} its own load
+ * loop left behind. Both windows now match end to end.
  *
  * <p>The window rule is the same as the first fixture's: power-on through the
  * first post-epoch music request, which for this movie lands at emulator frame
@@ -36,8 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * <p>This test never hydrates engine or gameplay state from the fixture; it
  * replays the reference's own dispatch sequence through the real
  * {@link com.openggf.audio.driver.SmpsDriver} and compares driver state. It is
- * not required to be green: it pins the current frontier so a regression is
- * visible and an improvement has to be recorded rather than absorbed.
+ * green: it pins the current frontier so a regression is visible and any
+ * further movement has to be recorded rather than absorbed.
  */
 class TestS1GameplayRun2AudioDriverOracle {
     private static final Path REFERENCE = Path.of(
@@ -47,7 +50,7 @@ class TestS1GameplayRun2AudioDriverOracle {
     Path temp;
 
     @Test
-    void currentFrontierIsTheFirstDivergence() throws Exception {
+    void wholeWindowMatches() throws Exception {
         Path rom = requiredRom();
         Path reference = decompress(REFERENCE, temp.resolve("reference.jsonl"));
         Path openGgf = temp.resolve("openggf.jsonl");
@@ -59,14 +62,9 @@ class TestS1GameplayRun2AudioDriverOracle {
         AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
 
         // Frontier pin (docs/status/audio-frontier-log.md, 2026-09-03): the
-        // reference's tick 1,906 opens with two PSG writes the engine never
-        // emits, so the comparator's first difference is a value difference at
-        // event 0 -- reference PSG $1F against the engine's YM2612 port 0
-        // register $A4. Track state agrees on both sides at this tick, so the
-        // gap is in what the driver writes, not in what it thinks it is
-        // playing. Not investigated here: this lane is measurement only.
-        assertEquals(AudioParityReport.Kind.EVENT_VALUE_DIFFERENT, report.kind(), report::toHumanText);
-        assertEquals(1906, report.tickOrdinal().intValue(), report::toHumanText);
+        // window matched end to end once Sound_PlaySpecial's .doneoverride
+        // PSG pair was modelled. The previous frontier was tick 1,906.
+        assertEquals(AudioParityReport.Kind.MATCH, report.kind(), report::toHumanText);
     }
 
     /**

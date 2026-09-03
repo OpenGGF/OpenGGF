@@ -8,6 +8,7 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.smps.SmpsSequencerHost;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsTrackSnapshot;
@@ -725,6 +726,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         }
         recordSfxClaims(sequencer);
         installPreparedSfxChannelOwnership(admission, sequencer);
+        writeSpecialSfxPsg3SilencePair(sequencer);
         restoreMusicDacData();
         reportSfxAdmission(sequencer);
         if (admission.continuousSfxId() != 0) {
@@ -893,6 +895,86 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         // track's first UpdateMusic service (SD:1038-1044). PSG1/2 have
         // no corresponding admission write.
         writePsg3AdmissionPairIfDeclared(sequencer);
+    }
+
+    /**
+     * Emits the PSG pair S1's {@code Sound_PlaySpecial} writes at its
+     * {@code .doneoverride} tail (docs/s1disasm/s1.sounddriver.asm:1183-1191).
+     *
+     * <p>The routine loads the special SFX's own {@code v_spcsfx_*} tracks,
+     * then tests the NORMAL SFX PSG3 slot: {@code tst.b
+     * SMPS_RAM.v_sfx_psg3_track.PlaybackControl(a6) / bpl.s .locret} (:1183).
+     * When that slot is playing it sets the 'SFX is overriding' bit on its own
+     * special PSG3 track and writes {@code ori.b #$1F,d4 / move.b d4,(psg_input)
+     * / bchg #5,d4 / move.b d4,(psg_input)} (:1186-1191).
+     *
+     * <p>{@code d4} is NOT the PSG3 channel byte the "command to silence
+     * channel" comment implies. Its last assignment is {@code move.b 1(a1),d4}
+     * at the top of {@code .sfxloadloop} (:1141), so it holds the voice control
+     * bits of the last track the loop read. {@code SndD0 - Waterfall} declares
+     * one track, {@code cFM4} = {@code $04}, so the pair emitted is {@code $1F,
+     * $3F}: two SN76489 data bytes rather than the intended {@code $DF, $FF}
+     * latch pair. This is the shipped {@code FixBugs = 0} path
+     * (docs/s1disasm/sonic.asm:20); the fixed branch does not exist for this
+     * site, so there is no alternative behaviour to select. The engine emits
+     * what the ROM emits.
+     */
+    private void writeSpecialSfxPsg3SilencePair(SmpsSequencer sequencer) {
+        if (!sequencer.isSpecialSfx()
+                || sequencer.getConfig().getSpecialSfxPsg3SilenceMode()
+                        != SmpsSequencerConfig.SpecialSfxPsg3SilenceMode
+                                .S1_STALE_VOICE_CONTROL_PAIR) {
+            return;
+        }
+        if (!normalSfxPsg3TrackPlaying()) {
+            return;
+        }
+        int staleVoiceControl = lastLoadedSfxTrackVoiceControl(sequencer);
+        if (staleVoiceControl < 0) {
+            return;
+        }
+        int silence = (staleVoiceControl | 0x1F) & 0xFF;
+        writeRawPsg(silence);
+        writeRawPsg(silence ^ 0x20);
+    }
+
+    /**
+     * The engine's reading of {@code v_sfx_psg3_track.PlaybackControl} bit 7:
+     * a normal (non-special) SFX holding an active PSG3 track. S1 keeps exactly
+     * one such slot, which {@code Sound_PlaySpecial} never writes.
+     */
+    private boolean normalSfxPsg3TrackPlaying() {
+        for (SmpsSequencer candidate : sfxSequencers) {
+            if (candidate.isSpecialSfx()) {
+                continue;
+            }
+            for (int track = 0; track < candidate.trackCount(); track++) {
+                SmpsSequencer.Track entry = candidate.trackAt(track);
+                if (entry.active
+                        && entry.type == SmpsSequencer.TrackType.PSG
+                        && entry.channelId == 2) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The voice control byte {@code Sound_PlaySpecial}'s {@code .sfxloadloop}
+     * leaves in {@code d4}: the channel byte of the last header entry it read
+     * (s1.sounddriver.asm:1141).
+     */
+    private static int lastLoadedSfxTrackVoiceControl(SmpsSequencer sequencer) {
+        if (!(sequencer.getSmpsData() instanceof SmpsSfxData sfxData)) {
+            return -1;
+        }
+        java.util.List<? extends SmpsSfxData.SmpsSfxTrack> entries =
+                sfxData.getTrackEntries();
+        if (entries.isEmpty()) {
+            return -1;
+        }
+        return entries.get(entries.size() - 1).channelMask() & 0xFF;
     }
 
     private void writeConfiguredPsg3AdmissionPair(

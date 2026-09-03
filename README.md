@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Second Sonic 1 gameplay oracle is a full match:** the shipped
+  `Sound_PlaySpecial` silence tail, which writes two stale data bytes instead
+  of the intended PSG3 latch pair when a normal PSG3 effect is playing, is now
+  emitted as the ROM does; both S1 gameplay recordings match end to end.
 - **S3K request sidecar published and wired:** the fourteen source-observed
   mailbox writes are a committed comparison-only fixture the v2 oracle resolves
   against completed services; PSG tracks keep the ROM's AMS/FMS default and
