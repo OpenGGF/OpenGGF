@@ -27,6 +27,46 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S2 driver oracle reaches full MATCH over the 698-tick window
+
+- **Context:** `.worktrees/s2-tick0-land`, branch `bugfix/ai-s2-level-playbgm-land`,
+  on top of `810dbc039`. No fixture, candidate, comparator or alignment was
+  changed.
+- **Fixture:** the authenticated S2 driver oracle payload behind
+  `TestS2AudioOracleFixture.fixturePath()`, driven by
+  `sonic-2-sonic-tails-complete-emeralds.bk2` against the S2 World REV01 ROM
+  (SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`).
+- **Command:** the same invocation as the entry below.
+- **Result before:** `S2 driver oracle: DIVERGENCE at tick 557 (movie row 10759),
+  field writes.count: expected=4 actual=5 [20 of 698 ticks divergent]`.
+- **Result after:** **`S2 driver oracle: MATCH (698 ticks)`**.
+  `MATCH: 25 production transfers agree` is unchanged.
+- **Notes:** the remaining extras were PSG attenuation bytes `0xf2`, `0xf4`,
+  `0xf6`, `0xf8`, `0xfa`, `0xff` — a music PSG3 volume envelope ramping to
+  silence on the noise channel. SFX `0xC1` Explosion is requested at movie row
+  10759 and declares `cFM5` plus `cPSG3`, and the reference's PSG3
+  `playbackControl` byte moves `0x80` to `0x84` on that exact row, so the ROM
+  holds the track SFX-overridden for the whole span. The engine installs that
+  override on the correct row; logging the transitions shows PSG channel 2
+  flipping to overridden at row 10759. The defect was that the PSG branch of
+  `SmpsSequencer.refreshVolume` consulted only the rest bit and never the
+  override bit, so the envelope kept writing behind the override.
+
+  All three drivers agree here, so this is a universal correction rather than a
+  per-game one. S2 `zPSGUpdateVol` does `and 6` over the rest and override bits
+  and returns (`s2.sounddriver.asm:1305-1308`); S1 `SetPSGVolume` tests the two
+  bits separately (`s1.sounddriver.asm:1965-1969`); S3K reaches the same outcome
+  one level up, where `zUpdatePSGTrack` returns on bit 2 before both the
+  frequency pair and the volume tail (skdisasm `Sound/Z80 Sound
+  Driver.asm:4079-4081`). In each case the flutter or envelope index still
+  advances behind the suppressed write, which is why the gate belongs at the
+  write and not at the envelope step.
+- **Regression gates:** S1 GHZ music oracle `MATCH (14690 ticks)` and S1
+  sound-test SFX oracle `MATCH (1967 ticks)`, both exit 0. The S1, S2, S3K and
+  shared audio packages report 1,943 tests with the same five pre-existing
+  failures as the entry below and no new ones.
+  `TestSmpsFadeAudioThroughput` passes.
+
 ## 2026-09-03 — S2 ROM SFX-release semantics advance the driver frontier to tick 557
 
 - **Context:** `.worktrees/s2-tick0-land`, branch `bugfix/ai-s2-level-playbgm-land`,

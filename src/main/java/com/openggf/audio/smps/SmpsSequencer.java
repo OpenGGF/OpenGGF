@@ -2477,6 +2477,18 @@ public class SmpsSequencer implements CoordFlagContext {
             if (t.envAtRest || t.resting) {
                 return;
             }
+            // Every SMPS driver withholds the PSG attenuation byte while an SFX
+            // owns the track, testing the same playback-control bit 2 the flutter
+            // index keeps advancing behind: S2 zPSGUpdateVol does `and 6` over the
+            // rest and override bits and returns (s2.sounddriver.asm:1305-1308),
+            // S1 SetPSGVolume tests the two bits separately
+            // (s1.sounddriver.asm:1965-1969), and S3K reaches the same outcome one
+            // level up, where zUpdatePSGTrack returns on bit 2 before either the
+            // frequency pair or the volume tail (skdisasm Sound/Z80 Sound
+            // Driver.asm:4079-4081).
+            if (t.overridden) {
+                return;
+            }
             int vol = t.note == 0x80 ? 0x0f
                     : Math.min(0x0F, Math.max(0, t.volumeOffset + t.envValue));
             int ch = t.channelId;
