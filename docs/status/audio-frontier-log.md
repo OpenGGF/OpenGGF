@@ -27,6 +27,38 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K oracle: the note path sends one frequency and no pan; tick 138 event 151 -> 255
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick138`,
+  `bugfix/ai-s3k-oracle-tick138`, on top of the entry below.
+- **Command:** unchanged, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 138, event 151, reference
+  `ym2612 port 0 register 28h = 0F1h` against engine `port 0 register 0B5h = 0C0h`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 138, event 255 of 259,
+  reference `psg 0A0h` against engine `psg 0A3h`. Every YM2612 write of the
+  title-music load now agrees, across all six FM tracks.
+- **Two writes the S3K note path does not make.** `zUpdateFMorPSGTrack` runs
+  `zGetNextNote`, `zPrepareModulation`, `zUpdateFreq` and `zDoModulation`, all of
+  which only compute, and then a single `zFMSendFreq` before `zFMNoteOn`
+  (Sound/Z80 Sound Driver.asm:776-782). `zFMSendFreq` writes 0A4h and 0A0h and
+  nothing else (:815-871); the track's AMS/FMS/pan reaches the chip from the
+  voice upload (:1533), not from the note. The engine was writing the pan
+  between the frequency and the key-on, and was sending the frequency twice,
+  once unmodulated and once from the forced note-start modulation write. The
+  second write hid the first while it sat between them.
+- **No constant was introduced.** Both changes delete a write the listing does
+  not contain.
+- **Next.** The remaining divergence is a PSG tone byte, reference `0A0h`
+  against engine `0A3h`, on a PSG track's first note.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`; the S1 gameplay v3 and run-2 oracles and the S2 driver
+  oracle `MATCH (698 ticks)` all pass inside one run of the
+  `com.openggf.tools.audio.parity` and `com.openggf.audio` packages,
+  `TestSmpsFadeAudioThroughput` and the four S3K keep-green classes: 2,097
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S3K oracle: cfSetVoice releases the envelope first; tick 138 event 87 -> 151
 
 - **Worktree/branch:** `.worktrees/audio-s3k-tick138`,

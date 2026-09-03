@@ -2368,18 +2368,26 @@ public class SmpsSequencer implements CoordFlagContext {
                 synth.writeFm(this, 0, 0x28, chVal); // Key Off before frequency change
             }
 
-            writeFmFreq(port, ch, fnum, block);
+            // The S3K HOLD-family path applies its note-start modulation before
+            // key-on. S2 calls zFMNoteOn first and zDoModulation afterwards
+            // (sd:821-835); S1 does not apply modulation at note start.
+            boolean modulationSendsNoteFrequency = t.modEnabled
+                    && config.isApplyModOnNote()
+                    && config.getNoteOnPrevent()
+                            == SmpsSequencerConfig.NoteOnPrevent.HOLD;
+            if (!modulationSendsNoteFrequency) {
+                // zUpdateFreq and zDoModulation only compute the frequency; the
+                // single zFMSendFreq that follows them puts it on the bus
+                // (skdisasm Sound/Z80 Sound Driver.asm:776-782, :815-871), so a
+                // modulated note must not also send the unmodulated value.
+                writeFmFreq(port, ch, fnum, block);
+            }
             // S1/S2 FMPrepareNote writes only A4/A0; pan is written by SetVoice
             // or its coordination flag (S2 sd:821-835, 2797-2807).
             if (config.isWriteFmPanOnNote()) {
                 applyFmPanAmsFms(t);
             }
-            // The S3K HOLD-family path applies its note-start modulation before
-            // key-on. S2 calls zFMNoteOn first and zDoModulation afterwards
-            // (sd:821-835); S1 does not apply modulation at note start.
-            if (t.modEnabled && config.isApplyModOnNote()
-                    && config.getNoteOnPrevent()
-                            == SmpsSequencerConfig.NoteOnPrevent.HOLD) {
+            if (modulationSendsNoteFrequency) {
                 t.forceModulationWrite = true;
                 applyModulation(t);
             }

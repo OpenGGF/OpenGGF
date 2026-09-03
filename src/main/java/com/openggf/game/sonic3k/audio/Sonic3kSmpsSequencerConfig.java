@@ -60,7 +60,7 @@ public final class Sonic3kSmpsSequencerConfig {
                 // Preserve the existing S3K Z80 rest path; the S2 oracle's
                 // post-rest envelope step is selected independently.
                 .advancePsgEnvelopeOnRest(false)
-                .writeFmPanOnNote(true)
+                .writeFmPanOnNote(false)
                 .dacNoteKeysOffFm6AndRestoresFm3(true)
                 .enableDacOnSequencerStart(false)
                 .fmVoiceWriteProfile(SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80)
