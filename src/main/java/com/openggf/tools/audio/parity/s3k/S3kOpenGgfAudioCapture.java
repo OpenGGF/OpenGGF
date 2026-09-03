@@ -102,6 +102,11 @@ public final class S3kOpenGgfAudioCapture {
                     Sonic3kSmpsPhysicalPolicy.INSTANCE.boot());
             S3kAudioTick bootReference = reference.getFirst();
             addTick(ticks, driver, writes, bootReference, corruptWriteTick);
+            // The init's last write is zStopAllSound's 27h (D:2513-2519); it
+            // then jumps into zPlayDigitalAudio (D:550-551, :4256-4260), whose
+            // 2Bh belongs to the window closed by the first zVInt return.
+            applyProgram(driver,
+                    Sonic3kSmpsPhysicalPolicy.INSTANCE.enterDacIdleLoop());
 
             for (int index = 1; index < reference.size(); index++) {
                 S3kAudioTick referenceTick = reference.get(index);

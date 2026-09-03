@@ -18,7 +18,8 @@ public final class Sonic3kSmpsPhysicalPolicy
     private static final Identity IDENTITY =
             new Identity("sonic3k-shipped-v1");
     private static final SmpsWriteProgram STOP_ALL = stopAllProgram();
-    private static final SmpsWriteProgram BOOT = bootProgram();
+    private static final SmpsWriteProgram BOOT = STOP_ALL;
+    private static final SmpsWriteProgram DAC_IDLE_ENTRY = dacIdleEntryProgram();
 
     private Sonic3kSmpsPhysicalPolicy() {
     }
@@ -39,6 +40,11 @@ public final class Sonic3kSmpsPhysicalPolicy
     }
 
     @Override
+    public SmpsWriteProgram enterDacIdleLoop() {
+        return DAC_IDLE_ENTRY;
+    }
+
+    @Override
     public SmpsWriteProgram silenceAllPsg() {
         // Sound/Z80 Sound Driver.asm:zPlaySoundByIndex/zFadeEffects routes
         // E3h to zPSGSilenceAll, whose four iterations add 20h to 9Fh.
@@ -51,13 +57,15 @@ public final class Sonic3kSmpsPhysicalPolicy
                 .activateMusic(activation);
     }
 
-    private static SmpsWriteProgram bootProgram() {
-        List<SmpsChipWrite> writes = new ArrayList<>(85);
-        writes.addAll(STOP_ALL.writes());
-        // zInitAudioDriver enters zPlayDigitalAudio; the first idle loop
-        // disables DAC once more after zStopAllSound completes.
-        writes.add(new SmpsChipWrite.Ym2612(0, 0x2B, 0x00));
-        return new SmpsWriteProgram(writes);
+    private static SmpsWriteProgram dacIdleEntryProgram() {
+        // Sound/Z80 Sound Driver.asm:zPlayDigitalAudio (:4256-4260) opens with
+        // di / ld a,2Bh / ld c,0 / call zWriteFMI, disabling the DAC once more.
+        // zInitAudioDriver reaches it by jp after ei (:550-551) and never
+        // returns, so this write is the first work of the service that follows
+        // the init, not part of the init itself. zStopAllSound's own 27h
+        // (:2513-2519) is therefore the init's last write.
+        return new SmpsWriteProgram(
+                List.of(new SmpsChipWrite.Ym2612(0, 0x2B, 0x00)));
     }
 
     private static SmpsWriteProgram stopAllProgram() {
