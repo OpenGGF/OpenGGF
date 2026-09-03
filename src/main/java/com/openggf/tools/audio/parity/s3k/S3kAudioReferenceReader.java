@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
 
@@ -104,6 +105,16 @@ public final class S3kAudioReferenceReader {
      */
     public static Metadata readDriverServices(
             Path path, Consumer<S3kAudioTick> serviceConsumer) {
+        return readDriverServices(path, S3kRequestObservationSidecar.absent(), serviceConsumer);
+    }
+
+    /**
+     * As above, but consults source-observed mailbox requests for the rows the
+     * stream's pre-invocation sampling cannot see. The sidecar supplies a
+     * driver input only; it contributes no compared value.
+     */
+    public static Metadata readDriverServices(Path path,
+            S3kRequestObservationSidecar requests, Consumer<S3kAudioTick> serviceConsumer) {
         List<S3kAudioTick> frames = new ArrayList<>();
         Metadata metadata = read(path, frames::add);
         int completion = -1;
@@ -150,17 +161,29 @@ public final class S3kAudioReferenceReader {
             List<AudioParityChipWrite> serviceWrites = frame.writes().stream()
                     .filter(write -> !isPcmTransportWrite(write))
                     .toList();
+            List<Integer> mailbox = frame.mailbox();
             if (segaPcmSuspended && !serviceWrites.isEmpty()) {
                 segaPcmSuspended = false;
-                if (frame.mailbox().stream().allMatch(value -> value == 0)) {
-                    inputEvidence = S3kAudioTick.ProducerInputEvidence.unavailable(
-                            "mailbox input was unavailable for the first observable service after reference producer interrupt services suspended");
+                if (mailbox.stream().allMatch(value -> value == 0)) {
+                    // The stream samples the mailbox before each invocation, so a
+                    // request written and consumed inside one frame is invisible
+                    // to it. A source-observed byte, read at Play_Music's
+                    // bus-release instruction while the Z80 was still stopped,
+                    // supplies that input; without one the evidence stays
+                    // unavailable exactly as before.
+                    Optional<Integer> observed = requests.requestAt(index);
+                    if (observed.isPresent()) {
+                        mailbox = List.of(observed.get(), 0, 0);
+                    } else {
+                        inputEvidence = S3kAudioTick.ProducerInputEvidence.unavailable(
+                                "mailbox input was unavailable for the first observable service after reference producer interrupt services suspended");
+                    }
                 }
             }
             serviceConsumer.accept(new S3kAudioTick(ordinal++, frame.lag(),
-                    frame.mailbox(), frame.global(), frame.tracks(), serviceWrites,
+                    mailbox, frame.global(), frame.tracks(), serviceWrites,
                     inputEvidence));
-            if (frame.mailbox().contains(S3kAudioParitySchema.CMD_SEGA)) {
+            if (mailbox.contains(S3kAudioParitySchema.CMD_SEGA)) {
                 segaPcmSuspended = true;
             }
         }

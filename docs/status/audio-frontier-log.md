@@ -27,6 +27,60 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S3K oracle advances off the producer-input limitation to tick 138
+
+- **Context:** `.worktrees/audio-s3k-observer`, branch
+  `feature/ai-s3k-request-observer` on `a92b12513`, with `tools/tracechaser` on
+  `bugfix/ai-s3k-request-observer` at `78b8c1e`. No committed fixture,
+  comparator or engine owner changed.
+- **Fixture:** the committed bounded oracle
+  `src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz`,
+  unchanged, plus a new external request sidecar supplying driver inputs only.
+- **Command:**
+
+  ```
+  S3kAudioParityTool compare \
+    --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v1.jsonl.gz \
+    --requests <external>/s3k-request-observations.json \
+    --rom <absolute locked-on S3K ROM>
+  ```
+
+- **Result before:** `REFERENCE_LIMITATION`, tick 128, field `producer_input`.
+- **Result after:** **`MISMATCH`, `TRACK_STATE_MISMATCH` at tick 138, role
+  `MUS_DAC`, field `frequency`, reference 134, engine `null`.**
+- **Notes:** the v1 stream samples the mailbox before each invocation, so a
+  request written and consumed inside one frame is invisible to it. Two serial
+  power-on captures of `[0,5400)` observed 14 requests at the `Play_Music`
+  bus-release instruction while the Z80 was stopped. Both captures are
+  byte-identical, SHA-256
+  `2063b558c9b81ba8ccdf487ddb95d9be1bfd7979997be831d0f73bd4164639d3`, and the
+  extractor reduces them to a 14-entry sidecar only when they agree.
+
+  Thirteen of the 14 appear in the committed fixture one frame later, which is
+  exactly where a pre-invocation sample would see them: `e1` at row 13 against
+  fixture frame 14, `ff` at 62 against 63, `25` at 251 against 252, and so on.
+  The fourteenth, `fe` at row 242, has no fixture counterpart at all. That is
+  `cmd_StopSEGA`, written and consumed inside one frame, and it is the input
+  the limitation was reporting as missing. The agreement on the other thirteen
+  is independent corroboration that the observer reads the right byte.
+
+  Supplying it is an input, not a compared value. The oracle already takes its
+  mailbox from the reference, the way the S1 tool plays the GHZ song; the
+  sidecar only supplies a byte the old capture was blind to. The default reader
+  path is untouched and still reports the same limitation at tick 128, pinned
+  by a test.
+
+  The new frontier at tick 138 is a real engine gap: the reference has a music
+  DAC track with a frequency, and the engine has no such track.
+- **Regression gates:** S1 GHZ music oracle **`MATCH (14690 ticks)`** and S1
+  sound-test SFX oracle **`MATCH (1967 ticks)`**, both exit 0. The S2 driver
+  oracle against its committed raw-v1 fixture reports `DIVERGENCE at tick 210
+  [303 of 698 ticks divergent]`, which is its documented pre-request-awareness
+  state; the `MATCH (698 ticks)` recorded on 2026-09-03 is against the
+  unpublished request-aware candidate, and that invocation needs
+  `--ignore-digest` against an external path, which was blocked here.
+  `TestS3kRequestObservationSidecar` passes 11 of 11.
+
 ## 2026-09-03 — S3K pre-consumption mailbox observed; request layer still not compared
 
 - **Context:** `.worktrees/audio-s3k-observer`, branch

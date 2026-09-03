@@ -86,8 +86,11 @@ public final class S3kAudioParityTool {
         String format = options.getOrDefault("format", "text");
         Integer corrupt = options.containsKey("corrupt-engine-write-tick")
                 ? Integer.parseInt(options.get("corrupt-engine-write-tick")) : null;
+        S3kRequestObservationSidecar requests = options.containsKey("requests")
+                ? S3kRequestObservationSidecar.read(requiredPath(options, "requests"))
+                : S3kRequestObservationSidecar.absent();
         List<S3kAudioTick> reference = new ArrayList<>();
-        S3kAudioReferenceReader.readDriverServices(referencePath, reference::add);
+        S3kAudioReferenceReader.readDriverServices(referencePath, requests, reference::add);
         if (options.containsKey("ticks")) {
             int limit = Integer.parseInt(options.get("ticks"));
             if (limit < 1 || limit > reference.size()) {
@@ -153,7 +156,8 @@ public final class S3kAudioParityTool {
     private static void usage(PrintStream stream) {
         stream.println("usage: S3kAudioParityTool validate --reference <jsonl[.gz]>");
         stream.println("       S3kAudioParityTool compare --reference <jsonl[.gz]> --rom <s3k.gen>");
-        stream.println("           [--ticks N] [--format text|json] [--corrupt-engine-write-tick N]");
+        stream.println("           [--requests <observations.json>] [--ticks N] [--format text|json]");
+        stream.println("           [--corrupt-engine-write-tick N]");
     }
 
     private static final class UsageException extends RuntimeException {
