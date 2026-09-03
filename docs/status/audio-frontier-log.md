@@ -27,6 +27,47 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — S1 gameplay oracle stops at tick 629: the fixture records no special-SFX dispatch
+
+- **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
+  `bugfix/ai-s1-gameplay-frontier`, at `6c788b4fe`. Measurement only; no engine
+  change accompanies this entry.
+- **Result:** MISMATCH, `TRACK_STATE_MISMATCH`, tick 629, role FM4, field
+  `overridden` — reference true, engine false.
+- **Diagnosis — a reference limitation, not an engine defect.** Tick 583
+  dispatches `sfx_Spring` (`0xCC`) onto FM4 and tick 593 dispatches a ring
+  (`0xB5`, resolved to the left-speaker `0xCE`) onto the same channel. `SndCE`
+  is three notes totalling `$24` ticks, so it ends exactly at tick 629, and
+  both streams agree write-for-write up to that point.
+  `cfStopTrack` (`docs/s1disasm/s1.sounddriver.asm:2489-2563`) then chooses
+  where to hand FM4 back. Its FM4 case first tests
+  `v_spcsfx_fm4_track.PlaybackControl` (`:2510-2515`): when a **special** SFX is
+  playing it restores `v_special_voice_ptr` into the special track and never
+  touches the music track, so the music FM4 override bit survives. Only the
+  fall-through `.getpointer` path (`:2519-2528`) reaches the music track and
+  clears bit 2.
+  The reference keeps the music FM4 override set at ticks 629-631, so the ROM
+  took the special-SFX branch. Ticks 630 and 631 confirm it: their FM4
+  frequency and key-on writes land *after* that invocation's music PSG writes,
+  which the music FM walk (`:214-221`) precedes, so they come from the
+  special-SFX section (`:243-247`).
+- **Why the engine cannot follow.** GHZ's special SFX reaches the driver
+  through `Sound_PlaySpecial` (`:1105`), a separate entry point with its own
+  track slots. The fixture's per-tick `dispatches` array records only
+  `Sound_PlaySFX` calls, and `raw_state.tracks` carries the ten music slots
+  only — neither the special-SFX admission nor its track state is captured. The
+  replay host has no data from which to admit that sound, so the engine
+  correctly releases FM4 to music where the ROM releases it to a special SFX
+  the fixture never mentions. `voice_selector` is `0x40` on every tick and is
+  not evidence either way: `UpdateMusic` stores it unconditionally before the
+  special-SFX section (`:243`).
+- **What would move it:** a re-capture whose probe also records
+  `Sound_PlaySpecial` dispatches and the two special-SFX track slots, published
+  through the fixture contract. That is capture work, not engine work.
+- **Gates at this commit:** S1 sound-test music MATCH (14,690 ticks) and SFX
+  MATCH (1,967 ticks); the audio packages, `TestSmpsFadeAudioThroughput` and
+  the S2 driver oracle run 2,470 tests with 0 failures.
+
 ## 2026-09-03 — S1 gameplay oracle: tick 316 → 629 (SFX walks fixed RAM slots)
 
 - **Worktree/branch:** `.worktrees/audio-s1-gameplay-frontier`,
