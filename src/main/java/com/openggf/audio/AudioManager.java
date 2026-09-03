@@ -858,9 +858,8 @@ public class AudioManager implements MusicRestoreSink {
 
     public void playSegaPcmCommand(int sourceCommandId) {
         BaseAudioSource source = baseAudioSource;
-        Rom sourceRom = (Rom) source.rom();
         if (suppressingRewindReplay()
-                || source.profile() == null || sourceRom == null) {
+                || source.profile() == null || source.rom() == null) {
             return;
         }
         SegaPcmSpec spec = source.profile().getSegaPcmSpec();
@@ -868,8 +867,12 @@ public class AudioManager implements MusicRestoreSink {
             return;
         }
         try {
-            byte[] pcm = sourceRom.readBytes(
-                    spec.address(), spec.length());
+            // The runtime-layer profile owns the ROM read; the audio layer
+            // must not depend on com.openggf.data (TestArchUnitRules).
+            byte[] pcm = source.profile().loadSegaPcm(source.rom());
+            if (pcm == null) {
+                return;
+            }
             recordTimelineCommand(new AudioCommand.PlaySegaPcm(
                     sourceCommandId, pcm, spec.sampleRate()));
         } catch (Exception e) {
@@ -2134,14 +2137,20 @@ public class AudioManager implements MusicRestoreSink {
 
     private AudioCommand segaPcmCommand(BaseAudioSource source, int commandId) {
         SegaPcmSpec spec = source.profile().getSegaPcmSpec();
-        Rom sourceRom = (Rom) source.rom();
-        if (spec == null || sourceRom == null) {
+        if (spec == null || source.rom() == null) {
             return new AudioCommand.ReferenceLimitation(
                     commandId, "SEGA PCM source is unavailable");
         }
         try {
-            return new AudioCommand.PlaySegaPcm(commandId,
-                    sourceRom.readBytes(spec.address(), spec.length()), spec.sampleRate());
+            // Same runtime-layer read as playSegaPcmCommand: the audio layer
+            // describes the span, the game profile fetches the bytes.
+            byte[] pcm = source.profile().loadSegaPcm(source.rom());
+            if (pcm == null) {
+                return new AudioCommand.ReferenceLimitation(
+                        commandId, "SEGA PCM source is unavailable");
+            }
+            return new AudioCommand.PlaySegaPcm(commandId, pcm,
+                    spec.sampleRate());
         } catch (java.io.IOException unavailable) {
             return new AudioCommand.ReferenceLimitation(
                     commandId, "SEGA PCM source could not be read");

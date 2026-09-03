@@ -181,6 +181,23 @@ public interface GameAudioProfile {
         return null;
     }
 
+    /**
+     * Reads this game's boot SEGA PCM chant out of the active ROM value.
+     *
+     * <p>The audio layer owns the request but not the ROM read: the per-game
+     * profiles live in the runtime layer, which may depend on
+     * {@code com.openggf.data}, so they supply the bytes and keep the audio
+     * services free of ROM edges.
+     *
+     * @param rom the active ROM value as the audio layer holds it
+     * @return the sample bytes, or {@code null} when this game has no
+     *         command-driven SEGA PCM path or the ROM is unavailable
+     * @throws java.io.IOException if the described ROM span cannot be read
+     */
+    default byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+        return null;
+    }
+
     /** How speed shoes affect music playback. Default: TEMPO_SWAP (S1/S2). */
     default SpeedMode getSpeedMode() {
         return SpeedMode.TEMPO_SWAP;

@@ -18,7 +18,6 @@ Field <com.openggf.graphics.RenderContext.palettes> depends on component type <c
 Field <com.openggf.graphics.RenderContext.palettes> has type <[Lcom.openggf.level.Palette;> in (RenderContext.java:0)
 Field <com.openggf.graphics.pipeline.UiRenderPipeline.hudRenderManager> has type <com.openggf.level.objects.HudRenderManager> in (UiRenderPipeline.java:0)
 Method <com.openggf.audio.AudioManager.configuredServicesOrNull()> calls method <com.openggf.game.GameServices.configuration()> in (AudioManager.java:206)
-Method <com.openggf.audio.AudioManager.playSegaPcmCommand(int)> calls method <com.openggf.data.Rom.readBytes(long, int)> in (AudioManager.java:851)
 Method <com.openggf.audio.AudioManager.setRom(com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)
 Method <com.openggf.audio.GameAudioProfile.createSmpsLoader(com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (GameAudioProfile.java:0)
 Method <com.openggf.audio.debug.SoundTestApp$InteractiveState.getOutputSampleRate()> calls method <com.openggf.game.GameServices.configuration()> in (SoundTestApp.java:834)

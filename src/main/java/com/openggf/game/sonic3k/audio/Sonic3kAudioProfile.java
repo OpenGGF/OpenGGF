@@ -5,6 +5,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
+import com.openggf.game.audio.SegaPcmRomReader;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
@@ -192,6 +193,15 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
                 Sonic3kSmpsConstants.SEGA_SOUND_ADDR,
                 Sonic3kSmpsConstants.SEGA_SOUND_SIZE,
                 Sonic3kSmpsConstants.SEGA_SOUND_SAMPLE_RATE);
+    }
+
+    /**
+     * Reads the chant through the runtime-layer ROM reader so the audio layer
+     * never depends on {@code com.openggf.data} for this sample.
+     */
+    @Override
+    public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+        return SegaPcmRomReader.read(rom, getSegaPcmSpec());
     }
 
     /** S3K fade-out uses delay 6 instead of the S1/S2 default delay 3. */
