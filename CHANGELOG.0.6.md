@@ -19,7 +19,9 @@ This file contains the complete 0.6 development snapshot history carried forward
   sound effects such as rings and springs. It used to seize that channel the
   moment it started, silencing whatever was on it. It now waits, exactly as the
   original driver does, and becomes audible only when the other sound effect
-  finishes with the channel.
+  finishes with the channel. When it does take the channel it now plays with its
+  own instrument rather than the music's, so it sounds like the waterfall
+  instead of a stray note of the Green Hill theme.
 
 - **Sonic 3&K audio comparison now reads the music request the driver actually
   received:** the bounded S3K sound-driver oracle stopped early because a

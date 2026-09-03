@@ -735,6 +735,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             }
             updateOverrides(SmpsSequencer.TrackType.FM, channel, true);
             if (yieldsToIncumbentSfx(sequencer, fmLocks[channel])) {
+                sequencer.setChannelOverriddenWithoutRestore(
+                        SmpsSequencer.TrackType.FM, channel, true);
                 continue;
             }
             fmLocks[channel] = sequencer;
@@ -746,6 +748,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             }
             updateOverrides(SmpsSequencer.TrackType.PSG, channel, true);
             if (yieldsToIncumbentSfx(sequencer, psgLocks[channel])) {
+                sequencer.setChannelOverriddenWithoutRestore(
+                        SmpsSequencer.TrackType.PSG, channel, true);
                 continue;
             }
             psgLocks[channel] = sequencer;
@@ -2398,6 +2402,14 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                     == SmpsSequencerConfig.FmSfxReleaseMode.LEGACY_FULL_RESTORE) {
                 sequencer.forceSilence(SmpsSequencer.TrackType.FM, channel);
             }
+            SmpsSequencer waiting = waitingSpecialSfx(
+                    SmpsSequencer.TrackType.FM, channel, sequencer);
+            if (waiting != null) {
+                fmLocks[channel] = waiting;
+                waiting.setChannelOverridden(
+                        SmpsSequencer.TrackType.FM, channel, false);
+                continue;
+            }
             fmLocks[channel] = null;
             updateOverrides(SmpsSequencer.TrackType.FM, channel, false);
         }
@@ -2410,9 +2422,45 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                     == SmpsSequencerConfig.PsgSfxReleaseMode.LEGACY_FULL_RESTORE) {
                 sequencer.forceSilence(SmpsSequencer.TrackType.PSG, channel);
             }
+            SmpsSequencer waitingPsg = waitingSpecialSfx(
+                    SmpsSequencer.TrackType.PSG, channel, sequencer);
+            if (waitingPsg != null) {
+                psgLocks[channel] = waitingPsg;
+                waitingPsg.setChannelOverridden(
+                        SmpsSequencer.TrackType.PSG, channel, false);
+                continue;
+            }
             psgLocks[channel] = null;
             updateOverrides(SmpsSequencer.TrackType.PSG, channel, false);
         }
+    }
+
+    /**
+     * The special SFX waiting on a channel a normal SFX is about to release,
+     * or {@code null} when nothing is waiting.
+     *
+     * <p>{@code cfStopTrack}'s FM4 case tests {@code v_spcsfx_fm4_track}'s
+     * PlaybackControl before anything else (s1.sounddriver.asm:2512-2518). When
+     * a special SFX is playing it restores into the *special* track using
+     * {@code v_special_voice_ptr}, the special SFX's own voice table, and never
+     * reaches the music track, so the music override bit survives the release.
+     * PSG3 takes the same shape through {@code .getpsgptr} (:2540-2547). The
+     * restore itself is {@code .gotpointer} (:2529-2533, PSG at :2554-2556):
+     * clear the track's
+     * 'SFX overriding' bit, set 'track at rest', and reload its current voice.
+     */
+    private SmpsSequencer waitingSpecialSfx(
+            SmpsSequencer.TrackType type, int channel, SmpsSequencer releasing) {
+        for (SmpsSequencer candidate : sfxSequencers) {
+            if (candidate == releasing || !candidate.isSpecialSfx()) {
+                continue;
+            }
+            if (hasActiveTrack(candidate, channel,
+                    type == SmpsSequencer.TrackType.PSG)) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private static boolean hasActiveTrack(
