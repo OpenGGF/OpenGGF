@@ -14,6 +14,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 3&K audio comparison now reads the music request the driver actually
+  received:** the bounded S3K sound-driver oracle stopped early because a
+  request written and consumed inside one frame was invisible to the
+  reference's pre-invocation sampling. The reference now supplies that request
+  from a source observation taken while the Z80 bus was held, and the DAC
+  track's saved sample is reported where the driver stores it, so the
+  comparison reaches real driver behaviour instead of a missing input.
+
 - **Sonic 2 level music now starts on the shipped level-entry cadence:** the
   game-owned timing profile derives pre-BGM work from ROM data, including
   title-card and PLC paths, region, prior live water state, and Saxman load
