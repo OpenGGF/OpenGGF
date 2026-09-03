@@ -27,6 +27,86 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-03 — the S1 gameplay capture's "BizHawk self-termination" is the probe; window republished as v3
+
+- **Worktree/branch:** `.worktrees/audio-s1-widen`,
+  `feature/ai-s1-oracle-widen` from `develop` at `3ba2f7c3b`.
+- **The question.** The v1/v2 entries below record that BizHawk's headless
+  client self-terminated at frame 3,219 of `sonic1-complete-withemeralds.bk2`
+  through the S1 gameplay probe — clean process exit 0, no Lua error, no
+  signal — and that the cause was never isolated, so the window was bounded at
+  frame 3,000.
+- **The cause, with evidence.** It is the probe, and the reason nobody saw it
+  is a swallow. `probe_runtime.lua`'s hook wrapper calls `finish()` — which
+  runs `client.exit()` — *before* it re-raises the callback's error, so
+  BizHawk leaves before any Lua error can reach the console or the launcher.
+  Reproduced by running the probe against a copy of `probe_runtime.lua` that
+  appends every hook failure to an external file before `finish()`:
+
+  ```
+  HOOK ERROR s1_audio_ghz_epoch frame 3219
+    s1_audio_parity_contract.lua:436: music $87 accepted after capture epoch
+  stack traceback:
+    s1_audio_parity_contract.lua:436: in method 'acceptBgm'
+    [string "main"]:685: in field 'callback'
+  FINISH called at frame 3219
+  RUN returned normally at frame 3220 cleanupFailures 0
+  ```
+
+  Not the launcher (it has no stop-frame handling at all), not the movie (the
+  input row is unremarkable held-right), not BizHawk. `$87` is
+  `bgm_Invincible` (`docs/s1disasm/_Constants.asm:344`): the movie collects the
+  GHZ1 invincibility monitor at frame 3,219, the ROM calls `Sound_PlayBGM`, and
+  the shared contract's `acceptBgm` treats any post-epoch music request as
+  capture contamination and raises
+  (`tools/tracechaser/bizhawk/audio/s1_audio_parity_contract.lua:436`).
+  The earlier lane's `pcall` wrapping never fired because it covered the
+  `invocationLifecycle` entry/close transitions, not the BGM hook.
+- **What that means for the window.** Frame 3,219 is not an accident to be
+  worked around; it is where this oracle's contract stops describing the ROM.
+  Both sides are single-song: the reference normalizes track state against one
+  song's ROM asset range (`GHZ_ASSET_BASE`/`GHZ_ASSET_END` in the probe), and
+  the engine host `S1OpenGgfSfxAudioCapture` drives exactly one music
+  sequencer, loaded from the epoch song. `Sound_PlayBGM` → `InitMusicPlayback`
+  (`docs/s1disasm/s1.sounddriver.asm:1498-1502`) reloads driver RAM with a
+  different song, so every later tick would be normalized against the wrong
+  range.
+- **The fix (probe/wrapper only, no engine change).** The probe now closes the
+  capture cleanly at the first post-epoch music request, discarding the
+  invocation that carries it (the ROM has already swapped songs by the time
+  that invocation walks its tracks). `CAPTURE_END_FRAME` drops to a secondary
+  safety bound. Separately, every probe hook error is appended to
+  `<OGGF_OUT>.error` before the client can exit, and
+  `tools/audio/run_s1_audio_parity.sh` fails the capture on a non-empty
+  sidecar — so this class of failure can never again look like a clean exit 0.
+- **Fixture (new):** `s1-gameplay-ghz1-reference.v3.jsonl.gz`, **2,562 ticks**
+  (up from v2's 2,343), last captured invocation at emulator frame 3,218, 90
+  SFX/special-SFX dispatches (up from 81). Two BizHawk captures byte-identical,
+  uncompressed SHA-256 `39519de782fc21a8…`, 22,067,859 bytes; two OpenGGF
+  replay captures byte-identical. v2 is retired in the manifest with its bytes
+  kept.
+- **Command:** `tools/audio/run_s1_audio_parity.sh --mode gameplay --rom
+  <absolute S1 REV01 .gen> --bizhawk-home <BizHawk 2.11 Linux x64>
+  --output-root <external run root>`.
+- **Result:** **`MATCH (2562 ticks)`** — the whole reference, end to end. The
+  218 ticks v2 never reached carry no divergence. The frontier is again the end
+  of the capture, but the boundary is now the ROM's, not an arbitrary number.
+- **Broken on purpose:**
+  `TestS1GameplayAudioDriverOracle.corruptingTheReferenceIsDetectedAtTheCorruptedTick`
+  flips tick 0's first YM2612 register-40 write value in a temp copy of v3 and
+  the comparator reports the divergence at tick 0, so the green above is a live
+  comparison and not a skipped one.
+- **The next frontier, and what it costs.** There is none inside this fixture.
+  Moving past frame 3,219 needs a multi-song oracle contract, not a longer
+  capture: a per-tick asset range in the stream, and a music-sequencer swap in
+  the engine host modelling `Sound_PlayBGM`. A second gameplay fixture from a
+  different zone needs the same generalization one step earlier — the probe's
+  epoch arms on `$81` specifically, the asset range is a GHZ constant, the
+  ordinal-0 track-activity expectation is a GHZ literal, and
+  `AudioParitySchema` pins one gameplay capture kind, movie, and launch
+  invocation count. Both are contract work, and neither was attempted here.
+
+
 ## 2026-09-03 — S1 gameplay oracle reaches full MATCH: the special-SFX voice pointer outlives its sound
 
 - **Worktree/branch:** `.worktrees/audio-s1-special-frontier-2`,

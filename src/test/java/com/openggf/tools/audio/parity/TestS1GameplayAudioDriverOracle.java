@@ -15,21 +15,27 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * ROM-gated, comparison-only oracle for the S1 gameplay driver reference
- * fixture ({@code s1-gameplay-ghz1-reference.v2.jsonl.gz}) -- the first S1
+ * fixture ({@code s1-gameplay-ghz1-reference.v3.jsonl.gz}) -- the first S1
  * audio oracle sourced from a real playthrough (the pinned complete-run movie
  * {@code sonic1-complete-withemeralds.bk2}, power-on through early GHZ1 play)
  * rather than a scripted sound-test movie. See
  * {@code src/test/resources/audio/parity/s1/fixture-manifest.json} for the
  * fixture's capture provenance.
  *
- * <p>v2 supersedes v1: the recorder probe
- * ({@code tools/audio/probes/s1_gameplay_driver_parity_probe.lua}) gained a
- * second dispatch hook at {@code Sound_PlaySpecial}
- * (docs/s1disasm/s1.sounddriver.asm:1117), so the fixture now records the
- * GHZ waterfall special-SFX dispatch that v1 could not see -- v1's frontier
- * at tick 629 was a reference limitation, not an engine defect (see
- * docs/status/audio-frontier-log.md, 2026-09-03 entries). v1's bytes remain
- * committed, unmodified, for provenance; it is retired, not deleted.
+ * <p>v3 supersedes v2, which superseded v1. v2 added a second dispatch hook
+ * at {@code Sound_PlaySpecial} (docs/s1disasm/s1.sounddriver.asm:1117) so the
+ * fixture records the GHZ waterfall special-SFX dispatch v1 could not see.
+ * v3 replaces v2's arbitrary frame-3000 bound with the window's real
+ * boundary: the capture now ends at the first post-epoch music request, which
+ * in this movie is the GHZ1 invincibility monitor dispatching
+ * {@code bgm_Invincible} ($87, docs/s1disasm/_Constants.asm:344) at frame
+ * 3,219. That request is where the single-song oracle contract stops being
+ * able to describe the ROM: {@code Sound_PlayBGM} reloads driver RAM with a
+ * different song, and both the reference normalization and this test's engine
+ * host are pinned to one song's asset range. v2 stopped short of it only
+ * because the probe raised there and BizHawk's Lua host exits the client
+ * before a probe error can surface. v1 and v2 bytes remain committed,
+ * unmodified, for provenance; they are retired, not deleted.
  *
  * <p>This test never hydrates engine or gameplay state from the fixture; it
  * only replays the reference's own request/dispatch sequence through the real
@@ -38,13 +44,13 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * compares the resulting driver state. The gameplay oracle is not required to
  * be green: it is measurement, and {@link #oracleMatchesTheWholeReference()}
  * pins the current frontier so a regression there is visible without papering
- * over it. As of 2026-09-03 that frontier is the end of the capture: all 2,343
+ * over it. As of 2026-09-03 that frontier is the end of the capture: all 2,562
  * ticks match. See docs/status/audio-frontier-log.md for the dated
  * measurement this pins.
  */
 class TestS1GameplayAudioDriverOracle {
     private static final Path REFERENCE = Path.of(
-            "src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v2.jsonl.gz");
+            "src/test/resources/audio/parity/s1/s1-gameplay-ghz1-reference.v3.jsonl.gz");
 
     @TempDir
     Path temp;
@@ -57,7 +63,7 @@ class TestS1GameplayAudioDriverOracle {
 
         S1OpenGgfSfxAudioCapture.CaptureResult result =
                 S1OpenGgfSfxAudioCapture.capture(reference, rom, openGgf);
-        assertEquals(2343, result.recordCount());
+        assertEquals(2562, result.recordCount());
 
         AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
 
@@ -66,12 +72,12 @@ class TestS1GameplayAudioDriverOracle {
         // SendVoiceTL reads v_special_voice_ptr for a normal SFX
         // (docs/s1disasm/s1.sounddriver.asm:2391-2398) after the special SFX
         // that installed it has finished. With that pointer modelled as the
-        // ROM's persistent global the whole 2,343-tick reference matches. This
+        // ROM's persistent global the whole 2,562-tick reference matches. This
         // assertion is the frontier pin: it moved to MATCH, it was not removed.
         // If a change makes this red again, record the new first divergence in
         // the frontier log with the ROM routine that explains it.
         assertEquals(AudioParityReport.Kind.MATCH, report.kind(), report::toHumanText);
-        assertEquals(2343, report.ticksCompared());
+        assertEquals(2562, report.ticksCompared());
     }
 
     /**

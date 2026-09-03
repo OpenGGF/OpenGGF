@@ -83,7 +83,30 @@
       "recorder_probe": "tools/audio/probes/s1_gameplay_driver_parity_probe.lua",
       "recorder_probe_note": "probe gained a second dispatch hook at Sound_PlaySpecial (s1.sounddriver.asm:1117, PC $7230C) alongside the existing Sound_PlaySFX hook (PC $721C6); both write into the same flat per-tick 'dispatches' array (schema unchanged -- the id itself, >= 0xD0, already disambiguates a special-SFX dispatch from a normal one). 81 dispatches recorded in this window vs 70 in v1 (11 additional Sound_PlaySpecial calls, all GHZ waterfall id 0xD0).",
       "capture_command": "OGGF_OUT=<external>/reference-gameplay.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_gameplay_driver_parity_probe.lua src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2 <s1-rev01.gen>",
-      "provenance": "captured via tools/audio/run_s1_audio_parity.sh --mode gameplay; two BizHawk captures byte-identical (cmp -s) and two OpenGGF replay captures byte-identical, both checked by the launcher before it would proceed"
+      "provenance": "captured via tools/audio/run_s1_audio_parity.sh --mode gameplay; two BizHawk captures byte-identical (cmp -s) and two OpenGGF replay captures byte-identical, both checked by the launcher before it would proceed",
+      "retired": "superseded by s1-gameplay-ghz1-reference.v3.jsonl.gz -- v2's frame-3000 bound was not a property of the movie or the driver. The probe raised on the first post-epoch music request (the shared contract's acceptBgm treats a second BGM as contamination) and probe_runtime exits the BizHawk client before re-raising, so the capture looked like a clean self-termination at frame 3219. v3 ends the window at that request deliberately. Bytes retained unchanged; do not re-derive from it."
+    },
+    {
+      "file": "s1-gameplay-ghz1-reference.v3.jsonl.gz",
+      "capture": "s1_gameplay_ghz1_driver_reference",
+      "movie": "../../../traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2",
+      "uncompressed_sha256": "39519de782fc21a8c61aef7697fccae8cfe0af52beab74d6c72b791d99db67eb",
+      "uncompressed_bytes": 22067859,
+      "terminal_record_count": 2562,
+      "cycle_start": 0,
+      "period": 0,
+      "epoch_open_frame": 656,
+      "capture_end_frame": 3218,
+      "recorder_probe": "tools/audio/probes/s1_gameplay_driver_parity_probe.lua",
+      "recorder_probe_note": "probe carries v2's two dispatch hooks (Sound_PlaySFX PC $721C6 and Sound_PlaySpecial PC $7230C) and adds the window rule: the capture closes at the first post-epoch Sound_PlayBGM request instead of a fixed frame budget, because the single-song normalization contract (one song's ROM asset range on the reference side, one music sequencer in S1OpenGgfSfxAudioCapture) cannot describe the ROM after Sound_PlayBGM reloads driver RAM. In this movie that request is bgm_Invincible ($87, _Constants.asm:344) at frame 3219, from the GHZ1 invincibility monitor; the invocation carrying it is discarded. 90 dispatches recorded in this window vs 81 in v2. Hook failures are now appended to <OGGF_OUT>.error before the client exits, and run_s1_audio_parity.sh fails the capture on a non-empty sidecar.",
+      "capture_command": "OGGF_OUT=<external>/reference-gameplay.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_gameplay_driver_parity_probe.lua src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2 <s1-rev01.gen>",
+      "provenance": "captured via tools/audio/run_s1_audio_parity.sh --mode gameplay; two BizHawk captures byte-identical (cmp -s, sha256 39519de782fc21a8c61aef7697fccae8cfe0af52beab74d6c72b791d99db67eb) and two OpenGGF replay captures byte-identical, both checked by the launcher before it would proceed",
+      "window_end": {
+        "reason": "post_epoch_music_dispatch",
+        "music_id": "0x87",
+        "emulator_frame": 3219,
+        "last_captured_invocation_frame": 3218
+      }
     }
   ]
 }
