@@ -118,7 +118,7 @@ final class PhysicalChipCapture implements ChipWriteObserver {
             BuildIdentity build) throws IOException {
         try (BufferedWriter output = Files.newBufferedWriter(path)) {
             output.write(String.format(Locale.ROOT,
-                    "{\"type\":\"header\",\"format\":\"openggf-physical-chip-bus-v1\",\"engine\":\"openggf\",\"engine_version\":\"%s\",\"engine_commit\":\"%s\",\"engine_dirty\":%s,\"rom_path\":\"%s\",\"rom_sha1\":\"%s\",\"initial_state\":\"constructor_reset\",\"ym_core\":\"nuked-opn2\",\"ym_chip_type\":\"YM2612\",\"output_sample_rate\":%.6f,\"game\":\"%s\",\"kind\":\"%s\",\"id\":%d,\"ym_domain\":\"YM2612_INTERNAL_CYCLE\",\"ym_ticks_per_second\":%.6f,\"psg_domain\":\"PSG_GENERATOR_TICK\",\"psg_ticks_per_second\":%.6f,\"capture_capacity\":%d,\"events\":%d,\"overflow\":%s,\"dropped\":%d}",
+                    "{\"type\":\"header\",\"format\":\"openggf-physical-chip-bus-v1\",\"engine\":\"openggf\",\"engine_version\":\"%s\",\"engine_commit\":\"%s\",\"engine_dirty\":%s,\"rom_path\":\"%s\",\"rom_sha1\":\"%s\",\"initial_state\":\"constructor_reset\",\"ym_core\":\"nuked-opn2\",\"ym_core_mode\":3,\"ym_chip_type\":\"YM2612\",\"output_sample_rate\":%.6f,\"game\":\"%s\",\"kind\":\"%s\",\"id\":%d,\"ym_domain\":\"YM2612_INTERNAL_CYCLE\",\"ym_ticks_per_second\":%.6f,\"psg_domain\":\"PSG_GENERATOR_TICK\",\"psg_ticks_per_second\":%.6f,\"capture_capacity\":%d,\"events\":%d,\"overflow\":%s,\"dropped\":%d}",
                     escape(build.baseVersion()), escape(build.commit()), build.dirty(),
                     escape(romPath), escape(romSha1), outputRate,
                     escape(game), escape(kind), id,

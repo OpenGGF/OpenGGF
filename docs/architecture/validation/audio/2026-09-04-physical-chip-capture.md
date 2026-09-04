@@ -44,9 +44,12 @@ restore callbacks are also private, then a surviving `TRANSACTION_ROLLBACK`
 boundary is published for each chip before later committed events. This avoids
 exposing aborted writes while making the monotonic-clock gap explicit.
 
-Raw bus replay is valid only from an observed reset (or the tool's explicit,
-trusted `constructor_reset` initial-state header) and within a segment that has
-no non-bus boundary. In particular, a raw file is not an exact PCM replay
+Raw bus replay is valid only from the tool's explicit, trusted
+`constructor_reset` initial-state header (including the declared core mode), or
+from an externally established equivalent configuration, and within a segment
+that has no non-bus boundary. A `RESET` event by itself does not establish that
+configuration: YM reset retains chip type, mutes and output rate, while PSG reset
+retains type, preamp and panning. In particular, a raw file is not an exact PCM replay
 across mute, output-gate, policy, snapshot, or synthetic interpolation
 boundaries. It is an engine/Nuked comparison capture, never a hardware recording.
 
@@ -58,7 +61,9 @@ captured without changing the historical logical-write log. It writes the
 bounded, versioned JSONL sidecar
 `<game>-<kind>-<id>-ym-bus.jsonl` in addition to the unchanged legacy
 frame-stamped `-ym-writes.txt` file. Its header identifies OpenGGF, the
-`nuked-opn2` YM core, constructor-reset initial state, output rate, absolute ROM
+`nuked-opn2` YM core, its known YM2612/read-mode flag set
+(`MODE_YM2612 | MODE_READMODE`, numeric `3`), constructor-reset initial state,
+output rate, absolute ROM
 path and SHA-1, engine version/commit/dirty state, per-chip rates/domains,
 capacity, event count, and overflow state. Events have a process-local callback
 ordinal, but that ordinal is the only cross-chip order; it is not a conversion
@@ -77,6 +82,9 @@ physical PSG callbacks were absent. The green coverage now verifies:
 
 * paced YM 0/1 and 2/3 strobes at cycles 0, 1, 35, and 36;
 * reset-origin raw YM replay into a fresh `NukedOpn2` core;
+* replay-segment rejection for unknown initial configuration, non-bus
+  boundaries (including reset after unknown configuration), unknown restored
+  provenance, non-monotonic clocks, and invalid raw ports;
 * real DAC and synthetic DAC provenance without synthetic legacy callbacks;
 * PSG generator-tick timestamps;
 * snapshot/mutation boundaries, non-bus configuration/admission restores, and

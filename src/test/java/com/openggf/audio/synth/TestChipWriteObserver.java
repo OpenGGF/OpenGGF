@@ -12,6 +12,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestChipWriteObserver {
@@ -65,12 +66,15 @@ class TestChipWriteObserver {
         assertEquals(List.of("YM2612_INTERNAL_CYCLE:0:RESET"),
                 observer.boundaries);
         observer.boundaries.clear();
+        observer.boundaryEvents.clear();
 
         ym.write(0, 0x22, 0x08);
         ym.write(1, 0xB4, 0xC0);
         ym.readStatus();
 
-        NukedOpn2 replayed = replay(observer.ymBusEvents);
+        NukedOpn2 replayed = replayKnownInitialSegment(
+                InitialYmConfig.CONSTRUCTOR_RESET_YM2612,
+                observer.ymBusEvents, observer.boundaryEvents);
         assertEquals(observer.liveCoreAtLastStrobe, replayed.state(),
                 "raw port/cycle capture must reproduce live state at its strobe boundary");
     }
@@ -109,6 +113,50 @@ class TestChipWriteObserver {
 
         assertEquals(7, observer.boundaries.stream().filter(
                 boundary -> boundary.endsWith(":MODEL_MUTATION")).count());
+    }
+
+    @Test
+    void rawReplayRejectsUnknownConfigurationAndDiscontinuousSegments() {
+        List<BusEvent> valid = List.of(new BusEvent(0, 0, 0x22,
+                ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS));
+        assertThrows(IllegalArgumentException.class,
+                () -> replayKnownInitialSegment(InitialYmConfig.UNKNOWN,
+                        valid, List.of()));
+        for (ChipWriteObserver.PhysicalTimelineBoundary boundary : List.of(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION,
+                ChipWriteObserver.PhysicalTimelineBoundary.SNAPSHOT_RESTORE,
+                ChipWriteObserver.PhysicalTimelineBoundary.TRANSACTION_ROLLBACK,
+                ChipWriteObserver.PhysicalTimelineBoundary.RESET)) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> replayKnownInitialSegment(
+                            InitialYmConfig.CONSTRUCTOR_RESET_YM2612, valid,
+                            List.of(boundary)));
+        }
+    }
+
+    @Test
+    void rawReplayRejectsUnknownOriginAndNonMonotonicStrobes() {
+        assertThrows(IllegalArgumentException.class,
+                () -> replayKnownInitialSegment(
+                        InitialYmConfig.CONSTRUCTOR_RESET_YM2612,
+                        List.of(new BusEvent(0, 0, 0x2A,
+                                ChipWriteObserver.PhysicalWriteOrigin.RESTORED_UNKNOWN)),
+                        List.of()));
+        assertThrows(IllegalArgumentException.class,
+                () -> replayKnownInitialSegment(
+                        InitialYmConfig.CONSTRUCTOR_RESET_YM2612,
+                        List.of(
+                                new BusEvent(2, 0, 0x22,
+                                        ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS),
+                                new BusEvent(1, 1, 0x08,
+                                        ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS)),
+                        List.of()));
+        assertThrows(IllegalArgumentException.class,
+                () -> replayKnownInitialSegment(
+                        InitialYmConfig.CONSTRUCTOR_RESET_YM2612,
+                        List.of(new BusEvent(0, 4, 0x22,
+                                ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS)),
+                        List.of()));
     }
 
     @Test
@@ -252,6 +300,31 @@ class TestChipWriteObserver {
         return expected;
     }
 
+    private static NukedOpn2 replayKnownInitialSegment(
+            InitialYmConfig initial, List<BusEvent> events,
+            List<ChipWriteObserver.PhysicalTimelineBoundary> boundaries) {
+        if (initial != InitialYmConfig.CONSTRUCTOR_RESET_YM2612) {
+            throw new IllegalArgumentException("YM initial configuration is unknown");
+        }
+        if (!boundaries.isEmpty()) {
+            throw new IllegalArgumentException("raw replay crosses a non-bus boundary");
+        }
+        long previousCycle = -1;
+        for (BusEvent event : events) {
+            if (event.origin() == ChipWriteObserver.PhysicalWriteOrigin.RESTORED_UNKNOWN) {
+                throw new IllegalArgumentException("raw replay has unknown DAC provenance");
+            }
+            if (event.busPort() < 0 || event.busPort() > 3) {
+                throw new IllegalArgumentException("raw replay has an invalid YM bus port");
+            }
+            if (event.cycle() < previousCycle) {
+                throw new IllegalArgumentException("raw replay clocks are not monotonic");
+            }
+            previousCycle = event.cycle();
+        }
+        return replay(events);
+    }
+
     private static NukedOpn2 replay(List<BusEvent> events) {
         NukedOpn2 core = new NukedOpn2();
         core.setChipType(NukedOpn2.MODE_YM2612 | NukedOpn2.MODE_READMODE);
@@ -285,7 +358,13 @@ class TestChipWriteObserver {
         throw new AssertionError("no DAC address/data pair for " + origin);
     }
 
-    private record BusEvent(long cycle, int busPort, int value) {
+    private record BusEvent(long cycle, int busPort, int value,
+            ChipWriteObserver.PhysicalWriteOrigin origin) {
+    }
+
+    private enum InitialYmConfig {
+        CONSTRUCTOR_RESET_YM2612,
+        UNKNOWN
     }
 
     private static class RecordingObserver implements ChipWriteObserver {
@@ -307,6 +386,7 @@ class TestChipWriteObserver {
         private final List<String> psgPhysical = new ArrayList<>();
         private final List<BusEvent> ymBusEvents = new ArrayList<>();
         private final List<String> boundaries = new ArrayList<>();
+        private final List<PhysicalTimelineBoundary> boundaryEvents = new ArrayList<>();
         private java.util.function.Supplier<NukedOpn2State> liveCoreSupplier;
         private NukedOpn2State liveCoreAtLastStrobe;
 
@@ -319,7 +399,7 @@ class TestChipWriteObserver {
         public void onYm2612BusWrite(long cycle, int busPort, int value,
                 ChipWriteObserver.PhysicalWriteOrigin origin) {
             physical.add("%d:%d:%02X:%s".formatted(cycle, busPort, value, origin));
-            ymBusEvents.add(new BusEvent(cycle, busPort, value));
+            ymBusEvents.add(new BusEvent(cycle, busPort, value, origin));
             if (liveCoreSupplier != null) {
                 liveCoreAtLastStrobe = liveCoreSupplier.get();
             }
@@ -334,6 +414,7 @@ class TestChipWriteObserver {
         public void onPhysicalTimelineBoundary(ChipClockDomain domain,
                 long clock, PhysicalTimelineBoundary boundary) {
             boundaries.add("%s:%d:%s".formatted(domain, clock, boundary));
+            boundaryEvents.add(boundary);
         }
     }
 }

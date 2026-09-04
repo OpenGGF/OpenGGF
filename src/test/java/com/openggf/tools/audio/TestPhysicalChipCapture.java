@@ -36,6 +36,7 @@ class TestPhysicalChipCapture {
         String text = Files.readString(output);
         assertTrue(text.contains("\"ym_ticks_per_second\":"));
         assertTrue(text.contains("\"rom_sha1\":\"012345\""));
+        assertTrue(text.contains("\"ym_core_mode\":3"));
         assertEquals(3, text.lines().count(),
                 "JSONL has one header and one line per retained event");
         assertTrue(text.contains("\"psg_ticks_per_second\":"));
