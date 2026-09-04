@@ -538,6 +538,9 @@ final class SmpsAssetCatalog {
                 .psgNoteGoingOrder(source.getPsgNoteGoingOrder())
                 .psgEnvRestCmd(source.getPsgEnvRestCmd())
                 .stepModulationAtRest(source.isStepModulationAtRest())
+                .noteResetAliasesModulationState(
+                        source.isNoteResetAliasesModulationState())
+                .fmNoteGoingReturnsAtRest(source.isFmNoteGoingReturnsAtRest())
                 .noteFillTail(source.getNoteFillTail())
                 .fadeOutDelay(source.getFadeOutDelay())
                 .fadeOutSteps(source.getFadeOutSteps())

@@ -1360,6 +1360,22 @@ public class SmpsSequencer implements CoordFlagContext {
             if (t.duration > 0) {
                 t.duration--;
 
+                if (t.duration > 0 && t.type == TrackType.FM && t.resting
+                        && config.isFmNoteGoingReturnsAtRest()) {
+                    // zUpdateFMorPSGTrack's .note_going opens with
+                    // bit 4,(ix+zTrack.PlaybackControl) / ret nz
+                    // (Sound/Z80 Sound Driver.asm:781-783). That branch is
+                    // only reached when the duration timer did NOT expire; an
+                    // expired timer goes to zGetNextNote instead, which is why
+                    // this is gated on the post-decrement duration. So a
+                    // resting FM track whose note is still running advances
+                    // nothing else: no volume envelope, no note fill, no
+                    // frequency update and no modulation step.
+                    // zUpdatePSGTrack has no such test at its matching entry
+                    // (:4066-4076).
+                    return;
+                }
+
                 if (!t.tieNext && t.type != TrackType.DAC) {
                     if (config.isDirect68kDriver()) {
                         if (t.fillCounter > 0 && --t.fillCounter == 0) {
@@ -2347,6 +2363,20 @@ public class SmpsSequencer implements CoordFlagContext {
         boolean preventAttack = shouldPreventNoteAttack(t);
         if (!preventAttack) {
             t.fillCounter = t.fill;
+            if (config.isNoteResetAliasesModulationState()) {
+                // zFinishTrackUpdate clears ModEnvIndex and ModEnvSens for
+                // every stream unit it reads, rest or note, whenever the
+                // do-not-attack bit is clear (Sound/Z80 Sound
+                // Driver.asm:1055-1069). Those are the same bytes as
+                // ModulationSpeed (offset 25h) and ModulationValLow (22h)
+                // (:76-92), so a track running normal modulation has its
+                // speed counter and the low byte of its accumulator zeroed by
+                // an unrelated routine. The engine's resetModEnvelopeState
+                // below clears them only when a modulation envelope is in
+                // use, which is the mod-envelope reading of the same bytes.
+                t.modRateCounter = 0;
+                t.modAccumulator = (short) (t.modAccumulator & 0xFF00);
+            }
             if (t.note != 0x80 || config.isDirect68kDriver()) {
                 if (t.customModEnabled) {
                     prepareCustomModulation(t);
@@ -3312,9 +3342,11 @@ public class SmpsSequencer implements CoordFlagContext {
             t.modDelay = 1;
 
             boolean accumulatorChanged = false;
-            if (t.modRateCounter > 0) {
-                t.modRateCounter--;
-            }
+            // dec (ix+ModulationSpeed) / jr nz, .mod_sustain: an 8-bit
+            // decrement, so zero wraps to 0FFh and the accumulator then holds
+            // for 255 passes rather than advancing every pass
+            // (Sound/Z80 Sound Driver.asm:1296-1301).
+            t.modRateCounter = (t.modRateCounter - 1) & 0xFF;
             if (t.modRateCounter == 0) {
                 t.modRateCounter = t.modPendingRate;
                 t.modAccumulator += t.modCurrentDelta;

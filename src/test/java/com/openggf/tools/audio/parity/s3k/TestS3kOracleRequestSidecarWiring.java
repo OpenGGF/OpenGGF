@@ -198,11 +198,12 @@ class TestS3kOracleRequestSidecarWiring {
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
      * The comparison now covers the modulation accumulator and its wait,
      * speed, delta and step counters, which the oracle previously did not
-     * compare at all. That deliberately moves the reported frontier back from
-     * service 331 to service 150: the writes still agree to 330, but the
-     * driver state behind them diverges earlier and is now visible. The first
-     * divergence is {@code modulationSpeed}, which
-     * {@code zFinishTrackUpdate} zeroes through its {@code ModEnvIndex} alias.
+     * compare at all, and every one of them agrees through service 341 along
+     * with the writes. Two corrections got it there: the aliased clears
+     * {@code zFinishTrackUpdate} performs through {@code ModEnvIndex} and
+     * {@code ModEnvSens}, and the rest test at the top of
+     * {@code zUpdateFMorPSGTrack}'s {@code .note_going}, which freezes a
+     * resting FM track completely.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -214,10 +215,11 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 12, report.tick());
-        assertEquals("MUS_FM2", report.role());
-        assertEquals("modulationSpeed", report.field());
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 204, report.tick());
+        assertEquals(4, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=74, value=16]",
+                report.reference());
     }
 
     /**

@@ -90,6 +90,13 @@ public final class Sonic3kSmpsSequencerConfig {
                 // (Sound/Z80 Sound Driver.asm:1277-1283), so a resting track
                 // keeps stepping. Only S2 returns early at rest.
                 .stepModulationAtRest(true)
+                // zFinishTrackUpdate zeroes ModEnvIndex and ModEnvSens, which
+                // alias ModulationSpeed and ModulationValLow in this layout
+                // (Sound/Z80 Sound Driver.asm:1055-1069, :76-92).
+                .noteResetAliasesModulationState(true)
+                // zUpdateFMorPSGTrack .note_going returns on the rest bit
+                // before it does anything (Sound/Z80 Sound Driver.asm:781-783).
+                .fmNoteGoingReturnsAtRest(true)
                 .noteFillTail(SmpsSequencerConfig.NoteFillTail.S3K_SPLIT)
                 .fadeOutDelay(6)            // FadeOutDelay = 6
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
