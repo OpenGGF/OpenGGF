@@ -99,6 +99,13 @@ class TestS2CpzDriverStateOracle {
         }
         return DRIVER_PLAYLIST_FROM_81[index].id;
     }
+    /** The committed request stimuli for this movie from the driver's first
+     * serviced frame, which is what makes the ring phase derivable. */
+    static final String REQUEST_STIMULI_RESOURCE =
+            "/audio/parity/s2/s2-request-stimuli-cpz-w120-3450.json";
+    /** The ROM request id for the ring sound (s2.sounddriver.asm:2124-2135). */
+    static final int RING_REQUEST_ID = 0xB5;
+
     /** The committed request-window sidecar for this same movie and span. */
     static final String REQUEST_SIDECAR_RESOURCE =
             "/audio/parity/s2/s2-request-window-cpz-w2700-3450.raw-v2.jsonl.gz";
@@ -176,7 +183,8 @@ class TestS2CpzDriverStateOracle {
         List<S2OracleEngineCapture.EngineTick> engine =
                 S2OracleEngineCapture.capture(Path.of(romProperty),
                         reference.size(), reference.size(),
-                        requestStimuli(reference), LOAD_ENGINE_MUSIC_ID);
+                        requestStimuli(reference), LOAD_ENGINE_MUSIC_ID,
+                        ringRequestsBefore(reference.get(0).row()));
 
         // The write comparison starts one service later than the state one.
         // This window's load spans two services, because the Saxman
@@ -291,6 +299,34 @@ class TestS2CpzDriverStateOracle {
             }
         }
         return stimuli;
+    }
+
+    /**
+     * How many ring requests the recording issued before this window opened,
+     * from the committed stimuli file for the same movie starting at the
+     * driver's first serviced frame. The driver's ring flag is the parity of
+     * those (s2.sounddriver.asm:2124-2135), and a song load does not clear it,
+     * so a mid-run window inherits it. The count is a stimulus, not a compared
+     * value: nothing here reads driver state back from the reference.
+     */
+    private static int ringRequestsBefore(int anchorRow) throws IOException {
+        com.fasterxml.jackson.databind.ObjectMapper json =
+                new com.fasterxml.jackson.databind.ObjectMapper();
+        try (java.io.InputStream raw = TestS2CpzDriverStateOracle.class
+                .getResourceAsStream(REQUEST_STIMULI_RESOURCE)) {
+            com.fasterxml.jackson.databind.JsonNode root = json.readTree(
+                    java.util.Objects.requireNonNull(raw,
+                            "committed CPZ request stimuli are absent"));
+            int count = 0;
+            for (com.fasterxml.jackson.databind.JsonNode transfer
+                    : root.get("transfers")) {
+                if (transfer.get("request").asInt() == RING_REQUEST_ID
+                        && transfer.get("row").asInt() < anchorRow) {
+                    count++;
+                }
+            }
+            return count;
+        }
     }
 
     private static List<S2AudioOracleComparator.ReferenceTick> reindex(

@@ -3015,10 +3015,29 @@ does not read it as a channel-assignment defect. The slot rule itself is not
 involved: `zPlaySound` derives an SFX slot from the header's own channel byte
 through `zMusicTrackOffs` (:2210-2251, :747-757) and both sides agree on it.
 
+### Resolved For The Ring Flag
+
+Met on 2026-09-04 by the second route rather than the first. The flag is the
+parity of the rings played since power-on, and the recording's own ring
+requests are stimuli, so the count of them before a window derives it without
+reading any compared value. `S2OracleEngineCapture` takes that count and the
+CPZ oracle reads it from the committed
+`s2-request-stimuli-cpz-w120-3450.json`, which carries one ring request at
+movie row 1432, before the window. The write frontier moved from service 237,
+movie row 2968, to service 494, movie row 3225.
+
+The entry stays because the general limitation stands: any other driver
+variable outside the load's clear is still inherited and still undetermined,
+and the ring flag is only the first one to have cost anything.
+
 ### Removal Condition
 
-A capture that starts from power-on, or a derivation of the flag from something
-the window does contain. Reading it from the reference is not one.
+A capture that starts from power-on and an engine run driven across it. Two
+producer limitations block that today and are recorded in the audio frontier
+log: the request-window capture mode cannot begin a publication epoch at movie
+row 0, and the request producer records no music requests at all, so a
+power-on engine run cannot reproduce the songs a recording loads before the
+window.
 
 ---
 

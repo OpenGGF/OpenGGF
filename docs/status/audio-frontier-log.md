@@ -27,6 +27,58 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The ring phase is derived from requests; CPZ tick 237 -> 494, and two producer limits found
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, over `develop` at `874906bb7`.
+- **Before:** CPZ state with writes DIVERGENCE at tick 237 (movie row 2968),
+  `writes[4]`, reference `ym1[0xb1]=0x4` against the engine's
+  `ym1[0xb0]=0x4`; 36 of 719 divergent.
+- **After:** DIVERGENCE at tick 494 (movie row 3225), field `writes.count`,
+  reference 34 against the engine's 3; 18 of 719 divergent. State only stays
+  `MATCH (720 ticks)`.
+- **The removal condition is met by derivation, not by a power-on engine run.**
+  The ring flag is the parity of the rings played since power-on, because
+  `zPlaySound_CheckRing` complements it on every ring
+  (s2.sounddriver.asm:2124-2135). Ring requests are stimuli under the accepted
+  contract, so counting the ones before a window derives the phase without
+  reading a compared value. `S2OracleEngineCapture` now takes that count and
+  the CPZ oracle reads it from the new committed stimuli file, which carries
+  exactly one ring request, at movie row 1432. The driver-state capture agrees:
+  `zRingSpeaker` is `00h` from power-on and flips once, at movie row 1436, the
+  service that consumed it.
+- **Two new fixtures.** `s2-driver-state-cpz-w0-3450.reference-v2.jsonl.gz`,
+  3,264 ticks from the driver's first serviced frame to row 3449, duplicate
+  capture met byte-identical; and `s2-request-stimuli-cpz-w120-3450.json`, the
+  49 request transfers of the extracted request window reduced to row, order,
+  request and slot, with the source payload's digest recorded.
+- **First producer limitation: the request capture cannot start at row 0.**
+  `--request-window-mode capture --first-row 0` fails with "GPGX audio observer
+  begin publication epoch failed with status -2". The same command at
+  `--first-row 120`, the driver's first serviced frame, succeeds, and at
+  `--first-row 2700` succeeds. The driver-state mode accepts row 0 and simply
+  reports its first tick at row 120.
+- **Second producer limitation, and it is the larger one: no music requests are
+  recorded.** All 49 transfers over rows 120-3448 are `A0h` or above. The
+  driver-state capture shows the run loading nine songs in that span, with
+  `zCurSong` moving to `99h`, `91h`, `99h`, `89h`, `97h`, `82h`, `99h`, `91h`
+  and finally `8Eh` at row 2725, and not one of those appears in the request
+  stream. So an engine run driven from power-on by recorded requests cannot
+  reproduce the songs the recording plays, which is what a true power-on
+  comparison would need.
+- **A third, smaller gap in the same producer.** The stimuli carry eight ring
+  requests while the driver-state capture records nine flips of `zRingSpeaker`,
+  and only the ROM's ring path complements that byte (:2133). The missing one is
+  at movie row 3225, which is exactly the new first divergence: the reference
+  emits 34 writes there and the engine 3, because it was never told to play
+  that sound.
+- **What did not change.** No engine behaviour. The capture's power-on default
+  is still the ROM's zero flag; the count simply advances it.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the EHZ v2 oracle
+  unchanged at `MATCH (2198 ticks)` on both lines; the three request windows
+  `MATCH` at 25, 52 and 27 transfers; audio packages plus the four extra
+  classes with three ROM paths: 2,063 tests, 0 failures, 0 errors, 10 skips.
+
 ## 2026-09-04 - CPZ tick 237 attributed: the ring speaker's phase, inherited from before the window
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,

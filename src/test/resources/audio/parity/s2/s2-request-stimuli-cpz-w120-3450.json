@@ -1,0 +1,313 @@
+{
+ "schema": "openggf.s2-request-stimuli.v1",
+ "movie": {
+  "name": "s2-lvl-select-CPZ.bk2",
+  "sha256": "7e28cf822d5dbbe64646965cd857f264bf51d3349075af94db1a818cac7311e4"
+ },
+ "window": {
+  "first_row": 120,
+  "exclusive_end": 3450
+ },
+ "source": {
+  "payload_schema": "openggf.s2-oracle-audio-raw.v2",
+  "payload_sha256": "a06a17c1d8abd6ebfcdcf290d99117305304d3bb7b41156387a2104bc73697e8",
+  "capture_raw_v3_sha256": "e79560f467887cbac6e78fa5282bcd1099b3687b0f2d0fc1db84c7b406e87ef7"
+ },
+ "projection": "every request_transfer of the extracted payload, in stream order, reduced to row, order, request and slot. Nothing else of the payload is kept, because a stimulus needs no state.",
+ "transfers": [
+  {
+   "row": 249,
+   "order": 0,
+   "request": 250,
+   "slot": 0
+  },
+  {
+   "row": 420,
+   "order": 0,
+   "request": 167,
+   "slot": 0
+  },
+  {
+   "row": 466,
+   "order": 0,
+   "request": 205,
+   "slot": 0
+  },
+  {
+   "row": 472,
+   "order": 0,
+   "request": 205,
+   "slot": 0
+  },
+  {
+   "row": 510,
+   "order": 0,
+   "request": 249,
+   "slot": 0
+  },
+  {
+   "row": 1432,
+   "order": 0,
+   "request": 181,
+   "slot": 0
+  },
+  {
+   "row": 1771,
+   "order": 0,
+   "request": 249,
+   "slot": 0
+  },
+  {
+   "row": 1960,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 1976,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 2132,
+   "order": 0,
+   "request": 167,
+   "slot": 0
+  },
+  {
+   "row": 2171,
+   "order": 0,
+   "request": 167,
+   "slot": 0
+  },
+  {
+   "row": 2190,
+   "order": 0,
+   "request": 167,
+   "slot": 0
+  },
+  {
+   "row": 2209,
+   "order": 0,
+   "request": 167,
+   "slot": 0
+  },
+  {
+   "row": 2228,
+   "order": 0,
+   "request": 167,
+   "slot": 0
+  },
+  {
+   "row": 2388,
+   "order": 0,
+   "request": 249,
+   "slot": 0
+  },
+  {
+   "row": 2691,
+   "order": 0,
+   "request": 249,
+   "slot": 0
+  },
+  {
+   "row": 2959,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 2968,
+   "order": 0,
+   "request": 181,
+   "slot": 1
+  },
+  {
+   "row": 2974,
+   "order": 0,
+   "request": 181,
+   "slot": 1
+  },
+  {
+   "row": 2975,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 3004,
+   "order": 0,
+   "request": 181,
+   "slot": 1
+  },
+  {
+   "row": 3018,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 3034,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 3069,
+   "order": 0,
+   "request": 181,
+   "slot": 1
+  },
+  {
+   "row": 3124,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3125,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3126,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3127,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3128,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3129,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3130,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3140,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3141,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3142,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3143,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3144,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3145,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3146,
+   "order": 0,
+   "request": 164,
+   "slot": 0
+  },
+  {
+   "row": 3159,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 3191,
+   "order": 0,
+   "request": 190,
+   "slot": 0
+  },
+  {
+   "row": 3192,
+   "order": 0,
+   "request": 193,
+   "slot": 0
+  },
+  {
+   "row": 3209,
+   "order": 0,
+   "request": 190,
+   "slot": 0
+  },
+  {
+   "row": 3315,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 3331,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 3413,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 3429,
+   "order": 0,
+   "request": 160,
+   "slot": 0
+  },
+  {
+   "row": 3437,
+   "order": 0,
+   "request": 181,
+   "slot": 1
+  },
+  {
+   "row": 3440,
+   "order": 0,
+   "request": 181,
+   "slot": 1
+  },
+  {
+   "row": 3448,
+   "order": 0,
+   "request": 181,
+   "slot": 1
+  }
+ ]
+}
