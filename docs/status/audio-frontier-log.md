@@ -27,6 +27,142 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The unobserved transfer is sndDriverInput's music store at PC $10C0, and the hook is managed
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, at `54d3d3adb`. Analysis only; nothing
+  changed and no line moved.
+- **The answer, cited.** `sndDriverInput` makes two distinct stores into Z80
+  RAM. The music one is `move.b d0,zVar.QueueToPlay(a1)` at
+  `.isNotPauseCommand`, which the disassembly labels `loc_10C0`
+  (s2.asm:1302-1304). The SFX one is `move.b d0,zVar.Queue0(a1,d1.w)` inside
+  `.loop` (:1317-1326). The observer's manifest hooks a single instruction,
+  `pc 4310` with opcode `13801009`, and 4310 is `$10D6`.
+- **Verified against the cartridge, not only the listing.** The ROM holds
+  `13400008` at `$10C0` and `13801009` at `$10D6`, and `72031030` at `$10C4`,
+  which is the `moveq #3,d1` the `fixBugs = 0` path assembles at `.doSFX`. So
+  `$10D6` is the SFX store the manifest already names and `$10C0` is the music
+  store it does not.
+- **That single omission explains both gaps.** The nine music loads reach the
+  driver through `$10C0`, and so does the ring at movie row 3225, because the
+  ring-milestone check jumps to `PlayMusic` (s2.asm:25913-25914) which writes
+  `Sound_Queue.Music0` or `Music1` (:1520-1527) rather than the SFX slots.
+- **A structural finding that changes the shape of the fix.** The hook is not a
+  native observer action. `S2PreconsumptionRequestObserver` arms it with
+  `host.RegisterExecuteCallback(Pc, OnTransfer)`, a managed execute callback,
+  and reads `M68K D0` and `D1` in the callback; the manifest's
+  `native_action: 7` and patch digest are validated as identity, not used to
+  arm this hook. So adding the second site needs no patch edit, no core rebuild
+  and no toolchain: it is a manifest schema change plus managed code and tests.
+- **One detail the second site must not copy.** At `$10D6` the callback reads
+  `D1` as the SFX queue slot, which the `.loop` index makes correct. At `$10C0`
+  `D1` holds the pause-check residue of `move.b d0,d1` / `subi.b #MusID_Pause,d1`
+  (:1294-1295), so it is not a slot and must not be recorded as one; the music
+  transfer needs its own fixed slot identity.
+- **Next.** Implement the second site in the TraceChaser submodule under the
+  same rules, add the harness tests the existing site has, then recapture and
+  re-measure. The three published request windows and their transfer counts of
+  25, 52 and 27 are a gate: a widened observer that changes them must explain
+  each new transfer by ROM routine, and every one of them should be a music
+  request that `$10C0` alone carries.
+
+## 2026-09-04 - The CPZ writes line is producer-blocked: one ring is played through the music mailbox
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, at `aa3b74a4b`.
+- **Measurement, not a comparison run.** Nothing changed. CPZ state only
+  `MATCH (720 ticks)`; state with writes DIVERGENCE at tick 494 (movie row
+  3225), `writes.count`, reference 34 against the engine's 3, 18 of 719
+  divergent. All 18 are at or after that row, so there is one cause.
+- **What the reference plays there.** The FM5 voice-load block, byte for byte
+  the same one the ring plays at rows 2968, 2974, 3004 and 3069. The engine
+  emits only the three music writes of that service, because it was never told
+  to play it.
+- **Only the ring path can produce it, and that is checked rather than
+  assumed.** `zRingSpeaker` has exactly one writer in the whole driver, the
+  `cpl` in `zPlaySound_CheckRing` (s2.sounddriver.asm:2127-2134, declared at
+  :4091), and the flag flips at this row. So a ring was played.
+- **Two producers, nine rings, and the same one missing from both.** The
+  power-on driver-state capture records nine flips of the flag, at movie rows
+  1436, 2968, 2974, 3004, 3069, 3225, 3437, 3440 and 3448. Its own
+  pre-consumption markers appear at seven of those, missing 1436 and 3225. The
+  request capture records eight transfers, at 1432, 2968, 2974, 3004, 3069,
+  3437, 3440 and 3448, missing 3225. So row 3225 is invisible to both, and the
+  49-transfer reduction is not at fault: the extracted payload contains 49
+  request values in total and none of them is near that row.
+- **The ROM says why. The 68k plays the ring from seven sites and one of them
+  uses the other mailbox.** Six reach `PlaySound` or `PlaySound2`, but the
+  ring-milestone check at s2.asm:25913-25914 does `move.w #SndID_Ring,d0` then
+  `jmp (PlayMusic).l`, and `PlayMusic` writes `Sound_Queue.Music0` or
+  `Music1` (:1520-1527) rather than the SFX slots. The request manifest hooks a
+  single instruction, `pc 4310` with opcode `13801009`, described as the
+  accepted M68K-to-Z80 transfer, so a request that arrives through the music
+  mailbox is not observed. This is the same mailbox split an earlier lane
+  recorded for the ten-ring and shield monitors.
+- **So the writes line cannot reach MATCH from the committed captures.** The
+  missing stimulus is a request the recording genuinely made; supplying it by
+  reading the reference's flag flip would be hydrating driver state to decide
+  what the engine plays, which hard rule 4 forbids, and narrowing the window to
+  end before row 3225 would be fitting the measurement to the gap.
+- **What would unblock it.** A producer change: record the music-mailbox
+  transfer as well as the SFX one. The manifest is already data-driven, with
+  `request_transfer` carrying cpu, pc, opcode, native action and marker tokens,
+  so the shape of the change is a second transfer site rather than new
+  analysis. It needs a TraceChaser submodule change and a recapture, which is
+  why it is proposed here rather than started.
+
+## 2026-09-04 - The ring phase is derived from requests; CPZ tick 237 -> 494, and two producer limits found
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, over `develop` at `874906bb7`.
+- **Before:** CPZ state with writes DIVERGENCE at tick 237 (movie row 2968),
+  `writes[4]`, reference `ym1[0xb1]=0x4` against the engine's
+  `ym1[0xb0]=0x4`; 36 of 719 divergent.
+- **After:** DIVERGENCE at tick 494 (movie row 3225), field `writes.count`,
+  reference 34 against the engine's 3; 18 of 719 divergent. State only stays
+  `MATCH (720 ticks)`.
+- **The removal condition is met by derivation, not by a power-on engine run.**
+  The ring flag is the parity of the rings played since power-on, because
+  `zPlaySound_CheckRing` complements it on every ring
+  (s2.sounddriver.asm:2124-2135). Ring requests are stimuli under the accepted
+  contract, so counting the ones before a window derives the phase without
+  reading a compared value. `S2OracleEngineCapture` now takes that count and
+  the CPZ oracle reads it from the new committed stimuli file, which carries
+  exactly one ring request, at movie row 1432. The driver-state capture agrees:
+  `zRingSpeaker` is `00h` from power-on and flips once, at movie row 1436, the
+  service that consumed it.
+- **Two new fixtures.** `s2-driver-state-cpz-w0-3450.reference-v2.jsonl.gz`,
+  3,264 ticks from the driver's first serviced frame to row 3449, duplicate
+  capture met byte-identical; and `s2-request-stimuli-cpz-w120-3450.json`, the
+  49 request transfers of the extracted request window reduced to row, order,
+  request and slot, with the source payload's digest recorded.
+- **First producer limitation: the request capture cannot start at row 0.**
+  `--request-window-mode capture --first-row 0` fails with "GPGX audio observer
+  begin publication epoch failed with status -2". The same command at
+  `--first-row 120`, the driver's first serviced frame, succeeds, and at
+  `--first-row 2700` succeeds. The driver-state mode accepts row 0 and simply
+  reports its first tick at row 120.
+- **Second producer limitation, and it is the larger one: no music requests are
+  recorded.** All 49 transfers over rows 120-3448 are `A0h` or above. The
+  driver-state capture shows the run loading nine songs in that span, with
+  `zCurSong` moving to `99h`, `91h`, `99h`, `89h`, `97h`, `82h`, `99h`, `91h`
+  and finally `8Eh` at row 2725, and not one of those appears in the request
+  stream. So an engine run driven from power-on by recorded requests cannot
+  reproduce the songs the recording plays, which is what a true power-on
+  comparison would need.
+- **A third, smaller gap in the same producer.** The stimuli carry eight ring
+  requests while the driver-state capture records nine flips of `zRingSpeaker`,
+  and only the ROM's ring path complements that byte (:2133). The missing one is
+  at movie row 3225, which is exactly the new first divergence: the reference
+  emits 34 writes there and the engine 3, because it was never told to play
+  that sound.
+- **What did not change.** No engine behaviour. The capture's power-on default
+  is still the ROM's zero flag; the count simply advances it.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the EHZ v2 oracle
+  unchanged at `MATCH (2198 ticks)` on both lines; the three request windows
+  `MATCH` at 25, 52 and 27 transfers; audio packages plus the four extra
+  classes with three ROM paths: 2,063 tests, 0 failures, 0 errors, 10 skips.
+
 ## 2026-09-04 - The miniboss fade is real, and the drowning restore had no overrides
 
 - **Worktree/branch:** `.worktrees/s3k-issue-coverage`,

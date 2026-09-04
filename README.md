@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Second S2 recording green on state and writes:** the CPZ level-select window
+  matches all 719 services once TraceChaser's request observer records the music
+  mailbox (ring milestone, song loads); request windows compare per site and
+  every published S2 window is regenerated under the v4 payload contract.
 - **Music after drowning and S3K fades follow the ROM:** surfacing restores the
   invincibility, Super or boss theme per each game's own routine (a per-game
   audio-profile rule), and S3K object fades use the driver's delay 6 / 40 steps

@@ -15,11 +15,13 @@ public final class S2RequestProjectionBk2TestBridge {
 
     public record Capture(
             S2ProductionRequestProjector projector, List<Integer> requestRows,
+            List<Integer> musicSubmissionRows,
             List<ProductionAudioRow> audioRows,
             List<PublicAudioRequest> publicAudioRequests,
             List<DriverUpdateTick> updateTicks) {
         public Capture {
             requestRows = List.copyOf(requestRows);
+            musicSubmissionRows = List.copyOf(musicSubmissionRows);
             audioRows = List.copyOf(audioRows);
             publicAudioRequests = List.copyOf(publicAudioRequests);
             updateTicks = List.copyOf(updateTicks);

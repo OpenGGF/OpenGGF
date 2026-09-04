@@ -63,7 +63,17 @@ final class S2RequestAwareOracleRawStream {
     }
 
     /** A pre-consumption M68K-to-Z80 transfer observation, not an admission. */
+    /**
+     * Which of {@code sndDriverInput}'s two stores into Z80 RAM delivered a
+     * request. The routine writes the music queue at {@code .isNotPauseCommand},
+     * labelled {@code loc_10C0} (docs/s2disasm/s2.asm:1302-1304), and the SFX
+     * queue inside {@code .loop} (:1317-1326). The two carry different
+     * guarantees, so a record names its own site.
+     */
+    enum TransferSite { SFX, MUSIC }
+
     record RequestTransfer(int sourceRow, int rowOrder, long sourceGlobalOrdinal,
+            TransferSite site,
             int requestByte, int physicalSlot, int pc, long a7, int nativeOrdinal,
             int sourceCpu, int serviceToken, int serviceKind, int depth,
             ActiveServiceOwner activeServiceOwner) {
@@ -308,18 +318,22 @@ final class S2RequestAwareOracleRawStream {
         for (int order = 0; order < values.size(); order++) {
             JsonNode value = values.get(order);
             exact(value, "request transfer", "row", "order", "global_transfer_ordinal",
-                    "request", "slot", "pc", "a7", "native_ordinal", "source_cpu",
+                    "site", "request", "slot", "pc", "a7", "native_ordinal", "source_cpu",
                     "service_token", "service_kind", "depth", "active_service_owner");
             long global = integer64(value, "global_transfer_ordinal");
             int nativeOrdinal = integer(value, "native_ordinal");
+            String siteText = text(value, "site");
+            TransferSite site = switch (siteText) {
+                case "sfx" -> TransferSite.SFX;
+                case "music" -> TransferSite.MUSIC;
+                default -> throw new IllegalArgumentException(
+                        "request transfer site differs");
+            };
             require(integer(value, "row") == row && integer(value, "order") == order
                             && global >= 0
-                            && (previousGlobal < 0 || global == previousGlobal + 1)
-                            && nativeOrdinal > previousNative,
+                            && (previousGlobal < 0 || global == previousGlobal + 1),
                     "request transfer order differs");
             require(unsignedByte(value, "request") != 0
-                            && integer(value, "slot") >= 0 && integer(value, "slot") <= 3
-                            && unsignedInt(value, "pc") == S2RequestAwareOracleSchema.REQUEST_PC
                             && unsignedByte(value, "source_cpu") == 2,
                     "request transfer identity differs");
             ActiveServiceOwner owner = parseOwner(value.get("active_service_owner"));
@@ -328,16 +342,36 @@ final class S2RequestAwareOracleRawStream {
                             && owner.depth() == unsignedByte(value, "depth"),
                     "request owner differs");
             long a7 = a7(value);
-            require(nativeOrdinal >= 0 && nativeOrdinal < events.size()
-                            && consumedMarkers.add(nativeOrdinal)
-                            && isExactMarker(events.get(nativeOrdinal), a7,
-                                    unsignedShort(value, "service_token"),
-                                    unsignedByte(value, "service_kind"),
-                                    unsignedByte(value, "depth")),
-                    "request transfer marker differs");
+            // The music store emits no native action-7 marker, so its records
+            // carry the reserved slot, that PC and no correlation. The SFX
+            // store keeps every guarantee it had, including the strictly
+            // increasing native ordinal and its exact marker.
+            if (site == TransferSite.MUSIC) {
+                require(integer(value, "slot") == S2RequestAwareOracleSchema.MUSIC_SLOT
+                                && unsignedInt(value, "pc")
+                                        == S2RequestAwareOracleSchema.MUSIC_REQUEST_PC
+                                && nativeOrdinal == 0 && owner.token() == 0
+                                && owner.kind() == 0 && owner.depth() == 0,
+                        "music request transfer identity differs");
+            } else {
+                require(nativeOrdinal > previousNative,
+                        "request transfer order differs");
+                require(integer(value, "slot") >= 0 && integer(value, "slot") <= 3
+                                && unsignedInt(value, "pc")
+                                        == S2RequestAwareOracleSchema.REQUEST_PC,
+                        "request transfer identity differs");
+                require(nativeOrdinal >= 0 && nativeOrdinal < events.size()
+                                && consumedMarkers.add(nativeOrdinal)
+                                && isExactMarker(events.get(nativeOrdinal), a7,
+                                        unsignedShort(value, "service_token"),
+                                        unsignedByte(value, "service_kind"),
+                                        unsignedByte(value, "depth")),
+                        "request transfer marker differs");
+                previousNative = nativeOrdinal;
+            }
             previousGlobal = global;
-            previousNative = nativeOrdinal;
-            result.add(new RequestTransfer(row, order, global, unsignedByte(value, "request"),
+            result.add(new RequestTransfer(row, order, global, site,
+                    unsignedByte(value, "request"),
                     integer(value, "slot"), (int) unsignedInt(value, "pc"), a7, nativeOrdinal,
                     unsignedByte(value, "source_cpu"), unsignedShort(value, "service_token"),
                     unsignedByte(value, "service_kind"), unsignedByte(value, "depth"), owner));
@@ -583,6 +617,13 @@ final class S2RequestAwareOracleRawStream {
         private long allEventCount;
         private long markerEventCount;
         private long transferCount;
+        /**
+         * Transfers from the music store at {@code loc_10C0}
+         * (docs/s2disasm/s2.asm:1302-1304). That store emits no native
+         * action-7 marker, so these are the transfers a marker count cannot
+         * account for.
+         */
+        private long musicTransferCount;
         private long overrideCount;
         private long pcmCount;
         private int maxRequestOccupancy;
@@ -621,6 +662,9 @@ final class S2RequestAwareOracleRawStream {
             for (JsonNode transfer : requestTransfers) {
                 updateLine(transfers, compactBytes(transfer));
                 transferCount++;
+                if ("music".equals(text(transfer, "site"))) {
+                    musicTransferCount++;
+                }
             }
             JsonNode override = value.get("override_resume");
             if (override != null && !override.isNull()) {
@@ -637,9 +681,15 @@ final class S2RequestAwareOracleRawStream {
         void verify(JsonNode cutoff, S2RequestAwareOracleSchema.Window window) {
             require(frameCount == window.exclusiveEnd() - window.firstRow()
                             && terminalState != null && overrideCount <= 1 && pcmCount <= 1
-                            && overrideCount == pcmCount && markerEventCount == transferCount
+                            && overrideCount == pcmCount
+                            // Only the SFX store's transfers have a marker.
+                            && markerEventCount == transferCount - musicTransferCount
                             && allEventCount == baseEventCount + markerEventCount
-                            && maxRequestOccupancy <= 4,
+                            // One pass of sndDriverInput carries at most one
+                            // music request and four SFX ones, because .doSFX
+                            // loads moveq #4-1,d1 on the shipped fixBugs = 0
+                            // path (docs/s2disasm/s2.asm:1310-1315).
+                            && maxRequestOccupancy <= 5,
                     "bounded inventory shape differs");
             require(integer64(cutoff, "frame_count") == frameCount
                             && integer64(cutoff, "base_event_count") == baseEventCount

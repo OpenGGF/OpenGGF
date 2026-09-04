@@ -92,6 +92,33 @@ public final class S2OracleEngineCapture {
      */
     public static List<EngineTick> capture(Path romPath, int tickCount, int speedUpTick,
             List<DriverRequest> requests, int engineMusicId) {
+        return capture(romPath, tickCount, speedUpTick, requests, engineMusicId, 0);
+    }
+
+    /**
+     * The same capture for a window that opens partway through a recording,
+     * where the ring speaker's alternation already has a phase.
+     *
+     * <p>{@code zPlaySound_CheckRing} resolves a raw {@code B5h} to {@code CEh}
+     * only while {@code zRingSpeaker} is zero and complements the flag either
+     * way (s2.sounddriver.asm:2124-2135), so the flag is simply the parity of
+     * the rings played since power-on. It lives outside the region
+     * {@code zInitMusicPlayback} clears (:2580-2612), so a song load does not
+     * reset it and a window that opens on one inherits whatever parity the run
+     * had reached.
+     *
+     * <p>{@code ringRequestsBeforeWindow} is that count, and it is a stimulus
+     * like the requests themselves: the number of ring requests the recording's
+     * own 68k issued before the window. Nothing is read back from comparison
+     * state, and the alternation rule stays the ROM's.
+     */
+    public static List<EngineTick> capture(Path romPath, int tickCount, int speedUpTick,
+            List<DriverRequest> requests, int engineMusicId,
+            int ringRequestsBeforeWindow) {
+        if (ringRequestsBeforeWindow < 0) {
+            throw new IllegalArgumentException(
+                    "ring request count must be non-negative");
+        }
         Objects.requireNonNull(romPath, "romPath");
         requests = validateRequests(requests, tickCount);
         verifyRomIdentity(romPath);
@@ -133,7 +160,9 @@ public final class S2OracleEngineCapture {
 
             int z80Start = song.getZ80StartAddress();
             int requestIndex = 0;
-            boolean ringLeftNext = true;
+            // zRingSpeaker is zero at power-on, which resolves the first raw
+            // B5h to CEh; each ring since then has complemented it.
+            boolean ringLeftNext = (ringRequestsBeforeWindow & 1) == 0;
             for (int ordinal = 0; ordinal < tickCount; ordinal++) {
                 if (ordinal == speedUpTick) {
                     sequencer.setSpeedShoes(true);
