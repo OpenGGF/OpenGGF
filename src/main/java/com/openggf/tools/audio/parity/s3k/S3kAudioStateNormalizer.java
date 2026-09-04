@@ -156,7 +156,15 @@ public final class S3kAudioStateNormalizer {
                 track.scaledDuration() & 0xff,
                 frequency,
                 track.detune() & 0xff,
-                null, null, null,
+                // VolEnv (17h) is the envelope position, which
+                // zDoVolEnvAdvance increments and zFinishTrackUpdate clears
+                // (Sound/Z80 Sound Driver.asm:1055-1069, :4211-4213), not the
+                // envelope's identity. NoteFillTimeout (1Eh) and
+                // NoteFillMaster (1Fh) are the running and reload copies of
+                // the note fill (:4070-4077).
+                track.envPos() & 0xff,
+                track.fillCounter() & 0xff,
+                track.fill() & 0xff,
                 // The modulation pointer is a Z80 address the engine has no
                 // equivalent for, like the data pointer above.
                 null,

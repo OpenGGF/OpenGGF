@@ -27,6 +27,54 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Four comparator fields promoted from diagnostic to gated, at no cost
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`.
+- **Why.** The previous entry's envelope drift ran eight entries deep for four
+  hundred services before any gated field noticed. The field that would have
+  caught it on the first service was registered as diagnostic.
+- **What was actually wrong with `volEnv`.** Not a shape mismatch, as its
+  registry note claimed. The engine sent `null`: three track fields were
+  hard-coded null in `S3kAudioStateNormalizer`, so there was nothing to
+  compare even if the field had been gated. The ROM's byte is the envelope
+  *position*, which `zDoVolEnvAdvance` increments and `zFinishTrackUpdate`
+  clears (Sound/Z80 Sound Driver.asm:1055-1069, :4211-4213), and the engine
+  has carried it in `SmpsTrackSnapshot.envPos` all along.
+- **Promoted, all four free.** The frontier is 1490 before and after.
+
+  | Field | ROM byte | Engine source |
+  |---|---|---|
+  | `volEnv` | VolEnv 17h | `SmpsTrackSnapshot.envPos` |
+  | `noteFillTimeout` | NoteFillTimeout 1Eh | `fillCounter` |
+  | `noteFillMaster` | NoteFillMaster 1Fh | `fill` |
+  | `palDoubleUpdateCounter` | zPalDblUpdCounter 1C04 | `SmpsDriverSnapshot.palUpdateCounter` |
+
+- **Each proven to run.** Corrupting the engine's value for a field, one at a
+  time, makes the oracle report that field by name. A gate that has never
+  failed and a gate that never executes look identical from the outside.
+- **One I did not promote, and the gap it found.** `fadeDelay` and
+  `fadeDelayTimeout` have settled ROM meanings, but wiring them puts the
+  frontier at tick 1: the reference reads 6 where the engine reads 0, because
+  the ROM seeds `zFadeDelay` at driver init and the engine carries no such
+  byte until a fade is armed. That is a real engine gap, not comparator
+  timidity, and gating it now would hide everything after tick 1. Recorded here
+  so it is a known item rather than a silent one; the fix is to give the driver
+  the seeded byte, after which the gate costs nothing.
+- **The rest stay diagnostic for cause, not for comfort.** `dacIndex`,
+  `fadeInTimeout`, `pauseFlag`, `soundQueue`, `nextSound`, `modulationPtr` and
+  `dataPointer` each name a ROM byte the engine has no equivalent for, or a
+  Z80 address, or presentation-side state that is not a driver flag.
+  `fadeOutTimeout` maps to a fade shape that differs. None of those is a
+  settled mapping being withheld.
+- **Frontier unchanged** at tick 1490, event 0, and the DAC stream at run 338,
+  byte 0. No re-pin was needed.
+- **Gates at this commit, all green, on a clean build.** Audio, per-game audio
+  and parity packages with all three ROM paths: 2,758 tests, 0 failures, 16
+  skips. Ordinary suite 16,475 tests, 0 failures, 22 skips. `-Pguards` 608
+  tests, 0 failures.
+
+
 ## 2026-09-04 - Every driver restarts the volume envelope at a note; frontier 760 -> 1490
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
