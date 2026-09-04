@@ -97,6 +97,29 @@ public final class SmpsSequencerConfig {
         S1_PSG3_SILENCE_PAIR
     }
 
+    /**
+     * Visible PSG writes S1's special-SFX loader emits at the tail of
+     * {@code Sound_PlaySpecial}.
+     */
+    public enum SpecialSfxPsg3SilenceMode {
+        /** Admitting a special SFX changes no PSG register state. */
+        NONE,
+        /**
+         * S1: {@code Sound_PlaySpecial}'s {@code .doneoverride} tail
+         * (docs/s1disasm/s1.sounddriver.asm:1183-1191) writes {@code d4|$1F}
+         * and then that value with bit 5 flipped, where {@code d4} still holds
+         * the voice control bits of the LAST track its own load loop read
+         * (:1141). The intended value was the PSG3 channel byte {@code $C0},
+         * which would give the {@code $DF, $FF} silence pair; with an FM-only
+         * special SFX such as {@code SndD0 - Waterfall} ({@code cFM4} =
+         * {@code $04}) it instead emits {@code $1F, $3F}, two SN76489 DATA
+         * bytes that land on whichever register was latched last. This is a
+         * shipped-ROM defect under {@code FixBugs = 0} and is modelled as
+         * emitted, not as the value the comment intends.
+         */
+        S1_STALE_VOICE_CONTROL_PAIR
+    }
+
     /** Visible PSG writes emitted while admitting a declared PSG3 SFX track. */
     public enum Psg3SfxAdmissionWriteMode {
         /** Admission changes no PSG register state. */
@@ -183,9 +206,13 @@ public final class SmpsSequencerConfig {
     private final boolean direct68kDriver;
     private final boolean advancePsgEnvelopeOnRest;
     private final boolean writeFmPanOnNote;
+    private final boolean dacNoteKeysOffFm6AndRestoresFm3;
+    private final boolean enableDacOnSequencerStart;
+    private final boolean psgFrequencyHighByteNibbleSwap;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
     private final PsgSfxTakeoverMode psgSfxTakeoverMode;
     private final Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode;
+    private final SpecialSfxPsg3SilenceMode specialSfxPsg3SilenceMode;
     private final SfxChannelOwnershipMode sfxChannelOwnershipMode;
     private final FmSfxReleaseMode fmSfxReleaseMode;
     private final PsgSfxReleaseMode psgSfxReleaseMode;
@@ -228,9 +255,13 @@ public final class SmpsSequencerConfig {
         this.direct68kDriver = b.direct68kDriver;
         this.advancePsgEnvelopeOnRest = b.advancePsgEnvelopeOnRest;
         this.writeFmPanOnNote = b.writeFmPanOnNote;
+        this.dacNoteKeysOffFm6AndRestoresFm3 = b.dacNoteKeysOffFm6AndRestoresFm3;
+        this.enableDacOnSequencerStart = b.enableDacOnSequencerStart;
+        this.psgFrequencyHighByteNibbleSwap = b.psgFrequencyHighByteNibbleSwap;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
         this.psg3SfxAdmissionWriteMode = b.psg3SfxAdmissionWriteMode;
+        this.specialSfxPsg3SilenceMode = b.specialSfxPsg3SilenceMode;
         this.sfxChannelOwnershipMode = b.sfxChannelOwnershipMode;
         this.fmSfxReleaseMode = b.fmSfxReleaseMode;
         this.psgSfxReleaseMode = b.psgSfxReleaseMode;
@@ -346,12 +377,40 @@ public final class SmpsSequencerConfig {
         return writeFmPanOnNote;
     }
 
+    /**
+     * Whether starting a DAC sample also keys off the shared FM6 channel and
+     * restores FM3 to normal mode, as the S3K Z80 driver's DAC track does.
+     */
+    public boolean isDacNoteKeysOffFm6AndRestoresFm3() {
+        return dacNoteKeysOffFm6AndRestoresFm3;
+    }
+
+    /**
+     * Whether admitting a sequencer also enables the YM2612 DAC (2Bh = 80h).
+     * The Z80 drivers do not: their DAC transport owns that register.
+     */
+    public boolean isEnableDacOnSequencerStart() {
+        return enableDacOnSequencerStart;
+    }
+
+    /**
+     * Whether the PSG frequency's second byte is the S3K driver's nibble swap
+     * of {@code (low & 0F0h) | high} rather than a six-bit-masked shift.
+     */
+    public boolean isPsgFrequencyHighByteNibbleSwap() {
+        return psgFrequencyHighByteNibbleSwap;
+    }
+
     public FmSfxTakeoverMode getFmSfxTakeoverMode() {
         return fmSfxTakeoverMode;
     }
 
     public PsgSfxTakeoverMode getPsgSfxTakeoverMode() {
         return psgSfxTakeoverMode;
+    }
+
+    public SpecialSfxPsg3SilenceMode getSpecialSfxPsg3SilenceMode() {
+        return specialSfxPsg3SilenceMode;
     }
 
     public Psg3SfxAdmissionWriteMode getPsg3SfxAdmissionWriteMode() {
@@ -468,10 +527,15 @@ public final class SmpsSequencerConfig {
         private boolean direct68kDriver = false;
         private boolean advancePsgEnvelopeOnRest = true;
         private boolean writeFmPanOnNote = false;
+        private boolean dacNoteKeysOffFm6AndRestoresFm3 = false;
+        private boolean enableDacOnSequencerStart = true;
+        private boolean psgFrequencyHighByteNibbleSwap = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
         private PsgSfxTakeoverMode psgSfxTakeoverMode = PsgSfxTakeoverMode.FORCE_SILENCE;
         private Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode =
                 Psg3SfxAdmissionWriteMode.NONE;
+        private SpecialSfxPsg3SilenceMode specialSfxPsg3SilenceMode =
+                SpecialSfxPsg3SilenceMode.NONE;
         private SfxChannelOwnershipMode sfxChannelOwnershipMode =
                 SfxChannelOwnershipMode.FIRST_WRITE;
         private FmSfxReleaseMode fmSfxReleaseMode = FmSfxReleaseMode.LEGACY_FULL_RESTORE;
@@ -508,9 +572,13 @@ public final class SmpsSequencerConfig {
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder advancePsgEnvelopeOnRest(boolean val) { advancePsgEnvelopeOnRest = val; return this; }
         public Builder writeFmPanOnNote(boolean val) { writeFmPanOnNote = val; return this; }
+        public Builder dacNoteKeysOffFm6AndRestoresFm3(boolean val) { dacNoteKeysOffFm6AndRestoresFm3 = val; return this; }
+        public Builder enableDacOnSequencerStart(boolean val) { enableDacOnSequencerStart = val; return this; }
+        public Builder psgFrequencyHighByteNibbleSwap(boolean val) { psgFrequencyHighByteNibbleSwap = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder psgSfxTakeoverMode(PsgSfxTakeoverMode val) { psgSfxTakeoverMode = val; return this; }
         public Builder psg3SfxAdmissionWriteMode(Psg3SfxAdmissionWriteMode val) { psg3SfxAdmissionWriteMode = val; return this; }
+        public Builder specialSfxPsg3SilenceMode(SpecialSfxPsg3SilenceMode val) { specialSfxPsg3SilenceMode = val; return this; }
         public Builder sfxChannelOwnershipMode(SfxChannelOwnershipMode val) { sfxChannelOwnershipMode = val; return this; }
         public Builder fmSfxReleaseMode(FmSfxReleaseMode val) { fmSfxReleaseMode = val; return this; }
         public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }

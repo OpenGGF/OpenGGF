@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -43,8 +44,12 @@ public final class S3kRequestObservationSidecar {
         this.firstRow = firstRow;
         this.exclusiveEnd = exclusiveEnd;
         this.captureSha256 = captureSha256;
-        this.observations = Map.copyOf(observations);
+        this.observations = Collections.unmodifiableMap(new LinkedHashMap<>(observations));
     }
+
+    /** The committed observations for the S3K oracle's power-on window. */
+    public static final Path COMMITTED = Path.of(
+            "src/test/resources/audio/parity/s3k/s3k-aiz1-intro-requests-v1.json");
 
     /** An empty sidecar: every row is unobserved, which is the pre-existing behaviour. */
     public static S3kRequestObservationSidecar absent() {
@@ -108,6 +113,11 @@ public final class S3kRequestObservationSidecar {
     /** The source-observed request written on this movie row, if one was observed. */
     public Optional<Integer> requestAt(int movieRow) {
         return Optional.ofNullable(observations.get(movieRow));
+    }
+
+    /** The observed requests, keyed by movie row, in ascending row order. */
+    public Map<Integer, Integer> observations() {
+        return observations;
     }
 
     public int size() {
