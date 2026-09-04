@@ -27,6 +27,74 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The note fill moves into the continuing-note branch; the duration seed does not land
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `1292b5a51`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before and after:** `TRACK_STATE_MISMATCH`, tick 565, role
+  `SFX_FM4`, field `durationTimeout`, reference `1` against engine `0`; DAC
+  stream `BYTE_DIFFERENT` run 338 byte 0. **The frontier did not move.** What
+  landed is a cited correction at a site no committed fixture exercises, and
+  the finding that the seed needs more than the restructure it was paired
+  with.
+- **Every driver seeds the first duration timeout with 1, and each is cited.**
+  S1 loads `d5 = 1` for both of its music loops, commenting "note duration for
+  first note" (s1.sounddriver.asm:823, :836), and uses it at :847 and :897;
+  its SFX loops write 1 directly (:1062, :1171). S2 stores 1 with the comment
+  "should expire next update, play first note, etc." (s2.sounddriver.asm:1857).
+  S3K's `zZeroFillTrackRAM` seeds it in the track-RAM fill itself (skdisasm
+  Sound/Z80 Sound Driver.asm:2168-2184). There is no per-driver difference to
+  model: the value is 1 everywhere.
+- **What landed: the note fill belongs to the continuing-note branch.** All
+  three drivers call it only from there, never from the pass whose duration
+  timer expired: S3K from `zUpdateFMorPSGTrack`'s `.note_going`
+  (:781-790), S2 from `zFMUpdateTrack`'s `.notegoing`
+  (s2.sounddriver.asm:832-834) and S1 from `FMUpdateTrack`'s `.notegoing`
+  (s1.sounddriver.asm:358-361). The engine ran it after the decrement whatever
+  the outcome. Moving it changes nothing measurable today, because no
+  committed fixture has a fill expire on the same pass its timer runs out, and
+  it is landed cited rather than left wrong.
+- **What did not land, and the honest reason.** Seeding the constructor with 1
+  makes the frontier byte agree and takes the S3K oracle to service 565's
+  first write. It also turns two assertions red, and they stay red with the
+  note-fill relocation in place, so the relocation was necessary-but-not-
+  sufficient rather than the whole story:
+  `TestS1AudioStateNormalizer#productionS1NoteFillExpirySkipsTheRemainingPsgUpdate`
+  reads envelope cursor 3 where it asserts 2, and
+  `TestAudioDiagnosticObservers#fadeOnlyFrameAndTempoDelayTrackWalkHaveTypedServices`
+  loses its tempo-delay track walk. The first names a ROM property rather than
+  pinning a snapshot. The residual is an interaction with S1's `TIMEOUT` tempo
+  mode, whose per-frame branch adds 1 to every track's duration, and I did not
+  isolate it. Landing a seed I cannot explain against an assertion that names
+  a ROM property is the mistake this log exists to prevent, so the seed is
+  reverted and stays on the open list with these two names attached.
+- **The CPZ line is not mine, and that was measured rather than assumed.**
+  `s2-driver-state-cpz-w2700-3450 state and writes` reports `DIVERGENCE at
+  tick 237, field writes[4], expected ym1[0B1h] against ym1[0B0h], 36 of 719
+  ticks divergent`. Reverting this branch's only source change and re-running
+  the identical command reproduces that line character for character, so it is
+  the S2 lane's own frontier. Its `state only` companion is `MATCH (720
+  ticks)`, as reported.
+- **All other S1 and S2 lines read by content.** S1 sound test `MATCH (14690
+  ticks)` and `MATCH (1967 ticks)`; S2 v1 driver oracle `MATCH (698 ticks)`;
+  v2 state-and-writes and state-only `MATCH (2198 ticks)` each; CPZ state-only
+  `MATCH (720 ticks)`; request windows `MATCH` at 25, 52 and 27 transfers.
+- **Open items.** The track-init `DurationTimeout` seed, now with its two
+  blocking assertions named; S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape.
+- **Gates at this commit, all green.** The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,158
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - An S3K SFX owns its channel at admission but walks a service later
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
