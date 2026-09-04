@@ -27,6 +27,65 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K 751: the sidecar was right, my probe was not, and the real fault is request ordering
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `4c43929a9`.
+- **Correction, and it retracts the previous entry's main claim.** I reported a
+  one-service phase error, with the engine spending 89 writes in service 750
+  and 177 in 751 against the reference's 8 and 274. That was a measurement
+  artefact of my own making. The probe set its ordinal immediately before
+  `driver.serviceOuterFrame()`, but the capture host dispatches the service's
+  request *before* that call, so every write the request itself produced was
+  stamped with the previous service's ordinal. Moving the assignment above the
+  dispatch loop gives 8 writes in 750 and 258 in 751. There is no phase error.
+  This is the mislabelled-probe-column hazard exactly as the briefing describes
+  it, and it cost an entry.
+- **The sidecar attribution is correct, and was never the problem.** Audited
+  against all fourteen observations, using the reference's own non-DAC write
+  counts as the arbiter. Every request that loads music resolves to the service
+  whose write count shows the load, and in each of those cases the consuming
+  service is simply the first one whose frame is greater than the observation
+  row, which is `firstServiceAfter` with no adjustment:
+
+  | Row | Request | Consuming service frame | Its non-DAC writes |
+  |---|---|---|---|
+  | 251 | 25h | 253 | 259 |
+  | 618 | 2Fh | 620 | 164 |
+  | 876 | 01h | 879 | 274 |
+  | 1618 | 1Fh | 1620 | 218 |
+  | 2144 | 01h | 2147 | 296 |
+  | 3968 | 2Ch | 3970 | 196 |
+  | 5165 | 01h | 5167 | 276 |
+
+  In every one of these the row after the observation completes no service at
+  all, so the rule's third branch fires and takes that service unchanged. The
+  branch I suspected, the one that steps back a service, never runs for them.
+  The remaining seven observations are fades and stops whose services carry the
+  request in their own frame-entry mailbox, so the sidecar only cross-checks
+  them.
+- **The real fault is that a request pre-empts its own service's track walk.**
+  Reference service 751 opens with `A5h` then `A1h`, the frequency pair for
+  linear FM4, and only then begins the six-channel silence loop at `82h`. The
+  engine's 751 opens directly at `82h`. Its service 750 shows the ordinary
+  per-service frequency sends, so the walk works normally right up to the
+  service that takes the request.
+- **Why, in ROM terms.** `zUpdateEverything` runs `zPauseUnpause` and
+  `zUpdateSFXTracks`, then `zUpdateMusic`'s `TempoWait` and both fade
+  handlers, and only then loads `zMusicNumber` and calls `zFillSoundQueue`
+  and `zCycleSoundQueue` (`Sound/Z80 Sound Driver.asm:653-701`). So the tracks
+  of the service that consumes a request are walked *before* the request is
+  consumed. The capture host dispatches the request before
+  `driver.serviceOuterFrame()`, so the stop-all runs first and there is no walk
+  left to do. This is the same ordering the branch already models for the first
+  service through `sfxWalkPrecedesRequest`; it is simply not applied to
+  mid-stream requests.
+- **Size of the gap.** Reference 274 non-DAC writes against the engine's 258 at
+  service 751. The two leading frequency writes are part of that difference; the
+  rest should be accounted for by the fix rather than assumed.
+- **Gates.** Not re-run; no engine behaviour changed since `0da7b645a`.
+
+
 ## 2026-09-04 - S3K service 751 is a music change, and the engine goes quiet just as the ROM gets busy
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
