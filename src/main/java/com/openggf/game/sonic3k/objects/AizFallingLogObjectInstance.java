@@ -169,7 +169,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
 
     protected int levelFrameCounterForSpawner(int fallbackFrameCounter) {
         return services().levelManager() != null
-                ? services().levelManager().getFrameCounter() + 1
+                ? services().levelManager().getFrameCounter()
                 : fallbackFrameCounter;
     }
 

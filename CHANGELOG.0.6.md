@@ -22,10 +22,17 @@ This file contains the complete 0.6 development snapshot history carried forward
   That patched up the physics but left the tempo change arriving one sound-program
   update late, which is audible as the music holding its faster tempo a beat
   longer than it should. The countdown now runs where the original runs it, so
-  both halves happen together, and the stretch is gone. Sonic 3 & Knuckles, whose
-  countdown only steps every eighth frame, also had its frame numbering corrected
-  to match: the original counts the frame up before the step reads it, and the
-  engine counted it up afterwards.
+  both halves happen together, and the stretch is gone.
+
+- **The engine now counts the level's frame number up where the original does:**
+  at the very start of a frame, before anything in that frame runs, in all three
+  games. The engine had been counting it up at the end instead, so everything
+  that asks "which frame is this?" during a frame saw the previous one's number.
+  Roughly two dozen places compensated by adding one back at the point they read
+  it, and a few that should have compensated did not. The count is now advanced
+  once, in the right place, and every reader takes it as it stands. Nothing in
+  play changes; the timing that was already right stays right, and the pieces
+  that were quietly a frame out are now in step.
 
 - **A broken Sonic 2 monitor's explosion sound now comes from the explosion
   itself:** the original plays it from the explosion's own turn in the object

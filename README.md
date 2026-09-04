@@ -263,6 +263,42 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **First duration timeout seeds at 1 in all three drivers:** cited per ROM; two
+  S1 unit fixtures that could never advance (tempo 1) corrected. S3K oracle at
+  the first write of service 565.
+- **S2 run-chain segment 15 diagnosed:** the CPZ2 boss gunk falls a frame early
+  because the ROM rewrites the container in place (`Obj5D_Container_Extend`)
+  while the engine respawns it; recorded, not yet closed.
+- **S2 CPZ tick-237 is the ring speaker flag:** the driver alternates left/right
+  ring variants on a flag outside the song-load clear, so a capture starting at
+  the load inherits its phase; recorded as a capture-start limitation.
+- **Note fill runs only on the unexpired-timer branch:** all three drivers reach
+  the note-fill routine from the not-expired branch of the duration decrement;
+  the engine now matches, cited per driver.
+- **S2 CPZ oracle music id cited from the driver playlist:** request `8Eh` indexes
+  the master playlist to Chemical Plant; the tick-237 write difference is a whole
+  voice load one FM channel across, not a slot-search rule.
+- **S3K SFX admission follows the ROM service order:** a newly requested SFX is
+  walked from the next service while the music-track override bit is set on the
+  admitting one; S3K oracle at the duration-timeout seed in service 565.
+- **Second S2 driver-state recording (CPZ, rows 2700-3450):** captured from a
+  different movie, zone and song; state matches all 720 ticks, writes diverge at
+  tick 237 on a second overlapping SFX FM slot.
+- **Level frame counter advances where the ROM does:** all three loops increment
+  `Level_frame_counter` before the object pass; about two dozen per-reader `+1`
+  compensations and the speed-shoes phase offset are deleted.
+- **S3K duration-only units neither silence nor retune:** a positive stream byte
+  only stores the duration, keeping the existing frequency and rest state; PSG
+  volume silence keys on the rest bit. S3K oracle at service 565.
+- **S2 DAC runs are bounded by the ROM sample length:** runs end at the
+  `zDACLenTbl` length, a silent service, or a selector change; the residual
+  byte difference is a supersession join and is reported as such.
+- **S3K duration-only notes keep the rest state the ROM left:** the note-start path
+  no longer recomputes the rest bit from a stale note byte; S3K oracle at a write
+  difference inside service 551.
+- **S2 DAC stream reports where the reference resyncs:** the byte-709 difference is
+  a merged-play sample join, not decode or selection; the driver-state oracle now
+  matches all 2,198 services for state and writes.
 - **S3K resting a PSG track silences it:** `zRestTrack` runs straight into the
   PSG channel silence when the driver still owns the track, so a parked envelope
   rest silences every pass; S3K oracle at service 551.

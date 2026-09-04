@@ -43,20 +43,15 @@ public class SpeedShoesTimer extends AbstractTimer implements DisplayPhaseTimer 
 
     /**
      * Offset aligning the engine's level frame counter to ROM
-     * {@code Level_frame_counter} as read from the display step.
-     *
-     * <p>Two separate facts set this. {@code (Level_frame_counter+1).w} is 68k
-     * syntax for reading the low byte at the label address plus one; it does
-     * not add one to the counter value, so the gate itself is simply
-     * "divisible by eight". But {@code LevelLoop} increments the counter at the
-     * top of the loop, before {@code Process_Sprites} runs
-     * {@code Sonic_Display} ({@code docs/skdisasm/sonic3k.asm:7916-7925}),
-     * whereas the engine increments it in {@code LevelManager.update()}, which
-     * the level frame step runs after the player physics pass. The engine's
-     * counter is therefore one behind the ROM's at the moment
-     * {@code Sonic_ChkShoes} reads it, and the gate must add that one back.
+     * {@code Level_frame_counter} as read from the display step. It is zero:
+     * {@code (Level_frame_counter+1).w} is 68k syntax for reading the low byte
+     * at the label address plus one, not an increment of the value, and the
+     * engine now advances its counter where the ROM does, at the top of the
+     * level loop before the object pass
+     * ({@code LevelManager.advanceLevelFrameCounter}), so the display step
+     * reads the ROM's own value.
      */
-    static final int LEVEL_FRAME_PHASE_OFFSET = 1;
+    static final int LEVEL_FRAME_PHASE_OFFSET = 0;
 
     private final AbstractPlayableSprite sprite;
     /** Decrement cadence in level frames; a power of two (1 or 8). */

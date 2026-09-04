@@ -8,6 +8,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import com.openggf.audio.smps.DacData;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -162,9 +164,9 @@ class TestS2DriverStateOracle {
     void aCorruptedDacSampleByteBreaksTheStreamComparison() throws Exception {
         S2DriverStateReference.Result reference = S2DriverStateReference.read();
         List<S2AudioOracleComparator.ReferenceTick> clean = referenceTicks(reference);
-        List<S2OracleEngineCapture.EngineTick> engine = engineFromReference(reference);
         assertEquals(S2DacStreamComparator.Kind.MATCH,
-                S2DacStreamComparator.compare(clean, engine).kind(),
+                S2DacStreamComparator.compare(
+                        dacServices(clean, null), dacServices(clean, null)).kind(),
                 "the reference's DAC stream must agree with itself first");
 
         int victimTick = -1;
@@ -193,8 +195,8 @@ class TestS2DriverStateOracle {
         corrupted.set(victimTick, new S2AudioOracleComparator.ReferenceTick(
                 victim.ordinal(), victim.row(), victim.state(), writes));
 
-        S2DacStreamComparator.Report report =
-                S2DacStreamComparator.compare(corrupted, engine);
+        S2DacStreamComparator.Report report = S2DacStreamComparator.compare(
+                dacServices(corrupted, null), dacServices(clean, null));
         assertEquals(S2DacStreamComparator.Kind.BYTE_DIFFERENT, report.kind(),
                 report.describe());
     }
@@ -203,13 +205,44 @@ class TestS2DriverStateOracle {
             S2DriverStateReference.Result reference,
             S2RequestProjectionBk2TestBridge.Capture capture) {
         Aligned aligned = align(reference, capture, true);
-        return S2DacStreamComparator.compare(aligned.reference(), aligned.engine());
+        List<S2DacStreamComparator.Service> referenceServices =
+                dacServices(aligned.reference(), aligned.romDacData());
+        List<S2DacStreamComparator.Service> engineServices = new ArrayList<>();
+        for (int index = 0; index < aligned.engine().size(); index++) {
+            int[] dac = aligned.engineDacSampleAndLength().get(index);
+            engineServices.add(new S2DacStreamComparator.Service(
+                    aligned.engine().get(index).writes(), dac[0], dac[1]));
+        }
+        return S2DacStreamComparator.compare(referenceServices, engineServices);
+    }
+
+    /**
+     * The reference's services with its own selector and that sample's decoded
+     * length. {@code zUpdateDAC} stores {@code zCurDAC} already rebased by
+     * {@code 81h} (s2.sounddriver.asm:505-518), so the note that indexes the
+     * ROM's DAC table is the stored value plus {@code 81h}.
+     */
+    private static List<S2DacStreamComparator.Service> dacServices(
+            List<S2AudioOracleComparator.ReferenceTick> ticks,
+            DacData romDacData) {
+        List<S2DacStreamComparator.Service> services = new ArrayList<>();
+        for (S2AudioOracleComparator.ReferenceTick tick : ticks) {
+            int selector = S2OracleDriverState.decode(tick.state())
+                    .globals().curDac();
+            services.add(new S2DacStreamComparator.Service(tick.writes(),
+                    selector,
+                    S2Bk2DriverOracleComparator.decodedLength(
+                            romDacData, (selector + 0x81) & 0xff)));
+        }
+        return services;
     }
 
     /** The two sides aligned service for service, ready to compare. */
     private record Aligned(
             List<S2AudioOracleComparator.ReferenceTick> reference,
-            List<S2OracleEngineCapture.EngineTick> engine) {
+            List<S2OracleEngineCapture.EngineTick> engine,
+            List<int[]> engineDacSampleAndLength,
+            DacData romDacData) {
     }
 
     private static Aligned align(
@@ -236,6 +269,8 @@ class TestS2DriverStateOracle {
             referenceAnchor++;
         }
         List<S2OracleEngineCapture.EngineTick> engine = new ArrayList<>();
+        List<int[]> engineDac = new ArrayList<>();
+        DacData romDacData = null;
         int shared = Math.min(ticks.size() - anchor,
                 allTicks.size() - referenceAnchor);
         for (int index = 0; index < shared; index++) {
@@ -244,6 +279,16 @@ class TestS2DriverStateOracle {
             engine.add(S2Bk2DriverOracleComparator.mapUpdateTick(
                     index, tick.snapshot(),
                     compareWrites ? tick.writes() : List.of()));
+            engineDac.add(S2Bk2DriverOracleComparator.dacSampleAndLength(
+                    tick.snapshot()));
+            if (romDacData == null) {
+                for (var entry : tick.snapshot().sequencers()) {
+                    if (!entry.sfx() && entry.dacData() != null) {
+                        romDacData = entry.dacData();
+                        break;
+                    }
+                }
+            }
         }
         List<S2AudioOracleComparator.ReferenceTick> referenceTicks =
                 new ArrayList<>();
@@ -269,7 +314,7 @@ class TestS2DriverStateOracle {
                     + " and reference tick " + referenceAnchor
                     + " comparing " + shared);
         }
-        return new Aligned(referenceTicks, engine);
+        return new Aligned(referenceTicks, engine, engineDac, romDacData);
     }
 
     private static S2AudioOracleComparator.Report compare(

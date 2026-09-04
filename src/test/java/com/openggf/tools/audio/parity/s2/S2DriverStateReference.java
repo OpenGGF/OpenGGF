@@ -144,7 +144,12 @@ final class S2DriverStateReference {
     }
 
     static InputStream open() throws IOException {
-        InputStream stream = S2DriverStateReference.class.getResourceAsStream(RESOURCE);
+        return open(RESOURCE);
+    }
+
+    /** The same, for another committed driver-state reference of this shape. */
+    static InputStream open(String resource) throws IOException {
+        InputStream stream = S2DriverStateReference.class.getResourceAsStream(resource);
         if (stream == null) {
             throw new IOException("committed S2 driver-state reference is absent");
         }
@@ -152,9 +157,14 @@ final class S2DriverStateReference {
     }
 
     static String gzipDigest() throws IOException, NoSuchAlgorithmException {
+        return gzipDigest(RESOURCE);
+    }
+
+    static String gzipDigest(String resource)
+            throws IOException, NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (InputStream stream =
-                     S2DriverStateReference.class.getResourceAsStream(RESOURCE)) {
+                     S2DriverStateReference.class.getResourceAsStream(resource)) {
             if (stream == null) {
                 throw new IOException("committed S2 driver-state reference is absent");
             }

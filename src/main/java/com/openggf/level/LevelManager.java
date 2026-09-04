@@ -964,7 +964,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-            objectManager.update(camera.getX(), playable, sidekicks, frameCounter + 1);
+            objectManager.update(camera.getX(), playable, sidekicks, frameCounter);
         }
 
         // ROM parity: OscillateNumDo runs AFTER ExecuteObjects in both S1
@@ -1033,14 +1033,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (objectManager != null) {
             objectManager.runTouchResponsesForPlayer(
                     player,
-                    frameCounter + 1,
+                    frameCounter,
                     objectsExecuteAfterPlayerPhysics());
         }
         if (ringManager != null && player instanceof AbstractPlayableSprite playable && !playable.getDead()) {
-            ringManager.collectAttractedRing(playable, frameCounter + 1);
+            ringManager.collectAttractedRing(playable, frameCounter);
             ringManager.attractStageRings(playable);
             if (!ringManager.usesObjectTouchCollection()) {
-                ringManager.collectStageRings(playable, frameCounter + 1);
+                ringManager.collectStageRings(playable, frameCounter);
             }
             // Lost (spilled) ring collection now runs through the unified slot-ordered touch
             // loop in ObjectManager.runTouchResponsesForPlayer (above) via the type-keyed
@@ -1087,7 +1087,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
 
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-            objectManager.update(camera.getX(), playable, sidekicks, frameCounter + 1, false);
+            objectManager.update(camera.getX(), playable, sidekicks, frameCounter, false);
         }
 
         // ROM parity: OscillateNumDo runs AFTER ExecuteObjects in both S1
@@ -1112,7 +1112,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         AbstractPlayableSprite playable =
                 player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
-        objectManager.runPostPlayerHooks(playable, frameCounter + 1);
+        objectManager.runPostPlayerHooks(playable, frameCounter);
     }
 
     /**
@@ -1138,7 +1138,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-            objectManager.update(camera.getX(), playable, sidekicks, frameCounter + 1,
+            objectManager.update(camera.getX(), playable, sidekicks, frameCounter,
                     false, true, true, afterExecBeforePlacement);
         }
 
@@ -1201,7 +1201,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             suppressGlobalOscillationForTitleCardPass = false;
             return;
         }
-        OscillationManager.update(frameCounter + 1);
+        OscillationManager.update(frameCounter);
     }
 
     void advanceGlobalOscillation() {
@@ -1299,16 +1299,27 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
+    /**
+     * Advances {@code Level_frame_counter} at the ROM's own point in the loop:
+     * immediately after the V-blank wait and before the object pass, so every
+     * routine that runs this frame reads the already-incremented value.
+     *
+     * <p>All three games place the increment there --
+     * {@code addq.w #1,(v_framecount).w} after {@code WaitForVBlank}
+     * ({@code docs/s1disasm/sonic.asm:3001-3006}),
+     * {@code addq.w #1,(Level_frame_counter).w} after {@code WaitForVint}
+     * ({@code docs/s2disasm/s2.asm:5090-5094}) and after {@code Wait_VSync}
+     * ({@code docs/skdisasm/sonic3k.asm:7919-7925}) -- in each case before
+     * {@code ExecuteObjects} / {@code RunObjects} / {@code Process_Sprites}.
+     */
+    public void advanceLevelFrameCounter() {
+        frameCounter++;
+    }
+
     public void update() {
         // NOTE: OscillationManager and objectManager are now updated via updateObjectPositions()
         // which is called earlier in GameLoop to fix platform riding sync (1-frame lag fix).
 
-        // Advance the frame counter. This drives OscillationManager dedup (via
-        // updateObjectPositionsWithoutTouches), ring/object frame tracking, and
-        // parallax animation timing. Must increment here (in the logic path)
-        // rather than in drawWithSpritePriority() so headless tests see the
-        // counter advance even when rendering is disabled.
-        frameCounter++;
         lostRingSpawns.processPending();
 
         Sprite player = null;
@@ -2477,10 +2488,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /**
      * Aligns this manager's level frame counter during one-time replay/bootstrap
-     * setup. ROM {@code Level_frame_counter} is already incremented before
-     * {@code Process_Sprites}; the engine stores the previous completed level
-     * frame here until {@link #update()} runs near the end of
-     * {@code LevelFrameStep}.
+     * setup. Seed it with the PREVIOUS completed level frame:
+     * {@link #advanceLevelFrameCounter()} runs at the top of the next
+     * {@code LevelFrameStep} frame, where the ROM's own loop increments
+     * {@code Level_frame_counter}, so that frame's body reads the ROM's value.
      */
     public void setFrameCounter(int frameCounter) {
         this.frameCounter = frameCounter;

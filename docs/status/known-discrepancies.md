@@ -2869,23 +2869,76 @@ The run count must match exactly, and every byte the two sides share within a
 run must be equal, in order. That is what proves the sample selection, the
 `jman2050` nybble decode and the cadence.
 
-A run boundary is the ROM's own and is visible in the write stream on both
-sides, so run structure is pinned by compared data rather than assumed. Sonic
-2's playback loop writes nothing at all between samples: `zWaitLoop` spins on
-the remaining length `de` being zero and touches no register until a sample is
-queued (:647-650). A completed service carrying no `2Ah` byte is therefore a
-real gap between samples. Measured on the committed reference, that rule yields
-92 runs across 2,243 services, against 91 changes of the driver's own `zCurDAC`
-byte over the same window, and the engine independently produces the same 92.
+Every run boundary is the ROM's own and is derived from driver state rather
+than assumed; the next section states the rule in full. Sonic 2's playback loop
+writes nothing at all between samples, because `zWaitLoop` spins on the
+remaining length `de` being zero and touches no register until a sample is
+queued (:647-650), so a completed service carrying no `2Ah` byte is a real gap.
+The sample's own decoded length and the driver's current sample selector supply
+the other two.
 
 Unlike S3K, no `2Bh` write moved into this stream. Sonic 2's playback loop
 never writes the DAC enable register per sample: every `2Bh` write in this
 driver belongs to a song load, a fade or the SEGA chant (:1613, :1662, :1936,
 :2555, :3158), so all of them stay in the per-service partition.
 
-One quantity is reported rather than asserted, so a regression in it stays
-visible on the DAC stream's result line: `run-length delta`, the cumulative
-byte-count difference across shared runs.
+Two quantities are reported rather than asserted, so a regression in either
+stays visible on the DAC stream's result line. `run-length delta` is the
+cumulative byte-count difference across shared runs. `resync` is where the
+reference's remaining bytes pick up again in the engine's run after a byte
+difference, and it is what separates the two very different situations a byte
+difference can mean.
+
+### The Run Rule, And The One Thing It Cannot Split
+
+A run is at most one decoded sample long. That bound is the one
+`zWriteToDAC` itself enforces: it decrements `de`, loaded from `zDACLenTbl`
+by the same self-modified entry lookup that rebases `zCurDAC`
+(s2.sounddriver.asm:505-518, :528-529), once per source byte, and returns to
+`zWaitLoop` when it reaches zero. So a run ends at its sample's decoded
+length, at a service that carried no sample byte, or at a change of the
+current sample selector. Two consecutive plays of one sample are two runs of
+that length even with nothing between them. Each side reads the bound from the
+ROM's own table through its own selector, and the two selectors are never
+compared to each other.
+
+A run shorter than its bound was cut off by another play rather than
+exhausting its sample, and how far each side got before the cut is the
+service-duration quantity above. The join between two such runs is the one
+place the comparison cannot line up, because the two producers phase a queued
+sample differently: the ROM arms it at the end of `zUpdateDAC` and cannot
+stream a byte until the service returns and re-enables interrupts (:492-536,
+:682-726), while the engine's pump, charging nothing for the service, begins
+inside it.
+
+It is measured, not assumed. On the committed `s2-driver-state-w10150-12400`
+reference the first such join is in run 3, whose sample is 1,320 decoded bytes
+long. The ROM played 709 of them before another play superseded it and the
+engine played 1,206. The reference's 709 is exactly the sum of its own
+services 150-155, and its next byte is `0x80`, the value `zWriteToDAC`'s
+accumulator starts every sample at (`ld a,80h` / `ex af,af'` in `zVInt`'s
+`.dacqueued`, :502-517); the step from the preceding `0x89` is minus nine,
+which no entry of `zDACDecodeTbl` can produce, so a second sample begins
+there.
+
+The data itself is not in question, and the result line says so. The three
+runs before the join are full-length plays of 1,320 bytes and agree byte for
+byte on both sides, which is what `complete runs agreed` counts. Aligning each
+side's superseding sample by its own start, 3,612 bytes agree with zero
+mismatches. A byte difference inside a full-length run would be sample data
+and would be a defect; a byte difference after a pair of short runs is this
+join.
+
+The engine's DAC interpolation is not involved and cannot be. `Ym2612Chip`'s
+interpolated write deliberately does not call the write observer, because it
+has no ROM counterpart, so no synthetic byte reaches the compared stream.
+
+Three quantities are reported rather than asserted, so a regression in any of
+them stays visible on the result line: `run-length delta`, the cumulative
+byte-count difference across shared runs; `resync`, where the reference's
+remaining bytes resume in the engine's run after a difference; and
+`previous run superseded`, the two short lengths and the bound they fell short
+of.
 
 ### Verification
 
@@ -2898,6 +2951,74 @@ byte and requires the verdict to move.
 
 A Z80 cycle account for the driver's own service. Nothing short of that makes
 the partition derivable, and no fixture measurement may stand in for it.
+
+---
+
+## S2 Headless Oracle Capture Starts Mid-Run (Driver Variables Outside The Music Load's Clear)
+
+The S2 driver-state oracles drive the engine from a song load, not from
+power-on. Driver variables that a song load does not clear therefore enter the
+comparison with whatever the recording accumulated before the window, and the
+engine capture has no way to know that value. The first one this has cost is
+`zRingSpeaker`.
+
+### Original Implementation
+
+`zPlaySound_CheckRing` alternates the ring sound between two speakers. While
+`zRingSpeaker` is zero it resolves the raw `B5h` request to `CEh`, ring left,
+and either way it complements the flag afterwards, so consecutive rings
+alternate (s2.sounddriver.asm:2124-2135). The flag lives among the driver's own
+byte variables at low Z80 addresses, outside the `zAbsVar`-to-`zTracksSongEnd`
+region `zInitMusicPlayback` clears (:2580-2612), so a song load leaves it
+untouched.
+
+### Engine Behaviour
+
+`S2OracleEngineCapture` starts its alternation at the power-on value, zero, so
+its first ring resolves to `CEh`. That is the correct default and it is
+asserted by
+`TestS2AudioOracleComparator#explicitDriverRequestsResolveAndAdmitTheFirstRingBeforeTheTargetUpdate`,
+which requires `zRingSpeaker = 0` to produce `CEh`.
+
+### Why
+
+A capture that begins at a mid-run song load cannot derive a variable the load
+does not clear. Seeding it from the reference would hydrate driver state that
+decides *which* sound plays, which is outside the hardware-timing exception in
+hard rule 4: that exception may only affect when engine-created work becomes
+ready or which of two existing ROM loops a row takes, never what happens.
+
+### What It Costs, Measured
+
+On the committed `s2-driver-state-cpz-w2700-3450` reference the window's
+`zRingSpeaker` is `FFh` from the anchor through service 261 and flips to `00h`
+at service 262, which is the window's first ring. So the ROM kept `B5h`, ring
+right, where the engine resolved `CEh`, ring left. The two sounds occupy
+different FM channels, so the whole voice load appears one channel across:
+the reference on FM5 at `B1h`, `31h`, `35h`, `39h`, `3Dh`, the engine on FM4 at
+`B0h`, `30h`, `34h`, `38h`, `3Ch`, every value equal.
+
+The attribution was proved by experiment rather than argued. Starting the
+harness alternation at the opposite phase moves the first write divergence from
+service 237, movie row 2968, to service 494, movie row 3225, and halves the
+divergent services from 36 to 18. That change was not kept, because it breaks
+the power-on assertion above; the phase is a property of the window, not a
+constant to pick.
+
+### What Is Still Compared
+
+Everything else. The CPZ window's driver state matches on all 720 compared
+services, and the write stream matches up to the first ring. Nothing is
+excluded from the comparison by this entry; it records why a mid-run window's
+first ring can differ and what that difference looks like, so the next lane
+does not read it as a channel-assignment defect. The slot rule itself is not
+involved: `zPlaySound` derives an SFX slot from the header's own channel byte
+through `zMusicTrackOffs` (:2210-2251, :747-757) and both sides agree on it.
+
+### Removal Condition
+
+A capture that starts from power-on, or a derivation of the flag from something
+the window does contain. Reading it from the reference is not one.
 
 ---
 

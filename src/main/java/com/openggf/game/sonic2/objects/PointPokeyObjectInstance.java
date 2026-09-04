@@ -504,7 +504,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      */
     private int levelFrameCounter(int vIntRunCount) {
         return services().levelManager() != null
-                ? services().levelManager().getFrameCounter() + 1
+                ? services().levelManager().getFrameCounter()
                 : vIntRunCount;
     }
 

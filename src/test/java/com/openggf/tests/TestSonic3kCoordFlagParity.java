@@ -293,6 +293,12 @@ public class TestSonic3kCoordFlagParity {
                 new byte[] {(byte) 0xE9, (byte) 0xE9, (byte) 0xF2}),
                 0);
         fixture.mix();
+        // zUpdateSFXTracks runs before zUpdateMusic's zFillSoundQueue admits
+        // the request (skdisasm Sound/Z80 Sound Driver.asm:650-701), so the
+        // service that admits an SFX gives it no walk; its flags run on the
+        // next one. Two mixes is the same amount of driver work this test
+        // always meant, expressed at the ROM's cadence.
+        fixture.mix();
         assertEquals(2, fixture.state.spindashRevCounter());
 
         fixture.addSfx(createSfxData(
@@ -302,6 +308,7 @@ public class TestSonic3kCoordFlagParity {
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.SPINDASH.id,
                 new byte[] {(byte) 0xE9, (byte) 0xF2}), 0);
+        fixture.mix();
         fixture.mix();
 
         assertEquals(1, fixture.state.spindashRevCounter(),
@@ -349,6 +356,7 @@ public class TestSonic3kCoordFlagParity {
                 Sonic3kSfx.SPINDASH.id,
                 new byte[] {(byte) 0xE9, (byte) 0xF2}), 0);
         fixture.mix();
+        fixture.mix();
 
         assertEquals(1, fixture.state.spindashRevCounter());
     }
@@ -359,6 +367,12 @@ public class TestSonic3kCoordFlagParity {
         fixture.addSfx(createSfxData(
                 Sonic3kSfx.SPINDASH.id,
                 new byte[] {(byte) 0xE9, (byte) 0xE9, (byte) 0xF2}), 0);
+        fixture.mix();
+        // zUpdateSFXTracks runs before zUpdateMusic's zFillSoundQueue admits
+        // the request (skdisasm Sound/Z80 Sound Driver.asm:650-701), so the
+        // service that admits an SFX gives it no walk; its flags run on the
+        // next one. Two mixes is the same amount of driver work this test
+        // always meant, expressed at the ROM's cadence.
         fixture.mix();
         assertEquals(2, fixture.state.spindashRevCounter());
 

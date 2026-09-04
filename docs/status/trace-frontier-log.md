@@ -115393,3 +115393,164 @@ The other three death arms remain coordinates only.
   6568's movement, and both S3K traces return to their baseline results. The
   pre-physics drive point had been cancelling the offset error by applying the
   restore a frame late; the two wrongs are removed together.
+
+## 2026-09-04 - Level_frame_counter is advanced where the ROM advances it, and ~26 per-reader compensations are deleted
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, over its own `58468acb8`.
+- **Command:** the same full `-Ptrace-replay` invocation as the previous entry,
+  with `target/surefire-reports` removed before each run and the reports copied
+  aside for a by-name, by-message diff.
+- **Result: 854 tests, 8 failures, 6 skips, unchanged.** The same eight classes
+  with byte-identical messages as the previous entry's table, so no first-error
+  row moved.
+- **What changed.** All three ROMs increment the level frame counter at the top
+  of the level loop, immediately after the V-blank wait and before the object
+  pass: `docs/s1disasm/sonic.asm:3001-3006`, `docs/s2disasm/s2.asm:5090-5094`,
+  `docs/skdisasm/sonic3k.asm:7919-7925`. The engine incremented it in
+  `LevelManager.update()`, near the end of the frame step, so every routine that
+  ran during the frame read the previous frame's number. `LevelFrameStep` now
+  calls `LevelManager.advanceLevelFrameCounter()` at the ROM's point, and the
+  per-reader `+ 1` compensations are deleted: eight inside `LevelManager` (the
+  object-pass, touch, post-player-hook and oscillation arguments), and the reads
+  in `Sonic1ElectrocuterObjectInstance`, `Sonic1SpikedPoleHelixObjectInstance`,
+  `Sonic1VanishingPlatformObjectInstance`, `Sonic1SpinPlatformObjectInstance`,
+  `LeavesGeneratorObjectInstance`, `SpikyBlockObjectInstance`,
+  `SpikyBlockSpikeInstance`, `PointPokeyObjectInstance`, `CogObjectInstance`,
+  `AizDisappearingFloorObjectInstance`, `AizFallingLogObjectInstance`,
+  `CnzBumperObjectInstance`, `Sonic3kAIZEvents`,
+  `Sonic3kBonusStageCoordinator` and `SidekickCpuController`. The ending
+  cutscene drives `LevelManager` directly rather than through the frame step, so
+  it calls the same method explicitly.
+  `SpeedShoesTimer.LEVEL_FRAME_PHASE_OFFSET` is back to `0`, which is what the
+  previous entry's S3K correction was standing in for.
+- **The intermediate arm, and the reader it found.** The first attempt moved the
+  increment and removed the `+ 1` reads, and two S2 Metropolis traces went red:
+  `TestS2Mtz2LevelSelectTraceReplay` at frame 1268 (`y` expected `0x0465`,
+  actual `0x046D`, 49012 errors) and `TestS2Mtz3LevelSelectTraceReplay` at frame
+  1998 (`player_animation_id` expected `0x0005`, actual `0x0000`, 49261 errors);
+  nothing else moved. The cause was `CogObjectInstance`, which carried the same
+  compensation *inside* its gate expression, `((levelFrameCounter + 1) & 0x0F)`,
+  where a search for `getFrameCounter() + 1` could not see it, plus a
+  first-execution special case that existed only because the raw read was a
+  frame behind. Obj70_Main's own test is
+  `move.b (Level_frame_counter+1).w,d0 / andi.w #$F,d0`
+  (`docs/s2disasm/s2.asm:54662-54665`), where the `+1` is the low byte's odd
+  address rather than an increment, so the gate is now `(counter & 0x0F) == 0`
+  and both MTZ traces returned to green.
+- **Tests ported, not weakened.** Six unit tests pinned the old convention by
+  seeding a stale counter and asserting the recovered value: the MTZ cog gate,
+  the CNZ bumper orbit and bounce angle, the S3K slot bonus-stage frame advance,
+  the S3K panic rev pulse, and the AIZ intro catch-up release. Each now seeds the
+  ROM-visible value the ROM routine actually reads. The `GameLoop` size ratchet
+  moved 3071 -> 3072 for the ending path's single delegating call.
+- **Other gates.** S2 driver-state v2 state only still `MATCH (2198 ticks)`;
+  state and writes unchanged at tick 228 with 178 divergent ticks; v1 oracle
+  `MATCH (698 ticks)`; request windows `MATCH` at 25, 52 and 27. Ordinary suite
+  16,399 tests, 0 failures, 17 skips; `-Pguards` 607 tests, 0 failures.
+
+## 2026-09-04 - Level-frame-counter branch re-verified on the merged tree
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase` after merging the lead's
+  `origin/bugfix/ai-speed-shoes-timer-phase` (develop merged in), measured from
+  `mvn clean` so the classes under test are the merged ones.
+- **Full `-Ptrace-replay` with three absolute ROM paths: 854 tests, 8 failures,
+  6 skips**, the same eight classes and the same first-error rows as this
+  branch's earlier entries: `TestS3kReplayReferenceClosureIntegration` frame
+  25589, `TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestTraceRunReplayWalkerControlFlow`,
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` frame 2252 and
+  `TestS3kAizTraceReplay` frame 20713.
+- Ordinary suite 16,399 tests, 0 failures, 17 skips; `-Pguards` 607 tests, 0
+  failures; parity suite 178 tests, 0 failures, 2 skips.
+
+## 2026-09-04 - S2 complete-emeralds segment 15: the CPZ boss gunk falls one frame ahead of the ROM
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-s2-runchain-seg15`, over `develop` at `3499ca48b`.
+- **Reproduced, unchanged:** `TestS2CompleteEmeraldRunChain` fails on 12 axes,
+  segment 15 diverging with 2,122 comparator errors, first non-camera mismatch
+  at frame 2252 on field `air`, plus the uncompared-interior walk overrunning
+  destination 101691 and ten dynamic-art gap axes.
+- **The headline frame is not the cause.** Segment 15 is `seg10_cpz2`, and the
+  standalone lane `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` shows the
+  same first error at frame 2252 with 370 errors and runs in ten seconds, so all
+  the work below was done there. Parsing its report: the frame-2252 `air` error
+  is a single frame, `cascading: false`, and **exactly one of the 370 errors
+  starts before frame 5662**. Closing 2252 would remove one error. The cascade
+  origin is 5662, and every field there is a sidekick field.
+- **What happens at 5662.** The engine puts Tails into the hurt routine one
+  frame before the ROM does. The recorded rows carry the ROM's own hurt at row
+  5663 with `routine 0x02 -> 0x04`, `x_vel -0x200`, `y_vel -0x400`,
+  `animation 0x1A`; the engine produces that same state at row 5662. On the
+  ROM's own clock, the recorded `gameplay_frame_counter` for the ROM's hurt row
+  is `0x161E` (5662) and the engine's touch fires at level frame 5661.
+- **The object, named by a probe rather than inferred.** A temporary probe on
+  the sidekick hurt path fired exactly once in the whole segment:
+  `slot=33 id=0x5d class=CPZBossGunk objY=0x04DF liveFlags=0x87 sizeIdx=7
+  cat=HURT`, against Tails at `(0x2AD3,0x04F0)`. This is the CPZ act 2 boss's
+  Mega Mack blob (`Obj5D` routine `$C`), not one of its droplets: the droplets
+  are created with `collision_flags` copied from the parent *after* the parent
+  zeroes its own (`docs/s2disasm/s2.asm:63031,63053`), so a droplet can never
+  hurt anyone.
+- **Geometry and sizes agree; the phase does not.** Touch size index 7 is
+  `(6,6)` in `Touch_Sizes` (`s2.asm:85455-85462`) on both sides, and the boss
+  branch `Touch_Boss` reaches the same box arithmetic as the ordinary path,
+  because `BossSpecificCollision` only acts on `collision_flags == $F` and the
+  gunk's is `$87` (`s2.asm:85325-85400`, `:85783-85793`). Working the ROM's
+  height test by hand for Tails, `y_radius` 15 so `d3 = y - 12` and `d5 = 24`:
+  the blob at `0x04DD` misses and at `0x04DF` hits. The ROM hurts on the frame
+  its touch pass sees `0x04DF`; so does the engine. The two disagree only about
+  **which frame the blob is at `0x04DF`**.
+- **Measured: the engine's blob falls one frame ahead for its whole descent.**
+  A probe on the object's own update, against the recorded slot-31 rows:
+
+  | end of frame | ROM `y` | engine `y` |
+  |---|---|---|
+  | 5632-5634 | 0x048B | 0x048B |
+  | 5635 | 0x048B | 0x048C |
+  | 5636 | 0x048C | 0x048D |
+  | 5659 | 0x04D7 | 0x04DD |
+  | 5660 | 0x04DD | 0x04DF |
+
+  The two sequences are identical in shape -- `04C2, 04C7, 04CC, 04D2, 04D7,
+  04DD, 04DF` -- so the motion model is right and only the phase is wrong. The
+  ROM dwells four frames at the spawn `y` (5632 through 5635); the engine dwells
+  three.
+- **Root cause, from the ROM.** `Obj5D_Container_Extend` does not allocate a
+  gunk. It rewrites ITSELF: `move.b #$C,routine(a0)`,
+  `move.b #0,routine_secondary(a0)`, `move.b #$87,collision_flags(a0)`, then
+  `bra.s Obj5D_Container_Floor_End` (`docs/s2disasm/s2.asm:62843-62847`). Two
+  things follow. The gunk keeps that object's SST slot -- the recording shows
+  slot 31 carrying routine `0x10` through row 5632 and `0x0C` from row 5633,
+  one slot, one identity. And the branch away means `Obj5D_Gunk_Init`, which
+  falls through into `Obj5D_Gunk_Main` and its first `ObjectMoveAndFall`, is not
+  reached on the rewriting frame; the object pass has already run that slot, so
+  the gunk's first execution is the NEXT frame. The engine instead does
+  `spawnGunk(); setDestroyed(true)` in `CPZBossContainerExtend`, which both
+  takes a fresh slot (engine 33 against ROM 31) and runs the gunk's init in the
+  rewriting frame, which is the missing dwell frame.
+- **A candidate implemented, measured and REVERTED -- do not retry it as-is.**
+  Replacing the child spawn with the documented in-place transfer
+  (`ObjectLifetimeOps.detachSlotForTransfer` plus
+  `addReplacementAtTransferredSlot`) moved the gunk's first execution from level
+  frame 5632 to **5634**, two frames later rather than one, where the ROM's is
+  5633. The hurt correspondingly moved from one frame early to one frame late,
+  at level frame 5663 against the ROM's 5662, and the segment went from 370 to
+  **1,377 errors**. The transferred object's x also changed, 0x2AD4 to 0x2AD2
+  against the ROM's 0x2AD6, which says the rewriting frame itself moved rather
+  than only the first execution. The transfer helper adds the replacement
+  directly at the slot, so the extra frame comes from the surrounding
+  extend-object lifecycle, not from the helper. The direction is right and the
+  citation holds; what is missing is why the transform frame shifts. Reverted:
+  the segment is back to 370 errors and the tree is source-identical to
+  `3499ca48b`.
+- **Next step.** Instrument `CPZBossContainerExtend`'s own frames across the
+  transform under both shapes and find why `shouldSpawnGunk()` is observed a
+  frame later once the object is transferred rather than destroyed. The gunk's
+  first execution has to land on the frame after the rewrite, not two after.
+- **Not the cause, ruled out here.** The droplets, which carry zero collision by
+  the ROM's own copy order; the touch box sizes, which match; and the boss-branch
+  collision filter, which does not apply to `$87`.
