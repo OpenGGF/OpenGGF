@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K DAC enable follows the idle loop:** the driver records the sample-index
+  store and the DAC enable is emitted by the idle loop at the next service
+  boundary, as `zPlayDigitalAudio` does; the oracle now stops on the music DAC
+  byte pump, which the engine renders inside the chip rather than on the bus.
 - **ROM-less CI green again:** the complete-run producer tests and two Sonic 2
   level-init tests now skip without a ROM instead of failing.
 - **Sonic 2 request-window producer is a command:** TraceChaser now captures
