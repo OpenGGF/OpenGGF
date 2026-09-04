@@ -27,6 +27,49 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 DAC runs are bounded by zDACLenTbl; the residual is a supersession join, not data
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `a0a5a47c7`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, DAC stream:** `BYTE DIFFERENT in run 3 at byte 709: reference 0x80,
+  engine 0x8D (92 runs, run-length delta 0, reference resyncs at engine byte 828
+  for 3612 bytes)`.
+- **After, DAC stream:** `BYTE DIFFERENT in run 4 at byte 0: reference 0x80,
+  engine 0x8A (104 runs, run-length delta 497, no resync, previous run
+  superseded: reference 709 and engine 1206 of 1320, 3 complete runs agreed)`.
+- **State lines:** `MATCH (2198 ticks)` for both, unchanged.
+- **The rule.** A run is now at most one decoded sample long, the bound
+  `zWriteToDAC` itself enforces by decrementing `de` from `zDACLenTbl` once per
+  source byte and returning to `zWaitLoop` at zero (s2.sounddriver.asm:505-518,
+  :528-529, :682-726). A run ends at that length, at a service with no sample
+  byte, or at a change of the current sample selector. Each side reads the bound
+  from the ROM's own table through its own selector, so the rule is symmetric
+  and the break-it control, which feeds the reference to both sides, stays
+  green.
+- **What the new line says, and it answers the question directly.** The three
+  runs before the join are full-length 1,320-byte plays and agree byte for byte
+  on both sides, which is what `complete runs agreed` counts. The run that then
+  differs follows a pair of runs that are both short of that same 1,320-byte
+  bound, 709 on the ROM and 1,206 on the engine. By the bound's own criterion
+  those runs were ended by supersession, which is the excused service-duration
+  quantity, not by a decode or selection error.
+- **A byte inside a bounded run would be data and would be fixed.** None is.
+  Aligning each side's superseding sample by its own start, 3,612 bytes agree
+  with zero mismatches, and the reference's byte 709 is `0x80`, the accumulator
+  value every sample starts at, reached by a step of minus nine that no
+  `zDACDecodeTbl` entry can produce.
+- **Also tried and reverted.** Cutting the engine's tick at its driver-service
+  return, to match the reference's sampling point and move the post-service DAC
+  bytes into the next tick, is the actual cause of the phase. It emptied the
+  engine's write stream, taking the state-with-writes line from `MATCH (2198
+  ticks)` to a divergence at tick 0, and was reverted rather than pursued: the
+  write partition is fully matching and is worth more than the DAC line.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 production transfers; audio packages plus the four
+  extra classes with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10
+  skips.
+
 ## 2026-09-04 - S2 driver-state v2 reaches MATCH on all 2,198 services; the DAC join is duration, proven
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
