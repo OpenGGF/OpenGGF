@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S2 CPZ tick-237 is the ring speaker flag:** the driver alternates left/right
+  ring variants on a flag outside the song-load clear, so a capture starting at
+  the load inherits its phase; recorded as a capture-start limitation.
 - **Note fill runs only on the unexpired-timer branch:** all three drivers reach
   the note-fill routine from the not-expired branch of the duration decrement;
   the engine now matches, cited per driver.

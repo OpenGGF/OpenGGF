@@ -27,6 +27,51 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - CPZ tick 237 attributed: the ring speaker's phase, inherited from before the window
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, over `develop` at `d3f3f4212`.
+- **Result lines unchanged.** CPZ state only `MATCH (720 ticks)`; state with
+  writes DIVERGENCE at tick 237 (movie row 2968), `writes[4]`, reference
+  `ym1[0xb1]=0x4` against the engine's `ym1[0xb0]=0x4`, 36 of 719 divergent.
+  Nothing landed in the engine.
+- **The attribution.** The window's request at that row is `B5h`, the ring
+  sound. `zPlaySound_CheckRing` resolves a raw `B5h` to `CEh`, ring left, only
+  while `zRingSpeaker` is zero, and complements the flag either way
+  (s2.sounddriver.asm:2124-2135). The reference's `zRingSpeaker` is `FFh` from
+  the anchor through service 261 and flips to `00h` at service 262, which is
+  that row, so the ROM kept `B5h`, ring right. The engine's headless capture
+  starts the alternation at the power-on value zero and resolved `CEh`, ring
+  left. The two sounds sit on different FM channels, which is why the whole
+  voice load appeared one channel across rather than as a value difference.
+- **Proved by experiment, not argued.** Starting the harness alternation at the
+  opposite phase moves the write frontier from tick 237, row 2968, to tick 494,
+  row 3225, and halves the divergent services from 36 to 18.
+- **Not kept, and the default is not arbitrary.** The opposite phase breaks
+  `TestS2AudioOracleComparator#explicitDriverRequestsResolveAndAdmitTheFirstRingBeforeTheTargetUpdate`,
+  which requires `zRingSpeaker = 0` to resolve the first raw `B5h` to `CEh`.
+  Zero is the power-on value, so the harness default is right and the CPZ
+  window simply starts with the flag already flipped.
+- **Why the engine cannot derive it.** `zRingSpeaker` lives among the driver's
+  own byte variables at low Z80 addresses, outside the region
+  `zInitMusicPlayback` clears (:2580-2612), so a song load leaves it untouched
+  and a capture that begins at that load inherits nothing. Seeding it from the
+  reference would hydrate driver state that decides *which* sound plays, which
+  hard rule 4's exception does not cover.
+- **The slot rule is not involved and that is now settled from both sides.**
+  `zPlaySound` derives an SFX slot from the header's own channel byte through
+  `zMusicTrackOffs` (:2210-2251, :747-757), and the engine's
+  `SmpsSequencer.mapFmChannel` agrees with it. Neither side searches for a free
+  channel.
+- **Recorded** in docs/status/known-discrepancies.md, "S2 Headless Oracle
+  Capture Starts Mid-Run (Driver Variables Outside The Music Load's Clear)",
+  with a removal condition: a capture that starts from power-on, or a
+  derivation from something the window does contain.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the EHZ v2 oracle
+  unchanged at `MATCH (2198 ticks)` on both lines; the three request windows
+  `MATCH` at 25, 52 and 27 transfers; audio packages plus the four extra
+  classes with three ROM paths: 2,063 tests, 0 failures, 0 errors, 10 skips.
+
 ## 2026-09-04 - The note fill moves into the continuing-note branch; the duration seed does not land
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
