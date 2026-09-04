@@ -281,7 +281,8 @@ public final class S3kOpenGgfAudioCapture {
             // zFadeOutMusic writes zFadeDelayTimeout and zFadeDelay before it
             // looks at anything else, and never asks whether a song is loaded
             // (D:2306-2312), so the driver records the pair either way.
-            driver.armFadeDelay(
+            driver.armFadeOut(
+                    Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutSteps(),
                     Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutDelay());
             SmpsSequencer music = driver.firstMusicSequencer();
             if (music != null) {

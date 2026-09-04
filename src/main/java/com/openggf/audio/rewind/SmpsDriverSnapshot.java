@@ -27,7 +27,10 @@ public record SmpsDriverSnapshot(
         List<SavedOverride> savedOverrides,
         PendingService pendingService,
         int fadeDelay,
-        int fadeDelayTimeout) {
+        int fadeDelayTimeout,
+        int fadeOutTimeout,
+        int fadeInTimeout,
+        boolean driverOwnedFade) {
 
     public SmpsDriverSnapshot {
         Objects.requireNonNull(region, "region");
@@ -53,7 +56,7 @@ public record SmpsDriverSnapshot(
         this(region, readMode, continuousSfxId, continuousSfxFlag,
                 contSfxLoopCnt, palUpdateCounter, sequencers,
                 fmLockSequencerIds, psgLockSequencerIds, savedOverrides,
-                null, 0, 0);
+                null, 0, 0, 0, 0, false);
     }
 
     /** Retains the pre-fade-pair arity for callers that carry no fade state. */
@@ -72,7 +75,7 @@ public record SmpsDriverSnapshot(
         this(region, readMode, continuousSfxId, continuousSfxFlag,
                 contSfxLoopCnt, palUpdateCounter, sequencers,
                 fmLockSequencerIds, psgLockSequencerIds, savedOverrides,
-                pendingService, 0, 0);
+                pendingService, 0, 0, 0, 0, false);
     }
 
     public SmpsDriverSnapshot(

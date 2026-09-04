@@ -27,6 +27,44 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The whole S3K fade-out machine moves to the driver, and both counters gate
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`.
+- **What moved.** `zFadeOutTimeout` (1C0Dh) and `zFadeInTimeout` (1C29h) join
+  the delay pair as driver state, so the fade-out machine is driver-owned end
+  to end. `zDoMusicFadeOut` runs from `zUpdateMusic` every service and tests
+  only `zFadeOutTimeout` (Sound/Z80 Sound Driver.asm:2331-2346), so the driver
+  now steps it with no song loaded, which is the case a song-owned stepper
+  could not reach at all. A song still drives its own fade through
+  `SmpsSequencer.processFade`.
+- **Ordering, learned from the oracle.** The songless step must run before the
+  service consumes its request. `zUpdateMusic` runs `TempoWait` and both fade
+  handlers before it reaches `zFillSoundQueue` (:659-701), so a fade armed by
+  this service's own request is not stepped until the next one. Stepping it
+  first put the engine one ahead at service 1, reading 5 where the reference
+  read 6.
+- **Both counters now gate.** `fadeDelay` and `fadeDelayTimeout` are compared
+  every service, and each was proven to run by corrupting the engine's value
+  for it and checking the oracle names that field. S1 and S2 keep their
+  song-owned shape under `driverOwnedFadeDelay`.
+- **Frontier unchanged** at tick 1490, event 0, and the DAC stream at run 338,
+  byte 0. Two more gated fields at no cost.
+- **A measurement hazard I created and then had to unpick.** Two of my own
+  background gate runs overlapped in one worktree, sharing its `target/` and
+  its Maven temp directory. That produced a `CAPTURE_FAILURE` in a
+  memory-constrained child JVM on one run and twenty "failed to create default
+  temp directory" guard errors on the next, with different victims each time
+  and neither reproducible alone. Disk had 326 GB free, so space was never the
+  issue. Killing the stray run by PID and running the chain once on a quiet
+  machine gave a clean result. Read a red from a worktree that had two runs in
+  it as a measurement fault first, not a regression.
+- **Gates at this commit, all green, on a clean build and an undisturbed
+  machine.** Audio, per-game audio and parity packages with all three ROM
+  paths: 2,758 tests, 0 failures, 16 skips. Ordinary suite 16,475 tests, 0
+  failures, 22 skips. `-Pguards` 608 tests, 0 failures.
+
+
 ## 2026-09-04 - The fade delay pair moves to the driver, and the ROM swaps its roles
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

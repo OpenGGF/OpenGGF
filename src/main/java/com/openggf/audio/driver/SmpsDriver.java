@@ -79,6 +79,15 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      */
     private int fadeDelay;
     private int fadeDelayTimeout;
+    /** zFadeOutTimeout (1C0Dh) and zFadeInTimeout (1C29h). */
+    private int fadeOutTimeout;
+    private int fadeInTimeout;
+    /**
+     * Set once a request arms a fade through the driver-owned shape. With no
+     * song loaded there is no config to consult, and the ROM's stepper runs
+     * from zUpdateMusic regardless of whether one is (D:2331-2346).
+     */
+    private boolean driverOwnedFade;
 
     /** zMusicNumber, zSFXNumber0 and zSFXNumber1 (D:698-701). */
     private static final int SOUND_QUEUE_SLOTS = 3;
@@ -1816,7 +1825,10 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                     List.of(),
                     null,
                     fadeDelay,
-                    fadeDelayTimeout);
+                    fadeDelayTimeout,
+                    fadeOutTimeout,
+                    fadeInTimeout,
+                    driverOwnedFade);
         }
     }
 
@@ -1870,6 +1882,9 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             palUpdateCounter = snapshot.palUpdateCounter();
             fadeDelay = snapshot.fadeDelay();
             fadeDelayTimeout = snapshot.fadeDelayTimeout();
+            fadeOutTimeout = snapshot.fadeOutTimeout();
+            fadeInTimeout = snapshot.fadeInTimeout();
+            driverOwnedFade = snapshot.driverOwnedFade();
 
             for (int i = 0; i < entries.size(); i++) {
                 SmpsDriverSnapshot.SequencerEntry entry = entries.get(i);
@@ -2244,6 +2259,67 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
     public void armFadeDelay(int value) {
         setFadeDelay(value);
         setFadeDelayTimeout(value);
+        driverOwnedFade = true;
+    }
+
+    /**
+     * Arms a fade out on the driver, as {@code zFadeOutMusic} does: the step
+     * counter first, then both halves of the delay pair, none of it
+     * conditional on a song being loaded (skdisasm Sound/Z80 Sound
+     * Driver.asm:2306-2312).
+     */
+    public void armFadeOut(int steps, int delay) {
+        setFadeStepCounter(true, steps);
+        armFadeDelay(delay);
+    }
+
+    @Override
+    public int fadeStepCounter(boolean fadeOut) {
+        return fadeOut ? fadeOutTimeout : fadeInTimeout;
+    }
+
+    @Override
+    public void setFadeStepCounter(boolean fadeOut, int value) {
+        if (fadeOut) {
+            fadeOutTimeout = value & 0xFF;
+        } else {
+            fadeInTimeout = value & 0xFF;
+        }
+        driverOwnedFade = true;
+    }
+
+    /**
+     * Runs {@code zDoMusicFadeOut}'s delay step for a driver with no song
+     * loaded (skdisasm Sound/Z80 Sound Driver.asm:2331-2346). The routine is
+     * called from {@code zUpdateMusic} every service and tests only
+     * {@code zFadeOutTimeout}, so the counters keep moving with nothing to
+     * apply the volume change to. A song of its own drives this through
+     * {@code SmpsSequencer.processFade} instead.
+     */
+    /**
+     * {@code zUpdateMusic} runs {@code TempoWait} and both fade handlers
+     * before it reaches {@code zFillSoundQueue} (skdisasm Sound/Z80 Sound
+     * Driver.asm:659-701), so a fade armed by this service's own request is
+     * not stepped until the next one. A song drives its own fade through
+     * {@code SmpsSequencer.processFade}; this covers the case where there is
+     * none to drive it.
+     */
+    private void stepSonglessFadeIfNoSong() {
+        if (firstMusicSequencerLocked() == null) {
+            stepSonglessFade();
+        }
+    }
+
+    private void stepSonglessFade() {
+        if (!driverOwnedFade || fadeOutTimeout == 0) {
+            return;
+        }
+        fadeDelayTimeout = (fadeDelayTimeout - 1) & 0xFF;
+        if (fadeDelayTimeout != 0) {
+            return;
+        }
+        fadeDelayTimeout = fadeDelay;
+        fadeOutTimeout = (fadeOutTimeout - 1) & 0xFF;
     }
 
     public void stopAllSfx() {
@@ -2401,6 +2477,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 // it: zCycleSoundQueue runs at :698-701 and .update_music
                 // follows at :702. SmpsSequencer.primeFirstService owns what
                 // that first walk does.
+                stepSonglessFadeIfNoSong();
                 runPendingServiceRequest();
                 serviceSequencers(false);
                 serviceSequencers(true);
@@ -2419,6 +2496,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         if (music != null) {
             music.serviceS3kSpeedupTail();
         }
+        stepSonglessFadeIfNoSong();
         runPendingServiceRequest();
         music = firstMusicSequencerLocked();
         serviceSequencers(false);

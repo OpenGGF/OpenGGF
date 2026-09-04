@@ -1811,6 +1811,24 @@ public class SmpsSequencer implements CoordFlagContext {
      * (skdisasm Sound/Z80 Sound Driver.asm:2306-2312 against
      * s1.sounddriver.asm:1363 and s2.sounddriver.asm:2425-2429).
      */
+    /**
+     * The fade's remaining steps. S3K keeps this on the driver as
+     * {@code zFadeOutTimeout} / {@code zFadeInTimeout}, which is what its
+     * steppers test to decide a fade is running at all (Sound/Z80 Sound
+     * Driver.asm:2331-2335, :2395-2396); S1 and S2 keep it with the song.
+     */
+    private int fadeSteps() {
+        return config.isDriverOwnedFadeDelay()
+                ? host.fadeStepCounter(fadeState.fadeOut) : fadeState.steps;
+    }
+
+    private void setFadeSteps(int value) {
+        if (config.isDriverOwnedFadeDelay()) {
+            host.setFadeStepCounter(fadeState.fadeOut, value);
+        }
+        fadeState.steps = value;
+    }
+
     private int fadeDelayCounter() {
         if (!config.isDriverOwnedFadeDelay()) {
             return fadeState.delayCounter;
@@ -1865,7 +1883,7 @@ public class SmpsSequencer implements CoordFlagContext {
         }
         // ROM: Check if fade counter is already 0 BEFORE processing
         // This happens after all steps have been applied
-        if (fadeState.steps == 0) {
+        if (fadeSteps() == 0) {
             if (fadeState.fadeOut) {
                 // Stop all tracks
                 for (Track t : tracks) {
@@ -1907,7 +1925,7 @@ public class SmpsSequencer implements CoordFlagContext {
         }
 
         // ROM: Decrement fade counter and apply volume change
-        fadeState.steps--;
+        setFadeSteps(fadeSteps() - 1);
         setFadeDelayCounter(fadeDelayReload());
 
         int dir = fadeState.fadeOut ? 1 : -1;
@@ -3939,10 +3957,10 @@ public class SmpsSequencer implements CoordFlagContext {
 
     public void triggerFadeIn(int steps, int delay) {
         // Start a fade in from current volume (silence) to normal
-        fadeState.steps = steps;
         fadeState.addFm = 1;
         fadeState.addPsg = 1;
         fadeState.fadeOut = false;
+        setFadeSteps(steps);
         setFadeDelayReload(delay);
         // S1 and S2 leave the fade-in delay uninitialised, so their first step
         // happens at once. S3K's zFadeInToPrevious writes the same value to
@@ -4021,10 +4039,10 @@ public class SmpsSequencer implements CoordFlagContext {
         if (steps <= 0) {
             return;
         }
-        fadeState.steps = steps;
         fadeState.addFm = 1;
         fadeState.addPsg = 1;
         fadeState.fadeOut = true;
+        setFadeSteps(steps);
         setFadeDelayReload(delay);
         setFadeDelayCounter(delay);
         fadeState.active = true;
