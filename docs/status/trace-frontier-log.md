@@ -115319,3 +115319,14 @@ The other three death arms remain coordinates only.
   divergence at that exact tick, and perturbing every frame value in the
   reference changes nothing compared, which is what makes the frame field
   provenance rather than input.
+- **Why the alignment is sound.** All 7 zero-service frames fall before the
+  anchor: 10184, 10195 and 10197 to 10201. The compared span 10202 to 12399
+  holds 2198 frames and 2198 reference ticks, one service per frame, and the
+  engine contributes exactly 2198 ticks after its own anchor. No overrun frame
+  lies inside the compared span, so the ordinal correspondence cannot have
+  drifted, and the row-11991 divergence is driver state rather than scheduling.
+  The anchor is needed only because this window opens mid-run on a music
+  reload: the reference's first 45 services run before any music is loaded and
+  have no engine counterpart. An unanchored ordinal alignment was measured and
+  is wrong, pairing reference row 10185 against engine row 10202 and making all
+  2198 ticks diverge on tempo.
