@@ -1447,14 +1447,18 @@ public class SmpsSequencer implements CoordFlagContext {
                 }
             }
 
-            if (t.duration == 0
-                    && t.type != TrackType.DAC
-                    && config.getNoteOnPrevent()
-                            == SmpsSequencerConfig.NoteOnPrevent.REST) {
-                // S1/S2 clear PlaybackControl bit 4 only when the current duration
-                // expires on FM/PSG, before interpreting the next stream unit.
-                // S2 zDACUpdateTrack has no matching res 4 and retains the bit
-                // (sd:775-819 versus 821-835 and 1123-1138).
+            if (t.duration == 0 && t.type != TrackType.DAC) {
+                // Every driver clears its do-not-attack bit before it reads the
+                // next stream unit, so a prevent-attack coordination flag read
+                // during that same unit survives into the note it guards and
+                // stays set for the note's whole duration. S1/S2 clear
+                // PlaybackControl bit 4 when the duration expires
+                // (s2.sounddriver.asm:775-819), and their DAC path has no
+                // matching res 4 (:821-835, :1123-1138). S3K clears its bit 1
+                // at the top of zGetNextNote, ahead of the coordination-flag
+                // loop (skdisasm Sound/Z80 Sound Driver.asm:905-915), and
+                // cfPreventAttack (0E7h) sets it from inside that loop
+                // (:3212-3221).
                 t.tieNext = false;
             }
             while (t.duration == 0 && t.active) {
@@ -2356,7 +2360,6 @@ public class SmpsSequencer implements CoordFlagContext {
                 // (S2 sd:1123-1131, 1276-1312).
                 primePsgRestEnvelope(t);
             }
-            clearTransientNoAttack(t);
             return;
         }
 
@@ -2391,7 +2394,6 @@ public class SmpsSequencer implements CoordFlagContext {
             if (!t.dacMuted) {
                 synth.playDac(this, t.note);
             }
-            clearTransientNoAttack(t);
             return;
         }
 
@@ -2568,13 +2570,6 @@ public class SmpsSequencer implements CoordFlagContext {
             // still resends its current volume (SD:1813-1821, 1926-1987).
             refreshVolume(t);
         }
-        clearTransientNoAttack(t);
-    }
-
-    private void clearTransientNoAttack(Track t) {
-        if (config.getNoteOnPrevent() == SmpsSequencerConfig.NoteOnPrevent.HOLD) {
-            t.tieNext = false;
-        }
     }
 
     private void playRawFrequency(Track t) {
@@ -2659,7 +2654,14 @@ public class SmpsSequencer implements CoordFlagContext {
             }
         }
 
-        t.tieNext = false;
+        if (config.getNoteOnPrevent() == SmpsSequencerConfig.NoteOnPrevent.REST) {
+            // S1/S2 keep the engine's existing post-note clear. S3K must not
+            // clear here: zGetNextNote clears the bit before the
+            // coordination-flag loop, so a cfPreventAttack read in that same
+            // unit stays set for the guarded note's whole duration
+            // (Sound/Z80 Sound Driver.asm:905-915, :3212-3221).
+            t.tieNext = false;
+        }
     }
 
     private int getPitchSlideFreq(int freq) {

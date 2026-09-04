@@ -27,6 +27,56 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K clears do-not-attack before the note read; tick 180 -> tick 234
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `00a65e743`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 180, role `MUS_FM2`, field
+  `doNotAttack`, reference `true` against engine `false`. DAC stream
+  `BYTE_DIFFERENT` run 29 byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 234, role `MUS_PSG2`, field
+  `resting`, reference `true` against engine `false`. DAC stream unchanged.
+  Services 139 through 233 now agree.
+- **The routine.** `zGetNextNote` clears `PlaybackControl` bit 1 at its top,
+  before the coordination-flag loop it then enters (Sound/Z80 Sound
+  Driver.asm:905-915), and `cfPreventAttack` (`0E7h`) sets that bit from
+  inside the loop (:3212-3221). So a prevent-attack flag read while fetching a
+  note survives into the note it guards and stays set for the note's whole
+  duration, until the *next* `zGetNextNote` clears it. The engine cleared the
+  bit after the note started instead, so it never persisted.
+- **The evidence, from a probe rather than inference.** The reference's FM2 at
+  tick 180 advances its data pointer by two bytes, 63796 to 63798, reuses its
+  saved duration of 6, and raises `doNotAttack`, which then stays up for ticks
+  180 through 185 and drops at 186 when the next unit is read. Two bytes is
+  the parameterless `0E7h` plus the note byte.
+- **Scoped, and a first attempt was measured and corrected.** The engine's
+  post-note clear lived in a helper called from four sites, all of which
+  cleared only in the S3K `HOLD` mode. Inverting that helper to the S1/S2
+  `REST` mode made those three previously inert sites fire for S1, which
+  `TestS1AudioStateNormalizer#productionS1NoAttackBitRemainsLatchedForTheTiedNote`
+  caught outright, along with both S1 gameplay oracles. The landed change
+  instead removes the helper and its three S3K-only sites and leaves S1 and S2
+  with exactly the single post-note clear they had. On the same reading S1 and
+  S2 also clear before the read, so their post-note clear looks redundant too;
+  that is untouched and recorded here as open rather than changed on a green
+  oracle.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` is a per-pass countdown
+  that rests the track and sends a note off (s2.sounddriver.asm:1153-1163),
+  where the engine models an elapsed comparison. And the listing's annotated
+  cycle total for one iteration of `.dac_playback_loop` is 303 against
+  `Sonic3kSmpsLoader`'s `baseCycles` of 297.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - Three S3K rest-bit corrections; tick 150 -> tick 180
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
