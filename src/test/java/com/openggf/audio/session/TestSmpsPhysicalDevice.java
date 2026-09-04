@@ -113,6 +113,48 @@ class TestSmpsPhysicalDevice {
     }
 
     @Test
+    void sessionRollbackDiscardsRawStrobesButPublishesSegmentBreakBeforeNextWrite() {
+        PhysicalRecordingObserver observer = new PhysicalRecordingObserver();
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(observer);
+        session.install();
+        observer.events.clear();
+        SmpsDriverServiceObserver.DriverIdentity owner =
+                SmpsSessionTestFixtures.owner(41);
+
+        SmpsDriverSession.LiveMutationToken token = session.captureLiveMutation();
+        session.withPort(owner, port -> {
+            port.writeFm(0, 0x2B, 0x5A);
+            return null;
+        });
+        session.renderFrames(new short[16], 0, 8);
+        session.rollbackLiveMutation(token);
+
+        session.withPort(owner, port -> {
+            port.writeFm(0, 0x2C, 0x17);
+            return null;
+        });
+        session.renderFrames(new short[16], 0, 8);
+
+        assertFalse(observer.events.stream().anyMatch(
+                event -> event.contains(":0:2B:2B:")
+                        || event.contains(":1:5A:5A:")),
+                "aborted bus writes must not escape the transaction");
+        assertTrue(observer.events.stream().anyMatch(
+                event -> event.endsWith(":TRANSACTION_ROLLBACK")),
+                "rollback must leave a replay segment boundary");
+        assertTrue(observer.events.stream().anyMatch(
+                event -> event.contains(":0:2C:2C:")
+                        || event.contains(":1:17:17:")),
+                "the next committed write remains observable");
+        int rollback = indexOf(observer.events,
+                event -> event.endsWith(":TRANSACTION_ROLLBACK"));
+        int nextWrite = indexOf(observer.events,
+                event -> event.contains(":0:2C:2C:"));
+        assertTrue(rollback >= 0 && nextWrite > rollback,
+                "the rollback boundary must precede the next committed strobe");
+    }
+
+    @Test
     void controlsAndOutputSettingsApplyOncePerSession() {
         SmpsDriverSession session = SmpsSessionTestFixtures.session(
                 new SmpsSessionTestFixtures.RecordingObserver());
@@ -134,6 +176,47 @@ class TestSmpsPhysicalDevice {
                 session.captureSnapshot().physical().synth().ym().mutes());
         assertArrayEquals(controlled.physical().synth().psg().mutes(),
                 session.captureSnapshot().physical().synth().psg().mutes());
+    }
+
+    private static final class PhysicalRecordingObserver
+            implements ChipWriteObserver {
+        private final List<String> events = new ArrayList<>();
+
+        @Override
+        public void onYm2612Write(int port, int register, int value) {
+        }
+
+        @Override
+        public void onPsgWrite(int value) {
+        }
+
+        @Override
+        public boolean observesPhysicalWrites() {
+            return true;
+        }
+
+        @Override
+        public void onYm2612BusWrite(long cycle, int busPort, int value,
+                PhysicalWriteOrigin origin) {
+            events.add("YM:%d:%d:%02X:%02X:%s".formatted(
+                    cycle, busPort, value, value, origin));
+        }
+
+        @Override
+        public void onPhysicalTimelineBoundary(ChipClockDomain domain,
+                long clock, PhysicalTimelineBoundary boundary) {
+            events.add("%s:%d:%s".formatted(domain, clock, boundary));
+        }
+    }
+
+    private static int indexOf(List<String> events,
+            java.util.function.Predicate<String> predicate) {
+        for (int index = 0; index < events.size(); index++) {
+            if (predicate.test(events.get(index))) {
+                return index;
+            }
+        }
+        return -1;
     }
 }
 

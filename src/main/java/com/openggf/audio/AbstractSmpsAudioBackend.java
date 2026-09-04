@@ -858,6 +858,34 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 AudioDiagnosticObserverException.invoke(() ->
                         chipWriteObserver.onPsgWrite(value));
             }
+
+            @Override
+            public boolean observesPhysicalWrites() {
+                return chipWriteObserver.observesPhysicalWrites();
+            }
+
+            @Override
+            public void onYm2612BusWrite(long cycle, int busPort, int value,
+                    ChipWriteObserver.PhysicalWriteOrigin origin) {
+                AudioDiagnosticObserverException.invoke(() ->
+                        chipWriteObserver.onYm2612BusWrite(
+                                cycle, busPort, value, origin));
+            }
+
+            @Override
+            public void onPsgBusWrite(long tick, int value) {
+                AudioDiagnosticObserverException.invoke(() ->
+                        chipWriteObserver.onPsgBusWrite(tick, value));
+            }
+
+            @Override
+            public void onPhysicalTimelineBoundary(
+                    ChipWriteObserver.ChipClockDomain domain, long clock,
+                    ChipWriteObserver.PhysicalTimelineBoundary boundary) {
+                AudioDiagnosticObserverException.invoke(() ->
+                        chipWriteObserver.onPhysicalTimelineBoundary(
+                                domain, clock, boundary));
+            }
         };
     }
 

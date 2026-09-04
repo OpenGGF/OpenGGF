@@ -115,6 +115,16 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
         psg.restoreSnapshot(snapshot.psg());
     }
 
+    /**
+     * Delimits a diagnostic raw-bus segment without mutating either chip.
+     * Used after a live transaction restores and discards unpublished writes.
+     */
+    public void reportPhysicalTimelineBoundary(
+            ChipWriteObserver.PhysicalTimelineBoundary boundary) {
+        ym.reportPhysicalTimelineBoundary(boundary);
+        psg.reportPhysicalTimelineBoundary(boundary);
+    }
+
     /** Channel-bounded rollback state for one prepared SFX admission. */
     public static final class SfxAdmissionState {
         private final Ym2612Chip.SfxAdmissionState ym;
