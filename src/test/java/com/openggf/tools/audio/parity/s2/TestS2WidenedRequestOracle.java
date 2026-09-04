@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -35,8 +34,9 @@ class TestS2WidenedRequestOracle {
 
     /** How many of a published window's transfers were observed at one site. */
     private static int siteTransfers(S2PublishedRequestWindows.Published published,
-            S2RequestAwareOracleRawStream.TransferSite site) throws Exception {
-        return (int) transfers(published, null).stream()
+            S2RequestAwareOracleRawStream.TransferSite site, Path directory)
+            throws Exception {
+        return (int) transfers(published, directory).stream()
                 .filter(transfer -> transfer.site() == site)
                 .count();
     }
@@ -64,10 +64,11 @@ class TestS2WidenedRequestOracle {
      */
     private static List<String> siteRequests(
             S2PublishedRequestWindows.Published published,
-            S2RequestAwareOracleRawStream.TransferSite site) throws Exception {
+            S2RequestAwareOracleRawStream.TransferSite site, Path directory)
+            throws Exception {
         List<String> result = new ArrayList<>();
         for (S2RequestAwareOracleRawStream.RequestTransfer transfer
-                : transfers(published, null)) {
+                : transfers(published, directory)) {
             if (transfer.site() != site) {
                 continue;
             }
@@ -84,8 +85,7 @@ class TestS2WidenedRequestOracle {
     private static List<S2RequestAwareOracleRawStream.RequestTransfer> transfers(
             S2PublishedRequestWindows.Published published, Path directory)
             throws Exception {
-        Path expanded = published.expand(
-                directory == null ? Files.createTempDirectory("s2-window") : directory);
+        Path expanded = published.expand(directory);
         S2RequestAwareOracleRawStream.Result reference =
                 S2RequestAwareOracleRawStream.scanWindowSourceCandidateForTesting(
                         expanded, published.window());
@@ -131,7 +131,7 @@ class TestS2WidenedRequestOracle {
             // the SFX site. Pin its count against the SFX-site transfers
             // rather than the payload total.
             assertEquals(siteTransfers(published, S2RequestAwareOracleRawStream
-                            .TransferSite.SFX),
+                            .TransferSite.SFX, temporaryDirectory),
                     report.comparedTransfers(),
                     published.name() + ": " + report.describe());
 
@@ -140,7 +140,8 @@ class TestS2WidenedRequestOracle {
             // holds as the MUSIC0/MUSIC1 mailbox. Both sides carry the native
             // request byte, so no id translation takes part.
             List<String> expectedMusic = siteRequests(published,
-                    S2RequestAwareOracleRawStream.TransferSite.MUSIC);
+                    S2RequestAwareOracleRawStream.TransferSite.MUSIC,
+                    temporaryDirectory);
             List<String> actualMusic = new ArrayList<>();
             for (int index = 0; index < capture.musicSubmissionRows().size(); index++) {
                 int row = capture.musicSubmissionRows().get(index);
