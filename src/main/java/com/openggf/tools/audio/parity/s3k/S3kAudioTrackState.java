@@ -30,7 +30,13 @@ public record S3kAudioTrackState(
         Integer detune,           // offset 10, signed byte as -128..127
         Integer volEnv,           // offset 17
         Integer noteFillTimeout,  // offset 1E
-        Integer noteFillMaster) { // offset 1F
+        Integer noteFillMaster,   // offset 1F
+        Integer modulationPtr,    // offsets 20-21 (Z80 address; engine: null)
+        Integer modulationVal,    // offsets 22-23 as High<<8|Low, the accumulator
+        Integer modulationWait,   // offset 24
+        Integer modulationSpeed,  // offset 25, aliases ModEnvIndex
+        Integer modulationDelta,  // offset 26
+        Integer modulationSteps) {// offset 27
 
     public S3kAudioTrackState {
         Objects.requireNonNull(role, "role");
@@ -41,6 +47,7 @@ public record S3kAudioTrackState(
 
     public static S3kAudioTrackState idle(String role) {
         return new S3kAudioTrackState(role, false, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null);
     }
 }

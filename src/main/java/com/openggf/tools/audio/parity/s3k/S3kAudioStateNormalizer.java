@@ -156,7 +156,20 @@ public final class S3kAudioStateNormalizer {
                 track.scaledDuration() & 0xff,
                 frequency,
                 track.detune() & 0xff,
-                null, null, null);
+                null, null, null,
+                // The modulation pointer is a Z80 address the engine has no
+                // equivalent for, like the data pointer above.
+                null,
+                // zTrack offsets 22h-27h. The engine's names differ but the
+                // bytes are the same state: the accumulator zDoModulation adds
+                // its delta into, and the wait, speed, delta and step counters
+                // zPrepareModulation loads from the modulation data
+                // (Sound/Z80 Sound Driver.asm:34-97, :1277-1327, :1330-1352).
+                track.modAccumulator() & 0xffff,
+                track.modDelay() & 0xff,
+                track.modRateCounter() & 0xff,
+                track.modCurrentDelta() & 0xff,
+                track.modStepCounter() & 0xff);
     }
 
     /**

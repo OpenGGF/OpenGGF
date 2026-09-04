@@ -196,10 +196,13 @@ class TestS3kOracleRequestSidecarWiring {
      * in the following service's window. The music DAC byte pump now streams
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
-     * A hundred and ninety-two consecutive services now agree. The most recent
-     * correction is that neither S3K PSG volume coordination flag writes to
-     * the chip: both end at {@code zStoreTrackVolume}, which stores the byte
-     * and returns. What remains is a PSG2 frequency value at service 331.
+     * The comparison now covers the modulation accumulator and its wait,
+     * speed, delta and step counters, which the oracle previously did not
+     * compare at all. That deliberately moves the reported frontier back from
+     * service 331 to service 150: the writes still agree to 330, but the
+     * driver state behind them diverges earlier and is now visible. The first
+     * divergence is {@code modulationSpeed}, which
+     * {@code zFinishTrackUpdate} zeroes through its {@code ModEnvIndex} alias.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -211,11 +214,10 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 193, report.tick());
-        assertEquals(10, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=163]",
-                report.reference());
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 12, report.tick());
+        assertEquals("MUS_FM2", report.role());
+        assertEquals("modulationSpeed", report.field());
     }
 
     /**

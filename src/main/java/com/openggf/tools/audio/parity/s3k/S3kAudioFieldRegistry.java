@@ -95,7 +95,19 @@ public final class S3kAudioFieldRegistry {
             field("noteFillTimeout", Scope.TRACK, "NoteFillTimeout offset 1E",
                     "SmpsTrackSnapshot.fillCounter", Comparison.DIAGNOSTIC),
             field("noteFillMaster", Scope.TRACK, "NoteFillMaster offset 1F",
-                    "SmpsTrackSnapshot.fill", Comparison.DIAGNOSTIC));
+                    "SmpsTrackSnapshot.fill", Comparison.DIAGNOSTIC),
+            field("modulationPtr", Scope.TRACK, "ModulationPtr offsets 20-21",
+                    "Z80 address; engine has no equivalent", Comparison.DIAGNOSTIC),
+            field("modulationVal", Scope.TRACK, "ModulationVal offsets 22-23",
+                    "SmpsTrackSnapshot.modAccumulator", Comparison.GATE),
+            field("modulationWait", Scope.TRACK, "ModulationWait offset 24",
+                    "SmpsTrackSnapshot.modDelay", Comparison.GATE),
+            field("modulationSpeed", Scope.TRACK, "ModulationSpeed offset 25",
+                    "SmpsTrackSnapshot.modRateCounter", Comparison.GATE),
+            field("modulationDelta", Scope.TRACK, "ModulationDelta offset 26",
+                    "SmpsTrackSnapshot.modCurrentDelta", Comparison.GATE),
+            field("modulationSteps", Scope.TRACK, "ModulationSteps offset 27",
+                    "SmpsTrackSnapshot.modStepCounter", Comparison.GATE));
 
     private S3kAudioFieldRegistry() {
     }

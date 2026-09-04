@@ -27,6 +27,52 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The S3K oracle now compares modulation state; reported frontier 331 -> 150
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `9c568300f`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 331, event 10, reference
+  `psg 163` against engine `psg 160`. DAC stream `BYTE_DIFFERENT` run 29
+  byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 150, role `MUS_FM2`, field
+  `modulationSpeed`, reference `0` against engine `1`. DAC stream unchanged.
+- **The frontier moved backwards on purpose, and that is the point.** The
+  writes still agree through service 330; nothing regressed. Six zTrack bytes
+  that the oracle never compared are now compared, and the driver state behind
+  those writes turns out to diverge 181 services earlier. Comparing more state
+  can only move a reported frontier earlier, never later, so this number is
+  not comparable with the previous entry's and should not be read as one.
+- **What was added,** from the track layout at Sound/Z80 Sound
+  Driver.asm:34-97: `ModulationVal` (offsets 22h-23h, the accumulator
+  `zDoModulation` adds its delta into), `ModulationWait` (24h),
+  `ModulationSpeed` (25h), `ModulationDelta` (26h) and `ModulationSteps`
+  (27h), all gated, plus `ModulationPtr` (20h-21h) as a diagnostic-only field
+  because it is a Z80 address the engine has no equivalent for, exactly like
+  the existing data pointer. All six are inside the committed
+  `1C00h-1FA0h` RAM snapshot, so no fixture change was needed. The engine side
+  maps to `modAccumulator`, `modDelay`, `modRateCounter`, `modCurrentDelta`
+  and `modStepCounter`.
+- **S3K only.** S1 and S2 have their own normalizers and neither was touched,
+  so both oracles are unaffected by construction rather than by measurement.
+- **What the first divergence says, and it is already diagnosed.**
+  `zFinishTrackUpdate` clears `ModEnvIndex` and `ModEnvSens` whenever the
+  do-not-attack bit is clear (:1055-1069). Those two names alias
+  `ModulationSpeed` at offset 25h and `ModulationValLow` at 22h, so reading
+  any ordinary note zeroes the modulation speed counter and the low byte of
+  the modulation accumulator on a track using normal modulation. The engine
+  models neither. That is the next fix.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S3K holds its PSG modulation after a rest note; tick 331 decoded, not closed
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
