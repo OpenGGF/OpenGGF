@@ -545,6 +545,16 @@ final class SmpsAssetCatalog {
                 .fadeDelayCadence(source.getFadeDelayCadence())
                 .tempoWaitPrecedesRequest(source.isTempoWaitPrecedesRequest())
                 .psgSilenceShape(source.getPsgSilenceShape())
+                .psgVolumeTail(source.getPsgVolumeTail())
+                .fadeInRestore(source.getFadeInRestore())
+                .dacNoteKeysOffFm6AndRestoresFm3(
+                        source.isDacNoteKeysOffFm6AndRestoresFm3())
+                .enableDacOnSequencerStart(
+                        source.isEnableDacOnSequencerStart())
+                .psgFrequencyHighByteNibbleSwap(
+                        source.isPsgFrequencyHighByteNibbleSwap())
+                .specialSfxPsg3SilenceMode(
+                        source.getSpecialSfxPsg3SilenceMode())
                 .sfxWalkPrecedesRequest(source.isSfxWalkPrecedesRequest())
                 .sfxAdmissionKeyOffAndClearsSsgEg(
                         source.isSfxAdmissionKeyOffAndClearsSsgEg())

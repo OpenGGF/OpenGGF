@@ -35,18 +35,21 @@ public record AudioParityMetadata(
                 || capture.equals(AudioParitySchema.SFX_OPENGGF_CAPTURE);
         boolean gameplayCapture = capture.equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE)
                 || capture.equals(AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE);
+        boolean runWindowCapture = capture.equals(AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE)
+                || capture.equals(AudioParitySchema.RUN_WINDOW_OPENGGF_CAPTURE);
         if (!capture.equals(AudioParitySchema.REFERENCE_CAPTURE)
                 && !capture.equals(AudioParitySchema.OPENGGF_CAPTURE)
-                && !sfxCapture && !gameplayCapture) {
+                && !sfxCapture && !gameplayCapture && !runWindowCapture) {
             throw new IllegalArgumentException("unknown audio parity capture kind: " + capture);
         }
-        if (sfxCapture || gameplayCapture) {
-            // The SFX and gameplay captures are bounded by their movie/frame
-            // budget, not a recurrence proof.
+        if (sfxCapture || gameplayCapture || runWindowCapture) {
+            // The SFX, gameplay and per-song window captures are bounded by
+            // their movie/frame budget or their closing BGM dispatch, not a
+            // recurrence proof.
             if (cycleStart != 0 || period != 0 || terminalRecordCount <= 0
                     || terminalRecordCount > AudioParitySchema.MAX_INVOCATIONS) {
                 throw new IllegalArgumentException(
-                        "SFX/gameplay capture requires cycle_start 0, period 0, "
+                        "SFX/gameplay/run-window capture requires cycle_start 0, period 0, "
                                 + "and a bounded terminal_record_count");
             }
         } else {
@@ -92,6 +95,18 @@ public record AudioParityMetadata(
             String romCrc32) {
         return new AudioParityMetadata(AudioParitySchema.VERSION,
                 AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE, 0, 0, terminalRecordCount, romSha1,
+                romCrc32, JsonNodeFactory.instance.objectNode());
+    }
+
+    /**
+     * OpenGGF side of a per-song run window. Like the other OpenGGF factories
+     * it carries no details: the window's identity, including which song it
+     * replays, is the reference's to state, and the host reads it from there.
+     */
+    public static AudioParityMetadata openGgfRunWindow(int terminalRecordCount, String romSha1,
+            String romCrc32) {
+        return new AudioParityMetadata(AudioParitySchema.VERSION,
+                AudioParitySchema.RUN_WINDOW_OPENGGF_CAPTURE, 0, 0, terminalRecordCount, romSha1,
                 romCrc32, JsonNodeFactory.instance.objectNode());
     }
 

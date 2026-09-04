@@ -332,9 +332,11 @@ public final class SmpsSequencerConfig {
     private final boolean noteResetAliasesModulationState;
     private final boolean fmNoteGoingReturnsAtRest;
     private final FadeOutHalt fadeOutHalt;
+    private final FadeInRestore fadeInRestore;
     private final FadeDelayCadence fadeDelayCadence;
     private final boolean tempoWaitPrecedesRequest;
     private final PsgSilenceShape psgSilenceShape;
+    private final PsgVolumeTail psgVolumeTail;
     private final boolean sfxWalkPrecedesRequest;
     private final boolean sfxAdmissionKeyOffAndClearsSsgEg;
     private final boolean trackEndFlagOwnsTheStop;
@@ -393,9 +395,11 @@ public final class SmpsSequencerConfig {
         this.noteResetAliasesModulationState = b.noteResetAliasesModulationState;
         this.fmNoteGoingReturnsAtRest = b.fmNoteGoingReturnsAtRest;
         this.fadeOutHalt = b.fadeOutHalt;
+        this.fadeInRestore = b.fadeInRestore;
         this.fadeDelayCadence = b.fadeDelayCadence;
         this.tempoWaitPrecedesRequest = b.tempoWaitPrecedesRequest;
         this.psgSilenceShape = b.psgSilenceShape;
+        this.psgVolumeTail = b.psgVolumeTail;
         this.sfxWalkPrecedesRequest = b.sfxWalkPrecedesRequest;
         this.sfxAdmissionKeyOffAndClearsSsgEg = b.sfxAdmissionKeyOffAndClearsSsgEg;
         this.trackEndFlagOwnsTheStop = b.trackEndFlagOwnsTheStop;
@@ -774,6 +778,34 @@ public final class SmpsSequencerConfig {
         return psgSilenceShape;
     }
 
+    /** When a sounding PSG track resends its attenuation byte. */
+    public enum PsgVolumeTail {
+        /**
+         * The engine's existing S1/S2 behaviour: the attenuation goes out when
+         * a note starts or an envelope step changes it, and not otherwise.
+         * Both 68K-era drivers reach their volume write through
+         * {@code PSGDoVolFX} off the note path, and their oracles are pinned to
+         * this shape, so it is left alone rather than re-derived here.
+         */
+        NOTE_AND_ENVELOPE_ONLY,
+        /**
+         * S3K: {@code zUpdatePSGTrack}'s {@code .note_going} path sends the
+         * frequency pair and then falls straight into the volume tail on every
+         * pass of a sounding note, gated only on {@code PlaybackControl} bit 2
+         * (SFX overriding) and bit 4 (track at rest)
+         * (skdisasm Sound/Z80 Sound Driver.asm:4079-4135). This is what
+         * carries a mid-note volume change, such as the
+         * {@code smpsPSGAlterVol} ramp that gives {@code sfx_Collapse} its
+         * decaying tail, out to the chip.
+         */
+        EVERY_NOTE_GOING_PASS
+    }
+
+    /** PSG volume tail: NOTE_AND_ENVELOPE_ONLY (S1/S2) or EVERY_NOTE_GOING_PASS (S3K). */
+    public PsgVolumeTail getPsgVolumeTail() {
+        return psgVolumeTail;
+    }
+
     /** Which tracks a music fade-out request halts outright. */
     public enum FadeOutHalt {
         /**
@@ -795,6 +827,43 @@ public final class SmpsSequencerConfig {
     /** Fade-out halt scope: DAC_ONLY (S1/S2) or DAC_AND_PSG (S3K). */
     public FadeOutHalt getFadeOutHalt() {
         return fadeOutHalt;
+    }
+
+    /**
+     * What the restore-to-previous fade does to each music track it brings
+     * back. The two shapes silence the resumed song by different bits, and
+     * the drivers do not agree on which bit means what.
+     */
+    public enum FadeInRestore {
+        /**
+         * S1/S2: {@code cfFadeInToPrevious} sets {@code PlaybackControl} bit 1,
+         * "track at rest" in these drivers, on every playing FM and PSG track
+         * and calls {@code PSGNoteOff} on the PSG ones
+         * (s2.sounddriver.asm:3107, :3131-3132; s1.sounddriver.asm:2193,
+         * :2211-2212). The FM tracks get no key-off; their voice is re-sent
+         * instead. Each track leaves rest when it reads its own next note.
+         */
+        REST_TRACKS,
+        /**
+         * S3K: {@code zFadeInToPrevious} ORs {@code 84h} over every track and
+         * then clears bit 2 again on the FM ones
+         * (skdisasm Sound/Z80 Sound Driver.asm:2761-2770). In this driver's
+         * layout bit 2 is "SFX is overriding this track" and bit 4 is "track
+         * is resting" (Driver.asm:25, :27, and {@code zRestTrack} at :4220-4223
+         * sets bit 4 then tests bit 2). {@code 84h} is therefore bits 7 and 2,
+         * playing and overriding -- the routine's own inline comment calling
+         * it "playing and resting" is a mislabel. So the PSG tracks are left
+         * marked overridden, which is what silences them through the fade,
+         * the FM tracks are released, re-voiced and attenuated by 40h
+         * (:2767-2770), and no track is rested. The PSG tracks get no
+         * attenuation at all.
+         */
+        OVERRIDE_PSG
+    }
+
+    /** Restore-fade track handling: REST_TRACKS (S1/S2) or OVERRIDE_PSG (S3K). */
+    public FadeInRestore getFadeInRestore() {
+        return fadeInRestore;
     }
 
     /** Note-fill expiry tail: LEGACY (S1/S2) or S3K_SPLIT (S3K). */
@@ -881,9 +950,11 @@ public final class SmpsSequencerConfig {
         private boolean noteResetAliasesModulationState = false;
         private boolean fmNoteGoingReturnsAtRest = false;
         private FadeOutHalt fadeOutHalt = FadeOutHalt.DAC_ONLY;
+        private FadeInRestore fadeInRestore = FadeInRestore.REST_TRACKS;
         private FadeDelayCadence fadeDelayCadence = FadeDelayCadence.TEST_THEN_DECREMENT;
         private boolean tempoWaitPrecedesRequest = false;
         private PsgSilenceShape psgSilenceShape = PsgSilenceShape.SOUNDING_CHANNEL_ONLY;
+        private PsgVolumeTail psgVolumeTail = PsgVolumeTail.NOTE_AND_ENVELOPE_ONLY;
         private boolean sfxWalkPrecedesRequest = false;
         private boolean sfxAdmissionKeyOffAndClearsSsgEg = false;
         private boolean trackEndFlagOwnsTheStop = false;
@@ -934,9 +1005,11 @@ public final class SmpsSequencerConfig {
         public Builder noteResetAliasesModulationState(boolean val) { noteResetAliasesModulationState = val; return this; }
         public Builder fmNoteGoingReturnsAtRest(boolean val) { fmNoteGoingReturnsAtRest = val; return this; }
         public Builder fadeOutHalt(FadeOutHalt val) { fadeOutHalt = val; return this; }
+        public Builder fadeInRestore(FadeInRestore val) { fadeInRestore = val; return this; }
         public Builder fadeDelayCadence(FadeDelayCadence val) { fadeDelayCadence = val; return this; }
         public Builder tempoWaitPrecedesRequest(boolean val) { tempoWaitPrecedesRequest = val; return this; }
         public Builder psgSilenceShape(PsgSilenceShape val) { psgSilenceShape = val; return this; }
+        public Builder psgVolumeTail(PsgVolumeTail val) { psgVolumeTail = val; return this; }
         public Builder sfxWalkPrecedesRequest(boolean val) { sfxWalkPrecedesRequest = val; return this; }
         public Builder sfxAdmissionKeyOffAndClearsSsgEg(boolean val) { sfxAdmissionKeyOffAndClearsSsgEg = val; return this; }
         public Builder trackEndFlagOwnsTheStop(boolean val) { trackEndFlagOwnsTheStop = val; return this; }

@@ -115,6 +115,12 @@ public final class Sonic3kSmpsSequencerConfig {
                 // (Sound/Z80 Sound Driver.asm:4226-4245).
                 .psgSilenceShape(
                         SmpsSequencerConfig.PsgSilenceShape.TONE_THEN_NOISE)
+                // zUpdatePSGTrack's .note_going path sends the frequency pair
+                // and then the volume tail on every pass of a sounding note,
+                // with no attack test on the tail
+                // (Sound/Z80 Sound Driver.asm:4079-4135).
+                .psgVolumeTail(
+                        SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS)
                 // zUpdateSFXTracks runs before zUpdateMusic fills the queue
                 // (Sound/Z80 Sound Driver.asm:650-701), so an SFX admitted in
                 // a service first updates in the next one.
@@ -154,6 +160,10 @@ public final class Sonic3kSmpsSequencerConfig {
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
                 .fadeInSteps(0x40)          // FadeInSteps = 40h
                 .fadeInDelay(2)             // FadeInDelay = 2
+                // zFadeInToPrevious silences by the overriding bit, not the
+                // resting one: it ORs 84h over every track and clears bit 2
+                // again on the FM ones (Sound/Z80 Sound Driver.asm:2761-2770).
+                .fadeInRestore(SmpsSequencerConfig.FadeInRestore.OVERRIDE_PSG)
                 .build();
     }
 

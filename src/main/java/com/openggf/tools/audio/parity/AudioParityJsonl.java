@@ -88,14 +88,19 @@ public final class AudioParityJsonl {
             AudioParityMetadata metadata = parseMetadata(metadataLine);
             boolean referenceCapture = metadata.capture().equals(AudioParitySchema.REFERENCE_CAPTURE)
                     || metadata.capture().equals(AudioParitySchema.SFX_REFERENCE_CAPTURE)
-                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE);
+                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE);
             String expectedRawBusSource = referenceCapture
                     ? text(object(metadata.details().get("callback_contract"), "callback_contract"), "source")
                     : null;
+            // Every capture kind that carries a per-invocation dispatch
+            // sequence: the request stream is the engine host's input contract.
             boolean sfxCapture = metadata.capture().equals(AudioParitySchema.SFX_REFERENCE_CAPTURE)
                     || metadata.capture().equals(AudioParitySchema.SFX_OPENGGF_CAPTURE)
                     || metadata.capture().equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE)
-                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE);
+                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.RUN_WINDOW_OPENGGF_CAPTURE);
             String line;
             int expectedOrdinal = 0;
             while ((line = input.readLine()) != null) {
@@ -402,10 +407,15 @@ public final class AudioParityJsonl {
     private static void validateMetadataDetails(String capture, ObjectNode details) {
         if (capture.equals(AudioParitySchema.OPENGGF_CAPTURE)
                 || capture.equals(AudioParitySchema.SFX_OPENGGF_CAPTURE)
-                || capture.equals(AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE)) {
+                || capture.equals(AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE)
+                || capture.equals(AudioParitySchema.RUN_WINDOW_OPENGGF_CAPTURE)) {
             if (!details.isEmpty()) {
                 throw invalid("OpenGGF capture metadata cannot contain reference movie/callback fields");
             }
+            return;
+        }
+        if (capture.equals(AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE)) {
+            validateRunWindowDetails(details);
             return;
         }
         boolean sfx = capture.equals(AudioParitySchema.SFX_REFERENCE_CAPTURE);
@@ -455,6 +465,55 @@ public final class AudioParityJsonl {
                 || integer(movie, "input_rows") != expectedRows
                 || !text(movie, "opaque_header_hash").equals(expectedOpaque)) {
             throw invalid("reference movie metadata does not match the pinned S1 BK2 for " + capture);
+        }
+    }
+
+    /**
+     * A per-song run window names the song it replays and where in its movie it
+     * sits, and carries no {@code launch_update_music_invocations}: only a
+     * movie's first window has a dormant prefix, and that count is already
+     * pinned by the gameplay capture kind.
+     */
+    private static void validateRunWindowDetails(ObjectNode details) {
+        Set<String> referenceFields = Set.of("callback_contract", "diagnostic_fields",
+                "gating_fields", "movie", "music_id", "window");
+        exactFields(details, referenceFields, referenceFields, "run window metadata");
+        int musicId = integer(details, "music_id");
+        if (musicId < AudioParitySchema.MUSIC_ID_BASE || musicId > AudioParitySchema.MUSIC_ID_MAX) {
+            throw invalid("run window music_id is outside the S1 music pointer table: " + musicId);
+        }
+        ObjectNode window = object(details.get("window"), "window");
+        Set<String> windowFields = Set.of("ordinal", "open_frame", "close_frame");
+        exactFields(window, windowFields, windowFields, "window");
+        int ordinal = integer(window, "ordinal");
+        int openFrame = integer(window, "open_frame");
+        int closeFrame = integer(window, "close_frame");
+        if (ordinal < 0 || openFrame < 0 || closeFrame <= openFrame) {
+            throw invalid("run window ordinal/frame span is out of range");
+        }
+        validateCallbackContract(object(details.get("callback_contract"), "callback_contract"));
+        validateFieldInventory(details, "diagnostic_fields", AudioParitySchema.DIAGNOSTIC_GLOBAL_FIELDS,
+                AudioParitySchema.DIAGNOSTIC_TRACK_FIELDS);
+        validateFieldInventory(details, "gating_fields", AudioParitySchema.SFX_GATING_GLOBAL_FIELDS,
+                AudioParitySchema.GATING_TRACK_FIELDS);
+        ObjectNode movie = object(details.get("movie"), "movie");
+        Set<String> movieFields = Set.of("archive_sha256", "core", "emulator", "game", "input_rows",
+                "opaque_header_hash");
+        exactFields(movie, movieFields, movieFields, "movie");
+        AudioParitySchema.GameplayMovie pinned =
+                AudioParitySchema.GAMEPLAY_MOVIES.get(text(movie, "archive_sha256"));
+        if (pinned == null) {
+            throw invalid("run window names a BK2 that is not a pinned S1 complete-run movie");
+        }
+        if (!text(movie, "core").equals(AudioParitySchema.BK2_CORE)
+                || !text(movie, "emulator").equals(AudioParitySchema.BK2_EMULATOR)
+                || !text(movie, "game").equals(AudioParitySchema.BK2_GAME)
+                || integer(movie, "input_rows") != pinned.inputRows()
+                || !text(movie, "opaque_header_hash").equals(AudioParitySchema.GAMEPLAY_BK2_OPAQUE_HASH)) {
+            throw invalid("run window movie metadata does not match its pinned S1 BK2");
+        }
+        if (closeFrame > pinned.inputRows()) {
+            throw invalid("run window close_frame is past the end of its movie");
         }
     }
 

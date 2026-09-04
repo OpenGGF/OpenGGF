@@ -263,6 +263,34 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S2 music restores cleanly after a 1-up:** the driver rests every music
+  track on the fade-in-to-previous as the ROM does (S3K instead keeps its PSG
+  overridden), so the level song no longer resumes on the notes the jingle cut
+  into; pinned by a new 1-up driver-state window.
+- **S3K title theme no longer dies on a late intro skip:** the SEGA chant stop is
+  issued once, as the ROM does at `loc_3FE4`, so pressing Start during the Sonic
+  animation keeps the title music; pinned by a headless request-order test.
+- **S3K spindash release and collapsing-bridge sounds restored:** a PSG3 noise
+  track now owns the noise channel, the PSG volume tail is sent every pass as the
+  ROM does, the fabricated spindash pitch multiplier is gone, and sequencer config
+  fields reach live playback (five were silently dropped); guarded by runtime-path
+  tests with AIZ1 music and a config-copy guard.
+- **S1 audio oracles cover whole complete runs per song:** windows tile each
+  movie by `Sound_PlayBGM` and 1-up restore epochs; the title-screen song matches
+  end to end (72 ticks), tied PSG notes step their envelope, a finished song keeps
+  its tempo, and fade commands dispatch at the ROM's point in `UpdateMusic`.
+- **`audio.psgNoiseShiftEveryToggle` removed:** the PSG noise LFSR now always
+  clocks once per rising edge, the hardware rate; the every-toggle mode from the
+  old PSG core is gone and an old config key is ignored with a warning.
+- **S2 CPZ2 boss segment green:** the boss spawns its children from its own
+  first update in ROM slot order, the container rewrites itself into the gunk
+  in place, and `Obj6B` platforms gate solidity on the previous frame's on-screen
+  bit; trace sweep 8 to 7 failing classes.
+- **S1 sound-test oracles run in JUnit:** the GHZ music (14,690 ticks) and SFX
+  (1,967 ticks) references are now ROM-gated assertions in the committed suite.
+- **Matching audio oracles are pinned as assertions:** S2 v1 (698), S2 v2 state and
+  writes (2,198), the three S2 request windows (25/52/27), S1 run 2 (5,257) and
+  S2 CPZ state-only (720) now fail the build on regression.
 - **First duration timeout seeds at 1 in all three drivers:** cited per ROM; two
   S1 unit fixtures that could never advance (tempo 1) corrected. S3K oracle at
   the first write of service 565.

@@ -73,7 +73,7 @@ public final class S3kOpenGgfAudioCapture {
             try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                     "s3k-oracle", 0,
                     new SmpsPhysicalDevice.Settings(
-                            SAMPLE_RATE, false, false),
+                            SAMPLE_RATE, false),
                     Sonic3kSmpsPhysicalPolicy.INSTANCE,
                     ChipWriteObserver.NONE)) {
             SmpsDriver driver = stream.logicalDriver();

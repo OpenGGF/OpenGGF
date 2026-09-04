@@ -26,7 +26,7 @@ class TestSmpsPhysicalDevice {
         SmpsSessionTestFixtures.RecordingObserver observer =
                 new SmpsSessionTestFixtures.RecordingObserver();
         SmpsPhysicalDevice.Settings settings =
-                new SmpsPhysicalDevice.Settings(48_000, true, true);
+                new SmpsPhysicalDevice.Settings(48_000, true);
 
         SmpsPhysicalDevice device =
                 new SmpsPhysicalDevice(settings, observer);
@@ -36,7 +36,6 @@ class TestSmpsPhysicalDevice {
         assertEquals(settings, snapshot.settings());
         assertEquals(48_000, snapshot.synth().outputSampleRate());
         assertTrue(snapshot.synth().ym().dacInterpolate());
-        assertTrue(snapshot.synth().psg().noiseShiftOnEveryToggle());
 
         device.close();
         assertTrue(observer.events().isEmpty());
@@ -145,7 +144,7 @@ final class SmpsSessionTestFixtures {
     }
 
     static SmpsPhysicalDevice.Settings settings() {
-        return new SmpsPhysicalDevice.Settings(44_100, false, false);
+        return new SmpsPhysicalDevice.Settings(44_100, false);
     }
 
     static SmpsDriverSession session(ChipWriteObserver observer) {

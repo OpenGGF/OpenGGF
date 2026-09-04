@@ -262,10 +262,13 @@ public final class AudioParityComparator {
             expectedOpenGgfKind = AudioParitySchema.SFX_OPENGGF_CAPTURE;
         } else if (AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE.equals(reference.capture())) {
             expectedOpenGgfKind = AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE;
+        } else if (AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE.equals(reference.capture())) {
+            expectedOpenGgfKind = AudioParitySchema.RUN_WINDOW_OPENGGF_CAPTURE;
         } else {
             return metadataField("capture",
                     AudioParitySchema.REFERENCE_CAPTURE + " or " + AudioParitySchema.SFX_REFERENCE_CAPTURE
-                            + " or " + AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE,
+                            + " or " + AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE
+                            + " or " + AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE,
                     reference.capture());
         }
         AudioParityReport result = metadataField("capture", expectedOpenGgfKind, openGgf.capture());
