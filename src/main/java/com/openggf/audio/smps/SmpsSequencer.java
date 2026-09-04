@@ -405,6 +405,16 @@ public class SmpsSequencer implements CoordFlagContext {
             this.pos = pos;
             this.type = type;
             this.channelId = channelId;
+            // Every driver seeds the first duration timeout with 1, so the
+            // track's first walk decrements it to zero and reads its opening
+            // stream unit on that same walk. S1 loads d5 = 1 for both music
+            // loops (s1.sounddriver.asm:823, :836, used at :847 and :897) and
+            // writes 1 directly for SFX (:1062, :1171); S2 stores 1 with the
+            // comment "should expire next update, play first note, etc."
+            // (s2.sounddriver.asm:1857); S3K's zZeroFillTrackRAM seeds it in
+            // the track-RAM fill (skdisasm Sound/Z80 Sound
+            // Driver.asm:2168-2184).
+            this.duration = 1;
         }
     }
 

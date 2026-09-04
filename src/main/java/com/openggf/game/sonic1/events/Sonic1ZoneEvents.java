@@ -95,6 +95,19 @@ abstract class Sonic1ZoneEvents {
     /** Run per-frame event logic for the given act. */
     abstract void update(int act);
 
+    /**
+     * Whether this handler's level runs the ROM {@code Level_MainLoop} tail
+     * slot, i.e. {@code SignpostArtLoad} (docs/s1disasm/sonic.asm:3035).
+     * <p>
+     * True for every ordinary level, which the ROM plays from
+     * {@code Level_MainLoop}. The ending sequence has its own main loop
+     * ({@code End_MainLoop}, docs/s1disasm/sonic.asm:3662-3680), which calls
+     * neither {@code RunPLC} nor {@code SignpostArtLoad}.
+     */
+    boolean runsLevelMainLoopTail() {
+        return true;
+    }
+
     protected <T extends ObjectInstance> T spawnObject(Supplier<T> factory) {
         LevelManager lm = levelManager();
         if (lm == null || lm.getObjectManager() == null) {
