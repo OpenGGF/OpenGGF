@@ -6,6 +6,7 @@ import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -34,7 +35,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.audio.Sonic2SmpsConstants;
 
 import java.util.List;
@@ -624,11 +624,21 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         switch (MonitorType.fromSubtype(subtype)) {
             case RINGS -> {
                 player.addRings(RING_MONITOR_REWARD);
-                services.playSfx(GameSound.RING);
+                // ROM super_ring reaches the driver through the music mailbox,
+                // not the SFX queue: it ends `move.w #SndID_Ring,d0 /
+                // jmp (PlayMusic).l` (s2.asm:25864, :25913-25914). The driver
+                // still applies the ring speaker alternation, because
+                // QueueToPlay hands an SFX-range byte to zPlaySound_CheckRing
+                // (s2.sounddriver.asm:1565-1571, :2116-2135).
+                services.playMusicMailboxNativeRequest(
+                        Sonic2AudioConstants.SFX_RING_RIGHT);
             }
             case SHIELD -> {
                 player.giveShield();
-                services.playSfx(Sonic2Sfx.SHIELD.id);
+                // ROM shield_monitor likewise uses the music mailbox:
+                // `move.w #SndID_Shield,d0 / jsr (PlayMusic).l`
+                // (s2.asm:25953-25956).
+                services.playMusicMailboxNativeRequest(Sonic2Sfx.SHIELD.id);
             }
             case SHOES -> {
                 player.giveSpeedShoes();

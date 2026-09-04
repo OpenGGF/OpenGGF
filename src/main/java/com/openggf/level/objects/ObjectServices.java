@@ -85,6 +85,15 @@ public interface ObjectServices {
     void playSfx(int soundId);
     void playSfx(GameSound sound);
     void playMusic(int musicId);
+
+    /**
+     * Submits a native ROM sound id through the music mailbox, as the ROM's
+     * {@code PlayMusic} does at several {@code SndID_} call sites
+     * (docs/s2disasm/s2.asm:1517-1527).
+     */
+    default void playMusicMailboxNativeRequest(int nativeRequestId) {
+        audioManager().playMusicMailboxNativeRequest(nativeRequestId);
+    }
     default boolean playMusic(GameMusic music) {
         return audioManager().playMusic(music);
     }
