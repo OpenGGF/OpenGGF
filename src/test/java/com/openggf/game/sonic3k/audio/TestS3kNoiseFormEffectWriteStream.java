@@ -150,7 +150,7 @@ class TestS3kNoiseFormEffectWriteStream {
         DacData dacData = loader.loadDacData();
         try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                 "s3k-noise-form", 0,
-                new SmpsPhysicalDevice.Settings(SAMPLE_RATE, false, false),
+                new SmpsPhysicalDevice.Settings(SAMPLE_RATE, false),
                 Sonic3kSmpsPhysicalPolicy.INSTANCE, ChipWriteObserver.NONE)) {
             SmpsDriver driver = stream.logicalDriver();
             driver.setRegion(SmpsSequencer.Region.NTSC);

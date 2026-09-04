@@ -37,7 +37,6 @@ class TestVirtualSynthesizerSnapshot {
         VirtualSynthesizer synth = new VirtualSynthesizer(44100.0);
         synth.setDacData(dacData());
         synth.setDacInterpolate(true);
-        synth.setPsgNoiseShiftOnEveryToggle(false);
         return synth;
     }
 

@@ -186,9 +186,8 @@ Common sources of differences:
 - **Modulation timing:** Vibrato/tremolo delay and depth.
 - **DAC sample rate:** Derived from Z80 `djnz` loop timing; different base cycle counts
   per game.
-- **PSG noise behavior:** The `audio.psgNoiseShiftEveryToggle` config key controls whether
-  the noise LFSR shifts on every toggle (MAME-style) or only on positive edges
-  (Genesis Plus GX style).
+- **PSG noise behavior:** The noise LFSR always shifts once per rising edge of the noise
+  square wave (the libvgm/hardware rule); there is no configurable every-toggle mode.
 
 ## Common Audio Bugs
 

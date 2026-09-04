@@ -746,8 +746,67 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         }
     }
 
+    /**
+     * ROM {@code zSFXTrackInitLoop}: while an SFX is still being loaded, each
+     * of its tracks is keyed off and has its SSG-EG operators cleared, in
+     * track order (skdisasm Sound/Z80 Sound Driver.asm:2092-2103). The clear
+     * is {@code zFMClearSSGEGOps}, which walks 90h and the three operator
+     * registers above it with zero (:2528-2536).
+     *
+     * <p>{@code fix_sndbugs = 0} is the branch the shipped ROM takes and the
+     * one modelled here (skdisasm/sonic3k.asm:38). On that branch
+     * {@code zSFXTrackInitLoop} calls {@code zFMClearSSGEGOps} for every
+     * track including PSG ones, which the listing flags with its own
+     * "(even on PSG tracks!!!)" note at :2099. Nothing reaches the chip for
+     * those, because every write goes through {@code zWriteFMIorII}, which
+     * returns at once on bit 7 of {@code VoiceControl} (:2549-2551). The
+     * fixed branch would test that bit at the call site and skip the call
+     * instead; the observable write stream is identical either way, so this
+     * models the FM tracks alone and is complete rather than partial.
+     *
+     * <p>The same routine's second guard is modelled too: {@code
+     * zWriteFMIorII} also returns on bit 2 of {@code PlaybackControl}, the
+     * SFX-overriding bit (:2552-2553), and {@code zKeyOffIfActive} returns on
+     * either that bit or the do-not-attack bit (:3338-3341).
+     *
+     * <p>Those two track bits are the driver's whole arbitration here: the
+     * writes themselves go out through {@code zWriteFMI} / {@code
+     * zWriteFMIorII} straight to the chip, with no test of which track last
+     * claimed the channel. They must therefore bypass this class's FM lock
+     * table, which would otherwise drop them whenever the incoming SFX is
+     * taking the channel from an SFX that still holds it - exactly the case
+     * where the ROM's key off is audible, because it releases the outgoing
+     * SFX's note before the new one attacks.
+     */
+    private void emitSfxTrackInitWrites(SmpsSequencer sequencer) {
+        if (!sequencer.getConfig().isSfxAdmissionKeyOffAndClearsSsgEg()) {
+            return;
+        }
+        for (SmpsSequencer.Track track : sequencer.getTracks()) {
+            // zWriteFMIorII returns on bit 7 of VoiceControl, so a PSG track's
+            // clear writes nothing at all.
+            if (track.type != SmpsSequencer.TrackType.FM) {
+                continue;
+            }
+            if (track.overridden) {
+                continue;
+            }
+            int channel = track.channelId;
+            int port = channel < 3 ? 0 : 1;
+            int channelInPort = channel % 3;
+            if (!track.tieNext) {
+                int keyOffSelect = port == 0 ? channelInPort : channelInPort + 4;
+                writeRawFm(0, 0x28, keyOffSelect);
+            }
+            for (int operator = 0; operator < 4; operator++) {
+                writeRawFm(port, 0x90 + operator * 4 + channelInPort, 0x00);
+            }
+        }
+    }
+
     private void installPreparedSfxChannelOwnership(
             PreparedSfxAdmission admission, SmpsSequencer sequencer) {
+        emitSfxTrackInitWrites(sequencer);
         if (!ownsChannelsAtAdmission(sequencer)) {
             return;
         }
@@ -2310,10 +2369,28 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 continue;
             }
             sequencer.serviceOuterFrame();
-            if (sequencer.isComplete()) {
+            if (sequencer.isComplete() && !retainsFinishedMusic(sequencer, sfx)) {
                 pendingRemovals.add(sequencer);
             }
         }
+    }
+
+    /**
+     * Whether a music sequencer whose tracks have all ended must keep being
+     * serviced. S1's {@code UpdateMusic} decrements
+     * {@code v_main_tempo_timeout} and reloads it through {@code TempoWait}
+     * before it looks at any track, and unconditionally
+     * (s1.sounddriver.asm:174-176, :1549-1560), so the driver's tempo keeps
+     * running after a song's last track stops; the RAM only stops changing
+     * when a new song loads or {@code StopAllSound} clears it. The engine
+     * treated an all-tracks-inactive music sequencer as finished and stopped
+     * servicing it, which froze the tempo state a song end onward.
+     *
+     * <p>SFX sequencers are unaffected: those genuinely are released when they
+     * end, and the ROM frees their slots.
+     */
+    private static boolean retainsFinishedMusic(SmpsSequencer sequencer, boolean sfx) {
+        return !sfx && sequencer.getConfig().isDirect68kDriver();
     }
 
     private boolean usesChannelRamOrderSfxWalk() {
@@ -2471,7 +2548,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         synchronized (sequencersLock) {
             for (int i = 0; i < sequencers.size(); i++) {
                 SmpsSequencer seq = sequencers.get(i);
-                if (seq.isComplete() && !pendingRemovals.contains(seq)) {
+                if (seq.isComplete() && !pendingRemovals.contains(seq)
+                        && !retainsFinishedMusic(seq, isSfx(seq))) {
                     pendingRemovals.add(seq);
                 }
             }
@@ -2495,6 +2573,28 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         return sfxSequencers.contains(source);
     }
 
+    /**
+     * S3K's {@code cfStopTrack} hands the channel back inside the flag: it
+     * clears the overridden music track's bit and sends that track's FM
+     * instrument before the music update of the same service runs
+     * (skdisasm Sound/Z80 Sound Driver.asm:3059-3086). Only an SFX track's
+     * end does this; the ROM gates the whole tail on {@code zUpdatingSFX}
+     * (:3050-3054).
+     */
+    @Override
+    public void releaseChannelToMusic(SmpsSequencer sequencer,
+            SmpsSequencer.TrackType type, int channelId) {
+        if (!isSfx(sequencer)) {
+            return;
+        }
+        SmpsSequencer[] locks = type == SmpsSequencer.TrackType.PSG ? psgLocks : fmLocks;
+        if (channelId < 0 || channelId >= locks.length || locks[channelId] != sequencer) {
+            return;
+        }
+        locks[channelId] = null;
+        updateOverrides(type, channelId, false);
+    }
+
     private void releaseLocks(SmpsSequencer seq) {
         boolean isSfx = isSfx(seq);
         for (int i = 0; i < 6; i++) {
@@ -2503,6 +2603,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 if (isSfx && seq.getConfig().getFmSfxReleaseMode()
                         == SmpsSequencerConfig.FmSfxReleaseMode.LEGACY_FULL_RESTORE) {
                     seq.forceSilence(SmpsSequencer.TrackType.FM, i);
+                } else if (isSfx) {
+                    keyOffTornDownSfxTrack(seq, i);
                 }
                 fmLocks[i] = null;
                 updateOverrides(SmpsSequencer.TrackType.FM, i, false);
@@ -2523,6 +2625,34 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         psgLatches.remove(seq);
         sfxAdmissionOrdinals.remove(seq);
         pendingConflictOwners.keySet().removeIf(key -> key.challenger() == seq);
+    }
+
+    /**
+     * A track leaving an SFX runs {@code cfStopTrack}, which clears the
+     * playing flag and then sends {@code zKeyOffIfActive} for the channel
+     * before any voice restore (skdisasm Sound/Z80 Sound Driver.asm:3443-3462).
+     * A sequencer torn down wholesale never executes that flag, so the key off
+     * is issued here on its behalf; without it the outgoing SFX's note keeps
+     * sounding on the channel it just gave back.
+     *
+     * <p>{@code zKeyOffIfActive} returns without writing when the track's
+     * SFX-overriding or do-not-attack bit is set (:3338-3341), which is the
+     * {@code overridden} test below. The write bypasses the lock table because
+     * the ROM's own key off goes straight out through {@code zWriteFMI}.
+     */
+    private void keyOffTornDownSfxTrack(SmpsSequencer seq, int channel) {
+        for (SmpsSequencer.Track track : seq.getTracks()) {
+            if (track.type != SmpsSequencer.TrackType.FM
+                    || track.channelId != channel) {
+                continue;
+            }
+            if (!track.active || track.overridden) {
+                return;
+            }
+            int keyOffSelect = channel < 3 ? channel : (channel % 3) + 4;
+            writeRawFm(0, 0x28, keyOffSelect);
+            return;
+        }
     }
 
     private void releaseLocksWithoutRestoreWrites(SmpsSequencer seq) {
@@ -2654,12 +2784,43 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         return null;
     }
 
+    /**
+     * Whether {@code sequencer} still drives {@code channel}.
+     *
+     * <p>A PSG track in noise mode owns two hardware channels, not one. The
+     * ROM keeps the noise channel on the PSG3 track slot itself: {@code
+     * zStopPSGTrack} decides whether to re-send a stored noise byte by testing
+     * {@code PlaybackControl} bit 0 -- "Is this a noise channel?" -- on that
+     * track, and reads {@code zTrack.PSGNoise} out of the same slot
+     * (Sound/Z80 Sound Driver.asm:3520-3527). There is no separate noise track
+     * to hold the ownership, so a track whose {@code channelId} is PSG3 keeps
+     * the noise channel alive for as long as it is active.
+     *
+     * <p>Matching only on {@code channelId} released the noise channel on the
+     * first reconcile of every noise-form effect, and the release force-silences
+     * it. That silenced the whole tail of {@code sfx_Collapse} ($59) and
+     * {@code sfx_Dash} ($B6), whose PSG3 noise tracks outlive their short FM
+     * tracks by design: Collapse's six-iteration volume ramp
+     * (Sound/SFX/59 - Collapse.asm:31-36) and Dash's $4F-tick noise sweep
+     * (Sound/SFX/B6 - Dash.asm:19-23) never reached the bus.
+     *
+     * <p>Drivers that fold noise ownership onto PSG3 are unaffected: {@link
+     * #psgOwnershipChannel} already remaps the noise channel to 2 under
+     * {@code S1_PSG3_SILENCE_PAIR}, so those never take a channel-3 lock.
+     */
     private static boolean hasActiveTrack(
             SmpsSequencer sequencer, int channel, boolean psg) {
         for (int index = 0; index < sequencer.trackCount(); index++) {
             SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (track.active && track.channelId == channel
-                    && (track.type == SmpsSequencer.TrackType.PSG) == psg) {
+            if (!track.active
+                    || (track.type == SmpsSequencer.TrackType.PSG) != psg) {
+                continue;
+            }
+            if (track.channelId == channel) {
+                return true;
+            }
+            if (psg && channel == PSG_NOISE_CHANNEL && track.noiseMode
+                    && track.channelId == PSG_TONE3_CHANNEL) {
                 return true;
             }
         }
@@ -2832,6 +2993,12 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             }
         }
     }
+
+    /** PSG3, the tone channel a noise track's own slot names. */
+    private static final int PSG_TONE3_CHANNEL = 2;
+
+    /** The PSG noise channel, which a PSG3 noise track owns alongside PSG3. */
+    private static final int PSG_NOISE_CHANNEL = 3;
 
     private static int psgOwnershipChannel(
             int hardwareChannel, Object source) {
@@ -3101,6 +3268,15 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      */
     protected void writeRawPsg(int val) {
         synthesizer.writePsg(null, val);
+    }
+
+    /**
+     * Driver-owned FM write that skips the channel lock table, modelling a ROM
+     * write issued through {@code zWriteFMI} / {@code zWriteFMIorII} outside
+     * any track's playback (skdisasm Sound/Z80 Sound Driver.asm:2545-2556).
+     */
+    protected void writeRawFm(int port, int register, int value) {
+        synthesizer.writeFm(null, port, register, value);
     }
 
     /**

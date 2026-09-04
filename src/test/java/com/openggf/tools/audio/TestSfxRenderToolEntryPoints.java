@@ -130,7 +130,7 @@ class TestSfxRenderToolEntryPoints {
         Sonic1SmpsLoader loader = new Sonic1SmpsLoader(rom);
         try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                 "fm-render", 0,
-                new SmpsPhysicalDevice.Settings(RATE, false, false),
+                new SmpsPhysicalDevice.Settings(RATE, false),
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                 ChipWriteObserver.NONE)) {
             SmpsDriver driver = stream.logicalDriver();

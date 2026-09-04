@@ -309,6 +309,15 @@ public class SmpsSequencer implements CoordFlagContext {
         public int fill; // note-off shortening in ticks
         public int fillCounter; // live S1/S2 NoteTimeout countdown
         public boolean resting; // S1/S2 PlaybackControl bit 1
+        /**
+         * Withholds the PSG attenuation byte while the envelope is stepped.
+         * S1 splits the work in two: PSGDoVolFX advances the envelope and
+         * computes the level, then falls into SetPSGVolume, which decides
+         * whether the byte reaches the chip (s1.sounddriver.asm:1938-1969).
+         * The engine's envelope step sends as it goes, so stepping it without
+         * a send needs this.
+         */
+        public boolean suppressPsgVolumeWrite;
         public int keyOffset; // signed semitone displacement (E9)
         public int volumeOffset; // attenuation applied to TL (FM) or volume (PSG)
         public boolean tieNext; // E7 prevents next attack
@@ -1516,7 +1525,13 @@ public class SmpsSequencer implements CoordFlagContext {
             }
             while (t.duration == 0 && t.active) {
                 if (t.pos >= programView.dataLength()) {
+                    // Running off the end of the data has no ROM counterpart,
+                    // since every stream ends with a track-end flag. Keep the
+                    // engine's safety stop here rather than after the loop, so
+                    // it cannot double up with the stop a track-end flag has
+                    // already performed.
                     t.active = false;
+                    stopNote(t);
                     break;
                 }
 
@@ -1603,9 +1618,37 @@ public class SmpsSequencer implements CoordFlagContext {
                 processPsgEnvelope(t);
             }
 
-            if (!t.active) {
+            if (!t.active && !config.isTrackEndFlagOwnsTheStop()) {
+                // S1/S2 keep this blanket stop: their handlers do not all stop
+                // the note themselves and removing it costs the S2
+                // driver-state oracle a write at tick 207. S3K's cfStopTrack
+                // keys off exactly once on its own (Sound/Z80 Sound
+                // Driver.asm:3040-3046), so a second stop here would put a
+                // duplicate key-off on the bus.
                 stopNote(t);
             }
+        }
+    }
+
+    /**
+     * Runs at the ROM's dispatch point: after the fade step and before the
+     * track walk. S1's {@code UpdateMusic} steps the fade
+     * (s1.sounddriver.asm:179-186) and only then cycles the sound queue and
+     * calls {@code PlaySoundID} (:197-202), before walking any track (:205
+     * onward). A request that arms a fade in one invocation is therefore not
+     * stepped until the next, because that invocation's fade step has already
+     * gone by. Set by the parity host so a recorded driver command lands where
+     * the ROM issues it.
+     */
+    private Runnable dispatchPoint;
+
+    public void setDispatchPointListener(Runnable listener) {
+        this.dispatchPoint = listener;
+    }
+
+    private void runDispatchPoint() {
+        if (dispatchPoint != null) {
+            dispatchPoint.run();
         }
     }
 
@@ -1637,6 +1680,9 @@ public class SmpsSequencer implements CoordFlagContext {
                         t.duration++;
                     }
                 }
+                // The ROM's dispatch point: past the fade step, before any
+                // track is walked (SD:179-202).
+                runDispatchPoint();
             }
             tick(sfxMode);
         } else if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
@@ -2732,6 +2778,31 @@ public class SmpsSequencer implements CoordFlagContext {
             // S1 PSGUpdateTrack always falls through PSGDoVolFX after a new
             // stream unit. A tied/no-attack note preserves envelope state but
             // still resends its current volume (SD:1813-1821, 1926-1987).
+            //
+            // PSGDoVolFX advances the envelope as well as sending the volume,
+            // and the new-note path reaches it unconditionally: the branch is
+            // `bra.w PSGDoVolFX` (SD:1819), taken whatever the do-not-attack
+            // bit says. Only the *reset* is conditional, and it lives in
+            // FinishTrackUpdate, which skips `clr.b VolEnvIndex` when bit 4 is
+            // set (SD:438-442). So a tied note keeps its cursor and then steps
+            // it once, where an attacked note clears the cursor and then steps
+            // it once. Stepping here rather than only resending is what makes
+            // the two cases differ by their reset alone, as the ROM does.
+            // S2 reaches its vol-FX the same unconditional way, by `call
+            // zPSGDoVolFX` on the note-on path (s2.sounddriver.asm:1129).
+            //
+            // The ROM splits this in two and so does the engine here: the
+            // step advances the cursor and computes the level, then exactly
+            // one send follows, because PSGDoVolFX falls into SetPSGVolume
+            // (SD:1960-1969). Stepping with the send suppressed and sending
+            // once afterwards keeps a pass to a single write whether or not
+            // the step itself would have emitted one.
+            t.suppressPsgVolumeWrite = true;
+            try {
+                processPsgEnvelope(t);
+            } finally {
+                t.suppressPsgVolumeWrite = false;
+            }
             refreshVolume(t);
         }
     }
@@ -2853,6 +2924,11 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     @Override
+    public void releaseChannelToMusic(TrackType type, int channelId) {
+        host.releaseChannelToMusic(this, type, channelId);
+    }
+
+    @Override
     public void stopNote(Track t) {
         if (t.type == TrackType.FM) {
             int hwCh = t.channelId;
@@ -2896,6 +2972,9 @@ public class SmpsSequencer implements CoordFlagContext {
         if (t.type == TrackType.FM) {
             updateFmTotalLevel(t);
         } else if (t.type == TrackType.PSG) {
+            if (t.suppressPsgVolumeWrite) {
+                return;
+            }
             if (t.envAtRest || t.resting) {
                 return;
             }
@@ -3482,6 +3561,37 @@ public class SmpsSequencer implements CoordFlagContext {
                 synth.writePsg(this, 0x80 | (ch << 5) | data);
                 synth.writePsg(this, psgFrequencyHighByte(reg));
             }
+            if (config.getPsgVolumeTail()
+                    == SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS
+                    && t.instrumentId == 0) {
+                // zUpdatePSGTrack's .note_going path sends the frequency pair
+                // and then falls straight into the volume tail on every pass
+                // of a sounding note. The only gates on that tail are
+                // PlaybackControl bit 2 (SFX overriding) and bit 4 (track at
+                // rest), both of which refreshVolume already applies; there is
+                // no attack test in it at all
+                // (Sound/Z80 Sound Driver.asm:4079-4135).
+                //
+                // The gate is the ROM's own: zUpdatePSGTrack reads VoiceIndex
+                // and takes .no_volenv when it is zero, skipping zDoVolEnv with
+                // c = 0 and falling through to the same volume write rather
+                // than returning (:4103-4112). A track that does carry a PSG
+                // volume envelope already reaches refreshVolume through its
+                // envelope step each pass, so writing here as well would double
+                // the write. Testing the voice index rather than whether
+                // envelope data happens to be loaded matters: a track that
+                // takes its channel from music can be holding the displaced
+                // track's envelope data while its own voice index is still
+                // zero, and that is exactly the collapse-over-music case.
+                //
+                // Without the tail, a volume the track changed while a note was
+                // already sounding never reached the chip. sfx_Collapse's tail
+                // is exactly that: six passes of "nB3, $18, smpsNoAttack" each
+                // followed by smpsPSGAlterVol $03
+                // (Sound/SFX/59 - Collapse.asm:31-36), whose $00-to-$0F decay
+                // ramp is what makes the effect ring out rather than stop dead.
+                refreshVolume(t);
+            }
         }
     }
 
@@ -3719,14 +3829,57 @@ public class SmpsSequencer implements CoordFlagContext {
         // Add steps to existing volumeOffset (attenuate by 'steps'), then fade
         // decreases it.
         for (Track track : tracks) {
-            // For DAC, mute during fade-in (no volume control available)
+            // For DAC, mute during fade-in (no volume control available). The
+            // ROM expresses the same thing by setting the DAC track's
+            // "SFX is overriding" bit so nothing drives it through the fade
+            // (s2.sounddriver.asm:3094, s1.sounddriver.asm:2183).
             if (track.type == TrackType.DAC) {
                 track.dacMuted = true;
                 stopNote(track);
                 continue;
             }
-            track.volumeOffset += steps;
-            refreshVolume(track);
+            boolean restTracks = config.getFadeInRestore()
+                    == SmpsSequencerConfig.FadeInRestore.REST_TRACKS;
+            // S1 and S2 attenuate every playing FM and PSG track by the fade
+            // depth (s2.sounddriver.asm:3098-3099, :3109, :3134;
+            // s1.sounddriver.asm:2194, :2213). S3K attenuates only the FM
+            // tracks, by 40h, and leaves the PSG volumes alone
+            // (Sound/Z80 Sound Driver.asm:2767-2770).
+            if (restTracks || track.type == TrackType.FM) {
+                track.volumeOffset += steps;
+                refreshVolume(track);
+            }
+            if (!track.active) {
+                continue;
+            }
+            if (restTracks) {
+                // S1/S2: mark the track at rest so the resumed song stays
+                // silent until each track reads its own next note, rather
+                // than holding the note that was sounding when the jingle
+                // interrupted it (s2.sounddriver.asm:3107, :3131;
+                // s1.sounddriver.asm:2193, :2211).
+                track.resting = true;
+                if (track.type == TrackType.PSG) {
+                    // zPSGNoteOff / PSGNoteOff on each rested PSG track
+                    // (s2.sounddriver.asm:3132, s1.sounddriver.asm:2212).
+                    // The FM tracks get no key-off: the ROM re-sends their
+                    // voice instead.
+                    stopNote(track);
+                }
+            } else {
+                // S3K silences by a different bit. zFadeInToPrevious ORs 84h
+                // over every track and then clears bit 2 again on the FM ones
+                // (Sound/Z80 Sound Driver.asm:2761-2770). Bit 2 is "SFX is
+                // overriding this track" and bit 4 is "track is resting" in
+                // this driver (Driver.asm:25, :27; zRestTrack at :4220-4223
+                // sets bit 4 then tests bit 2), so 84h is bits 7 and 2,
+                // playing plus overriding -- the routine's inline comment
+                // naming it "playing and resting" is a mislabel. The PSG
+                // tracks keep the overriding bit, which is what mutes them
+                // through the fade; the FM tracks have it cleared whatever it
+                // was before, and no track is rested.
+                track.overridden = track.type == TrackType.PSG;
+            }
         }
     }
 

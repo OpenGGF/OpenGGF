@@ -190,13 +190,13 @@ class TestShadowAudioPresentationRouting {
     static Stream<AudioPresentationTuning> presentationTunings() {
         return Stream.of(
                 new AudioPresentationTuning(
-                        SmpsSequencer.Region.NTSC, false, false, false),
+                        SmpsSequencer.Region.NTSC, false, false),
                 new AudioPresentationTuning(
-                        SmpsSequencer.Region.PAL, true, false, true),
+                        SmpsSequencer.Region.PAL, true, true),
                 new AudioPresentationTuning(
-                        SmpsSequencer.Region.NTSC, false, true, true),
+                        SmpsSequencer.Region.NTSC, false, true),
                 new AudioPresentationTuning(
-                        SmpsSequencer.Region.PAL, true, true, false));
+                        SmpsSequencer.Region.PAL, true, false));
     }
 
     @Test
