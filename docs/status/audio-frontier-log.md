@@ -27,6 +27,128 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - A tied note steps the PSG envelope: music $8E moves from tick 186 to tick 360
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `981aece96`.
+- **Fixture:** scratch capture of window 2 of `s1-complete-run.bk2`, music
+  `$8E`, 567 ticks.
+- **Result before:** `TRACK_STATE_MISMATCH` tick 186, role `PSG1`, field
+  `envelope_cursor`, reference `7` against engine `6`.
+- **Result after:** `GLOBAL_STATE_MISMATCH` tick 360, field `tempo_timeout`,
+  reference `1` against engine `2`.
+
+**Two hypotheses died before the right one, and both are worth recording.**
+First: S1's shipped `FixBugs = 0` path treats only an exact `$80` as the
+envelope terminator and uses any other high byte as a signed volume addend,
+where the engine treats every byte at or above `$80` as a command
+(s1.sounddriver.asm:1938-1952). That is a real divergence in the code and it
+is unreachable in practice: all nine S1 PSG envelopes were dumped from the
+pinned ROM and every one terminates with `$80` and contains no other high
+byte. Second: the envelope-index reset is gated on the do-not-attack bit
+(`FinishTrackUpdate`, :438-442), so a tied note keeps its cursor. The engine
+already gates its reset the same way. Neither hypothesis survived contact with
+the data.
+
+**What the data said.** Dumping `PSG1` across ticks 170-195 on both sides shows
+them identical up to 185 and identical again from 189, with the reference one
+step ahead across 186-188 exactly. Tick 186 is where the track reads a new note
+(sequence position 63 to 66) that is *tied*: `doNotAttack` is true. The
+reference's cursor goes 6 to 7; the engine's stays at 6.
+
+**The ROM reason.** `PSGUpdateTrack`'s new-note path ends `bra.w PSGDoVolFX`
+(:1813-1819), taken whatever the do-not-attack bit says, and `PSGDoVolFX`
+advances the envelope index. Only the *reset* is conditional, and it lives
+elsewhere, in `FinishTrackUpdate` (:438-442). So an attacked note clears the
+cursor and then steps it, and a tied note keeps the cursor and then steps it.
+The engine did the reset and the step together inside its
+attacked-note branch, so a tied note got neither. S2 reaches its vol-FX the
+same unconditional way, `call zPSGDoVolFX` on the note-on path
+(s2.sounddriver.asm:1129). S3K's `zUpdatePSGTrack` is structured differently
+(skdisasm Sound/Z80 Sound Driver.asm:4058-4069), so the change stays on the
+existing `isDirect68kDriver` branch that already carried this citation.
+
+**One write per pass, which is what the first attempt got wrong.** Stepping the
+envelope on the tied path made the track state agree and then reported an extra
+PSG write, because the engine's envelope step sends the volume as it goes and
+the branch already sent one afterwards. Removing the second send instead broke
+both committed gameplay oracles with `event_missing`, at ticks 1,861 and 2,810,
+because a step that ends on a hold emits nothing while the ROM still sends. The
+ROM splits the work: `PSGDoVolFX` computes and falls into `SetPSGVolume`, which
+decides and sends (:1960-1969). The engine now mirrors that split, stepping
+with the write withheld and then sending exactly once.
+
+**Gates, all green and read by content.** Audio parity package with three ROM
+paths: 183 tests, 0 failures, 0 errors, 2 skips. Both S1 gameplay oracles pass
+their `MATCH` assertions at 2,562 and 5,257 ticks, which is the check that
+caught the wrong version of this fix. S2 v1 `MATCH (698 ticks)`; v2 both lines
+`MATCH (2198 ticks)`; CPZ state-only `MATCH (720 ticks)` with its
+state-and-writes companion unchanged at tick 237; request windows `MATCH` at
+25, 52 and 27.
+
+
+## 2026-09-04 - The re-entered invocation measured: both call sites identified, and the cause is not preemption
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `981aece96`.
+- **Method:** the survey probe logs every `UpdateMusic` entry and return within
+  two frames of each known re-entry, with the caller's return address read off
+  the stack. That address is what distinguishes the two call sites.
+
+**Both call sites confirmed by their following opcodes.** `$B64` is the return
+address of `VBlank_Music`'s `jsr` (sonic.asm:682): the bytes before it are
+`4eb900071b4c`, `jsr (UpdateMusic).l`, and the bytes after are `52b8fe0c`,
+`addq.l #1,(v_vblank_count).w`, which is `VBlank_Exit` (:684). `$11B0` is the
+HBlank delayed-transfer call (:1062): same `jsr` before it, and after it
+`4cdf7fff` `4e73`, `movem.l (sp)+,d0-a6` then `rte` (:1063-1064).
+
+**The measured events, all three from `s1-complete-run.bk2`.**
+
+| Abandoned entry | Caller | Re-entry | Caller | Stack move |
+|---|---|---|---|---|
+| frame 107,740 | HBlank (:1062) | 107,741 | HBlank (:1062) | 4 bytes deeper |
+| frame 187,448 | VBlank (:682) | 187,449 | VBlank (:682) | 4 bytes shallower |
+| frame 194,164 | VBlank (:682) | 194,165 | VBlank (:682) | 4 bytes shallower |
+
+**This refutes the obvious explanation, which is worth stating because it was
+mine too.** It is not one call site preempting the other: in two of the three
+events both the abandoned invocation and the re-entry come from the *same* site,
+`VBlank_Music`. The stack moves in both directions across the three events, and
+in every case the re-entry lands on the *following* frame rather than nested
+inside the same one. So the abandoned invocation is not a partially-executed
+inner call that an outer one interrupted.
+
+**What the ROM does offer.** `UpdateMusic`'s `.updateloop` re-executes the
+routine's own entry address through `bra.s UpdateMusic` whenever the Z80 has
+the DAC busy (s1.sounddriver.asm:147-165), so a single logical invocation can
+strike the entry hook many times. The shared parity contract already models
+that as a same-stack `retry`. What these three events add is a retry arriving
+at a *different* stack depth a frame later, meaning the earlier invocation never
+reached `DoStartZ80`'s `rts`. How long the Z80 holds the DAC busy is hardware
+timing, and it is not derivable from the frame-granularity state the contract
+records.
+
+**Consequence for the contract, and the decision taken.** Modelling this would
+require knowing where in the track walk the abandoned invocation stopped, which
+no frame-granularity record contains. Hard rule 3 is explicit that a value
+measured from a fixture's own rows rather than derived from the ROM is a fitted
+model even when the test passes, and rule 4's timing exception does not cover
+it: this decides *what* work happens, not when engine-created work becomes
+ready. **So windows containing a re-entered invocation are excluded from the
+committed subset rather than modelled.** That is 3 of 83 windows in
+`s1-complete-run.bk2` (ordinals 39, 78, 81) and 3 of 101 in
+`sonic1-complete-withemeralds.bk2` (ordinals 3, 63, 98). Both probes continue to
+drop such an invocation and count it in the window's metadata, so a window that
+contains one is identifiable from the record alone.
+
+**One song is blocked by this.** Music `$8B` has exactly one window in each
+movie and in both it is a re-entry window, so `$8B` cannot be published clean
+from either recording. It is included in the subset and expected to diverge at
+its re-entry; the alternative is no `$8B` coverage at all. **Removal
+condition:** a recording whose `$8B` window contains no re-entry, or a contract
+that can represent a partial track walk.
+
+
 ## 2026-09-04 - The fade dispatch class is hooked, and the residual is an ordering fact about UpdateMusic
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,

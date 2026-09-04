@@ -14,6 +14,15 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **A tied note no longer freezes a PSG channel's volume shimmer in Sonic 1:**
+  when one note runs straight into the next without re-attacking, the original
+  keeps stepping that channel's volume envelope, so the shimmer carries on
+  through the join. The engine restarted the step only on notes that attack, so
+  a tied note held the level flat and the channel drifted a step behind the
+  original for as long as the tie lasted. Tied notes now step the envelope the
+  way the original does, and the whole pass still puts exactly one volume byte
+  on the sound chip.
+
 - **Speed shoes now slow the music down on the same frame they take your speed
   back:** the original does both in one step at the end of a frame, restoring the
   boosted running values and asking the sound program to drop the tempo together.
