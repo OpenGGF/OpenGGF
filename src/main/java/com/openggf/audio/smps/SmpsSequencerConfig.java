@@ -331,6 +331,8 @@ public final class SmpsSequencerConfig {
     private final boolean stepModulationAtRest;
     private final boolean noteResetAliasesModulationState;
     private final boolean fmNoteGoingReturnsAtRest;
+    private final FadeOutHalt fadeOutHalt;
+    private final FadeDelayCadence fadeDelayCadence;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
@@ -385,6 +387,8 @@ public final class SmpsSequencerConfig {
         this.stepModulationAtRest = b.stepModulationAtRest;
         this.noteResetAliasesModulationState = b.noteResetAliasesModulationState;
         this.fmNoteGoingReturnsAtRest = b.fmNoteGoingReturnsAtRest;
+        this.fadeOutHalt = b.fadeOutHalt;
+        this.fadeDelayCadence = b.fadeDelayCadence;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
@@ -655,6 +659,51 @@ public final class SmpsSequencerConfig {
         return fmNoteGoingReturnsAtRest;
     }
 
+    /** How the fade's inter-step delay counter is tested. */
+    public enum FadeDelayCadence {
+        /**
+         * S1/S2: {@code zUpdateFadeout} reads the delay, steps when it is
+         * already zero, and otherwise decrements and returns
+         * (s2.sounddriver.asm:1686-1697). A delay of 3 therefore steps on the
+         * fourth service.
+         */
+        TEST_THEN_DECREMENT,
+        /**
+         * S3K: {@code zDoMusicFadeOut} decrements first and steps when the
+         * result is zero (skdisasm Sound/Z80 Sound Driver.asm:2337-2343). A
+         * delay of 6 therefore steps on the sixth service.
+         */
+        DECREMENT_THEN_TEST
+    }
+
+    /** Fade delay cadence: TEST_THEN_DECREMENT (S1/S2) or DECREMENT_THEN_TEST (S3K). */
+    public FadeDelayCadence getFadeDelayCadence() {
+        return fadeDelayCadence;
+    }
+
+    /** Which tracks a music fade-out request halts outright. */
+    public enum FadeOutHalt {
+        /**
+         * S1/S2: {@code zFadeOutMusic} zeroes only the DAC track's playback
+         * control, with the comment "can't fade it"
+         * (s2.sounddriver.asm:1668-1681).
+         */
+        DAC_ONLY,
+        /**
+         * S3K: {@code zFadeOutMusic} falls through into {@code zHaltDACPSG},
+         * which zeroes FM6/DAC, PSG3, PSG1 and PSG2 and then jumps to
+         * {@code zPSGSilenceAll} (skdisasm Sound/Z80 Sound
+         * Driver.asm:2307-2325). The halt itself writes nothing to the chip;
+         * only {@code zPSGSilenceAll} does.
+         */
+        DAC_AND_PSG
+    }
+
+    /** Fade-out halt scope: DAC_ONLY (S1/S2) or DAC_AND_PSG (S3K). */
+    public FadeOutHalt getFadeOutHalt() {
+        return fadeOutHalt;
+    }
+
     /** Note-fill expiry tail: LEGACY (S1/S2) or S3K_SPLIT (S3K). */
     public NoteFillTail getNoteFillTail() {
         return noteFillTail;
@@ -738,6 +787,8 @@ public final class SmpsSequencerConfig {
         private boolean stepModulationAtRest = false;
         private boolean noteResetAliasesModulationState = false;
         private boolean fmNoteGoingReturnsAtRest = false;
+        private FadeOutHalt fadeOutHalt = FadeOutHalt.DAC_ONLY;
+        private FadeDelayCadence fadeDelayCadence = FadeDelayCadence.TEST_THEN_DECREMENT;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
@@ -784,6 +835,8 @@ public final class SmpsSequencerConfig {
         public Builder stepModulationAtRest(boolean val) { stepModulationAtRest = val; return this; }
         public Builder noteResetAliasesModulationState(boolean val) { noteResetAliasesModulationState = val; return this; }
         public Builder fmNoteGoingReturnsAtRest(boolean val) { fmNoteGoingReturnsAtRest = val; return this; }
+        public Builder fadeOutHalt(FadeOutHalt val) { fadeOutHalt = val; return this; }
+        public Builder fadeDelayCadence(FadeDelayCadence val) { fadeDelayCadence = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }

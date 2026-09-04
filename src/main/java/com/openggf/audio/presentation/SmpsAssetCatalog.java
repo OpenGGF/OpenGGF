@@ -541,6 +541,8 @@ final class SmpsAssetCatalog {
                 .noteResetAliasesModulationState(
                         source.isNoteResetAliasesModulationState())
                 .fmNoteGoingReturnsAtRest(source.isFmNoteGoingReturnsAtRest())
+                .fadeOutHalt(source.getFadeOutHalt())
+                .fadeDelayCadence(source.getFadeDelayCadence())
                 .noteFillTail(source.getNoteFillTail())
                 .fadeOutDelay(source.getFadeOutDelay())
                 .fadeOutSteps(source.getFadeOutSteps())

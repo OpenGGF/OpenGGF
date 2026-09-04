@@ -196,14 +196,11 @@ class TestS3kOracleRequestSidecarWiring {
      * in the following service's window. The music DAC byte pump now streams
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
-     * The comparison now covers the modulation accumulator and its wait,
-     * speed, delta and step counters, and every one of them agrees through
-     * service 420 along with the writes. The most recent correction is that
-     * {@code zSendTL} writes all four operators' total level and uses the
-     * carrier mask only to decide where the track volume is added. What
-     * remains is the DAC track's {@code playing} bit at service 421, which is
-     * the first service of an {@code E1h} music fade the capture host reports
-     * as unmodelled.
+     * The {@code E1h} music fade is now driver-owned state rather than an
+     * unmodelled request, so the host consumes it like any other and the
+     * capture reports no unsupported requests at all. Everything agrees
+     * through service 494, including the fade's own volume ramp. What remains
+     * is the global {@code tempoAccumulator} at service 495.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -215,10 +212,9 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 283, report.tick());
-        assertEquals("MUS_DAC", report.role());
-        assertEquals("playing", report.field());
+        assertEquals(S3kAudioParityComparator.Report.Kind.GLOBAL_STATE_MISMATCH, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 357, report.tick());
+        assertEquals("tempoAccumulator", report.field());
     }
 
     /**
@@ -241,7 +237,10 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.DacStreamReport.Kind.BYTE_DIFFERENT,
                 dac.kind());
-        assertEquals(29, dac.run());
+        // Modelling the music fade moved this from run 29 to run 338: halting
+        // the DAC track on the request, rather than leaving it playing,
+        // changes which samples the following services select.
+        assertEquals(338, dac.run());
         assertEquals(0, dac.byteOffset());
     }
 

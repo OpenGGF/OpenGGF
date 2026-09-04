@@ -27,6 +27,73 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The S3K music fade becomes driver state; tick 421 -> tick 495
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `38e8777b5`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 421, role `MUS_DAC`, field
+  `playing`, reference `false` against engine `true`. DAC stream
+  `BYTE_DIFFERENT` run 29 byte 0. Five services reported
+  `active music fade for request 0xe1 is not modelled by this capture host`.
+- **Result after:** `GLOBAL_STATE_MISMATCH`, tick 495, field
+  `tempoAccumulator`, reference `64` against engine `128`. DAC stream
+  `BYTE_DIFFERENT` run 338 byte 0. **No unsupported requests at all.**
+- **The request.** Both `0E1h` and `0E5h` dispatch to `zFadeOutMusic`
+  (Sound/Z80 Sound Driver.asm:1668, :1672). It sets `zFadeOutTimeout` to
+  `28h` and both `zFadeDelayTimeout` and `zFadeDelay` to 6, then falls through
+  into `zHaltDACPSG`, which zeroes the playback control of FM6/DAC, PSG3,
+  PSG1 and PSG2 and jumps to `zPSGSilenceAll` (:2307-2325). The halt itself
+  writes nothing; only `zPSGSilenceAll` does, which the host already applied.
+  `zDoMusicFadeOut` then runs once per `zUpdateMusic` (:2331-2385).
+- **Three per-driver differences, each measured and each cited.**
+  1. *What the request halts.* S2's `zFadeOutMusic` stops only the DAC track,
+     commenting "can't fade it" (s2.sounddriver.asm:1668-1681). S3K halts the
+     three PSG tracks as well. New `SmpsSequencerConfig.FadeOutHalt`,
+     defaulting to `DAC_ONLY`.
+  2. *How the delay counter is tested.* S2 reads the delay, steps when it is
+     already zero, and otherwise decrements and returns (:1686-1697), so a
+     delay of 3 steps on the fourth service. S3K decrements first and steps
+     when the result is zero (:2337-2343), so a delay of 6 steps on the sixth.
+     The engine implemented S2's shape for both. New `FadeDelayCadence`,
+     defaulting to S1/S2's.
+  3. *When the armed fade first advances.* `zUpdateEverything` runs
+     `zDoMusicFadeOut` before `zUpdateMusic` loads `zMusicNumber` for
+     `zFillSoundQueue` (:653-701, :2628-2643), so the service that consumes
+     the request has already run its fade handler and does not advance the
+     fade it just armed. The capture host arms from the mailbox before the
+     service, so without this the first step lands one service early. A fade
+     armed by a coordination flag needs no such handling, because the engine's
+     `musicUpdateOverflow` already runs the fade step before the track walk,
+     exactly as the ROM does.
+- **No constants were introduced.** `28h` and 6 come from `zFadeOutMusic` and
+  were already in the S3K sequencer config from that same routine; the host
+  reads them from the config rather than restating them.
+- **Measured in two wrong positions before the right one, and both are worth
+  recording.** With only the halt modelled, the engine was one step behind at
+  service 433, reference volume 23 against 22. With the cadence corrected but
+  not the ordering, it was one step ahead at 426, 21 against 22. Only with all
+  three does the ramp line up, and it then agrees for the whole fade.
+- **The DAC stream improved as a side effect,** from run 29 to run 338:
+  halting the DAC track on the request, rather than leaving it playing,
+  changes which samples the following services select. Its pin was updated
+  with that reason.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear; the
+  `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297; and now
+  S2's `zFadeOutMusic` clearing `SpeedUpFlag` (s2.sounddriver.asm:1677-1679),
+  which the engine does not model and which was left alone here.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S3K zSendTL writes all four operators; tick 342 -> tick 421
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
