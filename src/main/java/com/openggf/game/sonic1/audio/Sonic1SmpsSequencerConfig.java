@@ -74,6 +74,7 @@ public final class Sonic1SmpsSequencerConfig {
                 .extraTrkEndFlags(Set.of(0xEE))
                 .relativePointers(true)  // S1: PC-relative pointers for F6/F7/F8
                 .tempoOnFirstTick(true)  // S1: process tempo on first frame (DOTEMPO)
+                .stepModulationAtRest(true) // DoModulation has no rest check (SD:483-490)
                 .direct68kDriver(true)   // S1 writes the YM/PSG cores from the 68k driver
                 .fmVoiceWriteProfile(FmVoiceWriteProfile.S1_68K)
                 // The shipped Sound_PlaySFX initializes track RAM only. SetVoice and the

@@ -82,6 +82,15 @@ public final class Sonic3kSmpsSequencerConfig {
                 // and S2 run their volume effects first instead.
                 .psgNoteGoingOrder(
                         SmpsSequencerConfig.PsgNoteGoingOrder.FREQUENCY_THEN_VOLUME)
+                // zDoVolEnv rests the track on 81h and 83h without silencing
+                // it (Sound/Z80 Sound Driver.asm:4169-4175, :4187-4208).
+                .psgEnvRestCmd(
+                        SmpsSequencerConfig.PsgEnvRestCmd.Z80_81_AND_83)
+                // zDoModulation tests only ModulationCtrl, never the rest bit
+                // (Sound/Z80 Sound Driver.asm:1277-1283), so a resting track
+                // keeps stepping. Only S2 returns early at rest.
+                .stepModulationAtRest(true)
+                .noteFillTail(SmpsSequencerConfig.NoteFillTail.S3K_SPLIT)
                 .fadeOutDelay(6)            // FadeOutDelay = 6
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
                 .fadeInSteps(0x40)          // FadeInSteps = 40h

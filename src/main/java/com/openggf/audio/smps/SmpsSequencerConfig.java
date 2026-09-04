@@ -96,6 +96,57 @@ public final class SmpsSequencerConfig {
         EVERY_PASS
     }
 
+    /** What a track's note-fill countdown does when it reaches zero. */
+    public enum NoteFillTail {
+        /**
+         * The engine's existing behaviour for S1 and S2. S1's
+         * {@code NoteTimeoutUpdate} and S2's {@code zNoteFillUpdate} both set
+         * the rest bit, discard the caller's return address and send a note
+         * off for either track type (s2.sounddriver.asm:1153-1163). S2 does
+         * not currently take that path in the engine, which models its fill
+         * as an elapsed comparison rather than the ROM's per-pass countdown;
+         * that difference is unverified and deliberately untouched here.
+         */
+        LEGACY,
+        /**
+         * S3K splits the tail by track type, and both halves are tail jumps
+         * so the rest of the pass is skipped either way.
+         * {@code zUpdatePSGTrack}'s {@code jp z, zRestTrack} sets the rest bit
+         * and writes nothing (skdisasm Sound/Z80 Sound
+         * Driver.asm:4070-4074, :4220-4224), while
+         * {@code zUpdateFMorPSGTrack}'s {@code jp z, zKeyOffIfActive} keys the
+         * channel off and never rests it (:786-790, :2148-2152).
+         */
+        S3K_SPLIT
+    }
+
+    /**
+     * Whether the PSG volume envelope carries commands that put the track at
+     * rest.
+     */
+    public enum PsgEnvRestCmd {
+        /**
+         * S1/S2 keep the engine's existing generic handling. S2's flutter
+         * list defines only {@code 80h} as a terminator and applies every
+         * other negative byte as a value (s2.sounddriver.asm:1298-1301), so
+         * what the engine does with {@code 81h}, {@code 82h}, {@code 83h} and
+         * {@code 84h} on those drivers is unverified and deliberately left
+         * alone here.
+         */
+        NONE,
+        /**
+         * S3K's {@code zDoVolEnv} dispatches {@code 83h} to
+         * {@code zDoVolEnvFullRest} and {@code 81h} to
+         * {@code zDoVolEnvRest} (skdisasm Sound/Z80 Sound
+         * Driver.asm:4169-4175). Both pop the caller's return address, set
+         * {@code PlaybackControl} bit 4 and end the track's pass; neither
+         * advances the envelope index and neither silences the channel, which
+         * the ROM says outright at :4206-4208. {@code 82h} and {@code 84h}
+         * are not commands there at all.
+         */
+        Z80_81_AND_83
+    }
+
     /**
      * Order in which a PSG track whose note has not expired writes its
      * frequency and its volume.
@@ -276,6 +327,9 @@ public final class SmpsSequencerConfig {
     private final ModAlgo modAlgo;
     private final NoteGoingFreqSend noteGoingFreqSend;
     private final PsgNoteGoingOrder psgNoteGoingOrder;
+    private final PsgEnvRestCmd psgEnvRestCmd;
+    private final boolean stepModulationAtRest;
+    private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
     private final int fadeInSteps;
@@ -325,6 +379,9 @@ public final class SmpsSequencerConfig {
         this.modAlgo = b.modAlgo;
         this.noteGoingFreqSend = b.noteGoingFreqSend;
         this.psgNoteGoingOrder = b.psgNoteGoingOrder;
+        this.psgEnvRestCmd = b.psgEnvRestCmd;
+        this.stepModulationAtRest = b.stepModulationAtRest;
+        this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
         this.fadeInSteps = b.fadeInSteps;
@@ -546,6 +603,29 @@ public final class SmpsSequencerConfig {
         return psgNoteGoingOrder;
     }
 
+    /** PSG envelope rest commands: NONE (S1/S2) or Z80_81_AND_83 (S3K). */
+    public PsgEnvRestCmd getPsgEnvRestCmd() {
+        return psgEnvRestCmd;
+    }
+
+    /**
+     * Whether a track at rest still advances its modulation phase. Only S2
+     * checks the rest bit on entry to its modulation routine
+     * ({@code bit 1,(ix+zTrack.PlaybackControl) / ret nz},
+     * s2.sounddriver.asm:988-990). S1's {@code DoModulation}
+     * (s1.sounddriver.asm:483-490) and S3K's {@code zDoModulation}
+     * (skdisasm Sound/Z80 Sound Driver.asm:1277-1283) test only whether
+     * modulation is active, so both keep stepping while the track rests.
+     */
+    public boolean isStepModulationAtRest() {
+        return stepModulationAtRest;
+    }
+
+    /** Note-fill expiry tail: LEGACY (S1/S2) or S3K_SPLIT (S3K). */
+    public NoteFillTail getNoteFillTail() {
+        return noteFillTail;
+    }
+
     /** Fade-out inter-step delay in frames. S1/S2: 3, S3K: 6. */
     public int getFadeOutDelay() {
         return fadeOutDelay;
@@ -620,6 +700,9 @@ public final class SmpsSequencerConfig {
         private ModAlgo modAlgo = ModAlgo.MOD_68K;
         private NoteGoingFreqSend noteGoingFreqSend = NoteGoingFreqSend.MODULATION_ONLY;
         private PsgNoteGoingOrder psgNoteGoingOrder = PsgNoteGoingOrder.VOLUME_THEN_FREQUENCY;
+        private PsgEnvRestCmd psgEnvRestCmd = PsgEnvRestCmd.NONE;
+        private boolean stepModulationAtRest = false;
+        private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
         private int fadeInSteps = 0x28;
@@ -661,6 +744,9 @@ public final class SmpsSequencerConfig {
         public Builder modAlgo(ModAlgo val) { modAlgo = val; return this; }
         public Builder noteGoingFreqSend(NoteGoingFreqSend val) { noteGoingFreqSend = val; return this; }
         public Builder psgNoteGoingOrder(PsgNoteGoingOrder val) { psgNoteGoingOrder = val; return this; }
+        public Builder psgEnvRestCmd(PsgEnvRestCmd val) { psgEnvRestCmd = val; return this; }
+        public Builder stepModulationAtRest(boolean val) { stepModulationAtRest = val; return this; }
+        public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }
         public Builder fadeInSteps(int val) { fadeInSteps = val; return this; }
