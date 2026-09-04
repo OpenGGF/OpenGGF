@@ -2,6 +2,7 @@ package com.openggf.tools.audio.parity.s3k;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.tools.audio.parity.AudioParityChipWrite;
 import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -192,10 +193,13 @@ class TestS3kOracleRequestSidecarWiring {
      * title-music load's own driver state, and now through that load's DAC-track
      * prefix, all six of its FM tracks and its PSG tracks, so the whole of that
      * service now agrees, and through the DAC enable the ROM's idle loop sends
-     * in the following service's window. What remains is the music DAC byte
-     * pump: the reference streams every decoded sample byte as a 2Ah write
-     * (Sound/Z80 Sound Driver.asm:4299-4351), which the engine plays inside
-     * its chip DAC rather than on the write bus.
+     * in the following service's window. The music DAC byte pump now streams
+     * on the write bus as well, and is compared unpartitioned by
+     * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
+     * remains in the partitioned stream is a track-set divergence in the
+     * first update after the load: the reference sends FM2's frequency pair
+     * and three PSG channels where the engine sends FM4 and FM5 and one PSG
+     * channel.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -210,8 +214,83 @@ class TestS3kOracleRequestSidecarWiring {
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
         assertEquals(TITLE_MUSIC_TICK + 1, report.tick());
         assertEquals(1, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=42, value=128]",
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=165, value=19]",
                 report.reference());
+    }
+
+    /**
+     * The DAC byte stream is compared over the whole window rather than per
+     * service, because which window a byte lands in is Z80 service duration;
+     * see docs/status/known-discrepancies.md, "S3K Music DAC Byte Stream
+     * Partition". Its content is compared in full, and it agrees for
+     * twenty-eight complete sample runs before following the partitioned
+     * stream's own divergence into a different sample.
+     */
+    @Test
+    void theDacByteStreamAgreesUntilTheServiceStreamDiverges() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> reference = read(committed());
+        S3kOpenGgfAudioCapture.CaptureResult engine =
+                S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
+        S3kAudioParityComparator.DacStreamReport dac =
+                S3kAudioParityComparator.compareDacStream(reference, engine.ticks());
+
+        assertEquals(S3kAudioParityComparator.DacStreamReport.Kind.BYTE_DIFFERENT,
+                dac.kind());
+        assertEquals(29, dac.run());
+        assertEquals(0, dac.byteOffset());
+    }
+
+    /**
+     * The DAC stream comparison is broken on purpose: a corrupted sample byte
+     * must be reported at its own run and offset, ahead of the run the live
+     * frontier stops at. Without this, a stream that was never populated and
+     * one that agrees would read identically.
+     */
+    @Test
+    void aCorruptedDacByteIsReportedAtItsRunAndOffset() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> reference = read(committed());
+        S3kOpenGgfAudioCapture.CaptureResult engine =
+                S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
+
+        List<S3kAudioTick> corrupted = new ArrayList<>(reference.size());
+        boolean done = false;
+        for (S3kAudioTick tick : reference) {
+            if (done || tick.ordinal() < 140) {
+                corrupted.add(tick);
+                continue;
+            }
+            List<AudioParityChipWrite> writes = new ArrayList<>(tick.writes());
+            int index = -1;
+            for (int probe = 0; probe < writes.size(); probe++) {
+                AudioParityChipWrite write = writes.get(probe);
+                if ("ym2612".equals(write.chip()) && write.port() == 0
+                        && write.register() == 0x2A) {
+                    index = probe;
+                    break;
+                }
+            }
+            if (index < 0) {
+                corrupted.add(tick);
+                continue;
+            }
+            writes.set(index, AudioParityChipWrite.ym2612(0, 0x2A,
+                    writes.get(index).value() ^ 0x55));
+            corrupted.add(new S3kAudioTick(tick.ordinal(), tick.frame(), tick.lag(),
+                    tick.mailbox(), tick.global(), tick.tracks(), writes,
+                    tick.producerInputEvidence()));
+            done = true;
+        }
+        assertTrue(done, "no DAC sample byte found to corrupt");
+
+        S3kAudioParityComparator.DacStreamReport dac =
+                S3kAudioParityComparator.compareDacStream(corrupted, engine.ticks());
+        assertEquals(S3kAudioParityComparator.DacStreamReport.Kind.BYTE_DIFFERENT,
+                dac.kind());
+        assertEquals(1, dac.run());
     }
 
     private static S3kRequestObservationSidecar committed() {

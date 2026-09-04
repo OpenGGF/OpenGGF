@@ -191,6 +191,14 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
         ym.stopDac();
     }
 
+    /**
+     * Consumes one DAC sample-end edge from the FM chip. See
+     * {@link Ym2612Chip#consumeDacSampleEnded()}.
+     */
+    public boolean consumeDacSampleEnded() {
+        return ym.consumeDacSampleEnded();
+    }
+
     public void render(short[] buffer) {
         renderFrames(buffer, 0, buffer.length / 2);
     }

@@ -2733,6 +2733,78 @@ shift is the single explicit adjustment the port contract permits.
 
 ---
 
+## S3K Music DAC Byte Stream Partition (Oracle Comparison)
+
+The S3K driver oracle compares the music DAC byte stream over the whole capture
+window rather than per service window, and does not assert how far a DAC run
+got before it was cut short. Everything else in a tick, including the `2Bh`
+DAC enable and disable and their position among the tick's service writes,
+stays strictly partitioned and compared.
+
+### Original Implementation
+
+`zPlayDigitalAudio` streams every decoded sample byte to `2Ah` for the whole
+of the interval between two V-ints (Sound/Z80 Sound Driver.asm:4296-4351),
+so the number of bytes that land in a given service window is whatever the
+Z80 had time for after that frame's `zUpdateEverything` returned.
+
+### Engine Behaviour
+
+The engine models the driver's semantics, not the Z80's instruction timing.
+`Ym2612Chip` streams the same bytes at the same per-byte cadence, derived from
+`DacData.baseCycles` and the sample's rate byte, but it has no cost for the
+service itself, so it spends the whole interval streaming.
+
+### Why
+
+The split is a property of a CPU this engine does not emulate, and measuring
+it from a fixture would be a fitted model. Two measurements settle it. The
+aggregate cadence is right: every contiguous run of `2Ah` writes in the
+reference sums to a ROM sample's own decoded sample count (1,438 for
+`DAC_86`, 3,836 for `DAC_81`, 9,294 for `DAC_88`), and pairing each tick's
+`zDACIndex` with that sample's rate byte leaves a residual per frame that is
+consistent across fifteen samples spanning rates 3 to 27:
+
+| Sample | Rate | Median bytes per tick | Z80 cycles unaccounted per frame |
+|---|---|---|---|
+| `DAC_90` | 3 | 265 | 13,494 |
+| `DAC_86` | 4 | 239 | 14,924 |
+| `DAC_88` | 6 | 220 | 12,766 |
+| `DAC_8D` | 11 | 165 | 13,784 |
+| `DAC_93` | 14 | 151 | 11,794 |
+| `DAC_97` | 18 | 129 | 12,070 |
+| `DAC_B2` | 22 | 114 | 11,685 |
+| `DAC_8B` | 27 | 98 | 12,059 |
+
+A wrong per-byte cost would skew that residual with the rate; it does not.
+The residual is the service's own execution cost, and it is not constant:
+within one uninterrupted play of one sample at one fixed rate the reference's
+per-tick counts swing by 15 to 86 bytes, and four separate plays of the same
+sample index peak at 268, 258, 257 and 244.
+
+Run length inherits the same quantity. A run ends either because the sample
+was exhausted or because a later play cut it short
+(`jp p, .dac_idle_loop`, :4343-4345), and how far the stream got before the
+cut is Z80 duration: the engine carries the first music sample 1,438 bytes
+where the reference's own play was cut at 1,364.
+
+### What Is Still Compared
+
+The comparison keeps everything the ROM decides rather than the Z80's clock.
+The run count must match exactly. Every byte the two sides share in a run
+must be equal, in order, which is what proves the sample selection, the DPCM
+decode and the cadence. Run boundaries are the `2Bh` writes, which are
+themselves compared per tick, so run structure is pinned by compared data.
+The cumulative run-length difference is reported on the DAC stream's result
+line as `run-length delta` so a regression in it stays visible.
+
+### Removal Condition
+
+A Z80 cycle account for the driver's own service. Nothing short of that makes
+the partition derivable, and no fixture measurement may stand in for it.
+
+---
+
 ## PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores
 
 **Location:** `PsgChip.tickNoise()` / `PsgChip.linkedNoiseReload()`

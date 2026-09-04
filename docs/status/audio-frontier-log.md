@@ -27,6 +27,66 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K music DAC byte pump lands unpartitioned; tick 139 event 1 becomes a track-set frontier
+
+- **Worktree/branch:** `.worktrees/audio-s3k-dac-pump`,
+  `feature/ai-s3k-dac-byte-pump`, over `develop` at `340634eb7`.
+- **Command:** unchanged, plus the second result line the tool now prints.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 139, event 1, reference
+  `ym2612 port 0 register 2Ah = 80h` against engine `port 1 register 0A4h = 27`.
+  No DAC byte stream existed to compare.
+- **Result after, two lines:**
+  - `S3K audio oracle: MISMATCH`, `EVENT_VALUE_DIFFERENT`, tick 139, event 1,
+    reference `ym2612 port 0 register 0A5h = 19` against engine
+    `port 1 register 0A4h = 27`.
+  - `S3K DAC byte stream: MISMATCH`, `BYTE_DIFFERENT`, run 29, byte 0,
+    reference `0x7C` against engine `0x7F`. Twenty-eight complete sample runs
+    agree byte for byte first.
+- **What the DAC line proves.** The engine's decoded samples are the ROM's:
+  the first music run compares equal for all 1,364 bytes the reference
+  carries, and the full `DAC_86` sample the engine decodes matches the
+  reference's own 1,438-byte run elsewhere byte for byte. Run 29's first byte
+  differing is a different sample being selected, which is downstream of the
+  partitioned stream's own divergence at tick 139 rather than a DAC defect.
+- **What was excused, and it is written down.** Which service window a `2Ah`
+  byte lands in, and how far a run got before a later play cut it short, are
+  both Z80 service duration. Recorded with its residual table in
+  docs/status/known-discrepancies.md, "S3K Music DAC Byte Stream Partition",
+  together with what is still compared: run count exactly, every shared byte
+  of every run in order, and the `2Bh` enable and disable which stay
+  partitioned and which delimit the runs.
+- **The pair now ships together.** `SmpsDriverSession` emits
+  `policy.enableDacFromIdleLoop()` after a service whose DAC track queued a
+  sample (Sound/Z80 Sound Driver.asm:2896-2903, :4269-4276) and
+  `policy.enterDacIdleLoop()` for every sample the chip exhausts
+  (:4348-4355, :4256-4260). The previous lane withheld the enable because
+  only half the pair existed; with the disable modelled,
+  `TestSonic3kUnifiedAudioPresentationRomIntegration`'s silence assertion
+  passes.
+- **No constant was introduced.** The per-byte cadence is the existing
+  `Ym2612Chip.dacPeriod` from `DacData.baseCycles` and the sample's rate
+  byte. The capture host advances the chip by one V-int of the driver's own
+  region cadence per tick.
+- **Next.** Tick 139's remaining service writes are a track-set divergence in
+  the first update after the load: the reference sends FM2's frequency pair
+  (`ym0 0A5h/0A1h`) and three PSG channels, where the engine sends FM4 and
+  FM5 and one PSG channel, and in volume-before-frequency order rather than
+  the reference's frequency-then-volume.
+- **Gates at this commit:** one run of the `com.openggf.tools.audio.parity`
+  and `com.openggf.audio` packages plus `TestSmpsFadeAudioThroughput`,
+  `TestYm2612DacTiming`, the four S3K keep-green classes,
+  `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,106
+  tests, 0 failures, 14 skips. That covers the S1 sound-test and both S1
+  gameplay oracles, the S2 driver oracle and the S2 request windows, none of
+  which moved.
+- **Break-it evidence.** `aCorruptedDacByteIsReportedAtItsRunAndOffset`
+  corrupts one reference sample byte after tick 140 and requires the DAC
+  stream comparison to report it at run 1, ahead of the live frontier's run
+  29. Without it a stream that was never populated and one that agrees would
+  read identically.
+
+
 ## 2026-09-04 - S3K music DAC byte pump: the cadence reconciles, the per-tick partition does not
 
 - **Worktree/branch:** `.worktrees/audio-s3k-dac-pump`,

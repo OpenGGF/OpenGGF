@@ -76,9 +76,16 @@ import java.util.Objects;
  * on, the staircase between two PCM samples is additionally refined by a
  * linearly interpolated {@code 0x2A} write once per output frame; this is a
  * presentation option with no hardware counterpart, and it never alters the
- * sample cadence (see {@link #serviceDac(int)}). Internally scheduled DAC
- * writes are not reported to the observer. {@code 0x2B} (DAC enable) is left
- * to the sequencer and to the core.
+ * sample cadence (see {@link #serviceDac(int)}). Each real sample write is
+ * reported to the observer exactly as a sequencer write is, because the ROM's
+ * playback loop sends every decoded sample byte over the same address/data
+ * pair (Sound/Z80 Sound Driver.asm:4299-4351); the synthetic interpolated
+ * write has no ROM counterpart and is never reported. Exhausting a sample
+ * raises a sample-end edge for the session to consume
+ * ({@link #consumeDacSampleEnded()}), the point at which the ROM clears
+ * {@code zDACIndex} and re-enters {@code zPlayDigitalAudio}, whose entry
+ * disables the DAC (:4352-4355, :4256-4260). {@code 0x2B} (DAC enable) is
+ * left to the sequencer, the session's physical policy and the core.
  *
  * <h2>Snapshot</h2>
  * {@link #captureSnapshot()} is pure and {@link #restoreSnapshot(Snapshot)}
@@ -238,6 +245,14 @@ public class Ym2612Chip {
     private int dacWritePhase;
     private int dacWriteValue;
     private boolean dacInterpolate = false;
+    /**
+     * Sample-end edges raised but not yet consumed. Raised where the ROM's
+     * playback loop runs out of sample bytes and falls through to
+     * {@code xor a / ld (zDACIndex), a / jp zPlayDigitalAudio}
+     * (Sound/Z80 Sound Driver.asm:4348-4355); a re-trigger or a stop clears
+     * the index without reaching that fall-through, so neither raises one.
+     */
+    private int dacSampleEndPending;
 
     /** Constructs a reset chip at {@link #getDefaultOutputRate()}; nothing global is touched. */
     public Ym2612Chip() {
@@ -320,6 +335,7 @@ public class Ym2612Chip {
         dacPendingValue = NO_DAC_VALUE;
         dacWritePhase = 0;
         dacWriteValue = 0;
+        dacSampleEndPending = 0;
         resampler.reset(INTERNAL_RATE, outputRate);
     }
 
@@ -449,6 +465,20 @@ public class Ym2612Chip {
     }
 
     /**
+     * Consumes one pending sample-end edge, or reports that none is pending.
+     * The owning session turns an edge into the ROM's {@code 2Bh = 0}
+     * (Sound/Z80 Sound Driver.asm:4256-4260) through its physical policy; the
+     * chip states the fact and writes no enable byte of its own.
+     */
+    public boolean consumeDacSampleEnded() {
+        if (dacSampleEndPending == 0) {
+            return false;
+        }
+        dacSampleEndPending--;
+        return true;
+    }
+
+    /**
      * Z80 cycles per PCM sample, expressed in {@link #DAC_TICK_UNITS}ths of an
      * internal FM cycle: {@code (baseCycles + 2 * 13 * (loops - 1)) / 2} Z80
      * cycles per sample times {@code 5 / 14} FM cycles per Z80 cycle.
@@ -575,6 +605,7 @@ public class Ym2612Chip {
                 int value = dacSampleAt(dacIndex);
                 if (value == NO_DAC_VALUE) {
                     dacSampleId = NO_DAC_VALUE;
+                    dacSampleEndPending++;
                 } else {
                     dacPendingValue = value;
                     dacPreviousValue = value;
@@ -595,6 +626,11 @@ public class Ym2612Chip {
             dacPendingValue = NO_DAC_VALUE;
             dacWritePhase = 1;
             busHold = ADDRESS_SETTLE_CYCLES;
+            // The ROM's playback loop sends this byte over the same
+            // address/data pair the sequencer uses (:4305-4306, :4318-4319),
+            // so it is an observable write like any other. The interpolated
+            // branch below is not: it has no ROM counterpart.
+            writeObserver.onYm2612Write(0, DAC_REGISTER, dacWriteValue);
         } else if (dacInterpolate && cycle == 0 && dacSampleId != NO_DAC_VALUE
                 && dacPreviousValue != NO_DAC_VALUE
                 && dacAccumulator + SYNTHETIC_WRITE_UNITS < dacPeriod) {
@@ -770,6 +806,7 @@ public class Ym2612Chip {
                 dacPendingValue,
                 dacWritePhase,
                 dacWriteValue,
+                dacSampleEndPending,
                 dacInterpolate,
                 mutes,
                 resampler.captureSnapshot());
@@ -805,6 +842,7 @@ public class Ym2612Chip {
         dacPendingValue = snapshot.dacPendingValue();
         dacWritePhase = snapshot.dacWritePhase();
         dacWriteValue = snapshot.dacWriteValue();
+        dacSampleEndPending = snapshot.dacSampleEndPending();
         dacInterpolate = snapshot.dacInterpolate();
         System.arraycopy(snapshot.mutesRef(), 0, mutes, 0, mutes.length);
         resampler.restoreSnapshot(snapshot.resampler());
@@ -871,6 +909,7 @@ public class Ym2612Chip {
             int dacPendingValue,
             int dacWritePhase,
             int dacWriteValue,
+            int dacSampleEndPending,
             boolean dacInterpolate,
             boolean[] mutes,
             BlipResampler.Snapshot resampler) {
@@ -926,6 +965,7 @@ public class Ym2612Chip {
                     && dacPendingValue == other.dacPendingValue
                     && dacWritePhase == other.dacWritePhase
                     && dacWriteValue == other.dacWriteValue
+                    && dacSampleEndPending == other.dacSampleEndPending
                     && dacInterpolate == other.dacInterpolate
                     && Arrays.equals(mutes, other.mutes)
                     && Objects.equals(resampler, other.resampler);
@@ -937,7 +977,8 @@ public class Ym2612Chip {
                     frameSumLeft, frameSumRight, busHold, queuedAddress,
                     currentDacSampleId, dacPeriod, dacIndex, dacAccumulator,
                     dacPos, dacPreviousValue, dacPendingValue, dacWritePhase,
-                    dacWriteValue, dacInterpolate, resampler);
+                    dacWriteValue, dacSampleEndPending, dacInterpolate,
+                    resampler);
             result = 31 * result + Arrays.hashCode(directFrames);
             result = 31 * result + Arrays.hashCode(pendingOps);
             return 31 * result + Arrays.hashCode(mutes);
