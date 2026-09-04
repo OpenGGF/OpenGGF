@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K rest bits and sample-end follow the driver:** DAC tracks never rest,
+  S3K's PSG envelope rests a track without silencing it, only S2 skips
+  modulation at rest, and the sample-end DAC disable joins the excused byte
+  stream; S3K oracle 143 to 180.
 - **Sonic 2 driver-state reference v2:** driver RAM is now sampled by the
   observer core at both `zVInt` returns over rows 10150 to 12400 (2,243
   services, two byte-identical captures); the driver state agrees for 1,789

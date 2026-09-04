@@ -24,11 +24,17 @@ import java.util.Objects;
  * inter-V-int interval (Sound/Z80 Sound Driver.asm:4296-4351). Within one
  * uninterrupted play of one sample at one fixed rate the reference's own
  * per-tick counts swing by 15 to 86 bytes, so the split is a property of a
- * Z80 this engine does not emulate. Everything the ROM decides rather than
- * the Z80's clock stays strictly partitioned, including the {@code 2Bh}
- * enable and disable and their position among the tick's service writes; and
- * those same {@code 2Bh} writes are what delimit the runs this stream
- * compares, so run structure remains pinned by compared data. See
+ * Z80 this engine does not emulate. The {@code 2Bh = 80h} enable stays
+ * strictly partitioned, because the idle loop writes it immediately on
+ * finding {@code zDACIndex} non-zero (Sound/Z80 Sound Driver.asm:4269-4276)
+ * and that store happens at a service boundary, so every run's start remains
+ * pinned to an exact tick by compared data. The {@code 2Bh = 0} disable moves
+ * into this stream with the bytes, because it is written only by
+ * {@code zPlayDigitalAudio}'s entry (:4258-4262), which a sample reaches only
+ * by being exhausted; a sample superseded mid-play jumps straight to
+ * {@code .dac_idle_loop} instead (:4343-4345) and writes no disable. Whether
+ * a given play exhausts or is superseded is therefore the same Z80 duration
+ * as the run length already excused here. See
  * docs/status/known-discrepancies.md, "S3K music DAC byte stream partition".
  */
 public final class S3kAudioParityComparator {
@@ -136,16 +142,25 @@ public final class S3kAudioParityComparator {
                 serviceWrites(openGgf.writes()), ordinal);
     }
 
-    /** Every write of the tick except the DAC sample bytes. */
+    /**
+     * Every write of the tick except the DAC sample bytes and the sample-end
+     * {@code 2Bh = 0} disable, both of which the DAC byte stream compares.
+     * The {@code 2Bh = 80h} enable stays here.
+     */
     private static List<AudioParityChipWrite> serviceWrites(
             List<AudioParityChipWrite> writes) {
         List<AudioParityChipWrite> result = new ArrayList<>(writes.size());
         for (AudioParityChipWrite write : writes) {
-            if (!isDacSampleByte(write)) {
+            if (!isDacSampleByte(write) && !isDacDisableWrite(write)) {
                 result.add(write);
             }
         }
         return result;
+    }
+
+    /** The {@code 2Bh = 0} a sample's exhaustion writes on re-entry. */
+    private static boolean isDacDisableWrite(AudioParityChipWrite write) {
+        return isDacEnableWrite(write) && write.value() == 0;
     }
 
     private static boolean isDacSampleByte(AudioParityChipWrite write) {
@@ -171,23 +186,58 @@ public final class S3kAudioParityComparator {
      * (:4348-4355, :4256-4260). Tick boundaries are deliberately not run
      * boundaries; see the class comment.</p>
      */
-    static List<int[]> dacRuns(List<S3kAudioTick> ticks) {
-        List<int[]> runs = new ArrayList<>();
+    static List<DacRun> dacRuns(List<S3kAudioTick> ticks) {
+        List<DacRun> runs = new ArrayList<>();
         List<Integer> current = new ArrayList<>();
+        boolean enabled = false;
+        int bytesWhileDisabled = 0;
         for (S3kAudioTick tick : ticks) {
             for (AudioParityChipWrite write : tick.writes()) {
                 if (isDacSampleByte(write)) {
+                    if (!enabled) {
+                        bytesWhileDisabled++;
+                    }
                     current.add(write.value());
-                } else if (isDacEnableWrite(write) && !current.isEmpty()) {
-                    runs.add(toArray(current));
-                    current = new ArrayList<>();
+                } else if (isDacEnableWrite(write)) {
+                    boolean disable = write.value() == 0;
+                    if (!current.isEmpty()) {
+                        runs.add(new DacRun(toArray(current),
+                                disable ? 1 : 0, bytesWhileDisabled));
+                        current = new ArrayList<>();
+                        bytesWhileDisabled = 0;
+                    } else if (disable && !runs.isEmpty()) {
+                        // A second disable before the next run's first byte.
+                        // The ROM writes exactly one, so charge it to the run
+                        // it follows and let the comparison reject it.
+                        DacRun last = runs.remove(runs.size() - 1);
+                        runs.add(new DacRun(last.bytes(),
+                                last.trailingDisables() + 1,
+                                last.bytesWhileDisabled()));
+                    }
+                    enabled = !disable;
                 }
             }
         }
         if (!current.isEmpty()) {
-            runs.add(toArray(current));
+            runs.add(new DacRun(toArray(current), 0, bytesWhileDisabled));
         }
         return runs;
+    }
+
+    /**
+     * One contiguous group of {@code 2Ah} bytes with the terminator evidence
+     * that follows it.
+     *
+     * @param bytes the decoded sample bytes, in order
+     * @param trailingDisables how many {@code 2Bh = 0} writes fall between
+     *     this run's last byte and the next run's first. The ROM writes at
+     *     most one, and writes it only when the sample was exhausted rather
+     *     than superseded.
+     * @param bytesWhileDisabled how many of this run's bytes arrived while
+     *     the last {@code 2Bh} write had left the DAC disabled. Always zero
+     *     in the ROM, since the idle loop streams nothing.
+     */
+    record DacRun(int[] bytes, int trailingDisables, int bytesWhileDisabled) {
     }
 
     private static int[] toArray(List<Integer> values) {
@@ -214,39 +264,74 @@ public final class S3kAudioParityComparator {
      * share, which is the content this comparison exists to prove. The
      * cumulative difference is reported as {@code run-length delta} so a
      * regression in it stays visible.</p>
+     *
+     * <p>Whether a run carries a trailing {@code 2Bh = 0} inherits that same
+     * quantity, because only an exhausted sample reaches
+     * {@code zPlayDigitalAudio}'s entry disable (:4258-4262) and a superseded
+     * one does not. So a run terminated by a disable on one side and by the
+     * next enable on the other is excused, and the count is reported as
+     * {@code sample-end delta}.</p>
+     *
+     * <p>Two further quantities are counted rather than asserted, and both
+     * were demoted because the committed reference itself violates the
+     * invariant that would have promoted them. How many disables fall between
+     * two runs is not fixed: run 0 carries three on both sides, because
+     * {@code zPlaySEGAPCM} returns through {@code zPlayDigitalAudio}'s entry
+     * and re-writes one each time the idle path is re-entered. And a
+     * {@code 2Ah} byte streaming while the DAC is disabled is not impossible:
+     * the reference does it once, at service 3,837. That count is reported as
+     * {@code idle-byte delta}; the engine's own figure is 497 from service
+     * 496, which is a real difference and stays visible without being called
+     * an error the reference would also fail.</p>
      */
     public static DacStreamReport compareDacStream(List<S3kAudioTick> reference,
             List<S3kAudioTick> openGgf) {
-        List<int[]> referenceRuns = dacRuns(reference);
-        List<int[]> openGgfRuns = dacRuns(openGgf);
+        List<DacRun> referenceRuns = dacRuns(reference);
+        List<DacRun> openGgfRuns = dacRuns(openGgf);
+        int idleByteDelta = idleBytes(openGgfRuns) - idleBytes(referenceRuns);
         int common = Math.min(referenceRuns.size(), openGgfRuns.size());
         int bytes = 0;
         int truncationDelta = 0;
+        int sampleEndDelta = 0;
         for (int run = 0; run < common; run++) {
-            int[] expected = referenceRuns.get(run);
-            int[] actual = openGgfRuns.get(run);
+            DacRun expectedRun = referenceRuns.get(run);
+            DacRun actualRun = openGgfRuns.get(run);
+            int[] expected = expectedRun.bytes();
+            int[] actual = actualRun.bytes();
             int shared = Math.min(expected.length, actual.length);
             for (int index = 0; index < shared; index++) {
                 if (expected[index] != actual[index]) {
                     return new DacStreamReport(
                             DacStreamReport.Kind.BYTE_DIFFERENT,
                             referenceRuns.size(), bytes, truncationDelta,
-                            run, index,
+                            sampleEndDelta, idleByteDelta, run, index,
                             hex(expected[index]), hex(actual[index]));
                 }
             }
             bytes += shared;
             truncationDelta += actual.length - expected.length;
+            sampleEndDelta += actualRun.trailingDisables()
+                    - expectedRun.trailingDisables();
         }
         if (referenceRuns.size() != openGgfRuns.size()) {
             return new DacStreamReport(DacStreamReport.Kind.RUN_COUNT_DIFFERENT,
-                    referenceRuns.size(), bytes, truncationDelta, common, 0,
+                    referenceRuns.size(), bytes, truncationDelta,
+                    sampleEndDelta, idleByteDelta, common, 0,
                     Integer.toString(referenceRuns.size()),
                     Integer.toString(openGgfRuns.size()));
         }
         return new DacStreamReport(DacStreamReport.Kind.MATCH,
-                referenceRuns.size(), bytes, truncationDelta,
-                null, null, null, null);
+                referenceRuns.size(), bytes, truncationDelta, sampleEndDelta,
+                idleByteDelta, null, null, null, null);
+    }
+
+    /** Total bytes that streamed while the DAC's last {@code 2Bh} left it off. */
+    private static int idleBytes(List<DacRun> runs) {
+        int total = 0;
+        for (DacRun run : runs) {
+            total += run.bytesWhileDisabled();
+        }
+        return total;
     }
 
     private static String hex(int value) {
@@ -258,8 +343,8 @@ public final class S3kAudioParityComparator {
      * beside the per-tick service-write result.
      */
     public record DacStreamReport(Kind kind, int runs, int bytesCompared,
-            int truncationDelta, Integer run, Integer byteOffset,
-            String reference, String openggf) {
+            int truncationDelta, int sampleEndDelta, int idleByteDelta,
+            Integer run, Integer byteOffset, String reference, String openggf) {
         public enum Kind {
             MATCH, RUN_COUNT_DIFFERENT, BYTE_DIFFERENT
         }
@@ -272,7 +357,9 @@ public final class S3kAudioParityComparator {
             if (matches()) {
                 return "S3K DAC byte stream: MATCH (" + runs + " runs, "
                         + bytesCompared + " bytes, run-length delta "
-                        + truncationDelta + ")";
+                        + truncationDelta + ", sample-end delta "
+                        + sampleEndDelta + ", idle-byte delta "
+                        + idleByteDelta + ")";
             }
             return "S3K DAC byte stream: MISMATCH\nkind: " + kind
                     + "\nrun: " + run
@@ -287,6 +374,8 @@ public final class S3kAudioParityComparator {
                     + ",\"runs\":" + runs
                     + ",\"bytes_compared\":" + bytesCompared
                     + ",\"run_length_delta\":" + truncationDelta
+                    + ",\"sample_end_delta\":" + sampleEndDelta
+                    + ",\"idle_byte_delta\":" + idleByteDelta
                     + ",\"run\":" + (run == null ? "null" : run)
                     + ",\"byte\":" + (byteOffset == null ? "null" : byteOffset)
                     + ",\"reference\":" + Report.jsonString(reference)
