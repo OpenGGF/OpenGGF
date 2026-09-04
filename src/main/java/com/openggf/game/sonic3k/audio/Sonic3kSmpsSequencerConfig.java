@@ -115,6 +115,17 @@ public final class Sonic3kSmpsSequencerConfig {
                 // (Sound/Z80 Sound Driver.asm:4226-4245).
                 .psgSilenceShape(
                         SmpsSequencerConfig.PsgSilenceShape.TONE_THEN_NOISE)
+                // zUpdateSFXTracks runs before zUpdateMusic fills the queue
+                // (Sound/Z80 Sound Driver.asm:650-701), so an SFX admitted in
+                // a service first updates in the next one.
+                .sfxWalkPrecedesRequest(true)
+                // zSFXTrackInitLoop sets bit 2 on the overridden music track
+                // while the SFX is still being loaded (Sound/Z80 Sound
+                // Driver.asm:1997-2003), so ownership exists from the
+                // admitting service even though that service gives the SFX
+                // track itself no update.
+                .sfxChannelOwnershipMode(
+                        SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
                 .noteFillTail(SmpsSequencerConfig.NoteFillTail.S3K_SPLIT)
                 .fadeOutDelay(6)            // FadeOutDelay = 6
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h

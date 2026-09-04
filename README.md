@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K SFX admission follows the ROM service order:** a newly requested SFX is
+  walked from the next service while the music-track override bit is set on the
+  admitting one; S3K oracle at the duration-timeout seed in service 565.
 - **Second S2 driver-state recording (CPZ, rows 2700-3450):** captured from a
   different movie, zone and song; state matches all 720 ticks, writes diverge at
   tick 237 on a second overlapping SFX FM slot.

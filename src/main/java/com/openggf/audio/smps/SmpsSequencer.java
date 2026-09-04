@@ -1086,6 +1086,14 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void primeFirstService() {
+        if (sfxMode && config.isSfxWalkPrecedesRequest()) {
+            // zUpdateSFXTracks has already walked the SFX tracks by the time
+            // zUpdateMusic's zFillSoundQueue admits this one (Sound/Z80 Sound
+            // Driver.asm:650-701), so the admitting service gives it no update
+            // at all and its first one is the next service.
+            primed = true;
+            return;
+        }
         if (config.isTempoWaitPrecedesRequest()) {
             // The load service's TempoWait already ran, with the previous
             // tempo, before zUpdateMusic reached zFillSoundQueue

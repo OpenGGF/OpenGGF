@@ -545,6 +545,7 @@ final class SmpsAssetCatalog {
                 .fadeDelayCadence(source.getFadeDelayCadence())
                 .tempoWaitPrecedesRequest(source.isTempoWaitPrecedesRequest())
                 .psgSilenceShape(source.getPsgSilenceShape())
+                .sfxWalkPrecedesRequest(source.isSfxWalkPrecedesRequest())
                 .noteFillTail(source.getNoteFillTail())
                 .fadeOutDelay(source.getFadeOutDelay())
                 .fadeOutSteps(source.getFadeOutSteps())
