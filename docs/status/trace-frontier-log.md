@@ -115150,3 +115150,37 @@ The other three death arms remain coordinates only.
   with 25 transfers, `w10900-11650` MATCH with 52, and `w11650-12400`
   **DIVERGENCE at transfer 21**, movie row 12132, the recording asking for SFX
   `$A0` where the engine asks for SFX `$B5` at row 12114.
+
+## 2026-09-04 - S2 request marker lands in the shipped observer core
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
+  TraceChaser `bugfix/ai-s2-request-window-producer` at `166b178`.
+- The S2 request marker is no longer an unmerged candidate at an abandoned ABI.
+  Its patch is folded into the observer patch, its harnesses are selftests that
+  run on every build, and the candidates tree is deleted. The core exports one
+  additional function and changes no ABI, event layout or existing behaviour.
+- The managed side gained what the candidate branch had proven and the pinned
+  head lacked: the second marker for a transfer nested under a kind-3 VInt
+  service, ordered insertion of the marker pair so the core's hook ordering
+  holds, the carried kind-4 root identity, and a bounded-candidate completion
+  that does not require an override-resume service inside a request window.
+- Build: `native/gpgx-audio-observer/prepare-toolchain.sh` then
+  `build-observer.sh`, installed with `install-observer.sh` to a scratch home
+  outside both repositories. New identities: patch
+  `2e1d1e59175f7e544558088bae48c4f45ee78401dbf808a494182c2575767a0b`, core
+  `177fb4b04e73fa12edc2fdcb097d6f11a8850a8cdf86fabeaaf8b374d62e4464`, build id
+  `9ded8f477abe193d`.
+- **Recapture proof.** `run-s2-request-window.sh --request-window-mode capture`
+  over movie rows 10900 to 11650, with that core, reproduced the published
+  raw-v3 digest
+  `1182a93833c4663d5a71883bd72b6c4edb50f70ab3cd9a122b3f6d0c9dca962e`, and the
+  extract mode reproduced the published payload digest
+  `b24c6f9144d8f4fe85316cf7d2a22020b916ec208280ac8001ab18876d3d9137`. The
+  published windows are therefore reproducible from the command.
+- Selftest evidence: breaking the new harness's expected request PC on purpose
+  fails the build with the harness's own assertion, so the selftest runs rather
+  than merely being present.
+- TraceChaser suite: 63 failures on this branch against 81 at the pinned head
+  on the same machine, and the five failures unique to this branch before the
+  test port are gone. The three that remain in the `S2` filter fail identically
+  at the pinned head. Both policy scanners PASS.
