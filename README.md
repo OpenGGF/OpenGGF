@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K music DAC on the observed bus:** every sample write the chip performs
+  now reaches the write observer, a sample-end edge emits the ROM's DAC
+  disable, and the oracle compares the DAC byte stream whole-window while
+  excusing only the per-service split that Z80 service duration decides.
 - **Sonic 2 monitor sounds match the ROM:** ring and shield monitors send
   their sound through the music mailbox as `super_ring` does, and a monitor's
   explosion makes its request from its own slot a pass later when allocated

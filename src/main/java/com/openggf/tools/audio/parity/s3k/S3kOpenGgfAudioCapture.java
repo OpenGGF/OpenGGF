@@ -112,6 +112,14 @@ public final class S3kOpenGgfAudioCapture {
             applyProgram(driver,
                     Sonic3kSmpsPhysicalPolicy.INSTANCE.enterDacIdleLoop());
 
+            // One V-int of Z80 time is the whole of what the driver is not
+            // servicing: zPlayDigitalAudio streams DAC bytes for all of it
+            // (Sound/Z80 Sound Driver.asm:4296-4351). The frame length is the
+            // driver's own region cadence, not a measured quantity.
+            int framesPerVint = (int) Math.round(
+                    SAMPLE_RATE / SmpsSequencer.Region.NTSC.frameRate);
+            short[] dacScratch = new short[framesPerVint * 2];
+
             boolean[] segaPending = new boolean[1];
             for (int index = 1; index < reference.size(); index++) {
                 S3kAudioTick referenceTick = reference.get(index);
@@ -128,6 +136,11 @@ public final class S3kOpenGgfAudioCapture {
                     addTick(ticks, driver, writes, referenceTick, corruptWriteTick);
                     continue;
                 }
+                // The Z80 spends the whole inter-V-int interval in
+                // zPlayDigitalAudio, so this window's DAC bytes (and the
+                // 2Bh = 0 of any sample that finishes inside it) precede the
+                // service that closes the window.
+                stream.advanceDacIdleLoop(dacScratch, framesPerVint);
                 for (int request : referenceTick.mailbox()) {
                     if (request != 0) {
                         dispatch(request, loader, dacData, stream, unsupported,
