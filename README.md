@@ -266,6 +266,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Overridden S3K PSG tracks no longer advance their envelope:** the ROM's PSG
+  update returns on the overriding bit before the frequency latch and envelope
+  read, so a channel taken by an SFX resumes where it left off; intro oracle at
+  the 1569 write difference.
 - **S3K 1-up fade-in completes correctly and survives rewind:** PSG tracks are
   released at fade completion with their volumes untouched (`zDoMusicFadeIn`
   loops FM only), and the session snapshot copy now carries the driver fade

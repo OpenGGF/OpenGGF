@@ -262,11 +262,11 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH,
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
                 report.kind());
         assertEquals(TITLE_MUSIC_TICK + 1431, report.tick());
-        assertEquals("MUS_PSG3", report.role());
-        assertEquals("volEnv", report.field());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=255]",
+                report.reference());
     }
 
     /**
