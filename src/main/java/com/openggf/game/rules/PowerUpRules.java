@@ -3,24 +3,6 @@ package com.openggf.game.rules;
 /**
  * Game-wide power-up/effect rules.
  *
- * <p>{@code speedShoesTimerPrePhysicsExtraTicks} compensates for where the
- * countdown sits inside the frame. In S1 and S2 the shoes timer is decremented
- * -- and, on the decrement that reaches zero, the acceleration/top-speed/
- * deceleration values are restored -- inside {@code Sonic_Display}, which the
- * player's control routine calls <em>after</em> it has already dispatched the
- * movement modes: {@code jsr Sonic_Modes} then {@code bsr.s Sonic_Display}
- * ({@code docs/s1disasm/_incObj/01 Sonic.asm:76,80}; the decrement and restore
- * at {@code :186-191}), and {@code jsr Obj01_Modes} then
- * {@code bsr.s Sonic_Display} ({@code docs/s2disasm/s2.asm:36240,36244};
- * decrement at {@code :36310-36312}). The frame whose display step zeroes the
- * timer therefore still moved with boosted acceleration. The engine ticks its
- * timers before the movement step, so both games need one extra tick to place
- * the restore on the same frame boundary the ROM does. S3K's value is left at
- * zero here: its byte timer only decrements on every eighth level frame
- * ({@code docs/skdisasm/sonic3k.asm:22072-22078}), so its phase is set by that
- * gate rather than by this offset, and it has not been measured against a
- * trace that expires speed shoes.
- *
  * <p>{@code waterSplashFixedSlotIndex} is the absolute SST slot the water-entry
  * splash occupies, or {@code -1} when the game allocates it dynamically. Sonic 1
  * writes {@code id_Splash} straight into {@code v_splash}
@@ -42,7 +24,6 @@ package com.openggf.game.rules;
  * Sonic 1 has no super form and no such object.
  */
 public record PowerUpRules(
-        int speedShoesTimerPrePhysicsExtraTicks,
         int shieldObjectFixedSlotIndex,
         int invincibilityStarsFixedSlotIndex,
         int waterSplashFixedSlotIndex,

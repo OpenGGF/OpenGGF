@@ -14,6 +14,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.timer.TimerManager;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
@@ -635,6 +636,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						if (skipCpuPhysicsThisFrame) {
 							applyScreenYWrapValueAfterControl(playable);
 							playable.getAnimationManager().update(cadence);
+							tickDisplayPhaseTimers(playable);
 							playable.tickStatus();
 							playable.endOfTick();
 							continue;
@@ -643,6 +645,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 								&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 							applyScreenYWrapValueAfterControl(playable);
 							playable.getAnimationManager().update(cadence);
+							tickDisplayPhaseTimers(playable);
 							playable.tickStatus();
 							playable.endOfTick();
 							continue;
@@ -1112,6 +1115,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 									true, aiJumpPress);
 							if (skipCpuPhysicsThisFrame) {
 								playable.getAnimationManager().update(frameCounter);
+								tickDisplayPhaseTimers(playable);
 								playable.tickStatus();
 								playable.endOfTick();
 								continue;
@@ -1119,6 +1123,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 							if (cpuController.isApproaching()
 									&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 								playable.getAnimationManager().update(frameCounter);
+								tickDisplayPhaseTimers(playable);
 								playable.tickStatus();
 								playable.endOfTick();
 								continue;
@@ -1842,6 +1847,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// invulnerable_time, and spilled-ring touch checks read that decremented
 		// value in the same object-interaction pass.
 		playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+		tickDisplayPhaseTimers(playable);
 		// ROM Obj01_Control: movement runs first, then Sonic_Animate, then
 		// TouchResponse. Special objects like monitors gate on anim(a0), so
 		// ReactToItem must observe the post-movement animation state from the
@@ -1867,6 +1873,27 @@ public class SpriteManager implements PlayableSstDispatcher {
 		levelManager.applyPlaneSwitchers(playable);
 		playable.tickStatus();
 		playable.endOfTick();
+	}
+
+	/**
+	 * Runs a character's display-phase countdowns, at the point in the frame the
+	 * ROM's {@code Sonic_Display} occupies. All three games call it from the
+	 * control routine after the movement modes have been dispatched
+	 * (S1 {@code docs/s1disasm/_incObj/01 Sonic.asm:76,80},
+	 * S2 {@code docs/s2disasm/s2.asm:36242,36248},
+	 * S3K {@code docs/skdisasm/sonic3k.asm:22021,22031}), and its
+	 * {@code Sonic_ChkShoes} tail does both consequences of the speed-shoes
+	 * countdown reaching zero there in the one frame: the top-speed,
+	 * acceleration and deceleration restore, and the slow-down music command.
+	 * Driving the countdown here instead of from the level loop's pre-physics
+	 * timer pass keeps those two together and puts the queue write ahead of the
+	 * same frame's driver service, where the ROM's is.
+	 */
+	private static void tickDisplayPhaseTimers(AbstractPlayableSprite playable) {
+		TimerManager timers = GameServices.timersOrNull();
+		if (timers != null) {
+			timers.updateDisplayPhaseTimersFor(playable);
+		}
 	}
 
 	private static void applySolidContacts(LevelManager levelManager, AbstractPlayableSprite playable,
