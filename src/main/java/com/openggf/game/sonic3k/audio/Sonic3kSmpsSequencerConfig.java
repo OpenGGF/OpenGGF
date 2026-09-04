@@ -77,6 +77,11 @@ public final class Sonic3kSmpsSequencerConfig {
                 // discard the return address instead and skip it.
                 .noteGoingFreqSend(
                         SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS)
+                // zUpdatePSGTrack latches the frequency before it reads the
+                // volume envelope (Sound/Z80 Sound Driver.asm:4077-4110); S1
+                // and S2 run their volume effects first instead.
+                .psgNoteGoingOrder(
+                        SmpsSequencerConfig.PsgNoteGoingOrder.FREQUENCY_THEN_VOLUME)
                 .fadeOutDelay(6)            // FadeOutDelay = 6
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
                 .fadeInSteps(0x40)          // FadeInSteps = 40h

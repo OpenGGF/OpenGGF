@@ -96,6 +96,28 @@ public final class SmpsSequencerConfig {
         EVERY_PASS
     }
 
+    /**
+     * Order in which a PSG track whose note has not expired writes its
+     * frequency and its volume.
+     */
+    public enum PsgNoteGoingOrder {
+        /**
+         * S1/S2: the volume effects run first and the frequency last -
+         * {@code PSGUpdateVolFX}, {@code DoModulation}, {@code PSGUpdateFreq}
+         * (s1.sounddriver.asm:1822-1827) and {@code zPSGUpdateVolFX},
+         * {@code zDoModulation}, {@code zPSGUpdateFreq}
+         * (s2.sounddriver.asm:1134-1138).
+         */
+        VOLUME_THEN_FREQUENCY,
+        /**
+         * S3K: {@code zUpdatePSGTrack}'s {@code .skip_fill} latches the
+         * frequency to the PSG immediately after {@code zDoModulation}, and
+         * only then reads the volume envelope and writes the volume
+         * (skdisasm Sound/Z80 Sound Driver.asm:4077-4110).
+         */
+        FREQUENCY_THEN_VOLUME
+    }
+
     /** Modulation stepping algorithm. */
     public enum ModAlgo {
         /** S1/S2 (MODALGO_68K): pre-check step counter, then decrement. Reload from raw data. */
@@ -253,6 +275,7 @@ public final class SmpsSequencerConfig {
     private final CoordFlagHandler coordFlagHandler;
     private final ModAlgo modAlgo;
     private final NoteGoingFreqSend noteGoingFreqSend;
+    private final PsgNoteGoingOrder psgNoteGoingOrder;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
     private final int fadeInSteps;
@@ -301,6 +324,7 @@ public final class SmpsSequencerConfig {
         this.coordFlagHandler = b.coordFlagHandler;
         this.modAlgo = b.modAlgo;
         this.noteGoingFreqSend = b.noteGoingFreqSend;
+        this.psgNoteGoingOrder = b.psgNoteGoingOrder;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
         this.fadeInSteps = b.fadeInSteps;
@@ -514,6 +538,14 @@ public final class SmpsSequencerConfig {
         return noteGoingFreqSend;
     }
 
+    /**
+     * PSG note-going write order: VOLUME_THEN_FREQUENCY (S1/S2) or
+     * FREQUENCY_THEN_VOLUME (S3K).
+     */
+    public PsgNoteGoingOrder getPsgNoteGoingOrder() {
+        return psgNoteGoingOrder;
+    }
+
     /** Fade-out inter-step delay in frames. S1/S2: 3, S3K: 6. */
     public int getFadeOutDelay() {
         return fadeOutDelay;
@@ -587,6 +619,7 @@ public final class SmpsSequencerConfig {
         private CoordFlagHandler coordFlagHandler = null;
         private ModAlgo modAlgo = ModAlgo.MOD_68K;
         private NoteGoingFreqSend noteGoingFreqSend = NoteGoingFreqSend.MODULATION_ONLY;
+        private PsgNoteGoingOrder psgNoteGoingOrder = PsgNoteGoingOrder.VOLUME_THEN_FREQUENCY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
         private int fadeInSteps = 0x28;
@@ -627,6 +660,7 @@ public final class SmpsSequencerConfig {
         public Builder coordFlagHandler(CoordFlagHandler val) { coordFlagHandler = val; return this; }
         public Builder modAlgo(ModAlgo val) { modAlgo = val; return this; }
         public Builder noteGoingFreqSend(NoteGoingFreqSend val) { noteGoingFreqSend = val; return this; }
+        public Builder psgNoteGoingOrder(PsgNoteGoingOrder val) { psgNoteGoingOrder = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }
         public Builder fadeInSteps(int val) { fadeInSteps = val; return this; }

@@ -535,6 +535,7 @@ final class SmpsAssetCatalog {
                 .delayFreq(source.getDelayFreq())
                 .modAlgo(source.getModAlgo())
                 .noteGoingFreqSend(source.getNoteGoingFreqSend())
+                .psgNoteGoingOrder(source.getPsgNoteGoingOrder())
                 .fadeOutDelay(source.getFadeOutDelay())
                 .fadeOutSteps(source.getFadeOutSteps())
                 .fadeInSteps(source.getFadeInSteps())

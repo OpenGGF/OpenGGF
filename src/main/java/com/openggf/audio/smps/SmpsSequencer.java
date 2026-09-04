@@ -1375,9 +1375,20 @@ public class SmpsSequencer implements CoordFlagContext {
                 }
 
                 if (t.duration > 0) {
-                    // Z80 driver order: PSG envelope (zPSGUpdateVolFX) THEN modulation (zDoModulation)
+                    // S1/S2 run the PSG volume effects before modulation and
+                    // the frequency (s1.sounddriver.asm:1822-1827,
+                    // s2.sounddriver.asm:1134-1138). S3K's zUpdatePSGTrack
+                    // latches the frequency first and reads the volume
+                    // envelope afterwards (skdisasm Sound/Z80 Sound
+                    // Driver.asm:4077-4110). The FM side is volume-envelope
+                    // first in all three (S3K :781-790).
+                    boolean psgFrequencyFirst = t.type == TrackType.PSG
+                            && config.getPsgNoteGoingOrder()
+                                    == SmpsSequencerConfig.PsgNoteGoingOrder.FREQUENCY_THEN_VOLUME;
                     if (t.type == TrackType.PSG) {
-                        processPsgEnvelope(t);
+                        if (!psgFrequencyFirst) {
+                            processPsgEnvelope(t);
+                        }
                     } else if (t.type == TrackType.FM) {
                         processFmVolEnvelope(t);
                     }
@@ -1394,9 +1405,18 @@ public class SmpsSequencer implements CoordFlagContext {
                         int freqDelta = t.modEnabled
                                 ? applyModulation(t, !resendEveryPass)
                                 : 0;
-                        if (resendEveryPass && !t.resting) {
-                            writeTrackFrequency(t, freqDelta);
+                        // S3K's FM .note_going returns on the rest bit before
+                        // it reaches the send (Sound/Z80 Sound
+                        // Driver.asm:781-783), but zUpdatePSGTrack's rest check
+                        // sits after the frequency latch and gates only the
+                        // volume (:4085-4090, :4098-4101), so a resting PSG
+                        // track still puts its frequency on the bus.
+                        if (resendEveryPass && (t.type == TrackType.PSG || !t.resting)) {
+                            writeTrackFrequency(t, freqDelta, false);
                         }
+                    }
+                    if (psgFrequencyFirst) {
+                        processPsgEnvelope(t);
                     }
                     return;
                 }
@@ -3151,12 +3171,19 @@ public class SmpsSequencer implements CoordFlagContext {
         if (!write || !changed) {
             return freqDelta;
         }
-        writeTrackFrequency(t, freqDelta);
+        writeTrackFrequency(t, freqDelta, true);
         return freqDelta;
     }
 
-    /** Puts the track's frequency plus {@code freqDelta} on the bus. */
-    private void writeTrackFrequency(Track t, int freqDelta) {
+    /**
+     * Puts the track's frequency plus {@code freqDelta} on the bus.
+     *
+     * @param suppressPsgAtRest whether a resting PSG track is skipped. True on
+     *     the modulation-driven send, whose S1/S2 callers have already returned
+     *     at rest; false on S3K's unconditional per-pass send, whose ROM rest
+     *     check comes after the frequency latch.
+     */
+    private void writeTrackFrequency(Track t, int freqDelta, boolean suppressPsgAtRest) {
         if (t.type == TrackType.FM) {
             int packed = getPacked(t, freqDelta);
 
@@ -3174,7 +3201,8 @@ public class SmpsSequencer implements CoordFlagContext {
                 int fnum = packed & 0x7FF;
                 writeFmFreq(port, ch, fnum, block);
             }
-        } else if (t.type == TrackType.PSG && t.channelId < 3 && !t.resting) {
+        } else if (t.type == TrackType.PSG && t.channelId < 3
+                && !(suppressPsgAtRest && t.resting)) {
             boolean noiseUsesTone2 = t.noiseMode && t.channelId == 2 && (t.psgNoiseParam & 0x03) == 0x03;
             if (!t.noiseMode || noiseUsesTone2) {
                 int reg = t.baseFnum + freqDelta + t.detune;

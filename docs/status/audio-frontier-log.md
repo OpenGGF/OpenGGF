@@ -27,6 +27,68 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K latches the PSG frequency before the volume; tick 139 -> tick 143
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `2607114d4`.
+- **Command:** unchanged, both result lines.
+- **Result before:**
+  - `S3K audio oracle: MISMATCH`, `EVENT_VALUE_DIFFERENT`, tick 139, event 7,
+    reference `psg 128` against engine `psg 178`.
+  - `S3K DAC byte stream: MISMATCH`, `BYTE_DIFFERENT`, run 29, byte 0.
+- **Result after:**
+  - `S3K audio oracle: MISMATCH`, `EVENT_VALUE_DIFFERENT`, tick 143, event 0,
+    reference `ym2612 port 0 register 0A5h = 19` against engine
+    `port 0 register 2Bh = 0`.
+  - `S3K DAC byte stream: MISMATCH`, `BYTE_DIFFERENT`, run 29, byte 0,
+    unchanged.
+- **The routines.** `zUpdatePSGTrack`'s `.skip_fill` runs `zUpdateFreq` and
+  `zDoModulation`, returns only on the SFX-override bit, latches the frequency
+  to the PSG, and only then reads the volume envelope and writes the volume
+  (Sound/Z80 Sound Driver.asm:4077-4110). S1 and S2 are the other order:
+  `PSGUpdateVolFX` then `DoModulation` then `PSGUpdateFreq`
+  (s1.sounddriver.asm:1822-1827) and `zPSGUpdateVolFX` then `zDoModulation`
+  then `zPSGUpdateFreq` (s2.sounddriver.asm:1134-1138). That is now
+  `SmpsSequencerConfig.PsgNoteGoingOrder`, defaulting to the S1/S2
+  `VOLUME_THEN_FREQUENCY` with only the S3K preset selecting
+  `FREQUENCY_THEN_VOLUME`.
+- **The second half, and it is what actually cleared the tick.** S3K's rest
+  check for PSG sits *after* the frequency latch and gates only the volume
+  (:4085-4090, :4098-4101), unlike the FM path whose `.note_going` returns on
+  the rest bit before reaching the send (:781-783). So a resting S3K PSG track
+  still puts its frequency on the bus. Reference tick 139 shows exactly that:
+  PSG1 and PSG3 send frequency pairs with no volume write, and only PSG2
+  writes a volume. With the rest guard lifted for that path, ticks 139 through
+  142 agree in full - all six FM frequency sends, all three PSG frequency
+  pairs and the one PSG volume.
+- **Next, and it is measured rather than inferred.** Tick 143 event 0 is the
+  engine's music DAC sample running out and emitting the idle loop's
+  `2Bh = 0`, where the ROM's is still playing. A per-tick byte count over
+  ticks 139-150 gives the reference a steady **265** DAC bytes per service and
+  the engine **316**, a factor of 1.19, so the engine plays a 1,438-byte
+  sample in about four services where the ROM takes about five and a half.
+  Run lengths are excused by the DAC stream comparison, which compares only
+  shared bytes, so this rate error is invisible there and surfaces only as the
+  early `2Bh` disable in the partitioned stream. The SEGA PCM run before it
+  (24,111 bytes) agrees in both content and span, so the divergence is
+  specific to the music DAC path's rate, most likely `Ym2612Chip.dacPeriod`'s
+  inputs for this entry rather than the pump itself.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)` re-run through `S1AudioParityTool` capture + compare
+  after this change; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. One run of the `com.openggf.audio` and
+  `com.openggf.tools.audio.parity` packages plus `TestSmpsFadeAudioThroughput`,
+  `TestYm2612DacTiming`, the four S3K keep-green classes,
+  `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,106
+  tests, 0 failures, 10 skips.
+- **Break-it evidence.** The frontier stays pinned by assertion in
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`,
+  which asserts kind, tick, event index and the exact reference write, and
+  failed against the old tick 139 pin until it was moved to tick 143.
+
+
 ## 2026-09-04 - S3K re-sends an unchanged frequency every pass; tick 139 event 1 -> 7
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
