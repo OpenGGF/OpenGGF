@@ -1923,10 +1923,23 @@ public class SmpsSequencer implements CoordFlagContext {
                     stopNote(t);
                 }
             } else {
+                boolean releasePsg = config.getFadeInRestore()
+                        == SmpsSequencerConfig.FadeInRestore.OVERRIDE_PSG;
                 // Fade In complete - unmute DAC tracks
                 for (Track t : tracks) {
                     if (t.type == TrackType.DAC) {
                         t.dacMuted = false;
+                    }
+                    if (releasePsg
+                            && (t.type == TrackType.PSG
+                                    || t.type == TrackType.DAC)) {
+                        // zDoMusicFadeIn's tail clears the SFX-overriding bit
+                        // on every PSG track and on FM6/DAC once the timeout
+                        // reaches zero (Sound/Z80 Sound Driver.asm:2440-2452).
+                        // That bit is how the restore muted them, so without
+                        // this they never come back and the song plays on with
+                        // no PSG at all.
+                        t.overridden = false;
                     }
                 }
                 // Notify listener that fade-in is complete (e.g., to unblock SFX)
@@ -1969,6 +1982,15 @@ public class SmpsSequencer implements CoordFlagContext {
             if (t.type == TrackType.DAC)
                 continue;
 
+            if (t.type == TrackType.PSG && config.getFadeInRestore()
+                    == SmpsSequencerConfig.FadeInRestore.OVERRIDE_PSG) {
+                // Neither S3K stepper walks the PSG tracks. zDoMusicFadeOut
+                // loops the tracks before PSG1 and zDoMusicFadeIn loops FM1
+                // onwards (Sound/Z80 Sound Driver.asm:2364, :2416-2430), so a
+                // PSG track's volume never moves with the fade in this driver;
+                // the overriding bit is what silences it.
+                continue;
+            }
             int add = (t.type == TrackType.PSG) ? fadeState.addPsg : fadeState.addFm;
             int change = add * dir;
 

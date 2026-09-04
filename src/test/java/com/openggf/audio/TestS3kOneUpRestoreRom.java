@@ -132,6 +132,7 @@ class TestS3kOneUpRestoreRom {
         assertTrue(psgTrackOverridden(audio),
                 "the PSG tracks stay overridden through the fade");
 
+        int psgAtRestore = psgVolumeOffset(audio);
         int previous = atRestore;
         boolean climbed = false;
         for (int frame = 0; frame < 400 && !climbed; frame++) {
@@ -141,6 +142,82 @@ class TestS3kOneUpRestoreRom {
         assertTrue(climbed,
                 "the fade in must step the attenuation back down from "
                         + previous);
+
+        // Run the fade to completion rather than stopping at the first step:
+        // zDoMusicFadeIn only releases the PSG tracks when its timeout reaches
+        // zero (Sound/Z80 Sound Driver.asm:2440-2452), so a test that stops
+        // early cannot see whether they ever come back.
+        for (int frame = 0; frame < 400; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+
+        assertFalse(psgTrackOverridden(audio),
+                "the PSG tracks must be released when the fade in completes,"
+                        + " or the song plays on with no PSG at all");
+        assertEquals(psgAtRestore, psgVolumeOffset(audio),
+                "neither S3K fade stepper walks the PSG tracks, so their"
+                        + " volume must not move with the fade");
+        assertEquals(settledVolume, fmVolumeOffset(audio),
+                "the FM tracks must arrive back at the volume they had"
+                        + " before the jingle");
+    }
+
+    /**
+     * A capture and restore round trip must not disturb a running fade.
+     *
+     * <p>The driver's fade counters are driver state like its lock table, and
+     * the session's snapshot copy lists its arguments positionally. When it
+     * dropped the fade counters the round trip zeroed them, and the fade in
+     * stopped stepping: the attenuation stayed wherever the capture happened to
+     * land, and the song never came back to its own volume.
+     */
+    @Test
+    void aSnapshotRoundTripDuringTheFadeLeavesItRunning() {
+        AudioManager audio = install();
+        audio.playMusic(Sonic3kMusic.AIZ1.id);
+        for (int frame = 0; frame < 8; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        int settledVolume = fmVolumeOffset(audio);
+
+        audio.playMusic(Sonic3kMusic.EXTRA_LIFE.id);
+        boolean restored = false;
+        for (int frame = 0; frame < 900 && !restored; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+            restored = playingMusicId(audio) == Sonic3kMusic.AIZ1.id;
+        }
+        assertTrue(restored, "the level music must come back");
+
+        for (int frame = 0; frame < 20; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        int midFade = fmVolumeOffset(audio);
+        assertTrue(midFade > settledVolume,
+                "the fade must still be attenuating before the round trip");
+
+        audio.restoreLogicalSnapshot(audio.captureLogicalSnapshot());
+
+        for (int frame = 0; frame < 400; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        assertEquals(settledVolume, fmVolumeOffset(audio),
+                "the fade must run to completion across a round trip,"
+                        + " not freeze at the attenuation it was captured at");
+    }
+
+    private static int psgVolumeOffset(AudioManager audio) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : audio.shadowSmpsDriverSnapshotForTesting().sequencers()) {
+            if (entry.sfx()) {
+                continue;
+            }
+            for (SmpsTrackSnapshot track : entry.snapshot().tracks()) {
+                if (track.type() == SmpsSequencer.TrackType.PSG) {
+                    return track.volumeOffset();
+                }
+            }
+        }
+        return -1;
     }
 
     private static int fmVolumeOffset(AudioManager audio) {
