@@ -113,6 +113,24 @@ local CAPTURE_DEBUG = os.getenv("OGGF_AUDIO_CAPTURE_DEBUG") == "1"
 -- movie. Unset for a real capture, which always runs to movie end; a capture
 -- taken under this bound is a partial run and is not publishable.
 local MAX_WINDOWS = tonumber(os.getenv("OGGF_AUDIO_MAX_WINDOWS") or "") or math.huge
+-- Comma-separated window ordinals to write in full. Every window is still
+-- opened, walked and reported in the run manifest, so the manifest always
+-- describes the whole movie and any window is regenerable from it; only the
+-- selected ordinals' ticks are written to disk. Unset means write them all.
+local SELECTED_WINDOWS = nil
+do
+    local list = os.getenv("OGGF_AUDIO_WINDOWS")
+    if list and list ~= "" then
+        SELECTED_WINDOWS = {}
+        for ordinal in list:gmatch("%d+") do
+            SELECTED_WINDOWS[tonumber(ordinal)] = true
+        end
+    end
+end
+
+local function windowIsSelected(ordinal)
+    return SELECTED_WINDOWS == nil or SELECTED_WINDOWS[ordinal] == true
+end
 local EXPECTED_ROM_SHA1 = "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b"
 local EXPECTED_ROM_CRC32 = "afe05eee"
 -- Every gameplay movie this probe will record, keyed by the SHA-256 the
@@ -755,9 +773,24 @@ end
 -- metadata line cannot be written until the closing dispatch fixes the record
 -- count. On close the final file is metadata followed by the body.
 local function closeWindow(context, closeFrame)
-    if not windowFile then return end
-    windowFile:close()
-    windowFile = nil
+    if windowOrdinal < 0 then return end
+    local selected = windowFile ~= nil
+    if selected then
+        windowFile:close()
+        windowFile = nil
+    end
+    windowManifest[#windowManifest + 1] = {
+        abandoned_invocations = windowAbandoned,
+        close_frame = closeFrame,
+        music_id = windowMusicId,
+        open_frame = windowOpenFrame,
+        ordinal = windowOrdinal,
+        published = selected,
+        terminal_record_count = windowRecordCount,
+        type = "window"
+    }
+    context.log(AudioContract.canonicalJson(windowManifest[#windowManifest]))
+    if not selected then return end
     local path = windowOutputPath(windowOrdinal, windowMusicId)
     local bodyPath = path .. ".body"
     local final = assert(io.open(path, "w"))
@@ -771,16 +804,6 @@ local function closeWindow(context, closeFrame)
     body:close()
     final:close()
     os.remove(bodyPath)
-    windowManifest[#windowManifest + 1] = {
-        abandoned_invocations = windowAbandoned,
-        close_frame = closeFrame,
-        music_id = windowMusicId,
-        open_frame = windowOpenFrame,
-        ordinal = windowOrdinal,
-        terminal_record_count = windowRecordCount,
-        type = "window"
-    }
-    context.log(AudioContract.canonicalJson(windowManifest[#windowManifest]))
 end
 
 local function openWindow(musicId, frame)
@@ -791,7 +814,9 @@ local function openWindow(musicId, frame)
     windowRecordCount = 0
     assetBase, assetEnd = musicAssetRange(musicId)
     activeLoopCounters = reachableLoopCounters()
-    windowFile = assert(io.open(windowOutputPath(windowOrdinal, musicId) .. ".body", "w"))
+    windowFile = windowIsSelected(windowOrdinal)
+        and assert(io.open(windowOutputPath(windowOrdinal, musicId) .. ".body", "w"))
+        or nil
 end
 
 local function emitRunSummary(context)
@@ -864,7 +889,9 @@ local function closeCapturedInvocation(context)
         state = normalized,
         type = "tick"
     }
-    windowFile:write(AudioContract.canonicalJson(record), "\n")
+    if windowFile then
+        windowFile:write(AudioContract.canonicalJson(record), "\n")
+    end
     windowRecordCount = windowRecordCount + 1
     assert(windowRecordCount < MAX_WINDOW_INVOCATIONS,
         "per-song window exceeded the 36,000-invocation budget")
@@ -1021,7 +1048,7 @@ addHook({
         assert(invocationLifecycle:isActive(),
             "Sound_PlayBGM dispatched outside an UpdateMusic invocation")
         local openInvocationFrame = invocationLifecycle:openEmulatorFrame()
-        if windowFile then
+        if windowOrdinal >= 0 then
             assert(windowRecordCount > 0, "music changed before any invocation was captured")
             closeWindow(context, frame)
         else
@@ -1248,7 +1275,7 @@ ProbeRuntime.run({
                 and (context.movieFinished() or #windowManifest >= MAX_WINDOWS)
                 and not invocationLifecycle:isActive() then
             emitted = true
-            if windowFile then
+            if windowOrdinal >= 0 then
                 assert(windowRecordCount > 0, "final window closed with no captured invocations")
                 closeWindow(context, emu.framecount())
             end

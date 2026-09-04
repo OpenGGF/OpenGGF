@@ -97,6 +97,17 @@ for musicId = MUSIC_ID_BASE, MUSIC_ID_BASE + MUSIC_COUNT - 1 do
     ranges[string.format("0x%02X", musicId)] = {asset_base = base, asset_end = bound}
 end
 
+-- Frames at or near which a re-entered invocation was observed in an earlier
+-- survey pass. Diagnostic only: the probe logs entry/return detail around them
+-- with the caller's return address, which is what distinguishes UpdateMusic's
+-- VBlank call site (sonic.asm:682) from its HBlank delayed-transfer call site
+-- (sonic.asm:1062).
+local REENTRY_WATCH = {}
+for _, centre in ipairs({107741, 187449, 194165}) do
+    for offset = -2, 2 do REENTRY_WATCH[centre + offset] = true end
+end
+local diagnosticContext = nil
+
 local invocations = 0
 local active = false
 local activeStack = nil
@@ -199,6 +210,13 @@ hooks[#hooks + 1] = guard{
                 -- where those happen across a whole run is part of what this
                 -- survey is for. The abandoned invocation is dropped and the
                 -- new one opened in its place.
+                if diagnosticContext then
+                    diagnosticContext.log(AudioContract.canonicalJson({
+                        event = "reentry", frame = emu.framecount(),
+                        return_address = memory.read_u32_be(stack & 0xFFFF, "68K RAM"),
+                        stack = stack, type = "reentry_diagnostic"
+                    }))
+                end
                 abandoned[#abandoned + 1] = {
                     frame = emu.framecount(),
                     game_mode = mainmemory.read_u8(GAME_MODE),
@@ -213,6 +231,13 @@ hooks[#hooks + 1] = guard{
         active = true
         activeStack = stack
         invocations = invocations + 1
+        if REENTRY_WATCH[emu.framecount()] and diagnosticContext then
+            diagnosticContext.log(AudioContract.canonicalJson({
+                event = "entry", frame = emu.framecount(),
+                return_address = memory.read_u32_be(stack & 0xFFFF, "68K RAM"),
+                stack = stack, type = "reentry_diagnostic"
+            }))
+        end
         if current then current.invocations = current.invocations + 1 end
     end
 }
@@ -221,6 +246,13 @@ hooks[#hooks + 1] = guard{
     name = "s1_survey_update_music_return",
     address = UPDATE_MUSIC_RETURN,
     callback = function()
+        if REENTRY_WATCH[emu.framecount()] and diagnosticContext then
+            diagnosticContext.log(AudioContract.canonicalJson({
+                event = "return", frame = emu.framecount(), open_stack = activeStack,
+                stack = (emu.getregister("M68K A7") or 0) & 0xFFFFFFFF,
+                type = "reentry_diagnostic"
+            }))
+        end
         active = false
         activeStack = nil
     end
@@ -269,6 +301,7 @@ ProbeRuntime.run({
     continueAfterMovie = true,
     hooks = hooks,
     onFrame = function(context)
+        diagnosticContext = context
         local ok, failure = pcall(function()
         local frame = emu.framecount()
         if frame % 5000 == 0 or frame < 3 then
