@@ -27,6 +27,55 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The every-toggle noise clock doubles the shift rate, and is still not the fault
+
+- **Worktree/branch:** `.worktrees/s3k-issue-coverage`,
+  `feature/ai-s3k-aiz1-audio-issue-coverage`.
+- **Why.** Three of the four reported AIZ1 audio faults are noise-form effects.
+  Every S3K effect that carries a PSG form declares `$E7`, white noise clocked
+  from PSG3's tone period, and the one effect nobody has complained about, the
+  jump (`$62`), is a plain tone on PSG1 with no form byte at all.
+- **Measurement.** Each effect's real per-frame PSG writes were captured from
+  the driver and replayed into `PsgChip` clocked at the tick rate, counting
+  LFSR shifts, against an independently written SN76489 noise generator
+  following the libvgm rule of one shift per rising edge.
+
+  | Effect | Independent oracle | `everyToggle=false` | `everyToggle=true` | Ratio |
+  |---|---|---|---|---|
+  | Splash `$39` | 4,522 | 4,523 | 9,044 | 2.000 |
+  | Insta-shield `$42` | 11,408 | 11,408 | 22,815 | 2.000 |
+  | Collapse `$59` | 2,165 | 2,166 | 4,330 | 1.999 |
+
+  The hardware-rule mode matches the independent oracle, exactly for the
+  insta-shield and within a single shift for the other two, which is a
+  start-of-run counter phase and not a rule difference. The every-toggle mode
+  shifts twice as often for all three. The comparison can disagree and does,
+  by a factor of two, so it is not measuring itself.
+- **It is not the reported fault, though.** A field test on 2026-09-04 set
+  `audio.psgNoiseShiftEveryToggle=false` for the reporter, who had `true`, and
+  none of the four reported faults changed. So the shipped default is a real
+  divergence from the hardware rule and worth removing on its own merits, but
+  it is not what anyone is hearing. The pattern fit was strong and wrong, which
+  is why the field test and not the pattern is what settles it.
+- **Config.** `src/main/resources/config.yaml` ships
+  `audio.psgNoiseShiftEveryToggle: true`; the repository-root `config.yaml`
+  sets it `false`. `PsgChip`'s own default is the hardware rule, and
+  `TestPsgChipHardwareBehaviour.everyToggleModeShiftsExactlyTwiceAsOften`
+  already pins the 2x relationship at the chip level. Audit CHIP-02 in
+  `docs/architecture/audits/audio/2026-08-30-smps-behaviour-claims-digest.md`
+  records this residual default. Removal is owned by the `psg-noise-toggle`
+  lane; nothing in this lane depends on the key.
+- **Separately, a driver-side ordering defect.** `cfSetPSGNoise` puts `0DFh`
+  and the noise operand on the bus back to back (`Sound/Z80 Sound
+  Driver.asm:3558-3571`, `fix_sndbugs = 0`). The engine emits `DF FF E7`,
+  because `SmpsDriver.silencePsgChannel` runs the SFX channel takeover lazily
+  on the first latch of the stolen channel and the `0E7h` write is that latch.
+  Recorded in `docs/S3K_KNOWN_DISCREPANCIES.md` and covered by
+  `TestS3kNoiseFormEffectWriteStream`, which is `@Disabled` against that entry.
+  Not fixed here: the reorder is in shared cross-game driver code and the
+  hardware oracle cannot yet arbitrate it, since its S3K frontier is service
+  565 and the first splash request in the captured window is service 4,087.
+
 ## 2026-09-04 - A 16,000-frame AIZ1 window captures splash and collapse, but the frontier is 565
 
 - **Worktree/branch:** `.worktrees/s3k-issue-coverage`,
