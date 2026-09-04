@@ -66,6 +66,12 @@ class TestS2DriverStateOracle {
         S2AudioOracleComparator.Report report = compare(reference, capture, true);
         System.out.println("MEASUREMENT_ONLY s2-driver-state-w10150-12400 "
                 + "state and writes: " + report.describe());
+        // The DAC sample bytes are excused from the per-service partition and
+        // compared as their own whole-window stream, so the two questions are
+        // reported as two lines.
+        S2DacStreamComparator.Report dac = compareDacStream(reference, capture);
+        System.out.println("MEASUREMENT_ONLY s2-driver-state-w10150-12400 "
+                + "DAC stream: " + dac.describe());
         // The two questions are separable and answered separately: whether the
         // driver's committed state agrees at each service return, and whether
         // the writes that service emitted agree.
@@ -145,7 +151,66 @@ class TestS2DriverStateOracle {
                 "a reference whose frames are all wrong still compares identically");
     }
 
-    private static S2AudioOracleComparator.Report compare(
+    /**
+     * The DAC stream comparison must be able to fail. Flipping one sample byte
+     * in the reference moves the verdict; without this, a stream that never
+     * compared would read exactly like a stream that agreed.
+     */
+    @Test
+    void aCorruptedDacSampleByteBreaksTheStreamComparison() throws Exception {
+        S2DriverStateReference.Result reference = S2DriverStateReference.read();
+        List<S2AudioOracleComparator.ReferenceTick> clean = referenceTicks(reference);
+        List<S2OracleEngineCapture.EngineTick> engine = engineFromReference(reference);
+        assertEquals(S2DacStreamComparator.Kind.MATCH,
+                S2DacStreamComparator.compare(clean, engine).kind(),
+                "the reference's DAC stream must agree with itself first");
+
+        int victimTick = -1;
+        int victimWrite = -1;
+        for (int tick = 0; tick < clean.size() && victimTick < 0; tick++) {
+            List<S2OracleRawStream.ChipWrite> writes = clean.get(tick).writes();
+            for (int index = 0; index < writes.size(); index++) {
+                if (S2DacStreamComparator.isDacSampleByte(writes.get(index))) {
+                    victimTick = tick;
+                    victimWrite = index;
+                    break;
+                }
+            }
+        }
+        assertTrue(victimTick >= 0, "the fixture must carry a DAC sample byte");
+
+        List<S2AudioOracleComparator.ReferenceTick> corrupted =
+                new ArrayList<>(clean);
+        S2AudioOracleComparator.ReferenceTick victim = corrupted.get(victimTick);
+        List<S2OracleRawStream.ChipWrite> writes =
+                new ArrayList<>(victim.writes());
+        S2OracleRawStream.ChipWrite original = writes.get(victimWrite);
+        writes.set(victimWrite, new S2OracleRawStream.ChipWrite(
+                original.ym(), original.port(), original.register(),
+                original.value() ^ 0xff, original.serviceKind()));
+        corrupted.set(victimTick, new S2AudioOracleComparator.ReferenceTick(
+                victim.ordinal(), victim.row(), victim.state(), writes));
+
+        S2DacStreamComparator.Report report =
+                S2DacStreamComparator.compare(corrupted, engine);
+        assertEquals(S2DacStreamComparator.Kind.BYTE_DIFFERENT, report.kind(),
+                report.describe());
+    }
+
+    private static S2DacStreamComparator.Report compareDacStream(
+            S2DriverStateReference.Result reference,
+            S2RequestProjectionBk2TestBridge.Capture capture) {
+        Aligned aligned = align(reference, capture, true);
+        return S2DacStreamComparator.compare(aligned.reference(), aligned.engine());
+    }
+
+    /** The two sides aligned service for service, ready to compare. */
+    private record Aligned(
+            List<S2AudioOracleComparator.ReferenceTick> reference,
+            List<S2OracleEngineCapture.EngineTick> engine) {
+    }
+
+    private static Aligned align(
             S2DriverStateReference.Result reference,
             S2RequestProjectionBk2TestBridge.Capture capture,
             boolean compareWrites) {
@@ -187,23 +252,31 @@ class TestS2DriverStateOracle {
                     tick.row(), tick.state(),
                     compareWrites ? tick.writes() : List.of()));
         }
-        if (!compareWrites) {
-            return S2AudioOracleComparator.compareWithEngine(referenceTicks, engine);
+        if (compareWrites) {
+            StringBuilder pairing = new StringBuilder();
+            for (int index = 0; index < Math.min(5, shared); index++) {
+                pairing.append(' ').append(referenceTicks.get(index).row())
+                        .append('/').append(ticks.get(anchor + index).row());
+            }
+            System.out.println("MEASUREMENT_ONLY s2-driver-state-w10150-12400"
+                    + " first reference/engine rows:" + pairing);
+            System.out.println("MEASUREMENT_ONLY s2-driver-state-w10150-12400"
+                    + " reference ticks=" + reference.ticks().size()
+                    + " engine ticks=" + ticks.size()
+                    + " anchored at engine tick " + anchor
+                    + " and reference tick " + referenceAnchor
+                    + " comparing " + shared);
         }
-        StringBuilder pairing = new StringBuilder();
-        for (int index = 0; index < Math.min(5, shared); index++) {
-            pairing.append(' ').append(referenceTicks.get(index).row())
-                    .append('/').append(ticks.get(anchor + index).row());
-        }
-        System.out.println("MEASUREMENT_ONLY s2-driver-state-w10150-12400"
-                + " first reference/engine rows:" + pairing);
-        System.out.println("MEASUREMENT_ONLY s2-driver-state-w10150-12400"
-                + " reference ticks=" + reference.ticks().size()
-                + " engine ticks=" + ticks.size()
-                + " anchored at engine tick " + anchor
-                + " and reference tick " + referenceAnchor
-                + " comparing " + shared);
-        return S2AudioOracleComparator.compareWithEngine(referenceTicks, engine);
+        return new Aligned(referenceTicks, engine);
+    }
+
+    private static S2AudioOracleComparator.Report compare(
+            S2DriverStateReference.Result reference,
+            S2RequestProjectionBk2TestBridge.Capture capture,
+            boolean compareWrites) {
+        Aligned aligned = align(reference, capture, compareWrites);
+        return S2AudioOracleComparator.compareWithEngine(
+                aligned.reference(), aligned.engine());
     }
 
 

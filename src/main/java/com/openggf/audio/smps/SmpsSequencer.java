@@ -2600,10 +2600,18 @@ public class SmpsSequencer implements CoordFlagContext {
 
             // S3K zUpdatePSGTrack calls zUpdateFreq and zDoModulation, which
             // only compute, and then sends the frequency once
-            // (skdisasm Sound/Z80 Sound Driver.asm:4077-4095). S2 genuinely
-            // sends it twice: zPSGDoNoteOn writes it, then zPSGUpdateFreq
-            // writes it again after zDoModulation
-            // (s2.sounddriver.asm:1046-1053).
+            // (skdisasm Sound/Z80 Sound Driver.asm:4077-4095).
+            //
+            // S2 sends it once here too. zPSGDoNoteOn is not a separate write:
+            // it loads the frequency into de and falls straight through into
+            // zPSGUpdateFreq, which is the send (s2.sounddriver.asm:1202-1209).
+            // The second send at the tail of zPSGUpdateTrack's note-on branch
+            // (:1127-1131) is reached only when zDoModulation recomputes the
+            // frequency, because zDoModulation pops its caller's return address
+            // on entry (:986-987) and every early return therefore lands past
+            // zPSGUpdateTrack. Only the .calcfreq path returns normally, with
+            // an explicit `jp (hl)` the listing annotates "WILL return to
+            // zUpdateTrack" (:1046-1049).
             boolean modulationSendsNoteFrequency = t.modEnabled
                     && config.isApplyModOnNote()
                     && config.getNoteOnPrevent()
@@ -2618,7 +2626,13 @@ public class SmpsSequencer implements CoordFlagContext {
 
             // S2 (ModAlgo 68k_a) applies modulation before PSG volume write; S1 (ModAlgo 68k) does not.
             if (t.modEnabled && config.isApplyModOnNote()) {
-                t.forceModulationWrite = true;
+                // Whether that modulation pass also puts the frequency back on
+                // the bus is the same ROM property NoteGoingFreqSend names. A
+                // driver whose modulation discards the caller's return address
+                // sends again only when it actually stepped the frequency;
+                // S3K's ordinary subroutine returns into the send every time.
+                t.forceModulationWrite = config.getNoteGoingFreqSend()
+                        == SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS;
                 applyModulation(t);
             }
 

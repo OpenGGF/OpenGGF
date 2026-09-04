@@ -154,6 +154,156 @@ defined by `com.openggf.tools.audio.parity`.
   tests, 0 failures, 10 skips.
 
 
+## 2026-09-04 - S2 sends a PSG note-on frequency once, not twice; tick 170 -> tick 228
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `2fed63a53`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 170 (movie row 10372),
+  field `writes[2]`, reference `psg=0x90` against the engine's `psg=0x8f`;
+  515 of 2,198 ticks divergent.
+- **After, state with writes:** DIVERGENCE at tick 228 (movie row 10430), field
+  `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's `psg=0x87`;
+  496 of 2,198 ticks divergent.
+- **DAC stream and state only:** both unchanged, `BYTE DIFFERENT in run 3 at
+  byte 709` and tick 1,789 `global.currentTempo`.
+- **The divergence.** At tick 170 the reference emitted `psg=8F psg=0E psg=90`,
+  one PSG1 frequency pair then the volume; the engine emitted `psg=8F psg=0E
+  psg=8F psg=0E psg=90`, sending the same unchanged pair twice.
+- **What the ROM actually does, against a comment that said the opposite.** The
+  engine's own comment claimed "S2 genuinely sends it twice: zPSGDoNoteOn
+  writes it, then zPSGUpdateFreq writes it again", citing
+  s2.sounddriver.asm:1046-1053. `zPSGDoNoteOn` is not a separate write: it
+  loads the frequency into `de` and falls straight through into
+  `zPSGUpdateFreq`, which is the send (:1202-1209). And the cited lines are the
+  proof of the opposite. `zDoModulation` pops its caller's return address on
+  entry (:986-987), so each of its early returns lands past `zPSGUpdateTrack`
+  and skips the trailing `jp zPSGUpdateFreq` (:1127-1131). Only the `.calcfreq`
+  path returns normally, through the explicit `jp (hl)` the listing annotates
+  "WILL return to zUpdateTrack" (:1046-1049). So the second send happens only
+  when modulation actually recomputed the frequency.
+- **Where it landed.** The note-on path set `forceModulationWrite`
+  unconditionally whenever modulation was enabled, forcing a send that the ROM
+  gates. It is now set only for a driver whose modulation returns into the send
+  every pass, which is the property `NoteGoingFreqSend` already names. S1 sets
+  `applyModOnNote(false)` and never reaches this path; S3K is `EVERY_PASS` and
+  is unchanged.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 transfers; audio packages plus the four extra classes with three
+  ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next.** Tick 228 has the reference writing an FM register where the engine
+  writes a PSG latch, so the two sides disagree about which track runs at that
+  point rather than about a value.
+
+## 2026-09-04 - S2 tempo phase: the audio layer already consumes at the head; the offset is a gameplay compensation constant
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, at `f1f721ed1`.
+- **Measurement, not a comparison run.** No engine behaviour changed. The
+  state-only line is unchanged: DIVERGENCE at tick 1,789 (movie row 11991),
+  `global.currentTempo`, reference `0x9e` against the engine's `0xbe`.
+- **The premise this round started from does not hold.** The engine does not
+  consume the sound queue after its driver update.
+  `AudioPresentationProducer.presentSessionForward` services the request
+  boundary and applies the pending command batch *before* it calls
+  `smpsSession.serviceForward()`, which is the ROM's own order: `zVInt` falls
+  into `zUpdateEverything`, which runs `zCycleQueue` and `zPlaySoundByIndex`
+  before either `zUpdateMusic` call (s2.sounddriver.asm:411-450).
+- **Probes, on the committed BK2 run.** With prints on the speed-shoes timer,
+  on the presentation's forward path and on the session's command case:
+
+  | event | playback cursor |
+  |---|---|
+  | speed-shoes timer fires | 11991 |
+  | next forward presentation begins | 11992 |
+  | session applies the slow-down | 11992 |
+
+  The cursor advances inside the frame's own step, so those are one engine
+  frame, and the command is applied at the first driver service after the game
+  wrote it. That is the same relationship the ROM has, where the 68k writes the
+  queue byte in its main loop and the following V-int consumes it. The
+  reference confirms the consumption side: at row 11991 the tempo is already
+  `9Eh` and `QueueToPlay` is back to `80h`, so the byte arrived and was
+  consumed inside that service.
+- **So the offset is upstream, and it is a named constant.** The engine's
+  speed-shoes expiry lands one frame later than the ROM's write.
+  `PowerUpRules.speedShoesTimerPrePhysicsExtraTicks` is `1` for both S1 and S2
+  (`GameRules.java:161-162`, `:316-317`), added to the timer's duration in
+  `SpeedShoesTimer.durationTicks`. Its documented reason is purely about
+  movement: the ROM decrements the timer inside `Sonic_Display`, which the
+  control routine calls *after* dispatching the movement modes
+  (s2.asm:36240-36244, decrement at :36310-36312), so the frame that zeroes the
+  timer still moved boosted, and the engine ticks its timers before the
+  movement step.
+- **Why that constant reaches the music at all.** The ROM does both things on
+  the one frame the timer hits zero: it restores top speed, acceleration and
+  deceleration, and it jumps to `PlayMusic` with `MusID_SlowDown`
+  (s2.asm:36313-36326). The engine hangs both on one timer, so the tick added
+  to place the *physics* restore on the ROM's frame also pushes the *music*
+  command a frame past it. The music consequence has no dependency on where the
+  movement step sits, so it should not carry the movement compensation.
+- **Not changed here, and deliberately.** The two candidate repairs both move
+  gameplay timing that S2 physics traces depend on: either fire the music
+  consequence `speedShoesTimerPrePhysicsExtraTicks` ticks before the physics
+  one, or move the countdown after the movement step and drop the constant
+  entirely. Neither belongs to an audio lane whose gate list carries no
+  `*TraceReplay` sweep, and the second is the better fix precisely because it
+  removes a compensation constant rather than adding a second one.
+- **What this means for the frontier.** The state-only divergence at tick 1,789
+  is not a driver defect and will not be fixed inside the audio layer. The 409
+  ticks counted after it were never re-measured for cause; the tempo itself
+  re-converges at the very next tick.
+
+## 2026-09-04 - S2 driver-state v2: the DAC byte stream leaves the service partition; tick 0 -> tick 170
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `2fed63a53`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 0 (movie row 10202), field
+  `writes.count`, reference 145 against the engine's 253; 1,525 of 2,198 ticks
+  divergent.
+- **After, state with writes:** DIVERGENCE at tick 170 (movie row 10372), field
+  `writes[2]`, reference `psg=0x90` against the engine's `psg=0x8f`; 515 of
+  2,198 ticks divergent.
+- **After, DAC stream (new second line):** `BYTE DIFFERENT in run 3 at byte
+  709: reference 0x80, engine 0x8D (92 runs, run-length delta 0)`.
+- **State only:** unchanged, DIVERGENCE at tick 1,789 (movie row 11991),
+  `global.currentTempo` `0x9e` against `0xbe`. This change touches no state.
+- **What moved.** The `2Ah` sample bytes now leave the per-service partition
+  and are compared as their own whole-window stream, the treatment the S3K
+  oracle already gives them. Which service a sample byte lands in is Z80
+  duration: `zWriteToDAC` streams from outside the interrupt, bracketing each
+  write with `di` / `ei` and spending the rest of its time in two `djnz $`
+  busy waits (s2.sounddriver.asm:682-726), which are the only window a V-int
+  can land in. The engine charges nothing for the service itself.
+- **The run boundary is the ROM's, and it validated.** Sonic 2's playback loop
+  writes nothing between samples: `zWaitLoop` spins on the remaining length
+  being zero and touches no register (:647-650). So a completed service with no
+  `2Ah` byte is a real gap. That rule gives the reference 92 runs across 2,243
+  services against 91 changes of its own `zCurDAC` byte, and the engine
+  independently produces the same 92, with a cumulative run-length delta of
+  zero. Run structure is therefore pinned by compared data, not assumed.
+- **No `2Bh` write moved.** Unlike S3K, Sonic 2's playback loop never writes the
+  DAC enable per sample; every `2Bh` in this driver belongs to a song load, a
+  fade or the SEGA chant (:1613, :1662, :1936, :2555, :3158), so all stay in the
+  per-service partition.
+- **Break-it evidence.**
+  `TestS2DriverStateOracle#aCorruptedDacSampleByteBreaksTheStreamComparison`
+  flips one reference sample byte and requires the verdict to move, so a stream
+  that never compared cannot read as one that agreed.
+- **Recorded** in docs/status/known-discrepancies.md, "S2 Music DAC Byte Stream
+  Partition (Oracle Comparison)".
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 production transfers; the audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, `TestRewindCoverageGuard`
+  and `TestStaticStateRewindCoverageGuard` with three ROM paths: 2,058 tests,
+  0 failures, 0 errors, 10 skips.
+- **Next, two real divergences now visible behind the excused bytes.** The
+  service line at tick 170 is a PSG attenuation off by one step, `0x90` against
+  `0x8f`. The DAC line is a genuine content difference inside the fourth
+  sample run, at byte 709 of that run, with the three runs before it agreeing
+  in full.
+
 ## 2026-09-04 - S3K zSendTL writes all four operators; tick 342 -> tick 421
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
