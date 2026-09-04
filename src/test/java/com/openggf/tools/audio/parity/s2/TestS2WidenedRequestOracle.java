@@ -1,12 +1,17 @@
 package com.openggf.tools.audio.parity.s2;
 
 import com.openggf.tests.SessionInvocationExtension;
+import com.openggf.tools.audio.completerun.s2.S2NativeSoundResolver;
 import com.openggf.tests.trace.runs.S2RequestProjectionBk2TestBridge;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -27,6 +32,71 @@ class TestS2WidenedRequestOracle {
 
     @TempDir
     Path temporaryDirectory;
+
+    /** How many of a published window's transfers were observed at one site. */
+    private static int siteTransfers(S2PublishedRequestWindows.Published published,
+            S2RequestAwareOracleRawStream.TransferSite site) throws Exception {
+        return (int) transfers(published, null).stream()
+                .filter(transfer -> transfer.site() == site)
+                .count();
+    }
+
+    /**
+     * The driver's music playlist range. {@code zPlaySound} treats an id below
+     * {@code MusID__First} as no music, and {@code MusID__First} is {@code 81h}
+     * with the last playlist entry at {@code 9Fh}
+     * (docs/s2disasm/s2.constants.asm:832, s2.sounddriver.asm:1514).
+     */
+    private static final int MUSIC_FIRST_ID = 0x81;
+    private static final int MUSIC_LAST_ID = 0x9f;
+
+    /**
+     * One site's transfers as row and request id, in order.
+     *
+     * <p>A playlist id is translated into the engine's own music id space.
+     * The ROM stores the playlist id in {@code sndDriverInput}, where
+     * {@code MusID_EHZ} is {@code 82h} (docs/s2disasm/s2.constants.asm:834),
+     * while the engine's request pipeline carries its own music id, where
+     * Emerald Hill is {@code 0x81}. {@link S2NativeSoundResolver} owns that
+     * mapping, so it is read out of the resolver rather than assumed to be a
+     * fixed offset. Command ids above the playlist are the same byte in both
+     * spaces, which the speed-shoes {@code FBh} transfer confirms.
+     */
+    private static List<String> siteRequests(
+            S2PublishedRequestWindows.Published published,
+            S2RequestAwareOracleRawStream.TransferSite site) throws Exception {
+        List<String> result = new ArrayList<>();
+        for (S2RequestAwareOracleRawStream.RequestTransfer transfer
+                : transfers(published, null)) {
+            if (transfer.site() != site) {
+                continue;
+            }
+            int id = transfer.requestByte();
+            if (id >= MUSIC_FIRST_ID && id <= MUSIC_LAST_ID) {
+                id = S2NativeSoundResolver.rev01().fromNativeId(id).engineApiId();
+            }
+            result.add(transfer.sourceRow() + ":" + id);
+        }
+        return List.copyOf(result);
+    }
+
+    /** Every transfer the published window recorded, in observation order. */
+    private static List<S2RequestAwareOracleRawStream.RequestTransfer> transfers(
+            S2PublishedRequestWindows.Published published, Path directory)
+            throws Exception {
+        Path expanded = published.expand(
+                directory == null ? Files.createTempDirectory("s2-window") : directory);
+        S2RequestAwareOracleRawStream.Result reference =
+                S2RequestAwareOracleRawStream.scanWindowSourceCandidateForTesting(
+                        expanded, published.window());
+        List<S2RequestAwareOracleRawStream.RequestTransfer> result = new ArrayList<>();
+        for (S2RequestAwareOracleRawStream.Frame frame : reference.frames()) {
+            result.addAll(frame.requestTransfers());
+        }
+        result.sort(Comparator.comparingLong(
+                S2RequestAwareOracleRawStream.RequestTransfer::sourceGlobalOrdinal));
+        return List.copyOf(result);
+    }
 
     @Test
     @ExtendWith(SessionInvocationExtension.class)
@@ -56,8 +126,42 @@ class TestS2WidenedRequestOracle {
                     + report.describe());
             assertEquals(S2RequestAwareCandidateComparator.Kind.MATCH,
                     report.kind(), published.name() + ": " + report.describe());
-            assertEquals(published.requestTransfers(), report.comparedTransfers(),
+            // The projector models the ROM's three-entry sound queue
+            // (Sonic2SoundRequestPipeline.QueueSlot), so it can only ever see
+            // the SFX site. Pin its count against the SFX-site transfers
+            // rather than the payload total.
+            assertEquals(siteTransfers(published, S2RequestAwareOracleRawStream
+                            .TransferSite.SFX),
+                    report.comparedTransfers(),
                     published.name() + ": " + report.describe());
+
+            // The music site is compared at the engine's own model of the
+            // ROM's second request store: submitMusic, which the pipeline
+            // holds as the MUSIC0/MUSIC1 mailbox. Both sides carry the native
+            // request byte, so no id translation takes part.
+            List<String> expectedMusic = siteRequests(published,
+                    S2RequestAwareOracleRawStream.TransferSite.MUSIC);
+            List<String> actualMusic = new ArrayList<>();
+            for (int index = 0; index < capture.musicSubmissionRows().size(); index++) {
+                int row = capture.musicSubmissionRows().get(index);
+                if (row < published.window().firstRow()
+                        || row >= published.window().exclusiveEnd()) {
+                    continue;
+                }
+                actualMusic.add(row + ":" + capture.projector().musicSubmissions()
+                        .get(index).nativeRequestId());
+            }
+            System.out.println("MEASUREMENT_ONLY " + published.name()
+                    + " music mailbox: reference=" + expectedMusic.size()
+                    + " engine=" + actualMusic.size());
+            assertEquals(expectedMusic, actualMusic, published.name()
+                    + ": the engine must submit every music-site request the ROM"
+                    + " stored, on the same rows and with the same byte");
+
+            // The two sites together account for the whole published window.
+            assertEquals(published.requestTransfers(),
+                    report.comparedTransfers() + expectedMusic.size(),
+                    published.name() + ": published transfer count");
         }
     }
 
