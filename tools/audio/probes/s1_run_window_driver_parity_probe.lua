@@ -94,6 +94,13 @@ local SOUND_E0_TO_E4 = 0x71F8E
 -- "43ee03a0" (lea v_1up_ram_copy(a6),a1) and "303c0087" (move.w #$87,d0, the
 -- $220/4-1 longword count the listing names).
 local CF_FADE_IN_TO_PREVIOUS = 0x72B14
+-- UpdateMusic's .driverinput (s1.sounddriver.asm:169, "loc_71B82"), the point
+-- past the Z80/DAC wait loop where a pass actually decrements the tempo and
+-- goes on to walk the tracks. Diagnostic only, under OGGF_AUDIO_CAPTURE_DEBUG:
+-- counting these per recorded invocation distinguishes an invocation that ran
+-- the driver once from one that ran it twice, which the tick record cannot
+-- show. Verified by opcode: "4df900fff000" is lea (v_snddriver_ram).l,a6.
+local DRIVER_INPUT = 0x71B82
 -- sonic1-complete-withemeralds.bk2 (SHA-256 f2e81793...) has 225,101 input
 -- rows covering the entire pinned complete run; see ACCEPTED_MOVIES.
 -- Secondary bound only: a frame budget from power-on, never movie end (see
@@ -663,6 +670,7 @@ local validation = {
     identityLogged = false
 }
 local invocationLifecycle = AudioContract.newInvocationLifecycle()
+local driverInputPasses = 0
 local currentOrdinal = nil
 local currentOpenFrame = nil
 local currentStreams = nil
@@ -683,6 +691,7 @@ local function beginCapturedInvocation(ordinal, openFrame)
     currentOrdinal = ordinal
     currentOpenFrame = openFrame
     currentDispatches = {}
+    driverInputPasses = 0
     currentStreams = {}
     if selectedSource then
         currentStreams[selectedSource] = newStream()
@@ -911,6 +920,15 @@ local function closeCapturedInvocation(context)
         state = normalized,
         type = "tick"
     }
+    if CAPTURE_DEBUG and driverInputPasses ~= 1 then
+        context.log(AudioContract.canonicalJson({
+            driver_input_passes = driverInputPasses,
+            emulator_frame = emu.framecount(),
+            ordinal = currentOrdinal,
+            type = "driver_input_diagnostic",
+            window_ordinal = windowOrdinal
+        }))
+    end
     if windowFile then
         windowFile:write(AudioContract.canonicalJson(record), "\n")
     end
@@ -1127,6 +1145,19 @@ addHook({
         currentDispatches[#currentDispatches + 1] = soundId
     end
 })
+
+-- Registered only under OGGF_AUDIO_CAPTURE_DEBUG, so a production capture
+-- carries exactly the hooks it did before and two passes of the same movie
+-- cannot differ by the presence of a diagnostic.
+if CAPTURE_DEBUG then
+    addHook({
+        name = "s1_audio_driver_input",
+        address = DRIVER_INPUT,
+        callback = function()
+            driverInputPasses = driverInputPasses + 1
+        end
+    })
+end
 
 addHook({
     name = "s1_audio_fade_in_to_previous",

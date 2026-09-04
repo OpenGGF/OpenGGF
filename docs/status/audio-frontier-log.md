@@ -27,6 +27,51 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Music $8E tick 360 measured, not argued: the ROM ran its driver twice in that frame
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `193561c6f`.
+- **Result unchanged:** `GLOBAL_STATE_MISMATCH` tick 360, `tempo_timeout`,
+  reference `1` against engine `2`. **Nothing landed. What changed is that the
+  cause is now measured rather than reasoned about.**
+
+**The measurement.** A debug-only hook on `UpdateMusic`'s `.driverinput`
+(s1.sounddriver.asm:169, `loc_71B82`, verified by opcode `4df900fff000`,
+`lea (v_snddriver_ram).l,a6`) counts how many times a recorded invocation gets
+past the Z80/DAC wait loop to the point where the tempo is decremented and the
+tracks are walked. Over the first four windows of `s1-complete-run.bk2`, 6,419
+frames and several thousand invocations, **exactly one** invocation has a count
+other than 1: window 2, ordinal 360, emulator frame 6,204, with **2 passes**.
+That is the divergent tick, and it accounts for the whole discrepancy: two
+passes decrement the tempo twice, which is the 3-to-1 step the previous entry
+recorded, and everything after it is a constant one-step phase offset.
+
+**It corrects my own earlier reasoning, which is why it was worth measuring.**
+The previous entry ruled out the `.updateloop` DAC-busy retry on the grounds
+that `bra.s UpdateMusic` returns above the tempo decrement. That much is right
+-- a retry never reaches `.driverinput`, so retries cannot decrement twice --
+but I had then treated "not the retry" as "not a second driver pass", and it is
+a second driver pass. Two passes inside one entry-to-return pair means a second
+`UpdateMusic` service ran within the invocation the probe recorded, at a stack
+the lifecycle folded rather than flagged, since window 2 records no abandoned
+invocations.
+
+**What this means for the contract.** The replay host services the driver once
+per recorded tick, so it cannot express a tick in which the ROM serviced twice.
+This is the same shape as the re-entered invocation: a scheduling outcome of the
+real hardware that frame-granularity state does not carry, and no constant can
+absorb it honestly.
+
+**The one option worth putting to a decision rather than taking.** The probe
+could record the per-tick driver-pass count and the host could service that many
+times. That carries no value and creates no work the engine did not already
+have; it selects between two ROM loops that both exist, which is close to hard
+rule 4's sanctioned per-row scheduling admission shape. But rule 4's exception
+is written for the art-loading timing contract and the lag contract, and this
+is neither, so extending it is a design decision and not a lane's to take.
+**Recorded as an open question, deliberately not implemented.**
+
+
 ## 2026-09-04 - The dispatch point lands, and music $8A goes green: the first whole new song to match
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,
