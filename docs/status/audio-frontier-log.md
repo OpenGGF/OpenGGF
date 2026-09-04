@@ -27,6 +27,57 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The subset is published: 20 per-song windows, all 15 songs, six matching
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` merged at `633ee400f`,
+  clean-built before measuring.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off -B -Dsonic1.rom.path=...
+  -Dsonic2.rom.path=... -Ds3k.rom.path=... -Ds2.request.bk2.path=...
+  "-Dtest=com/openggf/tools/audio/parity/**/*,com/openggf/audio/**/*,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard" test`
+
+**Published:** 20 windows from `s1-complete-run.bk2`, 5.94 MB gzipped, covering
+**all 15 songs the movie plays**. Four whole-movie capture passes, two per
+window, every published window verified `cmp`-identical between its pair before
+publication.
+
+**Eight windows match end to end, across six distinct songs** -- `$81` Green
+Hill (three windows, one of 5,726 ticks), `$82` Labyrinth, `$84` Spring Yard at
+5,535 ticks, `$8A` title screen, `$8C` special stage, and `$91` credits. Before
+today only GHZ had ever matched.
+
+**The twelve red windows, by cause.**
+
+| Cause | Windows | Frontier |
+|---|---|---|
+| SFX override held from before the window's epoch | 15, 16, 58, 77, 80 | tick 0 (58 at tick 34) |
+| Act-clear double driver pass | 62, 72 | tick 360, `tempo_timeout` |
+| 1-up restore arms a fade the engine has no save slot for | 59 | tick 0, `fade_active` |
+| `StopAllSound` write ordering inside the silence | 81 | tick 4,646 of 4,671 |
+| Re-entered invocation | 82 | tick 0 |
+| First chip write | 76 | tick 0 |
+| PSG base frequency | 30 | tick 0 |
+
+**The restore window confirms the other lane's prediction exactly.** Window 59,
+music `$84`, opens at the 1-up restore and diverges at tick 0 on `fade_active`:
+`cfFadeInToPrevious` arms a fade-in at counter `$28`, and the engine has no
+driver-level 1-up save slot, so it has nothing to restore into. That is 0.7
+authenticity work, not a driver defect, and it is now pinned rather than
+predicted.
+
+**Two housekeeping corrections.** A stale `w002` fixture from the earlier
+partial publish was removed; the full capture's `$8E` windows are 62 and 72.
+And window 81's pinned frontier moved between the pre-merge and post-merge
+measurement, from the engine emitting a pan byte to emitting a key-off with the
+wrong channel -- closer, and re-pinned from a clean build rather than carried.
+
+**Gates.** Audio parity and the wider audio packages plus both rewind coverage
+guards, with three ROM paths and the S2 request movie: **2,109 tests, 0
+failures, 0 errors, 10 skips.** Both S1 gameplay oracles `MATCH` at 2,562 and
+5,257 ticks; S2 v1 `MATCH (698 ticks)`; v2 both lines `MATCH (2198 ticks)`; CPZ
+state-only `MATCH (720 ticks)`; request windows `MATCH` at 25, 52 and 27.
+
+
 ## 2026-09-04 - StopAllSound routed against the window that contains one: $8D from a crash to tick 4,646 of 4,671
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,
