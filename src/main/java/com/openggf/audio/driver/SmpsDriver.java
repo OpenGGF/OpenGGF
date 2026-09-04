@@ -2113,8 +2113,14 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             continuousSfxFlag = false;
             contSfxLoopCnt = 0;
             // StopAllSound clears the driver RAM globals, v_special_voice_ptr
-            // included (s1.sounddriver.asm:1468-1478).
+            // included (s1.sounddriver.asm:1468-1478). S3K's zStopAllSound
+            // zeroes zTempVariablesStart..zTempVariablesEnd, which contains
+            // zDACIndex (skdisasm Sound/Z80 Sound Driver.asm:134,163,214,
+            // :2461-2470), so a sample queued but not yet seen by the idle
+            // loop is discarded and the DAC stays disabled by the same
+            // routine's own 2Bh = 0 (:2508-2511).
             s1SpecialVoicePointer = null;
+            dacQueuedSinceIdleLoopPass = false;
         }
         // Silence hardware (ROM: zFMSilenceAll + zPSGSilenceAll)
         silenceAll();
@@ -3104,6 +3110,15 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             if (fmLocks[ch] == null) {
                 synthesizer.stopDac(source);
             }
+        }
+        // Stopping the DAC is zDACIndex returning to zero, so any sample the
+        // idle loop has not yet seen is gone: zStopAllSound zeroes the
+        // variable block that holds it (skdisasm Sound/Z80 Sound
+        // Driver.asm:134,163,214,:2461-2470) and the playback loop's own exit
+        // clears it before re-entering zPlayDigitalAudio (:4352-4355). Either
+        // way the next idle-loop pass finds zero and writes no enable.
+        synchronized (sequencersLock) {
+            dacQueuedSinceIdleLoopPass = false;
         }
     }
 }

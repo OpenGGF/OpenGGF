@@ -654,17 +654,18 @@ public final class SmpsDriverSession implements AutoCloseable {
             return SmpsServiceOutcome.GLOBAL_STOP_CONSUMED;
         }
 
-        if (driver.consumeDacIdleLoopPass()) {
-            // The previous service's DAC track queued a sample; the driver
-            // returned into its idle loop, which found zDACIndex non-zero and
-            // enabled the DAC before decoding
-            // (Sound/Z80 Sound Driver.asm:4269-4276). The write therefore
-            // opens this service's window, not the one that queued it.
-            withPort(driverIdentity, port -> {
-                applyProgram(port, policy.enableDacFromIdleLoop());
-                return null;
-            });
-        }
+        // The DAC idle loop's own 2Bh = 80h is deliberately NOT emitted here.
+        // In the ROM that enable is one half of a pair: the loop writes it on
+        // finding zDACIndex non-zero (Sound/Z80 Sound Driver.asm:4269-4276),
+        // streams every decoded sample byte to 2Ah (:4299-4351), then clears
+        // the index and re-enters zPlayDigitalAudio, whose 2Bh = 0 turns the
+        // DAC back off (:4352-4355, :4256-4260). This session plays music DAC
+        // inside the chip rather than on the write bus and has no signal for
+        // the sample's end, so emitting only the enable would leave the DAC
+        // on and holding its last level after the sample finished. The
+        // oracle's capture host, which owns the reference's write partition,
+        // applies policy.enableDacFromIdleLoop() at this boundary; the
+        // runtime joins it when the sample-end disable is modelled with it.
         PendingService service = pendingService;
         if (service != null) {
             if (!service.readiness().ready()) {

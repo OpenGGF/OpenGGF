@@ -46,9 +46,20 @@ defined by `com.openggf.tools.audio.parity`.
   itself. A sample queued while another plays clears bit 7, so
   `jp p, .dac_idle_loop` (:4343-4345) sends the loop back through the same
   enable: one 2Bh = 80h per queued sample. The engine now records the
-  `zDACIndex` store in `SmpsDriver` and lets the service-boundary owner (the
-  S3K capture host, and `SmpsDriverSession.serviceForward` at runtime) emit the
+  `zDACIndex` store in `SmpsDriver`, discards it wherever the ROM zeroes
+  `zDACIndex` (`zStopAllSound`'s wipe of the variable block that holds it,
+  :134,163,214, :2461-2470), and lets the oracle's capture host emit the
   physical policy's enable at the start of the following window.
+- **The runtime session deliberately does not emit it yet, and that is
+  measured, not assumed.** The ROM's enable is one half of a pair: it streams
+  every decoded byte to 2Ah and then clears the index and re-enters
+  `zPlayDigitalAudio`, whose 2Bh = 0 turns the DAC off (:4352-4355,
+  :4256-4260). The session plays music DAC inside `Ym2612Chip` and has no
+  sample-end signal, so applying only the enable left the DAC on holding its
+  last level: `TestSonic3kUnifiedAudioPresentationRomIntegration` failed on
+  "stopping the music must actually silence the final packet", and an A/B with
+  the hook disabled passed. The runtime joins the capture host when the
+  sample-end disable is modelled with it.
 - **No constant was introduced.** The write, its value and its position are all
   stated by the listing. S1 and S2 keep an empty `enableDacFromIdleLoop`, since
   their DAC enable is not written by an idle loop.
