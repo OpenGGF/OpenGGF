@@ -114,7 +114,12 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                     } else if (t.type == SmpsSequencer.TrackType.PSG) {
                         // 00(min)..7F(max) -> 0F(min)..00(max)
                         t.volumeOffset = ((raw >> 3) & 0x0F) ^ 0x0F;
-                        ctx.refreshVolume(t);
+                        // cfSetVolume's PSG branch ends at zStoreTrackVolume,
+                        // which stores the byte and returns without touching
+                        // the chip; only the FM branch falls through to
+                        // zSendTL to "begin using new volume immediately"
+                        // (Sound/Z80 Sound Driver.asm:3128-3146, :3178-3181).
+                        // The track's own zUpdatePSGTrack tail sends it.
                     }
                 }
                 return true;
@@ -182,8 +187,15 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                         }
                         t.volumeOffset = updated;
                         t.envAtRest = false;
+                        // cfChangePSGVolume opens with res 4, clearing the rest
+                        // bit before it touches the volume at all
+                        // (Sound/Z80 Sound Driver.asm:3186-3190).
+                        t.resting = false;
                         if (t.envPos > 0) t.envPos--; // SMPSPlay smps_commands.c:1890 VolEnvIdx--
-                        ctx.refreshVolume(t);
+                        // Like cfSetVolume's PSG branch, this ends at
+                        // zStoreTrackVolume, which stores the byte and returns
+                        // without touching the chip (:3191-3199). The track's
+                        // own zUpdatePSGTrack tail sends it.
                     }
                 }
                 return true;
