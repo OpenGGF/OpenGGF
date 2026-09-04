@@ -27,6 +27,80 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The override-resume oracle cannot be made green: the engine restores in a different layer than the ROM
+
+- **Worktree/branch:** `.worktrees/next-audio-validation`,
+  `feature/ai-validate-next-audio-fixes`, over `develop` at `373b4376c`.
+- **Subject:** replacing `TestS1OverrideResumeAudioOracle`, which asserts that
+  its reference bundle is *absent* and therefore cannot disagree with anything.
+- **Result:** no capture published this cycle, and the reason is not effort. A
+  driver-level comparison across the 1-up resume compares two different
+  mechanisms in two different layers, so it can only ever be a divergent
+  measurement until the driver models the ROM's save slot.
+
+**The test is inverted, not merely empty.** It asserts
+`OverrideResumeReferenceBundle.open` *fails* with
+`FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE`. Publishing the
+reference it exists to consume would turn it red. `TestS2OverrideResumeAudioOracle`
+is the identical shape. Both method names, `exactFirstServiceAndNextPcmMatch`,
+also show the intended comparison is a single first-divergence boundary plus one
+PCM packet, not a window of state and writes across a resume.
+
+**The ROM restores inside the driver; the engine signals out of it.** S1's `E4`
+coord flag, `cfFadeInToPrevious`, copies the whole `$220`-byte block back from
+`v_1up_ram_copy` - every driver variable and every music track - then sets the
+DAC SFX-overriding bit, applies the fade offset to each playing track, re-sends
+FM voices, key-offs PSG, arms the fade-in with counter `$28`, and clears
+`f_1up_playing` (s1.sounddriver.asm:2164-2222). On the shipped `FixBugs = 0`
+path it omits the DAC-mode disable write, so the FM6/DAC restoration bug is
+live. The engine's `SmpsSequencer` case `0xE4` instead deactivates every track
+and calls `MusicRestoreSink.restoreMusic()`, a no-argument no-return interface
+that carries no state and cannot restore anything; it asks the presentation
+layer to re-issue a song. Searching `com.openggf.audio` by role as well as by
+name finds no driver-level track save or restore at all: the only override
+restore is `AudioVoiceRegistry.restoreMusicOverride()`, in the presentation
+layer. The parity capture host settles it - `S1OpenGgfAudioCapture` builds its
+sequencer with `() -> { }` as that sink and one song's data, so at the `E4`
+all nine engine tracks go inactive and stay inactive while the ROM plays the
+restored zone song.
+
+**Two blockers, neither inside this lane.** The Java capture kind that would
+carry a mid-movie window fixture, `s1_run_song_window_driver_reference`, is
+unlanded and lives on `feature/ai-s1-audio-complete-runs`; the landed
+`AudioParitySchema` has only the GHZ music, sound-test SFX and GHZ1 gameplay
+kinds. And making the oracle green is not a test change but an implementation
+of S1's 1-up save slot inside the driver, which is inside the SMPS playback
+authenticity programme deferred to 0.7 in `b4c8fbd8a`.
+
+**The bundle is blocked behind machinery the owner has since rejected.** Its
+own status document records four blockers: an unconfigured two-build observer
+reproduction gate, a locked recipe verifier failing on a pinned `/usr/bin/ar`
+hash, a capability guard rejecting the current source hash, and a missing
+`identity.json`. That is the host-toolchain locking the owner ruled against the
+next day. The bundle is also atomic across S1 and S2, so no S1-only
+publication can satisfy it and it is not this lane's to retire alone.
+
+**The window rule already covers this, and the S1 lane found it first.** I
+raised the mid-window song change with them as an open question; it was not
+open. Their whole-run capture aborted at frame 138,347, 212 frames into window
+58, song `$88`, with `ROM sequence pointer is outside the GHZ asset range`, and
+their corrected rule closes a window at a `cfFadeInToPrevious` restore
+(`$72B14`, matched by opcode) as well as at a `Sound_PlayBGM` dispatch. That
+makes the interrupt and the resume two adjacent windows with a ROM-defined
+boundary between them, which is a better frame for this oracle than one window
+holding two songs. I stopped my own redundant survey rather than compete for
+the emulator.
+
+**Where the divergence should land, more precisely.** At the restore boundary
+the ROM continues the interrupted song from restored RAM with the fade-in armed
+at counter `$28` and the rest bit set on every playing track, while the engine
+host would load that window's epoch song fresh and start it from the beginning,
+its tracks already deactivated by the `E4`. The second window should diverge at
+its first tick, in track state before writes.
+- Full analysis and the three-step recommendation:
+  `docs/architecture/audits/2026-09-04-next-audio-fixes-validation.md`.
+
+
 ## 2026-09-04 - The `next` audio fixes were already on develop; the override oracle compares nothing
 
 - **Worktree/branch:** `.worktrees/next-audio-validation`,

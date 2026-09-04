@@ -135,3 +135,141 @@ re-save during a 1-up and both discard the save on any other music request. If
 an S2 1-up restore bug reproduces on `develop` today, the defect is below the
 `isMusicOverride` classification, not in it. `TestS1OverrideResumeAudioOracle`
 is not a comparison and will not arbitrate a fix.
+
+---
+
+# Follow-up: making `TestS1OverrideResumeAudioOracle` compare something
+
+Recorded 2026-09-04 on the same branch, after the lead asked for the green
+no-op to be replaced by a real comparison or deleted.
+
+## The test is worse than a no-op; it is inverted
+
+It asserts that `OverrideResumeReferenceBundle.open` *fails*. Publishing the
+reference it exists to consume would turn it red. Whatever replaces it cannot
+be a narrowing of the current assertion; the assertion has to be inverted.
+
+## The reference bundle is not a dead contract, but it is blocked behind machinery the user has since rejected
+
+The bundle is recent and deliberate: `26a443def` and `e28c08137`, both
+2026-09-02, by the repository owner. Its own status document,
+`docs/architecture/validation/audio/2026-09-01-override-resume-reference-limitation.md`,
+records why no capture was ever published. The four blockers are a two-build
+observer reproduction gate with no configured inputs, a locked recipe verifier
+failing because the host's `/usr/bin/ar` hash does not match a pinned constant,
+a reviewed-capability guard rejecting the current source hash, and a stock
+BizHawk tree failing installation authentication for a missing `identity.json`.
+
+That is the same class of machinery the owner ruled on the following day, on
+the TraceChaser native build: pinned host-toolchain hashes behind chained
+recipe locks that turn every system update into a manual identity cascade.
+Reviving the bundle as designed means restoring those trust roots. This audit
+does not recommend that.
+
+The bundle is also atomic across both games: `open` requires an `s1` *and* an
+`s2` member, so no S1-only publication can satisfy it. That makes it
+jointly owned with the S2 1-up lane rather than mine to retire alone.
+
+## Two independent blockers found for the replacement
+
+### 1. The per-song window contract that would carry the fixture is unlanded
+
+The lead directed me to the `s1-audio-complete` lane's probes rather than a new
+one, which is right: `tools/audio/probes/s1_bgm_window_survey_probe.lua` tiles a
+movie by `Sound_PlayBGM` dispatch and `s1_run_window_driver_parity_probe.lua`
+captures a window byte-identically to a committed fixture. But the Java capture
+kind those produce, `s1_run_song_window_driver_reference`, exists only on
+`feature/ai-s1-audio-complete-runs`. The landed `AudioParitySchema` carries
+only the GHZ music, sound-test SFX and GHZ1 gameplay kinds. A 1-up window
+fixture cannot be published here until that contract lands.
+
+### 2. The engine cannot pass this oracle, because it models the resume in a different layer
+
+This is the finding that decides the shape of the work. In the ROM, S1's `E4`
+coord flag is a driver-internal restore: `cfFadeInToPrevious` copies the whole
+`$220`-byte block back from `v_1up_ram_copy` — every driver variable and every
+music track's state — then sets the DAC SFX-overriding bit, applies the
+current fade offset to each playing track, re-sends FM voices, key-offs PSG,
+triggers the fade-in flag with counter `$28`, and clears `f_1up_playing`
+(`s1.sounddriver.asm:2164-2222`). On the shipped `FixBugs = 0` path it also
+omits the DAC-mode disable write, so the FM6/DAC restoration bug is live and
+any reference records its absence. The bundle schema's `writes_dac_disable_zero`
+field was evidently designed around exactly that.
+
+The engine does none of this in the driver. `SmpsSequencer`'s `0xE4` handler
+deactivates every track in the current sequence and calls
+`MusicRestoreSink.restoreMusic()`, a no-argument, no-return functional
+interface whose entire contract is "receives an SMPS request to restore the
+music beneath an override". It carries no state, so it cannot restore anything;
+it is a signal to the presentation layer to re-issue a song. The parity capture
+host makes this concrete: `S1OpenGgfAudioCapture` constructs its sequencer with
+`() -> { }` as that sink and with a single song's data. At the `E4` the engine's
+nine tracks all go inactive and stay inactive, while the ROM has the
+interrupted zone song playing again from restored RAM.
+
+So a driver-level comparison across the resume does not compare an engine
+mistake against the ROM. It compares two different mechanisms in two different
+layers, and it would diverge at the first tick after the `E4` in essentially
+every field. Making it green is not a test change; it is implementing S1's
+1-up save slot inside the driver, which is squarely inside the SMPS playback
+authenticity programme the owner deferred to 0.7 in `b4c8fbd8a`.
+
+## Recommendation
+
+Do not delete the test and do not make it a hard assertion. Three steps, in
+order, none of which this lane can complete alone:
+
+1. **Land the per-song window contract** from the `s1-audio-complete` lane, so
+   a mid-movie window fixture has a parser.
+2. **Publish the `$88` window as a comparison-only reference** with pinned
+   digests, using that lane's capture probe. This is the artefact the
+   limitation document says is missing, minus the attestation machinery, and it
+   pins the ROM's resume behaviour including the `FixBugs = 0` DAC-write
+   omission.
+3. **Replace the inverted assertion with a `MEASUREMENT_ONLY` comparison** that
+   reports its first divergence, in the shape `TestS2DriverStateOracle` already
+   uses, and record the frontier. Include that oracle's negative control: a
+   corrupted input must move the verdict, or the new comparison inherits the
+   old one's inability to disagree.
+
+The resulting oracle will be red at the `E4`, and that is the correct outcome.
+It converts an untested claim into a measured frontier whose cause is known and
+whose fix is scheduled for 0.7.
+
+## The per-song window rule already handles this, and the S1 lane got there first
+
+I raised the mid-window song change with the `s1-audio-complete` lane as an
+open contract question. It was not open: that lane had already hit it and fixed
+it the same day, and the credit is theirs. Their whole-run capture of
+`s1-complete-run.bk2` aborted at emulator frame 138,347, 212 frames into
+**window 58, whose song is `$88`**, with `ROM sequence pointer is outside the
+GHZ asset range`. Windows 0 through 57 completed. A single-song contract that
+asserts its own asset range turned an unmodelled ROM epoch into a loud failure
+at the exact frame instead of into plausible parity data normalized against the
+wrong song.
+
+Their corrected rule closes a window at either ROM epoch that replaces the music
+track RAM wholesale: a `Sound_PlayBGM` dispatch, or a `cfFadeInToPrevious`
+restore at `$72B14`, verified by opcode rather than label because labels there
+have drifted. The window opening at a restore is normalized against the song
+being restored.
+
+**This improves the plan rather than complicating it.** Under the corrected
+rule the interrupt and the resume are two adjacent windows: the `$88` jingle
+window, then a window opened by the restore and carrying the interrupted song's
+id. "Compare state and writes across the interrupt and resume" is therefore a
+comparison over that adjacent pair, with a ROM-defined boundary between them,
+and either window can be published on its own because the capture probe already
+writes one file per window.
+
+It also sharpens the expected divergence. At the restore boundary the ROM
+continues the interrupted song from restored RAM with a fade-in armed at
+counter `$28` and the rest bit set on every playing track. The engine host
+would load that window's epoch song fresh from the ROM and begin it at its
+start, and its sequencer has in any case deactivated every track at the `E4`.
+The second window should therefore diverge from its first tick, in track
+state before writes.
+
+One consequence worth carrying: ordinals after a run's first restore shift by
+one per restore, so anything citing a window must quote its epoch frame
+alongside its ordinal.
