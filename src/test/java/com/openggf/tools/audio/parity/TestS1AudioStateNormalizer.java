@@ -527,7 +527,15 @@ class TestS1AudioStateNormalizer {
             psgVolumeOffsets = new int[] {0};
             psgModEnvs = new int[] {0};
             psgInstruments = new int[] {0};
-            tempo = 1;
+            // A tempo of 1 is degenerate against the ROM's own seed. S1's
+            // UpdateMusic adds 1 to every slot's DurationTimeout whenever the
+            // tempo timeout expires (s1.sounddriver.asm:1549-1561), which at
+            // tempo 1 is every frame, exactly cancelling the per-frame
+            // decrement; a track seeded with the ROM's DurationTimeout of 1
+            // (:823, :836) would then never reach zero and never read its
+            // stream at all. Tempo 2 lets the note play, which is what this
+            // fixture is for.
+            tempo = 2;
         }
 
         @Override public byte[] getVoice(int voiceId) { return null; }

@@ -81,10 +81,12 @@ class TestS2DriverStateOracle {
                 compare(reference, capture, false);
         System.out.println("MEASUREMENT_ONLY s2-driver-state-w10150-12400 "
                 + "state only: " + stateOnly.describe());
-        assertNotEquals(S2AudioOracleComparator.Kind.INVALID, report.kind(),
+        assertEquals(S2AudioOracleComparator.Kind.MATCH, report.kind(),
                 report.describe());
-        assertNotEquals(S2AudioOracleComparator.Kind.INVALID, stateOnly.kind(),
+        assertEquals(2198, report.comparedTicks(), report.describe());
+        assertEquals(S2AudioOracleComparator.Kind.MATCH, stateOnly.kind(),
                 stateOnly.describe());
+        assertEquals(2198, stateOnly.comparedTicks(), stateOnly.describe());
     }
 
     /**
