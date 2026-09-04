@@ -29,9 +29,12 @@ defined by `com.openggf.tools.audio.parity`.
 
 ## 2026-09-04 - HANDOVER: S3K AIZ1 intro oracle, state at branch head
 
-- **Branch:** `bugfix/ai-s3k-oracle-freq-resend`, head `3c552b92a`, merged with
-  develop at `37c3f0c0b`. Worktree `.worktrees/audio-s3k-freq`. Tree clean,
-  nothing in flight.
+- **Historical branch:** `bugfix/ai-s3k-oracle-freq-resend`; the measured code
+  head was `3c552b92a`, followed by handover documentation at `ebc90caa3`.
+  This work entered develop through `a306c0351`, not the earlier merge
+  `37c3f0c0b` (which predates `3c552b92a`). The originating worktree was
+  `.worktrees/audio-s3k-freq`, reported clean at handover. Counts and frontiers
+  below describe that historical measurement, not the current branch.
 - **Resume command.** From the worktree, after `mvn -q -Dmse=off clean package
   -DskipTests` and `mvn -q -Dmse=off dependency:build-classpath
   -Dmdep.outputFile=target/gates/cp.txt`:

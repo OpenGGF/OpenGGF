@@ -89,11 +89,11 @@ default void onPhysicalTimelineBoundary(ChipClockDomain domain, long clock,
 
 Use distinct clock domains: YM internal cycles at `Ym2612Chip.getInternalRate() * 24`; PSG generator ticks at `PsgChip.TICK_RATE_HZ`. Do not claim a shared master clock: the FM input-clock constant is rounded and is not the 53MHz board master. Export callback ordinals separately; do not globally sort independent chip clocks. Counters are diagnostic-only and monotonic; resets, snapshot restore and non-bus model mutations explicitly delimit replay segments. Do not add counters to production snapshots or fabricate bus writes for policy operations.
 
-All existing observer wrappers must forward physical capability and events. Disabled capture must not allocate per physical strobe. Existing session transaction buffering must preserve commit/rollback semantics; direct capture sinks must be nonthrowing and nonreentrant. A bounded capture sink records overflow and fails the CLI after rendering rather than throwing into the audio operation.
+All existing observer wrappers must forward physical capability and events. Disabled capture must not allocate per physical strobe. Existing session transaction buffering must preserve commit/rollback semantics; direct capture sinks must be nonthrowing and nonreentrant. Aborted physical writes are not published, but rollback must preserve a discontinuity notification before subsequent committed events: monotonic counters plus silently rolled-back chip state would otherwise produce an unreplayable, falsely continuous stream. A bounded capture sink records overflow and fails the CLI after rendering rather than throwing into the audio operation.
 
 Add opt-in physical output to the existing FM render tool with explicit engine provenance, rates, origin and discontinuities; retain old output compatibility. Reject unsupported replay segments rather than inventing initial state. Continuous reset-origin YM replay against the existing Nuked implementation must recover the raw pins/write order, with separate PSG timing tests. Do not promise a whole-mixer replay across rewind or output-policy changes.
 
-Red-first cases: queued burst strobes at internal cycles 0/1 then 35/36; real DAC byte address/data pair separated by one cycle; synthetic-origin events without added legacy notifications; PSG native-tick positioning; opt-in through session forwarding; aborted transaction leaves no committed events; restore emits a boundary without rewinding diagnostic time; enabled/disabled capture yields identical PCM and snapshots; overflow and malformed/unsupported segment fail clearly. Run existing observer, DAC timing, snapshot, Sega PCM and relevant physical-device/session tests alongside new cases.
+Red-first cases: queued burst strobes at internal cycles 0/1 then 35/36; real DAC byte address/data pair separated by one cycle; synthetic-origin events without added legacy notifications; PSG native-tick positioning; opt-in through session forwarding; aborted transaction publishes no aborted writes and the next committed operation has an explicit discontinuity; restore emits a boundary without rewinding diagnostic time; enabled/disabled capture yields identical PCM and snapshots; overflow and malformed/unsupported segment fail clearly. Run existing observer, DAC timing, snapshot, Sega PCM and relevant physical-device/session tests alongside new cases.
 
 ### Task 3: Evidence and maintained experiments
 
@@ -115,17 +115,21 @@ Retain one opt-in, ROM-free synthetic benchmark entry point with pinned external
 - [ ] Refresh main `develop`, rebaseline if it moved, integrate with README release summary, run post-merge ordinary/guards and exact regression comparison, push only `develop`.
 - [ ] Inspect and remove only this round's fully merged worktrees/branches after successful push.
 
-Verification commands (set each property to the discovered absolute ROM path):
+Verification commands (export `SONIC1_ROM`, `SONIC2_ROM`, and `S3K_ROM` as the discovered absolute ROM paths first; this round verified SHA-1 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, `8bca5dcef1af3e00098666fd892dc1c2a76333f9`, and `cfbf98c36c776677290a872547ac47c53d2761d6` respectively):
 
 ```bash
-LUA_BIN=lua5.4 mvn -Dmse=off -B -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... test
+LUA_BIN=lua5.4 mvn -Dmse=off -B "-Dsonic1.rom.path=$SONIC1_ROM" "-Dsonic2.rom.path=$SONIC2_ROM" "-Ds3k.rom.path=$S3K_ROM" test
 LUA_BIN=lua5.4 mvn -Dmse=off -B -Pguards test
-LUA_BIN=lua5.4 mvn -Dmse=off -B -Ds3k.rom.path=... -Dtest=TestS3kOracleRequestSidecarWiring,TestS3kSfxLifecycleRom,TestSmpsSequencerConfigCopyCoverageGuard test
+LUA_BIN=lua5.4 mvn -Dmse=off -B "-Ds3k.rom.path=$S3K_ROM" -Dtest=TestS3kOracleRequestSidecarWiring,TestS3kSfxLifecycleRom,TestSmpsSequencerConfigCopyCoverageGuard test
 ```
 
 ## Integration report
 
-Initial baseline: `4296bc291`, fetched and already current. Ordinary verification is running in the main workspace. No implementation commits integrated yet. Main disassembly submodule changes are pre-existing and out of scope.
+Initial baseline: `4296bc291`, fetched and already current. Main workspace ordinary verification: 16,465 reported test executions, 0 failures, 0 errors, 40 skips (5:25); separate guards: 609, 0 failures/errors/skips (2:19). All three ROM hashes and Maven JDK 21 verified. Logs and compressed Surefire reports are archived under `target/audio-round-baseline-*` before reuse.
+
+Measurement note: ordinary Surefire console reports 2,027 class-result lines but only 1,983 distinct final XML files; those XML files total 16,369 cases. Preserve the console execution count and XML case count separately rather than treating repeated class-result lines as independent XML artifacts. Both sources have empty failure/error sets. Comparison uses archived per-test outcomes and the final Maven result, not historical suite totals.
+
+No implementation commits integrated yet. Main disassembly submodule changes are pre-existing and out of scope.
 
 ## End-to-end review
 

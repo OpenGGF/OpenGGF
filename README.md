@@ -534,9 +534,11 @@ traces.
   art loading have received substantial accuracy and stability work. Audio
   output runs through the unified presentation pipeline, which live recording,
   offline trace capture, and the standalone ROM-backed sound-test launcher all
-  share. A further SMPS and chip-level parity programme built during the 0.6
-  cycle is deferred to 0.7 and is not part of this release; see the release
-  summary for what was withdrawn and why.
+  share. The current development branch includes the Java Nuked-OPN2 FM core,
+  PSG corrections, session-owned SMPS state, request scheduling, and subsequent
+  fade/SFX fixes. This supersedes the August 28 audio-baseline withdrawal;
+  complete driver parity and listening validation remain unfinished. Backend
+  performance experiments do not change the production FM backend.
 - **Sound-driver reverse-engineering groundwork:** disassembly-cited routine
   maps and behaviour specs for all three games' SMPS drivers, an engine gap
   analysis, and committed driver-parity oracles (S1 GHZ music and sound-test
@@ -548,8 +550,10 @@ traces.
   service per outer frame and reproduce S2/S3K PAL repeat cadence and S3K's
   shared speed-up tail. Sonic 1's committed sound-test SFX oracle now matches
   all 1,967 ticks while its protected GHZ music oracle remains matched across
-  14,690 ticks; the current S2 and S3K frontiers stop where their first-version
-  captures cannot observe a request before the retail driver consumes it.
+  14,690 ticks. Newer request sidecars allow comparisons beyond the original
+  capture limitations, but published windows include known divergences: a
+  recorded window is not necessarily a passing assertion. See the frontier
+  log and audio handover for the current measured boundaries.
 - **Resolve-ready capture:** live and trace recording can select DNxHR SQ video
   with lossless 24-bit PCM audio in a MOV container for DaVinci Resolve on Linux.
 - **Gameplay-scoped rewind:** dynamic objects, child graphs, rider state,
@@ -593,12 +597,14 @@ gameplay defect.
 
 Known limitations: the Game Over / Continue flow is missing in all three games
 (`docs/status/known-bugs.md`), there is no modding framework, the level editor
-is a dormant prototype, and the SMPS audio parity programme is deferred to 0.7.
-Release documentation was reconciled with these facts on 2026-08-28: the
-release summary now carries the commit-stamped validation numbers, the guard
-and trace policy statements match `docs/status/trace-scope-release-6.md`, and
+is a dormant prototype, and complete SMPS audio parity remains unfinished.
+The September 4 audio handover supersedes the August 28 withdrawal statement:
+audio corrections and comparison tooling have landed, not complete parity or
+release listening approval. The release summary carries commit-stamped
+validation numbers, the guard and trace policy statements match
+`docs/status/trace-scope-release-6.md`, and
 `RELEASE_NOTES_v0.6.prerelease.md` is a pointer to the summary.
-Contributor and player guides were corrected the same day (hook installation,
+Contributor and player guides were corrected on August 28 (hook installation,
 config defaults, player-2 bindings, dead links), and the skill mirrors were
 resynchronised.
 Repository hygiene followed: IDE/scratch files and two native libraries were
