@@ -95,3 +95,26 @@ Post-merge delivery repeats both commands on `develop` and compares their result
 against these baselines before push. Generated logs and testcase outcome snapshots
 are retained in the main workspace's `target/slop-cleanup-evidence/`; the final
 delivery report records the pushed commits and post-merge results.
+
+## Interrupted first post-merge run
+
+The first ordinary run at merge `e03ebb9a8` finished with 16,465 tests, one
+failure, six errors, and 40 skips. All seven unsuccessful tests were class-loading
+failures (including an expected-exception assertion receiving
+`NoClassDefFoundError`). They affected `TestGameLoopSpecialStageRewindGate`,
+`TestS1VisualPlaybackControlLock`, both `TestLevelRewindFrameRecorder` tests,
+two `TestSpecialStageHardwareTimingLifecycle` tests, and one
+`TestTraceSessionLauncherFailureCleanup` test.
+
+Evidence of build-output interference: the run compiled before tests started at
+21:33, but production class files and the Maven compiler `createdFiles.lst` were
+rewritten at 21:36:38–21:36:48, during the failing tests. The missing types were
+`TraceSuppressedRowClosure`, `LevelRewindFrameRecorder`,
+`SpecialStageTraceHudOverlay`, and `CompactFieldMap`. All four subsequently existed
+and matched the verified development tree's bytecode hashes. No corresponding
+source edits occurred. This interrupted run is not accepted as verification.
+
+Delivery requires a fresh full run and guards, with compiler-output timestamps
+checked for further interference. Its results are reported in the final delivery
+message; the unsuccessful run and exact testcase failures remain under
+`target/slop-cleanup-evidence/merged*`.
