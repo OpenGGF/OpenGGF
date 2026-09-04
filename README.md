@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Second S2 driver-state recording (CPZ, rows 2700-3450):** captured from a
+  different movie, zone and song; state matches all 720 ticks, writes diverge at
+  tick 237 on a second overlapping SFX FM slot.
 - **Level frame counter advances where the ROM does:** all three loops increment
   `Level_frame_counter` before the object pass; about two dozen per-reader `+1`
   compensations and the speed-shoes phase offset are deleted.
