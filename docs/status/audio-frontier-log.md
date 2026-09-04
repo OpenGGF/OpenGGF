@@ -4752,3 +4752,40 @@ defined by `com.openggf.tools.audio.parity`.
 - **Gate:** `com.openggf.tools.audio.parity.**` — 178 tests, 0 failures,
   0 errors, 2 skips (ROM-gated measurements with no supplied sidecar path),
   run with `-Dmse=off` and explicit absolute ROM/BK2 paths.
+
+## 2026-09-04 — S1 sound-test music and SFX oracles brought into JUnit
+
+- **Worktree/branch:** `.worktrees/oracle-pins`, `test/ai-s1-soundtest-oracle-tests`,
+  from `develop` `319d777de`.
+- **Motivation:** the S1 GHZ music oracle (`MATCH (14690 ticks)`) and the S1
+  sound-test SFX oracle (`MATCH (1967 ticks)`) were regression gates quoted
+  repeatedly in this log, but both were measured only via the external
+  `tools/audio/run_s1_audio_parity.sh` + BizHawk wrapper. Their references —
+  `s1-soundtest-ghz-reference.v1.jsonl.gz` and
+  `s1-soundtest-sfx-reference.v1.jsonl.gz` — were already committed, so no
+  BizHawk capture is needed to exercise them: BizHawk only produced the
+  reference bytes, which are static fixtures now. The wrapper's own engine
+  side already runs the same in-process capture
+  (`S1AudioParityTool capture --capture music|sfx`, which calls
+  `S1OpenGgfAudioCapture`/`S1OpenGgfSfxAudioCapture`), so nothing about the
+  comparison itself requires BizHawk.
+- **Added**, modelled on `TestS1GameplayAudioDriverOracle`:
+  - `TestS1SoundTestMusicAudioDriverOracle.wholeWindowMatches`: decompresses
+    the committed GHZ music reference, replays it through
+    `S1OpenGgfAudioCapture.capture` (the same host `--capture music` uses),
+    and asserts `AudioParityReport.Kind.MATCH` with `ticksCompared() == 14690`.
+  - `TestS1SoundTestSfxAudioDriverOracle.wholeWindowMatches`: same shape for
+    the sound-test SFX reference via `S1OpenGgfSfxAudioCapture.capture` (the
+    same host `--capture sfx` uses), asserting `MATCH` with
+    `ticksCompared() == 1967`.
+  - Both classes also carry a `corruptingTheReferenceIsDetectedAtTheCorruptedTick`
+    test (byte-flip on tick 0's first YM2612 write), proving the comparison is
+    live rather than a comparison that never actually ran.
+  - Neither test hydrates engine or gameplay state from the fixture; both are
+    comparison-only, ROM-gated on `-Dsonic1.rom.path`.
+- **Break-on-purpose:** both new `ticksCompared()` pins were bumped by one
+  (14691 / 1968), run, and confirmed to fail
+  (`expected: <14691> but was: <14690>`, `expected: <1968> but was: <1967>`),
+  then reverted to the correct literals.
+- **Gate:** `com.openggf.tools.audio.parity.**` full run, `-Dmse=off`,
+  absolute ROM/BK2 paths — see the commit for the exact count.
