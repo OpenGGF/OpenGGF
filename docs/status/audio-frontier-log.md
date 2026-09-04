@@ -27,6 +27,54 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K tick 502: a per-service PSG3 and noise silence with no ROM writer found
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `cf0f5d6d2`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  records what the frontier is and, more usefully, four readings that are
+  already ruled out, so the next round does not spend them again.
+- **The frontier.** `EVENT_MISSING`, tick 502, event 10: the reference emits
+  `psg 0DFh` where the engine emits nothing. The DAC stream is unchanged at
+  run 338 byte 0.
+- **What the reference does.** From service 502 onward, every service ends
+  with the same eight PSG bytes: three frequency pairs, `80h 00h`,
+  `0AFh 0FFh` and `0C0h 00h`, then `0DFh` and `0FFh`. The engine produces the
+  three pairs and neither of the last two. The pair persists at services 503,
+  504, 506, 510 and 520, so it is a steady per-service write, not a one-off.
+- **`0DFh` is PSG3's volume latch and `0FFh` is the noise channel's**, decoded
+  from the byte layout: bit 7 latch, bits 6-5 the channel, bit 4 selecting
+  volume over tone. So the ROM writes a silence-level volume to PSG3 and to
+  the noise channel on every service.
+- **Ruled out, each by measurement.**
+  1. *An SFX taking the channel.* At service 502 the only playing tracks are
+     `MUS_PSG1`, `MUS_PSG2` and `MUS_PSG3`; no SFX role is playing on either
+     side, and the mailbox is empty from services 496 through 506.
+  2. *A state divergence behind the writes.* Every compared track field agrees
+     at 502, which is why the comparator reports a write rather than a field.
+     A probe over 499-505 confirms `MUS_PSG3` is resting on both sides with
+     the same duration, saved duration, volume and frequency.
+  3. *The engine's envelope-hold gate on the PSG volume.* Removing
+     `envAtRest` from the volume gate for S3K moves nothing, so that flag is
+     not what suppresses the write. The change was reverted.
+  4. *The tempo-delay service.* Service 498 has the same accumulator carry as
+     502 and carries no such pair, so the carry is not the trigger.
+- **What makes it puzzling, stated plainly so the next round starts here.**
+  `zUpdatePSGTrack`'s volume tail is gated on the rest bit: `.no_volenv` tests
+  `bit 4, (ix+zTrack.PlaybackControl)` and returns when it is set (Sound/Z80
+  Sound Driver.asm:4098-4101). All three music PSG tracks are resting, so on
+  that reading the ROM should write no PSG volume at all here. Something
+  writes both bytes anyway, every service. The candidates not yet checked are
+  a writer outside `zUpdatePSGTrack` entirely, and the possibility that the
+  recorded RAM window's rest bit is sampled after a routine that clears and
+  re-sets it within the service.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape, which no routine in either listing pins.
+
+
 ## 2026-09-04 - S3K silences a PSG track's own channel first; tick 495 -> tick 502
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
