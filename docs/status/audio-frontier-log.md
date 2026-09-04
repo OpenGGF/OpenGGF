@@ -27,6 +27,47 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 releases every PSG lock before restoring; the write stream reaches the tempo frontier
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `b637f4171`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 584 (movie row 10786),
+  field `writes.count`, reference 9 against the engine's 8; 411 of 2,198 ticks
+  divergent.
+- **After, state with writes:** DIVERGENCE at tick 1,789 (movie row 11991),
+  field `global.currentTempo`, reference `0x9e` against the engine's `0xbe`;
+  409 of 2,198 ticks divergent. The write stream now agrees over every service
+  up to the tempo frontier, and the two result lines have converged on the same
+  tick and the same field.
+- **DAC stream:** unchanged, `BYTE DIFFERENT in run 3 at byte 709`.
+- **The divergence.** At tick 584 the reference emitted `psg=FF psg=E7` and the
+  engine only `psg=FF`. The missing byte is a PSG3 noise re-latch.
+- **The routine.** `zStopPSGSFXTrack` clears the SFX override bit on the
+  corresponding music track, marks it resting, and if that track's
+  `VoiceControl` is `0E0h`, a PSG3 noise track, writes its stored `PSGNoise`
+  byte back to the chip (s2.sounddriver.asm:3581-3587).
+- **What was actually wrong, measured rather than inferred.** The engine did
+  attempt the write. A probe on the release showed it firing at the right
+  moment with the track active and its noise parameter `7`, and a second probe
+  on the driver's music write path caught the byte being dropped:
+  `psg=E7 ch=3 own=3 lockHeld=true`. A noise byte's ownership channel is the
+  noise channel, not the track's own, and the release loop cleared the lock on
+  channel 2 and ran the override update from inside the same iteration, before
+  it had reached channel 3, which this same SFX still held.
+- **Where it landed.** `SmpsDriver.reconcileInactiveSfxTracks` now releases all
+  of the sequencer's PSG locks first and runs the override updates in a second
+  pass. The ROM has no per-channel hardware ownership that can be half
+  released: it clears one bit on the music track and the write goes out.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 production transfers; audio packages plus the four extra classes
+  with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next, and it is no longer an audio-lane frontier.** Both lines now stop at
+  the speed-shoes tempo, which is the gameplay timer compensation constant
+  recorded two entries below and handed to a gameplay lane with the trace
+  sweeps as its gates. The remaining audio-side frontier is the DAC stream's
+  run-3 byte difference.
+
 ## 2026-09-04 - S2 SFX takes a PSG channel without silencing it; tick 557 -> tick 584
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
