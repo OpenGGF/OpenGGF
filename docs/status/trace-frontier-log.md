@@ -115108,8 +115108,11 @@ The other three death arms remain coordinates only.
 ## 2026-09-04 - S2 request-window capture becomes a real command
 
 - Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
-  TraceChaser branch `bugfix/ai-s2-request-window-producer` at `3166a36`, cut
-  from the pinned head `8e32d25` and pointed at by this branch's gitlink.
+  TraceChaser branch `bugfix/ai-s2-request-window-producer` at `6481d7e`, cut
+  from the pinned head `8e32d25` and pointed at by this branch's gitlink. Two
+  commits: `dafd26b` fixes the raw sink, which wrote the profile's first pinned
+  movie identity into every capture whatever recording ran, and `6481d7e` adds
+  the command.
 - The bounded S2 request-window producer is now a command rather than a
   disposable test on an unmerged commit. Capture takes the ROM, the movie and
   its SHA-256, the service and candidate manifests, the BizHawk installation,
