@@ -115554,3 +115554,138 @@ The other three death arms remain coordinates only.
 - **Not the cause, ruled out here.** The droplets, which carry zero collision by
   the ROM's own copy order; the touch box sizes, which match; and the boss-branch
   collision filter, which does not apply to `$87`.
+
+## 2026-09-04 - S2 run-chain dynamic-art gaps: the uniform 1 is the engine's, and the 36-40 is a mislocated load-completion row
+
+- **Worktree/branch:** `.worktrees/s2-art-gaps`,
+  `bugfix/ai-s2-runchain-art-gaps`, over `develop` at `7ca24101c`. `src/` is
+  unchanged; everything below was measured with temporary probes that were
+  reverted before the gates.
+- **The ten gap axes are two families, and they do NOT split by source segment
+  type.** The 2026-08-21 entry "the gap stamp is NOT a recorder artefact, and it
+  is not one family either" concluded level-to-level was `-1` and
+  special-stage-to-level was a `+1,+2,+8,+20,+21` spread. Re-measured at
+  `7ca24101c`, every gap in the run is engine-LOW, and the split is by the
+  **edge's role**, not by the gap's source:
+
+  | edge role | gaps affected | engine - rom |
+  |---|---|---|
+  | source level's last in-segment art | all | 0 (matches) |
+  | destination level-entry pair (`map 1`, sonic + tails) | level-to-level | 0 (matches) |
+  | destination level-entry pair (`map 1`, sonic + tails) | special-stage-to-level | **-36 to -40** |
+  | destination's first two post-entry Tails frames (`map $10`, `$11`) | **all nine** | **-1** |
+
+  So the uniform 1 is one family with one owner spanning both source types, and
+  the special-stage spread is a different quantity entirely.
+
+### The uniform -1: the recorder and the harness agree; the engine's Tails does not
+
+The previous round left a named kill condition: probe
+`playback.getCursorFrame()` against `step.movieRow()` at the top of
+`stepEngineFrame` on the gap rows, on the theory that a cursor-derived stamp
+overwrites the driver-authoritative one. **That candidate is dead.** Probed on
+the `seg7_ehz2 -> seg8_cpz1` gap, the cursor equals `step.movieRow()` on every
+gap row, and the two stamping conventions provably agree: the recorder sets
+`DynamicArtLogicalFrame = rowsConsumed` before `host.Advance()`
+(`tools/tracechaser/bizhawk-headless/src/Recording/S2RunCaptureRunner.cs`:216-219,
+:456-465) while the segment is disarmed, so its stamp is the 0-based index of
+the row the edge fires on; `AbstractRunChainTest.stateMovieLogicalRow(step)`
+states the same index. The proof is in the data rather than the reading: the
+level-entry pair at that gap is stamped 61180/61181 by BOTH sides, through those
+same two paths.
+
+The whole gap, from the probe (`gapOrigin=61028`, 178 rows,
+`loadCompletionIndex=152`):
+
+| row | engine | recording |
+|---|---|---|
+| 61180 (last lag row) | sonic+tails `map 1` submitted | same |
+| 61181 | sonic+tails `map 1` completed | same |
+| 61181..61194 | tails DPLC observed, `map 1`, 14 rows | - |
+| 61195 | tails `map $10` submitted | (nothing) |
+| 61196 | tails `map $10` completed | tails `map $10` **submitted** |
+| 61203/61204 | tails `map $11` submitted/completed | - |
+| 61204/61205 | - | tails `map $11` submitted/completed |
+
+Both sides begin dispatching Tails on 61181 and both hold `map 1` before
+switching; the ROM holds it for 15 dispatches and switches on the 16th, the
+engine holds it for 14 and switches on the 15th. The 8-row cadence after the
+switch matches exactly on both sides, so the animation model is right and only
+the switch row is wrong.
+
+`map $10`/`$11` are `TailsAni_Walk` frames 0 and 1
+(`docs/s2disasm/s2.asm:41556`), not `TailsAni_Wait` (`:41566`, whose first ten
+entries are all `map 1`). The edge is therefore the frame Tails starts walking,
+and what decides it is the level-entry phase of the leader's position-record
+ring: `TailsCPU_Normal` reads `Sonic_Pos_Record_Buf` at
+`Sonic_Pos_Record_Index - $44`, seventeen 4-byte entries back
+(`docs/s2disasm/s2.asm:39285-39295`), and `Obj01_Init_Continued` zeroes that
+index, runs `Sonic_RecordPos` 64 times over the leader displaced by
+`(-$20,+4)`, then restores the position (`:36201-36217`). Tails stands until the
+delayed read first returns a live, un-displaced entry, and the engine reaches
+that one dispatch early at every level entry in the run.
+
+**Owner: the engine, in the sidekick/playable position-record path, not the
+harness and not the recorder.** This lane was fenced out of physics and sidekick
+code, so no fix was attempted. The candidate site for the next round, named but
+NOT confirmed: `AbstractPlayableSprite.recordFollowerHistoryForTick` increments
+before writing where the ROM writes before incrementing, and both
+`resetPositionAndStatTableHistoryAtCentre` and `prefillPositionHistoryWithCentre`
+compensate by parking `historyPos` at 63; either compensation, or the
+`followerHistoryRecordedThisTick` guard being cleared by a reset that runs after
+a record on the same tick, would put the ring one write ahead for the rest of
+the level. Confirm by probing the ring index across rows 61181-61196 before
+changing anything.
+
+### The 36-40: the ROM's level-entry pair sits at `destination_first_row - 26`
+
+The special-stage-to-level family is the same level-entry pair, released too
+early. The recorded rows say where it belongs:
+
+| gap | destination first row | recorded pair | offset |
+|---|---|---|---|
+| `ss -> seg2_ehz1` | 10334 | 10308 | -26 |
+| `ss_2 -> seg3_ehz1` | 20246 | 20220 | -26 |
+| `ss_3 -> seg4_ehz1` | 31472 | 31446 | -26 |
+| `seg7_ehz2 -> seg8_cpz1` | 61206 | 61180 | -26 |
+| `ss_4 -> seg6_ehz2` | 46374 | 46347 | -27 |
+
+This is the S1 `segment_start - 26` load-pair invariant holding on S2. The
+engine locates that row as `lastNonAdmittedRow(gapLag)`, the census's last lag
+row (`AbstractRunChainTest`:3734), which is correct at every level-to-level gap
+and wrong by 36-40 rows at every special-stage return: after a special stage the
+ROM's level load finishes on an ADMITTED row, so the last lag row of the gap is
+no longer where `InitPlayers` runs. The recording corroborates the phase
+difference independently - at a level-to-level gap the pair's submitted and
+completed edges are 1 row apart, at a special-stage return they are 2, so a lag
+row intervenes between the submission and `ProcessDMAQueue` there.
+
+Not fixed. Relocating the load-completion row for the special-stage-return path
+is the next round's work, and it must be derived from the ROM's return sequence
+rather than from the 26.
+
+`ss_6 -> seg10_cpz2` is the one gap that fits neither shape: its pair is at
+82295 against a destination first row of 82342 (-47), and its post-entry Tails
+pair is 2 rows early rather than 1. It should be re-measured on its own.
+
+### Gates, on a source-identical tree
+
+- Command (all three from `.worktrees/s2-art-gaps` after `mvn clean`, with
+  `LUA_BIN=lua5.4`, `-Dmse=off -B`, `-Dsurefire.runOrder=alphabetical` and all
+  three absolute ROM paths; `target/surefire-reports` removed before each):
+  `-Ptrace-replay test`, then the ordinary `test`, then `-Pguards test`.
+- **`-Ptrace-replay`: 854 tests, 8 failures, 0 errors, 6 skips** - the stated
+  baseline, unmoved, with the same eight classes:
+  `TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestS3kAizTraceReplay`,
+  `TestS3kReplayReferenceClosureIntegration`,
+  `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestTraceRunReplayWalkerControlFlow`. Nothing moved either way, as expected
+  from a source-identical tree.
+- **Ordinary suite: 16,404 tests, 0 failures, 0 errors, 22 skips.**
+- **`-Pguards`: 607 tests, 0 failures, 0 errors, 0 skips.**
+- `TestS2CompleteEmeraldRunChain` still fails on the same 12 axes: the
+  segment-15 physics cascade another lane owns, the uncompared-interior walk
+  overrunning destination 101691, and the ten dynamic-art gap axes characterised
+  above.
