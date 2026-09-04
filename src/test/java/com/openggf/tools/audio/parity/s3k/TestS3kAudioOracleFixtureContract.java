@@ -110,16 +110,21 @@ class TestS3kAudioOracleFixtureContract {
                 engine.ticks().get(138).writes().subList(0, 84));
 
         // v1's frame-granular projection swept the whole boot frame, so its
-        // boot row carries zPlayDigitalAudio's entry 2Bh (D:4256-4260) as an
-        // 85th write. zInitAudioDriver's own last write is zStopAllSound's 27h
-        // (D:2513-2519,550-551), so the engine now closes the init service
-        // before that write and v1's boot row is one write long. This is the
-        // retired stream's sampling artefact seen from the engine side, not a
-        // driver defect; v2 is the live comparison.
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_MISSING,
+        // boot row still physically carries zPlayDigitalAudio's entry 2Bh
+        // (D:4256-4260) as an 85th write, where zInitAudioDriver's own last
+        // write is zStopAllSound's 27h (D:2513-2519,550-551) and the engine
+        // closes the init service before it. That write is the sample-end
+        // disable, which now belongs to the DAC byte stream, so tick 0's
+        // service streams agree and the retired stream's first divergence is
+        // its next sampling artefact: v1's row for the SEGA PCM start omits
+        // the 2Bh = 80h enable the engine emits there. The enable is
+        // deliberately still compared per tick, so every run start stays
+        // pinned. v2 remains the live comparison.
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_EXTRA,
                 report.kind());
-        assertEquals(0, report.tick());
+        assertEquals(50, report.tick());
         assertEquals("decoded_write", report.field());
+        assertEquals(0x80, engine.ticks().get(50).writes().getFirst().value());
         assertEquals(85, services.getFirst().writes().size(),
                 "the retired v1 boot row absorbed the DAC loop's entry write");
         assertEquals(0x2b, services.getFirst().writes().get(84).register());

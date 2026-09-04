@@ -58,6 +58,10 @@ public final class Sonic2SmpsSequencerConfig {
                 .fmChannelOrder(FM_CHANNEL_ORDER)
                 .psgChannelOrder(PSG_CHANNEL_ORDER)
                 .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                // zDoModulation is the only one of the three that tests the
+                // rest bit on entry: bit 1,(ix+zTrack.PlaybackControl) / ret nz
+                // (s2.sounddriver.asm:988-990). S1 and S3K keep stepping.
+                .stepModulationAtRest(false)
                 .palUpdateMode(SmpsSequencerConfig.PalUpdateMode.EXTRA_MUSIC)
                 // TempoWait runs at the top of EVERY zUpdateMusic including the
                 // first after a song load (sd:545-551): the load seeds

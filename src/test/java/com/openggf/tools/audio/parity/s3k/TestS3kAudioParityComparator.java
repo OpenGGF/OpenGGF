@@ -140,6 +140,101 @@ class TestS3kAudioParityComparator {
                 S3kAudioParityTool.renderReport(report, "json"));
     }
 
+    /**
+     * The sample-end {@code 2Bh = 0} left the strictly partitioned service
+     * stream, so a run that exhausts on one side and is superseded on the
+     * other no longer fails the tick comparison. Reverting the exclusion in
+     * {@code serviceWrites} makes this fail with {@code EVENT_VALUE_DIFFERENT}
+     * at tick 1 event 0.
+     */
+    @Test
+    void theSampleEndDisableIsNotComparedInTheServiceStream() {
+        List<S3kAudioTick> reference = List.of(tick(0, 0x40, 0xB4),
+                withWrites(tick(1, 0x40, 0x9F),
+                        AudioParityChipWrite.ym2612(0, 0xA4, 0x1B)));
+        List<S3kAudioTick> engine = List.of(tick(0, 0x40, 0xB4),
+                withWrites(tick(1, 0x40, 0x9F),
+                        AudioParityChipWrite.ym2612(0, 0x2B, 0x00),
+                        AudioParityChipWrite.ym2612(0, 0xA4, 0x1B)));
+
+        assertTrue(S3kAudioParityComparator.compare(reference, engine).matches(),
+                () -> S3kAudioParityComparator.compare(reference, engine).toHumanText());
+    }
+
+    /**
+     * The {@code 2Bh = 80h} enable did NOT move. The idle loop writes it on
+     * finding {@code zDACIndex} non-zero at a service boundary, so every run
+     * start stays pinned to an exact tick. Widening the exclusion in
+     * {@code serviceWrites} to all {@code 2Bh} writes makes this fail.
+     */
+    @Test
+    void theRunStartEnableStaysComparedInTheServiceStream() {
+        List<S3kAudioTick> reference = List.of(tick(0, 0x40, 0xB4),
+                withWrites(tick(1, 0x40, 0x9F),
+                        AudioParityChipWrite.ym2612(0, 0xA4, 0x1B)));
+        List<S3kAudioTick> engine = List.of(tick(0, 0x40, 0xB4),
+                withWrites(tick(1, 0x40, 0x9F),
+                        AudioParityChipWrite.ym2612(0, 0x2B, 0x80),
+                        AudioParityChipWrite.ym2612(0, 0xA4, 0x1B)));
+
+        S3kAudioParityComparator.Report report =
+                S3kAudioParityComparator.compare(reference, engine);
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
+                report.kind());
+        assertEquals(1, report.tick());
+    }
+
+    /**
+     * A byte streaming while the DAC is disabled is counted, not failed. The
+     * committed reference does it once itself, at service 3,837, so calling
+     * it an error would fail the oracle on the reference's own behaviour.
+     * The count must still reach the result line, or the difference would be
+     * invisible.
+     */
+    @Test
+    void bytesStreamedWhileTheDacIsDisabledAreCountedNotFailed() {
+        // Four one-byte runs each side, same bytes, same run count. The only
+        // difference is that the second run's byte arrives before its enable.
+        List<S3kAudioTick> clean = List.of(withWrites(tick(0, 0x40, 0xB4),
+                enable(), byte7F(), disable(),
+                enable(), byte7F(), disable(),
+                enable(), byte7F(), disable(),
+                enable(), byte7F()));
+        List<S3kAudioTick> streaming = List.of(withWrites(tick(0, 0x40, 0xB4),
+                enable(), byte7F(), disable(),
+                byte7F(), disable(),
+                enable(), byte7F(), disable(),
+                enable(), byte7F()));
+
+        assertTrue(S3kAudioParityComparator.compareDacStream(clean, clean).matches());
+        S3kAudioParityComparator.DacStreamReport report =
+                S3kAudioParityComparator.compareDacStream(clean, streaming);
+        assertTrue(report.matches(), report::toHumanText);
+        assertEquals(1, report.idleByteDelta());
+        assertTrue(report.toHumanText().contains("idle-byte delta 1"),
+                report::toHumanText);
+    }
+
+    private static AudioParityChipWrite enable() {
+        return AudioParityChipWrite.ym2612(0, 0x2B, 0x80);
+    }
+
+    private static AudioParityChipWrite disable() {
+        return AudioParityChipWrite.ym2612(0, 0x2B, 0x00);
+    }
+
+    private static AudioParityChipWrite byte7F() {
+        return AudioParityChipWrite.ym2612(0, 0x2A, 0x7F);
+    }
+
+    private static S3kAudioTick withWrites(S3kAudioTick source,
+            AudioParityChipWrite... extra) {
+        List<AudioParityChipWrite> writes = new ArrayList<>(source.writes());
+        writes.addAll(List.of(extra));
+        return new S3kAudioTick(source.ordinal(), source.lag(), source.mailbox(),
+                source.global(), source.tracks(), writes);
+    }
+
     private static S3kAudioTick tick(int ordinal, int tempo, int psgWrite) {
         List<S3kAudioTrackState> tracks = new ArrayList<>();
         for (int index = 0; index < S3kAudioParitySchema.ROLES.size(); index++) {

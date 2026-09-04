@@ -1369,7 +1369,32 @@ public class SmpsSequencer implements CoordFlagContext {
                             t.resting = true;
                             return;
                         }
+                    } else if (config.getNoteFillTail()
+                            == SmpsSequencerConfig.NoteFillTail.S3K_SPLIT) {
+                        if (t.fillCounter > 0 && --t.fillCounter == 0) {
+                        // S3K's note fill is the same per-pass countdown,
+                        // armed unscaled from NoteFillMaster at note start
+                        // (Sound/Z80 Sound Driver.asm:1067-1068), but its two
+                        // tails differ by track type and both are tail jumps,
+                        // so the rest of the pass is skipped either way.
+                        // zUpdatePSGTrack's `jp z, zRestTrack` only sets the
+                        // rest bit and writes nothing (:4070-4074,
+                        // :2160-2164), while zUpdateFMorPSGTrack's
+                        // `jp z, zKeyOffIfActive` keys the channel off
+                        // (:786-790, :2148-2152).
+                            if (t.type == TrackType.PSG) {
+                                t.resting = true;
+                            } else {
+                                stopNote(t);
+                            }
+                            return;
+                        }
                     } else if (t.fill > 0 && (t.scaledDuration - t.duration) >= t.fill) {
+                        // S2's zNoteFillUpdate is a per-pass countdown that
+                        // rests the track and sends a note off
+                        // (s2.sounddriver.asm:1153-1163). The engine models it
+                        // as an elapsed comparison instead. That difference is
+                        // unverified against the S2 oracle and is left alone.
                         stopNote(t);
                     }
                 }
@@ -2307,7 +2332,14 @@ public class SmpsSequencer implements CoordFlagContext {
                 resetModEnvelopeState(t);
             }
         }
-        t.resting = t.note == 0x80;
+        // No driver's DAC path touches the track's rest bit. S3K's
+        // zUpdateDACTrack jumps a rest straight to
+        // zUpdateDACTrack_GetDuration without setting PlaybackControl bit 4
+        // (skdisasm Sound/Z80 Sound Driver.asm:2890-2896), and S1's
+        // DACUpdateTrack (s1.sounddriver.asm:277-307) and S2's
+        // zDACUpdateTrack (s2.sounddriver.asm:759-790) have no rest test at
+        // all. Only FM and PSG tracks rest.
+        t.resting = t.type != TrackType.DAC && t.note == 0x80;
 
         if (t.note == 0x80) {
             if (t.type != TrackType.DAC) {
@@ -2868,6 +2900,23 @@ public class SmpsSequencer implements CoordFlagContext {
                 refreshVolume(t);
                 return;
             } else {
+                if (config.getPsgEnvRestCmd()
+                        == SmpsSequencerConfig.PsgEnvRestCmd.Z80_81_AND_83
+                        && (val == 0x81 || val == 0x83)) {
+                    // zDoVolEnvRest and zDoVolEnvFullRest pop the caller's
+                    // return address, set PlaybackControl bit 4 and end the
+                    // track's pass (Sound/Z80 Sound Driver.asm:4169-4175,
+                    // :4187-4194, :4204-4208). Neither advances VolEnv, so the
+                    // same command is re-read every pass, and neither silences
+                    // the channel: the ROM says so outright at :4208. The
+                    // frequency latch has already happened by here, which is
+                    // why only the volume write is skipped.
+                    t.envPos--;
+                    t.resting = true;
+                    t.envHold = true;
+                    t.envAtRest = true;
+                    return;
+                }
                 if (val == 0x80) {
                     if (config.getPsgEnvCmd80() == SmpsSequencerConfig.PsgEnvCmd80.RESET) {
                         // S3K: reset envelope to start (loop from beginning)
@@ -3153,9 +3202,12 @@ public class SmpsSequencer implements CoordFlagContext {
     private int applyModulation(Track t, boolean write) {
         if (!t.modEnabled)
             return 0;
-        // Z80-family drivers return before stepping modulation at rest. S1's
-        // 68k DoModulation has no rest check and continues advancing its phase.
-        if (!config.isDirect68kDriver() && t.resting)
+        // Only S2's zDoModulation tests the rest bit on entry
+        // (s2.sounddriver.asm:988-990). S1's DoModulation
+        // (s1.sounddriver.asm:483-490) and S3K's zDoModulation
+        // (skdisasm Sound/Z80 Sound Driver.asm:1277-1283) test only whether
+        // modulation is active, so both keep advancing the phase at rest.
+        if (!config.isStepModulationAtRest() && t.resting)
             return 0;
 
         stepCustomModulation(t);
