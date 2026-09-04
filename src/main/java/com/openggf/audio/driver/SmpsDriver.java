@@ -2654,12 +2654,43 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         return null;
     }
 
+    /**
+     * Whether {@code sequencer} still drives {@code channel}.
+     *
+     * <p>A PSG track in noise mode owns two hardware channels, not one. The
+     * ROM keeps the noise channel on the PSG3 track slot itself: {@code
+     * zStopPSGTrack} decides whether to re-send a stored noise byte by testing
+     * {@code PlaybackControl} bit 0 -- "Is this a noise channel?" -- on that
+     * track, and reads {@code zTrack.PSGNoise} out of the same slot
+     * (Sound/Z80 Sound Driver.asm:3520-3527). There is no separate noise track
+     * to hold the ownership, so a track whose {@code channelId} is PSG3 keeps
+     * the noise channel alive for as long as it is active.
+     *
+     * <p>Matching only on {@code channelId} released the noise channel on the
+     * first reconcile of every noise-form effect, and the release force-silences
+     * it. That silenced the whole tail of {@code sfx_Collapse} ($59) and
+     * {@code sfx_Dash} ($B6), whose PSG3 noise tracks outlive their short FM
+     * tracks by design: Collapse's six-iteration volume ramp
+     * (Sound/SFX/59 - Collapse.asm:31-36) and Dash's $4F-tick noise sweep
+     * (Sound/SFX/B6 - Dash.asm:19-23) never reached the bus.
+     *
+     * <p>Drivers that fold noise ownership onto PSG3 are unaffected: {@link
+     * #psgOwnershipChannel} already remaps the noise channel to 2 under
+     * {@code S1_PSG3_SILENCE_PAIR}, so those never take a channel-3 lock.
+     */
     private static boolean hasActiveTrack(
             SmpsSequencer sequencer, int channel, boolean psg) {
         for (int index = 0; index < sequencer.trackCount(); index++) {
             SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (track.active && track.channelId == channel
-                    && (track.type == SmpsSequencer.TrackType.PSG) == psg) {
+            if (!track.active
+                    || (track.type == SmpsSequencer.TrackType.PSG) != psg) {
+                continue;
+            }
+            if (track.channelId == channel) {
+                return true;
+            }
+            if (psg && channel == PSG_NOISE_CHANNEL && track.noiseMode
+                    && track.channelId == PSG_TONE3_CHANNEL) {
                 return true;
             }
         }
@@ -2832,6 +2863,12 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             }
         }
     }
+
+    /** PSG3, the tone channel a noise track's own slot names. */
+    private static final int PSG_TONE3_CHANNEL = 2;
+
+    /** The PSG noise channel, which a PSG3 noise track owns alongside PSG3. */
+    private static final int PSG_NOISE_CHANNEL = 3;
 
     private static int psgOwnershipChannel(
             int hardwareChannel, Object source) {

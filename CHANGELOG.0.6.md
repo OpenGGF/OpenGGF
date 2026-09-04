@@ -14,6 +14,21 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 3 & Knuckles collapsing scenery rings out again, and the spindash
+  release stops buzzing:** both effects put a long noise part alongside a short
+  instrument part, and in both the noise part is what a player actually hears.
+  The sound program hands the noise generator to the effect's third tone track,
+  which has no separate track of its own, so the engine did not recognise that
+  the track was still using it. It took the generator back on the effect's very
+  first update and muted it, which chopped the spindash release into a buzz and
+  cut the collapse short. The collapse also lost its ring-out: its script fades
+  the noise across six repeats by stepping the volume down each time, and the
+  engine only sent a new volume when a note began, so a fade applied mid-note
+  never reached the chip and the effect ended flat. It now sends the volume on
+  every update of a sounding note, as the original does, so the collapse decays
+  away instead of stopping dead. Sonic 1 and Sonic 2 keep their audited volume
+  behaviour.
+
 - **Speed shoes now slow the music down on the same frame they take your speed
   back:** the original does both in one step at the end of a frame, restoring the
   boosted running values and asking the sound program to drop the tempo together.

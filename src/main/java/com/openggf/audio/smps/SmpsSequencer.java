@@ -3482,6 +3482,32 @@ public class SmpsSequencer implements CoordFlagContext {
                 synth.writePsg(this, 0x80 | (ch << 5) | data);
                 synth.writePsg(this, psgFrequencyHighByte(reg));
             }
+            if (config.getPsgVolumeTail()
+                    == SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS
+                    && (t.envData == null || t.envData.length == 0)) {
+                // zUpdatePSGTrack's .note_going path sends the frequency pair
+                // and then falls straight into the volume tail on every pass
+                // of a sounding note. The only gates on that tail are
+                // PlaybackControl bit 2 (SFX overriding) and bit 4 (track at
+                // rest), both of which refreshVolume already applies; there is
+                // no attack test in it at all
+                // (Sound/Z80 Sound Driver.asm:4079-4135).
+                //
+                // A track that carries a PSG volume envelope already reaches
+                // refreshVolume through its envelope step every pass, so the
+                // tail is taken here only for the envelope-less case. That is
+                // the ROM's own .no_volenv path: a zero VoiceIndex skips
+                // zDoVolEnv with c = 0 and falls through to the same volume
+                // write rather than returning (:4103-4112).
+                //
+                // Without the tail, a volume the track changed while a note was
+                // already sounding never reached the chip. sfx_Collapse's tail
+                // is exactly that: six passes of "nB3, $18, smpsNoAttack" each
+                // followed by smpsPSGAlterVol $03
+                // (Sound/SFX/59 - Collapse.asm:31-36), whose $00-to-$0F decay
+                // ramp is what makes the effect ring out rather than stop dead.
+                refreshVolume(t);
+            }
         }
     }
 
