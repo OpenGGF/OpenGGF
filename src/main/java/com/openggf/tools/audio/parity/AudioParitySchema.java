@@ -75,6 +75,27 @@ public final class AudioParitySchema {
             new GameplayMovie(GAMEPLAY_BK2_INPUT_ROWS, GAMEPLAY_BK2_LAUNCH_INVOCATIONS),
             GAMEPLAY2_BK2_SHA256,
             new GameplayMovie(GAMEPLAY2_BK2_INPUT_ROWS, GAMEPLAY2_BK2_LAUNCH_INVOCATIONS));
+    /**
+     * Per-song window capture pair: one window of a complete-run movie, opened
+     * by a {@code Sound_PlayBGM} dispatch and closed by the next one.
+     *
+     * <p>The gameplay capture kind above covers a movie's first window only,
+     * and pins that window's dormant launch-invocation count as a property of
+     * its movie. Windows after the first have no dormant prefix at all -- the
+     * driver is already running when they open -- so they are a separate kind
+     * rather than a widening of the gameplay contract, which leaves every
+     * committed gameplay fixture's validation untouched.
+     *
+     * <p>A window is single-song by construction, which is the whole point:
+     * the reference normalizes sequence positions against one song's ROM asset
+     * range and the engine host drives one music sequencer. Chaining windows
+     * covers a whole run without either side needing a multi-song contract.
+     */
+    public static final String RUN_WINDOW_REFERENCE_CAPTURE = "s1_run_song_window_driver_reference";
+    public static final String RUN_WINDOW_OPENGGF_CAPTURE = "s1_run_song_window_driver_openggf";
+    /** S1 music ids, {@code bgm__First} through the last music pointer-table entry. */
+    public static final int MUSIC_ID_BASE = 0x81;
+    public static final int MUSIC_ID_MAX = 0x93;
     public static final int MAX_INVOCATIONS = 36_000;
     public static final String METADATA_TYPE = "capture_metadata";
     public static final String TICK_TYPE = "tick";
@@ -88,7 +109,7 @@ public final class AudioParitySchema {
     public static final Set<String> METADATA_FIELDS = Set.of(
             "type", "schema", "capture", "cycle_start", "period", "terminal_record_count", "rom",
             "callback_contract", "diagnostic_fields", "gating_fields", "launch_update_music_invocations",
-            "movie");
+            "movie", "music_id", "window");
     public static final List<String> DIAGNOSTIC_GLOBAL_FIELDS = List.of(
             "priority", "pause", "fade flags", "queues", "sound id", "voice selector", "DAC update",
             "1-up", "speed-up reload", "communication", "ring speaker", "push");

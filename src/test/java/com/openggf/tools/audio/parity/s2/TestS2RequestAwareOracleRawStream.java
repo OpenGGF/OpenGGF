@@ -131,8 +131,9 @@ class TestS2RequestAwareOracleRawStream {
                         TestS2AudioOracleFixture.fixturePath(), capture.audioRows());
         System.out.println("MEASUREMENT_ONLY " + requests.describe());
         System.out.println("MEASUREMENT_ONLY " + driver.describe());
-        assertNotEquals(S2AudioOracleComparator.Kind.INVALID,
+        assertEquals(S2AudioOracleComparator.Kind.MATCH,
                 driver.kind(), driver.describe());
+        assertEquals(698, driver.comparedTicks(), driver.describe());
     }
 
     @Test

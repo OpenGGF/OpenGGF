@@ -162,6 +162,74 @@ defined by `com.openggf.tools.audio.parity`.
   unchanged at `MATCH (2198 ticks)` on both lines; the three request windows
   `MATCH` at 25, 52 and 27 transfers; audio packages plus the four extra
   classes with three ROM paths: 2,063 tests, 0 failures, 0 errors, 10 skips.
+## 2026-09-04 - The duration seed lands; both red assertions were the suspects
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `230e88fcc`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 565, role `SFX_FM4`, field
+  `durationTimeout`, reference `1` against engine `0`. DAC stream
+  `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 565, event 0, reference
+  `ym2612 port 0 register 28h = 4` against engine `port 0 register 0A4h = 18`.
+  DAC stream unchanged. Every compared field at service 565 agrees.
+- **The oracles arbitrated first, and they cleared the seed.** With the seed
+  in place all four S1 comparisons still MATCH: the sound-test captures at
+  14,690 and 1,967 ticks, and both gameplay oracles at 2,562 and 5,257. That
+  is real hardware behaviour agreeing with the change, against two synthetic
+  fixtures disagreeing with it.
+- **Hypothesis 1, the S1 note-fill assertion: the fixture was degenerate, not
+  the assertion.** Counting the ROM with the seed of 1 and the fill-after-not-
+  expired ordering gives cursor 2, exactly what the test asserts: the opening
+  walk reads `E8 02`, `F5 01` and the note and takes the first envelope step;
+  the next frame decrements the fill from 2 to 1 and steps again; the frame
+  after that decrements it to zero and `NoteTimeoutUpdate` exits before the
+  envelope. So the ROM says 2 and the assertion was right. A frame-by-frame
+  probe showed the engine's track never reading its stream at all: the fixture
+  declares `tempo = 1`, and S1's `UpdateMusic` adds 1 to every slot's
+  `DurationTimeout` whenever the tempo timeout expires
+  (s1.sounddriver.asm:1549-1561), which at tempo 1 is every frame and exactly
+  cancels the per-frame decrement. A track seeded at the ROM's own 1 can then
+  never reach zero. The fixture now declares `tempo = 2` and the assertion
+  passes at its original value.
+- **Hypothesis 2, the tempo-delay walk: the guard was measuring the wrong
+  frame.** Its `events.size() > 2` required at least one chip write on a
+  tempo-delay frame. That only held while the track had never started, because
+  the write it counted was the opening note read. Once a track is playing, S1's
+  tempo delay adds 1 and the walk's decrement cancels it, so the note does not
+  advance and the frame emits nothing. The guard now asserts what the frame
+  genuinely proves: the walk ran, evidenced by the duration being net
+  unchanged across it, and the frame's event list is exactly the service
+  begin/end pair. The scoping property the test exists for is untouched, and
+  the observer still fails any unscoped write.
+- **No per-driver difference to model.** All three ROMs seed 1: S1 loads
+  `d5 = 1` for both music loops (s1.sounddriver.asm:823, :836, used at :847
+  and :897) and writes 1 for SFX (:1062, :1171); S2 stores 1 with the comment
+  "should expire next update, play first note, etc."
+  (s2.sounddriver.asm:1857); S3K's `zZeroFillTrackRAM` seeds it in the
+  track-RAM fill (skdisasm Sound/Z80 Sound Driver.asm:2168-2184).
+- **The CPZ state-and-writes line is still the S2 lane's own frontier.**
+  `DIVERGENCE at tick 237, field writes[4], expected ym1[0B1h] against
+  ym1[0B0h], 36 of 719 ticks divergent`, unchanged by this branch and
+  previously reproduced with this branch's source change reverted. Its
+  `state only` companion is `MATCH (720 ticks)`.
+- **Open items.** S2's `zNoteFillUpdate` countdown; S1 and S2's post-note
+  do-not-attack clear; the `.dac_playback_loop` cycle total of 303 against
+  `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape. The duration seed leaves the list.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 v1 `MATCH (698 ticks)`, v2 state-and-writes and state-only
+  `MATCH (2198 ticks)`, CPZ state-only `MATCH (720 ticks)`, request windows
+  `MATCH` at 25, 52 and 27. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,159
+  tests, 0 failures, 10 skips.
+
 
 ## 2026-09-04 - CPZ tick 237 attributed: the ring speaker's phase, inherited from before the window
 
@@ -4768,3 +4836,91 @@ defined by `com.openggf.tools.audio.parity`.
   impossible value leaves both the engine capture and the comparison
   bit-for-bit unchanged. Replacing the supplied byte with a constant makes
   exactly the three tests that claim those properties fail, and no others.
+
+## 2026-09-04 — Currently-matching audio oracles pinned as hard assertions
+
+- **Worktree/branch:** `.worktrees/oracle-pins`, `test/ai-oracle-match-pins`, from
+  `develop` `a85d1f7b6`.
+- **Motivation:** several oracles printed their result on a `MEASUREMENT_ONLY`
+  line and never asserted it. A regression that took the S2 driver oracle from
+  `MATCH (698 ticks)` to a divergence at tick 208 left the suite at 0 failures.
+  A `MATCH` that is achieved is now pinned as a hard assertion so a regression
+  fails the build; comparisons that still diverge are left as
+  `MEASUREMENT_ONLY` on purpose.
+- **Pinned (test-only, no production code touched):**
+  - `TestS2RequestAwareOracleRawStream.realCandidateAndBk2DrivenDriverStateCompare`
+    now asserts `S2AudioOracleComparator.Kind.MATCH` and `driver.comparedTicks() == 698`
+    (was `assertNotEquals(..., INVALID)`).
+  - `TestS2DriverStateOracle.driverStateComparesAcrossTheWidenedSpan` now
+    asserts `MATCH` and `comparedTicks() == 2198` for both the "state and
+    writes" and the "state only" reports (was `assertNotEquals(..., INVALID)`
+    for both). The DAC-stream comparison (`BYTE DIFFERENT` at run 3 byte 709)
+    is left `MEASUREMENT_ONLY`; it still diverges.
+  - `TestS2WidenedRequestOracle.everyReplayableWindowComparesAgainstTheEnginesOwnRequests`
+    now asserts `MATCH` and `comparedTransfers() == published.requestTransfers()`
+    per window (was `assertNotEquals(..., INVALID)`), pinning the three windows
+    the capture bound actually exercises: `w10150-10900` (25), `w10900-11650`
+    (52), `w11650-12400` (27).
+  - `TestS1GameplayRun2AudioDriverOracle.wholeWindowMatches` now also asserts
+    `report.ticksCompared() == 5257` alongside the existing `Kind.MATCH`
+    assertion.
+  - `TestS1GameplayAudioDriverOracle.oracleMatchesTheWholeReference` already
+    asserted `MATCH (2562 ticks)`; unchanged.
+  - `TestS2CpzDriverStateOracle.driverStateComparesAcrossTheCpzWindow` (landed
+    on `develop` after this branch started, merged in) now asserts `MATCH` and
+    `stateOnly.comparedTicks() == 720` for the state-only report (was
+    `assertNotEquals(..., INVALID)`). The "state and writes" report for the
+    same window still diverges (`DIVERGENCE` at tick 237, `writes[4]`, ym1 port
+    `0xB1` vs `0xB0`) and is left `MEASUREMENT_ONLY` on purpose.
+- **Left as `MEASUREMENT_ONLY` (still diverging, not pinned):** the S2 DAC byte
+  stream (`BYTE DIFFERENT` at run 3 byte 709) and the S3K oracle frontier at
+  service 551/tick 138.
+- **S1 GHZ music oracle (`MATCH (14690 ticks)`) and S1 sound-test SFX oracle
+  (`MATCH (1967 ticks)`)** are measured only via the external
+  `tools/audio/run_s1_audio_parity.sh` + BizHawk wrapper; no committed JUnit
+  test in `src/test/java/com/openggf/tools/audio/parity/**` currently drives
+  either comparison, so there is nothing in-repo to pin for them.
+- **Break-on-purpose evidence:** each new pin was temporarily broken (expected
+  tick/transfer constant off by one, or `Kind.MATCH` swapped for a mismatching
+  kind) and confirmed to fail before being reverted to the correct value; see
+  the commit for the exact pins exercised.
+- **Gate:** `com.openggf.tools.audio.parity.**` — 178 tests, 0 failures,
+  0 errors, 2 skips (ROM-gated measurements with no supplied sidecar path),
+  run with `-Dmse=off` and explicit absolute ROM/BK2 paths.
+
+## 2026-09-04 — S1 sound-test music and SFX oracles brought into JUnit
+
+- **Worktree/branch:** `.worktrees/oracle-pins`, `test/ai-s1-soundtest-oracle-tests`,
+  from `develop` `319d777de`.
+- **Motivation:** the S1 GHZ music oracle (`MATCH (14690 ticks)`) and the S1
+  sound-test SFX oracle (`MATCH (1967 ticks)`) were regression gates quoted
+  repeatedly in this log, but both were measured only via the external
+  `tools/audio/run_s1_audio_parity.sh` + BizHawk wrapper. Their references —
+  `s1-soundtest-ghz-reference.v1.jsonl.gz` and
+  `s1-soundtest-sfx-reference.v1.jsonl.gz` — were already committed, so no
+  BizHawk capture is needed to exercise them: BizHawk only produced the
+  reference bytes, which are static fixtures now. The wrapper's own engine
+  side already runs the same in-process capture
+  (`S1AudioParityTool capture --capture music|sfx`, which calls
+  `S1OpenGgfAudioCapture`/`S1OpenGgfSfxAudioCapture`), so nothing about the
+  comparison itself requires BizHawk.
+- **Added**, modelled on `TestS1GameplayAudioDriverOracle`:
+  - `TestS1SoundTestMusicAudioDriverOracle.wholeWindowMatches`: decompresses
+    the committed GHZ music reference, replays it through
+    `S1OpenGgfAudioCapture.capture` (the same host `--capture music` uses),
+    and asserts `AudioParityReport.Kind.MATCH` with `ticksCompared() == 14690`.
+  - `TestS1SoundTestSfxAudioDriverOracle.wholeWindowMatches`: same shape for
+    the sound-test SFX reference via `S1OpenGgfSfxAudioCapture.capture` (the
+    same host `--capture sfx` uses), asserting `MATCH` with
+    `ticksCompared() == 1967`.
+  - Both classes also carry a `corruptingTheReferenceIsDetectedAtTheCorruptedTick`
+    test (byte-flip on tick 0's first YM2612 write), proving the comparison is
+    live rather than a comparison that never actually ran.
+  - Neither test hydrates engine or gameplay state from the fixture; both are
+    comparison-only, ROM-gated on `-Dsonic1.rom.path`.
+- **Break-on-purpose:** both new `ticksCompared()` pins were bumped by one
+  (14691 / 1968), run, and confirmed to fail
+  (`expected: <14691> but was: <14690>`, `expected: <1968> but was: <1967>`),
+  then reverted to the correct literals.
+- **Gate:** `com.openggf.tools.audio.parity.**` full run, `-Dmse=off`,
+  absolute ROM/BK2 paths — see the commit for the exact count.

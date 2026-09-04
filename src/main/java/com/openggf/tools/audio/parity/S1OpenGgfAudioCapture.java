@@ -102,15 +102,34 @@ public final class S1OpenGgfAudioCapture {
     }
 
     static SongContract inspectGhz(Rom rom, AbstractSmpsData song) {
+        return inspectSong(rom, song, Sonic1Music.GHZ.id);
+    }
+
+    /**
+     * Derives a song's ROM asset range and reachable loop indices, the two
+     * pieces of song identity the state normalizer needs.
+     *
+     * <p>The range is the song's own pointer-table entry through that entry
+     * plus the loaded blob's length, exactly as
+     * {@code Sonic1SmpsLoader.calculateMusicDataSize} sized the blob. Every
+     * music id is derived the same way, so a per-song window carries no
+     * hard-coded address of its own.
+     */
+    static SongContract inspectSong(Rom rom, AbstractSmpsData song, int musicId) {
+        if (musicId < Sonic1Music.ID_BASE || musicId > Sonic1Music.ID_MAX) {
+            throw new IllegalArgumentException(
+                    "music id is outside the S1 pointer table: 0x" + Integer.toHexString(musicId));
+        }
         try {
-            int index = Sonic1Music.GHZ.id - Sonic1Music.ID_BASE;
+            int index = musicId - Sonic1Music.ID_BASE;
             long base = Integer.toUnsignedLong(rom.read32BitAddr(
                     Sonic1SmpsConstants.MUSIC_PTR_TABLE_ADDR + index * 4L));
             long end = base + song.getData().length;
             return new SongContract(new S1AudioStateNormalizer.GhzAssetRange(base, end),
                     parseReachableF7LoopIndices(song));
         } catch (IOException error) {
-            throw new IllegalArgumentException("cannot derive the GHZ ROM asset range", error);
+            throw new IllegalArgumentException("cannot derive the ROM asset range for music 0x"
+                    + Integer.toHexString(musicId), error);
         }
     }
 
@@ -271,7 +290,7 @@ public final class S1OpenGgfAudioCapture {
             stream = new OwnedSmpsAudioStream(
                     "s1-parity", 0,
                     new SmpsPhysicalDevice.Settings(
-                            SAMPLE_RATE, false, false),
+                            SAMPLE_RATE, false),
                     LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                     ChipWriteObserver.NONE);
             driver = stream.logicalDriver();
