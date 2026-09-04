@@ -116282,3 +116282,67 @@ next round's job is those three writes and nothing else; suppressing the
 sidekick's execution wholesale is now ruled out by the ROM reading above, because
 during the load the ROM's sidekick is not executing either but it IS already
 placed, and the engine's placement is already correct.
+
+## 2026-09-04 - The position probe: the destination's players are created one row LATE
+
+Same worktree and branch, over the landed commits; both experiments below are
+reverted and `src/` is clean. Three arms measured on the `ss -> seg2_ehz1` gap,
+whose recorded load-completion row is 10308 and whose destination's first
+recorded row is 10334.
+
+| arm | `sidekick_x` at the destination's frame 0 | walk-failure axis |
+|---|---|---|
+| baseline (nothing held) | matches the recording, no error | baseline's |
+| destination players' execution suppressed for the load span | `0x0DDA` against `0x0DDD` -- 3px short | `Segment 7`, truncated |
+| one extra player pass on the load-completion row | wrong at the same field and frame, 143 errors | `Segment 7`, truncated |
+
+### What the probe actually shows
+
+A ring-write probe through that gap:
+
+```
+10309 REC Sonic pos=0 x=3568
+10309 REC Tails pos=26 x=3536
+10310 REC Sonic pos=1 x=3568
+...
+```
+
+The destination's playables are created at row **10309**, and the sidekick is
+placed at 3536, exactly the leader's 3568 minus `$20`. So the engine reproduces
+`InitPlayers`' placement (`docs/s2disasm/s2.asm:5191-5195`) faithfully -- the
+sidekick is created positioned, standing on its own delayed target, as the ROM
+intends.
+
+**But 10309 is one row after the ROM's `InitPlayers` row, which is 10308.** The
+ROM's sidekick therefore gets 26 executions before the destination's frame 0
+(10308 through 10333) and the engine's gets 25. Those rows are exactly what
+carries the sidekick from 3536 to the recorded 3549, and one row of them is worth
+about 3 pixels -- which is precisely the deficit the suppression arm produced.
+
+### Why both candidate directions are wrong
+
+Both compensate at the wrong end of the same off-by-one.
+
+- **Suppressing execution** removes rows the engine does have, making the
+  sidekick finish further short.
+- **Adding a pass on the load-completion row** injects an execution without
+  moving creation, so the players run a row on which they do not yet exist in the
+  engine's own model, and the destination's frame 0 is wrong in a different way.
+
+The defect is that **the engine creates the destination's playables one row after
+the ROM's `InitPlayers`**, and neither the position ring nor the title-card
+execution path owns that. It is a level-load scheduling question: which row the
+destination's level load is considered to complete on, versus which row the
+engine actually instantiates the players on. The art hold already names the
+former correctly -- the recorded entry-art pair lands on 10308 with the landed
+locator -- so the two are one row apart inside the engine.
+
+### Next target, narrowed
+
+Move the destination playables' creation onto the load-completion row, rather
+than adding or removing executions around it. Then re-measure the ring: the
+premature writes and the missing `InitPlayers`-row write should both resolve as a
+consequence, since both are downstream of the creation row.
+
+Do not retry either arm above; their numbers are recorded here so they are not
+repeated.
