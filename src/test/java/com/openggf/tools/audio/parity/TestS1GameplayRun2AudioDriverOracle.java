@@ -65,6 +65,7 @@ class TestS1GameplayRun2AudioDriverOracle {
         // window matched end to end once Sound_PlaySpecial's .doneoverride
         // PSG pair was modelled. The previous frontier was tick 1,906.
         assertEquals(AudioParityReport.Kind.MATCH, report.kind(), report::toHumanText);
+        assertEquals(5257, report.ticksCompared());
     }
 
     /**
