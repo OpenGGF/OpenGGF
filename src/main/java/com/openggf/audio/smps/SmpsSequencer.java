@@ -3815,6 +3815,41 @@ public class SmpsSequencer implements CoordFlagContext {
         audioManager.restoreMusic();
     }
 
+    /**
+     * Models {@code StopAllSound}'s effect on this sequencer's own track RAM
+     * (s1.sounddriver.asm:1461-1482). The ROM writes the DAC-enable and
+     * FM3/FM6-mode registers, clears the driver's variable and track RAM, sets
+     * {@code v_sound_id} to {@code $80}, and silences FM and PSG. What that
+     * leaves behind for the music tracks is every playback-control byte zero,
+     * so no track is playing, while the driver itself keeps running: the next
+     * {@code UpdateMusic} still decrements the tempo timeout, now from a
+     * cleared value.
+     *
+     * <p>Distinct from the {@code E4} coordination flag in track data
+     * ({@link #handleFadeIn}), which ends a 1-up jingle and restores the
+     * interrupted song. This is the {@code $E4} sound id, reached through
+     * {@code PlaySoundID}'s {@code Sound_E0toE4} branch (:715, :726).
+     *
+     * <p>Deliberately does not touch the sequencer's membership of the driver.
+     * The ROM's driver has no notion of going away, and this engine retains a
+     * finished direct-68k music sequencer for the same reason.
+     */
+    public void applyStopAllSound() {
+        for (Track track : tracks) {
+            track.active = false;
+            stopNote(track);
+        }
+        fadeState.active = false;
+        fadeState.steps = 0;
+        fadeState.delayCounter = 0;
+        // The clear covers the driver's variables too, so the master tempo and
+        // its timeout are both zeroed alongside the track RAM.
+        normalTempo = 0;
+        tempoWeight = 0;
+        tempoAccumulator = 0;
+        speedShoes = false;
+    }
+
     public void triggerFadeIn(int steps, int delay) {
         // Start a fade in from current volume (silence) to normal
         fadeState.steps = steps;
