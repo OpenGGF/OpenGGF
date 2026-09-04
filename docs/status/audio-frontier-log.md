@@ -27,6 +27,64 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - zRestTrack falls through into the PSG silence; tick 502 -> tick 551
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `de1fe004c`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_MISSING`, tick 502, event 10, reference
+  `psg 223` against `<missing>`. DAC stream `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 551, role `MUS_PSG3`, field
+  `resting`, reference `false` against engine `true`. DAC stream unchanged.
+  The whole 49-service run of missing silences, 502 through 550, now agrees.
+- **The routine, and it is a fall-through with no `ret` of its own.**
+  `zRestTrack` sets the rest bit, returns only when an SFX is overriding the
+  track, and otherwise runs straight on into `zSilencePSGChannel`, which is
+  the very next routine in the listing (Sound/Z80 Sound Driver.asm:4220-4245).
+  So resting a PSG track the driver still owns also silences it, and because
+  a parked volume envelope re-reads its command every pass, the silence
+  repeats every pass.
+- **A correction to my own earlier entry in this branch.** The 2026-09-04
+  entry on the `81h`/`83h` envelope rest commands said "neither silences the
+  channel, which the ROM says outright at :4208". The quoted remark belongs to
+  `zSilencePSGChannel`'s noise test, not to the rest path, and I read the
+  `ret nz` at :4223 as ending `zRestTrack`. It does not. `83h` reaches
+  `zRestTrack` and therefore silences; `81h` sets the bit itself and returns,
+  and genuinely writes nothing. The two are now modelled separately, and the
+  PSG note-fill tail routes through the same helper.
+- **The candidate this round was given, and why it is refuted by the
+  listing.** The fade handlers were proposed as the writer. Neither can be:
+  `zDoMusicFadeOut`'s loop bound is literally
+  `(zSongPSG1-zTracksStart)/zTrack.len`, so it walks DAC and FM only and its
+  per-track call is `zSendTL`, which is FM-only (:2331-2385).
+  `zDoMusicFadeIn` walks `(zSongPSG1-zSongFM1)` FM tracks for volume and
+  touches PSG tracks only at completion, where it clears their SFX-override
+  bit and writes nothing (:2386-2446). No PSG volume leaves either handler.
+- **What actually located it was the pattern's shape.** Scanning the whole
+  reference for services ending in `0DFh 0FFh` gives 1,247 of 5,263: isolated
+  ones at services 0, 1, 49, 128, 421 and 495, all of which are stop or
+  silence-all events, then a 49-service run from 502 to 550, then two-service
+  bursts every eight services at 557, 573, 581, 589, 597 and 605. A run plus a
+  rhythmic burst pattern is a track's own part, not a global, and per-pass
+  repetition is what a parked envelope command produces.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape, which no routine in either listing pins.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,154
+  tests, 0 failures, 10 skips. `TestSonic3kFm3SpecialMode` joins the per-cycle
+  gate for the same reason `TestSonic3kCoordFlagParity` did.
+
+
 ## 2026-09-04 - S3K tick 502: a per-service PSG3 and noise silence with no ROM writer found
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
