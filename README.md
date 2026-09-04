@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S1 audio oracles cover whole complete runs per song:** windows tile each
+  movie by `Sound_PlayBGM` and 1-up restore epochs; the title-screen song matches
+  end to end (72 ticks), tied PSG notes step their envelope, a finished song keeps
+  its tempo, and fade commands dispatch at the ROM's point in `UpdateMusic`.
 - **`audio.psgNoiseShiftEveryToggle` removed:** the PSG noise LFSR now always
   clocks once per rising edge, the hardware rate; the every-toggle mode from the
   old PSG core is gone and an old config key is ignored with a warning.
