@@ -116023,3 +116023,75 @@ the ROM's `InitPlayers` at 61180, with the engine one write ahead from there on.
 The arm point measurement: the destination's ring reset precedes
 `admitLevelWhenReady`, so the hold must be armed in `prepareAcrossLevelBoundary`.
 Arming there is safe -- the comparable run above proves it moves nothing.
+
+## 2026-09-04 - LANDED: the special-stage return arms the level-entry hold, and the load is the gap's LONGEST non-admitted run
+
+- **Worktree/branch:** `.worktrees/s2-art-gaps`,
+  `bugfix/ai-s2-runchain-art-gaps`, over `develop` at `7ca24101c`. Change is
+  confined to `AbstractRunChainTest`; no engine source moved.
+
+### Two changes, both structural
+
+1. **The uncompared-interior (special-stage return) path now arms the same
+   level-entry art hold the level-to-level path arms**, and releases it on that
+   transition's own load-completion row. It previously armed nothing at all, so
+   a returning level's entry art published on the engine's own
+   instantaneous-load row. The per-row census these rows already carry supplies
+   the locator, so nothing new is read from the trace.
+2. **The load-completion row is the last row of the gap's LONGEST non-admitted
+   run, not of its last one.** The ROM's level-entry load -- `LoadZoneTiles`
+   through `WaterEffects`, ending at `InitPlayers`
+   (`docs/s2disasm/s2.asm:4938-4946`) -- is the only long stretch of
+   straight-line code in a transition, so it is the longest run of frames the
+   main loop did not run on. Everything after it waits on V-int per pass and
+   admits the main loop. Where the load was the final stall the two rules agree;
+   where a later, shorter stall follows it, the old rule held the art tens of
+   rows too long.
+
+Checked against all 27 transitions of the run manifest, which is why the rule was
+adopted rather than the row count: the recorded entry pair sits on the end of the
+longest non-admitted run in **21** of 27 gaps, against **17** for the last run,
+and every one of the six residuals is off by exactly one row in the same
+direction. No constant was introduced, and S1's derived 26 was not ported.
+
+### Result
+
+`TestS2CompleteEmeraldRunChain` still fails on 12 axes, but the
+**special-stage-return family is closed**. Every remaining `run_gap` delta in the
+whole run is now 1, with four at 2:
+
+| | baseline | candidate |
+|---|---|---|
+| gap field errors | 108 | 108 |
+| deltas of 36-40 | 20 | **0** |
+| deltas of 1 | 84 | 106 |
+| deltas of 2 | 4 | 4 |
+
+Comparability was checked before the counts, per the rule this lane added: the
+candidate's walk-failure axis is the baseline's (`uncompared-interior physical
+walk exceeded destination 101691`) and segment 15 is at the baseline's frontier
+(2,122 errors, frame 2252, field `air`). An intermediate candidate that armed the
+hold with the old last-run locator moved segment 15 to 17,717 errors at frame 0
+on a `dynamic_art` field -- that is what the longest-run rule fixed, and it is
+recorded here so the pair is not separated.
+
+### Gates, from a clean build with three absolute ROM paths
+
+- `-Ptrace-replay`: **854 tests, 8 failures, 0 errors, 6 skips** -- the baseline
+  exactly, same eight classes: `TestS1CompleteEmeraldRunChain`,
+  `TestS2CompleteEmeraldRunChain`,
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestS3kAizTraceReplay`,
+  `TestS3kReplayReferenceClosureIntegration`,
+  `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestTraceRunReplayWalkerControlFlow`. **No class moved in either direction.**
+- Ordinary suite: 16,404 tests, 0 failures, 0 errors, 22 skips.
+- `-Pguards`: 607 tests, 0 failures, 0 errors, 0 skips.
+
+### What remains
+
+The uniform 1 at all nine gaps, which is the premature-leader-init defect
+measured two entries above and is NOT addressed here, and the four deltas of 2 at
+`ss_6 -> seg10_cpz2`. The six one-row residuals in the locator table above are
+very likely the same question as that uniform 1 seen from the census side; do not
+close them by biasing the locator, which would be fitting.

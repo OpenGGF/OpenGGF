@@ -2406,6 +2406,7 @@ abstract class AbstractRunChainTest {
         private final HeadlessRunCoordinatorAdapter runCoordinator;
         private final ReplayPrefixTarget prefixTarget;
         private final List<UncomparedInteriorPhysicalRow> physicalRows;
+        private int loadCompletionRowIndex = -1;
         private final int destinationOffset;
         private int physicalRowIndex;
         private TraceRunSpecialStageRows specialRows;
@@ -2463,6 +2464,44 @@ abstract class AbstractRunChainTest {
                     segment.segment().bk2FrameOffset(), specialRows.rowCount(),
                     destinationOffset,
                     expandGapAdmissionCensus(segment.exitBoundary()));
+            // The destination of a special-stage return takes the same ROM
+            // level-entry load as any other level entry, ending at InitPlayers
+            // (docs/s2disasm/s2.asm:4946), and the same last non-admitted row of
+            // the transition's census locates it. This path previously armed no
+            // hold at all, so the destination's level-entry art published on the
+            // engine's own instantaneous-load row instead.
+            loadCompletionRowIndex = lastNonAdmittedInterstitialRow(physicalRows);
+            holdPlayerArtForLevelEntryLoad(loadCompletionRowIndex >= 0);
+        }
+
+        /**
+         * Index into {@code physicalRows} of the last row of the longest
+         * interstitial run the main loop was not admitted on, or {@code -1}
+         * when the census records none -- the same structural locator
+         * {@link #lastNonAdmittedRow(boolean[])} applies on the level-to-level
+         * path, read from the per-row census these rows already carry.
+         */
+        private int lastNonAdmittedInterstitialRow(
+                List<UncomparedInteriorPhysicalRow> rows) {
+            int bestEnd = -1;
+            int bestLength = 0;
+            int runStart = -1;
+            for (int index = 0; index <= rows.size(); index++) {
+                boolean lag = index < rows.size()
+                        && !rows.get(index).representedSpecialRow()
+                        && rows.get(index).lagGapRow();
+                if (lag && runStart < 0) {
+                    runStart = index;
+                } else if (!lag && runStart >= 0) {
+                    int length = index - runStart;
+                    if (length > bestLength) {
+                        bestLength = length;
+                        bestEnd = index - 1;
+                    }
+                    runStart = -1;
+                }
+            }
+            return bestEnd;
         }
 
         @Override
@@ -2606,13 +2645,15 @@ abstract class AbstractRunChainTest {
         }
 
         private void driveInterstitialRow() {
+            int rowIndex = physicalRowIndex;
             UncomparedInteriorPhysicalRow physicalRow = nextPhysicalRow(false);
             assertEquals(physicalRow.movieRow(), playback.getCursorFrame(),
                     "interstitial physical cursor");
             fixture.enterHardwareTimingGap();
             stepEngineFrameInTransitionGap(
                     gameplayMode, loop, playback, physicalRow.movieRow(),
-                    physicalRow.lagGapRow());
+                    physicalRow.lagGapRow(),
+                    rowIndex == loadCompletionRowIndex);
         }
 
         private UncomparedInteriorPhysicalRow nextPhysicalRow(
@@ -2640,6 +2681,10 @@ abstract class AbstractRunChainTest {
             }
             assertEquals(destinationOffset, playback.getCursorFrame(),
                     "uncompared-interior walk must stop at destination offset");
+            // Fail-safe, matching the level-to-level path: a gap whose
+            // load-completion row was never reached must not leak held
+            // decisions into the destination segment.
+            releasePlayerArtForLevelEntryLoad();
         }
 
         private void completeRepresentedRows() {
@@ -5017,19 +5062,42 @@ abstract class AbstractRunChainTest {
     }
 
     /**
-     * Index of the last row of a gap the main loop was not admitted on, or
-     * {@code -1} when the census records no such row. In the ROM's level-entry
-     * sequence that row is the one {@code InitPlayers} runs on
-     * (docs/s2disasm/s2.asm:4946): every span after it waits on V-int per pass
-     * (the leave loop, :5060-5066) and so admits the main loop.
+     * Index of the last row of the gap's LONGEST non-admitted run, or
+     * {@code -1} when the census records none.
+     *
+     * <p>In the ROM's level-entry sequence that row is the one
+     * {@code InitPlayers} runs on (docs/s2disasm/s2.asm:4946). The load it ends
+     * -- LoadZoneTiles, loadZoneBlockMaps, LoadAnimatedBlocks, DrawInitialBG,
+     * ConvertCollisionArray, LoadCollisionIndexes, WaterEffects (:4938-4945) --
+     * is the only long stretch of straight-line code in the whole transition,
+     * so it is the gap's longest run of frames on which the main loop did not
+     * run. Everything after it waits on V-int per pass: the leave loop
+     * (:5060-5066) and then the title-card loop (:5060-5066), which admits the
+     * main loop on every row.
+     *
+     * <p>This was the LAST such run rather than the longest, which is the same
+     * row whenever the load is the final non-admitted stretch and is badly
+     * wrong when it is not -- a later, shorter stall then wins and the
+     * destination's level-entry art is held tens of rows past its row.
      */
     private static int lastNonAdmittedRow(boolean[] gapLag) {
-        for (int index = gapLag.length - 1; index >= 0; index--) {
-            if (gapLag[index]) {
-                return index;
+        int bestEnd = -1;
+        int bestLength = 0;
+        int runStart = -1;
+        for (int index = 0; index <= gapLag.length; index++) {
+            boolean lag = index < gapLag.length && gapLag[index];
+            if (lag && runStart < 0) {
+                runStart = index;
+            } else if (!lag && runStart >= 0) {
+                int length = index - runStart;
+                if (length > bestLength) {
+                    bestLength = length;
+                    bestEnd = index - 1;
+                }
+                runStart = -1;
             }
         }
-        return -1;
+        return bestEnd;
     }
 
     private static void holdPlayerArtForLevelEntryLoad(boolean arm) {
