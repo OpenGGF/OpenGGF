@@ -8,11 +8,12 @@ before relying on any of them (see the measurement-hazard table in
 
 ## Where develop stands
 
-- `develop` head at handover: see `git log`; the last audio merge in this
-  session was `5dd1b8122` (S3K 1-up fade-in body on the live path, driver-owned
-  fade machine, four more gated oracle fields, intro oracle 760 → 1490).
+- `develop` head at handover: `37c3f0c0b` (the two audited P1 fade regressions
+  fixed; before it `5dd1b8122`: S3K 1-up fade-in body on the live path,
+  driver-owned fade machine, four more gated oracle fields, intro oracle 760 →
+  1490, then 1569 on the branch).
 - Ordinary suite on `5dd1b8122`: 16,476 tests, 0 failures, 22 skips (three ROM
-  paths). Guards: 608, 0 failures. CI on develop was green at `725d4cfd5`.
+  paths). Guards: 609 (incl. the snapshot-copy guard), 0 failures. CI on develop was green at `725d4cfd5`.
 - Trace sweep (`-Ptrace-replay`, three ROM paths) on `5dd1b8122`: 854 tests,
   7 failures, 6 skips; the seven are S1/S2/S3K complete-run chains,
   S2 EHZ halfpipe, `TestS3kAizTraceReplay`, `TestS3kReplayReferenceClosureIntegration`,
@@ -57,18 +58,16 @@ five silently dropped settings on its first run).
 | S3K quick shield silent | passes the in-play sequence test with the SFX-takeover write fix; not proven red-before | `3947ba305` |
 | S3K abrupt music changes | drowning-restore substitution and S3K fade rate fixed | `fb091dfc3` |
 | S2 music after 1-up ("funky remix") | fixed (tracks rest on hand-back) | `633ee400f` |
-| S3K 1-up: exception in batch, then no fade-in / wrong instruments | fixed twice (`725d4cfd5`, `5dd1b8122`); **external audit found two P1 residuals, see below** | |
+| S3K 1-up: exception in batch, no fade-in / wrong instruments, then PSG lost after the fade and fade state dropped by rewind | fixed in three steps | `725d4cfd5`, `5dd1b8122`, `37c3f0c0b` |
 | S3K Knuckles held note | not reproduced by any test | open |
 
 ## Open items, in priority order
 
-1. **P1 (audit, 2026-09-04 evening):** after the S3K 1-up fade-in, PSG tracks
-   stay overridden and their volumes are decremented; the ROM's `zDoMusicFadeIn`
-   changes FM only and releases PSG at completion; fade completion at
-   `SmpsSequencer.java:1893` releases only DAC. Assigned to lane `s3k-freq`.
-2. **P1 (audit):** `SmpsDriverSession.java:1935` snapshot copier calls the old
-   constructor and zeroes the four driver fade counters and `driverOwnedFade`;
-   a rewind round trip during a fade leaves FM attenuation stuck. Same lane.
+1. (closed at `37c3f0c0b`) Audit P1: PSG tracks stayed overridden and were
+   attenuated after the S3K 1-up fade-in; now released at completion with
+   volumes untouched, per `zDoMusicFadeIn`.
+2. (closed at `37c3f0c0b`) Audit P1: the session snapshot copy dropped the
+   driver fade counters; fixed, with a record-component survival guard.
 3. S3K intro oracle from 1,569: same lane, branch `bugfix/ai-s3k-oracle-freq-resend`.
 4. S1 red windows: five share one cause (an SFX from the previous window still
    holds a track at the epoch). Fix designed: replay from the predecessor
