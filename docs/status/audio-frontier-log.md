@@ -27,6 +27,61 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K: a request no longer pre-empts the service that consumes it
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`.
+- **The fix.** `zUpdateEverything` runs `zPauseUnpause` and
+  `zUpdateSFXTracks`, then `zUpdateMusic`'s `TempoWait` and both fade
+  handlers, and only then loads `zMusicNumber` and calls `zFillSoundQueue`
+  and `zCycleSoundQueue` (`Sound/Z80 Sound Driver.asm:653-701`). The tracks
+  playing when a request arrives are therefore walked by the very service that
+  consumes it, before it is consumed. The capture host applied the request
+  ahead of `driver.serviceOuterFrame()`, so a music change tore those tracks
+  down first and the frequency their last update owed the chip was never sent.
+  The host now hands the request to the driver, which runs it between the SFX
+  walk and the music walk in `serviceSfxThenMusic`.
+- **Three slots, not one.** The first attempt asserted on a second pending
+  request and the oracle stopped on it. That was the ROM telling me something:
+  `zCycleSoundQueue` is called three times, playing `zMusicNumber`,
+  `zSFXNumber0` and `zSFXNumber1` in order (:698-701), so one service can
+  consume a song and two sound effects. The driver now runs them in submission
+  order and refuses a fourth.
+- **The load service still walks the song it loads.** Placing the consume
+  point after the music walk broke the title load at service 138, where the
+  reference's `durationTimeout` is 6 and the engine's stayed at its seed of 1.
+  `.update_music` follows `zCycleSoundQueue` at :702, so the new song is
+  walked by its own load service, and `SmpsSequencer.primeFirstService` owns
+  what that walk does. The consume point sits before the music walk in both
+  service orders.
+- **Evidence at 751.** The reference opens that service with `A5h` then `A1h`,
+  the frequency pair for linear FM4, and then begins the six-channel silence
+  loop at `82h`. The engine used to open at `82h`; it now opens with the same
+  pair. Non-DAC writes for the service went from 258 to 260 against the
+  reference's 274, and the event-zero divergence there is gone.
+- **The frontier moved backwards, from 751 to 566, and that is the honest
+  result.** Correcting the ordering also changes what the music change at
+  service 495 leaves behind, which uncovers a `resting` difference at 566 that
+  the old ordering had been hiding: reference true, engine false. The old
+  number was not the better engine. The pin in
+  `TestS3kOracleRequestSidecarWiring` follows the correction and says so in its
+  own comment rather than moving quietly.
+- **The sidecar was audited and is correct.** All fourteen observations were
+  checked against the reference's own non-DAC write counts. Every request that
+  loads music resolves to the service whose writes show the load. The branch I
+  had suspected never fires for any of them.
+- **Gates at this commit, all green, on a clean build.** Audio, per-game audio
+  and parity packages with all three ROM paths: 2,696 tests, 0 failures, 16
+  skips. Ordinary suite 16,408 tests, 0 failures, 22 skips. `-Pguards` 607
+  tests, 0 failures. S1 and S2 are untouched by construction: only the S3K
+  capture host submits a service request, so `runPendingServiceRequest` is a
+  no-op for every other driver, and both oracle-backed S1 classes and all five
+  S2 ones stayed green.
+- **Next.** Service 566, `TRACK_STATE_MISMATCH` on `resting`, reference true
+  against engine false. The DAC byte stream is unchanged at run 338, byte 0,
+  reference `88h` against engine `7Fh`.
+
+
 ## 2026-09-04 - S3K 751: the sidecar was right, my probe was not, and the real fault is request ordering
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

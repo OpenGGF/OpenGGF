@@ -214,7 +214,19 @@ class TestS3kOracleRequestSidecarWiring {
      * channels off and clears their SSG-EG operators as
      * {@code zSFXTrackInitLoop} does, a track-end flag is the only thing that
      * stops the note, and that flag hands the channel back to music inline as
-     * {@code cfStopTrack} does. What remains is a write at service 751.
+     * {@code cfStopTrack} does.
+     *
+     * <p>This pin moved backwards, from service 751 to 566, and deliberately.
+     * A request used to be applied ahead of the whole service that consumed
+     * it, so a music change tore its tracks down before they were walked. The
+     * ROM walks them first: {@code zUpdateEverything} runs
+     * {@code zUpdateSFXTracks} and both fade handlers before it reaches
+     * {@code zFillSoundQueue} (Sound/Z80 Sound Driver.asm:653-701). Correcting
+     * that gives service 751 the two leading frequency writes the reference
+     * opens it with, and the divergence there is gone. It also changes what
+     * the music change at service 495 leaves behind, which uncovers a rest-flag
+     * difference at 566 that the old ordering had been hiding. The earlier
+     * number was not the better engine, so the pin follows the correction.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -226,11 +238,12 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 613, report.tick());
-        assertEquals(0, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=1, register=165, value=50]",
-                report.reference());
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH,
+                report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 428, report.tick());
+        assertEquals("resting", report.field());
+        assertEquals("true", report.reference());
+        assertEquals("false", report.openggf());
     }
 
     /**
