@@ -27,6 +27,58 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 DAC run 3 is a supersede with no gap, and no symmetric run boundary exists
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, at `042b8a858`.
+- **Measurement, not a comparison run.** Three candidate run rules were built
+  and measured, and all three were reverted. The committed comparator is
+  unchanged, and so are its lines: state with writes and state only both stop at
+  tick 1,789 `global.currentTempo`; DAC stream `BYTE DIFFERENT in run 3 at byte
+  709, reference 0x80, engine 0x8D (92 runs, run-length delta 0)`.
+- **Run 3's byte 709 is not a decode error.** The reference's bytes over its
+  ticks 150-155 sum to exactly 709, and its byte 709 is `0x80`, the value
+  `zWriteToDAC`'s accumulator starts every sample at (`ld a,80h` /
+  `ex af,af'` in `zVInt`'s `.dacqueued`, s2.sounddriver.asm:502-517). The step
+  from the preceding `0x89` to `0x80` is minus nine, which no entry of
+  `zDACDecodeTbl` can produce. So a second sample begins there, and the engine's
+  `0x8D` is a legitimate continuation of the first, plus four, which the table
+  does contain. Both sides play the same sample correctly; they merely reach the
+  join at different byte offsets.
+- **The join has no gap, which is why the committed rule misses it.** The
+  reference's own `zCurDAC` changes at its tick 155 while that service is still
+  emitting 121 bytes of the outgoing sample, and the new sample's bytes begin at
+  tick 156. No service is silent, so the gap rule cannot see the boundary.
+- **Three rules were tried and each failed for a stated reason.**
+  1. *Gap, plus a selector change closing the changing service.* Moved the
+     failure to run 4 byte 0 at 100 runs, because the engine's selector and its
+     bytes change in the same service while the reference's selector leads its
+     bytes by one.
+  2. *Selector change alone.* 91 runs, failure at run 1 byte 0. Measured cause:
+     two consecutive plays of one sample change no selector at all. Over the
+     window's first two plays the reference's selector reads `0` throughout and
+     the engine's reads `129` throughout, and only the silent services between
+     them separate the plays.
+  3. *Selector change, phased per producer* — closing after the changing service
+     for the ROM, before it for the engine, on the stated ground that
+     `zUpdateDAC` arms a sample the loop can only play after the service returns
+     while the engine's pump starts it in the same service. This is the closest
+     to correct and was still reverted, because an asymmetric rule makes the
+     comparison disagree with itself: the break-it control feeds the reference
+     to both sides and it failed, `expected MATCH but was BYTE_DIFFERENT`.
+     Weakening that control to land the rule would remove the only evidence the
+     comparison works at all.
+- **What this means.** A supersede with no intervening gap is not comparable
+  under a partition that must be symmetric, because the two producers phase a
+  queued sample differently and that phase is the service-duration quantity
+  already excused for this stream. The honest next step is not another boundary
+  rule. It is either an engine-side signal that marks the first byte of a
+  sample directly, independent of service phase, or accepting the merge and
+  bounding each run's comparison at its own sample's decoded length, which the
+  ROM knows from `zDACLenTbl` and the engine from its `DacData`.
+- **Gates unchanged**, since nothing landed: S2 v1 driver oracle `MATCH (698
+  ticks)`, request windows `MATCH` at 25, 52 and 27 transfers.
+
 ## 2026-09-04 - S2 releases every PSG lock before restoring; the write stream reaches the tempo frontier
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
