@@ -23,7 +23,7 @@ class TestS2WidenedRequestOracle {
 
     /** The widest movie row the committed run chain replays in one capture. */
     private static final int CAPTURE_FIRST_ROW = 10_150;
-    private static final int CAPTURE_EXCLUSIVE_END = 11_650;
+    private static final int CAPTURE_EXCLUSIVE_END = 12_400;
 
     @TempDir
     Path temporaryDirectory;
