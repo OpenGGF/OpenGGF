@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **`audio.psgNoiseShiftEveryToggle` removed:** the PSG noise LFSR now always
+  clocks once per rising edge, the hardware rate; the every-toggle mode from the
+  old PSG core is gone and an old config key is ignored with a warning.
 - **S2 CPZ2 boss segment green:** the boss spawns its children from its own
   first update in ROM slot order, the container rewrites itself into the gunk
   in place, and `Obj6B` platforms gate solidity on the previous frame's on-screen

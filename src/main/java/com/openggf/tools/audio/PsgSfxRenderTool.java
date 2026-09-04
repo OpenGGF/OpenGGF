@@ -148,7 +148,7 @@ public final class PsgSfxRenderTool {
             double rate, int maxFrames, boolean muteFm) {
         try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                 "psg-render", 0,
-                new SmpsPhysicalDevice.Settings(rate, false, false),
+                new SmpsPhysicalDevice.Settings(rate, false),
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                 ChipWriteObserver.NONE)) {
             SmpsDriver driver = stream.logicalDriver();

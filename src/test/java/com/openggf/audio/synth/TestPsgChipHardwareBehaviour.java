@@ -9,7 +9,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -333,18 +332,11 @@ class TestPsgChipHardwareBehaviour {
     }
 
     @Test
-    void everyToggleModeShiftsExactlyTwiceAsOften() {
+    void noiseShiftsOncePerRisingEdgeOnly() {
         PsgChip edge = noiseChip(0xE4);
-        edge.setNoiseShiftOnEveryToggle(false);
-        PsgChip toggle = noiseChip(0xE4);
-        toggle.setNoiseShiftOnEveryToggle(true);
-        assertFalse(new PsgChip().isNoiseShiftOnEveryToggle(),
-                "the chip's own default is the hardware rule, one shift per rising edge (§4.1)");
         List<Integer> edgeShifts = shiftTicks(edge, 32 * 64 + 1);
-        List<Integer> toggleShifts = shiftTicks(toggle, 32 * 64 + 1);
-        assertEquals(64, edgeShifts.size());
-        assertEquals(128, toggleShifts.size());
-        assertEquals(List.of(1 + 16, 1 + 32, 1 + 48), toggleShifts.subList(0, 3));
+        assertEquals(64, edgeShifts.size(),
+                "the hardware rule (§4.1): one shift per rising edge of the noise square wave");
     }
 
     @Test
@@ -442,7 +434,6 @@ class TestPsgChipHardwareBehaviour {
             }
         });
         chip.setMute(2, true);
-        chip.setNoiseShiftOnEveryToggle(true);
         chip.write(0x8C);
         chip.write(0x1A);
         chip.write(0x90);
@@ -462,7 +453,6 @@ class TestPsgChipHardwareBehaviour {
         assertArrayEquals(new boolean[] {true, true, true, true}, s.polarities());
         assertArrayEquals(new int[] {0, 0, 0, 0}, s.counters());
         assertArrayEquals(new boolean[] {false, false, true, false}, s.mutes(), "mutes survive");
-        assertTrue(s.noiseShiftOnEveryToggle(), "modes survive");
         assertEquals(48000.0, s.sampleRate());
         assertEquals(List.of(), observed, "reset is not a write");
 
@@ -626,7 +616,6 @@ class TestPsgChipHardwareBehaviour {
         assertEquals(JSON.valueToTree(first), tree, "Jackson round trip is lossless");
 
         PsgChip target = new PsgChip(8000.0, PsgChip.ChipType.DISCRETE);
-        target.setNoiseShiftOnEveryToggle(true);
         target.configure(30, 0x11);
         target.write(0xE5);
         advanceSamples(target, 91);

@@ -27,7 +27,7 @@ public final class SmpsDriverTestAccess {
         OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                 "test", 0,
                 new SmpsPhysicalDevice.Settings(
-                        sampleRate, false, false),
+                        sampleRate, false),
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                 ChipWriteObserver.NONE);
         stream.setChipWriteObserver(observer);

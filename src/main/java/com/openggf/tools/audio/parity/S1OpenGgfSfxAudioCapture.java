@@ -118,7 +118,7 @@ public final class S1OpenGgfSfxAudioCapture {
             stream = new OwnedSmpsAudioStream(
                     "s1-sfx-parity", 0,
                     new SmpsPhysicalDevice.Settings(
-                            SAMPLE_RATE, false, false),
+                            SAMPLE_RATE, false),
                     LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                     ChipWriteObserver.NONE);
             driver = stream.logicalDriver();
