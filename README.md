@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K 1-up fade-in completes correctly and survives rewind:** PSG tracks are
+  released at fade completion with their volumes untouched (`zDoMusicFadeIn`
+  loops FM only), and the session snapshot copy now carries the driver fade
+  state, guarded so no snapshot component can be dropped by the copy again.
 - **S3K 1-up resume fades in with its instruments restored:** the fade-in-to-previous
   body (FM override clear, 40h attenuation, instrument resend, fade of 40h steps at
   delay 2) now runs on the live restore path; fade delay pair and fade-out

@@ -1932,7 +1932,8 @@ public final class SmpsDriverSession implements AutoCloseable {
         return copyWithSessionState(snapshot, List.of(), null);
     }
 
-    private static SmpsDriverSnapshot copyWithSessionState(
+    /** Package-visible for TestSmpsDriverSnapshotCopyCoverageGuard. */
+    static SmpsDriverSnapshot copyWithSessionState(
             SmpsDriverSnapshot snapshot,
             List<SmpsDriverSnapshot.SavedOverride> savedOverrides,
             SmpsDriverSnapshot.PendingService pendingService) {
@@ -1943,7 +1944,13 @@ public final class SmpsDriverSession implements AutoCloseable {
                 snapshot.contSfxLoopCnt(), snapshot.palUpdateCounter(),
                 snapshot.sequencers(), snapshot.fmLockSequencerIds(),
                 snapshot.psgLockSequencerIds(), savedOverrides,
-                pendingService);
+                pendingService,
+                // The driver's fade counters are as much of its state as the
+                // lock table. Dropping them here left a capture and restore
+                // during a fade with the attenuation frozen where it stood.
+                snapshot.fadeDelay(), snapshot.fadeDelayTimeout(),
+                snapshot.fadeOutTimeout(), snapshot.fadeInTimeout(),
+                snapshot.driverOwnedFade());
     }
 
     private static SmpsDriverSnapshot emptyLogicalSnapshot(

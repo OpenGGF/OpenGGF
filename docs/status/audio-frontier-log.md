@@ -27,6 +27,91 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Two regressions in my own fade work, both found by audit not by me
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`. Both reported against develop
+  `5dd1b8122`, both reproducible through the live presentation path, and
+  neither visible to the intro oracle, which reaches no extra life.
+- **First: S3K lost its PSG channels after the 1-up fade in.** The restore
+  marks the PSG tracks overridden, which is right and is what mutes them
+  through the fade. `zDoMusicFadeIn` clears that bit again on every PSG track
+  and on FM6/DAC once its timeout reaches zero (Sound/Z80 Sound
+  Driver.asm:2440-2452); the engine's completion branch released only the DAC,
+  so the PSG tracks stayed muted for the rest of the song. The engine was also
+  attenuating them on the way: neither S3K stepper walks the PSG tracks at all,
+  since `zDoMusicFadeOut` loops the tracks before PSG1 and `zDoMusicFadeIn`
+  loops FM1 onwards (:2364, :2416-2430). Measured, 400 frames after the
+  restore, all three PSG tracks were still overridden with their volume offsets
+  driven from 4 to -60.
+- **My test could not have caught it.** It stopped at the first attenuation
+  decrease, and the release only happens at completion. It now runs the fade
+  out and asserts the PSG tracks are released, that their volume never moved,
+  and that the FM tracks arrive back at the volume they had before the jingle.
+- **Second: a rewind round trip zeroed the driver's fade counters.**
+  `SmpsDriverSession`'s snapshot copy lists its arguments positionally and was
+  still calling the pre-fade-pair constructor, so a capture and restore dropped
+  all four counters and the driver-owned-fade flag. A round trip during the
+  fade left the attenuation frozen where the capture landed: 69 instead of the
+  settled 15.
+- **The compatibility constructor I added is what allowed it.** I widened the
+  snapshot record and kept an overload at the old arity so the nine existing
+  construction sites would keep compiling. That overload silently defaulted the
+  new fields for every caller that had not been updated, including the one that
+  mattered. Convenient, and exactly the wrong trade.
+- **A guard for the shape, not just the instance.**
+  `TestSmpsDriverSnapshotCopyCoverageGuard` builds a snapshot whose every
+  component differs from its zero value, runs the session copy, and reflects
+  over the record naming any component that did not survive. Against the
+  unfixed copier it names all five. It is the same guard shape as
+  `TestSmpsSequencerConfigCopyCoverageGuard`, which caught my
+  `driverOwnedFadeDelay` flag two commits ago; a positional copy of a growing
+  record needs one.
+- **Frontier unchanged** at tick 1569, `MUS_PSG3` `volEnv`, and the DAC stream
+  at run 338, byte 0.
+- **Gates at this commit, all green, on a clean build and a quiet machine.**
+  Audio, per-game audio and parity packages with all three ROM paths: 2,761
+  tests, 0 failures, 16 skips. Ordinary suite 16,477 tests, 0 failures, 22
+  skips. `-Pguards` 609 tests, 0 failures.
+
+
+## 2026-09-04 - A music change was eating that service's fade step; 1490 -> 1569
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, merged with develop at `5dd1b8122`
+  (a fast-forward that did not move the frontier).
+- **What 1490 was.** The reference opens the service with twenty total level
+  writes, four operators across five FM channels, and only then silences FM6
+  and loads the next song. The engine went straight to the silence. Those
+  twenty writes are one fade step: the level music was fading out with 26
+  steps left and its delay counting 4, 3, 2, 1 across services 1486 to 1489, so
+  1490 is the service the step falls on.
+- **The cause.** `zUpdateMusic` runs `TempoWait`, `zDoMusicFadeOut` and
+  `zDoMusicFadeIn` before it reaches `zFillSoundQueue` (Sound/Z80 Sound
+  Driver.asm:659-701). The song playing when a request arrives therefore takes
+  its fade step first, and a music change consumed by that service replaces it
+  afterwards. The engine ran the step inside the song's own walk, which the
+  earlier ordering work had already placed after the request, so a service that
+  changed the music lost the step: at 1490 the engine's music slot is already
+  the new song and the old one never stepped.
+- **The fix.** The driver runs the playing song's fade step before it consumes
+  the queue, and the song's own walk skips the step it has already had. Only a
+  step that actually ran claims the service, which matters because a fade armed
+  by the request that follows must still be left alone by its own arming
+  service.
+- **One wrong turn, recorded.** Latching the service unconditionally, including
+  when no fade was active, swallowed a later real step and put the frontier back
+  at 422 with the delay counter one behind. The oracle caught it immediately.
+- **Frontier 1490 to 1569,** and the field that catches it is one promoted two
+  commits ago: `TRACK_STATE_MISMATCH` on `MUS_PSG3`'s `volEnv`, reference 79
+  against engine 80. Gating that field is already paying for itself. The DAC
+  byte stream is unchanged at run 338, byte 0.
+- **Gates at this commit, all green, on a clean build and a quiet machine.**
+  Audio, per-game audio and parity packages with all three ROM paths: 2,759
+  tests, 0 failures, 16 skips. Ordinary suite 16,476 tests, 0 failures, 22
+  skips. `-Pguards` 608 tests, 0 failures.
+
+
 ## 2026-09-04 - The 1-up resume never ran its restore body on the live path
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
