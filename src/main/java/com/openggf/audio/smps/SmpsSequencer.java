@@ -1410,7 +1410,7 @@ public class SmpsSequencer implements CoordFlagContext {
                         // `jp z, zKeyOffIfActive` keys the channel off
                         // (:786-790, :2148-2152).
                             if (t.type == TrackType.PSG) {
-                                t.resting = true;
+                                restTrack(t);
                             } else {
                                 stopNote(t);
                             }
@@ -2772,6 +2772,22 @@ public class SmpsSequencer implements CoordFlagContext {
         return freq;
     }
 
+    /**
+     * ROM {@code zRestTrack} (Sound/Z80 Sound Driver.asm:4220-4224): set the
+     * rest bit, return if an SFX is overriding the track, and otherwise fall
+     * through into {@code zSilencePSGChannel}. The routine has no terminating
+     * {@code ret} of its own, so the fall-through is unconditional for a
+     * track the driver still owns, and the silence therefore repeats on every
+     * pass that reaches it.
+     */
+    private void restTrack(Track t) {
+        t.resting = true;
+        if (t.overridden) {
+            return;
+        }
+        stopNote(t);
+    }
+
     @Override
     public void stopNote(Track t) {
         if (t.type == TrackType.FM) {
@@ -3020,20 +3036,28 @@ public class SmpsSequencer implements CoordFlagContext {
                 if (config.getPsgEnvRestCmd()
                         == SmpsSequencerConfig.PsgEnvRestCmd.Z80_81_AND_83
                         && (val == 0x81 || val == 0x83)) {
-                    // zDoVolEnvRest and zDoVolEnvFullRest pop the caller's
-                    // return address, set PlaybackControl bit 4 and end the
-                    // track's pass (Sound/Z80 Sound Driver.asm:4169-4175,
-                    // :4187-4194, :4204-4208). Neither silences the channel,
-                    // which the ROM says outright at :4208. Neither advances
-                    // VolEnv either, so the envelope stays parked on the
-                    // command and re-reads it on every later pass, re-setting
-                    // the rest bit each time. That re-set matters: zGetNextNote
-                    // clears bit 4 when a new note is read (:905-915), and the
-                    // envelope puts it straight back on the same pass. So the
-                    // envelope must NOT be held here, or the rest would be lost
-                    // at the next note.
+                    // zDoVolEnvRest (81h) and zDoVolEnvFullRest (83h) both pop
+                    // the caller's return address and end the track's pass
+                    // (Sound/Z80 Sound Driver.asm:4169-4175, :4187-4194,
+                    // :4204-4208), and neither advances VolEnv, so the
+                    // envelope stays parked and re-reads the command on every
+                    // later pass. That re-read matters: zGetNextNote clears
+                    // bit 4 when a new note is read (:905-915) and the parked
+                    // command puts it straight back on the same pass, so the
+                    // envelope must not be held here.
+                    //
+                    // The two differ in one way. 81h sets the bit itself and
+                    // returns, writing nothing, which the ROM notes at :4208.
+                    // 83h jumps to zRestTrack, which has no terminating ret
+                    // and falls straight through into zSilencePSGChannel
+                    // (:4220-4245), so it silences the channel every pass it
+                    // runs.
                     t.envPos--;
-                    t.resting = true;
+                    if (val == 0x83) {
+                        restTrack(t);
+                    } else {
+                        t.resting = true;
+                    }
                     return;
                 }
                 if (val == 0x80) {

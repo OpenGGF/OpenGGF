@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K resting a PSG track silences it:** `zRestTrack` runs straight into the
+  PSG channel silence when the driver still owns the track, so a parked envelope
+  rest silences every pass; S3K oracle at service 551.
 - **Speed shoes expire on the ROM's frame in all three games:** the countdown
   is driven at the display step where `Obj01_ChkShoes` runs, restoring physics
   and issuing the slow-down command together, and the compensation constant

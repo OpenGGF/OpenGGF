@@ -201,9 +201,11 @@ class TestS3kOracleRequestSidecarWiring {
      * capture reports no unsupported requests at all. Everything agrees
      * through service 494, including the fade's own volume ramp, and the
      * service-495 song load now ends on the accumulator value {@code zBGMLoad}
-     * seeds rather than one accumulation past it, and a silenced PSG track
-     * now emits its own tone channel before the noise byte. What remains is a
-     * missing PSG3 silence at service 502.
+     * seeds rather than one accumulation past it, a silenced PSG track emits
+     * its own tone channel before the noise byte, and {@code zRestTrack}'s
+     * fall-through into {@code zSilencePSGChannel} is modelled, which is what
+     * the 49-service run of PSG3 silences from 502 was. What remains is
+     * PSG3's {@code resting} bit at service 551, where that run ends.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -215,11 +217,10 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_MISSING, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 364, report.tick());
-        assertEquals(10, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=223]",
-                report.reference());
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 413, report.tick());
+        assertEquals("MUS_PSG3", report.role());
+        assertEquals("resting", report.field());
     }
 
     /**
