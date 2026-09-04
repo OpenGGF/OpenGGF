@@ -4731,6 +4731,12 @@ defined by `com.openggf.tools.audio.parity`.
     assertion.
   - `TestS1GameplayAudioDriverOracle.oracleMatchesTheWholeReference` already
     asserted `MATCH (2562 ticks)`; unchanged.
+  - `TestS2CpzDriverStateOracle.driverStateComparesAcrossTheCpzWindow` (landed
+    on `develop` after this branch started, merged in) now asserts `MATCH` and
+    `stateOnly.comparedTicks() == 720` for the state-only report (was
+    `assertNotEquals(..., INVALID)`). The "state and writes" report for the
+    same window still diverges (`DIVERGENCE` at tick 237, `writes[4]`, ym1 port
+    `0xB1` vs `0xB0`) and is left `MEASUREMENT_ONLY` on purpose.
 - **Left as `MEASUREMENT_ONLY` (still diverging, not pinned):** the S2 DAC byte
   stream (`BYTE DIFFERENT` at run 3 byte 709) and the S3K oracle frontier at
   service 551/tick 138.
