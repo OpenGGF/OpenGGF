@@ -27,6 +27,54 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The second S2 recording already exists; what is missing is an engine side to compare it against
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, from `develop` at `33d99b0ec`.
+- **Measurement and survey, not a comparison run.** No engine behaviour
+  changed and no fixture was published. This records why roadmap step 4 did not
+  produce a measurement, so the next lane does not repeat the search.
+- **A second S2 recording is already committed.**
+  `s2-request-window-cpz-w2700-3450` is cut from `s2-lvl-select-CPZ.bk2`, a
+  different movie from the complete-emeralds run, with its own pinned
+  digests and a `production_bound: false` declaration. Its 750 frame rows carry
+  the full 8 KB Z80 RAM image per row, and the CPZ music load is inside the
+  window: `zCurSong` goes `91h` to `8Eh` at movie row 2724.
+- **The engine cannot be driven through it, and the code says so.**
+  `S2PublishedRequestWindows` splits its published list into `ALL` and
+  `COMPLETE_RUN_WINDOWS`, the latter documented as "the candidates the
+  engine-side request oracle can drive today: those cut from the committed
+  complete run, which the run-chain harness replays". The CPZ window is in the
+  first list only.
+- **Nor can a trace replay cover the load.** `src/test/resources/traces/s2/cpz`
+  does replay this movie, through `TestS2CpzLevelSelectTraceReplay`, but its
+  metadata gives `bk2_frame_offset: 2868`. The trace therefore starts 144 rows
+  *after* the song load at 2724, so an engine replay could cover 582 of the
+  window's 750 rows and none of the load the window exists to capture.
+- **Capturing a fresh driver-state v2 reference is blocked on a build, not on
+  a movie.** The v2 producer needs the patch-0001 GPGX audio observer core.
+  No core matching `artifact-lock.json`'s
+  `25ee305d8bcac2567d60fd04c14238784ddd018808d4dafe7d5ef2b8372677b6` exists
+  anywhere on this machine: every `gpgx.wbx.zst` under the repository and under
+  the agent scratch roots is the stock `c4231296…`. The `.NET` harness
+  `BizHawk.Headless.Gpgx.exe` is built in three other worktrees but not here,
+  and building the core needs `prepare-toolchain.sh` fed a pinned source tree
+  and a package directory of exact clang-16 `.deb` files, neither of which is
+  staged. Network access to the pinned repositories does work, so this is a
+  cost question rather than an impossibility.
+- **The third route, decoding the committed v2 capture into driver-state
+  ticks, is real work rather than plumbing.** The v2 raw payload carries
+  tokenised native events, not attributed chip writes; only the v1 reader
+  produces the `ChipWrite` stream the driver-state comparator consumes, and it
+  rejects a v2 schema by design.
+- **Recommendation.** The cheapest route to a measured second recording is to
+  build the observer core once and capture a CPZ driver-state v2 reference
+  over rows 2700-3450, because the engine side then needs only the existing
+  `S2OracleEngineCapture` pattern with the CPZ music id, which plays the song
+  from a constant and takes recorded requests as stimuli. That avoids both the
+  run-chain gap and the v2 event decode. It is an infrastructure task with its
+  own risks, which is why it was not started unilaterally.
+
 ## 2026-09-04 - The rest-bit contradiction settled, and a duration-only unit fixed
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
