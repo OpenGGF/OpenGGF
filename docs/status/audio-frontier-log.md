@@ -27,6 +27,61 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - A second S2 driver-state recording: CPZ state MATCHes, writes stop at an SFX channel choice
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, over `develop` at `9f8f21058`.
+- **Fixture:** `s2-driver-state-cpz-w2700-3450.reference-v2.jsonl.gz`, new,
+  captured from `s2-lvl-select-CPZ.bk2` over movie rows [2700,3450). 744 ticks
+  across 750 frames, 6 of them run past by an overrunning service, 94,990
+  writes. A different movie, a different zone and a different song from the
+  widened EHZ span.
+- **Command:** `run-s2-request-window.sh --request-window-mode driver-state`
+  with the CPZ movie and its sha256, `--first-row 2700 --exclusive-end 3450`,
+  recorded in full in the fixture metadata.
+- **The core was not rebuilt.** The build the widen lane left under its scratch
+  root matches `artifact-lock.json` on all four values, compressed digest,
+  decompressed digest, build id and observer identity, so it was installed
+  beside the stock distribution and used as is. A previous entry said no such
+  core existed anywhere; that was a fact about a search capped at six
+  directory levels, not about the machine.
+- **Duplicate-capture gate met:** two serial captures to distinct absent
+  external paths, byte-identical at
+  `af5ec3e65137d3cc1670433b368247dcf25440cc8ea2a7ebf7478c6ddc680bd7`.
+- **Result, state only:** `MATCH (720 ticks)`. The engine's driver state agrees
+  with a second recording across the whole span after the load.
+- **Result, state and writes:** DIVERGENCE at tick 237 (movie row 2968), field
+  `writes[4]`, reference `ym1[0xb1]=0x4` against the engine's
+  `ym1[0xb0]=0x4`; 36 of 719 ticks divergent.
+- **Mechanism candidate for that first divergence: SFX FM channel choice.** The
+  two sides write the same value to two different channels of port 1, `B1`
+  against `B0`, which is FM5 against FM4. The row is the window's second sound
+  request, `B5h`, arriving while the first, `A0h` at row 2959, is still
+  sounding, so the two sides disagree about which FM slot the second SFX takes
+  when one is already in use. Not fixed here: the write comparison had never
+  reached a second overlapping SFX before, and the ROM evidence for the
+  allocation order needs reading `zPlaySound`'s SFX slot search rather than
+  inferring it from one row.
+- **The engine music id was measured, not assumed.** ROM request `8Eh` is
+  engine id `8Ch`. The two are not a fixed distance apart, since EHZ is driver
+  `82h` against engine `81h`, so the id was settled by matching the song's
+  stored header tempo `EEh` against every loadable id
+  (s2.sounddriver.asm:1817-1826).
+- **Requests come from the committed sidecar.** The driver-state payload's own
+  pre-consumption markers carry no sound id, so the already-published
+  `s2-request-window-cpz-w2700-3450` supplies the 33 request transfers as
+  engine stimuli. Feeding them moved the write line from tick 228, the window's
+  first unheard SFX, to tick 237, and cut divergent ticks from 306 to 36.
+- **One documented offset.** The writes are compared from the first wholly
+  post-load service onwards, one later than the state. This window's load spans
+  two services because the Saxman decompression overruns its frame, so the
+  anchored service still carries the tail of `zBGMLoad`'s writes while the
+  engine capture emits its load burst as one block and drains it.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the EHZ v2 oracle
+  unchanged at `MATCH (2198 ticks)` on both lines; the three request windows
+  `MATCH` at 25, 52 and 27 transfers; audio packages plus the four extra
+  classes with three ROM paths: 2,062 tests, 0 failures, 0 errors, 10 skips.
+
 ## 2026-09-04 - Roadmap step 4: all three routes to a second S2 span are blocked, and the third is the engine's own chain
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,

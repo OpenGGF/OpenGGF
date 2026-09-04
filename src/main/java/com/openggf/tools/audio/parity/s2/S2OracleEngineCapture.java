@@ -77,6 +77,21 @@ public final class S2OracleEngineCapture {
 
     public static List<EngineTick> capture(Path romPath, int tickCount, int speedUpTick,
             List<DriverRequest> requests) {
+        return capture(romPath, tickCount, speedUpTick, requests,
+                Sonic2Music.EMERALD_HILL.id);
+    }
+
+    /**
+     * The same capture for a window whose recording loads a different song.
+     * The engine music id is the caller's, because the ROM driver's request id
+     * and the engine's id are not a fixed distance apart: EHZ is driver
+     * {@code 82h} against engine {@code 81h}, while CPZ is driver {@code 8Eh}
+     * against engine {@code 8Ch}. The id is settled by the song's own header
+     * tempo, which the driver stores in {@code zAbsVar.TempoMod} at load
+     * (s2.sounddriver.asm:1817-1826), not by assuming a shift.
+     */
+    public static List<EngineTick> capture(Path romPath, int tickCount, int speedUpTick,
+            List<DriverRequest> requests, int engineMusicId) {
         Objects.requireNonNull(romPath, "romPath");
         requests = validateRequests(requests, tickCount);
         verifyRomIdentity(romPath);
@@ -91,8 +106,8 @@ public final class S2OracleEngineCapture {
             // EMERALD_HILL (0x81) loads the song the driver plays for request
             // id 0x82 (S2OracleSchema.ANCHOR_ROM_MUSIC_ID).
             AbstractSmpsData song = Objects.requireNonNull(
-                    loader.loadMusic(Sonic2Music.EMERALD_HILL.id),
-                    "S2 EHZ music is absent from the verified ROM");
+                    loader.loadMusic(engineMusicId),
+                    "S2 music id is absent from the verified ROM");
             DacData dacData = Objects.requireNonNull(loader.loadDacData(),
                     "S2 DAC data is absent from the verified ROM");
 
