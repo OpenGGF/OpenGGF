@@ -72,6 +72,14 @@ public final class Sonic2SmpsSequencerConfig {
                 .tempoOnFirstTick(true)
                 .sfxChannelOwnershipMode(
                         SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION)
+                // Taking a PSG channel from the music costs no register write.
+                // zPlaySound's .sfxinitpsg silences only PSG3, through the
+                // explicit or 1Fh / xor 20h pair below (s2.sounddriver.asm:
+                // 2221-2228); every other channel is claimed by nothing more
+                // than `set 2,(hl)` on the corresponding music track (:2243-2245),
+                // and the SFX's own bytecode owns the visible writes from there.
+                .psgSfxTakeoverMode(
+                        SmpsSequencerConfig.PsgSfxTakeoverMode.REGISTER_SEQUENCE)
                 // zPlaySound .sfxinitpsg writes DF then FF while loading any
                 // C0/PSG3 SFX header (sd:2208-2220), independent of ownership.
                 .psg3SfxAdmissionWriteMode(

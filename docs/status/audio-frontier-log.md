@@ -27,6 +27,46 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 SFX takes a PSG channel without silencing it; tick 557 -> tick 584
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `b637f4171`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 557 (movie row 10759),
+  field `writes[38]`, reference `psg=0xe7` against the engine's `psg=0xff`;
+  455 of 2,198 ticks divergent.
+- **After, state with writes:** DIVERGENCE at tick 584 (movie row 10786), field
+  `writes.count`, reference 9 against the engine's 8; 411 of 2,198 ticks
+  divergent.
+- **DAC stream and state only:** both unchanged.
+- **The divergence.** At tick 557 the engine emitted an extra `psg=FF`, a
+  maximum-attenuation latch on the noise channel, immediately before the SFX's
+  own `psg=E7` noise-control write. Tick 558 showed the same extra `FF` between
+  the reference's `psg=9F` and `psg=F2`.
+- **How it was attributed.** A probe on every PSG write printed its call stack.
+  The extra byte did not come from the sequencer at all: it came from
+  `SmpsDriver.writePsg`'s takeover path, which silences a PSG channel it is
+  about to take from the music. The sequencer's own writes agreed exactly.
+- **The routine.** `zPlaySound`'s `.sfxinitpsg` silences only PSG3, and only
+  through the explicit `or 1Fh` / `xor 20h` pair that writes `DF` then `FF`
+  (s2.sounddriver.asm:2221-2228). Every other PSG channel is claimed by nothing
+  more than `set 2,(hl)` on the corresponding music track (:2243-2245), with no
+  register write at all; the SFX's own bytecode owns everything visible from
+  there. The engine had S2 on the builder default `FORCE_SILENCE`, while S1,
+  whose loader is the same shape, was already off it.
+- **Where it landed.** `Sonic2SmpsSequencerConfig` now sets
+  `PsgSfxTakeoverMode.REGISTER_SEQUENCE`. The PSG3 pair itself is untouched: it
+  is already modelled by the separate `psg3SfxAdmissionWriteMode`, and both
+  sides still emit `DF FF` at the head of tick 557.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 production transfers; audio packages plus the four extra classes
+  with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next.** Tick 584 is a write-count difference, reference 9 against the
+  engine's 8, so the engine is now missing a write rather than adding one.
+  `fmSfxTakeoverMode` is still on the builder default `FORCE_RESET` for S2 while
+  `.sfxinitfm` sets the same override bit and writes nothing (:2238-2245); that
+  is the obvious next thing to check, with its own evidence.
+
 ## 2026-09-04 - S2 walks the fixed SFX RAM slots, not the SFX header order; tick 228 -> tick 557
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
