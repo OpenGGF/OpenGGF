@@ -27,6 +27,40 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 tick 228 is a music walk-order difference, not a value difference
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, at `d82441942`.
+- **Measurement, not a comparison run.** No engine behaviour changed. Lines are
+  unchanged: state with writes DIVERGENCE at tick 228 (movie row 10430), field
+  `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's `psg=0x87`, 496 of
+  2,198 ticks divergent; DAC stream `BYTE DIFFERENT in run 3 at byte 709`;
+  state only tick 1,789.
+- **The two sides emit the same writes in a different order.** At tick 228,
+  after two leading PSG writes both sides agree on:
+
+  - reference: an FM voice-load block ending `ym0[28]=F5`, then `psg=87 psg=0E`
+  - engine: `psg=87 psg=0E`, then the identical FM voice-load block
+
+  Nothing differs in value, register or count. The engine runs that PSG track
+  before that FM track; the ROM runs it after. Tick 229 repeats the pattern.
+- **The ROM's walk is fixed and cited.** `zUpdateMusic` updates the DAC track,
+  then loops `MUSIC_FM_TRACK_COUNT` times over the FM tracks, then
+  `MUSIC_PSG_TRACK_COUNT` times over the PSG tracks
+  (s2.sounddriver.asm:554-575). Every FM music track therefore writes before
+  every PSG music track within one service.
+- **What is different about this tick, as a hypothesis rather than a finding.**
+  At tick 226 the engine ordered FM before PSG correctly, and the ticks that
+  diverge are the ones whose FM update carries a full voice load
+  (`ym1[B1]`, the operator block, `ym1[41]`-`ym1[4D]`). Whether the engine
+  defers a voice-load-bearing FM update past the PSG tracks, or reaches it by
+  another route, was not established here and should be instrumented rather than
+  assumed.
+- **Not a partition artefact.** The two leading PSG writes are identical on both
+  sides and are the same on the surrounding ticks, so wherever the service
+  boundary places them, the reordering sits between the FM block and the PSG1
+  frequency pair.
+
 ## 2026-09-04 - S2 sends a PSG note-on frequency once, not twice; tick 170 -> tick 228
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
