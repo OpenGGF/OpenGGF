@@ -14,6 +14,17 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **The Chemical Plant boss's parts now take their turns in the original's
+  order:** the boss itself moved last among its own components, so its arm and
+  container were working from where it had been a frame earlier. Everything
+  downstream inherited that lag, and the falling chemical blob it drops ran a
+  frame ahead of the original for its whole descent, which is what made it catch
+  Tails a frame early. The boss now builds its parts the way the original does,
+  from its own turn, so it moves first and the rest follow. The blob it drops
+  also becomes the falling blob in place rather than being handed off to a new
+  one, which is what the original does and what gives the drop its correct
+  first frame.
+
 - **Speed shoes now slow the music down on the same frame they take your speed
   back:** the original does both in one step at the end of a frame, restoring the
   boosted running values and asking the sound program to drop the tempo together.

@@ -208,6 +208,13 @@ class TestS2CpzBossGraphRewind {
                     services);
             holder[0] = objectManager;
             objectManager.reset(0);
+            // ROM Obj5D_Init is the boss's routine 0, executed from its own slot,
+            // and it is what allocates the five child components
+            // (docs/s2disasm/s2.asm:61628-61710). Drive that one execution here so
+            // the graph under test is the one production builds.
+            objectManager.getActiveObjects().stream()
+                    .filter(o -> o instanceof Sonic2CPZBossInstance)
+                    .forEach(o -> o.update(0, null));
             return new Harness(objectManager);
         }
     }

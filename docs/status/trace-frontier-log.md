@@ -115613,3 +115613,63 @@ The other three death arms remain coordinates only.
 - **Do not retry.** The in-place transfer on its own, with or without the
   position copy: both produce 1,377 errors on the segment lane, which is this
   lever's fingerprint.
+
+## 2026-09-04 - S2 segment 15: the CPZ boss family takes the ROM's slot order; 370 errors to 1
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-s2-runchain-seg15`, over `develop` at `7ca24101c`.
+- **Result.** `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` goes from
+  **370 errors to 1**, and segment 15 of `TestS2CompleteEmeraldRunChain` from
+  **2,122 to 1**. Both remaining errors are the same single frame: 2252, field
+  `air`, ROM 1 against engine 0, `cascading: false`, self-healing on the next
+  frame. The whole frame-5662 sidekick cascade is closed.
+- **Root cause, found by probing the trigger's inputs.** The container's drop
+  trigger reads the boss's position, and the engine's read was a frame stale.
+  The boss was in slot 29 and its own container in slot 27, so the container
+  executed first. The recording has the boss in slot 24 and the container in 28.
+  The inversion comes from `AbstractBossInstance`'s constructor calling
+  `initializeBossState()`, which spawned the five children before the object
+  manager had given the boss a slot, so `spawnChild`'s after-current scan had no
+  parent slot to start from and the children took the lower free slots.
+- **The ROM.** `Obj5D_Init` allocates all five with
+  `AllocateObjectAfterCurrent` in the order Robotnik, Flame, Pump, Container,
+  Pipe (`docs/s2disasm/s2.asm:61628-61710`), and it is the boss's routine 0,
+  executed from the boss's own slot. That is what keeps the boss at the lowest
+  slot of its family. Moving the spawn out of the constructor and into the
+  boss's first update reproduces the recording exactly: boss 24, Robotnik 25,
+  Flame 26, Pump 27, Container 28, in creation order.
+- **Landed as one commit, because each half alone regresses.** Three changes:
+  1. the CPZ boss spawns its children from its own first update, as
+     `Obj5D_Init` does, giving it the ROM's slot;
+  2. `Obj5D_Container_Extend` rewrites itself into the gunk in place
+     (`s2.asm:62843-62848`), keeping its slot and deferring
+     `Obj5D_Gunk_Init` to the next frame;
+  3. the rewriting frame still runs the `Obj5D_Container_Floor_End` tail
+     (`s2.asm:62881-62889`), copying the parent's position before the transform.
+  Measured individually on the segment lane: the slot fix alone gives 1,104
+  errors and the transfer alone 1,377, because each removes one of a pair of
+  compensating one-frame errors. Together they give 1.
+- **The drop cadence now matches the recording frame for frame.** Both gunk
+  drops: rewrite at ROM frames 5221 and 5632, landing at 5251 and 5661, against
+  the previous shape's 5222/5251 and 5632/5660.
+- **Tests ported, not weakened.** Two CPZ boss rewind classes built their graph
+  by constructing the boss and asserting immediately. They now drive the boss's
+  one init execution first, which is what production does and what the ROM's
+  routine 0 is.
+- **The remaining error, characterised but not closed.** At frame 2252 the
+  player is standing on a CPZ `Obj6B` platform in slot 35 when three of them
+  wrap to new positions; the ROM leaves him airborne for exactly that frame and
+  attaches him to slot 36 on the next, while the engine hands him over with no
+  gap. Position, speeds and angle agree throughout, and `stand_on_obj` goes
+  `0x23 -> 0x24` a frame later on the ROM side. `Obj6B_Main` gates its entire
+  `SolidObject` call on the object's own on-screen render bit
+  (`docs/s2disasm/s2.asm:54443-54456`), which the engine's platform does not
+  model, but that is a hypothesis and was NOT measured -- the three platforms
+  are all plausibly on screen at the wrap. The next round should probe the
+  engine's solid pass for slots 35 and 36 across frame 2252 before changing
+  anything, and note the change would touch every `Obj6B` platform including
+  MTZ's.
+- **Gates from a clean build.** Full `-Ptrace-replay` with three absolute ROM
+  paths: 854 tests, 8 failures, 6 skips, the same eight classes as the baseline
+  with every message byte-identical except the two that improved. Ordinary suite
+  16,404 tests, 0 failures, 17 skips. `-Pguards` 607 tests, 0 failures.
