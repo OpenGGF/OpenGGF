@@ -211,6 +211,165 @@ defined by `com.openggf.tools.audio.parity`.
   sample run, at byte 709 of that run, with the three runs before it agreeing
   in full.
 
+## 2026-09-04 - S3K zSendTL writes all four operators; tick 342 -> tick 421
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `9c568300f`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 342, event 4, reference
+  `ym2612 port 0 register 4Ah = 16` against engine `port 0 register 28h = 2`.
+  DAC stream `BYTE_DIFFERENT` run 29 byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 421, role `MUS_DAC`, field
+  `playing`, reference `false` against engine `true`. DAC stream unchanged.
+  Every compared field and every write now agree through service 420.
+- **The routine.** `zSendTL` walks the whole FM TL table and writes an entry
+  for every operator. The `or a / jp p, .skip_track_vol` test only branches
+  past the track-volume add for a positive byte; the write itself is
+  unconditional, and the `fix_sndbugs = 0` path strips the sign bit from what
+  it sends (Sound/Z80 Sound Driver.asm:3149-3178). The engine wrote only the
+  carriers, so three of the four total-level bytes never reached the chip.
+  Reference service 342 shows the full set in S3K's middle-register traversal
+  order: `42h = 0Fh`, `4Ah = 10h`, `46h = 32h`, `4Eh = 0Ch`, where the engine
+  emitted `42h` alone.
+- **This is the rule S2 already had.** `zSetFMTLs` writes every TL register
+  and uses its mask only to decide where the channel volume is added
+  (s2.sounddriver.asm:3385-3424, :3438-3457), which the engine already
+  modelled and `TestSmpsFmVoiceWriteProfiles` already documented for S2. The
+  two Z80 drivers now share one loop, differing only in the per-operator
+  arithmetic: S2 rewrites non-carriers unchanged, S3K strips their sign bit.
+- **A test pinned the old behaviour and was corrected, not deleted.**
+  `s3kVolumeRefreshUsesBitSevenAndItsMiddleRegisterTraversal` asserted the two
+  carriers alone, with no ROM citation for the omission. It now asserts all
+  four with the `zSendTL` citation, and its values check out byte for byte:
+  the non-carriers `15h` and `17h` go out unchanged, the carriers `96h` and
+  `98h` go out as `16h` and `18h` plus the track volume.
+- **The new frontier is a known capture-host limitation, not a driver defect.**
+  Service 421 is the first service of an `E1h` music fade, which the host
+  reports as unmodelled on every run, including before this change.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear; and
+  the `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
+## 2026-09-04 - A resting S3K FM track freezes completely; tick 150 -> tick 342
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `9c568300f`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 150, role `MUS_FM2`, field
+  `modulationSpeed`, reference `0` against engine `1`. DAC stream
+  `BYTE_DIFFERENT` run 29 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 342, event 4, reference
+  `ym2612 port 0 register 4Ah = 16` against engine `port 0 register 28h = 2`.
+  DAC stream unchanged. Every compared field, including the six modulation
+  bytes added in the previous commit, and every write now agree through
+  service 341. That is past the old service-331 frontier with strictly more
+  state compared.
+- **Two corrections, landed together because the second only became visible
+  after the first.**
+  1. *The aliased clears.* `zFinishTrackUpdate` zeroes `ModEnvIndex` and
+     `ModEnvSens` for every stream unit it reads, rest or note, whenever the
+     do-not-attack bit is clear (Sound/Z80 Sound Driver.asm:1055-1069). Those
+     are the same bytes as `ModulationSpeed` at offset 25h and
+     `ModulationValLow` at 22h (:76-92), so a track running normal modulation
+     has its speed counter and the low byte of its accumulator zeroed by a
+     routine that has nothing to do with normal modulation. The engine cleared
+     them only when a modulation envelope was in use, which is the other
+     reading of the same bytes. Landed with the ROM's own 8-bit
+     `dec (ix+ModulationSpeed)` so a zeroed counter wraps to 0FFh and holds
+     for 255 passes instead of advancing every pass (:1296-1301). Tick 150 ->
+     151.
+  2. *The rest test at the caller.* `zUpdateFMorPSGTrack`'s `.note_going`
+     opens with `bit 4,(ix+zTrack.PlaybackControl) / ret nz` (:781-783), so a
+     resting FM track whose note is still running advances nothing at all: no
+     volume envelope, no note fill, no frequency update and no modulation
+     step. `zUpdatePSGTrack` has no such test at its matching entry
+     (:4066-4076), which is why a resting PSG track keeps sending its
+     frequency. Tick 151 -> 342.
+- **This corrects the scope of an earlier conclusion in this branch, not the
+  conclusion itself.** `stepModulationAtRest` was landed on the reading that
+  S3K's `zDoModulation` has no rest check. That reading is right, and the flag
+  stays. What was missing is that the FM caller never reaches `zDoModulation`
+  while resting, so the flag only ever applied to PSG. The two facts live at
+  different sites and are cited separately.
+- **The evidence was a comparison, not a decode.** With the modulation bytes
+  compared, a probe over services 146 to 154 shows both sides identical
+  through 150, then the reference frozen at `wait 15, speed 0, val 0, delta 6,
+  steps 3` for the whole rest while the engine walked `wait` down 14, 13, 12,
+  11. That is what the widened surface was for.
+- **One wrong turn, caught immediately.** The first form of the rest return
+  fired before the duration timer's expiry was tested, so a resting FM track
+  could never read its next note and stayed rested forever; the oracle
+  reported it at service 156 on the `resting` field. The ROM reaches
+  `.note_going` only when the timer did not expire, so the return is gated on
+  the post-decrement duration.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear; and
+  the `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
+## 2026-09-04 - The S3K oracle now compares modulation state; reported frontier 331 -> 150
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `9c568300f`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 331, event 10, reference
+  `psg 163` against engine `psg 160`. DAC stream `BYTE_DIFFERENT` run 29
+  byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 150, role `MUS_FM2`, field
+  `modulationSpeed`, reference `0` against engine `1`. DAC stream unchanged.
+- **The frontier moved backwards on purpose, and that is the point.** The
+  writes still agree through service 330; nothing regressed. Six zTrack bytes
+  that the oracle never compared are now compared, and the driver state behind
+  those writes turns out to diverge 181 services earlier. Comparing more state
+  can only move a reported frontier earlier, never later, so this number is
+  not comparable with the previous entry's and should not be read as one.
+- **What was added,** from the track layout at Sound/Z80 Sound
+  Driver.asm:34-97: `ModulationVal` (offsets 22h-23h, the accumulator
+  `zDoModulation` adds its delta into), `ModulationWait` (24h),
+  `ModulationSpeed` (25h), `ModulationDelta` (26h) and `ModulationSteps`
+  (27h), all gated, plus `ModulationPtr` (20h-21h) as a diagnostic-only field
+  because it is a Z80 address the engine has no equivalent for, exactly like
+  the existing data pointer. All six are inside the committed
+  `1C00h-1FA0h` RAM snapshot, so no fixture change was needed. The engine side
+  maps to `modAccumulator`, `modDelay`, `modRateCounter`, `modCurrentDelta`
+  and `modStepCounter`.
+- **S3K only.** S1 and S2 have their own normalizers and neither was touched,
+  so both oracles are unaffected by construction rather than by measurement.
+- **What the first divergence says, and it is already diagnosed.**
+  `zFinishTrackUpdate` clears `ModEnvIndex` and `ModEnvSens` whenever the
+  do-not-attack bit is clear (:1055-1069). Those two names alias
+  `ModulationSpeed` at offset 25h and `ModulationValLow` at 22h, so reading
+  any ordinary note zeroes the modulation speed counter and the low byte of
+  the modulation accumulator on a track using normal modulation. The engine
+  models neither. That is the next fix.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S3K holds its PSG modulation after a rest note; tick 331 decoded, not closed
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

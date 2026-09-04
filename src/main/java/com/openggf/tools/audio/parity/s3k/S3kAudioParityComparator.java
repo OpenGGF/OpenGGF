@@ -441,7 +441,22 @@ public final class S3kAudioParityComparator {
         if (result != null) return result;
         result = trackField(ordinal, role, "frequency", reference.frequency(), openGgf.frequency());
         if (result != null) return result;
-        return trackField(ordinal, role, "detune", reference.detune(), openGgf.detune());
+        result = trackField(ordinal, role, "detune", reference.detune(), openGgf.detune());
+        if (result != null) return result;
+        result = trackField(ordinal, role, "modulationVal", reference.modulationVal(),
+                openGgf.modulationVal());
+        if (result != null) return result;
+        result = trackField(ordinal, role, "modulationWait", reference.modulationWait(),
+                openGgf.modulationWait());
+        if (result != null) return result;
+        result = trackField(ordinal, role, "modulationSpeed", reference.modulationSpeed(),
+                openGgf.modulationSpeed());
+        if (result != null) return result;
+        result = trackField(ordinal, role, "modulationDelta", reference.modulationDelta(),
+                openGgf.modulationDelta());
+        if (result != null) return result;
+        return trackField(ordinal, role, "modulationSteps", reference.modulationSteps(),
+                openGgf.modulationSteps());
     }
 
     private static Report trackField(int ordinal, String role, String field, Object reference,

@@ -196,10 +196,14 @@ class TestS3kOracleRequestSidecarWiring {
      * in the following service's window. The music DAC byte pump now streams
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
-     * A hundred and ninety-two consecutive services now agree. The most recent
-     * correction is that neither S3K PSG volume coordination flag writes to
-     * the chip: both end at {@code zStoreTrackVolume}, which stores the byte
-     * and returns. What remains is a PSG2 frequency value at service 331.
+     * The comparison now covers the modulation accumulator and its wait,
+     * speed, delta and step counters, and every one of them agrees through
+     * service 420 along with the writes. The most recent correction is that
+     * {@code zSendTL} writes all four operators' total level and uses the
+     * carrier mask only to decide where the track volume is added. What
+     * remains is the DAC track's {@code playing} bit at service 421, which is
+     * the first service of an {@code E1h} music fade the capture host reports
+     * as unmodelled.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -211,11 +215,10 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 193, report.tick());
-        assertEquals(10, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=163]",
-                report.reference());
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 283, report.tick());
+        assertEquals("MUS_DAC", report.role());
+        assertEquals("playing", report.field());
     }
 
     /**
