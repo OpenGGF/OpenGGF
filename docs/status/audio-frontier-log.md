@@ -27,6 +27,57 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K silences a PSG track's own channel first; tick 495 -> tick 502
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `0b3aca34b`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 495, event 161, reference
+  `psg 223` against engine `psg 255`. DAC stream `BYTE_DIFFERENT` run 338
+  byte 0.
+- **Result after:** `EVENT_MISSING`, tick 502, event 10, reference `psg 223`
+  against `<missing>`. DAC stream unchanged.
+- **The routine.** `zSilencePSGChannel` writes `1Fh + VoiceControl` first,
+  which is the track's own tone channel, and only then adds `0FFh` for the
+  noise channel, gated on `PlaybackControl` bit 0 (Sound/Z80 Sound
+  Driver.asm:4226-4245). The engine wrote a single byte for whichever channel
+  the track was sounding on, so a noise PSG3 track emitted `0FFh` alone where
+  the ROM emits `0DFh` then `0FFh`.
+- **The listing calls its own bug here, and it matters.** Under
+  `fix_sndbugs = 0` the noise test is bit 0 of `PlaybackControl`, and the
+  comment says outright that "since this function is called when a new channel
+  is starting, this bit will almost inevitably be 0 and the noise channel will
+  not be silenced". So most calls emit the tone byte alone; service 495 is one
+  where the bit was set and both went out.
+- **Instrumented, not assumed.** A stack-tagged probe on every PSG `stopNote`
+  showed 27 calls for a noise PSG3 track, all from the note-start path, which
+  is what put the lone `0FFh` on the bus.
+- **Scoped to S3K, and the reason is that there is nothing to cite for the
+  others.** Neither S1 nor S2 has a per-track PSG silence routine; both
+  silence all four channels at once (s2.sounddriver.asm:1412-1418). Their
+  behaviour is therefore unaudited rather than established, and the new
+  `PsgSilenceShape` defaults to what the engine already did for them.
+- **Open items.** S2's `zNoteFillUpdate` countdown against the engine's
+  elapsed comparison; S1 and S2's post-note do-not-attack clear; the
+  `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297; S2's
+  `zFadeOutMusic` clearing `SpeedUpFlag` with `xor a / ld (zAbsVar.SpeedUpFlag), a`
+  (s2.sounddriver.asm:1677-1679), which the engine does not model; and now
+  S1's and S2's own per-track PSG silence shape, which no routine in either
+  listing pins. None of these is touched in this lane.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestRewindCoverageGuard` and
+  `TestStaticStateRewindCoverageGuard`: 2,142 tests, 0 failures, 10 skips.
+  `TestSonic3kCoordFlagParity` is now in the per-cycle gate, because its two
+  end-state snapshots are exactly the kind of assertion the audio gate used to
+  miss.
+
+
 ## 2026-09-04 - An S3K load service does not accumulate for the song it loads
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
@@ -77,8 +128,13 @@ defined by `com.openggf.tools.audio.parity`.
   recorded.** `TestSonic3kCoordFlagParity`'s two `zDoModulation` tests assert
   a packed frequency captured after running the engine for 60,000 samples.
   Those are end-state snapshots of engine output, not ROM-derived constants,
-  and they shift whenever the run's start phase does; this change moved them
-  from `2A94h` to `2A84h` and from `2AADh` to `2AD6h`. The mechanisms they
+  and they shift whenever the run's start phase does. The fix that moved them
+  is this entry's own: not accumulating tempo on the load service removes one
+  accumulation from the very start of the run, so every later service of the
+  60,000-sample run is reached one accumulation earlier in the tempo cycle and
+  the final modulated frequency lands elsewhere. `2A94h` became `2A84h` and
+  `2AADh` became `2AD6h`. Neither value was chosen; both were read back after
+  the change, and they are snapshots precisely so a future shift is visible. The mechanisms they
   name, the step-counter decrement on sustain ticks and the wait-zero
   same-tick application, are untouched, and the reference oracle is the
   authority for the shift. Both now carry a comment saying what kind of value

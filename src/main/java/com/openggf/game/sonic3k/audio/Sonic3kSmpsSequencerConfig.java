@@ -110,6 +110,11 @@ public final class Sonic3kSmpsSequencerConfig {
                 // :2607-2621), so a load service does not accumulate for the
                 // song it loads.
                 .tempoWaitPrecedesRequest(true)
+                // zSilencePSGChannel writes the track's own tone channel
+                // first and adds the noise byte only for a noise track
+                // (Sound/Z80 Sound Driver.asm:4226-4245).
+                .psgSilenceShape(
+                        SmpsSequencerConfig.PsgSilenceShape.TONE_THEN_NOISE)
                 .noteFillTail(SmpsSequencerConfig.NoteFillTail.S3K_SPLIT)
                 .fadeOutDelay(6)            // FadeOutDelay = 6
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
