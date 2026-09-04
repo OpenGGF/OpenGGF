@@ -204,8 +204,9 @@ class TestS3kOracleRequestSidecarWiring {
      * seeds rather than one accumulation past it, a silenced PSG track emits
      * its own tone channel before the noise byte, and {@code zRestTrack}'s
      * fall-through into {@code zSilencePSGChannel} is modelled, which is what
-     * the 49-service run of PSG3 silences from 502 was. What remains is
-     * PSG3's {@code resting} bit at service 551, where that run ends.
+     * the 49-service run of PSG3 silences from 502 was, and a duration-only
+     * stream unit no longer re-derives the rest bit from the previous unit's
+     * note. What remains is a PSG3 write 151 events into service 551.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -217,10 +218,11 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
         assertEquals(TITLE_MUSIC_TICK + 413, report.tick());
-        assertEquals("MUS_PSG3", report.role());
-        assertEquals("resting", report.field());
+        assertEquals(151, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=192]",
+                report.reference());
     }
 
     /**
