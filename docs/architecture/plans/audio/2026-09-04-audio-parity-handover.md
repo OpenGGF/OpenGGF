@@ -6,6 +6,33 @@ named. Numbers are stamped with the commit they were measured on; re-measure
 before relying on any of them (see the measurement-hazard table in
 `docs/agent-workflow/briefing-trace-rounds.md`).
 
+## Coordinated follow-on milestone
+
+The follow-on round starts at `develop` `4296bc291`; the sections below retain
+the original handover's historical measurements. See the
+[coordination plan](2026-09-04-audio-correctness-and-evidence.md) and
+[review/verification record](../../validation/audio/2026-09-04-coordinated-audio-review.md)
+for delivery status, rather than interpreting the original "no lane running"
+statement as current status.
+
+- S3K admission correction `5aca88c31` matches 1,570 services, ordinals
+  0–1569. The next first difference is service 1570/event 39, reference PSG
+  `E7` versus engine `FF`; DAC remains run 338/byte 0, `88` versus `7F`.
+  Resume from the newest audio-frontier entry, not the historical 1569 command
+  interpretation below.
+- The [FM performance research record](../../research/audio/2026-09-04-fm-core-performance-exploration.md)
+  and `tools/audio/fm-core-benchmark/` preserve bounded backend experiments.
+  Java Nuked remains the production core. Native/JNI feasibility and a faster
+  candidate core do not establish platform readiness or listening parity.
+- Physical capture `aefd59738` / `75c10b85a` adds opt-in raw YM/PSG strobes,
+  DAC origins and discontinuity markers. The
+  [capture contract](../../validation/audio/2026-09-04-physical-chip-capture.md)
+  describes clock units, provenance and bounded replay validation. It is not
+  a whole-mixer replay or a new hardware-reference capture.
+- Ordinary baseline at `4296bc291`: 16,465 reported executions, zero failures
+  or errors, 40 skips; separate guards: 609, zero failures/errors/skips.
+  Combined and merged verification belongs to the linked delivery record.
+
 ## Where develop stands
 
 - `develop` head at handover: `a306c0351` (S3K branch `bugfix/ai-s3k-oracle-freq-resend`

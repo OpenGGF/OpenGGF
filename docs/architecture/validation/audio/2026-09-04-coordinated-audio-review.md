@@ -45,6 +45,14 @@ These were returned to the worker before integration. Strobe placement,
 per-chip clock advancement, disabled-path allocation and full-session rollback
 ordering were sound by inspection; that is not a final test or merge verdict.
 
+The committed implementation `aefd59738` resolved those findings. Follow-up
+`75c10b85a` adds fail-closed, test-only replay-segment checks and corrects reset
+provenance: reset preserves configuration and cannot make an unknown state
+known. Explicit YM mode 3 identifies the constructor configuration. Final
+independent verdict: approved, no blocking findings. The reviewer verified
+48 targeted XML test results with zero failures/errors/skips. No general
+production replayer or whole-mixer parity claim was added.
+
 ### Benchmark and evidence tooling
 
 Independent review: `review_evidence`, gpt-5.6-sol/high, range

@@ -106,10 +106,10 @@ Retain one opt-in, ROM-free synthetic benchmark entry point with pinned external
 - [x] Refresh `develop`; hash all three ROMs and verify Maven JDK 21.
 - [x] Dispatch bounded exploration to appropriately sized agents; lead independently inspects source.
 - [x] Create isolated coordination, S3K and capture worktrees; create evidence worktree.
-- [ ] Task 1: reproduce existing frontier, write failing admission/prefix tests, implement profile-owned guarantee, run focused tests, record new frontier separately from DAC, commit.
-- [ ] Task 2: approve concrete physical capture design, write timing/completeness/non-interference tests, implement and replay captured stream, commit.
-- [ ] Task 3: preserve minimal benchmark tooling and research evidence, correct public/handover claims, validate opt-in harness failure controls, commit.
-- [ ] Independent per-task spec/code review; return findings to the owner.
+- [x] Task 1: reproduce existing frontier, write failing admission/prefix tests, implement profile-owned guarantee, run focused tests, record new frontier separately from DAC, commit.
+- [x] Task 2: approve concrete physical capture design, write timing/completeness/non-interference tests, implement and replay captured stream, commit.
+- [x] Task 3: preserve minimal benchmark tooling and research evidence, correct public/handover claims, validate opt-in harness failure controls, commit.
+- [x] Independent per-task spec/code review; return findings to the owner.
 - [ ] Merge reviewed task commits into the coordination branch, reconcile documentation, run ordinary suite and separate guards against the fresh baseline.
 - [ ] Independent whole-branch review and fix verification.
 - [ ] Refresh main `develop`, rebaseline if it moved, integrate with README release summary, run post-merge ordinary/guards and exact regression comparison, push only `develop`.
@@ -129,11 +129,42 @@ Initial baseline: `4296bc291`, fetched and already current. Main workspace ordin
 
 Measurement note: ordinary Surefire console reports 2,027 class-result lines but only 1,983 distinct final XML files; those XML files total 16,369 cases. Preserve the console execution count and XML case count separately rather than treating repeated class-result lines as independent XML artifacts. Both sources have empty failure/error sets. Comparison uses archived per-test outcomes and the final Maven result, not historical suite totals.
 
-No implementation commits integrated yet. Main disassembly submodule changes are pre-existing and out of scope.
+S3K `5aca88c31` and evidence tooling `856f91776` / `7ef9e44d8` are reviewed
+and integrated into the coordination branch. Physical capture `aefd59738` /
+`75c10b85a` is independently approved and integrated, with 48 focused tests
+green. Main disassembly submodule changes are pre-existing
+and out of scope. The [review record](../../validation/audio/2026-09-04-coordinated-audio-review.md)
+tracks findings, corrections and subsequent combined/merged verification.
 
 ## End-to-end review
 
 Required review questions: does the PSG fix follow the retail routine rather than the fixture? Are physical and logical notifications distinguishable? Can capture change PCM or scheduling? Are provenance, clock units and discontinuities explicit? Do research claims distinguish raw-core throughput, Native Image proof, waveform diagnostics and unperformed listening/platform tests? Do all delivery stages meet the repository workflow?
+
+## Follow-on order after this milestone
+
+1. Continue the S3K service oracle at the newly exposed lazy noise takeover
+   write. Keep the DAC run-338 mismatch separate; derive its timing from the
+   reference driver rather than absorbing it into a fitted constant.
+2. Keep full-game BizHawk traces as the integration evidence. Use small,
+   repeatable driver request windows to diagnose their first divergence, then
+   replay the longer run to check interactions. State, ordered driver writes,
+   physical chip strobes, and final PCM answer different questions; a match at
+   one tier must not be substituted for a match at another.
+3. Repair incomplete window context and extend recordings according to the
+   handover priorities. A published red window remains evidence, not a green
+   gate; preserve hard matching-prefix assertions and active negative controls.
+4. Profile the unchanged Java Nuked implementation on a quiet host and a
+   representative lower-end machine. Try measured hot-path optimizations under
+   the pinned bit-exact tests before creating a runtime backend abstraction.
+5. If the budget still requires a second core, compare batched native Nuked
+   with a candidate fast core using complete physical inputs. A JNI experiment
+   must next transfer actual PCM and exercise lifecycle, snapshots, Native
+   Image packaging and supported platforms. A fast option is an explicit
+   fidelity/performance choice, not an automatic resurrection of the removed
+   core or an unmeasured clean-room rewrite.
+6. Keep release listening and playable AIZ → HCZ validation ahead of broad
+   framework migration. These release gates are not discharged by this round's
+   automated audio work.
 
 ## Coordination ledger
 
