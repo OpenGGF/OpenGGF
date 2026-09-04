@@ -14,6 +14,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Four more sound settings now reach playback:** a new guard checks that
+  every sound-driver setting survives the step that prepares a sound for
+  playback, since a setting missing from that step is silently ignored rather
+  than reported. It found four more that were being dropped: three Sonic 3 &
+  Knuckles settings covering DAC channel handling at note and sequence start
+  and the PSG frequency byte order, and one Sonic 1 setting for how a special
+  effect silences the third PSG channel. All four are honoured now.
+
 - **The collapsing-scenery ring-out now survives with music playing:** the
   fix that restored the effect's fade was reaching the sound chip only when
   nothing else was playing. The layer that prepares a sound for playback copies
