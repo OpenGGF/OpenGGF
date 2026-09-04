@@ -115241,3 +115241,22 @@ The other three death arms remain coordinates only.
   on the same machine, and the five failures unique to this branch before the
   test port are gone. The three that remain in the `S2` filter fail identically
   at the pinned head. Both policy scanners PASS.
+
+## 2026-09-04 - S2 request windows on the merged tree, measured after a clean build
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`
+  merged with `origin/develop` at `2607114d4`, gitlink at TraceChaser `7ebed3b`.
+- Command: `mvn -Dmse=off -Dtest=com.openggf.tools.audio.parity.**` with the
+  three ROM paths and the complete-run BK2 as absolute properties.
+- Result: **all three replayable windows MATCH**, at 25, 52 and 27 production
+  transfers, and the driver oracle still reports **MATCH (698 ticks)**. The
+  row-12132 divergence is closed by the monitor-mailbox and explosion-ownership
+  fixes this merge brought in. Parity suite 170 tests, 0 failures, 2 skips;
+  `-Pguards` 607 tests, 0 failures, 0 errors.
+- **Measurement hazard worth recording.** The first run after the merge still
+  reported the old divergence at transfer 21, movie row 12132, because Maven's
+  incremental compile had not rebuilt the merged `src/main` classes. The engine
+  under test was the pre-merge engine while the sources on disk were the merged
+  ones. `mvn clean` before the run changed the verdict from DIVERGENCE to MATCH
+  with no source change. After merging another branch's fixes, measure from a
+  clean build or the number is about the wrong engine.
