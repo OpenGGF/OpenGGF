@@ -723,9 +723,10 @@ public final class SmpsSequencerConfig {
      * {@code zKeyOffIfActive} and then {@code zFMClearSSGEGOps} for every SFX
      * track it initialises (skdisasm Sound/Z80 Sound Driver.asm:2092-2103,
      * :2528-2536), writing 90h, 94h, 98h and 9Ch of the track's channel with
-     * zero. Under {@code fix_sndbugs = 0} the SSG-EG clear runs for PSG
-     * tracks too, which the listing flags itself; only the FM case is
-     * modelled here, because no committed fixture exercises the other.
+     * zero. On the shipped {@code fix_sndbugs = 0} branch the clear is also
+     * called for PSG tracks, but {@code zWriteFMIorII} returns on bit 7 of
+     * {@code VoiceControl} before writing anything (:2549-2551), so no PSG
+     * track puts a byte on the bus; the fixed branch merely skips the call.
      */
     public boolean isSfxAdmissionKeyOffAndClearsSsgEg() {
         return sfxAdmissionKeyOffAndClearsSsgEg;

@@ -27,6 +27,71 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The PSG SSG-EG clear writes nothing, and 588 is a force-silence with no ROM caller
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged by design.
+- **Command:** unchanged, both result lines.
+- **Result before and after:** `EVENT_VALUE_DIFFERENT`, tick 588, event 3,
+  reference `ym2612 port 1 register 0B5h = 64` against engine
+  `port 0 register 28h = 5`; DAC stream `BYTE_DIFFERENT` run 338 byte 0. The
+  frontier did not move. What landed is a correction to the previous entry's
+  reasoning and two cited config corrections that are inert on this fixture.
+- **The previous entry was wrong to call the PSG case unmodelled, and the
+  `FixBugs` rule is what settles it.** `fix_sndbugs = 0` is the shipped branch
+  (skdisasm/sonic3k.asm:38) and it does call `zFMClearSSGEGOps` for PSG tracks,
+  which the listing flags with its own "(even on PSG tracks!!!)" note
+  (:2099). But every one of that loop's writes goes through
+  `zWriteFMIorII`, which opens with `bit 7,(ix+zTrack.VoiceControl) / ret nz`
+  and returns before touching the chip for any PSG track (:2549-2551). So the
+  PSG call is a wasted call, not a write, and the fixed branch merely tests
+  that bit at the call site to skip it. The observable stream is identical on
+  both branches. The FM-only implementation is therefore complete rather than
+  partial, and the comment now says so with the flag named, the branch taken
+  and what the fixed branch would do.
+- **Two further guards from the same routines are now modelled.**
+  `zWriteFMIorII` also returns on `PlaybackControl` bit 2, the SFX-overriding
+  bit (:2552-2553), and `zKeyOffIfActive` returns on that bit or the
+  do-not-attack bit (:3338-3341). Both are inert for a freshly loaded SFX
+  track, which is why the frontier is unchanged, and both are cited.
+- **Two config corrections, cited and inert here.** S3K now uses
+  `FmSfxTakeoverMode.REGISTER_SEQUENCE`, because `zSFXTrackInitLoop`'s only
+  chip writes are the key-off and the SSG-EG clear (:2092-2103) and the
+  engine's legacy takeover additionally forced RR and TL on the channel. And
+  `FmSfxReleaseMode.ROM_VOICE_RESTORE`, because `cfStopTrack` releases a
+  channel by keying it off, clearing the music track's override bit and
+  restoring its voice (:3040-3070), never force-silencing;
+  `zFMSilenceChannel` is reached only from `zInitAudioDriver`'s boot loop
+  (:2475-2495) and from the track's own `0F2h` flag, `cfSilenceStopTrack`
+  (:3082-3096). Neither changed a single byte of this capture.
+- **Service 588, decoded but not closed.** The reference is
+  `ym1[0A4h] [0A0h]`, one `ym0[28h] = 5`, then straight into the voice load
+  at `ym1[0B5h]`. The engine inserts, between the key-off and the voice load,
+  a second `ym0[28h] = 5` followed by `ym1[81h] [89h] [85h] [8Dh] = 0FFh` and
+  `ym1[41h] [49h] [45h] [4Dh] = 07Fh`. That is
+  `SmpsSequencer.forceSilence`'s release-rate and total-level block. It is not
+  reached through the takeover or release modes corrected above, both of which
+  I changed and re-measured without effect, so the caller is one of the two
+  remaining `forceSilence` sites in `SmpsDriver` around lines 2555 and 2565,
+  which are a different release path. S3K has no ROM counterpart for it at
+  this point: the two routines the engine's comment cites,
+  `zSetMaxRelRate` and `zFMSilenceChannel`, are called only at boot and from
+  the `0F2h` flag. Tracing which of those two sites fires here is the next
+  step.
+- **S1 and S2 unchanged, read by content.** S1 sound test `MATCH (14690
+  ticks)` and `MATCH (1967 ticks)`; S2 v1 `MATCH (698 ticks)`, v2
+  state-and-writes and state-only `MATCH (2198 ticks)`, CPZ state-only
+  `MATCH (720 ticks)`, request windows `MATCH` at 25, 52 and 27. The CPZ
+  state-and-writes line sits unchanged at its own frontier.
+- **Open items.** S2's `zNoteFillUpdate` countdown; S1 and S2's post-note
+  do-not-attack clear; the `.dac_playback_loop` cycle total of 303 against
+  `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape. The SSG-EG-on-PSG item leaves the list: there is nothing to model.
+- **Gates at this commit, all green.** 2,159 tests, 0 failures, 10 skips
+  across the audio packages and the keep-green set.
+
+
 ## 2026-09-04 - The SFX load keys off and clears SSG-EG; tick 565 -> tick 588
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

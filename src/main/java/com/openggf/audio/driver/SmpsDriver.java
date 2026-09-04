@@ -750,26 +750,45 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      * ROM {@code zSFXTrackInitLoop}: while an SFX is still being loaded, each
      * of its tracks is keyed off and has its SSG-EG operators cleared, in
      * track order (skdisasm Sound/Z80 Sound Driver.asm:2092-2103). The clear
-     * is {@code zFMClearSSGEGOps}, which writes 90h and the three operator
-     * registers above it with zero (:2528-2536). Under
-     * {@code fix_sndbugs = 0} the ROM runs the clear for PSG tracks as well,
-     * which the listing itself flags; only the FM case is modelled, because
-     * no committed fixture exercises the other and inventing it would be a
-     * guess.
+     * is {@code zFMClearSSGEGOps}, which walks 90h and the three operator
+     * registers above it with zero (:2528-2536).
+     *
+     * <p>{@code fix_sndbugs = 0} is the branch the shipped ROM takes and the
+     * one modelled here (skdisasm/sonic3k.asm:38). On that branch
+     * {@code zSFXTrackInitLoop} calls {@code zFMClearSSGEGOps} for every
+     * track including PSG ones, which the listing flags with its own
+     * "(even on PSG tracks!!!)" note at :2099. Nothing reaches the chip for
+     * those, because every write goes through {@code zWriteFMIorII}, which
+     * returns at once on bit 7 of {@code VoiceControl} (:2549-2551). The
+     * fixed branch would test that bit at the call site and skip the call
+     * instead; the observable write stream is identical either way, so this
+     * models the FM tracks alone and is complete rather than partial.
+     *
+     * <p>The same routine's second guard is modelled too: {@code
+     * zWriteFMIorII} also returns on bit 2 of {@code PlaybackControl}, the
+     * SFX-overriding bit (:2552-2553), and {@code zKeyOffIfActive} returns on
+     * either that bit or the do-not-attack bit (:3338-3341).
      */
     private void emitSfxTrackInitWrites(SmpsSequencer sequencer) {
         if (!sequencer.getConfig().isSfxAdmissionKeyOffAndClearsSsgEg()) {
             return;
         }
         for (SmpsSequencer.Track track : sequencer.getTracks()) {
+            // zWriteFMIorII returns on bit 7 of VoiceControl, so a PSG track's
+            // clear writes nothing at all.
             if (track.type != SmpsSequencer.TrackType.FM) {
+                continue;
+            }
+            if (track.overridden) {
                 continue;
             }
             int channel = track.channelId;
             int port = channel < 3 ? 0 : 1;
             int channelInPort = channel % 3;
-            int keyOffSelect = port == 0 ? channelInPort : channelInPort + 4;
-            writeFm(this, 0, 0x28, keyOffSelect);
+            if (!track.tieNext) {
+                int keyOffSelect = port == 0 ? channelInPort : channelInPort + 4;
+                writeFm(this, 0, 0x28, keyOffSelect);
+            }
             for (int operator = 0; operator < 4; operator++) {
                 writeFm(this, port, 0x90 + operator * 4 + channelInPort, 0x00);
             }
