@@ -282,9 +282,23 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager != null) {
-            spawnFreeChild(() -> new ExplosionObjectInstance(0x27, spawn.x(), spawn.y(), renderManager));
+            // ROM Obj26_SpawnSmoke allocates the explosion and gives it
+            // routine 2, so its first execution runs Obj27_Init and that
+            // routine plays SndID_Explosion (docs/s2disasm/s2.asm:25702-25707,
+            // :46717-46734). The sound therefore belongs to the explosion's
+            // own pass, not to the touch that broke the monitor.
+            ExplosionObjectInstance explosion = spawnFreeChild(() ->
+                    new ExplosionObjectInstance(0x27, spawn.x(), spawn.y(), renderManager,
+                            Sonic2Sfx.EXPLOSION.id));
+            if (explosion.getSlotIndex() >= 0
+                    && getSlotIndex() >= 0
+                    && explosion.getSlotIndex() < getSlotIndex()) {
+                // AllocateObject is lowest-free, so the explosion often lands
+                // below the monitor's own slot, which the ROM's scan has
+                // already passed; Obj27 then first executes next frame.
+                explosion.delayFirstUpdateForPassedSlot();
+            }
         }
-        services().playSfx(Sonic2Sfx.EXPLOSION.id);
     }
 
     @Override

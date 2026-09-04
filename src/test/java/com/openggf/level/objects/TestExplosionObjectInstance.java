@@ -61,35 +61,53 @@ public class TestExplosionObjectInstance {
         assertTrue(explosion.isDestroyed(), "S1 explosion must self-delete 39 game frames after spawn");
     }
 
+    /**
+     * ROM {@code Obj27_Init} plays the explosion sound from the explosion's own
+     * execution — {@code move.w #SndID_Explosion,d0 / jsr (PlaySound).l}
+     * (docs/s2disasm/s2.asm:46717-46734) — so neither construction nor service
+     * injection may make the request. The object that spawned the explosion has
+     * already finished its own pass by then.
+     */
     @Test
-    public void deferredExplosionSoundPlaysWhenServicesAreInjectedAfterConstruction() {
+    public void explosionSoundPlaysOnTheExplosionsOwnFirstUpdate() {
         RecordingObjectServices services = new RecordingObjectServices();
 
         ExplosionObjectInstance explosion = new ExplosionObjectInstance(0x27, 100, 200, null, 77);
         assertEquals(0, services.playedSfxCount);
 
         explosion.setServices(services);
+        assertEquals(0, services.playedSfxCount,
+                "injecting services must not make the request; the explosion's own pass does");
 
+        explosion.update(1, (PlayableEntity) null);
         assertEquals(1, services.playedSfxCount);
         assertEquals(77, services.lastSfxId);
+
+        explosion.update(2, (PlayableEntity) null);
+        assertEquals(1, services.playedSfxCount, "the request is made once, not every pass");
     }
 
+    /**
+     * An explosion allocated into a slot the object scan has already passed
+     * runs its init on the next pass, so its sound follows one frame later.
+     * {@code Obj26_Break} allocates with lowest-free {@code AllocateObject}
+     * from the monitor's own slot (docs/s2disasm/s2.asm:25702-25707).
+     */
     @Test
-    public void constructionContextPlaybackDoesNotReplayWhenServicesAreInjected() {
+    public void passedSlotExplosionDefersItsSoundByOnePass() {
         RecordingObjectServices services = new RecordingObjectServices();
 
-        AbstractObjectInstance.CONSTRUCTION_CONTEXT.set(services);
-        try {
-            ExplosionObjectInstance explosion = new ExplosionObjectInstance(0x27, 100, 200, null, 88);
-            assertEquals(1, services.playedSfxCount);
+        ExplosionObjectInstance explosion = new ExplosionObjectInstance(0x27, 100, 200, null, 88);
+        explosion.setServices(services);
+        explosion.delayFirstUpdateForPassedSlot();
 
-            explosion.setServices(services);
+        explosion.update(1, (PlayableEntity) null);
+        assertEquals(0, services.playedSfxCount,
+                "the passed-slot pass is consumed by the deferral");
 
-            assertEquals(1, services.playedSfxCount);
-            assertEquals(88, services.lastSfxId);
-        } finally {
-            AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
-        }
+        explosion.update(2, (PlayableEntity) null);
+        assertEquals(1, services.playedSfxCount);
+        assertEquals(88, services.lastSfxId);
     }
 
     private static final class RecordingObjectServices extends TestObjectServices {
