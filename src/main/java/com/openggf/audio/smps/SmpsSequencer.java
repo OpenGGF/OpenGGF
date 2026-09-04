@@ -1527,6 +1527,16 @@ public class SmpsSequencer implements CoordFlagContext {
                         }
                     }
                     if (psgFrequencyFirst) {
+                        if (t.type == TrackType.PSG && t.overridden) {
+                            // zUpdatePSGTrack tests the SFX-overriding bit
+                            // right after zDoModulation and returns on it,
+                            // before both the frequency latch and zDoVolEnv
+                            // (Sound/Z80 Sound Driver.asm:4079-4083). So a PSG
+                            // track an SFX has taken stops advancing its
+                            // volume envelope entirely, rather than running on
+                            // underneath and coming back somewhere else in it.
+                            return;
+                        }
                         processPsgEnvelope(t);
                     }
                     return;

@@ -27,6 +27,36 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - An overridden PSG track kept running its envelope; 1569 state -> 1569 write
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, merged with develop at `37c3f0c0b`,
+  which did not move the frontier.
+- **What 1569 was.** `TRACK_STATE_MISMATCH` on `MUS_PSG3`'s `volEnv`, reference
+  79 against engine 80. At that service an SFX takes the third PSG channel: the
+  reference's track goes `ovr=true` and its envelope position stops dead at 79
+  and stays there, while the engine kept advancing it.
+- **The ROM.** `zUpdatePSGTrack` tests the SFX-overriding bit immediately after
+  `zDoModulation` and returns on it, before both the frequency latch and
+  `zDoVolEnv` (Sound/Z80 Sound Driver.asm:4079-4083). An overridden PSG track
+  therefore advances nothing at all. The engine ran the envelope underneath the
+  SFX, so when the channel came back the envelope was somewhere else in its
+  data.
+- **The gated field earned its place again.** `volEnv` was promoted from
+  diagnostic three commits ago and has now caught two separate defects, this
+  one within a single service of the takeover that caused it. Before the
+  promotion this would have surfaced, if at all, as some unrelated write
+  hundreds of services later.
+- **Frontier stays at 1569 and changes kind,** from a state mismatch to a write
+  one: the reference emits `psg 0FFh` where the engine emits
+  `ym2612 port 0 register 164 value 34`. That is the next thing to chase. The
+  DAC byte stream is unchanged at run 338, byte 0.
+- **Gates at this commit, all green, on a clean build and a quiet machine.**
+  Audio, per-game audio and parity packages with all three ROM paths: 2,761
+  tests, 0 failures, 16 skips. Ordinary suite 16,477 tests, 0 failures, 22
+  skips. `-Pguards` 609 tests, 0 failures.
+
+
 ## 2026-09-04 - Two regressions in my own fade work, both found by audit not by me
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
